@@ -442,7 +442,9 @@ class ProjectSettings(LiveBrowserCase):
 
     def test_the_page_uses_tokens_for_font_size_and_radius(self):
         css = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/style.css").read_text()
-        mine = css[css.index("#228: the full-page project settings"):]
+        start = css.index("#228: the full-page project settings")
+        end = next((m.start() for m in re.finditer(r"\n/\* ", css[start:]) if not css[start + m.start() + 4:].startswith("#228")), len(css) - start)
+        mine = css[start:start + end]                       # this page's block only: the next feature's comment ends it
         self.assertNotRegex(mine, r"font-size:\s*\d+px")
         self.assertNotRegex(mine, r"border-radius:\s*\d+px")
 

@@ -2827,3 +2827,29 @@ Questions go on the row ("Needs you"); ask creaite opens only when Alan asks. Us
   hook's own run; the rules paragraph): `dev/proposals/intake-process-round2/`, for Jarvis to apply.
 - Tests: `dev/tests/test_intake_process.py`, `test_intake_process_round2.py`, `test_intake_process_ui.py`, `test_transcripts_ui.py`.
 - Follow-ups: Refresh as a direct job (#265, done); Re-extract in the Minutes view still opens ask creaite (#268, for 2.6).
+## v2.6.0 Intake (issue #232): the old Review and Intake pages retired (C2, C3, C4; `p260-c2`)
+
+*Written by builder C. The rename and `core/intakeApi.js` (C1, part 1) are on `p260-c`; the page is A's, the update peek B's, "minutes by someone else" E's. This part removes what they replaced.*
+
+### C2: the code ("thin, don't delete", Q12)
+
+- **What:** `renderReview` and the Review page it drew, Calendar import and the Upload table, `#v-review` and `#v-inbox` in `shell.html`, every `bootReview…`/`bootIntake…` step (and Today's `bootToday0027`), the Review block of `core/keys.js`, the Review selection in `work.js` and `core/server.js`, `intakeHooks`, `mRowGone`. The listeners the peek and Today still use are `bootProposalActions` and `bootContextMenu` in `review.js`. Every export something else imports kept its name; the survivors of `intake.js` are in `core/intakeApi.js` (now with `kb` and `intakeSeams`), and `intake.js` is an empty shell that re-exports it. The empty shells go in a later release; the old pages' CSS is still in `style.css`.
+- **Re-pointed:** the palette (`irPickFiles`, `irProcessAll`, `irProcess`), Today's day line (`irProcessById`) and Refresh calendar (`irRefreshCalendar`), `conflictChoice` (opens the page on the proposal), `refreshAll` (asks for the reject guesses while the page is open), `go()` (reads the inbox list when Intake opens; no `{legacy:true}`), `irOpenPeek` (keeps unsaved edits when another row is clicked: the old row's guard). `build_dashboard._ir_split` puts a followed person's proposals first, unlabelled (the old page sorted them on the page).
+- **Guarded files:** none touched.
+- **Tests:** `test_intake_retired_names` (nothing imports a retired name, `intake.js` is the empty shell, the shell has no old page), `test_dashboard_split`, `test_script_policy`, `check.py`.
+
+### C3: the tests (what became of each old file)
+
+| File | Fate |
+|---|---|
+| `test_meetings` (InboxPageTests), `test_transcripts_ui`, `clear_day_support` ClearDayPage and its three callers | Removed with the pages. Their Intake-page equivalents are `test_intake_review_intake`, `_finish`, `_files`, `_chrome`; the data tests (`MeetingsDataTests`, `ClearData*`) stay. Gone for good: Select new, Load into inbox as a separate step, the tint, Clear day, the Upload table's Preview and Remove icons |
+| `test_review_age`, `test_review_meta_229`, `test_review_floating_bar`, `test_row_selection` (Review test), `test_work_filters_live` (ReviewList), `test_motion` (MotionReview), `test_context_menu` (Review menu), `test_review_focus` (FocusBrowser), `test_review_project` (two row/minutes move tests) | Removed with the select bar, the age banner, the cleared tick, the row menu, the focus view and the Project button. The age on a meeting row is `test_intake_review_intake`; the one-meta-line rule `test_intake_review_harden_b`; the palette check `test_intake_review_themes` (new) |
+| `test_review_triage`, `test_review_nesting`, `test_rejects_ui`, `test_reject_reasons`, `test_as_proposed`, `test_peek_follow`, `test_prep_updates`, `test_minutes_draft`, `test_smart_updates` | Rewritten on the Intake page's rows (`tr.irprop[data-irn]`, `[data-ira=…]`); batch, selection and greyed-row assertions dropped, each said in the file |
+| `test_ui_sweep`, `test_snapshots`, `test_shared_behaviour`, `test_day_past_and_sizes`, `test_icons`, `test_hostile_text`, `test_project_names`, `test_keys_chip`, `test_esc_peek_161`, `test_close_day_card`, `test_day_roll`, `test_pages`, `test_dashboard_editing`, `test_drafts_*`, `test_sweep_alerts`, `test_side_panel_live`, `test_work_item_peek`, `test_weekend_dates`, `test_no_dead_ends`, `test_link_renderers`, `test_ux172_clarity` | Selectors and screens moved to Intake; `intake.html` and `review.html` are now `intake-review.html` |
+
+### C4: documents and the sheets
+
+- `dev/dashboard-spec.md`: the wiring section corrected, a new "Intake and Review: the old pages retired" section, a retired note on the sections about the pages.
+- `system/templates/help.md` (and the two guides): the Review and Intake task and reference sections now describe the one page (keys, Process, Add files, Later and Not needed, Approve routine, the reject menu); the guides are regenerated.
+- **Hand checks for 2.6.0** are `dev/handchecks/v2.6.0.md` and `dev/tests/handchecks/test_v260.py` on `handchecks-v260` (not touched here). The screenshot sheet comes from `just handchecks v2.6.0`; Board, Two panes, dark and both palettes are judgement on it, and the palette contrast is `test_intake_review_themes`.
+- **Not on the Intake page (to confirm):** see the list in `dashboard-spec.md`.

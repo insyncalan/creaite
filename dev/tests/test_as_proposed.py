@@ -151,23 +151,18 @@ class PageEditTests(LiveBrowserCase):
         self.edit('it(1).values={...it(1).values,description:"Send the SOW"};')
         self.assertEqual(self.items()[1]["as_proposed"]["description"], "Send revised SOW to client")
 
-    def test_review_row_edit_and_undo(self):
+    def test_the_peek_save_records_the_first_values(self):
+        """#232 C2: the old Review bar's Set owner (rvSet) and its Undo went with the page; the Intake page edits a proposal in the peek,
+        whose Save goes through editProposal and so records the first values once."""
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
+        b.eval("go('intake-review')")
         n = b.eval("REV.find(r=>r.rec&&r.rec.t==='Second row').n")
-        b.eval(f"RHL.clear(); RHL.add({n}); rvSyncChk(); renderReview()")
         first = dict(self.items()[2]["values"])
-        b.eval("rvSet('o','Sara Example')")
+        b.eval(f"openProposal({n}); pkCommit('actions','rv{n}',{{o:'Sara Example'}},'Owner','',''); pkPropSave(false)")
         b.wait(f"REV.find(r=>r.n==={n}).edited", 10)
         it = self.items()[2]
         self.assertEqual((it["values"]["owner"], it["as_proposed"]), ("Sara Example", first))
-        b.click("#snackU")                                                                       # Undo
-        b.wait(f"!REV.find(r=>r.n==={n}).edited", 10)
-        it = self.items()[2]
-        self.assertEqual(it["values"], first)
-        self.assertNotIn("as_proposed", it)                                                      # restored with the values
-        self.assertNotIn("edited_in", it)
+        self.assertEqual(it["edited_in"], "dashboard")
 
 
 if __name__ == "__main__":

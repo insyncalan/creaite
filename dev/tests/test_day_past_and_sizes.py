@@ -126,8 +126,8 @@ class PastTimeContrast(Base):
 
 # (name, how to get there, what must be shown, selectors measured)
 SCREENS = (
-    ("intake", "go('inbox')", "document.querySelector('#mtgBody .btn.mtgclr') && document.querySelector('#mtgBody select.mtgp')",
-     ("#mtgBody .btn.mtgclr", "#mtgBody select.mtgp")),
+    ("intake", "go('intake-review')", "document.querySelector('#irQ') && document.querySelector('[data-ira=processall]')",
+     ("#irQ", "[data-ira=processall]")),      # #232 C2: the search box and Process all ready (the old Calendar import's Clear day and project select went with it)
     ("activity", "go('activity')", "document.getElementById('actQ')", ("#actQ",)),
     ("settings-essentials", "go('settings','essentials')", "document.getElementById('setq')?.offsetParent", ("#setq",)),
     ("settings-advanced", "go('settings','advanced')", "document.getElementById('setq')?.offsetParent", ("#setq",)),

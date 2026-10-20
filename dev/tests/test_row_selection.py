@@ -1,5 +1,6 @@
 """BL-122: click selects, the ID or a double-click opens, Cmd/Ctrl and Shift select several. A real browser against the real live
-server, with real mouse and key events (Work table and board, a person's page, Review).
+server, with real mouse and key events (Work table and board, a person's page; Review's rows went with the old Review page, #232 C2: the Intake page opens a row
+in the peek with one click, test_peek_follow, and has no multi-select).
 
 Run: python3 dev/tests/test_row_selection.py   (needs Google Chrome; skipped otherwise)
 """
@@ -200,35 +201,6 @@ class Selecting(LiveBrowserCase):
         b.key("Escape")
         b.click(sel(a) + " .bct", count=2)                                # a double-click opens
         b.wait(f"CUR&&CUR.id==={a!r}")
-
-    # ── Review ──
-
-    def test_review_rows_highlight_open_on_double_click_and_keep_the_bulk_rule(self):
-        b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
-        info = b.eval("REV.filter(r=>!r.done).map(r=>({n:r.n,kind:r.kind,indiv:!!r.indiv}))")
-        routine = next(r for r in info if not r["indiv"] and r["kind"] == "actions")
-        individual = next(r for r in info if r["indiv"])
-        row = lambda n: f'#reviewBody tr[data-n="{n}"] td.title'  # noqa: E731
-        b.click(row(routine["n"]))
-        self.assertFalse(self.panel_on())                                 # a click highlights, it does not open
-        self.assertEqual(b.eval("[...document.querySelectorAll('#reviewBody tr.hl')].map(t=>+t.dataset.n)"), [routine["n"]])
-        self.assertEqual(b.eval("document.querySelector('#reviewBody tr.hl').getAttribute('aria-selected')"), "true")
-        self.assertFalse(b.eval("document.getElementById('bulkApprove').disabled"))          # the highlight is the tick: Approve selected is live
-        b.click(row(individual["n"]), modifiers=META)
-        self.assertEqual(sorted(b.eval("[...document.querySelectorAll('#reviewBody tr.hl')].map(t=>+t.dataset.n)")), sorted([routine["n"], individual["n"]]))
-        self.assertEqual(sorted(b.eval("[...CHK]")), [routine["n"]])      # the individual-approval item is highlighted but never ticked
-        b.click("#bulkApprove")
-        b.wait("/Approved 1/.test(document.getElementById('rvresult').textContent)", 15)          # BL-133: the result names what was left out
-        text = b.eval("document.getElementById('rvresult').textContent")
-        self.assertIn("Approved 1", text)
-        self.assertIn("needs individual approval", text)
-        self.assertIn("partial", text)
-        done = b.eval("REV.filter(r=>r.done).map(r=>r.n)")
-        self.assertNotIn(individual["n"], done)                           # the bulk rule held: it was not approved
-        b.click(row(individual["n"]), count=2)                            # a double-click opens its detail
-        b.wait("document.getElementById('panel').classList.contains('on') || /Edit in Word/.test(document.getElementById('snackT').textContent)")
 
 
 if __name__ == "__main__":

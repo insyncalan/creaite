@@ -319,9 +319,10 @@ class FilesLiveTests(FilesLiveBase):
 
     def test_intake_reloads_its_files_too(self):
         touch(self.v.root / "inbox" / "Late arrival.vtt", "WEBVTT")
-        self.b.eval("go('inbox')")
-        self.b.wait("document.body.textContent.includes('Late arrival.vtt')")
-        self.assertIn("Late arrival.vtt", self.b.eval("document.getElementById('inboxTbl').textContent"))
+        self.b.eval("go('intake-review')")
+        self.b.eval("reloadData()")                                            # #232 C2: the page's rows come from the data; the quick file refresh only counts a new file
+        self.b.wait("document.getElementById('v-intake-review').textContent.includes('Late arrival.vtt')")
+        self.assertIn("Late arrival.vtt", self.b.eval("document.getElementById('v-intake-review').textContent"))
 
 
 class FilesFileVersionTests(unittest.TestCase):

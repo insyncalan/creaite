@@ -246,5 +246,18 @@ class ReportsPage(LiveBrowserCase):
             self.assertLessEqual(b.eval("document.documentElement.scrollWidth - innerWidth"), 0, js)
 
 
+class NoReportingCardInSource(unittest.TestCase):
+    """The browser check above (`typeof mountReportingCard`) only sees names in core/globals.json, so a component exported from a
+    source file but never listed there would pass it. This reads the source: nothing exports it, in any form."""
+
+    def test_no_export_of_mountReportingCard_remains(self):
+        import re
+        src = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src"
+        pat = re.compile(r"\bexport\b[^\n;]*\bmountReportingCard\b|\bexport\s*\{[^}]*\bmountReportingCard\b")
+        hits = [str(f.relative_to(src)) for f in src.rglob("*") if f.suffix in (".js", ".jsx") and pat.search(f.read_text(encoding="utf-8"))]
+        self.assertEqual(hits, [])
+        self.assertTrue(pat.search("export function mountReportingCard(h) {}") and pat.search("export { a, mountReportingCard };"))   # the guard itself bites
+
+
 if __name__ == "__main__":
     unittest.main()

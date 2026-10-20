@@ -2,6 +2,9 @@
 
 Run: python3 dev/tests/test_review_nesting.py   (the dashboard part needs Google Chrome; skipped otherwise)
 
+#232 C2: the dashboard part is the Intake page's (a meeting's rows nest under it, Approve routine, Reject the minutes); the old page's
+collapse chevron, ticks and X key went with the select bar.
+
 The fictional portfolio from test_dashboard.py has one pending cx-minutes proposal (ABC Steering) holding a routine
 action and a new risk for ABC, plus an item from Teams that needs a project.
 """
@@ -27,25 +30,20 @@ SCRIPT = r"""
        async remove(p){ delete FILES[p]; }, async exists(p){ return p in FILES; }, async append(p,t){ FILES[p]=(FILES[p]||"")+t; } };
   VSTATE="ok"; needVault=async()=>true;   /* the page's own vault check can finish late and reset the fake vault (slow CI) */ S.autoApply=false;
   out.snacks=[]; { const sn=snack; snack=function(m,u,l){ out.snacks.push(m+(u?" ["+(l||"Undo")+"]":"")); return sn(m,u,l); }; }   /* the record, if CI fails */
-  const rowsNow=()=>[...document.querySelectorAll("#reviewBody tr[data-n]")].map(tr=>[tr.className.includes("mparent")?"parent":tr.className.includes("mchild")?"child":"row",tr.querySelector("td.title").textContent.replace(/\s+/g," ").trim().slice(0,40)]);
+  const rowsNow=()=>[...document.querySelectorAll("#v-intake-review tr.irprop")].map(tr=>[tr.className.includes("mchild")?"child":"row",tr.querySelector("td.title").textContent.replace(/\s+/g," ").trim().slice(0,40)]);
   try{
-    go("review"); out.layout=rowsNow();
     const m=REV.find(r=>r.kind==="draft"&&r.ref==="meeting");
-    out.toggle=document.querySelector("tr.mparent [data-act=t]").textContent; out.togOpen=document.querySelector("tr.mparent [data-act=t]").getAttribute("aria-expanded");
-    document.querySelector("tr.mparent [data-act=t]").click(); out.collapsed=rowsNow().length;
-    document.querySelector("tr.mparent [data-act=t]").click(); out.expanded=rowsNow().length;
-    // ticking the parent ticks its routine children only
-    const cb=document.querySelector("tr.mparent input[type=checkbox]"); cb.click();
-    out.ticked=[...CHK].map(n=>REV.find(r=>r.n===n).rec.t); CHK.clear(); renderReview();
-    // X on the parent does the same
-    RSEL=[...document.querySelectorAll("#reviewBody tr[data-n]")].findIndex(tr=>tr.classList.contains("mparent"));
-    document.dispatchEvent(new KeyboardEvent("keydown",{key:"x",bubbles:true})); out.xTicked=CHK.size; CHK.clear(); renderReview();
-    // group approve: routine items only; the risk and the minutes stay
-    document.querySelector("tr.mparent [data-act=ga]").click();
-    await until(()=>REV.some(r=>r.file===m.file&&r.done==="approved")&&/approving one by one/.test(document.getElementById("snackT").textContent));
+    go("intake-review",m.n); await until(()=>rowsNow().some(r=>r[0]==="child")); out.layout=rowsNow();   /* #232 C2: the Intake page, the minutes' meeting open */
+    // one click closes the meeting and hides what is under it; another opens it again
+    const head=()=>document.querySelector(`#v-intake-review [data-irm="${irOpen.value}"] td.title`);
+    out.open=rowsNow().length; head().click(); await until(()=>rowsNow().length<out.open); out.closed=rowsNow().length;
+    head()||(irOpen.value=null); go("intake-review",m.n); await until(()=>rowsNow().length===out.open); out.reopened=rowsNow().length;
+    // Approve routine in the meeting: its routine items only; the risk, the minutes and the DEF item (needs a project) stay
+    document.querySelector("#v-intake-review tr.icsubhead.routine.child [data-ira=routine]").click();
+    await until(()=>REV.some(r=>r.file===m.file&&r.done==="approved")&&/Approved 1 routine/.test(document.getElementById("snackT").textContent));
     out.afterGroup=REV.filter(r=>r.file===m.file).map(r=>[r.kind,r.done||"pending"]); out.groupSnack=document.getElementById("snackT").textContent;
     // rejecting the minutes offers to reject what's left
-    document.querySelector("tr.mparent [data-act=r]").click();
+    document.querySelector("#v-intake-review tr.irprop[data-kind=draft] [data-ira=reject]").click();
     await until(()=>/Reject them too/.test(document.getElementById("snackU").textContent));
     out.rejectSnack=[document.getElementById("snackT").textContent,document.getElementById("snackU").textContent];
     await UNDO(); await until(()=>!REV.some(r=>r.file===m.file&&!r.done)); out.afterRejectAll=REV.filter(r=>r.file===m.file).map(r=>[r.kind,r.done||"pending"]);
@@ -135,17 +133,14 @@ class ReviewNestingTests(unittest.TestCase):
         self.assertTrue(m, "the page didn't finish")
         r = json.loads(m.group(1).replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&"))
         self.assertEqual(r["errors"], [])
-        kinds = [k for k, _ in r["layout"]]
-        p = kinds.index("parent")
-        self.assertEqual(kinds[p:p + 3], ["parent", "child", "child"])               # both ABC items under the minutes
-        self.assertTrue(any("Confirm data owner" in t for k, t in r["layout"] if k == "row"))   # not nested
-        self.assertEqual((r["toggle"].strip(), r["togOpen"]), ("2 items", "true"))   # BL-158: the chevron is an icon, open is aria-expanded
-        self.assertEqual(r["expanded"] - r["collapsed"], 2)                          # collapse hides the children
-        self.assertEqual(r["ticked"], ["Chase legal on the SOW"])                    # the new risk is never ticked
-        self.assertEqual(r["xTicked"], 1)
+        children = [t for k, t in r["layout"] if k == "child"]
+        self.assertTrue(any("Chase legal on the SOW" in t for t in children), children)         # both ABC items under the minutes
+        self.assertTrue(any("Confirm data owner" in t for k, t in r["layout"]))              # the DEF item of the same file: on the Intake page every item of a meeting is under it (the old page left other projects' items at project level)
+        self.assertGreaterEqual(r["open"] - r["closed"], 2)                          # closing the meeting hides its rows
+        self.assertEqual(r["reopened"], r["open"])
         self.assertEqual(sorted(r["afterGroup"]), [["actions", "approved"], ["actions", "pending"], ["draft", "pending"],
                                                    ["raid", "pending"]])                     # the DEF item needs a project
-        self.assertIn("1 still need approving one by one", r["groupSnack"])
+        self.assertIn("Approved 1 routine", r["groupSnack"])
         self.assertEqual(r["rejectSnack"], ["Minutes rejected. Its 2 items stay for review.", "Reject them too"])
         self.assertEqual(sorted(r["afterRejectAll"]), [["actions", "approved"], ["actions", "rejected"], ["draft", "rejected"],
                                                        ["raid", "rejected"]], "messages shown: " + " | ".join(r["snacks"]))

@@ -426,15 +426,15 @@ class PickerBrowserTests(LiveBrowserCase):
         return next(i for i in json.loads(self.prop.read_text())["items"] if i["n"] == ref)
 
     def open_new(self):
-        self.b.eval('go("review")')
+        self.b.eval(f'go("intake-review", {NEW_ROW}.n)')                                   # #232 C2: the Intake page
         self.b.wait(f'!!{NEW_ROW}')
         self.b.eval(f'openProposal({NEW_ROW}.n)')
         self.b.wait(f'!!document.querySelector({json.dumps(PICKED)})')
 
-    def test_the_review_list_itself_is_unchanged(self):
-        self.b.eval('go("review")')
-        self.b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
-        self.assertFalse(self.b.eval('!!document.querySelector("#reviewBody [data-rvrt]")'))   # only the peek and the menu have it
+    def test_the_intake_list_itself_is_unchanged(self):
+        self.b.eval('go("intake-review")')
+        self.b.wait('!!document.querySelector("#v-intake-review tr.irprop")')
+        self.assertFalse(self.b.eval('!!document.querySelector("#v-intake-review [data-rvrt]")'))   # only the peek has it (the row menu went with the old page)
 
     def test_pick_an_item_then_undo(self):
         b, sel = self.b, json.dumps(PICKED)
@@ -475,39 +475,30 @@ class PickerBrowserTests(LiveBrowserCase):
         self.assertEqual((it["op"], it["values"]["description"], it["decision"]), ("new", REBOOK, "pending"))
         b.wait(f'!!{NEW_ROW}')
 
-    def test_the_right_click_menu_offers_it_on_a_new_item_only(self):
+    def test_the_peek_offers_it_on_a_new_item_only(self):
+        """#232 C2: the old row's right-click menu entry went with the page; the peek's button is the way in."""
         b = self.b
-        b.eval('go("review")')
-        b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
-        label = "Update an existing item instead…"
-        menu = '[...document.querySelectorAll(".cxmenu [role=menuitem]")].map(x=>x.querySelector("span").firstChild.textContent)'
+        b.eval('go("intake-review")')
+        b.wait('!!document.querySelector("#v-intake-review tr.irprop")')
         upd = b.eval('REV.find(r=>!r.done&&r.kind==="update").n')
-        b.click(f'#reviewBody tr[data-n="{upd}"] td.title', button="right")
-        b.wait('!!document.querySelector(".cxmenu")')
-        self.assertNotIn(label, b.eval(menu))                                             # an update names its item already
-        b.key("Escape")
-        b.wait('!document.querySelector(".cxmenu")')
-        n = b.eval(f'{NEW_ROW}.n')
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title', button="right")
-        b.wait('!!document.querySelector(".cxmenu")')
-        self.assertIn(label, b.eval(menu))
-        b.eval(f'[...document.querySelectorAll(".cxmenu [role=menuitem]")].find(x=>x.querySelector("span").firstChild.textContent==={json.dumps(label)}).click()')
+        b.eval(f"openProposal({upd})")
+        b.wait("CUR&&CUR.mode==='proposal'&&document.getElementById('panel').classList.contains('on')")
+        self.assertFalse(b.eval(f"!!document.querySelector({json.dumps(PICKED)})"))        # an update names its item already
+        b.eval("closePanel()")
+        self.open_new()
+        b.click(PICKED)
         b.wait('!!document.querySelector(".pkpop [role=listbox] [role=option]")')
         self.assertTrue(b.eval('document.activeElement.matches(".pkpop [role=option]")'))
         b.key("Escape")
         b.wait('!document.querySelector(".pkpop")')
         self.assertEqual(self.item()["op"], "new")
 
-    def test_the_picker_still_opens_when_review_is_drawn_again_while_the_server_answers(self):
-        """The candidates come from the server; if Review is redrawn meanwhile (a refresh, slow CI), the picker opens on the new row."""
+    def test_the_picker_still_opens_when_the_peek_is_drawn_again_while_the_server_answers(self):
+        """The candidates come from the server; if the peek is redrawn meanwhile (a refresh, slow CI), the picker opens on the new button."""
         b = self.b
-        b.eval('go("review")')
-        b.wait(f'!!{NEW_ROW}')
-        b.eval("""{ const a=api; api=function(u,body){ const p=a.apply(this,arguments); return u==='/api/review/candidates'?p.then(r=>{ renderReview(); return r; }):p; }; }""")
-        n = b.eval(f'{NEW_ROW}.n')
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title', button="right")
-        b.wait('!!document.querySelector(".cxmenu")')
-        b.eval('[...document.querySelectorAll(".cxmenu [role=menuitem]")].find(x=>x.querySelector("span").firstChild.textContent==="Update an existing item instead…").click()')
+        self.open_new()
+        b.eval("""{ const a=api; api=function(u,body){ const p=a.apply(this,arguments); return u==='/api/review/candidates'?p.then(r=>{ drawPanel(); return r; }):p; }; }""")
+        b.click(PICKED)
         b.wait('!!document.querySelector(".pkpop [role=listbox] [role=option]")')
         b.key("Escape")
 

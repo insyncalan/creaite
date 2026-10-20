@@ -1707,6 +1707,7 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
   :root:not([data-motion="full"]) #askBtn.working::after,:root:not([data-motion="full"]) .askbtn[data-state=answering] .spark{animation:none}
   :root:not([data-motion="full"]) .sp-flash{animation:none;background-color:var(--warn-soft)}   /* BL-322: Sneak peek's flash holds still */
   :root:not([data-motion="full"]) .aispark{animation:none}                                          /* #117: the AI sparkle's slide-in */
+  :root:not([data-motion="full"]) #v-intake-review .icprog{animation:none;background-size:60% 100%}   /* #232-A: the drafting bar holds still */
 }
 :root[data-motion="reduce"] #askBtn.working::after,:root[data-motion="reduce"] .askbtn[data-state=answering] .spark{animation:none}   /* the ask pulses are removed, not just stopped */
 :root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:0s!important;transition-delay:0s!important;scroll-behavior:auto!important}
@@ -4124,6 +4125,58 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
 #v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 #v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
+.pfname+.pset{margin-left:6px;vertical-align:middle}
+/* ===== #232 Intake and Review, one page (v2.5.0; components/intakeReview/). From the locked mockup (18-10-2026b): the app's
+   tokens only, no new colours, so light, dark and both palettes follow. Scoped to #v-intake-review. ===== */
+#v-intake-review .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
+#v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
+#v-intake-review .icpipe .ar{align-self:center;color:var(--muted)}
+#v-intake-review .icsub{font-size:var(--fs-xs);color:var(--muted)}
+#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
+#v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
+#v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
+#v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
+#v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
+#v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
+#v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
+#v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:var(--fs-md);font-weight:600}
+#v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
+#v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
+#v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
+#v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
+@media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
+/* ===== #232-A Intake side: the meeting row's actions, progress, notes, the drop target (scoped to #v-intake-review) ===== */
+#v-intake-review .icprog{height:6px;border-radius:var(--r-sm);background:linear-gradient(90deg,transparent,var(--accent),transparent) no-repeat var(--sunk);background-size:35% 100%;border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px;animation:mhair calc(1600ms*var(--k)) var(--inout) infinite}   /* the run hairline's loop (mhair), on the track itself */
+#v-intake-review .icprog i{display:none}
+#v-intake-review .iccardacts{margin-top:8px}
+#v-intake-review .irnote{color:var(--warn)}
+@media (max-width:560px){#v-intake-review td.title{min-width:0}#v-intake-review .iracts{white-space:normal;width:auto;min-width:0}#v-intake-review .iracts .mini{margin:2px 0}}   /* a narrow window: the row's buttons wrap under each other, never clipped */
+#v-intake-review #irQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px;font-size:var(--ctl-fs)}   /* the Search box (#rvQ is the earlier Review page's) */
+#v-intake-review .ictrack{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}#v-intake-review .ictrack i{width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);display:inline-block}#v-intake-review .ictrack i.done{background:var(--muted)}#v-intake-review .ictrack i.now{background:var(--accent);border-color:var(--accent)}#v-intake-review .ictrack span.on{color:var(--ink);font-weight:600}
+#v-intake-review .icrack{margin:8px 0}#v-intake-review .icsum{margin:0 0 8px}#v-intake-review .irright{text-align:right;white-space:nowrap}
+#v-intake-review .icsep{align-self:stretch;width:1px;background:var(--line);margin:4px 6px}
+#v-intake-review .icbv{display:flex;align-items:center;gap:10px}#v-intake-review .icbi{display:inline-flex;color:var(--accent)}#v-intake-review .icbi svg{width:22px;height:22px}
+#v-intake-review .evbox[data-irstage=drafted] .icbi{color:var(--warn)}#v-intake-review .evbox[data-irstage=approved] .icbi{color:var(--ok)}#v-intake-review .evbox[data-irstage=all] .icbi{color:var(--muted)}
+#v-intake-review .icdrop{position:fixed;inset:0;z-index:var(--z-top);display:none;place-items:center;text-align:center;pointer-events:none;background:color-mix(in srgb,var(--bg) 82%,transparent);border:3px dashed var(--accent);font-size:var(--fs-lg)}
+#v-intake-review .icdrop.on{display:grid}
+#v-intake-review .irlist li{margin:2px 0}
+
+/* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
+#v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
+#v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
+#v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
+#v-intake-review .icchg .icsrc{font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
+#v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
+/* #232-B (release 2.6): an update proposal in the peek shows the whole item with the changed fields highlighted (the locked mockup's .chg, .updiff and a pending activity line) */
+.pk-chip.chg{background:var(--warn-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)} .pk-chip.chg s{color:var(--muted)} .pk-chip.chg b{color:var(--ink)}
+.pk-chip.chg:hover{background:var(--warn-soft)}
+.updiff{display:grid;gap:6px;font-size:var(--fs-lg);line-height:var(--lh-22);margin:6px 0} .updiff .old{color:var(--muted)} .updiff .old s{text-decoration-thickness:1px}
+.updiff .new{background:var(--warn-soft);border-radius:var(--r-md);padding:6px 8px;margin-left:-8px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)}
+.pk-fe.pending>div{background:var(--warn-soft);border-radius:var(--r-md);padding:4px 8px}
+.pk-desc.updnew{background:var(--warn-soft);border-radius:var(--r-md);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)}
+.pk-updtext{font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);overflow-wrap:anywhere} .pk-updact{margin-top:14px}
 /* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
    data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
    failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */

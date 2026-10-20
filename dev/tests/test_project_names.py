@@ -95,8 +95,8 @@ class Page(LiveBrowserCase):
         self.assert_clean("panel", "New action")
         self.b.eval("closePanel()")
 
-    def test_review_and_intake_and_files_and_activity_and_people(self):
-        for v, root in (("review", "v-review"), ("inbox", "v-inbox"), ("files", "v-files"), ("activity", "v-activity"), ("people", "v-people")):
+    def test_intake_and_files_and_activity_and_people(self):
+        for v, root in (("intake-review", "v-intake-review"), ("files", "v-files"), ("activity", "v-activity"), ("people", "v-people")):   # #232 C2: Review and Intake are one page
             self.view(v)
             self.assert_clean(root, v)
 

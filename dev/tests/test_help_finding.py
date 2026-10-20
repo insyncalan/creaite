@@ -21,7 +21,7 @@ sys.path.insert(0, str(REPO / "system" / "scripts"))
 sys.path.insert(0, str(REPO / "dev" / "tools"))
 import build_dashboard as bd  # noqa: E402
 
-SCREENS = ["today", "work", "review", "projects", "people", "notes", "intake", "files"]
+SCREENS = ["today", "work", "intake", "projects", "people", "notes", "files"]   # #232-C: Intake is one screen
 
 
 class DataTests(unittest.TestCase):
@@ -57,9 +57,9 @@ class DataTests(unittest.TestCase):
             self.assertNotIn("Jobs:", re.sub(r"<[^>]+>", " ", t["html"]))
 
     def test_a_dead_id_is_refused(self):
-        self.assertEqual(bd.help_check([{"id": "nope"}], {"review": {"title": "Review", "ids": ["start-the-day", "gone"], "ref": "nope"}},
-                                       self.tasks, {"review"}),
-                         ["Jobs: nope", "Screen Review: gone", "Screen Review: Reference nope"])
+        self.assertEqual(bd.help_check([{"id": "nope"}], {"work": {"title": "Work", "ids": ["start-the-day", "gone"], "ref": "nope"}},
+                                       self.tasks, {"work"}),
+                         ["Jobs: nope", "Screen Work: gone", "Screen Work: Reference nope"])
 
     def test_a_broken_screen_line_is_a_build_error_naming_the_line(self):
         for bad in ("Screen: Review review-and-approve-proposals", "Screen: Review -> a, b | Reference: review extra"):
@@ -226,7 +226,7 @@ class PageTests(unittest.TestCase):
           out.open=[$q("#cmdk").open,$q("#helpPanel").classList.contains("on"),VIEW];
           $q("#cmdk").close(); document.activeElement.blur(); key("?"); out.after=$q("#helpPanel").classList.contains("on");
           window.OUT=out;""")
-        self.assertEqual(o["open"], [True, False, "review"])
+        self.assertEqual(o["open"], [True, False, "intake-review"])
         self.assertTrue(o["after"])
 
     def test_slash_focuses_the_search_in_help_and_is_ask_creaite_elsewhere(self):
@@ -271,7 +271,7 @@ class PageTests(unittest.TestCase):
         o = self.probe("""
           go("review"); const btn=$q("#themeBtn"); btn.focus(); key("?");
           const p=$q("#helpPanel");
-          out.open=[p.classList.contains("on"),p.textContent.includes("Help · Review"),$a("#helpPanel .hpn-jobs li").length,!!$q("#helpPanel [data-hpn^=reference]"),!!$q("#hpnFind"),VIEW];
+          out.open=[p.classList.contains("on"),p.textContent.includes("Help · Intake"),$a("#helpPanel .hpn-jobs li").length,!!$q("#helpPanel [data-hpn^=reference]"),!!$q("#hpnFind"),VIEW];
           openChat(); out.exclusive=[p.classList.contains("on"),$q("#chat").classList.contains("on")];
           key("?"); out.back=[p.classList.contains("on"),$q("#chat").classList.contains("on")];
           key("Escape"); out.esc=[p.classList.contains("on"),$q("#chat").classList.contains("on")]; btn.focus(); await wait(10);
@@ -281,7 +281,7 @@ class PageTests(unittest.TestCase):
           go("settings"); key("?"); out.noList=[VIEW,p.classList.contains("on")];
           go("work"); key("?"); $q("#hpnFind").click(); await wait(30); out.find=[VIEW,document.activeElement.id,p.classList.contains("on")];
           window.OUT=out;""")
-        self.assertEqual(o["open"], [True, True, 2, True, True, "review"])
+        self.assertEqual(o["open"], [True, True, 4, True, True, "intake-review"])
         self.assertEqual(o["exclusive"], [False, True])                                 # ask creaite closes the panel
         self.assertEqual(o["back"], [True, False])                                      # and the panel closes ask creaite
         self.assertEqual(o["esc"], [False, False])
@@ -293,15 +293,15 @@ class PageTests(unittest.TestCase):
 
     def test_the_foot_line_is_on_the_eight_screens(self):          # #248: seven now; People has the first-visit line only
         o = self.probe("""
-          const names={today:"Today",work:"Work",review:"Review",projects:"Projects",people:"People",notes:"Notes",intake:"Intake",files:"Files"};
-          const view={today:["today"],work:["work"],review:["review"],projects:["projects"],people:["people"],notes:["notes",P[0].code],intake:["inbox"],files:["files"]};
+          const names={today:"Today",work:"Work",ir:"Intake",projects:"Projects",people:"People",notes:"Notes",files:"Files"};
+          const view={today:["today"],work:["work"],ir:["intake-review"],projects:["projects"],people:["people"],notes:["notes",P[0].code],files:["files"]};
           const res={};
           for(const k of Object.keys(names)){ go(...view[k]); await wait(20); helpScreenSync(); const f=$q("#hFoot");
             res[k]=[f.hidden,f.textContent.trim(),f.closest(".view")&&f.closest(".view").id]; }
           go("activity"); helpScreenSync(); res.activity=$q("#hFoot").hidden;
           out.res=res; window.OUT=out;""")
-        names = {"today": "Today", "work": "Work", "review": "Review", "projects": "Projects", "people": "People",
-                 "notes": "Notes", "intake": "Intake", "files": "Files"}
+        names = {"today": "Today", "work": "Work", "ir": "Intake", "projects": "Projects", "people": "People",
+                 "notes": "Notes", "files": "Files"}
         for k, n in names.items():
             if k == "people":           # #248: the People page v2 drops the permanent line (Alan, 19-10-2026); its first-visit line stays
                 self.assertTrue(o["res"][k][0], k)
@@ -311,12 +311,12 @@ class PageTests(unittest.TestCase):
 
     def test_the_empty_state_links_to_how_the_screen_works(self):
         o = self.probe("""
-          out.link=howLink("review"); go("review"); await wait(20);
+          out.link=howLink("intake"); go("review"); await wait(20);
           const a=document.createElement("a"); a.innerHTML=out.link; document.body.append(a); a.firstElementChild.click(); await wait(30);
           out.went=[VIEW,HELPARG];
           window.OUT=out;""")
-        self.assertIn("How Review works", o["link"])
-        self.assertEqual(o["went"], ["help", "reference-review"])
+        self.assertIn("How Intake works", o["link"])
+        self.assertEqual(o["went"], ["help", "reference-intake"])
 
     def test_the_first_visit_line(self):
         o = self.probe("""
@@ -341,7 +341,7 @@ class PageTests(unittest.TestCase):
           $q("#cmdk").close(); document.activeElement.blur(); helpScreenSync(); out.dlgAfter=shown();
           go("people"); helpScreenSync(); out.people=shown(); openChat(); helpScreenSync(); out.chat=!shown(); closeChat(); helpScreenSync(); out.chatAfter=shown();
           go("projects"); helpScreenSync(); out.proj=shown(); openHelpPanel("projects"); helpScreenSync(); out.hp=!shown(); closeHelpPanel(); helpScreenSync(); out.hpAfter=shown();
-          go("inbox"); helpScreenSync(); out.intake=shown(); const q=document.createElement("input"); document.body.append(q); q.focus(); helpScreenSync(); out.typing=!shown(); q.blur(); q.remove(); helpScreenSync(); out.typingAfter=shown();
+          go("notes",P[0].code); helpScreenSync(); out.intake=shown(); const q=document.createElement("input"); document.body.append(q); q.focus(); helpScreenSync(); out.typing=!shown(); q.blur(); q.remove(); helpScreenSync(); out.typingAfter=shown();
           window.OUT=out;""")
         self.assertEqual(o["today"], [True, "dayband", "Press ? for help with Today"])      # after the band, never inside it
         self.assertTrue(o["keyAtOnce"])
@@ -362,7 +362,7 @@ class PageTests(unittest.TestCase):
 
     def test_the_question_mark_clears_the_line_and_opens_the_panel(self):
         o = self.probe("""
-          try{ localStorage.removeItem("creaite-help-line-review"); }catch(e){}
+          try{ localStorage.removeItem("creaite-help-line-intake"); }catch(e){}
           S.helpLine=true; go("review"); helpScreenSync(); out.before=isOn($q("#hFirst"));
           key("?"); helpScreenSync(); out.after=[!isOn($q("#hFirst")),$q("#helpPanel").classList.contains("on")];
           closeHelpPanel(); helpScreenSync(); out.later=!isOn($q("#hFirst"));
@@ -448,7 +448,7 @@ class NoShiftTests(LiveBrowserCase):
     def test_nothing_moves_when_the_line_clears_on_a_click_a_key_or_the_chat(self):
         for width in (900, 1400):
             self.b.resize(width, 900)
-            for view, target in (("today", "#dayHead"), ("work", "#v-work h1"), ("review", "#v-review h1"), ("people", "#v-people h1")):
+            for view, target in (("today", "#dayHead"), ("work", "#v-work h1"), ("review", "#v-intake-review h1"), ("people", "#v-people h1")):
                 with self.subTest(width=width, view=view):
                     self.fresh(view)
                     on, y0, h = self.anchor()
@@ -469,7 +469,7 @@ class NoShiftTests(LiveBrowserCase):
         self.b.resize(1400, 900)
         self.fresh("today")
         self.b.click("#dayHead")
-        self.b.eval("localStorage.setItem('creaite-help-line-review','1'); go('review'); helpScreenSync()")
+        self.b.eval("localStorage.setItem('creaite-help-line-intake','1'); go('review'); helpScreenSync()")
         self.assertEqual(self.b.eval("document.getElementById('hFirst').hidden"), True)
 
     def test_the_foot_line_is_at_the_foot_of_the_page_never_inside_the_day_band(self):

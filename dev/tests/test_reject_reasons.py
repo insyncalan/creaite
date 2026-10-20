@@ -193,46 +193,50 @@ class ReasonMenu(LiveBrowserCase):
     def n(self, text):
         return self.b.eval(f"REV.find(r=>r.rec.t.startsWith({text!r})).n")
 
-    def test_a_spot_repeats_off_shows_no_looks_like(self):
-        """BL-290: with Settings › General › AI drafts › Spot repeats off, neither the row nor the panel says Looks like."""
+    def show(self):
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
+        b.eval("go('intake-review')")
+        b.wait("!!document.querySelector('#v-intake-review [data-irsec=other]') && !!document.querySelector('#v-intake-review [data-irsec=other]').parentElement.querySelector('tr.irprop')")
+
+    def row(self, n):
+        return f'#v-intake-review tr.irprop[data-irn="{n}"]'
+
+    def test_a_spot_repeats_off_shows_no_looks_like(self):
+        """BL-290: with Settings › General › AI drafts › Spot repeats off, the panel does not say Looks like.
+        (#232 C2: the Intake page's rows never carried the mark; the old Review row's was page code.)"""
+        b = self.b
+        self.show()
         n1 = b.eval(f"(REV.find(r=>r.dup&&r.dup.id==={self.dup!r}&&!r.done)||{{}}).n")
         if not n1:
             self.skipTest("rejected by another test in this class's server")
-        row = f'#reviewBody tr[data-n="{n1}"]'
         try:
-            b.eval("S.drafting={...(S.drafting||{}),repeat:false}; renderReview()")
-            b.wait(f"document.querySelector('{row}')")
-            self.assertNotIn("Looks like", b.eval(f"document.querySelector('{row}').textContent"))
-            self.assertIsNone(b.eval(f"document.querySelector('{row} .dupt')"))
-            b.click(f"{row} td.title", count=2)
+            b.eval("S.drafting={...(S.drafting||{}),repeat:false}; irTick.value++")
+            b.click(f"{self.row(n1)} td.title")
             b.wait("document.querySelector('#pkPropTop .pk-propline')")
             self.assertIsNone(b.eval("document.querySelector('#pkPropTop .rvdupnote')"))
             self.assertNotIn("Looks like", b.eval("document.getElementById('pkPropTop').textContent"))
             b.eval("closePanel()")
         finally:
-            b.eval("S.drafting={...(S.drafting||{}),repeat:true}; renderReview()")
-        b.wait(f"document.querySelector('{row} .dupt')")
+            b.eval("S.drafting={...(S.drafting||{}),repeat:true}; irTick.value++")
+        b.click(f"{self.row(n1)} td.title")
+        b.wait("document.querySelector('#pkPropTop .rvdupnote')")
+        b.eval("closePanel()")
 
     def test_the_menu_by_mouse_and_keyboard_and_r_alone(self):
         """BL-315 replaced BL-133's four-item menu with the seven reasons, Use each guess and No reason; R alone opens it too."""
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
+        self.show()
         n1 = self.n(b.eval(f"REV.find(r=>r.dup&&r.dup.id==={self.dup!r}).rec.t"))
-        self.assertIn(f"Looks like {self.dup} (same project, open)", b.eval(f"document.querySelector('#reviewBody tr[data-n=\"{n1}\"]').textContent"))
-        b.click(f'#reviewBody tr[data-n="{n1}"] [data-act=rr]')                         # the mouse
+        b.click(f'{self.row(n1)} [data-ira=reject]')                                    # the mouse
         b.wait("document.getElementById('rvReason')")
         self.assertEqual(b.eval("[...document.querySelectorAll('#rvReason [role=menuitem]')].map(s=>s.dataset.reason)"),
                          ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team", "guess", ""])
         self.assertIn(f"of {self.dup}", b.eval("document.querySelector('#rvReason [data-reason=Duplicate]').textContent"))
         b.click('#rvReason [data-reason="Duplicate"]')
         b.wait(f"!REV.some(r=>r.dup&&r.dup.id==={self.dup!r}&&!r.done)", 15)
-        # keyboard: Shift+R on the cursor row, then 1
+        # keyboard: Shift+R on the focused row, then 1
         n3 = self.n("Keyboard one")
-        b.eval(f"RHL.clear(); RSEL=[...document.querySelectorAll('#reviewBody tr[data-n]')].findIndex(t=>+t.dataset.n==={n3}); renderReview(); document.activeElement.blur()")
+        b.eval(f"document.querySelector('{self.row(n3)}').focus()")
         b.key("R", modifiers=8)
         b.wait("document.getElementById('rvReason') && document.getElementById('rvReason').contains(document.activeElement)")
         b.key("1")
@@ -240,20 +244,19 @@ class ReasonMenu(LiveBrowserCase):
         # R alone opens the menu now; 0 is no reason
         b.wait("REV.some(r=>/^Plain one/.test(r.rec.t)&&!r.done)", 15)
         n2 = self.n("Plain one")
-        b.eval(f"RHL.clear(); RSEL=[...document.querySelectorAll('#reviewBody tr[data-n]')].findIndex(t=>+t.dataset.n==={n2}); renderReview(); document.activeElement.blur()")
+        b.eval(f"document.querySelector('{self.row(n2)}').focus()")
         b.key("r")
         b.wait("document.getElementById('rvReason') && document.getElementById('rvReason').contains(document.activeElement)")
         b.key("0")
         b.wait("!document.getElementById('rvReason')")
-        # the bar: two at once, For another team
-        b.wait("REV.filter(r=>/for the bar/.test(r.rec.t)&&!r.done).length===2", 15)
-        ns = b.eval("REV.filter(r=>/for the bar/.test(r.rec.t)&&!r.done).map(r=>r.n)")
-        b.eval(f"RHL.clear(); {json.dumps(ns)}.forEach(n=>RHL.add(n)); rvSyncChk(); renderReview()")
-        b.wait("!document.getElementById('rvReason') && !document.getElementById('rvbar').hidden", 10)
-        b.click("#bulkReject")
-        b.wait("document.getElementById('rvReason')")
-        b.key("7")
-        b.wait("/Rejected 2 as For another team/.test(document.getElementById('rvresult').textContent)", 15)
+        # two more, For another team (the old bar did these together; the Intake page takes one row at a time)
+        for _ in range(2):
+            b.wait("REV.some(r=>/for the bar/.test(r.rec.t)&&!r.done)", 15)
+            nb = b.eval("REV.find(r=>/for the bar/.test(r.rec.t)&&!r.done).n")
+            b.click(f"{self.row(nb)} [data-ira=reject]")
+            b.wait("document.getElementById('rvReason')")
+            b.key("7")
+            b.wait(f"!REV.some(r=>r.n=={nb}&&!r.done)", 15)
         items = None
         for _ in range(100):
             items = self.staged()
@@ -272,12 +275,11 @@ class ReasonMenu(LiveBrowserCase):
 
     def test_the_panel_offers_reject_as_duplicate(self):
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
+        self.show()
         n1 = b.eval(f"(REV.find(r=>r.dup&&r.dup.id==={self.dup!r}&&!r.done)||{{}}).n")
         if not n1:
             self.skipTest("rejected by the other test in this class's server")
-        b.click(f'#reviewBody tr[data-n="{n1}"] td.title', count=2)
+        b.click(f'{self.row(n1)} td.title')
         b.wait("document.querySelector('#pkPropTop .rvdupnote')")                       # BL-177: the peek layout keeps the note
         self.assertIn(f"Reject as duplicate of {self.dup}", b.eval("document.querySelector('#pkPropTop .rvdupnote').textContent"))
 

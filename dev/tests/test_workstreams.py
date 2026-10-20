@@ -324,8 +324,8 @@ class DashboardTests(unittest.TestCase):
           row().querySelector("[data-ws-save]").click(); await wait(80); await VQ; await wait(30);
           document.querySelector('#psWs [data-ws-edit="Testing"]').click(); await wait(30); row().querySelector("[data-ws-retire]").click(); await wait(80); await VQ; await wait(30);
           const mgr=document.getElementById("psWs").innerText, renamedItem=A.find(a=>a.t==="Profile the data extract").ws;
-          // Review: the flagged item offers to add its workstream
-          go("review"); await wait(30); const q=document.querySelector(".wsq")?.innerText||"";
+          // Intake: the flagged item offers to add its workstream
+          go("intake-review"); await wait(150); const q=document.querySelector("#v-intake-review .wsq")?.innerText||"";
           window.OUT={card, cockpit, form, ask, box, offered, wsAt, mgr, renamedItem, q,
             files:Object.fromEntries(Object.entries(FILES).filter(([k])=>k.startsWith("system/staging/proposed-")))};""")
 

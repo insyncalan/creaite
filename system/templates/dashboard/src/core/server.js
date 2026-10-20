@@ -2,6 +2,8 @@
 /* core/server.js (BL-231 step 2b): vault access, the live server (`api`, `reloadData`, `applyNow`), proposals (`writeProposal`, `save`), the snackbar and undo, status, the pulse, the event stream and the debug log's error hook.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
+import { irLiveCounts, irModelBehind } from "../stores/intakeReview.js";   /* #232-C */
+import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { reportsBadge, spaceCode } from "../stores/reporting.js";
@@ -12,23 +14,22 @@ import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
 import { openChat, reattach, say } from "../ask.js";
 import { A, DEC, FILES, P, R, REMINDERS, REV } from "./data.js";
-import { $, $$, addHTML, esc, html, putHTML, raw } from "./dom.js";
+import { $, $$, esc, html, putHTML, raw } from "./dom.js";
 import { typing } from "./keys.js";
 import { mCells, mCounts } from "./motion.js";
 import { go, tabTitle } from "./nav.js";
 import { D, days, fd, fdMd, fdText, mK, mSay, nowStamp, prio, reduced, S, TODAY } from "./page.js";
 import { shared } from "./state.js";
+import { rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
-import { inboxBadge, renderInbox } from "../intake.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
-import { renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
 import { ownerFinal, renderPerson, row, savedNow, vipPoll, WSD, wsNewOf } from "../settings.js";
 import { renderToday } from "../today.js";
-import { hit, items, renderPeople, renderWork, rvPaint } from "../work.js";
+import { hit, items, renderPeople, renderWork } from "../work.js";
 /* ======================= vault access (Step 4b): File System Access API, Chrome or Edge ======================= */
 /* The browser remembers the vault folder (IndexedDB). Every write goes through one queue (vq) so concurrent saves
    can't overwrite each other. Edits become proposals in system/staging/; settings go to settings.json. */
@@ -86,20 +87,13 @@ export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolea
 export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
   return f?`${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`:t; };
 /* fresh data after an apply or undo */
-/* BL-216: Review keeps its selection and highlight across a reload (rvHold before, rvRestore after) */
-export function rvHold(){ const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n); return {keys,ck:cr&&rvKey(cr)}; }
-export function rvRestore(h){ if(!h) return; const {keys,ck}=h;
-  RHL.clear(); REV.filter(r=>keys.includes(rvKey(r))&&!r.done).forEach(r=>RHL.add(r.n)); rvSyncChk();
-  if(shared.VIEW==="review"){ renderReview(); if(ck){ const r=REV.find(x=>rvKey(x)===ck), i=r?$$("#reviewBody tr[data-n]").findIndex(tr=>+tr.dataset.n===r.n):-1; if(i>=0){ shared.RSEL=i; rvPaint(); } } } }
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
-    const hold=rvHold();
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
   Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b));
   shared.ACT=n.activity; R.forEach(x=>x.pr=prio(x.imp,x.lik)); shared.DATA_AT=n.data_at||shared.DATA_AT;
   [...A,...R,...DEC,...P].forEach(o=>["t","upd","resp","cm","cmd","reason","current"].forEach(k=>{ if(typeof o[k]==="string") o[k]=(k==="current"?fdMd:fdText)(o[k]); })); shared.ACT.forEach(a=>a.what=fdText(a.what));
   ovReapply();   /* BL-304: a change still saving stays on screen */
   refreshAll(); }catch(e){} })();
-    rvRestore(hold);
     if(SERVED&&PULSE.v!=null&&!PULSE.busy){ const r=await pulseGet(); if(r&&!PULSE.stale){ PULSE.v=r.v; PULSE.pending=r.pending; } }   /* BL-110: take the new fingerprint, so his own saves don't cause a second reload */
   }finally{ PULSE.reloads--; }
   await pkReconcile();
@@ -111,7 +105,7 @@ export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=applyWords(r.message); return r; }
 export let undoApply = async function(id,ids){ const u=await api("/api/undo",{apply_id:id}); if(!(ids&&await refreshRecords(ids))) await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };   /* BL-304: ids, just those items again */
 /* BL-304: just these items again (Review keeps its selection; the peek's staging is reconciled), or false */
-export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{hold:rvHold,restore:rvRestore,after:async()=>{ await pkReconcile(); }}); }
+export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{after:async()=>{ await pkReconcile(); }}); }
 /* several quick decisions (bulk approve) become one apply */
 export let APPLYT=null, APPLYN=0;
 export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
@@ -128,10 +122,10 @@ export async function reviewViaServer(r,decision,modes){ const res=await api("/a
 /* re-extract: rebuild a meeting's proposed items from its edited draft */
 export async function refreshItems(r){ const res=await api("/api/refresh",{file:r.file}); await reloadData();
   openChat(); await say(res.ok?res.message.replace(/^.*problem\(s\)\n/,""):oneLine(res.message)); }
-/* BL-149 (sprint-ux): a conflict is settled on its row in Review (Keep current or Use this one), not in the chat. BL-231 step 2b
+/* BL-149 (sprint-ux): a conflict is settled on its row in Intake (Keep current or Use this one), not in the chat. BL-231 step 2b
    folded in the replacement that Today's BL-149 block (script/0027) assigned at load; the chat version it replaced never ran. */
-export async function conflictChoice(r){ const tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`), b=tr&&tr.querySelector('[data-act="co"]');
-  if(shared.VIEW!=="review") go("review"); snack("This conflicts with a newer change: choose Keep current or Use this one on its row"); (b||tr)?.focus?.(); }
+export async function conflictChoice(r){ if(shared.VIEW!=="intake-review") go("intake-review",r.n);   /* #232-C2: the page opens on its proposal */
+  snack("This conflicts with a newer change: choose Keep current or Use this one on its row"); }
 export let ALERT0=null; shared.LIVELINK=false;
 export async function checkLive(){ if(SERVED){ try{ const r=await fetch("/health",{cache:"no-store"}); setLive(r.ok); }catch(e){ setLive(false); } return; }
   /* ===== BL-212 (sprint-ui-audit) ===== /health sends no cross-origin header now, so a page opened from a file can't read it;
@@ -352,7 +346,7 @@ export async function applyPending(){ if(viaServer()){ const r=await applyNow();
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
   if(shared.VIEW==="psettings") psTick.value++;   /* #228: the project settings page redraws with the fresh data */
-  status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
+  status(); renderBadge(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="intake-review"){ renderIntakeReview(); if(!shared.LOADING) rjLoadGuesses(); } if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }
     if(cnts) $$("#v-today .th .cnt").forEach(e=>{ const k=e.id||e.parentElement.id; if(cnts.has(k)&&cnts.get(k)!==e.textContent.trim()) hit.push(e); });
@@ -363,7 +357,9 @@ export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P
       if(shared.VIEW==="milestones"&&!(document.activeElement&&["mvNote","mvRbWhy","mvAdjWhy"].includes(document.activeElement.id))) renderMilestones();
       if(shared.MV.peek&&!shared.MV.add&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw(); } }   /* BL-245: once the Milestones block has run (a reload with staged peek changes refreshes before it) */
   if(shared.PREPEV&&$("#prepDlg")&&$("#prepDlg").open) drawPrep(); }   /* BL-286 E: an applied edit shows in the Prep popup */
-export function renderBadge(){ const n=REV.filter(r=>!r.done).length; setRailCount("review",n); reportsBadge(); tabTitle(); }   /* BL-337: Reports' count */
+export function renderBadge(){ const c=irLiveCounts(), n=c.badge;   /* #232-C: ready meetings and files plus proposals to approve: the same number Today's line and the page show */
+  setRailCount("review",n,n?`${n} for Intake: ${c.ready} ready to process, ${c.to_approve} to approve`:"");
+  reportsBadge(); tabTitle(); }   /* BL-337: Reports' count */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0021's place) */
 export function bootLive(){
 if(SERVED){ if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
@@ -447,6 +443,7 @@ export async function evFlush(){ EVS.timer=null;
     $("#newChip").classList.add("on"); return; }   /* typing: after, as the pulse waits, with the chip showing that something waits */
   const prev=PULSE.pending;
   if(!await refreshRecords(ids)){ pulseCheck(); return; }
+  if(shared.VIEW==="intake-review"&&irModelBehind()) await reloadData();   /* #232-C: the quick refresh brought proposals the Intake model lacks (the counts already include them): the page being shown needs the whole data */
   if(!PULSE.stale) $("#newChip").classList.remove("on");   /* the pulse's own wait (a full reload still to come) keeps it */
   if(prev!=null&&PULSE.pending!=null&&PULSE.pending>prev){ const n=PULSE.pending-prev; snack(`${n} new item${n===1?"":"s"} in Review`); } }   /* as pulseReload says it */
 /* ===== end BL-253 ===== */

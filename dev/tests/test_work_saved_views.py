@@ -59,7 +59,7 @@ class Views(LiveBrowserCase):
     def saved(self, tab="actions"):
         return json.loads((self.v.root / "system/config/settings.json").read_text())["work"]["saved_views"].get(tab, [])
 
-    def settle(self, read, want, secs=10):
+    def settle_until(self, read, want, secs=10):
         """The page changes its own list first and writes settings.json a moment later (an await), so a test that reads the file
         straight after the page changed polls until it shows `want` (#152: on a slow macOS runner the write came after the read)."""
         end, got = time.time() + secs, None
@@ -71,10 +71,10 @@ class Views(LiveBrowserCase):
         self.assertEqual(got, want)
 
     def settled_names(self, want):
-        self.settle(lambda: [v["name"] for v in self.saved()], want)
+        self.settle_until(lambda: [v["name"] for v in self.saved()], want)
 
     def settled_default(self, key, want):
-        self.settle(lambda: json.loads((self.v.root / "system/config/settings.json").read_text())["defaults"][key], want)
+        self.settle_until(lambda: json.loads((self.v.root / "system/config/settings.json").read_text())["defaults"][key], want)
 
     def save_as(self, name):
         b = self.b

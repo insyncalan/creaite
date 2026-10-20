@@ -27,8 +27,8 @@ from split_dashboard import readable_page  # noqa: E402
 # every ## heading of the old single-page Help, less "Guides" (replaced by a sentence in Reference's lead-in)
 OLD_HEADINGS = [
     "Keyboard shortcuts", "What the icons mean", "Opening the dashboard", "Working with lists", "How saving works", "Updating creaite", "Today",
-    "Project page", "Reports", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The Reporting page", "AI drafts", "Review", "Intake", "Files",
-    "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
+    "Project page", "Reports", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The Reporting page", "AI drafts", "Approving proposals", "Meetings and files", "Files",
+    "Intake", "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
     "Word documents and permissions in ask creaite", "Commands for Claude", "Open creaite as an app", "Live server and backups", "Troubleshooting"]
 GROUPS = ["Every day", "Meetings", "Keeping it right", "Reporting", "Admin"]
 
@@ -70,7 +70,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual([s["title"] for s in o["stages"]], ["Material arrives", "Claude drafts", "Review", "Apply", "See and report"])
         self.assertEqual(len(o["steps"]), 4)                                           # the first hour
         self.assertEqual(len(o["rhythm"]), 4)
-        self.assertEqual(o["views"], ["Today", "Intake", "Projects", "Reports", "Work", "People", "Review", "Files", "Settings"])
+        self.assertEqual(o["views"], ["Today", "Intake", "Projects", "Reports", "Work", "People", "Files", "Settings"])
         self.assertGreaterEqual(len(o["say"]), 9)
         self.assertEqual(len(o["rules"]), 4)
         html = self.tab["start"]
@@ -84,7 +84,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(html.count('class="hp-rule"'), 4)
         self.assertEqual(html.count('class="hp-step"'), 4)
         self.assertEqual(html.count('class="hp-beat"'), 4)
-        self.assertEqual(html.count('class="hp-view"'), 9)
+        self.assertEqual(html.count('class="hp-view"'), 8)
         self.assertIn("<thead>", html)                                                 # the phrasebook has its heading row
         self.assertIn('<span class="hp-say">process new minutes</span>', html)         # phrases are chips
 
@@ -289,7 +289,7 @@ class PageTests(unittest.TestCase):
           out.task=ckItems("hand over someone").filter(i=>i.g==="Help"&&i.h==="How do I…").map(i=>[i.l,i.h]);   /* #158: the best three by line follow the title rows */
           out.section=ckItems("early warn").filter(i=>i.g==="Help"&&i.h==="Reference").map(i=>[i.l,i.h]);
           const howdo=ckItems("how do i"), nt=HD.tasks.length; out.nt=nt; out.howdo=[howdo[0].l, howdo.slice(1,nt+1).every(i=>i.g==="Help"&&i.h==="How do I…"), howdo[1].l, howdo[nt].l];
-          const help=ckItems("help"); out.help=[help.slice(0,3).map(i=>i.l), help.filter(i=>i.g==="Help"&&!i.h.includes("›")).length, help.findIndex(i=>i.l==="Help: Review"), help.findIndex(i=>i.l==="Help: Review and approve proposals")];
+          const help=ckItems("help"); out.help=[help.slice(0,3).map(i=>i.l), help.filter(i=>i.g==="Help"&&!i.h.includes("›")).length, help.findIndex(i=>i.l==="Help: Approving proposals"), help.findIndex(i=>i.l==="Help: Review and approve proposals")];
           out.hint=ckItems("how do i…").length>0;
           // choosing one, the way the palette does: type, arrow, Enter
           go("today"); openCk(); const box=document.getElementById("cmdkIn"); box.value="hand over someone"; box.dispatchEvent(new Event("input",{bubbles:true}));
@@ -305,7 +305,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["nt"], len(bd.help_sections()["tasks"]))
         self.assertEqual(o["howdo"], ["Help: How do I…", True, "Help: Start the day", "Help: Fix a stopped server and other problems"])   # the tab, then every task
         self.assertEqual(o["help"][0], ["Help: Start here", "Help: How do I…", "Help: Reference"])
-        self.assertEqual(o["help"][1], 4 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
+        self.assertEqual(o["help"][1], 4 + o["nt"] + 37)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
         self.assertGreater(o["help"][3], 0)
         self.assertLess(o["help"][3], o["help"][2])                                    # tasks come before reference sections
         self.assertTrue(o["hint"])
@@ -418,7 +418,7 @@ class FirstVisitTests(unittest.TestCase):
 
     def test_an_address_is_never_overridden(self):
         o = self.load(False, "#review")
-        self.assertEqual(o["view"][0], "review")
+        self.assertEqual(o["view"][0], "intake-review")                                # #232: #review opens Intake
 
     def test_it_is_marked_seen_with_a_logged_settings_write(self):
         seed = json.dumps((self.v.root / "system/config/settings.json").read_text(encoding="utf-8"))

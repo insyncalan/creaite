@@ -2,6 +2,7 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { irLiveCounts, irModel } from "./stores/intakeReview.js";   /* #232-C */
 import { closeHelpPanel } from "./helpscreen.js";
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
 import { needsMe, thisWeek } from "./stores/reporting.js";
@@ -9,6 +10,7 @@ import { clientReportOn } from "./stores/reportingSettings.js";
 import { resumeDeleteNote } from "./components/notes/DeleteNote.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
+import { irAsk } from "./stores/intakeReview.js";
 import { noteCur, noteFlush, openNote } from "./stores/notes.js";
 import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
@@ -22,14 +24,14 @@ import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
-import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, renderMeetings } from "./intake.js";
+import { previewInbox } from "./core/intakeApi.js";
+import { irCanProcess, irPickFiles, irProcess, irProcessAll } from "./components/intakeReview/actions.js";   /* #232-C2: the palette's Intake actions are the page's own */
 import { prepPage } from "./meetings.js";
 import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
 import { mdHtml, newItemOf, norm, openNew, openProject, openRecord, pkArr, pkCommit, pkPersist, pkStatuses, pkUndoLast, REC, validate } from "./panel.js";
-import { openGen, openPrep, pickImage, prepOf, startCurEdit, vsAskSync } from "./projects.js";
+import { openGen, pickImage, startCurEdit, vsAskSync } from "./projects.js";
 import { railPopOpen } from "./rail.js";
-import { decide } from "./review.js";
 import { ownerFinal, peopleCk, PERS, renderSettings, resolvePerson, row, VIPD } from "./settings.js";
 import { DC, longDay, pkAdd, plur, tl } from "./today.js";
 import { allViews, applyView, items, itemsMove, loadTab, rows, saveTab } from "./work.js";
@@ -578,7 +580,7 @@ export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "no
    at once; a confirmed write stops once the step running now has finished. What's shown so far is kept. */
 export let ATTACHED=null; shared.RUN=null;
 export const SENDI=ic("arrowup"), STOPI=ic("stop");   /* BL-161 */
-export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
+export function setRunning(on){ irAsk.value=!!on||!!shared.BUSY; const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
 export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; const res=await api("/api/ask/stop",{run:shared.RUN.id});
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
@@ -835,8 +837,8 @@ export async function fillThumbs(root){ for(const t of root.querySelectorAll("[d
 export const imgFiles=dt=>dt?[...dt.files].filter(f=>f.type.startsWith("image/")):[];
 export let SENDIMG=[];
 export let send = function(text){ const sent=(async text=>{ text=(text??$("#chIn").value).trim(); const imgs=shared.PIMG.filter(p=>p.id).map(p=>p.id); if(shared.RUN&&(text||imgs.length)&&viaServer()&&await sendQueued(text,imgs)) return; if(shared.BUSY||(!text&&!imgs.length)) return; if(shared.PIMG.some(p=>!p.id)){ imgFlash("Wait for the image to finish uploading"); return; }
-  if(!text) text=imgs.length>1?"Please look at these images.":"Please look at this image."; shared.BUSY=true; $("#chIn").value=""; acClose(); SENDIMG=imgs; shared.PIMG=[]; drawThumbs();
-  const d=addEl("msg u",html`${text}${raw(imgThumbsHtml(imgs))}`); fillThumbs(d); try{ await handle(text); } finally{ shared.BUSY=false; SENDIMG=[]; } })(text);
+  if(!text) text=imgs.length>1?"Please look at these images.":"Please look at this image."; shared.BUSY=true; irAsk.value=true; $("#chIn").value=""; acClose(); SENDIMG=imgs; shared.PIMG=[]; drawThumbs();
+  const d=addEl("msg u",html`${text}${raw(imgThumbsHtml(imgs))}`); fillThumbs(d); try{ await handle(text); } finally{ shared.BUSY=false; irAsk.value=!!shared.RUN; SENDIMG=[]; } })(text);
   if(text==null&&!$("#chIn").value){ clearTimeout(DRAFTT); draftClear(); CHREC.i=-1; } return sent; };   /* the draft is cleared once a typed message has gone */
 /* BL-257: sent while a run works: queued with the server (true), or false when the run has just ended (sent as usual) */
 export async function sendQueued(text,imgs){ if(shared.PIMG.some(p=>!p.id)){ imgFlash("Wait for the image to finish uploading"); return true; }
@@ -993,8 +995,8 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 /* ======================= command palette ======================= */
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
-  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length;   /* BL-337 */
-  [["today","Today",""],["inbox","Intake",nNew?`${nNew} new`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["review","Review",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
+  const nRep=needsMe().length, nIr=irLiveCounts().badge, nReady=irLiveCounts().ready;   /* #232-C: one Go to entry, with the rail's number */   /* BL-337 */
+  [["today","Today",""],["intake-review","Intake",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v),v==="intake-review"?"review inbox proposals approve":""));   /* #232-C: the old names still find it */
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
@@ -1002,8 +1004,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
   if(q) P.filter(p=>clientReportOn(p.code)).forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>openSpace(p.code,thisWeek(),"client"),`client report ${p.code}`));   /* #221: the hub's Client view (only for a project that has a client report); P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
-  add("Actions","Add files to Intake","",()=>{ go("inbox"); $("#inboxFile").click(); });
-  if(nNew) add("Actions","Process new Intake files",`${nNew} new`,()=>{ go("inbox"); $("#inboxNew").click(); });
+  add("Actions","Add files to Intake","",()=>{ go("intake-review"); irPickFiles(); });
+  if(nReady) add("Actions","Process all ready",`${nReady} ready`,()=>{ go("intake-review",{stage:"arrived"}); irProcessAll(); });
   if(shared.VIEW==="cockpit"&&shared.COCK){ const c=shared.COCK;   /* the project page you're on */
     add("Actions",`Generate current state: ${c}`,"",()=>openGen(c)); add("Actions",`Edit current state: ${c}`,"",()=>startCurEdit(c));
     add("Actions",`Add milestone: ${c}`,"",()=>openNewMilestone(c)); add("Actions",`Add image: ${c}`,"",()=>{ go("cockpit",c); startCurEdit(c); pickImage(); }); add("Actions",`Edit health: ${c}`,"",()=>openProject(c,"health")); }
@@ -1011,15 +1013,15 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   THEMES.forEach(t=>add("Actions",`Theme: ${t.id}`,themeOf(S.palette)===t?"current":"",()=>setPalette(t.id)));
   add("Actions","Customise the rail","right-click the rail",()=>railPopOpen());   /* BL-191: the rail's control has no button of its own now */
   if(q.length>1){ P.forEach(p=>(p.ms||[]).filter(m=>m[3]).forEach(m=>add("Milestones",`${m[3]} · ${m[0]}`,m[1]?fd(m[1]):"",()=>openMilestone(m[3]))));
-    (D.inbox||[]).forEach(f=>add("Intake",f.name,"preview",()=>{ go("inbox"); previewInbox(f.path); }));
+    (D.inbox||[]).forEach(f=>add("Intake",f.name,"preview",()=>{ go("intake-review"); previewInbox(f.path); }));
     FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[fpName(f.p),f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path),f.p)); }   /* BL-101: the name shown, the code still finds it */
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
   const sc=searchCkItems(), askRow=sc.filter(x=>String(x.l).startsWith("ask creaite:")), restSc=sc.filter(x=>!askRow.includes(x));   /* a question's ask row stays first, ahead of the Help rows */
   return [...askRow,...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...restSc]; })(q);
   if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
-  MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
-    if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("inbox"); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
+  /** @type {any[]} */ (irModel().meetings).filter(m=>irCanProcess(m)&&m.src!=="upload").forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
+    if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("intake-review",{stage:"arrived"}); irProcess(m); }}); });   /* BL-42 phase 3; #232-C2: the page's own Process */
   { const c=ckParse(q); if(c){ const pre=[], ql=String(q||"").trim().toLowerCase();
     if(!(c.ask&&(ql.split(/\s+/).length<3||out.some(x=>String(x.l).toLowerCase().startsWith(ql))))){   /* "New action" is the palette's own entry, not a request */
     if(c.pick) c.pick.forEach(x=>{ const isP=c.what==="person"; pre.push({g:"Change · which one?",l:isP?x:`${x.id} · ${x.t}`,h:isP?"person":pName(x.p),change:c,fn:()=>{ if(isP){ shared.CKPICK.owner=x; shared.CKPICK.ofor=c.phrase; } else { shared.CKPICK.target={k:x.k,id:x.id}; shared.CKPICK.for=c.phrase; } ckRefresh(); },keep:true}); });
@@ -1143,7 +1145,7 @@ export function ckPreview(c){ if(c.ask) return `<div class="ckpv"><div class="ck
   else { const x=c.k==="milestones"?ckMs(c.id):REC(c.k,c.id); title=`${c.id} · ${x.t}`;
     rows=Object.entries(c.patch).map(([f,v])=>{ const was=c.k==="milestones"?(f==="fc"?x.due:""):x[f]; return `<div class="ckln"><span class="ckf">${CKFN[f]||f}</span><span class="ckdel" aria-label="Before">− ${esc(ckShow(f,was))}</span><span class="ckadd" aria-label="After">+ ${esc(ckShow(f,v))}</span></div>`; }).join(""); }
   const t=ckTouches(c);
-  return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows}${t.length?`<div class="cktch"><div class="sub">What else it touches</div><ul>${t.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:'<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Review · <kbd>Esc</kbd> nothing changes</div></div>`; }
+  return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows}${t.length?`<div class="cktch"><div class="sub">What else it touches</div><ul>${t.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:'<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`; }
 export function ckSummary(c){ if(c.new) return `Add: ${c.new.t}`; const x=c.k==="milestones"?ckMs(c.id):REC(c.k,c.id), f=Object.keys(c.patch)[0];
   return `${c.label}: ${c.id} ${x?"· "+x.t:""} → ${ckShow(f,c.patch[f])}`; }
 /* ---- staging: the peek's path, never applied here ---- */
@@ -1159,7 +1161,7 @@ export async function ckStage(c,thenReview){ if(c.ask){ ckAsk($("#cmdkIn").value
     ok=await pkCommit(k,c.id,f,c.label,String(x[f0]??""),String(f[f0]??"")); }
   if(!ok) return;
   snack(`Staged: ${ckSummary(c)}. Nothing reaches the tracker until you apply`,()=>pkUndoLast());
-  if(thenReview) go("review"); }
+  if(thenReview) go("intake-review"); }
 export async function ckStageNew(c){ const k=c.k, f={...c.new}; if(f.o&&f.o!=="TBC"){ const o=await ownerFinal(f.o); if(o===null) return false; f.o=o; } if(f.by){ const o=await ownerFinal(f.by); if(o===null) return false; f.by=o; }
   const err=validate(k,f,true,null); if(err){ snack(oneLine(err)); return false; } norm(k,f); const {values}=newItemOf(k,f); if(!await needVault()) return false;
   const meta={k,id:"nw"+Date.now().toString(36),patch:{},prev:{},label:"Created",from:"",to:f.t,at:nowStamp(),note:"⌘K",type:"act",isNew:true,title:f.t,p:f.p,known:pkArr(k).map(r=>r.id),ms:Date.now()};

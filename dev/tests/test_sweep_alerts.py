@@ -349,7 +349,7 @@ class VipTests(unittest.TestCase):
 
 
 class VipPageTests(unittest.TestCase):
-    """BL-99: the VIP block opens Today's Needs attention, above the proposals; VIP proposals lead Review."""
+    """BL-99: the VIP block opens Today's Needs attention, above the proposals; VIP proposals lead Intake."""
 
     @classmethod
     def setUpClass(cls):
@@ -369,8 +369,8 @@ class VipPageTests(unittest.TestCase):
           const msg=document.querySelector('#tdList>li.td-message'), lis=[...document.querySelectorAll('#tdList>li')];   /* BL-319: the message is a row of To decide */
           out.first=[msg.className, msg.textContent.replace(/\\s+/g,' ').trim()]; out.second=(document.getElementById('tdQuiet')||{textContent:''}).textContent; out.order=document.getElementById('mineSec').compareDocumentPosition(msg);
           out.badge=document.getElementById('vipBadge').textContent; out.title=document.title;
-          go("review"); renderReview(); const rows=[...document.querySelectorAll('#reviewBody tr[data-n]')];
-          out.review=rows.map(r=>r.querySelector('td.title').textContent.replace(/\\s+/g,' ').trim().slice(0,40));
+          go("intake-review"); await new Promise(r=>setTimeout(r,300)); const rows=[...document.querySelectorAll('#v-intake-review tr.irprop')];   /* #232 C2: the Intake page's rows (the model puts a followed person's first) */
+          out.review=rows.map(r=>r.querySelector('.icttl').textContent.replace(/\\s+/g,' ').trim().slice(0,40));
           go("person","Mia Hale"); out.person=document.querySelector('#v-person h1').textContent;
           window.OUT=out;"""
         cls.out, cls.errors = chrome(v, probe, "vip-page")

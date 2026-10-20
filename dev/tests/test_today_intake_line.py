@@ -18,12 +18,18 @@ KEY = "creaite-intakeline-dismissed"
 VISIBLE = "(()=>{const e=document.getElementById('tdQuiet'); return !!e && !e.hidden && e.offsetParent!==null && getComputedStyle(e).display!=='none';})()"
 # exactly p proposals, m meetings with a transcript ready (the last one confidential when conf), f new files in Intake. po, mo and fo
 # shift the ids of the proposals, meetings and files, so a test can say "a different one" (the x keeps ids, not counts)
-SET = """window.setWaiting=(p,m,f,conf,po=0,mo=0,fo=0)=>{ REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000));
+SET = """window.setWaiting=(p,m,f,conf,po=0,mo=0,fo=0)=>{ shared.LIVE=false;   /* the fixture stands for the lists: opening Intake would read the real inbox again (refreshFiles) and replace the files set here */
+  REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000));
   for(let i=0;i<p;i++) REV.push({n:9000+po+i,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:po+i+1,rec:{t:'Late one '+i},src:''});
-  D.inbox=Array.from({length:f},(_,i)=>({state:'new',name:'f'+(fo+i)+'.docx',path:'inbox/f'+(fo+i)+'.docx'}));
+  D.inbox=Array.from({length:f},(_,i)=>({state:'new',name:'f'+(fo+i)+'.docx',path:'inbox/f'+(fo+i)+'.docx',ft:'transcript'}));   /* kind known: ready to process */
   D.meetings={rows:Array.from({length:m},(_,i)=>{ const c=conf&&i===m-1; return c?{key:TODAY+'|09:00|SECRETBOARD',id:null,title:'SECRETBOARD',p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:true}
     :{id:'mx'+(mo+i),key:'mx'+(mo+i),title:'Steering '+i,p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:false}; })};
   renderBadge(); renderToday(); return true; }"""
+
+QUIET = """(()=>{ if(!window.__quiet){ window.__quiet=1; const of=window.fetch, off=u=>/\\/health|\\/api\\/data|\\/api\\/files/.test(String(u));
+    window.fetch=(u,...a)=>/\\/health/.test(String(u))?Promise.reject(new Error('offline')):off(u)?Promise.resolve(new Response('{}',{status:503})):of(u,...a); }
+  shared.LIVE=false; return true; })()"""   # the fixture stands for the lists: the page's health check (every 30 s) would flip LIVE back and reload the data, and opening Intake reads the data and the file list again, over it
+SETTLED = "PULSE.reloads===0 && !shared.FBUSY"                                        # nothing still reading or reloading from the page's start-up
 
 
 class Line(LiveBrowserCase):
@@ -34,6 +40,8 @@ class Line(LiveBrowserCase):
         super().setUp()
         b = self.b
         b.eval(f"try{{localStorage.removeItem('{KEY}')}}catch(e){{}}")
+        b.eval(QUIET)
+        b.wait(SETTLED)
         b.eval("go('today')")
         b.eval(SET)
 
@@ -45,6 +53,8 @@ class Line(LiveBrowserCase):
 
     def reload(self):
         self.b.reload(wait_for="typeof go==='function' && LIVE")
+        self.b.eval(QUIET)
+        self.b.wait(SETTLED)
         self.b.eval("go('today')")
         self.b.eval(SET)
 
@@ -56,7 +66,7 @@ class Shows(Line):
         self.assertTrue(b.eval(VISIBLE))
         self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 proposals to approve.")
         links = b.eval("[...document.querySelectorAll('#tdQuiet a')].map(a=>[a.dataset.tdq,a.textContent,a.getAttribute('href')])")
-        self.assertEqual(links, [["meetings", "1 meeting ready to process", "#inbox"], ["proposals", "4 proposals to approve", "#review"]])
+        self.assertEqual(links, [["meetings", "1 meeting ready to process", "#intake-review&stage=arrived"], ["proposals", "4 proposals to approve", "#intake-review&stage=drafted"]])
         self.assertTrue(b.eval("!!document.querySelector('#tdQuiet svg.i') && !!document.querySelector('#tdQuiet button#tdQx svg')"))
 
     def test_plurals_and_singulars(self):
@@ -72,7 +82,39 @@ class Shows(Line):
     def test_new_files_in_intake_are_a_third_phrase(self):
         self.waiting(4, 1, 2)
         self.assertEqual(self.text(), "Intake: 1 meeting ready to process, 4 proposals to approve and 2 new files to process.")
-        self.assertEqual(self.b.eval("document.querySelector('#tdQuiet [data-tdq=files]').getAttribute('href')"), "#inbox")
+        self.assertEqual(self.b.eval("document.querySelector('#tdQuiet [data-tdq=files]').getAttribute('href')"), "#intake-review&stage=arrived")
+
+    def test_a_file_of_unknown_kind_is_not_a_new_file_to_process(self):
+        """Decision (a), 20-10-2026: the line and the rail badge are one number. A file whose kind is unknown (Plan.docx: ft "") is
+        'need a type' on the page and not in the badge, so the line does not count it either."""
+        b = self.b
+        self.waiting(0, 0, 1)
+        before = b.eval("irLiveCounts()")
+        b.eval("D.inbox.push({state:'new',name:'Plan.docx',path:'inbox/Plan.docx',ft:''}); renderBadge(); renderToday()")
+        self.assertEqual(self.text(), "Intake: 1 new file to process.")                  # the known file only
+        after = b.eval("irLiveCounts()")
+        self.assertEqual(after["need_type"], before["need_type"] + 1)                    # the page says "1 need a type"...
+        self.assertEqual(after["badge"], before["badge"])                                # ...and the badge, like the line, does not count it
+        b.eval("D.inbox=[{state:'new',name:'Plan.docx',path:'inbox/Plan.docx',ft:''}]; renderBadge(); renderToday()")
+        self.assertFalse(b.eval(VISIBLE))                                                # only the unknown one: no line
+
+    def test_the_badge_counts_a_ready_file_the_model_lacks_and_the_line_agrees(self):
+        """A file dropped in since the model was built counts at once, in the badge and in the line, as one number."""
+        b = self.b
+        self.waiting(0, 0, 1)
+        before = b.eval("irLiveCounts()")
+        b.eval("D.inbox.push({state:'new',name:'Extra.vtt',path:'inbox/Extra.vtt',ft:'transcript'}); renderBadge(); renderToday()")
+        after = b.eval("irLiveCounts()")
+        self.assertEqual((after["ready"], after["badge"]), (before["ready"] + 1, before["badge"] + 1))
+        self.assertEqual(self.text(), "Intake: 2 new files to process.")
+
+    def test_a_transcript_already_loaded_for_a_meeting_is_not_a_second_item(self):
+        """Decision (a): an inbox file with an event is the meeting's own transcript (Calendar import loaded it); the page folds it into
+        the meeting's row and irLiveCounts leaves it out, so the line counts the meeting and not the file as well."""
+        b = self.b
+        self.waiting(0, 1, 0)
+        b.eval("D.inbox=[{state:'new',name:'Steering 0.vtt',path:'inbox/Steering 0.vtt',ft:'transcript',event:'mx0'}]; renderBadge(); renderToday()")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process.")
 
     def test_the_line_has_no_live_role_and_a_small_hidden_region_announces_the_count_politely(self):
         b = self.b
@@ -151,7 +193,7 @@ class Shows(Line):
     def test_the_phrases_say_what_the_pages_count(self):
         b = self.b
         self.waiting(3, 2, 1)
-        o = b.eval("({p:REV.filter(r=>!r.done).length, m:MTG().filter(mtgHasTx).length, f:(D.inbox||[]).filter(x=>x.state==='new').length})")
+        o = b.eval("({p:REV.filter(r=>!r.done).length, m:MTG().filter(txReady).length, f:(D.inbox||[]).filter(x=>x.state==='new').length})")
         self.assertEqual(o, {"p": 3, "m": 2, "f": 1})
         self.assertIn("3 proposals to approve", self.text())
         self.assertIn("2 meetings ready to process", self.text())
@@ -164,25 +206,29 @@ class Links(Line):
         self.assertTrue(b.eval(f"document.activeElement===document.querySelector('#tdQuiet [data-tdq={key}]')"))   # a real link: Tab reaches it
         b.key("Enter")
 
-    def test_proposals_open_review_and_meetings_open_intake(self):
+    def test_every_phrase_opens_the_one_intake_page_at_its_stage(self):
+        """#232 (2.6): Review is part of Intake, so BOTH links open the one Intake page (#245's test sent proposals to Review and
+        meetings and files to Intake). The proposals open its Drafted stage (proposals to approve); meetings and new files its Arrived stage."""
         b = self.b
         self.waiting(4, 1, 1)
-        for key, view in (("proposals", "review"), ("meetings", "inbox"), ("files", "inbox")):
+        for key, stage in (("proposals", "drafted"), ("meetings", "arrived"), ("files", "arrived")):
             self.where(key)
-            b.wait(f"VIEW==='{view}'")
+            b.wait("VIEW==='intake-review'")
+            self.assertEqual(b.eval("irStage.value"), stage)
             b.eval("go('today')")
             b.eval("renderToday()")
             b.wait("document.getElementById('tdQuiet')")
 
     def test_the_target_lives_in_one_function(self):
         b = self.b
-        self.assertEqual(b.eval("[intakeTarget('proposals'),intakeTarget('meetings'),intakeTarget('files')]"), ["review", "inbox", "inbox"])
+        self.assertEqual(b.eval("[intakeTarget('proposals'),intakeTarget('meetings'),intakeTarget('files')]"), ["intake-review&stage=drafted", "intake-review&stage=arrived", "intake-review&stage=arrived"])
 
     def test_a_click_goes_to_the_page_too(self):
         b = self.b
         self.waiting(4, 1)
         b.click("#tdQuiet [data-tdq=meetings]")
-        b.wait("VIEW==='inbox'")
+        b.wait("VIEW==='intake-review'")
+        self.assertEqual(b.eval("irStage.value"), "arrived")
 
 
 class Dismiss(Line):
@@ -217,7 +263,7 @@ class Dismiss(Line):
         self.waiting(4, 1, 2)
         b.click("#tdQx")
         b.pump(0.2)
-        self.assertEqual(b.eval("[REV.filter(r=>!r.done).length, MTG().filter(mtgHasTx).length, D.inbox.length]"), [4, 1, 2])
+        self.assertEqual(b.eval("[REV.filter(r=>!r.done).length, MTG().filter(txReady).length, D.inbox.length]"), [4, 1, 2])
 
     def test_it_comes_back_when_a_new_proposal_arrives(self):
         b = self.b

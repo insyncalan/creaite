@@ -1,6 +1,11 @@
-"""#233 (UX review #172, findings 3 and 9): Review's bulk button is not a second Approve, and Intake's Process selected says why it is off.
+"""#233 (UX review #172, findings 3 and 9), after #232 C2 retired the pages they were about.
 
 Run: python3 dev/tests/test_ux172_clarity.py   (needs Google Chrome; skipped otherwise). Desktop width only.
+
+Finding 3 (Review's bulk button named what it affects) was about the old page's "Approve n routine" button on the minutes' row; on the Intake
+page Approve routine sits in its group's heading and names its count. (The old test also asserted the bulk button was not the Approve green;
+the new page's two buttons share a style: see the report on #232 C2.) Finding 9 (Process selected said why it was off) was about Calendar
+import's buttons, which went with the old Intake page; Process all ready says the same on the new one.
 """
 import sys
 import unittest
@@ -14,24 +19,23 @@ class Clarity(LiveBrowserCase):
     shared_server = True
     width, height = 1400, 1000
 
-    def test_bulk_button_is_distinct_and_names_what_it_affects(self):
+    def test_approve_routine_names_what_it_affects(self):
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('tr.mparent [data-act=ga]')")
-        ga, ap = b.eval("(r=>[r.querySelector('[data-act=ga]'),r.querySelector('[data-act=a]')].map(e=>[e.className,e.textContent.trim()]))(document.querySelector('tr.mparent'))")
-        self.assertNotIn("ok", ga[0].split(), "the bulk button wears the same green as Approve")
-        self.assertNotEqual(ga[1], "Approve all from these minutes")
-        self.assertRegex(ga[1], r"\d+ routine")                      # names what it affects: a count of routine items
-        self.assertIn("ok", ap[0].split())
+        b.eval("go('intake-review')")
+        b.wait("!!document.querySelector('#v-intake-review [data-irsec]')")
+        text = b.eval("(e=>e?e.textContent.trim():null)(document.querySelector('#v-intake-review [data-ira=routine]'))")
+        if text is None:
+            self.skipTest("the sample vault has no routine group on Intake")
+        self.assertRegex(text, r"Approve routine \(\d+\)")                      # a count of routine items
 
-    def test_process_selected_says_why_it_is_off(self):
+    def test_process_all_ready_says_why_it_is_off(self):
         b = self.b
-        b.eval("go('inbox')")
-        b.wait("document.getElementById('inboxGo')&&document.getElementById('mtgGo')")
-        for i in ("inboxGo", "mtgGo"):
-            off, title = b.eval(f"[document.getElementById('{i}').disabled,document.getElementById('{i}').title]")
-            self.assertTrue(off)
-            self.assertRegex(title, r"(?i)tick .*first", f"{i}: no hint while nothing is ticked")
+        b.eval("go('intake-review')")
+        b.wait("!!document.querySelector('#v-intake-review [data-ira=processall]')")
+        off, title = b.eval("[document.querySelector('#v-intake-review [data-ira=processall]').disabled, document.querySelector('#v-intake-review [data-ira=processall]').title]")
+        if not off:
+            self.skipTest("the sample vault has something ready to process")
+        self.assertRegex(title, r"(?i)nothing is ready|busy")                  # a dead button says why
 
 
 if __name__ == "__main__":

@@ -20,20 +20,22 @@ import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, openWork } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
-import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
+import { api, oneLine, onceFor, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
 import { openMilestone } from "./milestones.js";
+import { irFreshFiles, irReveal } from "./stores/intakeReview.js";   /* #232-C */
 import { draftBtn } from "./drafts.js";
-import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
+import { checkMeeting, MTG } from "./core/intakeApi.js";
+import { irProcessById, irRefreshCalendar } from "./components/intakeReview/actions.js";   /* #232-C2: Today's day line and Refresh calendar go through the Intake page's own actions */
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
-import { draftOn, RHL } from "./review.js";
+import { draftOn } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
-import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
+import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.list("creaite-dismiss"), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
 /* ===== Today brief (BL-72) ===== */
@@ -256,14 +258,14 @@ export function onDayWheel(e){ if(SWIPE.seen.has(e)) return; SWIPE.seen.add(e);
 /* what the band's buttons do */
 export const DAYRUN=new Map();   /* a check or a process under way, by calendar ID: "Checking…" */
 /** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
-export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
-  DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
-  try{ await processMeetings(); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
+export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake to process this meeting"); return; }
+  DAYRUN.set(m.id,"Processing…"); renderDay();
+  try{ await irProcessById(m.id); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
 /** Look for an ended meeting's transcript (Alan, 13-10-2026: a meeting not checked yet offers Check). */
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
+export const DAYACTS={open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("intake-review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;
@@ -276,7 +278,7 @@ export async function runReminder(r){ if(!r||!r.cmd||!viaServer()||RUNNING.has(r
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; }
   RUNNING.add(r.id); renderToday(); openChat();
   try{ await send(r.cmd); } finally{ RUNNING.delete(r.id); renderToday(); }
-  if(r.id.startsWith("weekly:")&&REV.some(x=>!x.done&&x.p&&(!r.id.split(":")[2]||x.p===r.id.split(":")[2]))) await say("A project with items awaiting review is skipped until they're reviewed.",`<button class="mini" data-go="review">Open Review</button>`); }
+  if(r.id.startsWith("weekly:")&&REV.some(x=>!x.done&&x.p&&(!r.id.split(":")[2]||x.p===r.id.split(":")[2]))) await say("A project with items awaiting review is skipped until they're reviewed.",`<button class="mini" data-go="review">Open Intake</button>`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0026(){
 $("#tBrief").addEventListener("click",async e=>{ const a=e.target.closest('a[href="#"]'); if(a) e.preventDefault();
@@ -294,7 +296,7 @@ window.addEventListener("resize",()=>{ if(shared.VIEW==="today") renderDay(); })
   band.addEventListener("pointerup",e=>{ if(sx==null) return; const dx=e.clientX-sx, dy=e.clientY-sy; sx=null;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) stepDay(dx<0?1:-1); });
   band.addEventListener("pointercancel",()=>{ sx=null; }); }
-document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) refreshCalendar(); if(e.target.closest("[data-thelp]")) toggleHelpPanel("today"); });   /* #237: the header's ? opens the same panel as the ? key; #249: and closes it again */
+document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) irRefreshCalendar(); if(e.target.closest("[data-thelp]")) toggleHelpPanel("today"); });   /* #237: the header's ? opens the same panel as the ? key; #249: and closes it again */
 }
 /* ===== BL-149 (sprint-ux) ===== no dead ends into Claude Code. If the dashboard can do it, it does; the command is a footnote,
    shown only when the live server is down. A reminder gets one primary button on its row (Draft weekly report, Draft client
@@ -312,12 +314,6 @@ export function conflictHtml(r){ const ch=(r.rec.changes&&r.rec.changes.length?r
   const v=x=>x==null||x===""?"(empty)":esc(DATE.test(String(x).slice(0,10))&&String(x).length===10?fd(x):String(x));
   return `<div class="cfvs">${ch.map(c=>`<div><span class="cff">${esc(c.field)}</span><span class="cfnow">Now: <b>${v(c.from)}</b></span><span class="cfnew">This one: <b>${v(c.to)}</b></span></div>`).join("")||'<div class="sub">Changed in the tracker after this was proposed.</div>'}</div>`; }
 /* ===== end BL-149 ===== */
-/* BL-231: what this block did at load, run in today's order by src/main.js */
-export function bootToday0027(){
-$("#reviewBody").addEventListener("click",e=>{ const b=e.target.closest('[data-act="ck"],[data-act="co"]'); if(!b) return; e.stopPropagation(); e.preventDefault();
-  const r=REV.find(x=>x.n===+b.closest("tr[data-n]").dataset.n); if(!r||r.done) return; b.disabled=true;
-  reviewViaServer(r,b.dataset.act==="ck"?"keep":"override",[]); },true);
-}
 export const kindLabel=r=>({actions:"Action",raid:r.rec.type||"Risk",decisions:"Decision",update:"Update",draft:"Draft",files:"File change"}[r.kind]);
 export function evidence(p){ const nw=WARNS().filter(w=>w.p===p.code).length, ov=A.filter(x=>x.p===p.code&&overdue(x)).length, urg=R.filter(r=>r.p===p.code&&r.st==="Open"&&r.pr==="Urgent").length;
   /* BL-190 (sprint-links): each figure is its own link (a zero stays plain); a click on one doesn't also open the row's project page */
@@ -402,14 +398,14 @@ document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".c
    people in the register, or no sweep yet) Today starts with five steps, each with a button that does it or opens where it is
    done, ticked as it is done: Connect Microsoft 365 (ticked by the first sweep, which needs it; the button opens Help's first
    hour), Add a project (the Projects page, then ask creaite), Add people (the People page, #248), Run the first sweep (ask creaite,
-   "sweep"), Open Review (ticked once Review has been opened in this browser). It goes when all five are ticked, or for good with
+   "sweep"), Open Intake (ticked once Intake has been opened in this browser). It goes when all five are ticked, or for good with
    Dismiss (kept with the dismissed reminders, so Settings › Reminders › Restore brings it back). Nothing it does is new. */
 export function setupSteps(){ const seen=store.get(SETUPK,{});
   return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the sweep has read your mail":`Connected in Claude itself, so the page can’t: connect it there, then say “${esc(SU_M365)}” in Claude Code. The first sweep confirms it`],
     ["proj","Add a project",P.length>0,"Add a project","proj",`${P.length} project${P.length===1?"":"s"}`],
     ["people","Add people",shared.REG.length>0,"Add people","people",`${shared.REG.length} in the people register`],
     ["sweep","Run the first sweep",swept(),"Run the first sweep","sweep",swept()?`Last swept ${esc(String(D.last_sweep))}`:"Reads mail, Teams and the calendar since the look-back days"],
-    ["review","Open Review",!!seen.review,"Open Review","review","Approve what's right; nothing reaches the tracker until you do"]]; }
+    ["review","Open Intake",!!seen.review,"Open Intake","review","Approve what's right; nothing reaches the tracker until you do"]]; }
 export function setupShown(){ if([...dismissedF(),...(D.dismissed||[])].includes(SETUPID)) return false;
   const st=setupSteps(), base=st.slice(0,4).some(x=>!x[2]); if(base){ const seen=store.get(SETUPK,{}); if(!seen.shown){ seen.shown=true; store.set(SETUPK,seen); } return true; }
   return !!store.get(SETUPK,{}).shown&&!st[4][2]; }
@@ -455,7 +451,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-setup]");
   if(a==="dismiss"){ const l=dismissedF(); l.push(SETUPID); store.set("creaite-dismiss",l); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...l])]}); renderSetup();
     snack("Checklist dismissed. Settings › Reminders › Restore brings it back",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==SETUPID)); renderSetup(); }); return; }
   if(a==="help") go("help","start"); else if(a==="proj") addProject(); else if(a==="people") go("people","all");   /* #248: the People page, Add a person; v2.6: Add a project, below */
-  else if(a==="review") go("review"); else if(a==="sweep"){ if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); } });
+  else if(a==="review") go("intake-review"); else if(a==="sweep"){ if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); } });
 if(shared.VIEW==="today") renderSetup();
 }
 /* ===== BL-166 (sprint-polish-2) ===== set-up in the dashboard where it can be. The live server runs the steps that are scripts
@@ -527,6 +523,8 @@ export const revAt=r=>{ const w=String(r.file||"").match(/^proposed-(\d{4}-\d{2}
 export const whenWords=at=>!at?"":at.slice(0,10)===TODAY?at.slice(11,16):`${longDay(at.slice(0,10))}${at.length>10?", "+at.slice(11,16):""}`;
 const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-\d+)?\.json$/.test(r.file)?"your edits":/-excel(-\d+)?\.json$/.test(r.file)?"Excel import"
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
+/** a meeting whose transcript is ready (Intake's calendar import, #245; the old Intake page's own test, kept here since #232 retired it) */
+export const txReady=/** @param {any} m */m=>m.transcript==="available"&&!m.processed&&!m.draft;
 const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
 /** the Messages section's rows (BL-319 called it To decide, #168 Intake and Review), newest first: messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]); void live;
@@ -617,15 +615,14 @@ export function tdFocusAfter(){ const f=TDFOCUS; if(!f||Date.now()-f.at>8000){ T
   TDFOCUS=null; if(b){ /** @type {HTMLElement} */(b).focus(); return; } const h=$("#hTd")||$("#hAttn"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); } }
 export function tdFocusMark(key,what){ const i=$$("#tdList > li").filter(l=>!l.hidden).findIndex(l=>l.dataset.td===key); TDFOCUS={i:Math.max(0,i),what,at:Date.now()}; }
 /** a proposal's row in Review, highlighted (as First thing opens one) */
-export function tdToReview(n){ go("review"); const r=REV.find(x=>x.n===n&&!x.done); if(!r) return; RHL.clear(); RHL.add(r.n); rvPaint();
-  const tr=$(`#reviewBody tr[data-n="${r.n}"]`); if(tr) tr.scrollIntoView({block:"center"}); }
+export function tdToReview(n){ go("intake-review"); const r=REV.find(x=>x.n===n&&!x.done); if(r) irReveal([r.n]); }   /* #232-C: the meeting it came from opens */
 /* ----- #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (replaces the Intake and Review section, its
    fold and #208's line). The counts are the pages': proposals waiting in Review (the rail's badge), the meetings whose transcript is
    ready in Intake's calendar import, and new files in Intake. Counts only: a confidential meeting is counted and never named. ----- */
-/** the page a phrase of the line opens: one place to change when #232 (v2.6) joins Review into Intake, after which proposals go to "inbox" too */
-export const intakeTarget=/** @param {string} key */key=>key==="proposals"?"review":"inbox";
+/** the place a phrase of the line opens (#232, v2.6: Review is part of Intake, one page): proposals go to its "To approve" stage (drafted), meetings and new files to its "Arrived" stage; renderIntakeLine splits the address into a page and a stage */
+export const intakeTarget=/** @param {string} key */key=>key==="proposals"?"intake-review&stage=drafted":"intake-review&stage=arrived";
 /** @returns {{key:string,n:number,text:string,go:string}[]} meetings first, then proposals, then new files; none at zero */
-export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(mtgHasTx).length, fl=(D.inbox||[]).filter(f=>f.state==="new").length, L=[];
+export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(txReady).length, fl=irFreshFiles().ready.length, L=[];   /* the files the rail's badge counts: ready ones, not a transcript already loaded for a meeting */
   if(nTr) L.push({key:"meetings",n:nTr,text:`${nTr} meeting${nTr===1?"":"s"} ready to process`,go:intakeTarget("meetings")});
   if(pr) L.push({key:"proposals",n:pr,text:`${pr} proposal${pr===1?"":"s"} to approve`,go:intakeTarget("proposals")});
   if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} to process`,go:intakeTarget("files")});
@@ -646,9 +643,9 @@ let TQMEM=/** @type {TqKept|null} */(null), TQSTUCK=false;   /* TQSTUCK: the las
 const tqHash=/** @param {string} s */s=>{ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(16).padStart(8,"0"); };
 /** each kind's waiting ids, hashed: what intakeParts() counts, item by item */
 function intakeIds(){ return {
-  meetings:MTG().filter(mtgHasTx).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
+  meetings:MTG().filter(txReady).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
   proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}|${r.made||""}`:`n${r.n}`))),
-  files:(D.inbox||[]).filter(f=>f.state==="new").map(f=>tqHash("f|"+(f.path||f.name))) }; }
+  files:irFreshFiles().ready.map(f=>tqHash("f|"+(f.path||f.name))) }; }
 /* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
    storage event); the memory is read instead when the store can't be read, or when this page's last write to it failed (a store
    that reads but won't write). All storage in try/catch. */
@@ -669,7 +666,7 @@ function intakeDismissed(){ const d=tqRead(); if(!d||d.day!==TODAY||!d.ids||type
     return l.every(h=>kept.has(h))||(!!d.all&&typeof d.all[k]==="string"&&d.all[k]===tqDigest(l)); }); }
 export function renderIntakeLine(){ const host=$("#tdQuietHost"); if(!host) return;
   const parts=intakeParts(), hid=parts.length>0&&intakeDismissed();
-  drawIntakeLine(host,hid?[]:parts,pg=>go(pg)); }
+  drawIntakeLine(host,hid?[]:parts,pg=>{ const [v,st]=pg.split("&stage="); go(v,st?{stage:st}:undefined); }); }
 document.addEventListener("click",e=>{ const x=e.target.closest&&e.target.closest("#tdQx"); if(!x) return; e.preventDefault();
   const host=$("#tdQuietHost"), had=host&&host.contains(document.activeElement);
   tqWrite(tqKeep()); renderIntakeLine();
