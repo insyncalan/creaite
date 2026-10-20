@@ -4522,9 +4522,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IMG_MAX: () => IMG_MAX,
     IMG_SIDE: () => IMG_SIDE,
     INFLIGHT: () => INFLIGHT,
+    INOUT: () => INOUT,
     INRUN: () => INRUN,
     INSEL: () => INSEL,
     INSTATE: () => INSTATE,
+    INSTEP: () => INSTEP,
     ITEMCODE: () => ITEMCODE,
     ITEMID: () => ITEMID,
     Icon: () => Icon,
@@ -5770,7 +5772,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     imgSrc: () => imgSrc,
     imgThumbsHtml: () => imgThumbsHtml,
     imgView: () => imgView,
+    inAsk: () => inAsk,
     inProj: () => inProj,
+    inRowState: () => inRowState,
     inSpan: () => inSpan,
     inTriangle: () => inTriangle,
     inboxBadge: () => inboxBadge,
@@ -6434,6 +6438,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     previewInbox: () => previewInbox,
     prio: () => prio,
     processInbox: () => processInbox,
+    processLive: () => processLive,
     processMeetings: () => processMeetings,
     profileTools: () => profileTools,
     projArchive: () => projArchive,
@@ -46680,7 +46685,7 @@ ${s5}`;
     });
     putHTML($("#inboxTbl"), html`<thead><tr><th style="width:32px"></th><th>File</th><th>Type</th><th>Size</th><th>Added</th><th>Likely project</th><th>State</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => {
       const st2 = INRUN.includes(f5.path) ? "processing" : f5.state;
-      return html`<tr data-inf="${f5.path}"><td><input type="checkbox" aria-label="Select ${f5.name}" ${raw(INSEL.has(f5.path) ? "checked" : "")} ${raw(st2 === "new" ? "" : "disabled")}></td><td class="title">${f5.name}</td><td>${f5.ext}</td><td>${kb2(f5.size)}</td><td style="white-space:nowrap">${fd(f5.date)}</td><td>${f5.p ? raw(pLink(f5.p)) : html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st2 === "new" ? "" : "sub"}">${INSTATE[st2]}</span>${st2 === "draft" && html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye", "Preview", 'data-inprev aria-haspopup="dialog"', "sm"))}${raw(ibtn("trash", "Remove from Intake", `data-inrm ${st2 === "processing" ? "disabled" : ""}`, "sm no"))}</td></tr>`;
+      return html`<tr data-inf="${f5.path}"><td><input type="checkbox" aria-label="Select ${f5.name}" ${raw(INSEL.has(f5.path) ? "checked" : "")} ${raw(st2 === "new" ? "" : "disabled")}></td><td class="title">${f5.name}</td><td>${f5.ext}</td><td>${kb2(f5.size)}</td><td style="white-space:nowrap">${fd(f5.date)}</td><td>${f5.p ? raw(pLink(f5.p)) : html`<span class="sub">Not sure</span>`}</td><td>${inRowState(f5, st2)}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye", "Preview", 'data-inprev aria-haspopup="dialog"', "sm"))}${raw(ibtn("trash", "Remove from Intake", `data-inrm ${st2 === "processing" ? "disabled" : ""}`, "sm no"))}</td></tr>`;
     }) : html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
     $("#inboxGo").disabled = !INSEL.size || !!shared.RUN;
     $("#inboxGo").title = shared.RUN ? "ask creaite is busy; try again when it's finished" : INSEL.size ? "" : "Tick a file first";
@@ -46729,6 +46734,67 @@ ${s5}`;
       renderInbox();
     }
   }
+  var INOUT = {};
+  var INSTEP = "";
+  function inRowState(f5, st2) {
+    const o5 = INOUT[f5.path];
+    if (st2 === "processing") return html`<span class="spin" aria-hidden="true"></span> ${INSTATE.processing}${INSTEP ? html` <span class="sub">${INSTEP}</span>` : ""} <button type="button" class="linkbtn" data-instop>Stop</button>`;
+    if (st2 === "new" && o5 && o5.state === "needs") return html`<span class="tag warn">Needs you</span> <span class="sub">${o5.question}</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
+    if (st2 === "new" && o5 && o5.state === "not_staged") return html`<span class="tag warn">Not staged</span> <span class="sub">Process it again, or ask creaite</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
+    return html`<span class="tag ${st2 === "new" ? "" : "sub"}">${INSTATE[st2]}</span>${st2 === "draft" && html` <a href="#" data-go="review" class="sub">Open Review</a>`}`;
+  }
+  var processLive = async function(files, onEv) {
+    const id2 = `i-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    shared.RUN = { id: id2, ctl };
+    setRunning(true);
+    let got = {};
+    try {
+      const r4 = await fetch("/api/intake/process", { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token || "" }, body: JSON.stringify({ files, run: id2 }) });
+      if (!r4.ok || !r4.body) {
+        const j5 = await r4.json().catch(() => ({}));
+        return { ok: false, message: j5.message || "Process couldn't start: check the live server." };
+      }
+      const rd2 = r4.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (; ; ) {
+        const { value, done } = await rd2.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        for (let i5 = buf.indexOf("\n\n"); i5 >= 0; i5 = buf.indexOf("\n\n")) {
+          const c5 = buf.slice(0, i5);
+          buf = buf.slice(i5 + 2);
+          if (!c5.startsWith("data: ")) continue;
+          let ev;
+          try {
+            ev = JSON.parse(c5.slice(6));
+          } catch (e4) {
+            continue;
+          }
+          if (ev.type === "intake") got = { ...got, files: ev.files, staged: ev.staged, needs: ev.needs };
+          else if (ev.type === "closure") got.closure = ev;
+          else if (ev.type === "stopped") got.stopped = true;
+          else if (ev.type === "error") got.message = ev.message;
+          if (onEv) onEv(ev);
+        }
+      }
+      return { ok: true, ...got };
+    } catch (e4) {
+      return { ok: false, stopped: e4 && e4.name === "AbortError", message: e4 && e4.name === "AbortError" ? "Stopped" : "The live server stopped." };
+    } finally {
+      shared.RUN = null;
+      setRunning(false);
+      api("/api/ask/ack", { run: id2 });
+    }
+  };
+  function inAsk(path) {
+    const o5 = INOUT[path] || {}, name = path.replace(/^inbox\//, "");
+    openChat();
+    const box = $("#chIn");
+    if (box) {
+      box.value = `About the Intake file “${name}”: ${o5.question || "Process didn't stage it. Why not, and what should I do?"}`;
+      box.focus();
+    }
+  }
   async function processInbox() {
     const paths = [...INSEL];
     if (!paths.length || shared.RUN) return;
@@ -46736,18 +46802,30 @@ ${s5}`;
       snack("Processing needs the live server");
       return;
     }
+    const files = paths.map((p6) => ({ path: p6 }));
     INRUN = paths;
+    INSTEP = "";
+    paths.forEach((p6) => delete INOUT[p6]);
     INSEL.clear();
     renderInbox();
-    openChat();
-    addEl("msg u", html`${`Process ${paths.length} file${paths.length === 1 ? "" : "s"} from Intake`}`);
+    let r4;
     try {
-      await askLive(`process ${paths.join("; ")}`, `Process ${paths.length === 1 ? paths[0] : paths.length + " Intake files"} into draft minutes and proposed items`);
+      r4 = await processLive(files, (ev) => {
+        if (ev.type === "step") {
+          INSTEP = ev.label || "";
+          renderInbox();
+        }
+      });
     } finally {
       INRUN = [];
-      await reloadData();
-      renderInbox();
+      INSTEP = "";
     }
+    (r4 && r4.files || []).forEach((o5) => {
+      if (o5.state !== "staged") INOUT[o5.path] = { state: o5.state, question: o5.question || "" };
+    });
+    await reloadData();
+    renderInbox();
+    snack(r4 && r4.closure ? oneLine(r4.closure.line) : r4 && r4.stopped ? "Stopped: nothing more was staged" : oneLine(r4 && r4.message || "Process couldn't finish"));
   }
   async function previewInbox(path) {
     if (!viaServer()) {
@@ -46828,6 +46906,9 @@ ${s5}`;
       if (!tr2) return;
       if (e4.target.closest("[data-inprev]")) previewInbox(tr2.dataset.inf);
       else if (e4.target.closest("[data-inrm]")) removeInbox(tr2.dataset.inf);
+      else if (e4.target.closest("[data-instop]")) {
+        if (shared.RUN) api("/api/ask/stop", { run: shared.RUN.id });
+      } else if (e4.target.closest("[data-inask]")) inAsk(tr2.dataset.inf);
     });
     $("#inPrevOpen").onclick = async () => {
       const o5 = await api("/api/open", { path: $("#inPrev").dataset.path });
@@ -46971,16 +47052,14 @@ ${s5}`;
       }
       MRUN[m5.id] = "processing";
       renderMeetings();
-      addEl("msg u", html`${`Process the meeting “${m5.title}” (${when2})`}`);
-      const before = $$("#chLog .msg.a").length;
-      shared.RUNLABEL = PL;
+      let r4 = null;
       try {
-        await askLive(`process ${now.loaded}`, `Process “${m5.title}” (${when2}) into draft minutes and proposed items`);
+        r4 = await processLive([m5.p ? { path: now.loaded, project: m5.p } : { path: now.loaded }]);
       } catch (e4) {
       }
       await reloadData();
-      const after = MTG().find((x5) => x5.id === m5.id), said2 = [...$$("#chLog .msg.a")].slice(before).map((e4) => e4.textContent.trim()).filter(Boolean).pop() || "";
-      MRUN[m5.id] = after && (after.draft || after.processed) ? "draft" : `failed:${oneLine(said2).split(/(?<=[.!?])\s/)[0].slice(0, 140) || "no draft came back"}`;
+      const after = MTG().find((x5) => x5.id === m5.id), o5 = (r4 && r4.files || [])[0], said2 = o5 && o5.question || (r4 && r4.stopped ? "Stopped" : "") || oneLine(r4 && r4.message || "");
+      MRUN[m5.id] = after && (after.draft || after.processed) ? "draft" : `failed:${said2.slice(0, 140) || "no draft came back"}`;
       renderMeetings();
     }
   }
@@ -47261,6 +47340,8 @@ ${s5}`;
     jobLive = v5;
   }, nowHM: (v5) => {
     nowHM = v5;
+  }, processLive: (v5) => {
+    processLive = v5;
   } };
 
   // files.js
@@ -65661,6 +65742,7 @@ ${d5.text}`);
     check: "Transcript check",
     load: "Transcript load",
     vip: "Alert check",
+    process: "Intake processing",
     other: "Other"
   };
   var FILE = {
@@ -76918,6 +77000,7 @@ ${d5.text}`);
         "prepTimed",
         "previewInbox",
         "prio",
+        "processLive",
         "profileTools",
         "projPeople",
         "projectState",
