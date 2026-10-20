@@ -279,16 +279,20 @@ def _whose_file(p):
 #   notes  <projects root>/<engagement or portfolio folder>/<its notes folder>/<note>.md
 #                                                  -> <same folder>/_Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
 #                                                     name is taken there (#124 Delete note, Alan 15-10-2026; one .md file, only from
-#                                                     the live server's own card: propose.py stages it only from system/guard/)
+#                                                     the live server: propose.py stages it only from system/guard/; #255, Alan
+#                                                     20-10-2026: from the page's own button, no card)
 #   notes_back  exactly the reverse of a "notes" move (one file, back to the same notes folder; tracker.check_move also requires
 #               that a Delete note moved it there). With NOTES_BACK_RENAMES on, a note that has taken the old name is never
 #               overwritten: the note comes back as <name>-2.md (-3…, paths.free_path), the only difference allowed from its old name
 ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
 FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
-# #124 F3: the moves only Approve on the live server's own card makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal).
-# tracker._op_move refuses one unless the server wrote its marker on Approve (card_move_marker), for exactly that move and that
-# proposal file, under CARD_MOVE_SECONDS old: a proposal written into staging by hand is never applied as one of these moves.
+# #124 F3: the moves only the live server makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal): tracker._op_move
+# refuses one unless the server wrote its marker (card_move_marker), for exactly that move and that proposal file, under
+# CARD_MOVE_SECONDS old: a proposal written into staging by hand is never applied as one of these moves. The server writes the
+# marker on Approve on its own card, and (#255, Alan 20-10-2026: the click is the approval) for PAGE_MOVES on the page's own
+# button (live_server.page_move: the page's token, a loopback same-origin call, never ask creaite). The name stays for the tests.
 CARD_ONLY_MOVES = ("reports_back", "notes", "notes_back")
+PAGE_MOVES = ("notes", "notes_back")       # #255: Delete note and a deleted note's Move back: no card (archive.PAGE_MOVES too)
 CARD_MOVE_SECONDS = 300
 
 
