@@ -72053,7 +72053,7 @@ ${d5.text}`);
       approveOpen.value = false;
     };
     const one = problems.length === 1, filed2 = files.map(filedAt)[0];
-    return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value && problems.length > 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
+    return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value && problems.length !== 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
       /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Approve the minutes" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: [
         "Before these minutes are approved, ",
@@ -73442,6 +73442,7 @@ ${d5.text}`);
           Menu,
           {
             label: "",
+            id: "mnExport",
             icon: "download",
             btnCls: "ib sm",
             ariaLabel: "Export",

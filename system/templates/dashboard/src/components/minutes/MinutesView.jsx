@@ -153,7 +153,7 @@ function Bar({ doc, zoom, setZoom, exported, setExported, status, bad, scale }) 
       <span class="sheet-barr"><span class="mnbarr">
         <button type="button" class="ib sm" id="mnTrBtn" aria-pressed={paneOpen.value ? "true" : "false"} aria-label="Transcript" data-tip={paneOpen.value ? "Hide the transcript" : "Show the transcript"}
           onClick={() => setPane(!paneOpen.value)}><Icon name="chat" /></button>
-        <Menu label="" icon="download" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
+        <Menu label="" id="mnExport" icon="download" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
           items={/** @type {any} */ (MN_EXPORTS)} onPick={exportAs} />
         {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"
           data-tip="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}

@@ -18,7 +18,7 @@ export function ApprovePopup({ problems, checks = [], files = [], transcripts = 
   const close = () => { approveOpen.value = false; };
   const one = problems.length === 1, filed = files.map(filedAt)[0];
   return (
-    <Dialog open={approveOpen.value && problems.length > 0} onClose={close} labelledBy="mnApproveH" id="mnApprove" class="mnapprove" focus="#mnApproveGo">
+    <Dialog open={approveOpen.value && problems.length !== 0} onClose={close} labelledBy="mnApproveH" id="mnApprove" class="mnapprove" focus="#mnApproveGo">
       <div class="mnap">
         <h2 id="mnApproveH">Approve the minutes</h2>
         <p class="sub">Before these minutes are approved, {one ? "one ticked item has" : `${problems.length} ticked items have`} something worth a look. Nothing else needs checking.</p>
