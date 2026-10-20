@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 8719edfc..f83c5d48 100644
+index f748bcea..ce84aff0 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -1252,7 +1252,8 @@ class Handler(BaseHTTPRequestHandler):

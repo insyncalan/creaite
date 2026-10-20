@@ -14,13 +14,13 @@ git apply --check dev/proposals/intake-process/reach.diff dev/proposals/intake-p
 git apply dev/proposals/intake-process/reach.diff dev/proposals/intake-process/live_server.diff
 ```
 
-Checked on this branch's base (`origin/v253-release` 0874dff1): `git apply --check` is clean for both, in either order. Undo:
+Checked against `origin/v253-release` de0de94e and its newer tip df417f7d (20-10-2026): `git apply --check` is clean for both, in either order. Undo:
 `git apply -R` with the same two files (or `git checkout -- system/scripts/live_server.py system/scripts/reach.py` before committing).
 
 Verify after applying (one at a time; each takes minutes on a loaded machine):
 
 ```
-python3 dev/tests/test_intake_process.py         # 17 tests: helpers, the guard mode, the route (all pass, none expected to fail)
+python3 dev/tests/test_intake_process.py         # 25 tests: helpers, the guard mode, the route (all pass, none expected to fail)
 python3 dev/tests/test_intake_process_ui.py      # 2 tests in Chrome: Process on the 3 sample files; a question on its row
 python3 dev/tests/test_transcripts_ui.py         # the meetings' Process selected goes through the same route
 python3 dev/tools/check.py                       # check: OK
@@ -46,9 +46,12 @@ python3 dev/tools/check.py                       # check: OK
 {"files": [{"path": "inbox/<name>", "project": "ABC"}, ...], "run": "<id, optional>"}
 ```
 
-`project` is optional (a code in the tracker's projects table); a plain list of path strings is accepted too. The server, never the
-model, checks each path (`intake_process.validate_request`): directly in `inbox/`, a plain file (no link, no second hard link, not
-hidden), `.vtt .docx .txt .md .pdf`, 1 byte to 25 MB, a name of the characters an upload gets, each once, at most 20, and none
+`project` is optional (a code in the tracker's projects table, or `_portfolio` for the portfolio); the page sends it only when
+Alan chose it (Calendar import's picker, or remembered for the series), never a match from the title. A plain list of path strings
+is accepted too. The server, never the model, checks each path (`intake_process.validate_request`): directly in `inbox/`, a plain
+file (no link, no second hard link, not hidden), `.vtt .docx .txt .md .pdf`, 1 byte to 25 MB, named exactly as Intake lists it,
+a name `minutes.stem` can give (so "Jane’s check-in" and "Q4 – kickoff!" are fine; no control, bidi/format or line-separator
+character, back-quote, colon, path separator or `* ? " < > |`), each once ignoring case and Unicode form, at most 20, and none
 already waiting in Review. A refusal is `400 {"ok": false, "message": "<path>: <why>"}`; a run already going is `409 {"busy": true}`.
 
 The answer is the run engine's event stream (`data: {...}` lines: `step`, `closure`, `done`, `stopped`, `error`...), with one
@@ -73,6 +76,11 @@ given), never the file's text. Stop is `POST /api/ask/stop {"run": "<id>"}`, as 
   system/templates/minutes-template.docx <values in drafts> <.docx in drafts>`, and `search.py enrich set`. Everything else is
   refused, failing closed (anything unknown is refused).
 - A direct Write or Edit in this mode may only create a `.json` directly in `system/staging/drafts/`, or change one this run wrote.
+- "This run's" file, everywhere in the mode: one that didn't exist, or was last written after the run started (`_older_than_run`,
+  from `started` in `run.json`; fails closed). So `fill` writes only a new `.docx` from the run's own values file (which `fill`
+  deletes) with no pictures; a spec's Word `"draft"` is one this run filled; `people map` maps only the run's own spec; `tracker.py
+  validate` (it writes its findings into the file) runs only on a proposal this run staged; and `search.py enrich set` takes only
+  `--path`/`--summary`/`--tags`, each path the `to` of a copy in a proposal this run staged, never one that already has a summary.
 - Every check a plain chat already has still runs first (one script on its own, no shell characters, the never list, reports).
 
 **`live_server.py`:**
@@ -126,16 +134,40 @@ Fixed in the diffs:
    can be turned into a record change from its own words.
 6. **A guessed project presented as Alan's.** The page sends no project for an uploaded file (Intake's "likely project" is a guess);
    the prompt says "as set in Intake" for a project the page does send (a meeting row's picker).
-7. **Odd names in the prompt.** A path with a line break, back-quote, colon or any character outside the upload's own set is refused
-   by the route, so a file name can't add a `QUESTION:` line or a new instruction line to the prompt.
+7. **Odd names in the prompt.** A path with a line break, back-quote, colon, a bidi or other format character, a line separator or
+   any character a file name can't hold is refused by the route; the prompt numbers the files and gives each path as a JSON string
+   after `path: `, and says a name is only a name. A file name can't add a `QUESTION:` line or a new instruction line.
+
+## Independent review (20-10-2026: READY WITH NOTES) and how each finding was fixed
+
+The review's probe (`attack264.py`) and mutants (`mutate264.py`, `mutate264b.py`) were re-run against a scratch tree of
+`origin/v253-release` with this branch merged and both diffs applied.
+
+| Finding | Fix | Test (`dev/tests/test_intake_process.py`) |
+|---|---|---|
+| **M1** (medium): `docx_tools.py fill` could write over another flow's Word draft in drafts (a steerco one-pager, an ad hoc document, Word minutes awaiting approval), and a spec's `"draft"` could name one, to be filed as these minutes | `fill` only into a `.docx` that is new or this run's, from this run's own values file; a spec's `"draft"` only one this run made (`reach.py` `_process_fill_problem`, `_process_stage_problem`) | `Fence.test_it_never_writes_over_another_flows_draft_or_summary` (fill over the one-pager, from an older values file, a spec naming the one-pager); `test_it_may_read_draft_and_stage_its_own_files` (its own new draft still stages) |
+| **M2** (medium): `search.py enrich set --path <any path>` could replace any file's summary (a client report, another project's minutes) | Only `--path`, `--summary` and `--tags`; each path the `to` of a `copy` in a proposal this run staged, and never one that already had a summary before the run (`_process_enrich_problem`) | same test: a client report, another project's path, a path with an older summary, a mix, another option; its own copy allowed |
+| **F1** (regression): Calendar import's Process selected sent `_portfolio`, refused as a code; a loaded transcript's name (`minutes.stem`: – ’ ! # @ ; = $) was refused with "rename it" | `_portfolio` accepted (prompt: "the portfolio, _portfolio, as set in Intake"); names checked by what `minutes.stem` can give, refusing only control, format, separator, surrogate/private/unassigned characters, back-quote, colon, path separators and `* ? " < > \|`; the prompt quotes each path as JSON in a numbered list | `Helpers.test_a_loaded_transcripts_name_is_an_intake_name`, `test_the_portfolio_is_a_project_alan_can_choose`, `test_the_prompt_is_fixed_and_lists_the_files`; `test_transcripts_ui.py` (the loaded file in the prompt) |
+| **S6**: the page sent a guessed project (matched from the title, or the portfolio guess) as if Alan chose it | `intake.js` `mtgProcessFile`: the project goes only when `how` is `"remembered"` (the picker sets it too) | `test_meetings.py` (a matched ABC meeting goes without a project; the five cases of `mtgProcessFile`) |
+| LOW: a spec whose `"transcript"` is a list crashed the check (TypeError; the hook failed closed) | a plain refusal | `Fence.test_a_spec_whose_transcript_is_a_list_is_refused_plainly` |
+| LOW: bidi and format characters in a question or a name | stripped from the question (`intake_process.plain`); refused in a name | `test_questions_are_only_for_the_runs_own_files_one_line`, the F1 test |
+| LOW: two names for one file on APFS (case, Unicode form) | duplicates compared case-folded in NFC; a name must be exactly as Intake lists it (`os.listdir`) | `Helpers.test_one_file_once_whatever_its_capitals_and_named_as_listed` |
+| LOW: `tracker.py validate <another pending proposal>` (it writes into the file); `fill` with pictures from anywhere; `people map` of any `.json` in drafts | validate only a proposal this run staged; no `"image"`/`"images"` entry in the values file; map only the run's own spec | the M1/M2 test (validate a waiting proposal or one with no meeting, a values file with a picture, map another flow's draft) and `test_it_may_read_draft_and_stage_its_own_files` (validate its own) |
+| Surviving mutants L2, L4, L5, L6, L10, M13 (and M10 from `mutate264b.py`) | tests added | L2: the stand-in's Process reply now carries CONFIRM, CHANGE and EDIT lines and `test_1` asserts no card; L4 and L6: `test_1` checks the `--add-dir` folders (never the home folder) and `--disallowedTools`; L5: `test_5_process_waits_for_a_run_already_going` (409 while a slow chat runs); L10: `test_6_its_usage_is_counted_as_its_own_kind`; M13: `stage_two` in the M1/M2 test; M10: `Fence.test_only_a_process_runs_record_names_files`. Re-run: all 24 mutants of `mutate264.py` and 7 of `mutate264b.py` killed |
 
 Residual (not fixed, small, for the record):
+- **"This run's" is by time.** A file is the run's when it is new or was written after the run started. Another writer touching a
+  draft during the run (Alan saving a minutes record in the dashboard at the same moment) would make it look like the run's.
+  Only one run goes at a time, so the window is that of the dashboard's own saves.
+- **Recommendation, outside this diff: `/api/ask` and Process's start.** The Process route takes `START_LOCK` for its busy check and
+  start; `/api/ask` doesn't (pre-existing), so an ask creaite message sent at the same instant as Process could start beside it and
+  replace `run.json`. Taking `START_LOCK` around `/api/ask`'s busy check and start would close it.
 - **Check-then-use on the spec.** The hook reads the spec when it checks `minutes.py stage`, just before the call runs. Changing
   the spec in between would need a second write running at the same moment (not checked here). The worst case is a pending
   proposal for another file in reach, waiting in Review, never applied.
 - **A file name can still carry words** ("ignore the rules and …" is a valid name). It can only steer the model inside the fence.
-- **`search.py enrich set`** may attach a summary to any path in the search index (a plain chat may too). It changes what search
-  shows, never a file or the record.
+- **`search.py enrich set`** in a plain chat may still attach a summary to any path in the search index (pre-existing). In a
+  Process run it is limited as above.
 - **`run.json` holds one run.** The hook reads the Process files from the run record without comparing the run ID; there is only
   ever one run, and a record that isn't a Process run's gives no files (fail closed).
 - Pre-existing, outside this diff: in a plain chat, `minutes.py stage` (a stage command) runs unconfirmed with any spec, including a
@@ -155,12 +187,13 @@ Residual (not fixed, small, for the record):
 
 ## Tests (fail-first evidence)
 
-On the branch, without the diffs: `python3 dev/tests/test_intake_process.py` → `OK (expected failures=6)`; the 6 are the route
-(Process on the three sample files ends in Review with no go-ahead; a question on its row; refusals) and the mode-only fence checks.
+On the branch, without the diffs: `python3 dev/tests/test_intake_process.py` → `OK (expected failures=11)`; the 11 are the route
+(Process on the three sample files ends in Review with no go-ahead; a question on its row; refusals; one run at a time; the usage
+kind) and the mode-only fence checks (one: a run record that isn't a Process run's names no files, mutant M10).
 `dev/tests/test_intake_process_ui.py` (2) and two tests in `test_transcripts_ui.py` are expected failures too.
 
-With the diffs applied (a scratch worktree of the branch's HEAD, `git apply` of both files): `test_intake_process.py` → `OK`
-(17, no expected failures), and the related suites listed in the report pass.
+With the diffs applied (a scratch worktree of `origin/v253-release` with this branch merged, `git apply` of both files):
+`test_intake_process.py` → `OK` (25, no expected failures), and the related suites listed in the report pass.
 
 Security tests in `test_intake_process.py`: a path outside Intake, `..`, a subfolder, a link, a second hard link, a 21st file, a
 type Intake doesn't take, a hidden or empty file, odd characters; a forged `kind`/`files`/`mode` marker in an ordinary ask message
