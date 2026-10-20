@@ -78,6 +78,9 @@
 .doc .msel:hover{border-color:var(--line);background:var(--surface)} .doc .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface);cursor:text}
 .doc .msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .doc select.msel.pr-U{color:var(--bad)} .doc select.msel.pr-H{color:var(--warn)}
 .doc input.msel{width:100%} .doc select.msel{width:100%}
+.doc .msel.dueb{width:100%;text-align:left;min-width:0}
+.doc table.mnt col.c-trk{width:62px}
+.doc .msel.dueb{width:100%;text-align:left;min-width:0}
 </style></head>
 <body>
 <div class="shell">
@@ -177,7 +180,7 @@
             <section class="view" id="v-people"><div class="mnview">
 <header class="mnhead"><nav class="crumb" aria-label="Breadcrumb"><a href="#">Review</a> › <span aria-current="page">Minutes</span></nav><h1 id="mnTitle">Pilot readiness review</h1><p class="sub mnmeta">Example Programme · 20-10-2026 · Draft, not yet approved</p></header>
 <div class="mnwrap withpane"><div class="mnsheet"><div class="sheet-root">
-<div class="sheet-bar" role="toolbar" aria-label="Minutes"><span class="sheet-mini"><b>Pilot readiness review</b><span class="sub">Example Programme · 20-10-2026</span></span><span class="sheet-zoom" id="zoomG" role="group" aria-label="Zoom"><button type="button" class="btn sm" aria-label="Zoom out">−</button><span class="sheet-zv">80%</span><button type="button" class="btn sm" aria-label="Zoom in" disabled>+</button></span><button type="button" class="btn" aria-pressed="false" id="asExp">Show as exported</button><span class="sub sheet-status" role="status">Saved · version 1</span><span class="mnsum" id="mnSum" role="status"></span><span class="sheet-barr"><span class="mnbarr"><button type="button" class="btn sm" aria-pressed="true" id="trBtn">Transcript</button><span class="seg" role="group" aria-label="Export" title="Word, HTML or PDF. A copy: editing it elsewhere does not change the minutes here."><button type="button">Export Word</button></span><button type="button" class="btn sm" data-tip="Draft the minutes again from the transcript">Re-extract</button><button type="button" class="btn sm primary" id="apBtn">Approve minutes</button></span></span></div>
+<div class="sheet-bar" role="toolbar" aria-label="Minutes"><span class="sheet-mini"><b>Pilot readiness review</b><span class="sub">Example Programme · 20-10-2026</span></span><span class="sheet-zoom" id="zoomG" role="group" aria-label="Zoom"><button type="button" class="btn sm" aria-label="Zoom out" id="zOut">−</button><span class="sheet-zv">80%</span><button type="button" class="btn sm" aria-label="Zoom in" id="zIn">+</button></span><button type="button" class="btn" aria-pressed="false" id="asExp">Show as exported</button><span class="sub sheet-status" role="status">Saved · version 1</span><span class="mnsum" id="mnSum" role="status"></span><span class="sheet-barr"><span class="mnbarr"><button type="button" class="btn sm" aria-pressed="true" id="trBtn">Transcript</button><span class="mnpopw"><button type="button" class="btn sm" id="exBtn" aria-haspopup="menu" aria-expanded="false">Export ▾</button></span><button type="button" class="btn sm" data-tip="Draft the minutes again from the transcript">Re-extract</button><button type="button" class="btn sm primary" id="apBtn">Approve minutes</button></span></span></div>
 <div class="sheet-area"><div class="sheet-scroll" id="body"></div></div></div></div>
 <aside class="mnpane" aria-labelledby="mnPaneH"><div class="mnpane-h"><h2 id="mnPaneH">Transcript</h2><button type="button" class="ib sm" aria-label="Close the transcript" id="trX"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div><div class="mnpane-q"><input type="search" class="pkdt" id="mnPaneQ" aria-label="Search the transcript" placeholder="Search the transcript"><span class="sub" role="status" id="turnN"></span></div><ol class="mnturns" id="turns" tabindex="0" aria-label="Speaker turns"></ol></aside></div></div></section>
       <section class="view" id="v-person" hidden=""></section>
@@ -318,21 +321,22 @@ var ITEMS=[
 {id:'a3',k:'Action',t:'Fix the login failure and release build 15.',o:'Omar Ali',turn:1,trk:'y',due:'23-10-2026',pri:'U',ws:'Build',q:'I can have a fix by Friday.'},
 {id:'a4',k:'Action',t:'Send the pilot budget forecast to Finance.',o:'Alan Carter',turn:7,trk:'y',due:'06-11-2026',pri:'M',ws:'Budget',int:1,q:'Finance needs the pilot budget forecast by 6 November.'}];
 var SUMM='The group confirmed the pilot go-live date of 27 November, with scanner hardware following in phase two. One login defect in build 14 must be fixed first; training proceeds with manual entry.';
+var Z=1;
 var PRI={U:'Urgent',H:'High',M:'Medium',L:'Low'},WS=['Build','Training','Supply','Budget','Governance'];
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
 function itm(id){return ITEMS.filter(function(x){return x.id==id})[0]}
 function chip(c,a,t){return '<button type="button" class="mchip'+c+'" '+a+'>'+t+'</button>'}
 function sel(f,x,opts,cls,ph){return '<select class="msel'+cls+'" data-f="'+f+'" data-id="'+x.id+'" aria-label="'+f+'">'+(ph?'<option value="">'+ph+'</option>':'')+opts.map(function(o){return '<option value="'+o[0]+'"'+(o[0]==x[f]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select>'}
 function ownerC(x){return sel('o',x,Object.keys(P).map(function(n){return [n,n]}),'')}
-function dueC(x){return '<input type="text" class="msel'+(x.due?'':' empty')+'" data-f="due" data-id="'+x.id+'" value="'+esc(x.due||'')+'" placeholder="No date" aria-label="Due date">'}
+function dueC(x){return '<button type="button" class="msel dueb'+(x.due?'':' empty')+'" data-dueb="'+x.id+'" aria-haspopup="dialog" aria-label="Due date">'+(x.due||'No date')+'</button>'}
 function priC(x){return sel('pri',x,Object.keys(PRI).map(function(k){return [k,PRI[k]]}),x.pri?' pr-'+x.pri:' empty','Priority')}
 function wsC(x){return sel('ws',x,WS.map(function(w){return [w,w]}),x.ws?'':' empty','Workstream')}
 function trk(x){return '<span class="trk" role="group" aria-label="Work item"><button type="button" class="y" data-trk="y" data-id="'+x.id+'" aria-pressed="'+(x.trk=='y')+'" title="Register a work item" aria-label="Register a work item">'+ic('ok')+'</button><button type="button" class="n" data-trk="n" data-id="'+x.id+'" aria-pressed="'+(x.trk=='n')+'" title="Remove from the minutes" aria-label="Remove from the minutes">'+ic('x')+'</button></span>'}
-function status(x){var h='';if(P[x.o]===0)h+='<span class="mck">'+esc(x.o)+' needs details</span> ';if(x.dup)h+='<span class="mck">'+esc(x.dup)+'</span> ';if(x.trk==''&&x.k!='Decision'&&x.k!='Risk')h+='<span class="mck info">Kept in the minutes, not tracked</span>';return h}
+function status(x){var h='';if(P[x.o]===0)h+='<span class="mck">'+esc(x.o)+' needs details</span> ';if(x.dup)h+='<span class="mck">'+esc(x.dup)+'</span> ';return h}
 function tbl(k,cols){var L=ITEMS.filter(function(x){return x.k==k});if(!L.length)return '';
- var h='<h2 class="mnh">'+k+'s <span class="n">'+L.length+'</span></h2><table class="mnt"><colgroup><col class="c-trk"><col><col class="c-own">'+(cols?'<col class="c-due"><col class="c-pri"><col class="c-ws">':'')+'<col class="c-act"></colgroup><thead><tr><th title="Tick to register a work item; cross to remove from the minutes; neither keeps it in the minutes only">Track</th><th>'+k+'</th><th>Owner</th>'+(cols?'<th>Due</th><th>Priority</th><th>Workstream</th>':'')+'<th></th></tr></thead><tbody>';
+ var h='<h2 class="mnh">'+k+'s <span class="n">'+L.length+'</span></h2><table class="mnt"><colgroup><col class="c-trk"><col><col class="c-own">'+(cols?'<col class="c-due"><col class="c-pri"><col class="c-ws">':'')+'</colgroup><thead><tr><th title="Tick to register a work item; cross to remove from the minutes; neither keeps it in the minutes only">Track</th><th>'+k+'</th><th>Owner</th>'+(cols?'<th>Due</th><th>Priority</th><th>Workstream</th>':'')+'</tr></thead><tbody>';
  L.forEach(function(x){var n=cols?6:3;
-  h+='<tr class="mi'+''+'" data-id="'+x.id+'" data-trk="'+x.trk+'"><td>'+trk(x)+'</td><td><span class="mit" contenteditable="plaintext-only" spellcheck="true" data-t="'+x.id+'">'+esc(x.t)+'</span>'+(status(x)?'<div class="mnrow2">'+status(x)+'</div>':'')+'</td><td>'+ownerC(x)+'</td>'+(cols?'<td>'+dueC(x)+'</td><td>'+priC(x)+'</td><td>'+wsC(x)+'</td>':'')+'<td style="text-align:right;white-space:nowrap"><button type="button" class="msrc" data-src="'+x.turn+'" aria-label="Show in the transcript" title="Show in the transcript">'+ic('src')+'</button></td></tr>';});
+  h+='<tr class="mi'+''+'" data-id="'+x.id+'" data-trk="'+x.trk+'"><td>'+trk(x)+'</td><td><span class="mit" contenteditable="plaintext-only" spellcheck="true" data-t="'+x.id+'">'+esc(x.t)+'</span>'+(status(x)?'<div class="mnrow2">'+status(x)+'</div>':'')+'</td><td>'+ownerC(x)+'</td>'+(cols?'<td>'+dueC(x)+'</td><td>'+priC(x)+'</td><td>'+wsC(x)+'</td>':'')+'</tr>';});
  return h+'</tbody></table>'}
 function draw(){
  var sc=$('#body').scrollTop;
@@ -341,17 +345,17 @@ function draw(){
  '<h2 class="mnh">Summary</h2><p class="sumblock" contenteditable="plaintext-only" spellcheck="true" data-sum="1" style="margin:0">'+esc(SUMM)+'</p>'+
  tbl('Decision',0)+tbl('Risk',1)+tbl('Issue',1)+tbl('Action',1)+'</div></div></div></div></div>';
  wire();sum();fit();$('#body').scrollTop=sc}
-function fit(){var a=$('.sheet-a4');if(!a)return;var w=$('#body').clientWidth-32,k=Math.min(1,w/793.7);a.style.transform='scale('+k+')';var f=$('.sheet-fit');f.style.width=(793.7*k)+'px';f.style.height=(a.offsetHeight*k)+'px';f.style.margin='0 auto';$('.sheet-zv').textContent=Math.round(k*100)+'%'}
+function fit(){var a=$('.sheet-a4');if(!a)return;var w=$('#body').clientWidth-32,k=Math.min(1,w/793.7)*Z;a.style.transform='scale('+k+')';var f=$('.sheet-fit');f.style.width=(793.7*k)+'px';f.style.height=(a.offsetHeight*k)+'px';f.style.margin=f.offsetWidth<=w?'0 auto':'0';$('.sheet-zv').textContent=Math.round(k*100)+'%'}
 function sum(){var y=ITEMS.filter(function(x){return x.trk=='y'}).length,n=ITEMS.filter(function(x){return x.trk=='n'}).length,k=ITEMS.length-y-n;
  $('#mnSum').innerHTML='<b>'+y+'</b> work items to register \u00b7 <b>'+k+'</b> kept in the minutes only'+(n?' \u00b7 '+n+' removed':'')}
 function hlTurn(i){$$('#turns li').forEach(function(l,k){l.classList.toggle('hl',k==i)});var e=$$('#turns li')[i];if(e&&i>=0)e.scrollIntoView({block:'nearest'})}
 function wire(){
  $$('tr.mi').forEach(function(r){r.addEventListener('mouseenter',function(){hlTurn(itm(r.dataset.id).turn)});r.addEventListener('mouseleave',function(){hlTurn(-1)})});
  $$('[data-trk]').forEach(function(b){b.onclick=function(){var x=itm(b.dataset.id);x.trk=x.trk==b.dataset.trk?'':b.dataset.trk;draw()}});
- $$('[data-src]').forEach(function(b){b.onclick=function(){showPane(true);hlTurn(+b.dataset.src)}});
- $$('[data-t]').forEach(function(e){e.onblur=function(){var t=e.textContent.trim();if(t)itm(e.dataset.t).t=t;else e.textContent=itm(e.dataset.t).t};e.onkeydown=function(k){if(k.key=='Escape'){e.textContent=itm(e.dataset.t).t;e.blur()}if(k.key=='Enter'){k.preventDefault();e.blur()}}});
+  $$('[data-t]').forEach(function(e){e.onblur=function(){var t=e.textContent.trim();if(t)itm(e.dataset.t).t=t;else e.textContent=itm(e.dataset.t).t};e.onkeydown=function(k){if(k.key=='Escape'){e.textContent=itm(e.dataset.t).t;e.blur()}if(k.key=='Enter'){k.preventDefault();e.blur()}}});
  var sb=$('[data-sum]');if(sb){sb.onblur=function(){SUMM=sb.textContent.trim()||SUMM};sb.onkeydown=function(k){if(k.key=='Escape'){sb.textContent=SUMM;sb.blur()}}}
- $$('.msel').forEach(function(e){e.onchange=function(){var x=itm(e.dataset.id),v=e.value;if(e.dataset.f=='due'&&v&&!/^\d\d-\d\d-\d{4}$/.test(v)){e.value=x.due||'';return}x[e.dataset.f]=v;draw()}})}
+ $$('[data-dueb]').forEach(function(b){b.onclick=function(e){e.stopPropagation();dpop(b,itm(b.dataset.dueb))}});
+ $$('select.msel').forEach(function(e){e.onchange=function(){var x=itm(e.dataset.id),v=e.value;if(e.dataset.f=='due'&&v&&!/^\d\d-\d\d-\d{4}$/.test(v)){e.value=x.due||'';return}x[e.dataset.f]=v;draw()}})}
 function showPane(on){$('.mnwrap').classList.toggle('withpane',on);$('#trBtn').setAttribute('aria-pressed',on);setTimeout(fit,0)}
 $('#turns').innerHTML=TURNS.map(function(t){return '<li><span class="mnwho">'+t[0]+'</span> <span class="mntime">'+t[1]+'</span><div>'+t[2]+'</div></li>'}).join('');
 $('#turnN').textContent=TURNS.length+' turns';
@@ -363,6 +367,34 @@ $('#apBtn').onclick=function(){var y=ITEMS.filter(function(x){return x.trk=='y'}
  $('#apSub').textContent=y.length+' work items will be registered. Everything else stays in the minutes; removed lines are left out.';
  $('#apList').innerHTML=ITEMS.map(function(x){var s=x.trk=='y'?'Register':x.trk=='n'?'Removed':'Minutes only';return '<div class="row'+(x.trk=='n'?' rm':'')+'"><span class="k">'+s+'</span><span>'+esc(x.t)+'</span></div>'}).join('');$('#mnApprove').showModal()};
 $('#apCancel').onclick=$('#apNone').onclick=$('#apGo').onclick=function(){$('#mnApprove').close()};
+function zoom(z){Z=Math.max(.5,Math.min(2.5,z));fit()}
+$('#zIn').onclick=function(){zoom(Z+.1)};$('#zOut').onclick=function(){zoom(Z-.1)};
+$('#body').addEventListener('wheel',function(e){if(!e.ctrlKey)return;e.preventDefault();zoom(Z*Math.exp(-e.deltaY*.01))},{passive:false});
+var gs=1;document.addEventListener('gesturestart',function(e){e.preventDefault();gs=Z});document.addEventListener('gesturechange',function(e){e.preventDefault();zoom(gs*e.scale)});
+function closePop(){$$('.mnpop').forEach(function(p){p.remove()})}
+document.addEventListener('click',function(e){if(!e.target.closest('.mnpop'))closePop()});
+document.addEventListener('keydown',function(e){if(e.key=='Escape')closePop()});
+function pad(n){return (n<10?'0':'')+n}
+function parseD(s){var m=/^(\d\d)-(\d\d)-(\d{4})$/.exec(s||'');return m?new Date(+m[3],+m[2]-1,+m[1]):null}
+function fmtD(d){return pad(d.getDate())+'-'+pad(d.getMonth()+1)+'-'+d.getFullYear()}
+var WORDS=function(w){var t=new Date(2026,9,20),l=w.toLowerCase().trim(),d=null,add=function(n){d=new Date(t);d.setDate(t.getDate()+n)},m;
+ if(l=='friday')add(3);else if(l=='next week')add(7);else if(l=='next wednesday')add(8);else if(l=='end of month')d=new Date(2026,9,30);else if(l=='tomorrow')add(1);else if(m=/^in (\d+) weeks?$/.exec(l))add(7*m[1]);else if(m=/^(\d\d)-(\d\d)(?:-(\d{4}))?$/.exec(l))d=new Date(m[3]?+m[3]:2026,+m[2]-1,+m[1]);return d};
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function dpop(b,x){closePop();var cur=parseD(x.due)||new Date(2026,9,20),vm=new Date(cur.getFullYear(),cur.getMonth(),1),r=b.getBoundingClientRect(),d=document.createElement('div');
+ d.className='pkpop pkcal mnpop';d.setAttribute('role','dialog');d.setAttribute('aria-label','Due date');d.style.cssText='position:fixed;z-index:var(--z-pop);top:'+Math.max(8,Math.min(r.bottom+4,innerHeight-420))+'px;left:'+Math.min(r.left,innerWidth-300)+'px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px 12px 12px';
+ function set(dt){x.due=dt?fmtD(dt):'';closePop();draw()}
+ function paint(){var first=(vm.getDay()+6)%7,days=new Date(vm.getFullYear(),vm.getMonth()+1,0).getDate(),h='<label class="sub" style="display:block;font-size:12px;margin-bottom:4px">Type a due date, worked out from the meeting on 20-10-2026</label><input class="pkdt" id="dw" type="text" autocomplete="off" placeholder="Friday, next week, 30-10\u2026" style="width:100%"><div id="dsay" class="sub" role="status" style="min-height:20px;font-size:12px;margin:4px 0"></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+[['Friday','friday'],['Next week','next week'],['Next Wednesday','next wednesday'],['End of month','end of month']].map(function(q){return '<button type="button" class="mchip" data-q="'+q[1]+'">'+q[0]+' \u00b7 '+fmtD(WORDS(q[1])).slice(0,5)+'</button>'}).join('')+'</div><div class="pkcalh"><button type="button" class="ib sm" data-m="-1" aria-label="Previous month">\u2039</button><b>'+MON[vm.getMonth()]+' '+vm.getFullYear()+'</b><button type="button" class="ib sm" data-m="1" aria-label="Next month">\u203a</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px">'+['Mo','Tu','We','Th','Fr','Sa','Su'].map(function(n){return '<span class="sub" style="padding:4px 0">'+n+'</span>'}).join('');
+  for(var i=0;i<first;i++)h+='<span></span>';
+  for(var k=1;k<=days;k++){var dt=new Date(vm.getFullYear(),vm.getMonth(),k),sel=x.due==fmtD(dt),tod=fmtD(dt)=='20-10-2026',we=dt.getDay()%6==0;h+='<button type="button" data-d="'+k+'" style="height:30px;border:0;border-radius:var(--r-md);cursor:pointer;background:'+(sel?'var(--accent)':'none')+';color:'+(sel?'var(--accent-ink)':we?'var(--muted)':'var(--ink)')+';'+(tod&&!sel?'box-shadow:inset 0 0 0 1px var(--accent)':'')+'">'+k+'</button>'}
+  h+='</div><div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><button type="button" class="linkbtn" data-q="">Not set</button></div>';d.innerHTML=h;
+  $$('[data-m]',d).forEach(function(m){m.onclick=function(e){e.stopPropagation();vm=new Date(vm.getFullYear(),vm.getMonth()+ +m.dataset.m,1);paint()}});
+  $$('[data-d]',d).forEach(function(m){m.onclick=function(){set(new Date(vm.getFullYear(),vm.getMonth(),+m.dataset.d))}});
+  $$('[data-q]',d).forEach(function(m){m.onclick=function(){set(m.dataset.q?WORDS(m.dataset.q):null)}});
+  var inp=$('#dw',d);inp.oninput=function(){var g=inp.value.trim()?WORDS(inp.value):null;$('#dsay',d).innerHTML=inp.value.trim()?(g?'Means <b>'+fmtD(g)+'</b>. Press Enter to set it.':'Not a date yet'):''};inp.onkeydown=function(e){if(e.key=='Enter'){var g=WORDS(inp.value);if(g)set(g)}};inp.focus()}
+ document.body.appendChild(d);paint();d.style.top=Math.max(8,Math.min(r.bottom+4,innerHeight-d.offsetHeight-8))+'px'}
+$('#exBtn').onclick=function(e){e.stopPropagation();var o=$('.mnpop.exm');closePop();if(o)return;var r=this.getBoundingClientRect(),d=document.createElement('div');d.className='pkpop mnpop exm';d.setAttribute('role','menu');d.style.cssText='position:fixed;z-index:var(--z-pop);left:auto;top:'+(r.bottom+4)+'px;right:'+(innerWidth-r.right)+'px;width:290px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px';
+ d.innerHTML=[['Word','The minutes template'],['PDF','Printed from the page'],['HTML','A read-only page, filed beside the minutes'],['',''],['Draft the follow-up email','From these minutes; copied, never sent']].map(function(f){return f[0]?'<button type="button" role="menuitem" class="exi" style="display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:6px;cursor:pointer;font:inherit"><b style="font-weight:600">'+f[0]+'</b><div class="sub" style="font-size:12px">'+f[1]+'</div></button>':'<hr style="border:0;border-top:1px solid var(--line);margin:4px 0">'}).join('');
+ document.body.appendChild(d);$$('.exi',d).forEach(function(b){b.onmouseenter=function(){b.style.background='var(--sunk)'};b.onmouseleave=function(){b.style.background='none'};b.onclick=closePop})};
 draw();
 })();
 </script></body></html>
