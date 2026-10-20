@@ -1,7 +1,7 @@
 """BL-10 fixes in the page (v1.9.5, hand checks 26 and 27; board #81): items archived for their age, shown and opened.
 
 - With Show archived projects on, an age-archived item is back in Work and its row is tagged Archived (Files' tag); a live
-  item is not. The switch's help, in Settings › People and projects › Projects and register, mentions items archived for
+  item is not. The switch's help, in Settings › Work and reports › Opening views (v2.6), mentions items archived for
   their age.
 - Opening an age-archived item from search (switch off) opens it in its panel, as any item; its project is live.
 - Opening an archived project's item from search (switch off) says the project is archived and names the real switch and
@@ -89,7 +89,7 @@ class AgeArchivedInThePage(LiveBrowserCase):
         b.wait("/project is archived/.test(document.getElementById('snackT').textContent)", 10)
         msg = b.eval("document.getElementById('snackT').textContent")
         self.assertIn("Show archived projects", msg)
-        self.assertIn("Settings › People and projects › Projects and register", msg)
+        self.assertIn("Settings › Work and reports › Opening views", msg)        # v2.6 (#246): the switch moved there
         self.assertNotIn("Advanced", msg)
 
 

@@ -971,7 +971,7 @@ class Bl333And10(HandcheckCase):
         """Settings: the show-archived switch (data-k showArchived), clicked as Alan would; waits until the page has reloaded
         its data. Returns the switch row's label and its section."""
         b = self.b
-        self.screen("settings-people")
+        self.screen("settings-work")                           # v2.6 (#246): Work and reports › Opening views
         sel = "input.switch[data-k=showArchived]"
         b.wait(f"document.querySelector('{sel}')")
         where = b.eval(f"""(()=>{{ const e=document.querySelector('{sel}'), r=e.closest('.srow'), s=e.closest('[data-sec]');
@@ -1148,7 +1148,7 @@ class Bl333And10(HandcheckCase):
                       f"({st['archived']}, not 2: the demo's MER-A-003 too; the date is the run's, seven months on)")
 
     def test_c26_show_archived(self):
-        """26. Turn on "Show archived projects" (Settings › People and projects › Projects and register; its help mentions items
+        """26. Turn on "Show archived projects" (Settings › Work and reports › Opening views since v2.6, #246; its help mentions items
         archived for their age) → both are back in Work (Closed and Cancelled shown), each row tagged Archived. Turn it off."""
         b, problems = self.b, []
         self.ensure_archived()
@@ -1172,9 +1172,9 @@ class Bl333And10(HandcheckCase):
                 problems.append(f"the page's records carry no archived flag ({', '.join(k for k, v in marked.items() if not v)}), "
                                 "so nothing can mark them")
             label = "Show archived projects"
-            if where["label"] != label or where["sec"] != "projects" or "projects and register" not in (where["heading"] or "").lower():
+            if where["label"] != label or where["sec"] != "views" or "opening views" not in (where["heading"] or "").lower():
                 problems.append(f"the switch is \"{where['label']}\" in Settings › {where['heading']} ({where['sec']}), not \"{label}\" "
-                                f"in People and projects › Projects and register")
+                                f"in Work and reports › Opening views")
             if "archived for their age" not in where["help"]:
                 problems.append(f"its help doesn't mention items archived for their age: \"{where['help'][:100]}\"")
         finally:

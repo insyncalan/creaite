@@ -946,6 +946,8 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .setq{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs);width:100%;box-sizing:border-box}   /* v1.9.5 check 9: the one field height (was 38px) */
 .setcatsel{display:none;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;background:var(--surface);color:var(--ink)}
 .setcrumb{font-size:var(--fs-xs);color:var(--muted);margin:2px 0 -10px 2px}
+/* v2.6 (#246): Advanced's line and sub-tabs, and the side column's "Looking for People…" line */
+.advnote{margin:0 0 10px} #settingsBody>.tabhost{margin:0 0 14px} .setmoved{margin:14px 4px 0;font-size:var(--fs-xs);line-height:1.5} .setmount:empty,.setembed:empty{display:none}
 .setnone{padding:12px 2px}
 .srow[hidden],.igrow[hidden]{display:none}
 .setstack{display:flex;flex-direction:column;gap:16px}
@@ -4238,7 +4240,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
-        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
+        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select><p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
@@ -4300,6 +4302,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ACTPK: () => ACTPK,
     ACTSHOW: () => ACTSHOW,
     ACT_ASK_AGAIN: () => ACT_ASK_AGAIN,
+    ADVSUBS: () => ADVSUBS,
     AGD: () => AGD,
     AGSTYLES: () => AGSTYLES,
     AG_CAP: () => AG_CAP,
@@ -4441,6 +4444,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ED_SLASH: () => ED_SLASH,
     ED_SLASH_ROWS: () => ED_SLASH_ROWS,
     ED_TOOLS: () => ED_TOOLS,
+    EMBEDDED: () => EMBEDDED,
     EVS: () => EVS,
     EVWHAT: () => EVWHAT,
     EV_FULL: () => EV_FULL,
@@ -4542,6 +4546,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     MOREMARK: () => MOREMARK,
     MOREOPEN: () => MOREOPEN,
     MOUNTS: () => MOUNTS,
+    MOVING: () => MOVING,
     MQ_REDUCE: () => MQ_REDUCE,
     MRUN: () => MRUN,
     MSEL: () => MSEL,
@@ -4726,6 +4731,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     SHEET_ZOOM_MAX: () => SHEET_ZOOM_MAX,
     SHEET_ZOOM_MIN: () => SHEET_ZOOM_MIN,
     SHEET_ZOOM_STEP: () => SHEET_ZOOM_STEP,
+    SHOWARCH_ROW: () => SHOWARCH_ROW,
     SHVERBS: () => SHVERBS,
     SKEY: () => SKEY,
     SKIND: () => SKIND,
@@ -4783,6 +4789,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TextEditor: () => TextEditor,
     ToDecide: () => ToDecide,
     Toast: () => Toast,
+    UNCOVERED: () => UNCOVERED,
     VAULT_PATH: () => VAULT_PATH,
     VDB: () => VDB,
     VH: () => VH,
@@ -5312,6 +5319,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     crTick: () => crTick,
     creaiteEditor: () => creaiteEditor,
     createNote: () => createNote,
+    crumbOf: () => crumbOf,
     csClean: () => csClean,
     csEditable: () => csEditable,
     csHead: () => csHead,
@@ -6878,6 +6886,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     suRedraw: () => suRedraw,
     suStatus: () => suStatus,
     suText: () => suText,
+    subName: () => subName,
     subOf: () => subOf,
     sw: () => sw2,
     swapHTML: () => swapHTML,
@@ -7146,6 +7155,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PKSEQ: void 0,
     PSORT: void 0,
     SCAT: void 0,
+    SSUB: void 0,
     SETROW: void 0,
     SQ: void 0,
     WSNEW: void 0,
@@ -30639,6 +30649,7 @@ ${s5}`;
     const t47 = text.toLowerCase();
     return w6.every((x5) => t47.includes(x5));
   };
+  var essText = (r4) => `${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")} ${r4.keys.map((k5) => (settingOf(k5) || {}).label || "").join(" ")}`;
   var val = (k5) => {
     const s5 = settingOf(k5);
     return s5 ? s5.value : void 0;
@@ -30746,6 +30757,29 @@ ${s5}`;
       case "work.weekend_days":
         control = ticks(WEEKDAYS, (v5) => v5.slice(0, 3));
         break;
+      case "identity.short_forms":
+      case "identity.own_domains": {
+        const list = () => (Array.isArray(val(k5)) ? val(k5) : []).join(", ");
+        control = /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            ...named,
+            value: list(),
+            size: 18,
+            placeholder: k5 === "identity.own_domains" ? "example.com" : "Alan, AC",
+            onChange: async (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.currentTarget
+              );
+              const v5 = el2.value.split(",").map((x5) => x5.trim()).filter(Boolean).map((x5) => k5 === "identity.own_domains" ? x5.toLowerCase() : x5);
+              if (!await save2({ [k5]: v5 })) el2.value = list();
+            }
+          }
+        );
+        break;
+      }
       case "sweep.due_from":
         control = text((v5) => HHMM.test(v5) ? v5 : void 0, "Use 24-hour HH:MM, such as 07:00", "HH:MM");
         break;
@@ -30915,7 +30949,7 @@ ${s5}`;
       /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.") })
     ] });
     const w6 = settingWords(query.value);
-    const rows2 = c5.essentials.filter((r4) => !w6.length || settingHasAll(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
+    const rows2 = c5.essentials.filter((r4) => !w6.length || settingHasAll(essText(r4), w6));
     if (!rows2.length) return null;
     const sections = [...new Set(rows2.map((r4) => r4.section))];
     return /* @__PURE__ */ u2("div", { class: "setstack", children: sections.map((s5) => /* @__PURE__ */ u2("div", { class: "card", "data-ess": s5, children: [
@@ -31430,15 +31464,18 @@ ${s5}`;
       }
     );
   }
-  function MoreSettings({ covered: covered2 }) {
+  var tabOfSetting = (c5, s5) => s5.tab !== void 0 ? s5.tab : (c5.group_tabs || {})[s5.tier === "developer" ? "Developer" : s5.group] ?? null;
+  var moreRows = (c5, covered2, w6) => c5.settings.filter((s5) => s5.tier !== "essentials" && !covered2(s5.key) && tabOfSetting(c5, s5) !== null && (!w6.length || settingHasAll(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6)));
+  function MoreSettings({ covered: covered2, tab, groups, skip = [], bare, all }) {
     const c5 = catalogue.value;
     if (!c5) return null;
-    const w6 = settingWords(query.value);
-    const list = c5.settings.filter((s5) => s5.tier !== "essentials" && !covered2(s5.key) && (!w6.length || settingHasAll(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6)));
-    if (!list.length) return null;
+    const w6 = all ? [] : settingWords(query.value);
     const groupOf2 = (s5) => s5.tier === "developer" ? "Developer" : s5.group;
-    const groups = [...c5.groups.filter((g5) => g5 !== "Developer"), "Developer"].filter((g5) => list.some((s5) => groupOf2(s5) === g5));
-    return /* @__PURE__ */ u2("div", { class: "setstack", children: groups.map((g5) => /* @__PURE__ */ u2("div", { class: "card", "data-more": g5, children: [
+    const list = moreRows(c5, covered2, w6).filter((s5) => groups ? groups.includes(groupOf2(s5)) : tabOfSetting(c5, s5) === tab && !skip.includes(groupOf2(s5)));
+    if (!list.length) return null;
+    if (bare) return /* @__PURE__ */ u2(S2, { children: list.map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key)) });
+    const order = [...c5.groups.filter((g5) => g5 !== "Developer"), "Developer"].filter((g5) => list.some((s5) => groupOf2(s5) === g5));
+    return /* @__PURE__ */ u2("div", { class: "setstack", children: order.map((g5) => /* @__PURE__ */ u2("div", { class: "card", "data-more": g5, children: [
       /* @__PURE__ */ u2("h2", { children: g5 }),
       list.filter((s5) => groupOf2(s5) === g5).map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key))
     ] })) });
@@ -31681,20 +31718,35 @@ ${s5}`;
   }
 
   // settings.js
-  var SETCATS = [["essentials", "Essentials"], ["people", "People and projects"], ["advanced", "Advanced"], ["health", "Health"]];
-  var CATOF = { general: "advanced", work: "advanced", review: "advanced", capture: "advanced", system: "health" };
+  var SETCATS = [
+    ["essentials", "Essentials"],
+    ["work", "Work and reports"],
+    ["sweep", "Sweep and Intake"],
+    ["reports", "Reports and minutes"],
+    ["ai", "AI drafts"],
+    ["look", "Look and help"],
+    ["advanced", "Advanced"],
+    ["health", "Health"]
+  ];
+  var ADVSUBS = [["review", "Review and warnings"], ["state", "Current state"], ["arch", "Archiving and backups"], ["folders", "Folders and OneDrive"], ["server", "Server, search and logs"]];
+  var MOVING = ["people", "People and projects"];
+  var CATOF = { general: "look", capture: "sweep", review: "advanced", system: "health" };
   var OLDCATS = { general: "You and the look", work: "Work and views", review: "Review and warnings", capture: "Capture and alerts", advanced: "Everything else" };
   var catOf = (s5) => CATOF[s5.cat] || s5.cat;
-  var SETOLD = { prefs: "essentials", admin: "people", general: "advanced", work: "advanced", capture: "advanced", system: "health" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "vip" };
+  var SETOLD = { prefs: "essentials", admin: "people", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials" };
   function setResolve(t47) {
     t47 = String(t47 || "").toLowerCase();
-    if (SETCATS.some((c5) => c5[0] === t47)) return { cat: t47 };
+    if (SETCATS.some((c5) => c5[0] === t47) || t47 === MOVING[0]) return { cat: t47 };
+    if (ADVSUBS.some((c5) => c5[0] === t47)) return { cat: "advanced", sub: t47 };
     if (SETOLD[t47]) return { cat: SETOLD[t47] };
-    const sec = SETSECTIONS.find((x5) => x5.id === (SETALIAS[t47] || t47));
-    return sec ? { cat: catOf(sec), sec: sec.id } : null;
+    const a5 = SETALIAS[t47] || t47;
+    if (SETCATS.some((c5) => c5[0] === a5)) return { cat: a5 };
+    const sec = SETSECTIONS.find((x5) => x5.id === a5);
+    return sec ? { cat: catOf(sec), sub: sec.sub || null, sec: sec.id } : null;
   }
   var SECT = null;
   shared.SCAT = "essentials";
+  shared.SSUB = "review";
   shared.SQ = "";
   var sw2 = (k5) => `<input type="checkbox" class="switch" data-k="${k5}" ${S[k5] ? "checked" : ""}>`;
   var tx2 = (k5, ph2) => `<input type="text" data-k="${k5}" value="${esc(S[k5])}" placeholder="${ph2 || ""}">`;
@@ -31704,6 +31756,7 @@ ${s5}`;
     Object.defineProperty(window, "STAB", { configurable: true, get: () => shared.SCAT, set: (v5) => {
       const r4 = setResolve(v5);
       shared.SCAT = r4 ? r4.cat : "essentials";
+      if (r4 && r4.sub) shared.SSUB = r4.sub;
       SECT = r4 && r4.sec || null;
       shared.SQ = "";
       const q5 = document.getElementById("setq");
@@ -31727,7 +31780,7 @@ ${s5}`;
   var PSTATE = { active: "Active", closed: "Closed", archived: "Archived" };
   function projArchiveHtml() {
     const L3 = (D.project_states || []).filter((p6) => p6.state !== "archived" || S.showArchived);
-    return row("Show archived projects", sw2("showArchived"), "Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived") + `<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L3.map((p6) => {
+    return `<p class="sub" style="margin:8px 0 0">An archived project is listed here while Show archived projects (Work and reports › Opening views) is on.</p><div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L3.map((p6) => {
       const back2 = p6.state === "archived";
       return `<tr><td>${esc(p6.name)}</td><td>${PSTATE[p6.state] || esc(p6.state)}</td><td class="mgract"><button class="mini" data-parch="${back2 ? "restore" : "archive"}" data-pcode="${esc(p6.code)}" aria-label="${back2 ? "Restore" : "Archive"} ${esc(p6.name)}">${back2 ? "Restore" : "Archive"}</button></td></tr>`;
     }).join("") || '<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`;
@@ -31773,54 +31826,52 @@ ${s5}`;
   };
   var projSettingsListHtml = () => `<div class="srows" id="projSetList"><h3 style="margin:12px 0 0">Project settings</h3><p class="sub" style="margin:4px 0 0">Each project's name, client, people and partners, milestones, reporting and archive are on its own page.</p>` + P4.map((p6) => row(esc(p6.name), `<button type="button" class="mini" data-psopen="${esc(p6.code)}" aria-label="Open the settings of ${esc(p6.name)}">Open settings</button>`)).join("") + `</div>`;
   var clientReportsHtml = () => `<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>` + P4.map((p6) => row(`${esc(p6.name)}: this project needs a separate client report`, `<input type="checkbox" class="switch" data-crsw="${p6.code}" ${clientReportOn(p6.code) ? "checked" : ""}>`)).join("") + `</div>`;
+  var SHOWARCH_ROW = () => row("Show archived projects", sw2("showArchived"), "Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived");
+  var moreSection = (cat, sub) => {
+    const tab = sub ? `advanced/${sub}` : cat;
+    return {
+      id: "more-" + (sub || cat),
+      cat,
+      sub,
+      more: true,
+      title: "More",
+      kw: `more settings ${tab}`,
+      mount: (el2) => R(k(MoreSettings, { covered, tab, skip: EMBEDDED() }), el2),
+      match: (w6) => {
+        const c5 = catalogue.value;
+        return !!c5 && moreRows(c5, covered, w6).some((x5) => tabOfSetting(c5, x5) === tab && !EMBEDDED().includes(x5.tier === "developer" ? "Developer" : x5.group));
+      }
+    };
+  };
   var SETSECTIONS = [
     /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
-       whether a search finds anything in it. */
+       whether a search finds anything in it. v2.6 (#246): `groups` are the catalogue groups drawn inside this card, after its
+       own rows (one card per group). */
     {
       id: "essentials",
       cat: "essentials",
       title: "Essentials",
-      kw: "essentials your day",
+      kw: "essentials your day you short forms email domains follow browser notification",
       mount: (el2) => R(k(Essentials, null), el2),
       match: (w6) => {
         const c5 = catalogue.value;
-        return !!c5 && c5.essentials.some((r4) => sqHas(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
+        return !!c5 && c5.essentials.some((r4) => sqHas(essText(r4), w6));
       }
-    },
-    {
-      id: "you",
-      cat: "general",
-      title: "You",
-      kw: "short forms email domains identity owner mine company",
-      render: () => row("Short forms", tx2("short", "Alan, AC"), "Comma-separated; also matched as you (your name is in Essentials)") + row("Own email domains", `<input type="text" data-k="ownDomains" value="${esc((S.ownDomains || []).join(", "))}" placeholder="example.com">`, "Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside")
-    },
-    {
-      id: "appearance",
-      cat: "general",
-      title: "Appearance",
-      kw: "theme mode light dark colour palette column widths order reset motion animation reduced",
-      render: () => row("Column widths and order", ibtn("undo", "Reset column widths and order", 'id="rzReset"', "bd"), "Drag a column edge in Work to resize, or a heading to move it")
-    },
-    {
-      id: "closeday",
-      cat: "general",
-      title: "Close the day",
-      kw: "close the day evening catch up catch-up sweep before closing minutes shutdown",
-      /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
-      render: () => row("Catch up when the last sweep is older than (minutes)", nm2("catchupAfter"), "A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")
     },
     {
       id: "views",
       cat: "work",
       title: "Opening views",
-      kw: "default priority new action actions raid open status filter view",
-      render: () => row("New action priority", sl2("defPriority", ["Urgent", "High", "Medium", "Low"])) + row("Actions open with", sl2("defActionView", viewsList("actions"))) + row("RAID opens with", sl2("defRaidView", viewsList("raid"))) + row("Decisions open with", sl2("defDecisionView", viewsList("decisions")))
+      groups: ["Opening views"],
+      kw: "default priority new action actions raid open status filter view opening page sort archived projects show",
+      render: () => row("New action priority", sl2("defPriority", ["Urgent", "High", "Medium", "Low"])) + row("Actions open with", sl2("defActionView", viewsList("actions"))) + row("RAID opens with", sl2("defRaidView", viewsList("raid"))) + row("Decisions open with", sl2("defDecisionView", viewsList("decisions"))) + SHOWARCH_ROW()
     },
-    /* BL-131 */
+    /* BL-131; BL-09's switch, from Projects and register */
     {
       id: "board",
       cat: "work",
       title: "Work board",
+      groups: ["Work board"],
       kw: "board group by actions raid decisions closed days column",
       render: () => row("Actions board groups by", sl2("bgActions", groupsOf("actions"))) + row("RAID board groups by", sl2("bgRaid", groupsOf("raid"))) + row("Decisions board groups by", sl2("bgDecisions", groupsOf("decisions"))) + row("Board shows closed items from the last (days)", nm2("boardClosedDays"), "The Closed column on a Work board; Show all brings the rest")
     },
@@ -31828,6 +31879,7 @@ ${s5}`;
       id: "projpage",
       cat: "work",
       title: "Project page",
+      groups: ["Project page"],
       kw: "flow weeks undated grace no due date list cap overdue ageing",
       render: () => row("Flow looks back (weeks)", nm2("flowWeeks"), "The project page's Flow card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)") + row("A new undated item counts as new for (days)", nm2("undatedGrace"), "The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made") + row("Project page lists show at most", nm2("listCap"), "Actions due or overdue; the rest are a link away")
     },
@@ -31835,33 +31887,76 @@ ${s5}`;
       id: "files",
       cat: "work",
       title: "Files",
-      kw: "files page documents project minutes transcripts reports search",
+      groups: ["Files"],
+      kw: "files page documents project minutes transcripts reports search intake portfolio excel export",
       render: () => row("Show project documents", sw2("filesDocs"), "Off by default: the Files page lists minutes, transcripts and reports (Weekly, Adhoc and Steerco), and skips the rest of a large engagement folder. Search still reads documents. Steerco is only read; creaite files nothing there.")
     },
-    {
-      id: "thresholds",
-      cat: "review",
-      title: "Review and health",
-      kw: "stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap",
-      render: () => row("Stale after (days)", nm2("staleDays")) + row("Review: move to the next proposal after a decision", sw2("rvAdvance"), "After Approve or Reject, the next undecided row is ready for the keyboard") + row("Review: possible duplicate when words overlap at least", `<input type="number" data-k="dupOverlap" value="${S.dupOverlap ?? 0.6}" min="0.1" max="1" step="0.05" style="width:80px">`, "0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project") + row("Due soon means within (days)", nm2("dueSoon")) + row("At risk: action overdue more than (days)", nm2("overdueDays")) + row("At risk: milestone slip up to (weeks)", nm2("slipAtRisk")) + row("Off track: slip more than (weeks)", nm2("slipOff")) + row("Off track: Urgent risks at least", nm2("urgentOff"))
-    },
-    { id: "warnings", cat: "review", title: "Early warnings", elid: "warnSettings", kw: "early warnings signals re-dated repeat risk milestone slip long open key person vip dependency", render: () => warnSectionHtml() },
+    moreSection("work"),
     {
       id: "sweep",
-      cat: "capture",
+      cat: "sweep",
       title: "Sweep",
-      kw: "sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from",
+      groups: ["Sweep"],
+      kw: "sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from promises",
       render: () => row("First-run look-back (days)", nm2("lookback"), "When the sweep runs and what it reads are in Essentials › Your day") + row("Show possible matches", sw2("possible")) + '<div id="ignMgr"></div>',
       after: () => renderIgnore()
     },
-    { id: "vip", cat: "capture", title: "People I follow", elid: "vipSet", kw: "follow alerts important people notification browser", render: () => vipSectionHtml() },
+    moreSection("sweep"),
+    {
+      id: "closeday",
+      cat: "sweep",
+      title: "Close the day",
+      groups: ["Close the day"],
+      kw: "close the day evening catch up catch-up sweep before closing minutes shutdown",
+      /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
+      render: () => row("Catch up when the last sweep is older than (minutes)", nm2("catchupAfter"), "A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")
+    },
+    moreSection("reports"),
     {
       id: "reminders",
-      cat: "capture",
+      cat: "reports",
       title: "Reminders",
-      kw: "reminders weekly report day client report rhythm fortnightly monthly dismissed restore",
-      render: () => row("Reminders on", sw2("remindersOn"), "The weekly report's day and time are in Essentials › Your day") + P4.map((p6) => row(`${p6.name} client report`, `<select data-rhythm="${p6.code}">${["Weekly", "Fortnightly", "Monthly", "Off"].map((o5) => `<option ${p6.rhythm === o5 ? "selected" : ""}>${o5}</option>`).join("")}</select>`)).join("") + row("Dismissed reminders", `<button class="btn" id="remRestore">Restore</button>`, "Brings back reminders dismissed forever")
+      groups: ["Reminders"],
+      kw: "reminders weekly report day dismissed restore",
+      /* v2.6 (#246): each project's client report rhythm is in that project's settings */
+      render: () => row("Reminders on", sw2("remindersOn"), "The weekly report's day and time are in Essentials › Your day; each project's client report rhythm is in that project's settings") + row("Dismissed reminders", `<button class="btn" id="remRestore">Restore</button>`, "Brings back reminders dismissed forever")
     },
+    moreSection("ai"),
+    {
+      id: "appearance",
+      cat: "look",
+      title: "Appearance",
+      groups: ["Look and help", "Look and layout"],
+      kw: "theme mode light dark colour palette column widths order reset motion animation reduced icon size",
+      render: () => row("Column widths and order", ibtn("undo", "Reset column widths and order", 'id="rzReset"', "bd"), "Drag a column edge in Work to resize, or a heading to move it")
+    },
+    {
+      id: "help",
+      cat: "look",
+      title: "Help",
+      groups: ["Help"],
+      kw: "help start here first run first-run show again welcome",
+      /* v2.6 (#246): help.start_seen as a quiet button */
+      render: () => row("Show the first-run help again", '<button type="button" class="btn" id="helpAgain" data-setkey="help.start_seen">Show it again</button>', "Help › Start here opens by itself the next time creaite starts, as it did the first time")
+    },
+    moreSection("look"),
+    {
+      id: "thresholds",
+      cat: "advanced",
+      sub: "review",
+      title: "Review and health",
+      groups: ["Review", "Health thresholds"],
+      kw: "stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
+      render: () => row("Stale after (days)", nm2("staleDays")) + row("Review: move to the next proposal after a decision", sw2("rvAdvance"), "After Approve or Reject, the next undecided row is ready for the keyboard") + row("Review: possible duplicate when words overlap at least", `<input type="number" data-k="dupOverlap" value="${S.dupOverlap ?? 0.6}" min="0.1" max="1" step="0.05" style="width:80px">`, "0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project") + row("Due soon means within (days)", nm2("dueSoon")) + row("At risk: action overdue more than (days)", nm2("overdueDays")) + row("At risk: milestone slip up to (weeks)", nm2("slipAtRisk")) + row("Off track: slip more than (weeks)", nm2("slipOff")) + row("Off track: Urgent risks at least", nm2("urgentOff"))
+    },
+    { id: "warnings", cat: "advanced", sub: "review", title: "Early warnings", groups: ["Early warnings"], elid: "warnSettings", kw: "early warnings signals re-dated repeat risk milestone slip long open key person vip dependency", render: () => warnSectionHtml() },
+    moreSection("advanced", "review"),
+    moreSection("advanced", "state"),
+    moreSection("advanced", "arch"),
+    moreSection("advanced", "folders"),
+    moreSection("advanced", "server"),
+    /* People and projects (MOVING): no tab; their old addresses still open them until the People page and each project's
+       settings hold them (v26-project-settings-v2) */
     { id: "people", cat: "people", title: "People", raw: true, kw: "people owners register email aliases organisation role rename merge vip", render: () => '<div class="card wide" id="peopleMgr" data-sec="people"></div>', after: () => renderPeopleMgr() },
     { id: "workstreams", cat: "people", title: "Workstreams", raw: true, kw: "workstreams lead keywords rename merge retire project", render: () => '<div class="card wide" id="wsMgr" data-sec="workstreams"></div>', after: () => renderMgr("ws") },
     {
@@ -31885,44 +31980,36 @@ ${s5}`;
       mount: (el2) => R(k(Health, null), el2),
       match: () => false
     },
+    moreSection("health"),
+    /* Health check: the dismissed problems' Reset; Stop stays last */
     {
       id: "live",
-      cat: "system",
+      cat: "health",
       title: "Live server and backups",
       elid: "liveCard",
       kw: "live server backups port daily database backup status start terminal",
       render: () => row("Status", shared.LIVE ? '<span class="h-ok">Running</span>' : '<span class="h-bad">Stopped</span>', "127.0.0.1, required") + row("Mail, Teams and data", esc(`${SWEPT === "never" ? "Mail and Teams never swept" : `Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0, 16)}`)) + row("Port", nm2("port"), "The creaite app belongs to this port: if you change it, install the app again and reconnect the vault") + `<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh", "Check now", 'id="liveCheck"', "bd")}</div>`
     },
-    { id: "diag", cat: "system", title: "Diagnostics", raw: true, kw: "diagnostics log level errors debug copy report folder", render: () => diagCardHtml(), after: () => {
+    { id: "diag", cat: "health", title: "Diagnostics", raw: true, kw: "diagnostics log level errors debug copy report folder", render: () => diagCardHtml(), after: () => {
       if (SERVED) diagLoad().then(() => {
         if (shared.VIEW === "settings") diagRedraw();
       });
     } },
     /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
-    { id: "version", cat: "system", title: "creaite version", raw: true, kw: "version update install release zip undo", render: () => '<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>', after: () => drawUpdates() },
+    { id: "version", cat: "health", title: "creaite version", raw: true, kw: "version update install release zip undo", render: () => '<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>', after: () => drawUpdates() },
     {
       id: "danger",
-      cat: "system",
+      cat: "health",
       title: "Stop the live server",
       elid: "dangerCard",
       kw: "stop live server quit",
       render: () => row("Stop the live server", '<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>', "Open creaite again from its launcher or Terminal. Edits wait until it is running again")
-    },
-    {
-      id: "more",
-      cat: "advanced",
-      title: "Everything else",
-      kw: "everything else advanced",
-      mount: (el2) => R(k(MoreSettings, { covered }), el2),
-      match: (w6) => {
-        const c5 = catalogue.value;
-        return !!c5 && c5.settings.some((s5) => s5.tier !== "essentials" && !covered(s5.key) && sqHas(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6));
-      }
     }
   ];
+  var EMBEDDED = () => SETSECTIONS.flatMap((s5) => s5.groups || []);
   var ROWKEY = { k: (v5) => SKEY[v5], vipk: (v5) => "vip." + v5, drsw: (v5) => "drafting." + v5, wk: (v5) => "warnings." + v5 };
-  var COVERED_PREFIX = ["warnings.", "dashboard.rail."], COVERED_KEYS = ["logging.level", "sweep.ignore", "vip.notify", "reminders.dismissed_forever", "dashboard.week_ahead_priorities"];
-  var covered = (k5) => Object.values(SKEY).includes(k5) || COVERED_KEYS.includes(k5) || COVERED_PREFIX.some((p6) => k5.startsWith(p6));
+  var COVERED_PREFIX = ["warnings.", "dashboard.rail.", "drafting."], COVERED_KEYS = ["logging.level", "sweep.ignore", "vip.notify", "reminders.dismissed_forever", "dashboard.week_ahead_priorities", "help.start_seen"], UNCOVERED = ["drafting.agenda_style"];
+  var covered = (k5) => !UNCOVERED.includes(k5) && (Object.values(SKEY).includes(k5) || COVERED_KEYS.includes(k5) || COVERED_PREFIX.some((p6) => k5.startsWith(p6)));
   function rowKeys(r4) {
     const out = [];
     r4.querySelectorAll("input,select,textarea").forEach((el2) => {
@@ -32033,26 +32120,33 @@ ${s5}`;
       if (viaServer()) checkHealth();
     }, 60 * 1e3);
   }
-  var setCard = (s5) => s5.mount ? `<div class="setmount" id="set-${s5.id}" data-sec="${s5.id}" data-mount></div>` : s5.raw ? s5.render() : `<div class="card${s5.wide ? " wide" : ""}" id="${s5.elid || "set-" + s5.id}" data-sec="${s5.id}"><h2>${s5.title}</h2>${s5.render()}</div>`;
-  var catName = (id2) => (SETCATS.find((c5) => c5[0] === id2) || [])[1] || "";
+  var setCard = (s5) => s5.mount ? `<div class="setmount" id="set-${s5.id}" data-sec="${s5.id}" data-mount></div>` : s5.raw ? s5.render() : `<div class="card${s5.wide ? " wide" : ""}" id="${s5.elid || "set-" + s5.id}" data-sec="${s5.id}"><h2>${s5.title}</h2>${s5.render()}${s5.groups ? `<div class="setembed" data-embed="${s5.id}" data-mount></div>` : ""}</div>`;
+  var catName = (id2) => id2 === MOVING[0] ? MOVING[1] : (SETCATS.find((c5) => c5[0] === id2) || [])[1] || "";
+  var subName = (id2) => (ADVSUBS.find((c5) => c5[0] === id2) || [])[1] || "";
+  var crumbOf = (s5) => [catName(catOf(s5)), catOf(s5) === "advanced" ? subName(s5.sub || "review") : "", s5.more ? "" : s5.title].filter(Boolean).join(" › ");
+  var embedHit = (s5, w6) => {
+    const c5 = catalogue.value;
+    return !!(c5 && s5.groups) && moreRows(c5, covered, w6).some((x5) => s5.groups.includes(x5.group));
+  };
   var sqWords = () => shared.SQ.toLowerCase().split(/\s+/).filter(Boolean), sqHas = (txt, w6) => w6.every((x5) => txt.toLowerCase().includes(x5));
   var rowText = (r4) => (r4.classList.contains("srow") && r4.firstElementChild && r4.firstElementChild !== r4.lastElementChild ? r4.firstElementChild : r4).textContent;
   var SMATCH = /* @__PURE__ */ new Set();
-  var rowOK = (r4, w6) => sqHas(rowText(r4), w6);
+  var rowCat = (r4) => rowKeys(r4).map((k5) => settingOf(k5)).filter(Boolean).map((x5) => `${x5.label} ${x5.line}`).join(" ");
+  var rowOK = (r4, w6) => sqHas(`${rowText(r4)} ${rowCat(r4)}`, w6);
   function setSearchSections() {
     const w6 = sqWords();
     SMATCH = /* @__PURE__ */ new Set();
     const t47 = document.createElement("div");
     return SETSECTIONS.filter((s5) => {
       if (s5.mount) return s5.match(w6);
-      if (sqHas(`${s5.title} ${catName(catOf(s5))} ${OLDCATS[s5.cat] || ""}`, w6)) {
+      if (sqHas(`${s5.title} ${crumbOf(s5)} ${OLDCATS[s5.cat] || ""}`, w6)) {
         SMATCH.add(s5.id);
         return true;
       }
       putHTML(t47, raw(setCard(s5)));
       setMark(t47);
       const rows2 = [...t47.querySelectorAll(".srow,.igrow")];
-      return sqHas(s5.kw, w6) || rows2.some((r4) => rowOK(r4, w6));
+      return sqHas(s5.kw, w6) || rows2.some((r4) => rowOK(r4, w6)) || embedHit(s5, w6);
     });
   }
   function setApplySearch() {
@@ -32060,7 +32154,7 @@ ${s5}`;
     const w6 = sqWords();
     $$("#settingsBody [data-sec]").forEach((c5) => {
       if (c5.hasAttribute("data-mount") || SMATCH.has(c5.dataset.sec)) return;
-      const rows2 = [...c5.querySelectorAll(".srow,.igrow")], hit2 = rows2.filter((r4) => rowOK(r4, w6));
+      const rows2 = [...c5.querySelectorAll(".srow,.igrow")].filter((r4) => !mounted(r4)), hit2 = rows2.filter((r4) => rowOK(r4, w6));
       rows2.forEach((r4) => {
         r4.hidden = hit2.length ? !hit2.some((h5) => h5 === r4 || h5.contains(r4)) : false;
       });
@@ -32072,8 +32166,9 @@ ${s5}`;
     MOUNTS = [];
   }
   function renderSettings() {
-    if (!SETCATS.some((c5) => c5[0] === shared.SCAT)) shared.SCAT = "essentials";
-    const searching = !!shared.SQ.trim();
+    if (!SETCATS.some((c5) => c5[0] === shared.SCAT) && shared.SCAT !== MOVING[0]) shared.SCAT = "essentials";
+    if (!ADVSUBS.some((c5) => c5[0] === shared.SSUB)) shared.SSUB = "review";
+    const searching = !!shared.SQ.trim(), moving = !searching && shared.SCAT === MOVING[0];
     query.value = shared.SQ.trim();
     if (SERVED && !catalogue.value) loadCatalogue();
     drawTabs($("#setcatsHost"), {
@@ -32083,15 +32178,26 @@ ${s5}`;
       vertical: true,
       controls: "settingsBody",
       items: SETCATS.map(([id2, t47]) => ({ id: id2, label: t47, data: { scat: id2 } })),
-      selected: searching ? "" : shared.SCAT,
+      selected: searching || moving ? "" : shared.SCAT,
       onSelect: setOpen
     });
-    putHTML($("#setcatsel"), raw((searching ? `<option value="">Search results</option>` : "") + SETCATS.map(([id2, t47]) => `<option value="${id2}" ${!searching && id2 === shared.SCAT ? "selected" : ""}>${esc(t47)}</option>`).join("")));
-    const secs = searching ? setSearchSections() : SETSECTIONS.filter((s5) => catOf(s5) === shared.SCAT);
-    const head = (s5) => searching ? s5.mount && s5.id !== "more" ? "" : `<div class="setcrumb">${esc(catName(catOf(s5)))} › ${esc(s5.id === "more" ? OLDCATS.advanced : s5.title)}</div>` : shared.SCAT === "advanced" && OLDCATS[s5.cat === "advanced" ? "advanced" : s5.cat] && s5 === secs.find((x5) => x5.cat === s5.cat) ? `<h2 class="setgroup">${esc(OLDCATS[s5.cat])}</h2>` : "";
+    putHTML($("#setcatsel"), raw((searching ? `<option value="">Search results</option>` : moving ? `<option value="">${esc(MOVING[1])}</option>` : "") + SETCATS.map(([id2, t47]) => `<option value="${id2}" ${!searching && id2 === shared.SCAT ? "selected" : ""}>${esc(t47)}</option>`).join("")));
+    const adv = !searching && shared.SCAT === "advanced";
+    const secs = searching ? setSearchSections() : SETSECTIONS.filter((s5) => catOf(s5) === shared.SCAT && (!adv || (s5.sub || "review") === shared.SSUB));
+    const head = (s5) => !searching || s5.mount && !s5.more ? "" : `<div class="setcrumb">${esc(crumbOf(s5))}</div>`;
     setUnmount();
     const none = `No settings match “${shared.SQ.trim()}”.`;
-    putHTML($("#settingsBody"), !secs.length ? html`<p class="sub setnone" role="status">${none}</p>` : html`<div class="setstack">${raw(secs.map((s5) => head(s5) + setCard(s5)).join(""))}</div>`);
+    const top = adv ? `<p class="sub advnote">For tuning and rarely changed settings. Everything has a sensible default, so most people never open this.</p><div class="tabhost" id="setsubHost"></div>` : moving ? `<p class="sub advnote" id="setMovingNote">People, workstreams and archiving are moving out of Settings: people to the People page, workstreams and archive to each project's settings. Until then they are here.</p>` : "";
+    putHTML($("#settingsBody"), !secs.length ? html`<p class="sub setnone" role="status">${none}</p>` : html`${raw(top)}<div class="setstack">${raw(secs.map((s5) => head(s5) + setCard(s5)).join(""))}</div>`);
+    if (adv) drawTabs($("#setsubHost"), {
+      id: "subtabs",
+      className: "tabs",
+      label: "Advanced",
+      controls: "settingsBody",
+      items: ADVSUBS.map(([id2, t47]) => ({ id: id2, label: t47, data: { ssub: id2 } })),
+      selected: shared.SSUB,
+      onSelect: (k5) => setOpen(k5)
+    });
     secs.forEach((s5) => {
       if (s5.mount) {
         const el2 = document.getElementById("set-" + s5.id);
@@ -32099,7 +32205,14 @@ ${s5}`;
           MOUNTS.push(el2);
           s5.mount(el2);
         }
-      } else if (s5.after) s5.after();
+      } else {
+        if (s5.after) s5.after();
+        const em2 = s5.groups && document.querySelector(`#settingsBody [data-embed="${s5.id}"]`);
+        if (em2) {
+          MOUNTS.push(em2);
+          R(k(MoreSettings, { covered, groups: s5.groups, bare: true, all: SMATCH.has(s5.id) }), em2);
+        }
+      }
     });
     setMark($("#settingsBody"));
     setApplySearch();
@@ -32110,6 +32223,11 @@ ${s5}`;
       shared.COLORD = {};
       store.set("creaite-colorder", shared.COLORD);
       snack("Column widths and order reset");
+    };
+    if (b5("helpAgain")) b5("helpAgain").onclick = async () => {
+      if (!await writeSettings({ "help.start_seen": false })) return;
+      S.helpSeen = false;
+      snack("Help › Start here opens by itself next time creaite starts");
     };
     if (b5("remRestore")) b5("remRestore").onclick = async () => {
       if (!await writeSettings({ "reminders.dismissed_forever": [] })) return;
@@ -42468,7 +42586,7 @@ ${s5}`;
   function bootToday0164() {
     SETSECTIONS.splice(SETSECTIONS.findIndex((s5) => s5.id === "live") + 1, 0, {
       id: "setup",
-      cat: "system",
+      cat: "health",
       title: "Set-up",
       raw: true,
       kw: "setup set-up health check doctor launcher microsoft 365 connect rebuild excel first run",
@@ -51128,10 +51246,12 @@ ${pre}**Current state title:** ${title}`);
       const r4 = await api("/api/open", { path: a5.dataset.dropen });
       if (!r4.ok) snack(oneLine(r4.message) || "Couldn't open it");
     });
-    SETSECTIONS.splice(SETSECTIONS.findIndex((s5) => s5.id === "appearance") + 1, 0, {
+    SETSECTIONS.splice(SETSECTIONS.findIndex((s5) => s5.id === "more-ai"), 0, {
       id: "drafts",
-      cat: "general",
+      cat: "ai",
       title: "AI drafts",
+      groups: ["AI drafts"],
+      /* v2.6 (#246): its own tab; the agenda style joins it */
       kw: "ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
       render: () => `<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>` + DRAFTFEATURES.map(([f5, l6, h5]) => row(l6, `<input type="checkbox" class="switch" data-drsw="${f5}" ${draftOn(f5) ? "checked" : ""} aria-label="${esc(l6)}">`, h5)).join("") + `<div class="drstats" id="drStats">${viaServer() ? "" : "How often each kind of draft is used shows here while the live server runs."}</div>`,
       after: () => drStatsLoad()
@@ -62342,7 +62462,7 @@ ${d5.text}`);
     const [g5, i5] = key2.split(":"), r4 = SRCH.res && SRCH.res.groups[g5] && SRCH.res.groups[g5][+i5];
     if (r4) openFound(r4);
   }
-  var SHOWARCH = "Show archived projects (Settings › People and projects › Projects and register)";
+  var SHOWARCH = "Show archived projects (Settings › Work and reports › Opening views)";
   async function openFound(r4) {
     const o5 = r4.opens;
     if (o5.type === "item" && o5.archived && !S.showArchived) {
@@ -72626,7 +72746,7 @@ ${d5.text}`);
   function navState() {
     const st2 = {
       v: shared.VIEW,
-      arg: shared.VIEW === "cockpit" ? shared.COCK : shared.VIEW === "person" ? shared.PERSON : shared.VIEW === "help" ? shared.HELPARG : shared.VIEW === "settings" ? shared.SCAT : null,
+      arg: shared.VIEW === "cockpit" ? shared.COCK : shared.VIEW === "person" ? shared.PERSON : shared.VIEW === "help" ? shared.HELPARG : shared.VIEW === "settings" ? shared.SCAT === "advanced" && shared.SSUB && shared.SSUB !== "review" ? shared.SSUB : shared.SCAT : null,
       wt: shared.WT,
       wv: shared.WVIEW,
       p: [...PROJF],
@@ -75762,6 +75882,7 @@ ${d5.text}`);
         "$$",
         "A",
         "ACTKINDS",
+        "ADVSUBS",
         "AI_ACTIONS",
         "AI_GROUPS",
         "AI_PLACES",
@@ -75830,6 +75951,7 @@ ${d5.text}`);
         "MFIRST",
         "MM",
         "MOD",
+        "MOVING",
         "MRUN",
         "MSEL",
         "MTG",
@@ -76383,6 +76505,7 @@ ${d5.text}`);
         "rjGuesses",
         "rkText",
         "row",
+        "rowKeys",
         "rows",
         "rtOK",
         "runCheck",
@@ -76599,6 +76722,7 @@ ${d5.text}`);
         "SETROW",
         "SHOWN",
         "SQ",
+        "SSUB",
         "STALE",
         "UNDO",
         "VIEW",

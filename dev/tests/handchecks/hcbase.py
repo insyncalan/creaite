@@ -75,7 +75,8 @@ SCREENS = {
     "help": ("go('help')", "!document.getElementById('v-help').hidden"),
     "settings-essentials": ("go('settings','essentials')", "!!document.querySelector('#set-essentials .srow')"),
     "settings-people": ("go('settings','people')", "!!document.querySelector('#settingsBody [data-sec=people]')"),
-    "settings-advanced": ("go('settings','advanced')", "!!document.querySelector('#set-more .srow')"),
+    "settings-advanced": ("go('settings','advanced')", "!!document.querySelector('#settingsBody [data-sec=thresholds] .srow')"),   # v2.6 (#246)
+    "settings-work": ("go('settings','work')", "!!document.querySelector('#settingsBody [data-sec=views] .srow')"),
     "settings-health": ("go('settings','health')", "!!document.querySelector('#healthCard')"),
 }
 

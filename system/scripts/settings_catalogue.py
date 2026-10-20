@@ -35,6 +35,10 @@ ESSENTIALS, ADVANCED, DEVELOPER = "essentials", "advanced", "developer"
 ESSENTIAL_ROWS = (
     ("You", "Your name", "Set at first start. creaite uses it to know which items are yours.", ("identity.name",)),
     ("You", "Weekend", "No reminders or \"due\" warnings fall on these days.", ("work.weekend_days",)),
+    ("You", "Short forms of your name", "Other ways people write your name, comma-separated (Al, AC); also matched as you.",
+     ("identity.short_forms",)),                                                            # v2.6 (#246): the old "You" card joined
+    ("You", "Own email domains", "Comma-separated; addresses at these domains are inside your company, so Draft email warns "
+     "about anyone outside.", ("identity.own_domains",)),
     ("Your day", "Morning sweep from", "creaite catches up on mail and Teams when you first open it after this time.",
      ("sweep.due_from",)),
     ("Your day", "What the sweep reads", "Inbox, Sent Items, Teams chats and channels, your calendar.",
@@ -51,6 +55,8 @@ ESSENTIAL_ROWS = (
     ("People I follow", "Tell me when they write", "Their messages head Today until you dismiss them. Only you see who you follow.",
      ("vip.enabled",)),
     ("People I follow", "Check every", "While creaite is open.", ("vip.check_minutes",)),
+    ("People I follow", "Browser notification", "Also a notification on the Mac when they write; your browser asks once.",
+     ("vip.notify",)),                                                                      # v2.6 (#246): one People I follow
     ("Look and help", "Theme", "Light, dark, or follow your Mac.", ("dashboard.theme",)),
     ("Look and help", "Style", "The look of the whole app.", ("dashboard.palette",)),
     ("Look and help", "Motion", "Follows your Mac's Reduce motion unless you choose.", ("dashboard.motion",)),
@@ -156,7 +162,7 @@ CATALOGUE = {
                          "Problems you dismissed in Settings › Health: they stop counting until their detail changes.",
                          "None: every problem counts until you dismiss it. Reset brings them all back."),     # #242
     # ── Look and layout, Work and views
-    "dashboard.default_tab": ("Work and views", "Opening page", "The page creaite opens on.", "Portfolio: the whole picture first."),
+    "dashboard.default_tab": ("Opening views", "Opening page", "The page creaite opens on.", "Portfolio: the whole picture first."),
     "dashboard.theme": ("Look and help", "Theme", "Light, dark, or follow the Mac.", "Follows your Mac, so it matches your other apps."),
     "dashboard.palette": ("Look and help", "Style", "The named look of the whole app.", "creaite, the house style."),
     "dashboard.motion": ("Look and help", "Motion", "Animations: follow the Mac, reduce or full.",
@@ -166,28 +172,27 @@ CATALOGUE = {
                              "On: you can tell the pages apart without pointing at them; the collapsed rail is only 20px wider."),
     "dashboard.rail_icon_size": ("Look and help", "Icon size", "Small, medium or large icons in the left rail.",
                                  "Small is the size the rail has always had."),
-    "dashboard.files_show_inbox": ("Work and views", "Files: show Intake", "List the files waiting in Intake on Files.",
+    "dashboard.files_show_inbox": ("Files", "Files: show Intake", "List the files waiting in Intake on Files.",
                                    "On: a waiting transcript should be seen."),
-    "dashboard.files_show_portfolio": ("Work and views", "Files: show the portfolio", "List the portfolio's own meetings on Files.",
+    "dashboard.files_show_portfolio": ("Files", "Files: show the portfolio", "List the portfolio's own meetings on Files.",
                                        "On: cross-project meetings matter as much as project ones."),
-    "dashboard.files_show_documents": ("Work and views", "Files: show documents", "List each project's documents on Files.",
+    "dashboard.files_show_documents": ("Files", "Files: show documents", "List each project's documents on Files.",
                                        "Off: documents are many and passive; search still reads them."),
-    "dashboard.show_archived": ("Work and views", "Show archived projects",
-                                "People and projects › Projects and register: archived projects' items, and items archived for "
-                                "their age, in the views.",
+    "dashboard.show_archived": ("Opening views", "Show archived projects",
+                                "Archived projects' items, and items archived for their age, in Work, Today and the Excel export.",
                                 "Off: archived work is finished; search still finds it, marked Archived."),
     "dashboard.week_ahead_priorities": ("Saving and review", "Week ahead shows", "The priorities listed in Today's Week ahead.",
                                         ("Urgent only keeps the week short; add High for a fuller view (Alan, 14-10-2026, "
                                          "keeping it rather than the mockup's Urgent and High).")),
-    "dashboard.undated_grace_days": ("Work and views", "New items without a date: grace (days)",
+    "dashboard.undated_grace_days": ("Project page", "New items without a date: grace (days)",
                                      "An item raised this recently shows as new rather than undated.",
                                      "Three days gives time to add a date before it is flagged."),
-    "dashboard.flow_weeks": ("Work and views", "Flow chart weeks", "How many weeks the opened and closed chart shows.",
+    "dashboard.flow_weeks": ("Project page", "Flow chart weeks", "How many weeks the opened and closed chart shows.",
                              "Eight weeks shows a trend without old noise."),
     "dashboard.auto_apply": ("Saving and review", "Save my changes at once",
                              "Your own edits are applied straight away, with Undo.",
                              "On: matches how you work; Review still guards what creaite suggests."),
-    "dashboard.project_list_cap": ("Work and views", "Project page list length", "How many due or overdue actions a project page lists.",
+    "dashboard.project_list_cap": ("Project page", "Project page list length", "How many due or overdue actions a project page lists.",
                                    "Ten fits the page; the rest are one click away in Work."),
     "dashboard.generate_days": ("Current state", "Generate from the last (days)", "The default period when drafting a Current state.",
                                 "A week matches the weekly report."),
@@ -214,38 +219,216 @@ CATALOGUE = {
     "status.length_words.fuller": ("Current state", "Fuller length (words)", "The target for a fuller Current state.",
                                    "250 words: room for context without becoming a report."),
     # ── Archiving (BL-10, BL-03; Alan, 14-10-2026)
-    "archive.after_months.actions": ("Archiving", "Archive closed actions after (months)",
+    "archive.after_months.actions": ("Archiving and backups", "Archive closed actions after (months)",
                                      "Closed or cancelled actions are archived this long after closing, once a day; 0 never.",
                                      "Six months: long enough to be past any report that mentions them (Alan, 14-10-2026)."),
-    "archive.after_months.raid": ("Archiving", "Archive closed RAID items after (months)",
+    "archive.after_months.raid": ("Archiving and backups", "Archive closed RAID items after (months)",
                                   "Closed or cancelled risks, issues, assumptions and dependencies; 0 never.",
                                   "Six months, as for actions (Alan, 14-10-2026)."),
-    "archive.after_months.promises": ("Archiving", "Archive done promises after (months)",
+    "archive.after_months.promises": ("Archiving and backups", "Archive done promises after (months)",
                                       "Done or dropped promises; 0 never.", "Six months, as for actions (Alan, 14-10-2026)."),
-    "archive.reports_after_months": ("Archiving", "Offer to archive reports and minutes after (months)",
+    "archive.reports_after_months": ("Archiving and backups", "Offer to archive reports and minutes after (months)",
                                      "Reports, minutes and one-pagers older than this are offered monthly in Health; 0 never.",
                                      "Twelve months: a year of reporting stays at hand (Alan, 14-10-2026)."),
     # ── Safety, live server, ask creaite
     "backups.daily": ("Safety", "Daily backup", "Copy the database each day, then a closed zip of what rebuilds the vault (to OneDrive "
                       "when projects live there).", "On: non-negotiable safety; off only on purpose."),
     # BL-323: retention, applied by the daily Tidy up here and in OneDrive (Alan, 14-10-2026)
-    "backups.daily_days": ("Safety", "Keep every daily backup for (days)", "Daily database backups and zips: every one this long.",
+    "backups.daily_days": ("Archiving and backups", "Keep every daily backup for (days)",
+                           "Daily database backups and zips: every one this long.",
                            "30 days: any day of the last month can be restored."),
-    "backups.weekly_days": ("Safety", "Then keep one a week for (days)", "After that, the Monday's, for this long; then the first "
-                            "of each month for good.", "A year of weekly points, then monthly ones for good (Alan, 14-10-2026)."),
-    "backups.copy_days": ("Safety", "Keep apply and undo copies for (days)", "The database copies made before each apply, undo, "
-                          "revert or migrate.", "14 days: they undo recent changes on this laptop; the daily backups cover the rest."),
-    "backups.snapshot_days": ("Safety", "Keep daily dashboard snapshots for (days)", "Then one a month. The flow history is kept "
-                              "for good.", "30 days: a snapshot is only a view of the database."),
-    "backups.file_change_days": ("Safety", "Keep file-change backups for (days)", "The earlier version of each file ask creaite "
-                                 "changed. Undo of an older change then says the backup has gone.", "90 days: a quarter."),
-    "backups.releases_kept": ("Safety", "Release zips kept", "The installed release and the ones before it.",
+    "backups.weekly_days": ("Archiving and backups", "Then keep one a week for (days)",
+                            "After that, the Monday's, for this long; then the first of each month for good.",
+                            "A year of weekly points, then monthly ones for good (Alan, 14-10-2026)."),
+    "backups.copy_days": ("Archiving and backups", "Keep apply and undo copies for (days)",
+                          "The database copies made before each apply, undo, revert or migrate.",
+                          "14 days: they undo recent changes on this laptop; the daily backups cover the rest."),
+    "backups.snapshot_days": ("Archiving and backups", "Keep daily dashboard snapshots for (days)",
+                              "Then one a month. The flow history is kept for good.",
+                              "30 days: a snapshot is only a view of the database."),
+    "backups.file_change_days": ("Archiving and backups", "Keep file-change backups for (days)",
+                                 "The earlier version of each file ask creaite changed. Undo of an older change then says "
+                                 "the backup has gone.", "90 days: a quarter."),
+    "backups.releases_kept": ("Archiving and backups", "Release zips kept", "The installed release and the ones before it.",
                               "3: the installed one and the two before it; any release can be downloaded again."),
-    "backups.update_backups_kept": ("Safety", "Update backups kept", "The backups made before each update (undo update uses the "
+    "backups.update_backups_kept": ("Archiving and backups", "Update backups kept",
+                                    "The backups made before each update (undo update uses the last one).",
+                                    "3: the last three updates."),
+    "live_mode.required": "the dashboard needs the live server (IT-approved); not a choice",
+    "live_mode.port": "the installed app belongs to its port; change it at set-up",
+    "assistant.enabled": "ask creaite's switch is kept out of the screens on purpose",
+    "people.added": "an old list; set-up moves it into the people register",
+    "people.hidden": "an old list; set-up moves it into the people register",
+    "workstreams.added": "an old list; set-up moves it into the workstreams table",
+    "workstreams.hidden": "an old list; set-up moves it into the workstreams table",
+}
+CATALOGUE = {
+    # ── Sweep
+    "sweep.due_from": ("Your day", "Morning sweep from", "The time after which the first session of the day sweeps mail and Teams.",
+                       "Before the first meeting, after overnight mail from other time zones."),
+    "promises.from_sweep": ("Sweep", "Promises from the sweep",                               # BL-125 A (joined on release-192)
+                            "Let the sweep propose promises from mail and Teams; promises from meetings and your own are unaffected.",
+                            "Off: promises come from meetings and from you until the sweep's are trusted."),
+    "sweep.first_run_lookback_days": ("Sweep", "First sweep looks back", "How many days the very first sweep reads.",
+                                      "Two weeks catches what's still live without flooding Review on day one."),
+    "sweep.max_lookback_days": ("Sweep", "Sweep looks back at most",
+                                "The furthest back a sweep reads mail and Teams after a gap; \"sweep the last 7 days\" overrides it.",
+                                "Three days covers a long weekend without a flood in Review after a holiday."),
+    "sweep.sources.inbox": ("Your day", "Sweep reads: Inbox", "Mail you received.",
+                            "Missing a source is worse than one more proposal; ignore rules handle the noise."),
+    "sweep.sources.sent_items": ("Your day", "Sweep reads: Sent Items", "Mail you sent, where your own promises are.",
+                                 "Missing a source is worse than one more proposal; ignore rules handle the noise."),
+    "sweep.sources.teams_chats": ("Your day", "Sweep reads: Teams chats", "Your one-to-one and group chats.",
+                                  "Missing a source is worse than one more proposal; ignore rules handle the noise."),
+    "sweep.sources.teams_channels": ("Your day", "Sweep reads: Teams channels", "Channel posts in your teams.",
+                                     "Missing a source is worse than one more proposal; ignore rules handle the noise."),
+    "sweep.sources.calendar": ("Your day", "Sweep reads: calendar", "The week's meetings, for Today, Intake and prep.",
+                               "Today's day view and meeting prep need it."),
+    "sweep.show_possible_matches": ("Sweep", "Show possible matches",
+                                    "Messages that may belong to a project are shown in Review to place, not dropped.",
+                                    "A weak match you can place is better than a message silently lost."),
+    "sweep.ignore": ("Sweep", "Ignore rules", "Mail, Teams and invites the sweep skips (counted, never read into proposals).",
+                     "Private items are always skipped; the rest are common noise you can switch off or edit."),
+    # ── People I follow
+    "vip.enabled": ("People I follow", "Tell me when they write", "Messages from people you follow head Today.",
+                    "On: these are the people you can't afford to miss."),
+    "vip.check_minutes": ("People I follow", "Check every (minutes)", "How often the live server looks for their messages.",
+                          "Fast enough to matter, light on Microsoft 365 calls."),
+    "vip.notify": ("People I follow", "Browser notification", "Also show a notification on the Mac, not only on Today.",
+                   "On: an alert you don't see until you open Today is late; nothing leaves the laptop."),
+    # ── Reminders
+    "reminders.enabled": ("Reminders", "Report reminders", "Weekly and client report reminders on Today and at session start.",
+                          "On: a reminder is one line and never drafts anything by itself."),
+    "reminders.weekly_report_day": ("Your day", "Weekly report reminder: day", "The day the weekly report reminder starts.",
+                                    "Friday leaves time to draft before the weekend."),
+    "reminders.weekly_report_from": ("Your day", "Weekly report reminder: from", "The time on that day it starts.",
+                                     "Midday: the week's meetings are mostly done, the afternoon is left to write."),
+    "reminders.dismissed_forever": ("Reminders", "Dismissed reminders", "Reminders and notices you dismissed for good.",
+                                    "Empty: nothing is hidden until you hide it. Reset brings them all back."),
+    # ── Review
+    "review.stale_after_days": ("Review", "Stale after (days)", "An open action with no update for this long counts as stale.",
+                                "A week: one reporting cycle without news is worth a nudge."),
+    "review.auto_advance": ("Review", "Move to the next item", "After a decision, Review moves on to the next item.",
+                            "On: approving a batch is quicker without reaching for the next row."),
+    "review.duplicate_overlap": ("Review", "Duplicate likeness",
+                                 "How alike (0 to 1) a proposal must be to an open item to be tagged a likely repeat.",
+                                 "0.6 catches reworded repeats without tagging items that merely share a topic."),
+    "review.due_soon_days": ("Review", "Due soon (days)", "How far ahead counts as due soon.", "A week matches the weekly rhythm."),
+    "review.spot_check_every": ("Review", "Spot-check one in", "When approving routine items together, one in this many is shown to check.",
+                                "One in ten keeps bulk approval honest without slowing it down; 0 shows none."),
+    # ── Health thresholds
+    "health.at_risk_overdue_days": ("Health thresholds", "At risk: overdue for (days)",
+                                    "An action overdue this long suggests At risk.", "A week overdue is a pattern, not a slip."),
+    "health.at_risk_milestone_slip_weeks_max": ("Health thresholds", "At risk: milestone slip up to (weeks)",
+                                                "A milestone forecast up to this many weeks late suggests At risk.",
+                                                "Up to two weeks can usually still be recovered."),
+    "health.off_track_milestone_slip_weeks_over": ("Health thresholds", "Off track: milestone slip over (weeks)",
+                                                   "More than this many weeks late suggests Off track.",
+                                                   "Beyond two weeks a milestone usually needs re-planning."),
+    "health.off_track_urgent_risks_min": ("Health thresholds", "Off track: urgent risks from",
+                                          "This many open Urgent risks suggests Off track.",
+                                          "One urgent risk is managed; two at once is a project in trouble."),
+    "health.dismissed": ("Health check", "Dismissed health problems",
+                         "Problems you dismissed in Settings › Health: they stop counting until their detail changes.",
+                         "None: every problem counts until you dismiss it. Reset brings them all back."),     # #242
+    # ── Look and layout, Work and views
+    "dashboard.default_tab": ("Opening views", "Opening page", "The page creaite opens on.", "Portfolio: the whole picture first."),
+    "dashboard.theme": ("Look and help", "Theme", "Light, dark, or follow the Mac.", "Follows your Mac, so it matches your other apps."),
+    "dashboard.palette": ("Look and help", "Style", "The named look of the whole app.", "creaite, the house style."),
+    "dashboard.motion": ("Look and help", "Motion", "Animations: follow the Mac, reduce or full.",
+                         "Follows your Mac's accessibility setting."),
+    "dashboard.rail_labels": ("Look and help", "Labels when collapsed",
+                             "A name under each icon when the left rail is collapsed. Off: icons only.",
+                             "On: you can tell the pages apart without pointing at them; the collapsed rail is only 20px wider."),
+    "dashboard.rail_icon_size": ("Look and help", "Icon size", "Small, medium or large icons in the left rail.",
+                                 "Small is the size the rail has always had."),
+    "dashboard.files_show_inbox": ("Files", "Files: show Intake", "List the files waiting in Intake on Files.",
+                                   "On: a waiting transcript should be seen."),
+    "dashboard.files_show_portfolio": ("Files", "Files: show the portfolio", "List the portfolio's own meetings on Files.",
+                                       "On: cross-project meetings matter as much as project ones."),
+    "dashboard.files_show_documents": ("Files", "Files: show documents", "List each project's documents on Files.",
+                                       "Off: documents are many and passive; search still reads them."),
+    "dashboard.show_archived": ("Opening views", "Show archived projects",
+                                "Archived projects' items, and items archived for their age, in Work, Today and the Excel export.",
+                                "Off: archived work is finished; search still finds it, marked Archived."),
+    "dashboard.week_ahead_priorities": ("Saving and review", "Week ahead shows", "The priorities listed in Today's Week ahead.",
+                                        ("Urgent only keeps the week short; add High for a fuller view (Alan, 14-10-2026, "
+                                         "keeping it rather than the mockup's Urgent and High).")),
+    "dashboard.undated_grace_days": ("Project page", "New items without a date: grace (days)",
+                                     "An item raised this recently shows as new rather than undated.",
+                                     "Three days gives time to add a date before it is flagged."),
+    "dashboard.flow_weeks": ("Project page", "Flow chart weeks", "How many weeks the opened and closed chart shows.",
+                             "Eight weeks shows a trend without old noise."),
+    "dashboard.auto_apply": ("Saving and review", "Save my changes at once",
+                             "Your own edits are applied straight away, with Undo.",
+                             "On: matches how you work; Review still guards what creaite suggests."),
+    "dashboard.project_list_cap": ("Project page", "Project page list length", "How many due or overdue actions a project page lists.",
+                                   "Ten fits the page; the rest are one click away in Work."),
+    "dashboard.generate_days": ("Current state", "Generate from the last (days)", "The default period when drafting a Current state.",
+                                "A week matches the weekly report."),
+    "dashboard.rail.order": ("Look and layout", "Rail order", "The order of the pages on the left-hand rail.",
+                             "The day's order: Today first, Settings last."),
+    "dashboard.rail.hidden": ("Look and layout", "Hidden rail pages", "Pages taken off the rail.", "None: everything is reachable."),
+    "dashboard.rail.more": ("Look and layout", "Pages in More", "The pages kept in More, at the bottom of the sidebar.",   # BL-319
+                            "Intake, Files, Activity and Settings: the pages of every day stay in view."),
+    "dashboard.rail.display": ("Look and layout", "Rail shows", "Titles beside the icons, or icons only.",
+                               "Titles: plainer for a new user; icons only is there when you know them."),
+    # ── Current state
+    "status.headline_max_words": ("Current state", "Headline at most (words)", "The longest headline the checks accept.",
+                                  "Thirty words is a sentence an executive reads in one go."),
+    "status.max_risks": ("Current state", "Risks named", "How many risks a Current state names.", "Two: the ones that matter."),
+    "status.max_overdue_named": ("Current state", "Overdue items named", "How many overdue items are named.",
+                                 "Three: more reads as a list, not a message."),
+    "status.max_named_changes": ("Current state", "Changes named", "How many changes and decisions are named.",
+                                 "Three keeps the update short."),
+    "status.max_asks": ("Current state", "Asks named", "How many asks of the reader are named.", "Three: more and none get done."),
+    "status.length_words.short": ("Current state", "Short length (words)", "The target for a short Current state.",
+                                  "Forty words: a headline and one line."),
+    "status.length_words.standard": ("Current state", "Standard length (words)", "The target for a standard Current state.",
+                                     "150 words: a paragraph or two."),
+    "status.length_words.fuller": ("Current state", "Fuller length (words)", "The target for a fuller Current state.",
+                                   "250 words: room for context without becoming a report."),
+    # ── Archiving (BL-10, BL-03; Alan, 14-10-2026)
+    "archive.after_months.actions": ("Archiving and backups", "Archive closed actions after (months)",
+                                     "Closed or cancelled actions are archived this long after closing, once a day; 0 never.",
+                                     "Six months: long enough to be past any report that mentions them (Alan, 14-10-2026)."),
+    "archive.after_months.raid": ("Archiving and backups", "Archive closed RAID items after (months)",
+                                  "Closed or cancelled risks, issues, assumptions and dependencies; 0 never.",
+                                  "Six months, as for actions (Alan, 14-10-2026)."),
+    "archive.after_months.promises": ("Archiving and backups", "Archive done promises after (months)",
+                                      "Done or dropped promises; 0 never.", "Six months, as for actions (Alan, 14-10-2026)."),
+    "archive.reports_after_months": ("Archiving and backups", "Offer to archive reports and minutes after (months)",
+                                     "Reports, minutes and one-pagers older than this are offered monthly in Health; 0 never.",
+                                     "Twelve months: a year of reporting stays at hand (Alan, 14-10-2026)."),
+    # ── Safety, live server, ask creaite
+    "backups.daily": ("Safety", "Daily backup", "Copy the database each day, then a closed zip of what rebuilds the vault (to OneDrive "
+                      "when projects live there).", "On: non-negotiable safety; off only on purpose."),
+    # BL-323: retention, applied by the daily Tidy up here and in OneDrive (Alan, 14-10-2026)
+    "backups.daily_days": ("Archiving and backups",
+        "Keep every daily backup for (days)", "Daily database backups and zips: every one this long.",
+                           "30 days: any day of the last month can be restored."),
+    "backups.weekly_days": ("Archiving and backups",
+        "Then keep one a week for (days)", "After that, the Monday's, for this long; then the first "
+                            "of each month for good.", "A year of weekly points, then monthly ones for good (Alan, 14-10-2026)."),
+    "backups.copy_days": ("Archiving and backups",
+        "Keep apply and undo copies for (days)", "The database copies made before each apply, undo, "
+                          "revert or migrate.", "14 days: they undo recent changes on this laptop; the daily backups cover the rest."),
+    "backups.snapshot_days": ("Archiving and backups",
+        "Keep daily dashboard snapshots for (days)", "Then one a month. The flow history is kept "
+                              "for good.", "30 days: a snapshot is only a view of the database."),
+    "backups.file_change_days": ("Archiving and backups",
+        "Keep file-change backups for (days)", "The earlier version of each file ask creaite "
+                                 "changed. Undo of an older change then says the backup has gone.", "90 days: a quarter."),
+    "backups.releases_kept": ("Archiving and backups",
+        "Release zips kept", "The installed release and the ones before it.",
+                              "3: the installed one and the two before it; any release can be downloaded again."),
+    "backups.update_backups_kept": ("Archiving and backups",
+        "Update backups kept", "The backups made before each update (undo update uses the "
                                     "last one).", "3: the last three updates."),
     "live_mode.required": ("Live server and ask creaite", "Live server required", "The dashboard works through the live server.",
                            "Required: IT approved live mode; it is what makes Apply and ask creaite work."),
-    "live_mode.port": ("Live server and ask creaite", "Port", "The local port the live server listens on.",
+    # Port and Log level are on Health's own cards (v2.6, #246)
+    "live_mode.port": ("Live server and backups", "Port", "The local port the live server listens on.",
                        "8765: free on a normal Mac; the installed app belongs to it."),
     "live_mode.health_check_seconds": ("Live server and ask creaite", "Check the server every (seconds)",
                                        "How often the open page checks the server and refreshes itself.",
@@ -269,30 +452,30 @@ CATALOGUE = {
     "people.added": ("Legacy", "People (old list)", "Names added before the people register.", "Empty: the register holds people now."),
     "people.hidden": ("Legacy", "Hidden people (old list)", "Names hidden before the people register.",
                       "Empty: the register holds people now."),
-    "excel.export": ("Work and views", "Excel export", "When tracker-view.xlsx is rebuilt.",
+    "excel.export": ("Files", "Excel export", "When tracker-view.xlsx is rebuilt.",
                      "After every apply, paused only while it has edits not yet imported."),
     # ── New items and views
-    "defaults.new_action_priority": ("Work and views", "New action priority", "The priority a new action starts with.",
+    "defaults.new_action_priority": ("Opening views", "New action priority", "The priority a new action starts with.",
                                      "Medium: most actions are; raise the few that aren't."),
-    "defaults.actions_status_filter": ("Work and views", "Actions open on", "The status filter Actions opens with.",
+    "defaults.actions_status_filter": ("Opening views", "Actions open on", "The status filter Actions opens with.",
                                        "Open: closed work is history."),
-    "defaults.raid_status_filter": ("Work and views", "RAID opens on", "The status filter RAID opens with.",
+    "defaults.raid_status_filter": ("Opening views", "RAID opens on", "The status filter RAID opens with.",
                                     "Open: closed risks are history."),
-    "defaults.decisions_view": ("Work and views", "Decisions open on", "The view Decisions opens with.",
+    "defaults.decisions_view": ("Opening views", "Decisions open on", "The view Decisions opens with.",
                                 "All: decisions are few and each matters."),
-    "defaults.actions_sort": ("Work and views", "Actions sorted by", "The order Actions opens in.",
+    "defaults.actions_sort": ("Opening views", "Actions sorted by", "The order Actions opens in.",
                               "Overdue first, then due date: the order you act in."),
     "workstreams.added": ("Legacy", "Workstreams (old list)", "Workstreams added before the workstreams table.",
                           "Empty: the table holds workstreams now."),
     "workstreams.hidden": ("Legacy", "Hidden workstreams (old list)", "Workstreams hidden before the workstreams table.",
                            "Empty: the table holds workstreams now."),
-    "work.board.group.actions": ("Work and views", "Actions board groups by", "The board's columns for actions.",
+    "work.board.group.actions": ("Work board", "Actions board groups by", "The board's columns for actions.",
                                  "Due: the question for an action is when."),
-    "work.board.group.raid": ("Work and views", "RAID board groups by", "The board's columns for risks and issues.",
+    "work.board.group.raid": ("Work board", "RAID board groups by", "The board's columns for risks and issues.",
                               "Owner: the question for a risk is who."),
-    "work.board.group.decisions": ("Work and views", "Decisions board groups by", "The board's columns for decisions.",
+    "work.board.group.decisions": ("Work board", "Decisions board groups by", "The board's columns for decisions.",
                                    "Status: pending against made."),
-    "work.board.closed_days": ("Work and views", "Board shows closed for (days)", "How long a closed item stays in the Closed column.",
+    "work.board.closed_days": ("Work board", "Board shows closed for (days)", "How long a closed item stays in the Closed column.",
                                "Two weeks: long enough to see what was done."),
     "work.weekend_days": ("You", "Weekend", "Days with no reminders or due warnings.",
                           "Saturday and Sunday, from your work settings; change it for a Friday–Saturday week."),
@@ -375,36 +558,37 @@ CATALOGUE = {
     "locations.offsite_backup": ("Folders and OneDrive", "OneDrive backup copy folder", "Where the daily backup's closed copy goes.",
                                  "Inside _Portfolio's 99 System, which creaite keeps for its own files."),
     # ── Help, AI drafts, logging, close the day
-    "help.start_seen": ("Help", "Start here seen", "Whether Help › Start here has been shown once.",
-                        "Not yet: a new user sees it on the first visit; Reset shows it again."),
+    "help.start_seen": ("Help", "Show the first-run help again",                          # v2.6 (#246): a quiet button
+                        "Whether Help › Start here has been shown once; the button sets it back, so it opens again.",
+                        "Not yet: a new user sees it on the first visit; the button shows it again."),
     "help.first_line": ("Look and help", "Show the Press ? line on each screen",
                         "A quiet line under a page's title the first time you visit it.",
                         "On: a new user learns the Help key once per page, then never sees it again."),
-    "drafting.update": ("Look and help", "AI drafts: updates", "Draft an action's latest update.", "On: drafts only suggest."),
-    "drafting.client": ("Look and help", "AI drafts: client messages", "Draft a client-facing message for an item.",
+    "drafting.update": ("AI drafts", "AI drafts: updates", "Draft an action's latest update.", "On: drafts only suggest."),
+    "drafting.client": ("AI drafts", "AI drafts: client messages", "Draft a client-facing message for an item.",
                         "On: drafts only suggest."),
-    "drafting.thinking": ("Look and help", "AI drafts: show thinking", "Show what a draft was based on.",
+    "drafting.thinking": ("AI drafts", "AI drafts: show thinking", "Show what a draft was based on.",
                           "On: you see why it says what it says."),
-    "drafting.reason": ("Look and help", "AI drafts: reasons", "Draft a reason for a health or date change.", "On: drafts only suggest."),
-    "drafting.agenda": ("Look and help", "AI drafts: agendas", "Draft a meeting agenda.", "On: drafts only suggest."),
+    "drafting.reason": ("AI drafts", "AI drafts: reasons", "Draft a reason for a health or date change.", "On: drafts only suggest."),
+    "drafting.agenda": ("AI drafts", "AI drafts: agendas", "Draft a meeting agenda.", "On: drafts only suggest."),
     "drafting.agenda_style": ("AI drafts", "Agenda style", "The shape of a drafted agenda.",
                               "POAD: purpose, objectives, approach, deliverables, your house format."),
-    "drafting.email": ("Look and help", "AI drafts: emails", "Draft a follow-up or chase email (never sent).", "On: drafts only suggest."),
-    "drafting.forms": ("Look and help", "AI drafts: forms", "Fill a new item's form from its source.", "On: drafts only suggest."),
-    "drafting.repeat": ("Look and help", "AI drafts: repeats", "Spot a proposal that repeats an open item.",
+    "drafting.email": ("AI drafts", "AI drafts: emails", "Draft a follow-up or chase email (never sent).", "On: drafts only suggest."),
+    "drafting.forms": ("AI drafts", "AI drafts: forms", "Fill a new item's form from its source.", "On: drafts only suggest."),
+    "drafting.repeat": ("AI drafts", "AI drafts: repeats", "Spot a proposal that repeats an open item.",
                         "On: it only marks, you decide."),
-    "drafting.done": ("Look and help", "AI drafts: probably done", "Spot an open item a later message says is done.",
+    "drafting.done": ("AI drafts", "AI drafts: probably done", "Spot an open item a later message says is done.",
                       "On: it only marks, you decide."),
-    "drafting.sharpen": ("Look and help", "AI drafts: sharpen", "Suggest a sharper wording for a vague action.",
+    "drafting.sharpen": ("AI drafts", "AI drafts: sharpen", "Suggest a sharper wording for a vague action.",
                          "On: drafts only suggest."),
-    "drafting.shape": ("Look and help", "AI drafts: shape the meeting",                     # BL-286 C (joined on release-192)
+    "drafting.shape": ("AI drafts", "AI drafts: shape the meeting",                     # BL-286 C (joined on release-192)
                        "Read your focus and aim for a meeting and draft its notes, each line cited.", "On: drafts only suggest."),
-    "drafting.report-section": ("Look and help", "AI drafts: report sections",                # #90
+    "drafting.report-section": ("AI drafts", "AI drafts: report sections",                # #90
                                 "The ✦ on a weekly or client report's section: a fresh draft beside your words.",
                                 "On: drafts only suggest."),
-    "drafting.minutes-section": ("Look and help", "AI drafts: minutes sections",
+    "drafting.minutes-section": ("AI drafts", "AI drafts: minutes sections",
                                  "The ✦ on a section of the minutes: a fresh draft beside your words.", "On: drafts only suggest."),
-    "logging.level": ("Logging", "Log level", "Info, or debug for more detail.", "Info: enough to diagnose, small files."),
+    "logging.level": ("Diagnostics", "Log level", "Info, or debug for more detail.", "Info: enough to diagnose, small files."),
     "logging.max_mb": ("Logging", "Log file limit (MB)", "The largest a day's log may grow.",
                        "5 MB: a busy day fits; a loop can't fill the disk."),
     "logging.keep_days": ("Logging", "Keep logs for (days)", "How many days of log are kept.", "A week covers the last report cycle."),
@@ -426,9 +610,38 @@ CATALOGUE = {
                                             "15-10-2026)."),
 }
 GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
-               "Sweep", "Reminders", "Review", "Health thresholds", "Health check", "Early warnings", "Current state", "Work and views",
-               "Look and layout", "AI drafts", "Close the day", "Reports and minutes", "Meeting prep and Intake", "Search", "Archiving",
-               "Folders and OneDrive", "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
+               "Opening views", "Work board", "Project page", "Files",
+               "Sweep", "Meeting prep and Intake", "Close the day", "Reports and minutes", "Reminders", "AI drafts",
+               "Look and layout", "Help", "Review", "Health thresholds", "Early warnings", "Current state",
+               "Archiving and backups", "Folders and OneDrive", "Live server and ask creaite", "Search", "Logging",
+               "Health check", "Live server and backups", "Diagnostics", "Legacy", "Developer")
+# v2.6 (#246, Alan 19-10-2026): Settings is tabs. Each group's tab ("advanced/<sub>" for Advanced's five sub-tabs). An Essential
+# is always on the Essentials tab, whatever its group; every other setting is on its group's tab. A group mapped to None is
+# kept (the data is still read) but drawn nowhere: Legacy's old lists, read by the dashboard, propose.py, tracker.py migrate
+# and doctor until set-up moves them (HIDDEN_GROUPS).
+TABS = (("essentials", "Essentials"), ("work", "Work and reports"), ("sweep", "Sweep and Intake"),
+        ("reports", "Reports and minutes"), ("ai", "AI drafts"), ("look", "Look and help"), ("advanced", "Advanced"),
+        ("health", "Health"))
+ADVANCED_SUBS = (("review", "Review and warnings"), ("state", "Current state"), ("arch", "Archiving and backups"),
+                 ("folders", "Folders and OneDrive"), ("server", "Server, search and logs"))
+GROUP_TAB = {
+    "You": "essentials", "Your day": "essentials", "Saving and review": "essentials", "People I follow": "essentials",
+    "Safety": "essentials",
+    "Opening views": "work", "Work board": "work", "Project page": "work", "Files": "work",
+    "Sweep": "sweep", "Meeting prep and Intake": "sweep", "Close the day": "sweep",
+    "Reports and minutes": "reports", "Reminders": "reports",
+    "AI drafts": "ai",
+    "Look and help": "look", "Look and layout": "look", "Help": "look",
+    "Review": "advanced/review", "Health thresholds": "advanced/review", "Early warnings": "advanced/review",
+    "Current state": "advanced/state", "Archiving and backups": "advanced/arch", "Folders and OneDrive": "advanced/folders",
+    "Live server and ask creaite": "advanced/server", "Search": "advanced/server", "Logging": "advanced/server",
+    "Developer": "advanced/server",
+    "Health check": "health", "Live server and backups": "health", "Diagnostics": "health",
+    "Legacy": None,
+}
+# Essentials' "AI drafts" row is one switch over every kind; each kind's own switch, its home, is on the AI drafts tab.
+SHORTCUT_PREFIX = "drafting."
+HIDDEN_GROUPS = tuple(g for g, t in GROUP_TAB.items() if t is None)
 DEVELOPER_KEYS = ()       # development-only settings (library fetches, hand checks, the second laptop) when they exist
 
 
@@ -481,6 +694,19 @@ def tier_of(key):
     return ESSENTIALS if any(key in row[3] for row in ESSENTIAL_ROWS) else ADVANCED
 
 
+def tab_of(key):
+    """The Settings tab a setting is drawn on ("advanced/<sub>" in Advanced), or None for a hidden one (v2.6, #246)."""
+    if tier_of(key) == ESSENTIALS and not key.startswith(SHORTCUT_PREFIX):
+        return "essentials"
+    return GROUP_TAB.get("Developer" if key in DEVELOPER_KEYS else CATALOGUE[key][0])
+
+
+def tab_lists():
+    """The tabs, Advanced's sub-tabs and each group's tab, as the page reads them (v2.6, #246)."""
+    return {"tabs": [list(t) for t in TABS], "advanced_subs": [list(t) for t in ADVANCED_SUBS],
+            "group_tabs": {g: GROUP_TAB.get(g) for g in GROUP_ORDER}}
+
+
 def last_changes():
     """{key: the last time it was changed} from settings-log.jsonl, and the log's first time (or None)."""
     last, first = {}, None
@@ -508,6 +734,7 @@ def entry(key, default, current, changed_at):
                   default=None)
     return {"key": key, "tier": tier_of(key), "group": group, "label": label, "line": line, "reason": reason,
             "default": default, "value": value, "changed": not same(key, value, default),
+            "tab": tab_of(key),
             "resettable": key not in FIXED, "fixed_why": FIXED_WHY.get(key, "changed at set-up" if key in FIXED else ""),
             "last_changed": touched}
 
@@ -523,6 +750,7 @@ def catalogue(settings=None, today=None):
             "essentials": [{"section": s, "label": lab, "line": ln, "keys": list(keys),
                             "changed": any(r["changed"] for r in rows if r["key"] in keys)} for s, lab, ln, keys in ESSENTIAL_ROWS],
             "groups": [g for g in GROUP_ORDER if any(r["group"] == g for r in rows)],
+            **tab_lists(),
             "changed": sum(r["changed"] for r in rows), "essentials_count": len(ESSENTIAL_ROWS),
             "advanced_count": sum(r["tier"] == ADVANCED for r in rows),
             "retire_candidates": len(untouched), "retire_after_days": RETIRE_AFTER_DAYS}

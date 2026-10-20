@@ -66,19 +66,78 @@ class Catalogue(unittest.TestCase):
             self.assertLessEqual(len(line), 140, key)
 
     def test_the_essentials_are_about_sixteen_rows_of_real_settings(self):
-        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 18, len(sc.ESSENTIAL_ROWS))
+        # v2.6 (#246): 21, as the old You card's short forms and own domains and People I follow's browser notification
+        # joined their Essentials sections (one card each, Alan 19-10-2026); still a page of rows, not the whole catalogue
+        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 22, len(sc.ESSENTIAL_ROWS))
         sections = []
         for section, label, line, keys in sc.ESSENTIAL_ROWS:
             sections.append(section)
             self.assertTrue(label and line and keys)
             for k in keys:
                 self.assertIn(k, self.flat, k)
-                self.assertEqual(sc.CATALOGUE[k][0], section, f"{k} sits in its Essentials row's section")
+                # the AI drafts row is one switch over every kind; each kind's group is AI drafts, its own tab (v2.6, #246)
+                want = "AI drafts" if k.startswith(sc.SHORTCUT_PREFIX) else section
+                self.assertEqual(sc.CATALOGUE[k][0], want, f"{k} sits in its Essentials row's section")
                 self.assertNotIn(k, sc.FIXED, k)
         self.assertEqual(list(dict.fromkeys(sections)), ["You", "Your day", "Saving and review", "People I follow",
                                                          "Look and help", "Safety"])
         self.assertTrue({"sweep.due_from", "dashboard.theme", "backups.daily", "vip.check_minutes"} <=
                         {k for r in sc.ESSENTIAL_ROWS for k in r[3]})
+
+    def test_every_shown_key_has_exactly_one_tab(self):                              # v2.6 (#246): Settings is tabs
+        tabs = {t for t, _ in sc.TABS} - {"advanced"} | {f"advanced/{s}" for s, _ in sc.ADVANCED_SUBS}
+        self.assertEqual(set(sc.GROUP_TAB), set(sc.GROUP_ORDER), "every group has a tab (or None, hidden)")
+        self.assertTrue(set(t for t in sc.GROUP_TAB.values() if t) <= tabs, "a group names a tab that exists")
+        hidden = []
+        for key in self.flat:
+            tab = sc.tab_of(key)
+            if tab is None:
+                hidden.append(key)
+                continue
+            self.assertIn(tab, tabs, key)
+        # hidden: only Legacy's old lists, still read by the dashboard, propose.py, tracker.py migrate and doctor
+        self.assertEqual(sorted(hidden), ["people.added", "people.hidden", "workstreams.added", "workstreams.hidden"])
+        self.assertEqual(sc.tab_of("drafting.update"), "ai")                       # its home; Essentials has the all-kinds switch
+        self.assertEqual(sc.tab_of("drafting.agenda_style"), "ai")
+        self.assertEqual(sc.tab_of("backups.daily"), "essentials")
+        self.assertEqual(sc.tab_of("backups.daily_days"), "advanced/arch")         # retention joins Archiving and backups
+        self.assertEqual(sc.tab_of("archive.after_months.actions"), "advanced/arch")
+        self.assertEqual(sc.tab_of("vip.notify"), "essentials")                    # with People I follow
+        self.assertEqual(sc.tab_of("day.catchup_after_minutes"), "sweep")          # Close the day joins Sweep and Intake
+        self.assertEqual(sc.tab_of("prep.series"), "sweep")
+        self.assertEqual(sc.tab_of("help.start_seen"), "look")
+        self.assertEqual(sc.tab_of("health.dismissed"), "health")
+        rows = sc.catalogue({})["settings"]
+        self.assertEqual({r["key"]: r["tab"] for r in rows}, {k: sc.tab_of(k) for k in self.flat})
+        self.assertNotIn("Look and help", {r["group"] for r in rows if r["key"].startswith("drafting.")})   # one AI drafts group
+
+    def test_regrouping_renames_no_stored_key(self):                                 # v2.6 (#246): the migration fixture
+        """A settings.json with every key changed from its default comes back identical, key for key: the tabs move where a
+        setting is drawn, never where it is stored."""
+        def bump(v):
+            if isinstance(v, bool):
+                return not v
+            if isinstance(v, (int, float)):
+                return v + 1
+            if isinstance(v, str):
+                return v + "x"
+            if isinstance(v, list):
+                return v + ["extra"]
+            if isinstance(v, dict):
+                return {**v, "extra": "x"}
+            return "set"
+        saved = {}
+        for key, v in self.flat.items():
+            o, parts = saved, key.split(".")
+            for q in parts[:-1]:
+                o = o.setdefault(q, {})
+            o[parts[-1]] = bump(v)
+        before = json.dumps(saved, sort_keys=True)
+        rows = {r["key"]: r for r in sc.catalogue(saved)["settings"]}
+        self.assertEqual(json.dumps(saved, sort_keys=True), before, "reading the catalogue changes nothing")
+        self.assertEqual(set(rows), set(self.flat), "no key renamed, added or lost")
+        for key in self.flat:
+            self.assertEqual(rows[key]["value"], sc.value_at(saved, key), key)
 
     def test_the_sweep_lookback_cap_is_an_advanced_setting_with_its_reason(self):      # #146
         key = "sweep.max_lookback_days"

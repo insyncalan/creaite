@@ -936,6 +936,8 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .setq{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs);width:100%;box-sizing:border-box}   /* v1.9.5 check 9: the one field height (was 38px) */
 .setcatsel{display:none;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;background:var(--surface);color:var(--ink)}
 .setcrumb{font-size:var(--fs-xs);color:var(--muted);margin:2px 0 -10px 2px}
+/* v2.6 (#246): Advanced's line and sub-tabs, and the side column's "Looking for People…" line */
+.advnote{margin:0 0 10px} #settingsBody>.tabhost{margin:0 0 14px} .setmoved{margin:14px 4px 0;font-size:var(--fs-xs);line-height:1.5} .setmount:empty,.setembed:empty{display:none}
 .setnone{padding:12px 2px}
 .srow[hidden],.igrow[hidden]{display:none}
 .setstack{display:flex;flex-direction:column;gap:16px}

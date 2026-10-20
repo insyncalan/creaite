@@ -10,9 +10,9 @@ import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
 import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, saveWs, SWEPT, wsFor, wsHidden, wsKey, WSL, wsParts, wsUsed } from "./core/data.js";
 import { effect } from "@preact/signals";
 import { h, render } from "preact";
-import { Essentials } from "./components/settings/Essentials.jsx";
+import { essText, Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
-import { MoreSettings } from "./components/settings/MoreSettings.jsx";
+import { MoreSettings, moreRows, tabOfSetting } from "./components/settings/MoreSettings.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { openPath } from "./core/fields.js";
@@ -42,29 +42,37 @@ import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, l
    where something else looks it up; `after()` wires what needs the DOM. A later feature adds a section by adding an entry.
    How a setting saves is unchanged: the handlers below and in the sections' own code write settings.json through
    writeSettings (a backup, a log line, the live server's checks). */
-/* BL-320 (v1.9.2): four categories. Essentials (the ~16 settings that change the day, opened first), People and projects,
-   Advanced (everything else: the older categories' cards, each under its old name, then every remaining setting from the
-   catalogue) and Health (what needs you, then the live server, set-up, Diagnostics, the version and Stop). The sections keep
-   their old category as `cat`; CATOF maps it to where it now shows, so a section another module adds (Set-up, AI drafts) moves
-   with no change to that module. */
-export const SETCATS=[["essentials","Essentials"],["people","People and projects"],["advanced","Advanced"],["health","Health"]];
-export const CATOF={general:"advanced",work:"advanced",review:"advanced",capture:"advanced",system:"health"};
+/* v2.6 (#246, Alan 19-10-2026): Settings is tabs. Essentials (the settings that change the day, opened first), Work and
+   reports, Sweep and Intake, Reports and minutes, AI drafts, Look and help, Advanced (five sub-tabs, for tuning: most people
+   never open it) and Health. Each section's `cat` names its tab (and `sub` its Advanced sub-tab); a section another module
+   adds names its own (drafts.js: ai, today.js: health). An older module's category still lands somewhere (CATOF).
+   Each catalogue group is drawn once: inside the hand-made card that holds it (`groups`), or as its own card on its tab
+   (settings_catalogue.py GROUP_TAB, the `more-*` sections). "People and projects" is no longer a tab: its three sections
+   (People, Workstreams, Projects and register) are moving to the People page and each project's settings; until they are
+   there, they open only from their old addresses (#settings/people…), as MOVING, with no tab chosen. */
+export const SETCATS=[["essentials","Essentials"],["work","Work and reports"],["sweep","Sweep and Intake"],["reports","Reports and minutes"],
+  ["ai","AI drafts"],["look","Look and help"],["advanced","Advanced"],["health","Health"]];
+export const ADVSUBS=[["review","Review and warnings"],["state","Current state"],["arch","Archiving and backups"],["folders","Folders and OneDrive"],["server","Server, search and logs"]];
+export const MOVING=["people","People and projects"];
+export const CATOF={general:"look",capture:"sweep",review:"advanced",system:"health"};
 export const OLDCATS={general:"You and the look",work:"Work and views",review:"Review and warnings",capture:"Capture and alerts",advanced:"Everything else"};
 export const catOf=s=>CATOF[s.cat]||s.cat;
-/* Addresses: #settings/<category> opens that category; #settings/<section> (sweep, diagnostics…) opens the category the
-   section is in and scrolls to it. The old STAB values (prefs, admin, people, projects) and a bare #settings still work:
-   setting STAB picks a category the same way. */
-export const SETOLD={prefs:"essentials",admin:"people",general:"advanced",work:"advanced",capture:"advanced",system:"health"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"vip"};
-export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
-  const sec=SETSECTIONS.find(x=>x.id===(SETALIAS[t]||t)); return sec?{cat:catOf(sec),sec:sec.id}:null; }
-export let SECT=null; shared.SCAT="essentials"; shared.SQ="";                 /* the category, the section to scroll to, the search text */
+/* Addresses: #settings/<tab> opens that tab; #settings/<sub> an Advanced sub-tab; #settings/<section> (sweep, diagnostics…)
+   opens the tab the section is in and scrolls to it. The old ones (prefs, admin, general, capture, system, the old "more")
+   still work. */
+export const SETOLD={prefs:"essentials",admin:"people",general:"look",capture:"sweep",system:"health",more:"advanced"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"essentials",vip:"essentials",you:"essentials"};
+export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)||t===MOVING[0]) return {cat:t};
+  if(ADVSUBS.some(c=>c[0]===t)) return {cat:"advanced",sub:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
+  const a=SETALIAS[t]||t; if(SETCATS.some(c=>c[0]===a)) return {cat:a};
+  const sec=SETSECTIONS.find(x=>x.id===a); return sec?{cat:catOf(sec),sub:sec.sub||null,sec:sec.id}:null; }
+export let SECT=null; shared.SCAT="essentials"; shared.SSUB="review"; shared.SQ="";   /* the tab, Advanced's sub-tab, the section to scroll to, the search text */
 export const sw=(k)=>`<input type="checkbox" class="switch" data-k="${k}" ${S[k]?"checked":""}>`;   /* BL-279: named by its row's label (row, srName), never its key */
 export const tx=(k,ph)=>`<input type="text" data-k="${k}" value="${esc(S[k])}" placeholder="${ph||""}">`;
 export const nm=(k)=>`<input type="number" data-k="${k}" value="${S[k]}" min="0" style="width:80px">`;
 export const sl=(k,opts)=>`<select data-k="${k}">${opts.map(o=>Array.isArray(o)?`<option value="${o[0]}" ${S[k]===o[0]?"selected":""}>${o[1]}</option>`:`<option ${S[k]===o?"selected":""}>${o}</option>`).join("")}</select>`;
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0073(){
-Object.defineProperty(window,"STAB",{configurable:true,get:()=>shared.SCAT,set:v=>{ const r=setResolve(v); shared.SCAT=r?r.cat:"essentials"; SECT=r&&r.sec||null; shared.SQ=""; const q=document.getElementById("setq"); if(q) q.value=""; }});
+Object.defineProperty(window,"STAB",{configurable:true,get:()=>shared.SCAT,set:v=>{ const r=setResolve(v); shared.SCAT=r?r.cat:"essentials"; if(r&&r.sub) shared.SSUB=r.sub; SECT=r&&r.sec||null; shared.SQ=""; const q=document.getElementById("setq"); if(q) q.value=""; }});
 }
 /* ===== BL-214 (sprint-ui-audit) ===== a Settings row ties its words to its field: the label (in a span with an id) names the field
    and the hint describes it (aria-labelledby, aria-describedby). A row with several fields names each "Label: its example". A field
@@ -86,8 +94,7 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
    lists them first: Cancel them all and archive, or Stop. */
 const PSTATE={active:"Active",closed:"Closed",archived:"Archived"};
 export function projArchiveHtml(){ const L=(D.project_states||[]).filter(p=>p.state!=="archived"||S.showArchived);
-  return row("Show archived projects",sw("showArchived"),"Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived")
-    +`<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L.map(p=>{ const back=p.state==="archived";
+  return `<p class="sub" style="margin:8px 0 0">An archived project is listed here while Show archived projects (Work and reports › Opening views) is on.</p><div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L.map(p=>{ const back=p.state==="archived";
       return `<tr><td>${esc(p.name)}</td><td>${PSTATE[p.state]||esc(p.state)}</td><td class="mgract"><button class="mini" data-parch="${back?"restore":"archive"}" data-pcode="${esc(p.code)}" aria-label="${back?"Restore":"Archive"} ${esc(p.name)}">${back?"Restore":"Archive"}</button></td></tr>`; }).join("")||'<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`; }
 /* BL-316: the Dialog block (made the first time it opens, components/dialogs/PageDialogs.jsx); Esc or the scrim is Stop */
 export function openItemsAsk(name,open){ return new Promise(res=>{ const dlg=$("#parchDlg")||makeArchiveAskDialog();
@@ -108,43 +115,54 @@ export const projSettingsListHtml=()=>`<div class="srows" id="projSetList"><h3 s
 /** H3 (#221): "This project needs a separate client report", one switch per project; the hub's Client report settings panel sets the same line. */
 export const clientReportsHtml=()=>`<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>`
   +P.map(p=>row(`${esc(p.name)}: this project needs a separate client report`,`<input type="checkbox" class="switch" data-crsw="${p.code}" ${clientReportOn(p.code)?"checked":""}>`)).join("")+`</div>`;/* ===== end BL-214 ===== */
+export const SHOWARCH_ROW=()=>row("Show archived projects",sw("showArchived"),"Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived");
+/** v2.6 (#246): a tab's (or sub-tab's) catalogue groups that have no hand-made card, drawn as cards. @param {string} cat @param {string} [sub] */
+const moreSection=(cat,sub)=>{ const tab=sub?`advanced/${sub}`:cat;
+  return {id:"more-"+(sub||cat),cat,sub,more:true,title:"More",kw:`more settings ${tab}`,mount:el=>render(h(MoreSettings,{covered,tab,skip:EMBEDDED()}),el),
+    match:w=>{ const c=catalogue.value; return !!c&&moreRows(c,covered,w).some(x=>tabOfSetting(c,x)===tab&&!EMBEDDED().includes(x.tier==="developer"?"Developer":x.group)); }}; };
 export const SETSECTIONS=[
  /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
-    whether a search finds anything in it. */
- {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day",
-  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
- {id:"you",cat:"general",title:"You",kw:"short forms email domains identity owner mine company",
-  render:()=>row("Short forms",tx("short","Alan, AC"),"Comma-separated; also matched as you (your name is in Essentials)")
-   +row("Own email domains",`<input type="text" data-k="ownDomains" value="${esc((S.ownDomains||[]).join(", "))}" placeholder="example.com">`,"Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside")},
- {id:"appearance",cat:"general",title:"Appearance",kw:"theme mode light dark colour palette column widths order reset motion animation reduced",
-  render:()=>row("Column widths and order",ibtn("undo","Reset column widths and order",'id="rzReset"',"bd"),"Drag a column edge in Work to resize, or a heading to move it")},
- {id:"closeday",cat:"general",title:"Close the day",kw:"close the day evening catch up catch-up sweep before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
-  render:()=>row("Catch up when the last sweep is older than (minutes)",nm("catchupAfter"),"A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")},
- {id:"views",cat:"work",title:"Opening views",kw:"default priority new action actions raid open status filter view",
-  render:()=>row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))+row("Actions open with",sl("defActionView",viewsList("actions")))+row("RAID opens with",sl("defRaidView",viewsList("raid")))+row("Decisions open with",sl("defDecisionView",viewsList("decisions")))},   /* BL-131 */
- {id:"board",cat:"work",title:"Work board",kw:"board group by actions raid decisions closed days column",
+    whether a search finds anything in it. v2.6 (#246): `groups` are the catalogue groups drawn inside this card, after its
+    own rows (one card per group). */
+ {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day you short forms email domains follow browser notification",
+  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(essText(r),w)); }},
+ {id:"views",cat:"work",title:"Opening views",groups:["Opening views"],kw:"default priority new action actions raid open status filter view opening page sort archived projects show",
+  render:()=>row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))+row("Actions open with",sl("defActionView",viewsList("actions")))+row("RAID opens with",sl("defRaidView",viewsList("raid")))+row("Decisions open with",sl("defDecisionView",viewsList("decisions")))+SHOWARCH_ROW()},   /* BL-131; BL-09's switch, from Projects and register */
+ {id:"board",cat:"work",title:"Work board",groups:["Work board"],kw:"board group by actions raid decisions closed days column",
   render:()=>row("Actions board groups by",sl("bgActions",groupsOf("actions")))+row("RAID board groups by",sl("bgRaid",groupsOf("raid")))+row("Decisions board groups by",sl("bgDecisions",groupsOf("decisions")))
    +row("Board shows closed items from the last (days)",nm("boardClosedDays"),"The Closed column on a Work board; Show all brings the rest")},
- {id:"projpage",cat:"work",title:"Project page",kw:"flow weeks undated grace no due date list cap overdue ageing",
+ {id:"projpage",cat:"work",title:"Project page",groups:["Project page"],kw:"flow weeks undated grace no due date list cap overdue ageing",
   render:()=>row("Flow looks back (weeks)",nm("flowWeeks"),"The project page's Flow card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)")
    +row("A new undated item counts as new for (days)",nm("undatedGrace"),"The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made")
    +row("Project page lists show at most",nm("listCap"),"Actions due or overdue; the rest are a link away")},
- {id:"files",cat:"work",title:"Files",kw:"files page documents project minutes transcripts reports search",
+ {id:"files",cat:"work",title:"Files",groups:["Files"],kw:"files page documents project minutes transcripts reports search intake portfolio excel export",
   render:()=>row("Show project documents",sw("filesDocs"),"Off by default: the Files page lists minutes, transcripts and reports (Weekly, Adhoc and Steerco), and skips the rest of a large engagement folder. Search still reads documents. Steerco is only read; creaite files nothing there.")},
- {id:"thresholds",cat:"review",title:"Review and health",kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap",
-  render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next proposal after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
-   +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
-   +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
- {id:"warnings",cat:"review",title:"Early warnings",elid:"warnSettings",kw:"early warnings signals re-dated repeat risk milestone slip long open key person vip dependency",render:()=>warnSectionHtml()},
- {id:"sweep",cat:"capture",title:"Sweep",kw:"sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from",
+ moreSection("work"),
+ {id:"sweep",cat:"sweep",title:"Sweep",groups:["Sweep"],kw:"sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from promises",
   render:()=>row("First-run look-back (days)",nm("lookback"),"When the sweep runs and what it reads are in Essentials › Your day")
    +row("Show possible matches",sw("possible"))+'<div id="ignMgr"></div>',
   after:()=>renderIgnore()},
- {id:"vip",cat:"capture",title:"People I follow",elid:"vipSet",kw:"follow alerts important people notification browser",render:()=>vipSectionHtml()},
- {id:"reminders",cat:"capture",title:"Reminders",kw:"reminders weekly report day client report rhythm fortnightly monthly dismissed restore",
-  render:()=>row("Reminders on",sw("remindersOn"),"The weekly report's day and time are in Essentials › Your day")
-   +P.map(p=>row(`${p.name} client report`,`<select data-rhythm="${p.code}">${["Weekly","Fortnightly","Monthly","Off"].map(o=>`<option ${p.rhythm===o?"selected":""}>${o}</option>`).join("")}</select>`)).join("")
+ moreSection("sweep"),
+ {id:"closeday",cat:"sweep",title:"Close the day",groups:["Close the day"],kw:"close the day evening catch up catch-up sweep before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
+  render:()=>row("Catch up when the last sweep is older than (minutes)",nm("catchupAfter"),"A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")},
+ moreSection("reports"),
+ {id:"reminders",cat:"reports",title:"Reminders",groups:["Reminders"],kw:"reminders weekly report day dismissed restore",   /* v2.6 (#246): each project's client report rhythm is in that project's settings */
+  render:()=>row("Reminders on",sw("remindersOn"),"The weekly report's day and time are in Essentials › Your day; each project's client report rhythm is in that project's settings")
    +row("Dismissed reminders",`<button class="btn" id="remRestore">Restore</button>`,"Brings back reminders dismissed forever")},
+ moreSection("ai"),
+ {id:"appearance",cat:"look",title:"Appearance",groups:["Look and help","Look and layout"],kw:"theme mode light dark colour palette column widths order reset motion animation reduced icon size",
+  render:()=>row("Column widths and order",ibtn("undo","Reset column widths and order",'id="rzReset"',"bd"),"Drag a column edge in Work to resize, or a heading to move it")},
+ {id:"help",cat:"look",title:"Help",groups:["Help"],kw:"help start here first run first-run show again welcome",   /* v2.6 (#246): help.start_seen as a quiet button */
+  render:()=>row("Show the first-run help again",'<button type="button" class="btn" id="helpAgain" data-setkey="help.start_seen">Show it again</button>',"Help › Start here opens by itself the next time creaite starts, as it did the first time")},
+ moreSection("look"),
+ {id:"thresholds",cat:"advanced",sub:"review",title:"Review and health",groups:["Review","Health thresholds"],kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
+  render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next proposal after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
+   +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
+   +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
+ {id:"warnings",cat:"advanced",sub:"review",title:"Early warnings",groups:["Early warnings"],elid:"warnSettings",kw:"early warnings signals re-dated repeat risk milestone slip long open key person vip dependency",render:()=>warnSectionHtml()},
+ moreSection("advanced","review"),moreSection("advanced","state"),moreSection("advanced","arch"),moreSection("advanced","folders"),moreSection("advanced","server"),
+ /* People and projects (MOVING): no tab; their old addresses still open them until the People page and each project's
+    settings hold them (v26-project-settings-v2) */
  {id:"people",cat:"people",title:"People",raw:true,kw:"people owners register email aliases organisation role rename merge vip",render:()=>'<div class="card wide" id="peopleMgr" data-sec="people"></div>',after:()=>renderPeopleMgr()},
  {id:"workstreams",cat:"people",title:"Workstreams",raw:true,kw:"workstreams lead keywords rename merge retire project",render:()=>'<div class="card wide" id="wsMgr" data-sec="workstreams"></div>',after:()=>renderMgr("ws")},
  {id:"projects",cat:"people",title:"Projects and register",wide:true,kw:"projects register add close archive restore archived code signals domains matching",
@@ -152,17 +170,18 @@ export const SETSECTIONS=[
   after:()=>{ projArchiveBind(); $$("#projSetList [data-psopen]").forEach(b=>b.onclick=()=>openProjectSettings(b.dataset.psopen)); }},   /* BL-09; #228: each project opens its own settings page */
  {id:"health",cat:"health",title:"Health",kw:"health check problems fix",
   mount:el=>render(h(Health,null),el),match:()=>false},
- {id:"live",cat:"system",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
+ moreSection("health"),                                         /* Health check: the dismissed problems' Reset; Stop stays last */
+ {id:"live",cat:"health",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
   render:()=>row("Status",shared.LIVE?'<span class="h-ok">Running</span>':'<span class="h-bad">Stopped</span>',"127.0.0.1, required")
    +row("Mail, Teams and data",esc(`${SWEPT==="never"?"Mail and Teams never swept":`Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0,16)}`))
    +row("Port",nm("port"),"The creaite app belongs to this port: if you change it, install the app again and reconnect the vault")
    +`<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
- {id:"diag",cat:"system",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
- {id:"version",cat:"system",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
- {id:"danger",cat:"system",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
-  render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")},
- {id:"more",cat:"advanced",title:"Everything else",kw:"everything else advanced",mount:el=>render(h(MoreSettings,{covered}),el),
-  match:w=>{ const c=catalogue.value; return !!c&&c.settings.some(s=>s.tier!=="essentials"&&!covered(s.key)&&sqHas(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`,w)); }}];
+ {id:"diag",cat:"health",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
+ {id:"version",cat:"health",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
+ {id:"danger",cat:"health",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
+  render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")}];
+/** The catalogue groups a hand-made card holds (drawn inside it, never as their own card). */
+export const EMBEDDED=()=>SETSECTIONS.flatMap(s=>s.groups||[]);
 /* ===== BL-320 (v1.9.2): Settings, calmer, with Health inside =====
    The catalogue (/api/settings/catalogue, stores/settings.js) says, for every setting, whether it differs from its default.
    - Essentials, Health and Advanced's "Everything else" are components (`mount`); they read the catalogue and the page's
@@ -173,8 +192,10 @@ export const SETSECTIONS=[
    - A save on an older card rereads the catalogue (a moment later, once it is written); a save or a Reset anywhere brings
      the page's own copies up to date (setSynced). */
 export const ROWKEY={k:v=>SKEY[v],vipk:v=>"vip."+v,drsw:v=>"drafting."+v,wk:v=>"warnings."+v};
-export const COVERED_PREFIX=["warnings.","dashboard.rail."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities"];
-export const covered=k=>Object.values(SKEY).includes(k)||COVERED_KEYS.includes(k)||COVERED_PREFIX.some(p=>k.startsWith(p));
+/* v2.6 (#246): drafting.* are the AI drafts card's own switches (data-drsw), all but the agenda style; help.start_seen is Look and
+   help › Help's button */
+export const COVERED_PREFIX=["warnings.","dashboard.rail.","drafting."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities","help.start_seen"], UNCOVERED=["drafting.agenda_style"];
+export const covered=k=>!UNCOVERED.includes(k)&&(Object.values(SKEY).includes(k)||COVERED_KEYS.includes(k)||COVERED_PREFIX.some(p=>k.startsWith(p)));
 /** The settings a row of an older card holds, from its controls' data attributes. @param {Element} r */
 export function rowKeys(r){ const out=[]; r.querySelectorAll("input,select,textarea").forEach(el=>{ const d=/** @type {HTMLElement} */(el).dataset;
   for(const [a,f] of Object.entries(ROWKEY)) if(d[a]!=null){ const k=f(d[a]); if(k&&!out.includes(k)) out.push(k); } }); return out; }
@@ -222,43 +243,60 @@ effect(()=>{ const c=catalogue.value; if(!c||shared.VIEW!=="settings") return;
 /* the rail's count needs a recent check: one a minute after start-up when this browser hasn't checked for a day */
 if(SERVED&&Date.now()-lastCheckAt()>24*3600*1000) window.setTimeout(()=>{ if(viaServer()) checkHealth(); },60*1000);
 }
-export const setCard=s=>s.mount?`<div class="setmount" id="set-${s.id}" data-sec="${s.id}" data-mount></div>`:s.raw?s.render():`<div class="card${s.wide?" wide":""}" id="${s.elid||"set-"+s.id}" data-sec="${s.id}"><h2>${s.title}</h2>${s.render()}</div>`;
-export const catName=id=>(SETCATS.find(c=>c[0]===id)||[])[1]||"";
+export const setCard=s=>s.mount?`<div class="setmount" id="set-${s.id}" data-sec="${s.id}" data-mount></div>`:s.raw?s.render():`<div class="card${s.wide?" wide":""}" id="${s.elid||"set-"+s.id}" data-sec="${s.id}"><h2>${s.title}</h2>${s.render()}${s.groups?`<div class="setembed" data-embed="${s.id}" data-mount></div>`:""}</div>`;
+export const catName=id=>id===MOVING[0]?MOVING[1]:(SETCATS.find(c=>c[0]===id)||[])[1]||"";
+export const subName=id=>(ADVSUBS.find(c=>c[0]===id)||[])[1]||"";
+/** Where a section is: "Advanced › Archiving and backups › Archiving and backups"; a `more` section names its tab only. */
+export const crumbOf=s=>[catName(catOf(s)),catOf(s)==="advanced"?subName(s.sub||"review"):"",s.more?"":s.title].filter(Boolean).join(" › ");
+/** True when a search finds a row in one of the catalogue groups a hand-made card holds. @param {any} s @param {string[]} w */
+const embedHit=(s,w)=>{ const c=catalogue.value; return !!(c&&s.groups)&&moreRows(c,covered,w).some(x=>s.groups.includes(x.group)); };
 /* Search: sections and rows whose label, help text or keywords hold every word typed, across all categories. A section
    whose title or category matches shows all its rows; otherwise it shows just the rows that match, or all of them when
    only its keywords matched (for example "ignore rules" or "diagnostics"). A mounted section answers for itself (`match`). */
 export const sqWords=()=>shared.SQ.toLowerCase().split(/\s+/).filter(Boolean), sqHas=(txt,w)=>w.every(x=>txt.toLowerCase().includes(x));
 export const rowText=r=>(r.classList.contains("srow")&&r.firstElementChild&&r.firstElementChild!==r.lastElementChild?r.firstElementChild:r).textContent;
 export let SMATCH=new Set();
-export const rowOK=(r,w)=>sqHas(rowText(r),w);
+/* v2.6 (#246): an older card's row is also found by its settings' catalogue words (the label, line and key the catalogue gives
+   them), so Settings search finds every setting by the same words wherever it is drawn (not by its key: a keyword match
+   still shows the whole card) */
+const rowCat=r=>rowKeys(r).map(k=>settingOf(k)).filter(Boolean).map(x=>`${x.label} ${x.line}`).join(" ");
+export const rowOK=(r,w)=>sqHas(`${rowText(r)} ${rowCat(r)}`,w);
 export function setSearchSections(){ const w=sqWords(); SMATCH=new Set(); const t=document.createElement("div");
   return SETSECTIONS.filter(s=>{ if(s.mount) return s.match(w);
-    if(sqHas(`${s.title} ${catName(catOf(s))} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
+    if(sqHas(`${s.title} ${crumbOf(s)} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
     putHTML(t,raw(setCard(s))); setMark(t); const rows=[...t.querySelectorAll(".srow,.igrow")];
-    return sqHas(s.kw,w)||rows.some(r=>rowOK(r,w)); }); }
+    return sqHas(s.kw,w)||rows.some(r=>rowOK(r,w))||embedHit(s,w); }); }
 export function setApplySearch(){ if(!shared.SQ.trim()) return; const w=sqWords();
-  $$("#settingsBody [data-sec]").forEach(c=>{ if(c.hasAttribute("data-mount")||SMATCH.has(c.dataset.sec)) return; const rows=[...c.querySelectorAll(".srow,.igrow")], hit=rows.filter(r=>rowOK(r,w));
+  $$("#settingsBody [data-sec]").forEach(c=>{ if(c.hasAttribute("data-mount")||SMATCH.has(c.dataset.sec)) return; const rows=[...c.querySelectorAll(".srow,.igrow")].filter(r=>!mounted(r)), hit=rows.filter(r=>rowOK(r,w));
     rows.forEach(r=>{ r.hidden=hit.length?!hit.some(h=>h===r||h.contains(r)):false; }); }); }      /* a row inside a matching row (the ignore rules) stays */
 export let MOUNTS=[];
 export function setUnmount(){ MOUNTS.forEach(el=>render(null,el)); MOUNTS=[]; }
-export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) shared.SCAT="essentials";
-  const searching=!!shared.SQ.trim();
+export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)&&shared.SCAT!==MOVING[0]) shared.SCAT="essentials";
+  if(!ADVSUBS.some(c=>c[0]===shared.SSUB)) shared.SSUB="review";
+  const searching=!!shared.SQ.trim(), moving=!searching&&shared.SCAT===MOVING[0];
   query.value=shared.SQ.trim();
   if(SERVED&&!catalogue.value) loadCatalogue();
   drawTabs($("#setcatsHost"),{id:"setcats",className:"setcats",label:"Settings categories",vertical:true,controls:"settingsBody",
-    items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
-  putHTML($("#setcatsel"),raw((searching?`<option value="">Search results</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
-  const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT);
-  const head=s=>searching?(s.mount&&s.id!=="more"?"":`<div class="setcrumb">${esc(catName(catOf(s)))} › ${esc(s.id==="more"?OLDCATS.advanced:s.title)}</div>`)
-    :shared.SCAT==="advanced"&&OLDCATS[s.cat==="advanced"?"advanced":s.cat]&&(s===secs.find(x=>x.cat===s.cat))?`<h2 class="setgroup">${esc(OLDCATS[s.cat])}</h2>`:"";
+    items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching||moving?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
+  putHTML($("#setcatsel"),raw((searching?`<option value="">Search results</option>`:moving?`<option value="">${esc(MOVING[1])}</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
+  const adv=!searching&&shared.SCAT==="advanced";
+  const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT&&(!adv||(s.sub||"review")===shared.SSUB));
+  const head=s=>!searching||(s.mount&&!s.more)?"":`<div class="setcrumb">${esc(crumbOf(s))}</div>`;
   setUnmount();
   const none=`No settings match “${shared.SQ.trim()}”.`;
-  putHTML($("#settingsBody"),!secs.length?html`<p class="sub setnone" role="status">${none}</p>`:html`<div class="setstack">${raw(secs.map(s=>head(s)+setCard(s)).join(""))}</div>`);
-  secs.forEach(s=>{ if(s.mount){ const el=document.getElementById("set-"+s.id); if(el){ MOUNTS.push(el); s.mount(el); } } else if(s.after) s.after(); });
+  const top=adv?`<p class="sub advnote">For tuning and rarely changed settings. Everything has a sensible default, so most people never open this.</p><div class="tabhost" id="setsubHost"></div>`
+    :moving?`<p class="sub advnote" id="setMovingNote">People, workstreams and archiving are moving out of Settings: people to the People page, workstreams and archive to each project's settings. Until then they are here.</p>`:"";
+  putHTML($("#settingsBody"),!secs.length?html`<p class="sub setnone" role="status">${none}</p>`:html`${raw(top)}<div class="setstack">${raw(secs.map(s=>head(s)+setCard(s)).join(""))}</div>`);
+  if(adv) drawTabs($("#setsubHost"),{id:"subtabs",className:"tabs",label:"Advanced",controls:"settingsBody",
+    items:ADVSUBS.map(([id,t])=>({id,label:t,data:{ssub:id}})),selected:shared.SSUB,onSelect:k=>setOpen(k)});   /* v2.6 (#246): Advanced's sub-tabs */
+  secs.forEach(s=>{ if(s.mount){ const el=document.getElementById("set-"+s.id); if(el){ MOUNTS.push(el); s.mount(el); } }
+    else{ if(s.after) s.after(); const em=s.groups&&document.querySelector(`#settingsBody [data-embed="${s.id}"]`);
+      if(em){ MOUNTS.push(em); render(h(MoreSettings,{covered,groups:s.groups,bare:true,all:SMATCH.has(s.id)}),em); } } });
   setMark($("#settingsBody"));
   setApplySearch();
   const b=id=>document.getElementById(id);
   if(b("rzReset")) b("rzReset").onclick=()=>{ shared.RZ={}; store.set("creaite-colwidths",shared.RZ); shared.COLORD={}; store.set("creaite-colorder",shared.COLORD); snack("Column widths and order reset"); };
+  if(b("helpAgain")) b("helpAgain").onclick=async()=>{ if(!await writeSettings({"help.start_seen":false})) return; S.helpSeen=false; snack("Help › Start here opens by itself next time creaite starts"); };   /* v2.6 (#246) */
   if(b("remRestore")) b("remRestore").onclick=async()=>{ if(!await writeSettings({"reminders.dismissed_forever":[]})) return; store.set("creaite-dismiss",[]); if(D.dismissed) D.dismissed.length=0;   /* BL-157: the set-up checklist comes back at once */ sessionStorage.removeItem("creaite-dismiss-s"); snack("Dismissed reminders restored"); };
   if(b("liveCheck")) b("liveCheck").onclick=()=>{ setLive(true); renderSettings(); };
   if(b("liveStop")) b("liveStop").onclick=async()=>{ if(!viaServer()){ snack("The live server isn't running"); return; } const r=await api("/api/stop",{}); if(r.ok){ snack("Live server stopped"); setTimeout(()=>setLive(false),600); } else snack(oneLine(r.message)); };

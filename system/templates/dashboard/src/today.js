@@ -449,7 +449,7 @@ export async function suCheck(what,btn){ if(btn) btn.disabled=true; const r=awai
 /* ===== end BL-166 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0164(){
-SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="live")+1,0,{id:"setup",cat:"system",title:"Set-up",raw:true,kw:"setup set-up health check doctor launcher microsoft 365 connect rebuild excel first run",
+SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="live")+1,0,{id:"setup",cat:"health",title:"Set-up",raw:true,kw:"setup set-up health check doctor launcher microsoft 365 connect rebuild excel first run",
   render:()=>suCardHtml(),after:()=>{ suStatus().then(()=>{ if(shared.VIEW==="settings") suRedraw(); }); }});
 document.addEventListener("click",async e=>{ const t=e.target;
   const cp=t.closest("[data-sucopy]"); if(cp){ e.preventDefault(); suCopy(suText(cp.dataset.sucopy),cp); return; }
