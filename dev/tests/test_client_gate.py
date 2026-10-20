@@ -104,6 +104,26 @@ class TextFindingsMatchesEveryId(Base):
             self.assertEqual(self.findings(text), [], text)
             self.assertEqual(self.text(text), [], text)
 
+    def test_a_fraction_date_or_time_after_the_code_is_no_id_with_the_loose_forms_read(self):
+        # v2.5.3 (#259 round 3): the loose (P16) reading, which client_leak.diff puts in the gate, read "ABC A 4/10" as ABC-A-004
+        for text in ("ABC A 4/10 is the review day.", "ABC A 4/10/2026 is the review day.", "ABC A 4.10 is the release.",
+                     "ABC A 4:10 is the stand-up.", "ABC-A-4/10 is the review day.", "ABC A 04/10/2026 is the review day."):
+            self.assertEqual(self.loose(text), [], text)
+            self.assertEqual(self.text(text), [], text)
+        # a hyphen: the loose reading takes "4-10" as a date; the gate's own reading (edit_ai.loose_ids) still reads ABC-A-004
+        self.assertEqual(self.loose("ABC A 4-10 is the review day."), [])
+
+    def test_the_loose_forms_still_find_the_id(self):
+        why = f"{INTERNAL_ID} isn't client-visible, but its ID appears"
+        for text in ("See A B C - A - 0 0 4 for the detail.", "See ABC-A-0004 for the detail.", "ABC A 4. Then lunch.",
+                     "See ABC-A-0/0/4 for the detail.", "See ABC-A-004 2026 for the detail."):
+            self.assertIn(why, self.loose(text), text)
+
+    def loose(self, text):
+        """client_output.loose_findings on a raw text: the P16 reading the gate takes in once client_leak.diff is applied."""
+        return self.py("import client_output\n"
+                       f"print(json.dumps(client_output.loose_findings(client_leak.connect(), 'ABC', {text!r})))")
+
     def text(self, text):
         """client_leak.text_findings on a raw text, as review (Word), edit_ai and the ✦ call it."""
         return self.py(f"print(json.dumps(client_leak.text_findings(client_leak.connect(), 'ABC', {text!r})))")

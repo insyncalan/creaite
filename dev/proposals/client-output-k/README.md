@@ -27,6 +27,13 @@ sees the finding while he edits rather than only when he exports.
   the diff is in. It works out by itself whether the diff is applied, so it passes once it is, with no edit to the test.
 - Verified (round 2): `git apply --check` and, once applied, `git apply -R --check` both pass on the branch head; applied in a
   scratch copy, `test_client_output_k.py` (18, no expected failure left) and `test_client_output_k_round2.py` (24) are green.
+- Round 3 (Jarvis, 21-10-2026): with the diff in, `test_client_gate`'s "ABC A 4/10 is the review day." was read as ABC-A-004 (a
+  false positive). `client_output._loose_refs` (unguarded) now skips digits that are a fraction, date or time (a number then `/`,
+  `.`, `-` or `:` and a digit: "4/10", "4/10/2026", "4.10", "4-10", "4:10"), unless they are spaced one by one ("0/0/4" stays an
+  ID). "A B C - A - 0 0 1", "ABC-A-0001" and "ABC A 4." still block. Tests:
+  `test_client_gate.TextFindingsMatchesEveryId.test_a_fraction_date_or_time_after_the_code_is_no_id_with_the_loose_forms_read`
+  and `test_the_loose_forms_still_find_the_id`. The diff also moves the memory, chase-log and label checks into
+  `client_leak._context_findings`, so `text_findings` stays within check.py's complexity limit (`check: OK` with it applied).
 - It errs towards over-blocking: `client_leak.make_safe`, which strips the parts the gate finds, then also strips a part holding a
   loose form. That is the wanted direction.
 
