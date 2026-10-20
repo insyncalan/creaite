@@ -59,9 +59,12 @@ and checked). That changes `client_snapshot.py` (unguarded) and adds `system/gua
   counts as the client's only in a file whose bytes creaite itself last wrote: filechange's logged hash, not from an ask creaite
   run; or, for a filed report, its snapshot's source hash. Any other section that isn't one of creaite's own client sections is
   internal.
-- **K3 / I19:** `creaite_doc.derive_facts`, called by `derive_client`. Items come from `report_doc.client_facts_for`, tag text from
-  the item's client title, `based_on` from `report_doc.baseline`, and `layout.headings` from the sections. It fails closed: no
-  facts means no items, tags or based_on.
+- **K3 / I19:** `creaite_doc.derive_facts`, called by `derive_client`. Items come from `report_doc.client_items` (the locked week's
+  client-safe facts, then the tracker's for an item that became client-visible since), tag text from the item's client title, and
+  `based_on` from `report_doc.baseline`. It fails closed: no facts means no items, tags or based_on.
+- **Headings:** a draft keeps its own `layout.headings`. A filed or exported file's headings are made from its sections
+  (`report_doc.filed_client_data`). Save remembers only the headings the sections also show (`report_server.remembered`), so a
+  word stored only in one report's layout can't become the next report's shown heading.
 - **P7:** `creaite_doc.client_shape` now also allow-lists inner keys: item keys (`ITEM_KEYS`), a creaite client table's own columns
   (`report_doc.CLIENT_COLUMNS`), row cells limited to the columns, a row source only `added`, layout lists of strings, row rules
   `{top: int}`, and header dates `YYYY-MM-DD`.
@@ -72,4 +75,13 @@ and checked). That changes `client_snapshot.py` (unguarded) and adds `system/gua
 - **Missing snapshot test:** `test_snapshot_export_renders_the_snapshot_not_the_file_read_again`. The draft is changed on disk
   after the snapshot's check, and its mutant (render from the file) puts the late words in the export.
 - **Properties:** `P16out` (mutant `loose_off`) and `P18facts` (mutant `facts_off`) are new. P7's unknown keys now also go into
-  cells, columns, tags, figures, panes, header data, layout headings and row rules, and based_on.
+  cells, columns, tags, figures, panes, header data, layout headings and row rules, and based_on, and half of them hold only words
+  no gate knows.
+- **Mutation proofs:** K2 and apply's second check are extra guards, so some proofs now switch them off as well: `trust_on` (every
+  file read as creaite's own) for P11, P13, P13shared and P23; `apply_check_off` (in tracker.py's own process) for P23; and
+  `allow_off+facts_off` for P7. P8, P9, P10 and P16 stay green with their mutants. That was already so on `origin/v253-release`
+  (checked in a scratch copy), so it isn't caused by this branch.
+- **Existing tests that follow K2:** none of their leak assertions changed. A payload written on disk now also goes in the Summary,
+  which every output shows (`test_client_audience.tamper_on_disk`; step 2's hand-edited filed file). A client text section is
+  added through Save (`test_client_output_step2.client_text`). The gap B mutant (step 3) also switches off the new loose check,
+  which reads other projects' hidden wordings too.
