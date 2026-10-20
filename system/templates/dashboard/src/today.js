@@ -586,28 +586,42 @@ export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG()
   if(pr) L.push({key:"proposals",n:pr,text:`${pr} proposal${pr===1?"":"s"} to approve`,go:intakeTarget("proposals")});
   if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} to process`,go:intakeTarget("files")});
   return L; }
-/* The x hides the line until something new arrives or the next morning. This browser keeps the day and, per kind, the most that
-   waited since (localStorage creaite-intakeline-dismissed; kept in memory too, so a blocked store still hides it for this page load,
-   as the Sweep due banner's x does). A count above the kept one is something new, and shows the line again; a count below it lowers
-   the kept one, so what arrives later than a clear-out is new too. */
-const TQKEY="creaite-intakeline-dismissed"; let TQMEM=/** @type {{day:string,c:Record<string,number>}|null} */(null);
-const tqCounts=/** @param {{key:string,n:number}[]} parts */parts=>Object.fromEntries(["meetings","proposals","files"].map(k=>[k,(parts.find(x=>x.key===k)||{n:0}).n]));
+/* The x hides the line until something new arrives or the next morning. This browser keeps the day and, per kind, which items were
+   waiting when it was pressed (localStorage creaite-intakeline-dismissed): never text, only a short hash of each item's id (a
+   proposal's file and item, a meeting's calendar key, an Intake file's path), at most TQCAP a kind. An item waiting now that is not
+   in its kind's set is new and shows the line again; what has gone since needs nothing (a set, not a count, so approving older
+   ones never hides a newer one, and a swap is new). Kept in memory too, so a store that can't be read or written still hides it
+   for this page load, as the Sweep due banner's x does. */
+const TQKEY="creaite-intakeline-dismissed", TQCAP=200, TQKINDS=["meetings","proposals","files"];
+/** @typedef {{day:string,ids:Record<string,string[]>,over?:Record<string,number>}} TqKept */
+let TQMEM=/** @type {TqKept|null} */(null), TQSTUCK=false;   /* TQSTUCK: the last write failed, so the memory is newer than the store */
+/** a short, stable hash of an id (FNV-1a, 32 bits, 8 hex digits): the store holds no title, file name or other text */
+const tqHash=/** @param {string} s */s=>{ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(16).padStart(8,"0"); };
+/** each kind's waiting ids, hashed: what intakeParts() counts, item by item */
+function intakeIds(){ return {
+  meetings:MTG().filter(mtgHasTx).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
+  proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}`:`n${r.n}`))),
+  files:(D.inbox||[]).filter(f=>f.state==="new").map(f=>tqHash("f|"+(f.path||f.name))) }; }
 /* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
-   storage event); TQMEM is the fallback only when the store can't be read, and is written alongside it. All storage in try/catch. */
-function tqRead(){ try{ const v=localStorage.getItem(TQKEY); return v?JSON.parse(v):null; }catch(e){ return TQMEM; } }
+   storage event); the memory is read instead when the store can't be read, or when this page's last write to it failed (a store
+   that reads but won't write). All storage in try/catch. */
+function tqRead(){ if(TQSTUCK) return TQMEM; try{ const v=localStorage.getItem(TQKEY); return v?JSON.parse(v):null; }catch(e){ return TQMEM; } }
 /** @returns {boolean} whether the store took it (the memory has it either way) */
-function tqWrite(d){ TQMEM=d; try{ localStorage.setItem(TQKEY,JSON.stringify(d)); return true; }catch(e){ return false; } }
-function intakeDismissed(parts){ const d=tqRead(); if(!d||d.day!==TODAY||!d.c) return false;
-  const c=tqCounts(parts); if(Object.keys(c).some(k=>c[k]>(d.c[k]||0))) return false;
-  const low={day:d.day,c:Object.fromEntries(Object.keys(c).map(k=>[k,Math.min(c[k],d.c[k]||0)]))};
-  if(Object.keys(c).some(k=>low.c[k]!==d.c[k])) tqWrite(low);
-  return true; }
+function tqWrite(d){ TQMEM=d; try{ localStorage.setItem(TQKEY,JSON.stringify(d)); TQSTUCK=false; return true; }catch(e){ TQSTUCK=true; return false; } }
+/** what the x keeps: today and each kind's ids, the last TQCAP of a longer list (and how many were left out, so that many unknown
+    still read as dismissed: a queue longer than the cap can still be hidden; one more than that shows it) */
+function tqKeep(){ const all=intakeIds(), ids=/** @type {Record<string,string[]>} */({}), over=/** @type {Record<string,number>} */({});
+  TQKINDS.forEach(k=>{ const l=[...new Set(all[k])]; ids[k]=l.slice(-TQCAP); if(l.length>TQCAP) over[k]=l.length-TQCAP; });
+  return Object.keys(over).length?{day:TODAY,ids,over}:{day:TODAY,ids}; }
+function intakeDismissed(){ const d=tqRead(); if(!d||d.day!==TODAY||!d.ids||typeof d.ids!=="object") return false;
+  const now=intakeIds();
+  return TQKINDS.every(k=>{ const kept=new Set(Array.isArray(d.ids[k])?d.ids[k]:[]); return now[k].filter(h=>!kept.has(h)).length<=((d.over&&+d.over[k])||0); }); }
 export function renderIntakeLine(){ const host=$("#tdQuietHost"); if(!host) return;
-  const parts=intakeParts(), hid=intakeDismissed(parts);   /* asked even at zero, so a clear-out lowers the kept counts */
+  const parts=intakeParts(), hid=parts.length>0&&intakeDismissed();
   drawIntakeLine(host,hid?[]:parts,pg=>go(pg)); }
 document.addEventListener("click",e=>{ const x=e.target.closest&&e.target.closest("#tdQx"); if(!x) return; e.preventDefault();
   const host=$("#tdQuietHost"), had=host&&host.contains(document.activeElement);
-  tqWrite({day:TODAY,c:tqCounts(intakeParts())}); renderIntakeLine();
+  tqWrite(tqKeep()); renderIntakeLine();
   if(had||document.activeElement===document.body){ const v=$("#v-today"), nxt=v&&host&&[...v.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")]
       .find(n=>!!(host.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)&&n.offsetParent!==null);
     if(nxt) nxt.focus(); else if(v){ if(!v.hasAttribute("tabindex")) v.setAttribute("tabindex","-1"); v.focus(); } } });

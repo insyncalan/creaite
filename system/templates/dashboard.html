@@ -3143,14 +3143,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tres>details[open]>summary .th::before{transform:rotate(90deg)}
 .tres>details[open]>summary{margin-bottom:8px}
 .tres>details>summary:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
-/* #168: Intake and Review folds like Week ahead; an unseen message keeps a dot and "new" on the folded heading */
-.tdnew{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--warn,var(--accent))}
-.tdnew[hidden]{display:none}
-.tdnew::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 #hTd{gap:4px}
-/* #208: the one line for Review and Intake: quiet text, each count a link */
-.tdline{margin:2px 0 6px;font-size:var(--fs-sm);color:var(--ink2,var(--muted))}
-.tdline a{font-weight:600}
 @media (max-width:480px){
   #tBrief ol.bl>li>.tb{flex:1 1 calc(100% - 40px)}   /* a row's buttons go under its words, never squeezing them to a word a line */
   #tBrief .tdrow{flex-wrap:wrap} #tBrief .tdrow .tb{flex-basis:calc(100% - 90px)}
@@ -42827,16 +42820,31 @@ ${s5}`;
     if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} to process`, go: intakeTarget("files") });
     return L3;
   }
-  var TQKEY = "creaite-intakeline-dismissed";
+  var TQKEY = "creaite-intakeline-dismissed", TQCAP = 200, TQKINDS = ["meetings", "proposals", "files"];
   var TQMEM = (
-    /** @type {{day:string,c:Record<string,number>}|null} */
+    /** @type {TqKept|null} */
     null
+  ), TQSTUCK = false;
+  var tqHash = (
+    /** @param {string} s */
+    (s5) => {
+      let h5 = 2166136261;
+      for (let i5 = 0; i5 < s5.length; i5++) {
+        h5 ^= s5.charCodeAt(i5);
+        h5 = Math.imul(h5, 16777619);
+      }
+      return (h5 >>> 0).toString(16).padStart(8, "0");
+    }
   );
-  var tqCounts = (
-    /** @param {{key:string,n:number}[]} parts */
-    (parts) => Object.fromEntries(["meetings", "proposals", "files"].map((k5) => [k5, (parts.find((x5) => x5.key === k5) || { n: 0 }).n]))
-  );
+  function intakeIds() {
+    return {
+      meetings: MTG().filter(mtgHasTx).map((m5) => tqHash("m|" + (m5.key || m5.id || `${m5.day}|${m5.start}|${m5.title}`))),
+      proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}` : `n${r4.n}`))),
+      files: (D.inbox || []).filter((f5) => f5.state === "new").map((f5) => tqHash("f|" + (f5.path || f5.name)))
+    };
+  }
   function tqRead() {
+    if (TQSTUCK) return TQMEM;
     try {
       const v5 = localStorage.getItem(TQKEY);
       return v5 ? JSON.parse(v5) : null;
@@ -42848,24 +42856,41 @@ ${s5}`;
     TQMEM = d5;
     try {
       localStorage.setItem(TQKEY, JSON.stringify(d5));
+      TQSTUCK = false;
       return true;
     } catch (e4) {
+      TQSTUCK = true;
       return false;
     }
   }
-  function intakeDismissed(parts) {
+  function tqKeep() {
+    const all = intakeIds(), ids = (
+      /** @type {Record<string,string[]>} */
+      {}
+    ), over = (
+      /** @type {Record<string,number>} */
+      {}
+    );
+    TQKINDS.forEach((k5) => {
+      const l6 = [...new Set(all[k5])];
+      ids[k5] = l6.slice(-TQCAP);
+      if (l6.length > TQCAP) over[k5] = l6.length - TQCAP;
+    });
+    return Object.keys(over).length ? { day: TODAY, ids, over } : { day: TODAY, ids };
+  }
+  function intakeDismissed() {
     const d5 = tqRead();
-    if (!d5 || d5.day !== TODAY || !d5.c) return false;
-    const c5 = tqCounts(parts);
-    if (Object.keys(c5).some((k5) => c5[k5] > (d5.c[k5] || 0))) return false;
-    const low = { day: d5.day, c: Object.fromEntries(Object.keys(c5).map((k5) => [k5, Math.min(c5[k5], d5.c[k5] || 0)])) };
-    if (Object.keys(c5).some((k5) => low.c[k5] !== d5.c[k5])) tqWrite(low);
-    return true;
+    if (!d5 || d5.day !== TODAY || !d5.ids || typeof d5.ids !== "object") return false;
+    const now = intakeIds();
+    return TQKINDS.every((k5) => {
+      const kept = new Set(Array.isArray(d5.ids[k5]) ? d5.ids[k5] : []);
+      return now[k5].filter((h5) => !kept.has(h5)).length <= (d5.over && +d5.over[k5] || 0);
+    });
   }
   function renderIntakeLine() {
     const host2 = $("#tdQuietHost");
     if (!host2) return;
-    const parts = intakeParts(), hid = intakeDismissed(parts);
+    const parts = intakeParts(), hid = parts.length > 0 && intakeDismissed();
     drawIntakeLine(host2, hid ? [] : parts, (pg2) => go2(pg2));
   }
   document.addEventListener("click", (e4) => {
@@ -42873,7 +42898,7 @@ ${s5}`;
     if (!x5) return;
     e4.preventDefault();
     const host2 = $("#tdQuietHost"), had = host2 && host2.contains(document.activeElement);
-    tqWrite({ day: TODAY, c: tqCounts(intakeParts()) });
+    tqWrite(tqKeep());
     renderIntakeLine();
     if (had || document.activeElement === document.body) {
       const v5 = $("#v-today"), nxt = v5 && host2 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(host2.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
