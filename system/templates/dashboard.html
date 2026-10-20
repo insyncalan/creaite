@@ -72052,12 +72052,12 @@ ${d5.text}`);
         class: `msel${value ? "" : " empty"}${cls ? " " + cls : ""}`,
         "aria-label": label,
         value: value || "",
-        onChange: (e4) => {
-          const x5 = (
+        onChange: async (e4) => {
+          const el2 = (
             /** @type {HTMLSelectElement} */
-            e4.currentTarget.value
-          );
-          if (x5 !== (value || "")) onPick(x5);
+            e4.currentTarget
+          ), x5 = el2.value;
+          if (x5 !== (value || "") && await onPick(x5) === false) el2.value = value || "";
         },
         children: [
           /* @__PURE__ */ u2("option", { value: "", children: none }),
@@ -72169,7 +72169,7 @@ ${d5.text}`);
                 onPick: (x5) => edit({ priority: x5 || null })
               }
             ) : v5.priority ? /* @__PURE__ */ u2("span", { "data-tip": sid === "raid" ? "Worked out from impact and likelihood" : void 0, children: v5.priority }) : dash }),
-            /* @__PURE__ */ u2("td", { class: "mnwc", children: isNew && sid === "actions" ? /* @__PURE__ */ u2(
+            /* @__PURE__ */ u2("td", { class: "mnwc", children: isNew && sid !== "decisions" ? /* @__PURE__ */ u2(
               RowSelect,
               {
                 value: String(v5.workstream || ""),
@@ -72763,7 +72763,10 @@ ${d5.text}`);
       const n4 = r4.approved || 0, left = (r4.waiting || []).length;
       snack(
         `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
-        r4.apply_id ? () => undoApply(r4.apply_id) : null
+        r4.apply_id ? async () => {
+          await undoApply(r4.apply_id);
+          if (v5.proposal) loadMinutes({ file: v5.proposal });
+        } : null
       );
       await reloadData();
       if (v5.plan.files[0]) loadMinutes({ path: v5.plan.files[0] });
@@ -76859,6 +76862,7 @@ ${d5.text}`);
         "readDate",
         "readForm",
         "reattach",
+        "reconcileOps",
         "redraftAnswer",
         "reduced",
         "refreshAll",

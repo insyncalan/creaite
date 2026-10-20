@@ -60,6 +60,10 @@ class MinutesViewV2(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         populate(v)
+        v.propose("ws", [{"n": 1, "op": "new", "table": "workstreams", "decision": "approved",       # one workstream for the dropdown (BL-58)
+                          "values": {"project": "ABC", "name": "Testing", "lead": "Sara Example", "status": "Active", "source": "t"}}])
+        v.run("apply")
+        v.run(script="build_dashboard.py")
         cls.proposal = me.stage_meeting(v)
 
     def setUp(self):
@@ -216,11 +220,18 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertEqual(self.staged(1)["values"]["owner"], "Sara Example")
         ws = ROW % 1 + " td.mnwc select"
         opts = self.ev(f"[...document.querySelector({json.dumps(ws)}).options].map(o=>o.value).filter(Boolean)")
-        if opts:
-            b.eval(f"(()=>{{const s=document.querySelector({json.dumps(ws)}); s.value={json.dumps(opts[0])}; s.dispatchEvent(new Event('change',{{bubbles:true}}));}})()")
-            b.wait(f"document.querySelector({json.dumps(ws)}).value==={json.dumps(opts[0])}", 10)
-            b.pump(0.5)
-            self.assertEqual(self.staged(1)["values"].get("workstream"), opts[0])
+        self.assertTrue(opts, "the project's workstreams are offered")
+        b.eval(f"(()=>{{const s=document.querySelector({json.dumps(ws)}); s.value={json.dumps(opts[0])}; s.dispatchEvent(new Event('change',{{bubbles:true}}));}})()")
+        b.wait(f"document.querySelector({json.dumps(ws)}).value==={json.dumps(opts[0])}", 10)
+        b.pump(0.5)
+        self.assertEqual(self.staged(1)["values"].get("workstream"), opts[0])
+        rws = ROW % 5 + " td.mnwc select"                     # a risk's workstream: the record refuses it until the proposal lands; said, and kept as it was
+        b.eval(f"(()=>{{const s=document.querySelector({json.dumps(rws)}); s.value={json.dumps(opts[0])}; s.dispatchEvent(new Event('change',{{bubbles:true}}));}})()")
+        b.wait("document.getElementById('snack').classList.contains('on')", 10)
+        b.pump(0.4)
+        if self.staged(5)["values"].get("workstream") != opts[0]:
+            self.assertIn("can't be changed from the minutes", self.snack())
+            self.assertEqual(self.ev(f"document.querySelector({json.dumps(rws)}).value"), "", "the row keeps its value")
         self.assertIn("needs details", self.ev(f"document.querySelector(\"{ROW % 3}\").textContent"), "#266's wording")
         self.assertNotIn("people register", self.ev("document.querySelector('#v-minutes .page').textContent"))
 
@@ -357,6 +368,10 @@ class MinutesViewV2(LiveBrowserCase):
         filed = self.filed()
         self.assertIsNotNone(filed)
         self.assertIn("lighthouse site", filed.read_text(encoding="utf-8"), "kept in the minutes")
+        b.wait("document.querySelector('#v-minutes .mnmeta') && /Approved and filed/.test(document.querySelector('#v-minutes .mnmeta').textContent)", 15)
+        b.click("#snackU")                                      # Undo: the whole apply back, and the draft on the page again
+        b.wait("document.querySelector('#v-minutes tr.mi') && /Draft/.test(document.querySelector('#v-minutes .mnmeta').textContent)", 30)
+        self.assertNotIn("Share the cut-over plan with the client", [a["description"] for a in self.rows_of("actions")])
 
     def test_12_approve_with_no_problem_is_one_click_and_a_cross_removes_the_line(self):
         b = self.b

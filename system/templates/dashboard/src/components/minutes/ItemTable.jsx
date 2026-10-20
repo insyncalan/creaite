@@ -6,6 +6,9 @@
    - Track (track.js): tick = register a work item, cross = remove the line from the minutes, neither = it stays in the
      minutes as a line and no work item is made. Clicking the pressed button clears it. The choice is kept in the page's
      layout; the record follows when the minutes are approved.
+   - A risk's or issue's Workstream is a dropdown too; the record takes it once dev/proposals/minutes-view-v2 is applied
+     (minutes_record.EDITABLE), and until then the server's refusal is said on the toast and the row keeps its value. A
+     risk's Priority is worked out from impact and likelihood, so it is shown, not picked.
    - The item's words in the one editor (Tiptap, plain, one line, with AI on selected text): Enter or a click away saves,
      Esc puts the words back. Owner, Priority and Workstream are in-row dropdowns; Due opens the deadline popover
      (DeadlinePopover.jsx). Each is one of the record's changes (/api/minutes/save {op}), so the row and its staged item
@@ -92,12 +95,14 @@ function ItemText({ value, label, n, onSave }) {
   );
 }
 
-/** A dropdown in the row. @param {{value: string, label: string, options: string[], none: string, cls?: string, onPick: (v: string) => void}} props */
+/** A dropdown in the row; a change the record refuses puts the old value back.
+    @param {{value: string, label: string, options: string[], none: string, cls?: string, onPick: (v: string) => Promise<boolean>|void}} props */
 function RowSelect({ value, label, options, none, cls, onPick }) {
   const opts = value && !options.includes(value) ? [value, ...options] : options;
   return (
     <select class={`msel${value ? "" : " empty"}${cls ? " " + cls : ""}`} aria-label={label} value={value || ""}
-      onChange={e => { const x = /** @type {HTMLSelectElement} */ (e.currentTarget).value; if (x !== (value || "")) onPick(x); }}>
+      onChange={async e => { const el = /** @type {HTMLSelectElement} */ (e.currentTarget), x = el.value;
+        if (x !== (value || "") && (await onPick(x)) === false) el.value = value || ""; }}>
       <option value="">{none}</option>
       {opts.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
@@ -165,7 +170,7 @@ function MnRow({ r, ctx, full }) {
         <td class="mnpc">{isNew && sid === "actions" ? <RowSelect value={String(v.priority || "")} label={`Priority of ${label}`} options={MN_PRIOS} none="Priority"
           cls={v.priority ? `pr-${String(v.priority)[0]}` : ""} onPick={x => edit({ priority: x || null })} />
           : v.priority ? <span data-tip={sid === "raid" ? "Worked out from impact and likelihood" : undefined}>{v.priority}</span> : dash}</td>
-        <td class="mnwc">{isNew && sid === "actions" ? <RowSelect value={String(v.workstream || "")} label={`Workstream of ${label}`} options={wsFor(String(v.project || m.project || ""))}
+        <td class="mnwc">{isNew && sid !== "decisions" ? <RowSelect value={String(v.workstream || "")} label={`Workstream of ${label}`} options={wsFor(String(v.project || m.project || ""))}
           none="Workstream" onPick={x => edit({ workstream: x || null })} />
           : v.workstream ? <span>{v.workstream}</span> : dash}</td>
       </> : null}

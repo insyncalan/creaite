@@ -109,7 +109,7 @@ async function approveNow(anyway) {
     if (!r.ok) { snack(String(r.message || "The apply didn't run; nothing was changed.").split("\n")[0]); return; }
     const n = r.approved || 0, left = (r.waiting || []).length;
     snack(`Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
-      r.apply_id ? () => undoApply(r.apply_id) : null);
+      r.apply_id ? async () => { await undoApply(r.apply_id); if (v.proposal) loadMinutes({ file: v.proposal }); } : null);   // Undo: the draft comes back, so does its page
     await reloadData();
     if (v.plan.files[0]) loadMinutes({ path: v.plan.files[0] });
   } finally { approving.value = false; }

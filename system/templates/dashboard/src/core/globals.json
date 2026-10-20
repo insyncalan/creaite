@@ -596,6 +596,7 @@
    "readDate",
    "readForm",
    "reattach",
+   "reconcileOps",
    "redraftAnswer",
    "reduced",
    "refreshAll",
