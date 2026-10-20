@@ -1,17 +1,18 @@
-"""#174 (Alan, via Jarvis): ask creaite can't write a report-named draft through report.py adhoc and steerco-stage or docx_tools.py fill
-and build-adhoc either. PROPOSAL test.
+"""#174 (Alan, via Jarvis): ask creaite can't write a report-named draft through report.py adhoc and steerco-stage or docx_tools.py fill,
+build-adhoc and clean either. PROPOSAL test.
 
 Run: python3 dev/tests/test_guard_steerco_adhoc.py                      (quick tier: no Chrome)
 Fail-first: GUARD_STEERCO_UNPATCHED=1 python3 dev/tests/test_guard_steerco_adhoc.py   (the scratch copy is left without the diff)
 
-v2.5.1's report rule covers `report.py weekly-stage` and `client-stage`. `report.py steerco-stage` and `adhoc`, and `docx_tools.py fill`
-and `build-adhoc`, also write a Word draft into system/staging/drafts/, and `adhoc` names it from the spec's title, so the title
+v2.5.1's report rule covers `report.py weekly-stage` and `client-stage`. `report.py steerco-stage` and `adhoc`, and `docx_tools.py fill`,
+`build-adhoc` and `clean`, also write a Word draft into system/staging/drafts/, and `adhoc` names it from the spec's title, so the title
 'Example Programme Weekly report' wrote a report-named draft outside the rule. `reach.py` is a guarded file: the fix is the proposal
 dev/proposals/guard-174/reach-steerco-adhoc.diff (a third diff, which applies alone and in any order with reach.diff and
-reach-report.diff). It refuses those builders ONLY when the draft is named like a report (report, weekly or client in the output file
-name, or in the title of the spec file, or a client-safe Steerco one-pager); ordinary documents and internal one-pagers and every read
-stay allowed. This file applies it with `patch -p0` to a copy of the whole of system/scripts/ in a throwaway vault (with spec files in
-its system/staging/drafts/) and reads the guard's decisions from that copy (`reach.decide`, as the hook calls it) in every mode.
+reach-report.diff). It refuses those builders ONLY when the draft is named like a report (report, weekly or client, in the output file name,
+the title of the spec file, or a client-safe Steerco one-pager, read the way the scripts read their arguments); ordinary documents and
+internal one-pagers and every read stay allowed. A spec that can't be read, is over 1 MB, starts with ~, or an odd argument shape, counts as
+report-named. This file applies the diff with `patch -p0` to a copy of the whole of system/scripts/ in a throwaway vault (with spec
+files in it and a fake home folder) and reads the guard's decisions from that copy (`reach.decide`, as the hook calls it) in every mode.
 After the diff is applied to the repo the marker is found and the same tests keep guarding it (the unpatched copy is made with `patch -R`).
 """
 import itertools
@@ -20,6 +21,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -40,24 +42,55 @@ D = "system/staging/drafts/"
 
 MUTATIONS = {
     "drop-weekly": ("the word weekly is dropped from the report words", r'+ r"|report|weekly|client"', r'+ r"|report|client"'),
-    "drop-title-read": ("the spec's title is not read", 'return str(spec.get("title") or ""), str(spec.get("version") or "")',
-                        'return "", str(spec.get("version") or "")'),
-    "fail-open-unreadable": ("an unreadable adhoc spec with a report-named file is let through",
-                             'return sub == "adhoc" and bool(REPORT_WORDS.search(', 'return False and bool(REPORT_WORDS.search('),
-    "drop-client-version": ("a client-safe one-pager is let through", 'version.lower() == "client"', "False"),
-    "drop-output-name": ("the output file's name is not looked at", "if REPORT_WORDS.search(pos[3].rsplit", "if False and REPORT_WORDS.search(pos[3].rsplit"),
-    "unsplittable-open": ("a command that can't be split is let through", "REPORT_WORDS.search(rest) else None", "False else None"),
+    "drop-title-read": ("the spec's title is not read", 'for k, v in top if str(k).lower() == "title"]', 'for k, v in top if str(k).lower() == "none"]'),
+    "first-title-only": ("only the first title key counts", 'for k, v in top if str(k).lower() == "title"]',
+                         'for k, v in top[:1] if str(k).lower() == "title"]'),
+    "unreadable-steerco-open": ("an unreadable steerco-stage spec is let through", "    if fields is None:\n        return True",
+                                '    if fields is None:\n        return verb == "adhoc"'),
+    "oversized-open": ("a spec over 1 MB is read as if it were small", "if p.stat().st_size > 1_000_000:", "if False:"),
+    "drop-client-version": ("a client-safe one-pager is let through", 'any("client" in _plain(v) for v in versions)', "False"),
+    "drop-output-name": ("the output file's name is not looked at", "or _report_word(rest[2].rsplit", "or False and _report_word(rest[2].rsplit"),
+    "dash-words-dropped": ("words starting with - are dropped from the arguments, as v1 of this diff did",
+                           'script, argv = w.rsplit("/", 1)[-1], list(words[i + 1:])',
+                           'script, argv = w.rsplit("/", 1)[-1], [x for x in words[i + 1:] if not x.startswith("-")]'),
+    "expanduser-tilde": ("a ~ path is expanded by the guard, though the shell doesn't expand a quoted one",
+                         '    if path.startswith("~"):\n        return None\n', "    path = os.path.expanduser(path)\n"),
+    "no-nfkc": ("no NFKC: fullwidth letters don't match", 'unicodedata.normalize("NFKC", text)', "text"),
+    "no-mark-strip": ("combining marks are kept: accents hide the word", '("Cf", "Cc", "Mn", "Me")', '("Cf", "Cc")'),
+    "no-zero-width-strip": ("format characters are kept: a zero-width space hides the word", '("Cf", "Cc", "Mn", "Me")', '("Mn", "Me")'),
+    "no-clean": ("clean is not looked at", 'verb in ("fill", "build-adhoc", "clean")', 'verb in ("fill", "build-adhoc")'),
+    "unsplittable-open": ("a command that can't be split is let through", "_report_word(rest) else None", "False else None"),
 }
 
-SPECS = {                                 # file name -> content (a str is written as it is)
-    "spec-a.json": {"title": "Example Programme Weekly report"}, "spec-b.json": {"title": "Client report for the steering"},
+WEEKLY = {"title": "Example Programme Weekly report"}
+SPECS = {                                 # file name (relative to the drafts folder) -> content (a str is written as it is)
+    "spec-a.json": WEEKLY, "spec-b.json": {"title": "Client report for the steering"},
     "spec-c.json": {"title": "Weekly status pack"}, "spec-d.json": {"title": "Quarterly reporting"},
     "spec-n.json": {"title": "Open risks register"}, "spec-n2.json": {"title": "Data access decisions"},
     "spec-s-client.json": {"code": "ABC", "version": "client"}, "spec-s-int.json": {"code": "ABC", "version": "internal"},
     "spec-s-none.json": {"code": "ABC"}, "spec-s-title.json": {"code": "ABC", "title": "Weekly report one-pager"},
-    "spec-notitle.json": {"audience": "internal"}, "spec-bad.json": "this is not json",
+    "spec-notitle.json": {"audience": "internal"}, "spec-bad.json": "this is not json", "spec-list.json": "[1, 2]",
     "spec-weekly-pack.json": "this is not json",     # unreadable, and its own name is report-named
+    # a duplicate key: the script keeps the last value, the guard checks every one (and the other spellings of the key)
+    "spec-dup1.json": '{"title": "Open risks register", "title": "Example Programme Weekly report"}',
+    "spec-dup2.json": '{"title": "Example Programme Weekly report", "title": "Open risks register"}',
+    "spec-dup3.json": '{"Title": "Example Programme Weekly report", "title": "Open risks register"}',
+    "spec-dup-v.json": '{"code": "ABC", "version": "client", "version": "internal"}',
+    "spec-dup-v2.json": '{"code": "ABC", "version": "internal", "version": "client"}',
+    # lookalikes of the words
+    "spec-acc1.json": {"title": "Wéekly pack"}, "spec-acc2.json": {"title": "Ｗｅｅｋｌｙ pack"},
+    "spec-acc3.json": {"title": "Wee​kly pack"}, "spec-acc4.json": {"title": "Cliént list"},
+    "spec-acc5.json": {"title": "Réport pack"},
+    # over 1 MB: the script reads it anyway
+    "spec-big.json": {"title": "Example Programme Weekly report", "pad": "x" * 1_100_000},
+    "spec-big-n.json": {"title": "Open risks register", "pad": "x" * 1_100_000},
+    "spec-big-c.json": {"code": "ABC", "version": "client", "pad": "x" * 1_100_000},
 }
+ROOT_SPECS = {                           # relative to the vault root: the dash-led names report.py reads literally
+    "-w.json": WEEKLY, "-": WEEKLY, "-c.json": {"code": "ABC", "version": "client"}, "-s.json": WEEKLY,
+    "~/spec-n.json": WEEKLY,             # a folder literally called ~ in the vault: a quoted '~/...' reads this
+}
+HOME_SPECS = {"spec-n.json": {"title": "Open risks register"}}    # what an expanded ~ would find: neutral
 LAUNCHERS = {
     "python3": "python3 system/scripts/{s}", "python": "python system/scripts/{s}", "run": "system/scripts/run {s}",
     "abs-python3": "python3 {ROOT}/system/scripts/{s}", "abs-run": "{ROOT}/system/scripts/run {s}",
@@ -85,24 +118,27 @@ def _patch(root, diff, *flags):
         raise AssertionError(f"patch {diff.name} {' '.join(flags)} failed in the scratch copy:\n{r.stdout}\n{r.stderr}")
 
 
-def scratch(patched, others=(), mutation=""):
-    """A throwaway vault with a copy of the whole of system/scripts/ and spec files in its drafts folder; reach.py with (or without)
-    reach-steerco-adhoc.diff, after the other diffs named in `others` (a tuple of paths) were applied first."""
+def _write(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content if isinstance(content, str) else json.dumps(content, ensure_ascii=False), encoding="utf-8")
+
+
+def scratch(patched, mutation=""):
+    """A throwaway vault with a copy of the whole of system/scripts/, spec files (in its drafts folder and its root) and a fake home
+    folder; reach.py with (or without) reach-steerco-adhoc.diff."""
     v = Vault()
     v.run("init")
     shutil.copytree(REPO / "system" / "scripts", v.root / "system" / "scripts", dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns("__pycache__"))
-    drafts = v.root / "system" / "staging" / "drafts"
-    drafts.mkdir(parents=True, exist_ok=True)
     for name, content in SPECS.items():
-        (drafts / name).write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
+        _write(v.root / "system" / "staging" / "drafts" / name, content)
+    for name, content in ROOT_SPECS.items():
+        _write(v.root / name, content)
+    v.home = Path(tempfile.mkdtemp(prefix="creaite-test-home-"))
+    for name, content in HOME_SPECS.items():
+        _write(v.home / name, content)
     reach = v.root / "system" / "scripts" / "reach.py"
-    text = reach.read_text(encoding="utf-8")
-    for diff in others:
-        marker = "def _glob_refused" if diff.name == "reach.diff" else "def _stages_a_report"
-        if marker not in reach.read_text(encoding="utf-8"):
-            _patch(v.root, diff)
-    already = MARKER in text
+    already = MARKER in reach.read_text(encoding="utf-8")
     if patched and not already:
         _patch(v.root, DIFF)
     if not patched and already:
@@ -115,19 +151,27 @@ def scratch(patched, others=(), mutation=""):
     return v
 
 
+def cleanup(v):
+    v.cleanup()
+    shutil.rmtree(v.home, ignore_errors=True)
+
+
 def decisions(v, commands):
     r = subprocess.run([sys.executable, "-c", HARNESS], input=json.dumps([commands, list(MODES)]), cwd=v.root,
-                       capture_output=True, text=True, timeout=300)
+                       capture_output=True, text=True, timeout=300, env={**os.environ, "HOME": str(v.home)})
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
 
 
-def report_calls(root, specs, words, mode_script="report.py"):
+def report_calls(root, specs, words, script="report.py"):
+    """name -> command: each launcher, each spelling of the verb, each spec (a name in the drafts folder, or a literal word if it has
+    no folder and starts with - or ~, or is given with a leading / or ./)."""
     out = {}
     for lname, launcher in LAUNCHERS.items():
         for spec in specs:
+            arg = spec if spec.startswith(("-", "~", "'", "system/")) else f"{D}{spec}"
             for w in words:
-                out[f"{lname} | {w} | {spec}"] = launcher.format(s=mode_script, ROOT=root) + f" {w} {D}{spec}"
+                out[f"{lname} | {w} | {spec}"] = launcher.format(s=script, ROOT=root) + f" {w} {arg}"
     return out
 
 
@@ -143,19 +187,46 @@ def docx_calls(root):
         calls[f"{lname} | quoted fill"] = (d(f"'fill' {TEMPLATE} {D}spec-n.json '{D}Weekly status.docx'", lname), True)
         calls[f"{lname} | spliced fill"] = (d(f"fi''ll {TEMPLATE} {D}spec-n.json {D}client.docx", lname), True)
         calls[f"{lname} | build-adhoc, report-titled spec, neutral file"] = (d(f"build-adhoc {TEMPLATE} {D}spec-a.json {D}out.docx", lname), True)
+        calls[f"{lname} | build-adhoc, dashed template"] = (d(f"build-adhoc -t.docx {D}spec-n.json '{D}Weekly status.docx'", lname), True)
+        calls[f"{lname} | fill, dashed template and values"] = (d(f"fill -t.docx -v.json '{D}Client list.docx'", lname), True)
+        calls[f"{lname} | build-adhoc, dashed report-titled spec"] = (d(f"build-adhoc {TEMPLATE} -s.json {D}out.docx", lname), True)
+        calls[f"{lname} | build-adhoc, oversized spec"] = (d(f"build-adhoc {TEMPLATE} {D}spec-big-n.json {D}out.docx", lname), True)
+        calls[f"{lname} | build-adhoc, accented title"] = (d(f"build-adhoc {TEMPLATE} {D}spec-acc1.json {D}out.docx", lname), True)
+        calls[f"{lname} | clean into a report-named file"] = (d(f"clean {D}spec-n.docx 'system/staging/drafts/Example Client pack.docx'", lname), True)
+        calls[f"{lname} | clean in place, report-named"] = (d(f"clean 'system/staging/drafts/Example Client pack.docx'", lname), True)
+        calls[f"{lname} | clean, dashed input"] = (d(f"clean -x.docx '{D}Weekly pack.docx'", lname), True)
+        calls[f"{lname} | clean, spliced"] = (d(f"cl''ean {D}a.docx {D}client.docx", lname), True)
+        calls[f"{lname} | fill, too few arguments"] = (d(f"fill {TEMPLATE} {D}out.docx", lname), True)
+        calls[f"{lname} | build-adhoc, too many arguments"] = (d(f"build-adhoc {TEMPLATE} {D}spec-n.json {D}out.docx extra", lname), True)
+        calls[f"{lname} | clean, no arguments"] = (d("clean", lname), True)
         calls[f"{lname} | fill, neutral"] = (d(f"fill {TEMPLATE} {D}spec-n.json {D}out.docx", lname), False)
-        calls[f"{lname} | build-adhoc, neutral"] = (d(f"build-adhoc {TEMPLATE} {D}spec-n.json {D}Open risks.docx", lname), False)
+        calls[f"{lname} | fill, dashed template, neutral file"] = (d(f"fill -t.docx -v.json {D}out.docx", lname), False)
+        calls[f"{lname} | build-adhoc, neutral"] = (d(f"build-adhoc {TEMPLATE} {D}spec-n.json '{D}Open risks.docx'", lname), False)
+        calls[f"{lname} | clean, neutral in place"] = (d(f"clean {D}out.docx", lname), False)
+        calls[f"{lname} | clean, neutral into"] = (d(f"clean {D}a.docx {D}b.docx", lname), False)
     return calls
 
 
-REFUSED_ADHOC = ("spec-a.json", "spec-b.json", "spec-c.json", "spec-d.json", "spec-weekly-pack.json")
-REFUSED_STEERCO = ("spec-s-client.json", "spec-s-title.json")
-ALLOWED_ADHOC = ("spec-n.json", "spec-n2.json", "spec-notitle.json", "spec-bad.json", "spec-missing.json")
-ALLOWED_STEERCO = ("spec-s-int.json", "spec-s-none.json", "spec-missing.json")
+REFUSED_ADHOC = ("spec-a.json", "spec-b.json", "spec-c.json", "spec-d.json", "spec-weekly-pack.json", "spec-dup1.json", "spec-dup2.json",
+                 "spec-dup3.json", "spec-acc1.json", "spec-acc2.json", "spec-acc3.json", "spec-acc4.json", "spec-acc5.json",
+                 "spec-big.json", "spec-big-n.json", "spec-bad.json", "spec-list.json", "spec-missing.json")
+REFUSED_STEERCO = ("spec-s-client.json", "spec-s-title.json", "spec-dup-v2.json", "spec-dup-v.json", "spec-big-c.json", "spec-bad.json",
+                   "spec-missing.json", "spec-list.json")
+DASHED_ADHOC = ("-w.json", "-", "-s.json", "'~/spec-n.json'", "~/spec-n.json")        # step 2 of the review's bypasses (steps 1: filechange create)
+DASHED_STEERCO = ("-c.json", "'~/spec-n.json'")
+ALLOWED_ADHOC = ("spec-n.json", "spec-n2.json", "spec-notitle.json")
+ALLOWED_STEERCO = ("spec-s-int.json", "spec-s-none.json")
+ODD_SHAPES = ("python3 system/scripts/report.py adhoc", "python3 system/scripts/report.py adhoc system/staging/drafts/spec-n.json x",
+              "python3 system/scripts/report.py steerco-stage", "python3 system/scripts/report.py steerco-stage a b")
 READS = ("python3 system/scripts/report.py adhoc-data ABC", "system/scripts/run report.py steerco-data ABC",
          "python3 system/scripts/report.py weekly-data ABC", "system/scripts/run report.py client-data ABC",
          "python3 system/scripts/docx_tools.py text system/templates/adhoc-template.docx",
          "system/scripts/run docx_tools.py status system/templates/adhoc-template.docx")
+# NOT covered by this diff (the README says so): the draft is not made by one of these builders, or its name comes from somewhere else
+STILL_ALLOWED = (
+    "python3 system/scripts/filechange.py create 'system/staging/drafts/Weekly status.docx' --from system/staging/drafts/spec-n.json --why x",
+    "python3 system/scripts/filechange.py create 'system/staging/drafts/Example Client pack.docx' --from system/staging/drafts/spec-n.json --why x",
+)
 
 
 class Builders(unittest.TestCase):
@@ -164,34 +235,40 @@ class Builders(unittest.TestCase):
         cls.patched = scratch(patched=not UNPATCHED, mutation=MUTATE)
         cls.base = scratch(patched=False)
         r = str(cls.patched.root)
-        cls.refused = {**report_calls(r, REFUSED_ADHOC, ADHOC_WORDS), **report_calls(r, REFUSED_STEERCO, STEERCO_WORDS)}
+        cls.refused = {**report_calls(r, REFUSED_ADHOC, ADHOC_WORDS), **report_calls(r, REFUSED_STEERCO, STEERCO_WORDS),
+                       **report_calls(r, DASHED_ADHOC, ADHOC_WORDS), **report_calls(r, DASHED_STEERCO, STEERCO_WORDS[:2])}
+        cls.odd = {f"odd | {c}": c for c in ODD_SHAPES}
         cls.allowed = {**report_calls(r, ALLOWED_ADHOC, ADHOC_WORDS[:2]), **report_calls(r, ALLOWED_STEERCO, STEERCO_WORDS[:2])}
         cls.docx = docx_calls(r)
-        cls.got = decisions(cls.patched, list(cls.refused.values()) + list(cls.allowed.values()) + [c for c, _ in cls.docx.values()]
-                            + list(READS))
+        cls.got = decisions(cls.patched, list(cls.refused.values()) + list(cls.odd.values()) + list(cls.allowed.values())
+                            + [c for c, _ in cls.docx.values()] + list(READS) + list(STILL_ALLOWED))
 
     @classmethod
     def tearDownClass(cls):
-        cls.patched.cleanup()
-        cls.base.cleanup()
+        cleanup(cls.patched)
+        cleanup(cls.base)
+
+    def assert_refused(self, cmd):
+        for mode in MODES:
+            self.assertFalse(self.got["decide"][mode][cmd][0], f"{mode} lets it through: {cmd!r}")
+        for mode in ("ask", "confirmed", "sweep"):          # the modes the report rule (ask_bash_refusal) is in
+            self.assertIn(WHY, self.got["decide"][mode][cmd][1], (mode, cmd))
 
     def test_a_report_named_adhoc_or_steerco_draft_is_refused_in_every_mode(self):
         for name, cmd in self.refused.items():
             with self.subTest(name):
-                for mode in MODES:
-                    self.assertFalse(self.got["decide"][mode][cmd][0], f"{mode} lets it through: {cmd!r}")
-                for mode in ("ask", "confirmed", "sweep"):          # the modes the report rule (ask_bash_refusal) is in
-                    self.assertIn(WHY, self.got["decide"][mode][cmd][1], (mode, cmd))
+                self.assert_refused(cmd)
 
-    def test_docx_tools_fill_and_build_adhoc_with_a_report_named_file_or_title_are_refused(self):
-        for name, (cmd, refused) in self.docx.items():
-            if not refused:
-                continue
+    def test_an_argument_shape_the_scripts_would_not_run_is_refused(self):
+        for name, cmd in self.odd.items():
             with self.subTest(name):
-                for mode in MODES:
-                    self.assertFalse(self.got["decide"][mode][cmd][0], f"{mode} lets it through: {cmd!r}")
-                for mode in ("ask", "confirmed", "sweep"):
-                    self.assertIn(WHY, self.got["decide"][mode][cmd][1], (mode, cmd))
+                self.assert_refused(cmd)
+
+    def test_docx_tools_fill_build_adhoc_and_clean_with_a_report_named_file_or_title_are_refused(self):
+        for name, (cmd, refused) in self.docx.items():
+            if refused:
+                with self.subTest(name):
+                    self.assert_refused(cmd)
 
     def test_ordinary_documents_and_internal_one_pagers_stay_allowed(self):
         for name, cmd in self.allowed.items():
@@ -201,11 +278,10 @@ class Builders(unittest.TestCase):
 
     def test_neutral_docx_tools_runs_stay_allowed(self):
         for name, (cmd, refused) in self.docx.items():
-            if refused:
-                continue
-            with self.subTest(name):
-                for mode in ("ask", "confirmed", "sweep"):
-                    self.assertEqual(self.got["decide"][mode][cmd], [True, ""], (mode, cmd))
+            if not refused:
+                with self.subTest(name):
+                    for mode in ("ask", "confirmed", "sweep"):
+                        self.assertEqual(self.got["decide"][mode][cmd], [True, ""], (mode, cmd))
 
     def test_reads_stay_allowed(self):
         for cmd in READS:
@@ -213,17 +289,52 @@ class Builders(unittest.TestCase):
                 for mode in ("ask", "confirmed", "sweep"):
                     self.assertEqual(self.got["decide"][mode][cmd], [True, ""], (mode, cmd))
 
+    def test_what_this_diff_does_not_cover_is_still_allowed(self):
+        """Documented in the README, so a later change that closes one must update both."""
+        for cmd in STILL_ALLOWED:
+            with self.subTest(cmd):
+                self.assertEqual(self.got["decide"]["ask"][cmd], [True, ""], cmd)
+
     def test_an_unsplittable_command_fails_closed(self):
         self.assertIn(WHY, self.got.get("unsplittable") or "")
         self.assertIsNone(self.got.get("unsplittable_neutral"))
 
     def test_nothing_else_changes(self):
         """The allowed and read commands are decided exactly as on the unpatched file."""
-        cmds = list(self.allowed.values()) + [c for c, refused in self.docx.values() if not refused] + list(READS)
+        cmds = list(self.allowed.values()) + [c for c, refused in self.docx.values() if not refused] + list(READS) + list(STILL_ALLOWED)
         base_cmds = [c.replace(str(self.patched.root), str(self.base.root)) for c in cmds]
         base = decisions(self.base, base_cmds)
         for mode in MODES:
             self.assertEqual([self.got["decide"][mode][c] for c in cmds], [base["decide"][mode][c] for c in base_cmds], mode)
+
+
+class Premise(unittest.TestCase):
+    """The bypasses are real: report.py takes these arguments as the spec, and writes a report-named draft (run for real in a throwaway
+    vault, with the argument list a shell would pass)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.v = scratch(patched=False)
+
+    @classmethod
+    def tearDownClass(cls):
+        cleanup(cls.v)
+
+    def drafts(self):
+        return {p.name for p in (self.v.root / "system" / "staging" / "drafts").glob("*Weekly report*.docx")}
+
+    def run_adhoc(self, spec):
+        r = subprocess.run([sys.executable, str(self.v.root / "system" / "scripts" / "report.py"), "adhoc", spec], cwd=self.v.root,
+                           capture_output=True, text=True, env={**os.environ, "HOME": str(self.v.home), "CREAITE_NO_LAUNCH": "1"})
+        return r
+
+    def test_a_dash_led_spec_a_dash_and_a_quoted_tilde_are_read_literally_and_oversized_is_read(self):
+        for spec in ("-w.json", "-", "~/spec-n.json", f"{D}spec-big.json", f"{D}spec-dup1.json"):
+            with self.subTest(spec):
+                before = self.drafts()
+                r = self.run_adhoc(spec)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertGreater(len(self.drafts()), len(before), spec)       # a report-named draft was written
 
 
 class Hole(unittest.TestCase):
@@ -235,7 +346,10 @@ class Hole(unittest.TestCase):
             r = str(v.root)
             cmds = [*report_calls(r, ("spec-a.json",), ("adhoc", "'adhoc'")).values(),
                     *report_calls(r, ("spec-s-client.json",), ("steerco-stage", "'steerco-stage'")).values(),
+                    *report_calls(r, ("-w.json", "-", "spec-big.json", "spec-dup1.json"), ("adhoc",)).values(),
+                    f"python3 system/scripts/report.py steerco-stage -c.json",
                     f"python3 system/scripts/docx_tools.py fill {TEMPLATE} {D}spec-n.json '{D}Weekly status.docx'",
+                    f"python3 system/scripts/docx_tools.py clean {D}a.docx 'system/staging/drafts/Example Client pack.docx'",
                     f"system/scripts/run docx_tools.py build-adhoc {TEMPLATE} {D}spec-a.json {D}out.docx"]
             got = decisions(v, cmds)
             for cmd in cmds:
@@ -243,7 +357,7 @@ class Hole(unittest.TestCase):
                     for mode in ("ask", "confirmed", "sweep"):
                         self.assertEqual(got["decide"][mode][cmd], [True, ""], (mode, cmd))
         finally:
-            v.cleanup()
+            cleanup(v)
 
 
 class Orders(unittest.TestCase):
@@ -262,21 +376,17 @@ class Orders(unittest.TestCase):
                             _patch(v.root, diff)
                     r = str(v.root)
                     refused = report_calls(r, ("spec-a.json",), ("'adhoc'",))["python3 | 'adhoc' | spec-a.json"]
+                    dashed = report_calls(r, ("-w.json",), ("adhoc",))["python3 | adhoc | -w.json"]
                     allowed = report_calls(r, ("spec-n.json",), ("adhoc",))["python3 | adhoc | spec-n.json"]
                     stage = "python3 system/scripts/report.py 'weekly-stage' system/staging/drafts/spec-n.json"
-                    got = decisions(v, [refused, allowed, stage])
+                    got = decisions(v, [refused, dashed, allowed, stage])
                     for mode in MODES:
-                        self.assertFalse(got["decide"][mode][refused][0], mode)
-                        self.assertFalse(got["decide"][mode][stage][0], mode)     # the report diff and this one together
+                        for cmd in (refused, dashed, stage):     # the report diff and this one together
+                            self.assertFalse(got["decide"][mode][cmd][0], (mode, cmd))
                     for mode in ("ask", "confirmed", "sweep"):
                         self.assertEqual(got["decide"][mode][allowed], [True, ""], mode)
                 finally:
-                    v.cleanup()
-
-    @unittest.skipIf(UNPATCHED or MUTATE, "the unpatched and mutation runs look at the rule only")
-    def test_it_applies_alone(self):
-        v = scratch(patched=True)
-        v.cleanup()
+                    cleanup(v)
 
 
 class Mutations(unittest.TestCase):

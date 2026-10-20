@@ -2,26 +2,24 @@
 
 # FINAL, for Jarvis to apply (approved by Alan, 20-10-2026)
 
-Three independent diffs for `system/scripts/reach.py` (the only guarded file they touch), in `dev/proposals/guard-174/`, and one one-number change to the static-check baseline. From the repo root, **in this order**, each with `-p0` (the headers read `--- system/scripts/reach.py` and `--- dev/check-baseline.json`, so no `-p1`):
+Three independent diffs for `system/scripts/reach.py` (the only file they touch), in `dev/proposals/guard-174/`. From the repo root, **in this order**, each with `-p0` (the headers read `--- system/scripts/reach.py`, so no `-p1`):
 
 ```
 patch -p0 < dev/proposals/guard-174/reach.diff
 patch -p0 < dev/proposals/guard-174/reach-report.diff
 patch -p0 < dev/proposals/guard-174/reach-steerco-adhoc.diff
-patch -p0 < dev/proposals/guard-174/check-baseline.diff  # dev/check-baseline.json, not guarded: see below
 ```
 
-Add `--dry-run` first to check. Every order of the three `reach.py` diffs applies cleanly (checked, 7 orders, with `patch --dry-run` and for real) on `origin/main` (dcd8a7b6) **and** on `origin/v252-release` (afb8c30c, whose `reach.py` differs from main by one added table row): **no rebase is needed and no `-rebased.diff` exists**. `reach.diff` and `reach-report.diff` are byte for byte the diffs of 6a911a7b and dffd8fc7.
+Add `--dry-run` first to check. Every order of the three `reach.py` diffs applies cleanly (checked, 7 orders, with `patch --dry-run` and for real) on `origin/main` (dcd8a7b6) **and** on `origin/v252-release` (afb8c30c, whose `reach.py` differs from main by one added table row): **no rebase is needed and no `-rebased.diff` exists**. `reach.diff` and `reach-report.diff` are byte for byte the diffs of 6a911a7b and dffd8fc7 (the morning pack); `reach-steerco-adhoc.diff` is the only one that changed since (this round). `check-baseline.diff` is gone: **`check.py` fails by one long line after `reach.diff`** (`LONG 2 lines over 140`, from one 142-character comment `reach.diff` adds); Jarvis wraps that comment by hand.
 
 | Diff | What it refuses (only ever adds refusals) |
 |------|------------------------------------------|
 | `reach.diff` | `propose.py setting` and `workstreams retire-settings` however quoted or spliced; `people migrate` (the word anywhere after `people`); an unquoted `* ? [ ^ #` or inner `~` in any creaite script call (a shell pattern turned into another word by a file in the vault root); `command_kind` fails closed for `people`/`workstreams` with an unknown second word. |
 | `reach-report.diff` | `report.py weekly-stage` / `client-stage` spelled with quotes, splices, `run`, `python`, an absolute path (a hole in v2.5.1 on `main`). Reading reports stays allowed. |
 | `reach-steerco-adhoc.diff` | `report.py adhoc` and `steerco-stage`, `docx_tools.py fill` and `build-adhoc`, **only when the draft is named like a report** (below). |
-| `check-baseline.diff` | Nothing is refused. `reach.diff` adds one comment line of 142 characters; `dev/tools/check.py` allows one line over 140 in `reach.py` (an older line has the slot), so **after `reach.diff` the check fails** with `LONG 2 lines over 140 ... the limit is 1`. This diff raises that one allowance in `dev/check-baseline.json` (`long_lines`, `system/scripts/reach.py`, 1 to 2): a deliberate raise of a ratchet, for Alan to accept. It leaves `reach.diff` as approved (a comment-only fix of that line would make `patch -R reach.diff`, which the proposal tests use once it is applied, fail). With the three diffs and this one applied `check.py` is OK (checked on copies of `origin/main` and `origin/v252-release`). |
 
 **What Alan will notice** (plain words):
-- An ask creaite chat will now say "reports are the user's to edit" and stop if it is asked to produce a report-named draft by any route: a weekly or client report, a one-off document or Steerco one-pager whose title or file name has report, weekly or client in it (a client-safe one-pager too), however the command is typed. It also refuses `propose.py setting` and `people migrate` (use the approval card), and a command with an unquoted `*`, `?`, `[`, `^`, `#` or `~` inside a word (put the name in quotes).
+- An ask creaite chat will now say "reports are the user's to edit" and stop if it is asked to produce a report-named draft by any route: a weekly or client report, a one-off document or Steerco one-pager whose title or file name has report, weekly or client in it (a client-safe one-pager too), or one whose spec it can't check, however the command is typed. It also refuses `propose.py setting` and `people migrate` (use the approval card), and a command with an unquoted `*`, `?`, `[`, `^`, `#` or `~` inside a word (put the name in quotes).
 - Everything else still works: reading reports and files, Steerco one-pagers (internal) and one-off documents with ordinary titles, minutes, sweeps, staging, applying a confirmed change, filechange.py edits (the route the settings refusal points to), and quoted names with brackets or question marks.
 - Alan's own Claude Code session is not guarded, so he can still run any of these himself.
 
@@ -30,13 +28,14 @@ Add `--dry-run` first to check. Every order of the three `reach.py` diffs applie
 2. `reach.diff`: an unknown `people`/`workstreams` second word is refused in a plain chat and in held/prep runs.
 3. `reach-steerco-adhoc.diff` matches the **words** report, weekly and client as substrings in the spec title or the output file name, so a title like "Quarterly reporting" or "Client list", and a `docx_tools.py fill` of minutes into a file called "... Weekly sync minutes.docx", are refused in ask, confirmed and sweep. Alan's own Claude Code session is not guarded, so he can run these himself; or name the draft without those words. Narrowing the matcher to the existing `REPORT_NAME` (weekly/client followed by report) is a one-line change if Alan prefers.
 4. A client-safe Steerco one-pager (`steerco-stage` with `"version": "client"`) is refused: its file is called "... (client).docx". Internal one-pagers are allowed.
+5. `reach-steerco-adhoc.diff` fails closed: a spec that can't be read, is over 1 MB or whose path starts with `~`, and an argument shape the scripts wouldn't run, are refused for `adhoc`, `steerco-stage`, `build-adhoc` and `clean`. Write the spec first, name it in the drafts folder, then run the command. Not covered, still allowed: see the section on that diff.
 
 **Verify after applying** (from the repo root, one at a time; each takes minutes on a loaded machine):
 
 ```
 python3 dev/tests/test_guard_174.py              # 25 tests: the tests now guard the applied file
 python3 dev/tests/test_guard_report_quoted.py    # 8 tests
-python3 dev/tests/test_guard_steerco_adhoc.py    # 11 tests
+python3 dev/tests/test_guard_steerco_adhoc.py    # 13 tests
 python3 dev/tools/run_tests.py -j 3 test_reach test_guard_ test_held_bash_arg_forms test_record_commands test_ask_reports_refused test_permission_panel test_no_real_names
 python3 dev/tools/check.py --no-js
 ```
@@ -185,17 +184,26 @@ Tests: `dev/tests/test_guard_report_quoted.py` (8 tests, ~2.5 min): 17 stage for
 
 ## Report-named drafts through the other builders (`reach-steerco-adhoc.diff`)
 
-v2.5.1's rule covers `report.py weekly-stage` and `client-stage`. The review found that `report.py steerco-stage` and `adhoc`, and `docx_tools.py fill` and `build-adhoc`, are allowed in ask, confirmed and sweep and write a Word draft into `system/staging/drafts/`, and that `adhoc` names its file from the spec's title: a title such as "Example Programme Weekly report" writes a report-named draft outside the rule (the file rule only sees a command that names a report file).
+v2.5.1's rule covers `report.py weekly-stage` and `client-stage`. The review found that `report.py steerco-stage` and `adhoc`, and `docx_tools.py fill`, `build-adhoc` and `clean`, are allowed in ask, confirmed and sweep and write a Word draft into `system/staging/drafts/`, and that `adhoc` names its file from the spec's title: a title such as "Example Programme Weekly report" writes a report-named draft outside the rule (the file rule only sees a command that names a report file).
 
-**Interpretation taken (Jarvis and Alan to correct).** "Narrow" is read as: refuse these builders **only when the draft is named like a report**, in every mode that refuses `weekly-stage` today (ask, confirmed, sweep; held and prep refuse these as stage commands anyway):
-- `report.py adhoc <spec.json>`: when the spec file's `title` contains `report`, `weekly` or `client` (case-insensitive; the pattern is the existing `REPORT_NAME` plus the three words, so any spelling the report-name rule matches is included). `adhoc` has no output argument: its file is "<date> <title>.docx".
-- `report.py steerco-stage <spec.json>`: when the spec's `title` has one of the words, or its `version` is `client` (the draft is "... Steerco one-pager (client).docx"). The spec carries no title otherwise and the file name is built from the project's name, which the guard does not look up.
-- `docx_tools.py fill <template> <values> <out.docx>` and `build-adhoc <template> <spec> <out.docx>`: when the **output file name** has one of the words; for `build-adhoc` also when the spec's title has one.
-- Fail closed, as asked: a spec that can't be read or has no title is treated as report-named only for `adhoc` and only when the spec file's own name has one of the words; a command that can't be split is refused if it names one of these scripts and has a word. Everything else is allowed, and reading is untouched (`adhoc-data`, `steerco-data`, `weekly-data`, `client-data`, `docx_tools.py text` and `status`).
+**Interpretation taken (Jarvis confirmed it).** "Narrow" is read as: refuse these builders **only when the draft is named like a report**, in every mode that refuses `weekly-stage` today (ask, confirmed, sweep; held and prep refuse these as stage commands anyway). "Named like a report" means `report`, `weekly` or `client` in the text (the existing `REPORT_NAME` pattern plus the three words, as substrings):
+- `report.py adhoc <spec.json>`: the spec's `title`. `report.py steerco-stage <spec.json>`: the spec's `title`, or `version` `client` (its file is "... Steerco one-pager (client).docx").
+- `docx_tools.py fill|build-adhoc <template> <spec-or-values> <out.docx>`: the output file name; for `build-adhoc` also the spec's `title`. `docx_tools.py clean <docx> [<out.docx>]`: the output file name (the input itself when there is no second argument).
 
-It reads the staged spec with the guard's own `json.loads` (a file in reach, at most 1 MB, nothing printed), decides on the words as the shell hands them over and as `str.split` cuts them (quotes, splices, `run`, `python3`, `python`, absolute paths), and is added as one more check in `ask_bash_refusal` after `report_command_refusal`, so it needs nothing from the other two diffs and does not touch the lines they change.
+**How the arguments are read (round 5, after the Opus review).** From the exact positions the scripts parse, never by dropping words that start with `-`: `report.py` takes `argv[0]` as the verb and `argv[1]` as the one spec and runs nothing if there is any other number of arguments; `docx_tools.py fill` and `build-adhoc` take exactly three, `clean` one or two. A word starting with `-` is a file name there (the review's bypasses: `report.py adhoc -w.json`, `report.py adhoc -`, `steerco-stage -c.json`, `build-adhoc -t.docx drafts/n.json 'drafts/Weekly status.docx'`). The spec is opened as the script opens it (relative to the vault, **no `~` expansion**: the shell doesn't expand a quoted `~`, and the guard can't tell a quoted one from an unquoted one). Every `title` and `version` key of the spec's top-level object is checked, in any capitalisation, including a duplicate key (JSON keeps the last value, so `{"title": "Neutral", "title": "... Weekly report"}` was a bypass).
 
-Tests: `dev/tests/test_guard_steerco_adhoc.py` (11 tests): 175 refused `adhoc`/`steerco-stage` calls (5 launchers, 5 spellings of the subcommand, 7 specs) and 45 `docx_tools.py` calls in every mode, with the report reason in ask, confirmed and sweep; ordinary documents, internal one-pagers, neutral `fill`/`build-adhoc` and 6 reads allowed in ask, confirmed and sweep and decided exactly as on the unpatched file; the hole shown on the unpatched file; all 6 orders of the three diffs. `GUARD_STEERCO_UNPATCHED=1`: 221 failures. Mutations (each red): `drop-weekly` 66, `drop-title-read` 130, `fail-open-unreadable` 25, `drop-client-version` 25, `drop-output-name` 40, `unsplittable-open` 1.
+**Refused as report-named (fail closed), listed as false positives:** a spec that can't be read (missing, not JSON, not an object) or is over 1 MB (the script reads it anyway); a spec or file path starting with `~`; an argument shape the scripts wouldn't run (so nothing would be written). So `report.py adhoc` on a spec that doesn't exist yet is refused (write the spec first, then run it). An unreadable spec is refused for `adhoc` and `steerco-stage` alike, and for `build-adhoc`; a readable spec without any `title` is allowed. A command that can't be split is refused if it names one of the scripts and has a word.
+
+**Lookalikes.** The title and the file name are compared after NFKC (fullwidth letters), removing format and control characters (zero-width) and combining marks (accents), and case folding: `Wéekly`, fullwidth `Ｗｅｅｋｌｙ`, `Wee<zero-width space>kly` and a combining accent all match. This is wider than v2.5.1's own file rule (`REPORT_NAME`), which does not match those spellings: a report-named file with an accented spelling is still not recognised by v2.5.1 as a report file when it is read or written by other routes. Letters from other alphabets that merely look alike (a Cyrillic `е`) still don't match.
+
+**Not covered (still allowed, exact commands; not widened without Jarvis's word):**
+- `python3 system/scripts/filechange.py create 'system/staging/drafts/Weekly status.docx' --from system/staging/drafts/x.docx --why x` (and a direct Write of such a file): an ordinary file change; the 2.5.1 file rule only matches `weekly report` / `client report` names.
+- `python3 system/scripts/filechange.py create 'system/staging/drafts/Example Client pack.docx' --from … --why x`: the same.
+- A `steerco-stage` draft named after a project whose own name contains a word: the file is "<date> <project name> Steerco one-pager.docx", and the guard does not look the project up.
+- Lookalike letters from other alphabets (above).
+These are tested as still allowed (`test_what_this_diff_does_not_cover_is_still_allowed`), so closing one means updating the test and this list.
+
+Tests: `dev/tests/test_guard_steerco_adhoc.py` (13 tests): refused in every mode, with the report reason in ask, confirmed and sweep: `adhoc`/`steerco-stage` over 5 launchers and 5 spellings of the verb for 18 + 8 spec files (report titles, duplicate keys, lookalikes, over 1 MB, unreadable, a JSON list) and the dash-led, `-`, `~` cases; 4 odd shapes; and `docx_tools.py` calls (`fill`, `build-adhoc`, `clean`, dashed, spliced, too few or many arguments); ordinary documents, internal one-pagers, neutral `fill`/`build-adhoc`/`clean` and 6 reads allowed and decided exactly as on the unpatched file; a premise test that runs `report.py adhoc` for real in a throwaway vault and shows it takes `-w.json`, `-`, a literal `~/spec-n.json` and a spec over 1 MB and a duplicate-title spec and writes the report-named draft; the hole shown on the unpatched file; all 6 orders of the three diffs. `GUARD_STEERCO_UNPATCHED=1`: 905 failures. Mutations (each red; failure counts in the report): drop `weekly`, drop the title read, first title key only, an unreadable `steerco-stage` spec allowed, no size limit, drop the client version, drop the output-name check, dash words dropped again, `expanduser` on `~`, no NFKC, no combining-mark strip, no zero-width strip, no `clean`, an unsplittable command allowed.
 
 ## What Alan must approve
 
