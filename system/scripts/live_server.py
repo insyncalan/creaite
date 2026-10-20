@@ -6919,6 +6919,8 @@ def sneak_read_route(handler, req):
 DRAFT_ROUTES["/api/sneak/read"] = sneak_read_route
 import report_server  # noqa: E402  v2.1.0 P3 (BL-335, BL-336): the report routes, given this server's own lock and runner
 DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/report/draft, save, approve, export, logo
+import usage_reviews  # noqa: E402  #238 (v2.5.3): Your reviews on Activity › Usage
+DRAFT_ROUTES.update(usage_reviews.routes(LOCK))   # POST /api/usage/review {date, saw, decided}: token-checked by do_POST, under LOCK
 # ===== end BL-322 =====
 
 # ===== BL-227 (sprint-drafts-writing) ===== one set of facts, many forms. /api/current/generate takes `form`: "current" (or none) is
