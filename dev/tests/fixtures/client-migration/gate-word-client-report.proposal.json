@@ -1,0 +1,27 @@
+{
+  "created": "2026-10-09T13:00:00",
+  "source_run": "cx-client-report",
+  "files": [],
+  "items": [],
+  "report": {
+    "kind": "client",
+    "title": "Example Programme client report, 01-10-2026 to 09-10-2026",
+    "project": "ABC",
+    "projects": [
+      "ABC"
+    ],
+    "draft": "system/staging/drafts/2026-10-09 Client report - Example Programme.docx",
+    "report_decision": "pending",
+    "file_ops": [
+      {
+        "op": "copy",
+        "from": "draft",
+        "to": "projects/ABC Example Programme/reports/2026-10-09 Client report - Example Programme.docx"
+      },
+      {
+        "op": "remove",
+        "path": "system/staging/drafts/2026-10-09 Client report - Example Programme.docx"
+      }
+    ]
+  }
+}

@@ -257,6 +257,21 @@ def logos(code, wanted=None):
     return [{"kind": k, "path": paths.rel(f)} for k in kinds for f in [logo_file(code, k)] if f]
 
 
+def client_logos(code, layout=None):
+    """v2.5.1 (#239, b): the logos a client report draws NOW, never the list a draft stored: the project's logo files (logos) that the
+    report's layout ticks (`layout.logos`; none listed is all, as the screen reads it) and that the project's Client report logos
+    setting still ticks (the firm's always). [] when anything can't be read (fail closed)."""
+    try:
+        chosen = (layout or {}).get("logos") if isinstance(layout, dict) else None
+        kinds = set(resolve_logos(code, [k for k in chosen if isinstance(k, str)]) if isinstance(chosen, list) else logo_kinds(code))
+        ticked = project_logos(code)
+        if ticked is not None:
+            kinds &= set(resolve_logos(code, ticked)) | {"firm"}
+        return [x for x in logos(code) if x["kind"] in kinds]
+    except Exception:  # noqa: BLE001  a project or setting that can't be read: no logo at all
+        return []
+
+
 # ── Arranging the sections as the layout says ───────────────────────────────
 
 def _figures_in_order(figures, glance):
@@ -998,7 +1013,7 @@ def _current_ops(doc, folder):
     return [{"op": "write", "path": paths.rel(memory), "content": new, "previous": old}] if new != old else []
 
 
-def _file_ops(kind, code, fri, client, draft, doc=None):
+def _file_ops(kind, code, fri, client, draft, checked=None):
     """How Approve files the draft: a first filing of a weekly report copies it; a filed report is replaced whole by the approved new
     version (a write whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). A client report is
     always written whole, without meta.health_diff (the health difference and its reason stay in the draft, Alan 15-10-2026). The
@@ -1009,7 +1024,10 @@ def _file_ops(kind, code, fri, client, draft, doc=None):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(doc if doc is not None else creaite_doc.read_report(draft, kind))     # v2.5.0: the doc already checked
+    # v2.5.0: filed as a client report, header derived; v2.5.1 (#239): `checked`, the document Approve read once and checked, is the
+    # one filed (never the file read again)
+    doc = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(checked)) if checked is not None
+                            else creaite_doc.read_report(draft, kind))
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -1018,7 +1036,29 @@ def _file_ops(kind, code, fri, client, draft, doc=None):
         # block included, never holds them (the internal flag would be in them): the whole key goes, not just the reason.
         doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
         filed_client_data(doc)
-    return [{"op": "write", "path": filed, "content": creaite_doc.dumps(doc), "previous": old}, {"op": "remove", "path": draft}]
+    content = creaite_doc.dumps(doc)
+    snap = []
+    if kind == "client":
+        import client_output                                     # v2.5.1 (#239, c): what is filed is checked as an export is
+        found = client_output.filed_findings(doc, content)
+        if found:
+            raise ReportError("Not approved: the file to be filed held possible internal content: " + "; ".join(found))
+        snap = _snapshot_ops(doc, content, filed)
+    return [{"op": "write", "path": filed, "content": content, "previous": old}, *snap, {"op": "remove", "path": draft}]
+
+
+def _snapshot_ops(doc, content, filed):
+    """v2.5.1 (#239, step 2): the write of the client report's checked snapshot beside the filed report (`<name>.client.json`, made
+    from exactly the document filed, its hash recorded now: client_snapshot.for_filing), so Undo takes it back with the filing.
+    Raises ReportError when the snapshot's check finds anything."""
+    import client_snapshot
+    try:
+        stored, text = client_snapshot.for_filing(doc, content, filed)
+    except client_snapshot.SnapshotError as e:
+        raise ReportError(str(e)) from None
+    p = paths.resolve(stored)
+    prev = p.read_text(encoding="utf-8") if p.is_file() else None
+    return [{"op": "write", "path": stored, "content": text, "previous": prev}]
 
 
 CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
@@ -1026,7 +1066,11 @@ CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
 
 def filed_client_data(doc):
     """v2.5.0 (D): the filed client file's data block holds only what creaite puts there, in place: meta's dates (YYYY-MM-DD) and its
-    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes."""
+    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes.
+    v2.5.1 (#239, a): every other level too (creaite_doc.client_shape: top-level, section, row and data keys)."""
+    shaped = creaite_doc.client_shape(doc)
+    doc.clear()
+    doc.update(shaped)
     meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
     out = {k: meta[k] for k in CLIENT_META_DATES if isinstance(meta.get(k), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[k])}
     if isinstance(meta.get("locked"), bool):
@@ -1087,7 +1131,7 @@ def stage_weekly(draft, force=False, code=None, fri=None):
 def stage_client(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a client report draft: filed as the creaite report beside the internal one. Raises ReportError
     before the internal week is approved, while items await review (unless forced), or when the leak check finds anything."""
-    import client_leak
+    import client_snapshot
     import report
     import sweep
     doc = creaite_doc.read_report(draft, "client")  # v2.5.0 audience bypass: the gate sees a client report as one; another kind refused
@@ -1095,10 +1139,9 @@ def stage_client(draft, force=False, code=None, fri=None):
     code, fri = doc["project"], doc["date"]
     if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
         raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")
-    ok, why = client_ready(doc)
-    if not ok:
-        raise ReportError(why)
-    found = client_leak.findings(doc)
+    _snap, left, found = client_snapshot.build(doc)       # v2.5.1 step 2: the snapshot's one check (left_out and the gate) is Approve's
+    if not left["ready"]:
+        raise ReportError(left["not_ready"] or "The client report isn't ready to approve.")
     if found:
         raise ReportError("Not approved: possible internal content in the client report: " + "; ".join(found))
     blocked = report.pending_for(code)
@@ -1117,4 +1160,4 @@ def stage_client(draft, force=False, code=None, fri=None):
         "report": {"kind": "client", "format": "creaite", "title": f"{doc.get('project_name') or code} client report, week ending "
                                                                     f"{shown(fri)}" + (f" ({client})" if client else ""),
                    "project": code, "projects": [code], "week_ending": fri, "draft": draft, "report_decision": "approved",
-                   "file_ops": _file_ops("client", code, fri, client, draft, doc)}})      # filed from the doc the gate checked
+                   "file_ops": _file_ops("client", code, fri, client, draft, checked=doc)}})

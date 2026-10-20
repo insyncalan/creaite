@@ -316,8 +316,9 @@ class ClientBrowser(LiveBrowserCase):
                         [i for i, u in enumerate(calls) if u.endswith('/api/report/export')][0], "the check came first")
 
     def test_c08_the_client_export_is_the_clients_exported_page_and_holds_nothing_internal(self):
-        """#226 check 8: the client report's HTML is the client view's own exported page (the same renderer as the weekly report's),
-        client-visible items only, and the server's re-check let it through."""
+        """#226 check 8, as v2.5.1 (#239, f) changed it: the client report's HTML is the server's render of the saved report (the
+        page the client view posts is never used for a client report), client-visible items only, and its output check let it
+        through."""
         import time
         self.approve_internal()
         a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
@@ -341,11 +342,36 @@ class ClientBrowser(LiveBrowserCase):
             time.sleep(0.3)
         self.assertTrue(files, "no client export was written")
         text = files[0].read_text(encoding="utf-8")
-        self.assertIn('data-theme="light"', text, "the page's own file, not the plain renderer's")
-        self.assertIn('id="v-clientreport"', text)
+        # v2.5.1 (#239, f): a client report is never the page the browser posts; the server renders it from the saved report
+        self.assertNotIn('data-theme="light"', text, "the server's render of the report, never the page the browser posted")
+        self.assertNotIn('id="v-clientreport"', text)
+        self.assertIn('<main class="page">', text)
         self.assertIn("Test licences are not yet ordered.", text)
         for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "The internal summary", "creaite-data", "<script"):
             self.assertNotIn(internal, text)
+
+    def test_c09_show_as_exported_is_the_servers_render_of_a_preview_snapshot(self):
+        """v2.5.1 (#239, step 2): the client view's Show as exported is the server's own render (/api/report/exported-view) of a
+        preview snapshot of the saved report, in a sandboxed frame marked Preview; never a page drawn in the browser."""
+        self.approve_internal()
+        a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.open_view()
+        self.b.wait("document.querySelector('.hubstat[data-k=client]') && document.querySelector('.hubstat[data-k=client]').dataset.state==='draft'", 15)
+        self.b.eval("(()=>{ window.__calls=[]; const f=window.fetch; window.fetch=(u,o)=>{ window.__calls.push(String(u)); return f(u,o); }; })()")
+        self.b.click("#hubExp")
+        self.b.wait("document.querySelector('#v-reporting .crx-frame')", 20)
+        self.assertTrue(any(u.endswith("/api/report/exported-view") for u in self.b.eval("window.__calls")))
+        self.assertEqual(self.b.eval("document.querySelector('#v-reporting .crx-badge').textContent"), "Preview")
+        self.assertEqual(self.b.eval("document.querySelector('#v-reporting .crx-frame').getAttribute('sandbox')"), "")
+        html = self.b.eval("document.querySelector('#v-reporting .crx-frame').getAttribute('srcdoc')")
+        self.assertIn('<main class="page">', html)
+        self.assertIn("Test licences are not yet ordered.", html)
+        for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "The internal summary", "creaite-data"):
+            self.assertNotIn(internal, html)
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-reporting .sheet-handle, #v-reporting .wr-eye').length"), 0)
+        self.b.click("#hubExp")
+        self.b.wait("!document.querySelector('#v-reporting .crx-frame') && document.querySelector('#v-reporting .wr-health')", 10)
 
     @unittest.skipUnless(os.environ.get("CREAITE_SHOTS"), "set CREAITE_SHOTS=<folder> for screenshots")
     def test_zz_screenshots(self):

@@ -1,19 +1,16 @@
-"""v2.5.0 page subset, unit level: export_page.check_page refuses a client page whose words the saved report doesn't hold, and keeps
-the page the dashboard draws (its header, a logo drawn as its name, Markdown words, dates, tables). No vault: the tracker lookup and
-the client wording check are stubbed, so the subset check is the only thing that can refuse these pages. Fictional data only.
+"""v2.5.0 page subset, unit level, as superseded by #239 step 3 (v2.5.2): a client report's posted page is never used at all, so
+export_page.build refuses every client page outright (CLIENT_PAGE), the dashboard's own page and every page the 2.5.0 subset check
+refused alike; the client file is only ever client_snapshot.client_export's render. No vault. Fictional data only.
 
 Run: python3 dev/tests/test_export_page_subset_unit.py
 """
 import copy
 import sys
-import tempfile
-import types
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import export_page as E  # noqa: E402
-import paths  # noqa: E402
 
 DOC = {
     "format": "creaite-doc", "schema": 1, "kind": "client", "audience": "client", "project": "ABC", "project_name": "Example Programme",
@@ -55,60 +52,24 @@ def page(html, css=".page{color:#123}", version=3):
 
 
 class Subset(unittest.TestCase):
-    def setUp(self):
-        self.saved = {k: getattr(E, k) for k in ("item_lookup", "logo_names")}
-        self.mod = sys.modules.get("client_leak")
-        fake = types.ModuleType("client_leak")
+    def refused(self, html, **kw):
+        with self.assertRaises(E.PageRefused) as cm:
+            E.build(copy.deepcopy(DOC), page(html, **kw), "Client report")
+        self.assertEqual(str(cm.exception), E.CLIENT_PAGE)
 
-        class Con:
-            def __enter__(self):
-                return self
+    def test_even_the_dashboards_own_page_is_never_used_for_a_client_report(self):
+        self.refused(markup())
 
-            def __exit__(self, *a):
-                return False
-        fake.connect = Con
-        fake.plain_findings = lambda con, code, text: []          # the client wording check never refuses here
-        sys.modules["client_leak"] = fake
-        E.item_lookup = lambda ref: None
-        E.logo_names = lambda code: ["Harbour Partners"]
+    def test_a_logo_drawn_as_its_name_or_not_is_refused_with_the_page(self):
+        self.refused(markup(logos='<span class="wr-logo"><span class="sub">Harbour Partners</span></span>'))
+        self.refused(markup(logos='<span class="sub">Petra Quill</span>'))
 
-    def tearDown(self):
-        for k, v in self.saved.items():
-            setattr(E, k, v)
-        if self.mod is None:
-            sys.modules.pop("client_leak", None)
-        else:
-            sys.modules["client_leak"] = self.mod
-
-    def check(self, html, **kw):
-        """None when the page is used, else the refusal."""
-        pg = page(html, **kw)
-        attrs, info = [], {}
-        try:
-            m, text, sections, rows = E.clean_markup(pg["html"], True, attrs, info)
-            css = E.clean_css(pg["css"], True)
-            E.check_page(copy.deepcopy(DOC), pg, text, sections, rows, attrs, css, info)
-        except E.PageRefused as e:
-            return str(e)
-        return None
-
-    def test_control_the_dashboards_page_is_used(self):
-        self.assertIsNone(self.check(markup()))
-
-    def test_a_logo_drawn_as_its_name_is_not_refused(self):
-        logos = ('<span class="wr-logo"><span class="sub">Firm</span></span><span class="wr-logo"><span class="sub">Client</span></span>'
-                 '<span class="wr-logo"><span class="sub">Harbour Partners</span></span>')
-        self.assertIsNone(self.check(markup(logos=logos)))
-        self.assertIsNotNone(self.check(markup(logos='<span class="sub">Petra Quill</span>')), "a name that isn't a logo's")
-
-    def test_words_the_report_does_not_hold_are_refused_by_the_subset_check_alone(self):
-        """No hidden needle and no client wording finding here: only the subset check can refuse these."""
+    def test_words_the_report_does_not_hold_are_refused(self):
         for risk in ("Petra Quill will renegotiate the walrus supplier rebate quietly.", "Zanzibar quokka ledger.",
-                     "Testing is on plan this week."):                   # the summary's words, under the risks section's id
+                     "Quietly renegotiate the walrus rebate."):
             with self.subTest(risk=risk):
-                self.assertIn("words the saved report doesn't", self.check(markup(risk=risk)) or "")
-        self.assertIsNotNone(self.check(markup(risk="Quietly renegotiate the walrus rebate.")))     # a hidden row's (needle check)
-        self.assertIsNotNone(self.check(markup(extra="<p>Arbitrary words outside every section.</p>")))
+                self.refused(markup(risk=risk))
+        self.refused(markup(extra="<p>Arbitrary words outside every section.</p>"))
 
     def test_comments_scripts_style_words_and_foreign_ids_are_refused(self):
         for extra, css in (("<!-- Petra Quill -->", ".page{color:#123}"), ("<script>1</script>", ".page{color:#123}"),
@@ -116,23 +77,13 @@ class Subset(unittest.TestCase):
                            ('<section data-id="zz"><p>Issue</p></section>', ".page{color:#123}"),
                            ('<p data-id="zz"></p>', ".page{color:#123}")):
             with self.subTest(extra=extra, css=css):
-                self.assertIsNotNone(self.check(markup(extra=extra), css=css))
+                self.refused(markup(extra=extra), css=css)
 
-    def test_a_class_no_stylesheet_rule_uses_never_reaches_the_file(self):
-        out = E.clean_markup('<p class="wr-r Petra Quill"></p>', True, [], {})[0]
-        self.assertEqual(out, '<p class="wr-r"></p>')
-
-    def test_the_check_fails_closed_without_the_dashboards_stylesheet(self):
-        old, cache = paths.TEMPLATES, dict(E._OWN)
-        try:
-            with tempfile.TemporaryDirectory() as d:
-                paths.TEMPLATES = Path(d)
-                E._OWN.clear()
-                self.assertIsNotNone(self.check(markup()))
-        finally:
-            paths.TEMPLATES = old
-            E._OWN.clear()
-            E._OWN.update(cache)
+    def test_a_client_report_edited_to_another_audience_is_still_refused(self):
+        doc = copy.deepcopy(DOC)
+        doc["audience"] = "internal"                # the kind decides: a client report is a client report
+        with self.assertRaises(E.PageRefused):
+            E.build(doc, page(markup()), "Client report")
 
 
 if __name__ == "__main__":

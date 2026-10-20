@@ -13,6 +13,7 @@ import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
 import { drawDayMeetings } from "./components/today/DayMeetings.jsx";
 import { drawDayTabs } from "./components/today/DayTabs.jsx";
+import { drawIntakeLine } from "./components/today/IntakeLine.jsx";
 import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
@@ -113,7 +114,8 @@ export function renderToday(){
   $("#chgTitle").textContent=`${done.length} since ${longDate(LASTVISIT.slice(0,10))}`;   /* BL-319: folded to one line, the count in it */
   putHTML($("#chgList"),rc.html?raw(rc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0,10))}.</span></div></li>`);
   putHTML($("#chgMore"),html`${raw(rc.more)}${rc.more?" · ":""}<a class="s" href="#" data-go="activity">See all activity</a>`);
-  renderToDecide();   /* #168: Intake and Review, just above Week ahead (BL-319 had it first after the band) */
+  renderIntakeLine();   /* #245: Intake, one quiet line at the foot of Your commitments */
+  renderToDecide();   /* #245: Messages (BL-334), just above Week ahead */
   renderWeek();   /* BL-319: day by day to next Monday, each row saying why it is there */
   putHTML($("#pfTbl"),raw(portfolioTable("pf",true))); mountStatusDots($("#pfTbl")); pfResize($("#pfTbl"));   /* BL-285; BL-256 */
   decorateWarnings($("#mineList"));   /* BL-49 */
@@ -471,7 +473,7 @@ if(viaServer()) suStatus().then(()=>{ if(shared.VIEW==="today") renderSetup(); }
 /* ===== BL-319 (v1.9.2): Today as one home =====
    (dev/mockups/today-one-home-mockup.html, tab "Today, one home"). The day band stays exactly as BL-293 drew it, at full width;
    under it, at a 980px reading width, the sections in order and unboxed: First thing, Decisions needed, Needs
-   attention, Your commitments (with You owe and Waiting on), Intake and Review (#168, was To decide and first), Week ahead, Resolved (folded to one line) and Portfolio. Each
+   attention, Your commitments (with You owe and Waiting on, and #245's one quiet Intake line at its foot), Messages (BL-334; was To decide, then Intake and Review), Week ahead, Resolved (folded to one line) and Portfolio. Each
    row's actions are icons (IconButton, or tib for the rows still drawn as text), named on hover and to a screen reader,
    55% until the row is pointed at or tabbed into; nothing moves. Every change has Undo: an approval or a rejection the
    apply's Undo, a dismissed message its own, Mark done and Move the date the staged change's (Undo last). */
@@ -486,9 +488,9 @@ export const whenWords=at=>!at?"":at.slice(0,10)===TODAY?at.slice(11,16):`${long
 const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-\d+)?\.json$/.test(r.file)?"your edits":/-excel(-\d+)?\.json$/.test(r.file)?"Excel import"
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
 const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
-/** Intake and Review's rows (BL-319 called it To decide), newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
+/** the Messages section's rows (BL-319 called it To decide, #168 Intake and Review), newest first: messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]); void live;
-  /* #208 (Alan, 17-10-2026): proposals in Review and transcripts in Intake are no longer listed here: tdLine() says how many, in one line */
+  /* #208 (Alan, 17-10-2026): proposals in Review and transcripts in Intake are not listed here; #245: intakeParts() counts them, in a line under Your commitments */
   VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
     const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
     tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
@@ -577,23 +579,62 @@ export function tdFocusMark(key,what){ const i=$$("#tdList > li").filter(l=>!l.h
 /** a proposal's row in Review, highlighted (as First thing opens one) */
 export function tdToReview(n){ go("review"); const r=REV.find(x=>x.n===n&&!x.done); if(!r) return; RHL.clear(); RHL.add(r.n); rvPaint();
   const tr=$(`#reviewBody tr[data-n="${r.n}"]`); if(tr) tr.scrollIntoView({block:"center"}); }
-const TDFOLD="creaite-intake-review-hidden";   /* #168: per viewer, this browser only (localStorage), as Week ahead's */
-let tdFoldWired=false;
-function wireTdFold(){ const f=/** @type {HTMLDetailsElement|null} */($("#tdFold")); if(!f||tdFoldWired) return; tdFoldWired=true;
-  f.open=store.get(TDFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(TDFOLD,!f.open)); }
-/** #208: the one line for Review and Intake, each count a link to its page; nothing when all are zero. The counts are the rail's:
-    Review's badge (pending proposals) and Intake's (new files), plus the transcripts ready in Intake's calendar import.
-    @returns {{key:string,n:number,text:string,go:string}[]} */
-export function tdLine(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(mtgHasTx).length, fl=(D.inbox||[]).filter(f=>f.state==="new").length, L=[];
-  if(pr) L.push({key:"review",n:pr,text:`${pr} proposal${pr===1?"":"s"} in Review`,go:"review"});
-  if(nTr) L.push({key:"transcripts",n:nTr,text:`${nTr} transcript${nTr===1?"":"s"} ready in Intake`,go:"inbox"});
-  if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} in Intake`,go:"inbox"});
+/* ----- #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (replaces the Intake and Review section, its
+   fold and #208's line). The counts are the pages': proposals waiting in Review (the rail's badge), the meetings whose transcript is
+   ready in Intake's calendar import, and new files in Intake. Counts only: a confidential meeting is counted and never named. ----- */
+/** the page a phrase of the line opens: one place to change when #232 (v2.6) joins Review into Intake, after which proposals go to "inbox" too */
+export const intakeTarget=/** @param {string} key */key=>key==="proposals"?"review":"inbox";
+/** @returns {{key:string,n:number,text:string,go:string}[]} meetings first, then proposals, then new files; none at zero */
+export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(mtgHasTx).length, fl=(D.inbox||[]).filter(f=>f.state==="new").length, L=[];
+  if(nTr) L.push({key:"meetings",n:nTr,text:`${nTr} meeting${nTr===1?"":"s"} ready to process`,go:intakeTarget("meetings")});
+  if(pr) L.push({key:"proposals",n:pr,text:`${pr} proposal${pr===1?"":"s"} to approve`,go:intakeTarget("proposals")});
+  if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} to process`,go:intakeTarget("files")});
   return L; }
-export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return; wireTdFold();
-  const L=toDecideRows(), line=tdLine(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length+line.reduce((a,x)=>a+x.n,0); sec.hidden=!L.length&&!line.length;
-  { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
+/* The x hides the line until something new arrives or the next morning. This browser keeps the day and, per kind, which items were
+   waiting when it was pressed (localStorage creaite-intakeline-dismissed): never text, only a short hash of each item's id (a
+   proposal's file and item, a meeting's calendar key, an Intake file's path), at most TQCAP a kind. An item waiting now that is not
+   in its kind's set is new and shows the line again; what has gone since needs nothing (a set, not a count, so approving older
+   ones never hides a newer one, and a swap is new). Kept in memory too, so a store that can't be read or written still hides it
+   for this page load, as the Sweep due banner's x does. */
+const TQKEY="creaite-intakeline-dismissed", TQCAP=200, TQKINDS=["meetings","proposals","files"];
+/** @typedef {{day:string,ids:Record<string,string[]>,over?:Record<string,number>}} TqKept */
+let TQMEM=/** @type {TqKept|null} */(null), TQSTUCK=false;   /* TQSTUCK: the last write failed, so the memory is newer than the store */
+/** a short, stable hash of an id (FNV-1a, 32 bits, 8 hex digits): the store holds no title, file name or other text */
+const tqHash=/** @param {string} s */s=>{ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(16).padStart(8,"0"); };
+/** each kind's waiting ids, hashed: what intakeParts() counts, item by item */
+function intakeIds(){ return {
+  meetings:MTG().filter(mtgHasTx).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
+  proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}`:`n${r.n}`))),
+  files:(D.inbox||[]).filter(f=>f.state==="new").map(f=>tqHash("f|"+(f.path||f.name))) }; }
+/* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
+   storage event); the memory is read instead when the store can't be read, or when this page's last write to it failed (a store
+   that reads but won't write). All storage in try/catch. */
+function tqRead(){ if(TQSTUCK) return TQMEM; try{ const v=localStorage.getItem(TQKEY); return v?JSON.parse(v):null; }catch(e){ return TQMEM; } }
+/** @returns {boolean} whether the store took it (the memory has it either way) */
+function tqWrite(d){ TQMEM=d; try{ localStorage.setItem(TQKEY,JSON.stringify(d)); TQSTUCK=false; return true; }catch(e){ TQSTUCK=true; return false; } }
+/** what the x keeps: today and each kind's ids, the last TQCAP of a longer list (and how many were left out, so that many unknown
+    still read as dismissed: a queue longer than the cap can still be hidden; one more than that shows it) */
+function tqKeep(){ const all=intakeIds(), ids=/** @type {Record<string,string[]>} */({}), over=/** @type {Record<string,number>} */({});
+  TQKINDS.forEach(k=>{ const l=[...new Set(all[k])]; ids[k]=l.slice(-TQCAP); if(l.length>TQCAP) over[k]=l.length-TQCAP; });
+  return Object.keys(over).length?{day:TODAY,ids,over}:{day:TODAY,ids}; }
+function intakeDismissed(){ const d=tqRead(); if(!d||d.day!==TODAY||!d.ids||typeof d.ids!=="object") return false;
+  const now=intakeIds();
+  return TQKINDS.every(k=>{ const kept=new Set(Array.isArray(d.ids[k])?d.ids[k]:[]); return now[k].filter(h=>!kept.has(h)).length<=((d.over&&+d.over[k])||0); }); }
+export function renderIntakeLine(){ const host=$("#tdQuietHost"); if(!host) return;
+  const parts=intakeParts(), hid=parts.length>0&&intakeDismissed();
+  drawIntakeLine(host,hid?[]:parts,pg=>go(pg)); }
+document.addEventListener("click",e=>{ const x=e.target.closest&&e.target.closest("#tdQx"); if(!x) return; e.preventDefault();
+  const host=$("#tdQuietHost"), had=host&&host.contains(document.activeElement);
+  tqWrite(tqKeep()); renderIntakeLine();
+  if(had||document.activeElement===document.body){ const v=$("#v-today"), nxt=v&&host&&[...v.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")]
+      .find(n=>!!(host.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)&&n.offsetParent!==null);
+    if(nxt) nxt.focus(); else if(v){ if(!v.hasAttribute("tabindex")) v.setAttribute("tabindex","-1"); v.focus(); } } });
+window.addEventListener("storage",e=>{ if(e.key===TQKEY||e.key===null) renderIntakeLine(); });   /* another tab dismissed it (or cleared the store) */
+/** the Messages section (BL-334's cards of messages from people Alan follows); it was Intake and Review's list (#245) */
+export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return;
+  const L=toDecideRows(), n=L.filter(r=>r.kind!=="quiet").length; sec.hidden=!L.length;
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
-  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why)});
+  drawToDecide(body,{rows:L,cap:TDCAP,open:EXPAND.has("td"),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */

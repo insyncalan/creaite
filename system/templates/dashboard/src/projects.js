@@ -3,7 +3,6 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { howLink } from "./helpscreen.js";
-import { mountReportingCard } from "./components/reporting/ReportingCard.jsx";
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml } from "./core/linkText.js";
@@ -90,7 +89,6 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}${raw(legBtn())}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1,"actions:overdue"],["No due date",undatedWork(code).length,0,""],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1,"raid:urgentonly"],["Milestone slip",p.slip?p.slip+" days":"None",p.slip,""],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0,"actions:soon",{st:["Open","Delayed"]}]].map(([l,v,b,nav,ex])=>`<div class="evbox${nav?" click":""}" ${nav?`data-nav="${esc(navOf(`${nav}:${code}`,ex))}" role="link" tabindex="0" title="Open in Work"`:""}><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p))}
-     <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts.length?html` <span class="sub">· ${acts.length}</span>`:""}</h2><div class="mini-list">${raw(acts.slice(0,S.listCap||10).map(x=>`<div data-open="actions:${x.id}" style="cursor:pointer"><span class="${overdue(x)?"late":""}" style="display:inline-block;width:110px">${rel(x.due)}</span>${ico("action")}${esc(x.t)} <span class="sub">— ${esc(who(x.o))}</span></div>`).join("")||'<div class="sub">Nothing due in the next '+S.dueSoon+' days.</div>')}</div>${acts.length>(S.listCap||10)?html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts.length-(S.listCap||10))} more — see all ›</a> `:""}${raw(seeAll(nOpenA,`${pName(code)} open action`,"actions:open:"+code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
@@ -102,7 +100,6 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
    ${raw(flowCard(code))}
    <div class="cockfoot">${raw(ibtn("filetext","Reports",`data-reports="${p.code}"`,"bd"))}${raw(ibtn("folder","Browse files",`data-files="${p.code}"`,"bd"))}${raw(ibtn("gear","Project settings",`data-psettings="${p.code}"`,"bd"))}</div></div>`); })();
   drawCockpitTabs(code);   /* BL-301 B: Overview and Notes */
-  { const rc=$("#cockRep"); if(rc) mountReportingCard(rc,code); }   /* BL-337 */
   csHead(code);   /* BL-274 */
   if(!(shared.CURED&&shared.CURED.code===code)) readClaims(code);   /* BL-162 */
   { const v=$("#v-cockpit"); if(v){

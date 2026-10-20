@@ -201,7 +201,7 @@ function keepCaretInView(/** @type {any} */ view) {
 }
 
 /** @typedef {{value: string, rich: boolean, label: string, onText: (text: string) => void, ai?: any, checks?: SheetCheckLike[],
-    cls?: string, multiline?: boolean, placeholder?: string, editable?: boolean, text?: {code: string}|null}} EditorProps */
+    cls?: string, multiline?: boolean, placeholder?: string, editable?: boolean, text?: {code: string, kind?: string}|null}} EditorProps */
 /** One field on the one editor. It keeps its editor while it is drawn again; a value set from outside (a redraft used, a reload)
     goes in when the editor isn't being typed in. @param {EditorProps} props */
 export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls = "", multiline = true, placeholder, editable = true, text = null }) {
@@ -212,12 +212,12 @@ export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls =
   const marks = useRef(checks); marks.current = checks;
   /* #218: a text section (`text`, with its project's code) is the Notes editor (features "notes", written `#` to `###`) with the Notes bar and `/` menu;
      its pictures are read first so the editor can draw them where they stand */
-  const code = text ? text.code : "";
+  const code = text ? text.code : "", kind = text ? text.kind || "" : "";
   const [ready, setReady] = useState(!text || !imageRefsIn(value).length);       // a text with no picture mounts at once
   useEffect(() => {
     if (!text || ready) return undefined;
     let live = true;
-    loadReportImages(code, imageRefsIn(value)).then(() => { if (live) setReady(true); });
+    loadReportImages(code, imageRefsIn(value), kind).then(() => { if (live) setReady(true); });
     return () => { live = false; };
   }, [code]);
   /** The inserts the host does: a table, and a picture (its file dialog). */
@@ -228,7 +228,7 @@ export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls =
       its caption takes the focus. @param {FileList|null} files */
   const addImages = async files => {
     for (const f of [...(files || [])]) {
-      const ref = await addReportImage(code, f), h = ed.current;
+      const ref = await addReportImage(code, f, kind), h = ed.current;
       if (!ref || !h) continue;
       const st = h.editor.state, end = st.doc.content.size, at = st.doc.resolve(Math.min(st.selection.from, end)), after = at.depth ? at.after(1) : end;
       h.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
@@ -240,7 +240,7 @@ export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls =
     if (!ready) return undefined;
     const el = /** @type {HTMLDivElement} */ (box.current);
     const editorProps = { handleScrollToSelection: keepCaretInView };
-    const h = creaiteEditor(el, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: ref => reportImageSrc(code, ref), ...(ai ? { ai } : {}) }
+    const h = creaiteEditor(el, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: ref => reportImageSrc(code, ref, kind), ...(ai ? { ai } : {}) }
       : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...(ai ? { ai } : {}) }
       : { features: "plain", text: value, multiline, editorProps, ...(ai ? { ai } : {}) });
     ed.current = h;
