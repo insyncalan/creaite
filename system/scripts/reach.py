@@ -1555,6 +1555,127 @@ def report_command_refusal(command):
 # ===== end reports =====
 
 
+# ===== #174 (Alan, via Jarvis): a report-named draft can't be written through the other builders either =====
+# v2.5.1's rule covers report.py weekly-stage and client-stage. report.py steerco-stage and adhoc, and docx_tools.py fill, build-adhoc
+# and clean, also write a Word draft into system/staging/drafts/, and `adhoc` names it from the spec's title (a title such as
+# 'Example Programme Weekly report' writes a report-named draft that the file rule never sees as a command). Narrow scope: they are
+# refused only when the draft is named like a report: the output file's name (fill, build-adhoc, clean), the spec's title (adhoc,
+# build-adhoc, steerco-stage), or a client-safe one-pager (steerco-stage, version client, whose file is "... (client).docx"), contains
+# report, weekly or client. Ordinary one-off documents and internal Steerco one-pagers stay allowed; so does reading.
+# The arguments are taken from the exact positions the scripts parse (report.py: argv[0] the verb, argv[1] the one spec, nothing
+# else; docx_tools.py: the verb and exactly three arguments, clean one or two), a dash does not make a word an option, and anything
+# the scripts would not run, a spec that can't be read (or is over 1 MB), a path word with a ~ in it or starting with = (the shell may
+# expand them, bash after an =, zsh any =name; the guard can't tell) or an odd shape is treated as report-named: refused.
+REPORT_WORDS = re.compile(REPORT_NAME.pattern + r"|report|weekly|client", re.I)
+
+
+BIDI_CONTROLS = "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+FILLERS = "\u115f\u1160\u17b4\u17b5\u180e\u2800\u3164\uffa0"      # blank-looking letters (Lo, So, Mn); the Cf ones go with the category
+
+
+def _plain(text):
+    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), combining marks (accents)
+    and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
+    import unicodedata
+    spread = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
+    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Mn", "Me") and c not in FILLERS)
+    return "".join(kept).casefold()
+
+
+def _report_word(text):
+    """True when the text has report, weekly or client in it (as _plain reads it, forwards or backwards: a right-to-left override
+    shows the reversed letters as the word), or has a bidirectional control character at all."""
+    plain = _plain(text)
+    return any(c in BIDI_CONTROLS for c in text) or bool(REPORT_WORDS.search(plain) or REPORT_WORDS.search(plain[::-1]))
+
+
+def _odd_word(word):
+    """True for a path word the shell may expand in a way the guard doesn't model: a ~ anywhere (bash expands one after an =, zsh also
+    after a :, and a leading one) or a leading = (zsh's =cmd)."""
+    return "~" in word or word.startswith("=")
+
+
+def _command_words(cmd):
+    """The command's words as the shell hands them over (shlex: quotes removed, a quoted space is not a break); None if it can't be
+    split. str.split's cut (at a non-breaking space, say) is not read: the shell doesn't cut there, so no script sees such a word."""
+    import shlex
+    try:
+        return shlex.split(cmd)
+    except ValueError:
+        return None
+
+
+def _spec_fields(path):
+    """([every title value], [every version value]) of the top-level object of a staged spec file (JSON, a duplicate key counts every
+    time), or None when it can't be read the way the scripts read it: relative to the vault, no ~ expansion, at most 1 MB, an object."""
+    if _odd_word(path):
+        return None
+    try:
+        p = Path(path)
+        p = p if p.is_absolute() else Path(paths.ROOT) / p
+        if p.stat().st_size > 1_000_000:
+            return None
+        objects = []
+
+        def hook(pairs):
+            """json's object_pairs_hook: keep every pair (a duplicate key too) of each object, innermost first."""
+            objects.append(pairs)
+            return dict(pairs)
+        if not isinstance(json.loads(p.read_text(encoding="utf-8"), object_pairs_hook=hook), dict):
+            return None
+        top = objects[-1]               # the last object finished is the top-level one
+        return ([str(v) for k, v in top if str(k).lower() == "title"], [str(v) for k, v in top if str(k).lower() == "version"])
+    except Exception:  # noqa: BLE001  unreadable: refused by the caller
+        return None
+
+
+def _spec_is_report_named(verb, spec):
+    """True when `report.py adhoc|steerco-stage <spec>`, or build-adhoc's spec, would write a report-named draft: a title with a report
+    word, or (steerco-stage) a client version; a spec that can't be read counts as report-named."""
+    fields = _spec_fields(spec)
+    if fields is None:
+        return True
+    titles, versions = fields
+    return any(_report_word(t) for t in titles) or (verb == "steerco-stage" and any("client" in _plain(v) for v in versions))
+
+
+def _docx_named_like_a_report(verb, rest):
+    """True when `docx_tools.py <verb> <rest>` would write a report-named file (or fill/build-adhoc has an odd shape)."""
+    if any(_odd_word(w) for w in rest):
+        return True
+    if verb == "clean":
+        return len(rest) not in (1, 2) or _report_word(rest[-1].rsplit("/", 1)[-1])
+    if len(rest) != 3 or _report_word(rest[2].rsplit("/", 1)[-1]):
+        return True
+    return verb == "build-adhoc" and _spec_is_report_named(verb, rest[1])
+
+
+def _named_like_a_report(words):
+    """True when these words run a builder that would write a report-named draft, or one shape we can't tell."""
+    for i, w in enumerate(words):
+        script, argv = w.rsplit("/", 1)[-1], list(words[i + 1:])
+        verb, rest = (argv[0], argv[1:]) if argv else ("", [])
+        if script == "report.py" and verb in ("adhoc", "steerco-stage") and (len(rest) != 1 or _spec_is_report_named(verb, rest[0])):
+            return True
+        if script == "docx_tools.py" and verb in ("fill", "build-adhoc", "clean") and _docx_named_like_a_report(verb, rest):
+            return True
+    return False
+
+
+def report_named_draft_refusal(command):
+    """Why an ask creaite Bash call is refused as writing a report-named draft (see above), or None."""
+    cmd = vault_relative(command or "")
+    words = _command_words(cmd)
+    if words is None:       # can't be split: refuse if it names one of these builders and a report word
+        rest = re.sub(r"report\.py|docx_tools\.py", "", cmd)         # (the script's own name has the word report in it)
+        return REPORTS_ARE_THE_USERS if rest != cmd and _report_word(rest) else None
+    if _named_like_a_report(words):
+        return (REPORTS_ARE_THE_USERS + " (the draft would be named like a report: report, weekly or client in its title or "
+                "file name, or its spec can't be checked; give an ordinary document a name without them)")
+    return None
+# ===== end #174 report-named drafts =====
+
+
 def _direct_write_refusal(inp, mode):
     """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
     outside the run's direct-write folder. #264: a Process run writes only its own .json input files in drafts."""
@@ -1583,6 +1704,10 @@ def hook_decision(tool, inp, mode, run):
         why = outside_reason(tool, inp, data.get("outside"))
         if why:
             mark(run, why)
+    if mode == "calendar":                                  # #265: Calendar import's Refresh has its own short list of tools
+        why = calendar_tool_problem(tool, inp)
+        if why:
+            return False, why
     for p in tool_paths(tool, inp):
         kind, why = classify(p, "read")
         if kind == "never":
@@ -1608,7 +1733,8 @@ def ask_bash_refusal(command, mode):
     form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
     # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
     return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)
-            or report_command_refusal(command) or handover_refusal(command) or read_write_refusal(command)
+            or report_command_refusal(command) or report_named_draft_refusal(command) or handover_refusal(command)
+            or read_write_refusal(command)
             or ask_glob_reason(command))
 
 
@@ -1783,9 +1909,12 @@ def bash_refusal(command, mode):
 # own draft (`propose.py people map <a file in system/staging/drafts/>`), which changes nothing but that draft. Nothing else.
 def record_gate(command, mode):
     """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
-    an Intake Process run (#264) runs only its read and minutes steps (process_gate)."""
+    an Intake Process run (#264) runs only its read and minutes steps (process_gate); a calendar refresh (#265) only the sweep's
+    calendar steps (calendar_gate)."""
     if mode == "process":
         return process_gate(command)
+    if mode == "calendar":
+        return calendar_gate(command)
     if mode == "confirmed" or (mode == "sweep" and sweep_maps_draft(command)):
         return None
     return record_problem(command)
@@ -2011,6 +2140,76 @@ def process_gate(command):
 # ===== end #264 =====
 
 
+# ===== #265: Calendar import's Refresh (mode "calendar") =====
+# Pressing Refresh in Calendar import starts the run kind "calendar" (live_server, POST /api/calendar/refresh) under this mode. The
+# click is Alan's go-ahead to read his Outlook calendar and save it for Intake and Today (the sweep's calendar steps, cx-sweep 8
+# and 8b), and nothing more. Tighter than the sweep mode: the run may call only CALENDAR_TOOLS (the two Microsoft 365 calls the
+# calendar steps make, and no other connector tool); Read only the cx-sweep skill and its own two input files; Write or Edit only
+# those two files (system/staging/drafts/calendar.json and transcripts.json, never a link); and Bash only the five sweep.py
+# commands in CALENDAR_COMMANDS, exactly as written. Every other command is refused, read commands included: no tracker.py,
+# review.py, propose.py, minutes.py, filechange.py or sweep.py stage, lock, done or vip. Every check a plain chat has still runs
+# too (the never list, one creaite script on its own, no shell characters, reports).
+CALENDAR_SPEC = "system/staging/drafts/calendar.json"
+CALENDAR_FACTS = "system/staging/drafts/transcripts.json"
+CALENDAR_COMMANDS = ("calendar-window", f"calendar {CALENDAR_SPEC}", "transcripts todo", "transcripts show",
+                     f"transcripts record {CALENDAR_FACTS}")
+from permissions import M365 as _M365  # noqa: E402  review L6: one home for the connector's prefix (permissions imports only paths)
+CALENDAR_M365 = tuple(_M365 + t for t in ("outlook_calendar_search", "read_resource"))
+CALENDAR_TOOLS = ("Read", "Bash", "Write", "Edit", "ToolSearch", *CALENDAR_M365)
+CALENDAR_SKILL = ".claude/skills/cx-sweep"
+
+
+def _calendar_file(arg):
+    """The input file `arg` names (calendar.json or transcripts.json directly in drafts), or None: never a link (nor a drafts
+    folder that is one), never a file with a second hard link, and the real path must be one of the two exactly."""
+    try:
+        given = Path(os.path.expanduser(str(arg)))
+        given = given if given.is_absolute() else paths.ROOT / given
+        if given.is_symlink() or Path(paths.DRAFTS).is_symlink() or (given.exists() and os.lstat(given).st_nlink > 1):
+            return None
+        target = real(arg)
+    except (OSError, ValueError, RuntimeError):
+        return None
+    ok = {Path(os.path.realpath(paths.ROOT / CALENDAR_SPEC)), Path(os.path.realpath(paths.ROOT / CALENDAR_FACTS))}
+    return target if target in ok else None
+
+
+def calendar_tool_problem(tool, inp):
+    """Why a calendar refresh may not make this tool call, or None (#265): only CALENDAR_TOOLS; Read only the cx-sweep skill and
+    its two input files; Write and Edit only those two files."""
+    if tool not in CALENDAR_TOOLS:
+        _debug("warn", f"calendar run refused: {tool}")
+        return (f"{tool} isn't one of the calendar refresh's tools: it reads the calendar and saves it with the sweep's "
+                f"calendar commands, nothing else")
+    p = (inp or {}).get("file_path") or ""
+    if tool == "Read":
+        try:
+            rp, skill = real(p), Path(os.path.realpath(paths.ROOT / CALENDAR_SKILL))
+        except (OSError, ValueError, RuntimeError):
+            return f"{p}: the calendar refresh can't read this"
+        if parts_under(rp, skill) is None and _calendar_file(p) is None:
+            return f"{p}: the calendar refresh reads only the cx-sweep skill and its own input files"
+    if tool in ("Write", "Edit") and _calendar_file(p) is None:
+        _debug("warn", "calendar run refused a write")
+        return f"{p}: the calendar refresh writes only {CALENDAR_SPEC} and {CALENDAR_FACTS}"
+    return None
+
+
+def calendar_gate(command):
+    """Why a calendar refresh may not run this command, or None (#265): exactly one of CALENDAR_COMMANDS, its input file
+    directly in drafts and never a link. Fails closed."""
+    import re
+    m = re.fullmatch(r"(?:python3? system/scripts/|system/scripts/run )sweep\.py ([a-z -]+(?: system/staging/drafts/[a-z]+\.json)?)",
+                     (command or "").strip())
+    rest = m.group(1) if m else ""
+    if rest not in CALENDAR_COMMANDS or (" system/" in rest and _calendar_file(rest.rsplit(" ", 1)[1]) is None):
+        _debug("warn", "calendar run refused a command")
+        return ("the calendar refresh runs only the sweep's calendar commands, exactly: "
+                + "; ".join(f"system/scripts/run sweep.py {c}" for c in CALENDAR_COMMANDS))
+    return None
+# ===== end #265 =====
+
+
 def vault_relative(command):
     """`python3 <this vault>/system/scripts/x.py …` or `<this vault>/system/scripts/run x.py …` as the relative form the checks
     know (BL-268: a run that wrote a file by its full path then named the script the same way, and was refused). Only when the
@@ -2024,8 +2223,8 @@ def vault_relative(command):
 
 
 def hook_main(argv):
-    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
-    run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
+    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|calendar|prep|held [--held 1]`: Claude Code's PreToolUse hook
+    for an ask creaite run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
     error refuses: the guard fails closed."""
     try:

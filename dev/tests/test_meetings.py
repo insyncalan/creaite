@@ -338,7 +338,22 @@ PAGE_SCRIPT = r"""
     /* #264 S6: a project goes with the file only when Alan chose it */
     out.chosen=[{p:"ABC",how:"remembered"},{p:"ABC",how:"matched"},{p:"_portfolio",how:"portfolio"},{p:"_portfolio",how:"remembered"},{p:null,how:"unsure"}]
       .map(m=>mtgProcessFile(m,"inbox/x.vtt"));
-    window.ASKED=[]; document.getElementById("mtgRefresh").click(); await until(()=>ASKED.length>0,10000); out.refresh=ASKED.slice();
+    /* #265: Refresh runs its own route (calendarLive), with progress and Stop on the button, never an ask message */
+    window.ASKED=[]; window.CAL=[]; window.STOPS=[]; let release=null; const realFetch=window.fetch;
+    window.DATA=0; window.fetch=(u,o)=>{ if(String(u).includes("/api/ask/stop")) STOPS.push(JSON.parse(o.body).run);
+      if(String(u).includes("/api/data")) DATA++; return realFetch(u,o); };
+    calendarLive=async(onEv)=>{ CAL.push(1); onEv({type:"run",id:"c-test-1"}); onEv({type:"step",label:"Reading the calendar"});
+      await new Promise(r=>{ release=r; });
+      return {ok:true,saved:true,meetings:3,days:2,closure:{type:"closure",ok:true,line:"Calendar saved: 3 meetings over 2 days."}}; };
+    const said=()=>document.querySelectorAll("#chLog .msg.u").length, said0=said();
+    document.getElementById("mtgRefresh").click(); await until(()=>CAL.length>0&&!!release,10000);
+    const btn=()=>document.getElementById("mtgRefresh");
+    out.ref_during={button:btn().textContent,disabled:btn().disabled,read:document.getElementById("mtgRead").textContent,
+      chat:said()-said0};
+    btn().click(); await until(()=>STOPS.length>0,5000); out.stops=STOPS.slice();
+    const data0=DATA; release(); await until(()=>btn().textContent==="Refresh",5000);
+    out.after_refresh={button:btn().textContent,read:document.getElementById("mtgRead").textContent,reloaded:DATA>data0};
+    window.fetch=realFetch; out.refresh=ASKED.slice(); out.cal=CAL.length;
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre);
 })();
@@ -436,7 +451,15 @@ class InboxPageTests(unittest.TestCase):
         self.assertEqual(after["ABC Steering"], "Draft ready in Review")
         self.assertTrue(after["Weekly sync 12"].startswith("Skipped"))                         # nothing to load: the reason is on its row
         self.assertIn("No transcript could be loaded", after["Weekly sync 12"])
-        self.assertEqual(r["refresh"], [["refresh calendar", None]])
+        # #265: Refresh is its own run (POST /api/calendar/refresh through calendarLive), never an ask creaite message
+        self.assertEqual(r["refresh"], [])
+        self.assertEqual(r["cal"], 1)
+        self.assertEqual(r["ref_during"], {"button": "Stop", "disabled": False, "read": "Refreshing… Reading the calendar",
+                                       "chat": 0})            # progress and Stop on the button; nothing said in ask creaite
+        self.assertEqual(r["stops"], ["c-test-1"])                                             # Stop stops that run
+        self.assertEqual(r["after_refresh"]["button"], "Refresh")
+        self.assertTrue(r["after_refresh"]["reloaded"])                                        # the calendar is read again
+        self.assertTrue(r["after_refresh"]["read"].startswith("Calendar read"))
 
 
 if __name__ == "__main__":
