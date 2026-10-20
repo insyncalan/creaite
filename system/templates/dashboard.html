@@ -69536,12 +69536,12 @@ ${d5.text}`);
       return [(r4.top - box.top) / sc2 - y02, (r4.bottom - box.top) / sc2 - y02];
     }).filter(([t47, b5]) => b5 - t47 > 0.5);
     for (let k5 = 0; k5 < marks.length; k5++) {
-      let y5 = Math.max(marks[k5], k5 ? marks[k5 - 1] + 1 : 0), moved = true;
-      while (moved) {
-        moved = false;
+      let y5 = Math.max(marks[k5], k5 ? marks[k5 - 1] + 1 : 0), moved2 = true;
+      while (moved2) {
+        moved2 = false;
         for (const [t47, b5] of spans) if (y5 > t47 + 0.5 && y5 < b5 - 0.5) {
           y5 = b5;
-          moved = true;
+          moved2 = true;
         }
       }
       marks[k5] = Math.round(y5 * 100) / 100;
