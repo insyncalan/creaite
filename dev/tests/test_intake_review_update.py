@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_dashboard  # noqa: E402
 from test_tracker import ABC, Vault  # noqa: E402
 
-IRU = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/core/irUpdate.js"
+IRU = Path(os.environ.get("CREAITE_IRU") or Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/core/irUpdate.js")   # CREAITE_IRU: a mutated copy, to see a test go red
 SRC = f"{ABC}/minutes/2026-10-05 Steering.docx — Actions"
 
 HARNESS = r'''
@@ -120,6 +120,17 @@ out.raidUpd = f.irSaveChanges("raid", {status: "Closed"}, {status: "Open"}, {sta
 out.raidDue = f.irSaveChanges("raid", {status: "Closed"}, {status: "Open", due_date: null}, {status: "Closed", due_date: null}, {status: "Closed", due_date: "2026-11-02"});
 out.dec = f.irSaveChanges("decisions", {client_message: "x"}, {status: "Pending", date: null}, {status: "Pending"}, {status: "Made", date: "2026-10-12"});
 out.decNoDate = f.irSaveChanges("decisions", {client_message: "x"}, {status: "Pending", date: null}, {status: "Pending"}, {status: "Made", date: ""});
+out.closedDraft = save({status: "Closed", due_date: "2026-10-23", latest_update: changes.latest_update, closed: "2026-10-20"});
+out.closedPass = f.irSaveChanges("actions", {status: "Closed", closed: "2026-10-01"}, live, {status: "Closed"}, {status: "Closed", closed: "2026-10-20"});
+out.cap = [save({status: "Open", due_date: "2026-10-23", latest_update: "x".repeat(2000)}), save({status: "Open", due_date: "2026-10-23", latest_update: "x".repeat(2001)})];
+out.notText = [save({status: ["Closed"], due_date: "2026-10-23", latest_update: changes.latest_update}), save({status: {a: 1}, due_date: "2026-10-23", latest_update: changes.latest_update}),
+  save({status: "Open", due_date: ["2026-12-04"], latest_update: changes.latest_update}), save({status: "Open", due_date: "2026-10-23", latest_update: ["x"]})];
+out.fullDraft = f.irSaveChanges("actions", {due_date: "2026-10-23"}, live, {status: "Open", due_date: "2026-10-23", latest_update: "a"},
+  {status: "Open", due_date: "2026-10-23", latest_update: "a", owner: "X Y", priority: "High", project: "DEF", workstream: "w", milestone: "m", client_visible: 1, client_message: "secret", description: "zzz", closed: "2026-10-20", updated_at: "x", id: "ABC-A-999"});
+out.merge = [f.irMergeEdits({due_date: "2026-10-23", owner: "Sara Khan"}, {changes: {due_date: "2026-12-04"}, edited: ["due_date"]}),
+  f.irMergeEdits({due_date: "2026-10-23", owner: "Sara Khan"}, {changes: {owner: "Old Name"}, edited: ["due_date"]}),
+  f.irMergeEdits({due_date: "2026-10-23"}, {changes: {}, edited: ["due_date"]}),
+  f.irMergeEdits({due_date: "2026-10-23", latest_update: "n"}, {changes: {status: "Closed"}, edited: ["status"]})];
 out.ui = f.UI; out.editable = f.EDITABLE;
 console.log(JSON.stringify(out));
 """
@@ -189,6 +200,29 @@ class PureRules(unittest.TestCase):
         self.assertEqual(o["dec"]["changes"], {"client_message": "x", "status": "Made", "date": "2026-10-12"})
         self.assertEqual(o["dec"]["edited"], ["status", "date"])
         self.assertEqual(o["decNoDate"]["changes"], {"client_message": "x", "status": "Made"})   # no date: the tracker will say so
+
+    def test_the_peek_never_adds_closed_and_a_closed_in_the_proposal_passes_through_unchanged(self):
+        o = self.o
+        self.assertNotIn("closed", o["closedDraft"]["changes"])                                  # the status rule's `closed` in the draft is ignored
+        self.assertEqual(o["closedPass"]["changes"], {"status": "Closed", "closed": "2026-10-01"})   # the proposal's own `closed` is neither added to nor altered
+
+    def test_the_latest_update_is_capped_and_a_status_or_date_must_be_text(self):
+        o = self.o
+        self.assertIn("changes", o["cap"][0])
+        self.assertIn("2001 characters", o["cap"][1]["error"])
+        for bad in o["notText"]:
+            self.assertIn("error", bad)
+
+    def test_a_save_never_merges_the_draft_into_the_changes(self):
+        """Whatever the draft holds, only the proposal's own changes (and nothing the peek cannot write) come back."""
+        self.assertEqual(self.o["fullDraft"]["changes"], {"due_date": "2026-10-23"})
+
+    def test_a_newer_edit_to_the_proposal_survives_the_merge(self):
+        m = self.o["merge"]
+        self.assertEqual(m[0]["changes"], {"due_date": "2026-12-04", "owner": "Sara Khan"})       # the file's owner kept
+        self.assertEqual(m[1]["changes"], {"owner": "Sara Khan"})                                  # an edit back to the live value drops only that column
+        self.assertIn("Nothing would change", m[2]["error"])
+        self.assertEqual(m[3]["changes"], {"due_date": "2026-10-23", "latest_update": "n", "status": "Closed"})
 
     def test_the_editable_columns_exist_and_the_ui_keys_are_the_servers(self):
         """UI is the inverse of FIELD in core/server.js; EDITABLE names real columns of that table."""

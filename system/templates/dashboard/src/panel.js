@@ -21,7 +21,7 @@ import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
 import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
 import { irHold } from "./core/irFold.js";
-import { EDITABLE, irChanged, irIfApproved, irLabel, irNowRow, irSaveChanges, irUpdateList, irWord, UI } from "./core/irUpdate.js";
+import { EDITABLE, irChanged, irIfApproved, irLabel, irLineParts, irMergeEdits, irNowRow, irSaveChanges, irUpdateList, irWord, UI } from "./core/irUpdate.js";
 import { drawLast, drawLatestWas, drawUpdateBody, updateChipNodes, updateChips } from "./components/intakeReview/UpdatePeek.jsx";
 import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
@@ -252,13 +252,14 @@ export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=sha
   if("error" in plan){ pkNote(plan.error); return; }
   if(!plan.edited.length){ closePanel(); if(approve) decide(r.n,"approved",true); else snack("Nothing was changed"); return; }   /* nothing edited: the proposal is as it was */
   if(!await needVault()) return;
-  const cols=Object.keys(plan.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));        /* status first: the proposal's field is its first change, and the hold reads it */
-  const changes=Object.fromEntries(cols.map(c=>[c,plan.changes[c]]));
+  let fin=null;
   try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
-      it.changes=changes; it.edited_in="dashboard"; if(approve){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }
-  const was=r.rec.changes||[]; r.rec.changes=cols.map(c=>({field:irLabel(c).toLowerCase(),col:c,from:u.liveDb[c]??null,to:changes[c]}));
+      const m=irMergeEdits(it.changes||{},plan); if("error" in m) throw new Error(m.error);   /* the file's own changes now, with only the columns edited here put right */
+      const cols=Object.keys(m.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));   /* status first: the proposal's field is its first change, and the hold reads it */
+      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }
+  const was=r.rec.changes||[], cols=Object.keys(fin); r.rec.changes=cols.map(c=>({field:irLabel(c).toLowerCase(),col:c,from:u.liveDb[c]??null,to:fin[c]}));
   const f=r.rec.changes[0]; r.rec.field=f.col; r.rec.from=f.from; r.rec.to=f.to;
-  if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${cols.map(c=>`${c} → ${irWord(c,changes[c])}`).join(", ")}`;
+  if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${irLineParts(r.rec.changes).join("; ")}`;   /* in words ("due 20-10-2026 → 23-10-2026"), never a column name or a long text */
   r.edited=true; if("hold" in r) r.hold=irHold(r);
   closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } }
 /* ===== end #232-B ===== */

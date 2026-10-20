@@ -21,8 +21,9 @@ UAT, DEF = "Book UAT environment", "Agree pilot success criteria"
 
 
 def upd(n, ident, changes, **extra):
-    return {"n": n, "op": "update", "table": "actions", "id": ident, "match": "strong", "flags": [], "decision": "pending",
+    item = {"n": n, "op": "update", "table": "actions", "id": ident, "match": "strong", "flags": [], "decision": "pending",
             "changes": changes, "why": "the supplier confirmed", "source": S.MAIL, **extra}
+    return {k: v for k, v in item.items() if v is not None}                                   # why=None: an update with no reason (its row title is the change)
 
 
 class Fixture:
@@ -36,9 +37,10 @@ class Fixture:
         cls.live = {r["id"]: r for r in v.rows("actions")}
         p = v.propose("2026-10-09-1000-sweep", [
             upd(1, cls.uat, {"due_date": "2026-12-01", "latest_update": "The supplier confirmed a slot."}),
-            upd(2, cls.cio, {"status": cls.live[cls.cio]["status"], "due_date": "2026-12-02"}, why="same status"),   # the status it already has: plain
+            upd(2, cls.cio, {"status": cls.live[cls.cio]["status"], "due_date": "2026-12-02"}, why=None),   # the status it already has: plain
             upd(3, "ABC-A-001", {"due_date": "2026-12-05"}, flags=["conflict"], why="old news"),
-            upd(4, "ABC-A-998", {"due_date": "2026-12-03"}, why="gone")])                                        # no such item
+            upd(4, "ABC-A-998", {"due_date": "2026-12-03"}, why="gone"),
+            upd(5, "ABC-A-001", {"client_message": "What it is: SECRETWORDING\nWhat it means for you: x\nWhat is being done: y"}, flags=["conflict"], why="wording")])                                        # no such item
         data = json.loads(p.read_text())
         data["source_run"] = "cx-sweep"
         p.write_text(json.dumps(data, indent=2))
@@ -126,6 +128,18 @@ class UpdatePeek(LiveBrowserCase, Fixture):
         note = b.eval("document.getElementById('pkUpdNote').textContent")
         self.assertIn("due date", note)
         self.assertNotIn("status", note)
+
+    def test_a_conflict_never_shows_the_client_message_text(self):
+        b = self.b
+        S.open_page(b)
+        row = "[...document.querySelectorAll('#v-intake-review tr.irprop[data-kind=update]')].find(t=>t.querySelector('.cfvs')&&/client messag/i.test(t.querySelector('.cfvs').textContent))"
+        self.assertTrue(b.eval(f"!!({row})"))
+        self.assertNotIn("SECRETWORDING", b.eval(f"({row}).textContent"))
+        self.assertIn("client message: changed", b.eval(f"({row}).querySelector('.cfvs').textContent"))
+        b.eval(f"({row}).querySelector('.icttl').click()")
+        b.wait("!!document.querySelector('#pkUpd .cfvs')")
+        self.assertNotIn("SECRETWORDING", b.eval("document.getElementById('panel').textContent"))
+        self.assertIn("client message: changed", b.eval("document.querySelector('#pkUpd .cfvs').textContent"))
 
     def test_the_target_that_has_gone_falls_back_to_the_old_form(self):
         b = self.b
@@ -224,6 +238,40 @@ class UpdatePeekSaves(LiveBrowserCase, Fixture):
         line = b.eval(f"[...document.querySelectorAll('{ROW}')].find(t=>t.querySelector('.icchg').textContent.includes({self.uat!r})).querySelector('.icchg').textContent")
         self.assertIn("status Open → Delayed", line)
         self.assertIn("due ", line)
+
+    def test_a_newer_edit_to_the_same_proposal_survives_a_save_from_an_older_window(self):
+        """Window A opens the peek; the file then gains an owner change (another window, a cx-review edit); A edits the due date
+        and saves: the owner change is still there, the due date is A's, the latest update as proposed."""
+        b = self.b
+        open_update(b, self.uat)
+        n = self.n_of(self.uat)
+        b.wait("!!document.querySelector('#pkUpdNote')")
+        f, it = self.staged(self.uat)
+        data = json.loads(f.read_text())
+        for x in data["items"]:
+            if x.get("id") == self.uat and x.get("op") == "update":
+                x["changes"]["owner"] = "Omar Ali"
+        f.write_text(json.dumps(data, indent=2))
+        b.eval(f"pkCommit('actions','rv{n}',{{due:'2026-12-04'}},'Due date','x','y')")
+        b.wait("document.querySelector('#pkProps [data-pkp=due]').textContent.includes('04-12-2026')")
+        b.click("#pkPSave")
+        b.wait("!document.getElementById('panel').classList.contains('on')")
+        _, it = self.staged(self.uat)
+        self.assertEqual(it["changes"], {"due_date": "2026-12-04", "latest_update": "The supplier confirmed a slot.", "owner": "Omar Ali"})
+        self.assertNotEqual(it.get("decision"), "approved")
+
+    def test_the_row_title_after_a_save_is_in_words(self):
+        b = self.b
+        open_update(b, self.cio)
+        n = self.n_of(self.cio)
+        b.wait("!!document.querySelector('#pkUpdNote')")
+        b.eval(f"pkCommit('actions','rv{n}',{{due:'2026-12-04'}},'Due date','x','y')")
+        b.wait("document.querySelector('#pkProps [data-pkp=due]').textContent.includes('04-12-2026')")
+        b.click("#pkPSave")
+        b.wait("!document.getElementById('panel').classList.contains('on')")
+        title = b.eval(f"REV.find(r=>r.n==={n}).rec.t")
+        self.assertIn("due 25-10-2026 → 04-12-2026", title)
+        self.assertNotRegex(title, r"[a-z]_[a-z]")                                        # no column names ("due_date"), no raw values
 
     def test_a_conflict_hides_save_and_approve_and_shows_the_two_values(self):
         b = self.b

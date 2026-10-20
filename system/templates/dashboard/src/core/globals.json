@@ -404,6 +404,7 @@
    "irLineParts",
    "irLive",
    "irLiveCounts",
+   "irMergeEdits",
    "irMissing",
    "irModel",
    "irNotNeeded",

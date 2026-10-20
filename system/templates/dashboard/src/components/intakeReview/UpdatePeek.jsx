@@ -22,8 +22,10 @@ import { EDITABLE, irChanged, irLabel, irNoteText, irPhrase } from "../../core/i
 export function ConflictBlock({ rec }) {
   const ch = rec.changes && rec.changes.length ? rec.changes : rec.field ? [{ field: rec.field, from: rec.from, to: rec.to }] : [];
   const v = (/** @type {any} */ x) => (x == null || x === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x)) ? fd(String(x)) : String(x));
-  return <div class="cfvs">{ch.length ? ch.map((/** @type {any} */ c) => (
-    <div><span class="cff">{c.field}</span><span class="cfnow">Now: <b>{v(c.from)}</b></span><span class="cfnew">This one: <b>{v(c.to)}</b></span></div>
+  const isCm = (/** @type {any} */ c) => c.col === "client_message" || /^client messag/i.test(String(c.field || ""));      /* the client's wording is never shown: only that it changes */
+  return <div class="cfvs">{ch.length ? ch.map((/** @type {any} */ c) => (isCm(c)
+    ? <div><span class="cff">{c.field}</span><span class="cfnew">client message: changed (its wording is not shown)</span></div>
+    : <div><span class="cff">{c.field}</span><span class="cfnow">Now: <b>{v(c.from)}</b></span><span class="cfnew">This one: <b>{v(c.to)}</b></span></div>
   )) : <div class="sub">Changed in the tracker after this was proposed.</div>}</div>;
 }
 

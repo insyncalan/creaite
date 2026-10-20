@@ -150,8 +150,11 @@ export function irVerb(changes) {
 /** The line's first part: "Closes ABC-A-014: Draft the comms plan" (a project has no ID to show: "Updates Example Programme"). @param {string} verb @param {string} id @param {string} [title] */
 export const irLineHead = (verb, id, title) => (id ? `${verb} ${id}${title ? `: ${title}` : ""}` : `${verb} ${title || ""}`).trim();
 
+/** The longest latest update the peek will save (the tracker keeps the text as it comes; this is the page's own limit). */
+export const LATEST_MAX = 2000;
+
 /** A date the way the tracker stores it, or "" when it is not one. @param {any} v */
-const isoDate = v => { const s = String(v ?? "").trim(); const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); if (!m) return ""; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? s : ""; };
+const isoDate = v => { if (typeof v !== "string") return ""; const s = v.trim(); const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); if (!m) return ""; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? s : ""; };
 
 /** Allowed statuses, as the tracker's ALLOWED lists them. */
 export const STATUSES = /** @type {Record<string, string[]>} */ ({ actions: ["Open", "Delayed", "Closed", "Cancelled"], raid: ["Open", "Closed", "Cancelled"], decisions: ["Pending", "Made", "Withdrawn"] });
@@ -171,7 +174,9 @@ export function irSaveChanges(table, changes, live, opened, draft) {
   for (const col of EDITABLE[table] || []) {
     if (!(col in draft) || irSame(draft[col], opened[col])) continue;
     const v = clean(col, draft[col]);
+    if (v != null && typeof v !== "string") return { error: `${irLabel(col)} must be text.` };
     if (col === "status" && !(STATUSES[table] || []).includes(String(v))) return { error: `Status must be one of ${(STATUSES[table] || []).join(", ")}.` };
+    if (col === "latest_update" && v != null && v.length > LATEST_MAX) return { error: `The latest update is ${v.length} characters; the limit is ${LATEST_MAX}. Shorten it.` };
     if ((col === "due_date" || col === "needed_by") && v != null && !isoDate(v)) return { error: "That is not a date creaite knows. Use DD-MM-YYYY." };
     edited.push(col);
     if (irSame(v, live[col])) delete out[col]; else out[col] = v;
@@ -179,4 +184,17 @@ export function irSaveChanges(table, changes, live, opened, draft) {
   if (table === "decisions" && edited.includes("status") && out.status === "Made" && !live.date && isoDate(draft.date)) { out.date = draft.date; edited.push("date"); }
   if (!Object.keys(out).length) return { error: "Nothing would change if this were approved: reject it instead, or change a value first." };
   return { changes: out, edited };
+}
+
+/** The proposal's changes after a save, made from the file as it is now (`fresh`, read inside the write) and only the columns Alan
+    edited (`plan` from irSaveChanges): a column he did not touch keeps the file's own value, so a newer edit to the same
+    proposal (another window, a cx-review edit) is never wiped by the copy this page was built with.
+    @param {Record<string, any>} fresh the proposal item's `changes` in the file now
+    @param {{changes: Record<string, any>, edited: string[]}} plan
+    @returns {{changes: Record<string, any>} | {error: string}} */
+export function irMergeEdits(fresh, plan) {
+  const out = { ...fresh };
+  for (const col of plan.edited) { if (col in plan.changes) out[col] = plan.changes[col]; else delete out[col]; }
+  if (!Object.keys(out).length) return { error: "Nothing would change if this were approved: reject it instead, or change a value first." };
+  return { changes: out };
 }

@@ -36,7 +36,7 @@ export function irPill(r) {
 const irDueWords = (/** @type {string|null|undefined} */ d) => (d ? `due ${fd(d)}` : "No due date");
 const noTime = (/** @type {string} */ s) => String(s || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
 /** A change's column from its words, for a row built before the server named it ("due date" -> due_date). @param {string} field */
-const colOf = field => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action");
+const colOf = field => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action").replace(/^client_messaging$/, "client_message");
 
 /** The emphasised line's parts: what the proposal is, owner and date or priority first. @param {any} r @returns {{t: string, warn?: boolean}[]} */
 export function irChange(r) {

@@ -33,8 +33,22 @@ removed from `changes`** (nothing to write). A column Alan did not touch stays e
 read-only column (`owner`, `priority`, `project`, `workstream`, `milestone`, `client_visible`, `client_message`, `description`,
 `response_action`, ...): the draft is never read for them.
 
-Never written by the peek: `closed` (the draft's `closed` set by the status rule is ignored: `tracker.py` derives it in
-`_closed_for_update`), `updated_at`, `id`, `project`, any column of any other table.
+Never written by the peek: `updated_at`, `id`, `project`, any column of any other table. About `closed`: **the peek never ADDS
+`closed`**; the draft's `closed` (set by the peek's status rule) is ignored, and `tracker.py` derives it itself in
+`_closed_for_update`. A `closed` that the proposal already carries (staged by a sweep or cx-edit) passes through unchanged, and
+`tracker.py` accepts it (test: `test_the_peek_never_adds_closed_and_a_closed_in_the_proposal_passes_through_unchanged`).
+
+The write is made against the file as it is **now**: `updSave` calls `irMergeEdits(it.changes, plan)` inside the `editProposal`
+mutator, so a column Alan did not edit keeps the file's own value. A newer edit to the same proposal (another window, a cx-review
+edit such as "owner is Sara") is never wiped by the copy the page was built with (browser test: the owner added to the file after
+the peek opened survives an edit of the due date).
+
+Limits added in the peek (`irSaveChanges`): the latest update is at most 2000 characters; a status or date that is not text (an
+array or object) is refused. The tracker's own checks still apply.
+
+The conflict block (peek and row) never shows client message text: it says "client message: changed (its wording is not shown)".
+After a save, the row's title (for an update with no reason) is worded as the line is ("DEF-A-001: due 25-10-2026 → 04-12-2026"),
+never as column names.
 
 If the edit leaves `changes` empty, the save is refused in the peek ("Nothing would change if this were approved"). If nothing was
 edited, the proposal file is not rewritten at all.
@@ -69,6 +83,13 @@ item's `latest_update`); the side `date`; an empty result is an error.
 Browser (`test_intake_review_update_peek.py`, `UpdatePeekSaves`): Save with a changed due date stages `{"due_date": new,
 "latest_update": as proposed}` and does not approve; Save and approve with a changed status writes status, the proposal's due date
 and latest update to the tracker.
+
+## Mutation checks (each turned red on a scratch copy)
+
+Pure layer (`PureRules`): status check dropped, date check dropped, read the read-only columns from the draft, keep an unchanged
+value (not dropping a column set back to the live value), merge the whole draft into the changes, let `closed` through from the
+draft, replace the file's changes with the page's copy (merge), cap dropped, non-text allowed. Browser layer: auto-approve on Save,
+the page's copy replacing the file's changes, raw column names in the row title.
 
 ## What the reviewer should look at
 

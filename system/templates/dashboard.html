@@ -59848,8 +59848,10 @@ ${d5.text}`);
     return to2 === "Closed" ? "Closes" : to2 === "Cancelled" ? "Cancels" : "Updates";
   }
   var irLineHead = (verb, id2, title) => (id2 ? `${verb} ${id2}${title ? `: ${title}` : ""}` : `${verb} ${title || ""}`).trim();
+  var LATEST_MAX = 2e3;
   var isoDate = (v5) => {
-    const s5 = String(v5 ?? "").trim();
+    if (typeof v5 !== "string") return "";
+    const s5 = v5.trim();
     const m5 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s5);
     if (!m5) return "";
     const d5 = new Date(Date.UTC(+m5[1], +m5[2] - 1, +m5[3]));
@@ -59868,7 +59870,9 @@ ${d5.text}`);
     for (const col of EDITABLE[table] || []) {
       if (!(col in draft) || irSame(draft[col], opened[col])) continue;
       const v5 = clean(col, draft[col]);
+      if (v5 != null && typeof v5 !== "string") return { error: `${irLabel(col)} must be text.` };
       if (col === "status" && !(STATUSES[table] || []).includes(String(v5))) return { error: `Status must be one of ${(STATUSES[table] || []).join(", ")}.` };
+      if (col === "latest_update" && v5 != null && v5.length > LATEST_MAX) return { error: `The latest update is ${v5.length} characters; the limit is ${LATEST_MAX}. Shorten it.` };
       if ((col === "due_date" || col === "needed_by") && v5 != null && !isoDate(v5)) return { error: "That is not a date creaite knows. Use DD-MM-YYYY." };
       edited.push(col);
       if (irSame(v5, live[col])) delete out[col];
@@ -59881,12 +59885,25 @@ ${d5.text}`);
     if (!Object.keys(out).length) return { error: "Nothing would change if this were approved: reject it instead, or change a value first." };
     return { changes: out, edited };
   }
+  function irMergeEdits(fresh, plan) {
+    const out = { ...fresh };
+    for (const col of plan.edited) {
+      if (col in plan.changes) out[col] = plan.changes[col];
+      else delete out[col];
+    }
+    if (!Object.keys(out).length) return { error: "Nothing would change if this were approved: reject it instead, or change a value first." };
+    return { changes: out };
+  }
 
   // components/intakeReview/UpdatePeek.jsx
   function ConflictBlock({ rec }) {
     const ch2 = rec.changes && rec.changes.length ? rec.changes : rec.field ? [{ field: rec.field, from: rec.from, to: rec.to }] : [];
     const v5 = (x5) => x5 == null || x5 === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x5)) ? fd(String(x5)) : String(x5);
-    return /* @__PURE__ */ u4("div", { class: "cfvs", children: ch2.length ? ch2.map((c5) => /* @__PURE__ */ u4("div", { children: [
+    const isCm = (c5) => c5.col === "client_message" || /^client messag/i.test(String(c5.field || ""));
+    return /* @__PURE__ */ u4("div", { class: "cfvs", children: ch2.length ? ch2.map((c5) => isCm(c5) ? /* @__PURE__ */ u4("div", { children: [
+      /* @__PURE__ */ u4("span", { class: "cff", children: c5.field }),
+      /* @__PURE__ */ u4("span", { class: "cfnew", children: "client message: changed (its wording is not shown)" })
+    ] }) : /* @__PURE__ */ u4("div", { children: [
       /* @__PURE__ */ u4("span", { class: "cff", children: c5.field }),
       /* @__PURE__ */ u4("span", { class: "cfnow", children: [
         "Now: ",
@@ -60665,13 +60682,16 @@ ${d5.text}`);
       return;
     }
     if (!await needVault()) return;
-    const cols = Object.keys(plan.changes).sort((a5, b5) => (a5 === "status" ? -1 : 0) - (b5 === "status" ? -1 : 0));
-    const changes = Object.fromEntries(cols.map((c5) => [c5, plan.changes[c5]]));
+    let fin = null;
     try {
       await editProposal(r4.file, (data) => {
         const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
         if (!it2 || it2.applied) throw new Error("that proposal has already been applied");
-        it2.changes = changes;
+        const m5 = irMergeEdits(it2.changes || {}, plan);
+        if ("error" in m5) throw new Error(m5.error);
+        const cols2 = Object.keys(m5.changes).sort((a5, b5) => (a5 === "status" ? -1 : 0) - (b5 === "status" ? -1 : 0));
+        fin = Object.fromEntries(cols2.map((c5) => [c5, m5.changes[c5]]));
+        it2.changes = fin;
         it2.edited_in = "dashboard";
         if (approve) {
           it2.decision = "approved";
@@ -60682,13 +60702,13 @@ ${d5.text}`);
       snack("Not saved: " + e4.message);
       return;
     }
-    const was = r4.rec.changes || [];
-    r4.rec.changes = cols.map((c5) => ({ field: irLabel(c5).toLowerCase(), col: c5, from: u5.liveDb[c5] ?? null, to: changes[c5] }));
+    const was = r4.rec.changes || [], cols = Object.keys(fin);
+    r4.rec.changes = cols.map((c5) => ({ field: irLabel(c5).toLowerCase(), col: c5, from: u5.liveDb[c5] ?? null, to: fin[c5] }));
     const f5 = r4.rec.changes[0];
     r4.rec.field = f5.col;
     r4.rec.from = f5.from;
     r4.rec.to = f5.to;
-    if (was.length && String(r4.rec.t || "").startsWith(u5.id + ":") && !("why" in r4.rec)) r4.rec.t = `${u5.id}: ${cols.map((c5) => `${c5} → ${irWord(c5, changes[c5])}`).join(", ")}`;
+    if (was.length && String(r4.rec.t || "").startsWith(u5.id + ":") && !("why" in r4.rec)) r4.rec.t = `${u5.id}: ${irLineParts(r4.rec.changes).join("; ")}`;
     r4.edited = true;
     if ("hold" in r4) r4.hold = irHold(r4);
     closePanel();
@@ -75149,7 +75169,7 @@ ${d5.text}`);
   }
   var irDueWords = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
   var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
-  var colOf = (field) => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action");
+  var colOf = (field) => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action").replace(/^client_messaging$/, "client_message");
   function irChange(r4) {
     const x5 = r4.rec || {}, owner = (o5) => !o5 || o5 === "TBC" ? { t: "No owner", warn: true } : { t: o5 };
     if (r4.kind === "actions") return [owner(x5.o), { t: irDueWords(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
@@ -77756,6 +77776,7 @@ ${d5.text}`);
         "irLineParts",
         "irLive",
         "irLiveCounts",
+        "irMergeEdits",
         "irMissing",
         "irModel",
         "irNotNeeded",
