@@ -308,7 +308,10 @@ class WordLogos(Base):
         r = self.py(f"from pathlib import Path\nimport paths, docx_tools, zipfile\n"
                     f"doc = creaite_doc.new('client', 'ABC', 'Client report', '2026-10-16', {[hdr] + SECTIONS!r}, items={ITEMS!r},"
                     " audience='client')\n"
-                    "out = Path(paths.DRAFTS) / 'logo-test.docx'\ncreaite_doc.word_export(doc, out)\n"
+                    # #239 step 2: a client Word file is made only with client_snapshot's TOKEN; the writer's own logo rule is
+                    # what this tests, so the token is passed as client_export passes it
+                    "import client_snapshot\nout = Path(paths.DRAFTS) / 'logo-test.docx'\n"
+                    "creaite_doc.word_export(doc, out, token=client_snapshot.TOKEN)\n"
                     "z = zipfile.ZipFile(out)\n"
                     "print(json.dumps(sorted(list(docx_tools.image_size(z.read(n))) for n in z.namelist() if n.startswith('word/media/'))))")
         return [tuple(x) for x in r]

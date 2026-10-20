@@ -364,7 +364,7 @@ def _plain_name(name, ext, own=None):
     return None if _name_problem(name, own) else name
 
 
-RESERVED_NAME = re.compile(r"(?i)^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)(?:\..*)?$")
+RESERVED_STEM = re.compile(r"(?i)^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)(?:\..*)?$")
 REPORT_WORDS = re.compile(r"(?i)(?:weekly|client)\s*report")
 
 
@@ -374,7 +374,7 @@ def _name_problem(name, own=None):
     (weekly report, client report: in any case or spacing) other than this report's own (`own`, its filing name, which the name
     may start with: the clash question then says it is reserved), which belongs to a filing and could block an Approve."""
     stem = name.rsplit(".", 1)[0]
-    if RESERVED_NAME.match(stem) or RESERVED_NAME.match(name) or re.search(r'[<>:"|?*]', name) or stem != stem.rstrip(". "):
+    if RESERVED_STEM.match(stem) or RESERVED_STEM.match(name) or re.search(r'[<>:"|?*]', name) or stem != stem.rstrip(". "):
         return "reserved"
     import unicodedata
     plain = " ".join(unicodedata.normalize("NFKC", name).split())
@@ -562,7 +562,7 @@ def _client_export(handler, req, which, fmt):
 
     def settle():
         """The file name, once the snapshot passed its check (a taken name asks first)."""
-        name, overwrite, asked = _settle_name(folder, filed.stem + ext, ext, req, label, filed.name)
+        name, overwrite, asked = _settle_name(folder, filed.stem + ext, ext, req, label, filed.name, kind="client")
         settled.update(name=name, overwrite=overwrite)
         return asked
     with client_snapshot.locked():          # v2.5.1 step 3: a posted `page` is not taken for a client report (PAGE_IGNORED)

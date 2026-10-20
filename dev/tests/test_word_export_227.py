@@ -139,7 +139,7 @@ class Base(unittest.TestCase):
         import report_doc
         real_logos = report_doc.logos
         report_doc.logos = lambda code, wanted=None, _t=self.tmp: [{"kind": "firm", "path": str(_t / "firm.png")},
-                                                                    {"kind": "client", "path": str(_t / "client.svg")}]
+                                                                    {"kind": "client", "path": str(_t / "ABC-client.svg")}]
         self.addCleanup(setattr, report_doc, "logos", real_logos)
         (self.tmp / "images").mkdir()
         (self.tmp / "images" / "site.png").write_bytes(png(40, 20, (0, 150, 0, 255)))
