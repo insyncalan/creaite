@@ -127,6 +127,44 @@ class Markup(unittest.TestCase):
         self.assertEqual(req["mode"], "chase")                                     # the copy's references are still kept for the sweep
 
 
+    def test_s_is_not_on_outlooks_list_and_strike_is(self):
+        """#183 review L2: Outlook's list names strike, not s: an <s> is refused before any run, a <strike> passes."""
+        self.assertEqual(dd.markup_problem("<p><s>old</s></p>"), "a <s> element")
+        self.assertIsNone(dd.markup_problem("<p><strike>old</strike></p>"))
+        self.assertNotIn("s", dd.ALLOWED_TAGS)
+        with self.assertRaises(dd.Refused):
+            dd.request({**PAYLOAD, "html": "<p><s>old</s></p>"}, ON)
+
+
+class CopiedCommand(unittest.TestCase):
+    """#183 review L1: a copy is never refused for its markup, through the command line the live server calls (the route's
+    body used to carry no action, so the check always ran)."""
+
+    def test_the_copied_command_accepts_markup_outlook_would_refuse_and_the_request_command_needs_the_action(self):
+        v = Vault()
+        self.addCleanup(v.cleanup)
+        v.run("init")
+        env = {**os.environ, "CREAITE_NOW": "2026-10-19 12:00"}
+        dd_cmd = [sys.executable, str(v.root / "system/scripts/draft_delivery.py")]
+        settings = v.root / "system/config/settings.json"
+        s = json.loads(settings.read_text())
+        s["draft_email"] = {"outlook_drafts": True}
+        settings.write_text(json.dumps(s))
+        body = {**PAYLOAD, "html": "<p><span>x</span></p>"}
+
+        def call(cmd, payload):
+            r = subprocess.run(dd_cmd + [cmd], input=json.dumps(payload), capture_output=True, text=True, cwd=v.root, env=env)
+            return r.returncode, json.loads(r.stdout)
+
+        rc, out = call("copied", body)                                    # no action in the body, as the route sent it
+        self.assertEqual((rc, out["ok"]), (0, True), out)
+        rc, out = call("request", {**body, "action": "copied"})
+        self.assertEqual((rc, out["ok"]), (0, True), out)
+        rc, out = call("request", {**body, "action": "create"})
+        self.assertEqual((rc, out["ok"]), (1, False))
+        self.assertIn("formatting Outlook won't take", out["message"])
+
+
 class NeverSends(unittest.TestCase):
     def test_the_run_may_use_create_draft_and_tool_search_only(self):
         self.assertEqual(dd.allowed_tools(), ["mcp__claude_ai_Microsoft_365__outlook_create_draft", "ToolSearch"])

@@ -61,7 +61,7 @@ REASONS = (  # Outlook's error, as fixed words (never the tool's or the model's 
 # code, tables, br/hr, div, pre) and rejects, never strips, anything else: span, font, blockquote, images, scripts, event handlers,
 # comments and other <!...>/<?...?> markup. Alan, 19-10-2026: the builder writes only that subset, in the copy and the draft alike
 # (drafts.js draftEmail), and a body outside it is refused here, before any run, with fixed words.
-ALLOWED_TAGS = frozenset("p div h1 h2 h3 h4 h5 h6 a ul ol li b i strong em strike s code pre table thead tbody tfoot tr td th "
+ALLOWED_TAGS = frozenset("p div h1 h2 h3 h4 h5 h6 a ul ol li b i strong em strike code pre table thead tbody tfoot tr td th "
                          "caption br hr".split())
 ALLOWED_ATTRS = frozenset("style href align valign width cellpadding cellspacing border colspan rowspan bgcolor".split())
 BAD_STYLE = re.compile(r"var\(|url\(|expression\(|@import|javascript:|behavior\s*:", re.I)
@@ -431,7 +431,7 @@ def _cmd(name, body):
     if name == "created":
         return record_created(body)
     if name == "copied":
-        return record_copied(request(body))
+        return record_copied(request({**body, "action": "copied"}))   # a copy is never refused for its markup, whoever calls
     if name == "access":
         return access(body.get("events"))
     if name == "sent":
