@@ -1,4 +1,4 @@
-"""#232-B (v2.5.0): the standing rules on Intake and Review's proposal rows, in a real browser: full project names (the short code only
+"""#232-B (v2.5.0): the standing rules on Intake's proposal rows, in a real browser: full project names (the short code only
 inside an item's ID), no VIP label anywhere on a row (a followed person's proposal looks like any other), dates as DD-MM-YYYY, and
 the source line names where it came from without a time. (The meeting rows' rules are in the Intake side's tests.)
 

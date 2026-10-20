@@ -1,5 +1,5 @@
-"""#232-C (v2.5.0): the wiring of Intake and Review, in a real browser against the live server. One page now answers to every
-name the old Intake and Review pages had: go("review"), go("inbox") and go("intake"), the addresses #review, #intake, #inbox
+"""#232-C (v2.5.0): the wiring of Intake, in a real browser against the live server. One page now answers to every
+name the old Intake pages had: go("review"), go("inbox") and go("intake"), the addresses #review, #intake, #inbox
 (also #review=<n> and #intake-review&stage=&m=), a saved history entry from before the one page, and every link that used to
 point at them (Today's line, the rail, a toast, Close the day, the breadcrumb on a minutes page, a reminder's address).
 The rail badge, Today's line, the tab title, the command palette's one entry and the page's own sub-heading show one number.
@@ -123,7 +123,7 @@ class Wiring(LiveBrowserCase):
         b.eval("go('intake-review')")
         b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))")
         sub = b.eval("document.querySelector('#irSub').textContent.trim()")
-        o.update(sub=sub, subNums=[int(x) for x in __import__("re").findall(r"\d+", sub)], title=b.eval("document.title"))
+        o.update(sub=sub, subNums=[int(x) for x in __import__("re").findall(r"\d+", sub.split("Calendar read")[0])], title=b.eval("document.title"))
         b.eval("go('today')")
         return o
 
@@ -136,7 +136,7 @@ class Wiring(LiveBrowserCase):
         self.assertEqual(o["rail"], str(o["badge"]))
         self.assertEqual(o["lineSum"], o["badge"], o["line"])
         self.assertEqual(sum(o["subNums"]), o["badge"], o["sub"])
-        self.assertTrue(o["title"].endswith("Intake and Review (%d)" % o["badge"]), o["title"])
+        self.assertTrue(o["title"].endswith("Intake (%d)" % o["badge"]), o["title"])
 
     def test_the_real_model_counts_each_file_once(self):
         """p250-d puts a waiting upload in the model as a row; 232-C's extra-file count must not add it a second time."""
@@ -236,14 +236,13 @@ class Wiring(LiveBrowserCase):
         b = self.b
         self.model(ready=1)
         names = b.eval("ckItems('').map(i=>i.g+'|'+i.l)")
-        self.assertEqual([n for n in names if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake and Review"])
-        self.assertNotIn("Go to|Intake", names)
+        self.assertEqual([n for n in names if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake"])
         self.assertNotIn("Go to|Review", names)
-        hint = b.eval("ckItems('').find(i=>i.l==='Intake and Review'&&i.g==='Go to').h")
+        hint = b.eval("ckItems('').find(i=>i.l==='Intake'&&i.g==='Go to').h")
         self.assertEqual(hint, "%d waiting" % b.eval("irLiveCounts().badge"))
         for q in ("intake", "review"):
-            self.assertIn("Go to|Intake and Review", b.eval(f"ckItems({q!r}).map(i=>i.g+'|'+i.l)"))
-        b.eval("go('today'); ckItems('intake and review').find(i=>i.g==='Go to').fn()")
+            self.assertIn("Go to|Intake", b.eval(f"ckItems({q!r}).map(i=>i.g+'|'+i.l)"))
+        b.eval("go('today'); ckItems('intake').find(i=>i.g==='Go to').fn()")
         self.assertEqual(b.eval("VIEW"), "intake-review")
 
     # --- help ---
@@ -252,18 +251,18 @@ class Wiring(LiveBrowserCase):
         b = self.b
         self.model()
         o = b.eval("""(()=>{ go('intake-review'); helpScreenSync();
-          const foot=document.getElementById('hFoot'), sc=HD.screens['intake and review'];
+          const foot=document.getElementById('hFoot'), sc=HD.screens['intake'];
           return {keys:Object.keys(HD.screens), foot:foot&&!foot.hidden?foot.textContent:null, title:sc&&sc.title, ids:sc&&sc.ids, ref:sc&&sc.ref,
                   inPage:!!document.querySelector('#v-intake-review #hFoot'), screenKey:screenKey()}; })()""")
-        self.assertEqual(o["keys"], ["today", "work", "intake and review", "projects", "people", "notes", "files"])
-        self.assertEqual((o["title"], o["screenKey"]), ("Intake and Review", "intake and review"))
-        self.assertEqual(o["foot"], "Press ? for help with Intake and Review")
+        self.assertEqual(o["keys"], ["today", "work", "intake", "projects", "people", "notes", "files"])
+        self.assertEqual((o["title"], o["screenKey"]), ("Intake", "intake"))
+        self.assertEqual(o["foot"], "Press ? for help with Intake")
         self.assertTrue(o["inPage"])
-        self.assertTrue(1 <= len(o["ids"]) <= 5 and o["ref"] == "intake-and-review")
+        self.assertTrue(1 <= len(o["ids"]) <= 5 and o["ref"] == "intake")
         b.eval("document.dispatchEvent(new KeyboardEvent('keydown',{key:'?',bubbles:true}))")
         b.wait("helpPanelOpen()")
-        self.assertEqual(b.eval("document.querySelector('#hpnT').textContent"), "Help · Intake and Review")
-        self.assertTrue(b.eval("!!document.querySelector('#helpPanel a[href=\"#help-reference-intake-and-review\"]')"))
+        self.assertEqual(b.eval("document.querySelector('#hpnT').textContent"), "Help · Intake")
+        self.assertTrue(b.eval("!!document.querySelector('#helpPanel a[href=\"#help-reference-intake\"]')"))
 
 
 if __name__ == "__main__":

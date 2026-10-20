@@ -1,4 +1,4 @@
-"""#232-B (v2.5.0): the Review side's keys on Intake and Review. Up and down move between the proposals of the open meeting (and the
+"""#232-B (v2.5.0): the Review side's keys on Intake. Up and down move between the proposals of the open meeting (and the
 mail section), Enter opens the peek, A approves, R opens the reasons menu; Esc closes the peek first and then the meeting. The old
 Review's keys (J, K, Space, X, E) are not bound on this page.
 

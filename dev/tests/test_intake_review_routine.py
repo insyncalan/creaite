@@ -1,4 +1,4 @@
-"""#232-B (v2.5.0): Intake and Review's proposal rows and Approve routine, in a real browser against the live server.
+"""#232-B (v2.5.0): Intake's proposal rows and Approve routine, in a real browser against the live server.
 The page's rule is the server's (rvBulkOK reads the row's `hold`, `invalid` included); a meeting's proposals come in two groups,
 Needs your decision first, then Routine, with the approved wording; Approve routine (n) is one apply and one Undo, never covers the
 first group and keeps the meeting open.

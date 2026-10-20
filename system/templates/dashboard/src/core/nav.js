@@ -218,7 +218,7 @@ document.addEventListener("click",e=>{ const a=e.target.closest("[data-rphub]");
 /* ===== BL-152 (sprint-ux) ===== the browser tab says where you are and what is waiting: "creaite · Work", "creaite · <Project
    name>", "creaite · Review (4)" (the count is what waits in Review, not Intake). The finished-run mark (BL-139) and the VIP count
    (BL-99) still go first, and "DEV · " in the development repository. It follows the page, the project or person shown and the count. */
-export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Work",mine:"Work",reports:"Reports",people:"People",review:"Review","intake-review":"Intake and Review",files:"Files",activity:"Activity",settings:"Settings",help:"Help"};
+export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Work",mine:"Work",reports:"Reports",people:"People",review:"Intake","intake-review":"Intake",files:"Files",activity:"Activity",settings:"Settings",help:"Help"};
 export function tabTitle(){ if(shared.VIEW==="prep"){ const v=prepView.value, t=v&&v.ok&&v.model?v.model.meeting.title:""; TABNAME.prep=t?`Prep · ${t}`:"Prep"; }   /* BL-286 D */
   if(shared.VIEW==="minutes") TABNAME.minutes="Minutes";   /* v2.1.0 P7 */
   const n=REV.filter(r=>!r.done).length, vips=VIPS().length;

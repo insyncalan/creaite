@@ -6,7 +6,7 @@
    /api/inbox/upload, /api/intake/clear), and ask creaite's own run (askLive) makes the draft.
    Progress is the row's (irBusy); the ask panel is never opened, so ask creaite stays free (one run at a time is the engine's). */
 import { askLive } from "../../ask.js";
-import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../intake.js";
+import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
 import { D, fd, fdText, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";

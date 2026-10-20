@@ -12,11 +12,11 @@ import { shared } from "./core/state.js";
 import { HD, helpFocusSearch } from "./help.js";
 
 /** The screen a view belongs to (a project's page is Projects, a person's page is People). */
-export const SCREEN_OF={today:"today",work:"work",mine:"work",review:"intake and review","intake-review":"intake and review",inbox:"intake and review",projects:"projects",cockpit:"projects",people:"people",person:"people",notes:"notes",files:"files"};
+export const SCREEN_OF={today:"today",work:"work",mine:"work",review:"intake","intake-review":"intake",inbox:"intake",projects:"projects",cockpit:"projects",people:"people",person:"people",notes:"notes",files:"files"};
 /** The eight pages that carry the foot line and the first-visit line (the page itself, not a project's or a person's page). */
-const LINE_OF={today:"today",work:"work",mine:"work","intake-review":"intake and review",projects:"projects",people:"people",notes:"notes",files:"files"};
-const TITLE={today:"#v-today .dayband",work:"#v-work h1","intake and review":"#irTitle",projects:"#v-projects .hhead",people:"#v-people h1",notes:"#v-notes h1",files:"#v-files h1"};
-const FOOT={today:"#v-today",work:"#v-work .wrapmax","intake and review":"#v-intake-review .wrapmax",projects:"#v-projects .wrapmax",people:"#v-people .wrapmax",notes:"#v-notes",files:"#v-files .wrapmax"};
+const LINE_OF={today:"today",work:"work",mine:"work","intake-review":"intake",projects:"projects",people:"people",notes:"notes",files:"files"};
+const TITLE={today:"#v-today .dayband",work:"#v-work h1","intake":"#v-intake-review h1",projects:"#v-projects .hhead",people:"#v-people h1",notes:"#v-notes h1",files:"#v-files h1"};
+const FOOT={today:"#v-today",work:"#v-work .wrapmax","intake":"#v-intake-review .wrapmax",projects:"#v-projects .wrapmax",people:"#v-people .wrapmax",notes:"#v-notes",files:"#v-files .wrapmax"};
 
 export const screenKey=()=>SCREEN_OF[shared.VIEW]||"";
 export const screenInfo=(/** @type {string} */ k)=>HD.screens[k]||null;

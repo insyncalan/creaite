@@ -77,7 +77,7 @@ export function RailButton({ id, inMenu, onGo, fly, onFly }) {
         aria-controls={hasFly && open ? `railFly-${id}` : undefined} onKeyDown={hasFly ? key : undefined}
         onClick={() => { if (hasFly) { menuGroup.release(btn.current); shut(false); } onGo(id); }}>
         <RailIcon name={it.icon} />
-        <span class="rl" data-short={it.short}>{it.title}</span>
+        <span class="rl">{it.title}</span>
         {it.badge ? <span class="badge" id={it.badge} ref={bd} style="display:none"></span> : null}
       </button>
       {hasFly && open ? (

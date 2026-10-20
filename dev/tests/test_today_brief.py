@@ -49,20 +49,20 @@ class PageTests(unittest.TestCase):
 
 
 class IntakeNameTests(PageTests):
-    """BL-70, #232-C: Intake and Review is one screen and one rail entry; the folder, ids and keys keep their names; the old
+    """BL-70, #232-C: Intake is one screen and one rail entry; the folder, ids and keys keep their names; the old
     #intake, #inbox and #review addresses (and go("inbox"), go("review")) open it. The page's own structure is test_intake_review_page."""
 
     def test_the_words_alan_reads(self):
         o = self.probe("""
-          const rail=document.querySelector('.rail button[data-v=review]');   /* #232: Intake is in the one Intake and Review entry */
+          const rail=document.querySelector('.rail button[data-v=review]');   /* #232: Intake is the one entry */
           go("inbox"); const h1=document.querySelector("#v-intake-review h1").textContent;
           const names=ckItems("").map(i=>`${i.g}|${i.l}`), files=ckItems("recording").map(i=>`${i.g}|${i.l}`);
           go("files"); const tree=[...document.querySelectorAll("#tree button")].map(b=>b.textContent), chips=[...document.querySelectorAll("#fquick button")].map(b=>b.textContent);
           window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, names, files, tree, chips,
             drop:document.getElementById("inboxDrop").getAttribute("aria-label")};""")
-        self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake and Review", "Intake and Review", "Intake and Review"))
-        self.assertEqual([n for n in o["names"] if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake and Review"])   # #232-C: one entry
-        self.assertIn("Actions|Add files to Intake and Review", o["names"])
+        self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake", "Intake", "Intake"))
+        self.assertEqual([n for n in o["names"] if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake"])   # #232-C: one entry
+        self.assertIn("Actions|Add files to Intake", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
         self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" not in o["chips"])   # #192: Intake is in the tree once, not a pill)
@@ -74,7 +74,7 @@ class IntakeNameTests(PageTests):
           go("today"); window.location.hash="#inbox"; await new Promise(r=>setTimeout(r,200));
           window.OUT={written, parsed, hashOfInbox:hashOf({v:"inbox"}), view:VIEW};""")
         self.assertEqual(o["written"], "#intake-review")                          # #232-C: one address
-        self.assertEqual(o["parsed"], ["intake-review", "intake-review", None])   # #232: both open Intake and Review
+        self.assertEqual(o["parsed"], ["intake-review", "intake-review", None])   # #232: both open Intake
         self.assertEqual(o["hashOfInbox"], "#intake-review")
         self.assertEqual(o["view"], "intake-review")
 
@@ -324,7 +324,7 @@ class TodayBriefTests(PageTests):
         # #168: First thing and BL-210's Decisions needed; BL-125 A's two inside
         # Your commitments; Resolved after the Week ahead (folded); Portfolio last (the hidden ones are in the page too)
         self.assertEqual(o["heads"], ["First thing", "Decisions needed", "Needs attention", "Your commitments", "You owe", "Waiting on",
-                                      "Intake and Review", "Week ahead", "Resolved", "Portfolio"])
+                                      "Intake", "Week ahead", "Resolved", "Portfolio"])
         self.assertTrue(o["bandFirst"])
         self.assertAlmostEqual(o["ratios"][0], 0.8, delta=0.005)                   # #113: the header's content in the 80% column (the band itself is full width: test_today_home)
         self.assertLessEqual(o["ratios"][1]*o["inner"], 980.5)                     # the sections at a 980px reading width, centred
@@ -347,7 +347,7 @@ class TodayBriefTests(PageTests):
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertTrue(o["td"].startswith("4 proposals to approve"))                  # #208: every proposal is counted in Intake and Review's one line
+        self.assertTrue(o["td"].startswith("4 proposals to approve"))                  # #208: every proposal is counted in Intake's one line
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """
@@ -497,7 +497,7 @@ class TodayHeadingTests(PageTests):
             for sig, count, height, text in v["rows"]:
                 self.assertEqual(sig, v["ref"], key)                                       # exactly the shared h2
                 self.assertEqual(sig[4], "none", key)                                      # no capitals
-                self.assertEqual(text if text == "Intake and Review" else text[:1] + text[1:].lower(), text, key)   # #168: Review is the tab's name, as Alan wrote it                  # sentence case in the words themselves
+                self.assertEqual(text[:1] + text[1:].lower(), text, key)   # #168: Review is the tab's name, as Alan wrote it                  # sentence case in the words themselves
                 self.assertIn(count, (None, "400"), key)                                   # the count beside it stays light
                 self.assertLess(height, 30, key)                                           # one line
 

@@ -237,7 +237,7 @@ export async function runReminder(r){ if(!r||!r.cmd||!viaServer()||RUNNING.has(r
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; }
   RUNNING.add(r.id); renderToday(); openChat();
   try{ await send(r.cmd); } finally{ RUNNING.delete(r.id); renderToday(); }
-  if(r.id.startsWith("weekly:")&&REV.some(x=>!x.done&&x.p&&(!r.id.split(":")[2]||x.p===r.id.split(":")[2]))) await say("A project with items awaiting review is skipped until they're reviewed.",`<button class="mini" data-go="review">Open Review</button>`); }
+  if(r.id.startsWith("weekly:")&&REV.some(x=>!x.done&&x.p&&(!r.id.split(":")[2]||x.p===r.id.split(":")[2]))) await say("A project with items awaiting review is skipped until they're reviewed.",`<button class="mini" data-go="review">Open Intake</button>`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0026(){
 $("#tBrief").addEventListener("click",async e=>{ const a=e.target.closest('a[href="#"]'); if(a) e.preventDefault();
@@ -361,14 +361,14 @@ document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".c
    people in the register, or no sweep yet) Today starts with five steps, each with a button that does it or opens where it is
    done, ticked as it is done: Connect Microsoft 365 (ticked by the first sweep, which needs it; the button opens Help's first
    hour), Add a project (Settings › Projects and register), Add people (Settings › People), Run the first sweep (ask creaite,
-   "sweep"), Open Review (ticked once Review has been opened in this browser). It goes when all five are ticked, or for good with
+   "sweep"), Open Intake (ticked once Intake has been opened in this browser). It goes when all five are ticked, or for good with
    Dismiss (kept with the dismissed reminders, so Settings › Reminders › Restore brings it back). Nothing it does is new. */
 export function setupSteps(){ const seen=store.get(SETUPK,{});
   return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the sweep has read your mail":`Connected in Claude itself, so the page can’t: connect it there, then say “${esc(SU_M365)}” in Claude Code. The first sweep confirms it`],
     ["proj","Add a project",P.length>0,"Add a project","proj",`${P.length} project${P.length===1?"":"s"}`],
     ["people","Add people",shared.REG.length>0,"Add people","people",`${shared.REG.length} in the people register`],
     ["sweep","Run the first sweep",swept(),"Run the first sweep","sweep",swept()?`Last swept ${esc(String(D.last_sweep))}`:"Reads mail, Teams and the calendar since the look-back days"],
-    ["review","Open Review",!!seen.review,"Open Review","review","Approve what's right; nothing reaches the tracker until you do"]]; }
+    ["review","Open Intake",!!seen.review,"Open Intake","review","Approve what's right; nothing reaches the tracker until you do"]]; }
 export function setupShown(){ if([...dismissedF(),...(D.dismissed||[])].includes(SETUPID)) return false;
   const st=setupSteps(), base=st.slice(0,4).some(x=>!x[2]); if(base){ const seen=store.get(SETUPK,{}); if(!seen.shown){ seen.shown=true; store.set(SETUPK,seen); } return true; }
   return !!store.get(SETUPK,{}).shown&&!st[4][2]; }

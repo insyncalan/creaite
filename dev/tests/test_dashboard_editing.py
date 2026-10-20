@@ -431,7 +431,7 @@ class DashboardEditingTests(unittest.TestCase):
 
     def test_command_palette_reaches_everything(self):
         go, views, acts, ms, files, inbox = self.result["ck"]
-        self.assertIn("Go to|Intake and Review", go)   # #232-C: one entry for the one page
+        self.assertIn("Go to|Intake", go)   # #232-C: one entry for the one page
         self.assertIn("Go to|Your commitments", go)
         self.assertIn("Views|Actions: Overdue", views)
         self.assertEqual(sorted(acts), ["Actions|Edit current state: ABC", "Actions|Generate current state: ABC"])

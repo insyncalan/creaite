@@ -1,4 +1,4 @@
-"""#232-B (v2.5.0): the mail and Teams proposals on Intake and Review say what changes, in the same rows as a meeting's:
+"""#232-B (v2.5.0): the mail and Teams proposals on Intake say what changes, in the same rows as a meeting's:
 an update in words ("Closes ABC-A-014: Draft the comms plan · status Open → Closed · Looks done"; a changed latest update as "and the latest update") with its evidence and source; a new action or risk with
 owner, date or impact; the same two groups; and the source line shows no times.
 
