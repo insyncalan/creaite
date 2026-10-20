@@ -170,8 +170,19 @@ def save_route(handler, req):
     with handler_lock(handler):
         out = report_doc.save_draft(own_header_logos(doc), req.get("base_version"))
         if out.get("ok"):
-            report_doc.remember_layout(code, kind, doc.get("layout"), client)
+            report_doc.remember_layout(code, kind, remembered(doc), client)
     return answer(handler, out)
+
+
+def remembered(doc):
+    """The layout Save remembers for the next report. v2.5.3 (#259, K3): a client report's layout keeps only the headings its
+    sections show as well (creaite_doc.derived_headings), never words stored only in its layout, which the next report would show."""
+    lay = doc.get("layout")
+    if doc.get("kind") != "client" or not isinstance(lay, dict):
+        return lay
+    shown = creaite_doc.derived_headings([s for s in doc.get("sections") or [] if isinstance(s, dict)])
+    heads = lay.get("headings") if isinstance(lay.get("headings"), dict) else {}
+    return {**lay, "headings": {k: v for k, v in heads.items() if isinstance(v, str) and shown.get(k) == v.strip()[:120]}}
 
 
 def own_header_logos(doc):

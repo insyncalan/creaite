@@ -1116,6 +1116,8 @@ def filed_client_data(doc):
     doc["sources"] = [{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending {shown(week)}" if week else "")}]
     lay = doc.get("layout") if isinstance(doc.get("layout"), dict) else {}
     doc["layout"] = {k: v for k, v in lay.items() if k in default_layout("client")}
+    if "headings" in doc["layout"]:     # v2.5.3 (#259, K3): the headings the sections show, never words stored only in the layout
+        doc["layout"]["headings"] = creaite_doc.derived_headings([s for s in doc.get("sections") or [] if isinstance(s, dict)])
     return doc
 
 

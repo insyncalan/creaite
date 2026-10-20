@@ -132,9 +132,9 @@ def derive_facts(doc):
     """v2.5.3 (#259, K3 / I19): a client report's stored fields that no output draws, made again in place from where they come
     from, never kept as stored: `items` (each item a row, tag or milestone list names, exactly as the client-safe facts of its week
     hold it: report_doc.client_items; one the facts don't hold is dropped), each source tag's `text` (its item's client title;
-    a tag of an item the facts don't hold goes), `based_on` (the approved internal week it locks to, report_doc.baseline) and the
-    layout's `headings` (the shown headings of creaite's own sections that differ from creaite's, as the sections hold them).
-    Fails closed: when the facts can't be read, no item, tag or based_on is kept."""
+    a tag of an item the facts don't hold goes) and `based_on` (the approved internal week it locks to, report_doc.baseline). The
+    layout's `headings` are made from the sections when the report is filed or exported (report_doc.filed_client_data); a draft keeps
+    its own, which Save remembers for the next report. Fails closed: when the facts can't be read, no item, tag or based_on is kept."""
     import client_leak
     by_id, base = _facts_of(doc)
     sections = [s for s in doc.get("sections") or [] if isinstance(s, dict)]
@@ -144,8 +144,6 @@ def derive_facts(doc):
     used = client_leak.refs({"sections": sections})
     doc["items"] = {r: copy.deepcopy(by_id[r]) for r in sorted(used) if r in by_id}
     doc["based_on"] = {"path": base["path"], "version": base["version"]} if base else None
-    if isinstance(doc.get("layout"), dict):
-        doc["layout"]["headings"] = _derived_headings(sections)
     return doc
 
 
@@ -168,7 +166,7 @@ def _derived_tags(tags, by_id):
             if isinstance(g, dict) and isinstance(g.get("ref"), str) and g["ref"] in by_id]
 
 
-def _derived_headings(sections):
+def derived_headings(sections):
     """{section id: heading} of creaite's own client sections whose heading differs from creaite's (as the layout keeps it)."""
     import report_doc
     own = {sid: h for sid, _t, h in report_doc.SECTIONS["client"]}
