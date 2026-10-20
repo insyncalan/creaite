@@ -15,17 +15,21 @@ sys.path.insert(0, str(HERE))
 for up in HERE.parents:                       # run from dev/tests/ or from dev/proposals/draft-delivery/
     if (up / "dev" / "tests" / "live_browser.py").exists():
         sys.path.insert(0, str(up / "dev" / "tests"))
+        sys.path.insert(0, str(up / "system" / "scripts"))
         break
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_dashboard import d, populate  # noqa: E402
 from test_tracker import action  # noqa: E402
 
 CREATE = "mcp__claude_ai_Microsoft_365__outlook_create_draft"
+M365 = "mcp__claude_ai_Microsoft_365__"
+SCOPES = M365 + "get_granted_scopes"
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
 args = sys.argv[1:]
 here = os.path.abspath(__file__)
 open(here + ".argv", "a", encoding="utf-8").write(json.dumps(args) + "\n")
+open(here + ".cwd", "a", encoding="utf-8").write(os.getcwd() + "\n")
 p = args[args.index("--") + 1]
 mode = open(here + ".mode").read().strip() if os.path.exists(here + ".mode") else "made"
 out = lambda o: print(json.dumps(o), flush=True)
@@ -80,6 +84,10 @@ class Route(LiveBrowserCase):
         p = Path(str(self.fake) + ".argv")
         return [json.loads(ln) for ln in p.read_text().splitlines()] if p.exists() else []
 
+    def cwds(self):
+        p = Path(str(self.fake) + ".cwd")
+        return [Path(ln).resolve() for ln in p.read_text().splitlines()] if p.exists() else []
+
     def staging(self, name):
         p = self.v.root / "system/staging" / name
         return json.loads(p.read_text()) if p.exists() else None
@@ -101,6 +109,40 @@ class Route(LiveBrowserCase):
         self.assertNotIn("--dangerously-skip-permissions", args)
         self.assertEqual(self.staging("chases.json")["chases"][-1]["ids"], ["ABC-A-006"])
         self.assertEqual(len(self.staging("drafted.json")["drafted"]), 1)
+
+    def test_neither_run_can_read_microsoft_365_and_neither_loads_the_vaults_context(self):
+        """#183 review M1: the draft run denies every Microsoft 365 reading tool (mail, Teams, SharePoint) so a prompt injection in
+        an email can't read one thing and put it in a draft; the access run denies all of them but get_granted_scopes. Neither
+        loads a setting source (so none of the vault's allow rules, CLAUDE.md or session-start rule), neither starts in the vault,
+        and ToolSearch is the only built-in."""
+        import permissions
+        self.mode("made")
+        self.assertTrue(self.post("/api/email/draft", self.body())["j"]["ok"])
+        self.assertTrue(self.post("/api/email/outlook-access", {})["j"]["can"])
+        draft, access = self.argv()[-2:]
+        for args, allowed in ((draft, [CREATE, "ToolSearch"]), (access, [SCOPES, "ToolSearch"])):
+            self.assertEqual(args[args.index("--allowedTools") + 1].split(","), allowed)
+            denied = args[args.index("--disallowedTools") + 1].split(",")
+            self.assertIn(M365 + "outlook_email_search", denied)                  # the reader a prompt injection would use
+            for name in permissions.M365_READ:
+                with self.subTest(tool=name, allowed=allowed):
+                    (self.assertNotIn if M365 + name in allowed else self.assertIn)(M365 + name, denied)
+            self.assertEqual(args[args.index("--setting-sources") + 1], "")
+            self.assertEqual(args[args.index("--tools") + 1], "ToolSearch")
+            self.assertIn("--no-session-persistence", args)
+        for cwd in self.cwds()[-2:]:
+            self.assertNotEqual(cwd, self.v.root.resolve())
+            self.assertNotIn(self.v.root.resolve(), cwd.parents)
+
+    def test_a_copy_is_never_refused_for_markup_but_a_draft_is(self):
+        """#183 review L1, through the route: the body carries the action, so a copy skips Outlook's markup check."""
+        bad = '<p><span>x</span></p>'
+        n = len(self.argv())
+        self.assertTrue(self.post("/api/email/draft", self.body(action="copied", html=bad))["j"]["ok"])
+        r = self.post("/api/email/draft", self.body(action="create", html=bad))
+        self.assertFalse(r["j"]["ok"])
+        self.assertIn("formatting Outlook won't take", r["j"]["reason"])
+        self.assertEqual(len(self.argv()), n)                                     # refused before any run
 
     def test_a_refusal_records_nothing(self):
         self.mode("refused")

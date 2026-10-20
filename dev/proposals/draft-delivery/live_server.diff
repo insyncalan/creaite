@@ -1,8 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index ded1d52..a6adfe4 100644
+index ded1d52..5ebd084 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -6724,6 +6724,121 @@ def chase_pane_route(handler, req):
+@@ -6724,6 +6724,128 @@ def chase_pane_route(handler, req):
  DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
  
  
@@ -22,23 +22,30 @@ index ded1d52..a6adfe4 100644
 +
 +
 +def draft_run_deny(allowed):
-+    """A draft or access run's deny list: DENY_TOOLS and every Microsoft 365 action (draft_delivery.denied_tools), F3's
-+    run_deny_extras() and every built-in but ToolSearch, once each; never a tool in `allowed` (a deny beats an allow)."""
++    """A draft or access run's deny list: DENY_TOOLS, every Microsoft 365 action (draft_delivery.denied_tools) and every Microsoft
++    365 READING tool (#183 review M1: the run must not read mail, Teams or SharePoint and put it in a draft), F3's
++    run_deny_extras() and every built-in but ToolSearch, once each; never a tool in `allowed` (a deny beats an allow), so the
++    access run keeps only get_granted_scopes and the draft run keeps none of the readers."""
 +    import draft_delivery
 +    out = []
-+    for t in list(DENY_TOOLS) + draft_delivery.denied_tools() + vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES:
++    for t in (list(DENY_TOOLS) + draft_delivery.denied_tools() + vault_permissions.m365_read_tools()
++              + vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES):
 +        if t not in out and t not in allowed:
 +            out.append(t)
 +    return out
 +
 +
 +def draft_run(prompt, allowed):
-+    """One headless run with only `allowed`; its stream-json events ([] when it couldn't start or timed out)."""
-+    cmd = prompt_last([claude_path(), "-p", "--output-format", "stream-json", "--verbose", "--no-session-persistence",
++    """One headless run with only `allowed`; its stream-json events ([] when it couldn't start or timed out). #183 review M1: it
++    starts in an empty folder outside the vault with NO_CONTEXT_ARGS (no setting sources, so none of the vault's allow rules, no
++    CLAUDE.md, no session-start rule; no session saved) and NARROW_BUILTINS (ToolSearch the only built-in); the Microsoft 365
++    connector is account-level, not a setting, so it stays (probed, Claude Code 2.1.x). MCP is not strict: it needs the connector."""
++    cmd = prompt_last([claude_path(), "-p", "--output-format", "stream-json", "--verbose", *NO_CONTEXT_ARGS, *NARROW_BUILTINS,
 +                       "--allowedTools", ",".join(allowed),
 +                       "--disallowedTools", ",".join(draft_run_deny(allowed))], prompt)
 +    try:
-+        r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=DRAFT_RUN_SECONDS, env=run_env())
++        r = subprocess.run(cmd, cwd=neutral_cwd(), capture_output=True, text=True, timeout=DRAFT_RUN_SECONDS,
++                           env={**run_env(), **NO_CONTEXT_ENV})
 +    except (subprocess.TimeoutExpired, OSError):
 +        return []
 +    events = []
@@ -70,7 +77,7 @@ index ded1d52..a6adfe4 100644
 +    import draft_delivery
 +    if (paths.ROOT / ".creaite-dev").exists():
 +        return handler.send(200, {"ok": False, "reason": "this is the development repository"})
-+    body = {k: req.get(k) for k in ("to", "subject", "html", "ids", "mode", "name")}
++    body = {k: req.get(k) for k in ("action", "to", "subject", "html", "ids", "mode", "name")}   # #183 review L1: action too, so a copy skips the markup check
 +    dreq, why = _draft_request(body)
 +    if why:
 +        return handler.send(200, {"ok": False, "reason": why})
