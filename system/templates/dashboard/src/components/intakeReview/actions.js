@@ -12,7 +12,7 @@ import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../cor
 import { shared } from "../../core/state.js";
 import { pName } from "../../core/data.js";
 import { srcShort } from "../../core/fields.js";
-import { irKindOf, irMatches, irUnsure } from "../../core/irFold.js";
+import { irFixed, irKindOf, irMatches, irNameOk, irUnsure } from "../../core/irFold.js";
 import { irAside, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRow, irRefreshing, irSetBusy, irSetChecking, irSetFileKind, irTick } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
@@ -28,7 +28,12 @@ export const irCanSetAside = m => !!m && m.stage === "arrived" && m.src !== "dra
 export const irFileKind = m => irKindOf(m, irFileKinds.value);
 /** Why Process all ready leaves a row out, or "": a private or confidential meeting, or a file that is not sure what it is. An explicit
     Process on the row itself is "naming it", as cx-minutes allows (Alan, via Jarvis, 19-10-2026). @param {any} m */
-export const irLeaveOut = m => (m.private || m.confidential ? "private" : irUnsure(m, irFileKinds.value) ? "type" : "");
+export const irLeaveOut = m => (m.private || m.confidential ? "private" : irBadName(m) ? "name" : irUnsure(m, irFileKinds.value) ? "type" : "");
+/** Why a row is left out, in the words the page uses (counts only: a confidential meeting is never named). */
+export const IR_LEFT_WHY = "private, confidential, not sure what it is or name not allowed";
+/** Whether a file's name cannot be sent to ask creaite (a control character, backtick, double quote or angle bracket): it must be
+    renamed first, and Process and Process all ready skip it. @param {any} m */
+export const irBadName = m => !!m && m.src === "upload" && !irNameOk(m.path || m.title);
 /** The rows Process all ready would run. */
 export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irBusy.value.includes(m.id));
 /** The ready rows it leaves out (counts only: a confidential meeting is never named). */
@@ -37,7 +42,7 @@ export const irLeftOut = () => irModel().meetings.filter((/** @type {any} */ m) 
     @param {any} m */
 export const irProcessWord = m => (m.src !== "upload" ? "Process" : irFileKind(m) === "transcript" ? "Make minutes" : irFileKind(m) === "minutes" ? "Find work items" : "Process");
 /** Choose what a file is (transcript or minutes); remembered in this browser. @param {any} m @param {string} kind */
-export function irChooseKind(m, kind) { if (m && m.src === "upload") irSetFileKind(m.path, kind); }
+export function irChooseKind(m, kind) { if (m && m.src === "upload" && !irFixed(m)) irSetFileKind(m, kind); }
 
 /** The calendar import row (D.meetings.rows) a model row came from. @param {any} m */
 const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || []).find((/** @type {any} */ x) => x.key === m.key) || null : null);
@@ -48,6 +53,7 @@ const whenOf = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}`
     @param {any} m @returns {Promise<boolean>} whether a draft came back */
 export async function irProcess(m) {
   if (!irCanProcess(m)) return false;
+  if (irBadName(m)) { irNote(m.id, "Rename this file to process it"); return false; }
   if (irUnsure(m, irFileKinds.value)) { irNote(m.id, "Say whether it is a transcript or minutes first"); return false; }
   if (!viaServer()) { snack("Processing needs the live server"); return false; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return false; }
@@ -71,6 +77,7 @@ export async function irProcess(m) {
       }
     }
     shared.RUNLABEL = label;
+    if (!irNameOk(file)) { irNote(m.id, "Rename this file to process it"); return false; }      /* the name becomes part of the command */
     const minutes = irFileKind(m) === "minutes";           /* #232-E1: someone else's minutes are read for work items; no new minutes are drafted */
     try {
       await askLive(minutes ? `process ${file} as minutes by someone else` : `process ${file}`,
@@ -90,7 +97,7 @@ export async function irProcessAll() {
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
   const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length;
   for (const id of ids) { const m = rowOf(id); if (m) await irProcess(m); }
-  if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: private, confidential or not sure what it is`);   /* counts only: a confidential meeting is never named */
+  if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);   /* counts only: a confidential meeting is never named */
 }
 
 /** The clear route's item for a row. @param {any} m @param {Record<string, any>} [extra] */

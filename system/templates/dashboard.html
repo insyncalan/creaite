@@ -4121,6 +4121,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
+@media (max-width:560px){#v-intake-review td.title{min-width:0}#v-intake-review .iracts{white-space:normal;width:auto;min-width:0}#v-intake-review .iracts .mini{margin:2px 0}}   /* a narrow window: the row's buttons wrap under each other, never clipped */
 #v-intake-review #irQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px;font-size:var(--ctl-fs)}   /* the Search box (#rvQ is the earlier Review page's) */
 #v-intake-review .ictrack{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}#v-intake-review .ictrack i{width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);display:inline-block}#v-intake-review .ictrack i.done{background:var(--muted)}#v-intake-review .ictrack i.now{background:var(--accent);border-color:var(--accent)}#v-intake-review .ictrack span.on{color:var(--ink);font-weight:600}
 #v-intake-review .icrack{margin:8px 0}#v-intake-review .icsum{margin:0 0 8px}#v-intake-review .irright{text-align:right;white-space:nowrap}
@@ -4558,6 +4559,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IR_FOLDED: () => IR_FOLDED,
     IR_KINDS: () => IR_KINDS,
     IR_KIND_KEY: () => IR_KIND_KEY,
+    IR_LEFT_WHY: () => IR_LEFT_WHY,
     IR_REASONS: () => IR_REASONS,
     IR_SECTIONS: () => IR_SECTIONS,
     IR_STAGES: () => IR_STAGES,
@@ -5821,6 +5823,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irAside: () => irAside,
     irAsk: () => irAsk,
     irAskReason: () => irAskReason,
+    irBadName: () => irBadName,
     irBlocked: () => irBlocked,
     irBulk: () => irBulk,
     irBusy: () => irBusy,
@@ -5842,6 +5845,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irFileKinds: () => irFileKinds,
     irFilterModel: () => irFilterModel,
     irFiltered: () => irFiltered,
+    irFixed: () => irFixed,
     irFoldClick: () => irFoldClick,
     irFolded: () => irFolded,
     irGroupsShown: () => irGroupsShown,
@@ -5861,6 +5865,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irMissing: () => irMissing,
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
+    irNameOk: () => irNameOk,
     irNotNeeded: () => irNotNeeded,
     irNote: () => irNote,
     irNotes: () => irNotes,
@@ -5873,6 +5878,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irProcessAll: () => irProcessAll,
     irProcessById: () => irProcessById,
     irProcessWord: () => irProcessWord,
+    irPruneKinds: () => irPruneKinds,
     irQuery: () => irQuery,
     irQueryWords: () => irQueryWords,
     irReady: () => irReady,
@@ -9373,7 +9379,20 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   var irIsFolded = (folded, sec) => sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec);
   var IR_KINDS = ["transcript", "minutes"];
-  var irKindOf = (m5, kinds) => !m5 || m5.src !== "upload" ? "transcript" : kinds && m5.path && IR_KINDS.includes(kinds[m5.path]) ? kinds[m5.path] : m5.ft || "";
+  var irFixed = (m5) => !!m5 && m5.src === "upload" && (!!m5.fixed || /\.(vtt|srt)$/i.test(String(m5.path || m5.title || "")));
+  function irKindOf(m5, kinds) {
+    if (!m5 || m5.src !== "upload" || irFixed(m5)) return "transcript";
+    const e4 = kinds && m5.path ? kinds[m5.path] : null;
+    if (e4 && typeof e4 === "object" && IR_KINDS.includes(e4.k) && e4.size === (m5.size || 0) && e4.day === (m5.day || "")) return e4.k;
+    return m5.ft || "";
+  }
+  function irNameOk(name) {
+    for (const ch2 of String(name == null ? "" : name)) {
+      const c5 = ch2.charCodeAt(0);
+      if (c5 < 32 || c5 === 127 || '`"<>'.includes(ch2)) return false;
+    }
+    return true;
+  }
   var irUnsure = (m5, kinds) => !!m5 && m5.src === "upload" && !irKindOf(m5, kinds);
   function irCounts(model, done, kinds) {
     const ms2 = model.meetings || [], left = (m5) => {
@@ -9485,6 +9504,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function irAfterData() {
     irOpen.value = irKeepOpen(irOpen.value, irModel());
+    irPruneKinds();
     irTick.value++;
   }
   var irLiveCounts = () => {
@@ -9493,7 +9513,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       /** @type {any} */
       (D.inbox || []).filter((f5) => f5.state === "new" && f5.uploaded !== false && !f5.event && !known2.has(f5.path))
     );
-    const extra = fresh.length, sure = fresh.filter((f5) => irKindOf({ src: "upload", path: f5.path, ft: f5.ft }, kinds)).length;
+    const extra = fresh.length, sure = fresh.filter((f5) => irKindOf({ src: "upload", path: f5.path, ft: f5.ft, size: f5.size, day: f5.date }, kinds)).length;
     const late = irMissing().length;
     const k5 = { ...c5, to_approve: c5.to_approve + late, badge: c5.badge + late };
     return extra ? { ...k5, arrived: k5.arrived + extra, ready: k5.ready + sure, need_type: k5.need_type + extra - sure, badge: k5.badge + sure, all: k5.all + extra } : k5;
@@ -9523,25 +9543,49 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   var IR_KIND_KEY = "creaite-ir-filekind";
   var irFileKinds = y3(
-    /** @type {Record<string, string>} */
+    /** @type {Record<string, {k: string, size: number, day: string}>} */
     (() => {
       try {
         const v5 = store.get(IR_KIND_KEY, {});
-        return v5 && typeof v5 === "object" && !Array.isArray(v5) ? Object.fromEntries(Object.entries(v5).filter(([, k5]) => IR_KINDS.includes(
-          /** @type {string} */
-          k5
-        ))) : {};
+        if (!v5 || typeof v5 !== "object" || Array.isArray(v5)) return {};
+        return Object.fromEntries(Object.entries(v5).filter(([, e4]) => e4 && typeof e4 === "object" && IR_KINDS.includes(
+          /** @type {any} */
+          e4.k
+        )));
       } catch (x5) {
         return {};
       }
     })()
   );
-  function irSetFileKind(path, kind) {
-    if (!path || !IR_KINDS.includes(kind)) return;
-    irFileKinds.value = { ...irFileKinds.value, [path]: kind };
+  var irSaveKinds = () => {
     try {
       store.set(IR_KIND_KEY, irFileKinds.value);
     } catch (x5) {
+    }
+  };
+  function irSetFileKind(m5, kind) {
+    if (!m5 || !m5.path || !IR_KINDS.includes(kind)) return;
+    irFileKinds.value = { ...irFileKinds.value, [m5.path]: { k: kind, size: m5.size || 0, day: m5.day || "" } };
+    irSaveKinds();
+  }
+  function irPruneKinds() {
+    const inbox = (
+      /** @type {any[]|undefined} */
+      /** @type {any} */
+      D.inbox
+    );
+    if (!Array.isArray(inbox)) return;
+    const cur = irFileKinds.value, keep2 = (
+      /** @type {typeof cur} */
+      {}
+    );
+    for (const [p6, e4] of Object.entries(cur)) {
+      const f5 = inbox.find((x5) => x5.path === p6);
+      if (f5 && e4.size === (f5.size || 0) && e4.day === (f5.date || "")) keep2[p6] = e4;
+    }
+    if (Object.keys(keep2).length !== Object.keys(cur).length) {
+      irFileKinds.value = keep2;
+      irSaveKinds();
     }
   }
   var irQuery = y3("");
@@ -74413,18 +74457,24 @@ ${d5.text}`);
   var irCanProcess = (m5) => !!m5 && m5.stage === "arrived" && m5.state === "ready" && m5.src !== "draft";
   var irCanSetAside = (m5) => !!m5 && m5.stage === "arrived" && m5.src !== "draft" && !irBusy.value.includes(m5.id);
   var irFileKind = (m5) => irKindOf(m5, irFileKinds.value);
-  var irLeaveOut = (m5) => m5.private || m5.confidential ? "private" : irUnsure(m5, irFileKinds.value) ? "type" : "";
+  var irLeaveOut = (m5) => m5.private || m5.confidential ? "private" : irBadName(m5) ? "name" : irUnsure(m5, irFileKinds.value) ? "type" : "";
+  var IR_LEFT_WHY = "private, confidential, not sure what it is or name not allowed";
+  var irBadName = (m5) => !!m5 && m5.src === "upload" && !irNameOk(m5.path || m5.title);
   var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && !irBusy.value.includes(m5.id));
   var irLeftOut = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !!irLeaveOut(m5) && !irBusy.value.includes(m5.id));
   var irProcessWord = (m5) => m5.src !== "upload" ? "Process" : irFileKind(m5) === "transcript" ? "Make minutes" : irFileKind(m5) === "minutes" ? "Find work items" : "Process";
   function irChooseKind(m5, kind) {
-    if (m5 && m5.src === "upload") irSetFileKind(m5.path, kind);
+    if (m5 && m5.src === "upload" && !irFixed(m5)) irSetFileKind(m5, kind);
   }
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
   var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
+    if (irBadName(m5)) {
+      irNote(m5.id, "Rename this file to process it");
+      return false;
+    }
     if (irUnsure(m5, irFileKinds.value)) {
       irNote(m5.id, "Say whether it is a transcript or minutes first");
       return false;
@@ -74473,6 +74523,10 @@ ${d5.text}`);
         }
       }
       shared.RUNLABEL = label;
+      if (!irNameOk(file)) {
+        irNote(m5.id, "Rename this file to process it");
+        return false;
+      }
       const minutes = irFileKind(m5) === "minutes";
       try {
         await askLive(
@@ -74504,7 +74558,7 @@ ${d5.text}`);
       const m5 = rowOf(id2);
       if (m5) await irProcess(m5);
     }
-    if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: private, confidential or not sure what it is`);
+    if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
   }
   var asideItem = (m5, extra) => ({ key: m5.key || m5.path, day: m5.src === "upload" ? TODAY : m5.day, start: m5.start || "", title: m5.title, ...extra });
   async function setAside(ms2, extra, what) {
@@ -74766,6 +74820,10 @@ ${d5.text}`);
   }
   function FileKind({ m: m5 }) {
     const k5 = irFileKind(m5);
+    if (irBadName(m5)) return /* @__PURE__ */ u4("div", { class: "why irkind", "data-irkind": "name", children: [
+      /* @__PURE__ */ u4("span", { class: "tag warn", children: "Name not allowed" }),
+      " · Rename this file to process it."
+    ] });
     if (!k5) return /* @__PURE__ */ u4("div", { class: "why irkind", "data-irkind": "unsure", children: [
       /* @__PURE__ */ u4("span", { class: "tag warn", children: "Not sure" }),
       " · Is this a transcript or minutes?"
@@ -74775,7 +74833,7 @@ ${d5.text}`);
       " · ",
       k5 === "transcript" ? "It will be turned into minutes, then checked for work items." : "Written by someone else: it will be checked for work items, and no new minutes are drafted.",
       " ",
-      /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "ftype", onClick: () => irChooseKind(m5, k5 === "transcript" ? "minutes" : "transcript"), children: k5 === "transcript" ? "It is minutes" : "It is a transcript" })
+      irFixed(m5) ? null : /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "ftype", onClick: () => irChooseKind(m5, k5 === "transcript" ? "minutes" : "transcript"), children: k5 === "transcript" ? "It is minutes" : "It is a transcript" })
     ] });
   }
   function FileFacts({ m: m5, n: n4 }) {
@@ -74803,9 +74861,9 @@ ${d5.text}`);
         /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "removefile", title: "Take it out of Intake (kept in backups)", onClick: () => irRemoveFile(m5), children: "Remove" })
       ] }) : null
     ] }) : null;
-    const unsure = m5.src === "upload" && !irFileKind(m5);
+    const unsure = m5.src === "upload" && !irFileKind(m5), badName = irBadName(m5);
     return /* @__PURE__ */ u4(S2, { children: [
-      unsure ? /* @__PURE__ */ u4(S2, { children: [
+      badName ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "process", disabled: true, title: "Rename this file to process it", children: irProcessWord(m5) }) : unsure ? /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "ft", "data-t": "transcript", title: "It is a transcript: it will be turned into minutes", onClick: () => irChooseKind(m5, "transcript"), children: "Transcript" }),
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "ft", "data-t": "minutes", title: "It is minutes: it will be checked for work items", onClick: () => irChooseKind(m5, "minutes"), children: "Minutes" })
@@ -75431,7 +75489,7 @@ ${d5.text}`);
   }
   function ProcessAll({ n: n4, left }) {
     const blocked2 = irBlocked();
-    const lefts = left ? `${left} left out: private, confidential or not sure what it is` : "";
+    const lefts = left ? `${left} left out: ${IR_LEFT_WHY}` : "";
     return /* @__PURE__ */ u4(
       "button",
       {
@@ -75605,7 +75663,9 @@ ${d5.text}`);
       ] }),
       irLeftOut().length ? /* @__PURE__ */ u4("p", { class: "icsub irleft", "data-irleft": "1", children: [
         irLeftOut().length,
-        " left out of Process all ready: private, confidential or not sure what it is."
+        " left out of Process all ready: ",
+        IR_LEFT_WHY,
+        "."
       ] }) : null,
       view === "board" ? /* @__PURE__ */ u4(BoardView, { model }) : view === "two" ? /* @__PURE__ */ u4(TwoPanes, { model, list: model.meetings }) : /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4(StagePipe, { c: c5 }),
@@ -77608,11 +77668,14 @@ ${d5.text}`);
         "irBulk",
         "irBusy",
         "irChecking",
+        "irChooseKind",
         "irCounts",
         "irDone",
         "irEsc",
+        "irFileKind",
         "irFileKinds",
         "irFiltered",
+        "irFixed",
         "irFoldClick",
         "irFolded",
         "irGroupsShown",
@@ -77620,10 +77683,12 @@ ${d5.text}`);
         "irIsFolded",
         "irKeepOpen",
         "irKindOf",
+        "irLeftOut",
         "irLive",
         "irLiveCounts",
         "irMissing",
         "irModel",
+        "irNameOk",
         "irNotNeeded",
         "irNotes",
         "irOpen",
@@ -77632,6 +77697,7 @@ ${d5.text}`);
         "irProcess",
         "irProcessById",
         "irQuery",
+        "irReady",
         "irRefreshing",
         "irSel",
         "irSetChecking",

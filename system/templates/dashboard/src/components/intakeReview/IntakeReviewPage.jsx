@@ -16,7 +16,7 @@ import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
@@ -67,7 +67,7 @@ function FoldSection({ sec, title, n, children }) {
     redraws when they change (a component whose props are the same is left as it was). @param {{n: number, left: number}} props */
 function ProcessAll({ n, left }) {
   const blocked = irBlocked();
-  const lefts = left ? `${left} left out: private, confidential or not sure what it is` : "";
+  const lefts = left ? `${left} left out: ${IR_LEFT_WHY}` : "";
   return <button type="button" class="btn" data-ira="processall" disabled={!n || blocked} data-left={left || undefined}
     title={blocked ? "ask creaite is busy; try again when it's finished" : n ? lefts : lefts || "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
@@ -155,7 +155,7 @@ function IntakeReviewView() {
           ))}
         </span>
       </div>
-      {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: private, confidential or not sure what it is.</p> : null}
+      {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: {IR_LEFT_WHY}.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
       <FoldSection sec="later" title="Later" n={model.later.length}>
         {model.later.length ? <ul class="irlist">{model.later.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing set aside for later. A meeting comes back here when its transcript arrives.</div>}

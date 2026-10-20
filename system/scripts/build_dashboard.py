@@ -539,15 +539,26 @@ def _inbox_head(f, eid):
     """The first 4 KB of a .txt or .md file that was not loaded from the calendar (what file_kind reads), else ""."""
     if f.suffix.lower() not in (".txt", ".md") or eid:
         return ""
-    with open(f, "rb") as fh:
-        return fh.read(4096).decode("utf-8", "replace")
+    try:
+        with open(f, "rb") as fh:
+            return fh.read(4096).decode("utf-8", "replace")
+    except OSError:                       # unreadable (no permission) or removed while building: its kind is then not sure
+        return ""
+
+
+def _file_digest(f):
+    """A file's SHA-256, or None when it cannot be read (no permission, or removed while building)."""
+    import hashlib
+    try:
+        return hashlib.sha256(f.read_bytes()).hexdigest()
+    except OSError:
+        return None
 
 
 def inbox(projects):
     """Files waiting in inbox/ for the Inbox view (BL-42): type, size, likely project and state (and, #232-A1, `ft`: file_kind)."""
     if not paths.INBOX.is_dir():
         return []
-    import hashlib
     signals = register_signals()
     codes = {p["code"] for p in projects}
     drafts = {}
@@ -568,8 +579,8 @@ def inbox(projects):
                       None) or next((c for c, words in signals if c in codes and any(w in name for w in words)), None)
         digest = None
         if f.stat().st_size in filed:
-            digest = hashlib.sha256(f.read_bytes()).hexdigest()
-        done = digest and any(hashlib.sha256(g.read_bytes()).hexdigest() == digest for g in filed[f.stat().st_size])
+            digest = _file_digest(f)
+        done = digest and any(_file_digest(g) == digest for g in filed[f.stat().st_size])
         state = "draft" if rel in drafts else "processed" if done else "new"
         import minutes, transcripts                       # a transcript or chat loaded from the calendar (BL-42 phase 3) carries its event ID
         eid = transcripts.file_event_id(f) if f.suffix.lower() in (".vtt", ".txt") else None
@@ -2825,7 +2836,8 @@ def _ir_upload_row(f, by_path, today, stale_after):
     ft = f["ft"] if "ft" in f else file_kind(f.get("name"), "", f.get("event"))
     r = _ir_row("upload", f.get("path"), by_path.get(f.get("path"), []), "done" if state != "new" else "ready",
                 today, stale_after, key=f.get("path"), path=f.get("path"), title=f.get("name") or "",
-                day=f.get("date") or "", p=f.get("p"), ext=f.get("ext"), ft=ft or "", size=f.get("size") or 0)
+                day=f.get("date") or "", p=f.get("p"), ext=f.get("ext"), ft=ft or "", size=f.get("size") or 0,
+                fixed=(f.get("ext") or "").lower() in ("vtt", "srt"))             # a transcript by its extension: no switch
     return {**r, "already": True} if already else r
 
 
@@ -2896,7 +2908,8 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=
     {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
     row: {id, src (calendar|upload|draft), key, mkey, path, title, day, start, end, p, stage (arrived|drafted|approved),
     state (ready|waiting|proposals|done), age, stale, files, groups {needs, routine}; a calendar row also private, teams, tx,
-    later_back; an upload ext, ft (transcript|minutes|"" not sure), size, and already (a copy already filed)}."""
+    later_back; an upload ext, ft (transcript|minutes|"" not sure), size, fixed (a .vtt or .srt: no switch) and already (a copy already
+    filed)}."""
     by_mkey, by_path, mail, other = _ir_buckets(queue, meta)
     cal = meetings.get("rows") or []
     out = [_ir_calendar(m, by_mkey, today, stale_after) for m in cal]

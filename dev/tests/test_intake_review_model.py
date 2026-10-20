@@ -175,6 +175,33 @@ class FileKindTests(unittest.TestCase):
         self.assertEqual(m["counts"]["ready"], 0)
 
 
+class UnreadableFileTests(ClearData, unittest.TestCase):
+    """#232-A round 2: a file in inbox/ that cannot be read (no permission, removed while the page is built) does not stop the build."""
+    NOW = MONDAY
+
+    def test_an_unreadable_text_file_is_listed_as_not_sure_and_the_build_goes_on(self):
+        import os
+        (self.v.root / "inbox").mkdir(exist_ok=True)
+        f = self.v.root / "inbox" / "locked.txt"
+        f.write_text("WEBVTT\n\n00:00:01.000 --> 00:00:05.000\nHi\n")
+        (self.v.root / "inbox" / "open.txt").write_text("00:01 Sara Khan: a\n00:02 Omar Hale: b\n00:03 Sara Khan: c\n")
+        os.chmod(f, 0)
+        self.addCleanup(lambda: f.exists() and os.chmod(f, 0o644))
+        if os.access(f, os.R_OK):
+            self.skipTest("the files are readable whatever their mode here (running as root)")
+        self.v.run(script="build_dashboard.py")
+        d = page_data(self.v)
+        files = {x["name"]: x for x in d["inbox"]}
+        self.assertEqual((files["locked.txt"]["ft"], files["open.txt"]["ft"]), ("", "transcript"))
+        rows = {r["title"]: r for r in d["intake_review"]["meetings"]}
+        self.assertEqual((rows["locked.txt"]["ft"], rows["locked.txt"]["fixed"]), ("", False))
+
+    def test_a_vtt_is_fixed_as_a_transcript(self):
+        files = [{"name": "x.vtt", "path": "inbox/x.vtt", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "vtt", "size": 1}]
+        r = build_dashboard.intake_review_model({}, files, [], {}, TODAY, 14)["meetings"][0]
+        self.assertEqual((r["ft"], r["fixed"]), ("transcript", True))
+
+
 class HoldReasonTests(unittest.TestCase):
     """The one routine rule: what `review.py bulk` approves is exactly what the page calls routine."""
 

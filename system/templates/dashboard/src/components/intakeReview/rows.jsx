@@ -7,7 +7,8 @@ import { fd, TODAY } from "../../core/page.js";
 import { irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen } from "../../stores/intakeReview.js";
 import { IconButton } from "../IconButton.jsx";
 import { IrIcon } from "./icons.js";
-import { irAskReason, irCanCheck, irCanProcess, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
+import { irFixed } from "../../core/irFold.js";
+import { irAskReason, irBadName, irCanCheck, irCanProcess, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
 export const IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
@@ -65,13 +66,14 @@ export function StageTrack({ m }) {
     read for work items); a file that is not sure asks. Shown while the file waits. @param {{m: any}} props */
 export function FileKind({ m }) {
   const k = irFileKind(m);
+  if (irBadName(m)) return <div class="why irkind" data-irkind="name"><span class="tag warn">Name not allowed</span> · Rename this file to process it.</div>;
   if (!k) return <div class="why irkind" data-irkind="unsure"><span class="tag warn">Not sure</span> · Is this a transcript or minutes?</div>;
   return (
     <div class="why irkind" data-irkind={k}>
       <span class="tag">{k === "transcript" ? "Transcript" : "Minutes"}</span> · {k === "transcript"
         ? "It will be turned into minutes, then checked for work items."
         : "Written by someone else: it will be checked for work items, and no new minutes are drafted."}{" "}
-      <button type="button" class="linkbtn" data-ira="ftype" onClick={() => irChooseKind(m, k === "transcript" ? "minutes" : "transcript")}>{k === "transcript" ? "It is minutes" : "It is a transcript"}</button>
+      {irFixed(m) ? null : <button type="button" class="linkbtn" data-ira="ftype" onClick={() => irChooseKind(m, k === "transcript" ? "minutes" : "transcript")}>{k === "transcript" ? "It is minutes" : "It is a transcript"}</button>}
     </div>
   );
 }
@@ -98,9 +100,9 @@ export function RowActions({ m, mini }) {
   if (running) return <button type="button" class="mini" disabled data-ira="processing">Processing</button>;
   if (m.stage === "drafted") return mini ? null : <button type="button" class="mini" data-ira="open" onClick={() => irClickMeeting(m.id)}>{open ? "Close" : "Check them"}</button>;
   if (!irCanSetAside(m)) return m.stage === "approved" ? <><span class="icsub">Done</span>{m.already ? <>{" "}<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)" onClick={() => irRemoveFile(m)}>Remove</button></> : null}</> : null;
-  const unsure = m.src === "upload" && !irFileKind(m);
+  const unsure = m.src === "upload" && !irFileKind(m), badName = irBadName(m);
   return <>
-    {unsure ? <>
+    {badName ? <button type="button" class="mini" data-ira="process" disabled title="Rename this file to process it">{irProcessWord(m)}</button> : unsure ? <>
       <button type="button" class="mini" data-ira="ft" data-t="transcript" title="It is a transcript: it will be turned into minutes" onClick={() => irChooseKind(m, "transcript")}>Transcript</button>{" "}
       <button type="button" class="mini" data-ira="ft" data-t="minutes" title="It is minutes: it will be checked for work items" onClick={() => irChooseKind(m, "minutes")}>Minutes</button>
     </> : irCanProcess(m) ? <button type="button" class="mini" data-ira="process" disabled={blocked} title={blocked ? "ask creaite is busy; try again when it's finished" : ""}

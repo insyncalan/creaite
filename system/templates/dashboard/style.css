@@ -4111,6 +4111,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
+@media (max-width:560px){#v-intake-review td.title{min-width:0}#v-intake-review .iracts{white-space:normal;width:auto;min-width:0}#v-intake-review .iracts .mini{margin:2px 0}}   /* a narrow window: the row's buttons wrap under each other, never clipped */
 #v-intake-review #irQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px;font-size:var(--ctl-fs)}   /* the Search box (#rvQ is the earlier Review page's) */
 #v-intake-review .ictrack{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}#v-intake-review .ictrack i{width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);display:inline-block}#v-intake-review .ictrack i.done{background:var(--muted)}#v-intake-review .ictrack i.now{background:var(--accent);border-color:var(--accent)}#v-intake-review .ictrack span.on{color:var(--ink);font-weight:600}
 #v-intake-review .icrack{margin:8px 0}#v-intake-review .icsum{margin:0 0 8px}#v-intake-review .irright{text-align:right;white-space:nowrap}

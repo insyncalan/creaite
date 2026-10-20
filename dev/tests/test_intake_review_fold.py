@@ -31,10 +31,16 @@ out.fold = [f.irIsFolded({}, "later"), f.irIsFolded({}, "not_needed"), f.irIsFol
 const f1 = f.irFoldClick({}, "later"), f2 = f.irFoldClick(f1, "later"), f3 = f.irFoldClick({}, "mail");
 out.foldClicks = [f.irIsFolded(f1, "later"), f.irIsFolded(f2, "later"), f.irIsFolded(f3, "mail")];
 out.counts = f.irCounts(M, none); out.countsAfter = f.irCounts(M, d([5, 6]));
-const up = (path, ft) => ({ id: "u" + path, src: "upload", path, ft, stage: "arrived", state: "ready", groups: { needs: [], routine: [] } });
+const up = (path, ft) => ({ id: "u" + path, src: "upload", path, ft, size: 5, day: "2026-10-05", stage: "arrived", state: "ready", groups: { needs: [], routine: [] } });
 const U = { ...M, meetings: [...M.meetings, up("inbox/a.docx", "")] };
-out.unsureCounts = f.irCounts(U, none); out.chosenCounts = f.irCounts(U, none, { "inbox/a.docx": "minutes" });
-out.kinds = [f.irKindOf(up("p", "transcript")), f.irKindOf(up("p", "transcript"), { p: "minutes" }), f.irKindOf(up("p", "")), f.irKindOf({ src: "calendar" })];
+out.unsureCounts = f.irCounts(U, none); out.chosenCounts = f.irCounts(U, none, { "inbox/a.docx": { k: "minutes", size: 5, day: "2026-10-05" } });
+out.kinds = [f.irKindOf(up("p", "transcript")), f.irKindOf(up("p", "transcript"), { p: { k: "minutes", size: 5, day: "2026-10-05" } }), f.irKindOf(up("p", "")), f.irKindOf({ src: "calendar" })];
+const mins = { k: "minutes", size: 5, day: "2026-10-05" };
+out.stale = [f.irKindOf(up("p", "transcript"), { p: { ...mins, size: 6 } }), f.irKindOf(up("p", "transcript"), { p: { ...mins, day: "2026-10-06" } }),
+  f.irKindOf(up("p", "transcript"), { p: "minutes" }), f.irKindOf(up("p", ""), { p: { ...mins, k: "bogus" } })];
+out.fixed = [f.irKindOf({ ...up("inbox/x.vtt", "transcript") }, { "inbox/x.vtt": mins }), f.irKindOf({ ...up("inbox/x.srt", "") }, { "inbox/x.srt": mins }),
+  f.irKindOf({ ...up("inbox/x.docx", "minutes"), fixed: true }, {}), f.irFixed(up("inbox/x.vtt", "")), f.irFixed({ src: "calendar", path: "a.vtt" })];
+out.names = ["a b (1).vtt", "x; rm y.txt", "it's & ok+1.md", "a\\nb.txt", "a\\tb.txt", "a\\u0000b", "a`b`", "a\\"b", "<b>x", "x>y", "\\u007f", "", null].map(f.irNameOk);
 out.esc = [f.irEsc({peek: 3, open: "m1"}), f.irEsc({peek: null, open: "m1"})];
 out.views = [f.irViewNorm("board"), f.irViewNorm("two"), f.irViewNorm("nonsense"), f.irViewNorm(null)];
 console.log(JSON.stringify(out));
@@ -87,6 +93,14 @@ class FoldRulesTests(unittest.TestCase):
         self.assertEqual((o["unsureCounts"]["ready"], o["unsureCounts"]["need_type"], o["unsureCounts"]["badge"]), (1, 1, 8))      # m3 is a file of unknown kind
         self.assertEqual((o["chosenCounts"]["ready"], o["chosenCounts"]["need_type"]), (2, 0))                              # its chosen kind makes it ready
         self.assertEqual(o["kinds"], ["transcript", "minutes", "", "transcript"])
+
+    def test_a_remembered_kind_counts_only_for_the_file_it_was_made_for(self):
+        o = self.o
+        self.assertEqual(o["stale"], ["transcript", "transcript", "transcript", ""])              # another size, another day, an old bare word, an unknown kind
+        self.assertEqual(o["fixed"], ["transcript", "transcript", "transcript", True, False])      # a .vtt or .srt (or one the server fixes) cannot be switched
+
+    def test_which_file_names_may_be_sent_in_a_command(self):
+        self.assertEqual(self.o["names"], [True, True, True, False, False, False, False, False, False, False, False, True, True])
 
     def test_esc_closes_the_peek_first_then_the_meeting(self):
         self.assertEqual(self.o["esc"], [{"peek": None, "open": "m1"}, {"peek": None, "open": None}])

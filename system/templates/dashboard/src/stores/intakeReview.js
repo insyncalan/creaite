@@ -55,14 +55,14 @@ export function irClickStage(g) { irStage.value = irStageClick(irStage.value, g)
 /** @param {string} sec */
 export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); }
 /** After new data: the open meeting stays open while it is in the list. */
-export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irTick.value++; }
+export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irPruneKinds(); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
 export const irLiveCounts = () => {
   const kinds = irFileKinds.value, c = irCounts(irModel(), irDone, kinds), known = new Set((irModel().meetings || []).map(m => m.path).filter(Boolean));
   /* #232-C: a file that arrived since the model was built (the quicker file refresh does not rebuild it) counts at once, as the
      Intake badge did; a transcript Calendar import loaded belongs to its meeting's row */
   const fresh = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path));
-  const extra = fresh.length, sure = fresh.filter((/** @type {any} */ f) => irKindOf({ src: "upload", path: f.path, ft: f.ft }, kinds)).length;   /* a file of unknown kind is not ready */
+  const extra = fresh.length, sure = fresh.filter((/** @type {any} */ f) => irKindOf({ src: "upload", path: f.path, ft: f.ft, size: f.size, day: f.date }, kinds)).length;   /* a file of unknown kind is not ready */
   const late = irMissing().length;   /* proposals the quick refresh brought into Review before the model was rebuilt */
   const k = { ...c, to_approve: c.to_approve + late, badge: c.badge + late };
   return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + sure, need_type: k.need_type + extra - sure, badge: k.badge + sure, all: k.all + extra } : k;
@@ -88,14 +88,28 @@ export function irSetChecking(id, on) { irChecking.value = on ? [...irChecking.v
 /** The kind (transcript or minutes) chosen for a file, by its path: this browser's, kept in localStorage (never shared, never in
     settings.json); another browser derives it again from the file's name. */
 export const IR_KIND_KEY = "creaite-ir-filekind";
-export const irFileKinds = signal(/** @type {Record<string, string>} */ ((() => {
-  try { const v = store.get(IR_KIND_KEY, {}); return v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, k]) => IR_KINDS.includes(/** @type {string} */ (k)))) : {}; } catch (x) { return {}; }
+export const irFileKinds = signal(/** @type {Record<string, {k: string, size: number, day: string}>} */ ((() => {
+  try {
+    const v = store.get(IR_KIND_KEY, {});
+    if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+    return Object.fromEntries(Object.entries(v).filter(([, e]) => e && typeof e === "object" && IR_KINDS.includes(/** @type {any} */ (e).k)));   /* an older entry (a bare word) has no size: it is dropped */
+  } catch (x) { return {}; }
 })()));
-/** Choose a file's kind. @param {string} path @param {string} kind */
-export function irSetFileKind(path, kind) {
-  if (!path || !IR_KINDS.includes(kind)) return;
-  irFileKinds.value = { ...irFileKinds.value, [path]: kind };
-  try { store.set(IR_KIND_KEY, irFileKinds.value); } catch (x) { /* storage blocked: this page only */ }
+const irSaveKinds = () => { try { store.set(IR_KIND_KEY, irFileKinds.value); } catch (x) { /* storage blocked: this page only */ } };
+/** Choose a file's kind. The choice is kept with the file's size and day, so it is never taken for another file that later has the
+    same path. @param {any} m the file's row @param {string} kind */
+export function irSetFileKind(m, kind) {
+  if (!m || !m.path || !IR_KINDS.includes(kind)) return;
+  irFileKinds.value = { ...irFileKinds.value, [m.path]: { k: kind, size: m.size || 0, day: m.day || "" } };
+  irSaveKinds();
+}
+/** Drop the choices whose file is gone from inbox/ or is no longer the file they were made for (new data brings D.inbox). */
+export function irPruneKinds() {
+  const inbox = /** @type {any[]|undefined} */ (/** @type {any} */ (D).inbox);
+  if (!Array.isArray(inbox)) return;
+  const cur = irFileKinds.value, keep = /** @type {typeof cur} */ ({});
+  for (const [p, e] of Object.entries(cur)) { const f = inbox.find(x => x.path === p); if (f && e.size === (f.size || 0) && e.day === (f.date || "")) keep[p] = e; }
+  if (Object.keys(keep).length !== Object.keys(cur).length) { irFileKinds.value = keep; irSaveKinds(); }
 }
 /** The Search box's text: filters the meetings, files and mail rows on this page (client side; never saved). */
 export const irQuery = signal("");
