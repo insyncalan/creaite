@@ -9,25 +9,32 @@ CREAITE_MUTANT=<name> breaks one safeguard in the throwaway vault's copy of the 
 each mutant against its own test and requires it to go red.
 
 What is covered (the issue's (a) to (g)):
-(a) Delete note from the page moves the note into <engagement>/_Archive/<notes folder>/ with no card pending, one files-log line
+(a) Delete note from the page moves the note into <engagement>/<archive folder>/<notes folder>/ with no card pending, one files-log line
     and no marker left; the same route without the token, with another Host, or without the browser's same-origin marks moves
     nothing; the same move written into staging by hand is never applied; the old card route has gone.
-(b) ask creaite can't delete a note by any route: filechange.py move (never: _Archive) and delete (a card), a hand-staged or
+(b) ask creaite can't delete a note on its own: filechange.py move (never: the archive folder) and delete (a card), a hand-staged or
     drafted proposal, a CHANGE card, and the new route (it has no HTTP tool: WebFetch and curl are denied and the hook refuses
     curl; the token is in no file and no run's environment; a script's plain call with the token is refused).
 (c) a note changed since it was shown is refused with a plain message and left in place.
 (d) a name taken in the archive gets -2.
 (e) Undo and Move back restore it exactly (bytes and modification time); a note's Move back is direct too, never a card.
 (f) reports_back and a project's archive keep their card; the direct Move back refuses a report.
-(g) a path outside the notes folder, a folder, two files, a symlink, a name with .., a move into another engagement: refused.
-Everything is fictional and temporary.
+(g) a path outside the notes folder, a folder, two files, a symlink (also to a sibling note), a name with .., another case or
+    Unicode form of the name, a name with a line break, a linked archive folder, a move into another engagement: refused.
+Also: a failed apply leaves nothing in staging; the apply's number is tracker.py's own; Undo is in the files log too.
+The archive folder is paths.ARCHIVE (ARCHIVE below: _Archive today, 99 Archive after #252); a note in an older name's folder
+still moves back. Everything is fictional and temporary.
 """
 import json
 import os
 import re
+import shutil
+import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
+import unicodedata
 import unittest
 import urllib.error
 import urllib.request
@@ -41,6 +48,8 @@ from test_tracker import ABC, Vault  # noqa: E402
 
 os.environ.setdefault("CREAITE_NO_LAUNCH", "1")
 
+# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
+ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (REPO / "system/scripts/paths.py").read_text(encoding="utf-8"), re.M).group(1)
 DIFF_IN = "PAGE_MOVES = " in (REPO / "system/scripts/reach.py").read_text(encoding="utf-8")
 FORCE = os.environ.get("CREAITE_255_FORCE") == "1"
 
@@ -70,7 +79,25 @@ MUTANTS = {
                         "    same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server's port on a loopback host).\"\"\"\n"
                         "    return True\n"),
     "ask-has-http": ("live_server.py", '"Bash(curl *)", "WebFetch", ', ""),
+    "no-symlink-guard": ("live_server.py", "    if p.is_symlink():                                 # never followed: notes_target's",
+                         "    if False:                                 # never followed: notes_target's"),
+    "keep-failed-proposal": ("live_server.py", "        if code:                                       # not applied (or raised)",
+                             "        if False:                                       # not applied (or raised)"),
+    "latest-apply-id": ("live_server.py", '    m = re.search(r"^Apply (\\d+): ", out, re.M)', "    m = None"),
+    "same-site-ok": ("live_server.py", '(handler.headers.get("Sec-Fetch-Site") or "").lower() != "same-origin"',
+                     '(handler.headers.get("Sec-Fetch-Site") or "").lower() not in ("same-origin", "same-site", "none")'),
+    "any-name-variant": ("live_server.py", "    if not listed:\n", "    if False:\n"),
+    "control-names": ("live_server.py", '    if re.search(r"[\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]", p.name):', "    if False:"),
+    "linked-archive": ("archive.py", "    why = archive_folder_problem(base)\n    if why:\n        return None, why\n", ""),
+    "no-undo-record": ("live_server.py", "                page_move_undone(latest)", "                pass"),
 }
+
+
+def folds_names():
+    """Whether this file system finds a file by another case of its name (macOS's APFS does; Linux's ext4 doesn't)."""
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "Fold.md").write_text("x")
+        return (Path(d) / "fOLD.md").exists()
 
 
 def mutate(root, name):
@@ -150,7 +177,7 @@ class Server(unittest.TestCase):
         return self.v.root / ABC / "notes"
 
     def archive(self):
-        return self.v.root / ABC / "_Archive" / "notes"
+        return self.v.root / ABC / ARCHIVE / "notes"
 
     def files_log(self):
         p = self.v.root / "system/config/files-log.jsonl"
@@ -198,7 +225,7 @@ class DeleteNoteNoCard(Server):
         self.assertTrue(d["ok"], d)
         self.assertTrue(d["moved"])
         self.assertEqual(d["message"], "Moved “Working session” to the archive.")
-        self.assertEqual(d["to"], f"{ABC}/_Archive/notes/Working session.md")
+        self.assertEqual(d["to"], f"{ABC}/{ARCHIVE}/notes/Working session.md")
         self.assertFalse(f.exists())
         self.assertTrue(dest.is_file())
         self.assertIsNone(self.post("/api/edit/pending", {})["card"])                         # no card, ever
@@ -220,6 +247,10 @@ class DeleteNoteNoCard(Server):
                  "another Host": {**h, "Host": "creaite.example"},
                  "no browser marks": {"X-Creaite-Token": self.token},
                  "cross-site": {**h, "Sec-Fetch-Site": "cross-site"},
+                 "same-site": {**h, "Sec-Fetch-Site": "same-site"},                          # same-origin only
+                 "same-site, in capitals": {**h, "Sec-Fetch-Site": "SAME-SITE"},
+                 "none (a typed address or bookmark)": {**h, "Sec-Fetch-Site": "none"},
+                 "an empty mark": {**h, "Sec-Fetch-Site": ""},
                  "another site's Origin": {**h, "Origin": "http://elsewhere.example"},
                  "another port": {**h, "Origin": f"http://127.0.0.1:{self.port + 1}"},
                  "no Origin": {k: v for k, v in h.items() if k != "Origin"},
@@ -240,7 +271,7 @@ class DeleteNoteNoCard(Server):
     @needs_255("tracker.py's refusal for a page move names Delete note (the tracker.py diff)")
     def test_a_the_same_move_staged_by_hand_is_never_applied(self):
         self.new("By hand")
-        src, dst = f"{ABC}/notes/By hand.md", f"{ABC}/_Archive/notes/By hand.md"
+        src, dst = f"{ABC}/notes/By hand.md", f"{ABC}/{ARCHIVE}/notes/By hand.md"
         rel = self.hand_staged("notes", src, dst)
         r = self.post("/api/apply", {})
         self.assertTrue(r["ok"], r)
@@ -251,10 +282,10 @@ class DeleteNoteNoCard(Server):
 
     # ── (b) ──
     def test_b_ask_creaite_cant_move_or_delete_a_note_through_filechange(self):
-        """filechange.py: a move into _Archive is never; a delete, in an ask creaite run, is a card (exit 3, a request only)."""
+        """filechange.py: a move into the archive folder is never; a delete, in an ask creaite run, is a card (exit 3, a request only)."""
         self.new("Chat move")
         src = f"{ABC}/notes/Chat move.md"
-        out = self.run_at("filechange.py", "move", src, f"{ABC}/_Archive/notes/Chat move.md", "--why", "tidy")
+        out = self.run_at("filechange.py", "move", src, f"{ABC}/{ARCHIVE}/notes/Chat move.md", "--why", "tidy")
         self.assertNotEqual(out.returncode, 0)
         self.assertTrue((self.folder() / "Chat move.md").is_file())
         run = self.v.root / "system/guard/run.json"
@@ -410,8 +441,11 @@ class DeleteNoteNoCard(Server):
         self.assertTrue(d["ok"], d)
         self.assertEqual((self.archive() / "Exact.md").read_bytes(), raw)
         self.assertEqual(os.stat(self.archive() / "Exact.md").st_mtime_ns, old)
+        before = len(self.files_log())
         u = self.post("/api/undo", {"apply_id": d["apply_id"]})                                # the toast's Undo
         self.assertTrue(u["ok"], u)
+        self.assertEqual([(e["op"], e["path"], e["to"], e["apply"]) for e in self.files_log()[before:]],      # L3: logged too
+                         [("note-restored", d["to"], f"{ABC}/notes/Exact.md", d["apply_id"])])
         self.assertEqual(f.read_bytes(), raw)
         self.assertEqual(os.stat(f).st_mtime_ns, old)
         self.assertFalse((self.archive() / "Exact.md").exists())
@@ -430,6 +464,12 @@ class DeleteNoteNoCard(Server):
         self.assertIsNone(self.post("/api/edit/pending", {})["card"])
         self.assertEqual([e["op"] for e in self.files_log()[before:]], ["note-back"])
         self.assertEqual(self.markers(), [])
+        before = len(self.files_log())
+        u = self.post("/api/undo", {"apply_id": b["apply_id"]})                                # Undo of the Move back
+        self.assertTrue(u["ok"], u)
+        self.assertFalse(f.exists())
+        self.assertEqual([(e["op"], e["path"], e["to"]) for e in self.files_log()[before:]],
+                         [("note-rearchived", f"{ABC}/notes/Exact.md", at)])
 
     @needs_255("the direct Move back is in the live_server.py diff")
     def test_e_move_back_never_onto_a_note_that_has_the_name(self):
@@ -444,6 +484,29 @@ class DeleteNoteNoCard(Server):
         self.assertEqual((self.folder() / "Lessons.md").read_text(), new)
         self.assertTrue((self.folder() / "Lessons-2.md").is_file())
 
+    @needs_255("the direct Move back is in the live_server.py diff")
+    def test_e_a_note_in_the_old_archive_folder_still_moves_back(self):
+        """#252: new archives go into paths.ARCHIVE (99 Archive after it), but a note deleted before then is in the old _Archive
+        folder, and its Move back still works from there. With ARCHIVE still _Archive (today) the note is simply there."""
+        d = self.delete_now(self.new("Old place"))
+        self.assertTrue(d["ok"], d)
+        old = f"{ABC}/_Archive/notes/Old place.md"
+        if d["to"] != old:                                     # put it where an earlier delete left it, and say so in its apply
+            (self.v.root / old).parent.mkdir(parents=True, exist_ok=True)
+            (self.v.root / d["to"]).rename(self.v.root / old)
+            con = sqlite3.connect(self.v.root / "system/tracker.db")
+            (ops,) = con.execute("SELECT file_ops FROM applies WHERE apply_id = ?", (d["apply_id"],)).fetchone()
+            recs = [dict(r, to=old) if r.get("to") == d["to"] else r for r in json.loads(ops)]
+            con.execute("UPDATE applies SET file_ops = ? WHERE apply_id = ?", (json.dumps(recs), d["apply_id"]))
+            con.commit()
+            con.close()
+        self.assertIn(old, [a["at"] for a in self.archived()])
+        b = self.page("/api/files/move-back/now", {"path": old})
+        self.assertTrue(b["ok"], b)
+        self.assertEqual(b["message"], "Moved “Old place” back to its notes folder.")
+        self.assertTrue((self.folder() / "Old place.md").is_file())
+        self.assertFalse((self.v.root / old).exists())
+
     # ── (f) ──
     def test_f_a_report_s_move_back_and_a_project_s_archive_keep_their_card(self):
         from test_archive_move_back import DUE, archive_old_files
@@ -454,7 +517,7 @@ class DeleteNoteNoCard(Server):
         self.assertTrue(r["card"])
         card = self.post("/api/edit/pending", {})["card"]
         self.assertTrue(card and card["valid"], card)
-        self.assertTrue((abc / "_Archive" / DUE[1]).is_file())                                # nothing moved yet
+        self.assertTrue((abc / ARCHIVE / DUE[1]).is_file())                                # nothing moved yet
         self.post("/api/edit/reject", {"card": card["card"]})
         p = self.post("/api/project/archive", {"code": "ABC", "action": "archive", "cancel_open": True})
         self.assertTrue(p.get("card"), p)                                                      # a project's archive: the card
@@ -466,7 +529,7 @@ class DeleteNoteNoCard(Server):
             got = self.page("/api/files/move-back/now", {"path": stored})
             self.assertFalse(got["ok"], got)
             self.assertIn("anything else goes on the approval card", got["message"])
-            self.assertTrue((abc / "_Archive" / DUE[1]).is_file())
+            self.assertTrue((abc / ARCHIVE / DUE[1]).is_file())
             self.assertFalse((abc / DUE[1]).exists())
 
     def test_f_the_lists_agree(self):
@@ -509,7 +572,7 @@ class DeleteNoteNoCard(Server):
             self.assertTrue(problem, why)
 
     def test_g_the_mover_refuses_any_other_shape(self):
-        """reach.archive_move_problem "notes": one .md directly in a notes folder, into that engagement's own _Archive."""
+        """reach.archive_move_problem "notes": one .md directly in a notes folder, into that engagement's own archive folder."""
         self.new("Mover")
         other = self.v.root / "projects/DEF Other Programme/notes"
         other.mkdir(parents=True, exist_ok=True)
@@ -518,22 +581,22 @@ class DeleteNoteNoCard(Server):
         (self.folder() / "Picture.png").write_bytes(b"\x89PNG")
         self.odd_files()
         src = f"{ABC}/notes/Mover.md"
-        cases = {"other engagement": (src, "projects/DEF Other Programme/_Archive/notes/Mover.md"),
-                 "portfolio": (src, "projects/_portfolio/_Archive/notes/Mover.md"),
-                 "outside the notes folder": (f"{ABC}/CLAUDE.md", f"{ABC}/_Archive/notes/CLAUDE.md"),
-                 "a subfolder": (f"{ABC}/notes/_images/pic.md", f"{ABC}/_Archive/notes/_images/pic.md"),
-                 "a folder": (f"{ABC}/notes/Dir.md", f"{ABC}/_Archive/notes/Dir.md"),
-                 "not a note": (f"{ABC}/notes/Picture.png", f"{ABC}/_Archive/notes/Picture.png"),
-                 "a symlink": (f"{ABC}/notes/Linked.md", f"{ABC}/_Archive/notes/Linked.md"),
-                 "dot dot": (f"{ABC}/notes/../notes/Mover.md", f"{ABC}/_Archive/notes/Mover.md"),
-                 "renamed": (src, f"{ABC}/_Archive/notes/Other.md"),
-                 "deeper": (src, f"{ABC}/_Archive/notes/x/Mover.md")}
+        cases = {"other engagement": (src, f"projects/DEF Other Programme/{ARCHIVE}/notes/Mover.md"),
+                 "portfolio": (src, f"projects/_portfolio/{ARCHIVE}/notes/Mover.md"),
+                 "outside the notes folder": (f"{ABC}/CLAUDE.md", f"{ABC}/{ARCHIVE}/notes/CLAUDE.md"),
+                 "a subfolder": (f"{ABC}/notes/_images/pic.md", f"{ABC}/{ARCHIVE}/notes/_images/pic.md"),
+                 "a folder": (f"{ABC}/notes/Dir.md", f"{ABC}/{ARCHIVE}/notes/Dir.md"),
+                 "not a note": (f"{ABC}/notes/Picture.png", f"{ABC}/{ARCHIVE}/notes/Picture.png"),
+                 "a symlink": (f"{ABC}/notes/Linked.md", f"{ABC}/{ARCHIVE}/notes/Linked.md"),
+                 "dot dot": (f"{ABC}/notes/../notes/Mover.md", f"{ABC}/{ARCHIVE}/notes/Mover.md"),
+                 "renamed": (src, f"{ABC}/{ARCHIVE}/notes/Other.md"),
+                 "deeper": (src, f"{ABC}/{ARCHIVE}/notes/x/Mover.md")}
         got = self.py_json("import reach; c = " + json.dumps(cases) + "\n"
                            "print(json.dumps({k: reach.archive_move_problem(x, y, 'notes') for k, (x, y) in c.items()}))")
         for why, problem in got.items():
             self.assertTrue(problem, why)
         self.assertIsNone(self.py_json(f"import reach; print(json.dumps(reach.archive_move_problem({src!r}, "
-                                       f"{f'{ABC}/_Archive/notes/Mover.md'!r}, 'notes')))"))
+                                       f"{f'{ABC}/{ARCHIVE}/notes/Mover.md'!r}, 'notes')))"))
 
     @needs_255("the direct route is in the live_server.py diff")
     def test_g_the_route_refuses_anything_but_one_note(self):
@@ -544,7 +607,7 @@ class DeleteNoteNoCard(Server):
                 ("outside the notes folder", {"path": f"{ABC}/CLAUDE.md", "base": base}, 404),
                 ("a folder", {"path": f"{ABC}/notes/Dir.md", "base": base}, 404),
                 ("two files", {"path": [r["note"]["path"], f"{ABC}/notes/Other.md"], "base": base}, 400),
-                ("a destination", {"path": r["note"]["path"], "base": base, "to": f"{ABC}/_Archive/notes/x.md"}, 400),
+                ("a destination", {"path": r["note"]["path"], "base": base, "to": f"{ABC}/{ARCHIVE}/notes/x.md"}, 400),
                 ("dot dot", {"path": f"{ABC}/notes/../CLAUDE.md", "base": base}, 404),
                 ("dot dot to a note", {"path": f"{ABC}/notes/../notes/Only this.md", "base": base}, 404),
                 ("no version", {"path": r["note"]["path"]}, 400)):
@@ -559,13 +622,152 @@ class DeleteNoteNoCard(Server):
         self.assertTrue((self.folder() / "Only this.md").is_file())
         self.assertFalse(self.archive().joinpath("Only this.md").exists())
 
+    @needs_255("the direct route's symlink check is in the live_server.py diff")
+    def test_g_a_symlink_to_a_sibling_note_is_refused(self):
+        """notes_target finds Alias.md (its target is a note in the same folder) and its stored path is the target's: without the
+        route's own symlink check, Delete note on Alias would archive Real.md."""
+        r = self.new("Real")
+        real, alias = self.folder() / "Real.md", self.folder() / "Alias.md"
+        os.symlink("Real.md", alias)
+        self.addCleanup(lambda: alias.unlink(missing_ok=True))
+        raw = real.read_bytes()
+        for base in (r["base"], "a stale version"):
+            got = self.page("/api/notes/delete/now", {"path": f"{ABC}/notes/Alias.md", "base": base})
+            self.assertEqual(got, {"ok": False, "message": "Not deleted: that isn't a note that is there."}, base)
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(real.read_bytes(), raw)
+        self.assertEqual([p.name for p in self.archive().glob("*.md") if p.name.startswith(("Real", "Alias"))]
+                         if self.archive().is_dir() else [], [])
+
+    @needs_255("the direct route's name check is in the live_server.py diff")
+    def test_g_another_case_or_unicode_form_of_the_name_is_refused(self):
+        """A file system that folds case or Unicode form (macOS) finds the note by a variant of its name: refused, as the folder
+        lists another name (where it doesn't fold, the variant isn't there: 404). Nothing moves either way."""
+        r = self.new("Café plan")
+        name = next(n for n in os.listdir(self.folder()) if n.startswith("Caf") and n.endswith(".md"))
+        other = unicodedata.normalize("NFD" if unicodedata.is_normalized("NFC", name) else "NFC", name)
+        self.assertNotEqual(other, name)
+        for why, variant in (("case", name[:-3].swapcase() + ".md"), ("Unicode form", other)):
+            got = self.page("/api/notes/delete/now", {"path": f"{ABC}/notes/{variant}", "base": r["base"]})
+            if folds_names():                                                 # found by the variant: the name check refuses it
+                self.assertEqual(got, {"ok": False, "message": "Not deleted: that isn't a note that is there."}, why)
+            else:                                                             # not found: notes_target's own 404
+                self.assertEqual(got, {"status": 404, "ok": False, "message": "That note isn't there any more."}, why)
+        self.assertIn(name, os.listdir(self.folder()))
+        self.assertFalse(self.archive().is_dir() and any(n.lower().startswith("caf") for n in os.listdir(self.archive())))
+
+    @needs_255("the direct route's control-character check is in the live_server.py diff")
+    def test_g_a_name_with_a_line_break_is_refused(self):
+        """A file made outside creaite can have a line break in its name: never moved (its name would split the debug log's line)."""
+        r = self.new("Plain")
+        odd = self.folder() / "Two\nlines.md"
+        odd.write_bytes((self.folder() / "Plain.md").read_bytes())
+        self.addCleanup(lambda: odd.unlink(missing_ok=True))
+        g = self.post("/api/notes/get", {"path": f"{ABC}/notes/Two\nlines.md"})
+        self.assertTrue(g.get("ok"), g)
+        got = self.page("/api/notes/delete/now", {"path": f"{ABC}/notes/Two\nlines.md", "base": g["base"]})
+        self.assertEqual(got, {"ok": False, "message": "Not deleted: the note's name has a line break or another control "
+                                                       "character in it. Rename the file first."})
+        self.assertTrue(odd.is_file())
+        self.assertTrue(r["ok"])
+
+    def linked_archive(self):
+        """ABC's archive folder as a link to a folder outside the vault (the real one kept aside and put back after); the outside folder."""
+        arch, kept = self.v.root / ABC / ARCHIVE, self.v.root / ABC / f"{ARCHIVE}-kept"
+        if arch.is_dir():
+            arch.rename(kept)
+        outside = Path(tempfile.mkdtemp())
+        os.symlink(outside, arch)
+
+        def put_back():
+            arch.unlink()
+            if kept.is_dir():
+                kept.rename(arch)
+            shutil.rmtree(outside, ignore_errors=True)
+        self.addCleanup(put_back)
+        return outside
+
+    def test_g_a_linked_archive_folder_is_refused_by_archive_py(self):
+        r = self.new("Linked archive")
+        outside = self.linked_archive()
+        got = self.py_json(f"import archive; print(json.dumps(archive.note_delete_spec({r['note']['path']!r})))")
+        self.assertEqual(got, [None, f"the {ARCHIVE} folder isn't a plain folder in the project (a link or a file has its name), so "
+                                     "nothing moves"])
+        self.assertEqual(list(outside.iterdir()), [])
+
+    @needs_255("the direct routes are in the live_server.py diff")
+    def test_g_a_linked_archive_folder_is_a_plain_answer_not_an_error(self):
+        """L6: Delete note into a linked archive folder, and Move back out of one: a plain refusal (no 500, no absolute path)."""
+        r = self.new("Into a link")
+        d = self.delete_now(self.new("Out of a link"))
+        self.assertTrue(d["ok"], d)
+        at = next(a["at"] for a in self.archived() if a["path"] == f"{ABC}/notes/Out of a link.md")
+        kept = self.v.root / ABC / ARCHIVE
+        outside = self.linked_archive()
+        shutil.copytree(self.v.root / ABC / f"{ARCHIVE}-kept", outside, dirs_exist_ok=True)
+        want = f"the {ARCHIVE} folder isn't a plain folder in the project (a link or a file has its name), so nothing moves."
+        got = self.delete_now(r)
+        self.assertEqual(got, {"ok": False, "message": f"Not deleted: {want}"})
+        got = self.page("/api/files/move-back/now", {"path": at})
+        self.assertEqual(got, {"ok": False, "message": f"Not moved back: {want}"})
+        self.assertTrue((self.folder() / "Into a link.md").is_file())
+        self.assertFalse((self.folder() / "Out of a link.md").exists())
+        self.assertTrue((outside / "notes" / "Out of a link.md").is_file())
+        self.assertFalse((outside / "notes" / "Into a link.md").exists())
+        self.assertTrue(kept.is_symlink())
+
+    # ── the mover's own steps (in this process, over the same vault) ──
+    @needs_255("page_move is in the live_server.py diff")
+    def test_h_a_failed_apply_leaves_nothing_in_staging(self):
+        """L1: page_move stages the move, then the apply fails (or the marker can't be written): the proposal is removed."""
+        r = self.new("Fails")
+        staged = sorted(p.name for p in (self.v.root / "system/staging").glob("proposed-*.json"))
+        got = self.py_json(
+            "import contextlib, live_server as ls, archive\n"
+            f"spec, _ = archive.note_delete_spec({r['note']['path']!r})\n"
+            "real = ls.run\n"
+            "def failing(script, *a):\n"
+            "    return (1, 'refused for the test') if script == 'tracker.py' and a[:1] == ('apply',) else real(script, *a)\n"
+            "ls.run = failing\nfailed = ls.page_move(spec)\nls.run = real\n"
+            "@contextlib.contextmanager\ndef no_marker(name):\n    raise OSError('no marker')\n    yield\n"
+            "ls.card_moves_allowed = no_marker\nraised = ls.page_move(spec)\n"
+            "print(json.dumps([failed, raised]))")
+        self.assertEqual(got, [[None, "refused for the test"], [None, "the move couldn't be recorded (OSError)"]])
+        self.assertEqual(sorted(p.name for p in (self.v.root / "system/staging").glob("proposed-*.json")), staged)
+        self.assertTrue((self.folder() / "Fails.md").is_file())
+        self.assertEqual(self.markers(), [])
+
+    @needs_255("page_move is in the live_server.py diff")
+    def test_h_the_apply_number_is_tracker_s_own(self):
+        """L4: the number Undo is given is the one tracker.py apply printed, not the latest in the applies record (another
+        process may have applied in between)."""
+        r = self.new("Numbered")
+        got = self.py_json(
+            "import live_server as ls, archive\n"
+            f"spec, _ = archive.note_delete_spec({r['note']['path']!r})\n"
+            "ls.latest_apply = lambda: 999999\n"
+            "moved = ls.page_move(spec)\n"
+            "code, out = ls.run('tracker.py', 'read', 'applies')\n"
+            "print(json.dumps([moved, max(a['apply_id'] for a in json.loads(out) if not a['undone_at'])]))")
+        (apply_id, why), real = got
+        self.assertEqual((apply_id, why), (real, None))
+        self.assertTrue((self.archive() / "Numbered.md").is_file())
+
 
 # Each mutant, and the test that must go red with it.
 TARGETS = {"any-file": "test_g_page_move_problem_takes_exactly_one_note_s_move",
            "no-unchanged-check": "test_c_a_note_changed_since_it_was_shown_is_refused_and_left",
            "no-token": "test_a_only_the_page_s_own_call_moves_it",
            "ask-calls-route": "test_b_a_script_s_plain_call_with_the_token_is_refused",
-           "ask-has-http": "test_b_ask_creaite_has_no_way_to_call_the_page_s_routes"}
+           "ask-has-http": "test_b_ask_creaite_has_no_way_to_call_the_page_s_routes",
+           "no-symlink-guard": "test_g_a_symlink_to_a_sibling_note_is_refused",
+           "keep-failed-proposal": "test_h_a_failed_apply_leaves_nothing_in_staging",
+           "latest-apply-id": "test_h_the_apply_number_is_tracker_s_own",
+           "same-site-ok": "test_a_only_the_page_s_own_call_moves_it",
+           "any-name-variant": "test_g_another_case_or_unicode_form_of_the_name_is_refused",
+           "control-names": "test_g_a_name_with_a_line_break_is_refused",
+           "linked-archive": "test_g_a_linked_archive_folder_is_refused_by_archive_py",
+           "no-undo-record": "test_e_undo_and_move_back_restore_it_exactly"}
 
 
 class Mutations(unittest.TestCase):
@@ -598,6 +800,38 @@ class Mutations(unittest.TestCase):
 
     def test_m5_give_ask_creaite_an_http_tool(self):
         self.red("ask-has-http")
+
+    @needs_255("the symlink check is in the live_server.py diff")
+    def test_m6_follow_a_symlink_to_a_sibling_note(self):
+        self.red("no-symlink-guard")
+
+    @needs_255("page_move is in the live_server.py diff")
+    def test_m7_leave_a_failed_apply_s_proposal_in_staging(self):
+        self.red("keep-failed-proposal")
+
+    @needs_255("page_move is in the live_server.py diff")
+    def test_m8_take_the_latest_apply_s_number(self):
+        self.red("latest-apply-id")
+
+    @needs_255("page_call is in the live_server.py diff")
+    def test_m9_let_same_site_and_none_through(self):
+        self.red("same-site-ok")
+
+    @unittest.skipUnless(folds_names(), "this file system doesn't find a file by another case of its name")
+    @needs_255("the name check is in the live_server.py diff")
+    def test_m10_take_another_form_of_the_name(self):
+        self.red("any-name-variant")
+
+    @needs_255("the control-character check is in the live_server.py diff")
+    def test_m11_move_a_name_with_a_line_break(self):
+        self.red("control-names")
+
+    def test_m12_follow_a_linked_archive(self):
+        self.red("linked-archive")
+
+    @needs_255("the Undo record is in the live_server.py diff")
+    def test_m13_leave_undo_out_of_the_files_log(self):
+        self.red("no-undo-record")
 
 
 if __name__ == "__main__":
