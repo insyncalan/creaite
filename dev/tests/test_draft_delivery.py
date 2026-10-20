@@ -235,6 +235,18 @@ class Access(unittest.TestCase):
         return [{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a1", "name": name, "input": {}}]}},
                 {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a1", "is_error": error, "content": text}]}}]
 
+    def test_an_injected_cc_bcc_or_changed_subject_or_to_is_never_reported_as_success(self):
+        """#183 round 2 (L-b): a run that adds a Cc or Bcc (or changes the subject or the To) made a draft that isn't the one shown."""
+        req = dd.request(PAYLOAD, ON)
+        self.assertTrue(dd.check(stub_run(req, answer={"id": "A"}), req)["ok"])
+        for extra in ({"bcc": ["x@example.com"]}, {"cc": ["x@example.com"]}, {"bcc": []}, {"subject": "Changed"},
+                      {"to": ["x@example.com"]}):
+            with self.subTest(extra=extra):
+                got = dd.check(stub_run(req, answer={"id": "A"}, args={**req["args"], **extra}), req)
+                self.assertFalse(got["ok"])
+                self.assertTrue(got["made"])                       # a draft may exist: the popup says to check the Drafts folder
+                self.assertIn("Drafts folder", got["reason"])
+
     def test_mail_readwrite_means_drafts_can_be_made(self):
         self.assertTrue(dd.access(self.events('["User.Read", "Mail.Read", "Mail.ReadWrite", "Calendars.Read"]'))["can"])
 

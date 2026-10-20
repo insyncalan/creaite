@@ -1,8 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index ded1d52..5ebd084 100644
+index ded1d52..816d952 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -6724,6 +6724,128 @@ def chase_pane_route(handler, req):
+@@ -6724,6 +6724,129 @@ def chase_pane_route(handler, req):
  DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
  
  
@@ -77,7 +77,8 @@ index ded1d52..5ebd084 100644
 +    import draft_delivery
 +    if (paths.ROOT / ".creaite-dev").exists():
 +        return handler.send(200, {"ok": False, "reason": "this is the development repository"})
-+    body = {k: req.get(k) for k in ("action", "to", "subject", "html", "ids", "mode", "name")}   # #183 review L1: action too, so a copy skips the markup check
++    # #183 review L1: the action goes too, so a copy skips the markup check
++    body = {k: req.get(k) for k in ("action", "to", "subject", "html", "ids", "mode", "name")}
 +    dreq, why = _draft_request(body)
 +    if why:
 +        return handler.send(200, {"ok": False, "reason": why})
