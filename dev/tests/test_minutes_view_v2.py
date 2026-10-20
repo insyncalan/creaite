@@ -379,6 +379,22 @@ class MinutesViewV2(LiveBrowserCase):
         b.click("#snackU")                                      # Undo: the whole apply back, and the draft on the page again
         b.wait("document.querySelector('#v-minutes tr.mi') && /Draft/.test(document.querySelector('#v-minutes .mnmeta').textContent)", 30)
         self.assertNotIn("Share the cut-over plan with the client", [a["description"] for a in self.rows_of("actions")])
+        # #268's bug: after Undo the minutes are exactly as they were before Approve (the untracked decision and risk keep their
+        # controls), and approving again gives the same result: nothing goes to Review
+        b.wait(f"document.querySelector(\"{ROW % 4} td.mnoc select\") && document.querySelector(\"{ROW % 5} td.mnoc select\")", 30)
+        self.assertEqual(self.trk(), {"1": "y", "2": "y", "3": "y", "4": "", "5": ""}, "the Track column as it was")
+        self.assertEqual(self.summary(), "3 work items to register · 2 kept in the minutes only")
+        self.assertEqual(self.ev("document.querySelectorAll('#v-minutes tr.mi td.mnoc select').length"), 5, "every row has its Owner dropdown again")
+        self.assertEqual(self.staged(4)["decision"], "pending")
+        self.assertNotIn("reject_reason", self.staged(5))
+        b.wait("!document.getElementById('snack').classList.contains('on') || !/Minutes approved/.test(document.getElementById('snack').textContent)", 15)
+        b.click("#mnApproveBtn")
+        b.wait("document.getElementById('mnApprove').open")
+        b.click("#mnApproveGo")
+        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.assertIn("Minutes approved · 3 work items registered", self.snack())
+        self.assertNotIn("wait in Review", self.snack(), "the same result as the first time")
+        self.assertNotIn("The pilot stays on the lighthouse site", [x["decision"] for x in self.rows_of("decisions")])
 
     def test_12_approve_with_no_problem_is_one_click_and_a_cross_removes_the_line(self):
         b = self.b

@@ -15,7 +15,7 @@ import { api, oneLine, viaServer } from "../core/server.js";
 /** @typedef {{files: string[], transcripts: string[], items: PlanItem[], group: number, joins: string[]}} Plan */
 /** @typedef {{ok: boolean, message?: string, path?: string, doc?: SheetDoc, versions?: Version[],
     turns?: {timed: boolean, turns: Turn[]}, proposal?: string|null, plan?: Plan|null, labels?: Record<string, string[]>,
-    withheld?: Record<string, string>}} MinutesView */
+    withheld?: Record<string, string>, settle?: number[]}} MinutesView */
 
 /** What the view was opened with: {file} (the proposal) or {path} (the record). */
 export const minutesArg = signal(/** @type {{file?: string, path?: string}|null} */ (null));
@@ -53,8 +53,16 @@ export async function loadMinutes(arg) {
   minutesArg.value = arg;
   if (!viaServer()) { minutesView.value = { ok: false, message: "The minutes view needs the live server." }; return; }
   minutesBusy.value = "Opening the minutes…";
-  const r = await api("/api/minutes/draft", arg);
+  let r = await api("/api/minutes/draft", arg);
   if (mine !== mnAsked) return;
+  if (r && r.ok && r.doc && r.doc.state === "draft" && Array.isArray(r.settle) && r.settle.length) {
+    // #268: after Undo of Approve minutes the record still holds the approve's own changes (lines taken out or kept as lines
+    // only) while their items are pending again: settled first, so the minutes are exactly as they were before Approve.
+    const s = await api("/api/minutes/save", { path: r.path, op: { op: "settle" }, base_version: Number(r.doc.version) || undefined });
+    if (mine !== mnAsked) return;
+    if (s && s.ok) r = await api("/api/minutes/draft", { path: r.path });
+    if (mine !== mnAsked) return;
+  }
   minutesBusy.value = "";
   take(r && r.ok ? r : { ok: false, message: oneLine((r && r.message) || "") || "Couldn't open the minutes" });
 }

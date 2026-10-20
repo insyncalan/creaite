@@ -537,9 +537,16 @@ def remove(doc, data, n, keep_line=False):
 def restore(doc, data, n):
     """Undo ✕ Remove: the item is pending again and its row back where it was."""
     item = item_of(data, n)
-    gone = doc["meta"].get("removed", {}).pop(str(n), None)
     if item.get("decision") != "rejected" or item.get("decided_in") != "minutes":
         raise RecordError(f"Item {n} wasn't removed here.")
+    _row_back(doc, data, item)
+    return f"Item {n} is back."
+
+
+def _row_back(doc, data, item):
+    """The item's row back where it was (out of meta.removed; a kept line gives way to the row) and the item pending again."""
+    n = item["n"]
+    gone = doc["meta"].get("removed", {}).pop(str(n), None)
     if isinstance(item.get("was"), dict) and item.get("duplicate_of"):    # Update that one found a duplicate: the item as it was
         item = {**item["was"], "n": n}
         data["items"][next(k for k, i in enumerate(data["items"]) if i.get("n") == n)] = item
@@ -551,7 +558,29 @@ def restore(doc, data, n):
         s["rows"] = [r for r in s["rows"] if not (r.get("kept_line") and r.get("was") == f"@{n}")]
         s["rows"].insert(min(gone["index"], len(s["rows"])), gone["row"])
     sync_item(doc, item)
-    return f"Item {n} is back."
+
+
+def unsettled(doc, data):
+    """#268: the rows the record took out (meta.removed: removed, or kept as a line only) whose items are pending again, newest
+    first. Undo of Approve minutes (tracker.py undo) puts the proposal's items back to pending but leaves the record as the
+    approve's own changes made it, so until it is settled the record doesn't match its items."""
+    removed = ((doc or {}).get("meta") or {}).get("removed") or {}
+    items = {i.get("n"): i for i in (data or {}).get("items") or []}
+    out = []
+    for k in reversed(list(removed)):
+        it = items.get(int(k)) if str(k).isdigit() else None
+        if it and not it.get("applied") and it.get("decision") != "rejected":
+            out.append(int(k))
+    return out
+
+
+def settle(doc, data):
+    """#268: each unsettled row back as it was, in the reverse order of the changes that took them out (so each goes back to its
+    own place): after Undo of Approve minutes the minutes are exactly as they were before Approve. Returns the numbers."""
+    ns = unsettled(doc, data)
+    for n in ns:
+        _row_back(doc, data, next(i for i in data["items"] if i.get("n") == n))
+    return ns
 
 
 def update_that_one(doc, data, p, n, target):
@@ -732,14 +761,22 @@ def uncover(doc, data, point):
 
 # ── One change from the minutes view ─────────────────────────────────────────
 
+def _settled_words(settled):
+    """The `settle` change's message; with nothing to settle it is refused, so no new version is saved."""
+    if not settled:
+        raise RecordError("Nothing to put back.")
+    return f"Put back {len(settled)} line{'s' if len(settled) != 1 else ''} as they were before approving."
+
+
 def change(path, op, base_version=None, via="dashboard"):
     """Apply one change from the minutes view to the draft record and its proposal, then save both. `op` is {op: remove | restore |
-    update | keep_new | edit | deadline | cover | uncover, n, keep_line, id, values, words, point, how, line}. Returns {ok, message,
-    version, doc}; refusals raise RecordError."""
+    update | keep_new | edit | deadline | cover | uncover | settle, n, keep_line, id, values, words, point, how, line}. Returns
+    {ok, message, version, doc}; refusals raise RecordError. Every change first settles the record (#268: settle)."""
     doc = creaite_doc.read(path)
     if doc.get("state") == "approved":
         raise RecordError("These minutes are approved; their items are in the tracker. Change the items there.")
     p, data = proposal_for(doc)
+    settled = settle(doc, data)                             # #268: after an Undo of the approve, the record follows its items first
     kind, n = op.get("op"), op.get("n")
     if kind in ("remove", "restore", "update", "keep_new", "edit", "deadline") and not isinstance(n, int):
         raise RecordError("Which item?")
@@ -748,7 +785,8 @@ def change(path, op, base_version=None, via="dashboard"):
             "edit": lambda: edit_item(doc, data, n, dict(op.get("values") or {})),
             "deadline": lambda: edit_item(doc, data, n, {"due_words": op.get("words")}),
             "cover": lambda: cover(doc, data, str(op.get("point") or ""), op.get("how"), op.get("line", True) is not False),
-            "uncover": lambda: uncover(doc, data, str(op.get("point") or ""))}
+            "uncover": lambda: uncover(doc, data, str(op.get("point") or "")),
+            "settle": lambda: _settled_words(settled)}
     if kind not in acts:
         raise RecordError("That isn't a change the minutes know.")
     message = acts[kind]()
@@ -869,7 +907,8 @@ def view(file=None, path=None):
     labels = item_labels(doc)
     return {"ok": True, "path": rel, "doc": doc, "versions": creaite_doc.versions(rel), "turns": turns(meta.get("transcript")),
             "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None,
-            "labels": labels, "withheld": withheld(doc, labels)}
+            "labels": labels, "withheld": withheld(doc, labels),
+            "settle": unsettled(doc, data) if data and doc["state"] == "draft" else []}
 
 
 def save_page(path, page, base_version=None, via="dashboard"):

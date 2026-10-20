@@ -71451,8 +71451,14 @@ ${d5.text}`);
       return;
     }
     minutesBusy.value = "Opening the minutes…";
-    const r4 = await api("/api/minutes/draft", arg);
+    let r4 = await api("/api/minutes/draft", arg);
     if (mine !== mnAsked) return;
+    if (r4 && r4.ok && r4.doc && r4.doc.state === "draft" && Array.isArray(r4.settle) && r4.settle.length) {
+      const s5 = await api("/api/minutes/save", { path: r4.path, op: { op: "settle" }, base_version: Number(r4.doc.version) || void 0 });
+      if (mine !== mnAsked) return;
+      if (s5 && s5.ok) r4 = await api("/api/minutes/draft", { path: r4.path });
+      if (mine !== mnAsked) return;
+    }
     minutesBusy.value = "";
     take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
   }

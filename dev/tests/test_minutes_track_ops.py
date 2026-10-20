@@ -6,7 +6,10 @@ minutes_record.change and review.approve_minutes on test_minutes_approve's stage
 - neither = `remove` with keep_line (the line stays in the filed minutes, no item); cross = `remove` (the line goes); a tick
   on a kept line = `restore`; a cross on a kept line = `restore` then `remove`;
 - nothing ticked (#261, "take no items"): every item rejected, and the minutes are still filed with no work items;
-- a mix: only the ticked items are written, in one apply.
+- a mix: only the ticked items are written, in one apply;
+- Approve, Undo, Approve again (#268's bug): Undo leaves the minutes exactly as they were before Approve (the rows the approve
+  took out or kept as lines come back as item rows, with their items pending and no "Removed in the minutes"), so the second
+  Approve gives the same result as the first: nothing leaks to Review.
 """
 import os
 import sys
@@ -49,6 +52,54 @@ class TrackOps(Base):
         self.assertIn("Test data isn't anonymised", text, "neither: the line stays")
         self.assertNotIn("Go-live stays on 20 November", text, "crossed: the line goes")
         self.assertTrue(str(FILED).startswith(ABC))
+
+
+    def view(self):
+        return self.js("import minutes_record\n"
+                       f"r = minutes_record.view(file={self.name!r})\nprint(json.dumps({{'settle': r.get('settle'), 'doc': r['doc']}}))")
+
+    def approve_as_the_view_does(self):
+        """Neither on the decision (4) and the risk (5), a cross on the issue (2), the rest ticked; the own ticks 6 and 7."""
+        for op in ({"op": "remove", "n": 2}, {"op": "remove", "n": 4, "keep_line": True}, {"op": "remove", "n": 5, "keep_line": True}):
+            self.assertTrue(self.change(op)["ok"], op)
+        return self.approve(group=True, own=[6, 7])
+
+    def test_approve_undo_approve_again_gives_the_same_result(self):
+        before = self.doc()
+        first = self.approve_as_the_view_does()
+        self.assertTrue(first["ok"], first)
+        self.assertIn("Undid apply", self.v.run("undo").stdout)
+        seen = self.view()
+        self.assertEqual(seen["settle"], [5, 4, 2], "the view says which rows to put back, newest first")
+        r = self.change({"op": "settle"})
+        self.assertTrue(r["ok"], r)
+        self.assertIn("Put back 3 lines", r["message"])
+        after = self.doc()
+        for sid in ("decisions", "raid", "actions"):
+            self.assertEqual(self.rows(after, sid), self.rows(before, sid), f"{sid}: every row as it was before Approve")
+        self.assertFalse(after["meta"].get("removed"), "nothing left taken out")
+        for i in self.data()["items"]:
+            self.assertEqual(i["decision"], "pending", i["n"])
+            self.assertNotIn("reject_reason", i, i["n"])
+        self.assertEqual(self.view()["settle"], [], "settled")
+        again = self.change({"op": "settle"})
+        self.assertEqual((again["ok"], again["message"]), (False, "Nothing to put back."), "nothing to settle: no new version")
+        second = self.approve_as_the_view_does()
+        self.assertTrue(second["ok"], second)
+        self.assertEqual((second["approved"], second["waiting"]), (first["approved"], first["waiting"]), "the same result both times")
+        self.assertEqual(second["waiting"], [], "nothing waits in Review")
+        text = (self.v.root / FILED).read_text(encoding="utf-8")
+        self.assertIn("Go-live stays on 20 November", text, "neither: the line stays")
+        self.assertNotIn("Test data isn't anonymised", text, "crossed: the line goes")
+        self.assertNotIn("Test data isn't anonymised", [x["description"] for x in self.v.rows("raid")], "crossed: never registered (review H1)")
+        self.assertNotIn("Go-live stays on 20 November", [d["decision"] for d in self.v.rows("decisions")], "neither: no item")
+
+    def test_any_change_after_an_undo_settles_the_record_first(self):
+        self.assertTrue(self.approve_as_the_view_does()["ok"])
+        self.v.run("undo")
+        self.assertTrue(self.change({"op": "edit", "n": 1, "values": {"owner": "Jane Doe"}})["ok"])
+        self.assertEqual(self.view()["settle"], [])
+        self.assertTrue(any(x.get("ref") == "@4" for x in self.rows(self.doc(), "decisions")), "the decision is an item row again")
 
 
 if __name__ == "__main__":
