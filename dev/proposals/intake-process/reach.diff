@@ -1,0 +1,169 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index b1b7f66b..78c67014 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -636,11 +636,12 @@ def marked_sessions():
+         return set()
+ 
+ 
+-def start_run(run, mode, outside, session=None):
+-    """The server, as an ask creaite run starts: write the run (marked already if its chat was)."""
++def start_run(run, mode, outside, session=None, files=None):
++    """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
++    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
+     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
+     _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside, "marked": marked,
+-                           "session": session})
++                           "session": session, **({"files": [str(f) for f in files]} if files is not None else {})})
+ 
+ 
+ def mark(run, reason):
+@@ -1545,9 +1546,13 @@ def report_command_refusal(command):
+ 
+ def _direct_write_refusal(inp, mode):
+     """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
+-    outside the run's direct-write folder."""
++    outside the run's direct-write folder. #264: a Process run writes only its own .json input files in drafts."""
+     p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
+     rp = real(p)
++    if mode == "process":
++        why = process_write_problem(rp)
++        if why:
++            return f"{p}: {why}"
+     kind, why = classify(p, "change" if rp.exists() else "create")
+     if kind == "never":
+         return f"{p}: {why}"
+@@ -1766,7 +1771,10 @@ def bash_refusal(command, mode):
+ # direct writes only in system/staging/drafts/), with the one step cx-sweep needs that a plain chat lacks: mapping the names in its
+ # own draft (`propose.py people map <a file in system/staging/drafts/>`), which changes nothing but that draft. Nothing else.
+ def record_gate(command, mode):
+-    """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft."""
++    """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
++    an Intake Process run (#264) runs only its read and minutes steps (process_gate)."""
++    if mode == "process":
++        return process_gate(command)
+     if mode == "confirmed" or (mode == "sweep" and sweep_maps_draft(command)):
+         return None
+     return record_problem(command)
+@@ -1783,6 +1791,112 @@ def sweep_maps_draft(command):
+ # ===== end BL-295 =====
+ 
+ 
++# ===== #264: Intake's Process (mode "process") =====
++# Pressing Process in Intake starts the run kind "process" (live_server, POST /api/intake/process) under this mode. The click is
++# Alan's go-ahead to stage proposals for the Intake files the server checked and wrote into system/guard/run.json ("files"), and
++# nothing more. A creaite script command runs only when it is a read command (SCRIPT_COMMANDS; not one of HELD_NOT_READ, which
++# delete or write their input) or one of the minutes steps in process_step_problem. Everything else is refused: every record,
++# guarded (filechange.py) and unknown command, and every other stage or derived command (propose.py stage, sweep.py stage,
++# minutes.py refresh and carry, report.py, tracker.py apply and undo, review.py approve and reject...). Direct Edit and Write stay
++# in system/staging/drafts/ (direct_write_area), and every check a plain chat has still runs first (bash_refusal and the rest).
++PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
++
++
++def process_files():
++    """The Intake paths this Process run may stage, from system/guard/run.json (only the server writes it); none if the run in
++    progress isn't a Process run (fail closed)."""
++    data = guard_run()
++    if not data or data.get("mode") != "process" or not isinstance(data.get("files"), list):
++        return set()
++    return {f for f in data["files"] if isinstance(f, str)}
++
++
++def _in_drafts(arg, suffix):
++    """The real path when `arg` is a file name with this suffix directly in system/staging/drafts/, else None."""
++    try:
++        target = real(arg)
++    except (OSError, ValueError, RuntimeError):
++        return None
++    return target if target.suffix == suffix and target.parent == Path(os.path.realpath(paths.DRAFTS)) else None
++
++
++def _process_stage_problem(words):
++    """Why `minutes.py stage` is refused in a Process run, or None: a spec in drafts for one of the run's files, no note, and a
++    Word draft only from drafts."""
++    spec = _in_drafts(words[1], ".json") if len(words) == 2 else None
++    if spec is None:
++        return "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
++    try:
++        data = json.loads(spec.read_text(encoding="utf-8"))
++    except (OSError, ValueError):
++        return "the meeting spec can't be read"
++    if not isinstance(data, dict) or data.get("note") or data.get("transcript") not in process_files():
++        return ("Process stages only the Intake files Alan pressed Process on: the spec's \"transcript\" must be one of "
++                "them, exactly as listed, and it can't stage a note")
++    draft = data.get("draft")
++    if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
++        return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
++    return None
++
++
++def _process_fill_problem(words):
++    """Why `docx_tools.py fill` is refused in a Process run, or None: the minutes template, from and into drafts."""
++    ok = (len(words) == 4 and words[1] == PROCESS_TEMPLATE and _in_drafts(words[2], ".json") is not None
++          and _in_drafts(words[3], ".docx") is not None)
++    return None if ok else f"Process fills only {PROCESS_TEMPLATE} from a values file in system/staging/drafts/ into a draft there"
++
++
++def process_step_problem(name, words):
++    """Why one of Process's own minutes steps is refused, or None; "" when the command isn't one of them."""
++    if name == "minutes.py stage":
++        return _process_stage_problem(words)
++    if name == "propose.py people map":
++        return None if sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])) else \
++            "Process maps names only in its own spec in system/staging/drafts/"
++    if name == "docx_tools.py fill":
++        return _process_fill_problem(words)
++    if name == "search.py enrich" and [w for w in words if not w.startswith("-")][:2] == ["enrich", "set"]:
++        return None
++    return ""
++
++
++def process_write_problem(rp):
++    """Why a Process run may not write this file directly, or None: only a .json directly in system/staging/drafts/ that is new or
++    that this run wrote (never another flow's draft: minutes waiting in Review, a note, a sweep's input)."""
++    if _in_drafts(str(rp), ".json") is None:
++        return "a Process run writes only its own .json input files directly in system/staging/drafts/"
++    data = guard_run() or {}
++    try:
++        old = rp.exists() and rp.stat().st_mtime < float(data.get("started") or 0) - 1
++    except (OSError, ValueError, TypeError):
++        old = True
++    if old or data.get("mode") != "process":
++        return "a Process run doesn't change a draft it didn't write: write a new file in system/staging/drafts/"
++    return None
++
++
++def process_gate(command):
++    """Why a Process run may not run this creaite script command, or None (#264)."""
++    import re
++    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", (command or "").strip())
++    if not m:
++        return None                          # bash_problem has already refused anything that isn't one creaite script
++    words = bash_args(command)
++    kind, name = command_kind(m.group(1), words)
++    step = process_step_problem(name, words)
++    if step is None:
++        return None
++    if step:
++        _debug("warn", f"process run refused: {name}")
++        return step
++    if kind == READ and name not in HELD_NOT_READ:
++        return None
++    _debug("warn", f"process run refused: {name}")
++    return (f"{name} isn't one of Process's steps: an Intake Process run reads, drafts the minutes and stages them for "
++            f"Review, nothing else")
++# ===== end #264 =====
++
++
+ def vault_relative(command):
+     """`python3 <this vault>/system/scripts/x.py …` or `<this vault>/system/scripts/run x.py …` as the relative form the checks
+     know (BL-268: a run that wrote a file by its full path then named the script the same way, and was refused). Only when the
+@@ -1796,7 +1910,7 @@ def vault_relative(command):
+ 
+ 
+ def hook_main(argv):
+-    """`reach.py hook --run <id> --mode ask|confirmed|sweep|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
++    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
+     run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
+     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
+     error refuses: the guard fails closed."""
