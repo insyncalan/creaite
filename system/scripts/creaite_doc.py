@@ -125,7 +125,59 @@ def derive_client(doc):
         if isinstance(s, dict) and s.get("type") == "header":
             data = s.get("data") if isinstance(s.get("data"), dict) else {}
             s["data"] = {**data, "label": "Client report", "client": doc["client"] or "", "logos": [dict(x) for x in logos]}
+    return derive_facts(doc)
+
+
+def derive_facts(doc):
+    """v2.5.3 (#259, K3 / I19): a client report's stored fields that no output draws, made again in place from where they come
+    from, never kept as stored: `items` (each item a row, tag or milestone list names, exactly as the client-safe facts of its week
+    hold it: report_doc.client_items; one the facts don't hold is dropped), each source tag's `text` (its item's client title;
+    a tag of an item the facts don't hold goes), `based_on` (the approved internal week it locks to, report_doc.baseline) and the
+    layout's `headings` (the shown headings of creaite's own sections that differ from creaite's, as the sections hold them).
+    Fails closed: when the facts can't be read, no item, tag or based_on is kept."""
+    import client_leak
+    by_id, base = _facts_of(doc)
+    sections = [s for s in doc.get("sections") or [] if isinstance(s, dict)]
+    for s in sections:
+        if isinstance(s.get("tags"), list):
+            s["tags"] = _derived_tags(s["tags"], by_id)
+    used = client_leak.refs({"sections": sections})
+    doc["items"] = {r: copy.deepcopy(by_id[r]) for r in sorted(used) if r in by_id}
+    doc["based_on"] = {"path": base["path"], "version": base["version"]} if base else None
+    if isinstance(doc.get("layout"), dict):
+        doc["layout"]["headings"] = _derived_headings(sections)
     return doc
+
+
+def _facts_of(doc):
+    """({item id: client-safe facts}, the approved week or None) for a client report's project and week; ({}, None) when they
+    can't be read (fails closed)."""
+    import report_doc
+    code, fri = str(doc.get("project") or ""), str(doc.get("date") or "")
+    if not (report_doc.CODE.match(code) and DATE.match(fri)):
+        return {}, None
+    try:
+        return report_doc.client_items(code, fri), report_doc.baseline(code, fri)
+    except (Exception, SystemExit):  # noqa: BLE001  no tracker (tracker.connect exits) or a week that can't be read: fails closed
+        return {}, None
+
+
+def _derived_tags(tags, by_id):
+    """A section's source tags with each text its item's client title; a tag of an item the facts don't hold goes."""
+    return [{"ref": g["ref"], "text": str(by_id[g["ref"]].get("title") or "")} for g in tags
+            if isinstance(g, dict) and isinstance(g.get("ref"), str) and g["ref"] in by_id]
+
+
+def _derived_headings(sections):
+    """{section id: heading} of creaite's own client sections whose heading differs from creaite's (as the layout keeps it)."""
+    import report_doc
+    own = {sid: h for sid, _t, h in report_doc.SECTIONS["client"]}
+    out = {}
+    for s in sections:
+        h = s.get("heading").strip() if isinstance(s.get("heading"), str) else ""
+        if s.get("id") in own and h and h != own[s["id"]]:
+            out[s["id"]] = h[:120]
+    return out
 
 
 def _tracker_source(meta):
@@ -336,6 +388,13 @@ PANE_KEYS, TAG_KEYS, SOURCE_KEYS, BASED_KEYS = ("title", "text"), ("ref", "text"
 META_KEYS = ("period_start", "period_end", "locked", "facts_on", "facts_week", "health_diff")
 LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
 REF_LISTS = ("timeline", "milestones")
+# v2.5.3 (#259, P7): the inner keys too: an item's (report_doc._client_item's), a row's source (only Add from the tracker's mark),
+# the layout's lists (strings only), its row rules (a number only) and the header's dates (YYYY-MM-DD only)
+ITEM_KEYS = ("table", "id", "title", "owner", "due_date", "status", "closed", "client_owned", "type", "date", "needed_by", "made_by",
+             "state", "shown_date")
+ROW_SOURCES = ("added",)
+LAYOUT_LISTS = ("order", "hidden", "glance", "logos", "milestones")
+DATA_DATES = ("period_start", "period_end", "facts_week", "week_ending")
 
 
 def _only(x, keys):
@@ -351,6 +410,9 @@ def _list_of(x, keys):
 def _shape_data(d):
     """A section's data with only DATA_KEYS; its milestone lists hold item references (strings) only."""
     out = _only(d, DATA_KEYS) or {}
+    for k in DATA_DATES:
+        if k in out and not (isinstance(out[k], str) and DATE.match(out[k])):
+            out[k] = None
     for k in REF_LISTS:
         if k in out:
             out[k] = [r for r in out[k] if isinstance(r, str)] if isinstance(out[k], list) else []
@@ -374,6 +436,40 @@ def _shape_section(s):
             out[k] = _list_of(out[k], keys)
     if "data" in out:
         out["data"] = _shape_data(out["data"])
+    return _shape_table(out)
+
+
+def _shape_table(out):
+    """v2.5.3 (#259, K3 / P7): a section's columns and rows as creaite writes them: one of creaite's own client tables has its own
+    columns (report_doc.CLIENT_COLUMNS), whatever was stored; a row keeps only the cells of its section's columns, a reference that
+    is a string, and a source only when it is Add from the tracker's mark."""
+    import report_doc
+    if "columns" in out and out.get("id") in report_doc.CLIENT_COLUMNS:
+        out["columns"] = report_doc.client_columns(out["id"])
+    keys = {c.get("key") for c in out.get("columns") or [] if isinstance(c.get("key"), str)}
+    for r in out.get("rows") or []:
+        if "cells" in r:
+            r["cells"] = {k: v for k, v in r["cells"].items() if k in keys} if isinstance(r["cells"], dict) else {}
+        if "source" in r and r["source"] not in ROW_SOURCES:
+            del r["source"]
+        if "ref" in r and not isinstance(r["ref"], str):
+            del r["ref"]
+    return out
+
+
+def _shape_layout(lay):
+    """v2.5.3 (#259, P7): a client report's layout with only its own keys, each list of strings only, `headings` text by section
+    id, `rows` a number (`top`) by section id."""
+    out = _only(lay, LAYOUT_KEYS)
+    for k in LAYOUT_LISTS:
+        if k in out:
+            out[k] = [x for x in out[k] if isinstance(x, str)] if isinstance(out[k], list) else ([] if k != "milestones" else None)
+    if "headings" in out:
+        out["headings"] = {k: v for k, v in out["headings"].items() if isinstance(v, str)} if isinstance(out["headings"], dict) else {}
+    if "rows" in out:
+        rows = out["rows"] if isinstance(out["rows"], dict) else {}
+        out["rows"] = {k: {"top": v["top"]} for k, v in rows.items()
+                       if isinstance(v, dict) and isinstance(v.get("top"), int) and not isinstance(v.get("top"), bool)}
     return out
 
 
@@ -386,13 +482,16 @@ def client_shape(doc):
     out = _only(copy.deepcopy(doc), TOP_KEYS)
     if "sections" in out:
         out["sections"] = [x for x in (_shape_section(s) for s in out["sections"] or []) if x is not None]
-    for k, keys in (("meta", META_KEYS), ("layout", LAYOUT_KEYS), ("based_on", BASED_KEYS)):
+    for k, keys in (("meta", META_KEYS), ("based_on", BASED_KEYS)):
         if isinstance(out.get(k), dict):
             out[k] = _only(out[k], keys)
+    if isinstance(out.get("layout"), dict):
+        out["layout"] = _shape_layout(out["layout"])
     if "sources" in out:
         out["sources"] = _list_of(out["sources"], SOURCE_KEYS)
-    if "items" in out:
-        out["items"] = {k: v for k, v in out["items"].items() if isinstance(v, dict)} if isinstance(out["items"], dict) else {}
+    if "items" in out:          # v2.5.3 (#259, P7): each item with only its own keys (and its values derived: derive_facts)
+        out["items"] = {k: _only(v, ITEM_KEYS) for k, v in out["items"].items() if isinstance(v, dict)} \
+            if isinstance(out["items"], dict) else {}
     return out
 
 

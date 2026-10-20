@@ -717,6 +717,43 @@ class _Client:
         return self.facts.get(table) or []
 
 
+# v2.5.3 (#259, K3): a client table section's columns are creaite's own, fixed here (the editor never renames one); a client file
+# holds these and no other (creaite_doc.client_shape), and a row's cells only these keys.
+CLIENT_COLUMNS = {"asks": (("ask", "Ask"), ("from", "From"), ("by", "By"), ("why", "Why it matters")),
+                  "decisions": (("decision", "Decision"), ("date", "Date")),
+                  "risks": (("type", "Type"), ("risk", "What it is")),
+                  "overdue": (("action", "Action"), ("owner", "Owner"), ("due", "Due"))}
+
+
+def client_columns(sid):
+    """The columns of one of creaite's own client table sections, as a section holds them ([] for any other section)."""
+    return [{"key": k, "label": lab} for k, lab in CLIENT_COLUMNS.get(sid, ())]
+
+
+def client_facts_for(code, fri):
+    """v2.5.3 (#259, K3): the client-safe facts a client report for week ending `fri` is made from: those kept in the approved
+    internal week it locks to (meta.client_facts), else the tracker's as they stand (client_facts), as _Client reads them."""
+    base = baseline(code, fri)
+    locked = creaite_doc.read(base["path"]).get("meta", {}).get("client_facts") if base else None
+    return locked or client_facts(code)
+
+
+ITEM_TABLES = ("actions", "decisions", "raid", "milestones")
+
+
+def client_items(code, fri):
+    """v2.5.3 (#259, K3): {item id: its client-safe facts} a client report for week ending `fri` may hold: the locked week's
+    (client_facts_for), and for an item it doesn't hold, the tracker's as it stands (an item that became client-visible since, which
+    the editor's Add offers). Both are client-safe by construction (client_facts)."""
+    def index(facts):
+        """{id: item} of one set of facts."""
+        rows = [x for t in ITEM_TABLES for x in (facts or {}).get(t) or [] if isinstance(x, dict)]
+        return {x["id"]: x for x in rows if isinstance(x.get("id"), str)}
+    base = baseline(code, fri)
+    locked = creaite_doc.read(base["path"]).get("meta", {}).get("client_facts") if base else None
+    return {**index(client_facts(code)), **index(locked)}
+
+
 def _c_header(c, lay):
     return {"text": "", "data": {"label": "Client report", "client": c.client, "period_start": c.start, "period_end": c.end,
                                  "facts_week": c.base["date"] if c.base else None, "logos": logos(c.code, lay["logos"])}}
@@ -741,8 +778,7 @@ def _c_milestones(c, lay):
 def _c_asks(c, lay):
     rows = [{"ref": a["id"], "shown": True, "cells": {"ask": a["title"], "from": a["owner"], "by": shown(a["due_date"]), "why": ""}}
             for a in c.of("actions") if a["client_owned"] and a["status"] in ("In progress", "Delayed")]
-    return {"columns": [{"key": "ask", "label": "Ask"}, {"key": "from", "label": "From"}, {"key": "by", "label": "By"},
-                        {"key": "why", "label": "Why it matters"}], "rows": rows}
+    return {"columns": client_columns("asks"), "rows": rows}
 
 
 def _c_progress(c, lay):
@@ -759,17 +795,17 @@ def _c_decisions(c, lay):
         when = shown(d["date"]) if d["status"] == "Made" else ("Needed by " + shown(d["needed_by"]) if d.get("needed_by") else "Needed")
         rows.append({"ref": d["id"], "shown": True, "cells": {"decision": d["title"] if d["status"] == "Made"
                                                                           else f"Decision needed: {d['title']}", "date": when}})
-    return {"columns": [{"key": "decision", "label": "Decision"}, {"key": "date", "label": "Date"}], "rows": rows}
+    return {"columns": client_columns("decisions"), "rows": rows}
 
 
 def _c_risks(c, lay):
-    return {"columns": [{"key": "type", "label": "Type"}, {"key": "risk", "label": "What it is"}],
+    return {"columns": client_columns("risks"),
             "rows": [{"ref": r["id"], "shown": True, "cells": {"type": r["type"], "risk": r["title"]}} for r in c.of("raid")]}
 
 
 def _c_overdue(c, lay):
     late = [a for a in c.of("actions") if a["status"] in ("In progress", "Delayed") and a.get("due_date") and a["due_date"] < c.fri]
-    return {"columns": [{"key": "action", "label": "Action"}, {"key": "owner", "label": "Owner"}, {"key": "due", "label": "Due"}],
+    return {"columns": client_columns("overdue"),
             "rows": [{"ref": a["id"], "shown": bool(a["client_owned"]),          # the client's own by default; the others greyed
                       "cells": {"action": a["title"], "owner": a["owner"], "due": shown(a["due_date"])}} for a in late]}
 
