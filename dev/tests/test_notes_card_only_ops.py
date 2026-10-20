@@ -9,9 +9,9 @@ of the card's own proposal (tracker.card_marks), bound to that proposal's bytes 
 - a hand-staged remove: /api/apply leaves it in staging and says why; tracker.py apply naming it is refused before the backup;
   Approve on the card removes it (the marker exists only during that apply) and the same proposal again is refused;
 - copy then remove, and a write over a note, refused; the same ops on a file outside the notes folder apply (control);
-- the Notes tab still creates, saves, renames and deletes (no marker involved; the delete is #124's card);
+- the Notes tab still creates, saves, renames and deletes (no marker involved but the delete's own, #255: no card);
 - `..`, a symlink to a note or to the notes folder, a hard link, case variants, a subfolder and the portfolio's notes are all
-  inside; a minutes file, an inbox file and the _Archive are not;
+  inside; a minutes file, an inbox file and the archive folder (99 Archive today, 99 Archive after #252) are not;
 - locations.folders.notes on, inside or around a minutes or reports folder: refused by propose.py setting and the page's
   settings save, and with such a mapping a "reports" move of a file in it is refused by the mover, naming the mapping;
 - review F1 to F5: a rename of the notes folder is refused while notes are under the old name (the page's real /api/fs
@@ -21,6 +21,7 @@ Everything is fictional and temporary.
 """
 import json
 import os
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -33,6 +34,10 @@ from test_tracker import ABC  # noqa: E402
 
 IN_NOTES = "is in a notes folder: a note is changed through the Notes tab, or by Approve on the live server's approval card"
 
+
+# The archive folder's name, as paths.py has it (99 Archive today, 99 Archive after #252), read without importing paths here.
+ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
+                    .read_text(encoding="utf-8"), re.M).group(1)
 
 class NoteOps(test_card_only_moves.CardOnlyMoves):
     def hand(self, ops, via="fs", name="ops"):
@@ -138,9 +143,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
         self.assertTrue(m["ok"], m)
         self.assertTrue(m["renamed"])
         self.assertIn("Autosaved.", (self.v.root / m["note"]["path"]).read_text())
-        d = self.post("/api/notes/delete", {"path": m["note"]["path"], "base": m["base"]})
-        self.assertTrue(d["ok"], d)
-        done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
+        done = self.page("/api/notes/delete/now", {"path": m["note"]["path"], "base": m["base"]})     # #255: no card
         self.assertTrue(done["ok"], done)
         self.assertTrue((self.archive() / "Tab note renamed.md").is_file())
         self.assertEqual(self.markers(), [])
@@ -163,7 +166,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
                  "project_case": f"projects/{folder.upper()}/notes/Tricky.md", "symlink": "inbox/link.md",
                  "symlinked_folder": "inbox/notes-dir/Tricky.md", "sub": f"{ABC}/notes/sub/Deep.md",
                  "images": f"{ABC}/notes/_images/pic.png", "portfolio": "projects/_portfolio/notes/Thought.md",
-                 "plain": "inbox/Plain.md", "minutes": f"{ABC}/minutes/x.docx", "archive": f"{ABC}/_Archive/notes/Tricky.md",
+                 "plain": "inbox/Plain.md", "minutes": f"{ABC}/minutes/x.docx", "archive": f"{ABC}/{ARCHIVE}/notes/Tricky.md",
                  "hard_remove": "inbox/hard.md"}
         got = self.py_json(
             "import tracker\n"
@@ -213,8 +216,8 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
 
     def test_g_deleted_notes_are_not_copied_out_and_no_draft_is_stamped_in_notes(self):
         r = self.new("Gone")
-        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])     # Delete note
-        gone = f"{ABC}/_Archive/notes/Gone.md"
+        self.assertTrue(self.delete(r)["ok"])                                                             # Delete note
+        gone = f"{ABC}/{ARCHIVE}/notes/Gone.md"
         self.refused_both_ways([{"op": "copy", "from": gone, "to": "inbox/Gone copy.md"}], f"copy: {gone} {IN_NOTES}", "gone")
         self.assertFalse((self.v.root / "inbox/Gone copy.md").exists())
         doc = self.folder() / "Stamped.docx"                                     # F3: a draft is never stamped in a notes folder
@@ -335,14 +338,14 @@ class NotesMapping(OneDriveCase):
                                       "folders": {**data["locations"]["folders"], "notes": name}}}
 
     def test_h_the_rename_check_scans_every_place_notes_can_be(self):
-        """M1, M3, L2, L4 through the page's real save: an engagement not in the register, an engagement's _Archive and zz
-        Archive, an archived engagement and its own _Archive, a symlinked folder or file; Finder's own files are not notes."""
+        """M1, M3, L2, L4 through the page's real save: an engagement not in the register, an engagement's 99 Archive and zz
+        Archive, an archived engagement and its own 99 Archive, a symlinked folder or file; Finder's own files are not notes."""
         eng = self.eng("ABC").name
         out = self.root / "elsewhere"
         touch(out / "x.md", "x\n")
-        places = {"unregistered": "Side Engagement/08 Notes/S.md", "eng_archive": f"{eng}/_Archive/08 Notes/G.md",
-                  "eng_zz": f"{eng}/zz Archive/08 Notes/Z.md", "archived_eng": f"_Archive/{eng}/08 Notes/O.md",
-                  "archived_eng_archive": f"_Archive/{eng}/_Archive/08 Notes/Q.md", "portfolio": "_Portfolio/08 Notes/P.md"}
+        places = {"unregistered": "Side Engagement/08 Notes/S.md", "eng_archive": f"{eng}/99 Archive/08 Notes/G.md",
+                  "eng_zz": f"{eng}/zz Archive/08 Notes/Z.md", "archived_eng": f"99 Archive/{eng}/08 Notes/O.md",
+                  "archived_eng_archive": f"99 Archive/{eng}/99 Archive/08 Notes/Q.md", "portfolio": "_Portfolio/08 Notes/P.md"}
         for k, rel in places.items():
             f = touch(self.root / rel, "note\n")
             code, body = self.page_save(self.renamed())
@@ -366,7 +369,7 @@ class NotesMapping(OneDriveCase):
 
     def test_i_copy_out_of_an_archived_engagement_needs_the_card(self):
         eng = self.eng("ABC").name
-        for rel in (f"_Archive/{eng}/08 Notes/O.md", f"_Archive/{eng}/_Archive/08 Notes/Q.md", f"{eng}/zz Archive/08 Notes/Z.md"):
+        for rel in (f"99 Archive/{eng}/08 Notes/O.md", f"99 Archive/{eng}/99 Archive/08 Notes/Q.md", f"{eng}/zz Archive/08 Notes/Z.md"):
             touch(self.root / rel, "note\n")
             p = self.v.root / "system/staging/proposed-2026-10-16-arch.json"
             p.write_text(json.dumps({"source_run": "dashboard", "items": [], "file_changes": {
@@ -467,7 +470,7 @@ class NotesMapping(OneDriveCase):
 
     def test_k_the_skeleton_must_be_a_template_folder(self):
         cfg = self.v.root / "system/config/settings.json"
-        for bad in (".", "", "_Archive", "_Archive/Skel", self.eng("ABC").name, "_Portfolio", "../x"):
+        for bad in (".", "", "99 Archive", "99 Archive/Skel", self.eng("ABC").name, "_Portfolio", "../x"):
             data = json.loads(cfg.read_text())
             data["locations"]["skeleton"] = bad
             code, body = self.page_save(data)
@@ -522,7 +525,7 @@ class NotesMapping(OneDriveCase):
         weekly = data["locations"]["folders"]["weekly_reports"]
         report = touch(self.eng("ABC", weekly, "2025-01-03 Weekly report.docx"), b"PK")
         eng = self.eng("ABC").name
-        fop = {"op": "move", "from": f"projects/{eng}/{weekly}/{report.name}", "to": f"projects/{eng}/_Archive/{weekly}/{report.name}"}
+        fop = {"op": "move", "from": f"projects/{eng}/{weekly}/{report.name}", "to": f"projects/{eng}/99 Archive/{weekly}/{report.name}"}
         code = f"import tracker\nprint(json.dumps(tracker.card_move_problem({fop!r}, {{'archive': 'reports'}}, None)))"
         self.assertIsNone(self.py(code))                                         # control: notes in a folder of their own
         data["locations"]["folders"]["notes"] = weekly                           # saved by hand, past the refusals

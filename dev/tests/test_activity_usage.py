@@ -166,7 +166,8 @@ class UsageTab(UsageBase):
         calls = b.eval("window.__calls")
         writes = [c for c in calls if not c.startswith("GET ") and not any(p in c for p in ("/api/here", "/api/pulse", "/api/vip", "/api/ask/running"))]
         self.assertEqual(writes, [])                          # no POST, PUT or DELETE (the page's own polling excepted)
-        self.assertEqual(b.eval(f"{PANEL}.querySelectorAll('button, input, select, textarea, a[href]').length"), 0)
+        # v2.5.3: Your reviews (.urev) is the tab's one form, tested in test_usage_reviews_browser.py; the figures stay read only
+        self.assertEqual(b.eval(f"[...{PANEL}.querySelectorAll('button, input, select, textarea, a[href]')].filter(e=>!e.closest('.urev')).length"), 0)
 
     def test_fits_at_900_in_both_palettes_and_both_modes(self):
         b = self.open_usage()
@@ -276,7 +277,7 @@ class UsageRoute(UsageBase):
         b.wait(f"{TEXT}.includes('$7.00')")
         self.assertIn("Prep page", b.eval(TEXT))
         # and the tab stays read only
-        self.assertEqual(b.eval(f"{PANEL}.querySelectorAll('button, input').length"), 0)
+        self.assertEqual(b.eval(f"[...{PANEL}.querySelectorAll('button, input')].filter(e=>!e.closest('.urev')).length"), 0)   # Your reviews aside
 
 
 if __name__ == "__main__":

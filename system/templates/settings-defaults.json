@@ -67,10 +67,14 @@
     ]
   },
   "vip": {
-    "_about": "VIPs (BL-99): people marked VIP in the people register. Anything they send is alerted at the top of Today. check_minutes: how often the live server looks for VIP mail, Teams and invites while it runs (nothing is seen while creaite is closed; the next start catches up). notify: a browser notification as well as the Today block.",
+    "_about": "VIPs (BL-99): people marked VIP in the people register. Anything they send is alerted at the top of Today. check_minutes: how often the live server looks for VIP mail, Teams and invites while it runs (nothing is seen while creaite is closed; the next start catches up). notify: a browser notification as well as the Today block. quiet_overnight, quiet_from, quiet_to, quiet_weekend (#97): no checks between the two 24-hour times, nor on the weekend days (work.weekend_days); the first check after reads back to the last one.",
     "enabled": true,
     "check_minutes": 30,
-    "notify": true
+    "notify": true,
+    "quiet_overnight": true,
+    "quiet_from": "19:00",
+    "quiet_to": "07:00",
+    "quiet_weekend": true
   },
   "reminders": {
     "enabled": true,
@@ -153,7 +157,7 @@
     "update_backups_kept": 3
   },
   "archive": {
-    "_about": "Archiving (BL-10, BL-03). after_months: closed or cancelled actions and RAID items, and done or dropped promises, are archived (flagged, still searchable, undoable) this many months after closing, once a day; 0 turns a kind off. Decisions, milestones and open items never are. reports_after_months: weekly and client reports, minutes and Steerco one-pagers older than this (by the date in their name) are offered once a month in Settings › Health, to move into the engagement's own _Archive.",
+    "_about": "Archiving (BL-10, BL-03). after_months: closed or cancelled actions and RAID items, and done or dropped promises, are archived (flagged, still searchable, undoable) this many months after closing, once a day; 0 turns a kind off. Decisions, milestones and open items never are. reports_after_months: weekly and client reports, minutes and Steerco one-pagers older than this (by the date in their name) are offered once a month in Settings › Health, to move into the engagement's own 99 Archive (the old _Archive and zz Archive are still read for one release).",
     "after_months": {
       "actions": 6,
       "raid": 6,
@@ -286,7 +290,9 @@
       "notes": "08 Notes"
     },
     "never_index": [
+      "99 Archive",
       "_Archive",
+      "zz Archive",
       "_Templates",
       "99 System"
     ],

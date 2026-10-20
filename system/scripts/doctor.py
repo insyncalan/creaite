@@ -237,7 +237,7 @@ def extraction_scope():
 
 def notes_folder_own():
     """#124: the notes folder is its own: never the same as, inside or around a meeting, report, Steerco, agendas or images
-    folder (Delete note moves the notes folder's files into _Archive). The check is paths.notes_folder_clash (#128)."""
+    folder (Delete note moves the notes folder's files into 99 Archive). The check is paths.notes_folder_clash (#128)."""
     bad = paths.notes_folder_clash()
     return (False, f"locations.folders.notes ({paths.folder_name('notes')}) is also the {', '.join(bad)} folder or holds it: "
                    "give notes a folder of their own") if bad else (True, f"notes in {paths.folder_name('notes')}, a folder of their own")
@@ -733,29 +733,6 @@ def script_policy():
     return True, f"{total} violation{'' if total == 1 else 's'} in 7 days" + (f" ({top})" if top else "")
 # ===== end BL-255 =====
 
-
-# ===== BL-09: folders still called zz Archive (both names are skipped for one release) =====
-def old_archive_folders():
-    """Folders still called zz Archive in the projects folder: a warning naming them; Health's Fix it renames them to _Archive."""
-    found = paths.old_archive_folders()
-    if not found:
-        return True, "none: archive folders are called _Archive"
-    names = ", ".join(paths.rel(f) for f in found[:5]) + (f" and {len(found) - 5} more" if len(found) > 5 else "")
-    return None, (f"{len(found)} folder{'s are' if len(found) != 1 else ' is'} still called zz Archive ({names}): skipped as before; "
-                  "rename to _Archive (Settings › Health › Fix it, or say \"rename the old archive folders\")")
-
-
-def skeleton_archive():
-    """The project skeleton (locations.skeleton) still holding a zz Archive folder: a folder listing only; Alan renames it in Finder."""
-    found = paths.skeleton_old_archive()
-    if not found:
-        return True, "no zz Archive in the project skeleton" if paths.external() else "no project skeleton (projects in the vault)"
-    sk = str(paths.locations().get("skeleton") or "_Templates/_Skeleton")
-    return None, (f"{sk} still holds {', '.join(found)}: rename it to _Archive in Finder (creaite never writes in _Templates; "
-                  "a new project gets _Archive either way)")
-# ===== end BL-09 =====
-
-
 # ===== BL-10 and BL-03: archiving (v1.9.5) =====
 def archive_items():
     """The daily archiving of items closed long ago: its last run, as information (never a warning)."""
@@ -770,7 +747,7 @@ def archive_reports():
     st = archive.status()
     line = archive.reports_line(st)
     if st["reports"]["offer"]:
-        return None, (f"{line}: each moves into its engagement's own _Archive, in the same place below it; links keep working, "
+        return None, (f"{line}: each moves into its engagement's own 99 Archive, in the same place below it; links keep working, "
                       "nothing is deleted (Settings › Health › Archive them)")
     return True, line
 # ===== end BL-10 and BL-03 =====
@@ -810,8 +787,6 @@ def run_checks():
     check("ask creaite's reach and guard", assistant_guard)
     check("Vault is local, not synced", vault_not_synced)
     check("Online-only files", online_only)
-    check("Archive folders called _Archive", old_archive_folders)       # BL-09
-    check("Project skeleton's archive folder", skeleton_archive)      # BL-09
     check("Archiving of old items", archive_items)                    # BL-10
     check("Old reports and minutes", archive_reports)                 # BL-03
     check("Extraction never reads documents/ or reports/", extraction_scope)

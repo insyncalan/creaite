@@ -60,7 +60,11 @@ export const KL={action:"Action",decision:"Decision",milestone:"Milestone"};
 export const kindOf=(t,x)=>t==="actions"?"action":t==="raid"?((x&&x.type)||"Risk"):t==="decisions"?"decision":"milestone";
 export const ico=k=>KI[k]?`<span class="ki" title="${KL[k]||k}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k]}</svg></span>`:"";
 export const revIco=r=>r.kind==="actions"?ico("action"):r.kind==="raid"?ico(r.rec.type||"Risk"):r.kind==="decisions"?ico("decision"):"";
-export const store={get:(k,d)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set:(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+export const store={get:(k,d)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set:(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
+  /* #256: a saved map or list read tolerantly: anything else (null, a number, a string, the other shape) reads as empty. Reading
+     never writes: what is saved stays exactly as saved until Alan changes something. */
+  obj:k=>{ const v=store.get(k,{}); return v&&typeof v==="object"&&!Array.isArray(v)?v:{}; },
+  list:k=>{ const v=store.get(k,[]); return Array.isArray(v)?v:[]; }};
 export const CMT="What it is: \nWhat it means for you: \nWhat is being done: ";
 export const CMH=["What it is:","What it means for you:","What is being done:"];
 export const cmHeads=t=>CMH.every(h=>(t||"").split("\n").some(l=>l.trim().startsWith(h)));

@@ -151,7 +151,7 @@ class ReadCommandsWriteOnlyDrafts(unittest.TestCase):
         writer = src[src.index("def emit_spec"):src.index("def cmd_new_project")]
         self.assertIn("name != out or name.startswith(\".\")", writer)
         self.assertIn("paths.DRAFTS / f\"{stem}.json\"", writer)
-        for fn in ("def cmd_new_project", "def cmd_close_project", "def archive_cli", "def cmd_old_archives"):
+        for fn in ("def cmd_new_project", "def cmd_close_project", "def archive_cli"):
             body = src[src.index(fn):]
             body = body[:body.index("\ndef ", 1)]
             self.assertIn("emit_spec(", body, fn)
