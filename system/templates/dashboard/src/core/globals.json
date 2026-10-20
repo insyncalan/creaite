@@ -435,6 +435,7 @@
    "moveCol",
    "msOpts",
    "mtgHasTx",
+   "mtgProcessFile",
    "mtgTx",
    "mvAct",
    "mvAddCommit",

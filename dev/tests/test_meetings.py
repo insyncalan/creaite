@@ -335,6 +335,9 @@ PAGE_SCRIPT = r"""
     await until(()=>RUN===null&&!Object.values(MRUN).some(v=>v==="processing"||v==="loading")
       &&state("ABC Steering")==="Draft ready in Review"&&state("Weekly sync 12").startsWith("Skipped"));
     out.asked=ASKED.slice(); out.loaded=LOADED.slice(); out.after=rows();
+    /* #264 S6: a project goes with the file only when Alan chose it */
+    out.chosen=[{p:"ABC",how:"remembered"},{p:"ABC",how:"matched"},{p:"_portfolio",how:"portfolio"},{p:"_portfolio",how:"remembered"},{p:null,how:"unsure"}]
+      .map(m=>mtgProcessFile(m,"inbox/x.vtt"));
     window.ASKED=[]; document.getElementById("mtgRefresh").click(); await until(()=>ASKED.length>0,10000); out.refresh=ASKED.slice();
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre);
@@ -425,6 +428,9 @@ class InboxPageTests(unittest.TestCase):
         self.assertEqual(len(asked), 1)                                                        # only a loaded transcript goes to cx-minutes
         self.assertEqual(len(asked[0]), 1)
         self.assertRegex(asked[0][0]["path"], r"^inbox/\d{4}-\d{2}-\d{2} ABC Steering\.vtt$")  # the saved file, not a search of Teams
+        self.assertNotIn("project", asked[0][0])            # #264 S6: ABC was only matched from the title, so the run works it out
+        self.assertEqual(r["chosen"], [{"path": "inbox/x.vtt", "project": "ABC"}, {"path": "inbox/x.vtt"}, {"path": "inbox/x.vtt"},
+                                       {"path": "inbox/x.vtt", "project": "_portfolio"}, {"path": "inbox/x.vtt"}])
         # #264: through Process's own route (the click is the go-ahead to stage), never a confirmed ask message
         after = {row[0]: row[2] for row in r["after"]}
         self.assertEqual(after["ABC Steering"], "Draft ready in Review")

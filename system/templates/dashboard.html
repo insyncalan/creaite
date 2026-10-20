@@ -5970,6 +5970,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mtgHasTx: () => mtgHasTx,
     mtgLater: () => mtgLater,
     mtgLoadable: () => mtgLoadable,
+    mtgProcessFile: () => mtgProcessFile,
     mtgProject: () => mtgProject,
     mtgRestore: () => mtgRestore,
     mtgShown: () => mtgShown,
@@ -46887,6 +46888,7 @@ ${s5}`;
     putHTML($("#isecCalBody"), html`<div class="mtgsec" id="mtgSec"><div class="mtghead"><span class="sub" id="mtgRead"></span><span class="sp"></span><button class="btn" id="mtgRefresh">Refresh</button><button class="btn" id="mtgNew">Select new</button><button class="btn" id="mtgTx">Select with transcripts</button><button class="btn" id="mtgLoad" disabled>Load into inbox</button><button class="btn primary" id="mtgGo" disabled>Process selected</button></div><div class="mtgchips" id="mtgChips" role="group" aria-label="Show"></div><div id="mtgBody"></div></div>`);
   }
   var TXWHY = { none: "No transcript for this meeting", not_transcribed: "Not transcribed yet", no_access: "No access to the transcript" };
+  var mtgProcessFile = (m5, path) => m5 && m5.p && m5.how === "remembered" ? { path, project: m5.p } : { path };
   var mtgSkip = (m5) => m5.loaded ? "" : TXWHY[m5.transcript] || (!m5.transcript && !m5.teams ? "Not a Teams meeting, so there is no transcript to load" : "");
   async function processMeetings() {
     const L3 = MTG().filter((m5) => MSEL.has(m5.id));
@@ -46937,7 +46939,7 @@ ${s5}`;
       renderMeetings();
       let r4 = null;
       try {
-        r4 = await processLive([m5.p ? { path: now.loaded, project: m5.p } : { path: now.loaded }]);
+        r4 = await processLive([mtgProcessFile(m5, now.loaded)]);
       } catch (e4) {
       }
       await reloadData();
@@ -76602,6 +76604,7 @@ ${d5.text}`);
         "moveCol",
         "msOpts",
         "mtgHasTx",
+        "mtgProcessFile",
         "mtgTx",
         "mvAct",
         "mvAddCommit",

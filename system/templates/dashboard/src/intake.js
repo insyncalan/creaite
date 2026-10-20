@@ -169,6 +169,10 @@ putHTML($("#isecCalBody"),html`<div class="mtgsec" id="mtgSec"><div class="mtghe
    transcript to load (No transcript, Not transcribed, No access, or not a Teams meeting) is skipped with the reason on its row, and
    the others carry on. A meeting already loaded is processed from its file. Claude never searches Teams for a missing transcript. */
 export const TXWHY={none:"No transcript for this meeting",not_transcribed:"Not transcribed yet",no_access:"No access to the transcript"};
+/* #264 S6: the project goes with the file only when Alan chose it (the picker, or remembered for the series); a match from the
+   title or the portfolio guess is left for the run to work out, never presented as his choice. The portfolio is "_portfolio". */
+/** @param {any} m @param {string} path @returns {{path: string, project?: string}} */
+export const mtgProcessFile=(m,path)=>m&&m.p&&m.how==="remembered"?{path,project:m.p}:{path};
 export const mtgSkip=m=>m.loaded?"":TXWHY[m.transcript]||(!m.transcript&&!m.teams?"Not a Teams meeting, so there is no transcript to load":"");
 export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id)); if(!L.length) return;
   if(!viaServer()){ snack("Processing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
@@ -179,7 +183,7 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
       shared.RUNLABEL=PL; try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); now=MTG().find(x=>x.id===m.id);
       if(!now||!now.loaded){ MRUN[m.id]="skipped:"+(TXWHY[now&&now.transcript]||"No transcript could be loaded"); renderMeetings(); continue; } }
     MRUN[m.id]="processing"; renderMeetings();     /* #264: through Process's own route, as Upload files does: the click is the go-ahead */
-    let r=null; try{ r=await processLive([m.p?{path:now.loaded,project:m.p}:{path:now.loaded}]); }catch(e){} await reloadData();
+    let r=null; try{ r=await processLive([mtgProcessFile(m,now.loaded)]); }catch(e){} await reloadData();
     const after=MTG().find(x=>x.id===m.id), o=((r&&r.files)||[])[0], said=(o&&o.question)||(r&&r.stopped?"Stopped":"")||oneLine((r&&r.message)||"");
     MRUN[m.id]=after&&(after.draft||after.processed)?"draft":`failed:${said.slice(0,140)||"no draft came back"}`; renderMeetings(); } }
 export async function refreshCalendar(){ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
