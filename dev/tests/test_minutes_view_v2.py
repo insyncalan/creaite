@@ -174,6 +174,8 @@ class MinutesViewV2(LiveBrowserCase):
             app: own.appearance, ownBorder: own.borderTopStyle, ownBg: own.backgroundColor, emptyBorder: getComputedStyle(none).borderTopStyle}; })()""" % (ROW % 1, ROW % 1))
         self.assertEqual((look["thL"], look["tdL"], look["tdR"]), ("1px", "1px", "1px"), f"boxed: {look}")
         self.assertNotIn(look["thBg"], ("rgba(0, 0, 0, 0)", "transparent"), "a grey header row")
+        self.assertEqual(self.ev("getComputedStyle(document.querySelector('#v-minutes table.mnt th')).position"), "static",
+                         "the grey header never sticks over the rows as the sheet scrolls")
         self.assertEqual(look["app"], "none", "a pill, not a native select with a chevron")
         self.assertNotEqual(look["ownBorder"], "dashed", "a value is a filled pill")
         self.assertEqual(look["emptyBorder"], "dashed", "an empty value is dashed")

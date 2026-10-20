@@ -3572,7 +3572,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 #v-minutes .sheet-status{white-space:nowrap}
 .mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;min-height:24px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
-.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:12px}
+.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:12px;position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
 .sheet-a4 .page table.mnt td{padding:7px 8px}
 .mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
 .mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:12px}
