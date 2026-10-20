@@ -847,7 +847,7 @@ class Keys(Driver):
     KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
              ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"),
              ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"),
-             ("minutes-approve", "mnapp", "mnapp dialog#mnApprove", "minutes", "Approve minutes", "Approve the minutes"),
+             ("minutes-approve", "mnapp", "mnapp dialog#mnApprove", "minutes", "Approve minutes", "Before approving"),   # #268: the box shown only for a ticked item's real problem
              ("clientreport", "crleft", "crleft dialog#crLeftDlg", "clientreport", "Check and export", "Left out of the client's report"),
              ("today", "rail", "rail menu#railFly", "Shell", "→ on Projects, Work", "Rail flyouts"),
              ("work-board", "boardask", "boardask dialog#boardDlg", "Shell", "Move ▸ a due column", "Due date for"),

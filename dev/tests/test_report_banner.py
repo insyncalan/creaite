@@ -92,8 +92,8 @@ class Banner:
                 self.assertIn("·", st["mini"])
                 if self.VIEW != "#v-minutes":                                   # the hub's bar is icons: the controls are there, the words are tooltips
                     self.assertTrue(self.b.eval(f"!!document.querySelector('{self.VIEW} .sheet-bar #hubExp') && !!document.querySelector('{self.VIEW} .sheet-bar #zVal')"))
-                else:
-                    self.assertIn("Show as exported", st["text"])
+                else:                                                           # #268: the minutes' bar is icons too (Show as exported is an .ib with its tip)
+                    self.assertTrue(self.b.eval(f"!!document.querySelector('{self.VIEW} .sheet-bar .ib.sheet-exp[aria-label=\"Show as exported\"]')"))
                     self.assertIn("%", st["text"])
 
     def test_scrolling_up_never_brings_it_back_only_the_top_does(self):
@@ -279,8 +279,11 @@ class MinutesBanner(Banner, LiveBrowserCase):
         cls.proposal = stage_meeting(v)
 
     def open_view(self):
+        # #268: at 900 px the transcript now sits beside the sheet (280 px), so the page is drawn smaller and this short meeting
+        # has too little to scroll; the scroll rules are tested on the full-width sheet, with the transcript hidden
+        self.b.eval("(()=>{try{localStorage.setItem('creaite-minutes-transcript', innerWidth<=900?'false':'true')}catch(e){}})()")
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
-        self.b.wait("document.querySelector('#v-minutes .mnrow')", 15)
+        self.b.wait("document.querySelector('#v-minutes tr.mi')", 15)     # #268: the item rows are the Track tables' rows
 
 
 if __name__ == "__main__":

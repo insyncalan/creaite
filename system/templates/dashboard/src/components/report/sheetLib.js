@@ -10,12 +10,14 @@ export const MM = 96 / 25.4;
 /** A4 at its own size, the page's padding and the content one page holds (297 − 2 × 16 = 265 mm; contract §4.1). */
 export const A4_W = 210, A4_H = 297, PAD_MM = 16, CONTENT_MM = 265;
 
-/** A zoom held between 40% and 80% (a number that isn't one gives 80%). @param {number} z */
-export const clampZoom = z => Math.round(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, Number.isFinite(z) ? z : SHEET_ZOOM_DEFAULT)) * 1000) / 1000;
-/** One step of the − and + buttons and ⌘− ⌘+: 5 points, on the grid. @param {number} z @param {1|-1} dir */
-export const stepZoom = (z, dir) => clampZoom(Math.round((z + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP);
-/** A trackpad pinch (a ctrl wheel): smooth, so a hand's small movements make small changes. @param {number} z @param {number} deltaY */
-export const pinchZoom = (z, deltaY) => clampZoom(z * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01));
+/** A zoom held between 40% and 80% (a number that isn't one gives 80%); a view may give its own limits (#268: the minutes, 50% to
+    250%). @param {number} z @param {number} [lo] @param {number} [hi] */
+export const clampZoom = (z, lo = SHEET_ZOOM_MIN, hi = SHEET_ZOOM_MAX) => Math.round(Math.min(hi, Math.max(lo, Number.isFinite(z) ? z : SHEET_ZOOM_DEFAULT)) * 1000) / 1000;
+/** One step of the − and + buttons and ⌘− ⌘+: 5 points, on the grid. @param {number} z @param {1|-1} dir @param {number} [lo] @param {number} [hi] */
+export const stepZoom = (z, dir, lo, hi) => clampZoom(Math.round((z + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP, lo, hi);
+/** A trackpad pinch (a ctrl wheel): smooth, so a hand's small movements make small changes. @param {number} z @param {number} deltaY
+    @param {number} [lo] @param {number} [hi] */
+export const pinchZoom = (z, deltaY, lo, hi) => clampZoom(z * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01), lo, hi);
 
 /** The heading creaite would give a section. @param {{heading: string, default_heading?: string}} s */
 export const defaultHeading = s => (s.default_heading == null ? s.heading : s.default_heading);

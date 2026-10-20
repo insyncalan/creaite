@@ -5,6 +5,7 @@
    record and its proposal change together), /api/minutes/approve (the minutes and the ticked items in one apply) and
    /api/minutes/export. Nothing here writes any other way; nothing is sent. */
 import { signal } from "@preact/signals";
+import { store } from "../core/page.js";
 import { api, oneLine, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -14,7 +15,7 @@ import { api, oneLine, viaServer } from "../core/server.js";
 /** @typedef {{files: string[], transcripts: string[], items: PlanItem[], group: number, joins: string[]}} Plan */
 /** @typedef {{ok: boolean, message?: string, path?: string, doc?: SheetDoc, versions?: Version[],
     turns?: {timed: boolean, turns: Turn[]}, proposal?: string|null, plan?: Plan|null, labels?: Record<string, string[]>,
-    withheld?: Record<string, string>}} MinutesView */
+    withheld?: Record<string, string>, settle?: number[]}} MinutesView */
 
 /** What the view was opened with: {file} (the proposal) or {path} (the record). */
 export const minutesArg = signal(/** @type {{file?: string, path?: string}|null} */ (null));
@@ -25,14 +26,23 @@ export const minutesDoc = signal(/** @type {SheetDoc|null} */ (null));
 /** The version the page was opened at, sent with each save. */
 export const minutesBase = signal(/** @type {number|undefined} */ (undefined));
 export const minutesBusy = signal("");
+/** #268: whether the transcript pane is shown is remembered per browser (shown by default) and applies to the next minutes
+    opened, whichever meeting. The page works without the storage (store.get and store.set are inside try/catch). */
+export const PANE_KEY = "creaite-minutes-transcript";
 /** The transcript pane: open, the turn picked from a time tag, the words searched for. */
 export const paneOpen = signal(true);
+/** Show or hide the transcript, and remember the choice. @param {boolean} on */
+export function setPane(on) { paneOpen.value = !!on; store.set(PANE_KEY, !!on); }
+/** The remembered choice, read as each minutes opens. */
+export function paneRemembered() { paneOpen.value = store.get(PANE_KEY, true) !== false; }
+/** #268: the turn lit by hovering, both ways: a row lights its turn (from "row", the pane scrolls to it), a turn lights its
+    rows (from "pane"). */
+export const hoverTurn = signal(/** @type {{turn: number, from: "row"|"pane"}|null} */ (null));
 export const paneTurn = signal(/** @type {number|null} */ (null));
 export const paneQuery = signal("");
 /** Checks Alan kept his words on (Keep mine), by check id, for this page's life. */
 export const keptChecks = signal(/** @type {string[]} */ ([]));
-/** Internal, Distributed or Side by side, when the distributed version is on. */
-export const minutesMode = signal(/** @type {"internal"|"distributed"|"side"} */ ("internal"));
+/** #268: the Before approving box (only when a ticked item has a real problem). */
 export const approveOpen = signal(false);
 
 let mnAsked = 0;
@@ -43,8 +53,16 @@ export async function loadMinutes(arg) {
   minutesArg.value = arg;
   if (!viaServer()) { minutesView.value = { ok: false, message: "The minutes view needs the live server." }; return; }
   minutesBusy.value = "Opening the minutes…";
-  const r = await api("/api/minutes/draft", arg);
+  let r = await api("/api/minutes/draft", arg);
   if (mine !== mnAsked) return;
+  if (r && r.ok && r.doc && r.doc.state === "draft" && Array.isArray(r.settle) && r.settle.length) {
+    // #268: after Undo of Approve minutes the record still holds the approve's own changes (lines taken out or kept as lines
+    // only) while their items are pending again: settled first, so the minutes are exactly as they were before Approve.
+    const s = await api("/api/minutes/save", { path: r.path, op: { op: "settle" }, base_version: Number(r.doc.version) || undefined });
+    if (mine !== mnAsked) return;
+    if (s && s.ok) r = await api("/api/minutes/draft", { path: r.path });
+    if (mine !== mnAsked) return;
+  }
   minutesBusy.value = "";
   take(r && r.ok ? r : { ok: false, message: oneLine((r && r.message) || "") || "Couldn't open the minutes" });
 }
@@ -104,10 +122,10 @@ export async function approveMinutes(group, own) {
   return r || { ok: false, message: "The apply didn't run; nothing was changed." };
 }
 
-/** Export the minutes as HTML, Word or PDF (P2's export, opened once made); `version` "distributed" exports the distributed
-    version (the approved minutes only; filed under a new name, never over a file). @param {string} format @param {"internal"|"distributed"} [version] */
-export async function exportMinutes(format, version = "internal") {
+/** Export the minutes as HTML, Word or PDF (P2's export, opened once made). #268: one version only: the view never asks for
+    the distributed export (the server's distributed code is left as it is). @param {string} format */
+export async function exportMinutes(format) {
   const v = minutesView.value;
   if (!v || !v.ok || !v.path) return { ok: false, message: "The minutes aren't open." };
-  return (await api("/api/minutes/export", { path: v.path, format, file_beside: true, version })) || { ok: false, message: "Not exported." };
+  return (await api("/api/minutes/export", { path: v.path, format, file_beside: true })) || { ok: false, message: "Not exported." };
 }

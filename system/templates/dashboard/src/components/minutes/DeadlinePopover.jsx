@@ -1,5 +1,6 @@
 // @ts-check
-/* DeadlinePopover (v2.1.0 P7, BL-338 point 9): a row's deadline. The button shows the date (DD-MM-YYYY) or Not set; it opens a
+/* DeadlinePopover (v2.1.0 P7, BL-338 point 9): a row's deadline. The button (#268: a pill, dashed while empty) shows the date
+   (DD-MM-YYYY) or No date; it opens a
    popover with words to type ("Friday", "next week", "next Wednesday", "end of month", "in 2 weeks", "30-10"), the date they
    mean shown before anything is set, the quick picks with their dates, a calendar and Not set. Words are worked out from the
    meeting's date by the one parser (core/datewords.js, deadline mode, the same as minutes_record's), never from today. Setting
@@ -32,9 +33,9 @@ export function DeadlinePopover({ due, day, label, readOnly, onSet }) {
   if (readOnly) return <span class="mndue">{due ? fd(due) : "Not set"}</span>;
   return (
     <span class="mnpopw">
-      <button type="button" ref={btn} class="mndue btn sm" aria-haspopup="dialog" aria-expanded={open ? "true" : "false"}
+      <button type="button" ref={btn} class={`mndue msel dueb${due ? "" : " empty"}`} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"}
         aria-label={`Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`} onClick={() => setOpen(!open)}>
-        {due ? fd(due) : "Not set"}
+        {due ? fd(due) : "No date"}
       </button>
       <Pop open={open} onClose={() => setOpen(false)} label={`Deadline for ${label}`} anchor={btn} focus="input" cls="pkcal mndl">
         {open ? <DeadlineBody due={due} day={day} onPick={async w => { if (await onSet(w)) setOpen(false); }} /> : null}
@@ -53,7 +54,7 @@ function DeadlineBody({ due, day, onPick }) {
   const set = () => { if (got) onPick(words.trim()); };
   return (
     <div>
-      <label class="mndl-l" for="mnDlWords">Type a deadline, worked out from the meeting on {fd(day)}</label>
+      <label class="mndl-l" for="mnDlWords">Type a due date, worked out from the meeting on {fd(day)}</label>
       <input id="mnDlWords" class="pkdt" type="text" autocomplete="off" placeholder="Friday, next week, 30-10…" value={words}
         aria-describedby="mnDlSaid" onInput={e => setWords(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); set(); } }} />

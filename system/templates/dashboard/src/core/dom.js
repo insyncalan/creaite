@@ -54,6 +54,8 @@ export const ICONS={
   chat:'<path d="M4 5h16v11H9l-5 4z"/>',
   history:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   upload:'<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+  /* #268: a download arrow (the minutes' Export, as the signed-off mockup) */
+  download:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
   video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
   /* the legend (dev/mockups/icons-mockup.html §6) */

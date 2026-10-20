@@ -192,10 +192,12 @@ function SectionBlock({ s, i, p, peer }) {
   }, [wordsNow, docNow]);
   /** Why a suggestion can't be used: another document, or this section's words changed since ✦. @param {any} r */
   const staleWhy = r => r && r.from && (r.from !== liveKey.current ? "doc" : r.words !== liveWords.current ? "words" : "");
-  const [name, setName] = useState(s.heading);
+  const hd = p.headings ? p.headings(s) : null;      // #268: a view's own words for an untouched heading, and a note beside it (a count)
+  const shown = (hd && hd.name) || s.heading;
+  const [name, setName] = useState(shown);
   const [over, setOver] = useState(/** @type {""|"above"|"below"} */ (""));
   const box = useRef(/** @type {HTMLElement|null} */ (null));
-  useEffect(() => { setName(s.heading); }, [s.heading]);
+  useEffect(() => { setName(shown); }, [shown]);
   const sec = /** @type {any} */ (s);
   const change = (/** @type {SheetDoc} */ nd, /** @type {string} */ why, /** @type {SheetEvent|null} */ ev) => { onChange(nd, why); if (ev) onEvent(ev); };
   const update = (/** @type {Partial<SheetSection>} */ patch, /** @type {string} */ why) => {
@@ -232,7 +234,7 @@ function SectionBlock({ s, i, p, peer }) {
     spark, sparkInHeading: sparkOn && !ownSpark };
   const differs = p.side === "left" && peer ? sectionDiffers(s, peer) : false;
   const tags = tagsOf(s);
-  const nowName = (/** @type {string} */ v) => { if (v.trim() && v.trim() !== s.heading) change(renameHeading(doc, s.id, v), "Heading renamed", null); else setName(s.heading); };
+  const nowName = (/** @type {string} */ v) => { if (v.trim() && v.trim() !== shown) change(renameHeading(doc, s.id, v), "Heading renamed", null); else setName(shown); };
   const isText = isTextSection(s);
   const [confirmDel, setConfirmDel] = useState(false);          // #218: deleting a text section that holds words asks first
   const deleteIt = () => { setConfirmDel(false); change(withoutSection(doc, s.id), "Section deleted", { type: "section-deleted", id: s.id }); };
@@ -282,7 +284,8 @@ function SectionBlock({ s, i, p, peer }) {
         {editing ? <input ref={headBox} class="sheet-h" aria-label="Section heading" placeholder={isText ? "Section heading" : undefined} value={name}
           style={{ width: `${Math.max(isText ? 18 : 8, name.length + 1)}ch` }} onInput={e => setName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
           onBlur={e => nowName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); /** @type {HTMLInputElement} */ (e.currentTarget).blur(); } if (e.key === "Escape") setName(s.heading); }} /> : s.heading}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); /** @type {HTMLInputElement} */ (e.currentTarget).blur(); } if (e.key === "Escape") setName(shown); }} /> : shown}
+        {hd && hd.note != null && !exported ? <span class="n sheet-hn">{hd.note}</span> : null}
         {editing && s.heading !== defaultHeading(s) ? <button type="button" class="sheet-reset" onClick={() => change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id })}>Reset</button> : null}
         {sparkOn && !ownSpark && spark ? <SparkButton on={spark} heading={s.heading} health={s.type === "health"} /> : null}
         {editing && tags.length ? <button type="button" class="sheet-untag" onClick={() => { update({ tags: [] }, "Tags removed"); onEvent({ type: "tag", removed: true, all: true, id: s.id }); }}>Remove all tags</button> : null}
@@ -351,7 +354,8 @@ function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
     aiFor: (s: SheetSection, ro: boolean) => any, checks: any[], refocus: {current: string|null},
     match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void},
     report?: {audience: string, addText?: (sectionId: string) => void},
-    addTo?: null | {readOnly: boolean, one: (id: string) => void}}} PageProps */      // #218: the left page's "Add to the client report" for a text section the partner lacks
+    addTo?: null | {readOnly: boolean, one: (id: string) => void},
+    headings?: (s: SheetSection) => ({name?: string, note?: any}|null)}} PageProps */      // #218: the left page's "Add to the client report" for a text section the partner lacks
 
 /** One page: the header, its sections in order, the extras between them. @param {PageProps} p */
 export function SheetPage(p) {

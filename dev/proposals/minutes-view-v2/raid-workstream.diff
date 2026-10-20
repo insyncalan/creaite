@@ -1,0 +1,13 @@
+diff --git a/system/scripts/minutes_record.py b/system/scripts/minutes_record.py
+index 7fc476f0..20020925 100644
+--- a/system/scripts/minutes_record.py
++++ b/system/scripts/minutes_record.py
+@@ -589,7 +589,7 @@ def keep_new(doc, data, p, n):
+ 
+ 
+ EDITABLE = {"actions": ("description", "owner", "due_date", "workstream", "priority"),
+-            "raid": ("description", "owner", "type", "impact", "likelihood", "response_action", "due_date"),
++            "raid": ("description", "owner", "type", "impact", "likelihood", "response_action", "due_date", "workstream"),
+             "decisions": ("decision", "made_by", "reasoning", "options", "needed_by")}
+ 
+ 

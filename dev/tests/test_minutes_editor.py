@@ -4,14 +4,14 @@ A fictional steering committee is staged as a minutes record over the sample por
 transcript with timed turns, an agenda with a point not discussed, three actions (one owner the people register doesn't know,
 one deadline said as "by Friday"), a decision and a risk. The view opens from Review's Open draft and from its address.
 
-- Side by side: with the distributed version on, matching sections and topics are the same height on both pages, so their
-  headings stay level.
-- Popups close on Esc and on a click outside, with focus back on the button that opened them: the deadline popover, the owner
-  picker, a check, the Remove menu, Deal with it… and the approve popup (784 px).
-- ✕ Remove takes the item and its line out of the minutes (its proposal item rejected "Removed in the minutes"); Undo on the
-  toast brings it back; Keep the line only keeps the words with no item.
+- #268 (Minutes view v2): one version only, so there is no distributed version, Side by side or Internal only mark to test
+  here any more (the server's distributed export keeps its own tests in test_minutes_approve).
+- Popups close on Esc and on a click outside, with focus back on the button that opened them: the deadline popover, a check,
+  Deal with it… and the Before approving box (#268: as wide as the signed-off mockup's, 784 px, shown only when a ticked item has a real problem).
+- #268: a crossed line is left out of Show as exported; a line with neither ticked stays (the Track column replaces ✕ Remove
+  and Keep the line only; test_minutes_view_v2 has the rest).
 - The deadline popover: words worked out from the meeting's date (shown before they are set), the quick picks with their
-  dates, a day from the calendar, Not set; each changes the row and its staged item together.
+  dates, a day from the calendar, Not set (the button then says No date, #268); each changes the row and its staged item together.
 - Time tags scroll the transcript pane to what was said; coverage's Deal with it… carries a point with a line in the minutes.
 
 Run: python3 dev/tests/test_minutes_editor.py      (Chrome tier; skipped without Chrome)
@@ -118,7 +118,7 @@ class MinutesEditor(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
-        self.b.wait("document.querySelector('#v-minutes .mnrow')", 15)
+        self.b.wait("document.querySelector('#v-minutes tr.mi')", 15)
 
     # ── helpers ──
     def ev(self, js):
@@ -154,58 +154,28 @@ class MinutesEditor(LiveBrowserCase):
         self.assertEqual(self.ev("location.hash"), "#minutes=" + self.ev(f"encodeURIComponent({json.dumps(DRAFT)})"))
         self.assertEqual(self.ev("document.querySelector('.rail button[aria-current=page]').dataset.v"), "review", "under Review, no new page")
         self.assertEqual(self.ev("document.querySelectorAll('.mnturns li').length"), 6)
-        self.assertGreater(self.ev("document.querySelectorAll('#v-minutes .page .mntag').length"), 4)
-        b.eval("[...document.querySelectorAll('#v-minutes .page .mntag')].find(t=>t.textContent==='02:11').click()")
+        self.assertGreater(self.ev("document.querySelectorAll('#v-minutes .page .mntag').length"), 2)   # #268: the summary is edited in place, so its lines carry no tags now
+        turn = self.ev("(()=>{const t=[...document.querySelectorAll('#v-minutes .page .mntag')].find(t=>t.textContent==='01:06'); t.click(); return t.dataset.turn})()")
         b.pump(0.3)
-        self.assertEqual(self.ev("document.querySelector('.mnturns li.on').dataset.turn"), "4", "the tag's turn is highlighted")
+        self.assertEqual(self.ev("document.querySelector('.mnturns li.on').dataset.turn"), turn, "the tag's turn is highlighted")
         top = self.ev("document.querySelector('#v-minutes .sheet-scroll').scrollTop")
         self.assertEqual(top, 0, "the sheet itself never moves")
-        b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes .mnrow')")
+        b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes tr.mi')")
         self.assertEqual(self.ev("VIEW"), "minutes", "a reload keeps the minutes")
 
-    def test_2_side_by_side_keeps_matching_headings_level(self):
-        b = self.b
-        b.click('#v-minutes .seg button:nth-child(2)')         # Internal + distributed
-        b.wait("document.querySelector('[data-mnmode=side]')")
-        b.eval("document.querySelector('.mnlines .mnio').click()")       # one summary line Internal only: the pages differ
-        b.click("[data-mnmode=side]")
-        b.wait("document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page').length===2")
-        b.pump(0.5)
-        tops = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page'), out=[];
-          for(const h of l.querySelectorAll('section[data-id] > h2, .mnblock[data-level] > h3')){
-            const sec=h.closest('section[data-id]').dataset.id, lv=h.parentElement.dataset.level;
-            const o=lv?r.querySelector(`section[data-id="${sec}"] [data-level="${CSS.escape(lv)}"] > h3`):r.querySelector(`section[data-id="${sec}"] > h2`);
-            if(o) out.push([sec+(lv?':'+lv:''), Math.round(h.getBoundingClientRect().top), Math.round(o.getBoundingClientRect().top)]); }
-          return out; })()""")
-        self.assertGreater(len(tops), 6)
-        for name, left, right in tops:
-            self.assertLessEqual(abs(left - right), 1, f"{name}: {left} and {right}")
-        b.eval("document.querySelector('.sheet-scroll').scrollTop=400")
-        b.pump(0.3)
-        sec = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page');
-          return [l.querySelector('section[data-id=actions] > h2').getBoundingClientRect().top, r.querySelector('section[data-id=actions] > h2').getBoundingClientRect().top]; })()""")
-        self.assertLessEqual(abs(sec[0] - sec[1]), 1, "still level once scrolled")
-        marked = self.ev("document.querySelector('.sheet-pair > .sheet-fit > .sheet-a4 > .page .mnline.internal').textContent")
-        self.assertNotIn("The committee reviewed", self.ev("document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page')[1].textContent"))
-        self.assertIn("The committee reviewed", marked)
-        b.eval("document.querySelector('.sheet-scroll').scrollTop=0")   # #202: the top brings the full toolbar back
-        b.pump(0.3)
-        b.click("[data-mnmode=distributed]")                     # the Distributed page alone: the marked line isn't there
-        b.wait("!document.querySelector('.sheet-pair')")
-        self.assertNotIn("The committee reviewed", self.ev("document.querySelector('#v-minutes .page').textContent"))
-        b.click("#v-minutes [data-mnexport]")
-        b.wait("document.querySelector('#v-minutes .ddmenu.on')")
-        names = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].map(x=>x.textContent)")
-        self.assertTrue(any("Distributed: Word" in n and "approved" in n for n in names), names)
-        b.key("Escape")
+    def test_2_one_version_only(self):
+        """#268 change 1 (Alan: "I only ever want one version of minutes"): the One version / Internal + distributed switch, the
+        Internal / Distributed / Side by side switch and the Internal only marks are gone; Export offers no distributed file."""
+        self.assertFalse(self.ev("!!document.querySelector('#v-minutes .seg, #v-minutes [data-mnmode], #v-minutes .mnio, #v-minutes .sheet-pair')"))
+        names = self.menu_names()
+        self.assertFalse([n for n in names if "Distributed" in n or "Internal:" in n], names)
+        self.b.key("Escape")
 
     def test_3_popups_close_on_esc_and_a_click_outside_with_focus_back(self):
         b = self.b
-        openers = {
-            "deadline": "#v-minutes .mnrow[data-n='1'] .mndue",
-            "owner": "#v-minutes .mnrow[data-n='3'] .mnowner",
-            "check": "#v-minutes .mnrow[data-n='3'] .mnbar .mncheck",
-            "what changes": None,
+        openers = {                                       # #268: the owner is an in-row dropdown now, not a popover
+            "deadline": "#v-minutes tr.mi[data-n='1'] .mndue",
+            "check": "#v-minutes tr.mi[data-n='2'] .mnrow2 .mncheck",
         }
         for name, sel in openers.items():
             if not sel:
@@ -223,7 +193,7 @@ class MinutesEditor(LiveBrowserCase):
                         self.click_outside()
                     self.assertFalse(self.ev("!!document.querySelector('#v-minutes .mnpop')"), f"{name} closed by {how}")
                     self.assertEqual(self.ev("VIEW"), "minutes", "Esc goes no further")
-        for name, sel in (("remove", "#v-minutes .mnrow[data-n='1'] [data-mnremove]"), ("coverage", "[data-mncover='Training plan']")):
+        for name, sel in (("coverage", "[data-mncover='Training plan']"),):     # #268: no Remove menu (the Track column's cross)
             for how in ("esc", "outside"):
                 with self.subTest(popup=name, close=how):
                     b.click(sel)
@@ -239,7 +209,7 @@ class MinutesEditor(LiveBrowserCase):
             with self.subTest(popup="approve", close=how):
                 b.click("#mnApproveBtn")
                 b.wait("document.getElementById('mnApprove').open")
-                self.assertEqual(round(self.ev("document.getElementById('mnApprove').getBoundingClientRect().width")), 784)
+                self.assertEqual(round(self.ev("document.getElementById('mnApprove').getBoundingClientRect().width")), min(784, self.ev("innerWidth") - 32))   # #268: as the mockup's
                 if how == "esc":
                     b.key("Escape")
                 else:
@@ -250,31 +220,28 @@ class MinutesEditor(LiveBrowserCase):
                 self.assertFalse(self.ev("document.getElementById('mnApprove').open"))
                 self.assertEqual(self.ev("document.activeElement.id"), "mnApproveBtn")
 
-    def test_4_remove_and_undo_then_keep_the_line_only(self):
+    def test_4_a_crossed_line_is_left_out_of_show_as_exported(self):
+        """#268 change 2 replaces ✕ Remove and Keep the line only: a cross removes the line from the minutes (on approval), neither keeps
+        it as a line with no item. Show as exported shows the minutes as they will be filed."""
         b = self.b
-        b.click("#v-minutes .mnrow[data-n='1'] [data-mnremove]")
-        b.click("#v-minutes .ddmenu.on [role=menuitem]:nth-of-type(1)")
-        self.wait_saved("!document.querySelector(\"#v-minutes .mnrow[data-n='1']\")")
-        self.assertEqual(self.staged(1)["decision"], "rejected")
-        self.assertEqual(self.staged(1)["reject_reason"], "Removed in the minutes")
-        self.assertNotIn(1, [r.get("n") for r in self.rows()])
-        self.assertTrue(self.ev("document.getElementById('snack').classList.contains('on') && getComputedStyle(document.getElementById('snackU')).display!=='none'"))
-        b.click("#snackU")
-        self.wait_saved("document.querySelector(\"#v-minutes .mnrow[data-n='1']\")")
-        self.assertEqual(self.staged(1)["decision"], "pending")
-        self.assertEqual([r.get("n") for r in self.rows()][:1], [1], "back where it was")
-        b.click("#v-minutes .mnrow[data-n='2'] [data-mnremove]")
-        b.click("#v-minutes .ddmenu.on [role=menuitem]:nth-of-type(2)")
-        self.wait_saved("document.querySelector(\"#v-minutes .mnrow.kept[data-n='2']\")")
-        kept = [r for r in self.rows() if r.get("kept_line")]
-        self.assertEqual(kept[0]["cells"]["action"], "Book the UAT test environment")
-        self.assertIsNone(kept[0]["ref"], "the line only: no item")
-        self.assertEqual(self.staged(2)["decision"], "rejected")
+        b.click("#v-minutes tr.mi[data-n='1'] .mntrk button.n")
+        b.pump(0.2)
+        b.click("#v-minutes .sheet-exp")
+        b.wait("document.querySelector('#v-minutes .sheet-exp').getAttribute('aria-pressed')==='true'")
+        b.pump(0.3)
+        page = self.ev("document.querySelector('#v-minutes .page').textContent")
+        self.assertNotIn("Send the revised SOW to the client", page, "the crossed line is left out")
+        self.assertIn("Book the UAT test environment", page)
+        self.assertIn("The pilot stays on the lighthouse site", page, "neither: the line stays")
+        self.assertFalse(self.ev("!!document.querySelector('#v-minutes .page .mntrk')"), "no Track column in the exported view")
+        b.click("#v-minutes .sheet-exp")
+        b.pump(0.2)
+        self.assertEqual(self.staged(1)["decision"], "pending", "nothing changes before Approve minutes")
 
     def test_5_the_deadline_popover_works_words_out_from_the_meetings_date(self):
         b = self.b
-        sel = "#v-minutes .mnrow[data-n='3'] .mndue"
-        self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), "Not set")
+        sel = "#v-minutes tr.mi[data-n='3'] .mndue"
+        self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), "No date")
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         quick = self.ev("[...document.querySelectorAll('.mndl [data-quick]')].map(x=>[x.dataset.quick, x.getAttribute('aria-label')])")
@@ -288,7 +255,7 @@ class MinutesEditor(LiveBrowserCase):
         self.assertIn(self.ev(f"fd({json.dumps(got)})"), self.ev("document.getElementById('mnDlSaid').textContent"), "the date shown before it is set")
         self.assertIsNone(self.staged(3)["values"].get("due_date"), "nothing set yet")
         b.key("Enter")
-        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent!=='Not set'")
+        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent!=='No date'")
         self.assertEqual(self.staged(3)["values"]["due_date"], got)
         self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), self.ev(f"fd({json.dumps(got)})"))
         self.assertEqual(next(r for r in self.rows() if r.get("n") == 3)["cells"]["due"], self.ev(f"fd({json.dumps(got)})"))
@@ -307,7 +274,7 @@ class MinutesEditor(LiveBrowserCase):
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         b.click(".mndl [data-quick='not set']")
-        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent==='Not set'")
+        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent==='No date'")
         self.assertIsNone(self.staged(3)["values"].get("due_date"))
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
@@ -318,44 +285,26 @@ class MinutesEditor(LiveBrowserCase):
 
     def test_6_checks_inline_coverage_and_the_approve_popups_groups(self):
         b = self.b
-        notes = self.ev("[...document.querySelectorAll('#v-minutes .mnbar .mncheck')].map(x=>x.getAttribute('aria-label'))")
-        self.assertTrue(any("Pat Unknown isn't in the people register" in n for n in notes), notes)
+        self.assertIn("Pat Unknown needs details", self.ev("document.querySelector(\"#v-minutes tr.mi[data-n='3'] .mnrow2\").textContent"))   # #266's wording
+        notes = self.ev("[...document.querySelectorAll('#v-minutes .mnrow2 .mncheck')].map(x=>x.getAttribute('aria-label'))")
         self.assertTrue(any("said “by Friday”" in n for n in notes), notes)
-        b.eval("[...document.querySelectorAll('#v-minutes .mnbar .mncheck')].find(x=>/by Friday/.test(x.getAttribute('aria-label'))).click()")
+        b.eval("[...document.querySelectorAll('#v-minutes .mnrow2 .mncheck')].find(x=>/by Friday/.test(x.getAttribute('aria-label'))).click()")
         b.wait("document.querySelector('.mnck [data-ckact=use]')")
         b.click(".mnck [data-ckact=use]")
         friday = self.ev(f"CREAITE.parseWhen('by Friday', {json.dumps(DAY)}, true, 'deadline')")
-        self.wait_saved(f"document.querySelector(\"#v-minutes .mnrow[data-n='2'] .mndue\").textContent==={json.dumps(self.ev(f'fd({json.dumps(friday)})'))}")
+        self.wait_saved(f"document.querySelector(\"#v-minutes tr.mi[data-n='2'] .mndue\").textContent==={json.dumps(self.ev(f'fd({json.dumps(friday)})'))}")
         self.assertEqual(self.staged(2)["values"]["due_date"], friday, "Use that sets what was said")
         b.click("[data-mncover='Training plan']")
         b.click("#v-minutes .ddmenu.on [role=menuitem]:nth-of-type(1)")
         self.wait_saved("document.querySelector('[data-point=\"Training plan\"] .mncov-done')")
         nc = next(s for s in self.record()["sections"] if s["id"] == "not_covered")
         self.assertIn("Training plan was not discussed; it is carried to the next", nc["text"])
-        b.click("#mnApproveBtn")
+        b.click("#mnApproveBtn")                              # #268: the box lists only the ticked items with a real problem
         b.wait("document.getElementById('mnApprove').open")
-        self.assertTrue(self.ev("document.getElementById('mnApAll').checked"), "the group's one tick, ticked")
-        self.assertEqual(self.ev("[...document.querySelectorAll('#mnApprove [data-own]')].map(x=>[+x.dataset.own,x.checked])"),
-                         [[4, False], [5, False]], "a new decision and a new risk: one tick each, not ticked")
-        self.assertIn("check", self.ev("document.querySelector('#mnApprove .mnap-ck').textContent"))
+        self.assertIn("Pat Unknown needs details", self.ev("document.getElementById('mnApprove').textContent"))
+        self.assertNotIn("pilot stays", self.ev("document.getElementById('mnApprove').textContent"), "the decision isn't ticked")
 
     # ── v2.1.0 P7 follow-up (Alan, 15-10-2026): Draft the follow-up email, in the Export menu ──
-    def seed_secrets(self):
-        """A Sensitive decision (flag) and an Internal only action row, on the stored record; reloads the view."""
-        doc = self.record()
-        dec = next(s for s in doc["sections"] if s["id"] == "decisions")["rows"][0]
-        act = next(s for s in doc["sections"] if s["id"] == "actions")["rows"][0]
-        doc["items"][dec["ref"]]["flags"] = ["sensitive"]
-        doc["layout"] = {**(doc.get("layout") or {}), "distributed": True, "internal_only": [{"section": "actions", "ref": act["ref"]}]}
-        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import minutes_record; "
-                            f"r = minutes_record.save_record({DRAFT!r}, json.loads({json.dumps(json.dumps(doc))}), 'seed'); print(json.dumps({{'ok': r.get('ok')}}))"],
-                           cwd=self.v.root, capture_output=True, text=True, check=True)
-        self.assertTrue(json.loads(r.stdout.strip().splitlines()[-1])["ok"])
-        self.b.eval("go('review')")
-        self.b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
-        self.b.wait("document.querySelector('#v-minutes .mnrow')", 15)
-        return dec["cells"]["decision"], act["cells"]["action"]
-
     def shots(self, name):
         """With P7_SHOTS set: the open draft at 1400 and 900 px."""
         if not SHOTS:
@@ -387,40 +336,6 @@ class MinutesEditor(LiveBrowserCase):
         self.assertIn("Internal: not for distribution.", prev)
         self.assertIn("Send the revised SOW", self.ev("document.getElementById('deDlg').textContent"))
         self.shots("internal")
-
-    def test_8_follow_up_email_distributed_version_holds_nothing_internal(self):
-        b = self.b
-        decision, action = self.seed_secrets()
-        b.click("#v-minutes .seg button:nth-child(2)")
-        b.wait("document.querySelector('[data-mnmode=side]')")
-        names = self.menu_names()
-        self.assertEqual([n for n in names if "follow-up" in n].__len__(), 1, names)          # Internal shown: one entry
-        self.assertTrue(any(n.startswith("Internal:") and "follow-up" in n for n in names), names)
-        b.key("Escape")
-        b.click("[data-mnmode=side]")
-        b.wait("document.querySelector('.sheet-pair')")
-        names = self.menu_names()
-        self.assertEqual(sum("follow-up" in n for n in names), 2, "side by side: both versions offered")
-        b.key("Escape")
-        b.click("[data-mnmode=distributed]")
-        b.wait("!document.querySelector('.sheet-pair')")
-        names = self.menu_names()
-        self.assertEqual([n for n in names if "follow-up" in n], [n for n in names if n.startswith("Distributed:") and "follow-up" in n])
-        self.pick("Distributed: Draft the follow-up email")
-        whole = self.ev("document.getElementById('deDlg').textContent + ' ' + document.querySelector('#deSubj').value")
-        self.assertNotIn(decision, whole, "a Sensitive decision never reaches the distributed draft")
-        self.assertNotIn(action, whole, "an Internal only row never reaches it")
-        self.assertNotIn("[Internal]", whole)
-        self.assertNotIn("Internal: not for distribution", whole)
-        self.assertIn("Distributed", self.ev("document.querySelector('#deTitle').textContent"))
-        self.shots("distributed")
-        b.key("Escape")
-        b.click("[data-mnmode=internal]")
-        self.menu_names()
-        self.pick("Internal: Draft the follow-up email")
-        both = self.ev("document.getElementById('deDlg').textContent")
-        self.assertIn(action, both, "the Internal draft keeps it")
-        self.assertIn("Internal: not for distribution.", self.ev("document.querySelector('#dePrev').textContent"))
 
 
 if __name__ == "__main__":
