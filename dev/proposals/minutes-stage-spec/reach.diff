@@ -1,8 +1,16 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index b1b7f66b..ee9cc2dd 100644
+index 0de8e448..de1d548c 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
-@@ -1758,7 +1758,37 @@ def bash_refusal(command, mode):
+@@ -68,6 +68,7 @@ NEVER = (
+     ("vault", "system/staging/*.json", "write", RECORD), ("vault", "system/staging/*.jsonl", "write", RECORD),
+     ("vault", "system/staging/*.txt", "write", RECORD), ("vault", "dashboard.html", "write", RECORD),
+     ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
++    ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
+     ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
+     ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
+     ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),
+@@ -1944,7 +1945,37 @@ def bash_refusal(command, mode):
      (BL-267: the record changes only on a request Alan confirmed). BL-268: a script named by this vault's full path is read as
      the relative form first, so every check applies to it unchanged."""
      command = vault_relative(command)

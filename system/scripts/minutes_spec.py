@@ -224,8 +224,9 @@ def spec_file_problem(spec_path, root=None):
 
 
 def _read_once(given):
-    """The spec file's text, read once through a descriptor that never follows a link and is a plain file of its own."""
-    fd = os.open(str(given), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    """The spec file's text, read once through a descriptor that never follows a link and is a plain file of its own. Opened
+    without waiting (O_NONBLOCK, #269 round 2 L-A), so a named pipe swapped in after the check is refused below, never waited on."""
+    fd = os.open(str(given), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
     try:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:

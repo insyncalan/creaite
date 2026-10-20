@@ -1,8 +1,8 @@
 diff --git a/dev/tests/test_intake_process.py b/dev/tests/test_intake_process.py
-index fe947548..1bbe6f9e 100644
+index 87363db7..bfa8ad46 100644
 --- a/dev/tests/test_intake_process.py
 +++ b/dev/tests/test_intake_process.py
-@@ -239,7 +239,7 @@ class Fence(unittest.TestCase):
+@@ -242,7 +242,7 @@ class Fence(unittest.TestCase):
          cls.files = put_samples(cls.v)
          drafts = cls.v.root / "system/staging/drafts"
          drafts.mkdir(parents=True, exist_ok=True)
@@ -11,7 +11,7 @@ index fe947548..1bbe6f9e 100644
          (drafts / "other.json").write_text(json.dumps({"title": "Other", "transcript": "projects/secret.vtt"}))
          (drafts / "note.json").write_text(json.dumps({"title": "Note", "transcript": cls.files[0], "note": "projects/x.md"}))
          (drafts / "values.json").write_text("{}")
-@@ -251,7 +251,7 @@ class Fence(unittest.TestCase):
+@@ -254,7 +254,7 @@ class Fence(unittest.TestCase):
          (drafts / "new minutes.docx").write_bytes(b"PK")
          (drafts / "olddraft.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
                                                            "draft": "system/staging/drafts/steerco one-pager.docx"}))
@@ -20,3 +20,28 @@ index fe947548..1bbe6f9e 100644
                                                            "draft": "system/staging/drafts/new minutes.docx"}))
          (drafts / "list.json").write_text(json.dumps({"title": "P", "transcript": [cls.files[0]]}))
          (drafts / "pics.json").write_text(json.dumps({"BODY": [{"image": os.path.expanduser("~/Pictures/a.png")}]}))
+@@ -283,7 +283,7 @@ class Fence(unittest.TestCase):
+         (drafts / "2026-10-22 ABC weekly report.docx").write_bytes(b"PK")
+         (drafts / "rep.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+                                                      "draft": "system/staging/drafts/2026-10-22 ABC weekly report.docx"}))
+-        (drafts / "chain.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
++        (drafts / "chain.json").write_text(json.dumps({"title": "P", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0],
+                                                        "draft": "system/staging/drafts/chain.docx"}))
+         # N12: a proposal made during the run that isn't for the run's files (Alan's own edit in Review)
+         cls.alans = "projects/ABC Example/minutes/2026-10-18 Alans edit.docx"
+diff --git a/dev/tests/test_intake_process_round2.py b/dev/tests/test_intake_process_round2.py
+index 97702f17..bb736547 100644
+--- a/dev/tests/test_intake_process_round2.py
++++ b/dev/tests/test_intake_process_round2.py
+@@ -84,9 +84,9 @@ class Round2(unittest.TestCase):
+         (dr / "values.json").write_text("{}")
+         (dr / "board.json").write_text(json.dumps({"title": "Board", "transcript": cls.files[0],
+                                                    "draft": D + "2026-10-20 Board minutes.docx"}))
+-        (dr / "own.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0],
++        (dr / "own.json").write_text(json.dumps({"title": "Pilot", "date": "2026-10-20", "projects": ["ABC"], "transcript": cls.files[0],
+                                                  "draft": D + "own minutes.docx"}))
+-        (dr / "pilot.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0]}))
++        (dr / "pilot.json").write_text(json.dumps({"title": "Pilot", "date": "2026-10-20", "projects": ["ABC"], "transcript": cls.files[0]}))
+         st = cls.v.root / "system/staging"
+         cls.mine = "projects/ABC Example/minutes/2026-10-20 Pilot readiness review.docx"
+         cls.theirs = "projects/ABC Example/reports/2026-10-01 ABC client report.docx"

@@ -237,6 +237,28 @@ class StageSpec(unittest.TestCase):
         self.assertEqual(staged, [TRANSCRIPT], r.stdout + r.stderr)
         self.assertTrue(doc.exists())
 
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs named pipes")
+    def test_a_spec_swapped_for_a_named_pipe_after_its_check_is_refused_without_hanging(self):
+        """#269 round 2 (L-A): the spec is opened without waiting, so a named pipe put in its place between the check and the read
+        (with nobody writing to it) is refused as not a plain file, never left hanging the command."""
+        spec = self.root / "system/staging/drafts/pipe.json"
+        spec.write_text(json.dumps({"title": TITLE, "date": DAY, "projects": ["ABC"], "transcript": TRANSCRIPT}), encoding="utf-8")
+        code = ("import os, sys; sys.path.insert(0, 'system/scripts'); import minutes_spec\n"
+                "orig = minutes_spec.spec_file_problem\n"
+                "def swapped(*a, **k):\n"
+                "    why = orig(*a, **k)\n"
+                f"    os.unlink({str(spec)!r}); os.mkfifo({str(spec)!r})\n"
+                "    return why\n"
+                "minutes_spec.spec_file_problem = swapped\n"
+                f"print(minutes_spec.load_spec({str(spec)!r}, {str(self.root)!r}))")
+        try:
+            r = subprocess.run([sys.executable, "-c", code], cwd=self.root, capture_output=True, text=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            self.fail("reading a named pipe as the spec hung the command")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("(None, ", r.stdout)
+        self.assertEqual(self.proposals(), [])
+
     def test_an_unknown_project_code_is_refused(self):
         self.assertIn("isn't a project", self.refused(projects=["ZZZ"]))
         self.assertIn("isn't a project", self.refused(projects=["ABC", "QQQ9"]))
