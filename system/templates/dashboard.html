@@ -26700,7 +26700,7 @@ ${s5}`;
   };
   var keepOpenUntil = 0;
   function barFor(h5, ai2) {
-    if (!aiPlaceOn(ai2.place)) return;
+    if (!aiPlaceOn(ai2.place) || ai2.enabled && !ai2.enabled()) return;
     const s5 = h5.editor.state.selection;
     if (s5.empty || h5.editor.isDestroyed || !h5.editor.state.doc.textBetween(s5.from, s5.to, " ").trim()) {
       if (aiBar.value && aiBar.value.h === h5 && !barBusy()) aiBar.value = null;
@@ -26772,7 +26772,7 @@ ${s5}`;
         return;
       }
       if (e4.altKey && !e4.metaKey && !e4.ctrlKey && (e4.code === "Slash" || e4.key === "/")) {
-        if (!aiPlaceOn(ai2.place)) return;
+        if (!aiPlaceOn(ai2.place) || ai2.enabled && !ai2.enabled()) return;
         e4.preventDefault();
         e4.stopPropagation();
         if (!edSelection(h5)) {
@@ -26830,6 +26830,10 @@ ${s5}`;
   async function ask(s5) {
     if (!viaServer()) {
       aiSug.value = { ...s5, status: "failed", message: "AI on selected text needs the live server" };
+      return;
+    }
+    if (s5.ai.enabled && !s5.ai.enabled()) {
+      aiSug.value = { ...s5, status: "failed", message: "AI suggestions are off here" };
       return;
     }
     if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) {
@@ -50740,29 +50744,20 @@ ${pre}**Current state title:** ${title}`);
     const el2 = $("#dePrev");
     if (!el2) return;
     shared.DE.built = html2;
-    const safe = deAiSafe(), ai2 = !shared.DE.outside || safe, de2 = shared.DE;
-    if (el2.cxed && !el2.cxed.editor.isDestroyed && el2.cxed.aiOn === ai2 && el2.cxed.aiSafe === safe) {
+    if (!deAiSafe()) deAiCheck();
+    if (el2.cxed && !el2.cxed.editor.isDestroyed) {
       el2.cxed.setValue(html2);
       return;
     }
-    creaiteEditor(el2, { features: "email", html: html2, ...ai2 ? { ai: {
+    creaiteEditor(el2, { features: "email", html: html2, ai: {
       place: "email",
       project: () => {
         const d5 = shared.DE;
         return d5 && (d5.items && d5.items[0] && d5.items[0].p || d5.codes && d5.codes[0]) || "";
       },
-      ...safe ? { recipients: deRecipients } : {}
-    } } : {} });
-    if (el2.cxed) {
-      el2.cxed.aiOn = ai2;
-      el2.cxed.aiSafe = safe;
-    }
-    if (!safe) {
-      const q5 = deAiCheck();
-      if (q5) q5.then((ok2) => {
-        if (ok2 && shared.DE === de2 && !de2.edited && $("#dePrev") === el2) dePrevPut(de2.built);
-      });
-    }
+      enabled: () => !!shared.DE && (!shared.DE.outside || deAiSafe()),
+      recipients: () => deAiSafe() ? deRecipients() : null
+    } });
   }
   function dePrevDrop() {
     const el2 = $("#dePrev");

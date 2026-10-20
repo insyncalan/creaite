@@ -160,7 +160,7 @@ let keepOpenUntil = 0;
     Placing is the component's, with core/caretPlace.js placeAtCaret (the same placement the `/` menu has).
     @param {AiHandle} h @param {AiConf} ai */
 function barFor(h, ai) {
-  if (!aiPlaceOn(ai.place)) return;                                  // the place table: this place is switched off
+  if (!aiPlaceOn(ai.place) || (ai.enabled && !ai.enabled())) return;   // the place table, or the editor's own switch (#186), says off
   const s = h.editor.state.selection;
   if (s.empty || h.editor.isDestroyed || !h.editor.state.doc.textBetween(s.from, s.to, " ").trim()) {
     if (aiBar.value && aiBar.value.h === h && !barBusy()) aiBar.value = null;
@@ -211,7 +211,7 @@ export function aiAttach(h, ai) {
     if (e.isComposing || h.editor.view.composing) return;                       // an input method is composing: its keys are its own
     if (e.key === "Escape" && aiBar.value && aiBar.value.h === h && aiBar.value.shown) { e.preventDefault(); e.stopPropagation(); aiBar.value = null; return; }
     if (e.altKey && !e.metaKey && !e.ctrlKey && (e.code === "Slash" || e.key === "/")) {
-      if (!aiPlaceOn(ai.place)) return;                                          // the place table: this place is switched off, the key is nobody's
+      if (!aiPlaceOn(ai.place) || (ai.enabled && !ai.enabled())) return;         // switched off (the place table, or the editor's own switch): the key is nobody's
       e.preventDefault(); e.stopPropagation();
       if (!edSelection(h)) { snack("Select some text first (⌘A selects all of it), then Alt+/"); return; }
       barFor(h, ai);
@@ -251,6 +251,7 @@ export function aiSend() {
 /** @param {Sug} s */
 async function ask(s) {
   if (!viaServer()) { aiSug.value = { ...s, status: "failed", message: "AI on selected text needs the live server" }; return; }
+  if (s.ai.enabled && !s.ai.enabled()) { aiSug.value = { ...s, status: "failed", message: "AI suggestions are off here" }; return; }   // #186: switched off since the bar opened
   if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) { aiSug.value = { ...s, status: "failed", message: "ask creaite is busy; try again when it's finished" }; return; }
   const cur = { ...s, status: /** @type {"running"} */ ("running"), steps: 0 };
   aiSug.value = cur;

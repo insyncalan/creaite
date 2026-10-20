@@ -227,15 +227,14 @@ export function deAiCheck(){ if(DE_AI_SAFE||deAiAsking||!viaServer()||Date.now()
 export const deRecipients=()=>{ const d=shared.DE; if(!d) return [""]; return d.mode==="followup"?(d.attendees||[]).map(a=>String(a.email||"")):[String(d.email||"")]; };
 /** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
 export function dePrevPut(html){ const el=$("#dePrev"); if(!el) return; shared.DE.built=html;
-  /* The bar is on for an internal recipient, and for an outside one once the server has said it decides the audience (#186). With that
-     yes the request carries the addresses; an editor mounted the other way is rebuilt (the recipient changes with the follow-up's
-     attendees, which redraw the popup, and the yes can come after the first draw: then only an unedited email is rebuilt). */
-  const safe=deAiSafe(), ai=!shared.DE.outside||safe, de=shared.DE;
-  if(el.cxed&&!el.cxed.editor.isDestroyed&&el.cxed.aiOn===ai&&el.cxed.aiSafe===safe){ el.cxed.setValue(html); return; }
-  creaiteEditor(el,{ features:"email", html, ...(ai?{ ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; },
-    ...(safe?{ recipients:deRecipients }:{}) } }:{}) });
-  if(el.cxed){ el.cxed.aiOn=ai; el.cxed.aiSafe=safe; }
-  if(!safe){ const q=deAiCheck(); if(q) q.then(ok=>{ if(ok&&shared.DE===de&&!de.edited&&$("#dePrev")===el) dePrevPut(de.built); }); } }
+  /* The bar is on for an internal recipient, and for an outside one once the server has said it decides the audience (#186): `enabled`
+     is read each time a selection would show the sparkle, so the editor is never rebuilt when the answer comes (a rebuild would take
+     the focus and the caret away while you type). With that yes the request carries the addresses (read when you ask, so a follow-up's
+     attendees loaded later count); without it none are sent. */
+  if(!deAiSafe()) deAiCheck();
+  if(el.cxed&&!el.cxed.editor.isDestroyed){ el.cxed.setValue(html); return; }
+  creaiteEditor(el,{ features:"email", html, ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; },
+    enabled:()=>!!shared.DE&&(!shared.DE.outside||deAiSafe()), recipients:()=>deAiSafe()?deRecipients():null } }); }
 /** End the preview's editor (the popup is redrawn or closed), and with it the selection bar over it. */
 export function dePrevDrop(){ const el=$("#dePrev"); if(el&&el.cxed) el.cxed.destroy(); }
 /** The HTML Copy email puts on the clipboard. An unedited email is the builder's HTML as the browser holds it (what the preview's own

@@ -103,20 +103,17 @@ removes.
   name or the health reason's words in it is not caught. The facts Claude is given are the main protection: it is never told
   about internal items or people.
 
-## Decisions for Alan
+## Decisions: Alan answered YES to all, 20-10-2026
 
-1. **Exact domain only?** Recommended: a subdomain of an own domain (`mail.brightwater.example`) counts as outside, as the page
-   already does today. Say if subdomains of yours should count as inside.
-2. **Refuse, not make safe.** Recommended: a reply that leaks is dropped with a reason, never edited quietly.
+1. **Exact domain only:** yes. A subdomain of an own domain (`mail.brightwater.example`) counts as outside.
+2. **Refuse, not make safe:** yes. A reply that leaks is dropped with a reason, never edited quietly.
 3. **Your own words in the selection** (names, the health reason, markers) still go to Claude, as on the client sheet; only an
-   internal item ID in the selection stops the request. Recommended: keep it so.
-4. **Internal minutes follow-up** with outside attendees gets client facts (above). Recommended: yes.
-5. **Cc/Bcc**: accept that creaite judges only the To addresses it shows (it has no Cc or Bcc). Recommended: yes, and say so in
-   the help.
-6. **Optional: the minutes sheet.** The AI bar on the Internal minutes sheet still gets the full facts and no client check on its
-   reply. The Distributed version, which goes to attendees who may be outside, is made from that sheet (Internal only lines and
-   withheld items are left out). Should the minutes sheet's AI reply also be checked the way a client email's is? Not part of this
-   proposal; a separate item if you say yes.
+   internal item ID in the selection stops the request: yes, keep it so.
+4. **Internal minutes follow-up** with outside attendees gets client facts: yes.
+5. **Cc/Bcc:** yes, creaite judges only the To addresses it shows (it has no Cc or Bcc), and the help says so: Help › How do I… ›
+   Ask someone for an update (under step 5), and the AI on selected text paragraph in Reference (`system/templates/help.md`).
+6. **The minutes sheet's AI reply** checked the way a client email's is: yes, as its own item (#262, a separate proposal).
+- Also yes: the item panel's **Client messaging** field gets a client place (#263, a separate proposal; see the end of this file).
 
 ## How to apply and undo
 
