@@ -734,25 +734,29 @@ def script_policy():
 # ===== end BL-255 =====
 
 
-# ===== BL-09: folders still called zz Archive (both names are skipped for one release) =====
+# ===== BL-09, #252: archive folders still called _Archive or zz Archive (the old names are skipped for one release) =====
 def old_archive_folders():
-    """Folders still called zz Archive in the projects folder: a warning naming them; Health's Fix it renames them to _Archive."""
+    """Archive folders still called _Archive or zz Archive in the projects folder: a warning naming them; Health's Rename to
+    99 Archive renames them, on the approval card (never silently: they are in the company OneDrive and hold other people's files)."""
     found = paths.old_archive_folders()
     if not found:
-        return True, "none: archive folders are called _Archive"
+        return True, f"none: archive folders are called {paths.ARCHIVE}"
     names = ", ".join(paths.rel(f) for f in found[:5]) + (f" and {len(found) - 5} more" if len(found) > 5 else "")
-    return None, (f"{len(found)} folder{'s are' if len(found) != 1 else ' is'} still called zz Archive ({names}): skipped as before; "
-                  "rename to _Archive (Settings › Health › Fix it, or say \"rename the old archive folders\")")
+    return None, (f"{len(found)} archive folder{'s are' if len(found) != 1 else ' is'} still called "
+                  f"{' or '.join(sorted({f.name for f in found}))} ({names}): they keep working as before; rename to "
+                  f"{paths.ARCHIVE} (Settings › Health › Rename to {paths.ARCHIVE}, or say \"rename the old archive folders\")")
 
 
 def skeleton_archive():
-    """The project skeleton (locations.skeleton) still holding a zz Archive folder: a folder listing only; Alan renames it in Finder."""
+    """The project skeleton (locations.skeleton) still holding an _Archive or zz Archive folder: a folder listing only; Alan renames
+    it in Finder."""
     found = paths.skeleton_old_archive()
     if not found:
-        return True, "no zz Archive in the project skeleton" if paths.external() else "no project skeleton (projects in the vault)"
+        return (True, f"no old archive folder in the project skeleton" if paths.external()
+                else "no project skeleton (projects in the vault)")
     sk = str(paths.locations().get("skeleton") or "_Templates/_Skeleton")
-    return None, (f"{sk} still holds {', '.join(found)}: rename it to _Archive in Finder (creaite never writes in _Templates; "
-                  "a new project gets _Archive either way)")
+    return None, (f"{sk} still holds {', '.join(found)}: rename it to {paths.ARCHIVE} in Finder (creaite never writes in "
+                  f"_Templates; a new project gets {paths.ARCHIVE} either way)")
 # ===== end BL-09 =====
 
 
@@ -810,7 +814,7 @@ def run_checks():
     check("ask creaite's reach and guard", assistant_guard)
     check("Vault is local, not synced", vault_not_synced)
     check("Online-only files", online_only)
-    check("Archive folders called _Archive", old_archive_folders)       # BL-09
+    check("Archive folders called 99 Archive", old_archive_folders)     # BL-09, #252
     check("Project skeleton's archive folder", skeleton_archive)      # BL-09
     check("Archiving of old items", archive_items)                    # BL-10
     check("Old reports and minutes", archive_reports)                 # BL-03
