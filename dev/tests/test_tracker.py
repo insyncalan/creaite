@@ -82,6 +82,7 @@ def make_vault():
               "linktext.py",                                       # #121: links in plain text, read by the reports, search and the Excel export
               "confusables.py", "client_output.py",                # v2.5.1 (#239): the look-alike skeleton, the client output check
               "client_snapshot.py",                                # v2.5.1 (#239, step 2): the checked snapshot, the one client export
+              "intake_process.py",                                 # #264: Intake's Process, its own run kind
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)
