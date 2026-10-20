@@ -234,8 +234,9 @@ class UsageRoute(UsageBase):
     def load(cls, v):
         super().load(v)
         target = v.root / "system" / "scripts" / "live_server.py"
-        r = subprocess.run(["patch", "--no-backup-if-mismatch", "-p0", str(target), str(PROPOSAL)], capture_output=True, text=True)
-        assert r.returncode == 0, r.stdout + r.stderr
+        if "def usage_context_job" not in target.read_text(encoding="utf-8"):      # the diff is in the repo's live_server.py once applied
+            r = subprocess.run(["patch", "--no-backup-if-mismatch", "-p0", str(target), str(PROPOSAL)], capture_output=True, text=True)
+            assert r.returncode == 0, r.stdout + r.stderr
 
     def get(self, token):
         req = urllib.request.Request(self.base + "/api/usage", headers={"X-Creaite-Token": token} if token else {})

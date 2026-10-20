@@ -29,8 +29,9 @@ class Wiring(unittest.TestCase):
         cls.v = Vault()
         cls.addClassCleanup(cls.v.cleanup)
         cls.target = cls.v.root / "system" / "scripts" / "live_server.py"
-        r = subprocess.run(["patch", "--no-backup-if-mismatch", "-p0", str(cls.target), str(PROPOSAL)], capture_output=True, text=True)
-        assert r.returncode == 0, r.stdout + r.stderr
+        if "def usage_context_job" not in cls.target.read_text(encoding="utf-8"):      # the diff is in the repo's live_server.py once applied
+            r = subprocess.run(["patch", "--no-backup-if-mismatch", "-p0", str(cls.target), str(PROPOSAL)], capture_output=True, text=True)
+            assert r.returncode == 0, r.stdout + r.stderr
         cls.file = cls.v.root / "system" / "staging" / "context-size.jsonl"
 
     def run_job(self):
