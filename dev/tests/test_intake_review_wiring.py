@@ -62,8 +62,8 @@ class Wiring(LiveBrowserCase):
         for name in ("review", "inbox", "intake", "intake-review"):
             b.eval("go('today')")
             b.eval(f"go({name!r})")
-            self.assertEqual(b.eval("[VIEW, location.hash, document.getElementById('v-intake-review').hidden, document.getElementById('v-review').hidden, document.getElementById('v-inbox').hidden]"),
-                             ["intake-review", "#intake-review", False, True, True], name)
+            self.assertEqual(b.eval("[VIEW, location.hash, document.getElementById('v-intake-review').hidden, document.getElementById('v-review'), document.getElementById('v-inbox')]"),
+                             ["intake-review", "#intake-review", False, None, None], name)       # #232 C2: the old pages are not in the page at all
         self.assertEqual(b.eval("document.querySelector('.rail [data-v=review]').getAttribute('aria-current')"), "page")
 
     def test_old_addresses_and_forms(self):
@@ -258,11 +258,13 @@ class Wiring(LiveBrowserCase):
         meet = b.eval("ckItems('process meeting').map(i=>i.l).filter(l=>l.startsWith('Intake:'))")
         self.assertEqual(sorted(meet), ["Intake: process meeting Ready 0", "Intake: process meeting Ready 1"])      # the ready ones, not the drafted one
         b.eval("""window.PICKED=[]; window.REALCLICK=HTMLInputElement.prototype.click; HTMLInputElement.prototype.click=function(){ window.PICKED.push([this.type,this.multiple]); }; 0""")
-        self.addCleanup(lambda: b.eval("HTMLInputElement.prototype.click=window.REALCLICK; document.querySelectorAll('body > input[type=file]').forEach(e=>e.remove()); 0"))
-        b.eval("go('today'); ckItems('').find(i=>i.l==='Add files to Intake').fn()")
-        self.assertEqual(b.eval("VIEW"), "intake-review")
-        self.assertEqual(b.eval("PICKED"), [["file", True]])                                               # the chooser opened from the palette
-        self.assertEqual(b.eval("!!document.getElementById('inboxFile')"), False)                          # and no old page's input
+        try:
+            b.eval("go('today'); ckItems('').find(i=>i.l==='Add files to Intake').fn()")
+            self.assertEqual(b.eval("VIEW"), "intake-review")
+            self.assertEqual(b.eval("PICKED"), [["file", True]])                                               # the chooser opened from the palette
+            self.assertEqual(b.eval("!!document.getElementById('inboxFile')"), False)                          # and no old page's input
+        finally:
+            b.eval("HTMLInputElement.prototype.click=window.REALCLICK; document.querySelectorAll('body > input[type=file]').forEach(e=>e.remove()); 0")
 
     # --- help ---
 

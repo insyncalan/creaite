@@ -23,7 +23,7 @@ from measure import paint_contrast  # noqa: E402
 TEXT = {"meeting title": "#v-intake-review tr[data-irm] td.title b",
         "proposal title": "#v-intake-review tr.irprop .icttl",
         "proposal source": "#v-intake-review tr.irprop .icsrc",
-        "stage box": "#v-intake-review .icstage button",
+        "stage box": "#v-intake-review [data-irstage]",
         "sub line": "#v-intake-review #irSub",
         "heading": "#v-intake-review h1"}
 MARKS = {"kind pill": "#v-intake-review tr.irprop .ickind",

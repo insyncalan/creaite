@@ -1,0 +1,244 @@
+<section class="view" id="v-intake-review" aria-labelledby="irTitle">
+<div class="wrapmax irpage" data-irtick="1">
+<h1 id="irTitle">Intake</h1>
+<p id="hFirst" class="hfirst" data-k="intake">Press <kbd>?</kbd> for help with Intake</p>
+<p class="sub" id="irSub" style="margin: #px #px #px;">2 ready to process · 4 proposals to approve · <span class="sub" data-ircalread="1">No calendar yet</span>
+<button type="button" class="ib sm" id="icRef" data-ira="refreshcal" aria-label="Refresh the calendar" data-tip="Refresh the calendar">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="refresh">
+<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5">
+</path>
+</svg>
+</button>
+</p>
+<div class="toolbar rvtools">
+<input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off">
+<span class="sp">
+</span>
+<button type="button" class="btn" data-ira="processall" title="">Process all ready (2)</button>
+<button type="button" class="ib" data-irpick="1" aria-label="Add files: transcripts or minutes you already have (or drop them anywhere on this page)" data-tip="Add files: transcripts or minutes you already have (or drop them anywhere on this page)">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="upload">
+<path d="M12 16V4M7 9l5-5 5 5M4 20h16">
+</path>
+</svg>
+</button>
+<input type="file" multiple="" hidden="" accept=".vtt,.docx,.txt,.md,.pdf" aria-label="Choose transcripts or minutes to add">
+<span class="seg" role="group" aria-label="How you see Intake">
+<button type="button" data-irview="list" aria-pressed="true" title="List">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+<path d="M4 6h16M4 12h16M4 18h16">
+</path>
+</svg>
+<span style="margin-left: #px;">List</span>
+</button>
+<button type="button" data-irview="board" aria-pressed="false" title="Board">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+<rect x="3" y="4" width="5" height="16" rx="1">
+</rect>
+<rect x="10" y="4" width="5" height="10" rx="1">
+</rect>
+<rect x="17" y="4" width="4" height="13" rx="1">
+</rect>
+</svg>
+<span style="margin-left: #px;">Board</span>
+</button>
+<button type="button" data-irview="two" aria-pressed="false" title="Two panes">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+<rect x="3" y="4" width="8" height="16" rx="1">
+</rect>
+<rect x="13" y="4" width="8" height="16" rx="1">
+</rect>
+</svg>
+<span style="margin-left: #px;">Two panes</span>
+</button>
+</span>
+</div>
+<div class="icpipe" role="group" aria-label="Stages">
+<div class="evbox click" role="button" tabindex="0" data-irstage="arrived" aria-pressed="false">
+<div class="icbv">
+<span class="icbi" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="tray">
+<path d="M4 13l2.5-8h11L20 13v6H4z">
+</path>
+<path d="M4 13h5l1 2h4l1-2h5">
+</path>
+</svg>
+</span>
+<div class="v">2</div>
+</div>
+<div class="l">Arrived</div>
+<div class="icsub">2 ready to process</div>
+</div>
+<span class="ar" aria-hidden="true">→</span>
+<div class="evbox click" role="button" tabindex="0" data-irstage="drafted" aria-pressed="false">
+<div class="icbv">
+<span class="icbi" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="drafted">
+<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z">
+</path>
+<path d="M14 3v5h5M9 13h6M9 17h4">
+</path>
+</svg>
+</span>
+<div class="v">1</div>
+</div>
+<div class="l">Drafted</div>
+<div class="icsub">4 proposals to check</div>
+</div>
+<span class="ar" aria-hidden="true">→</span>
+<div class="evbox click" role="button" tabindex="0" data-irstage="approved" aria-pressed="false">
+<div class="icbv">
+<span class="icbi" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="approved">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M8 12.5l3 3 5-6">
+</path>
+</svg>
+</span>
+<div class="v">1</div>
+</div>
+<div class="l">Approved</div>
+<div class="icsub">this week</div>
+</div>
+<span class="icsep" aria-hidden="true">
+</span>
+<div class="evbox click" role="button" tabindex="0" data-irstage="all" aria-pressed="true">
+<div class="icbv">
+<span class="icbi" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="all">
+<path d="M12 3l9 5-9 5-9-5z">
+</path>
+<path d="M3 13l9 5 9-5">
+</path>
+</svg>
+</span>
+<div class="v">4</div>
+</div>
+<div class="l">Show all</div>
+<div class="icsub">meetings and files</div>
+</div>
+</div>
+<div data-irv="list">
+<div class="tbl">
+<table>
+<tbody>
+<tr class="click irmeet" data-irm="m7f5532f81f" data-stage="arrived" data-state="ready" tabindex="0">
+<td class="title">
+<span class="ki" aria-hidden="true" data-irki="file">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
+<path d="M6 3h8l4 4v14H6z">
+</path>
+<path d="M14 3v4h4">
+</path>
+</svg>
+</span>
+<b class="icmeethd">ABC weekly sync.vtt</b>
+<div class="why">Added today · Likely project: Example Programme</div>
+<div class="why">File ready · .vtt · 1 KB</div>
+<div class="why irkind" data-irkind="transcript">
+<span class="tag">Transcript</span> · It will be turned into minutes, then checked for work items. </div>
+</td>
+<td class="iracts">
+<button type="button" class="mini" data-ira="process" title="">Make minutes</button>
+<button type="button" class="mini" data-ira="later" title="Hide it; it stays in Later until you restore it">Later</button>
+<button type="button" class="ib sm no" aria-label="Not needed, with a reason" data-tip="Not needed, with a reason" aria-haspopup="menu" data-ira="notneeded">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr class="click irmeet" data-irm="m43da0fe5df" data-stage="approved" data-state="done" tabindex="0">
+<td class="title">
+<span class="ki" aria-hidden="true" data-irki="file">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
+<path d="M6 3h8l4 4v14H6z">
+</path>
+<path d="M14 3v4h4">
+</path>
+</svg>
+</span>
+<b class="icmeethd">Copy of filed.vtt</b>
+<div class="why">Added today · Likely project: Not sure</div>
+<div class="why">Already processed</div>
+</td>
+<td class="iracts">
+<span class="icsub">Done</span>
+<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)">Remove</button>
+</td>
+</tr>
+<tr class="click irmeet" data-irm="m5f7661d1cc" data-stage="arrived" data-state="ready" tabindex="0">
+<td class="title">
+<span class="ki" aria-hidden="true" data-irki="file">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
+<path d="M6 3h8l4 4v14H6z">
+</path>
+<path d="M14 3v4h4">
+</path>
+</svg>
+</span>
+<b class="icmeethd">Recording.vtt</b>
+<div class="why">Added today · Likely project: Not sure</div>
+<div class="why">File ready · .vtt · 1 KB</div>
+<div class="why irkind" data-irkind="transcript">
+<span class="tag">Transcript</span> · It will be turned into minutes, then checked for work items. </div>
+</td>
+<td class="iracts">
+<button type="button" class="mini" data-ira="process" title="">Make minutes</button>
+<button type="button" class="mini" data-ira="later" title="Hide it; it stays in Later until you restore it">Later</button>
+<button type="button" class="ib sm no" aria-label="Not needed, with a reason" data-tip="Not needed, with a reason" aria-haspopup="menu" data-ira="notneeded">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr class="click irmeet" data-irm="m13fbd79c3d" data-stage="drafted" data-state="proposals" tabindex="0" aria-expanded="false">
+<td class="title">
+<span class="ki" aria-hidden="true" data-irki="meeting">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="meeting">
+<rect x="4" y="5" width="16" height="15" rx="2">
+</rect>
+<path d="M4 10h16M9 3v4M15 3v4">
+</path>
+</svg>
+</span>
+<b class="icmeethd">ABC Steering</b>
+<div class="why"> · Example Programme</div>
+<div class="why">4 proposals to check · 5 days</div>
+</td>
+<td class="iracts">
+<button type="button" class="mini" data-ira="open">Check them</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="rgroup irsec" data-irsec="mail">
+<h2>From mail and Teams <span class="sub rgc">0 proposals</span>
+</h2>
+</div>
+<div class="empty">Nothing from mail or Teams to approve.</div>
+</div>
+<div class="rgroup irsec" data-irsec="later">
+<h2>Later <span class="sub rgc">0</span>
+<button type="button" class="linkbtn" data-irfold="later" aria-expanded="false">Show</button>
+</h2>
+</div>
+<div class="rgroup irsec" data-irsec="not_needed">
+<h2>Not needed <span class="sub rgc">0</span>
+<button type="button" class="linkbtn" data-irfold="not_needed" aria-expanded="false">Show</button>
+</h2>
+</div>
+<div class="icdrop" data-irdrop="1" aria-hidden="true">
+<div>
+<b>Drop to add files</b>
+<br>
+<span class="sub">Transcripts or minutes: .vtt, .docx, .txt, .md or .pdf, up to 25 MB each</span>
+</div>
+</div>
+<p id="hFoot" class="hfoot" data-k="intake">Press <kbd>?</kbd> for help with Intake</p>
+</div>
+</section>

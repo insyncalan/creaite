@@ -135,7 +135,7 @@ class ReviewNestingTests(unittest.TestCase):
         self.assertEqual(r["errors"], [])
         children = [t for k, t in r["layout"] if k == "child"]
         self.assertTrue(any("Chase legal on the SOW" in t for t in children), children)         # both ABC items under the minutes
-        self.assertTrue(any("Confirm data owner" in t for k, t in r["layout"] if k == "row"))   # not nested
+        self.assertTrue(any("Confirm data owner" in t for k, t in r["layout"]))              # the DEF item of the same file: on the Intake page every item of a meeting is under it (the old page left other projects' items at project level)
         self.assertGreaterEqual(r["open"] - r["closed"], 2)                          # closing the meeting hides its rows
         self.assertEqual(r["reopened"], r["open"])
         self.assertEqual(sorted(r["afterGroup"]), [["actions", "approved"], ["actions", "pending"], ["draft", "pending"],

@@ -67618,8 +67618,9 @@ ${d5.text}`);
       if (!opt2.restore) navWrite(true);
       return true;
     })(v5, arg, opt);
-    if (r4 !== false && (v5 === "files" || v5 === "intake-review")) filesOpened();
+    if (r4 !== false && v5 === "files") filesOpened();
     if (r4 !== false && v5 === "intake-review" && !shared.LOADING && irModelBehind()) setTimeout(reloadData, 0);
+    if (r4 !== false && v5 === "intake-review" && !shared.LOADING) rjLoadGuesses();
     if (r4 !== false) helpScreenSync();
     tabTitle();
     if (!shared.LOADING) {

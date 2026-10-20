@@ -172,10 +172,10 @@ class TargetSizes(UiSweepCase):
         for w, h in b.eval("[...document.querySelectorAll('#dispMenu .colmv button')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})"):
             self.assertGreaterEqual(min(w, h), 24, "a move-column button")
         self.goto("intake-review")
-        sizes = b.eval("[...document.querySelectorAll('#v-intake-review tr.irprop [data-ira=reject]')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})")
+        sizes = b.eval("[...document.querySelectorAll('#v-intake-review [data-ira=notneeded], #v-intake-review tr.irprop [data-ira=reject]')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})")
         self.assertTrue(sizes)
         for w, h in sizes:
-            self.assertGreaterEqual(min(w, h), 24, "Reject with a reason")
+            self.assertGreaterEqual(min(w, h), 24, "Not needed, with a reason (and a proposal's Reject, where the sample has one)")
 
     def test_a_tick_box_answers_a_click_beside_it(self):
         """BL-217's tick-box check, on Activity's list (the Review page's tick boxes went with the old page, #232 C2)."""
@@ -283,7 +283,8 @@ class Reflow(UiSweepCase):
         try:
             b.resize(600, 800)
             self.goto("intake-review")
-            ok = b.eval("""(()=>{ const tr=document.querySelector('#v-intake-review tr.irprop'); if(!tr) return false; const t=tr.querySelector('td.title'), a=tr.querySelector('.iracts'); return a.getBoundingClientRect().left>=0 && document.documentElement.scrollWidth<=innerWidth && t.getBoundingClientRect().width>0; })()""")
+            ok = b.eval("""(()=>{ const trs=[...document.querySelectorAll('#v-intake-review tr[data-irm]')]; if(!trs.length) return false;
+              return document.documentElement.scrollWidth<=innerWidth && trs.every(tr=>[...tr.querySelectorAll('button')].every(x=>{ const r=x.getBoundingClientRect(); return !r.width||(r.left>=0&&r.right<=innerWidth+1); })); })()""")
             self.assertTrue(ok, "the row's buttons stay in the window, and no table scrolls sideways")
         finally:
             b.resize(self.width, self.height)
@@ -298,7 +299,7 @@ class ForcedColours(UiSweepCase):
 
     def test_selected_states_and_edges_survive(self):
         b = self.b
-        for name in ("work", "work-board", "work-panel", "intake", "files", "activity", "milestones", "people", "help",
+        for name in ("work", "work-board", "work-panel", "intake-review", "files", "activity", "milestones", "people", "help",
                      "settings-advanced", "cmdk"):
             with self.subTest(name):
                 region = self.goto(name)

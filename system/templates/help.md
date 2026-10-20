@@ -640,13 +640,11 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 | Icon | What it does | Where |
 |---|---|---|
 | Lines / columns | **List** / **Board** | Work toolbar; the filled one is in use |
-| Sliders | **Display**: grouping, order, properties (D in Work) | Work and Review toolbars |
-| Funnel | **Add a filter** (F in Work), with a count when filters are on | Work and Review toolbars |
+| Sliders | **Display**: grouping, order, properties (D in Work) | Work toolbar |
+| Funnel | **Add a filter** (F in Work), with a count when filters are on | Work toolbar |
 | + tile | **New action**, **New RAID item**, **New decision** (a menu: Record a decision, Ask for a decision) | Right end of the Work toolbar |
-| Tick | **Approve** (with the word) | Review |
-| Double tick | **Approve routine** (with the word) | Review toolbar |
-| × | **Reject with a reason** (R), **Clear the selection** (Esc), **Close**, remove a filter | Review rows, bars, panels |
-| Chevron | Collapse or expand (it turns); **Reject with a reason** (R); on a rejected row, **Change the reason** | Groups, Board columns, Review |
+| × | **Reject with a reason** (R), **Not needed** (a meeting), **Close**, remove a filter | Intake rows, panels |
+| Chevron | Collapse or expand (it turns) | Groups, Board columns |
 | Pencil | **Edit**, **Edit details**, **Open draft** | Intake rows, a person's page, Settings › People |
 | Arrow right / corners | **Close** / **Expand to full width** an open item | An item's toolbar |
 | Up / down chevrons | **Previous item** (K) / **Next item** (J) | An item's toolbar |
@@ -657,7 +655,7 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 | T | **Rename** | Settings › People and the register lists |
 | Bin | **Remove from Intake**, **Remove from list**, **Retire** | Intake, Settings |
 | Curved arrow | **Undo this change**, **Restore**, **Reset** | Activity, Settings |
-| Circular arrow | **Refresh items**, **Check now** | Review rows, Settings |
+| Circular arrow | **Refresh the calendar**, **Check now** | Intake, Settings |
 | Two sheets | **Copy** (it ticks when done) | Settings |
 | Open folder | **Open folder** | Files |
 | Folder | **Browse files** | Project page |
@@ -952,7 +950,7 @@ Where: Reports › a project · address `#reporting=` (the old `#weekly=` and `#
 - Each project has its own workstreams (FAL's Cut-over and TID's Cut-over are separate), each with a **lead**, **keywords**, **aliases** (e.g. UAT for Testing) and a Teams channel. creaite uses them to put items from minutes and mail in the right workstream, from the item's project only.
 - **Settings › People and projects › Workstreams** lists them by project: **Add…** (creaite suggests keywords, aliases, lead and channel from the items that mention the name; change anything), **Edit**, **Close** or **Reopen**. Renaming one renames its items too; a closed one can't be chosen for new items, but items already on it keep it. Every change is a proposal, with Undo.
 - In an item, the Workstream list (under **Details**) offers that project's workstreams. **Add workstream…** (or a new name typed in the list) opens its details, suggested from the project's items; **Add and use it** stages the new workstream with the item's change, so **Apply** adds both and **Undo last** removes both.
-- Workstreams are managed in Settings (the project page doesn't list them). In Review, an item from minutes or mail that named a workstream its project doesn't have offers **Add workstream** or **Leave blank**.
+- Workstreams are managed in Settings (the project page doesn't list them).
 - They're in the Excel export too, on the Workstreams sheet, editable like the others.
 
 ## Search

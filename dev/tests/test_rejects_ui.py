@@ -194,7 +194,7 @@ class RejectsUI(LiveBrowserCase):
         b = self.b
         self.open_review()
         guesses = b.eval("Object.fromEntries(Object.entries(rjGuesses.value).map(([k,g])=>[k,g.reason]))")
-        self.assertEqual(sorted(guesses.values()), ["Chatter", "Chatter", "Doesn't need tracking", "Duplicate"])
+        self.assertEqual([guesses.get(f"proposed-rj.json#{i}") for i in (1, 2, 3, 4, 5)], ["Chatter", "Duplicate", "Doesn't need tracking", "Chatter", None])
         b.click(self.reject_button(self.dup_text))
         self.menu_open()
         self.assertIn(f"Duplicate", b.eval("document.querySelector('#rvReason [data-reason=guess]').textContent"))
@@ -259,10 +259,10 @@ class RejectsUI(LiveBrowserCase):
     def test_activity_lists_the_rejects_with_the_chip(self):
         b = self.b
         self.open_review()
-        for text in (THANKS, ROOM, KEYS):
+        for text, key in ((THANKS, "g"), (ROOM, "g"), (KEYS, "0")):
             b.click(self.reject_button(text))
             self.menu_open()
-            b.key("g")
+            b.key(key)
             b.wait(f"!REV.some(r=>r.rec.t.startsWith({text!r})&&!r.done)", 20)
         self.wait_rejected([1, 3, 7])
         b.eval("go('activity')")
