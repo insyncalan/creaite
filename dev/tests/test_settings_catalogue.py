@@ -66,7 +66,7 @@ class Catalogue(unittest.TestCase):
             self.assertLessEqual(len(line), 140, key)
 
     def test_the_essentials_are_about_sixteen_rows_of_real_settings(self):
-        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 18, len(sc.ESSENTIAL_ROWS))
+        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 24, len(sc.ESSENTIAL_ROWS))      # #97: two quiet-hours rows
         sections = []
         for section, label, line, keys in sc.ESSENTIAL_ROWS:
             sections.append(section)

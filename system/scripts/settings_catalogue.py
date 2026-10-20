@@ -51,6 +51,12 @@ ESSENTIAL_ROWS = (
     ("People I follow", "Tell me when they write", "Their messages head Today until you dismiss them. Only you see who you follow.",
      ("vip.enabled",)),
     ("People I follow", "Check every", "While creaite is open.", ("vip.check_minutes",)),
+    # #97 step 1: quiet hours for the alert check (vip_schedule.py)
+    ("People I follow", "Pause alert checks overnight",
+     "No checks between these times. The first check after them looks back to the last one, so nothing is missed: it is just "
+     "noticed later.", ("vip.quiet_overnight", "vip.quiet_from", "vip.quiet_to")),
+    ("People I follow", "Pause alert checks on weekend days", "Uses the weekend days set in Essentials › You.",
+     ("vip.quiet_weekend",)),
     ("Look and help", "Theme", "Light, dark, or follow your Mac.", ("dashboard.theme",)),
     ("Look and help", "Style", "The look of the whole app.", ("dashboard.palette",)),
     ("Look and help", "Motion", "Follows your Mac's Reduce motion unless you choose.", ("dashboard.motion",)),
@@ -120,6 +126,14 @@ CATALOGUE = {
                           "Fast enough to matter, light on Microsoft 365 calls."),
     "vip.notify": ("People I follow", "Browser notification", "Also show a notification on the Mac, not only on Today.",
                    "On: an alert you don't see until you open Today is late; nothing leaves the laptop."),
+    "vip.quiet_overnight": ("People I follow", "Pause alert checks overnight", "No checks between the two times below.",
+                            "On: each check is a paid call, and overnight messages are noticed at the first check after."),
+    "vip.quiet_from": ("People I follow", "Pause overnight from", "24-hour HH:MM; the same as To means no pause.",
+                       "19:00: the working day is over; the first check after the pause looks back to the last one."),
+    "vip.quiet_to": ("People I follow", "Pause overnight until", "24-hour HH:MM; checks start again at this time.",
+                     "07:00: before the morning sweep and the first meeting."),
+    "vip.quiet_weekend": ("People I follow", "Pause alert checks on weekend days", "No checks on the weekend days set in You.",
+                          "On: with overnight, about 64% fewer checks a week; Monday's first check reads back to Friday's last."),
     # ── Reminders
     "reminders.enabled": ("Reminders", "Report reminders", "Weekly and client report reminders on Today and at session start.",
                           "On: a reminder is one line and never drafts anything by itself."),

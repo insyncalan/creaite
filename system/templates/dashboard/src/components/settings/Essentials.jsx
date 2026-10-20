@@ -111,6 +111,18 @@ function Essential({ row }) {
             if (!await save({ [k]: v })) el.value = String(val(k) ?? 30); }} /> <span class="sub">minutes</span></span>
       );
       break;
+    case "vip.quiet_overnight": /* #97: the switch and its two times; the same time twice means no pause */
+      control = (
+        <span class="setpair">
+          {sw()}
+          {[["vip.quiet_from", "From", "19:00"], ["vip.quiet_to", "To", "07:00"]].map(([key, l, d], i) => [i ? " to " : " ",
+            <input type="text" aria-label={`${row.label}: ${l.toLowerCase()}`} value={val(key) ?? d} size={6} placeholder="HH:MM"
+              onChange={async e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget), v = el.value.trim();
+                if (!HHMM.test(v)) { snack(`Use 24-hour HH:MM, such as ${d}`); el.value = val(key) ?? d; return; }
+                if (!await save({ [key]: v })) el.value = val(key) ?? d; }} />])}
+        </span>
+      );
+      break;
     case "dashboard.theme": control = select([["System", "Follow my Mac"], ["Light", "Light"], ["Dark", "Dark"]]); break;
     case "dashboard.palette": control = select(THEMES.map(x => [x.id, x.id])); break;
     case "dashboard.motion": control = select([["System", "Follow my Mac"], ["Reduce", "Reduce"], ["Full", "Full"]]); break;
