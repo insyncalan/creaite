@@ -490,5 +490,36 @@ class MinutesViewV2(LiveBrowserCase):
                     self.move(5, 5)
 
 
+    def test_15_esc_on_ai_keeps_the_words_and_re_extract_keeps_unsent_ask_text(self):
+        b = self.b
+        ed = ROW % 2 + " .mnit .sheet-ed"
+        b.click(ed)
+        self.caret_end(ed)
+        b.type(" soon")
+        b.eval("""(()=>{ const h=document.querySelector(%s).cxed, doc=h.editor.state.doc; let at=-1;
+          doc.descendants((n,pos)=>{ if(at<0&&n.isText){ const i=n.text.indexOf('UAT'); if(i>=0) at=pos+i; } });
+          h.focus(); h.editor.commands.setTextSelection({from:at,to:at+3}); })()""" % json.dumps(ed))
+        b.wait("document.querySelector('#aiLayer .aispark')", 5)
+        b.key("Escape")
+        b.pump(0.3)
+        self.assertFalse(self.ev("!!document.querySelector('#aiLayer .aispark')"), "Esc closes AI")
+        self.assertIn("soon", self.ev(f"document.querySelector({json.dumps(ed)}).textContent"), "and the words typed stay (review LOW)")
+        b.key("Escape")                                         # a second Esc puts the words back, as before
+        b.pump(0.4)
+        self.assertNotIn("soon", self.ev(f"document.querySelector({json.dumps(ed)}).textContent"))
+        b.eval("openChat()")
+        b.wait("document.getElementById('chIn')", 5)
+        b.eval("(()=>{const t=document.getElementById('chIn'); t.value='half typed'; t.dispatchEvent(new Event('input',{bubbles:true}));})()")
+        b.eval("document.getElementById('mnReBtn').click()")
+        b.pump(0.4)
+        self.assertEqual(self.ev("document.getElementById('chIn').value"), "half typed", "unsent words are never written over")
+        self.assertIn("haven't sent", self.snack())
+        got = self.ev("""new Promise(r=>{ const t=document.getElementById('chIn'); t.value=''; let seen=false;
+          t.addEventListener('input', ()=>{ seen=true; }, {once:true}); document.getElementById('mnReBtn').click();
+          setTimeout(()=>r([t.value, seen]), 400); })""")
+        self.assertIn("re-extract the minutes of", got[0])
+        self.assertTrue(got[1], "the request is put in as typing would (input dispatched)")
+
+
 if __name__ == "__main__":
     unittest.main()
