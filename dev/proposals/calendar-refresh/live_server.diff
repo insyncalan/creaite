@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index cadcd932..d9ea3040 100644
+index cadcd932..851b6cd7 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -1258,7 +1258,8 @@ class Handler(BaseHTTPRequestHandler):
@@ -148,23 +148,35 @@ index cadcd932..d9ea3040 100644
      def _permission(self, p):
          """BL-75, BL-140, BL-141: a rule the run needs becomes an item on the one card; otherwise the panel says why not."""
          why = p.group(2).strip()[:300]
-@@ -2678,8 +2751,14 @@ class Run:
-         (a draft that couldn't be read, a transcript's outcome) or the kind's own done line, with its link."""
+@@ -2679,7 +2752,7 @@ class Run:
          lines = getattr(self, "lines", None) or {}
          if self.stop:
-+            stopped = lines.get("stopped")
-+            if callable(stopped):                          # #265 review L3: a line worked out at the stop (was it saved?)
-+                try:
-+                    stopped = stopped(self)
-+                except Exception:  # noqa: BLE001  never let the line break the closure
-+                    stopped = None
              return {"ok": False, "stopped": True,
 -                    "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else lines.get("stopped") or PLAIN_STOPPED}
-+                    "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else stopped or PLAIN_STOPPED}
++                    "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else self._stopped_line(lines)}
          if failed:
              return {"ok": False, "line": lines.get("failed") or PLAIN_FAILED}
          got = self._closer()
-@@ -2830,7 +2909,8 @@ class Run:
+@@ -2696,6 +2769,18 @@ class Run:
+             done.update(href=lines["href"], link=lines.get("link") or "Open")
+         return done
+ 
++    def _stopped_line(self, lines):
++        """The Stop line: the kind's own, or the plain one. #265 review L3: it may be a function of the run (was the calendar
++        saved before Stop?); a fault there gives the plain line."""
++        stopped = lines.get("stopped")
++        if callable(stopped):
++            try:
++                stopped = stopped(self)
++            except Exception as e:  # noqa: BLE001  never let the line break the closure
++                debuglog.warn("run", f"{self.id} stop line failed: {type(e).__name__}")
++                stopped = None
++        return stopped or PLAIN_STOPPED
++
+     def _closer(self):
+         """What the run's closer makes of a finished run (a Prep page saved), or None; a fault is one plain line too."""
+         closer = getattr(self, "closer", None)
+@@ -2830,7 +2915,8 @@ class Run:
  # the message, Shape, Edit with AI and Find updates are "draft"; Generate and Make it executive are "generate". The label is the
  # engine's kind or the draft's kind: fixed words, never the text of a prompt, a reply or a name. A failure never touches the run.
  USAGE_KIND = {"ask": "ask", "search": "ask", "sweep": "sweep", "prep": "prep", "check": "check", "load": "load",
@@ -174,7 +186,7 @@ index cadcd932..d9ea3040 100644
  
  
  def usage_kind(run):
-@@ -3181,7 +3261,8 @@ def describe_tool(name, inp):
+@@ -3181,7 +3267,8 @@ def describe_tool(name, inp):
  # `claude -p` call of its own, vip_check) and never shows in ask creaite.
  PLAIN_ASK = {"prep": "Make a prep page", "generate": "Draft with Claude", "shape-closed": "Shape the meeting",
               "check": "Check a meeting's transcript", "load": "Load a meeting's transcript",
