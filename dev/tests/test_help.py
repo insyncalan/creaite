@@ -142,6 +142,29 @@ class ParseTests(unittest.TestCase):
         for slug in re.findall(r'data-help="howto-([^"]+)"', html):
             self.assertIn(slug, known)
 
+    def test_the_26_items_are_explained(self):             # v2.6: #246 #247 #248 #241 #183 #250 #97, in plain words, where they belong
+        self.longMessage = False                                                        # name the missing words, not the whole page
+        ref, how = text_of(self.tab["reference"]), text_of(self.tab["howto"])
+        settings = ref[ref.index("Tabs: Essentials"):]
+        for words in ("one scrolling page", "Archive and close", "Client report and logos", "Not on any project yet",
+                      "removes them from this project only"):
+            self.assertIn(words, settings, words)                                       # #247
+        self.assertIn("Everyone", ref); self.assertIn("needs details", ref)            # #248
+        self.assertIn("Remove from the register", ref)
+        self.assertNotIn("has two tabs. With work", ref)
+        for words in ("Create drafts in Outlook", "Create draft in Outlook", "Draft created", "Copy it instead"):
+            self.assertIn(words, how, words)                                            # #183
+        self.assertNotIn("makes an Outlook draft", how + ref)
+        self.assertIn("Fetch transcripts as they appear", ref)                         # #250
+        self.assertIn("A confidential meeting is never fetched", ref)
+        for words in ("Pause alert checks overnight", "Pause alert checks on weekend days"):
+            self.assertIn(words, how, words)                                            # #97
+        for words in ("S / O / P / T", "Compact", "a badge sits beside"):
+            self.assertIn(words, ref, words)                                            # #241, beside the lines its branch wrote
+        for stale in ("Settings › Health and warnings", "Settings › Health › Advanced", "Settings › Review's number"):
+            self.assertNotIn(stale, ref + how, stale)                                   # #246: the old places are gone
+        self.assertNotIn("registers, themes", text_of(self.tab["start"]))
+
     def test_version_is_filled_in(self):
         version = (REPO / "VERSION").read_text().strip()
         self.assertIn(f"creaite {version} · first day", text_of(self.tab["start"]))
