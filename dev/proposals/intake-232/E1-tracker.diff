@@ -1,5 +1,5 @@
 diff --git system/scripts/tracker.py system/scripts/tracker.py
-index fb5a714f..1b37d548 100644
+index fb5a714f..d92a0f7c 100644
 --- system/scripts/tracker.py
 +++ system/scripts/tracker.py
 @@ -28,6 +28,7 @@ import os
@@ -72,7 +72,7 @@ index fb5a714f..1b37d548 100644
      return paths.rel(dest)
  
  
-@@ -1598,23 +1620,90 @@ def stamp_draft(draft, text, on):
+@@ -1598,23 +1620,111 @@ def stamp_draft(draft, text, on):
  
  def _op_copy(apply_id, fop, blk, done):
      src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
@@ -95,7 +95,9 @@ index fb5a714f..1b37d548 100644
 +    """#232 E1: someone else's minutes are copied from the bytes read once, never through a link, and only if they are the staged ones.
 +    `rel` is the stored path, the only one a message or the log may carry (an OSError would name the absolute one)."""
 +    try:
-+        with os.fdopen(os.open(src, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as f:
++        with os.fdopen(os.open(src, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)), "rb") as f:
++            if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):         # a pipe put there would block the read for ever
++                raise Invalid(f"copy: {rel} is not a regular file")
 +            data = f.read()
 +    except OSError as e:
 +        raise Invalid(f"copy: {rel} can't be read as a regular file ({type(e).__name__})") from None
@@ -137,34 +139,53 @@ index fb5a714f..1b37d548 100644
 +
 +def _remove_checked(apply_id, fop, blk, done):
 +    """#232 E1: remove the inbox copy of someone else's minutes through the open folder (_open_inbox_folder): the entry is opened
-+    there without following a link, checked (regular file, one name, the staged checksum) and unlinked by name from that folder. So
-+    a link put in place of the file, or of inbox/ or a folder in it, between the check and here removes nothing but the staged file."""
++    there without following a link (and without blocking on a pipe), checked (regular file, one name, the staged checksum), backed
++    up from the bytes read, moved to a private name in that folder, found to be the very file that was read (same inode), and
++    unlinked from there. So a link put in place of the file, or of inbox/ or a folder in it, or a different file of the same name
++    put there at any moment, removes nothing but the staged file; a different file caught by the move is put back."""
 +    rel = fop["path"]
 +    dfd = _open_inbox_folder(rel)
 +    name = rel.rsplit("/", 1)[1]
 +    try:
 +        try:
-+            ffd = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=dfd)
++            ffd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0), dir_fd=dfd)
 +        except FileNotFoundError:
 +            return                                                 # already gone
 +        except OSError as e:
 +            raise Invalid(f"remove: {rel} is not a regular file ({type(e).__name__})") from None
 +        with os.fdopen(ffd, "rb") as f:
 +            st = os.fstat(f.fileno())
++            if not stat.S_ISREG(st.st_mode):
++                raise Invalid(f"remove: {rel} is not a regular file")
 +            data = f.read()
-+        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1 or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):
++        if st.st_nlink > 1 or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):
 +            raise Invalid(f"remove: {rel}: the file changed since it was staged")
 +        kept = stash(apply_id, paths.resolve(rel), data)
-+        os.unlink(name, dir_fd=dfd)
++        _unlink_same(dfd, name, st, rel)
 +        done.append({"op": "remove", "path": rel, "kept": kept})
 +    finally:
 +        os.close(dfd)
 +
 +
++def _unlink_same(dfd, name, st, rel):
++    """Unlink entry `name` of open folder `dfd` only if it is still the file `st` describes: it is first moved to a private name, so
++    nothing can swap it between the check and the unlink; a different file found there is moved back and refused."""
++    private = f".{name}.removing-{os.getpid()}-{time.monotonic_ns()}"
++    try:
++        os.rename(name, private, src_dir_fd=dfd, dst_dir_fd=dfd)
++        now = os.stat(private, dir_fd=dfd, follow_symlinks=False)
++    except OSError as e:
++        raise Invalid(f"remove: {rel} changed while it was being removed ({type(e).__name__})") from None
++    if (now.st_dev, now.st_ino) != (st.st_dev, st.st_ino) or not stat.S_ISREG(now.st_mode):
++        os.rename(private, name, src_dir_fd=dfd, dst_dir_fd=dfd)
++        raise Invalid(f"remove: {rel}: a different file was put there; it is left alone")
++    os.unlink(private, dir_fd=dfd)
++
++
  def _op_mkdir(apply_id, fop, blk, done):
      p = safe_path(fop["path"], "mkdir")
      created = []
-@@ -2273,19 +2362,94 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
+@@ -2273,19 +2383,96 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
  
  # ── Apply ─────────────────────────────────────────────────────────────────────
  
@@ -181,11 +202,13 @@ index fb5a714f..1b37d548 100644
 +            and not any(i.get("decision") == "approved" for i in data.get("items", [])))
 +
 +
-+def by_others_unwritten(data, blk, apply_id):
-+    """True for a block of someone else's minutes when this apply wrote none of its proposal's items (each approved one was held,
-+    or needs a project): the file waits for the apply that writes one. Run after the items, in the same apply."""
++def by_others_unwritten(data, blk):
++    """True for a block of someone else's minutes when none of its proposal's approved items has been written (each approved one
++    was held, or needs a project): the file waits for the apply that writes one. Any apply counts, not only this one: an undo
++    that skipped an item ("changed since") leaves it approved and applied while the block goes back to approved, and the next apply
++    must still file the minutes. Run after the items, in the same apply."""
 +    return blk.get("kind") == BY_OTHERS and not any(
-+        i.get("applied") == apply_id and i.get("decision") == "approved" for i in data.get("items", []))
++        i.get("applied") and i.get("decision") == "approved" for i in data.get("items", []))
 +
 +
 +def by_others_op(fop, blk):
@@ -262,7 +285,7 @@ index fb5a714f..1b37d548 100644
  
  
  # ===== BL-323: the OneDrive copy is the day's closed zip (backup.py); its retention is Tidy up's =====
-@@ -2333,6 +2497,7 @@ def cmd_apply(args):
+@@ -2333,6 +2520,7 @@ def cmd_apply(args):
      work = _load_work(args)
      if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
          work = _skip_card_leftovers(work)
@@ -270,7 +293,7 @@ index fb5a714f..1b37d548 100644
      if not work:
          print("Nothing to apply: no decided items.")
          return 0
-@@ -2447,6 +2612,39 @@ def card_move_problems(p, data):
+@@ -2447,6 +2635,39 @@ def card_move_problems(p, data):
      return out
  
  
@@ -310,7 +333,7 @@ index fb5a714f..1b37d548 100644
  def _skip_card_leftovers(work):
      """#124 F3: a full apply (no names) leaves out a proposal with a card-only move and no marker (an Approve that stopped
      before its apply finished left it in staging), so the rest still applies. A proposal named on the command line is refused
-@@ -2465,7 +2663,7 @@ def _skip_card_leftovers(work):
+@@ -2465,7 +2686,7 @@ def _skip_card_leftovers(work):
  def _file_op_problems(p, data, written):
      problems = []
      for blk, field in blocks(data):
@@ -319,17 +342,17 @@ index fb5a714f..1b37d548 100644
              for fop in selected_ops(blk, field):
                  try:
                      check_file_op(fop, blk)
-@@ -2665,7 +2863,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
+@@ -2665,7 +2886,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
      proposal file (#124 F3)."""
      processed = []
      for blk, field in blocks(data):
 -        if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
 +        if blk.get("applied") or blk.get(field) not in ("approved", "rejected") or by_others_waiting(data, blk) \
-+                or by_others_unwritten(data, blk, apply_id):
++                or by_others_unwritten(data, blk):
              continue
          ops = selected_ops(blk, field)
          run_file_ops(apply_id, blk, field, ops, file_records, data, prop)
-@@ -2918,7 +3117,8 @@ def _return_proposals(proposals, apply_id, later, report):
+@@ -2918,7 +3140,8 @@ def _return_proposals(proposals, apply_id, later, report):
          for blk, field in blocks(data):
              if blk.get("applied") == apply_id:
                  blk.pop("applied", None)

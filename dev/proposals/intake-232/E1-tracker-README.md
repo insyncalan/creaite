@@ -1,7 +1,7 @@
 # Proposal E1-tracker: someone else's minutes are filed safely, and only with a written item
 
 `system/scripts/tracker.py` is guarded, so this is a proposal for Jarvis: `dev/proposals/intake-232/E1-tracker.diff` (a patch
-against origin/main's tracker.py, `patch -p0` from the vault root; about 210 lines added, 11 changed). The stage side
+against origin/main's tracker.py, `patch -p0` from the vault root; about 230 lines added, 11 changed). The stage side
 (`minutes.py`, the skill, the docs) needs no tracker.py change and is already on the branch; this is what makes the apply safe.
 
 ## Why
@@ -28,22 +28,29 @@ not refuse it. Apply runs a block's file operations whenever its decision is app
 - `by_others_waiting(data, blk)`: a `minutes by others` block, not yet applied, with no approved item. `decided()` leaves it out,
   `_file_op_problems` and `_apply_blocks` skip it, `finished()` treats it as finished (so a proposal whose items were all
   rejected moves to `applied/` and nothing is filed).
-- `by_others_unwritten(data, blk, apply_id)` (checked in `_apply_blocks`, after the items): the block is filed only if this apply
-  wrote at least one approved item. An approved item that is held (needs a project, conflict) files nothing; the file waits for
-  the apply that writes one, and the processed line carries the real count (at least 1).
+- `by_others_unwritten(data, blk)` (checked in `_apply_blocks`, after the items): the block is filed only if at least one approved
+  item of the proposal has been written (is `applied`), in this apply or an earlier one. An approved item that is held (needs a
+  project, conflict) files nothing; the file waits for the apply that writes one. (Counting only *this* apply's items left a
+  proposal stuck for good after an undo that skipped an item as "changed since": the item stays approved and applied, the block
+  goes back to approved, and the next apply wrote nothing new, so it never filed.) The processed line's count is of this apply's
+  items, so it can read 0 in that case.
 - `by_others_file_problem(rel, blk, sha)`, called from `check_file_op` for the block's `copy` source and its inbox `remove`, at
   validation and again before each operation at apply: the file must be a regular file by `lstat` (a link is refused, whatever it
   points at), have no other name (`st_nlink`), have a real path in inbox/ (itself not a link) or a matched project's minutes
   folder, and hash to the `src_sha256` staged by `minutes.py` ("the file changed since it was staged" otherwise; a missing
   checksum is refused).
 - `_op_copy` for the block reads the bytes once through `O_NOFOLLOW`, compares them with `src_sha256`, then writes them (no
-  window between check and copy). A link that appears after the check (an `ELOOP`) is a clean `Invalid` naming the stored
+  window between check and copy). It opens with `O_NONBLOCK` and checks `S_ISREG` on the open file before reading, so a pipe
+  (FIFO) put in place of the file after the check is refused instead of hanging the apply. A link that appears after the check (an `ELOOP`) is a clean `Invalid` naming the stored
   (relative) path, `from None`, so neither stdout nor the debug log carries the absolute path.
 - `_op_remove` for the block works through the open folder (`_remove_checked`, `_open_inbox_folder`): the folder is reached from
   the vault root one level at a time, each opened with `O_NOFOLLOW | O_DIRECTORY` (so `inbox/`, or a folder in it, swapped for a
   link is refused, and a rename or link put on the path afterwards changes nothing: the descriptor is the folder that was
-  opened); the entry is opened with `O_NOFOLLOW` from that folder, checked (regular file, one name, `src_sha256`), backed up from
-  the bytes just read, and unlinked by name from the open folder (`os.unlink(name, dir_fd=fd)`). Only a file in `inbox/` can be
+  opened); the entry is opened from that folder with `O_NOFOLLOW | O_NONBLOCK` (a pipe is refused, not waited on), checked
+  (regular file, one name, `src_sha256`), backed up from the bytes just read, **moved to a private name inside the open folder,
+  compared by inode with the file that was read, and only then unlinked** (`_unlink_same`, all through `dir_fd`). A different file
+  put under the same name at any moment is therefore never deleted: if the move caught it, it is moved back and the apply stops
+  ("a different file was put there; it is left alone"). Only a file in `inbox/` can be
   removed this way (minutes.py stages no other remove). (Inbox transcripts still have the old hole: `copy` from `transcript`
   then `remove` of the path; not touched here.)
 - **Undo:** the existing undo resets every applied block to `pending`; for a `minutes by others` block it now sets it back to
@@ -68,10 +75,9 @@ not refuse it. Apply runs a block's file operations whenever its decision is app
   and against other staged proposals' destinations, and refuses to stage the same file twice.
 
 ## Known residuals
-- The remove's last step (`unlink` by name from the open, checked folder) can in theory still remove a *different regular file of
-  the same name in the same folder* swapped in after the checksum was read, by a local process that wins that race; the file is
-  in inbox/ (or the minutes folder), backed up in `system/backups/files/` and undone with the apply. Nothing outside the folder can
-  be reached.
+- If a different file takes the staged file's name *after* the move to the private name and before the unlink, nothing is lost (the
+  private name is not guessable and nothing else looks there). The window between reading the file and moving it is closed by the
+  inode comparison, not by the checksum alone: the swapped-in file is moved back untouched.
 - The edited-proposal limit above.
 
 ## Repro (today)
@@ -89,7 +95,7 @@ Scratch vault: stage `"as": "minutes", "file": "inbox/m.txt"` (two items), then
     E1_TRACKER_MUTATE=<name> python3 dev/tests/test_minutes_by_others_filing.py   # one line of the patch broken: a test goes red
 The scratch copy is a throwaway vault whose `tracker.py` is the repo's with the diff applied (`patch -p0`); after Jarvis applies the
 diff to the repo the same file keeps guarding it (the marker `def by_others_waiting` is found, and the "defect" tests reverse the
-patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 22 of the 30 tests go red (the swap, undo, race, hand-written proposal, folder destination,
+patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 30 of the 38 tests go red (the swap, undo, race, hand-written proposal, folder destination,
 held-item, collision, unrelated-apply and all-rejected tests, and the validation message); the `DefectToday` tests document today's
 behaviour on the unpatched copy in both modes, and the rest (one approved item files, no double filing, undo, the same file at the
 destination) is today's behaviour and stays green.

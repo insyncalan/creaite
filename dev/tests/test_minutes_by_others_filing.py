@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import unittest
@@ -44,15 +45,24 @@ MARKER = "def by_others_waiting"
 MUTATE = os.environ.get("E1_TRACKER_MUTATE", "")
 # One text change per mutation, made on the patched scratch copy (E1_TRACKER_MUTATE=<name>): a test must turn red
 MUTATIONS = {
-    "no-regular-check": ("if not stat.S_ISREG(st.st_mode):", "if False:"),
+    "no-regular-check": ('if not stat.S_ISREG(st.st_mode):\n        return f"{rel} is not a regular file (a link', 'if False:\n        return f"{rel} is not a regular file (a link'),
     "no-hardlink-check": ("if st.st_nlink > 1:", "if False:"),
     "no-checksum": ("if file_hash(p) != sha:", "if False:"),
     "no-area-check": ("if os.path.islink(paths.INBOX) or not any(", "if False and not any("),
-    "copy-follows-links": ('os.open(src, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))', "os.open(src, os.O_RDONLY)"),
-    "no-unwritten": ("or by_others_unwritten(data, blk, apply_id):", "or False:"),
+    "copy-follows-links": ('os.open(src, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0))', "os.open(src, os.O_RDONLY | os.O_NONBLOCK)"),
+    "no-unwritten": ("or by_others_unwritten(data, blk):", "or False:"),
+    "unwritten-this-apply-only": ('i.get("applied") and i.get("decision") == "approved" for i in data.get("items", []))', 'i.get("applied") == apply_id and i.get("decision") == "approved" for i in data.get("items", []))'),
+    "no-nonblock-copy": ("os.open(src, os.O_RDONLY | os.O_NONBLOCK | getattr", "os.open(src, os.O_RDONLY | getattr"),
+    "no-nonblock-remove": ("os.open(name, os.O_RDONLY | os.O_NONBLOCK | getattr", "os.open(name, os.O_RDONLY | getattr"),
+    "no-regular-fstat-copy": ('                raise Invalid(f"copy: {rel} is not a regular file")', "                pass"),
+    "no-hash-copy": ("if hashlib.sha256(data).hexdigest() != sha:", "if False:"),
+    "no-hash-remove": (' or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):', ":"),
+    "remove-follows-entry-link": ("os.open(name, os.O_RDONLY | os.O_NONBLOCK | getattr(os, \"O_NOFOLLOW\", 0), dir_fd=dfd)", "os.open(name, os.O_RDONLY | os.O_NONBLOCK, dir_fd=dfd)"),
+    "path-unlink": ("    os.unlink(private, dir_fd=dfd)", "    os.unlink(paths.resolve(rel))"),
+    "no-inode-check": ("if (now.st_dev, now.st_ino) != (st.st_dev, st.st_ino) or not stat.S_ISREG(now.st_mode):", "if False:"),
+    "unlink-by-name": ("    os.unlink(private, dir_fd=dfd)", "    os.unlink(name, dir_fd=dfd)"),
     "no-skip": ("        work = _skip_by_others_problems(work)\n", ""),
     "no-claimed": ('                    claimed[to] = fop.get("src_sha256")\n', ""),
-    "no-waiting-in-apply": ('not in ("approved", "rejected") or by_others_waiting(data, blk) \\', 'not in ("approved", "rejected") \\'),
     "no-dest-check": ("if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):", "if False:"),
     "undo-pending": ('blk[field] = "approved" if blk.get("kind") == BY_OTHERS else "pending"', 'blk[field] = "pending"'),
     "remove-by-path": ("    if by_others_op(fop, blk):\n        return _remove_checked(apply_id, fop, blk, done)\n", ""),
@@ -61,7 +71,6 @@ MUTATIONS = {
     "kind-only": ('return blk.get("kind") == BY_OTHERS or bool(fop.get("src_sha256"))', 'return blk.get("kind") == BY_OTHERS'),
     "bare-oserror": ('raise Invalid(f"copy: {rel} can\'t be read as a regular file ({type(e).__name__})") from None', "raise"),
     "no-dir-check": ('    dst = safe_path(fop.get("to"), "copy")\n    if dst.is_dir():\n        raise Invalid(f"copy: {paths.rel(dst)} is a folder")\n    if dst.exists() and file_hash', '    dst = safe_path(fop.get("to"), "copy")\n    if dst.exists() and file_hash'),
-    "remove-follows-links": ("        if p.is_symlink():\n            raise Invalid(f\"remove:", "        if False:\n            raise Invalid(f\"remove:"),
 }
 
 DAY, TITLE = "2026-10-12", "[ABC] Vendor call"
@@ -124,7 +133,8 @@ class Base(unittest.TestCase):
         p = self.v.root / "system/staging" / self.name
         data = json.loads(p.read_text())
         for item, d in zip(data["items"], decisions):
-            item["decision"] = d
+            if d != "applied-keep":                                  # an item already applied keeps its decision
+                item["decision"] = d
         p.write_text(json.dumps(data, indent=2))
 
     def unrelated(self):
@@ -427,6 +437,22 @@ print('RC', tracker.main(['apply']))
 """
 
 
+DRIVER_HOOK = r"""
+import sys, os
+sys.path.insert(0, 'system/scripts')
+from pathlib import Path
+import tracker
+orig = tracker.%(target)s
+def swap(*a, **k):
+    %(swap)s
+    r = orig(*a, **k)
+    %(after)s
+    return r
+tracker.%(target)s = swap
+print('RC', tracker.main(['apply']))
+"""
+
+
 class Races(Base):
     """What a local process could do between the check and the operation (the operation is wrapped, as a reviewer would)."""
 
@@ -434,6 +460,81 @@ class Races(Base):
         r = subprocess.run([sys.executable, "-c", DRIVER % {"op": op, "swap": swap}], cwd=self.v.root, capture_output=True, text=True)
         log = "".join(f.read_text(errors="ignore") for f in (self.v.root / "system/logs").glob("*.log")) if (self.v.root / "system/logs").exists() else ""
         return r.stdout + r.stderr, log
+
+    def hook(self, target, swap, timeout=120, after="pass"):
+        """Like run_driver, for any tracker function (`FILE_OPS['remove']`, `stash`); a hang is a failure, not a stuck suite."""
+        code = DRIVER_HOOK % {"target": target, "swap": swap, "after": after}
+        try:
+            r = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.fail(f"the apply hung ({target}): a pipe put in place of the file blocked it")
+        return r.stdout + r.stderr
+
+    def entry(self, how):
+        return "p = Path('inbox') / %r; %s" % (Path(FILE).name, how)
+
+    def test_a_pipe_put_in_place_of_the_file_does_not_hang_the_copy(self):
+        self.decide("approved", "approved")
+        out = self.hook("FILE_OPS['copy']", self.entry("p.unlink(); os.mkfifo(p)"))
+        self.assertIn("RC 1", out)
+        self.assertIn("is not a regular file", out)
+        self.assertFalse(self.filed())
+
+    def test_a_pipe_put_in_place_of_the_file_does_not_hang_the_remove(self):
+        self.decide("approved", "approved")
+        out = self.hook("FILE_OPS['remove']", self.entry("p.unlink(); os.mkfifo(p)"))
+        self.assertIn("RC 1", out)
+        self.assertIn("is not a regular file", out)
+        self.assertFalse(self.filed())                              # rolled back: the copy made before is undone
+        self.assertEqual(self.v.rows("actions"), [])
+
+    def test_same_size_different_content_before_the_copy_is_refused_by_the_checksum(self):
+        self.decide("approved", "approved")
+        other = "X" * len(MINUTES)
+        # the original content is put back after the copy, so the remove's own checksum can't be what stops the apply
+        out = self.hook("FILE_OPS['copy']", self.entry("p.write_text(%r)" % other), after="p.write_text(%r)" % MINUTES)
+        self.assertIn("RC 1", out)
+        self.assertIn("changed since it was staged", out)
+        self.assertFalse(self.filed())
+
+    def test_same_size_different_content_before_the_remove_is_refused_and_left_alone(self):
+        self.decide("approved", "approved")
+        other = "X" * len(MINUTES)
+        out = self.hook("FILE_OPS['remove']", self.entry("p.write_text(%r)" % other))
+        self.assertIn("RC 1", out)
+        self.assertEqual((self.v.root / FILE).read_text(), other)       # not deleted
+        self.assertFalse(self.filed())
+
+    def test_a_link_with_the_same_bytes_in_place_of_the_file_is_refused_at_the_remove(self):
+        same = self.v.root / f"{ABC}/documents/same-bytes.txt"
+        same.parent.mkdir(parents=True, exist_ok=True)
+        same.write_text(MINUTES, encoding="utf-8")                  # the checksum matches: only not following the link stops it
+        self.decide("approved", "approved")
+        out = self.hook("FILE_OPS['remove']", self.entry("p.unlink(); p.symlink_to(%r)" % str(same)))
+        self.assertIn("RC 1", out)
+        self.assertIn("is not a regular file", out)
+        self.assertTrue(same.exists())
+
+    def test_a_different_file_of_the_same_name_swapped_in_after_the_read_is_put_back_not_lost(self):
+        """A hook on the backup (after the file was read and checked, before the unlink) puts a different file in its place."""
+        self.decide("approved", "approved")
+        out = self.hook("stash", "p = Path('inbox') / %r; p.unlink(); p.write_text('Somebody else\\'s file\\n')" % Path(FILE).name)
+        self.assertIn("RC 1", out)
+        self.assertIn("a different file was put there; it is left alone", out)
+        self.assertEqual((self.v.root / FILE).read_text(), "Somebody else's file\n")
+        self.assertFalse(self.filed())
+
+    def test_the_folder_swapped_for_a_link_after_the_open_does_not_redirect_the_unlink(self):
+        docs = self.v.root / f"{ABC}/documents"
+        docs.mkdir(parents=True, exist_ok=True)
+        victim = docs / Path(FILE).name
+        victim.write_text("A contract with the same file name\n")
+        self.decide("approved", "approved")
+        out = self.hook("stash", "os.rename('inbox', 'inbox.real'); os.symlink(%r, 'inbox')" % str(docs))
+        self.assertIn("RC 0", out)
+        self.assertTrue(victim.exists())                              # a path unlink would have deleted it
+        self.assertEqual(victim.read_text(), "A contract with the same file name\n")
+        self.assertFalse((self.v.root / "inbox.real" / Path(FILE).name).exists())    # the staged file was removed from the open folder
 
     def test_inbox_swapped_for_a_link_before_the_remove_deletes_nothing_of_the_target(self):
         docs = self.v.root / f"{ABC}/documents"
@@ -500,6 +601,27 @@ class Undo(Base):
         self.assertFalse(self.inbox())
         self.assertIn(f"{FILED} | 2", self.processed())
         self.assertEqual(len(self.v.rows("actions")), 2)
+        self.assertTrue((self.v.root / "system/staging/applied" / self.name).exists())
+
+
+class UndoSkipped(Base):
+    def test_an_item_skipped_by_undo_does_not_leave_the_minutes_unfiled(self):
+        self.decide("approved", "pending")
+        self.v.run("apply")
+        con = sqlite3.connect(self.v.root / "system/tracker.db")      # test setup only: a stray outside edit
+        con.execute("UPDATE actions SET owner = 'Sara Khan' WHERE id = 'ABC-A-001'")
+        con.commit()
+        con.close()
+        out = self.v.run("undo").stdout
+        self.assertIn("skipped ABC-A-001: changed since that apply", out)
+        self.assertTrue(self.inbox())                                  # the file is back in inbox/, the item stays applied
+        self.assertFalse(self.filed())
+        self.decide("applied-keep", "rejected")
+        r = self.v.run("apply")
+        self.assertIn("filed 1", r.stdout)
+        self.assertTrue(self.filed())
+        self.assertFalse(self.inbox())
+        self.assertIn(FILED, self.processed())
         self.assertTrue((self.v.root / "system/staging/applied" / self.name).exists())
 
 
