@@ -53,6 +53,21 @@
 </div>
 </span>
 </span>
+<span class="seg ico wdens" id="wdens" role="group" aria-label="Row density">
+<!-- #241 A: Compact and Comfortable rows (the List only) -->
+<button type="button" data-dens="cmp" aria-pressed="true" aria-label="Compact rows" data-tip="Compact rows">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<path d="M4 5h16M4 9.7h16M4 14.3h16M4 19h16">
+</path>
+</svg>
+</button>
+<button type="button" data-dens="cmf" aria-pressed="false" aria-label="Comfortable rows" data-tip="Comfortable rows">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<path d="M4 5h16M4 8.5h9M4 15.5h16M4 19h9">
+</path>
+</svg>
+</button>
+</span>
 <span class="seg ico" id="wlay" role="group" aria-label="Layout">
 <button type="button" data-lay="list" aria-pressed="true" aria-label="List" data-tip="List">
 <svg data-ic="list" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="list" aria-hidden="true">
@@ -84,8 +99,8 @@
 </h3>
 <div class="dline">
 <select id="wgrp">
-<option value="none" selected="">None</option>
-<option value="due">Due</option>
+<option value="none">None</option>
+<option value="due" selected="">Due</option>
 <option value="status">Status</option>
 <option value="owner">Owner</option>
 <option value="milestone">Milestone</option>
@@ -102,7 +117,6 @@
 <div class="dline">
 <select id="wsub">
 <option value="none">None</option>
-<option value="due">Due</option>
 <option value="status">Status</option>
 <option value="owner">Owner</option>
 <option value="milestone">Milestone</option>
@@ -250,7 +264,7 @@
 <!-- BL-132: one announcement per change -->
 <div class="wbulk" id="wbulk" role="region" aria-label="Change the selected items" hidden="">
 </div>
-<div class="tbl list" id="workWrap">
+<div class="tbl list cmp" id="workWrap">
 <table id="workTbl" role="grid" aria-multiselectable="true">
 <thead>
 <tr>
@@ -272,8 +286,41 @@
 </tr>
 </thead>
 <tbody>
-<tr class="click" data-row="ABC-A-001" aria-selected="false">
+<tr class="wgh lv1" data-gk="actions|due|overdue">
+<td colspan="5">
+<button type="button" class="wgtog" data-gtog="actions|due|overdue" aria-expanded="true" aria-label="Collapse Overdue" data-tip="Collapse Overdue">
+<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<input type="checkbox" class="wgtick" data-gtick="actions|due|overdue" aria-label="Select the rows in Overdue">
+<b class="wgn">Overdue</b>
+<span class="sub">1 action · <span class="late">1 overdue</span>
+</span>
+</td>
+</tr>
+<tr class="click" data-row="ABC-A-001" data-g1="actions|due|overdue" aria-selected="false">
 <td class="title" data-f="t">
+<span class="wkm">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);">
+<circle cx="12" cy="12" r="8">
+</circle>
+<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none">
+</path>
+</svg>
+<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+<rect x="3" y="16" width="3.4" height="4" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+<rect x="8" y="12" width="3.4" height="8" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+<rect x="13" y="8" width="3.4" height="12" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+<rect x="18" y="4" width="3.4" height="16" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+</svg>
+<span class="vh">Open, Urgent priority: </span>
+</span>
 <span class="ki" title="Action" aria-hidden="true">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <rect x="4" y="4" width="16" height="16" rx="3">
@@ -281,7 +328,7 @@
 <path d="m8 12.5 2.8 2.8L16.5 9.5">
 </path>
 </svg>
-</span>Escalate data access to the client CIO<div class="x">
+</span>Escalate data access to the client CIO<div class="x xup" style="--wkx: #px; --wky: #px;">
 <a href="#" class="rowid" data-rid="ABC-A-001" title="Open ABC-A-001">ABC-A-001</a> · <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
 </div>
 </td>
@@ -297,8 +344,53 @@
 <td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of ABC-A-001" title="Change the status">▾</button>
 </td>
 </tr>
-<tr class="click" data-row="ABC-A-002" aria-selected="false">
+<tr class="wgh lv1" data-gk="actions|due|week">
+<td colspan="5">
+<button type="button" class="wgtog" data-gtog="actions|due|week" aria-expanded="true" aria-label="Collapse This week" data-tip="Collapse This week">
+<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<input type="checkbox" class="wgtick" data-gtick="actions|due|week" aria-label="Select the rows in This week" disabled="">
+<b class="wgn">This week</b>
+<span class="sub">0 actions</span>
+</td>
+</tr>
+<tr class="wgh lv1" data-gk="actions|due|next">
+<td colspan="5">
+<button type="button" class="wgtog" data-gtog="actions|due|next" aria-expanded="true" aria-label="Collapse Next week" data-tip="Collapse Next week">
+<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<input type="checkbox" class="wgtick" data-gtick="actions|due|next" aria-label="Select the rows in Next week">
+<b class="wgn">Next week</b>
+<span class="sub">2 actions</span>
+</td>
+</tr>
+<tr class="click" data-row="ABC-A-002" data-g1="actions|due|next" aria-selected="false">
 <td class="title" data-f="t">
+<span class="wkm">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);">
+<circle cx="12" cy="12" r="8">
+</circle>
+<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none">
+</path>
+</svg>
+<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+<rect x="3" y="16" width="3.4" height="4" rx="1" fill="var(--accent)" opacity="1">
+</rect>
+<rect x="8" y="12" width="3.4" height="8" rx="1" fill="var(--accent)" opacity="1">
+</rect>
+<rect x="13" y="8" width="3.4" height="12" rx="1" fill="var(--accent)" opacity=".25">
+</rect>
+<rect x="18" y="4" width="3.4" height="16" rx="1" fill="var(--accent)" opacity=".25">
+</rect>
+</svg>
+<span class="vh">Open, Medium priority: </span>
+</span>
 <span class="ki" title="Action" aria-hidden="true">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <rect x="4" y="4" width="16" height="16" rx="3">
@@ -306,7 +398,7 @@
 <path d="m8 12.5 2.8 2.8L16.5 9.5">
 </path>
 </svg>
-</span>Book UAT environment<div class="x">
+</span>Book UAT environment<div class="x xup" style="--wkx: #px; --wky: #px;">
 <a href="#" class="rowid" data-rid="ABC-A-002" title="Open ABC-A-002">ABC-A-002</a> · <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
 </div>
 </td>
@@ -322,8 +414,27 @@
 <td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of ABC-A-002" title="Change the status">▾</button>
 </td>
 </tr>
-<tr class="click" data-row="DEF-A-001" aria-selected="false">
+<tr class="click" data-row="DEF-A-001" data-g1="actions|due|next" aria-selected="false">
 <td class="title" data-f="t">
+<span class="wkm">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);">
+<circle cx="12" cy="12" r="8">
+</circle>
+<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none">
+</path>
+</svg>
+<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+<rect x="3" y="16" width="3.4" height="4" rx="1" fill="var(--accent)" opacity="1">
+</rect>
+<rect x="8" y="12" width="3.4" height="8" rx="1" fill="var(--accent)" opacity="1">
+</rect>
+<rect x="13" y="8" width="3.4" height="12" rx="1" fill="var(--accent)" opacity=".25">
+</rect>
+<rect x="18" y="4" width="3.4" height="16" rx="1" fill="var(--accent)" opacity=".25">
+</rect>
+</svg>
+<span class="vh">Open, Medium priority: </span>
+</span>
 <span class="ki" title="Action" aria-hidden="true">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <rect x="4" y="4" width="16" height="16" rx="3">
@@ -331,7 +442,7 @@
 <path d="m8 12.5 2.8 2.8L16.5 9.5">
 </path>
 </svg>
-</span>Agree pilot success criteria<div class="x">
+</span>Agree pilot success criteria<div class="x xup" style="--wkx: #px; --wky: #px;">
 <a href="#" class="rowid" data-rid="DEF-A-001" title="Open DEF-A-001">DEF-A-001</a> · <span class="pcode plink" data-proj="DEF" role="link" tabindex="0" title="Open Digital Enablement">Digital Enablement</span>
 </div>
 </td>
@@ -347,17 +458,51 @@
 <td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of DEF-A-001" title="Change the status">▾</button>
 </td>
 </tr>
+<tr class="wgh lv1" data-gk="actions|due|later">
+<td colspan="5">
+<button type="button" class="wgtog" data-gtog="actions|due|later" aria-expanded="true" aria-label="Collapse Later" data-tip="Collapse Later">
+<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<input type="checkbox" class="wgtick" data-gtick="actions|due|later" aria-label="Select the rows in Later" disabled="">
+<b class="wgn">Later</b>
+<span class="sub">0 actions</span>
+</td>
+</tr>
+<tr class="wgh lv1" data-gk="actions|due|none">
+<td colspan="5">
+<button type="button" class="wgtog" data-gtog="actions|due|none" aria-expanded="true" aria-label="Collapse No date" data-tip="Collapse No date">
+<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<input type="checkbox" class="wgtick" data-gtick="actions|due|none" aria-label="Select the rows in No date" disabled="">
+<b class="wgn">No date</b>
+<span class="sub">0 actions</span>
+</td>
+</tr>
 </tbody>
 </table>
 </div>
 <div class="board" id="workBoard" hidden="" role="group" aria-label="Board">
 </div>
 <div class="kbdhint" id="whintList">
+<span class="kbd">↑</span>
+<span class="kbd">↓</span>
 <span class="kbd">J</span>
-<span class="kbd">K</span> move · <span class="kbd">Space</span> select · click a value to change it · <span class="kbd">Enter</span> or the ID opens · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear · click a heading to sort · drag a column edge to resize</div>
+<span class="kbd">K</span> move · <span class="kbd">Space</span> select · click a value to change it · <span class="kbd">Enter</span> or the ID opens · <span class="kbd">→</span> opens, ← closes (or the menu) · <span class="kbd">S</span>
+<span class="kbd">O</span>
+<span class="kbd">P</span>
+<span class="kbd">T</span> status, owner, priority, due · <span class="kbd">C</span> close · <span class="kbd">V</span> client-visible · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear · click a heading to sort · drag a column edge to resize</div>
 <div class="kbdhint" id="whintBoard" hidden="">
 <span class="kbd">J</span>
-<span class="kbd">K</span> step through the cards · <span class="kbd">Space</span> select · <span class="kbd">Enter</span> or the ID opens · drag a card, or use its <b>Move to…</b> menu, to change it · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear</div>
+<span class="kbd">K</span> step through the cards · <span class="kbd">Space</span> select · <span class="kbd">Enter</span> or the ID opens · <span class="kbd">→</span> opens, ← closes (or the menu) · <span class="kbd">S</span>
+<span class="kbd">O</span>
+<span class="kbd">P</span>
+<span class="kbd">T</span> status, owner, priority, due · <span class="kbd">C</span> close · <span class="kbd">V</span> client-visible · drag a card, or use its <b>Move to…</b> menu, to change it · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear</div>
 <p id="hFoot" class="hfoot" data-k="work">Press <kbd>?</kbd> for help with Work</p>
 </div>
 </section>
