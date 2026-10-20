@@ -26,6 +26,7 @@ import os
 import re
 import shutil
 import subprocess
+import unittest
 import sys
 import time
 import zipfile
