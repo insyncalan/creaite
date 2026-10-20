@@ -66,9 +66,7 @@ class Catalogue(unittest.TestCase):
             self.assertLessEqual(len(line), 140, key)
 
     def test_the_essentials_are_about_sixteen_rows_of_real_settings(self):
-        # v2.6 (#246): 21, as the old You card's short forms and own domains and People I follow's browser notification
-        # joined their Essentials sections (one card each, Alan 19-10-2026); still a page of rows, not the whole catalogue
-        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 22, len(sc.ESSENTIAL_ROWS))
+        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 24, len(sc.ESSENTIAL_ROWS))      # #97: two quiet-hours rows
         sections = []
         for section, label, line, keys in sc.ESSENTIAL_ROWS:
             sections.append(section)

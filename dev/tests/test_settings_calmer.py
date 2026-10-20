@@ -76,7 +76,7 @@ class SettingsReading(LiveBrowserCase):
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-essentials [data-ess] h2')].map(h=>h.textContent)"), ESS_SECTIONS)
         labels = self.b.eval("[...document.querySelectorAll('#set-essentials .srow')].map(r=>r.querySelector('span[id]').textContent)")
         self.assertEqual(labels, [r[1] for r in settings_catalogue.ESSENTIAL_ROWS])
-        self.assertTrue(14 <= len(labels) <= 22)            # v2.6 (#246): the old You and People I follow cards joined
+        self.assertTrue(14 <= len(labels) <= 24)                                     # #97: two quiet-hours rows
         lines = self.b.eval("[...document.querySelectorAll('#set-essentials .srow small')].map(s=>s.textContent)")
         self.assertEqual(lines, [r[2] for r in settings_catalogue.ESSENTIAL_ROWS])
 
