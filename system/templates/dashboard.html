@@ -50656,11 +50656,15 @@ ${pre}**Current state title:** ${title}`);
     $("#deNote").hidden = true;
     if (!shared.DE.subjEdited) $("#deSubj").value = em2.subject;
   }
-  var DE_AI_SAFE = false, deAiAsking = null;
+  var DE_AI_SAFE = false, deAiAsking = null, deAiNoUntil = 0;
+  var DE_AI_NO_MS = 6e4;
   var deAiSafe = () => DE_AI_SAFE;
   function deAiCheck() {
-    if (DE_AI_SAFE || deAiAsking || !viaServer()) return deAiAsking;
-    const q5 = Promise.resolve().then(() => api("/api/edit/ai/caps", {})).then((r4) => DE_AI_SAFE = !!(r4 && r4.ok && r4.email_audience === "recipients"), () => false);
+    if (DE_AI_SAFE || deAiAsking || !viaServer() || Date.now() < deAiNoUntil) return deAiAsking;
+    const q5 = Promise.resolve().then(() => api("/api/edit/ai/caps", {})).then((r4) => DE_AI_SAFE = !!(r4 && r4.ok && r4.email_audience === "recipients"), () => false).then((ok2) => {
+      if (!ok2) deAiNoUntil = Date.now() + DE_AI_NO_MS;
+      return ok2;
+    });
     deAiAsking = q5;
     q5.then(() => {
       if (deAiAsking === q5) deAiAsking = null;

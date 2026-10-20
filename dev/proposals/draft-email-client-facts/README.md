@@ -1,6 +1,6 @@
 # Proposal #186: the Draft email's AI bar, safe for people outside your company
 
-For Alan's approval. `edit_ai.py` is guarded-adjacent and `live_server.py` is the server, so neither is changed on this branch.
+For Alan's approval. Round 2: the fixes from the review of bba13f74 are in (marked "round 2" below). `edit_ai.py` is guarded-adjacent and `live_server.py` is the server, so neither is changed on this branch.
 `edit_ai.diff` is the change to both (apply from the repo root with `patch -p0 < dev/proposals/draft-email-client-facts/edit_ai.diff`).
 The dashboard part is already on the branch, and it does nothing new until the diff is applied.
 
@@ -37,6 +37,10 @@ removes.
      owner's, the tracker's internal health reason, an internal-only marker or the word VIP, **the suggestion is dropped** and you see
      a plain reason. It is refused, not edited: a quietly cut sentence is easy to accept without noticing.
 3. **An internal email is unchanged**: full facts, the reply as before.
+3a. **Addresses come only with the Draft email (round 2).** A request that carries addresses with any other place (a note, Current
+   state, an item field, a title, the weekly or minutes sheet, the client sheet) is refused, with "Addresses go only with the Draft
+   email, so nothing was sent to Claude." Refusing was picked over "treat it as an email" because it is the stricter of the two: such
+   a request can only come from a page that is wrong or tampered with.
 4. **The AI bar comes back for outside recipients**, but only once the server says it does the above (a small check,
    `/api/edit/ai/caps`). Until the diff is applied the server doesn't answer it, so the bar stays off for outside recipients exactly
    as today, and the page never sends addresses to a server that can't check them.
@@ -58,10 +62,23 @@ removes.
 | `sam.patel@brightwater.example`, `SAM.PATEL@BRIGHTWATER.EXAMPLE`, `sam+chase@brightwater.example`, `Sam Patel <sam.patel@brightwater.example>` | inside |
 | No address on record, no attendees, an empty address, a list with one outside address, `a@brightwater.example, b@client.example` | outside |
 | `"sam.patel@brightwater.example" <jane@client.example>` (the name says inside, the address isn't) | outside |
+| A display name that isn't plain words (round 2): another address in it (`x@client.example Sam <sam@brightwater.example>`), a line break, a tab or another control character, brackets (`Sam (x@client.example) <…>`), a colon | outside |
+| Group syntax: `undisclosed-recipients:;`, `Team: sam@brightwater.example;` | outside |
+| An `own_domains` (in any spelling) sent with the request | refused by the server; edit_ai.py reads the domains only from settings |
 | `jane@mail.brightwater.example` (a subdomain), `jane@brightwater.example.client.example`, `jane@brightwater.example.` | outside |
 | A look-alike or punycode domain (`brіghtwater.example` with a Cyrillic і, `xn--…`), a full-width `＠`, two `@` | outside |
 | No own domains set, or settings that can't be read | everyone outside |
-| More than 50 recipients, or anything that isn't a list of text | refused by the server (nothing sent) or outside |
+| More than 50 recipients, or anything that isn't a list of text | refused by the server with a plain message ("That email has too many recipients for a suggestion (50 at most)…", "The email's addresses couldn't be read…") |
+| Own email domains saved as text instead of a list | everyone outside; the debug log says "identity.own_domains is not a list" and `/api/edit/ai/caps` reports `own_domains: "not a list"` (round 2; never the domains themselves) |
+
+## Which places can reach a client (round 2)
+
+| Place | Where | Can reach a client? | Facts with this proposal |
+|---|---|---|---|
+| `email` | Draft email | yes | client facts unless every address is on an own domain; no addresses at all = outside |
+| `client` | the client report sheet | yes | client facts, bound on the server from the report (#123) |
+| `minutes` | the minutes sheet (Internal version only; the Distributed version is read-only) | indirectly: the Distributed version is made from it, leaving out Internal only lines and withheld items | full facts, as today (not changed here; a follow-up if Alan wants the reply checked there) |
+| `notes`, `current`, `plain`, `line`, `report`, `readonly` | notes, Current state, item fields and Prep boxes, titles, the weekly sheet | no (internal pages; the client report has its own place) | full facts, as today; refused if addresses are sent with them |
 
 ## What can still go wrong
 
@@ -72,6 +89,13 @@ removes.
   refused.
 - **Internal minutes follow-up.** That email is marked Internal today and its bar was on. With this change the server looks at the
   attendees: if any is outside, it gets client facts. Safer, but a suggestion may be less specific.
+- **Several projects in one email.** Claude gets the first project's client facts. The checks read every project: an item of another
+  project (even a client-visible one) in the words you select or in the reply is refused (#127's other-project rule). Strict, so
+  Ask may be refused on a multi-project email; it never lets another project's internal item through.
+- **Odd spellings the checks don't read (inherited from #127).** In the words you select, `A B C - A - 0 0 4` and `ABC 5` are not read
+  as item IDs. In Claude's reply, "O. Ali", "Health: At risk", a paraphrase of the health reason, `ABC-A-0004` or "ABC A zero zero
+  four" are not caught. Claude is never told about internal items, owners or the health reason for an outside email, which is the
+  main protection; the reply check is a second layer.
 - **No project.** An outside email with no project behind it (rare: a follow-up with no project code) is refused, as the client
   sheet does, because there is nothing to check against.
 - **Check limits from #127 still apply** to the reply check: it is plain code, so a cleverly paraphrased internal fact with no ID,
@@ -91,7 +115,8 @@ removes.
 
 ## How to apply and undo
 
-- Apply: from the repo root, `patch -p0 < dev/proposals/draft-email-client-facts/edit_ai.diff`, then run the tests below.
+- Apply: from the repo root, `patch -p0 < dev/proposals/draft-email-client-facts/edit_ai.diff` (`-p0`: the diff's file names have
+  no `a/` or `b/` prefix, so `git apply` needs `-p0` too), then run the tests below.
 - Undo: `patch -R -p0 < dev/proposals/draft-email-client-facts/edit_ai.diff`. The page then falls back by itself (the caps check
   gets no answer, so the bar is off for outside recipients again).
 - Tests: `python3 dev/tests/test_email_client_facts_186.py` (before applying it patches a scratch copy; after, it checks the real
@@ -100,11 +125,13 @@ removes.
 
 ## Size and risk
 
-- Size: **M, and two pieces.** The server part is `edit_ai.diff` (about 70 lines in `edit_ai.py`, 20 in `live_server.py`); the page
-  part (about 30 lines in `drafts.js`, `aiEdit.js`, `editor.js`, `server.js`) is on the branch. They can be reviewed apart: the page part
+- Size: **M, and two pieces.** The server part is `edit_ai.diff` (about 95 lines in `edit_ai.py`, 50 in `live_server.py`); the page
+  part (about 35 lines in `drafts.js`, `aiEdit.js`, `editor.js`, `server.js`) is on the branch. They can be reviewed apart: the page part
   is inert until the server part is applied.
 - Risk: low for leaks (it only adds checks and narrows facts; every doubt counts as outside). The usability risk is suggestions
   refused more often on outside emails, which is the point.
-- `live_server.py` change: `recipients` added to the request's allowed keys (passed whole, never cut: a list over 50 or of
-  non-text is a 400), and the one-line `/api/edit/ai/caps` route. No change to how runs start, tools or approvals.
+- `live_server.py` change: `recipients` added to the request's allowed keys (passed whole, never cut: a list over 50, of non-text,
+  or with a place other than the email is a 400 with a plain message), and the `/api/edit/ai/caps` route (it also says whether the
+  own-domains setting is usable). The page asks caps once; a no (an older server's 404) is kept for a minute, so redraws don't
+  ask again. No change to how runs start, tools or approvals.
 - Needs: an independent review of the diff (client-safe), as #127 had.

@@ -70,9 +70,7 @@ MUTATIONS = {
                    "return not any(address_inside(b, own) for b in parts)"),
     "subdomain": ("edit_ai.py", "a subdomain of an own domain counts as inside", "return bool(m) and m.group(1).lower() in own",
                   "return bool(m) and any(m.group(1).lower() == d or m.group(1).lower().endswith('.' + d) for d in own)"),
-    "display-name": ("edit_ai.py", "the address is taken from anywhere in the entry (the display name too)",
-                     "    m = re.fullmatch(r\"[^<>]*<([^<>]*)>\", s)\n",
-                     "    m = re.search(r\"(\\S+@\\S+?)[\\s>\\\"]\", s + \" \")\n"),
+    # (round 2: "display-name" is now name-any, name-at and name-ws below)
     "no-split": ("edit_ai.py", "a comma list is read as one address", "bits = re.split(r\"[,;]\", r)", "bits = [r]"),
     "empty-ok": ("edit_ai.py", "an empty address is skipped", "if any(not b.strip() for b in bits):\n            return True",
                  "bits = [b for b in bits if b.strip()]\n        if False:\n            return True"),
@@ -84,8 +82,22 @@ MUTATIONS = {
     # (not a mutation: dropping `if not s.isascii()` changes nothing, the ADDRESS pattern is ASCII-only too; the check says it plainly)
     "server-flag": ("live_server.py", "the live server lets an `outside` key through",
                     "\"document\", \"recipients\"}", "\"document\", \"recipients\", \"outside\"}"),
-    "server-cut": ("live_server.py", "the live server cuts a long list instead of refusing it",
-                   "len(rc) > 50 or any(", "False or any("),
+    "server-cut": ("live_server.py", "the live server takes a list of more than 50", "    if len(rc) > 50:\n", "    if False:\n"),
+    # round 2 (the review of bba13f74)
+    "place-any": ("edit_ai.py", "addresses with another place get that place's full facts",
+                  "if \"recipients\" in req and place not in EMAIL_PLACES:", "if False:"),
+    "server-place": ("live_server.py", "the live server lets addresses through with another place",
+                     "    if str(req.get(\"place\") or \"\") != \"email\":\n", "    if False:\n"),
+    "name-any": ("edit_ai.py", "a display name may hold anything", "if not DISPLAY_NAME.fullmatch(m.group(1)):", "if False:"),
+    "name-at": ("edit_ai.py", "a display name may hold an @ or brackets", "DISPLAY_NAME = re.compile(r\"[A-Za-z0-9 .,'\\\"\\-_&]*\")",
+                "DISPLAY_NAME = re.compile(r\"[^<>\\n\\t]*\")"),
+    "name-ws": ("edit_ai.py", "a display name may hold a line break or tab", "DISPLAY_NAME = re.compile(r\"[A-Za-z0-9 .,'\\\"\\-_&]*\")",
+                "DISPLAY_NAME = re.compile(r\"[A-Za-z0-9 .,'\\\"\\-_&\\s]*\")"),
+    "plain-message": ("live_server.py", "a refused list gets the generic message",
+                      "        return handler.send(400, {\"ok\": False, \"message\": why or ", "        return handler.send(400, {\"ok\": False, \"message\": None or "),
+    "no-domains-log": ("edit_ai.py", "a setting that isn't a list says nothing", "        _log_warn(\"identity.own_domains is not a list", "        (\"identity.own_domains is not a list"),
+    "caps-state": ("live_server.py", "caps doesn't say the setting isn't a list", "return \"ok\" if isinstance(given, list) else \"not a list\"",
+                   "return \"ok\""),
 }
 
 
@@ -130,13 +142,17 @@ import json, sys
 sys.path.insert(0, "system/scripts")
 import live_server
 out = []
-for req in json.loads(sys.stdin.read()):
+given = json.loads(sys.stdin.read())
+for req in given:
     out.append(live_server.edit_ai_request(req))
+sys.argv[1:] = [json.dumps(given)]
 caps = live_server.DRAFT_ROUTES.get("/api/edit/ai/caps")
 class H:
     def send(self, code, body):
         return [code, body]
-print(json.dumps({"bodies": out, "caps": caps(H(), {}) if caps else None}))
+reqs = json.loads(sys.argv[1]) if len(sys.argv) > 1 else []
+print(json.dumps({"bodies": out, "caps": caps(H(), {}) if caps else None,
+                  "routes": [live_server.edit_ai_route(H(), r) if live_server.edit_ai_request(r) is None else None for r in reqs]}))
 '''
 
 
@@ -269,6 +285,20 @@ class TheAddresses(_Vault):
         ['"sam.patel@brightwater.example" <jane@client.example>'],      # the display name says inside, the address isn't
         ["sam.patel@brightwater.example <jane@client.example>"],
         ["Jane <jane@client.example> sam@brightwater.example"],        # text after the brackets: not one address
+        # round 2: a display name holding another address, a line break, a tab, brackets or group syntax
+        ["x@client.example\nSam <sam@brightwater.example>"],
+        ["x@client.example\tSam <sam@brightwater.example>"],
+        ["x@client.example Sam <sam@brightwater.example>"],
+        ["Sam (x@client.example) <sam@brightwater.example>"],
+        ["Sam (client) <sam@brightwater.example>"],
+        ["Sam\x00 <sam@brightwater.example>"],
+        ["Sam\nPatel <sam@brightwater.example>"],                     # a line break or tab in the name alone: refused too
+        ["Sam\tPatel <sam@brightwater.example>"],
+        ["Sam\r\nBcc: x@client.example <sam@brightwater.example>"],
+        ["undisclosed-recipients:;"],
+        ["Team: sam@brightwater.example;"],
+        ["Team: sam@brightwater.example"],
+        ["Team: <sam@brightwater.example>"],
         ["jane@mail.brightwater.example"],                             # a subdomain of an own domain
         ["jane@brightwater.example.client.example"],
         ["jane@brightwater-example.com"],
@@ -292,6 +322,31 @@ class TheAddresses(_Vault):
     def test_every_spoof_is_outside(self):
         for r in self.SPOOFS:
             self.assertClientFacts(self.context(ask(r)), repr(r)[:80])
+
+    def test_display_names_of_plain_words_still_read_as_inside(self):
+        for r in (["Sam Patel <sam.patel@brightwater.example>"], ['"Sam Patel" <sam.patel@brightwater.example>'],
+                  ["O'Neill-Smith Jr. <sam.patel@brightwater.example>"], ["<sam.patel@brightwater.example>"]):
+            self.assertFullFacts(self.context(ask(r)), repr(r))
+
+    def test_own_domains_come_from_settings_never_the_request(self):
+        for key in ("own_domains", "ownDomains", "own_email_domains", "ownEmailDomains", "domains"):
+            self.assertClientFacts(self.context(ask([OUTSIDE], **{key: ["client.example"]})), key)
+        self.assertClientFacts(self.context(ask([OUTSIDE], identity={"own_domains": ["client.example"]})), "identity")
+        out = server(self.root, [ask([OUTSIDE], own_domains=["client.example"]), ask([OUTSIDE], ownDomains=["client.example"])])
+        self.assertEqual(out["bodies"], [None, None])
+
+    def test_a_setting_that_isnt_a_list_is_outside_and_said_in_the_log_and_caps(self):
+        s = self.root / "system/config/settings.json"
+        before = s.read_text(encoding="utf-8")
+        self.addCleanup(s.write_text, before, encoding="utf-8")
+        d = json.loads(before)
+        d["identity"]["own_domains"] = "brightwater.example"
+        s.write_text(json.dumps(d), encoding="utf-8")
+        self.assertClientFacts(self.context(ask([INSIDE])), "own_domains as a string")
+        logs = "".join(f.read_text(encoding="utf-8") for f in (self.root / "system/logs").glob("debug-*.log"))
+        self.assertIn("own_domains is not a list", logs)
+        self.assertNotIn("brightwater.example", logs)                    # counts and what is wrong only, never the domains
+        self.assertEqual(server(self.root, [])["caps"][1]["own_domains"], "not a list")
 
     def test_no_own_domains_means_everyone_is_outside(self):
         s = self.root / "system/config/settings.json"
@@ -317,7 +372,25 @@ class TheLiveServer(_Vault):
         self.assertEqual(b[1]["recipients"], many)
         for i in range(2, 7):
             self.assertIsNone(b[i], i)                                 # a 400: nothing goes to edit_ai.py or Claude
-        self.assertEqual(out["caps"], [200, {"ok": True, "email_audience": "recipients"}])
+        self.assertEqual(out["caps"], [200, {"ok": True, "email_audience": "recipients", "own_domains": "ok"}])
+
+    def test_addresses_with_any_other_place_are_refused(self):
+        doc = {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}
+        for place in ("plain", "notes", "line", "current", "report", "minutes", "client", "readonly"):
+            for r in ([OUTSIDE], [INSIDE], []):
+                body = {**ask(r, option="shorter"), "place": place, **({"document": doc} if place == "client" else {})}
+                ctx = self.context(body)
+                self.assertEqual(ctx.get("refused"), "Addresses go only with the Draft email, so nothing was sent to Claude.",
+                                 (place, r))
+        out = server(self.root, [{**ask([OUTSIDE]), "place": "plain"}, {**ask([INSIDE]), "place": "notes"}])
+        self.assertEqual(out["bodies"], [None, None])
+        self.assertIn("only with the Draft email", out["routes"][0][1]["message"])
+
+    def test_a_refused_list_gets_a_plain_message(self):
+        out = server(self.root, [ask([INSIDE] * 51), ask([INSIDE, 7])])
+        self.assertEqual(out["routes"][0][0], 400)
+        self.assertIn("too many recipients", out["routes"][0][1]["message"])
+        self.assertIn("couldn't be read", out["routes"][1][1]["message"])
 
 
 try:
@@ -436,6 +509,37 @@ if LiveBrowserCase is not None:
 
         def reply(self, text):
             Path(str(self.fake) + ".reply").write_text(text, encoding="utf-8")
+
+
+if LiveBrowserCase is not None:
+    class ThePageOldServer(LiveBrowserCase):
+        """An older server (the diff not applied): /api/edit/ai/caps is a 404, so the bar stays off for an outside recipient, no
+        addresses are sent, and the page asks once, not on every redraw (round 2: the no is kept a minute)."""
+        shared_server = True
+        width, height = 1400, 900
+
+        @classmethod
+        def load(cls, v):
+            R.populate(v)
+            ls = v.root / "system/scripts/edit_ai.py"
+            if MARKER in ls.read_text(encoding="utf-8"):             # the repo has the diff: take it out of this vault's copy
+                subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(DIFF)], check=True)
+
+        def test_an_old_server_keeps_the_bar_off_and_is_asked_once(self):
+            b = self.b
+            b.eval("""window.CAPS=0; const f1=window.__f1||(window.__f1=window.fetch); window.fetch=(u,o)=>{ if(String(u).endsWith("/api/edit/ai/caps")) CAPS++; return f1(u,o); }; true""")
+            b.eval(PREP % json.dumps(OUTSIDE))
+            for _ in range(4):                                           # four opens, each a redraw
+                b.eval('openDraftEmail("Jane Doe"); true')
+                b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+                b.pump(0.4)
+            self.assertFalse(b.eval("deAiSafe()"))
+            self.assertEqual(b.eval("CAPS"), 1)
+            b.click("#dePrev")
+            b.key("a", 4)
+            b.pump(0.4)
+            self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"), "an old server: no bar for an outside email")
+            b.eval("document.getElementById('deDlg')?.close(); true")
 
 
 if __name__ == "__main__":

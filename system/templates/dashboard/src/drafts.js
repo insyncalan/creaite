@@ -214,12 +214,14 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
    internal. The page only asks whether this server does that (/api/edit/ai/caps, until it says yes); until then the bar stays off for an
    outside recipient (#133's interim) and no addresses are sent, so an older server is never asked for something it can't check. The page's
    own `outside` only shows or hides the bar: it is never sent. */
-let DE_AI_SAFE=false, deAiAsking=null;
-/** Whether this server decides the email's audience itself (asked once it says yes; a no or an error is asked again next time). */
+let DE_AI_SAFE=false, deAiAsking=null, deAiNoUntil=0;
+const DE_AI_NO_MS=60000;   /* a no (an older server's 404, or an error) is kept a minute, so a redraw doesn't ask again each time */
+/** Whether this server decides the email's audience itself (kept once it says yes; a no is asked again after a minute). */
 export const deAiSafe=()=>DE_AI_SAFE;
 /** Ask the server, once at a time. @returns {Promise<boolean>|null} */
-export function deAiCheck(){ if(DE_AI_SAFE||deAiAsking||!viaServer()) return deAiAsking;
-  const q=Promise.resolve().then(()=>api("/api/edit/ai/caps",{})).then(r=>(DE_AI_SAFE=!!(r&&r.ok&&r.email_audience==="recipients")),()=>false);
+export function deAiCheck(){ if(DE_AI_SAFE||deAiAsking||!viaServer()||Date.now()<deAiNoUntil) return deAiAsking;
+  const q=Promise.resolve().then(()=>api("/api/edit/ai/caps",{})).then(r=>(DE_AI_SAFE=!!(r&&r.ok&&r.email_audience==="recipients")),()=>false)
+    .then(ok=>{ if(!ok) deAiNoUntil=Date.now()+DE_AI_NO_MS; return ok; });
   deAiAsking=q; q.then(()=>{ if(deAiAsking===q) deAiAsking=null; }); return q; }
 /** The addresses the email goes to, as the server judges them: the person's, or every attendee's ("" for anyone with none on record). */
 export const deRecipients=()=>{ const d=shared.DE; if(!d) return [""]; return d.mode==="followup"?(d.attendees||[]).map(a=>String(a.email||"")):[String(d.email||"")]; };

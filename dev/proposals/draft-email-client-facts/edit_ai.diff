@@ -37,12 +37,10 @@
  CLIENT_RULE = ("This text is for the client. Use only what the text holds and the item IDs listed below; never add an internal "
                 "health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
  FORMAT_RULES = {
-@@ -135,6 +149,52 @@
- # how far a place's stored heading levels are shifted from the editor's 1 to 3 (Current state's are written `###` to `#####`)
- HEAD_SHIFT = {"current": 2}
+@@ -137,6 +151,70 @@
  FENCE_RE = re.compile(r"^\s*(```|~~~)")
-+
-+
+ 
+ 
 +def own_domains():
 +    """The own mail domains (settings identity.own_domains), lower case, without a leading @; none when settings can't be read."""
 +    try:
@@ -50,18 +48,36 @@
 +    except Exception:  # noqa: BLE001  unreadable settings: no own domains, so every recipient is outside (fails closed)
 +        return set()
 +    if not isinstance(given, list):
++        _log_warn("identity.own_domains is not a list, so every Draft email recipient counts as outside")   # #186 r2: counts only
 +        return set()
 +    return {d.strip().lower().lstrip("@") for d in given if isinstance(d, str) and d.strip().lstrip("@")}
++
++
++def _log_warn(message):
++    """A warning in the debug log (BL-102), never raising: no addresses or text, only what is wrong."""
++    try:
++        import log
++        log.warn("edit", message)
++    except Exception:  # noqa: BLE001  the log is optional
++        pass
++
++
++# #186 review: a display name is plain words only: no @ (a second address), no control character (a line break or tab could hide
++# another recipient), no brackets, quotes' contents are words too, no colon or semicolon (group syntax: "undisclosed-recipients:;").
++DISPLAY_NAME = re.compile(r"[A-Za-z0-9 .,'\"\-_&]*")
 +
 +
 +def address_inside(entry, own):
 +    """Whether one recipient is a plain address on an own domain: `addr` or `Name <addr>` (the address in brackets is where mail
 +    goes, whatever the name says), ASCII only (a look-alike or punycode domain is another domain), the domain matched exactly, in any
-+    case (a subdomain of an own domain is not it)."""
-+    s = entry.strip()
-+    m = re.fullmatch(r"[^<>]*<([^<>]*)>", s)
++    case (a subdomain of an own domain is not it). A display name holding anything but plain words (an @, a line break, a tab or
++    another control character, brackets, a colon) is not read: the entry is outside (#186 review)."""
++    s = entry.strip(" ")
++    m = re.fullmatch(r"([^<>]*)<([^<>]*)>", s)
 +    if m:
-+        s = m.group(1).strip()
++        if not DISPLAY_NAME.fullmatch(m.group(1)):
++            return False
++        s = m.group(2)
 +    if not s.isascii():
 +        return False
 +    m = ADDRESS.fullmatch(s)
@@ -87,10 +103,12 @@
 +            return True
 +        parts += bits
 +    return not all(address_inside(b, own) for b in parts)
- 
- 
++
++
  def relevel(text, place):
-@@ -347,8 +407,9 @@
+     """A place that stores its headings shifted never gets a heading above its lowest level: Current state's `#` and `##` lines
+     become `###` and `####` (outside fenced code), so no `## ` line can end the `## Current state` section (#117)."""
+@@ -347,8 +425,9 @@
      return found
  
  
@@ -102,7 +120,7 @@
      if found == [NO_PROJECT]:
          return ("The suggestion was dropped: there's no project to check it against." if suggestion else
                  "There's no project to check this text against, so nothing was sent to Claude.")
-@@ -360,6 +421,11 @@
+@@ -360,6 +439,11 @@
      if UNCHECKED in found:
          return ("The suggestion was dropped: creaite couldn't check it against the tracker. Try again." if suggestion else
                  "creaite couldn't check this text against the tracker, so nothing was sent to Claude. Try again.")
@@ -114,7 +132,31 @@
      return ("The suggestion was dropped: it held something that isn't client-safe. Try again." if suggestion else
              "This text already holds something that isn't client-safe. Fix it first; nothing was sent to Claude.")
  
-@@ -457,16 +523,19 @@
+@@ -369,6 +453,7 @@
+ 
+ 
+ NOT_CLIENT = "That isn't a client report creaite can check, so nothing was sent to Claude."
++NOT_EMAIL = "Addresses go only with the Draft email, so nothing was sent to Claude."     # #186 review
+ 
+ 
+ def bound_place(req, code, claimed):
+@@ -429,10 +514,14 @@
+ 
+ 
+ def request(req):
+-    """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's."""
++    """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's. Addresses come only
++    with the Draft email: `recipients` with any other place is refused (#186 review: never full facts for a request that names an
++    outside address)."""
+     code = str(req.get("code") or "")
+     code = code if CODE_RE.fullmatch(code) else ""
+     place = bound_place(req, code, str(req.get("place") or ""))
++    if "recipients" in req and place not in EMAIL_PLACES:
++        raise Refused(NOT_EMAIL)
+     option = str(req.get("option") or "")
+     if place not in PLACES:
+         raise Refused("Not a place creaite knows.")
+@@ -457,16 +546,19 @@
      option, text, code, place, instruction = request(req)
      fmt = FORMATS[place]
      client = place in CLIENT_PLACES
@@ -137,7 +179,7 @@
      if option == "executive":
          import report
          task += "\n\nThe executive voice:\n" + report.style_guide()
-@@ -478,7 +547,7 @@
+@@ -478,7 +570,7 @@
          ids=", ".join(facts["ids"]) or "none",
          text=text)
      return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
@@ -146,7 +188,7 @@
  
  
  def parse(reply):
-@@ -545,9 +614,12 @@
+@@ -545,9 +637,12 @@
          text = one_line(text)
      if not text.strip():
          return {"text": "", "notes": [], "message": "No suggestion came back."}
@@ -187,28 +229,63 @@
  EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
  
  
-@@ -6013,9 +6015,20 @@
+@@ -6013,14 +6015,54 @@
          if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
              return None
          body["document"] = {k: x[:120] for k, x in d.items()}
 +    rc = req.get("recipients")                     # #186: the Draft email's addresses, passed whole (edit_ai.email_outside decides)
 +    if rc is not None:
-+        if not isinstance(rc, list) or len(rc) > 50 or any(not isinstance(x, str) or len(x) > 320 for x in rc):
++        if edit_ai_recipients_problem(req):
 +            return None
 +        body["recipients"] = list(rc)
      return body
  
  
++def edit_ai_recipients_problem(req):
++    """Why a request's `recipients` can't be taken (#186), as the message the page shows, or "" when they can (or there are none):
++    only the Draft email sends addresses, at most 50, each text of at most 320 characters. Never cut: a list is taken whole or not."""
++    rc = req.get("recipients") if isinstance(req, dict) else None
++    if rc is None:
++        return ""
++    if str(req.get("place") or "") != "email":
++        return "Addresses go only with the Draft email, so nothing was sent to Claude."
++    if not isinstance(rc, list) or any(not isinstance(x, str) or len(x) > 320 for x in rc):
++        return "The email's addresses couldn't be read, so nothing was sent to Claude."
++    if len(rc) > 50:
++        return "That email has too many recipients for a suggestion (50 at most), so nothing was sent to Claude."
++    return ""
++
++
++def own_domains_state():
++    """Whether the own-domains setting can decide who is inside (#186 review): "ok", "none" (empty: everyone is outside), "not a list"
++    or "unreadable". Counts only, never the domains."""
++    try:
++        given = (paths.load_settings().get("identity") or {}).get("own_domains")
++    except Exception:  # noqa: BLE001
++        return "unreadable"
++    if given is None or given == []:
++        return "none"
++    return "ok" if isinstance(given, list) else "not a list"
++
++
 +def edit_ai_caps_route(handler, req):
 +    """POST /api/edit/ai/caps (#186): what this server's edit_ai.py decides for itself, so the page can show the Draft email's AI bar
-+    for an outside recipient (an older server answers 404 and the page keeps the bar off)."""
-+    return handler.send(200, {"ok": True, "email_audience": "recipients"})
++    for an outside recipient (an older server answers 404 and the page keeps the bar off), and whether the own-domains setting is
++    usable (a setting that isn't a list makes every recipient outside)."""
++    return handler.send(200, {"ok": True, "email_audience": "recipients", "own_domains": own_domains_state()})
 +
 +
  def edit_ai_route(handler, req):
      """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
      body = edit_ai_request(req)
-@@ -6046,6 +6059,7 @@
+     if body is None:
+-        return handler.send(400, {"ok": False, "message": "That request isn't one creaite knows."})
++        why = isinstance(req, dict) and not set(req) - EDIT_AI_KEYS and edit_ai_recipients_problem(req)   # #186: a plain message
++        return handler.send(400, {"ok": False, "message": why or "That request isn't one creaite knows."})
+     busy = current_run()
+     if busy and not busy.done:
+         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
+@@ -6046,6 +6088,7 @@
  
  
  DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
