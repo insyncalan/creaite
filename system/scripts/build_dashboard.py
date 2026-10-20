@@ -658,7 +658,7 @@ def review_queue(con):
     overlap = float(paths.load_settings().get("review", {}).get("duplicate_overlap", 0.6) or 0.6)   # BL-133 stage B
     for p, data in review.proposals():
         age = review.age(data)
-        aged = {"age": age, "stale": age > limit}
+        aged = {"age": age, "stale": age > limit, "made": data.get("created") or ""}   # #245: made is part of Today's dismissed id
         for key, field, label in review.BLOCKS:
             b = data.get(key)
             if b and not b.get("applied") and b.get(field, "pending") == "pending":
