@@ -12,10 +12,10 @@ import { srcParse, weekendNote, wkLong } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
 import { irLineHead, irLineParts, irVerb } from "../../core/irUpdate.js";
 import { linkUrl } from "../../core/linkUrl.js";
-import { closePanel } from "../../projects.js";
+import { closePanel, PK, pkOn } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, updPeekable } from "../../panel.js";
+import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
 import { decide, draftOn, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
 import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
@@ -100,6 +100,7 @@ function ConflictChoices({ r }) {
 export function irOpenPeek(n) {
   const r = irRow(n);
   if (!r || r.done || !PEEKABLE.includes(r.kind) && r.kind !== "draft") return;
+  if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n && PK.dirty && pkOn()) { pkNote("Save or cancel this proposal first: its changes aren't saved yet."); return; }   /* #232 C2: the old Review row's guard (BL-198): edits not yet saved stay */
   shared.PKSRC = {
     view: "intake-review",
     order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "") || t.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t.getAttribute("data-irn") || 0)))).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),

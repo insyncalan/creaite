@@ -223,10 +223,10 @@ class WeekendInThePage(LiveBrowserCase):
 
     def test_review_notes_it_and_the_buttons_edit_the_proposal(self):
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.wait("document.querySelector('#reviewBody [data-wkrv]')")
-        self.assertIn("Due on a Sunday", b.eval("document.querySelector('#reviewBody .wkrv').textContent"))
-        b.click(f'#reviewBody [data-wkrv][data-to="{MON_AFTER(SUN - timedelta(days=1)).isoformat()}"]')
+        b.eval("go('intake-review')")                                             # #232 C2: the Intake page's row carries the note
+        b.wait("document.querySelector('#v-intake-review [data-wkrv]')")
+        self.assertIn("Due on a Sunday", b.eval("document.querySelector('#v-intake-review .wkrv').textContent"))
+        b.click(f'#v-intake-review [data-wkrv][data-to="{MON_AFTER(SUN - timedelta(days=1)).isoformat()}"]')
         f = self.v.root / "system/staging/proposed-wk-pending.json"
         b.wait(f"REV.some(r=>r.rec&&r.rec.due==={MON_AFTER(SUN - timedelta(days=1)).isoformat()!r})")
         self.assertEqual(json.loads(f.read_text())["items"][0]["values"]["due_date"], MON_AFTER(SUN - timedelta(days=1)).isoformat())

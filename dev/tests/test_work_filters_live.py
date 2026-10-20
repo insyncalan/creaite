@@ -808,31 +808,5 @@ class PeopleList(WorkCase):
         self.assertTrue(self.b.eval("isMe(document.querySelector('#peopleTbl tbody tr').dataset.pp)"))
 
 
-class ReviewList(LiveBrowserCase):
-    """Review: grouping by project, ticking items, and what "Approve selected" does and doesn't allow."""
-
-    def test_ticking_enables_the_buttons_and_individual_only_items_refuse_a_tick(self):
-        b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
-        groups = b.eval("[...document.querySelectorAll('#reviewBody .rgroup h2')].map(h=>h.textContent.trim())")
-        self.assertTrue(groups)
-        self.assertTrue(b.eval("document.getElementById('bulkApprove').disabled"))
-        rows = b.eval("[...document.querySelectorAll('#reviewBody tr[data-n]')].map(r=>[+r.dataset.n,r.querySelector('input[type=checkbox]').disabled])")
-        routine = b.eval("REV.filter(r=>!r.done&&!r.indiv&&r.p).map(r=>r.n)")
-        indiv = b.eval("REV.filter(r=>!r.done&&r.indiv).map(r=>r.n)")
-        self.assertTrue(routine and indiv)
-        b.click(f'#reviewBody tr[data-n="{routine[0]}"] input[type=checkbox]')
-        self.assertFalse(b.eval("document.getElementById('bulkApprove').disabled"))
-        self.assertFalse(b.eval("document.getElementById('bulkReject').disabled"))
-        b.click(f'#reviewBody tr[data-n="{routine[0]}"] input[type=checkbox]')
-        self.assertTrue(b.eval("document.getElementById('bulkApprove').disabled"))
-        b.eval("document.getElementById('snackT').textContent=''")
-        non_minutes = b.eval("REV.filter(r=>!r.done&&r.indiv&&r.kind!=='draft'&&r.kind!=='files').map(r=>r.n)")
-        if non_minutes:
-            b.click(f'#reviewBody tr[data-n="{non_minutes[0]}"] input[type=checkbox]')
-            self.assertEqual(b.eval("document.getElementById('bulkApprove').disabled"), True)    # it refused the tick
-
-
 if __name__ == "__main__":
     unittest.main()

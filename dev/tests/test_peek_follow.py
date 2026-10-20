@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_peek_follow.py   (needs Google Chrome; skipped otherwise)
 
-Work's table and Board, a person's page and Review's proposal rows: the peek follows a plain click; a Shift or Cmd/Ctrl click
+Work's table and Board, a person's page and Intake's proposal rows (Review's, before #232 C2): the peek follows a plain click; on Work a Shift or Cmd/Ctrl click
 is still a selection and leaves it; with no peek open a click only highlights. Real clicks (dev/tools/cdp.py), no hover.
 """
 import sys
@@ -84,25 +84,27 @@ class PeekFollowTests(LiveBrowserCase):
         b.wait(f"CUR&&CUR.id==={pid[1]!r}")
 
     def test_review_rows(self):
+        """#232 C2: Intake's proposal rows (BL-198's Review rows). A click on a row opens it in the peek, an update included (B2);
+        with the peek open a click on another row shows that one; edits not yet saved keep the peek, with a note. The old page's
+        highlight, Shift and Cmd/Ctrl selection went with it (the Intake page has no multi-select)."""
         b = self.b
-        b.eval('closePanel(); go("review",null,{legacy:true})')
-        b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
         n1 = b.eval('REV.find(r=>r.rec&&r.rec.t==="Send the joint plan").n')
         n2 = b.eval('REV.find(r=>r.rec&&r.rec.t==="Joint risk").n')
         nu = b.eval('REV.find(r=>r.kind==="update"&&!r.done).n')
-        b.click(f'#reviewBody tr[data-n="{n1}"] td.title')                 # no peek: only highlighted
+        b.eval(f'closePanel(); go("intake-review", {n1})')
+        row = lambda n: f'#v-intake-review tr.irprop[data-irn="{n}"] td.title .icttl'
+        b.wait(f'!!document.querySelector(\'{row(n1)}\')')
         self.assertIsNone(self.cur())
-        b.click(f'#reviewBody tr[data-n="{n1}"] td.title', count=2)
+        b.click(row(n1))
         b.wait(f"CUR&&CUR.mode==='proposal'&&CUR.n==={n1}&&pkOn()")
-        b.click(f'#reviewBody tr[data-n="{n2}"] td.title')
+        b.click(row(n2))
         b.wait(f"CUR&&CUR.n==={n2}")
-        self.assertEqual(b.eval("[...RHL]"), [n2])
-        b.click(f'#reviewBody tr[data-n="{n1}"] td.title', modifiers=SHIFT)  # a selection: the peek stays on n2
-        self.assertEqual(self.cur(), f"rv{n2}")
-        b.click(f'#reviewBody tr[data-n="{nu}"] td.title')                 # an update doesn't open in the peek: highlight only
-        self.assertEqual(self.cur(), f"rv{n2}")
+        b.click(row(nu))                                                   # an update opens in the peek too (B2)
+        b.wait(f"CUR&&CUR.n==={nu}")
+        b.click(row(n2))
+        b.wait(f"CUR&&CUR.n==={n2}")
         b.eval("PK.dirty=true")                                             # edits not yet saved: the peek stays, with a note
-        b.click(f'#reviewBody tr[data-n="{n1}"] td.title')
+        b.click(row(n1))
         self.assertEqual(self.cur(), f"rv{n2}")
         self.assertIn("Save or cancel", b.eval('document.getElementById("pkNote").textContent'))
         b.eval("PK.dirty=false; closePanel()")

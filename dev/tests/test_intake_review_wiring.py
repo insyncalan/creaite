@@ -12,7 +12,7 @@ Item -> test (the PM's table):
   Today's line and its links         test_todays_line_links_enter_the_stage
   links from other pages             test_link_families (Work, cockpit, activity, breadcrumb, data-go), test_server_made_addresses
   Close the day, First thing, toast  test_review_now_opens_the_meeting
-  command palette                    test_one_palette_entry
+  command palette                    test_one_palette_entry, test_the_palettes_intake_actions_are_the_pages_own
   help screen                        test_help_screen_for_the_one_page
 
 Run: python3 dev/tests/test_intake_review_wiring.py   (needs Google Chrome; skipped otherwise)
@@ -244,6 +244,25 @@ class Wiring(LiveBrowserCase):
             self.assertIn("Go to|Intake", b.eval(f"ckItems({q!r}).map(i=>i.g+'|'+i.l)"))
         b.eval("go('today'); ckItems('intake').find(i=>i.g==='Go to').fn()")
         self.assertEqual(b.eval("VIEW"), "intake-review")
+
+    def test_the_palettes_intake_actions_are_the_pages_own(self):
+        """#232 C2: Add files, Process all ready and Process a meeting no longer click the old page's ids; they call the page's actions."""
+        b = self.b
+        self.model(ready=2)
+        names = b.eval("ckItems('').map(i=>i.g+'|'+i.l)")
+        self.assertIn("Actions|Add files to Intake", names)
+        self.assertIn("Actions|Process all ready", names)
+        self.assertNotIn("Actions|Process new files", names)
+        hint = b.eval("ckItems('').find(i=>i.l==='Process all ready').h")
+        self.assertEqual(hint, "%d ready" % b.eval("irLiveCounts().ready"))
+        meet = b.eval("ckItems('process meeting').map(i=>i.l).filter(l=>l.startsWith('Intake:'))")
+        self.assertEqual(sorted(meet), ["Intake: process meeting Ready 0", "Intake: process meeting Ready 1"])      # the ready ones, not the drafted one
+        b.eval("""window.PICKED=[]; window.REALCLICK=HTMLInputElement.prototype.click; HTMLInputElement.prototype.click=function(){ window.PICKED.push([this.type,this.multiple]); }; 0""")
+        self.addCleanup(lambda: b.eval("HTMLInputElement.prototype.click=window.REALCLICK; document.querySelectorAll('body > input[type=file]').forEach(e=>e.remove()); 0"))
+        b.eval("go('today'); ckItems('').find(i=>i.l==='Add files to Intake').fn()")
+        self.assertEqual(b.eval("VIEW"), "intake-review")
+        self.assertEqual(b.eval("PICKED"), [["file", True]])                                               # the chooser opened from the palette
+        self.assertEqual(b.eval("!!document.getElementById('inboxFile')"), False)                          # and no old page's input
 
     # --- help ---
 

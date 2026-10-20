@@ -77,7 +77,7 @@ function UploadFiles() {
   const pick = useRef(/** @type {HTMLInputElement | null} */ (null));
   const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
   return <>
-    <button type="button" class="ib" data-irpick="1" aria-label="Add files" data-tip={tip} onClick={() => pick.current && pick.current.click()}><IrIcon name="upload" /></button>
+    <button type="button" class="ib" data-irpick="1" aria-label={tip} data-tip={tip} onClick={() => pick.current && pick.current.click()}><IrIcon name="upload" /></button>
     <input type="file" ref={pick} multiple hidden accept={IR_UPLOAD_TYPES.join(",")} aria-label="Choose transcripts or minutes to add"
       onChange={e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget); irAddFiles([...(el.files || [])]); el.value = ""; }} />
   </>;

@@ -7,16 +7,12 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from clear_day_support import ClearData, ClearDayPage, MONDAY  # noqa: E402
-from live_browser import LiveBrowserCase  # noqa: E402
+from clear_day_support import ClearData, MONDAY  # noqa: E402
 
 
 class ClearDataMonday(ClearData, unittest.TestCase):
     NOW = MONDAY
 
-
-class ClearDayPageMonday(ClearDayPage, LiveBrowserCase):
-    NOW = MONDAY
 
 
 if __name__ == "__main__":

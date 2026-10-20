@@ -90,14 +90,14 @@ class HostileText(LiveBrowserCase):
         self.assertIn(text, got, f"{where}: the hostile text is not shown literally")
 
     def view(self, v, arg=None):
-        self.b.eval(f"go({json.dumps(v)},{json.dumps(arg)},{{legacy:true}})")   # legacy: review and inbox still draw their old pages until they are retired
+        self.b.eval(f"go({json.dumps(v)},{json.dumps(arg)})")
         self.b.pump(0.4)
         self.assert_clean(f"view {v}{' ' + str(arg) if arg else ''}")
 
     # ----- the views -----
     def test_every_view_and_item(self):
         b = self.b
-        for v in ("today", "projects", "people", "review", "inbox", "files", "activity", "settings", "help"):
+        for v in ("today", "projects", "people", "intake-review", "files", "activity", "settings", "help"):
             with self.subTest(view=v):
                 self.view(v)
         self.view("cockpit", "ABC")
@@ -173,11 +173,9 @@ class HostileText(LiveBrowserCase):
                 self.assert_clean(f"the panel's {f} picker")
                 b.key("Escape")
                 b.pump(0.2)
-        b.eval("closePanel(true); go('review',null,{legacy:true})")
+        b.eval("closePanel(true); go('intake-review')")      # #232 C2: Review's display menu went with the old page
         b.pump(0.3)
-        b.click("#rvDispBtn")
-        b.pump(0.3)
-        self.assert_clean("Review's display menu")
+        self.assert_clean("the Intake page")
         b.eval("go('today')")
         if b.eval("!!document.getElementById('railMore') && !!document.getElementById('railMore').offsetParent"):
             b.click("#railMore")
@@ -212,11 +210,11 @@ class HostileText(LiveBrowserCase):
         with self.assertRaises(AssertionError):
             self.assert_clean("a deliberate hole")
 
-    def test_review_inbox_files_and_activity_show_it_as_text(self):
-        self.view("review")
-        self.shows("#v-review", "Pending hostile " + P1, "Review")
-        self.view("inbox")
-        self.shows("#v-inbox", P1 + ".vtt", "Intake")
+    def test_intake_files_and_activity_show_it_as_text(self):
+        n = self.b.eval("REV.find(r=>r.rec.t.startsWith('Pending hostile')).n")
+        self.view("intake-review", n)                                 # the meeting that holds the proposal opens
+        self.shows("#v-intake-review", "Pending hostile " + P1, "Intake (a proposal)")
+        self.shows("#v-intake-review", P1 + ".vtt", "Intake (a file)")
         self.view("files")
         self.view("activity")
         self.shows("#v-activity", "Hostile", "Activity")

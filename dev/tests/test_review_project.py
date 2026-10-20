@@ -224,60 +224,15 @@ class ReviewProjectBrowserTests(LiveBrowserCase):
     def data(self):
         return json.loads(self.prop.read_text())
 
+    # #232 C2: the old Review page's Project button on a row and on the minutes (rvMoveTo, rvMoveMinutes, with the preview and its Undo) went
+    # with the page, and so did their two browser tests (test_an_item_row_moves_to_another_project, test_the_minutes_move_after_a_preview).
+    # The engine behind them (review.py assign, /api/review/assign) is still tested above; the Intake page moves one item with the
+    # peek's Project chip, below. Moving a whole set of minutes has no button on the Intake page yet.
+
     def open_review(self):
-        self.b.eval('go("review",null,{legacy:true})')
-        self.b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
-
-    def row_of(self, text):
-        n = self.b.eval(f'(REV.find(r=>!r.done&&r.rec&&r.rec.t.includes({json.dumps(text)}))||{{}}).n')
-        self.assertIsNotNone(n, text)
-        return f'#reviewBody tr[data-n="{n}"]'
-
-    def test_an_item_row_moves_to_another_project(self):
-        before = self.v.snapshot()
-        self.open_review()
-        row = self.row_of("Send the joint plan")
-        self.b.click(row + " td.title")                                    # the row's buttons show on the cursor row
-        self.b.click(row + ' [data-act="pj"]')
-        self.b.wait('!!document.querySelector("#rvMoveTo[role=menu]")')                 # BL-316: the Menu block's menu
-        self.assertEqual(self.b.eval('document.querySelector("#rvMoveTo [role=menuitem][aria-disabled=true]").textContent.trim()'),
-                         "Example ProgrammeIts project now")
-        self.b.eval('[...document.querySelectorAll("#rvMoveTo [role=menuitem]")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
-        self.b.wait('/Moved to Growth Hub/.test(document.getElementById("snackT").textContent)')
-        it = next(i for i in self.data()["items"] if i["n"] == 1)
-        self.assertEqual((it["values"]["project"], it["values"]["milestone"], it["decision"]), ("GHI", None, "pending"))
-        self.assertEqual(self.v.snapshot()[0], before[0])                  # the tracker is untouched
-        self.b.wait('REV.some(r=>r.rec&&r.rec.t==="Send the joint plan"&&r.p==="GHI")')
-        self.b.eval('UNDO()')                                              # BL-281: Undo puts back what the move cleared
-        self.b.wait('/Moved back/.test(document.getElementById("snackT").textContent)')
-        it = next(i for i in self.data()["items"] if i["n"] == 1)
-        self.assertEqual((it["values"]["project"], it["values"]["milestone"], it["values"]["workstream"]), ("ABC", "ABC-M-001", "Build"))
-        self.b.wait('REV.some(r=>r.rec&&r.rec.t==="Send the joint plan"&&r.p==="ABC")')
-        self.assertFalse(self.b.eval('!!document.querySelector(`#reviewBody tr[data-n="${REV.find(r=>r.kind==="update"&&!r.done).n}"] [data-act=pj]`)'))
-
-    def test_the_minutes_move_after_a_preview(self):
-        self.open_review()
-        row = '#reviewBody tr.mparent'
-        self.b.click(row + " td.title")
-        self.b.click(row + ' [data-act="pj"]')
-        self.b.wait('!!document.querySelector("#rvMoveTo[role=menu]")')
-        self.b.eval('[...document.querySelectorAll("#rvMoveTo [role=menuitem]")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
-        self.b.wait('document.getElementById("rvDlg").open')               # BL-316: Review's confirmation dialog
-        self.assertEqual(self.b.eval('document.querySelector("#rvDlg .rvmv-h").textContent'), "Move 2 items from Example Programme to Growth Hub")
-        self.assertIn(self.a_id, self.b.eval('document.getElementById("rvDlgBody").textContent'))
-        self.assertEqual(self.b.eval('document.activeElement.id'), "rvDlgOk")
-        self.assertEqual(self.data()["meeting"]["projects"], ["ABC"])     # nothing yet: only the preview
-        self.b.click('#rvDlgOk')
-        self.b.wait('/Moved 2 items/.test(document.getElementById("snackT").textContent)')
-        m = self.data()["meeting"]
-        self.assertEqual(m["projects"], ["GHI"])
-        self.assertTrue(all(o["to"].startswith("projects/GHI") for o in m["file_ops"] if o["op"] == "copy"))
-        self.b.wait('REV.some(r=>r.ref==="meeting"&&r.p==="GHI")')
-        self.b.eval('UNDO()')                                              # Undo moves them back
-        self.b.wait('/Moved back/.test(document.getElementById("snackT").textContent)')
-        self.assertEqual(self.data()["meeting"]["projects"], ["ABC"])
-        it = next(i for i in self.data()["items"] if i["n"] == 1)               # BL-281: and its milestone and workstream
-        self.assertEqual((it["values"]["milestone"], it["values"]["workstream"]), ("ABC-M-001", "Build"))
+        n = self.b.eval('REV.find(r=>r.rec&&r.rec.t==="Joint risk").n')
+        self.b.eval(f'go("intake-review", {n})')
+        self.b.wait(f'!!document.querySelector("#v-intake-review tr.irprop[data-irn=\\"{n}\\"]")')
 
     def test_the_peek_has_a_project_chip_for_a_proposal(self):
         self.open_review()

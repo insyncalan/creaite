@@ -67618,7 +67618,7 @@ ${d5.text}`);
       if (!opt2.restore) navWrite(true);
       return true;
     })(v5, arg, opt);
-    if (r4 !== false && v5 === "files") filesOpened();
+    if (r4 !== false && (v5 === "files" || v5 === "intake-review")) filesOpened();
     if (r4 !== false && v5 === "intake-review" && !shared.LOADING && irModelBehind()) setTimeout(reloadData, 0);
     if (r4 !== false) helpScreenSync();
     tabTitle();
@@ -73269,6 +73269,10 @@ ${d5.text}`);
   function irOpenPeek(n4) {
     const r4 = irRow(n4);
     if (!r4 || r4.done || !PEEKABLE.includes(r4.kind) && r4.kind !== "draft") return;
+    if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n4 && PK.dirty && pkOn()) {
+      pkNote("Save or cancel this proposal first: its changes aren't saved yet.");
+      return;
+    }
     shared.PKSRC = {
       view: "intake-review",
       order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter((t47) => ["actions", "raid", "decisions"].includes(t47.getAttribute("data-kind") || "") || t47.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t47.getAttribute("data-irn") || 0)))).map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
@@ -73714,7 +73718,7 @@ ${d5.text}`);
     );
     const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
     return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("button", { type: "button", class: "ib", "data-irpick": "1", "aria-label": "Add files", "data-tip": tip, onClick: () => pick.current && pick.current.click(), children: /* @__PURE__ */ u4(IrIcon, { name: "upload" }) }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "ib", "data-irpick": "1", "aria-label": tip, "data-tip": tip, onClick: () => pick.current && pick.current.click(), children: /* @__PURE__ */ u4(IrIcon, { name: "upload" }) }),
       /* @__PURE__ */ u4(
         "input",
         {
@@ -75895,7 +75899,6 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
-        "isMin",
         "isNotePath",
         "itemDatePicker",
         "items",
@@ -76141,7 +76144,6 @@ ${d5.text}`);
         "resolvePerson",
         "restoreNav",
         "revDetail",
-        "rjGone",
         "rjGuesses",
         "rkText",
         "row",
@@ -76154,8 +76156,6 @@ ${d5.text}`);
         "runSearch",
         "rvBulkOK",
         "rvDecideMany",
-        "rvKey",
-        "rvWhyNot",
         "save",
         "saveCurEdit",
         "saveCurrent",

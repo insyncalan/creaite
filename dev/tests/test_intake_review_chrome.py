@@ -77,7 +77,8 @@ class AddFiles(IntakeBase):
     def test_add_files_is_an_icon_button_with_a_hidden_file_input(self):
         b = self.b
         self.assertEqual(b.eval("document.querySelector('[data-irpick]').textContent.trim()"), "")
-        self.assertEqual(b.eval("document.querySelector('[data-irpick]').getAttribute('aria-label')"), "Add files")
+        self.assertEqual(b.eval("document.querySelector('[data-irpick]').getAttribute('aria-label')"), b.eval("document.querySelector('[data-irpick]').dataset.tip"))   # BL-158: named with its tip's words (C2)
+        self.assertTrue(b.eval("document.querySelector('[data-irpick]').getAttribute('aria-label')").startswith("Add files"))
         self.assertIn("drop them anywhere", b.eval("document.querySelector('[data-irpick]').dataset.tip"))
         self.assertEqual(b.eval("!!document.querySelector('[data-irpick] svg[data-iric=upload]')"), True)
         self.assertEqual(b.eval("(i=>[i.type,i.multiple,i.hidden,i.accept])(document.querySelector('#v-intake-review input[type=file]'))"),

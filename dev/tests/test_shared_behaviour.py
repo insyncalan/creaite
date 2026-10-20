@@ -139,7 +139,8 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
 # #232-A: Intake with a meeting row whose Not needed button (aria-haspopup=menu, opens #irAside) shows. The sample's calendar has
 # no ended meeting, so the page is given one in the page only (the model's own shape; nothing is saved).
 SCREENS["intake-review"] = ("go('intake-review')", "VIEW==='intake-review' && !!document.querySelector('#v-intake-review [data-ira=notneeded]')", "#v-intake-review")
-EXTRA = ("clientreport", "today-days", "intake-review")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+us.SCREENS["intake-review"] = SCREENS["intake-review"]      # #232 C2: test_snapshots' own "intake-review" waits for less; this one needs a row with Not needed
+EXTRA = ("clientreport", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
 ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
@@ -147,12 +148,12 @@ ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-d
 ON_SCREEN = {"work-display": "VIEW==='work'"}
 # Controls whose choices are what the list shows, never a saved change: the filter bars and Work's views. The Undo check
 # leaves them alone (a choice there would also change what every later screen shows).
-VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
+VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#pmFBtn")
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
 SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
                 "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
-                "review": "Review", "review-peek": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
+                "review-peek": "Review", "intake-review": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
                 "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
@@ -735,16 +736,16 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         b = self.b
         n = None
         try:
-            self.goto("review")
+            self.goto("intake-review")
             n = b.eval("REV.find(r=>r.kind==='actions')?.n")
             if n is None:
                 return ["the sample vault has no actions proposal to mark as a repeat"]
-            b.eval("(()=>{ const r=REV.find(r=>r.n===%s); r.dup={id:'ABC-A-001',t:'Chase the SOW',strength:'Likely',staged:true,same:true,state:'open',project:'ABC'}; renderReview(); openProposal(%s); })()" % (n, n))
+            b.eval("(()=>{ const r=REV.find(r=>r.n===%s); r.dup={id:'ABC-A-001',t:'Chase the SOW',strength:'Likely',staged:true,same:true,state:'open',project:'ABC'}; irTick.value++; openProposal(%s); })()" % (n, n))
             b.wait("document.querySelector('[data-rvll=\"cmp:%s\"]')" % n, 10)
             bad, opened = self.enter_on("document.querySelector('[data-rvll=\"cmp:%s\"]')" % n, "document.getElementById('llDlg').open")
             return self.dialog_keys("llDlg") if opened else bad
         finally:
-            self.tidy("" if n is None else "const r=REV.find(r=>r.n===%s); if(r){ delete r.dup; renderReview(); }" % n)
+            self.tidy("" if n is None else "const r=REV.find(r=>r.n===%s); if(r){ delete r.dup; irTick.value++; }" % n)
 
     def searchprev(self):
         """The search preview (#searchPrev): a vault search on Files finds a meeting's minutes; Enter on that result previews it.
@@ -774,7 +775,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
              ("clientreport", "crleft", "crleft dialog#crLeftDlg", "clientreport", "Check and export", "Left out of the client's report"),
              ("today", "rail", "rail menu#railFly", "Shell", "→ on Projects, Work", "Rail flyouts"),
              ("work-board", "boardask", "boardask dialog#boardDlg", "Shell", "Move ▸ a due column", "Due date for"),
-             ("review", "llcompare", "llcompare dialog#llDlg", "Shell", "Compare", "Looks like"),
+             ("intake-review", "llcompare", "llcompare dialog#llDlg", "Shell", "Compare", "Looks like"),
              ("files", "searchprev", "searchprev dialog#searchPrev", "Shell", "a search result", "Preview"))
 
     def keyed_dialogs(self, only, report, found):

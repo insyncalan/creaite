@@ -82,27 +82,27 @@ class NoDeadEnds(LiveBrowserCase):
 
     def test_approve_on_a_draft_goes_through_review_py_and_routine_skips_minutes(self):
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.pump(0.3)
-        b.eval("""window.CALLS=[]; { const a=api; api=function(u,body){ if(u==='/api/review'){ CALLS.push(body); return Promise.resolve({ok:true,message:'Approved 1.'}); } return a.apply(this,arguments); }; }""")
         n = b.eval("REV.find(r=>r.kind==='draft').n")
-        b.click(f'#reviewBody tr[data-n="{n}"] [data-act="a"]')
+        b.eval(f"go('intake-review', {n})")                                  # #232 C2: the Intake page, the minutes' meeting open
+        b.wait(f"!!document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"] [data-ira=approve]')")
+        b.eval("""window.CALLS=[]; { const a=api; api=function(u,body){ if(u==='/api/review'){ CALLS.push(body); return Promise.resolve({ok:true,message:'Approved 1.'}); } return a.apply(this,arguments); }; }""")
+        b.click(f'#v-intake-review tr.irprop[data-irn="{n}"] [data-ira="approve"]')
         b.pump(0.3)
         calls = json.loads(b.eval("JSON.stringify(CALLS)"))
         self.assertEqual(len(calls), 1)
         self.assertEqual((calls[0]["ref"], calls[0]["decision"]), ("meeting", "approved"))   # review.py's checks run
         self.assertNotIn("Claude Code", b.eval("document.getElementById('snackT').textContent"))
-        self.assertFalse(b.eval("rvMatching().filter(rvBulkOK).some(r=>r.kind==='draft')"))   # Approve all routine never covers minutes
+        self.assertFalse(b.eval("REV.filter(rvBulkOK).some(r=>r.kind==='draft')"))   # Approve routine never covers minutes
         b.eval("openProposal(%d)" % n)
         self.assertIn("press Approve here", b.eval("document.getElementById('snackT').textContent"))
 
     def test_a_conflict_shows_both_versions_and_two_buttons(self):
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.pump(0.3)
         n = b.eval("REV.find(r=>(r.flags||[]).includes('conflict')).n")
-        row = f'#reviewBody tr[data-n="{n}"]'
-        self.assertFalse(b.eval(f"!!document.querySelector('{row} [data-act=\"a\"]')"))   # no plain Approve
+        b.eval(f"go('intake-review', {n})")
+        row = f'#v-intake-review tr.irprop[data-irn="{n}"]'
+        b.wait(f"!!document.querySelector('{row}')")
+        self.assertFalse(b.eval(f"!!document.querySelector('{row} [data-ira=\"approve\"]')"))   # no plain Approve
         txt = b.eval(f"document.querySelector('{row}').textContent")
         self.assertIn("Now: Sara Example", txt)
         self.assertIn("This one: Omar Ali", txt)
@@ -128,10 +128,10 @@ class KeepCurrent(LiveBrowserCase):
 
     def test_keep_current_rejects_the_edit(self):
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.pump(0.3)
         n = b.eval("REV.find(r=>(r.flags||[]).includes('conflict')).n")
-        b.click(f'#reviewBody tr[data-n="{n}"] [data-act="ck"]')
+        b.eval(f"go('intake-review', {n})")
+        b.wait(f"!!document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"] [data-act=ck]')")
+        b.click(f'#v-intake-review tr.irprop[data-irn="{n}"] [data-act="ck"]')
         b.wait("!REV.some(r=>(r.flags||[]).includes('conflict')&&!r.done)", 60)
         b.pump(0.5)
         owner = next(r["owner"] for r in self.v.rows("actions") if r["id"] == "ABC-A-002")

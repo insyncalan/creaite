@@ -274,13 +274,13 @@ SCRIPT = r"""
   VW={ async read(p){ if(!(p in FILES)) throw new Error("not found: "+p); return FILES[p]; }, async write(p,t){ FILES[p]=t; },
        async remove(p){ delete FILES[p]; }, async exists(p){ return p in FILES; }, async append(p,t){ FILES[p]=(FILES[p]||"")+t; } };
   VSTATE="ok"; needVault=async()=>true;   /* the page's own vault check can finish late and reset the fake vault (slow CI) */ S.autoApply=false;
-  const rowsNow=()=>[...document.querySelectorAll("#reviewBody tr[data-n]")].map(tr=>[tr.className.includes("mparent")?"parent":tr.className.includes("mchild")?"child":"row",tr.querySelector("td.title").textContent.replace(/\s+/g," ").trim()]);
+  const rowsNow=()=>[...document.querySelectorAll("#v-intake-review tr.irprop")].map(tr=>[tr.className.includes("mchild")?"child":"row",tr.querySelector("td.title").textContent.replace(/\s+/g," ").trim()]);
   try{
-    go("review",null,{legacy:true}); out.layout=rowsNow();
+    const m0=REV.find(r=>r.kind==="draft"&&r.ref==="meeting"); go("intake-review",m0.n); await wait(200); out.layout=rowsNow();   /* #232 C2: the Intake page, the minutes' meeting open */
     const ups=REV.filter(r=>r.kind==="update");
     out.updates=ups.map(r=>({t:r.rec.t,why:r.rec.why,src:r.src,indiv:r.indiv,whyCol:r.why,label:kindLabel(r),detail:revDetail(r).replace(/<[^>]+>/g,"")}));
     const m=REV.find(r=>r.kind==="draft"&&r.ref==="meeting");
-    document.querySelector("tr.mparent [data-act=ga]").click(); await wait(300);
+    document.querySelector("#v-intake-review tr.icsubhead.routine [data-ira=routine]").click(); await wait(300);   /* Approve routine: the minutes' own routine group */
     out.afterGroup=REV.filter(r=>r.file===m.file).map(r=>[r.kind,r.rec.target||r.rec.t.slice(0,20),r.done||"pending"]);
     out.routineKids=REV.filter(r=>r.file===m.file&&!r.done&&!r.indiv&&r.p).length;
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
@@ -367,9 +367,9 @@ class ReviewTests(PrepBase):
         self.assertTrue(m, "the page didn't finish")
         r = json.loads(m.group(1).replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&"))
         self.assertEqual(r["errors"], [])
-        kinds = [k for k, _ in r["layout"]]
-        p = kinds.index("parent")
-        self.assertEqual(kinds[p:p + 5], ["parent", "child", "child", "child", "child"])      # the 3 updates and the new action
+        children = " | ".join(t for k, t in r["layout"] if k == "child")
+        for title in ("Send revised SOW to client", "Book the UAT environment", "Data access delayed, so UAT may slip", "Brand new action"):
+            self.assertIn(title, children)                                                    # the 3 updates and the new action, under their minutes
         titles = {u["t"]: u for u in r["updates"]}
         self.assertEqual(set(titles), {"ABC-A-001 Send revised SOW to client", "ABC-A-002 Book the UAT environment",
                                        "ABC-003 Data access delayed, so UAT may slip"})

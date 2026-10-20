@@ -1,4 +1,4 @@
-"""BL-155, as changed by BL-175 (sprint-peek): the Keys chip is gone from Work and Review; the keys still work and Help lists
+"""BL-155, as changed by BL-175 (sprint-peek): the Keys chip is gone from Work and Intake (Review, #232 C2); the keys still work and Help lists
 them; the hint lines stay in the page, hidden. A real browser against the real live server.
 
 Run: python3 dev/tests/test_keys_chip.py   (needs Google Chrome; skipped otherwise)
@@ -14,7 +14,7 @@ SHOWN = "(sel=>{ const e=document.querySelector(sel); return !!(e&&e.offsetParen
 
 
 class KeysChip(LiveBrowserCase):
-    """BL-175 (sprint-peek): the chip is gone from Work and Review. The keys still work, the hint lines stay in the page but are
+    """BL-175 (sprint-peek): the chip is gone from Work and Intake. The keys still work, the hint lines stay in the page but are
     hidden, and Help's keyboard table lists every key."""
     def shown(self, sel):
         return self.b.eval(f"{SHOWN}({sel!r})")
@@ -29,13 +29,10 @@ class KeysChip(LiveBrowserCase):
         b.eval("document.activeElement&&document.activeElement.blur()")
         b.key("j")
         b.wait("HLC!=null", 5)                                                 # J still moves the cursor
-        b.eval("go('review',null,{legacy:true})")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
-        self.assertEqual(b.eval("document.querySelectorAll('.keyschip').length"), 0)
-        self.assertFalse(self.shown("#rvHint"))
-        before = b.eval("RSEL")
-        b.key("j")
-        b.wait(f"RSEL!=={before}", 5)
+        # #232 C2: Review is Intake now; its rows take the arrow keys (test_intake_review_keys_review) and it has no chip or hint line
+        b.eval("go('intake-review')")
+        b.wait("!!document.querySelector('#v-intake-review h1')")
+        self.assertEqual(b.eval("document.querySelectorAll('.keyschip,#rvKeys,#rvHint').length"), 0)
 
     def test_help_lists_the_keys(self):
         help_md = (Path(__file__).resolve().parents[2] / "system/templates/help.md").read_text(encoding="utf-8")

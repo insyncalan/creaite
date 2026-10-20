@@ -200,13 +200,13 @@ class InThePage(DraftCase):
         self.assertIn("Draft updates", b.eval("document.querySelector('#wbulk [data-drbulk]').textContent"))
         b.click("#wbulk [data-drbulk]")
         b.wait("REV.some(r=>r.drafted)", 30)
-        b.wait("document.getElementById('snackT').textContent.includes('in Review')", 30)
-        self.assertIn("in Review", b.eval("document.getElementById('snackT').textContent"))
+        b.wait("document.getElementById('snackT').textContent.includes('in Intake')", 30)
+        self.assertIn("in Intake", b.eval("document.getElementById('snackT').textContent"))
         b.eval("HL.clear(); hlPaint(); hlBar(); A.forEach(x=>x.upd_at='2026-01-01'); go('today'); renderToday()")
         b.wait("document.querySelector('#drStale [data-drstale]')")
         self.assertIn("had no update for 7 days", b.eval("document.getElementById('drStale').textContent"))
-        b.eval("go('review',null,{legacy:true})")
-        b.wait("document.querySelector('#reviewBody .drrv')")
+        b.eval("go('intake-review')")                                              # #232 C2: the drafted rows carry their tag on the Intake page
+        b.wait("document.querySelector('#v-intake-review tr.irprop .drrv')")
         for f in self.staged():
             f.unlink()
 

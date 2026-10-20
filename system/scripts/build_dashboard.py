@@ -2777,7 +2777,8 @@ def intake_review(meetings, files, queue, today, meta=None, stale_after=None, as
 def _ir_split(rows):
     """{"needs": [n], "routine": [n]}: routine only when hold_reason found nothing (queue rows carry it as `hold`)."""
     out, seen = {"needs": [], "routine": []}, set()
-    for r in rows:
+    # BL-152, BL-288: a followed person's proposals first, unlabelled (the old Review page sorted them on the page; stable, so the rest keep their order)
+    for r in sorted(rows, key=lambda r: "vip" not in (r.get("flags") or [])):
         if r["n"] not in seen:
             seen.add(r["n"])
             hold = r.get("hold") if "hold" in r else ("held" if r.get("indiv") or not r.get("p") else "")

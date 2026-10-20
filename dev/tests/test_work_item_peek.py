@@ -391,9 +391,9 @@ class CommandEnter(PeekCase):
 class Review(PeekCase):
     def test_a_proposal_opens_in_the_same_layout_with_its_footer_and_notes(self):
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>!r.done&&r.kind==='actions'&&!r.p).n")
+        b.eval(f"go('intake-review', {n})")                                    # #232 C2: the Intake page
+        b.wait(f"document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"]')")
         b.eval(f"openProposal({n})")
         b.wait("document.getElementById('panel').classList.contains('pkprop')")
         self.assertTrue(b.eval("!!document.querySelector('#pkTitle[contenteditable]')"))
@@ -448,15 +448,9 @@ class Toolbar(PeekCase):
                 self.assertLessEqual(r["right"], width, (width, menu))
                 b.key("Escape")
                 b.eval("closeDisp&&closeDisp(); document.querySelectorAll('#wfilters .ddmenu.on').forEach(m=>m.classList.remove('on'))")
-            b.eval("go('review',null,{legacy:true})")
-            b.wait("document.querySelector('#reviewBody tr[data-n]')")
+            b.eval("go('intake-review')")                                      # #232 C2: Review's filter funnel went with its page; Intake has none
+            b.wait("document.querySelector('#v-intake-review h1')")
             self.assertEqual(b.eval("document.querySelectorAll('.keyschip').length"), 0)
-            b.click("#rvMore")
-            b.pump(0.4)
-            r = json.loads(b.eval("JSON.stringify(document.getElementById('rvPick').getBoundingClientRect())"))
-            self.assertGreaterEqual(r["left"], 0, width)
-            self.assertLessEqual(r["right"], width, width)
-            b.key("Escape")
         b.resize(1400, 900)
 
 

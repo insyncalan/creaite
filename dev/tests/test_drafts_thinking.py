@@ -115,9 +115,10 @@ class Thinking(DraftCase):
 
     def test_review_offers_draft_a_response_for_a_new_risk(self):
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.wait("document.querySelector('#reviewBody [data-drrisk]')")
-        b.click("#reviewBody [data-drrisk]")
+        n = b.eval("REV.find(r=>r.kind==='raid'&&!r.done).n")
+        b.eval(f"go('intake-review', {n})")                                                   # #232 C2: the Intake page's row (its meeting opens)
+        b.wait("document.querySelector('#v-intake-review [data-drrisk]')")
+        b.click("#v-intake-review [data-drrisk]")
         b.wait("document.querySelector('#pkAiDraft .drcard')", 30)
         self.assertIn("Draft a response", b.eval("document.querySelector('#pkDescDr [data-drf=resp]').textContent"))
         b.click("#pkAiDraft [data-drdo=use]")

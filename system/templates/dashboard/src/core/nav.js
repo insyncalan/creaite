@@ -153,7 +153,7 @@ export function go(v,arg,opt){ if(v==="review"||v==="inbox"||v==="intake") v="in
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,"intake-review":renderIntakeReview,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
-  if(r!==false&&v==="files") filesOpened();
+  if(r!==false&&(v==="files"||v==="intake-review")) filesOpened();   /* the inbox list is read again when Intake opens, as it was for the old Intake page */
   if(r!==false&&v==="intake-review"&&!shared.LOADING&&irModelBehind()) setTimeout(reloadData,0);   /* #232-C: proposals the quick refresh brought in since the model was built */
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */
   tabTitle();

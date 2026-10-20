@@ -2,10 +2,12 @@
 
 Run: python3 dev/tests/test_context_menu.py   (needs Google Chrome; skipped otherwise)
 
-Real right-clicks (dev/tools/cdp.py) on Work's table and Board, a person's page, an item link and Review; the browser's own menu
+Real right-clicks (dev/tools/cdp.py) on Work's table and Board, a person's page and an item link; the browser's own menu
 outside items; each change through the existing save path with Undo; several highlighted rows act together and unfit actions
-are withheld; on Review a field change edits the proposal, leaves it pending and writes nothing to the tracker, and the bulk
-rule still holds; Shift+F10 and the context-menu key, arrows, Enter and Esc. No hover is relied on.
+are withheld; Shift+F10 and the context-menu key, arrows, Enter and Esc. No hover is relied on.
+
+#232 C2: the proposals' own right-click menu belonged to the old Review page and went with it (the Intake page's rows have none; their
+buttons and the peek do the same jobs). Its test, test_review_menu_edits_the_proposal_and_keeps_the_bulk_rule, is removed with it.
 """
 import json
 import sys
@@ -155,44 +157,6 @@ class ContextMenuTests(LiveBrowserCase):
         r = b.eval(f'(()=>{{ const m=[...document.querySelectorAll("{MENU}")].map(x=>x.getBoundingClientRect()); return [m[0].left,m[1].right,innerWidth,m[1].left]; }})()')
         self.assertLessEqual(r[1], r[0] + 4)                                                   # to the left of the menu
         self.assertGreaterEqual(r[3], 0)
-
-    def test_review_menu_edits_the_proposal_and_keeps_the_bulk_rule(self):
-        b = self.b
-        before = self.v.snapshot()[0]
-        b.eval('go("review",null,{legacy:true})')
-        b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
-        n = b.eval('REV.find(r=>r.rec&&r.rec.t==="Send the joint plan").n')
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title', button="right")
-        b.wait(f'!!document.querySelector("{MENU}")')
-        L = self.labels()
-        self.assertEqual(L[:2], ["Approve", "Reject with a reason…"])   # BL-315: it opens the reasons menu
-        for want in ("Project", "Owner", "Due", "Priority", "Workstream", "Milestone", "Status"):
-            self.assertIn(want, L)
-        self.pick("Priority")
-        b.wait(f'document.querySelectorAll("{MENU}").length===2')
-        self.pick("Urgent", 1)
-        b.wait('/Priority set to Urgent on 1 proposal/.test(document.getElementById("snackT").textContent)')
-        it = next(i for i in json.loads(self.prop.read_text())["items"] if i["n"] == 1)
-        self.assertEqual((it["values"]["priority"], it["decision"]), ("Urgent", "pending"))
-        self.assertEqual(self.v.snapshot()[0], before)                                         # nothing in the tracker
-        # a routine action and a new risk highlighted together: only the action can be approved together
-        risk = b.eval('REV.find(r=>r.rec&&r.rec.t==="Joint risk").n')
-        b.key("Escape")
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title')
-        b.click(f'#reviewBody tr[data-n="{risk}"] td.title', modifiers=CMD)
-        b.click(f'#reviewBody tr[data-n="{risk}"] td.title', button="right")
-        b.wait(f'!!document.querySelector("{MENU}")')
-        L = self.labels()
-        self.assertEqual(L[:3], ["#2 proposals", "Approve 1", "Reject 2 with a reason…"])   # BL-315
-        self.pick("Approve 1")
-        b.wait(f'REV.find(r=>r.n==={n}).done==="approved"')
-        self.assertFalse(b.eval(f'!!REV.find(r=>r.n==={risk}).done'))                            # the new risk waits for its own approval
-        decisions = {i["n"]: i["decision"] for i in json.loads(self.prop.read_text())["items"]}
-        self.assertEqual((decisions[1], decisions[2]), ("approved", "pending"))
-        b.click("#reviewBody tr.mparent td.title", button="right")                              # the minutes: Approve, Reject, Project
-        b.wait(f'!!document.querySelector("{MENU}")')
-        self.assertIn("Project", self.labels())
-        self.assertNotIn("Approve 1", self.labels())
 
 
 if __name__ == "__main__":

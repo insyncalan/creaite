@@ -203,38 +203,27 @@ class WorkToolbar(LiveBrowserCase):
 
 
 class ReviewIcons(LiveBrowserCase):
-    """BL-160"""
+    """BL-160, on the one Intake page since #232 C2 (the old Review page's toolbar, bulk bar and row actions are gone; the select bar
+    with its Clear icon, the Display and filter icons and the cursor-row Edit are not on the new page)."""
 
-    def test_toolbar_bulk_bar_and_rows(self):
+    @classmethod
+    def load(cls, v):
+        import intake_review_support as S
+        S.load(v)
+
+    def test_buttons_and_rows(self):
+        import intake_review_support as S
         b = self.b
-        b.eval("go('review',null,{legacy:true})")
-        b.pump(0.4)
-        self.assertEqual(b.eval("[$('#rvDispBtn').textContent.trim(), $('#rvDispBtn').getAttribute('aria-label')===$('#rvDispBtn').dataset.tip]"), ["", True])
-        self.assertEqual(b.eval("$('#rvMore').dataset.tip"), "Add a filter")
-        self.assertFalse(b.eval("'key' in $('#rvMore').dataset"))                  # F is Work's key only: no key shown here
-        self.assertTrue(b.eval("/^Approve routine \\(\\d+\\)$/.test($('#routineBtn').textContent.trim()) && $('#routineBtn').querySelector('svg').dataset.icn==='checks'"))
-        self.assertIn("Minutes, new decisions and new risks stay for you", b.eval("$('#routineBtn').dataset.tip"))
-        b.eval("RVF.k.add('actions'); rvChanged()")
-        self.assertEqual(b.eval("$('#rvMore .fcount').textContent"), "1")
-        b.eval("RVF.k.clear(); rvChanged()")
-        row = "#reviewBody tr[data-n]:not(.mparent)"
-        b.eval(f"RHL.add(+document.querySelector('{row}').dataset.n); renderReview()")
-        self.assertTrue(b.eval("/^Approve \\(\\d+\\)$/.test($('#bulkApprove').textContent) && !!$('#bulkApprove svg')"))
-        self.assertTrue(b.eval("$('#bulkReject').textContent==='Reject with a reason R' && !!$('#bulkReject svg')"))   # BL-315: one menu
-        self.assertEqual(b.eval("[$('#rvClear').dataset.tip, $('#rvClear').dataset.key]"), ["Clear the selection", "Esc"])
+        S.open_page(b)
+        self.assertTrue(b.eval("/^Approve routine \\(\\d+\\)$/.test(document.querySelector('[data-ira=routine]').textContent.trim())"))
+        self.assertIn("Approves every routine proposal here", b.eval("document.querySelector('[data-ira=routine]').title"))
+        row = "#v-intake-review tr.irprop"
         acts = b.eval(f"""(()=>{{ const tr=document.querySelector('{row}'); const q=s=>tr.querySelector(s);
-          return {{approve:q('[data-act=a]').textContent.trim(), reject:[q('[data-act=r]').textContent.trim(), q('[data-act=r]').getAttribute('aria-label'), q('[data-act=r]').dataset.key],
-                  edit:[q('[data-act=e]').getAttribute('aria-label'), q('[data-act=e]').dataset.key, !!q('[data-act=e]').closest('.rowact')]}}; }})()""")
-        self.assertEqual(acts, {"approve": "Approve", "reject": ["", "Reject, with a reason", "R"], "edit": ["Edit", "E", True]})
-        b.eval("RHL.clear(); CHK.clear(); RSEL=0; renderReview()")
-        # Edit shows on the cursor row, and on hover or focus of another row; not otherwise
-        op = "(i=>getComputedStyle(document.querySelectorAll('#reviewBody tr[data-n]')[i].querySelector('.rowact')).opacity)"
-        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=5, y=5, button="none")
-        b.pump(0.1)
-        self.assertEqual(b.eval(f"{op}(0)"), "1")
-        self.assertEqual(b.eval(f"{op}(2)"), "0")
-        b.eval("document.querySelectorAll('#reviewBody tr[data-n]')[2].querySelector('[data-act=e]').focus()")
-        self.assertEqual(b.eval(f"{op}(2)"), "1")
+          return {{approve:q('[data-ira=approve]').textContent.trim(), reject:[q('[data-ira=reject]').textContent.trim(), q('[data-ira=reject]').getAttribute('aria-label'), q('[data-ira=reject]').dataset.tip],
+                  edit:[q('[data-ira=edit]').getAttribute('aria-label'), q('[data-ira=edit]').dataset.tip]}}; }})()""")
+        # BL-158: an icon-only button is named by its aria-label and its tip, with the same words
+        self.assertEqual(acts, {"approve": "Approve", "reject": ["✕", "Reject, with a reason", "Reject, with a reason"],
+                                "edit": ["Open in the peek", "Open in the peek"]})
 
 
 class TheRest(LiveBrowserCase):
@@ -278,11 +267,7 @@ class TheRest(LiveBrowserCase):
         b.eval("go('files')")
         b.pump(0.3)
         self.assertEqual(self.named("#filesTbl button[data-openfile]")[0], ["Open folder", "Open folder", "", "folderopen"])
-        b.eval("go('inbox',null,{legacy:true})")
-        b.pump(0.3)
-        got = self.named("#inboxTbl [data-inprev], #inboxTbl [data-inrm]")
-        self.assertIn(["Preview", "Preview", "", "eye"], got)
-        self.assertIn(["Remove from Intake", "Remove from Intake", "", "trash"], got)
+        # #232 C2: the old Upload files table's Preview and Remove icons went with it (a processed copy's Remove is test_intake_review_files)
 
     def test_send_turns_into_stop(self):
         b = self.b

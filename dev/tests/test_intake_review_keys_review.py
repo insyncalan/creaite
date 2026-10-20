@@ -71,10 +71,10 @@ class KeysReview(LiveBrowserCase):
     def test_the_old_review_keys_do_nothing_here(self):
         b = self.b
         self.focus_first()
-        before = b.eval("[RHL.size, REV.filter(r=>r.done).length]")
+        before = b.eval("REV.filter(r=>r.done).length")
         for k in ("j", "k", "x", " "):
             b.key(k)
-        self.assertEqual(b.eval("[RHL.size, REV.filter(r=>r.done).length]"), before)
+        self.assertEqual(b.eval("REV.filter(r=>r.done).length"), before)
 
 
 if __name__ == "__main__":
