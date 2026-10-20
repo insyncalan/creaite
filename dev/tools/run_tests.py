@@ -81,9 +81,10 @@ FLAKY = TESTS / ".flaky.jsonl"        # one line each time a file failed under l
 REPO = TESTS.parents[1]
 EVERYTHING = ("VERSION", "system/creaite-rules.md", ".claude/", "system/config/")   # a change here can reach any test
 FILE_TIMEOUT = float(os.environ.get("CREAITE_FILE_TIMEOUT") or 900)   # seconds; 0 means no limit (see --file-timeout)
-# A file that is slow by design waits on a browser for every screen of the sample (test_shared_behaviour.py: about 1000 s on a
-# laptop, mostly waiting, 43 screens by 4 checks), so it gets a longer limit of its own; --file-timeout 0 still means none.
-SLOW_FILES = {"test_shared_behaviour.py": 2700, "test_shared_undo.py": 2700}   # #89: the Undo half has its own file
+# A file that is slow by design gets a longer limit of its own here (--file-timeout 0 still means none). Empty since #89: the
+# shared behaviour test (once about 1000 s waiting on a browser for every screen) is five files of about 230 s each, well inside
+# the default limit.
+SLOW_FILES = {}
 RERUN_MAX = int(os.environ.get("CREAITE_RERUN_MAX") or 15)            # more failures than this are not re-run alone
 TIMED_OUT = -1000                     # the exit code a file gets when it was stopped for running too long
 CI = bool(os.environ.get("GITHUB_ACTIONS"))   # on a runner, print a failure's output as it happens (folded), not only at the end
