@@ -388,6 +388,21 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertIsNotNone(self.filed(), "the minutes are filed")
         b.wait("document.querySelector('#v-minutes .mnmeta') && /Approved and filed/.test(document.querySelector('#v-minutes .mnmeta').textContent)", 15)
 
+    def test_14_at_1400_and_900_the_bar_is_one_row_and_the_headings_sit_over_their_cells(self):
+        for w in (1400, 900):
+            with self.subTest(width=w):
+                self.b.resize(w, 1000)
+                self.b.pump(0.6)
+                bar = self.ev("""(()=>{ const b=document.querySelector('#v-minutes .sheet-bar'), kids=[...b.querySelectorAll('button, .mnsum, .sheet-status')].filter(x=>x.offsetParent);
+                  const tops=new Set(kids.map(k=>Math.round(k.getBoundingClientRect().top+k.getBoundingClientRect().height/2)));
+                  return {h: b.getBoundingClientRect().height, rows: Math.max(...tops)-Math.min(...tops), right: Math.max(...kids.map(k=>k.getBoundingClientRect().right)), w: b.getBoundingClientRect().right}; })()""")
+                self.assertLess(bar["rows"], 12, f"one row at {w}: {bar}")
+                self.assertLessEqual(bar["right"], bar["w"] + 0.5, f"nothing cut off at {w}")
+                off = self.ev("""Math.max(...[...document.querySelectorAll('#v-minutes table.mnt')].map(t=>{ const r=t.querySelector('tbody tr');
+                  return Math.max(...[...t.querySelectorAll('thead th')].map((h,i)=>Math.abs(h.getBoundingClientRect().left-r.children[i].getBoundingClientRect().left))); }))""")
+                self.assertLess(off, 1.5)
+                self.assertLessEqual(self.ev("document.scrollingElement.scrollWidth - innerWidth"), 0, "no sideways scroll")
+
 
 if __name__ == "__main__":
     unittest.main()

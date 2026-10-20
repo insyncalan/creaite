@@ -119,7 +119,7 @@ function LooksLike({ item, n }) {
   if (!ll.id || ll.kept || ll.merged || !m) return null;
   return (
     <span class="mck mnlooks" data-tip={rec ? `${ll.id}: ${rec.t}` : undefined}>
-      Looks like <button type="button" class="linkbtn mnid" onClick={() => openRef(ll.id, () => false)}>{ll.id}</button>
+      <span>Looks like <button type="button" class="linkbtn mnid" onClick={() => openRef(ll.id, () => false)}>{ll.id}</button></span>
       <button type="button" class="linkbtn" data-mnact="update" onClick={() => m.change({ op: "update", n, id: ll.id }, { op: "keep_new", n })}>Update that one</button>
       <button type="button" class="linkbtn" data-mnact="keepnew" onClick={() => m.change({ op: "keep_new", n })}>Keep as new</button>
     </span>
@@ -151,7 +151,7 @@ function MnRow({ r, ctx, full }) {
         {(own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
           <div class="mnrow2">
             {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} /></span> : null}
-            {own ? <span class="mck" data-check={own.id}>{own.quote} needs details
+            {own ? <span class="mck" data-check={own.id}><span>{own.quote} needs details</span>
               <button type="button" class="linkbtn" data-ckact="details" onClick={() => addDetails(own.quote)}>Add details</button></span> : null}
             {isNew ? <LooksLike item={item} n={n} /> : null}
             {checks.filter(c => c !== own).map(c => <CheckMark key={c.id} check={c}>{c.kind === "due" ? "Deadline?" : c.kind === "figure" ? `${c.quote}?` : c.kind === "owner" ? c.note.replace(/\.$/, "") : "Check"}</CheckMark>)}

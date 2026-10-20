@@ -3580,27 +3580,28 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-root.rpt-slim>.sheet-bar .mnsum{display:none}
 #v-minutes .sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-bar .sheet-barr{margin-left:auto;flex:none} #v-minutes .sheet-bar .mnbarr{flex-wrap:nowrap}
 #v-minutes .sheet-status{white-space:nowrap}
-.mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
+.mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;min-height:24px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
 .sheet-a4 .page table.mnt th,.sheet-a4 .page table.mnt td{border-left:0;border-right:0;padding:5px 6px}
 .sheet-a4 .page table.mnt th{background:none;color:var(--paper-mute);font-size:var(--fs-xs);border-top:0}
 .mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
 .mnh3{font-size:var(--fs-sm);margin:10px 0 2px;font-weight:600} .mnh3 .n{font-weight:400;color:var(--paper-mute)}
 .mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
-.mntrk button{width:24px;height:24px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
 .mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
 .mntrk button.y[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok)} .mntrk button.n[aria-pressed="true"]{background:var(--bad-soft);color:var(--bad)}
 .page tr.mi[data-trk="y"] td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
 .page tr.mi[data-trk="n"]{opacity:.55} .page tr.mi[data-trk="n"] .mnit{text-decoration:line-through;color:var(--muted)}
 .page tr.mi.hl td{background:var(--accent-soft)}
-.mnit{min-width:0;border-radius:var(--r-sm)} .mnit .sheet-ed{min-height:22px;padding:1px 4px;margin:0 -4px;border-radius:var(--r-sm);cursor:text}
+.mnit{min-width:0;border-radius:var(--r-sm)} .mnit .sheet-ed{min-height:26px;padding:2px 4px;margin:0 -4px;border-radius:var(--r-sm);cursor:text}
 .mnit .sheet-ed:hover{background:var(--sunk)} .mnit .sheet-ed:focus-within,.mnit .sheet-ed.ProseMirror-focused{background:var(--surface);box-shadow:0 0 0 2px var(--focus)}
 .mnit-ro{padding:1px 0}
 .mnrow2{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.mck{display:inline-flex;align-items:center;gap:6px;min-height:22px;padding:0 8px;border-radius:var(--r-pill);background:var(--warn-soft);color:var(--warn);font-size:var(--fs-xs);font-weight:500}
-.mck.info{background:var(--sunk);color:var(--muted)} .mck .linkbtn{font-size:var(--fs-xs);min-height:22px}
-.mnrow2 .mncheck{font-size:var(--fs-xs);min-height:22px}
-.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:var(--fs-xs);padding:0 6px;cursor:pointer;text-overflow:ellipsis}
+.mck{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:0 8px;border-radius:var(--r-pill);background:var(--warn-soft);color:var(--warn);font-size:var(--fs-xs);font-weight:500}
+.mck{max-width:100%;flex-wrap:wrap;column-gap:6px;row-gap:0} .mck>*{white-space:nowrap}
+.mck.info{background:var(--sunk);color:var(--muted)} .mck .linkbtn{font-size:var(--fs-xs);min-height:26px}
+.mnrow2 .mncheck{font-size:var(--fs-xs);min-height:26px}
+.msel{height:28px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:var(--fs-xs);padding:0 6px;cursor:pointer;text-overflow:ellipsis}
 .msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
 .msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
 .mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
@@ -72086,8 +72087,10 @@ ${d5.text}`);
     const ll2 = item.looks_like || {}, rec = recOf(ll2.id);
     if (!ll2.id || ll2.kept || ll2.merged || !m5) return null;
     return /* @__PURE__ */ u2("span", { class: "mck mnlooks", "data-tip": rec ? `${ll2.id}: ${rec.t}` : void 0, children: [
-      "Looks like ",
-      /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openSheetRef(ll2.id, () => false), children: ll2.id }),
+      /* @__PURE__ */ u2("span", { children: [
+        "Looks like ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openSheetRef(ll2.id, () => false), children: ll2.id })
+      ] }),
       /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-mnact": "update", onClick: () => m5.change({ op: "update", n: n4, id: ll2.id }, { op: "keep_new", n: n4 }), children: "Update that one" }),
       /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-mnact": "keepnew", onClick: () => m5.change({ op: "keep_new", n: n4 }), children: "Keep as new" })
     ] });
@@ -72133,8 +72136,10 @@ ${d5.text}`);
             own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("div", { class: "mnrow2", children: [
               !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("span", { class: "mck info", children: /* @__PURE__ */ u2(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }) }) : null,
               own ? /* @__PURE__ */ u2("span", { class: "mck", "data-check": own.id, children: [
-                own.quote,
-                " needs details",
+                /* @__PURE__ */ u2("span", { children: [
+                  own.quote,
+                  " needs details"
+                ] }),
                 /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-ckact": "details", onClick: () => addDetails(own.quote), children: "Add details" })
               ] }) : null,
               isNew ? /* @__PURE__ */ u2(LooksLike, { item, n: n4 }) : null,
