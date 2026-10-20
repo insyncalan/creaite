@@ -33758,15 +33758,17 @@ ${s5}`;
   }
   var derivedOf = (name) => (registerRows().find((x5) => x5.n === name) || { derived: [] }).derived;
   var onOf = (name) => (registerRows().find((x5) => x5.n === name) || { on: [] }).on;
+  function applyFollow(r4, f5) {
+    if (f5.follow === void 0) return;
+    const cur = String(r4.extra.VIP || "").trim();
+    r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+  }
   function savePerson(name, f5) {
     const derived = derivedOf(name);
     return regSave(`Changed ${name} in the people register`, (L3) => {
       const r4 = rowIn(L3, name);
       Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
-      if (f5.follow !== void 0) {
-        const cur = String(r4.extra.VIP || "").trim();
-        r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
-      }
+      applyFollow(r4, f5);
       if (f5.projects) setOn(r4, derived, f5.projects);
       return L3;
     });
@@ -33775,6 +33777,7 @@ ${s5}`;
     return regSave(`Added ${name} to the people register`, (L3) => {
       const r4 = rowIn(L3, name);
       Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+      applyFollow(r4, f5);
       if (f5.projects) setOn(r4, [], f5.projects);
       return L3;
     });
@@ -34064,7 +34067,7 @@ ${s5}`;
             /* @__PURE__ */ u4("span", { class: "pdlab", children: "Follow" }),
             /* @__PURE__ */ u4("label", { class: "settick", children: [
               /* @__PURE__ */ u4("input", { type: "checkbox", id: "peFollow", defaultChecked: !!(x5 && x5.followed) }),
-              " Follow this person (VIP alerts)"
+              " Follow this person"
             ] }),
             /* @__PURE__ */ u4("span", { class: "pdh", children: "Their mail and chats are flagged for you first, and a star shows beside their name in this list, for you only. It never appears in a report, an export or a draft." })
           ] }) : null

@@ -100,7 +100,7 @@ export function PageDialogs() {
             <button class="btn primary" id="genGo" value="go" data-cmdenter=""><span id="genGoT">Generate</span><span class="kbd" id="genKbd" aria-hidden="true"></span></button></div>
         </form>
       </Dialog>
-      {/* People (BL-55, BL-56); no followed field (#248 M2: that is the project settings page's) */}
+      {/* People (BL-55, BL-56); no followed field here: it is the project settings page's alone (#247) */}
       <Dialog id="personDlg" labelledBy="pdTitle">
         <form method="dialog" id="personForm">
           <h2 id="pdTitle" style="margin:0 0 10px">New person</h2>

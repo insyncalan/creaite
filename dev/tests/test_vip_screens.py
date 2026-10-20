@@ -1,7 +1,7 @@
 """BL-288 part 2 and BL-296: who Alan follows is private on screen, and each followed person's message on Today can be
 dismissed or made into a work item.
 
-BL-288: no screen says "VIP" except the person form's own field and Settings › Capture › VIP alerts. Checked on BL-254's
+BL-288: no screen says "VIP" except Settings › Capture › VIP alerts (the person form's field went with #247: following is the project settings page's alone). Checked on BL-254's
 goldens (quick) and on every snapshot screen of a vault where someone is followed, has sent a message and owns an overdue
 item (Chrome), plus the window title, the rail badge's name, the notification, the Work filter and the Draft email.
 BL-296: Dismiss with Undo; Create work item opens the new-item peek filled from the message's references, Cancel leaves the
@@ -29,7 +29,7 @@ SNAPSHOTS = HERE / "snapshots"
 
 
 def without_allowed(html):
-    """The HTML without the two places allowed to say VIP: Settings › VIP alerts (#vipSet) and the person form's field."""
+    """The HTML without the one place allowed to say VIP: Settings › VIP alerts (#vipSet). The person form's field is gone (#247)."""
     m = re.search(r'<div[^>]*\bid="vipSet"', html)
     if m:
         depth, i = 0, m.start()
@@ -39,7 +39,7 @@ def without_allowed(html):
                 i = m.start() + t.end()
                 break
         html = html[:m.start()] + html[i:]
-    return re.sub(r'<(label|select)[^>]*class="pdvip"[^>]*>.*?</\1>', "", html, flags=re.S)
+    return html
 
 
 def says_vip(html):
@@ -48,7 +48,7 @@ def says_vip(html):
 
 
 class Goldens(unittest.TestCase):
-    """Quick: BL-254's goldens say VIP only in the two allowed places."""
+    """Quick: BL-254's goldens say VIP only in the one allowed place."""
 
     def test_no_golden_says_vip(self):
         files = sorted(SNAPSHOTS.glob("*.html"))
@@ -59,8 +59,8 @@ class Goldens(unittest.TestCase):
 
     def test_the_check_finds_one(self):
         self.assertIsNotNone(says_vip('<p>Owned by a VIP</p><div class="card" id="vipSet"><h2>VIP alerts</h2></div>'))
-        self.assertIsNone(says_vip('<div class="card" id="vipSet"><div><h2>VIP alerts</h2></div></div>'
-                                   '<label for="pd_vip" class="pdvip">VIP</label>'))
+        self.assertIsNone(says_vip('<div class="card" id="vipSet"><div><h2>VIP alerts</h2></div></div>'))
+        self.assertIsNotNone(says_vip('<div class="card" id="vipSet"></div><label for="pd_vip" class="pdvip">VIP</label>'), "the old person-form field is no longer allowed")
 
 
 TODAY = date.today().isoformat()

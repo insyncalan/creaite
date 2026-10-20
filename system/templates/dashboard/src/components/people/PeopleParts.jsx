@@ -172,7 +172,7 @@ export function PersonForm({ t, onClose, onSave, onRemove }) {
           <span class="pdh">Tick the projects they belong to; with none ticked they sit in Not on any project yet.</span>
           {t && t.follow ? <>
             <span class="pdlab">Follow</span>
-            <label class="settick"><input type="checkbox" id="peFollow" defaultChecked={!!(x && x.followed)} /> Follow this person (VIP alerts)</label>
+            <label class="settick"><input type="checkbox" id="peFollow" defaultChecked={!!(x && x.followed)} /> Follow this person</label>
             <span class="pdh">Their mail and chats are flagged for you first, and a star shows beside their name in this list, for you only. It never appears in a report, an export or a draft.</span>
           </> : null}
         </div>
