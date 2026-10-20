@@ -354,6 +354,14 @@ class Fence(unittest.TestCase):
                 self.assertFalse(ok, name)
 
     @needs_diff
+    def test_only_a_process_runs_record_names_files(self):
+        """A run record that isn't a Process run's names no files, whatever it holds: nothing can be staged from it."""
+        got = in_vault(self.v, "import reach; a = json.loads(sys.stdin.read()); "
+                               "reach.start_run('i-2', 'ask', {}, None, files=a); print(json.dumps(sorted(reach.process_files())))",
+                       self.files)
+        self.assertEqual(got, [])
+
+    @needs_diff
     def test_a_spec_whose_transcript_is_a_list_is_refused_plainly(self):
         ok, why = self.decide({"list": self.run_("minutes.py stage system/staging/drafts/list.json")}, why=True)["list"]
         self.assertFalse(ok)
