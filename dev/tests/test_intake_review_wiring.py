@@ -56,7 +56,8 @@ class Wiring(LiveBrowserCase):
         # and every pending proposal is in the model (the page counts all of them), so the line and the page say the same number
         rows = [{"id": f"mR{i}", "key": f"mR{i}", "title": f"Ready {i}", "p": "ABC", "day": "2026-10-05", "start": f"1{i}:00", "end": f"1{i}:30",
                  "transcript": "available", "processed": False, "draft": None, "private": False} for i in range(ready)]
-        self.b.eval(f"D.inbox=[]; D.meetings={{rows:{json.dumps(rows)}}}; D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
+        # the fixture stands for the lists: opening Intake would read the real inbox again (refreshFiles) and bring the sample's files back
+        self.b.eval(f"shared.LIVE=false; D.inbox=[]; D.meetings={{rows:{json.dumps(rows)}}}; D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
         return ns
 
     # --- go() and the addresses ---
