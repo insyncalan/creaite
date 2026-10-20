@@ -175,12 +175,12 @@ class ReviewsSave(ReviewsBase):
         self.assertEqual(b.eval("document.querySelector('#uRevDate').value"), "19-10-2026")       # today, as shown
         self.assertEqual(b.eval("document.activeElement.id"), "uRevSaw")
         b.eval("""(()=>{ const set=(s,v)=>{ const e=document.querySelector(s); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true})); };
-          set('#uRevDate','18-10-2026'); set('#uRevSaw','Cost up 117% on last week\\nmostly the sweep'); set('#uRevDec','Move the sweep to 08:00'); return true; })()""")
+          set('#uRevDate','18-10-2026'); set('#uRevSaw','Cost up 117% on last week,    mostly the sweep'); set('#uRevDec','Move the sweep to 08:00'); return true; })()""")
         b.click("#uRevSave")
         b.wait("!document.querySelector('#uRevForm')")
-        self.assertEqual(b.eval(ROWS)[0], ["18-10-2026", "Cost up 117% on last week mostly the sweep", "Move the sweep to 08:00"])
+        self.assertEqual(b.eval(ROWS)[0], ["18-10-2026", "Cost up 117% on last week, mostly the sweep", "Move the sweep to 08:00"])
         lines = [json.loads(x) for x in (self.v.root / "system" / "staging" / "usage-reviews.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(lines[-1], {"date": "2026-10-18", "saw": "Cost up 117% on last week mostly the sweep", "decided": "Move the sweep to 08:00"})
+        self.assertEqual(lines[-1], {"date": "2026-10-18", "saw": "Cost up 117% on last week, mostly the sweep", "decided": "Move the sweep to 08:00"})
         self.assertEqual(b.eval("document.activeElement.id"), "uRevAdd")
         b.reload("typeof go==='function' && LIVE")                       # kept: the page's next build reads the file
         b.eval("go('activity')")
@@ -209,7 +209,9 @@ class ReviewsSave(ReviewsBase):
         code, got = self.post({"date": "2026-10-19", "saw": "y" * 300, "decided": "Keep", "who": "Jane Example"}, token)
         self.assertEqual((code, got["ok"]), (200, True))
         self.assertEqual(got["reviews"][-1], {"date": "2026-10-19", "saw": "y" * 200, "decided": "Keep"})
-        self.assertNotIn("Jane", (self.v.root / "system" / "staging" / "usage-reviews.jsonl").read_text(encoding="utf-8"))
+        last = (self.v.root / "system" / "staging" / "usage-reviews.jsonl").read_text(encoding="utf-8").splitlines()[-1]
+        self.assertEqual(sorted(json.loads(last)), ["date", "decided", "saw"])         # the line written: the three fields only
+        self.assertNotIn("Jane", last)
         code, got = self.post({"date": "19-10-2026", "saw": "x"}, token)
         self.assertEqual((code, got["ok"]), (200, False))
 
