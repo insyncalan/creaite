@@ -227,7 +227,8 @@ def _relock_one(f, code, fri):
     if doc.get("kind") != "client" or doc.get("project") != code or doc["date"] < fri or doc.get("state") == "approved":
         return False
     base = report_doc.baseline(code, doc["date"])
-    if not base or doc.get("based_on") == {"path": base["path"], "version": base["version"]}:
+    stored = creaite_doc.read(f).get("based_on")      # v2.5.3 (#259, K3): read_report derives based_on; the file's own says if it's locked
+    if not base or stored == {"path": base["path"], "version": base["version"]}:
         return False
     facts = (creaite_doc.read(base["path"]).get("meta") or {}).get("client_facts") or {}
     allowed = {x["id"]: x for t in ("actions", "decisions", "raid", "milestones") for x in facts.get(t) or []}

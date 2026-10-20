@@ -121,9 +121,11 @@ class Html(Base):
     def test_an_unfiled_report_leaves_the_plain_name_for_the_filing(self):
         for kind, title in (("weekly", "Weekly report"), ("client", "Client report")):
             # v2.5.0 audience bypass: a client report is exported only after its internal week is approved, so it is based on one
-            base = ("b = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [])\nb['state'] = 'approved'\n"
-                    "rb = creaite_doc.save('system/staging/drafts/approved-base.html', b, 'Saved for a test')\n"
-                    "doc['based_on'] = {'path': rb['path'], 'version': rb['version']}\n") if kind == "client" else ""
+            # v2.5.3 (#259, K3): based_on is derived from the approved week filed in the Reports folder, so the base is filed there
+            base = ("import paths, report_doc\nb = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [])\nb['state'] = 'approved'\n"
+                    "b['version'] = 1\nf = paths.resolve(report_doc.filed_path('weekly', 'ABC', '2026-10-16'))\n"
+                    "f.parent.mkdir(parents=True, exist_ok=True)\nf.write_text(creaite_doc.dumps(b), encoding='utf-8')\n"
+                    "doc['based_on'] = {'path': paths.rel(f), 'version': 1}\n") if kind == "client" else ""
             secs, items = (CLIENT_SECTIONS, {}) if kind == "client" else (SECTIONS, ITEMS)      # v2.5.1: see CLIENT_SECTIONS
             r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {secs!r}, items={items!r})\n" + base +
                         "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
