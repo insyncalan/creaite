@@ -69,6 +69,7 @@ class HookChecksTheSpec(unittest.TestCase):
         cmds = [("system/scripts/run minutes.py stage system/staging/drafts/good.json", m) for m in MODES]
         cmds += [("system/scripts/run minutes.py new ABC", m) for m in MODES]
         cmds += [("python3 system/scripts/minutes.py stage system/staging/drafts/good.json", "confirmed")]
+        cmds += [("system/scripts/run minutes.py stage system/staging/drafts/not-there.json", m) for m in MODES]   # the command refuses it
         for k, why in self.refusals(cmds).items():
             with self.subTest(k):
                 self.assertIsNone(why)

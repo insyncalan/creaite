@@ -37,5 +37,32 @@ The command refuses the same spec on its own anyway.
 
 `reach.py`, `bash_refusal`: after the record gate, `stage_spec_gate(command)`. For `minutes.py stage` only, it calls
 `minutes_spec.validate_spec(<spec>, paths.ROOT)`, the check the command makes, and refuses with its reason; `minutes.py stage`
-with anything but one spec path is refused; any error refuses (fail closed). Every other command is unchanged. Held runs still
-refuse the command earlier, in the record gate.
+with anything but one spec path is refused; any error refuses (fail closed). A spec that doesn't exist yet is let through: there
+is nothing to read, and the command refuses it itself ("the spec not found", nothing staged); the classification tests
+(`test_record_commands.py`) name such a spec. Every other command is unchanged. Held runs still refuse the command earlier, in the
+record gate.
+
+## With #264 (Intake's Process)
+
+Checked in a scratch copy of `origin/v253-release` with this branch and `origin/v253-intake-process` merged and all three diffs
+applied (#264's `reach.diff` and `live_server.diff`, and this one): `test_intake_process.py`, `test_record_commands.py`,
+`test_minutes_stage_spec*.py`, `test_stage_pinned.py`, `test_held_run_bash_writes.py`, `test_panel_sweep.py`,
+`test_ask_shell_shapes.py`, `test_ask_confirmed_apply.py`, `test_minutes_record.py` and `test_minutes_review.py` all pass, with one
+line changed in #264's test (its fixture spec had no date or projects, which stage needs anyway):
+
+```
+dev/tests/test_intake_process.py, setUpClass:
+-        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0]}))
++        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0]}))
+```
+
+Without it, `Fence.test_it_may_read_draft_and_stage_its_own_files [stage]` fails once both reach diffs are in: the hook now refuses
+that half-spec, as the command always would have. The fix belongs on `v253-intake-process` (or at the merge).
+
+## Search summaries (`search.py enrich set`, the scope addition)
+
+No guarded change: the rule is in `search.py` itself, so it holds in every mode, Process included (#264's mode lets `enrich set`
+through; the command then applies this rule). A summary is written for a meeting or report that has none; an existing one is
+replaced only for a file that a proposal waiting in Review files (the `to` of a copy or move: a re-extract, a redrafted report),
+never a client report's; a path whose file leads outside the vault and the projects folder is refused; every path is checked
+before any is written. Tests: `dev/tests/test_enrich_guard.py`.

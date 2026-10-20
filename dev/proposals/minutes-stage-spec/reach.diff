@@ -1,8 +1,8 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index b1b7f66b..3e8ec058 100644
+index b1b7f66b..ee9cc2dd 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
-@@ -1758,7 +1758,33 @@ def bash_refusal(command, mode):
+@@ -1758,7 +1758,37 @@ def bash_refusal(command, mode):
      (BL-267: the record changes only on a request Alan confirmed). BL-268: a script named by this vault's full path is read as
      the relative form first, so every check applies to it unchanged."""
      command = vault_relative(command)
@@ -23,10 +23,14 @@ index b1b7f66b..3e8ec058 100644
 +    words = bash_args(command)
 +    if command_kind("minutes.py", words)[1] != "minutes.py stage":
 +        return None
++    if len(words) != 2 or words[0] != "stage":
++        return "minutes.py stage: give one meeting spec: `minutes.py stage <a .json in system/staging/drafts/>`"
++    spec = Path(words[1]) if Path(words[1]).is_absolute() else paths.ROOT / words[1]
++    if not os.path.lexists(spec):
++        return None                          # nothing to read: the command refuses a missing spec itself (and stages nothing)
 +    try:
 +        import minutes_spec
-+        why = (minutes_spec.validate_spec(words[1], paths.ROOT) if len(words) == 2 and words[0] == "stage" else
-+               "give one meeting spec: `minutes.py stage <a .json in system/staging/drafts/>`")
++        why = minutes_spec.validate_spec(words[1], paths.ROOT)
 +    except Exception as e:  # noqa: BLE001  fail closed: a check that can't run refuses
 +        why = f"the guard couldn't check the meeting spec ({type(e).__name__})"
 +    if why:
