@@ -294,7 +294,7 @@ index f52ea4dd..66ce4555 100644
                     "people rename": RECORD, "people merge": RECORD, "people map": RECORD, "people migrate": RECORD,
                     "workstreams": READ, "workstreams list": READ, "workstreams suggest": READ, "workstreams add": RECORD,
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index fb5a714f..80e4a082 100644
+index fb5a714f..062eb83e 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -407,10 +407,10 @@ def safe_path(rel_path, purpose):
@@ -338,7 +338,17 @@ index fb5a714f..80e4a082 100644
      src, dst = fop.get("from"), fop.get("to")
      for p in (src, dst):
          if not p or Path(str(p)).is_absolute() or not str(p).startswith("projects/"):
-@@ -2108,7 +2108,7 @@ def _op_move(apply_id, fop, blk, done, prop=None):
+@@ -1922,7 +1922,8 @@ def check_move(fop, blk):
+         raise Invalid(f"move: {problem}")
+     if kind in ("reports_back", "notes_back"):   # BL-331, #124: only a file an archive (or Delete note) moved there, back
+         import archive                            # to where it came from
+-        was = archive.archived_moves(kind=kind[:-len("_back")]).get(src)
++        # #252: the apply record keeps the archive folder's name as it was; src may name it either way (paths.follow_stored)
++        was = archive.archived_moves(kind=kind[:-len("_back")]).get(paths.follow_stored(src))
+         if was != dst and not (kind == "notes_back" and was and reach.NOTES_BACK_RENAMES and _renamed_back(was, dst)):
+             raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
+ 
+@@ -2108,7 +2109,7 @@ def _op_move(apply_id, fop, blk, done, prop=None):
          raise Invalid(why)
      a, b = paths.resolve(fop["from"], archived=False), paths.resolve(fop["to"], archived=False)
      made = b.parent
