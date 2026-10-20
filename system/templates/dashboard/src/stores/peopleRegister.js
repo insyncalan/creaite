@@ -202,9 +202,14 @@ export function removeFromProject(name, code) {
   const derived = derivedOf(name), want = onOf(name).filter(c => c !== code);
   return regSave(`Removed ${name} from ${projName(code)}`, L => { setOn(rowIn(L, name), derived, want); return L; });
 }
-/** The People page's delete: the person's row leaves the register (their items keep the name). Never called from a project page.
-    @param {string} name */
+/** How many items (actions, RAID and decisions, open or closed) name them, by their name or an alias: while any do, Remove from
+    the register is refused (#248 M3, Alan, 20-10-2026: reassign them first; nothing is reassigned for him, and the row would
+    only come back as "needs details" without its aliases). @param {string} name */
+export const ownedItems = name => (registerRows().find(x => pKey(x.n) === pKey(name)) || { items: [] }).items.length;
+/** The People page's delete: the person's row leaves the register. Refused (false, nothing written) while they own items.
+    Never called from a project page. @param {string} name */
 export function removeFromRegister(name) {
+  if (ownedItems(name) > 0) return Promise.resolve(false);
   return regSave(`Removed ${name} from the people register`, L => L.filter(p => pKey(p.name) !== pKey(name)));
 }
 /** @param {string} code */

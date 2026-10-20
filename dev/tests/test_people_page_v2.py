@@ -124,6 +124,45 @@ class PeoplePage(Base):
         self.wait_for(lambda: "| Mia Hale | mia@example.com |" in self.register, "Undo puts her record back", timeout=15)
         b.wait("!!document.querySelector('#plRows tr[data-pn=\"Mia Hale\"]')", timeout=15)
 
+    def test_remove_is_refused_while_they_own_items(self):
+        """#248 M3 (Alan, 20-10-2026): no Remove for someone who still owns items; the message gives the count and says to
+        reassign them first; nothing is written, so their aliases and details stay and no "needs details" row appears."""
+        b = self.b
+        self.open()
+        owned = b.eval("(()=>{ const me=['Sara Example','Sara','SE']; return [...A,...R].filter(i=>me.includes(i.o)).length"
+                       " + DEC.filter(d=>me.includes(d.by)).length; })()")
+        self.assertGreater(owned, 0, "the fixture gives Sara Example items")
+        before = self.register
+        self.tap("[data-pl-remove='Sara Example']")
+        b.wait("!!document.querySelector('[data-pl-remove-refused=\"Sara Example\"]')")
+        msg = b.eval("document.querySelector('[data-pl-remove-refused=\"Sara Example\"]').textContent")
+        self.assertIn(f"{owned} item", msg)
+        self.assertIn("reassign them first", msg.lower())
+        self.assertFalse(b.eval("!!document.querySelector('[data-pl-remove-yes=\"Sara Example\"]')"), "no Remove button")
+        self.tap("[data-pl-remove-no='Sara Example']")
+        b.wait("!document.querySelector('[data-pl-remove-refused=\"Sara Example\"]')")
+        time.sleep(0.5)
+        self.assertEqual(self.register, before, "nothing written")
+        self.assertIn("| Sara Example | sara@example.com | Sara, SE |", self.register)
+        self.assertFalse(b.eval("!!document.querySelector('#plRows tr[data-pn=\"Sara Example\"] [data-needs]')"))
+
+    def test_edit_details_on_a_person_page_has_no_followed_field(self):
+        """#248 M2 (Alan, 20-10-2026): the person page's Edit details has no VIP select or Follow tick (people you follow are
+        set on the project settings page); saving it keeps the register's value as it was."""
+        b = self.b
+        b.eval("go('person','Sara Example')")
+        b.wait("VIEW==='person' && !!document.querySelector('#ppEdit')")
+        self.tap("#ppEdit")
+        b.wait("document.getElementById('personDlg').open")
+        self.assertFalse(b.eval("!!document.querySelector('#personDlg select, #personDlg #pd_vip, #personDlg .pdvip, #personDlg input[type=checkbox]:not(#pdRemember)')"))
+        self.assertNotRegex(b.eval("document.getElementById('personDlg').innerText"), r"\bVIP\b|Follow")
+        b.eval("document.getElementById('pd_role').value='Delivery director'")
+        self.tap("#pdSave")
+        self.applied()
+        line = [ln for ln in self.register.splitlines() if ln.startswith("| Sara Example")][0]
+        self.assertIn("Delivery director", line)
+        self.assertRegex(line, r"\| yes \|", "still followed")
+
     def test_a_project_page_never_deletes_from_the_register(self):
         b = self.b
         Base.open(self, "people")          # the project settings page

@@ -9387,14 +9387,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           /* @__PURE__ */ u2("label", { for: "pd_org", children: "Organisation" }),
           /* @__PURE__ */ u2("input", { id: "pd_org", type: "text", autocomplete: "off" }),
           /* @__PURE__ */ u2("label", { for: "pd_role", children: "Role" }),
-          /* @__PURE__ */ u2("input", { id: "pd_role", type: "text", autocomplete: "off" }),
-          /* @__PURE__ */ u2("label", { for: "pd_vip", class: "pdvip", children: "VIP" }),
-          /* @__PURE__ */ u2("select", { id: "pd_vip", class: "pdvip", children: [
-            /* @__PURE__ */ u2("option", { value: "", children: "No" }),
-            /* @__PURE__ */ u2("option", { value: "management", children: "Management" }),
-            /* @__PURE__ */ u2("option", { value: "client", children: "Client" }),
-            /* @__PURE__ */ u2("option", { value: "yes", children: "Yes" })
-          ] })
+          /* @__PURE__ */ u2("input", { id: "pd_role", type: "text", autocomplete: "off" })
         ] }),
         /* @__PURE__ */ u2("div", { class: "sub", id: "pdErr", role: "alert", style: "color:var(--bad)" }),
         /* @__PURE__ */ u2("div", { class: "curacts", children: [
@@ -32297,14 +32290,7 @@ ${s5}`;
       };
       openDialog(dlg);
     });
-    const keep2 = !!(o5 && (o5.edit || o5.details)), cur = (o5 && o5.person && o5.person.extra || {}).VIP || "";
-    $$(".pdvip").forEach((el2) => el2.hidden = !keep2);
-    const sel = $("#pd_vip");
-    sel.value = [...sel.options].some((x5) => x5.value === cur.toLowerCase()) ? cur.toLowerCase() : cur ? "yes" : "";
-    return pr2.then((res) => {
-      if (res && res.person && keep2) res.person.extra = { ...o5.person && o5.person.extra || {}, VIP: sel.value };
-      return res;
-    });
+    return pr2;
   }
   async function ownerFinal(typed2, opt = {}) {
     typed2 = String(typed2 || "").trim();
@@ -33538,7 +33524,9 @@ ${s5}`;
       return L3;
     });
   }
+  var ownedItems = (name) => (registerRows().find((x5) => pKey(x5.n) === pKey(name)) || { items: [] }).items.length;
   function removeFromRegister(name) {
+    if (ownedItems(name) > 0) return Promise.resolve(false);
     return regSave(`Removed ${name} from the people register`, (L3) => L3.filter((p6) => pKey(p6.name) !== pKey(name)));
   }
   var projName = (code) => (P4.find((p6) => p6.code === code) || { name: code }).name;
@@ -33866,8 +33854,20 @@ ${s5}`;
   };
   function RemoveButton({ x: x5 }) {
     const [ask2, setAsk] = d2(false);
-    if (!inRegister(x5.n)) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove ${x5.n} from the register`, why: "Only their items name them: there is no record to remove" });
-    if (!ask2) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove ${x5.n} from the register`, cls: "no", data: { "pl-remove": x5.n }, onClick: () => setAsk(true) });
+    if (!inRegister(x5.n)) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove from the register: ${x5.n}`, why: "Only their items name them: there is no record to remove" });
+    if (!ask2) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove from the register: ${x5.n}`, cls: "no", data: { "pl-remove": x5.n }, onClick: () => setAsk(true) });
+    const owned = ownedItems(x5.n);
+    if (owned) return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": `${x5.n} can't be removed yet`, children: [
+      /* @__PURE__ */ u2("span", { class: "sub", role: "alert", "data-pl-remove-refused": x5.n, children: [
+        x5.n,
+        " owns ",
+        peoplePlural(owned, "item"),
+        ". Reassign them first, then remove ",
+        x5.n,
+        " from the register."
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-pl-remove-no": x5.n, onClick: () => setAsk(false), children: "OK" })
+    ] });
     return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": `Remove ${x5.n} from the register?`, children: [
       /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: [
         "Remove ",
@@ -33907,7 +33907,7 @@ ${s5}`;
       ) }),
       /* @__PURE__ */ u2("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u2("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u2(S2, { children: [
         x5.missing.length ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pl-details": x5.n, "aria-haspopup": "dialog", "aria-label": `Add details for ${x5.n}`, onClick: edit, children: "Add details" }) : null,
-        /* @__PURE__ */ u2(IconButton, { icon: "pencil", label: "Edit details", name: `Edit ${x5.n}`, haspopup: "dialog", data: { "pl-edit": x5.n }, onClick: edit }),
+        /* @__PURE__ */ u2(IconButton, { icon: "pencil", label: "Edit details", name: `Edit details: ${x5.n}`, haspopup: "dialog", data: { "pl-edit": x5.n }, onClick: edit }),
         /* @__PURE__ */ u2(RemoveButton, { x: x5 })
       ] }) })
     ] });
