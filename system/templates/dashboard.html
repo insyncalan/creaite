@@ -848,6 +848,9 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .cimgdel{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:var(--lh-1);font-size:var(--fs-lg)} .cimgdel:hover{color:var(--bad);border-color:var(--bad)} .pencil[aria-disabled="true"]{opacity:.3;cursor:default}
 tr.mchild td.title{padding-left:32px;position:relative} tr.mchild td.title::before{content:"";position:absolute;left:16px;top:0;bottom:0;border-left:2px solid var(--line)}
 tr.mparent td.title{font-weight:500} .mini.tog{margin-right:4px}
+/* #271: Review never scrolls sideways. The title cell takes the room the buttons leave (max-width:0 stops its nowrap meta line
+   setting the column's width), the meta line truncates with an ellipsis (full text on its tip) and a long title or tag wraps */
+@media (min-width:641px){ #reviewBody td.title{width:100%;max-width:0;overflow-wrap:anywhere} }
 .wfilters{display:flex;gap:6px;flex-wrap:wrap} .fbtn.on{border-color:var(--ink);font-weight:500}
 .wapplied{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;min-height:24px;font-size:var(--fs-sm)}
 .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--sunk);border-radius:var(--r-pill);padding:2px 4px 2px 10px} .fchip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-1);padding:0 4px} .fchip button:hover{color:var(--ink)}
@@ -28333,7 +28336,7 @@ ${s5}`;
     root2.className = "slashroot";
     (el2.closest("dialog[open]") || document.body).appendChild(root2);
     let st2 = null;
-    let dismissed = -1, opened = false, typedSlash = false, moved = false;
+    let dismissed = -1, opened = false, typedSlash = false, moved2 = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -28383,7 +28386,7 @@ ${s5}`;
       if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
       const fresh = !st2 || st2.from !== a5.from;
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
-      if (fresh) moved = false;
+      if (fresh) moved2 = false;
       draw2();
     };
     const choose = (r4) => {
@@ -28419,14 +28422,14 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         if (n4) {
-          moved = true;
+          moved2 = true;
           st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
           draw2();
         }
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
         const row2 = n4 ? st2.rows[st2.i] : null;
         const rank = row2 ? slashRank(row2, st2.q) : 9, lead = editor.state.doc.resolve(st2.from).parentOffset === 0;
-        if (row2 && (moved || rank === 0 || rank === 1 && (lead || st2.q.trim().length >= 3))) {
+        if (row2 && (moved2 || rank === 0 || rank === 1 && (lead || st2.q.trim().length >= 3))) {
           e4.preventDefault();
           e4.stopPropagation();
           choose(row2);
@@ -33513,18 +33516,18 @@ ${s5}`;
       drawWsMgr();
       return;
     }
-    const before = { ...w6 }, old = w6.name, moved = [...A4, ...R3].filter((x5) => x5.p === w6.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
+    const before = { ...w6 }, old = w6.name, moved2 = [...A4, ...R3].filter((x5) => x5.p === w6.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
     await save(
       `${pName(w6.p)} workstream ${old} ${changes.name ? `renamed ${changes.name}` : "updated"}`,
       [{ op: "update", table: "workstreams", id: id2, changes, based_on: w6.updated_at }],
       null,
       () => {
         Object.assign(w6, Object.fromEntries(Object.entries(changes).map(([k5, x5]) => [k5, x5 || ""])));
-        if (changes.name) moved.forEach((x5) => x5.ws = changes.name);
+        if (changes.name) moved2.forEach((x5) => x5.ws = changes.name);
       },
       () => {
         Object.assign(w6, before);
-        moved.forEach((x5) => x5.ws = old);
+        moved2.forEach((x5) => x5.ws = old);
       }
     );
     drawWsMgr();
@@ -35999,12 +36002,12 @@ ${s5}`;
     <div class="mv-detog"><button type="button" data-mvact="det" aria-expanded="${MVDET}" aria-controls="mvRows-${host2}"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>${MVDET ? "Hide milestone details" : "Show milestone details"}</button></div>
     <div class="mv-rows" id="mvRows-${host2}"${MVDET ? "" : " hidden"}>`;
     list.forEach((m5) => {
-      const st2 = m5.state, moved = st2 !== "achieved" && m5.agr && m5.fc > m5.agr, ach = st2 === "achieved";
+      const st2 = m5.state, moved2 = st2 !== "achieved" && m5.agr && m5.fc > m5.agr, ach = st2 === "achieved";
       const blk = cli || ach ? [] : R3.filter((r4) => r4.p === code && r4.type === "Dependency" && r4.st === "Open" && r4.ms === m5.id && depWarn(r4));
       h5 += `<div class="mv-prow${blk.length ? " atrisk" : ""}" role="button" tabindex="0" data-mvedit="${m5.id}" aria-label="Edit ${esc(m5.n)}"${m5.desc ? ` title="${esc(m5.desc)}"` : ""}>
       <div><div class="nm">${esc(m5.n)}${!m5.cvis && !cli ? ' <span class="mv-tag">Internal only</span>' : ""}${blk.length ? ` <span class="mv-tag warn waiting" title="${esc(blk.map((d5) => depWarn(d5).text).join("\n"))}">waiting on ${blk.map((d5) => esc(d5.id)).join(", ")}</span>` : ""}</div>${cli && m5.cw ? `<div class="mv-cw">${esc(m5.cw)}</div>` : ""}</div>
       <div><div class="mv-lbl">State</div>${mvTag(st2, cli)}${!cli && mvMismatch(m5) ? `<div class="mv-sugg">Dates suggest ${MVWORD[m5.sug]}</div>` : ""}</div>
-      <div><div class="mv-lbl">${ach ? "Achieved" : "Agreed date"}</div><div class="dt"${ach ? ' style="color:var(--ok)"' : ""}>${ach ? fd(m5.actual || m5.fc) : m5.agr ? fd(m5.agr) : "Not agreed yet"}</div>${ach && m5.agr ? `<div class="mv-hint">Agreed ${fd(m5.agr)}${m5.actual === m5.agr ? " · on the agreed date" : ""}</div>` : ""}${moved ? `<div class="exp">Expected ${fd(m5.fc)} (${mvDays(m5.fc, m5.agr)} days later)</div>` : ""}${!cli ? mvRevised(m5) : ""}</div>
+      <div><div class="mv-lbl">${ach ? "Achieved" : "Agreed date"}</div><div class="dt"${ach ? ' style="color:var(--ok)"' : ""}>${ach ? fd(m5.actual || m5.fc) : m5.agr ? fd(m5.agr) : "Not agreed yet"}</div>${ach && m5.agr ? `<div class="mv-hint">Agreed ${fd(m5.agr)}${m5.actual === m5.agr ? " · on the agreed date" : ""}</div>` : ""}${moved2 ? `<div class="exp">Expected ${fd(m5.fc)} (${mvDays(m5.fc, m5.agr)} days later)</div>` : ""}${!cli ? mvRevised(m5) : ""}</div>
       <div>${mvPct(m5)}</div></div>`;
     });
     return h5 + "</div>";
@@ -44139,9 +44142,9 @@ ${s5}`;
   };
   var rvTip = (r4) => {
     const d5 = (revDetail(r4) || "").replace(RV_WK, "").replace(RV_DR, "").replace(RV_ND, "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
-    if (!d5) return "";
     const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
-    return t47 ? raw(` data-tip="${esc(t47)}"`) : "";
+    const tail = [r4.why, fdText(srcShort(r4.src))].map((x5) => String(x5 ?? "").trim()).filter((x5) => x5 && x5 !== "—").join(" · "), all = [t47, tail].filter(Boolean).join(" · ");
+    return all ? raw(` data-tip="${esc(all)}"`) : "";
   };
   var WKRVF = { actions: ["due", "due_date"], raid: ["due", "due_date"], decisions: ["due", "needed_by"] };
   var draftOn = (f5) => !(S.drafting && S.drafting[f5] === false);
@@ -45434,8 +45437,8 @@ ${s5}`;
       openMenu(b5, { label: "These minutes span several projects: move which project's items?", id: "rvMoveTo", items: order.map((c5) => ({ id: c5, name: pName(c5), icon: "projects", line: `${plur(kidsOf(r4, c5).filter((k5) => !k5.done).length, "item")}, and its copy of the minutes` })), onPick: (v5) => setTimeout(() => to2(v5), 0) });
     } else to2(projs[0]);
   }
-  async function rvMovePreview(b5, r4, frm, code, moved = "leave") {
-    const res = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code, from: frm, moved, dry_run: true });
+  async function rvMovePreview(b5, r4, frm, code, moved2 = "leave") {
+    const res = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code, from: frm, moved: moved2, dry_run: true });
     if (!res.ok || !res.preview) {
       snack(oneLine(res.message) || "Can't move these minutes");
       return;
@@ -45443,7 +45446,7 @@ ${s5}`;
     const pv = res.preview, dlg = $("#rvDlg");
     putHTML($("#rvDlgBody"), html`<h2 id="rvDlgTitle" class="rvmv-h">${pv.headline}</h2>
     <p class="sub">The minutes and transcript will be filed in ${pName(code)}'s folders when the minutes are approved. Nothing changes in the tracker until then.</p>
-    ${pv.alone ? html`<fieldset class="rvmv-ch"><legend>${pv.alone} item${pv.alone === 1 ? " was" : "s were"} moved on ${pv.alone === 1 ? "its" : "their"} own before</legend><label><input type="radio" name="rvmvA" value="leave" ${raw(moved !== "all" ? "checked" : "")}> Leave ${pv.alone === 1 ? "it" : "those"} where ${pv.alone === 1 ? "it is" : "they are"}</label><label><input type="radio" name="rvmvA" value="all" ${raw(moved === "all" ? "checked" : "")}> Move all</label></fieldset>` : ""}
+    ${pv.alone ? html`<fieldset class="rvmv-ch"><legend>${pv.alone} item${pv.alone === 1 ? " was" : "s were"} moved on ${pv.alone === 1 ? "its" : "their"} own before</legend><label><input type="radio" name="rvmvA" value="leave" ${raw(moved2 !== "all" ? "checked" : "")}> Leave ${pv.alone === 1 ? "it" : "those"} where ${pv.alone === 1 ? "it is" : "they are"}</label><label><input type="radio" name="rvmvA" value="all" ${raw(moved2 === "all" ? "checked" : "")}> Move all</label></fieldset>` : ""}
     ${(pv.updates || []).length ? html`<p class="sub">${pv.updates.join(", ")} ${pv.updates.length === 1 ? "is an update" : "are updates"} to ${pv.updates.length === 1 ? "an item" : "items"} already in the tracker, so ${pv.updates.length === 1 ? "it stays" : "they stay"} with ${pName(frm)}.</p>` : ""}`);
     dlg.classList.add("rvmvdlg");
     $("#rvDlgOk").textContent = "Move";
@@ -45460,7 +45463,7 @@ ${s5}`;
       if (fired) return;
       fired = true;
       dlg.close();
-      const out = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code, from: frm, moved });
+      const out = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code, from: frm, moved: moved2 });
       if (!out.ok) {
         snack(oneLine(out.message) || "Not moved");
         return;
@@ -47379,7 +47382,7 @@ ${s5}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
@@ -47584,7 +47587,7 @@ ${s5}`;
     $("#filesTbl").addEventListener("click", (e4) => {
       const mb2 = e4.target.closest("[data-moveback]");
       if (mb2) {
-        moveBack(mb2.dataset.moveback);
+        moveBack(mb2.dataset.moveback, mb2.dataset.mbkind);
         return;
       }
       const tr2 = e4.target.closest("tr[data-fp]");
@@ -47593,10 +47596,25 @@ ${s5}`;
       $$("#filesTbl tr[data-fp]").forEach((r4) => r4.classList.toggle("sel", r4 === tr2));
     });
   }
-  async function moveBack(path) {
+  async function moveBack(path, kind) {
     if (!viaServer()) {
       snack("Moving a file back needs the live server");
       return;
+    }
+    if (kind === "notes") {
+      const n4 = await api("/api/files/move-back/now", { path });
+      if (n4.ok && n4.moved) {
+        await refreshFiles(true);
+        snack(oneLine(n4.message), async () => {
+          await undoApply(n4.apply_id);
+          await refreshFiles(true);
+        });
+        return;
+      }
+      if (n4.message !== OLDSERVER) {
+        snack(oneLine(n4.message || "It couldn't be moved back"));
+        return;
+      }
     }
     const r4 = await api("/api/files/move-back", { path });
     snack(oneLine(r4.message || (r4.ok ? "On the approval card" : "It couldn't be prepared")));
@@ -54468,9 +54486,15 @@ ${pre}**Current state title:** ${title}`);
       const cur = noteCur.value;
       let base = cur && cur.path === n4.path ? cur.base : "";
       if (!open2) base = n4.base || "";
-      const r4 = await api("/api/notes/delete", { path: n4.path, base });
+      let r4 = await api("/api/notes/delete/now", { path: n4.path, base });
+      if (r4 && !r4.ok && r4.message === OLDSERVER) r4 = await api("/api/notes/delete", { path: n4.path, base });
       noteDeleting.value = null;
       if (n4.row) focusRow(n4.path, n4.next);
+      if (r4 && r4.ok && r4.moved) {
+        await moved(n4, r4.apply_id);
+        if (n4.row) focusRow(n4.path, n4.next);
+        return true;
+      }
       if (!r4 || !r4.ok || !r4.card) {
         snack(oneLine(r4 && r4.message || "Not deleted."));
         return false;
@@ -54509,12 +54533,15 @@ ${pre}**Current state title:** ${title}`);
       remember(null);
     }
     if (!done) return false;
+    await moved(n4, done.apply);
+    return true;
+  }
+  async function moved(n4, id2) {
     if (noteCur.value && noteCur.value.path === n4.path) {
       noteGone(n4.path);
       navWrite(false);
     }
     await loadNotes(notesCode.value || n4.code);
-    const id2 = done.apply;
     snack(`Moved “${n4.title}” to the archive`, id2 ? async () => {
       const u5 = await api("/api/undo", { apply_id: id2 });
       snack(undoWords(u5, n4.title));
@@ -54523,7 +54550,6 @@ ${pre}**Current state title:** ${title}`);
         await loadNotes(notesCode.value || n4.code);
       }
     } : null);
-    return true;
   }
   function resumeDeleteNote(card) {
     let v5 = null;
@@ -54577,7 +54603,7 @@ ${pre}**Current state title:** ${title}`);
         where2,
         ", not away for good. Restore it any time from Files › Archived. Anything that links to it shows the link as missing until it is restored."
       ] }),
-      /* @__PURE__ */ u2("p", { class: "sub", children: "The move then waits on the approval card in ask creaite: nothing moves until you approve it there." }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "It moves as soon as you press Delete note, and the message that follows has Undo." }),
       /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "ndelCancel", onClick: () => closeBox(), disabled: busy.value, children: "Cancel" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "ndelGo", disabled: busy.value, onClick: () => deleteNote(n4), children: busy.value ? "Working…" : "Delete note" })
@@ -67781,7 +67807,7 @@ ${d5.text}`);
   async function matchInternalNow(ids) {
     const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
     if (!d02 || !i5 || !sameWeek(i5, d02)) return;
-    const moved = () => crIdentity() !== opened || !sameReport(d02) || !sameWeek(crInternal.value, d02);
+    const moved2 = () => crIdentity() !== opened || !sameReport(d02) || !sameWeek(crInternal.value, d02);
     const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
     const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
     const internalText = (id2) => {
@@ -67803,7 +67829,7 @@ ${d5.text}`);
       return;
     }
     const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
-    if (moved()) return;
+    if (moved2()) return;
     if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
       failed();
       return;
@@ -67845,10 +67871,10 @@ ${d5.text}`);
     if (clean.length) {
       for (let tries = 0; ; tries++) {
         const now = crDoc.value;
-        if (!now || moved()) return;
+        if (!now || moved2()) return;
         const d5 = onto(now);
         const last = await api("/api/report/match-check", { docs: [d5] });
-        if (moved()) return;
+        if (moved2()) return;
         const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
         if (!extra || extra.length) {
           failed();

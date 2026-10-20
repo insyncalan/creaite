@@ -393,6 +393,16 @@ def _archived_hit(path):
     return first
 
 
+def _source_problem(kind, src):
+    """Why the archived file `src` can't be moved back, or None: it must be a plain file there and, for a note (#255 L6), not
+    reached through a linked archive folder."""
+    if src.is_symlink() or not src.is_file():
+        return f"{src.name} isn't in {paths.ARCHIVE} any more"
+    if kind == NOTE and (src.parent.is_symlink() or src.parent.parent.is_symlink()):     # never through a link
+        return archive_folder_problem(src.parent.parent.parent) or f"the {paths.ARCHIVE} folder isn't a plain folder"
+    return None
+
+
 def back_spec(path):
     """(spec, None) that moves an archived file back, or (None, why not). `path` is the archived file's own stored path (Files'
     `at`, #124: unique, where two deleted notes may share one first name), or, as before, the stored path it came from."""
@@ -404,8 +414,9 @@ def back_spec(path):
     if not at:
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
-    if src.is_symlink() or not src.is_file():
-        return None, f"{src.name} isn't in {paths.ARCHIVE} any more"
+    why = _source_problem(kind, src)
+    if why:
+        return None, why
     name = dst.name
     if os.path.lexists(dst):
         if kind != NOTE or not reach.NOTES_BACK_RENAMES:
@@ -431,6 +442,16 @@ def back_spec(path):
 NOTE, NOTE_BACK = "notes", "notes_back"
 
 
+def archive_folder_problem(base):
+    """#255 L6: why the engagement folder `base`'s own _Archive (or its notes folder) can't take a note, or None: each must be a
+    plain folder in place, or not there yet. A link (or a file) there is never followed: the note would leave the vault's places."""
+    arch = Path(base) / paths.ARCHIVE
+    for p in (arch, arch / paths.folder_name("notes").strip("/")):
+        if p.is_symlink() or (os.path.lexists(p) and not p.is_dir()):
+            return f"the {paths.ARCHIVE} folder isn't a plain folder in the project (a link or a file has its name), so nothing moves"
+    return None
+
+
 def note_delete_spec(rel):
     """(spec, None) that moves the note at stored path `rel` into its own folder's _Archive, or (None, why not)."""
     import notes
@@ -439,12 +460,51 @@ def note_delete_spec(rel):
         return None, "that isn't a note that is there"
     code, p = hit
     base = paths.portfolio_dir() if code == "_portfolio" else paths.project_dir(code)
+    why = archive_folder_problem(base)
+    if why:
+        return None, why
     dest = paths.free_path(base / paths.ARCHIVE / paths.folder_name("notes").strip("/"), p.stem, p.suffix)
     title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
     return {"source_run": "notes", "items": [], "file_changes": {
         "title": f"Delete note \u201c{title}\u201d (move it to the archive)", "project": None if code == "_portfolio" else code,
         "archive": NOTE, "file_ops": [{"op": "move", "from": paths.rel(p), "to": paths.rel(dest)}]}}, None
 # ===== end #124 =====
+
+
+# ===== #255: Delete note and a note's Move back are the page's own button (Alan, 20-10-2026: the click is the approval) =====
+# The live server makes these two moves straight from the page's own button, with no approval card. It still stages only a spec
+# built here (note_delete_spec, back_spec), and page_move_problem is the last look at it before it is staged: exactly one `move`
+# of one note, of kind "notes" or "notes_back", with no tracker items and nothing else. Anything wider (a report's Move back, an
+# archive or restore of a project, two files) is not the page's own move and keeps its card. The mover itself (reach.py's shape,
+# tracker.py's one-time marker) is unchanged; this is ordinary code and decides nothing on its own.
+PAGE_MOVES = (NOTE, NOTE_BACK)
+
+
+def page_move_problem(spec, kind=None):
+    """None when `spec` is one note's Delete note or Move back (of `kind` when it is given), as this module builds it; else why
+    not, in plain words."""
+    fc = spec.get("file_changes") if isinstance(spec, dict) else None
+    if not isinstance(fc, dict) or set(spec) - {"source_run", "items", "file_changes"} or spec.get("items") \
+            or set(fc) - {"title", "project", "archive", "file_ops"}:
+        return "that isn't one note's move"
+    if fc.get("archive") not in PAGE_MOVES or (kind is not None and fc.get("archive") != kind):
+        return "only a note's Delete note or Move back is made from its own button; anything else goes on the approval card"
+    ops = fc.get("file_ops")
+    if not isinstance(ops, list) or len(ops) != 1:
+        return "a note's move is one file, never two"
+    return None if _one_note_move(ops[0]) else "that isn't one note's move"
+
+
+def _one_note_move(op):
+    """op is {"op": "move", "from", "to"}: two stored projects/ paths of .md files, no .. in either, nothing else."""
+    if not isinstance(op, dict) or set(op) != {"op", "from", "to"} or op["op"] != "move":
+        return False
+    ends = [op["from"], op["to"]]
+    return all(isinstance(x, str) and x.startswith("projects/") and x.lower().endswith(".md") and ".." not in Path(x).parts
+               for x in ends)
+
+
+# ===== end #255 =====
 
 
 def main(argv):
