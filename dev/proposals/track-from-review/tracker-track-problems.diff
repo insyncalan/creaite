@@ -1,0 +1,27 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 18dbce6e..7bde74b4 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -2377,6 +2377,14 @@ def cmd_apply(args):
+     return 0
+ 
+ 
++def track_problems(p, data):
++    """#275: an approved item of draft minutes that Alan crossed or left with neither in their Track column is never written, by any
++    path (Review's bulk approvals, review.py, a proposal edited by hand); the apply stops and says which (minutes_record.track_blocked)."""
++    import minutes_record
++    return [f"{p.name} item {n}: {'crossed' if t == 'n' else 'kept in the minutes only (neither)'} in the minutes' Track column; "
++            "tick it there to register it" for n, t in minutes_record.track_blocked(data, decided=True).items()]
++
++
+ def _load_work(args):
+     """[(proposal path, data)] for the proposals named (or every staged one) that have decided items."""
+     if args:
+@@ -2414,6 +2422,7 @@ def _validate_work(con, work):
+         blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
+         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
+         blocked += client_draft_problems(p, data)      # v2.5.1 (#239 step 3): a client Word draft only as its check passed
++        blocked += track_problems(p, data)             # #275: never an item crossed or left with neither in the minutes
+     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
+         blocked += _rejection_problems(con, p, data)
+     return blocked, held

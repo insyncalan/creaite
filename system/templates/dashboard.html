@@ -5030,6 +5030,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     applyView: () => applyView,
     applyWords: () => applyWords,
     approveGroup: () => approveGroup,
+    approveTracked: () => approveTracked,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
     askDeleteNote: () => askDeleteNote,
@@ -5869,6 +5870,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isMin: () => isMin,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
+    isRecordMin: () => isRecordMin,
     isStale: () => isStale,
     isSteering: () => isSteering,
     isStub: () => isStub,
@@ -6994,6 +6996,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toggleGroup: () => toggleGroup,
     toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
+    trackGroup: () => trackGroup,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
     typedLinkUrl: () => typedLinkUrl,
@@ -43086,7 +43089,7 @@ ${s5}`;
             return;
           }
           if (r4.done) return;
-          if (e4.key === "a") decide(n4, "approved");
+          if (e4.key === "a") decide(n4, "approved", void 0, trs[shared.RSEL].dataset.g);
           if (e4.key === "r") {
             e4.preventDefault();
             rjKey315();
@@ -43662,6 +43665,232 @@ ${s5}`;
     return /* @__PURE__ */ u2(S2, { children: LV.map((lv, i5) => /* @__PURE__ */ u2(Level, { lv, i: i5 }, lv.key)) });
   }
 
+  // components/minutes/track.js
+  var TRACK_SECTIONS = ["decisions", "raid", "actions"];
+  var rowN = (rw2) => {
+    if (rw2 && typeof rw2.n === "number") return rw2.n;
+    const m5 = /^@(\d+)$/.exec(String(rw2 && rw2.was || ""));
+    return m5 ? Number(m5[1]) : null;
+  };
+  function trackRows(doc) {
+    const out = [];
+    for (const s5 of doc && doc.sections || []) {
+      if (!TRACK_SECTIONS.includes(s5.id) || s5.type !== "table") continue;
+      const srows = (
+        /** @type {any[]} */
+        s5.rows || []
+      );
+      for (const rw2 of srows) {
+        const n4 = rowN(rw2);
+        if (n4 == null || !rw2.ref && !rw2.kept_line) continue;
+        out.push({ n: n4, section: s5.id, "row": rw2, item: rw2.ref ? (doc.items || {})[rw2.ref] || null : null, kept: !!rw2.kept_line });
+      }
+    }
+    return out;
+  }
+  var planGroupOf = (plan, n4) => ((plan || []).find((i5) => i5.n === n4) || { group: "" }).group;
+  var defaultTrack = (section, item, group) => (
+    /** @type {Track} */
+    group === "own" || section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
+  );
+  var waitsWhenNeither = (r4, plan) => !r4.kept && !!r4.item && r4.item.op === "update" && planGroupOf(plan, r4.n) === "own";
+  var trackChoices = (doc) => {
+    const t47 = (doc && doc.layout || {}).track;
+    return t47 && typeof t47 === "object" && !Array.isArray(t47) ? t47 : {};
+  };
+  function trackOf(doc, r4, plan) {
+    const c5 = trackChoices(doc)[String(r4.n)];
+    if (c5 === "y" || c5 === "n" || c5 === "") return c5;
+    return r4.kept ? "" : defaultTrack(r4.section, r4.item, planGroupOf(plan, r4.n));
+  }
+  var nextTrack = (now, pressed) => now === pressed ? "" : pressed;
+  function setTrack(doc, n4, t47) {
+    const lay = { ...doc.layout || {} };
+    lay.track = { ...trackChoices(doc), [String(n4)]: t47 };
+    return { ...doc, layout: lay };
+  }
+  function rowlessPending(doc, plan) {
+    const shown2 = new Set(trackRows(doc).map((r4) => r4.n));
+    return (plan || []).filter((i5) => ["group", "own", "waits", "milestone"].includes(i5.group) && !shown2.has(i5.n)).map((i5) => i5.n);
+  }
+  function trackCounts(doc, plan) {
+    const c5 = { y: 0, k: 0, n: 0, w: 0 };
+    for (const r4 of trackRows(doc)) {
+      const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
+      if (t47 === "n") c5.n++;
+      else if (t47 === "y") {
+        if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
+        else c5.w++;
+      } else if (waitsWhenNeither(r4, plan)) c5.w++;
+      else c5.k++;
+    }
+    c5.w += rowlessPending(doc, plan).length;
+    return c5;
+  }
+  var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
+  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
+  function reconcileOps(doc, plan) {
+    const ops = [];
+    for (const r4 of trackRows(doc)) {
+      const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
+      if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
+      if (r4.kept) {
+        ops.push({ op: "restore", n: r4.n });
+        if (want === "n") ops.push({ op: "remove", n: r4.n, keep_line: false });
+      } else ops.push({ op: "remove", n: r4.n, keep_line: want === "" });
+    }
+    return ops;
+  }
+  var approveArgs = (doc, plan) => ({ group: false, own: trackRows(doc).filter((r4) => ["group", "own"].includes(planGroupOf(plan, r4.n)) && trackOf(doc, r4, plan) === "y").map((r4) => r4.n) });
+  function approveProblems(doc, plan, needsDetails) {
+    const out = [];
+    for (const r4 of trackRows(doc)) {
+      if (trackOf(doc, r4, plan) !== "y" || !r4.item || r4.item.op !== "new") continue;
+      const v5 = r4.item.values || {}, text = String(v5.description || v5.decision || "");
+      const owner = String((r4.section === "decisions" ? v5.made_by : v5.owner) || "").trim();
+      if (owner && owner !== "TBC" && needsDetails(owner)) out.push({ n: r4.n, what: `${owner} needs details`, text });
+      const ll2 = r4.item.looks_like || {};
+      if (ll2.id && !ll2.kept && !ll2.merged) out.push({ n: r4.n, what: `Possible duplicate of ${ll2.id}`, text });
+    }
+    return out;
+  }
+
+  // stores/minutes.js
+  var minutesArg = y3(
+    /** @type {{file?: string, path?: string}|null} */
+    null
+  );
+  var minutesView = y3(
+    /** @type {MinutesView|null} */
+    null
+  );
+  var minutesDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var minutesBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var minutesBusy = y3("");
+  var PANE_KEY = "creaite-minutes-transcript";
+  var paneOpen = y3(true);
+  function setPane(on2) {
+    paneOpen.value = !!on2;
+    store.set(PANE_KEY, !!on2);
+  }
+  function paneRemembered() {
+    paneOpen.value = store.get(PANE_KEY, true) !== false;
+  }
+  var hoverTurn = y3(
+    /** @type {{turn: number, from: "row"|"pane"}|null} */
+    null
+  );
+  var paneTurn = y3(
+    /** @type {number|null} */
+    null
+  );
+  var paneQuery = y3("");
+  var keptChecks = y3(
+    /** @type {string[]} */
+    []
+  );
+  var approveOpen = y3(false);
+  var mnAsked = 0;
+  async function openMinutesRecord(arg, stale = () => false) {
+    let r4 = await api("/api/minutes/draft", arg);
+    if (stale()) return null;
+    if (r4 && r4.ok && r4.doc && r4.doc.state === "draft" && Array.isArray(r4.settle) && r4.settle.length) {
+      const s5 = await api("/api/minutes/save", { path: r4.path, op: { op: "settle" }, base_version: Number(r4.doc.version) || void 0 });
+      if (stale()) return null;
+      if (s5 && s5.ok) r4 = await api("/api/minutes/draft", { path: r4.path });
+      if (stale()) return null;
+    }
+    return r4;
+  }
+  async function loadMinutes(arg) {
+    const mine = ++mnAsked;
+    minutesArg.value = arg;
+    if (!viaServer()) {
+      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
+      return;
+    }
+    minutesBusy.value = "Opening the minutes…";
+    const r4 = await openMinutesRecord(arg, () => mine !== mnAsked);
+    if (r4 === null) return;
+    minutesBusy.value = "";
+    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
+  }
+  function take(r4) {
+    minutesView.value = r4;
+    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function reloadMinutes() {
+    const v5 = minutesView.value;
+    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
+    if (minutesArg.value) return loadMinutes(minutesArg.value);
+  }
+  async function changeMinutes(op2) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
+    if (r4 && r4.ok && r4.doc) {
+      minutesDoc.value = r4.doc;
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      minutesView.value = { ...v5, doc: r4.doc };
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
+  }
+  async function refreshPlan() {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return;
+    const r4 = await api("/api/minutes/draft", { path: v5.path });
+    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
+  }
+  async function saveMinutesPage(req) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
+  }
+  async function trackApprove(v5, how = {}) {
+    const doc = v5 && v5.ok ? v5.doc : null, plan = v5 && v5.plan ? v5.plan.items : null;
+    if (!doc || !plan || !v5.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
+    const args = approveArgs(doc, plan);
+    let base = Number(doc.version) || void 0, made = 0;
+    const change2 = how.change || (async (op2) => {
+      const r5 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: base });
+      if (r5 && r5.ok) base = Number(r5.version) || base;
+      return { ok: !!(r5 && r5.ok), message: oneLine(r5 && r5.message || "") };
+    });
+    for (const op2 of reconcileOps(doc, plan)) {
+      if (how.only && !how.only(op2.n)) continue;
+      const r5 = await change2(op2);
+      if (!r5.ok) return { ok: false, message: r5.message, made };
+      made++;
+    }
+    if (how.approve === false) return { ok: true, made };
+    if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
+    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+    return { ...r4 || { ok: false, message: "The apply didn't run; nothing was changed." }, made };
+  }
+  var trackFailWords = (r4, button) => r4.made ? `${r4.message ? `${oneLine(r4.message)} ` : ""}Some changes were made to the minutes; press ${button} again.` : String(r4.message || "The minutes weren't approved; nothing was applied.").split("\n")[0];
+  function trackApprovedWords(r4) {
+    const n4 = r4.approved || 0, left = (r4.waiting || []).length;
+    return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
+  }
+  async function exportMinutes(format) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+  }
+
   // review.js
   shared.RSEL = 0;
   var CHK = /* @__PURE__ */ new Set(), RHL = /* @__PURE__ */ new Set();
@@ -43724,7 +43953,7 @@ ${s5}`;
     if (it2 && it2.suggested && it2.suggested.feature === "promise" && (v5 === "approved" || v5 === "rejected")) draftStat("promise", v5 === "rejected" ? "rejected" : it2.as_proposed ? "edited" : "used");
     if (it2 && it2.looks_like && v5 === "rejected" && it2.duplicate_of === it2.looks_like.id) draftStat("repeat", "used");
   }
-  var decide = async function(n4, v5, written) {
+  var decide = async function(n4, v5, written, g5) {
     const tr2 = $(`#reviewBody tr[data-n="${n4}"]`), was = REV.find((x5) => x5.n === n4);
     const snap = tr2 && shared.VIEW === "review" && !reduced() ? { g: { r: tr2.getBoundingClientRect(), t: (tr2.querySelector("td.title") || tr2).textContent.trim() }, rows: mSnapRows("#reviewBody tr[data-n]", (e4) => e4.dataset.n) } : null;
     const before = was && was.done;
@@ -43738,6 +43967,11 @@ ${s5}`;
       if (v5 === "approved" && !r4.p && r4.kind !== "files") {
         snack("Choose a project first — open the item to set it");
         openProposal(n4);
+        return;
+      }
+      if (viaServer() && v5 === "approved" && isRecordMin(r4)) return approveTracked(r4, g5);
+      if (v5 === "approved" && r4.trk != null) {
+        snack(`${r4.trk === "n" ? "Crossed" : "Kept in the minutes only"} in the minutes' Track column: tick it there to register it`);
         return;
       }
       if (viaServer() && v5 === "approved" && r4.kind === "draft") return reviewViaServer(r4, "approved", []);
@@ -43843,12 +44077,12 @@ ${s5}`;
   var IMGI = '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>';
   var isMin = (r4) => r4 && r4.kind === "draft" && r4.ref === "meeting";
   var kidsOf = (m5, g5) => REV.filter((x5) => x5.file === m5.file && !["draft", "files"].includes(x5.kind) && (g5 === "*" || (x5.p || "?") === g5));
-  var routineKid = (x5) => !x5.done && !x5.indiv && x5.p && !(x5.flags || []).includes("conflict");
+  var routineKid = (x5) => !x5.done && !x5.indiv && x5.p && !(x5.flags || []).includes("conflict") && x5.trk == null;
   var COLLAPSED = /* @__PURE__ */ new Set();
   var rvMovable = (r4) => !!r4 && !r4.done && (isMin(r4) || ["actions", "raid", "decisions"].includes(r4.kind));
   function revRow(r4, idx, g5, cls, head) {
     const minKids = isMin(r4) && head.kids.some(routineKid);
-    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}<div class="why rvmeta"${rvTip(r4)}>${rvDrTag(r4)}${kindLabel(r4) ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${rvDraftBtn(r4)}${raw(rjGuessHtml(r4))} · ${r4.why ?? ""} · ${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div>${rvNotes(r4)}</td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini" data-act="ga" title="Approves the routine items from these minutes; the minutes, new decisions and new risks stay for one-by-one approval">Approve ${head.kids.filter(routineKid).length} routine</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
+    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}<div class="why rvmeta"${rvTip(r4)}>${rvDrTag(r4)}${kindLabel(r4) ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${rvDraftBtn(r4)}${raw(rjGuessHtml(r4))} · ${r4.why ?? ""} · ${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div>${rvNotes(r4)}</td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini" data-act="ga" title="Approves the routine items from these minutes; the minutes, new decisions and new risks stay for one-by-one approval">Approve ${head.kids.filter(routineKid).length} routine</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : isRecordMin(r4) ? html` data-tip="Approves the minutes and registers the items ticked in their Track column${(r4.projects || []).length > 1 ? ` (this project's)` : ""}; crossed lines leave the minutes, the rest stay untracked"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
     if (isConflict(r4)) {
       const live = viaServer(), btns = `<button class="mini" data-act="ck" ${live ? "" : 'disabled title="Needs the live server"'}>Keep current</button> <button class="mini ok" data-act="co" ${live ? "" : 'disabled title="Needs the live server"'}>Use this one</button>`;
       h5 = h5.replace(/<button class="mini ok" data-act="a">.*?<\/button>/, btns);
@@ -43924,6 +44158,10 @@ ${s5}`;
   async function approveGroup(m5, g5) {
     RVINBATCH = true;
     try {
+      if (viaServer() && isRecordMin(m5)) {
+        await approveGroupTracked(m5, g5);
+        return;
+      }
       const kids = kidsOf(m5, g5), ks2 = kids.filter(routineKid), left = kids.filter((x5) => !x5.done && !routineKid(x5)).length;
       for (const k5 of ks2) {
         CHK.delete(k5.n);
@@ -43934,6 +44172,68 @@ ${s5}`;
     } finally {
       RVINBATCH = false;
     }
+  }
+  var isRecordMin = (r4) => isMin(r4) && /\.html$/i.test(r4.src || "");
+  async function approveTracked(r4, g5) {
+    const v5 = await openMinutesRecord({ file: r4.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return;
+    }
+    const mine = g5 && g5 !== "*" && (r4.projects || []).length > 1 ? new Set(REV.filter((x5) => x5.file === r4.file && !["draft", "files"].includes(x5.kind) && (x5.p || "?") === g5).map((x5) => x5.ref)) : null;
+    if (v5.doc && v5.plan && approveProblems(v5.doc, v5.plan.items, unknownOwner).some((p6) => !mine || mine.has(p6.n))) {
+      go2("minutes", { file: r4.file, approve: true });
+      return;
+    }
+    const res = await trackApprove(v5, mine ? { mine: (n4) => mine.has(n4) } : {});
+    if (!res.ok) {
+      snack(trackFailWords(res, "Approve"));
+      await reloadData();
+      return;
+    }
+    snack(trackApprovedWords(res), res.apply_id ? async () => {
+      await undoApply(res.apply_id);
+      await openMinutesRecord({ file: r4.file });
+      await reloadData();
+    } : null);
+    await reloadData();
+  }
+  async function trackGroup(m5, g5) {
+    const v5 = await openMinutesRecord({ file: m5.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return false;
+    }
+    const mine = new Set(kidsOf(m5, g5).filter((k5) => !k5.done).map((k5) => k5.ref)), res = await trackApprove(v5, { only: (n4) => mine.has(n4), approve: false });
+    if (res.made) await reloadData();
+    if (!res.ok) {
+      snack(trackFailWords(res, `Approve routine`));
+      return false;
+    }
+    return res.made;
+  }
+  async function approveGroupTracked(m5, g5) {
+    const made = await trackGroup(m5, g5);
+    if (made === false) return;
+    const kids = kidsOf(m5, g5), ks2 = kids.filter(routineKid), left = kids.filter((x5) => !x5.done && !routineKid(x5)).length;
+    let undo = null;
+    if (ks2.length) {
+      const res = await rvDecideMany(ks2, "approved");
+      undo = res.undo || null;
+    } else if (made && S.autoApply) {
+      const res = await applyNow();
+      if (res.ok) undo = () => undoApply(res.apply_id);
+    }
+    const tail = made ? ` · ${made} line${made === 1 ? "" : "s"} taken out of the minutes or kept as lines only` : "";
+    snack(
+      `Approved ${ks2.length} item${ks2.length === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}`,
+      undo ? async () => {
+        await undo();
+        await openMinutesRecord({ file: m5.file });
+        await reloadData();
+      } : null
+    );
+    renderReview();
   }
   async function rejectMinutes(m5) {
     await decide(m5.n, "rejected");
@@ -43992,7 +44292,7 @@ ${s5}`;
           refreshItems(REV.find((x5) => x5.n === n4));
           return;
         }
-        if (b5.dataset.act === "a") decide(n4, "approved");
+        if (b5.dataset.act === "a") decide(n4, "approved", void 0, g5);
         else if (b5.dataset.act === "r") {
           const r4 = REV.find((x5) => x5.n === n4);
           if (rvRejectOK(r4)) rjMenuFor(rjWith(r4), b5);
@@ -44021,7 +44321,7 @@ ${s5}`;
   var RVQ = "", RVG = "project", RVO = "", RVPK = "k", RVLASTUNDO = null;
   shared.RVSTATS = { approved: 0, rejected: 0, edited: 0 };
   shared.RV_MAX = 25;
-  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict");
+  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict") && r4.trk == null;
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvSyncChk() {
     CHK.clear();
@@ -44033,6 +44333,7 @@ ${s5}`;
   function rvWhyNot(r4) {
     if (!r4.p && r4.kind !== "files") return ["project", "needs a project"];
     if ((r4.flags || []).includes("conflict")) return ["conflict", "has a conflict to settle"];
+    if (r4.trk != null) return ["indiv", r4.trk === "n" ? "is crossed in the minutes' Track column" : "is kept in the minutes only (Track: neither)"];
     if (r4.kind === "draft") return ["indiv", `${r4.ref === "meeting" ? "minutes are" : "a report is"} approved on its own`];
     if (r4.kind === "files") return ["indiv", "a file change is approved on its own"];
     return ["indiv", `${String(r4.why || "this").toLowerCase()} is never approved in bulk`];
@@ -72390,117 +72691,6 @@ ${d5.text}`);
     draftStat(ev.section === "health" ? HS_FEATURE : REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
   }
 
-  // stores/minutes.js
-  var minutesArg = y3(
-    /** @type {{file?: string, path?: string}|null} */
-    null
-  );
-  var minutesView = y3(
-    /** @type {MinutesView|null} */
-    null
-  );
-  var minutesDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var minutesBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var minutesBusy = y3("");
-  var PANE_KEY = "creaite-minutes-transcript";
-  var paneOpen = y3(true);
-  function setPane(on2) {
-    paneOpen.value = !!on2;
-    store.set(PANE_KEY, !!on2);
-  }
-  function paneRemembered() {
-    paneOpen.value = store.get(PANE_KEY, true) !== false;
-  }
-  var hoverTurn = y3(
-    /** @type {{turn: number, from: "row"|"pane"}|null} */
-    null
-  );
-  var paneTurn = y3(
-    /** @type {number|null} */
-    null
-  );
-  var paneQuery = y3("");
-  var keptChecks = y3(
-    /** @type {string[]} */
-    []
-  );
-  var approveOpen = y3(false);
-  var mnAsked = 0;
-  async function loadMinutes(arg) {
-    const mine = ++mnAsked;
-    minutesArg.value = arg;
-    if (!viaServer()) {
-      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
-      return;
-    }
-    minutesBusy.value = "Opening the minutes…";
-    let r4 = await api("/api/minutes/draft", arg);
-    if (mine !== mnAsked) return;
-    if (r4 && r4.ok && r4.doc && r4.doc.state === "draft" && Array.isArray(r4.settle) && r4.settle.length) {
-      const s5 = await api("/api/minutes/save", { path: r4.path, op: { op: "settle" }, base_version: Number(r4.doc.version) || void 0 });
-      if (mine !== mnAsked) return;
-      if (s5 && s5.ok) r4 = await api("/api/minutes/draft", { path: r4.path });
-      if (mine !== mnAsked) return;
-    }
-    minutesBusy.value = "";
-    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
-  }
-  function take(r4) {
-    minutesView.value = r4;
-    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function reloadMinutes() {
-    const v5 = minutesView.value;
-    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
-    if (minutesArg.value) return loadMinutes(minutesArg.value);
-  }
-  async function changeMinutes(op2) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
-    if (r4 && r4.ok && r4.doc) {
-      minutesDoc.value = r4.doc;
-      minutesBase.value = Number(r4.version) || minutesBase.value;
-      minutesView.value = { ...v5, doc: r4.doc };
-      refreshPlan();
-    }
-    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
-  }
-  async function refreshPlan() {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return;
-    const r4 = await api("/api/minutes/draft", { path: v5.path });
-    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
-  }
-  async function saveMinutesPage(req) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
-    if (r4 && r4.ok) {
-      minutesBase.value = Number(r4.version) || minutesBase.value;
-      refreshPlan();
-    }
-    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
-  }
-  async function approveMinutes(group, own) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.proposal) return { ok: false, message: "These minutes have nothing pending." };
-    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group, own });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportMinutes(format) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
-  }
-
   // components/minutes/ApprovePopup.jsx
   var filedAt = (p6) => {
     const parts = p6.split("/");
@@ -72866,96 +73056,6 @@ ${d5.text}`);
         cells
       ] })
     ] });
-  }
-
-  // components/minutes/track.js
-  var TRACK_SECTIONS = ["decisions", "raid", "actions"];
-  var rowN = (rw2) => {
-    if (rw2 && typeof rw2.n === "number") return rw2.n;
-    const m5 = /^@(\d+)$/.exec(String(rw2 && rw2.was || ""));
-    return m5 ? Number(m5[1]) : null;
-  };
-  function trackRows(doc) {
-    const out = [];
-    for (const s5 of doc && doc.sections || []) {
-      if (!TRACK_SECTIONS.includes(s5.id) || s5.type !== "table") continue;
-      const srows = (
-        /** @type {any[]} */
-        s5.rows || []
-      );
-      for (const rw2 of srows) {
-        const n4 = rowN(rw2);
-        if (n4 == null || !rw2.ref && !rw2.kept_line) continue;
-        out.push({ n: n4, section: s5.id, "row": rw2, item: rw2.ref ? (doc.items || {})[rw2.ref] || null : null, kept: !!rw2.kept_line });
-      }
-    }
-    return out;
-  }
-  var planGroupOf = (plan, n4) => ((plan || []).find((i5) => i5.n === n4) || { group: "" }).group;
-  var defaultTrack = (section, item, group) => (
-    /** @type {Track} */
-    group === "own" || section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
-  );
-  var waitsWhenNeither = (r4, plan) => !r4.kept && !!r4.item && r4.item.op === "update" && planGroupOf(plan, r4.n) === "own";
-  var trackChoices = (doc) => {
-    const t47 = (doc && doc.layout || {}).track;
-    return t47 && typeof t47 === "object" && !Array.isArray(t47) ? t47 : {};
-  };
-  function trackOf(doc, r4, plan) {
-    const c5 = trackChoices(doc)[String(r4.n)];
-    if (c5 === "y" || c5 === "n" || c5 === "") return c5;
-    return r4.kept ? "" : defaultTrack(r4.section, r4.item, planGroupOf(plan, r4.n));
-  }
-  var nextTrack = (now, pressed) => now === pressed ? "" : pressed;
-  function setTrack(doc, n4, t47) {
-    const lay = { ...doc.layout || {} };
-    lay.track = { ...trackChoices(doc), [String(n4)]: t47 };
-    return { ...doc, layout: lay };
-  }
-  function rowlessPending(doc, plan) {
-    const shown2 = new Set(trackRows(doc).map((r4) => r4.n));
-    return (plan || []).filter((i5) => ["group", "own", "waits", "milestone"].includes(i5.group) && !shown2.has(i5.n)).map((i5) => i5.n);
-  }
-  function trackCounts(doc, plan) {
-    const c5 = { y: 0, k: 0, n: 0, w: 0 };
-    for (const r4 of trackRows(doc)) {
-      const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
-      if (t47 === "n") c5.n++;
-      else if (t47 === "y") {
-        if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
-        else c5.w++;
-      } else if (waitsWhenNeither(r4, plan)) c5.w++;
-      else c5.k++;
-    }
-    c5.w += rowlessPending(doc, plan).length;
-    return c5;
-  }
-  var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
-  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
-  function reconcileOps(doc, plan) {
-    const ops = [];
-    for (const r4 of trackRows(doc)) {
-      const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
-      if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
-      if (r4.kept) {
-        ops.push({ op: "restore", n: r4.n });
-        if (want === "n") ops.push({ op: "remove", n: r4.n, keep_line: false });
-      } else ops.push({ op: "remove", n: r4.n, keep_line: want === "" });
-    }
-    return ops;
-  }
-  var approveArgs = (doc, plan) => ({ group: false, own: trackRows(doc).filter((r4) => ["group", "own"].includes(planGroupOf(plan, r4.n)) && trackOf(doc, r4, plan) === "y").map((r4) => r4.n) });
-  function approveProblems(doc, plan, needsDetails) {
-    const out = [];
-    for (const r4 of trackRows(doc)) {
-      if (trackOf(doc, r4, plan) !== "y" || !r4.item || r4.item.op !== "new") continue;
-      const v5 = r4.item.values || {}, text = String(v5.description || v5.decision || "");
-      const owner = String((r4.section === "decisions" ? v5.made_by : v5.owner) || "").trim();
-      if (owner && owner !== "TBC" && needsDetails(owner)) out.push({ n: r4.n, what: `${owner} needs details`, text });
-      const ll2 = r4.item.looks_like || {};
-      if (ll2.id && !ll2.kept && !ll2.merged) out.push({ n: r4.n, what: `Possible duplicate of ${ll2.id}`, text });
-    }
-    return out;
   }
 
   // components/minutes/ItemTable.jsx
@@ -73801,24 +73901,13 @@ ${d5.text}`);
     approving.value = true;
     try {
       if (!await mnSaveFirst()) return;
-      const args = approveArgs(doc, plan);
-      let made = 0;
-      for (const op2 of reconcileOps(doc, plan)) {
-        const r5 = await changeMinutes(op2);
-        if (!r5.ok) {
-          snack(made ? `${r5.message ? `${r5.message} ` : ""}Some changes were made to the minutes; press Approve minutes again.` : r5.message || "The minutes weren't approved; nothing was applied.");
-          return;
-        }
-        made++;
-      }
-      const r4 = await approveMinutes(args.group, args.own);
+      const r4 = await trackApprove({ ...v5, doc }, { change: changeMinutes });
       if (!r4.ok) {
-        snack(String(r4.message || "The apply didn't run; nothing was changed.").split("\n")[0]);
+        snack(trackFailWords(r4, "Approve minutes"));
         return;
       }
-      const n4 = r4.approved || 0, left = (r4.waiting || []).length;
       snack(
-        `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
+        trackApprovedWords(r4),
         r4.apply_id ? async () => {
           await undoApply(r4.apply_id);
           if (v5.proposal) loadMinutes({ file: v5.proposal });
@@ -74078,6 +74167,7 @@ ${d5.text}`);
       loadMinutes(a5).then(() => {
         navWrite(false);
         tabTitle();
+        if (a5.approve) approveNow(false);
       });
     }
   }
@@ -74441,6 +74531,7 @@ ${d5.text}`);
     }
     if (shared.MVREADY && (shared.MV.peek || shared.MV.add)) mvEdClose(true);
     const from = shared.VIEW, fromPage = mPageOf(shared.VIEW);
+    if (!shared.LOADING && from === "minutes" && v5 !== "minutes") reloadData();
     if (from === "notes" && v5 !== "notes") notesLeave();
     if (!shared.LOADING && from === "review" && v5 !== "review") {
       shared.MREVLEFT = true;
@@ -78023,6 +78114,7 @@ ${d5.text}`);
         "runSearch",
         "rvAdvance",
         "rvAgeBanner",
+        "rvApproveSelected",
         "rvBulkOK",
         "rvChanged",
         "rvDate",
@@ -78030,6 +78122,7 @@ ${d5.text}`);
         "rvMatching",
         "rvMoveTo",
         "rvPick",
+        "rvRoutine",
         "rvSet",
         "rvShown",
         "rvSrcKind",
@@ -78097,6 +78190,7 @@ ${d5.text}`);
         "thisWeek",
         "tl",
         "toIso",
+        "trackApprove",
         "trackCounts",
         "trackOf",
         "trackRows",

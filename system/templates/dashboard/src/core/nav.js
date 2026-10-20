@@ -10,7 +10,7 @@ import { mFirst, mLeave } from "./motion.js";
 import { curDrop } from "./editor.js";
 import { cardGroup, menuGroup } from "./hover.js";
 import { anim, DATE, mScroll, reduced, store } from "./page.js";
-import { snack } from "./server.js";
+import { reloadData, snack } from "./server.js";
 import { shared } from "./state.js";
 import { setRailView } from "../stores/rail.js";
 import { filesOpened, renderFiles } from "../files.js";
@@ -133,6 +133,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   if(v==="milestones"){ if(arg&&!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg||null; }   /* #204: no project is the Choose a project page */
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
+  if(!shared.LOADING&&from==="minutes"&&v!=="minutes") reloadData();   /* #275: Review's rows follow the Track choices just made (r.trk) */
   if(from==="notes"&&v!=="notes") notesLeave();   /* BL-301 B: leaving the note ends its editing session (its file is written) */
   if(!shared.LOADING&&from==="review"&&v!=="review"){ shared.MREVLEFT=true; rjCloseMenu(false); rjLeave(); }   /* BL-263; BL-315: the greyed rejected rows go when Review is left */
   if(v==="people"&&["all","work","none","att"].includes(arg)) setPTab(arg);   /* BL-190; #248 */
