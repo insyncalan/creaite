@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 import linktext  # noqa: E402  (#121: links in plain text show as their words in the activity lines)
 import review  # noqa: E402  (classification shared with cx-review: bulk rule, needs a project)
+import minutes_record  # noqa: E402  (#275: the Track column on Review's rows)
 from docx_tools import md_normalise  # noqa: E402  (Current state is Markdown, BL-22, BL-47)
 import propose  # noqa: E402  (register learning checks, BL-28)
 
@@ -665,11 +666,15 @@ def review_queue(con):
             if b and not b.get("applied") and b.get(field, "pending") == "pending":
                 n = num.get((p.name, key), n + 1)
                 out.append(queue_block(n, p, key, label, b, aged))
+        blocked = minutes_record.track_blocked(data)     # #275: crossed or left with neither in the minutes' Track column
         for item in data.get("items", []):
             if item.get("applied") or item.get("decision") != "pending":
                 continue
             n = num.get((p.name, item.get("n")), n + 1)
-            out.append(queue_item(con, n, p, item, aged, overlap))
+            row = queue_item(con, n, p, item, aged, overlap)
+            if item.get("n") in blocked:
+                row["trk"] = blocked[item["n"]]
+            out.append(row)
     return out
 
 

@@ -134,9 +134,11 @@ export async function saveMinutesPage(req) {
     show no row for, such as a promise, is never registered unseen and waits in Review, Cap's #268 review H1). `v` is the record's view answer, as
     on screen. `how.change` makes one change (the view's keeps its page in step; by default straight to /api/minutes/save, each
     on the version the last one made); `how.only` limits the changes to some items (Review's Approve n routine, one project's);
-    `how.approve` false makes the changes only (the bulk rule: Approve n routine never approves the minutes).
+    `how.approve` false makes the changes only (the bulk rule: Approve n routine never approves the minutes); `how.mine` limits
+    what is registered to some items (Review's Approve under one project of minutes covering several: the others wait in Review).
+    The server checks it again (review.approve_minutes: never an item crossed, left with neither, or with no row).
     @param {MinutesView} v @param {{change?: (op: Record<string, any>) => Promise<{ok: boolean, message: string}>,
-    only?: (n: number) => boolean, approve?: boolean}} [how] @returns {Promise<TrackApproved>} */
+    only?: (n: number) => boolean, mine?: (n: number) => boolean, approve?: boolean}} [how] @returns {Promise<TrackApproved>} */
 export async function trackApprove(v, how = {}) {
   const doc = v && v.ok ? v.doc : null, plan = v && v.plan ? v.plan.items : null;
   if (!doc || !plan || !v.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
@@ -155,7 +157,7 @@ export async function trackApprove(v, how = {}) {
   }
   if (how.approve === false) return { ok: true, made };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
-  const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: args.own });
+  const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
   return { ...(r || { ok: false, message: "The apply didn't run; nothing was changed." }), made };
 }
 

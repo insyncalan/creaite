@@ -9,9 +9,15 @@ the minutes exactly as they were before (as the view's Undo does). Both paths ca
 A promise has no row in the minutes, so no Track control: approved from Review it is never registered and waits in Review (Cap's
 #268 review H1, track.approveArgs).
 
+Cap's #275 review: the bulk paths (Approve routine, the bar's Approve, the group tick) never register a crossed or neither row
+(Review's rows carry `trk`); `review.py approve` on the minutes and on an item, and `review.py bulk`, honour the Track column on the
+server (ServerTrack, quick); under one project of minutes covering several, Approve registers only that project's ticked items; Undo
+of Approve n routine puts the crosses back too.
+
 Run: python3 dev/tests/test_minutes_track_review.py      (Chrome tier; skipped without Chrome)
 """
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -20,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 import test_minutes_view_v2 as mv  # noqa: E402
+import test_minutes_approve as ma  # noqa: E402
 
 ROW = mv.ROW
 SOW, UAT, CUT = "Send the revised SOW to the client", "Book the UAT test environment", "Share the cut-over plan with the client"
@@ -131,6 +138,144 @@ class TrackFromReview(LiveBrowserCase):
         self.assertIn("Minutes approved · 2 work items registered", self.snack())
         self.assertIn(CUT, self.descs())
         self.assertNotIn(UAT, self.descs())
+
+
+    def test_04_the_bulk_paths_never_register_a_crossed_or_neither_row(self):
+        b = self.b
+        trk = self.ev("Object.fromEntries(REV.filter(r=>r.trk!=null).map(r=>[r.ref,r.trk]))")
+        self.assertEqual(trk, {"2": "n", "3": ""}, "Review's rows carry the Track choices")
+        self.assertEqual(self.ev("REV.filter(r=>r.trk!=null).map(rvBulkOK)"), [False, False], "never approved in bulk")
+        self.ev("[...document.querySelectorAll('#reviewBody tr[data-n]')].forEach(tr=>{ const r=REV.find(x=>x.n===+tr.dataset.n); if(r&&!isMin(r)) RHL.add(r.n); }); rvSyncChk(); renderReview();")
+        self.ev("rvApproveSelected(true)")                      # the bar's Approve on every row, the crossed and neither ones included
+        for _ in range(120):
+            if SOW in self.descs():
+                break
+            b.pump(0.25)
+        self.assertIn(SOW, self.descs())
+        self.assertNotIn(UAT, self.descs(), "crossed: never registered by the bar's Approve")
+        self.assertNotIn(CUT, self.descs(), "neither: never registered by the bar's Approve")
+        self.assertEqual((self.staged(2)["decision"], self.staged(3)["decision"]), ("pending", "pending"))
+        self.ev("rvRoutine()")                                   # Approve routine: nothing of theirs is offered
+        b.pump(0.4)
+        self.assertNotIn(UAT, self.ev("document.getElementById('rvDlg').open ? document.getElementById('rvDlgBody').textContent : ''"))
+        self.assertNotIn(UAT, self.descs())
+
+    def test_05_undo_of_approve_n_routine_puts_the_crosses_back_too(self):
+        b = self.b
+        b.eval(MIN + ".querySelector('[data-act=ga]').click()")
+        b.wait("document.getElementById('snack').classList.contains('on') && /from these minutes/.test(document.getElementById('snack').textContent)", 30)
+        self.assertIn("4 lines taken out of the minutes or kept as lines only", self.snack())   # the cross, the neither, and the decision and risk at their default
+        for _ in range(60):
+            if SOW in self.descs():
+                break
+            b.pump(0.25)
+        self.assertEqual(self.staged(2)["decision"], "rejected")
+        b.click("#snackU")
+        for _ in range(120):
+            if SOW not in self.descs() and self.staged(2)["decision"] == "pending" and \
+                    self.rows_text(self.record()) == self.rows_text(self.before):
+                break
+            b.pump(0.25)
+        self.assertNotIn(SOW, self.descs())
+        self.assertEqual([self.staged(n)["decision"] for n in (1, 2, 3, 4, 5)], ["pending"] * 5, "the approval and the crosses undone")
+        self.assertEqual(self.rows_text(self.record()), self.rows_text(self.before), "the minutes' rows exactly as before")
+
+
+class TwoProjects(LiveBrowserCase):
+    """Cap's #275 M-b: minutes covering ABC and DEF; Approve under ABC registers ABC's ticked items only, DEF's wait in Review."""
+    @classmethod
+    def load(cls, v):
+        mv.MinutesViewV2.load.__func__(cls, v)
+        p = v.root / "system/staging" / cls.proposal
+        data = json.loads(p.read_text(encoding="utf-8"))
+        data["meeting"]["projects"] = ["ABC", "DEF"]
+        data["items"][1]["values"]["project"] = "DEF"              # "Book the UAT test environment" is DEF's
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    open, ev, staged, snack, rows_of, record = (mv.MinutesViewV2.open, mv.MinutesViewV2.ev, mv.MinutesViewV2.staged,
+                                                mv.MinutesViewV2.snack, mv.MinutesViewV2.rows_of, mv.MinutesViewV2.record)
+
+    def test_approve_under_one_project_registers_only_its_ticked_items(self):
+        b = self.b
+        self.open()
+        b.click(ROW % 3 + " .mntrk button.y")                   # Pat Unknown's action: neither, so nothing is worth a look
+        for _ in range(60):
+            if (self.record().get("layout") or {}).get("track") == {"3": ""}:
+                break
+            b.pump(0.25)
+        b.eval("go('review')")
+        b.wait("document.querySelector('#reviewBody tr.mparent[data-g=\"ABC\"] [data-act=a]')", 15)
+        b.pump(0.3)
+        tip = self.ev("document.querySelector('#reviewBody tr.mparent[data-g=\"ABC\"] [data-act=a]').dataset.tip")
+        self.assertIn("registers the items ticked in their Track column (this project's)", tip)
+        b.eval("document.querySelector('#reviewBody tr.mparent[data-g=\"ABC\"] [data-act=a]').click()")
+        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        descs = [a["description"] for a in self.rows_of("actions")]
+        self.assertIn(SOW, descs, "ABC's ticked action")
+        self.assertNotIn(UAT, descs, "DEF's ticked action waits in Review")
+        self.assertEqual(self.staged(2)["decision"], "pending")
+
+
+class ServerTrack(ma.Base):
+    """Cap's #275 M-a and H1 on the server: review.py and approve_minutes honour the Track column whatever the caller sends."""
+    def track(self, choices):
+        self.js("import minutes_record, creaite_doc\n"
+                f"d = creaite_doc.read({ma.DRAFT!r})\nd['layout'] = {{**(d.get('layout') or {{}}), 'track': {choices!r}}}\n"
+                f"r = minutes_record.save_page({ma.DRAFT!r}, d)\nprint(json.dumps({{'ok': bool(r.get('ok'))}}))")
+
+    def number(self, ref):
+        rows = json.loads(self.v.run("list", "--json", script="review.py").stdout)
+        return next(r["n"] for r in rows if r["file"] == self.name and r["ref"] == ref)
+
+    def item(self, n):
+        return next(i for i in self.data()["items"] if i["n"] == n)
+
+    def test_review_py_approve_on_the_minutes_honours_the_crosses(self):
+        self.track({"2": "n", "3": ""})
+        out = self.v.run("approve", str(self.number("meeting")), script="review.py").stdout
+        self.assertIn("Minutes approved", out)
+        self.v.run("apply")
+        self.assertIn("Book the UAT environment", [a["description"] for a in self.v.rows("actions")], "ticked: registered")
+        self.assertNotIn("Test data isn't anonymised", [r["description"] for r in self.v.rows("raid")], "crossed: never registered")
+        self.assertEqual(self.by_id("actions")["ABC-A-001"]["due_date"], "2026-10-20", "neither: the update isn't applied")
+        text = (self.v.root / ma.FILED).read_text(encoding="utf-8")
+        self.assertNotIn("Test data isn't anonymised", text, "the crossed line left the minutes")
+        self.assertEqual(self.item(4)["decision"], "pending", "a decision at its default waits in Review, as before")
+
+    def test_review_py_approve_and_bulk_refuse_an_item_crossed_or_left_with_neither(self):
+        self.track({"1": "n", "2": ""})
+        out = self.v.run("approve", str(self.number(1)), script="review.py").stdout
+        self.assertIn("crossed in the minutes' Track column", out)
+        out = self.v.run("approve", str(self.number(2)), script="review.py").stdout
+        self.assertIn("kept in the minutes only", out)
+        out = self.v.run("bulk", script="review.py").stdout
+        self.assertIn("not ticked in the minutes", out)
+        self.assertEqual((self.item(1)["decision"], self.item(2)["decision"], self.item(3)["decision"]), ("pending", "pending", "approved"))
+
+    def test_approve_minutes_never_registers_a_crossed_item_whatever_it_is_sent(self):
+        self.track({"1": "n", "4": ""})                       # no changes made on the page: the server makes them
+        r = self.approve(group=True, own=[1, 4])
+        self.assertTrue(r["ok"], r)
+        self.assertNotIn("Book the UAT environment", [a["description"] for a in self.v.rows("actions")])
+        self.assertNotIn("Go-live stays on 20 November", [d["decision"] for d in self.v.rows("decisions")])
+        self.assertIn("Test data isn't anonymised", [x["description"] for x in self.v.rows("raid")], "the ticked issue is registered")
+        text = (self.v.root / ma.FILED).read_text(encoding="utf-8")
+        self.assertNotIn("Book the UAT environment", text, "crossed: the line goes")
+        self.assertIn("Go-live stays on 20 November", text, "neither: the line stays")
+
+    @unittest.skipUnless("def track_problems" in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                                                                     "system", "scripts", "tracker.py"), encoding="utf-8").read(),
+                         "dev/proposals/track-from-review/tracker-track-problems.diff not applied yet")
+    def test_apply_refuses_a_crossed_item_approved_by_hand(self):
+        self.track({"1": "n"})
+        p = self.v.root / "system/staging" / self.name
+        data = json.loads(p.read_text(encoding="utf-8"))
+        data["items"][0]["decision"] = "approved"
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        r = self.v.run("apply", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("crossed in the minutes' Track column", r.stdout + r.stderr)
+        self.assertNotIn("Book the UAT environment", [a["description"] for a in self.v.rows("actions")])
 
 
 class RowlessPromiseFromReview(LiveBrowserCase):

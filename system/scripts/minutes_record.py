@@ -792,9 +792,17 @@ def _settled_words(settled):
     return f"Put back {len(settled)} line{'s' if len(settled) != 1 else ''} as they were before approving."
 
 
+def _tracked_words(made, settled):
+    """#275: the `track` change's message; with nothing to change it is refused, so no new version is saved."""
+    if not made and not settled:
+        raise RecordError("The minutes already follow the Track column.")
+    return f"Brought {len(made)} line{'s' if len(made) != 1 else ''} in line with the Track column."
+
+
 def change(path, op, base_version=None, via="dashboard"):
     """Apply one change from the minutes view to the draft record and its proposal, then save both. `op` is {op: remove | restore |
-    update | keep_new | edit | deadline | cover | uncover | settle, n, keep_line, id, values, words, point, how, line}. Returns
+    update | keep_new | edit | deadline | cover | uncover | settle | track, n, keep_line, id, values, words, point, how, line,
+    project}. Returns
     {ok, message, version, doc}; refusals raise RecordError. Every change first settles the record (#268: settle)."""
     doc = creaite_doc.read(path)
     if doc.get("state") == "approved":
@@ -810,7 +818,8 @@ def change(path, op, base_version=None, via="dashboard"):
             "deadline": lambda: edit_item(doc, data, n, {"due_words": op.get("words")}),
             "cover": lambda: cover(doc, data, str(op.get("point") or ""), op.get("how"), op.get("line", True) is not False),
             "uncover": lambda: uncover(doc, data, str(op.get("point") or "")),
-            "settle": lambda: _settled_words(settled)}
+            "settle": lambda: _settled_words(settled),
+            "track": lambda: _tracked_words(_track_reconcile(doc, data, op.get("project") or None), settled)}
     if kind not in acts:
         raise RecordError("That isn't a change the minutes know.")
     message = acts[kind]()
@@ -990,15 +999,131 @@ def _track_rows(doc):
                 yield s["id"], n, row
 
 
+def _track_of(choices, sid, row, item, group):
+    """A row's Track state ("y", "n" or ""): the choice made, else a kept line is neither, else the default (track.js trackOf)."""
+    want = choices.get(str(item.get("n")))
+    return want if want in ("y", "n", "") else "" if row.get("kept_line") else _track_default(sid, item, group)
+
+
+def _waits(item, group):
+    """Neither on an update approved one by one changes nothing: it stays in Review (review H2, track.js waitsWhenNeither)."""
+    return item.get("op") == "update" and group == "own"
+
+
 def _track_want(choices, sid, row, item, group):
     """What the Track column wants for a row ("y", "n" or ""), or None when the record already shows it (track.js trackOf and
     reconcileOps: neither on an update decided one by one leaves it in Review)."""
     kept = bool(row.get("kept_line"))
-    want = choices.get(str(item.get("n")))
-    want = want if want in ("y", "n", "") else "" if kept else _track_default(sid, item, group)
-    if want == ("" if kept else "y") or (want == "" and item.get("op") == "update" and group == "own"):
+    want = _track_of(choices, sid, row, item, group)
+    if want == ("" if kept else "y") or (want == "" and not kept and _waits(item, group)):
         return None
     return want
+
+
+def _choices(doc):
+    c = (doc.get("layout") or {}).get("track")
+    return c if isinstance(c, dict) else {}
+
+
+# ── #275: the Track column on the server, so every way of approving honours it ──
+# Review's Approve and Approve n routine, the minutes view, `review.py approve` (Claude Code and ask creaite) and Review's bulk
+# approvals all go through these. What Alan chose in the Track column (layout.track) is applied on the server: a cross takes the
+# line out, neither keeps it as a line only, a tick on a kept line brings it back (track_reconcile, the view's own changes), and an
+# item he crossed or left with neither is never approved (track_blocked). Approving the minutes registers the ticked rows, defaults
+# included (track_ticked), and never an item the minutes show no row for (a promise: track_rowed). A default he never changed is
+# not a choice: the view applies it when he presses Approve minutes there, and anywhere else a decision or a risk left at its
+# default stays in Review for him to decide, as before.
+
+def track_state(doc, data):
+    """{item number: "y" | "n" | ""} for each trackable row of a draft record whose item is still in the proposal (pending, or
+    taken out here as a kept line or a removed row), as the Track column shows it (defaults included)."""
+    import review
+    if not doc or doc.get("state") != "draft" or not data:
+        return {}
+    choices, items, out = _choices(doc), {i.get("n"): i for i in data.get("items") or []}, {}
+    for sid, n, row in _track_rows(doc):
+        item = items.get(n)
+        if item and not item.get("applied"):
+            out[n] = _track_of(choices, sid, row, item, review.minutes_group(item))
+    return out
+
+
+def track_ticked(doc, data, project=None):
+    """The pending items whose rows are ticked, in a group Approve minutes applies (review.minutes_group "group" or "own"), of
+    `project` when given: what approving the minutes registers (track.js approveArgs). An item with no row is never in it."""
+    import review
+    items = {i.get("n"): i for i in data.get("items") or []}
+    return [n for n, t in track_state(doc, data).items()
+            if t == "y" and items[n].get("decision") == "pending" and review.minutes_group(items[n]) in ("group", "own")
+            and (project is None or review.project_of(items[n]) == project)]
+
+
+def track_rowed(doc, data):
+    """The items of the proposal the record shows a row for and Alan didn't cross or leave with neither: the most Approve minutes
+    may register (never a promise with no row, Cap's #268 review H1; never an item whose Track choice is a cross or neither)."""
+    choices = _choices(doc)
+    return {n for n, t in track_state(doc, data).items() if choices.get(str(n)) not in ("n", "")}
+
+
+def track_blocked(data, decided=False):
+    """{item number: "n" | ""} for the pending items (with `decided`, the approved ones not yet applied too: tracker.py apply's
+    check) of a proposal whose draft minutes record Alan crossed or left with neither in the Track column (an update approved one
+    by one with neither excepted: it stays in Review, H2). {} for anything else."""
+    import review
+    draft = (data.get("meeting") or {}).get("draft")
+    if not (data.get("meeting") and not data["meeting"].get("applied") and is_record(draft)):
+        return {}
+    try:
+        doc = creaite_doc.read(draft)
+    except creaite_doc.DocError:
+        return {}
+    choices, items = _choices(doc), {i.get("n"): i for i in data.get("items") or []}
+    return {n: t for n, t in track_state(doc, data).items()
+            if choices.get(str(n)) in ("n", "") and items[n].get("decision") in (("pending", "approved") if decided else ("pending",))
+            and not (t == "" and _waits(items[n], review.minutes_group(items[n])))}
+
+
+def _track_reconcile(doc, data, project=None):
+    """The record and its proposal brought in line with Alan's Track choices, in place (of `project`'s items only when given): a cross
+    on a pending row is `remove`, neither `remove` with `keep_line` (not an update approved one by one), a tick on a kept line
+    `restore`, a cross on a kept line `restore` then `remove`. Returns the item numbers changed."""
+    import review
+    choices, items, made = _choices(doc), {i.get("n"): i for i in data.get("items") or []}, []
+    for sid, n, row in list(_track_rows(doc)):
+        item = items.get(n)
+        if not item or item.get("applied") or (project is not None and review.project_of(item) != project) or str(n) not in choices:
+            continue                                        # only Alan's own choices: a default is applied by the view's Approve
+        want = _track_want(choices, sid, row, item, review.minutes_group(item))
+        if want is None:
+            continue
+        kept = bool(row.get("kept_line"))
+        if kept:
+            restore(doc, data, n)
+        if want != "y":
+            remove(doc, data, n, keep_line=want == "")
+        made.append(n)
+    return made
+
+
+def track_reconcile(path, project=None, via="dashboard"):
+    """The draft record at `path` (and its proposal) settled (#268) and brought in line with its Track column, saved only when
+    something changed. Returns the item numbers changed."""
+    doc = creaite_doc.read(path)
+    if doc.get("state") != "draft":
+        return []
+    p, data = proposal_for(doc)
+    settled = settle(doc, data)
+    made = _track_reconcile(doc, data, project)
+    if not made and not settled:
+        return []
+    data = save_proposal(p, data)
+    for it in data.get("items") or []:
+        if f"@{it['n']}" in doc["items"]:
+            doc["items"][f"@{it['n']}"] = item_snapshot(it)
+    r = save_record(path, doc, "Minutes: the Track column", via=via)
+    if r.get("needs_approval"):
+        raise RecordError(r.get("message") or REFUSED_FILED)
+    return made
 
 
 def _track_apply(out, data, n, kept, want):
@@ -1021,8 +1146,7 @@ def tracked_of(doc):
         data = json.loads(json.dumps(proposal_for(doc)[1]))
     except RecordError:
         return doc
-    choices = (doc.get("layout") or {}).get("track")
-    choices = choices if isinstance(choices, dict) else {}
+    choices = _choices(doc)
     out, items = json.loads(json.dumps(doc)), {i.get("n"): i for i in data.get("items") or []}
     for sid, n, row in list(_track_rows(doc)):
         item = items.get(n)
