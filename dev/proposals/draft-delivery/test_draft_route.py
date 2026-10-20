@@ -6,6 +6,7 @@ A stand-in `claude` (never a real model or Microsoft 365 call) answers in the st
 the arguments in its prompt and gives a fixed tool result (made, or refused, as its .mode file says), and keeps its argv.
 """
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -21,6 +22,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 from test_dashboard import d, populate  # noqa: E402
 from test_tracker import action  # noqa: E402
 
+START = os.getcwd()                        # restored after the class: every test's vault is removed with the folder we sit in
 CREATE = "mcp__claude_ai_Microsoft_365__outlook_create_draft"
 M365 = "mcp__claude_ai_Microsoft_365__"
 SCOPES = M365 + "get_granted_scopes"
@@ -54,6 +56,8 @@ class Route(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         populate(v)
+        os.chdir(v.root)                       # #183 review L-c: the server starts in the vault, as launch.py starts it
+        cls.addClassCleanup(os.chdir, START)
         v.propose("chase", [action(20, owner="Sara Example", due_date=d(-4), description="Send the test plan")])
         v.run("apply")
         f = v.root / "system/config/settings.json"
@@ -130,7 +134,7 @@ class Route(LiveBrowserCase):
             self.assertEqual(args[args.index("--setting-sources") + 1], "")
             self.assertEqual(args[args.index("--tools") + 1], "ToolSearch")
             self.assertIn("--no-session-persistence", args)
-        for cwd in self.cwds()[-2:]:
+        for cwd in self.cwds()[-2:]:                                      # the server itself runs in the vault (load), the run does not
             self.assertNotEqual(cwd, self.v.root.resolve())
             self.assertNotIn(self.v.root.resolve(), cwd.parents)
 

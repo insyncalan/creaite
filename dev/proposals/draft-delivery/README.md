@@ -22,6 +22,16 @@
 | **L2**: `ALLOWED_TAGS` had `s`; Outlook's list names only `strike` | `s` removed from `ALLOWED_TAGS` in `draft_delivery.py` (the builder emits neither) | `test_draft_delivery.py::Markup::test_s_is_not_on_outlooks_list_and_strike_is` |
 | `rules-and-skill.diff` did not apply (the client report row, after main's "ask creaite does not write reports" clause) | Rebased onto `origin/main` keeping that clause; the Draft email bullet also names the reading-tool deny and the empty working folder | `patch -p1 --dry-run` and `git apply --check` clean for both diffs |
 
+**Round 2 (Opus delta re-check of 932ef492, 20-10-2026).** L-a: the L1 `body = …` line was 159 characters and put `live_server.py` 25 lines
+over the 140-character limit (the limit is 24); it is wrapped. Verified by applying both diffs to a scratch copy of `origin/main`
+(dcd8a7b6), in either order, and running `python3 dev/tools/check.py`: `check: OK` (before the wrap: 1 problem). L-b:
+`test_draft_delivery.py::test_an_injected_cc_bcc_or_changed_subject_or_to_is_never_reported_as_success` (a Cc, a Bcc, an empty Bcc, a
+changed subject or To in the tool call: `check()` refuses, `made` stays true). L-c: `test_draft_route.py` starts the server with the
+vault as its working folder (as `launch.py` does) and asserts the run's folder is neither the vault nor under it.
+**Follow-up for Jarvis (no code here):** this machine's account also connects Gmail, Google Drive, Google Calendar and Vercel, none in
+`permissions.NON_M365_MCP_DENY`. In this route's run they are stopped by headless default-deny and by `check()`; the same gap exists for
+the VIP/alert check and the other runs on main, which deny only the servers in that list.
+
 **Apply order:** `live_server.diff`, then `rules-and-skill.diff` (independent; either order applies), then move `test_draft_route.py` to
 `dev/tests/`. The branch's own files (`draft_delivery.py`, the popup, the tests) arrive when the branch is merged.
 
