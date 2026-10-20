@@ -54,7 +54,7 @@ python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check  
 
 ## Which tests prove it
 
-- `dev/tests/test_archive_99.py` (new): ordinary part always runs (names, resolve under all three names, both-present, look-alikes and case, new moves to `99 Archive`, a name taken in an old folder is numbered, skeleton, no migration and no offer). `HandRenamed`, `HandRenamedProject` (a folder renamed by hand after the archive: old record + new folder, new record + old folder, both; Files › Archived, Move back, Undo, Restore project, `check_move`) and `OldNamesAreStillSkipped` (a saved `never_index` without the old names still skips `zz Archive` and `_Archive` in indexing, documents and the guard) are in it too. The guarded part (`MoveRules`, `RestoreFromAnOldArchive`, the old-folder cases of `HandRenamed*`, `test_check_move_…`) **runs only when `reach.ARCHIVE99` is present** (the diff applied); with `ARCHIVE99_UNPATCHED=1`, or with the diff missing, it skips.
+- `dev/tests/test_archive_99.py` (new): ordinary part always runs (names, resolve under all three names, both-present, look-alikes and case, new moves to `99 Archive`, a name taken in an old folder is numbered, skeleton, no migration and no offer). `HandRenamed`, `HandRenamedProject` (a folder renamed by hand after the archive: old record + new folder, new record + old folder, both; Files › Archived, Move back, Undo, Restore project, `check_move`) and `AlwaysTheNewName` (a new archive goes to `99 Archive` where an old folder exists: Delete note, the 12-month move, archive project, numbering across all three) and `OldNamesAreStillSkipped` (a saved `never_index` without the old names still skips `zz Archive` and `_Archive` in indexing, documents and the guard) are in it too. The guarded part (`MoveRules`, `RestoreFromAnOldArchive`, the old-folder cases of `HandRenamed*`, `test_check_move_…`) **runs only when `reach.ARCHIVE99` is present** (the diff applied); with `ARCHIVE99_UNPATCHED=1`, or with the diff missing, it skips.
 - Updated for the new name: `test_archive_projects`, `test_archive_reports`, `test_archive_move_back`, `test_card_only_moves`, `test_notes_delete`, `test_notes_card_only_ops`, `test_onedrive_projects`, `test_update`, `test_reach`, `test_file_access`, `test_health_fixes`, `test_health_dismiss`, `test_portability` (doctor has 36 checks), `test_fs_newfile`, `test_fast_save`, `test_pages`, `test_agendas_files`, `test_settings_calmer`, the two bash-form tests, `handchecks/test_v195`.
 - The results are in the report that came with this proposal (head sha, counts, and the run on a scratch copy with the diff applied).
 
@@ -76,32 +76,27 @@ python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check  
 
 `Grep` is not blocked from the archive folders. The guard hook allows `Grep(path=<engagement folder>, output_mode=content)`, and `reach.never_inside` ignores project folders that are skipped by name, so a search from the engagement folder goes into `99 Archive` and `zz Archive` (there is no deny pattern for `zz Archive`; `99 Archive` and `_Archive` have one). It relies on Claude Code's own `Read` deny rules covering `Grep`. Worth a separate look; this proposal does not change it.
 
-## The one decision: where does a NEW archive go in a place that still has an old `_Archive`?
+## The rule (decided by Alan, 20-10-2026, via Jarvis)
 
-Alan's rule is one name, `99 Archive`, and no migration. The two proposals differ only here:
+**New archives always go into `99 Archive`, in every place** (the projects root, an engagement, the portfolio), even where an old `_Archive` still exists. **The old folders are read for one release**: nothing in them disappears, they are still skipped by search and extraction and unreadable to ask creaite, and a move OUT of them (restore, Move back, Undo) works from any of the three names. Alan renames his old folders by hand. A place with both an old folder and `99 Archive` reads both, `99 Archive` first (it wins on a stored path both hold); a name already taken in any of them is numbered, so a new item is never written over or followed into an old one (N1).
 
-| | **A: always `99 Archive`** (this proposal, current) | **B: the folder already in use at that place** (the other proposal's `reach.diff`) |
-|---|---|---|
-| A place with only an old `_Archive` (an engagement, the projects root, the portfolio) | A new report, note or project goes into a new `99 Archive` beside the old `_Archive`: **two archive folders side by side** in that place until Alan renames or merges the old one himself. Both are read, `99 Archive` first | New items keep going into the old `_Archive` until Alan renames it, so a place never has two. creaite keeps **writing into the old name** for one more release |
-| The guard | New moves must end in exactly `99 Archive`; `_Archive` and `zz Archive` are accepted only as the source of a restore or a move back | `_Archive` is also accepted as a destination, but only where that place has no `99 Archive` (never a new `_Archive`, never `zz Archive`); needs a `paths.archive_name(place)` helper that the guard calls |
-| Work to switch | none (built) | `paths.archive_name(base)`; four callers (`archive.free_archive_path` and `due_reports`, `propose.archive_spec`) and `reach._archive_part`; tests for each place state |
-| N1 (a taken name in an old folder) | the free-name check looks in all three folders either way, so it composes with A and B | same |
+*For Alan, in one line:* new archives always go to `99 Archive`; old `_Archive` and `zz Archive` folders are read for one release, then dropped.
 
-**Recommended: A.** It is the simplest rule to review, matches "one name", never writes into a name that is going away, and costs Alan nothing he will notice except two folders in a place until he renames the old one. Choose B only if two archive folders side by side in one place would bother him. Say which; B is a half-day change on top of this branch.
+(The other proposal's rule, "into the folder already in use at that place", was considered and not adopted; Jarvis first chose it, then reversed it on Alan's word. Nothing of it, `paths.archive_name` included, is in this branch.)
 
 ## Merged from the other proposal (`origin/v26-archive-name-proposal`, ae8740c4)
 
 | Piece | Taken? |
 |---|---|
-| 11 older tests expecting `99 Archive` | Already done here for every file it names (and more); the ones it left on `_Archive` only differ because of decision B above |
+| 11 older tests expecting `99 Archive` | Done here for every file it names and more, **including** those where an engagement already holds the skeleton's old `_Archive` (a new archive there goes to `99 Archive`) |
 | `creaite-rules.md` wording | One set: `rules_edit.py` (its `creaite-rules.diff` still talks about Health's rename, which Alan declined) |
 | `live_server.py` `existing_project_folder` via `skipped_names` | Taken (here via `paths.is_skipped`, also case-blind); the ask-creaite prompt and comment edits too. New test with a hand-emptied `never_index` |
 | `permissions.py` wording | Taken: the refusal names the folder that was hit (`99 Archive is never read or written…`, or `_Archive …`) |
-| `reach.py` rule for moves INTO an archive | **Not taken; see the decision above** (his is B) |
+| `reach.py` rule for moves INTO an archive | **Not taken**: his is "into the folder in use"; Alan's rule is always `99 Archive` (above) |
 | `reach.py` `rename` shape, Health's "Rename to 99 Archive", `old-archives`, the update's `never_index` rename | Declined: Alan's decision 1 (no migration, no offer) |
 | `tracker.py` comments | Taken (same changes) |
-| `archive_alias` / `archive_name` | `archive_alias` is covered by `paths.follow_stored` (all four record/folder combinations, no cross-project follow, no symlink, no `..`); `archive_name` only under B |
-| `test_archive_folder_99.py` | Its cases that fit this design are in `test_archive_99.py` (`AfterAHandRename`, the portfolio shapes, the emptied list); the Health, update-rename, folder-in-use and rename-apply tests are not (they test what Alan declined or decision B) |
+| `archive_alias` / `archive_name` | `archive_alias` is covered by `paths.follow_stored` (all four record/folder combinations, no cross-project follow, no symlink, no `..`); `archive_name` is not used (see the rule) |
+| `test_archive_folder_99.py` | Its cases that fit this design are in `test_archive_99.py` (`AfterAHandRename`, the portfolio shapes, the emptied list); the Health, update-rename, folder-in-use and rename-apply tests are not (they test what Alan declined or the rule he reversed); its "new archive goes into the old `_Archive` where one exists" cases are replaced by `AlwaysTheNewName`, which expects `99 Archive` |
 | `DESIGN.md` | `DESIGN.md` here lists every place that names the folder |
 
 ## With #255 (Delete note with no card, `origin/v26-delete-note-card` b73a31a4)
@@ -113,6 +108,5 @@ Alan's rule is one name, `99 Archive`, and no migration. The two proposals diffe
 
 ## Decisions Alan still has to make
 
-- **Where a new archive goes in a place that still has an old `_Archive`: always `99 Archive` (A, built) or the folder already in use (B).** See the table above; recommended A.
 - Which release drops the old names (Jarvis plans 2.6 for #252, so 2.7?). Until then Alan renames his own folders when he likes; nothing prompts him.
 - Whether `zz Archive` should stay out of ask creaite's deny patterns (as now: guarded by `classify`, not named) or be named too (a one-line change in `paths.never_index_patterns`).

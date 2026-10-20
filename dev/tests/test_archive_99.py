@@ -156,6 +156,47 @@ class AfterAHandRename(OneDriveCase):
                 self.assertEqual(got[2], [str(self.root / "_Portfolio" / NEW / "08 Notes" / "p.md")] * 2)
 
 
+class AlwaysTheNewName(OneDriveCase):
+    """Alan's rule (via Jarvis, 20-10-2026): a new archive ALWAYS goes into 99 Archive, in every place, even where an old _Archive
+    still exists; the old folders are read for one release and nothing is written into them."""
+
+    def test_delete_note_and_the_reports_move_write_only_to_99_archive(self):
+        for code in ("ABC", "DEF"):
+            shutil.rmtree(self.eng(code, NEW))                                  # the template's own: the places start without one
+            touch(self.eng(code, "08 Notes", "Plan.md"), "---\ntitle: Plan\n---\nBody\n")
+            touch(self.eng(code, "02 Meetings", "Minutes", "2024-01-05 Steering.docx"))
+        touch(self.eng("ABC", "_Archive", "08 Notes", "Other.md"))             # ABC still has the old _Archive, DEF has none
+        touch(self.eng("DEF", "zz Archive", "z.md"))                           # DEF has a zz Archive
+        got = self.py("import archive, datetime; print(json.dumps([[archive.note_delete_spec(p)[0]['file_changes']['file_ops'][0]['to'] "
+                      "for p in ('projects/Example Programme/08 Notes/Plan.md', 'projects/Digital Enablement/08 Notes/Plan.md')], "
+                      "sorted(r['to'] for r in archive.due_reports(on=datetime.date(2026, 10, 20)))]))")
+        self.assertEqual(got[0], ["projects/Example Programme/99 Archive/08 Notes/Plan.md",
+                                  "projects/Digital Enablement/99 Archive/08 Notes/Plan.md"])
+        self.assertEqual(got[1], ["projects/Digital Enablement/99 Archive/02 Meetings/Minutes/2024-01-05 Steering.docx",
+                                  "projects/Example Programme/99 Archive/02 Meetings/Minutes/2024-01-05 Steering.docx"])
+
+    def test_a_project_archive_goes_to_99_archive_beside_an_old_folder(self):
+        spec = lambda: json.loads(self.v.run("archive", "ABC", "--cancel-open", script="propose.py").stdout)["file_changes"]["file_ops"][0]["to"]  # noqa: E731
+        for old in OLDS:
+            (self.root / old).mkdir()
+            self.assertEqual(spec(), "projects/99 Archive/Example Programme", old)
+        touch(self.root / "_Archive" / "Example Programme" / "x.md")
+        self.assertEqual(spec(), "projects/99 Archive/Example Programme 2")       # a name taken in the old folder is numbered
+        (self.root / NEW).mkdir()
+        self.assertEqual(spec(), "projects/99 Archive/Example Programme 2")       # both there: still 99 Archive
+
+    def test_the_note_name_is_numbered_across_all_three_folders(self):
+        """N1: with an old folder holding the same name the new note is numbered in 99 Archive, and the guard accepts it."""
+        shutil.rmtree(self.eng("ABC", NEW))
+        touch(self.eng("ABC", "08 Notes", "Plan.md"), "---\ntitle: Plan\n---\nBody\n")
+        touch(self.eng("ABC", "_Archive", "08 Notes", "Plan.md"))
+        touch(self.eng("ABC", "zz Archive", "08 Notes", "Plan-2.md"))
+        op = self.py("import archive; print(json.dumps(archive.note_delete_spec('projects/Example Programme/08 Notes/Plan.md')[0]['file_changes']['file_ops'][0]))")
+        self.assertEqual(op["to"], "projects/Example Programme/99 Archive/08 Notes/Plan-3.md")
+        why = self.py(f"import reach; print(json.dumps(reach.archive_move_problem({op['from']!r}, {op['to']!r}, 'notes')))")
+        self.assertIsNone(why)
+
+
 class NewMovesGoToTheNewName(OneDriveCase):
     def test_a_project_archive_goes_to_99_archive_and_a_taken_name_is_numbered_across_all_three(self):
         o = self.py("import propose, paths\n"
