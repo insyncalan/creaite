@@ -7,6 +7,8 @@ On apply the inbox copy is filed in the project's minutes folder as `YYYY-MM-DD 
 (a transcript is never staged without its draft) must still hold, also when a transcript is passed off as minutes.
 """
 import json
+import re
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -148,6 +150,159 @@ class Refusals(Base):
         self.assertEqual(self.proposals(), [])
         self.assertTrue((self.v.root / FILE).exists())
 
+    def test_empty_values_do_not_slip_past_the_check(self):
+        """`minutes: {}` and `draft: ""` are falsy but given: refused, never the record path."""
+        for extra in ({"minutes": {}}, {"draft": ""}, {"transcript": ""}, {"note": ""}):
+            _, r = self.stage(ok=False, **extra)
+            self.assertEqual(r.returncode, 1, extra)
+            self.assertIn("staged on their own", r.stdout)
+        self.assertEqual(self.proposals(), [])
+
+    def test_a_transcript_by_its_type_or_its_header_is_refused(self):
+        (self.v.root / "inbox/call.vtt").write_text(TRANSCRIPT)
+        (self.v.root / "inbox/call.srt").write_text("1\n00:00:01,000 --> 00:00:04,000\nHello\n")
+        (self.v.root / "inbox/loaded.txt").write_text("Event ID: AAMkAD123\n\nOmar Ali: I'll send it.\n")
+        for f in ("inbox/call.vtt", "inbox/call.srt", "inbox/loaded.txt"):
+            _, r = self.stage(ok=False, file=f)
+            self.assertEqual(r.returncode, 1, f)
+            self.assertIn("is a transcript, not minutes", r.stdout)
+        self.assertEqual(self.proposals(), [])
+
+    def test_an_unreadable_file_is_a_clean_refusal(self):
+        import os
+        if os.geteuid() == 0:
+            self.skipTest("root reads everything")
+        (self.v.root / FILE).chmod(0)
+        try:
+            _, r = self.stage(ok=False)
+        finally:
+            (self.v.root / FILE).chmod(0o644)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("can't be read", r.stdout)
+        self.assertNotIn("Traceback", r.stderr)
+
+
+class Confinement(Base):
+    """The file is a plain path in inbox/ (or the matched project's minutes folder): the inbox copy's removal can't reach any
+    other file, and only relative paths are stored."""
+
+    def refused(self, file, **extra):
+        _, r = self.stage(ok=False, file=file, **extra)
+        self.assertEqual(r.returncode, 1, file)
+        self.assertEqual(self.proposals(), [], file)
+        return r.stdout
+
+    def test_an_absolute_path_is_refused(self):
+        outside = self.v.root.parent / "outside-minutes.txt"
+        outside.write_text("x")
+        try:
+            self.assertIn("not a plain path", self.refused(str(outside)))
+            self.assertIn("not a plain path", self.refused("/etc/hosts"))
+        finally:
+            outside.unlink()
+
+    def test_a_dotdot_path_that_reaches_another_project_file_is_refused_and_the_file_survives(self):
+        doc = self.v.root / f"{ABC}/documents/contract.txt"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("The contract\n")
+        self.assertIn("not a plain path", self.refused(f"inbox/../{ABC}/documents/contract.txt"))
+        self.assertTrue(doc.exists())
+
+    def test_a_backslash_path_is_refused_not_staged_without_a_remove(self):
+        (self.v.root / "inbox/m.txt").write_text(MINUTES)
+        self.assertIn("not a plain path", self.refused("inbox\\m.txt"))
+
+    def test_a_file_outside_the_inbox_and_the_minutes_folder_is_refused(self):
+        doc = self.v.root / f"{ABC}/documents/plan.txt"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("The plan\n")
+        self.assertIn("neither in inbox/", self.refused(f"{ABC}/documents/plan.txt"))
+        self.assertTrue(doc.exists())
+
+    def test_a_symlink_leaving_the_inbox_is_refused(self):
+        target = self.v.root / f"{ABC}/documents/secret.txt"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("Secret\n")
+        (self.v.root / "inbox/link.txt").symlink_to(target)
+        self.assertIn("neither in inbox/", self.refused("inbox/link.txt"))
+        self.assertTrue(target.exists())
+
+    def test_a_symlink_in_the_minutes_folder_leaving_it_is_refused(self):
+        target = self.v.root / f"{ABC}/documents/secret.txt"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("Secret\n")
+        link = self.v.root / f"{ABC}/minutes/2026-10-12 Vendor call.txt"
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+        self.assertIn("neither in inbox/", self.refused(f"{ABC}/minutes/2026-10-12 Vendor call.txt"))
+        self.assertTrue(target.exists())
+
+    def test_the_inbox_folder_itself_and_a_missing_file_are_refused(self):
+        self.assertIn("not found", self.refused("inbox/nothing.txt"))
+        self.assertIn("not found", self.refused("inbox"))
+
+    def test_a_minutes_folder_file_of_a_project_not_matched_is_refused(self):
+        other = self.v.root / f"{ABC}/minutes/2026-10-12 Vendor call.txt"
+        other.parent.mkdir(parents=True, exist_ok=True)
+        other.write_text(MINUTES)
+        self.assertIn("neither in inbox/", self.refused(f"{ABC}/minutes/2026-10-12 Vendor call.txt", projects=[]))
+
+    def test_only_relative_paths_reach_the_proposal(self):
+        self.stage()
+        text = self.proposals()[0].read_text()
+        self.assertNotIn(str(self.v.root), text)
+        meeting = json.loads(text)["meeting"]
+        self.assertFalse(Path(meeting["source_file"]).is_absolute() or Path(meeting["note"]).is_absolute())
+
+    def ops_for(self, file):
+        """by_others_ops called directly (behind the refusal): the removal is a second line of defence."""
+        code = ("import sys, json; sys.path.insert(0, 'system/scripts')\nimport minutes\n"
+                f"print(json.dumps(minutes.by_others_ops({{'file': {file!r}}}, ['ABC'], '2026-10-12 Vendor call')[1]))")
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def test_only_a_file_in_the_inbox_is_ever_removed(self):
+        other = self.v.root / f"{ABC}/documents/plan.txt"
+        other.parent.mkdir(parents=True, exist_ok=True)
+        other.write_text("The plan\n")
+        ops = self.ops_for(f"{ABC}/documents/plan.txt")
+        self.assertNotIn("remove", [o["op"] for o in ops])
+        own = self.v.root / f"{ABC}/minutes/2026-10-12 Vendor call.txt"
+        own.parent.mkdir(parents=True, exist_ok=True)
+        own.write_text(MINUTES)
+        self.assertEqual(self.ops_for(f"{ABC}/minutes/2026-10-12 Vendor call.txt"), [])
+        self.assertEqual([o["op"] for o in self.ops_for(FILE)], ["copy", "remove"])
+
+    def test_a_nested_inbox_file_is_removed_after_filing(self):
+        (self.v.root / "inbox/sub").mkdir()
+        (self.v.root / "inbox/sub/m.txt").write_text(MINUTES)
+        self.stage(file="inbox/sub/m.txt")
+        ops = self.staged()["meeting"]["file_ops"]
+        self.assertEqual(ops[-1], {"op": "remove", "path": "inbox/sub/m.txt"})
+
+
+class KeyTests(Base):
+    def test_the_key_includes_the_content_hash(self):
+        """Same date and title, different content: a different key (so a corrected file is not 'already processed')."""
+        (self.v.root / "inbox/a.txt").write_text("first version\n")
+        (self.v.root / "inbox/b.txt").write_text("second version\n")
+        keys = [json.loads(self.v.run("key", "--date", DAY, "--title", TITLE, "--minutes", f, script="minutes.py").stdout)["key"]
+                for f in ("inbox/a.txt", "inbox/b.txt")]
+        self.assertNotEqual(keys[0], keys[1])
+        self.assertTrue(all(re.fullmatch(r"fp:2026-10-12\|vendor call\|[0-9a-f]{12}", k) for k in keys), keys)
+
+    def test_a_missing_file_is_a_clean_error(self):
+        r = self.v.run("key", "--date", DAY, "--title", TITLE, "--minutes", "inbox/gone.txt", script="minutes.py", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("can't read inbox/gone.txt", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_reading_a_missing_file_as_minutes_fails_with_a_message(self):
+        r = self.v.run("transcript", "inbox/gone.txt", "--minutes", script="minutes.py", ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("can't read inbox/gone.txt", r.stdout)
+
 
 class ApplyTests(Base):
     """The apply files the copy (tracker.py apply, unchanged) and records the file's key, so a re-run says already processed."""
@@ -159,7 +314,7 @@ class ApplyTests(Base):
             i["decision"] = "approved"
         p.write_text(json.dumps(data, indent=2))
 
-    def test_nothing_is_filed_or_written_before_approval(self):
+    def test_staging_alone_files_and_writes_nothing(self):
         self.stage()
         self.assertTrue((self.v.root / FILE).exists())
         self.assertFalse((self.v.root / FILED).exists())
@@ -206,9 +361,6 @@ class ApplyTests(Base):
         self.assertFalse((self.v.root / FILED).exists())
         self.assertEqual(self.processed().strip(), "")
 
-    def test_rejecting_every_item_files_nothing_until_it_is_applied(self):
-        self.stage()
-        self.assertTrue((self.v.root / FILE).exists())               # staging alone moves nothing
 
 
 class ReadTests(Base):

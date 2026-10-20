@@ -75,10 +75,12 @@ An item may instead update an open item of the meeting's project (BL-65), for so
 Someone else's minutes (#232 E1, Intake's "Find work items"): give "as": "minutes" and "file": "inbox/<file>" in place of
 "draft", "minutes", "transcript" and "note" (any of them with "as" is refused: a transcript is never staged this way, BL-260
 holds). Nothing is drafted: no Word draft and no minutes record. Only actions, decisions, risks and issues, and updates to open
-ones, are read from it (a promise is left out: it is said in passing, in a meeting). The file is read where it is; on approval it
+ones, are read from it (a promise is left out: it is said in passing, in a meeting). "file" is a plain relative path (no
+"..", backslash or leading "/") in inbox/ or in a matched project's minutes folder; a .vtt, .srt, or a file with a calendar
+event ID in its header, is refused as a transcript. The file is read where it is; on approval it
 is copied to each matched project's minutes folder as "YYYY-MM-DD Title.ext" and the inbox copy removed (a file already in a
 project's minutes folder stays where it is: Alan's own, never copied, moved or renamed). The proposal's meeting block has
-"kind": "minutes by others", "minutes_decision": "approved" (like a quick note: nothing to approve but the items), "draft": null
+"kind": "minutes by others", "minutes_decision": "approved" (like a quick note: no minutes to approve), "draft": null
 and "note" (the first filed copy, which also tells apply there is no draft to file); each item's source is the filed copy plus
 its section. The key is "fp:<day>|<title>|<hash of the file>", so the same file again says "Already processed".
 A quick note (BL-54) is already filed where it belongs: give "note": "projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick
@@ -89,6 +91,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import date, datetime, timedelta
@@ -303,7 +306,7 @@ def minutes_key(day, title, file):
     """#232 E1: the key for someone else's minutes: 'fp:<day>|<title>|<hash of the file>'. Never an event ID: the file isn't
     the meeting's transcript, so it must not mark the meeting processed."""
     p = paths.resolve(file)
-    content = hashlib.sha256(p.read_bytes()).hexdigest()[:12] if p.is_file() else ""
+    content = hashlib.sha256(p.read_bytes()).hexdigest()[:12]
     return f"fp:{day}|{norm_title(title)}|{content}"
 
 
@@ -581,21 +584,77 @@ def by_others(spec):
 
 
 def minutes_by_others_refused(spec):
-    """True (and says why) when someone else's minutes can't be staged: it goes alone, as a file that exists. A transcript is
-    never staged this way, so BL-260 (never minutes without a draft) holds for every transcript."""
+    """True (and says why) when someone else's minutes can't be staged: they go alone, as a readable file in `inbox/` (or already
+    in a matched project's minutes folder) that is not a transcript. A transcript is never staged this way, so BL-260 (never
+    minutes without a draft) holds for every transcript."""
     if spec.get("as") != "minutes":
         print(f"Unknown \"as\": {spec.get('as')!r}. The only value is \"minutes\" (someone else's minutes). Nothing staged.")
         return True
-    if any(spec.get(k) for k in ("draft", "minutes", "transcript", "note")):
+    if any(spec.get(k) is not None for k in ("draft", "minutes", "transcript", "note")):     # also an empty one: {} or ""
         print("Someone else's minutes are staged on their own: give \"as\": \"minutes\" and \"file\" without \"draft\", "
               "\"minutes\", \"transcript\" or \"note\" (a transcript needs draft minutes). Nothing staged.")
         debuglog.warn("minutes", "stage refused: minutes by others were given with a draft, a transcript or a note")
         return True
-    if not spec.get("file") or not paths.resolve(spec["file"]).is_file():
-        print(f"Minutes file not found: {spec.get('file') or '(no file given)'}. Nothing staged.")
-        debuglog.warn("minutes", "stage refused: the minutes file was not found")
+    why = file_problem(spec.get("file"), spec.get("projects") or [])
+    if why:
+        print(f"{why} Nothing staged.")
+        debuglog.warn("minutes", "stage refused: the minutes file was not acceptable")
         return True
     return False
+
+
+def _inside(real, folder):
+    """Whether real path `real` is `folder` or below it (both already real paths)."""
+    return real == folder or real.startswith(folder.rstrip(os.sep) + os.sep)
+
+
+def _in_minutes_folder(file, real, code):
+    """Whether stored path `file` (real path `real`) is in project `code`'s minutes folder; an unknown project has none."""
+    try:
+        folder = paths.folder(code, "minutes")
+        return file.startswith(paths.rel(folder) + "/") and _inside(real, os.path.realpath(folder))
+    except (LookupError, ValueError, OSError):
+        return False
+
+
+def file_problem(file, projects):
+    """Why `file` can't be staged as someone else's minutes, or None. It must be a plain relative path (no `..`, backslash, NUL),
+    and, once every symlink is followed, a file in `inbox/` or in a matched project's minutes folder: never anywhere else, so the
+    inbox copy removal can't reach another file. A transcript (.vtt, .srt, or a calendar event ID in its header) is refused."""
+    if not isinstance(file, str) or not file.strip():
+        return "Minutes file not found: (no file given)."
+    parts = file.split("/")
+    if "\x00" in file or "\\" in file or file.startswith(("/", "~")) or any(x in ("", ".", "..") for x in parts):
+        return f"Minutes file not acceptable: {file!r} is not a plain path inside the vault."
+    return _file_problem(file, parts, projects)
+
+
+def _file_problem(file, parts, projects):
+    """file_problem's second half: the path is plain; where it points, and what it is."""
+    p = paths.resolve(file)
+    if not p.is_file():
+        return f"Minutes file not found: {file}."
+    real = os.path.realpath(p)
+    in_inbox = parts[0] == "inbox" and len(parts) > 1 and _inside(real, os.path.realpath(paths.INBOX))
+    in_place = any(_in_minutes_folder(file, real, c) for c in projects)
+    if not (in_inbox or in_place):
+        return f"Minutes file not acceptable: {file} is neither in inbox/ nor in the matched project's minutes folder."
+    if p.suffix.lower() in (".vtt", ".srt") or file_event_id(file):
+        return (f"{file} is a transcript, not minutes: a transcript needs draft minutes (use Make minutes). "
+                "Nothing is read as minutes from it.")
+    try:
+        p.read_bytes()
+    except OSError as e:
+        return f"Minutes file can't be read: {file} ({type(e).__name__})."
+    return None
+
+
+def _same_bytes(a, b):
+    """Whether two files hold the same bytes; unreadable counts as different."""
+    try:
+        return a.read_bytes() == b.read_bytes()
+    except OSError:
+        return False
 
 
 def filed_name(code, name, ext, src):
@@ -605,7 +664,7 @@ def filed_name(code, name, ext, src):
     for n in range(1, 100):
         to = f"{mdir}/{name}{ext}" if n == 1 else f"{mdir}/{name} ({n}){ext}"
         there = paths.resolve(to)
-        if not there.exists() or there.read_bytes() == paths.resolve(src).read_bytes():
+        if not there.exists() or _same_bytes(there, paths.resolve(src)):
             return to
     return f"{mdir}/{name}{ext}"
 
@@ -1222,14 +1281,23 @@ def cmd_transcript(args):
     if len(args) == 2 and args[1] != "--minutes":
         print("usage: minutes.py transcript <file> [--minutes]")
         return 2
-    print(tracker.text_of(paths.resolve(args[0])) if len(args) == 2 else transcript_text(args[0]))
+    try:
+        if not paths.resolve(args[0]).is_file():
+            raise FileNotFoundError(args[0])
+        print(tracker.text_of(paths.resolve(args[0])) if len(args) == 2 else transcript_text(args[0]))
+    except OSError as e:                          # a missing or unreadable file: one line, not a traceback
+        print(f"creaite: can't read {args[0]}: {type(e).__name__}")
+        return 1
     return 0
 
 
 def key_of(a):
     """The key `minutes.py key` prints: someone else's minutes by the file's content (#232 E1), else the meeting's."""
     if a.minutes:
-        return minutes_key(a.date, a.title, a.minutes)
+        try:
+            return minutes_key(a.date, a.title, a.minutes)
+        except OSError as e:
+            raise SystemExit(f"creaite: can't read {a.minutes}: {type(e).__name__}") from e
     return meeting_key(a.date, a.title, a.transcript, a.event_id)
 
 
