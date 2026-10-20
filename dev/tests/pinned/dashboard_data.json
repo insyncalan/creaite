@@ -1465,6 +1465,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     }
    ],
    "file": "proposed-design.json",
+   "hold": "minutes",
    "indiv": true,
    "kind": "draft",
    "mt": "aadc46ba3c",
@@ -1486,6 +1487,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-design.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -1516,6 +1518,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
   {
    "age": "<AGE>",
    "file": "proposed-files.json",
+   "hold": "file changes",
    "indiv": true,
    "kind": "files",
    "n": 4,
@@ -1535,6 +1538,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "age": "<AGE>",
    "cov": [],
    "file": "proposed-gone.json",
+   "hold": "minutes",
    "indiv": true,
    "kind": "draft",
    "mt": "c5f18f62ff",
@@ -1565,6 +1569,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    },
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -1597,6 +1602,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "raid",
    "mf": null,
@@ -1633,6 +1639,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "flags": [
     "conflict"
    ],
+   "hold": "conflict",
    "indiv": true,
    "kind": "update",
    "mf": null,
@@ -1642,6 +1649,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "rec": {
     "changes": [
      {
+      "col": "owner",
       "field": "owner",
       "from": "Sara Example",
       "to": "Omar Haddad"
@@ -1650,7 +1658,9 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "field": "owner",
     "from": "Sara Example",
     "t": "ABC-A-002: owner → Omar Haddad",
+    "table": "actions",
     "target": "ABC-A-002",
+    "title": "Book UAT environment",
     "to": "Omar Haddad"
    },
    "ref": 5,
@@ -1665,6 +1675,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "status change",
    "indiv": true,
    "kind": "update",
    "mf": null,
@@ -1674,11 +1685,13 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "rec": {
     "changes": [
      {
+      "col": "status",
       "field": "status",
       "from": "Open",
       "to": "Delayed"
      },
      {
+      "col": "latest_update",
       "field": "latest update",
       "from": null,
       "to": "CIO away"
@@ -1687,7 +1700,9 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "field": "status",
     "from": "Open",
     "t": "ABC-A-001 Escalate data access to the client CIO",
+    "table": "actions",
     "target": "ABC-A-001",
+    "title": "Escalate data access to the client CIO",
     "to": "Delayed",
     "why": "the CIO is away"
    },
@@ -1703,6 +1718,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "health change",
    "indiv": true,
    "kind": "update",
    "mf": null,
@@ -1712,11 +1728,13 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "rec": {
     "changes": [
      {
+      "col": "health",
       "field": "health",
       "from": "Off track",
       "to": "At risk"
      },
      {
+      "col": "health_reason",
       "field": "health reason",
       "from": "UAT start slipped 14 days",
       "to": "UAT"
@@ -1725,7 +1743,9 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "field": "health",
     "from": "Off track",
     "t": "ABC: health → At risk, health_reason → UAT",
+    "table": "projects",
     "target": "ABC",
+    "title": "Example Programme",
     "to": "At risk"
    },
    "ref": 7,
@@ -1740,6 +1760,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "update",
    "mf": null,
@@ -1749,6 +1770,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "rec": {
     "changes": [
      {
+      "col": "forecast_date",
       "field": "forecast",
       "from": "2026-11-02",
       "to": "2026-11-09"
@@ -1757,7 +1779,9 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "field": "forecast_date",
     "from": "2026-11-02",
     "t": "ABC-M-001: forecast_date → 09-11-2026",
+    "table": "milestones",
     "target": "ABC-M-001",
+    "title": "UAT start",
     "to": "2026-11-09"
    },
    "ref": 8,
@@ -1772,6 +1796,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "client wording",
    "indiv": true,
    "kind": "update",
    "mf": null,
@@ -1781,6 +1806,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "rec": {
     "changes": [
      {
+      "col": "client_message",
       "field": "client messaging",
       "from": "",
       "to": "We moved go-live"
@@ -1789,7 +1815,9 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "field": "client_message",
     "from": "",
     "t": "ABC-D-005: client_message → We moved go-live",
+    "table": "decisions",
     "target": "ABC-D-005",
+    "title": "Go-live moves two weeks",
     "to": "We moved go-live"
    },
    "ref": 9,
@@ -1804,6 +1832,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "need a project",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -1839,6 +1868,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "no-owner",
     "no-due-date"
    ],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -1873,6 +1903,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "flags": [
     "date-from-file"
    ],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -1907,6 +1938,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "flags": [
     "new-workstream"
    ],
+   "hold": "new risk",
    "indiv": true,
    "kind": "raid",
    "mf": null,
@@ -1946,6 +1978,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "need a project",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -1992,6 +2025,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "inferred": [],
    "kind": "actions",
@@ -2032,6 +2066,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    },
    "file": "proposed-mixed.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -2064,6 +2099,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-note.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -2095,6 +2131,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "age": "<AGE>",
    "cov": [],
    "file": "proposed-pending.json",
+   "hold": "minutes",
    "indiv": true,
    "kind": "draft",
    "mt": "13fbd79c3d",
@@ -2116,6 +2153,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-pending.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -2148,6 +2186,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-pending.json",
    "flags": [],
+   "hold": "new risk",
    "indiv": true,
    "kind": "raid",
    "mf": null,
@@ -2182,6 +2221,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-pending.json",
    "flags": [],
+   "hold": "need a project",
    "indiv": false,
    "kind": "actions",
    "mf": null,
@@ -2212,6 +2252,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
   {
    "age": "<AGE>",
    "file": "proposed-report.json",
+   "hold": "report",
    "indiv": true,
    "kind": "draft",
    "n": 5,
@@ -2232,6 +2273,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "dup": null,
    "file": "proposed-undone.json",
    "flags": [],
+   "hold": "",
    "indiv": false,
    "kind": "update",
    "mf": null,
@@ -2241,6 +2283,7 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
    "rec": {
     "changes": [
      {
+      "col": "due_date",
       "field": "due date",
       "from": "2026-10-06",
       "to": "2026-11-08"
@@ -2249,7 +2292,9 @@ Note: current-state image not found or not an image: projects/ABC Example Progra
     "field": "due_date",
     "from": "2026-10-06",
     "t": "ABC-A-001: due_date → 08-11-2026",
+    "table": "actions",
     "target": "ABC-A-001",
+    "title": "Escalate data access to the client CIO",
     "to": "2026-11-08"
    },
    "ref": 1,
