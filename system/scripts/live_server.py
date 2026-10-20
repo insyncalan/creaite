@@ -184,6 +184,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -1211,6 +1212,7 @@ class Handler(BaseHTTPRequestHandler):
         except CLIENT_LEFT:                                       # BL-284: the page left; not a 500
             raise
         except Exception as e:                                    # the page keeps its old list and says so
+            log_fault(self, e)                                    # #253: the cause, by class and frame
             self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
 
     def usage_get(self):
@@ -1221,6 +1223,7 @@ class Handler(BaseHTTPRequestHandler):
         except CLIENT_LEFT:                                       # the page left; not a 500
             raise
         except Exception as e:                                    # the tab keeps the figures built into the page
+            log_fault(self, e)                                    # #253: the cause, by class and frame
             self.send(500, {"ok": False, "message": f"{type(e).__name__}"})
 
     def do_POST(self):
@@ -1270,6 +1273,8 @@ class Handler(BaseHTTPRequestHandler):
         logged at info, never answered or logged as a 500 (BL-284)."""
         if isinstance(e, CLIENT_LEFT):
             raise e
+        log_fault(self, e)                                        # #253: the cause, by route, class and frame, once a minute
+        self._log_cls = type(e).__name__                          # #253: what the result routes' line names, never str(e)
         return self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
 
     def fs(self, req):
@@ -7858,14 +7863,74 @@ def log_stale(handler, line):
 # ===== end BL-269 =====
 
 
+# ===== #253 (log hygiene) ===== an unhandled route error's cause: the route, the exception's class and its innermost
+# frames (file name, line, function), at ERROR, once per route per minute so a loop cannot flood the log. Never str(e):
+# an exception's message can carry the request's own text. A page that left mid-reply (CLIENT_LEFT) stays at info.
+FAULT_EVERY = 60
+FAULT_SEEN = {}                     # "METHOD route" → when its cause was last logged (monotonic seconds)
+FAULT_LOCK = threading.Lock()
+
+
+def fault_frames(e, depth=3):
+    """e's innermost traceback frames as "file.py:line in function", innermost first: file names only, no source text."""
+    frames = traceback.extract_tb(e.__traceback__)[-depth:] if e.__traceback__ else []
+    return " < ".join(f"{Path(f.filename).name}:{f.lineno} in {f.name}" for f in reversed(frames))
+
+
+def log_cause(key, e):
+    """One ERROR line for an error's cause under `key` (a route, or a background thread): its class and innermost frames,
+    never its message; at most once per key per minute. A failure here is swallowed."""
+    try:
+        at = time.monotonic()
+        with FAULT_LOCK:
+            if at - FAULT_SEEN.get(key, at - FAULT_EVERY) < FAULT_EVERY:
+                return
+            FAULT_SEEN[key] = at
+        where = fault_frames(e)
+        debuglog.error("server", f"{key} raised {type(e).__name__}" + (f" at {where}" if where else ""))
+    except Exception:  # noqa: BLE001  a log line never stops the answer
+        return
+
+
+def log_fault(handler, e):
+    """Log a route error's cause (#253): never its message; at most once per route per minute; a page that left is not one."""
+    if isinstance(e, CLIENT_LEFT):
+        return
+    try:
+        key = f"{handler.command} {log_route(handler)}"
+    except Exception:  # noqa: BLE001
+        return
+    log_cause(key, e)
+
+
+def thread_name(t):
+    """A background thread's name for the log, as Python makes it ("Thread-3 (vip_timer)") or as it was given: no data."""
+    return debuglog.clean(re.sub(r"[^A-Za-z0-9_ ().-]+", "_", str(getattr(t, "name", "") or "?")), 60)
+
+
+def install_thread_faults():
+    """#253: a background thread's uncaught error is logged by thread, class and frame (never str(e)), once a minute, then
+    handed to Python's own hook (which prints it to the server's console, system/staging/live-server.log, as before)."""
+    orig = threading.excepthook
+
+    def hook(args):
+        """Log the thread's fault, then Python's own hook."""
+        if args.exc_value is not None and not isinstance(args.exc_value, SystemExit):
+            log_cause(f"thread {thread_name(args.thread)}", args.exc_value)
+        return orig(args)
+    threading.excepthook = hook
+# ===== end #253 =====
+
+
 def log_request(handler, started):
     """Write one debug-log line for a finished request: method, route, status and time, at a level fitting the result (BL-102)."""
     code, route = getattr(handler, "_log_code", None), log_route(handler)
     line = f"{handler.command} {route} {code or '-'} {int((time.monotonic() - started) * 1000)}ms"
     if getattr(handler, "_log_stale", None):                   # BL-269 (sprint-live-updates)
         return log_stale(handler, line)
-    if route in RESULT_ROUTES and getattr(handler, "_log_ok", None) is False:
-        debuglog.warn("server", f"{line} not ok: {debuglog.clean(getattr(handler, '_log_msg', ''), 160)}")
+    if route in RESULT_ROUTES and getattr(handler, "_log_ok", None) is False:      # #253: the class of a fault, never its words
+        cls = getattr(handler, "_log_cls", None)
+        debuglog.warn("server", f"{line} not ok" + (f": {cls}" if cls else ""))
     elif code and code >= 500:
         debuglog.error("server", line)
     elif code == 404 and route == "/api/chat":                 # BL-330: a remembered chat that's gone is normal, not a WARN
@@ -7999,16 +8064,13 @@ def install_debug_log():
     def logged_send(self, code, body, *a, **k):
         self._log_code = code
         if isinstance(body, dict):
-            self._log_ok = body.get("ok")
-            self._log_msg = str(body.get("message") or "") if body.get("ok") is False else ""
+            self._log_ok = body.get("ok")                     # #253: the message is not kept (it can carry item text)
         return send(self, code, body, *a, **k)
     Handler.send = logged_send
-
     def timed(name, orig):
         def method(self):
             started = time.monotonic()
-            self._log_code = self._log_ok = self._log_stale = None          # BL-269: _log_stale
-            self._log_msg = ""
+            self._log_code = self._log_ok = self._log_stale = self._log_cls = None   # BL-269: _log_stale; #253: _log_cls
             route = self.path.split("?")[0]
             try:
                 if name == "do_POST" and route == "/api/log/error":
@@ -8022,14 +8084,13 @@ def install_debug_log():
                 self._log_code = None                 # BL-284: whatever was being sent never arrived; not logged as its status
                 return None
             # ===== end BL-263 =====
-            except Exception:
-                debuglog.exception("server", f"{self.command} {log_route(self)} failed")
+            except Exception as e:
+                log_fault(self, e)                    # #253: class and frame, never str(e) (debuglog.exception printed it)
                 raise
             finally:
                 log_request(self, started)
         return method
     Handler.do_GET, Handler.do_POST = timed("do_GET", Handler.do_GET), timed("do_POST", Handler.do_POST)
-
     # ask creaite, Generate, search, Prep and Intake runs: started, tools used, permission requests, ended.
     orig_init, orig_emit, orig_read = Run.__init__, Run.emit, Run.read
 
@@ -8049,8 +8110,12 @@ def install_debug_log():
         elif kind == "permission":
             debuglog.warn("run", f"{self.id} asked for a permission rule: {debuglog.clean(data.get('rule', ''), 200)} ({data.get('state', '')})")
         elif kind == "changes":                                       # BL-141: the one card (paths only)
+            ops = {}                                                   # #253: each op and its count, never a title (it names a path)
+            for i in data.get("items") or []:
+                op = re.sub(r"[^a-z_]", "", str(i.get("op") or "rule"))[:20] or "rule"
+                ops[op] = ops.get(op, 0) + 1
             debuglog.warn("run", f"{self.id} card {data.get('card') or '-'}: {len(data.get('items') or [])} changes for approval, "
-                                 f"{len(data.get('refused') or [])} refused: " + debuglog.clean("; ".join(i.get('title', '') for i in data.get('items') or []), 300))
+                                 f"{len(data.get('refused') or [])} refused: " + debuglog.clean(", ".join(f"{k} {v}" for k, v in sorted(ops.items())), 120))
         elif kind == "stopped":
             debuglog.warn("run", f"{self.id} stopped{' (timed out)' if data.get('timed_out') else ''}")
         return orig_emit(self, kind, **data)
@@ -8096,6 +8161,7 @@ def install_debug_log():
 if debuglog is not None:
     try:
         install_debug_log()
+        install_thread_faults()                                   # #253: a background thread's error, by class and frame
     except Exception as e:  # noqa: BLE001  logging must never stop the server
         print(f"Note: the debug log wasn't installed: {type(e).__name__}: {e}", flush=True)
 
