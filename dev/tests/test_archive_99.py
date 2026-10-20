@@ -19,6 +19,7 @@ Everything is fictional and temporary.
 """
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import unittest
@@ -134,6 +135,25 @@ class Resolve(OneDriveCase):
         got = self.py("import paths; print(json.dumps([str(p) for p in paths.notes_places(paths.projects_root(), '08 Notes')]))")
         for name in ALL:
             self.assertIn(str(self.eng("ABC", name, "08 Notes")), got)
+
+
+class AfterAHandRename(OneDriveCase):
+    """From Stark's test_archive_folder_99 (merged): Alan renames the archive folders to 99 Archive himself; a path recorded under
+    the old name opens the file in the renamed folder, for a deleted note, an archived project and the portfolio's archive."""
+
+    def test_old_stored_paths_resolve_into_the_renamed_folder(self):
+        shutil.rmtree(self.eng("ABC", NEW))
+        note = touch(self.eng("ABC", NEW, "08 Notes", "Sandbox plan.md"), "---\ntitle: Sandbox plan\n---\nThe wombat sandbox.\n")
+        touch(self.root / NEW / "Old Engagement" / "CLAUDE.md")
+        touch(self.root / "_Portfolio" / NEW / "08 Notes" / "p.md")
+        for old in OLDS:
+            with self.subTest(old=old):
+                q = [f"projects/Example Programme/{old}/08 Notes/Sandbox plan.md", f"projects/{old}/Old Engagement/CLAUDE.md",
+                     f"projects/_portfolio/{old}/08 Notes/p.md"]
+                got = self.py("import paths; print(json.dumps([[str(paths.resolve(p, archived=a)) for a in (True, False)] for p in %r]))" % (q,))
+                self.assertEqual(got[0], [str(note)] * 2)
+                self.assertEqual(got[1], [str(self.root / NEW / "Old Engagement" / "CLAUDE.md")] * 2)
+                self.assertEqual(got[2], [str(self.root / "_Portfolio" / NEW / "08 Notes" / "p.md")] * 2)
 
 
 class NewMovesGoToTheNewName(OneDriveCase):
@@ -260,6 +280,28 @@ class MoveRules(OneDriveCase):
             self.assertEqual(self.problem(a, b, "notes") is None, name == NEW, name)
             (self.eng("ABC", f)).unlink()
 
+    def test_a_place_that_still_has_an_old_folder_gets_new_items_in_99_archive(self):
+        """The decision in the README: new archives go to 99 Archive always (this proposal); not to the old folder in use."""
+        f = "02 Meetings/Minutes/2024-01-05 Steering.docx"
+        for name in OLDS:
+            touch(self.eng("ABC", f))
+            touch(self.eng("ABC", name, "02 Meetings", "Minutes", "2023-01-05 Older.docx"))       # the place still has the old folder
+            a = f"projects/Example Programme/{f}"
+            self.assertIsNone(self.problem(a, f"projects/Example Programme/99 Archive/{f}", "reports"), name)
+            self.assertIsNotNone(self.problem(a, f"projects/Example Programme/{name}/{f}", "reports"), name)
+            self.eng("ABC", name, "02 Meetings", "Minutes", "2023-01-05 Older.docx").unlink()
+            self.eng("ABC", f).unlink()
+
+    def test_the_portfolio_has_the_same_shapes(self):
+        f = "02 Meetings/Minutes/2024-01-05 Portfolio review.docx"
+        touch(self.root / "_Portfolio" / f)
+        a = f"projects/_portfolio/{f}"
+        self.assertIsNone(self.problem(a, f"projects/_portfolio/99 Archive/{f}", "reports"))
+        self.assertIsNotNone(self.problem(a, f"projects/_portfolio/_Archive/{f}", "reports"))
+        (self.root / "_Portfolio" / f).unlink()
+        touch(self.root / "_Portfolio" / "_Archive" / f)
+        self.assertIsNone(self.problem(f"projects/_portfolio/_Archive/{f}", a, "reports_back"))
+
     def test_the_rename_kind_is_gone(self):
         touch(self.eng("ABC", "zz Archive", "x.md"))
         for new in ("99 Archive", "_Archive"):
@@ -320,6 +362,15 @@ class RestoreFromAnOldArchive(unittest.TestCase):
                 con.commit()
 
     def test_the_live_server_does_not_treat_the_archive_as_a_project_folder(self):
+        got = subprocess_json(self.v, "import live_server as L; print(json.dumps([L.existing_project_folder(n) for n in "
+                                      "('99 Archive', '99 archive', '_Archive', 'zz Archive')]))")
+        self.assertEqual(got, [False, False, False, False])
+        for n in ("99 Archive", "_Archive", "zz Archive"):
+            (self.v.root / "projects" / n).mkdir(exist_ok=True)
+        cfg = self.v.root / "system/config/settings.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["locations"] = {"projects_root": "", "never_index": ["_Templates"]}      # a list emptied by hand: still skipped
+        cfg.write_text(json.dumps(data, indent=2), encoding="utf-8")
         got = subprocess_json(self.v, "import live_server as L; print(json.dumps([L.existing_project_folder(n) for n in "
                                       "('99 Archive', '99 archive', '_Archive', 'zz Archive')]))")
         self.assertEqual(got, [False, False, False, False])
