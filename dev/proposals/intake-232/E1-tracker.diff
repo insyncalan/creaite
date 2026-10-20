@@ -1,5 +1,5 @@
 diff --git system/scripts/tracker.py system/scripts/tracker.py
-index fb5a714f..39b71db6 100644
+index fb5a714f..1b37d548 100644
 --- system/scripts/tracker.py
 +++ system/scripts/tracker.py
 @@ -28,6 +28,7 @@ import os
@@ -10,58 +10,161 @@ index fb5a714f..39b71db6 100644
  import subprocess
  import sys
  import threading
-@@ -1413,8 +1414,18 @@ def check_file_op(fop, blk):
-         src = op_source(fop, blk)
-         if not src or not paths.resolve(src).is_file():
-             raise Invalid(f"copy: source not found ({src})")
+@@ -1404,17 +1405,35 @@ def op_source(fop, blk):
+     return src
+ 
+ 
++def _check_copy(fop, blk):
++    """check_file_op for a copy: the source is there, the destination is a free name (never a folder, never a different file), and
++    for someone else's minutes (#232 E1) a regular file in the allowed folders going into the matched project's minutes folder."""
++    src = op_source(fop, blk)
++    if not src or not paths.resolve(src).is_file():
++        raise Invalid(f"copy: source not found ({src})")
++    dst = safe_path(fop.get("to"), "copy")
++    if dst.is_dir():
++        raise Invalid(f"copy: {paths.rel(dst)} is a folder")
++    if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):      # #232 E1: said now, not halfway through an apply
++        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
++    if by_others_op(fop, blk):
++        why = by_others_file_problem(src, blk, fop.get("src_sha256")) or by_others_dest_problem(dst, blk)
++        if why:
++            raise Invalid(f"copy: {why}")
++
++
+ def check_file_op(fop, blk):
+     """Check one file operation of a proposal can be done safely (source exists, every path relative and in a
+     writable area); raises Invalid.
+     """
+     op = fop.get("op")
+     if op == "copy":
+-        src = op_source(fop, blk)
+-        if not src or not paths.resolve(src).is_file():
+-            raise Invalid(f"copy: source not found ({src})")
 -        safe_path(fop.get("to"), "copy")
-+        dst = safe_path(fop.get("to"), "copy")
-+        if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):      # #232 E1: said now, not halfway through an apply
-+            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
-+        if blk.get("kind") == BY_OTHERS:
-+            why = by_others_file_problem(src, blk, fop.get("src_sha256"))
-+            if why:
-+                raise Invalid(f"copy: {why}")
++        _check_copy(fop, blk)
      elif op == "remove":
-+        if blk.get("kind") == BY_OTHERS:
++        if by_others_op(fop, blk):
 +            why = by_others_file_problem(fop.get("path"), blk, fop.get("src_sha256"))
 +            if why:
 +                raise Invalid(f"remove: {why}")
          safe_path(fop.get("path"), "remove")
      elif op == "mkdir":
          safe_path(fop.get("path"), "mkdir")
-@@ -1603,12 +1614,29 @@ def _op_copy(apply_id, fop, blk, done):
+@@ -1501,15 +1520,18 @@ def set_status_line(docx, text):
+     return True
+ 
+ 
+-def stash(apply_id, src):
+-    """Keep a copy of a file in system/backups/files/<apply_id>/ so undo can restore it."""
++def stash(apply_id, src, data=None):
++    """Keep a copy of a file in system/backups/files/<apply_id>/ so undo can restore it (`data`: the bytes already read and checked)."""
+     dest = paths.BACKUPS / "files" / str(apply_id) / paths.rel(src)
+     dest.parent.mkdir(parents=True, exist_ok=True)
+     n = 1
+     while dest.exists():
+         dest = dest.with_name(f"{dest.stem}.{n}{dest.suffix}")
+         n += 1
+-    shutil.copy2(src, dest)
++    if data is None:
++        shutil.copy2(src, dest)
++    else:
++        dest.write_bytes(data)
+     return paths.rel(dest)
+ 
+ 
+@@ -1598,23 +1620,90 @@ def stamp_draft(draft, text, on):
+ 
+ def _op_copy(apply_id, fop, blk, done):
+     src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
++    if dst.is_dir():
++        raise Invalid(f"copy: {paths.rel(dst)} is a folder")
+     if dst.exists():
+         if file_hash(dst) == file_hash(src):
              return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
          raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
      dst.parent.mkdir(parents=True, exist_ok=True)
 -    shutil.copy2(src, dst)
-+    if blk.get("kind") == BY_OTHERS:
-+        _copy_checked(src, dst, fop.get("src_sha256"))
++    if by_others_op(fop, blk):
++        _copy_checked(src, dst, fop.get("src_sha256"), op_source(fop, blk))
 +    else:
 +        shutil.copy2(src, dst)
      done.append({"op": "copy", "to": paths.rel(dst), "hash": file_hash(dst)})
  
  
-+def _copy_checked(src, dst, sha):
-+    """#232 E1: someone else's minutes are copied from the bytes read once, never through a link, and only if they are the staged ones."""
-+    with os.fdopen(os.open(src, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as f:
-+        data = f.read()
++def _copy_checked(src, dst, sha, rel):
++    """#232 E1: someone else's minutes are copied from the bytes read once, never through a link, and only if they are the staged ones.
++    `rel` is the stored path, the only one a message or the log may carry (an OSError would name the absolute one)."""
++    try:
++        with os.fdopen(os.open(src, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as f:
++            data = f.read()
++    except OSError as e:
++        raise Invalid(f"copy: {rel} can't be read as a regular file ({type(e).__name__})") from None
 +    if hashlib.sha256(data).hexdigest() != sha:
-+        raise Invalid(f"copy: {paths.rel(src)}: the file changed since it was staged")
++        raise Invalid(f"copy: {rel}: the file changed since it was staged")
 +    dst.write_bytes(data)
 +    shutil.copystat(src, dst)
 +
 +
  def _op_remove(apply_id, fop, blk, done):
      p = safe_path(fop["path"], "remove")
-+    if blk.get("kind") == BY_OTHERS:             # #232 E1: the path itself, never what a link there points at (safe_path resolves it)
-+        p = paths.resolve(fop["path"])
-+        if p.is_symlink():
-+            raise Invalid(f"remove: {fop['path']} is a link; it is never removed")
++    if by_others_op(fop, blk):
++        return _remove_checked(apply_id, fop, blk, done)
      if p.exists():
          kept = stash(apply_id, p)
          p.unlink()
-@@ -2273,19 +2301,74 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
+         done.append({"op": "remove", "path": paths.rel(p), "kept": kept})
+ 
+ 
++def _open_inbox_folder(rel):
++    """An open file descriptor for the folder of inbox file `rel`, reached from the vault root one folder at a time, each opened
++    without following a link: a link anywhere on the way (inbox/ itself, or a folder in it) is refused, and a rename or a link put
++    on the path afterwards changes nothing, because the descriptor is the folder that was opened. Raises Invalid."""
++    parts = rel.split("/")
++    if parts[0] != "inbox" or len(parts) < 2 or any(x in ("", ".", "..") for x in parts):
++        raise Invalid(f"remove: {rel} is not a file in inbox/")
++    flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
++    fd = os.open(os.path.realpath(paths.ROOT), os.O_RDONLY | os.O_DIRECTORY)
++    try:
++        for part in parts[:-1]:
++            nxt = os.open(part, flags, dir_fd=fd)
++            os.close(fd)
++            fd = nxt
++    except OSError as e:
++        os.close(fd)
++        raise Invalid(f"remove: {rel}: its folder is not a plain folder ({type(e).__name__})") from None
++    return fd
++
++
++def _remove_checked(apply_id, fop, blk, done):
++    """#232 E1: remove the inbox copy of someone else's minutes through the open folder (_open_inbox_folder): the entry is opened
++    there without following a link, checked (regular file, one name, the staged checksum) and unlinked by name from that folder. So
++    a link put in place of the file, or of inbox/ or a folder in it, between the check and here removes nothing but the staged file."""
++    rel = fop["path"]
++    dfd = _open_inbox_folder(rel)
++    name = rel.rsplit("/", 1)[1]
++    try:
++        try:
++            ffd = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=dfd)
++        except FileNotFoundError:
++            return                                                 # already gone
++        except OSError as e:
++            raise Invalid(f"remove: {rel} is not a regular file ({type(e).__name__})") from None
++        with os.fdopen(ffd, "rb") as f:
++            st = os.fstat(f.fileno())
++            data = f.read()
++        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1 or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):
++            raise Invalid(f"remove: {rel}: the file changed since it was staged")
++        kept = stash(apply_id, paths.resolve(rel), data)
++        os.unlink(name, dir_fd=dfd)
++        done.append({"op": "remove", "path": rel, "kept": kept})
++    finally:
++        os.close(dfd)
++
++
+ def _op_mkdir(apply_id, fop, blk, done):
+     p = safe_path(fop["path"], "mkdir")
+     created = []
+@@ -2273,19 +2362,94 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
  
  # ── Apply ─────────────────────────────────────────────────────────────────────
  
@@ -85,15 +188,35 @@ index fb5a714f..39b71db6 100644
 +        i.get("applied") == apply_id and i.get("decision") == "approved" for i in data.get("items", []))
 +
 +
-+def _minutes_areas(blk):
-+    """The real paths of the folders someone else's minutes may be filed from: inbox/ and each matched project's minutes folder."""
-+    areas = [os.path.realpath(paths.INBOX)]
++def by_others_op(fop, blk):
++    """Whether a file operation is one of someone else's minutes: its block says so, or it carries the checksum minutes.py stages
++    (so a hand-written proposal that drops `kind` still gets the same checks; one that drops both gets today's rules, as every
++    other block does)."""
++    return blk.get("kind") == BY_OTHERS or bool(fop.get("src_sha256"))
++
++
++def _minutes_folders(blk):
++    """The real paths of each matched project's minutes folder."""
++    out = []
 +    for code in blk.get("projects") or []:
 +        try:
-+            areas.append(os.path.realpath(paths.folder(code, "minutes")))
++            out.append(os.path.realpath(paths.folder(code, "minutes")))
 +        except (LookupError, OSError):
 +            continue      # a project with no folder has no minutes folder to file from
-+    return areas
++    return out
++
++
++def _minutes_areas(blk):
++    """The real paths of the folders someone else's minutes may be filed from: inbox/ and each matched project's minutes folder."""
++    return [os.path.realpath(paths.INBOX), *_minutes_folders(blk)]
++
++
++def by_others_dest_problem(dst, blk):
++    """Why a copy of someone else's minutes may not go to `dst`, or None: only into a matched project's minutes folder."""
++    real = os.path.realpath(dst)
++    if any(real.startswith(f.rstrip(os.sep) + os.sep) for f in _minutes_folders(blk)):
++        return None
++    return f"{paths.rel(dst)} is not in the matched project's minutes folder"
 +
 +
 +def by_others_file_problem(rel, blk, sha):
@@ -139,7 +262,7 @@ index fb5a714f..39b71db6 100644
  
  
  # ===== BL-323: the OneDrive copy is the day's closed zip (backup.py); its retention is Tidy up's =====
-@@ -2333,6 +2416,7 @@ def cmd_apply(args):
+@@ -2333,6 +2497,7 @@ def cmd_apply(args):
      work = _load_work(args)
      if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
          work = _skip_card_leftovers(work)
@@ -147,7 +270,7 @@ index fb5a714f..39b71db6 100644
      if not work:
          print("Nothing to apply: no decided items.")
          return 0
-@@ -2447,6 +2531,39 @@ def card_move_problems(p, data):
+@@ -2447,6 +2612,39 @@ def card_move_problems(p, data):
      return out
  
  
@@ -187,7 +310,7 @@ index fb5a714f..39b71db6 100644
  def _skip_card_leftovers(work):
      """#124 F3: a full apply (no names) leaves out a proposal with a card-only move and no marker (an Approve that stopped
      before its apply finished left it in staging), so the rest still applies. A proposal named on the command line is refused
-@@ -2465,7 +2582,7 @@ def _skip_card_leftovers(work):
+@@ -2465,7 +2663,7 @@ def _skip_card_leftovers(work):
  def _file_op_problems(p, data, written):
      problems = []
      for blk, field in blocks(data):
@@ -196,7 +319,7 @@ index fb5a714f..39b71db6 100644
              for fop in selected_ops(blk, field):
                  try:
                      check_file_op(fop, blk)
-@@ -2665,7 +2782,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
+@@ -2665,7 +2863,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
      proposal file (#124 F3)."""
      processed = []
      for blk, field in blocks(data):
@@ -206,3 +329,13 @@ index fb5a714f..39b71db6 100644
              continue
          ops = selected_ops(blk, field)
          run_file_ops(apply_id, blk, field, ops, file_records, data, prop)
+@@ -2918,7 +3117,8 @@ def _return_proposals(proposals, apply_id, later, report):
+         for blk, field in blocks(data):
+             if blk.get("applied") == apply_id:
+                 blk.pop("applied", None)
+-                blk[field] = "pending"
++                # #232 E1: someone else's minutes have no minutes to approve: approved from staging, so a re-apply files them again
++                blk[field] = "approved" if blk.get("kind") == BY_OTHERS else "pending"
+         save(p, data)
+         if p.parent == paths.APPLIED:
+             p.replace(paths.STAGING / name)

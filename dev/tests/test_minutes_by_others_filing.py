@@ -54,6 +54,13 @@ MUTATIONS = {
     "no-claimed": ('                    claimed[to] = fop.get("src_sha256")\n', ""),
     "no-waiting-in-apply": ('not in ("approved", "rejected") or by_others_waiting(data, blk) \\', 'not in ("approved", "rejected") \\'),
     "no-dest-check": ("if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):", "if False:"),
+    "undo-pending": ('blk[field] = "approved" if blk.get("kind") == BY_OTHERS else "pending"', 'blk[field] = "pending"'),
+    "remove-by-path": ("    if by_others_op(fop, blk):\n        return _remove_checked(apply_id, fop, blk, done)\n", ""),
+    "chain-follows-links": ("            nxt = os.open(part, flags, dir_fd=fd)", "            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY, dir_fd=fd)"),
+    "no-dest-confine": (" or by_others_dest_problem(dst, blk)", ""),
+    "kind-only": ('return blk.get("kind") == BY_OTHERS or bool(fop.get("src_sha256"))', 'return blk.get("kind") == BY_OTHERS'),
+    "bare-oserror": ('raise Invalid(f"copy: {rel} can\'t be read as a regular file ({type(e).__name__})") from None', "raise"),
+    "no-dir-check": ('    dst = safe_path(fop.get("to"), "copy")\n    if dst.is_dir():\n        raise Invalid(f"copy: {paths.rel(dst)} is a folder")\n    if dst.exists() and file_hash', '    dst = safe_path(fop.get("to"), "copy")\n    if dst.exists() and file_hash'),
     "remove-follows-links": ("        if p.is_symlink():\n            raise Invalid(f\"remove:", "        if False:\n            raise Invalid(f\"remove:"),
 }
 
@@ -85,7 +92,7 @@ def scratch(patched):
         _patch(v.root)
     if not patched and already:
         _patch(v.root, "-R")
-    if MUTATE:
+    if MUTATE and patched:                       # the mutation breaks the patch: the unpatched copy has nothing to break
         old, new = MUTATIONS[MUTATE]
         text = tracker.read_text(encoding="utf-8")
         assert text.count(old) == 1, f"mutation {MUTATE}: {old!r} found {text.count(old)} times"
@@ -404,6 +411,148 @@ class HeldItems(Base):
         self.assertTrue(self.filed())
         self.assertFalse(self.inbox())
         self.assertIn(f"{FILED} | 1", self.processed())
+
+
+DRIVER = r"""
+import sys, os
+sys.path.insert(0, 'system/scripts')
+from pathlib import Path
+import tracker
+orig = tracker.FILE_OPS[%(op)r]
+def swap(apply_id, fop, blk, done):
+    %(swap)s
+    return orig(apply_id, fop, blk, done)
+tracker.FILE_OPS[%(op)r] = swap
+print('RC', tracker.main(['apply']))
+"""
+
+
+class Races(Base):
+    """What a local process could do between the check and the operation (the operation is wrapped, as a reviewer would)."""
+
+    def run_driver(self, op, swap):
+        r = subprocess.run([sys.executable, "-c", DRIVER % {"op": op, "swap": swap}], cwd=self.v.root, capture_output=True, text=True)
+        log = "".join(f.read_text(errors="ignore") for f in (self.v.root / "system/logs").glob("*.log")) if (self.v.root / "system/logs").exists() else ""
+        return r.stdout + r.stderr, log
+
+    def test_inbox_swapped_for_a_link_before_the_remove_deletes_nothing_of_the_target(self):
+        docs = self.v.root / f"{ABC}/documents"
+        docs.mkdir(parents=True, exist_ok=True)
+        victim = docs / Path(FILE).name
+        victim.write_text("A contract with the same file name\n")
+        self.decide("approved", "approved")
+        out, _ = self.run_driver("remove", "os.rename('inbox', 'inbox.real'); os.symlink(%r, 'inbox')" % str(docs))
+        self.assertTrue(victim.exists())
+        self.assertEqual(victim.read_text(), "A contract with the same file name\n")
+        self.assertIn("RC 1", out)                                   # the apply stopped and rolled back
+        self.assertEqual(self.v.rows("actions"), [])
+        self.assertEqual(self.processed(), "")
+
+    def test_a_folder_in_inbox_swapped_before_the_remove_deletes_nothing_of_the_target(self):
+        (self.v.root / "inbox/sub").mkdir()
+        name = self.stage_more("inbox/sub/n.txt", "Nested minutes\n", title="[ABC] Nested call")
+        self.approve(name)
+        other = self.v.root / f"{ABC}/documents/other-inbox"
+        (other / "sub").mkdir(parents=True)
+        victim = other / "sub/n.txt"
+        victim.write_text("Nested minutes\n")                         # the very same bytes
+        out, _ = self.run_driver("remove", "os.rename('inbox', 'inbox.real'); os.symlink(%r, 'inbox')" % str(other))
+        self.assertTrue(victim.exists())
+        self.assertIn("RC 1", out)
+
+    def test_the_file_swapped_for_a_link_before_the_remove_is_not_removed(self):
+        target = self.contract()
+        self.decide("approved", "approved")
+        out, _ = self.run_driver("remove", "p = Path('inbox') / %r; p.unlink(); p.symlink_to(%r)" % (Path(FILE).name, str(target)))
+        self.assertTrue(target.exists())
+        self.assertIn("RC 1", out)
+        self.assertEqual(self.v.rows("actions"), [])
+
+    def test_the_copy_of_a_link_swapped_in_after_the_check_is_a_clean_refusal_with_no_absolute_path(self):
+        target = self.v.root / f"{ABC}/documents/same-bytes.txt"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(MINUTES, encoding="utf-8")                 # same bytes: only refusing the link stops the copy
+        self.decide("approved", "approved")
+        out, log = self.run_driver("copy", "p = Path('inbox') / %r; p.unlink(); p.symlink_to(%r)" % (Path(FILE).name, str(target)))
+        self.assertIn("RC 1", out)
+        self.assertIn("can't be read as a regular file", out + log)
+        for root in {str(self.v.root), os.path.realpath(self.v.root)}:      # the data's path (script file names in a traceback are code)
+            self.assertNotIn(root + "/inbox", out + log)
+            self.assertNotIn(root + "/projects", out + log)
+        self.assertFalse(self.filed())
+        self.assertTrue(target.exists())
+
+
+class Undo(Base):
+    def test_undo_then_approve_both_files_the_minutes_again(self):
+        self.decide("approved", "pending")
+        self.v.run("apply")
+        self.assertTrue(self.filed())
+        self.v.run("undo")
+        self.assertTrue(self.inbox())                               # the inbox copy is back
+        self.assertFalse(self.filed())
+        self.assertEqual(self.processed().strip(), "")
+        self.assertEqual(self.proposal()["meeting"]["minutes_decision"], "approved")
+        self.decide("approved", "approved")
+        r = self.v.run("apply")
+        self.assertIn("filed 1", r.stdout)
+        self.assertTrue(self.filed())
+        self.assertFalse(self.inbox())
+        self.assertIn(f"{FILED} | 2", self.processed())
+        self.assertEqual(len(self.v.rows("actions")), 2)
+        self.assertTrue((self.v.root / "system/staging/applied" / self.name).exists())
+
+
+class HandWritten(Base):
+    """A proposal edited to drop `kind` keeps the checks while its ops carry the checksum; `to` stays in the minutes folder."""
+
+    def edit(self, fn):
+        p = self.v.root / "system/staging" / self.name
+        data = json.loads(p.read_text())
+        fn(data["meeting"])
+        p.write_text(json.dumps(data, indent=2))
+
+    def test_without_kind_a_link_swap_still_deletes_nothing(self):
+        target = self.contract()
+        self.edit(lambda m: m.pop("kind"))
+        self.swap(lambda f: f.symlink_to(target))
+        self.decide("approved", "approved")
+        r = self.v.run("apply", self.name, ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(target.exists())
+        self.assertFalse(self.filed())
+
+    def move_out(self, m, drop_kind):
+        for op in m["file_ops"]:
+            if op["op"] == "copy":
+                op["to"] = f"{ABC}/documents/2026-10-12 Vendor call.txt"
+        if drop_kind:
+            m.pop("kind", None)
+
+    def test_a_copy_to_outside_the_minutes_folder_is_refused_with_or_without_kind(self):
+        for drop_kind in (False, True):
+            self.edit(lambda m, d=drop_kind: self.move_out(m, d))
+            r = self.v.run("validate", str(self.v.root / "system/staging" / self.name), ok=False)
+            self.assertEqual(r.returncode, 1, drop_kind)
+            self.assertIn("is not in the matched project's minutes folder", r.stdout)
+        self.assertFalse((self.v.root / f"{ABC}/documents/2026-10-12 Vendor call.txt").exists())
+
+
+class FolderDestination(Base):
+    def test_a_folder_at_the_destination_is_a_clean_refusal(self):
+        (self.v.root / FILED).mkdir(parents=True)
+        r = self.v.run("validate", str(self.v.root / "system/staging" / self.name), ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("is a folder", r.stdout)
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+        self.assertNotIn(str(self.v.root), r.stdout + r.stderr)
+        self.decide("approved", "approved")
+        r = self.v.run("apply", self.name, ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("is a folder", r.stdout)
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+        self.assertNotIn(str(self.v.root), r.stdout + r.stderr)
+        self.assertTrue(self.inbox())
 
 
 if __name__ == "__main__":

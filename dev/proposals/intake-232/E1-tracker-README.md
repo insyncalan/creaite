@@ -1,7 +1,7 @@
 # Proposal E1-tracker: someone else's minutes are filed safely, and only with a written item
 
 `system/scripts/tracker.py` is guarded, so this is a proposal for Jarvis: `dev/proposals/intake-232/E1-tracker.diff` (a patch
-against origin/main's tracker.py, `patch -p0` from the vault root; about 125 lines added, 7 changed). The stage side
+against origin/main's tracker.py, `patch -p0` from the vault root; about 210 lines added, 11 changed). The stage side
 (`minutes.py`, the skill, the docs) needs no tracker.py change and is already on the branch; this is what makes the apply safe.
 
 ## Why
@@ -37,8 +37,26 @@ not refuse it. Apply runs a block's file operations whenever its decision is app
   folder, and hash to the `src_sha256` staged by `minutes.py` ("the file changed since it was staged" otherwise; a missing
   checksum is refused).
 - `_op_copy` for the block reads the bytes once through `O_NOFOLLOW`, compares them with `src_sha256`, then writes them (no
-  window between check and copy); `_op_remove` for the block unlinks the path itself (`paths.resolve`, not the resolved
-  `safe_path` result) and refuses a link.
+  window between check and copy). A link that appears after the check (an `ELOOP`) is a clean `Invalid` naming the stored
+  (relative) path, `from None`, so neither stdout nor the debug log carries the absolute path.
+- `_op_remove` for the block works through the open folder (`_remove_checked`, `_open_inbox_folder`): the folder is reached from
+  the vault root one level at a time, each opened with `O_NOFOLLOW | O_DIRECTORY` (so `inbox/`, or a folder in it, swapped for a
+  link is refused, and a rename or link put on the path afterwards changes nothing: the descriptor is the folder that was
+  opened); the entry is opened with `O_NOFOLLOW` from that folder, checked (regular file, one name, `src_sha256`), backed up from
+  the bytes just read, and unlinked by name from the open folder (`os.unlink(name, dir_fd=fd)`). Only a file in `inbox/` can be
+  removed this way (minutes.py stages no other remove). (Inbox transcripts still have the old hole: `copy` from `transcript`
+  then `remove` of the path; not touched here.)
+- **Undo:** the existing undo resets every applied block to `pending`; for a `minutes by others` block it now sets it back to
+  `approved` (it is approved from staging), so undo, approve, apply files the minutes again. Without this the re-apply wrote the
+  items, filed nothing, left the file in inbox/ and the proposal in staging for good.
+- **Hand-written or edited proposals:** the checks key on `by_others_op(fop, blk)`: the block's `kind` *or* the `src_sha256` on the
+  operation, so a proposal edited to drop `kind` is still checked. A copy of such an operation must go to a matched project's
+  minutes folder (`by_others_dest_problem`), not anywhere `safe_path` allows. **Known limit:** a proposal edited to drop both
+  `kind` and `src_sha256` gets today's rules (a link swap is followed and its target removed, and `to` is confined only by
+  `safe_path`), as every other block (transcripts, reports, notes) does today; proposals are written by the staging scripts into
+  `system/staging/`, which only creaite's own commands and Alan write. Closing that for every block is a different, larger change.
+- **A folder at the destination** is refused cleanly at validation and at apply ("… is a folder", relative path), not an
+  `IsADirectoryError` naming the absolute path.
 - `check_file_op` (every copy): refuses, at validation, a destination that already exists as a different file.
 - **The queue is not blocked:** a full apply (`tracker.py apply` with no arguments) first drops, with a line "Left in staging,
   not applied: <proposal>: <reason>.", each `minutes by others` proposal whose file can't be filed now (destination taken by a
@@ -49,12 +67,20 @@ not refuse it. Apply runs a block's file operations whenever its decision is app
 - `minutes.py` (already on the branch) gives each copy and remove op `src_sha256`, numbers the destination against files on disk
   and against other staged proposals' destinations, and refuses to stage the same file twice.
 
+## Known residuals
+- The remove's last step (`unlink` by name from the open, checked folder) can in theory still remove a *different regular file of
+  the same name in the same folder* swapped in after the checksum was read, by a local process that wins that race; the file is
+  in inbox/ (or the minutes folder), backed up in `system/backups/files/` and undone with the apply. Nothing outside the folder can
+  be reached.
+- The edited-proposal limit above.
+
 ## Repro (today)
 Scratch vault: stage `"as": "minutes", "file": "inbox/m.txt"` (two items), then
 1. add another approved proposal and run `tracker.py apply`: m.txt is filed and removed, `processed.txt` has `... | 0`;
 2. or mark both items rejected and apply: the same;
 3. or replace `inbox/m.txt` with a symlink to a vault file, approve, apply: the target is filed as the minutes and deleted;
-4. or create a different file at the destination and apply twice: the apply fails each time, and an unrelated proposal in the
+4. or `tracker.py undo` after the first apply, approve both items and apply again: written 2, filed 0, the file stays in inbox/;
+5. or create a different file at the destination and apply twice: the apply fails each time, and an unrelated proposal in the
    queue is never applied.
 
 ## How to test
@@ -63,7 +89,7 @@ Scratch vault: stage `"as": "minutes", "file": "inbox/m.txt"` (two items), then
     E1_TRACKER_MUTATE=<name> python3 dev/tests/test_minutes_by_others_filing.py   # one line of the patch broken: a test goes red
 The scratch copy is a throwaway vault whose `tracker.py` is the repo's with the diff applied (`patch -p0`); after Jarvis applies the
 diff to the repo the same file keeps guarding it (the marker `def by_others_waiting` is found, and the "defect" tests reverse the
-patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 14 of the 21 tests go red (the swap,
+patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 22 of the 30 tests go red (the swap, undo, race, hand-written proposal, folder destination,
 held-item, collision, unrelated-apply and all-rejected tests, and the validation message); the `DefectToday` tests document today's
 behaviour on the unpatched copy in both modes, and the rest (one approved item files, no double filing, undo, the same file at the
 destination) is today's behaviour and stays green.
