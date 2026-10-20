@@ -10,7 +10,8 @@ Run: python3 dev/tests/test_client_output_properties.py                 smoke: 5
 The generator and the properties are dev/tests/client_output_props.py (standard library only, seeded), run inside this file's
 throwaway vault. Each property's docstring there states it; a failure prints its seed, case and mutation list to replay.
 Not run here: P12 and P25 (browser tier: asynchronous answers racing in the page, and the bulk Match and slash menu in the
-sheet), see their skipped tests.
+sheet). P25 runs in test_client_output_p25.py (Chrome); P12's server half is step 2's test_preview_P12_* (the answer names the
+report it is of); its page half (a delayed answer landing on another report's pane) has no browser test yet.
 """
 import json
 import os
@@ -138,7 +139,7 @@ class Properties(A.Audience):
     def test_P23_approve_files_the_export_and_undo_restores(self): self.check("P23")
     def test_P24_repeat_exports(self): self.check("P24")
 
-    @unittest.skip("P25 is the browser tier (the sheet's bulk Match and slash menu): not run by this file")
+    @unittest.skip("P25 is the browser tier: it runs in test_client_output_p25.py (Chrome; v2.5.1 step 3)")
     def test_P25_bulk_match_adds_no_section(self): pass
 
     @unittest.skipUnless(MUTANTS_ON, "the mutation proofs run with CREAITE_PROPS_MUTANTS=1")
