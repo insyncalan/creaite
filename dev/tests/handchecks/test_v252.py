@@ -544,6 +544,7 @@ class Usage238(V252Case):
         self.note(15, f"the daily job wrote {len(rows)} lines for {shown(today)} ({', '.join(sorted(r['file'] for r in rows))}), counts "
                       "only; a second run the same day added none; the tab only read it")
 
+    @unittest.skip("struck from 2.5.2 (Natasha, 20-10-2026): Your reviews and the CSV follow in 2.5.3")
     def test_c16_your_reviews_and_csv(self):
         """16. "Your reviews": add a note → it is saved with its date and kept; Download as CSV gives the notes."""
         self.need(self.fix238 and self.fix238_reviews, "#238's Your reviews (origin/v252-usage with its /api/usage/review route)")
