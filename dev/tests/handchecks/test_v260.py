@@ -1260,24 +1260,25 @@ class Archive252(V260Case):
         portfolio's too); two old folders in one place are never merged; none, nothing to rename."""
 
     @needs("252")
-    @calls((A99, ["Update", "VaultLayout"], AR))
+    @calls((A99, ["Update", "VaultLayout.test_99_archive_is_never_a_project"], AR))
     def test_c79_the_update_renames_the_setting_only(self):
         """79. The update renames the saved never_index value to 99 Archive and moves no folder; 99 Archive is never taken for a
         project."""
 
     @needs("252", "252g")
-    @calls((A99, ["GuardedMoves"], AR + " and its guarded diffs"))
+    @calls((A99, ["GuardedMoves", "VaultLayout.test_live_server_never_takes_99_archive_for_a_project"], AR + " and its guarded diffs"))
     def test_c80_the_guarded_moves(self):
         """80. With the guarded diffs in: the card's moves accept only 99 Archive (or the old folder in use), the rename applies and
-        undoes with links still working, and a project archives and restores through 99 Archive."""
+        undoes with links still working, a project archives and restores through 99 Archive, and the live server never takes
+        99 Archive for a project."""
 
     @needs("252")
     def test_c81_the_page_says_99_archive(self):
         """81. The dashboard and Help say 99 Archive wherever they name the archive folder; _Archive appears only as an old name."""
         page = (self.vault / "dashboard.html").read_text(encoding="utf-8", errors="ignore")
-        self.assertIn("99 Archive", page)
+        self.assertTrue("99 Archive" in page, "the dashboard never names 99 Archive")
         help_md = (self.vault / "system/templates/help.md").read_text(encoding="utf-8")
-        self.assertIn("99 Archive", help_md)
+        self.assertTrue("99 Archive" in help_md, "Help never names 99 Archive")
         old = [ln.strip()[:120] for ln in help_md.splitlines() if "_Archive" in ln and "99 Archive" not in ln]
         self.assertEqual(old, [], "a Help line names only the old folder")
 
