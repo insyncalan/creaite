@@ -3702,11 +3702,15 @@ def vip_check(how="check"):
     """One VIP check. Returns a short note of what happened (also printed). BL-342 Part 3 B: one call; its reply is checked
     by sweep.vip_clean before it is recorded, and the debug log gets one line of counts, seconds and dollars (BL-102)."""
     import sweep
+    import vip_schedule
     if (paths.ROOT / ".creaite-dev").exists():
         return "skipped: development repository"
     vs, vips = sweep.vip_settings(), sweep.vip_addresses()
     if not vs.get("enabled", True) or not vips:
         return "skipped: no VIPs"
+    quiet = vip_schedule.paused()                         # #97: no check in quiet hours (overnight, weekend days)
+    if quiet:
+        return quiet
     if sweep_running():                                   # BL-328: a lock left by an ended sweep doesn't hold the check
         return "skipped: a sweep is running"
     if not VIP_LOCK.acquire(blocking=False):
@@ -3714,7 +3718,7 @@ def vip_check(how="check"):
     VIP_STATUS["running"] = True
     try:
         st = sweep.vip_state()
-        since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
+        since = vip_schedule.look_back(st["last_check"], sweep.last_sweep(), sweep.now())   # #97: the last check
         zone = sweep.local_zone()                         # the laptop's own zone, read at each check (probe rule 1)
         parts = sweep.vip_prompt_parts(st, zone)
         prompt = vip_prompt(since, vips, zone, parts)
@@ -3799,6 +3803,7 @@ def vip_timer():
     """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it).
     Nothing in a check or in working out the wait can end the thread: a wait that can't be worked out is 30 minutes."""
     import sweep
+    import vip_schedule
     how = "start-up"
     while True:
         try:
@@ -3808,6 +3813,7 @@ def vip_timer():
         how = "check"
         try:
             wait = max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds()))
+            wait = vip_schedule.timer_wait(wait)          # #97: in quiet hours, wake when they end (never past the interval)
         except Exception:  # noqa: BLE001  a hand-edited setting never stops the timer
             wait = 60 * 30.0
         time.sleep(wait)
@@ -7765,7 +7771,7 @@ BROWSER = {"since": 0.0, "n": 0, "dropped": 0}
 BROWSER_LOCK = threading.Lock()
 SAFE_SETTINGS = ("sweep.due_from", "sweep.first_run_lookback_days", "sweep.max_lookback_days", "sweep.sources.",
                  "sweep.show_possible_matches",
-                 "vip.enabled", "vip.check_minutes", "vip.notify", "reminders.enabled", "reminders.weekly_report_",
+                 "vip.enabled", "vip.check_minutes", "vip.notify", "vip.quiet_", "reminders.enabled", "reminders.weekly_report_",
                  "review.", "health.", "dashboard.", "backups.", "live_mode.", "assistant.", "defaults.",
                  "work.", "warnings.", "search.", "inbox.meetings_from",
                  "locations.folders.", "locations.portfolio", "locations.skeleton", "locations.never_index", "logging.",
