@@ -43,7 +43,7 @@ class Search(LiveBrowserCase):
         b = self.b
         self.assertEqual(b.eval("document.querySelector('.rvtools').firstElementChild.id"), "irQ")
         self.assertEqual(b.eval("document.querySelector('#irQ').getAttribute('aria-label')"), "Search")
-        self.assertEqual(b.eval("document.querySelectorAll('#rvQ').length"), 1)                       # the earlier Review page's id is not reused
+        self.assertEqual(b.eval("document.querySelectorAll('#rvQ').length"), 0)                       # the earlier Review page (and its #rvQ) is gone; its id is not reused
         self.assertEqual(len(self.mail_titles()), 4)
 
     def test_typing_filters_meetings_by_title_and_mail_rows_by_title(self):

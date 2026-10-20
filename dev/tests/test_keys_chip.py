@@ -37,8 +37,8 @@ class KeysChip(LiveBrowserCase):
     def test_help_lists_the_keys(self):
         help_md = (Path(__file__).resolve().parents[2] / "system/templates/help.md").read_text(encoding="utf-8")
         self.assertNotIn("**Keys** chip", help_md)
-        self.assertIn("Work's and Review's keys are all in this table", help_md)
-        for row in ("| Space |", "| J / K |", "| A / R / X |", "| D |", "| F |", "| Cmd/Ctrl + Enter |"):
+        self.assertIn("Work's keys and Intake's are all in this table", help_md)
+        for row in ("| Space |", "| J / K |", "| ↑ / ↓, Enter, A, R |", "| D |", "| F |", "| Cmd/Ctrl + Enter |"):
             self.assertIn(row, help_md)
 
 

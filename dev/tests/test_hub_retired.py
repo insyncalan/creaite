@@ -213,7 +213,7 @@ class HubBrowser(LiveBrowserCase):
         b = self.b
         # the minutes drafted and waiting: Review
         b.eval(f"location.hash='#meeting={self.token('calendar:e3')}'")
-        b.wait("VIEW==='review'")
+        b.wait("VIEW==='intake-review'")                # #232 C2: the old #review address opens Intake
         # the minutes filed (the minutes view's address, #minutes=<stored path>)
         path = ABC + "/minutes/2026-10-08 ABC Steering minutes.html"
         t = self.token("calendar:e3")
@@ -235,8 +235,8 @@ class HubBrowser(LiveBrowserCase):
         route = b.eval(f"meetingRoute({json.dumps(t)})")
         self.assertEqual(route, "#review")                  # over, its minutes waiting in Review
         b.eval("document.querySelector('#srcprobe a.mhlink').click()")
-        b.wait("VIEW==='review'")
-        self.assertEqual(b.eval("location.hash"), route)
+        b.wait("VIEW==='intake-review'")
+        self.assertEqual(b.eval("location.hash"), "#intake-review")          # the route stays the old #review; the page writes its own address
         # filed minutes: the same link would go to the minutes view's address
         path = ABC + "/minutes/2026-10-13 Quick note minutes.html"
         b.eval(f"D.hub[{json.dumps(t)}].files.push({json.dumps(path)}); D.hub[{json.dumps(t)}].filed=[{json.dumps(path)}]")
