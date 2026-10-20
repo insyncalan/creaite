@@ -19,7 +19,7 @@
      option = str(req.get("option") or "")
      if place not in PLACES:
          raise Refused("Not a place creaite knows.")
-@@ -539,6 +544,16 @@
+@@ -539,6 +544,17 @@
          raise Refused(f"That's too much text for one suggestion; select under {MAX_TEXT // 1000}k characters.")
      _needs_blocks(option, text)
      return option, text, code, place, _instruction(req, option)
@@ -30,13 +30,14 @@
 +    Refuses (fails closed) a `field` that isn't one of CLIENT_FIELDS, or one named with a place other than its own."""
 +    if "field" not in req:
 +        return False
-+    if req.get("field") not in CLIENT_FIELDS or CLIENT_FIELDS[req.get("field")] != place:
++    field = req.get("field")
++    if not isinstance(field, str) or field not in CLIENT_FIELDS or CLIENT_FIELDS[field] != place:   # #263 review: any type
 +        raise Refused(NOT_FIELD)
 +    return True
  
  
  def _instruction(req, option):
-@@ -555,7 +570,7 @@
+@@ -555,7 +571,7 @@
      """{prompt, option, label, format} for one suggestion: the template filled from the request and the project's facts."""
      option, text, code, place, instruction = request(req)
      fmt = FORMATS[place]
@@ -45,7 +46,7 @@
      outside = place in EMAIL_PLACES and email_outside(req)        # #186: from the recipients, never from the page
      bad = client_problems(code, text, text) if client or outside else []
      if bad:
-@@ -570,7 +585,7 @@
+@@ -570,7 +586,7 @@
          ids=", ".join(facts["ids"]) or "none",
          text=text)
      return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
@@ -54,7 +55,7 @@
  
  
  def _task(option, instruction, place, client, outside):
-@@ -656,7 +671,7 @@
+@@ -656,7 +672,7 @@
          return {"text": "", "notes": [], "message": "No suggestion came back."}
      outside = bool(ctx.get("outside")) or (ctx.get("place") in EMAIL_PLACES and email_outside(body.get("request") or {}))   # #186
      bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") \
@@ -63,7 +64,7 @@
      if bad:
          return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"),
                  "message": refusal(bad, True, outside)}
-@@ -665,6 +680,13 @@
+@@ -665,6 +681,13 @@
              "format": ctx.get("format")}
  
  
@@ -77,6 +78,19 @@
  def main(argv):
      """The context, result and options commands (see the module's docstring)."""
      cmd = argv[0] if argv else ""
+@@ -691,5 +714,12 @@
+     return 0
+ 
+ 
++# #263 review: the stack guard. #262 (minutes) and #263 both change result(): applied in the wrong order (#262's plain diff, then this
++# one) the reply check for the Client messaging field would be missing while caps offers it. So edit_ai.py refuses to load then:
++# apply #186, #263, then #262's edit_ai-after-263.diff.
++if "MINUTES_PLACES" in globals() and "_client_reply" not in globals()["_reply_problems"].__code__.co_names:
++    raise SystemExit("edit_ai.py: #263 is applied over #262's plain diff. Apply #186, then #263, then #262's edit_ai-after-263.diff.")
++
++
+ if __name__ == "__main__":
+     sys.exit(main(sys.argv[1:]))
 --- system/scripts/live_server.py
 +++ system/scripts/live_server.py
 @@ -6013,7 +6013,7 @@

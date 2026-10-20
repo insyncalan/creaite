@@ -21,6 +21,7 @@ What it proves (test_reports' fictional ABC fixture, as test_email_client_facts_
 - the page: the Client messaging field has no bar until the server lists the field; then the request names it. The other longer fields
   keep their bar.
 """
+import json
 import os
 import subprocess
 import sys
@@ -38,6 +39,8 @@ UNPATCHED = os.environ.get("CM_263_UNPATCHED") == "1"
 MUTATE = os.environ.get("CM_263_MUTATE", "")
 MARKER = "CLIENT_FIELDS = {"
 REFUSED = "That field isn't one creaite can check, so nothing was sent to Claude."
+PLAIN_262 = REPO / "dev" / "proposals" / "minutes-reply-262" / "edit_ai.diff"            # #262's diffs, when this tree has them
+AFTER_262 = REPO / "dev" / "proposals" / "minutes-reply-262" / "edit_ai-after-263.diff"
 
 MUTATIONS = {   # (file, what it breaks, old text, new text)
     "no-client-rules": ("edit_ai.py", "the field doesn't get the client rules in context()",
@@ -58,6 +61,9 @@ MUTATIONS = {   # (file, what it breaks, old text, new text)
     "server-drops-field": ("live_server.py", "the live server drops the field", "        body[\"field\"] = req[\"field\"]\n", ""),
     "server-no-key": ("live_server.py", "the live server refuses the field key", "\"recipients\", \"field\"}", "\"recipients\"}"),
     "caps-silent": ("live_server.py", "caps doesn't list the field", "\"client_fields\": [\"client_message\"]", "\"client_fields\": []"),
+    # review of e8198a48
+    "field-type": ("edit_ai.py", "a field that isn't text reaches the lookup (a crash)", "not isinstance(field, str) or ", ""),
+    "no-guard": ("edit_ai.py", "the stack guard is gone", "if \"MINUTES_PLACES\" in globals() and", "if False and"),
 }
 
 
@@ -157,6 +163,32 @@ class TheBinding(_Vault):
         self.assertFullFacts(self.context(body), "plain")
         self.assertNotIn("This text is for the client.", self.context(body)["prompt"])
 
+    def test_a_field_of_any_other_type_is_refused_not_a_crash(self):
+        for field in (["client_message"], {"client_message": 1}, 7, None, True):
+            self.assertEqual(self.context(ask(field=field)).get("refused"), REFUSED, repr(field))
+
+    def test_a_selection_holding_vip_is_refused_before_claude(self):
+        for text in ("Our VIP sponsor is happy.", "Our v.i.p sponsor is happy."):
+            self.assertIn("isn't client-safe", self.context(ask(text=text)).get("refused", ""), text)
+
+    def test_the_wrong_order_with_262_fails_loudly(self):
+        """#186, #262's plain diff, then this one: patch fails a hunk, and edit_ai.py refuses to load (never a missing reply check)."""
+        if not PLAIN_262.exists():
+            self.skipTest("this tree doesn't have #262's diff (the full stack's copy runs it)")
+        if UNPATCHED or MUTATE:
+            self.skipTest("about the diffs as written")
+        v = E.patched_vault()                                            # #186 only
+        self.addCleanup(v.cleanup)
+        run = lambda d: subprocess.run(["patch", "-p0", "-s", "-d", str(v.root), "-i", str(d)], capture_output=True, text=True)  # noqa: E731
+        if MARKER in (v.root / "system/scripts/edit_ai.py").read_text(encoding="utf-8"):
+            self.skipTest("the repo already has #263 applied")
+        self.assertEqual(run(PLAIN_262).returncode, 0)
+        self.assertNotEqual(run(DIFF).returncode, 0)                     # a hunk fails
+        r = subprocess.run([sys.executable, str(v.root / "system/scripts/edit_ai.py"), "context"], input=json.dumps(ask()),
+                           cwd=v.root, capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Apply #186, then #263, then #262's edit_ai-after-263.diff", r.stdout + r.stderr)
+
     def test_the_live_server_passes_the_field_and_caps_lists_it(self):
         out = E.server(self.root, [ask(), ask(field=7), ask(field="x" * 41)])
         self.assertEqual(out["bodies"][0]["field"], "client_message")
@@ -192,6 +224,8 @@ if LiveBrowserCase is not None:
             if cls.patched:
                 prepare(v.root)                                          # #263
             elif MARKER in (v.root / "system/scripts/edit_ai.py").read_text(encoding="utf-8"):
+                if "MINUTES_PLACES = {" in (v.root / "system/scripts/edit_ai.py").read_text(encoding="utf-8"):   # #262 on top: it first
+                    subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(AFTER_262)], check=True)
                 subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(DIFF)], check=True)
             cls.fake = v.root / "fake_claude.py"
             cls.fake.write_text(t117.FAKE)

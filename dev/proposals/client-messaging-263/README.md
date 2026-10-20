@@ -1,5 +1,10 @@
 # Proposal #263: AI on the Client messaging field gets the client rules
 
+> **Apply in this order: #186's diff, then this one, then #262's `edit_ai-after-263.diff`.** #262 and #263 both change `result()`. If
+> #262's plain `edit_ai.diff` is already in, this diff fails one hunk (patch exits 1 and leaves a `.rej`): do not keep going. In that
+> case `edit_ai.py` also refuses to load ("#263 is applied over #262's plain diff…"), so every AI suggestion stops rather than the
+> Client messaging field getting the bar without its reply check. Take #262 out (`patch -R`), then apply in the order above.
+
 Alan said yes to this on 20-10-2026 (with #186's decisions). `edit_ai.py` is guarded-adjacent and `live_server.py` is the server, so
 neither is changed on this branch: `edit_ai.diff` is the change. It applies **on top of #186's diff**, so apply #186 first. The page
 part is on the branch and does nothing new until this diff is applied.
@@ -51,6 +56,12 @@ suggestion itself was never checked, and a paraphrase with no ID or name would n
   item ID stops the request.
 - **No project.** A new item with no project yet: the request is refused ("There's no project to check this text against"), as on the
   client sheet.
+
+## Review fixes (e8198a48)
+
+- A `field` that isn't text (a list, an object, a number) is refused like an unknown field, never a crash.
+- A selection holding the word VIP is refused before Claude for this field (the client check), pinned by a test.
+- The stack guard above (the wrong order fails loudly), with a test that applies #186, #262's plain diff and then this one.
 
 ## Decisions for Alan
 
