@@ -645,7 +645,14 @@ def start_run(run, mode, outside, session=None, files=None):
     Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
     _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside, "marked": marked,
-                           "session": session, **({"files": [str(f) for f in files]} if files is not None else {})})
+                           "session": session, **({"files": [str(f) for f in files]} if files is not None else {}),
+                           **(_process_start() if mode == "process" else {})})
+
+
+def _process_start():
+    """#264 R1: a Process run's record starts with the proposals already in staging ("before": never the run's, whatever is
+    written to them later) and no file of its own yet ("made": what the hook lets it create, added as it goes)."""
+    return {"before": sorted(p.name for p in paths.STAGING.glob("proposed-*.json")), "made": []}
 
 
 def mark(run, reason):
@@ -1824,25 +1831,50 @@ def _in_drafts(arg, suffix):
     return target if target.suffix == suffix and target.parent == Path(os.path.realpath(paths.DRAFTS)) else None
 
 
-def _older_than_run(rp):
-    """True when the file exists and was last written before this Process run started (another flow's file), and whenever that
-    can't be told (no Process run in progress, an unreadable time): fail closed. A file that doesn't exist yet is new."""
-    data = guard_run() or {}
+def _made():
+    """The files this Process run made (run.json "made", as the hook let it create them), or None when the run in progress isn't
+    a Process run (fail closed: nothing is then the run's own)."""
+    data = guard_run()
+    if not data or data.get("mode") != "process":
+        return None
+    made = data.get("made")
+    return {m for m in made if isinstance(m, str)} if isinstance(made, list) else set()
+
+
+def _runs_own(rp):
+    """True only for a file the hook let this Process run create (#264 R1: by its record, never by its time, so a file another
+    flow writes into drafts during the run is never the run's)."""
+    made = _made()
+    return made is not None and str(rp) in made
+
+
+def _may_make(rp):
+    """True when this Process run may write `rp`: a file that doesn't exist yet (claimed for the run in run.json "made", so a
+    second write to it is its own too) or one it made. False whenever that can't be told (fail closed)."""
     try:
-        if data.get("mode") != "process":
+        if _runs_own(rp):
             return True
-        return rp.exists() and rp.stat().st_mtime < float(data["started"]) - 1
-    except (OSError, ValueError, TypeError, KeyError):     # can't tell: another flow's, so refused (fail closed)
+        data = guard_run()
+        if _made() is None or rp.exists() or rp.is_symlink():
+            return False
+        data["made"] = sorted(_made() | {str(rp)})
+        _write_json(RUN_FILE, data)
         return True
+    except (OSError, ValueError, TypeError):     # can't tell: another flow's, so refused (fail closed)
+        return False
 
 
 def _runs_proposals():
-    """The proposals this Process run staged: in system/staging/, written since it started, for one of its files."""
-    files, out = process_files(), []
+    """The proposals this Process run staged: in system/staging/, not there when it started (run.json "before"), for one of its
+    files."""
+    files, out, data = process_files(), [], guard_run() or {}
+    before = data.get("before")
+    if not isinstance(before, list):
+        return []                                  # a record without "before" can't tell the run's proposals: none
     for p in sorted(paths.STAGING.glob("proposed-*.json")):
+        if p.name in before:
+            continue
         try:
-            if _older_than_run(p):
-                continue
             m = json.loads(p.read_text(encoding="utf-8")).get("meeting")
         except (OSError, ValueError):     # an unreadable proposal isn't this run's: nothing may be enriched or validated for it
             continue
@@ -1869,7 +1901,7 @@ def _process_stage_problem(words):
     draft = data.get("draft")
     if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
         return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
-    if draft is not None and _older_than_run(_in_drafts(draft, ".docx")):
+    if draft is not None and (not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx"))):
         return "a Word draft named in the spec must be one this run filled, never another draft waiting in drafts"
     return None
 
@@ -1889,7 +1921,7 @@ def _process_fill_problem(words):
     if not ok:
         return f"Process fills only {PROCESS_TEMPLATE} from a values file in system/staging/drafts/ into a draft there"
     values, target = _in_drafts(words[2], ".json"), _in_drafts(words[3], ".docx")
-    if _older_than_run(values) or _older_than_run(target):
+    if not _runs_own(values) or is_report_file(target) or not _may_make(target):
         return "Process fills only from its own values file into a new Word draft: never another draft waiting in drafts"
     try:
         pictures = _has_image(json.loads(values.read_text(encoding="utf-8")))
@@ -1913,7 +1945,7 @@ def _process_enrich_problem(words):
         rel = Path(v).as_posix()
         if rel not in mine:
             return f"{v}: Process enriches only the minutes and transcript copies of a meeting this run staged"
-        if _older_than_run(paths.SEARCH_DIR / (hashlib.sha256(rel.encode("utf-8")).hexdigest() + ".json")):
+        if not _may_make(Path(os.path.realpath(paths.SEARCH_DIR / (hashlib.sha256(rel.encode("utf-8")).hexdigest() + ".json")))):
             return f"{v}: that file already has a summary; Process never replaces one"
     return None if given else "Process enriches only with --path"
 
@@ -1932,7 +1964,7 @@ def process_step_problem(name, words):
     if name == "minutes.py stage":
         return _process_stage_problem(words)
     if name == "propose.py people map":
-        if len(words) == 3 and _in_drafts(words[2], ".json") is not None and _older_than_run(_in_drafts(words[2], ".json")):
+        if len(words) == 3 and _in_drafts(words[2], ".json") is not None and not _runs_own(_in_drafts(words[2], ".json")):
             return "Process maps names only in a spec this run wrote, never another flow's draft"
         return None if sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])) else \
             "Process maps names only in its own spec in system/staging/drafts/"
@@ -1951,7 +1983,7 @@ def process_write_problem(rp):
     if _in_drafts(str(rp), ".json") is None:
         return "a Process run writes only its own .json input files directly in system/staging/drafts/"
     data = guard_run() or {}
-    old = _older_than_run(rp)
+    old = not _may_make(rp)
     if old or data.get("mode") != "process":
         return "a Process run doesn't change a draft it didn't write: write a new file in system/staging/drafts/"
     return None
