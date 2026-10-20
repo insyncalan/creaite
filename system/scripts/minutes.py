@@ -77,7 +77,9 @@ Someone else's minutes (#232 E1, Intake's "Find work items"): give "as": "minute
 holds). Nothing is drafted: no Word draft and no minutes record. Only actions, decisions, risks and issues, and updates to open
 ones, are read from it (a promise is left out: it is said in passing, in a meeting). "file" is a plain relative path (no
 "..", backslash or leading "/") in inbox/ or in a matched project's minutes folder; a .vtt, .srt, or a file with a calendar
-event ID in its header, is refused as a transcript. The file is read where it is; on approval it
+event ID in its header, is refused as a transcript; it must be a .txt, .md, .docx or .pdf (Intake's upload types) and neither
+inbox/ nor the minutes folder may be a symlink. The ops carry "src_sha256" (the file's checksum when staged); the destination
+is numbered against files on disk and other staged proposals; the same file can't be staged twice. The file is read where it is; on approval it
 is copied to each matched project's minutes folder as "YYYY-MM-DD Title.ext" and the inbox copy removed (a file already in a
 project's minutes folder stays where it is: Alan's own, never copied, moved or renamed). The proposal's meeting block has
 "kind": "minutes by others", "minutes_decision": "approved" (like a quick note: no minutes to approve), "draft": null
@@ -576,6 +578,7 @@ def draft_refused(spec):
 
 # ===== #232 E1 (Find work items) =====
 BY_OTHERS = "minutes by others"
+MINUTES_TYPES = (".txt", ".md", ".docx", ".pdf")     # Intake's upload types (.vtt is a transcript: refused)
 
 
 def by_others(spec):
@@ -608,11 +611,23 @@ def _inside(real, folder):
     return real == folder or real.startswith(folder.rstrip(os.sep) + os.sep)
 
 
+def _real_folder(folder, base):
+    """Whether `folder` is a real folder under `base`: neither it nor any folder between is a symlink (a link would make
+    everything under its target count as that folder). `base` itself may be reached through links (macOS /tmp, OneDrive)."""
+    try:
+        parts = Path(folder).relative_to(base).parts
+    except ValueError:
+        return False
+    return not any(os.path.islink(Path(base).joinpath(*parts[:i + 1])) for i in range(len(parts)))
+
+
 def _in_minutes_folder(file, real, code):
     """Whether stored path `file` (real path `real`) is in project `code`'s minutes folder; an unknown project has none."""
     try:
         folder = paths.folder(code, "minutes")
-        return file.startswith(paths.rel(folder) + "/") and _inside(real, os.path.realpath(folder))
+        base = paths.projects_root() if paths.external() else paths.ROOT
+        return (file.startswith(paths.rel(folder) + "/") and _real_folder(folder, base)
+                and _inside(real, os.path.realpath(folder)))
     except (LookupError, ValueError, OSError):
         return False
 
@@ -635,13 +650,17 @@ def _file_problem(file, parts, projects):
     if not p.is_file():
         return f"Minutes file not found: {file}."
     real = os.path.realpath(p)
-    in_inbox = parts[0] == "inbox" and len(parts) > 1 and _inside(real, os.path.realpath(paths.INBOX))
+    in_inbox = (parts[0] == "inbox" and len(parts) > 1 and _real_folder(paths.INBOX, paths.ROOT)
+                and _inside(real, os.path.realpath(paths.INBOX)))
     in_place = any(_in_minutes_folder(file, real, c) for c in projects)
     if not (in_inbox or in_place):
         return f"Minutes file not acceptable: {file} is neither in inbox/ nor in the matched project's minutes folder."
     if p.suffix.lower() in (".vtt", ".srt") or file_event_id(file):
         return (f"{file} is a transcript, not minutes: a transcript needs draft minutes (use Make minutes). "
                 "Nothing is read as minutes from it.")
+    if p.suffix.lower() not in MINUTES_TYPES:        # also "a.txt." and "a.txt ": their suffix is not .txt
+        types = f"{', '.join(MINUTES_TYPES[:-1])} or {MINUTES_TYPES[-1]}"
+        return f"Minutes file not acceptable: {file} must end in {types} (Intake's upload types)."
     try:
         p.read_bytes()
     except OSError as e:
@@ -657,14 +676,52 @@ def _same_bytes(a, b):
         return False
 
 
+def staged_with_key(key):
+    """The name of a staged proposal for meeting key `key`, or None."""
+    for f in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            if (json.loads(f.read_text(encoding="utf-8")).get("meeting") or {}).get("key") == key:
+                return f.name
+        except (OSError, ValueError):
+            continue    # a proposal that can't be read isn't one for this file
+    return None
+
+
+def staged_targets():
+    """{filed path: sha256 of the file it comes from} for the copies other staged proposals will make (None: the source is gone)."""
+    out = {}
+    for f in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            meeting = json.loads(f.read_text(encoding="utf-8")).get("meeting") or {}
+        except (OSError, ValueError):
+            continue    # a proposal that can't be read has no destinations to avoid
+        for op in meeting.get("file_ops") or []:
+            if op.get("op") == "copy" and op.get("to"):
+                src = meeting.get(op.get("from")) if op.get("from") in ("draft", "transcript") else op.get("from")
+                out[op["to"]] = op.get("src_sha256") or _sha(src)
+    return out
+
+
+def _sha(rel):
+    """The SHA-256 of a stored path's file, or None if it can't be read."""
+    try:
+        return hashlib.sha256(paths.resolve(rel).read_bytes()).hexdigest()
+    except (OSError, TypeError, ValueError):
+        return None
+
+
 def filed_name(code, name, ext, src):
     """Where someone else's minutes are filed in project `code`: '<minutes folder>/<name><ext>', numbered when a different file
-    already has that name (apply never overwrites); the same file already there keeps its name (apply copies nothing)."""
+    already has that name, on disk or as another staged proposal's destination (apply never overwrites, and a refused
+    destination would fail every later apply); the same file already there keeps its name (apply copies nothing)."""
     mdir = paths.rel(paths.folder(code, "minutes"))
+    mine, staged = _sha(src), staged_targets()
     for n in range(1, 100):
         to = f"{mdir}/{name}{ext}" if n == 1 else f"{mdir}/{name} ({n}){ext}"
         there = paths.resolve(to)
-        if not there.exists() or _same_bytes(there, paths.resolve(src)):
+        free_on_disk = not there.exists() or _same_bytes(there, paths.resolve(src))
+        free_in_queue = to not in staged or staged[to] == mine
+        if free_on_disk and free_in_queue:
             return to
     return f"{mdir}/{name}{ext}"
 
@@ -672,7 +729,8 @@ def filed_name(code, name, ext, src):
 def by_others_ops(spec, projects, name):
     """The file operations for someone else's minutes: a copy to each project's minutes folder, and the inbox copy removed. A
     file already in one of the projects' minutes folders is Alan's own: left where it is. (folders, ops, copies)."""
-    src, ext = spec["file"], Path(spec["file"]).suffix
+    src, ext = spec["file"], Path(spec["file"]).suffix.lower()          # a type from MINUTES_TYPES (file_problem)
+    sha = _sha(src)
     spath = paths.resolve(src).resolve()
     in_place = lambda code: paths.folder(code, "minutes").resolve() in (spath.parent, *spath.parents)   # noqa: E731
     folders, ops, copies = {}, [], {}
@@ -682,9 +740,9 @@ def by_others_ops(spec, projects, name):
             copies[code] = src
         else:
             copies[code] = filed_name(code, name, ext, src)
-            ops.append({"op": "copy", "from": src, "to": copies[code]})
+            ops.append({"op": "copy", "from": src, "to": copies[code], "src_sha256": sha})
     if src.startswith("inbox/") and not any(in_place(c) for c in projects):
-        ops.append({"op": "remove", "path": src})
+        ops.append({"op": "remove", "path": src, "src_sha256": sha})
     return folders, ops, copies
 # ===== end #232 E1 =====
 
@@ -696,6 +754,9 @@ def stage_gate(spec):
         return 1, None
     key = (minutes_key(day, title, spec["file"]) if by_others(spec)
            else meeting_key(day, title, spec.get("note") or spec.get("transcript"), spec.get("event_id")))
+    if by_others(spec) and staged_with_key(key):          # a second proposal for the same file would fail once the first has moved it
+        print(f"Already staged in {staged_with_key(key)}: review that one. Nothing staged.")
+        return 3, key
     done = processed_on(key)
     if done:
         print(f"Already processed on {tracker.shown(done)}: {title}. Nothing staged.")

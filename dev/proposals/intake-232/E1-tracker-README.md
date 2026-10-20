@@ -1,50 +1,77 @@
-# Proposal E1-tracker: someone else's minutes are filed only with an approved item
+# Proposal E1-tracker: someone else's minutes are filed safely, and only with a written item
 
-`system/scripts/tracker.py` is guarded, so this is a proposal for Jarvis: `dev/proposals/intake-232/E1-tracker.diff`
-(a minimal patch against origin/main's tracker.py, `patch -p0` from the vault root; 22 lines added, 6 changed).
+`system/scripts/tracker.py` is guarded, so this is a proposal for Jarvis: `dev/proposals/intake-232/E1-tracker.diff` (a patch
+against origin/main's tracker.py, `patch -p0` from the vault root; about 125 lines added, 7 changed). The stage side
+(`minutes.py`, the skill, the docs) needs no tracker.py change and is already on the branch; this is what makes the apply safe.
 
 ## Why
-Find work items (#232 E1) stages someone else's minutes with `meeting.kind = "minutes by others"` and
-`minutes_decision = "approved"` from the start (there are no minutes to approve, as for a quick note), and `meeting.note` set so
-BL-260 point 4 does not refuse it. Apply runs a block's file operations whenever its decision is approved, so:
+Find work items (#232 E1) stages someone else's minutes with `meeting.kind = "minutes by others"` and `minutes_decision =
+"approved"` from the start (there are no minutes to approve, as for a quick note), and `meeting.note` set so BL-260 point 4 does
+not refuse it. Apply runs a block's file operations whenever its decision is approved, and `check_file_op` / `_op_copy` /
+`_op_remove` trust the path. So today:
 
-1. any later full `tracker.py apply`, even for an unrelated proposal, copies the file into the project's minutes folder, removes
-   the inbox copy and writes a `processed.txt` line with 0 items, while the proposal's items are still pending;
-2. rejecting every item still files the copy (and removes the inbox file);
-3. a different file already at the destination is only found halfway through the apply (`_op_copy`), after the backup.
+1. any later full `tracker.py apply`, even for an unrelated proposal, copies the file, removes the inbox copy and writes a
+   `processed.txt` line with 0 items, while the proposal's items are still pending; rejecting every item still files it;
+2. an approved item that is held (needs a project, or a conflict) still files the copy, with an item count of 0;
+3. **swap (TOCTOU):** `check_file_op` only asks `is_file()`, which follows links, and `safe_path` resolves links, so after staging
+   `rm inbox/m.txt; ln -s <vault>/projects/ABC.../documents/contract.txt inbox/m.txt` passes validation, files the contract's
+   contents as the minutes and **deletes the contract** (the remove resolves to the target), leaving a dangling link in inbox/
+   (undo restores it). A target outside the vault (`/etc/hosts`) is refused only by the remove, after the copy, rolling the whole
+   apply back. A hard link or a different regular file put there after staging is filed as the minutes. The same hole exists
+   today for an inbox transcript (`copy` from `transcript`, then `remove` of the inbox path): this patch closes it only for the
+   `minutes by others` block, and the transcript path would need the same change (not made here: out of E1's scope);
+4. a destination collision (a different file already there, or another proposal in the same apply copying a different file to the
+   same name) is found halfway through the apply, which rolls back, and **every later apply fails the same way**: one proposal
+   blocks the queue.
 
-## What the patch does (five hunks)
-- `by_others_waiting(data, blk)`: true for a `minutes by others` block, not yet applied, while no item of its proposal is `approved`.
-- `decided()` leaves such a block out; `_file_op_problems` and `_apply_blocks` skip it (no copy, no remove, no `processed.txt`
-  line, `applied` not set); `finished()` treats it as finished so a proposal whose items were all rejected moves to `applied/`.
-  With at least one approved item the behaviour is exactly today's (copy, remove, line with the count).
-- `check_file_op` (copy): refuses, at validation, a destination that already exists as a different file ("already exists; it is
-  never overwritten"). The same file already there is still fine. This also moves the existing `_op_copy` refusal earlier for every
-  copy (minutes, transcripts), before the backup.
+## What the patch does
+- `by_others_waiting(data, blk)`: a `minutes by others` block, not yet applied, with no approved item. `decided()` leaves it out,
+  `_file_op_problems` and `_apply_blocks` skip it, `finished()` treats it as finished (so a proposal whose items were all
+  rejected moves to `applied/` and nothing is filed).
+- `by_others_unwritten(data, blk, apply_id)` (checked in `_apply_blocks`, after the items): the block is filed only if this apply
+  wrote at least one approved item. An approved item that is held (needs a project, conflict) files nothing; the file waits for
+  the apply that writes one, and the processed line carries the real count (at least 1).
+- `by_others_file_problem(rel, blk, sha)`, called from `check_file_op` for the block's `copy` source and its inbox `remove`, at
+  validation and again before each operation at apply: the file must be a regular file by `lstat` (a link is refused, whatever it
+  points at), have no other name (`st_nlink`), have a real path in inbox/ (itself not a link) or a matched project's minutes
+  folder, and hash to the `src_sha256` staged by `minutes.py` ("the file changed since it was staged" otherwise; a missing
+  checksum is refused).
+- `_op_copy` for the block reads the bytes once through `O_NOFOLLOW`, compares them with `src_sha256`, then writes them (no
+  window between check and copy); `_op_remove` for the block unlinks the path itself (`paths.resolve`, not the resolved
+  `safe_path` result) and refuses a link.
+- `check_file_op` (every copy): refuses, at validation, a destination that already exists as a different file.
+- **The queue is not blocked:** a full apply (`tracker.py apply` with no arguments) first drops, with a line "Left in staging,
+  not applied: <proposal>: <reason>.", each `minutes by others` proposal whose file can't be filed now (destination taken by a
+  different file, link or changed file, a different file already claimed for the same destination by an earlier proposal in this
+  apply). Everything else in the queue applies. The dropped proposal stays in staging with its choices; the next apply tries it
+  again, so putting the file right (or restaging) is enough. `tracker.py apply <proposal>` (named) still stops with the reason, as
+  before. Other proposals (reports, ordinary minutes) keep today's behaviour.
+- `minutes.py` (already on the branch) gives each copy and remove op `src_sha256`, numbers the destination against files on disk
+  and against other staged proposals' destinations, and refuses to stage the same file twice.
 
 ## Repro (today)
-In a scratch vault: stage a spec with `"as": "minutes", "file": "inbox/m.txt"` (two items), add any other approved proposal, run
-`tracker.py apply`: `m.txt` is copied to `.../minutes/`, removed from `inbox/`, and `processed.txt` has `... | 0`. Or mark both items
-`rejected` and apply: the same.
+Scratch vault: stage `"as": "minutes", "file": "inbox/m.txt"` (two items), then
+1. add another approved proposal and run `tracker.py apply`: m.txt is filed and removed, `processed.txt` has `... | 0`;
+2. or mark both items rejected and apply: the same;
+3. or replace `inbox/m.txt` with a symlink to a vault file, approve, apply: the target is filed as the minutes and deleted;
+4. or create a different file at the destination and apply twice: the apply fails each time, and an unrelated proposal in the
+   queue is never applied.
 
 ## How to test
-    python3 dev/tests/test_minutes_by_others_filing.py                       # the fixed behaviour, on a patched scratch copy
+    python3 dev/tests/test_minutes_by_others_filing.py                        # the fixed behaviour, on a patched scratch copy
     E1_TRACKER_UNPATCHED=1 python3 dev/tests/test_minutes_by_others_filing.py # fail-first: the scratch copy has no patch
+    E1_TRACKER_MUTATE=<name> python3 dev/tests/test_minutes_by_others_filing.py   # one line of the patch broken: a test goes red
 The scratch copy is a throwaway vault whose `tracker.py` is the repo's with the diff applied (`patch -p0`); after Jarvis applies the
 diff to the repo the same file keeps guarding it (the marker `def by_others_waiting` is found, and the "defect" tests reverse the
-patch with `patch -R`). The repo's tracker.py is not touched by this branch.
+patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 14 of the 21 tests go red (the swap,
+held-item, collision, unrelated-apply and all-rejected tests, and the validation message); the `DefectToday` tests document today's
+behaviour on the unpatched copy in both modes, and the rest (one approved item files, no double filing, undo, the same file at the
+destination) is today's behaviour and stays green.
 
-Unpatched (`E1_TRACKER_UNPATCHED=1`) three `Fixed` tests go red: an unrelated apply leaves the proposal and the inbox file alone;
-rejecting every item files nothing and the proposal finishes; validation names a different file at the destination before any
-apply. The rest of `Fixed` (one approved item files and the other stays pending, no double filing, undo, the apply-time refusal
-of a different file, the same file there is fine) is the behaviour today and stays green both ways. The two `DefectToday` tests
-run on the unpatched copy in both modes: they document today's behaviour.
-
-Also checked with the diff applied to the worktree's tracker.py (then reverted): test_tracker, test_minutes_by_others,
-test_minutes_draft, _record, _approve, _review, _editor, test_refused_apply_words, test_activity_undo, test_shared_undo,
-test_stage_pinned all pass.
+Also run with the diff applied to the worktree's tracker.py (then reverted), all passing: test_tracker, test_minutes_by_others,
+test_minutes_draft, _record, _review, _approve, _editor, test_refused_apply_words, test_activity_undo, test_shared_undo,
+test_stage_pinned, test_script_policy, test_no_real_names, check.py.
 
 ## Until it is applied
-`dev/tests/test_minutes_by_others.py` (the stage side, no tracker.py change) is complete without it. The dashboard should not
-describe the file as "filed on approval" with more than "when you approve the items" until the patch is in; SKILL.md and
-`dev/staging-format.md` say precisely what is true today.
+`dev/tests/test_minutes_by_others.py` (the stage side) is complete without it. The ops carry `src_sha256`, which today's tracker
+ignores. Until the patch is in, the filing has the four defects above; SKILL.md and `dev/staging-format.md` say what is true today.

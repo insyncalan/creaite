@@ -6,8 +6,11 @@ minutes record, `minutes_decision` approved like a quick note. The key is the fi
 On apply the inbox copy is filed in the project's minutes folder as `YYYY-MM-DD Title.ext` and the inbox copy removed. BL-260
 (a transcript is never staged without its draft) must still hold, also when a transcript is passed off as minutes.
 """
+import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 import unittest
@@ -77,7 +80,9 @@ class StageTests(Base):
     def test_the_file_ops_copy_the_file_and_remove_the_inbox_copy(self):
         self.stage()
         ops = self.staged()["meeting"]["file_ops"]
-        self.assertEqual(ops, [{"op": "copy", "from": FILE, "to": FILED}, {"op": "remove", "path": FILE}])
+        sha = hashlib.sha256(MINUTES.encode()).hexdigest()          # the checksum the apply compares before it copies or removes
+        self.assertEqual(ops, [{"op": "copy", "from": FILE, "to": FILED, "src_sha256": sha},
+                               {"op": "remove", "path": FILE, "src_sha256": sha}])
 
     def test_the_proposal_validates(self):
         self.stage()
@@ -169,7 +174,6 @@ class Refusals(Base):
         self.assertEqual(self.proposals(), [])
 
     def test_an_unreadable_file_is_a_clean_refusal(self):
-        import os
         if os.geteuid() == 0:
             self.skipTest("root reads everything")
         (self.v.root / FILE).chmod(0)
@@ -279,7 +283,89 @@ class Confinement(Base):
         (self.v.root / "inbox/sub/m.txt").write_text(MINUTES)
         self.stage(file="inbox/sub/m.txt")
         ops = self.staged()["meeting"]["file_ops"]
-        self.assertEqual(ops[-1], {"op": "remove", "path": "inbox/sub/m.txt"})
+        self.assertEqual((ops[-1]["op"], ops[-1]["path"]), ("remove", "inbox/sub/m.txt"))
+
+
+class Names(Base):
+    """The filed name: only Intake's upload types, no trailing dot or space, never the same destination twice in the queue."""
+
+    def refused(self, name, text="Vendor call minutes\n"):
+        (self.v.root / "inbox" / name).write_text(text)
+        _, r = self.stage(ok=False, file=f"inbox/{name}")
+        self.assertEqual(r.returncode, 1, name)
+        self.assertEqual(self.proposals(), [], name)
+        return r.stdout
+
+    def test_a_trailing_dot_or_space_is_refused_not_filed_as_vendor_call_dot_dot(self):
+        for name in ("a.txt.", "a.txt ", "a.md..", "a.docx "):
+            self.assertIn("must end in .txt, .md, .docx or .pdf", self.refused(name), name)
+
+    def test_other_types_are_refused(self):
+        for name in ("a.rtf", "a.xlsx", "a", "a.eml", "a.html"):
+            self.assertIn("must end in", self.refused(name), name)
+
+    def test_the_four_types_stage_and_a_capital_extension_is_filed_lower_case(self):
+        for name in ("a.txt", "a.md", "a.docx", "a.pdf", "b.TXT"):
+            (self.v.root / "inbox" / name).write_text("Minutes\n")
+            self.stage(file=f"inbox/{name}", title="[ABC] Name check")
+            copy = next(o for o in self.staged()["meeting"]["file_ops"] if o["op"] == "copy")
+            self.assertEqual(copy["to"], f"{ABC}/minutes/2026-10-12 Name check{Path(name).suffix.lower()}", name)
+            self.proposals()[0].unlink()
+
+    def test_two_staged_files_with_one_date_and_title_get_two_destinations(self):
+        (self.v.root / "inbox/second.txt").write_text("A different set of minutes\n")
+        self.stage()
+        self.stage(file="inbox/second.txt")
+        tos = [o["to"] for p in self.proposals() for o in json.loads(p.read_text())["meeting"]["file_ops"] if o["op"] == "copy"]
+        self.assertEqual(set(tos), {FILED, f"{ABC}/minutes/2026-10-12 Vendor call (2).txt"})
+        self.assertEqual(len(tos), 2)
+
+    def test_the_same_file_staged_twice_is_refused_the_second_time(self):
+        self.stage()
+        _, r = self.stage(ok=False)
+        self.assertEqual(r.returncode, 3)
+        self.assertIn("Already staged in proposed-", r.stdout)
+        self.assertEqual(len(self.proposals()), 1)
+
+
+class LinkedFolders(Base):
+    """If inbox/ or the minutes folder is a symlink, everything under its target would count as that folder: refused."""
+
+    def test_an_inbox_that_is_a_symlink_is_refused(self):
+        other = self.v.root / f"{ABC}/documents"
+        other.mkdir(parents=True, exist_ok=True)
+        (other / "contract.txt").write_text("The contract\n")
+        inbox = self.v.root / "inbox"
+        for f in inbox.iterdir():
+            f.unlink()
+        inbox.rmdir()
+        inbox.symlink_to(other)
+        _, r = self.stage(ok=False, file="inbox/contract.txt")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("neither in inbox/", r.stdout)
+        self.assertEqual(self.proposals(), [])
+        self.assertTrue((other / "contract.txt").exists())
+
+    def test_a_minutes_folder_that_is_a_symlink_is_refused(self):
+        real = self.v.root / f"{ABC}/documents"
+        real.mkdir(parents=True, exist_ok=True)
+        (real / "plan.txt").write_text("The plan\n")
+        folder = self.v.root / f"{ABC}/minutes"
+        if folder.exists():
+            shutil.rmtree(folder)
+        folder.symlink_to(real)
+        _, r = self.stage(ok=False, file=f"{ABC}/minutes/plan.txt")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("neither in inbox/", r.stdout)
+
+    def test_a_link_deeper_in_the_inbox_path_is_refused(self):
+        other = self.v.root / f"{ABC}/documents"
+        other.mkdir(parents=True, exist_ok=True)
+        (other / "contract.txt").write_text("The contract\n")
+        (self.v.root / "inbox/sub").symlink_to(other)
+        _, r = self.stage(ok=False, file="inbox/sub/contract.txt")
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self.proposals(), [])
 
 
 class KeyTests(Base):

@@ -10,7 +10,12 @@ approve and apply (see E1-tracker-README.md). This file proves it without touchi
 patched (the marker `def by_others_waiting` is found), the same tests keep guarding it, and the unpatched copy used by the
 "defect" tests is made with `patch -R`.
 
-What it proves:
+What it proves (round 3 adds the swap, held-item and queue tests):
+- a link or another file put in inbox/ after staging is never filed as the minutes and nothing it points at is deleted: a symlink
+  to a vault file, a symlink to /etc/hosts, a hard link, and a regular file replaced by a different one (checksum mismatch); the
+  proposal is left in staging with a line saying why, and the rest of the queue still applies;
+- an approved item that is held (needs a project) does not file the copy;
+- a destination collision (with a file, or with another proposal in the same apply) leaves only that proposal in staging;
 - the defect is real today (always run on the unpatched copy): minutes_decision is "approved" from staging, so a full apply for an
   unrelated proposal copies the file, removes the inbox copy and writes a processed.txt line with 0 items; and rejecting every
   item still files the copy;
@@ -19,6 +24,7 @@ What it proves:
   (1 item); the other items stay pending and the proposal stays in staging; a different file already at the destination stops the
   apply before anything is backed up or changed.
 """
+import hashlib
 import json
 import os
 import shutil
@@ -35,6 +41,21 @@ REPO = HERE.parents[1]
 DIFF = REPO / "dev" / "proposals" / "intake-232" / "E1-tracker.diff"
 UNPATCHED = os.environ.get("E1_TRACKER_UNPATCHED") == "1"
 MARKER = "def by_others_waiting"
+MUTATE = os.environ.get("E1_TRACKER_MUTATE", "")
+# One text change per mutation, made on the patched scratch copy (E1_TRACKER_MUTATE=<name>): a test must turn red
+MUTATIONS = {
+    "no-regular-check": ("if not stat.S_ISREG(st.st_mode):", "if False:"),
+    "no-hardlink-check": ("if st.st_nlink > 1:", "if False:"),
+    "no-checksum": ("if file_hash(p) != sha:", "if False:"),
+    "no-area-check": ("if os.path.islink(paths.INBOX) or not any(", "if False and not any("),
+    "copy-follows-links": ('os.open(src, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))', "os.open(src, os.O_RDONLY)"),
+    "no-unwritten": ("or by_others_unwritten(data, blk, apply_id):", "or False:"),
+    "no-skip": ("        work = _skip_by_others_problems(work)\n", ""),
+    "no-claimed": ('                    claimed[to] = fop.get("src_sha256")\n', ""),
+    "no-waiting-in-apply": ('not in ("approved", "rejected") or by_others_waiting(data, blk) \\', 'not in ("approved", "rejected") \\'),
+    "no-dest-check": ("if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):", "if False:"),
+    "remove-follows-links": ("        if p.is_symlink():\n            raise Invalid(f\"remove:", "        if False:\n            raise Invalid(f\"remove:"),
+}
 
 DAY, TITLE = "2026-10-12", "[ABC] Vendor call"
 FILE = "inbox/Vendor call minutes.txt"
@@ -64,6 +85,11 @@ def scratch(patched):
         _patch(v.root)
     if not patched and already:
         _patch(v.root, "-R")
+    if MUTATE:
+        old, new = MUTATIONS[MUTATE]
+        text = tracker.read_text(encoding="utf-8")
+        assert text.count(old) == 1, f"mutation {MUTATE}: {old!r} found {text.count(old)} times"
+        tracker.write_text(text.replace(old, new), encoding="utf-8")
     return v
 
 
@@ -97,6 +123,34 @@ class Base(unittest.TestCase):
     def unrelated(self):
         """Another proposal, approved, in staging: a full apply reaches both."""
         self.v.propose("2026-10-13-0900", [action(1, description="Order the test licences")])
+
+    def stage_more(self, file, text, title="[ABC] Vendor call"):
+        """Another proposal for another file; returns its proposal name."""
+        (self.v.root / file).write_text(text, encoding="utf-8")
+        before = {p.name for p in (self.v.root / "system/staging").glob("proposed-*.json")}
+        f = self.v.root / "system/staging/drafts/meeting2.json"
+        f.write_text(json.dumps({"title": title, "date": DAY, "projects": ["ABC"], "as": "minutes", "file": file, "items": ITEMS}))
+        self.v.run("stage", str(f), script="minutes.py")
+        return next(p.name for p in (self.v.root / "system/staging").glob("proposed-*.json") if p.name not in before)
+
+    def approve(self, name):
+        p = self.v.root / "system/staging" / name
+        data = json.loads(p.read_text())
+        for i in data["items"]:
+            i["decision"] = "approved"
+        p.write_text(json.dumps(data, indent=2))
+
+    def contract(self):
+        c = self.v.root / f"{ABC}/documents/contract.txt"
+        c.parent.mkdir(parents=True, exist_ok=True)
+        c.write_text("The contract: not minutes\n", encoding="utf-8")
+        return c
+
+    def swap(self, make):
+        """Replace the staged inbox file with whatever `make(path)` builds, as someone could between staging and approving."""
+        f = self.v.root / FILE
+        f.unlink()
+        make(f)
 
     def processed(self):
         p = self.v.root / "system/processed.txt"
@@ -180,17 +234,49 @@ class Fixed(Base):
         self.assertFalse(self.filed())
         self.assertEqual(self.processed().strip(), "")
 
-    def test_a_different_file_at_the_destination_stops_the_apply_before_anything_changes(self):
+    def test_a_different_file_at_the_destination_leaves_only_that_proposal_in_staging(self):
         self.decide("approved", "approved")
         (self.v.root / FILED).parent.mkdir(parents=True, exist_ok=True)
         (self.v.root / FILED).write_text("Another file with this name\n")
-        r = self.v.run("apply", ok=False)
-        self.assertEqual(r.returncode, 1)
+        self.unrelated()
+        r = self.v.run("apply")                                     # a full apply: the rest of the queue goes through
+        self.assertIn("Left in staging, not applied", r.stdout)
         self.assertIn("already exists; it is never overwritten", r.stdout)
         self.assertEqual((self.v.root / FILED).read_text(), "Another file with this name\n")
         self.assertTrue(self.inbox())
-        self.assertEqual(self.v.rows("actions"), [])
+        self.assertEqual([a["description"] for a in self.v.rows("actions")], ["Order the test licences"])
         self.assertEqual(self.processed(), "")
+        self.assertTrue((self.v.root / "system/staging" / self.name).exists())
+
+    def test_named_apply_of_that_proposal_stops_with_the_message(self):
+        self.decide("approved", "approved")
+        (self.v.root / FILED).parent.mkdir(parents=True, exist_ok=True)
+        (self.v.root / FILED).write_text("Another file with this name\n")
+        r = self.v.run("apply", self.name, ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("already exists; it is never overwritten", r.stdout)
+        self.assertEqual(self.v.rows("actions"), [])
+        self.assertTrue(self.inbox())
+
+    def test_two_proposals_for_one_destination_in_one_apply_file_the_first_only(self):
+        second = self.stage_more("inbox/second.txt", "A different set of minutes\n")
+        p2 = self.v.root / "system/staging" / second
+        data = json.loads(p2.read_text())
+        for op in data["meeting"]["file_ops"]:
+            if op["op"] == "copy":
+                op["to"] = FILED                                    # as if both had been staged before either was numbered
+        p2.write_text(json.dumps(data, indent=2))
+        self.approve(self.name)
+        self.approve(second)
+        self.unrelated()
+        r = self.v.run("apply")
+        self.assertIn("is taken by a different file in this apply", r.stdout)
+        filed = (self.v.root / FILED).read_text(encoding="utf-8")
+        self.assertIn(filed, (MINUTES, "A different set of minutes\n"))
+        left_in_inbox = [f for f in ("inbox/second.txt", FILE) if (self.v.root / f).exists()]
+        self.assertEqual(len(left_in_inbox), 1)                      # exactly one was filed (and its inbox copy removed)
+        self.assertEqual(len(list((self.v.root / "system/staging").glob("proposed-*.json"))), 1)       # the other waits
+        self.assertEqual(self.processed().count(FILED), 1)
 
     def test_validation_names_a_different_file_at_the_destination_before_any_apply(self):
         (self.v.root / FILED).parent.mkdir(parents=True, exist_ok=True)
@@ -206,6 +292,118 @@ class Fixed(Base):
         self.v.run("apply")
         self.assertFalse(self.inbox())
         self.assertEqual(len(self.v.rows("actions")), 2)
+
+
+class Swapped(Base):
+    """A link or another file put in inbox/ after staging is never filed, and nothing it points at is deleted (pre-existing for an
+    inbox transcript too: safe_path resolves a link, so the remove deleted its target)."""
+
+    def check_left_alone(self, victim, text=None, why=None):
+        self.decide("approved", "approved")
+        self.unrelated()
+        r = self.v.run("apply")                                     # a full apply: the rest of the queue goes through
+        if why:
+            self.assertIn(why, r.stdout)
+        self.assertFalse(self.filed())
+        self.assertEqual(self.processed(), "")
+        if victim is not None:
+            self.assertTrue(victim.exists())
+            self.assertEqual(victim.read_text(), text)
+        self.assertTrue((self.v.root / "system/staging" / self.name).exists())
+        self.assertEqual([a["description"] for a in self.v.rows("actions")], ["Order the test licences"])
+
+    def test_a_symlink_to_a_vault_file_is_not_filed_and_its_target_survives(self):
+        target = self.contract()
+        self.swap(lambda f: f.symlink_to(target))
+        self.check_left_alone(target, "The contract: not minutes\n", "not a regular file")
+
+    def test_a_symlink_to_a_file_outside_the_vault_is_refused(self):
+        self.swap(lambda f: f.symlink_to("/etc/hosts"))
+        self.check_left_alone(Path("/etc/hosts"), Path("/etc/hosts").read_text(), "not a regular file")
+
+    def test_a_hard_link_is_refused_and_the_other_name_survives(self):
+        target = self.contract()
+        self.swap(lambda f: os.link(target, f))
+        self.check_left_alone(target, "The contract: not minutes\n", "hard link")
+
+    def test_a_different_regular_file_put_there_after_staging_is_a_checksum_mismatch(self):
+        self.swap(lambda f: f.write_text("Quite different minutes\n"))
+        self.check_left_alone(self.v.root / FILE, "Quite different minutes\n", "changed since it was staged")
+
+    def test_the_file_edited_in_place_after_staging_is_refused_too(self):
+        (self.v.root / FILE).write_text(MINUTES + "One more line\n")
+        self.check_left_alone(self.v.root / FILE, MINUTES + "One more line\n", "changed since it was staged")
+
+    def test_a_folder_swapped_for_a_link_after_staging_is_caught_by_the_area_check(self):
+        """inbox/sub/m.txt staged; sub is then replaced by a link to a vault folder holding the very same bytes."""
+        (self.v.root / "inbox/sub").mkdir()
+        (self.v.root / "inbox/sub/m.txt").write_text(MINUTES, encoding="utf-8")
+        name = self.stage_more("inbox/sub/m.txt", MINUTES, title="[ABC] Sub call")
+        folder = self.v.root / f"{ABC}/documents/sub"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "m.txt").write_text(MINUTES, encoding="utf-8")
+        shutil.rmtree(self.v.root / "inbox/sub")
+        (self.v.root / "inbox/sub").symlink_to(folder)
+        self.approve(name)
+        r = self.v.run("apply", name, ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not in inbox/ or the project's minutes folder", r.stdout)
+        self.assertTrue((folder / "m.txt").exists())
+
+    def test_a_named_apply_stops_with_the_reason_and_changes_nothing(self):
+        target = self.contract()
+        self.swap(lambda f: f.symlink_to(target))
+        self.decide("approved", "approved")
+        r = self.v.run("apply", self.name, ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not a regular file", r.stdout)
+        self.assertTrue(target.exists())
+        self.assertEqual(self.v.rows("actions"), [])
+
+    def test_a_link_swapped_in_between_validation_and_the_copy_is_still_caught(self):
+        """The copy reads the bytes once, never through a link, and checks them against the staged checksum."""
+        target = self.v.root / f"{ABC}/documents/same-bytes.txt"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(MINUTES, encoding="utf-8")                 # the same bytes: only refusing a link stops it
+        code = ("import sys, os; sys.path.insert(0, 'system/scripts')\nimport tracker, paths\nfrom pathlib import Path\n"
+                f"f = Path({str(self.v.root / FILE)!r}); f.unlink(); f.symlink_to({str(target)!r})\n"
+                f"fop = {{'op': 'copy', 'from': {FILE!r}, 'to': {FILED!r}, 'src_sha256': {hashlib.sha256(MINUTES.encode()).hexdigest()!r}}}\n"
+                "blk = {'kind': 'minutes by others'}\n"
+                "try:\n    tracker._op_copy(1, fop, blk, [])\nexcept (tracker.Invalid, OSError) as e:\n    print('REFUSED', type(e).__name__)\n")
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True)
+        self.assertIn("REFUSED", r.stdout, r.stderr)
+        self.assertFalse(self.filed())
+        self.assertTrue(target.exists())
+
+
+class HeldItems(Base):
+    def test_an_approved_item_that_is_held_does_not_file_the_copy(self):
+        p = self.v.root / "system/staging" / self.name
+        data = json.loads(p.read_text())
+        data["items"][0].update(decision="approved", match="possible")              # needs a project: held, not written
+        p.write_text(json.dumps(data, indent=2))
+        r = self.v.run("apply")
+        self.assertEqual(self.v.rows("actions"), [])
+        self.assertFalse(self.filed())
+        self.assertTrue(self.inbox())
+        self.assertEqual(self.processed(), "")
+        self.assertTrue(p.exists())
+        self.assertNotIn("applied", json.loads(p.read_text())["meeting"])
+        self.assertIn("filed 0", r.stdout)
+
+    def test_once_an_item_is_written_the_copy_is_filed_with_its_count(self):
+        p = self.v.root / "system/staging" / self.name
+        data = json.loads(p.read_text())
+        data["items"][0].update(decision="approved", match="possible")
+        p.write_text(json.dumps(data, indent=2))
+        self.v.run("apply")
+        data = json.loads(p.read_text())
+        data["items"][0]["match"] = "strong"
+        p.write_text(json.dumps(data, indent=2))
+        self.v.run("apply")
+        self.assertTrue(self.filed())
+        self.assertFalse(self.inbox())
+        self.assertIn(f"{FILED} | 1", self.processed())
 
 
 if __name__ == "__main__":
