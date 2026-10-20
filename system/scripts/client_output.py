@@ -179,6 +179,62 @@ def other_project_findings(con, code, text):
     return found
 
 
+LOOSE_SEP = r"[\W_]{0,4}"           # what may stand between an ID's characters: spaces, dashes, dots, any punctuation (up to four)
+
+
+def fold_words(text):
+    """Text as P16 matches a wording: through the confusables skeleton, lower case, every run of anything that isn't a letter or
+    a digit (spaces, hyphens, dots, underscores) one space, so "go-live", "go live" and "go.live" are one form."""
+    import confusables
+    import edit_ai
+    return " ".join(re.split(r"[\W_]+", edit_ai.normal(confusables.skeleton(text)).lower())).strip()
+
+
+def _number(groups):
+    """The number an ID's digits are read as: spaced one by one ("0 0 5") they are one number; otherwise the first run only
+    ("ABC-A-001 2026" is 001), so a list of numbers after a code ("ABC 1 2 3 4") is never read as a short ID."""
+    return "".join(groups) if all(len(g) == 1 for g in groups) else groups[0]
+
+
+def _loose_refs(con, text):
+    """{item ID} of the IDs `text` holds in the forms edit_ai.loose_ids doesn't read (#259, P16): the code's letters spaced or
+    dotted ("A B C - 0 0 5"), the digits spaced, more zeros ("ABC-0005") or fewer ("ABC-5"), any case. Only IDs the tracker holds."""
+    import edit_ai
+    import tracker
+    t = edit_ai.normal(text).lower()
+    out = set()
+    for (code,) in con.execute("SELECT code FROM projects"):
+        letters = LOOSE_SEP.join(re.escape(c) for c in str(code).lower())
+        pat = rf"(?<![a-z0-9]){letters}{LOOSE_SEP}(?:([a-z]){LOOSE_SEP})?(\d(?:[\s._\-]{{0,3}}\d)*)(?![\s._\-]{{0,3}}\d)"
+        for m in re.finditer(pat, t):
+            num = _number(re.split(r"[\s._\-]+", m.group(2))).lstrip("0") or "0"
+            if len(num) > 3:
+                continue
+            ref = f"{code}-{m.group(1).upper()}-{num.zfill(3)}" if m.group(1) else f"{code}-{num.zfill(3)}"
+            if tracker.item_table(ref) and edit_ai.in_tracker(con, ref):
+                out.add(ref)
+    return out
+
+
+def loose_findings(con, code, text, skip=()):
+    """v2.5.3 (#259, P16): what the gate's own reading misses in a client output's text: an item a client report can't show, by
+    its ID however it is written (_loose_refs), or by its wording with hyphens, dots, underscores or spaces for one another
+    (fold_words; the whole wording, 15 characters or more, as the gate matches wordings). `skip`: items a finding already names."""
+    import client_leak
+    found, skip = [], set(skip)
+    blocking = client_leak.blocking_labels(con)
+    for ref in sorted(_loose_refs(con, text) - skip):
+        why = f"{ref} belongs to another project" if ref.split("-")[0] != code else client_leak.item_problem(con, ref, blocking)
+        if why:
+            found.append(f"{why}, but its ID appears")
+    words = f" {fold_words(text)} "
+    for table, col in OTHER_TEXT:
+        for i, w in con.execute(f"SELECT id, {col} FROM {table} WHERE client_visible = 0"):
+            if i not in skip and len((w or "").strip()) >= 15 and f" {fold_words(w)} " in words:
+                found.append(f"{i} isn't client-visible but its wording appears: “{w[:80]}”")
+    return found
+
+
 def text_findings(doc, text, con=None):
     """The client gate's checks on an output's text, read as it is and through the confusables skeleton."""
     import client_leak
@@ -192,6 +248,7 @@ def text_findings(doc, text, con=None):
     if client_leak.marked(t) and "it holds an internal-only marker" not in found:
         found.append("it holds an internal-only marker")
     found += other_project_findings(con, code, t)
+    found += loose_findings(con, code, t, {f.split(" ", 1)[0] for f in found})      # v2.5.3 (#259, P16)
     return found + client_leak.name_findings(con, code, t, client_leak.blocking_labels(con))
 
 
