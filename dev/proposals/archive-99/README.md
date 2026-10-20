@@ -49,7 +49,7 @@ python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check  
 ```
 
 - **Checked:** `guarded.diff` applies cleanly (`git apply --check`) to `origin/main` (dcd8a7b6) **and** to `origin/v252-release` (fd60c7c0). `patch -p1 --dry-run` is clean on main.
-- `rules.diff` is the same rules change as a diff against `origin/main` only (it does not apply to `v252-release`, whose rules text has moved on); `rules_edit.py` works on both because it replaces exact sentences and refuses unless each occurs once. The rules file is replaced by updates, so it is not part of `guarded.diff`.
+- `rules_edit.py` is the one set of `creaite-rules.md` sentences (12, the same places as the other proposal's `creaite-rules.diff`: folder map row, `locations` cell, scripts row, Project documents, Read, Retention, Archiving); it replaces exact sentences, so it applies on any base, with or without #255 (checked on main, v253-release and main + #255). Nothing in the result says `_Archive` alone.
 - **Undo:** `git apply -R dev/proposals/archive-99/guarded.diff` (and revert the ordinary commits). Without the diff the branch still works for the new name (the guarded code reads `paths.ARCHIVE`), but an old-name restore or move back is refused and `rename` is still accepted until the diff lands.
 
 ## Which tests prove it
@@ -76,7 +76,43 @@ python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check  
 
 `Grep` is not blocked from the archive folders. The guard hook allows `Grep(path=<engagement folder>, output_mode=content)`, and `reach.never_inside` ignores project folders that are skipped by name, so a search from the engagement folder goes into `99 Archive` and `zz Archive` (there is no deny pattern for `zz Archive`; `99 Archive` and `_Archive` have one). It relies on Claude Code's own `Read` deny rules covering `Grep`. Worth a separate look; this proposal does not change it.
 
+## The one decision: where does a NEW archive go in a place that still has an old `_Archive`?
+
+Alan's rule is one name, `99 Archive`, and no migration. The two proposals differ only here:
+
+| | **A: always `99 Archive`** (this proposal, current) | **B: the folder already in use at that place** (the other proposal's `reach.diff`) |
+|---|---|---|
+| A place with only an old `_Archive` (an engagement, the projects root, the portfolio) | A new report, note or project goes into a new `99 Archive` beside the old `_Archive`: **two archive folders side by side** in that place until Alan renames or merges the old one himself. Both are read, `99 Archive` first | New items keep going into the old `_Archive` until Alan renames it, so a place never has two. creaite keeps **writing into the old name** for one more release |
+| The guard | New moves must end in exactly `99 Archive`; `_Archive` and `zz Archive` are accepted only as the source of a restore or a move back | `_Archive` is also accepted as a destination, but only where that place has no `99 Archive` (never a new `_Archive`, never `zz Archive`); needs a `paths.archive_name(place)` helper that the guard calls |
+| Work to switch | none (built) | `paths.archive_name(base)`; four callers (`archive.free_archive_path` and `due_reports`, `propose.archive_spec`) and `reach._archive_part`; tests for each place state |
+| N1 (a taken name in an old folder) | the free-name check looks in all three folders either way, so it composes with A and B | same |
+
+**Recommended: A.** It is the simplest rule to review, matches "one name", never writes into a name that is going away, and costs Alan nothing he will notice except two folders in a place until he renames the old one. Choose B only if two archive folders side by side in one place would bother him. Say which; B is a half-day change on top of this branch.
+
+## Merged from the other proposal (`origin/v26-archive-name-proposal`, ae8740c4)
+
+| Piece | Taken? |
+|---|---|
+| 11 older tests expecting `99 Archive` | Already done here for every file it names (and more); the ones it left on `_Archive` only differ because of decision B above |
+| `creaite-rules.md` wording | One set: `rules_edit.py` (its `creaite-rules.diff` still talks about Health's rename, which Alan declined) |
+| `live_server.py` `existing_project_folder` via `skipped_names` | Taken (here via `paths.is_skipped`, also case-blind); the ask-creaite prompt and comment edits too. New test with a hand-emptied `never_index` |
+| `permissions.py` wording | Taken: the refusal names the folder that was hit (`99 Archive is never read or written…`, or `_Archive …`) |
+| `reach.py` rule for moves INTO an archive | **Not taken; see the decision above** (his is B) |
+| `reach.py` `rename` shape, Health's "Rename to 99 Archive", `old-archives`, the update's `never_index` rename | Declined: Alan's decision 1 (no migration, no offer) |
+| `tracker.py` comments | Taken (same changes) |
+| `archive_alias` / `archive_name` | `archive_alias` is covered by `paths.follow_stored` (all four record/folder combinations, no cross-project follow, no symlink, no `..`); `archive_name` only under B |
+| `test_archive_folder_99.py` | Its cases that fit this design are in `test_archive_99.py` (`AfterAHandRename`, the portfolio shapes, the emptied list); the Health, update-rename, folder-in-use and rename-apply tests are not (they test what Alan declined or decision B) |
+| `DESIGN.md` | `DESIGN.md` here lists every place that names the folder |
+
+## With #255 (Delete note with no card, `origin/v26-delete-note-card` b73a31a4)
+
+#255 lands first; this rebases onto it. Dry-run in both orders:
+- **#255 first, then #252:** `guarded-on-255.diff` (this folder) applies on main + #255's `reach.diff`, `tracker.diff`, `live_server.diff` (checked with `git apply --check`); `rules_edit.py` applies. The ordinary branch conflicts in two places: `DeleteNote.jsx` (the header comment) and `help.md` (the Delete note bullet). Resolution: take #255's text and change its `_Archive` to `99 Archive`. #255's `tests.diff` then needs the same rename in `test_card_only_moves`, `test_notes_card_only_ops`, `test_notes_delete` and `test_notes_delete_browser` (apply it to main's versions, then `sed s/_Archive/99 Archive/`).
+- **#252 first, then #255:** #255's `reach.diff` (1 hunk) and `live_server.diff` (2 of 4 hunks) fail against `guarded.diff` because both rewrite the same comments; `tracker.diff` and `creaite-rules.diff` apply; the two ordinary conflicts above are the same. Use the first order.
+- A scratch copy of main + #255 + this branch + `guarded-on-255.diff` + #255's tests with the rename passed `test_delete_note_no_card`, `test_notes_delete`, `test_card_only_moves`, `test_notes_card_only_ops`, `test_archive_99` and `test_reach` (results in the report).
+
 ## Decisions Alan still has to make
 
+- **Where a new archive goes in a place that still has an old `_Archive`: always `99 Archive` (A, built) or the folder already in use (B).** See the table above; recommended A.
 - Which release drops the old names (Jarvis plans 2.6 for #252, so 2.7?). Until then Alan renames his own folders when he likes; nothing prompts him.
 - Whether `zz Archive` should stay out of ask creaite's deny patterns (as now: guarded by `classify`, not named) or be named too (a one-line change in `paths.never_index_patterns`).
