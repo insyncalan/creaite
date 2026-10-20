@@ -126,7 +126,7 @@ class Resolve(OneDriveCase):
         o = self.py("import paths; print(json.dumps([[str(d) for d in paths.archive_dirs(paths.projects_root())], "
                     "[str(d) for d in paths.archive_dirs(paths.projects_root() / 'Example Programme')]]))")
         self.assertEqual(o[0], [str(self.root / NEW), str(self.root / "_Archive"), str(self.root / "zz Archive")])
-        self.assertEqual(o[1], [])
+        self.assertEqual(o[1], [str(self.eng('ABC', NEW))])          # the engagement's own (from the template)
 
     def test_the_notes_places_include_every_archive_name(self):
         for name in ALL:
@@ -154,7 +154,7 @@ class NewMovesGoToTheNewName(OneDriveCase):
         touch(self.eng("ABC", "02 Meetings", "Minutes", "2024-01-05 Steering.docx"))
         touch(self.eng("ABC", "02 Meetings", "Minutes", "2024-02-05 Board.docx"))
         touch(self.eng("ABC", "_Archive", "02 Meetings", "Minutes", "2024-02-05 Board.docx"))     # already there, under the old name
-        got = self.py("import archive; print(json.dumps([(d['from'], d['to']) for d in archive.due_reports('2026-10-20')]))")
+        got = self.py("import archive; print(json.dumps([(d['from'], d['to']) for d in archive.due_reports(__import__('datetime').date(2026, 10, 20))]))")
         self.assertEqual(got, [["projects/Example Programme/02 Meetings/Minutes/2024-01-05 Steering.docx",
                                 "projects/Example Programme/99 Archive/02 Meetings/Minutes/2024-01-05 Steering.docx"]])
 
@@ -235,7 +235,7 @@ class MoveRules(OneDriveCase):
         touch(self.eng("ABC", "zz Archive", "x.md"))
         for new in ("99 Archive", "_Archive"):
             why = self.problem("projects/Example Programme/zz Archive", f"projects/Example Programme/{new}", "rename")
-            self.assertIn("archive, a restore", why)
+            self.assertIn("an archive or a restore", why)
         p = self.v.propose("rename", [], file_changes={"title": "x", "file_changes_decision": "approved", "archive": "rename",
                                                         "file_ops": [{"op": "move", "from": "projects/Example Programme/zz Archive",
                                                                       "to": "projects/Example Programme/99 Archive"}]})

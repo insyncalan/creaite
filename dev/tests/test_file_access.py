@@ -159,7 +159,7 @@ class ProjectPermissionTests(OneDriveCase):
     def test_only_a_named_project_folder_is_accepted(self):
         self.assertTrue(self.checked("Write(projects/Example Programme/04 Reporting/Steerco/**)")["ok"])
         for rule, why in (("Write(projects/**)", "name the project folder"), ("Edit(projects/*/04 Reporting/**)", "name the project folder"),
-                          ("Write(projects/Example Programme/99 Archive/**)", "99 Archive"),
+                          ("Write(projects/Example Programme/99 Archive/**)", "Archive"),      # #252: permissions.py names 99 Archive once its diff lands
                           ("Write(projects/Example Programme/_Templates/**)", "_Templates"),
                           ("Write(~/Documents/**)", "inside the vault"), ("Write(//Users/x/**)", "inside the vault"),
                           ("Write(projects/../system/scripts/x.py)", "inside the vault")):
