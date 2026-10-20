@@ -172,23 +172,25 @@ def migrate_backup_folder(settings):
     return changed
 
 
-# ===== zz Archive becomes _Archive (BL-09) =====
-# The one time an update changes a saved value (Alan, 14-10-2026): `zz Archive` in a saved locations.never_index becomes `_Archive`,
-# in its place, every other value kept. paths.skipped_names() still skips the old name for one release.
-OLD_ARCHIVE_NAME, NEW_ARCHIVE_NAME = "zz Archive", "_Archive"
+# ===== _Archive and zz Archive become 99 Archive (BL-09, #252) =====
+# The one time an update changes a saved value (Alan, 14-10-2026; again for #252, 20-10-2026): `_Archive` or `zz Archive` in a saved
+# locations.never_index becomes `99 Archive`, in its place, every other value kept. Only the setting: no folder is renamed at update
+# time (Health offers that, on the approval card). paths.skipped_names() still skips both old names for one release, and _Archive
+# stays on the deny lists through paths.ALWAYS_NEVER_INDEX.
+OLD_ARCHIVE_NAMES, NEW_ARCHIVE_NAME = ("_Archive", "zz Archive"), "99 Archive"
 
 
 def rename_archive_folder(settings):
     """Apply the rename to the parsed settings.json, in place. Returns the changed key (none the second time round)."""
     loc = settings.get("locations")
     skipped = loc.get("never_index") if isinstance(loc, dict) else None
-    if not isinstance(skipped, list) or OLD_ARCHIVE_NAME not in skipped:
+    if not isinstance(skipped, list) or not any(n in skipped for n in OLD_ARCHIVE_NAMES):
         return []
     MIGRATED.setdefault("locations.never_index", list(skipped))
     MIGRATED["archive.renamed"] = True
     renamed = []
     for name in skipped:
-        name = NEW_ARCHIVE_NAME if name == OLD_ARCHIVE_NAME else name
+        name = NEW_ARCHIVE_NAME if name in OLD_ARCHIVE_NAMES else name
         if name not in renamed:
             renamed.append(name)
     skipped[:] = renamed
@@ -260,10 +262,10 @@ def migration_note():
                      "The old folder and its copies stay where they are.")
     if "locations.never_index" in MIGRATED and "99 System" not in MIGRATED["locations.never_index"]:
         lines.append("99 System is added to the folders creaite never lists, indexes or reads (locations.never_index).")
-    if "archive.renamed" in MIGRATED:                     # BL-09
-        lines.append("zz Archive is renamed _Archive in the folders creaite never lists, indexes or reads "
-                     "(locations.never_index); every other value is kept. Folders still called zz Archive stay skipped, "
-                     "and Settings › Health offers to rename them.")
+    if "archive.renamed" in MIGRATED:                     # BL-09, #252
+        lines.append("The archive folder's name is now 99 Archive in the folders creaite never lists, indexes or reads "
+                     "(locations.never_index); every other value is kept. No folder is renamed: folders still called "
+                     "_Archive or zz Archive keep working and stay skipped, and Settings › Health offers to rename them.")
     return ("\n\n" + "\n".join(lines)) if lines else ""
 
 
