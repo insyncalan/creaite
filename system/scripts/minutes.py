@@ -843,12 +843,11 @@ def cmd_stage(spec_file):
     Returns 1 when the extraction checks find a problem (BL-218, BL-220, BL-221); otherwise the spec file is
     deleted once staged (BL-118).
     """
-    why = minutes_spec.validate_spec(spec_file)         # #269: the spec and every path it names, before anything is read
+    spec, why = minutes_spec.load_spec(spec_file)       # #269: read once; the spec and every path it names checked first
     if why:
         print(f"Not staged: {why}.")
         debuglog.warn("minutes", "stage refused: the meeting spec names a file stage doesn't take (#269)")
         return 1
-    spec = json.loads(Path(spec_file).read_text(encoding="utf-8"))
     refused, key = stage_gate(spec)
     if refused is not None:
         return refused

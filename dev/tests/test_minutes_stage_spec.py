@@ -213,6 +213,45 @@ class StageSpec(unittest.TestCase):
         self.assertIn("project codes", self.refused(projects=["../../outside"]))
         self.assertIn("project codes", self.refused(projects="ABC"))
 
+    # ── Review M1, L2, L4, L6 ───────────────────────────────────────────────────
+    def test_a_spec_swapped_after_its_check_is_never_staged(self):
+        """The spec is read once: the object checked is the object staged. A writer that swaps the file just after the check (here
+        the check itself is wrapped to do it) can't get an unchecked spec staged."""
+        doc = self.write(f"{ABC}/documents/Board pack.vtt", VTT)
+        spec = self.root / "system/staging/drafts/race.json"
+        good = {"title": TITLE, "date": DAY, "projects": ["ABC"], "transcript": TRANSCRIPT, "draft": DRAFT, "items": [ACTION]}
+        bad = {**good, "title": "Board", "transcript": f"{ABC}/documents/Board pack.vtt"}
+        spec.write_text(json.dumps(good), encoding="utf-8")
+        code = ("import json, sys; sys.path.insert(0, 'system/scripts'); import minutes, minutes_spec\n"
+                "orig = minutes_spec.spec_problem\n"
+                "def swapped(s):\n"
+                "    why = orig(s)\n"
+                f"    open({str(spec)!r}, 'w').write({json.dumps(bad)!r})\n"
+                "    return why\n"
+                "minutes_spec.spec_problem = swapped\n"
+                f"sys.exit(minutes.main(['stage', {str(spec)!r}]))")
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.root, capture_output=True, text=True,
+                           env={**os.environ, "CREAITE_NOW": "2026-10-14 12:00"})
+        staged = [json.loads(p.read_text())["meeting"]["transcript"] for p in self.proposals()]
+        self.assertNotIn(f"{ABC}/documents/Board pack.vtt", staged, r.stdout + r.stderr)
+        self.assertEqual(staged, [TRANSCRIPT], r.stdout + r.stderr)
+        self.assertTrue(doc.exists())
+
+    def test_an_unknown_project_code_is_refused(self):
+        self.assertIn("isn't a project", self.refused(projects=["ZZZ"]))
+        self.assertIn("isn't a project", self.refused(projects=["ABC", "QQQ9"]))
+
+    def test_a_hidden_or_temporary_file_is_refused_even_before_it_exists(self):
+        self.write("inbox/.2026-10-14 Steering.vtt", VTT)
+        self.assertIn("hidden or temporary", self.refused(transcript="inbox/.2026-10-14 Steering.vtt"))
+        self.assertIn("hidden or temporary", self.refused(draft="system/staging/drafts/~$26-10-14 Steering committee.docx"))
+        self.assertIn("hidden or temporary", self.refused(whole={"title": "x", "date": DAY, "projects": ["ABC"],
+                                                                 "note": f"{ABC}/minutes/.{DAY} Quick note - x.md", "items": []}))
+
+    def test_a_folder_named_like_a_transcript_is_refused(self):
+        (self.root / "inbox/2026-10-14 Folder.vtt").mkdir()
+        self.assertIn("isn't a file", self.refused(transcript="inbox/2026-10-14 Folder.vtt"))
+
     # ── Still staged: the flows that use stage ──────────────────────────────────
     def staged(self, **spec):
         before = self.proposals()

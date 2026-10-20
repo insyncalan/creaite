@@ -13,7 +13,9 @@ The spec is a `.json` directly in system/staging/drafts/, a JSON object. Every k
 Each path is a string, relative to the vault (stored form), with no `..`, backslash, `~` or control character. Anything else
 refused, in plain words. Nothing here writes."""
 import json
+import os
 import re
+import stat
 from datetime import date
 from pathlib import Path
 
@@ -53,7 +55,10 @@ def stored_problem(key, value):
 
 
 def _plain_file_problem(key, given, real, must_exist=True):
-    """Why the file at `given` (its real path `real`) isn't a plain file of its own, or None."""
+    """Why the file at `given` (its real path `real`) isn't a plain file of its own, or None. A hidden or temporary name is refused
+    whether or not the file exists yet."""
+    if real.name.startswith((".", "~$")) or Path(given).name.startswith((".", "~$")):
+        return f"\"{key}\" is a hidden or temporary file"
     try:
         if Path(given).is_symlink():
             return f"\"{key}\" is a link; give the file itself"
@@ -66,8 +71,6 @@ def _plain_file_problem(key, given, real, must_exist=True):
             return f"\"{key}\" is linked from elsewhere (a second hard link); give a copy of its own"
     except OSError as e:
         return f"\"{key}\" can't be checked ({type(e).__name__})"
-    if real.name.startswith((".", "~$")):
-        return f"\"{key}\" is a hidden or temporary file"
     return None
 
 
@@ -200,6 +203,10 @@ def fields_problem(spec):
     if not isinstance(projects, list) or any(not isinstance(c, str) or not (c == "_portfolio" or CODE.fullmatch(c))
                                              for c in projects):
         return "\"projects\" must be a list of project codes (like ABC)"
+    known = {code for code, _ in paths.project_folders()}
+    unknown = next((c for c in projects if c not in known), None)
+    if unknown:
+        return f"\"projects\": {unknown} isn't a project with a folder in this vault"
     return None
 
 
@@ -216,18 +223,43 @@ def spec_file_problem(spec_path, root=None):
     return _plain_file_problem("spec", given, real)
 
 
+def _read_once(given):
+    """The spec file's text, read once through a descriptor that never follows a link and is a plain file of its own."""
+    fd = os.open(str(given), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+            raise ValueError("not a plain file")
+        chunks = []
+        while True:
+            b = os.read(fd, 1 << 16)
+            if not b:
+                break
+            chunks.append(b)
+    finally:
+        os.close(fd)
+    return b"".join(chunks).decode("utf-8")
+
+
+def load_spec(spec_path, root=None):
+    """#269 review M1: (the spec, None) when `minutes.py stage <spec_path>` may go on, else (None, a plain refusal). The file is
+    read once, and the object checked is the object returned, so a file swapped after the check is never what is staged."""
+    why = spec_file_problem(spec_path, root)
+    if why:
+        return None, why
+    given = Path(spec_path) if Path(spec_path).is_absolute() else Path(root or Path.cwd()) / spec_path
+    try:
+        spec = json.loads(_read_once(given))
+    except (OSError, ValueError):
+        return None, "the meeting spec can't be read as JSON"
+    why = spec_problem(spec)
+    return (None, why) if why else (spec, None)
+
+
 def validate_spec(spec_path, root=None):
     """#269: None when `minutes.py stage <spec_path>` may go on, else a plain refusal (one sentence, no file text). `root` is the
     folder a relative `spec_path` is read from (the command's working folder; the guard hook passes the vault)."""
-    why = spec_file_problem(spec_path, root)
-    if why:
-        return why
-    given = Path(spec_path) if Path(spec_path).is_absolute() else Path(root or Path.cwd()) / spec_path
-    try:
-        spec = json.loads(given.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return "the meeting spec can't be read as JSON"
-    return spec_problem(spec)
+    return load_spec(spec_path, root)[1]
 
 
 def spec_problem(spec):
