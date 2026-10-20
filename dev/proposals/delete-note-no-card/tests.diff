@@ -1,5 +1,5 @@
 diff --git a/dev/tests/test_card_only_moves.py b/dev/tests/test_card_only_moves.py
-index bb2d1a3..51c56c9 100644
+index bb2d1a37..12035a5c 100644
 --- a/dev/tests/test_card_only_moves.py
 +++ b/dev/tests/test_card_only_moves.py
 @@ -1,4 +1,8 @@
@@ -12,12 +12,24 @@ index bb2d1a3..51c56c9 100644
  
  Run: python3 dev/tests/test_card_only_moves.py      (one live server over a throwaway vault; no Chrome)
  
-@@ -32,6 +36,12 @@ from test_archive_move_back import DUE, archive_old_files  # noqa: E402
+@@ -21,6 +25,7 @@ reach.CARD_MOVE_SECONDS old). What is covered:
+ Everything is fictional and temporary.
+ """
+ import json
++import re
+ import sys
+ import unittest
+ from pathlib import Path
+@@ -32,6 +37,16 @@ from test_archive_move_back import DUE, archive_old_files  # noqa: E402
  from test_tracker import ABC, action  # noqa: E402
  
  REFUSED = "is moved only by Approve on the live server's approval card"
 +PAGE_REFUSED = "is moved only by Delete note or Move back on the dashboard (the live server's own button)"     # #255
 +
++
++# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
++ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
++                    .read_text(encoding="utf-8"), re.M).group(1)
 +
 +def refused(kind):
 +    """The apply's refusal for a move of `kind` without the server's marker (#255: a note's own moves name the button)."""
@@ -25,7 +37,7 @@ index bb2d1a3..51c56c9 100644
  
  
  class CardOnlyMoves(test_notes_delete.NotesDelete):
-@@ -69,7 +79,7 @@ class CardOnly(CardOnlyMoves):
+@@ -69,7 +84,7 @@ class CardOnly(CardOnlyMoves):
          before = self.backups()
          r = self.post("/api/apply", {})                                            # a full apply leaves it in staging
          self.assertTrue(r["ok"], r)
@@ -34,7 +46,7 @@ index bb2d1a3..51c56c9 100644
          self.assertTrue((self.v.root / rel).is_file())
          self.assertTrue(there.is_file())
          self.assertFalse(gone.exists())
-@@ -78,7 +88,7 @@ class CardOnly(CardOnlyMoves):
+@@ -78,7 +93,7 @@ class CardOnly(CardOnlyMoves):
          r = self.run_at("tracker.py", "apply", name)
          self.assertNotEqual(r.returncode, 0)
          self.assertIn("Apply stopped. Nothing was written.", r.stdout)            # refused in the dry run
@@ -43,9 +55,12 @@ index bb2d1a3..51c56c9 100644
          self.assertEqual(self.backups(), before)                                   # before the backup
          self.assertTrue(there.is_file())
          self.assertFalse(gone.exists())
-@@ -88,8 +98,7 @@ class CardOnly(CardOnlyMoves):
+@@ -86,10 +101,9 @@ class CardOnly(CardOnlyMoves):
+ 
+     def test_a_a_hand_staged_note_delete_is_refused(self):
          self.new("Hand delete")
-         src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/_Archive/notes/Hand delete.md"
+-        src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/_Archive/notes/Hand delete.md"
++        src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/{ARCHIVE}/notes/Hand delete.md"
          self.assert_refused_both_ways("notes", src, dst, self.folder() / "Hand delete.md", self.archive() / "Hand delete.md")
 -        d = self.delete(self.post("/api/notes/get", {"path": src}))                   # the card still moves it
 -        done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
@@ -53,13 +68,14 @@ index bb2d1a3..51c56c9 100644
          self.assertTrue(done["ok"], done)
          self.assertTrue((self.archive() / "Hand delete.md").is_file())
          self.assertEqual(self.markers(), [])                                           # nothing left on success
-@@ -99,12 +108,10 @@ class CardOnly(CardOnlyMoves):
+@@ -99,12 +113,10 @@ class CardOnly(CardOnlyMoves):
  
      def test_b_a_hand_staged_note_move_back_is_refused(self):
          r = self.new("Hand back")
 -        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])
+-        src, dst = f"{ABC}/_Archive/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
 +        self.assertTrue(self.delete(r)["ok"])
-         src, dst = f"{ABC}/_Archive/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
++        src, dst = f"{ABC}/{ARCHIVE}/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
          self.assert_refused_both_ways("notes_back", src, dst, self.archive() / "Hand back.md", self.folder() / "Hand back.md")
 -        self.assertTrue(self.post("/api/files/move-back", {"path": dst})["ok"])       # Move back on the card still works
 -        card = self.post("/api/edit/pending", {})["card"]
@@ -68,7 +84,7 @@ index bb2d1a3..51c56c9 100644
          self.assertTrue((self.folder() / "Hand back.md").is_file())
          self.assertEqual(self.markers(), [])
  
-@@ -121,15 +128,19 @@ class CardOnly(CardOnlyMoves):
+@@ -121,15 +133,19 @@ class CardOnly(CardOnlyMoves):
          self.assertEqual(self.markers(), [])
  
      def test_d_no_marker_left_when_the_apply_fails_or_raises(self):
@@ -96,7 +112,16 @@ index bb2d1a3..51c56c9 100644
          got = self.py_json(
              "import pathlib, archive, live_server as ls, paths\n"
              f"rel = {f'{ABC}/notes/Fails.md'!r}\n"
-@@ -188,11 +199,11 @@ class CardOnly(CardOnlyMoves):
+@@ -158,7 +174,7 @@ class CardOnly(CardOnlyMoves):
+         self.new("Marker")
+         got = self.py_json(
+             "import hashlib, os, pathlib, time, reach, tracker, paths\n"
+-            f"src, dst = {f'{ABC}/notes/Marker.md'!r}, {f'{ABC}/_Archive/notes/Marker.md'!r}\n"
++            f"src, dst = {f'{ABC}/notes/Marker.md'!r}, {f'{ABC}/{ARCHIVE}/notes/Marker.md'!r}\n"
+             "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
+             "prop = paths.STAGING / 'proposed-2026-10-16-marker.json'\n"
+             "prop.write_text(json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}))\n"
+@@ -188,11 +204,11 @@ class CardOnly(CardOnlyMoves):
              "out['free_elsewhere'] = {k: tracker.card_move_problem(mins, {'archive': k}, None) for k in ('reports', 'archive', 'restore', 'rename')}\n"
              "prop.unlink(); other.unlink()\n"
              "print(json.dumps(out))")
@@ -110,7 +135,16 @@ index bb2d1a3..51c56c9 100644
          self.assertEqual(got["free_elsewhere"], {"reports": None, "archive": None, "restore": None, "rename": None})
          for k, why in got["free"].items():                                            # #128: never a note, by any other kind
              self.assertIn("is in a notes folder: a note is moved only by Delete note or Move back", why or "", k)
-@@ -209,7 +220,7 @@ class CardOnly(CardOnlyMoves):
+@@ -201,7 +217,7 @@ class CardOnly(CardOnlyMoves):
+         """An Approve that stopped before its apply finished (a crash) leaves an approved card-only proposal in staging with no
+         marker: a full Apply leaves it there, says which file, and applies the rest; named, it is refused before the backup."""
+         self.new("Leftover")
+-        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/_Archive/notes/Leftover.md"
++        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/{ARCHIVE}/notes/Leftover.md"
+         left = Path(self.hand("notes", src, dst, via="file")).name
+         normal = self.v.root / "system/staging/proposed-2026-10-16-normal.json"
+         normal.write_text(json.dumps({"source_run": "dashboard", "items": [action(1, description="Send the plan")]}),
+@@ -209,7 +225,7 @@ class CardOnly(CardOnlyMoves):
          before = self.backups()
          r = self.post("/api/apply", {})
          self.assertTrue(r["ok"], r)
@@ -119,7 +153,7 @@ index bb2d1a3..51c56c9 100644
          self.assertFalse(normal.exists())                                              # the normal one applied
          self.assertEqual(len(self.backups()), len(before) + 1)
          self.assertTrue((self.v.root / "system/staging" / left).is_file())             # the leftover stays, unapplied
-@@ -220,8 +231,7 @@ class CardOnly(CardOnlyMoves):
+@@ -220,8 +236,7 @@ class CardOnly(CardOnlyMoves):
          self.assertTrue(r["ok"], r)
          self.assertIn(f"Left in staging, not applied: {left}", r["message"])
          self.assertEqual(self.backups(), before)
@@ -129,7 +163,7 @@ index bb2d1a3..51c56c9 100644
          self.assertTrue(done["ok"], done)
          self.assertTrue((self.archive() / "Leftover.md").is_file())
          self.assertEqual(self.markers(), [])
-@@ -237,7 +247,7 @@ class CardOnly(CardOnlyMoves):
+@@ -237,7 +252,7 @@ class CardOnly(CardOnlyMoves):
              "for op in fc['file_ops']: tracker.check_file_op(op, fc)\n"
              "print(json.dumps([why, len(fc['file_ops'])]))")
          self.assertEqual(got, [None, 1])
@@ -138,7 +172,7 @@ index bb2d1a3..51c56c9 100644
          self.assertTrue(d["ok"], d)
          self.assertEqual(self.markers(), [])
  
-@@ -266,7 +276,7 @@ class CardOnly(CardOnlyMoves):
+@@ -266,7 +281,7 @@ class CardOnly(CardOnlyMoves):
          self.assertEqual(len(seen[0]), 1)                                              # the marker was there for the apply
          self.assertFalse(seen[1])                                                      # and the bytes under the name changed
          self.assertFalse(ok, message)
@@ -147,7 +181,16 @@ index bb2d1a3..51c56c9 100644
          self.assertTrue((self.folder() / "Other bytes.md").is_file())                 # the note stays
          self.assertFalse((self.archive() / "Other bytes.md").exists())
          self.assertEqual(after, [])
-@@ -298,7 +308,7 @@ class CardOnly(CardOnlyMoves):
+@@ -284,7 +299,7 @@ class CardOnly(CardOnlyMoves):
+         self.new("Loaded")
+         got = self.py_json(
+             "import hashlib, reach, tracker, paths\n"
+-            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/_Archive/notes/Loaded.md'!r}\n"
++            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/{ARCHIVE}/notes/Loaded.md'!r}\n"
+             "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
+             "prop = paths.STAGING / 'proposed-2026-10-16-loaded.json'\n"
+             "card = json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}).encode()\n"
+@@ -298,7 +313,7 @@ class CardOnly(CardOnlyMoves):
              "prop.write_bytes(other); tracker.load(prop); out['unbound_read'] = p()\n"
              "m.unlink(); prop.unlink(); tracker.READ_SHA.clear()\n"
              "print(json.dumps(out))")
@@ -156,7 +199,7 @@ index bb2d1a3..51c56c9 100644
          self.assertIsNone(got["card_loaded"])
          self.assertIsNone(got["unbound_read"])                  # only the apply's own load binds (the last bound one: the card's)
  
-@@ -340,7 +350,7 @@ class CardOnly(CardOnlyMoves):
+@@ -340,7 +355,7 @@ class CardOnly(CardOnlyMoves):
          self.assertFalse(ok, message)
          self.assertIn("the approval couldn't be recorded", message)
          self.assertEqual(left, [])                                                     # nothing written through the symlink
@@ -166,19 +209,41 @@ index bb2d1a3..51c56c9 100644
  
      def test_f_the_lists_agree_and_nobody_else_writes_the_marker(self):
 diff --git a/dev/tests/test_notes_card_only_ops.py b/dev/tests/test_notes_card_only_ops.py
-index 8af26fd..76539e6 100644
+index 8af26fd2..3ec25d83 100644
 --- a/dev/tests/test_notes_card_only_ops.py
 +++ b/dev/tests/test_notes_card_only_ops.py
-@@ -9,7 +9,7 @@ of the card's own proposal (tracker.card_marks), bound to that proposal's bytes
+@@ -9,9 +9,9 @@ of the card's own proposal (tracker.card_marks), bound to that proposal's bytes
  - a hand-staged remove: /api/apply leaves it in staging and says why; tracker.py apply naming it is refused before the backup;
    Approve on the card removes it (the marker exists only during that apply) and the same proposal again is refused;
  - copy then remove, and a write over a note, refused; the same ops on a file outside the notes folder apply (control);
 -- the Notes tab still creates, saves, renames and deletes (no marker involved; the delete is #124's card);
 +- the Notes tab still creates, saves, renames and deletes (no marker involved but the delete's own, #255: no card);
  - `..`, a symlink to a note or to the notes folder, a hard link, case variants, a subfolder and the portfolio's notes are all
-   inside; a minutes file, an inbox file and the _Archive are not;
+-  inside; a minutes file, an inbox file and the _Archive are not;
++  inside; a minutes file, an inbox file and the archive folder (_Archive today, 99 Archive after #252) are not;
  - locations.folders.notes on, inside or around a minutes or reports folder: refused by propose.py setting and the page's
-@@ -138,9 +138,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
+   settings save, and with such a mapping a "reports" move of a file in it is refused by the mover, naming the mapping;
+ - review F1 to F5: a rename of the notes folder is refused while notes are under the old name (the page's real /api/fs
+@@ -21,6 +21,7 @@ Everything is fictional and temporary.
+ """
+ import json
+ import os
++import re
+ import sys
+ import unittest
+ from pathlib import Path
+@@ -34,6 +35,10 @@ from test_tracker import ABC  # noqa: E402
+ IN_NOTES = "is in a notes folder: a note is changed through the Notes tab, or by Approve on the live server's approval card"
+ 
+ 
++# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
++ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
++                    .read_text(encoding="utf-8"), re.M).group(1)
++
+ class NoteOps(test_card_only_moves.CardOnlyMoves):
+     def hand(self, ops, via="fs", name="ops"):
+         """A proposal written into staging by hand, approved, with these file operations."""
+@@ -138,9 +143,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
          self.assertTrue(m["ok"], m)
          self.assertTrue(m["renamed"])
          self.assertIn("Autosaved.", (self.v.root / m["note"]["path"]).read_text())
@@ -189,23 +254,35 @@ index 8af26fd..76539e6 100644
          self.assertTrue(done["ok"], done)
          self.assertTrue((self.archive() / "Tab note renamed.md").is_file())
          self.assertEqual(self.markers(), [])
-@@ -213,7 +211,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
+@@ -163,7 +166,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
+                  "project_case": f"projects/{folder.upper()}/notes/Tricky.md", "symlink": "inbox/link.md",
+                  "symlinked_folder": "inbox/notes-dir/Tricky.md", "sub": f"{ABC}/notes/sub/Deep.md",
+                  "images": f"{ABC}/notes/_images/pic.png", "portfolio": "projects/_portfolio/notes/Thought.md",
+-                 "plain": "inbox/Plain.md", "minutes": f"{ABC}/minutes/x.docx", "archive": f"{ABC}/_Archive/notes/Tricky.md",
++                 "plain": "inbox/Plain.md", "minutes": f"{ABC}/minutes/x.docx", "archive": f"{ABC}/{ARCHIVE}/notes/Tricky.md",
+                  "hard_remove": "inbox/hard.md"}
+         got = self.py_json(
+             "import tracker\n"
+@@ -213,8 +216,8 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
  
      def test_g_deleted_notes_are_not_copied_out_and_no_draft_is_stamped_in_notes(self):
          r = self.new("Gone")
 -        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])     # Delete note
+-        gone = f"{ABC}/_Archive/notes/Gone.md"
 +        self.assertTrue(self.delete(r)["ok"])                                                             # Delete note
-         gone = f"{ABC}/_Archive/notes/Gone.md"
++        gone = f"{ABC}/{ARCHIVE}/notes/Gone.md"
          self.refused_both_ways([{"op": "copy", "from": gone, "to": "inbox/Gone copy.md"}], f"copy: {gone} {IN_NOTES}", "gone")
          self.assertFalse((self.v.root / "inbox/Gone copy.md").exists())
+         doc = self.folder() / "Stamped.docx"                                     # F3: a draft is never stamped in a notes folder
 diff --git a/dev/tests/test_notes_delete.py b/dev/tests/test_notes_delete.py
-index bad871a..28d92ce 100644
+index bad871a6..f367585b 100644
 --- a/dev/tests/test_notes_delete.py
 +++ b/dev/tests/test_notes_delete.py
-@@ -1,11 +1,11 @@
+@@ -1,17 +1,18 @@
 -"""#124: Delete note (Alan, 15-10-2026): the confirm box in the Notes tab AND the one approval card for the move into _Archive.
-+"""#124: Delete note (Alan, 15-10-2026): the confirm box in the Notes tab moves the note into _Archive; #255 (Alan, 20-10-2026):
-+with no approval card, the click is the approval (dev/tests/test_delete_note_no_card.py has the route's own guards).
++"""#124: Delete note (Alan, 15-10-2026): the confirm box in the Notes tab moves the note into the archive folder (paths.ARCHIVE:
++_Archive today, 99 Archive after #252); #255 (Alan, 20-10-2026): with no approval card, the click is the approval
++(dev/tests/test_delete_note_no_card.py has the route's own guards).
  
  Run: python3 dev/tests/test_notes_delete.py
  
@@ -218,7 +295,43 @@ index bad871a..28d92ce 100644
  - after the move: the notes list, the search index, Mentioned in (the other notes' links, left as written: missing) drop it;
    Files › Archived lists it with Move back; undo (tracker.py undo, the toast's Undo) brings it back, and so does Move back
    (kind "notes_back"), never onto a note that is there;
-@@ -69,31 +69,34 @@ class NotesDelete(test_notes_tab.NotesServer):
+-- a name taken in _Archive gets -2; a stale save, typing not yet saved, a path that isn't a note and a bad request are refused;
++- a name taken in the archive folder gets -2; a stale save, typing not yet saved, a path that isn't a note and a bad request are refused;
+ - never while ask creaite has read outside content (the rename's rule); a confidential note deletes the same way;
+-- ask creaite can't do it: _Archive stays never for classify(), propose.py stages a "notes" move only from the server's own
++- ask creaite can't do it: the archive folder stays never for classify(), propose.py stages a "notes" move only from the server's own
+   snapshot, a CHANGE card with one is refused;
+ - reach.archive_move_problem's "notes" and "notes_back" are exactly the one-note shape, in both layouts.
+ - a name taken between the check and the move is never overwritten (os.link, never os.rename over a file), and Undo or an
+@@ -23,6 +24,7 @@ Everything is fictional and temporary.
+ import json
+ import os
+ import subprocess
++import re
+ import sys
+ import unittest
+ import urllib.request
+@@ -34,6 +36,10 @@ import test_notes_tab  # noqa: E402
+ from test_onedrive_projects import OneDriveCase  # noqa: E402
+ from test_tracker import ABC  # noqa: E402
+ 
++# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
++ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
++                    .read_text(encoding="utf-8"), re.M).group(1)
++
+ os.environ.setdefault("CREAITE_NO_LAUNCH", "1")          # /api/open answers the path, never starts an app
+ 
+ 
+@@ -50,7 +56,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+         return r
+ 
+     def archive(self):
+-        return self.v.root / ABC / "_Archive" / "notes"
++        return self.v.root / ABC / ARCHIVE / "notes"
+ 
+     def titles(self, code="ABC"):
+         return [n["title"] for n in self.post("/api/notes/list", {"code": code})["notes"]]
+@@ -69,31 +75,34 @@ class NotesDelete(test_notes_tab.NotesServer):
                             cwd=self.v.root, capture_output=True, text=True)
          return json.loads(r.stdout.strip().splitlines()[-1])
  
@@ -237,12 +350,12 @@ index bad871a..28d92ce 100644
 -        return self.post("/api/notes/delete", {"path": r["note"]["path"], "base": r["base"]})
 +        """#255: Delete note from the page: moved at once, no card."""
 +        return self.page("/api/notes/delete/now", {"path": r["note"]["path"], "base": r["base"]})
- 
--    def test_a_one_card_reject_moves_nothing_approve_moves_undo_restores(self):
++
 +    def move_back(self, path):
 +        """#255: a deleted note's Move back from the page: at once, no card."""
 +        return self.page("/api/files/move-back/now", {"path": path})
-+
+ 
+-    def test_a_one_card_reject_moves_nothing_approve_moves_undo_restores(self):
 +    def test_a_delete_moves_at_once_undo_restores(self):
          r = self.new("Working session")
          other = self.new("Points at it")
@@ -270,7 +383,7 @@ index bad871a..28d92ce 100644
          self.assertEqual(done["message"], "Moved “Working session” to the archive.")                # L4: the note named
          self.assertFalse(f.exists())
          self.assertTrue((self.archive() / "Working session.md").is_file())
-@@ -117,28 +120,23 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -117,28 +126,23 @@ class NotesDelete(test_notes_tab.NotesServer):
  
      def test_b_move_back_from_files_never_onto_a_note_that_is_there(self):
          r = self.new("Lessons")
@@ -307,7 +420,7 @@ index bad871a..28d92ce 100644
          self.assertEqual(done["message"], "Moved “Lessons” back to its notes folder as “Lessons-2” (a note has its old name).")
          self.assertEqual((self.folder() / "Lessons.md").read_text(), new)                             # the new note untouched
          self.assertTrue((self.folder() / "Lessons-2.md").is_file())
-@@ -146,27 +144,26 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -146,27 +150,26 @@ class NotesDelete(test_notes_tab.NotesServer):
      def test_c_a_name_taken_in_the_archive_gets_a_number(self):
          for _ in range(2):
              r = self.new("Same name")
@@ -345,7 +458,7 @@ index bad871a..28d92ce 100644
  
      def test_e_never_while_ask_creaite_has_read_outside_content(self):
          r = self.new("Outside")
-@@ -188,10 +185,9 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -188,10 +191,9 @@ class NotesDelete(test_notes_tab.NotesServer):
          s = self.post("/api/notes/save", {"path": r["note"]["path"], "body": "The numbat negotiation position.\n",
                                            "changes": {"confidential": True}, "base": r["base"]})
          self.assertTrue(s["ok"] and s["note"]["confidential"], s)
@@ -358,7 +471,7 @@ index bad871a..28d92ce 100644
          self.assertTrue((self.archive() / "Private.md").is_file())
  
      def test_g_ask_creaite_cant_delete_a_note_this_way(self):
-@@ -217,39 +213,34 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -217,39 +219,34 @@ class NotesDelete(test_notes_tab.NotesServer):
          self.assertEqual(set(kinds), {"never"})
          self.assertTrue((self.folder() / "Not from a chat.md").is_file())
  
@@ -407,7 +520,7 @@ index bad871a..28d92ce 100644
          self.assertTrue(done["ok"], done)
          self.assertEqual(self.post("/api/notes/save", {"path": path, "body": "x", "base": s["base"]})["status"], 404)   # a window that missed it
  
-@@ -286,34 +277,29 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -286,34 +283,29 @@ class NotesDelete(test_notes_tab.NotesServer):
          for word in ("first", "second"):
              r = self.new("Twice")
              s = self.post("/api/notes/save", {"path": r["note"]["path"], "body": f"The {word} one.\n", "base": r["base"]})
@@ -415,7 +528,8 @@ index bad871a..28d92ce 100644
 -                                                            "base": s["base"]})["card"]["card"]})["ok"])
 +            self.assertTrue(self.page("/api/notes/delete/now", {"path": s["note"]["path"], "base": s["base"]})["ok"])
          rows = [a for a in self.files()["archived"] if a["path"] == f"{ABC}/notes/Twice.md"]
-         self.assertEqual(sorted(a["at"] for a in rows), [f"{ABC}/_Archive/notes/Twice-2.md", f"{ABC}/_Archive/notes/Twice.md"])
+-        self.assertEqual(sorted(a["at"] for a in rows), [f"{ABC}/_Archive/notes/Twice-2.md", f"{ABC}/_Archive/notes/Twice.md"])
++        self.assertEqual(sorted(a["at"] for a in rows), [f"{ABC}/{ARCHIVE}/notes/Twice-2.md", f"{ABC}/{ARCHIVE}/notes/Twice.md"])
          second = next(a["at"] for a in rows if a["at"].endswith("Twice-2.md"))
          opened = self.post("/api/open", {"path": second})                                          # Open: that file, read in place
          self.assertTrue(opened["ok"], opened)
@@ -430,7 +544,8 @@ index bad871a..28d92ce 100644
          self.assertIn("The second one.", (self.folder() / "Twice.md").read_text())                 # the row's own note
          self.assertIn("The first one.", (self.archive() / "Twice.md").read_text())                 # the other stays archived
          first = [a for a in self.files()["archived"] if a["path"] == f"{ABC}/notes/Twice.md"]
-         self.assertEqual([a["at"] for a in first], [f"{ABC}/_Archive/notes/Twice.md"])
+-        self.assertEqual([a["at"] for a in first], [f"{ABC}/_Archive/notes/Twice.md"])
++        self.assertEqual([a["at"] for a in first], [f"{ABC}/{ARCHIVE}/notes/Twice.md"])
  
 -    # ── L2: no Stage for review on a note's card ──
 -    def test_l_a_notes_card_cant_be_staged_for_review(self):
@@ -452,7 +567,7 @@ index bad871a..28d92ce 100644
          other = self.py_json("import live_server as ls; print(json.dumps(ls.edit_public({'id': 'e', 'run': None, 'chat': None, "
                               "'title': 't', 'state': 'pending', 'valid': True, 'clash': [], 'lines': [], 'problems': [], "
                               "'expires': 0, 'kind': 'reports_back'})['stage']))")
-@@ -322,7 +308,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -322,7 +314,7 @@ class NotesDelete(test_notes_tab.NotesServer):
      # ── L3: Undo says what it did ──
      def test_m_undo_after_a_note_took_the_name(self):
          r = self.new("Taken back")
@@ -461,7 +576,15 @@ index bad871a..28d92ce 100644
          self.new("Taken back")
          u = self.post("/api/undo", {"apply_id": done["apply_id"]})
          self.assertTrue(u["ok"], u)
-@@ -338,7 +324,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+@@ -332,28 +324,28 @@ class NotesDelete(test_notes_tab.NotesServer):
+         report = self.py_json("import reach, tracker\nreach.NOTES_BACK_RENAMES = False\n"
+                               f"import pathlib; d = pathlib.Path({str(self.archive())!r}); d.mkdir(parents=True, exist_ok=True)\n"
+                               "(d / 'Taken back.md').write_text('x')\nout = []\n"
+-                              f"tracker._reverse_move({{'from': '{ABC}/notes/Taken back.md', 'to': '{ABC}/_Archive/notes/Taken back.md', "
++                              f"tracker._reverse_move({{'from': '{ABC}/notes/Taken back.md', 'to': '{ABC}/{ARCHIVE}/notes/Taken back.md', "
+                               "'kind': 'notes'}, out)\nprint(json.dumps(out))")
+-        self.assertEqual(report, [f"skipped moving {ABC}/_Archive/notes/Taken back.md back: {ABC}/notes/Taken back.md is there again"])
++        self.assertEqual(report, [f"skipped moving {ABC}/{ARCHIVE}/notes/Taken back.md back: {ABC}/notes/Taken back.md is there again"])
  
      def test_n_move_back_renames_switch_off_refuses(self):
          r = self.new("Switch")
@@ -470,7 +593,55 @@ index bad871a..28d92ce 100644
          self.new("Switch")
          got = self.py_json(
              "import reach, archive, tracker\nreach.NOTES_BACK_RENAMES = False\n"
-@@ -422,7 +408,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+-            f"spec, why = archive.back_spec('{ABC}/_Archive/notes/Switch.md')\n"
+-            f"shape = reach.archive_move_problem('{ABC}/_Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
++            f"spec, why = archive.back_spec('{ABC}/{ARCHIVE}/notes/Switch.md')\n"
++            f"shape = reach.archive_move_problem('{ABC}/{ARCHIVE}/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
+             "try:\n"
+-            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-2.md'}}, {{'archive': 'notes_back'}}); chk = None\n"
++            f"    tracker.check_move({{'from': '{ABC}/{ARCHIVE}/notes/Switch.md', 'to': '{ABC}/notes/Switch-2.md'}}, {{'archive': 'notes_back'}}); chk = None\n"
+             "except tracker.Invalid as e:\n    chk = str(e)\n"
+             "reach.NOTES_BACK_RENAMES = True\n"
+-            f"on = reach.archive_move_problem('{ABC}/_Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
++            f"on = reach.archive_move_problem('{ABC}/{ARCHIVE}/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
+             "try:\n"
+-            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-3.md'}}, {{'archive': 'notes_back'}}); ok = None\n"
++            f"    tracker.check_move({{'from': '{ABC}/{ARCHIVE}/notes/Switch.md', 'to': '{ABC}/notes/Switch-3.md'}}, {{'archive': 'notes_back'}}); ok = None\n"
+             "except tracker.Invalid as e:\n    ok = str(e)\n"
+             "try:\n"
+-            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Other.md'}}, {{'archive': 'notes_back'}}); other = None\n"
++            f"    tracker.check_move({{'from': '{ABC}/{ARCHIVE}/notes/Switch.md', 'to': '{ABC}/notes/Other.md'}}, {{'archive': 'notes_back'}}); other = None\n"
+             "except tracker.Invalid as e:\n    other = str(e)\n"
+             "print(json.dumps([spec, why, shape, chk, on, ok, other]))")
+         spec, why, shape, chk, on, ok, other = got
+@@ -380,7 +372,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+             "    return real(a, b, kind)\n"
+             "def undo(name):\n"
+             "    (arc / name).write_text('the archived one'); racing.done = False; out = []\n"
+-            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/_Archive/notes/' + name, 'kind': 'notes'}}, out)\n"
++            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/{ARCHIVE}/notes/' + name, 'kind': 'notes'}}, out)\n"
+             "    return out\n"
+             "tracker._move = racing\n"
+             "on = undo('Late.md')\n"
+@@ -391,7 +383,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+             "reach.NOTES_BACK_RENAMES = True\n"
+             "(note / 'Apply.md').write_text('the note to delete'); racing.done = False\n"
+             "try:\n"
+-            f"    tracker._op_move(1, {{'from': '{ABC}/notes/Apply.md', 'to': '{ABC}/_Archive/notes/Apply.md'}}, {{'archive': 'notes'}}, [])\n"
++            f"    tracker._op_move(1, {{'from': '{ABC}/notes/Apply.md', 'to': '{ABC}/{ARCHIVE}/notes/Apply.md'}}, {{'archive': 'notes'}}, [])\n"
+             "    applied = None\n"
+             "except tracker.Invalid as e:\n"
+             "    applied = str(e)\n"
+@@ -411,7 +403,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+         on, on_files, off, off_files, applied, apply_files, fall, fall_files, moved = got
+         self.assertEqual(on, [f"restored {ABC}/notes/Late.md as Late-2.md: a note took its name"])
+         self.assertEqual(on_files, ["the new note", "the archived one", False])                        # the next free name
+-        self.assertEqual(off, [f"skipped moving {ABC}/_Archive/notes/Later.md back: {ABC}/notes/Later.md is there again"])
++        self.assertEqual(off, [f"skipped moving {ABC}/{ARCHIVE}/notes/Later.md back: {ABC}/notes/Later.md is there again"])
+         self.assertEqual(off_files, ["the new note", "the archived one"])                              # both as they were
+         self.assertIn("already exists", applied)                                                        # the apply rolls back
+         self.assertEqual(apply_files, ["the note to delete", "the new note"])
+@@ -422,7 +414,7 @@ class NotesDelete(test_notes_tab.NotesServer):
      # ── Team Cap's review F2: the wait is proven, never timing: tracker.py undo or apply never starts while a save holds the lock ──
      def test_p_undo_and_apply_wait_for_notes_lock(self):
          r = self.new("Undo raced")
@@ -479,11 +650,33 @@ index bad871a..28d92ce 100644
          staged = self.v.root / "system/staging/proposed-2026-10-16-hand.json"
          got = self.py_json(
              "import pathlib, threading, time, live_server as ls\n"
+@@ -484,7 +476,7 @@ class NotesDelete(test_notes_tab.NotesServer):
+             "tracker.card_move_problem = lambda *a: None       # the mover past the card's marker (#124 F3, tested on its own)\n"
+             "def st(): return [os.stat(outside).st_nlink, os.stat(inner).st_nlink, outside.read_text()]\n"
+             f"def fop(name, back=False):\n"
+-            f"    n, a = '{ABC}/notes/' + name, '{ABC}/_Archive/notes/' + name\n"
++            f"    n, a = '{ABC}/notes/' + name, '{ABC}/{ARCHIVE}/notes/' + name\n"
+             "    return ({'from': a, 'to': n}, {'archive': 'notes_back'}) if back else ({'from': n, 'to': a}, {'archive': 'notes'})\n"
+             "def refused(call):\n"
+             "    try:\n"
+@@ -515,10 +507,10 @@ class NotesDelete(test_notes_tab.NotesServer):
+             "               os.path.lexists(note / 'Nowhere.md')]\n"
+             "for name, target in (('Back out.md', outside), ('Back note.md', inner)):\n"
+             "    os.symlink(target, arc / name); rep = []\n"
+-            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/_Archive/notes/' + name, 'kind': 'notes'}}, rep)\n"
++            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/{ARCHIVE}/notes/' + name, 'kind': 'notes'}}, rep)\n"
+             "    out[name] = [rep, os.path.islink(arc / name), os.path.lexists(note / name)]\n"
+             "(arc / 'Back swap.md').write_text('archived'); os.link = swap; rep = []\n"
+-            f"tracker._reverse_move({{'from': '{ABC}/notes/Back swap.md', 'to': '{ABC}/_Archive/notes/Back swap.md', 'kind': 'notes'}}, rep)\n"
++            f"tracker._reverse_move({{'from': '{ABC}/notes/Back swap.md', 'to': '{ABC}/{ARCHIVE}/notes/Back swap.md', 'kind': 'notes'}}, rep)\n"
+             "os.link = real_link\n"
+             "out['back_swap'] = [rep, os.path.islink(arc / 'Back swap.md'), os.path.lexists(note / 'Back swap.md')]\n"
+             "out['st'] = st()\n"
 diff --git a/dev/tests/test_notes_delete_browser.py b/dev/tests/test_notes_delete_browser.py
-index 86006d6..630db39 100644
+index 86006d63..524e8b0c 100644
 --- a/dev/tests/test_notes_delete_browser.py
 +++ b/dev/tests/test_notes_delete_browser.py
-@@ -1,15 +1,15 @@
+@@ -1,20 +1,21 @@
 -"""#124: Delete note in a real browser against the real live server, at 1400 px and 900 px.
 +"""#124, #255: Delete note in a real browser against the real live server, at 1400 px and 900 px.
  
@@ -494,18 +687,45 @@ index 86006d6..630db39 100644
 -  - Delete note puts exactly one card up in ask creaite (the move into the archive, the file named); Reject leaves the note;
 -  - doing it again and Approve moves it into _Archive: the note closes, the list drops it, a toast says "Moved … to the archive";
 -  - the toast's Undo brings it back into the list;
-+  - #255: Delete note moves it into _Archive at once, with no card (Chrome's own call passes the server's page check): the note
++  - #255: Delete note moves it into the archive folder (_Archive today, 99 Archive after #252) at once, with no card (Chrome's own call passes the server's page check): the note
 +    closes, the list drops it, a toast says "Moved … to the archive", and the toast's Undo brings it back into the list;
    - nothing scrolls sideways at 900 px with the box open;
 -  - while the card waits the note is read only, with a line saying why, and Reject makes it editable again (M1);
 -  - the toast after Undo says what happened (back, or back under another name: L3, Jarvis 16-10-2026);
+-  - Files › Archived: two deleted notes of one name are two rows keyed by their own place in _Archive (Move back, Open), and Open
 +  - #255: a note saved in another window after it was opened here is not deleted: a plain message, the note stays;
 +  - #255: Files › Archived's Move back of a deleted note works at once, with Undo; the toast after Undo says what happened
 +    (back, or back under another name: L3, Jarvis 16-10-2026);
-   - Files › Archived: two deleted notes of one name are two rows keyed by their own place in _Archive (Move back, Open), and Open
++  - Files › Archived: two deleted notes of one name are two rows keyed by their own place in the archive folder (Move back, Open), and Open
      of a deleted note opens that file, never the Notes tab (M2).
  Each runs at 1400 px and again at 900 px.
-@@ -84,25 +84,10 @@ class NotesDeleteBrowser(LiveBrowserCase):
+ """
+ import json
++import re
+ import sys
+ import unittest
+ from pathlib import Path
+@@ -27,6 +28,10 @@ SHOTS = Path.home() / "dev.env/team-stark-shots/notes-124"
+ WS = "Working session"
+ 
+ 
++# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
++ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
++                    .read_text(encoding="utf-8"), re.M).group(1)
++
+ class NotesDeleteBrowser(LiveBrowserCase):
+     width, height = 1400, 1000
+     log, notes_dir, make = NotesTab.log, NotesTab.notes_dir, NotesTab.make
+@@ -39,7 +44,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
+             pass
+ 
+     def archived(self):
+-        return next((self.v.root / "projects").glob("ABC */")) / "_Archive" / "notes" / f"{WS}.md"
++        return next((self.v.root / "projects").glob("ABC */")) / ARCHIVE / "notes" / f"{WS}.md"
+ 
+     def open_box(self):
+         b = self.b
+@@ -84,25 +89,10 @@ class NotesDeleteBrowser(LiveBrowserCase):
          self.assertEqual(self.card(), [])
          self.assertTrue(f.is_file())
          self.open_box()
@@ -534,7 +754,16 @@ index 86006d6..630db39 100644
          b.wait("document.querySelector('.snack') && document.querySelector('.snack').textContent.includes('to the archive')", 10)
          self.assertFalse(f.exists())
          self.assertTrue(self.archived().is_file())
-@@ -150,56 +135,63 @@ class NotesDeleteBrowser(LiveBrowserCase):
+@@ -121,7 +111,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
+         import subprocess
+         names = ["Plan as built", 'Say "as is": a note', "Notes as a as b"]
+         code = ("import sys, json, pathlib; sys.path.insert(0, 'system/scripts')\nimport paths, reach, tracker\n"
+-                f"notes = pathlib.Path({str(self.notes_dir())!r}); arch = notes.parent / '_Archive' / 'notes'; arch.mkdir(parents=True, exist_ok=True)\n"
++                f"notes = pathlib.Path({str(self.notes_dir())!r}); arch = notes.parent / {ARCHIVE!r} / 'notes'; arch.mkdir(parents=True, exist_ok=True)\n"
+                 f"out = []\nfor n in {names!r}:\n"
+                 "    def run(on):\n        reach.NOTES_BACK_RENAMES = on; rep = []\n"
+                 "        tracker._reverse_move({'from': paths.rel(notes / (n + '.md')), 'to': paths.rel(arch / (n + '.md')), 'kind': 'notes'}, rep)\n"
+@@ -150,56 +140,63 @@ class NotesDeleteBrowser(LiveBrowserCase):
              if case == "renamed":
                  self.assertTrue(made, lines)
  
@@ -633,7 +862,7 @@ index 86006d6..630db39 100644
          b.eval("go('files')")
          b.wait("!!document.getElementById('filesTbl')", 15)
          b.eval("refreshFiles(true)")
-@@ -213,7 +205,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
+@@ -213,7 +210,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
      def post_api(self, path, body):
          return json.loads(self.b.eval(f"(async()=>JSON.stringify(await api({json.dumps(path)},{json.dumps(body)})))()"))
  
@@ -642,7 +871,7 @@ index 86006d6..630db39 100644
          self.flow()
  
      def test_at_900(self):
-@@ -221,21 +213,21 @@ class NotesDeleteBrowser(LiveBrowserCase):
+@@ -221,21 +218,21 @@ class NotesDeleteBrowser(LiveBrowserCase):
          self.b.wait("innerWidth===900")
          self.flow()
  
@@ -673,7 +902,7 @@ index 86006d6..630db39 100644
      def test_archived_rows_keyed_by_their_place(self):
          self.archived_rows("Same at 1400")
 diff --git a/dev/tests/test_notes_row_menu_browser.py b/dev/tests/test_notes_row_menu_browser.py
-index 3706907..5c7bb27 100644
+index 37069078..5c7bb27a 100644
 --- a/dev/tests/test_notes_row_menu_browser.py
 +++ b/dev/tests/test_notes_row_menu_browser.py
 @@ -9,7 +9,7 @@ Run: python3 dev/tests/test_notes_row_menu_browser.py   (needs Google Chrome; sk
