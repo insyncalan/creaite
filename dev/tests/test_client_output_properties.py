@@ -125,11 +125,10 @@ class Properties(A.Audience):
 
     def test_P16_every_text_form_is_gated_as_the_plain_one(self): self.check("P16")
 
-    @unittest.expectedFailure
-    def test_P16_json_escaped_form_needs_the_guarded_gate_diff(self):
-        """The JSON-escaped form (\\u0061 for a) passes client_leak.findings until dev/proposals/client-output-step1/client_leak.diff
-        is applied; the output check already keeps it out of every file (P1)."""
+    def test_P16_json_escaped_form_is_gated(self):
+        """The JSON-escaped form (\\u0061 for a) is read by client_leak.findings since the guarded gate diff (client-output-step1) is in."""
         self.check("P16json")
+
     def test_P17_internal_sections(self): self.check("P17")
     def test_P18_hidden_rows_items_tags_and_milestones(self): self.check("P18")
     def test_P19_the_post_render_check_on_its_own(self): self.check("P19")
