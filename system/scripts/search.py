@@ -748,7 +748,8 @@ def enrich_check(path):
 # so a re-extract or a redraft still updates it), never a client report's, and never for a path whose file leads outside the vault
 # and the projects folder. Checked here, so it holds in every mode (a plain chat, a confirmed run, Process, Terminal).
 def staged_targets():
-    """The vault paths the proposals waiting in Review file things to (copy and move `to`s in their file_ops)."""
+    """The vault paths the proposals waiting in Review file things to (copy and move `to`s in their file_ops) that don't exist yet
+    (review M2: a copy onto a file already filed is refused at apply, never overwriting it, so it never unlocks that file's summary)."""
     out = set()
 
     def walk(node):
@@ -756,7 +757,8 @@ def staged_targets():
         if isinstance(node, dict):
             ops = node.get("file_ops") if isinstance(node.get("file_ops"), list) else []
             for op in ops:
-                if isinstance(op, dict) and op.get("op") in ("copy", "move") and isinstance(op.get("to"), str):
+                if isinstance(op, dict) and op.get("op") in ("copy", "move") and isinstance(op.get("to"), str) \
+                        and not os.path.lexists(paths.resolve(op["to"])):
                     out.add(op["to"])
             for v in node.values():
                 walk(v)

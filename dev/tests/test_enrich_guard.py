@@ -20,6 +20,7 @@ from test_tracker import ABC, Vault  # noqa: E402
 MINUTES = f"{ABC}/minutes/2026-10-05 Sync.docx"
 WEEKLY = f"{ABC}/reports/2026-10-02 Weekly report - Example Programme.docx"
 CLIENT = f"{ABC}/reports/2026-10-02 Client report - Example Programme.docx"
+NOT_FILED = f"{ABC}/minutes/2026-10-09 Steering.docx"            # a meeting staged, its minutes not filed yet
 OK = ("--summary", "A new summary.", "--tags", "pilot, escalation, supplier")
 
 
@@ -85,26 +86,41 @@ class EnrichGuard(unittest.TestCase):
                 self.assertEqual(self.summary(rel), "The old summary.")
 
     def test_a_summary_is_replaced_for_a_file_a_staged_proposal_files(self):
-        self.seed(MINUTES)
-        self.seed(WEEKLY)
-        self.stage("meeting", MINUTES)                                       # re-extract: the meeting staged again
-        self.stage("weekly", WEEKLY, kind="report")                          # the weekly report redrafted
-        self.enrich(MINUTES, WEEKLY)
-        self.assertEqual((self.summary(MINUTES), self.summary(WEEKLY)), ("A new summary.", "A new summary."))
+        minutes, weekly = f"{ABC}/minutes/2026-10-09 Steering.docx", f"{ABC}/reports/2026-10-09 Weekly report - Example Programme.docx"
+        self.seed(minutes)                                                   # enriched at the first stage, not filed yet
+        self.seed(weekly)
+        self.stage("meeting", minutes)                                       # re-extract: the meeting staged again
+        self.stage("weekly", weekly, kind="report")                          # the weekly report redrafted
+        self.enrich(minutes, weekly)
+        self.assertEqual((self.summary(minutes), self.summary(weekly)), ("A new summary.", "A new summary."))
+
+    def test_a_staged_copy_onto_a_filed_file_doesnt_unlock_its_summary(self):
+        """Review M2: a proposal staged to copy onto a file that is already filed (a fake meeting named like the real one) doesn't
+        let its summary be replaced: apply refuses a copy onto an existing file, so that file is never this meeting's."""
+        transcript = f"{ABC}/transcripts/2026-10-05 Sync.vtt"
+        self.put(transcript, "x")
+        for rel in (MINUTES, transcript, WEEKLY):
+            self.seed(rel, "Original summary.")
+        self.stage("fake", MINUTES, transcript)
+        self.stage("fake-report", WEEKLY, kind="report")
+        for rel in (MINUTES, transcript, WEEKLY):
+            with self.subTest(rel):
+                self.assertIn("already has a summary", self.enrich(rel, ok=False).stderr)
+                self.assertEqual(self.summary(rel), "Original summary.")
 
     def test_an_applied_proposal_doesnt_count(self):
-        self.seed(MINUTES)
+        self.seed(NOT_FILED)
         applied = self.root / "system/staging/applied"
         applied.mkdir(parents=True, exist_ok=True)
-        (applied / "proposed-old.json").write_text(json.dumps({"meeting": {"file_ops": [{"op": "copy", "to": MINUTES}]}}))
-        self.enrich(MINUTES, ok=False)
-        self.assertEqual(self.summary(MINUTES), "The old summary.")
+        (applied / "proposed-old.json").write_text(json.dumps({"meeting": {"file_ops": [{"op": "copy", "to": NOT_FILED}]}}))
+        self.enrich(NOT_FILED, ok=False)
+        self.assertEqual(self.summary(NOT_FILED), "The old summary.")
 
     def test_a_proposal_that_only_names_the_file_doesnt_count(self):
-        self.seed(MINUTES)
-        self.v.propose("mention", [], meeting={"title": "x", "draft": MINUTES, "file_ops": [{"op": "remove", "path": MINUTES},
-                                                                                           {"op": "link", "to": MINUTES}]})
-        self.enrich(MINUTES, ok=False)
+        self.seed(NOT_FILED)
+        self.v.propose("mention", [], meeting={"title": "x", "draft": NOT_FILED, "file_ops": [{"op": "remove", "path": NOT_FILED},
+                                                                                           {"op": "link", "to": NOT_FILED}]})
+        self.enrich(NOT_FILED, ok=False)
 
     def test_a_client_reports_summary_is_never_replaced(self):
         self.seed(CLIENT)
