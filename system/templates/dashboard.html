@@ -30300,6 +30300,36 @@ ${s5}`;
           /* @__PURE__ */ u2("span", { class: "sub", children: "minutes" })
         ] });
         break;
+      case "vip.quiet_overnight":
+        control = /* @__PURE__ */ u2("span", { class: "setpair", children: [
+          sw3(),
+          [["vip.quiet_from", "From", "19:00"], ["vip.quiet_to", "To", "07:00"]].map(([key2, l6, d5], i5) => [
+            i5 ? " to " : " ",
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                type: "text",
+                "aria-label": `${row2.label}: ${l6.toLowerCase()}`,
+                value: val(key2) ?? d5,
+                size: 6,
+                placeholder: "HH:MM",
+                onChange: async (e4) => {
+                  const el2 = (
+                    /** @type {HTMLInputElement} */
+                    e4.currentTarget
+                  ), v5 = el2.value.trim();
+                  if (!HHMM.test(v5)) {
+                    snack(`Use 24-hour HH:MM, such as ${d5}`);
+                    el2.value = val(key2) ?? d5;
+                    return;
+                  }
+                  if (!await save2({ [key2]: v5 })) el2.value = val(key2) ?? d5;
+                }
+              }
+            )
+          ])
+        ] });
+        break;
       case "dashboard.theme":
         control = select([["System", "Follow my Mac"], ["Light", "Light"], ["Dark", "Dark"]]);
         break;
