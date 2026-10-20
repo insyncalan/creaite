@@ -3,8 +3,8 @@
    block (§1) and nothing about weekly, client or minutes: a view mounts it, supplies the renderers for its own sections and rows,
    and does its own server calls. It is a drop-in for SheetStub.jsx's props (the stub's types are exported from here now).
 
-   - True A4 (210 × 297 mm, 16 mm padded, so 265 mm of content a page), drawn at 40% to 80% of the sheet area's width: − and + in
-     the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
+   - True A4 (210 × 297 mm, 16 mm padded, so 265 mm of content a page), drawn at 40% to 80% of the sheet area's width (a view may
+     give its own limits: zoomMin, zoomMax; #268's minutes 50% to 250%): − and + in the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
    - THE SCROLL POSITION IS NEVER RESET BY A REDRAW (P5's first rule): per scrollKey it remembers the top-most visible section and the
      offset into it, and puts that back after a zoom, a move, Show as exported, a doc replaced by a save or reload, and on switching
      views. Nothing else sets scrollTop.
@@ -56,7 +56,7 @@ export { openSheetRef as openRef };
     match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
-    exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
+    zoomMin?: number, zoomMax?: number, exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
     checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
       document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
@@ -304,13 +304,14 @@ export function Sheet(props) {
   const refocus = useRef(/** @type {string|null} */ (null));
   const refocusR = useRef(/** @type {string|null} */ (null));   // p241: the right pane's own (the same section id is on both pages)
   const activeRight = useRef(false);                            // p241: which pane was used last (the global "add a text section" entry follows it)
-  const [zl, setZl] = useState(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
+  const zlo = props.zoomMin, zhi = props.zoomMax;                // #268: the minutes zoom from 50% to 250%; the reports keep 40% to 80%
+  const [zl, setZl] = useState(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT, zlo, zhi));
   const [xl, setXl] = useState(false);
   const [together, setTogether] = useState(true);
   const [breaks, setBreaks] = useState(/** @type {number[][]} */ ([]));
   const [pop, setPop] = useState(/** @type {null | {check: SheetCheck, x: number, y: number}} */ (null));
   const [found, setFound] = useState(/** @type {null | {items?: any[], message?: string, x: number, y: number}} */ (null));
-  const zoom = props.zoom == null ? zl : clampZoom(props.zoom);
+  const zoom = props.zoom == null ? zl : clampZoom(props.zoom, zlo, zhi);
   const exported = props.exported == null ? xl : !!props.exported;
   const leftRO = !!props.readOnly || (!!partner && !!props.leftReadOnly);      // Side by side with the left page read only (P8)
   const readOnly = !!props.readOnly || exported;
@@ -323,7 +324,7 @@ export function Sheet(props) {
     readOnly: !partner || !!partner.readOnly, onEvent });
 
   const setZoom = (/** @type {number} */ z) => {
-    const n = clampZoom(z);
+    const n = clampZoom(z, zlo, zhi);
     if (n === zref.current) return;
     zref.current = n; ZOOMS.set(scrollKey, n);
     if (props.zoom == null) setZl(n);
@@ -333,7 +334,7 @@ export function Sheet(props) {
     if (props.exported == null) setXl(on);
     props.onExported?.(on); onEvent({ type: "exported", on });
   };
-  useEffect(() => { if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT)); }, [scrollKey]);
+  useEffect(() => { if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT, zlo, zhi)); }, [scrollKey]);
 
   const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO || !sameSheetDoc(nd, P.current.doc)) return; props.onChange(nd, why); main.change(nd); };
   const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { const pt = P.current.partner; if (!pt || pt.readOnly || !sameSheetDoc(nd, pt.doc)) return; pt.onChange(nd, why); side.change(nd); };
@@ -400,8 +401,8 @@ export function Sheet(props) {
       if (!pg || !partner) { main.flush(); side.flush(); } else if (pg.dataset.pane === "right") side.flush(); else main.flush();
       return;
     }
-    if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(stepZoom(zref.current, 1)); }
-    else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(stepZoom(zref.current, -1)); }
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(stepZoom(zref.current, 1, zlo, zhi)); }
+    else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(stepZoom(zref.current, -1, zlo, zhi)); }
     else if (e.key === "0") { e.preventDefault(); setZoom(SHEET_ZOOM_DEFAULT); }
   };
   const onClick = (/** @type {MouseEvent} */ e) => {
@@ -413,7 +414,7 @@ export function Sheet(props) {
     if (!t.closest || (!t.closest(".sheet-pop") && pop)) setPop(null);
     if (!t.closest || (!t.closest(".sheet-found") && found)) setFound(null);
   };
-  const pinch = (/** @type {number} */ dy) => setZoom(pinchZoom(zref.current, dy));
+  const pinch = (/** @type {number} */ dy) => setZoom(pinchZoom(zref.current, dy, zlo, zhi));
 
   /* #218: stores/textSection.js addTextSection(afterId): what the sheet does when asked (any menu may ask); returns the new section's id */
   /* p241: each pane adds to its own report: the section menus say which pane they are in; the global entry follows the pane used last */

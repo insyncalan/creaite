@@ -4,7 +4,7 @@
    - mdLines(text): a section's Markdown as lines ({kind: "topic" | "bullet" | "para", text, flag}), for drawing each with its tag;
    - lineTag(line, tags): the time tag P4 gave that line (`{ref: "transcript", turn, time, text}`);
    - checksOf(doc, turns, people): the checks against the transcript and the record (§4.5's shape), worked out here in plain
-     code (no model): an owner the people register doesn't know, an action with no owner, a deadline that isn't what was said,
+     code (no model): an owner whose record needs details (#266), an action with no owner, a deadline that isn't what was said,
      a figure the transcript doesn't say, an item the tracker's checks refused;
    - distributedOf(doc): the distributed version (BL-338 point 13) as the page shows it: the internal record without the lines
      and rows marked Internal only (`layout.internal_only`) and without withheld items (Sensitive, partner-only or labelled to
@@ -120,7 +120,7 @@ function rowChecks(doc, s, r, i, turns, unknown) {
   const owner = s.id === "decisions" ? "" : String(v.owner || "").trim();
   if (s.id !== "decisions" && owner && owner !== "TBC" && unknown(owner))
     out.push({ id: `owner:${r.ref}`, section: s.id, row: i, field: "owner", quote: owner, kind: "owner", n,
-      note: `${owner} isn't in the people register.`, actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }] });
+      note: `${owner} needs details.`, actions: [{ id: "details", label: "Add details" }, { id: "keep", label: "Keep mine" }] });   // #266: a name on an item is in the register; its record may need details
   else if (s.id === "actions" && (!owner || owner === "TBC"))
     out.push({ id: `owner:${r.ref}`, section: s.id, row: i, field: "owner", quote: owner || "TBC", kind: "owner", n,
       note: "No owner yet.", actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }] });

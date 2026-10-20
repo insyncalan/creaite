@@ -1,39 +1,60 @@
 // @ts-check
-/* MinutesView (v2.1.0 P7, BL-338): a meeting's minutes in creaite (#minutes=<the record's stored path>), opened from Review's
-   Open draft on a minutes record, and later from the meeting's links (P10). It sits under Review in the sidebar: no new
-   top-level page. Built on the sheet's contract (dev/sprints/v210-contract.md §4), on P5's Sheet.jsx (the A4 page, zoom, levelled Side by side).
-   The view supplies its own renderers (TextLines for text sections, ItemRow for the item tables), the coverage extra and the
-   checks, keeps the document (stores/minutes.js) and makes its own server calls (P4's /api/minutes/*). Beside the sheet, the
-   transcript pane. The bar: versions, One version or Internal + distributed (with Internal, Distributed and Side by side), the
-   transcript, the open checks, Export and Approve minutes. A change to an item row saves any page edits first, then makes the
-   change, so the record and its proposal never part. Nothing here sends anything. */
+/* MinutesView (v2.1.0 P7, BL-338; #268 Minutes view v2): a meeting's minutes in creaite (#minutes=<the record's stored path>),
+   opened from Review's Open draft on a minutes record. It sits under Review in the sidebar: no new top-level page. Built on
+   the sheet (P5's Sheet.jsx: the A4 page, fit to width, zoom 50% to 250% with − and +, a pinch or Ctrl and the wheel, and the
+   slim bar when the sheet scrolls, as Reporting's `rpt-slim`). The view supplies its own renderers (SummaryText and TextLines
+   for text, ItemTable for decisions, risks and issues, and actions), the coverage extra and the checks, keeps the document
+   (stores/minutes.js) and makes its own server calls (P4's /api/minutes/*). Beside the sheet, the transcript pane.
+   #268: one version only (no distributed version or Internal only marks in the view; the server's distributed code is left
+   as it is). The bar is one row: the title (when slim), zoom, Show as exported, the save line, the Track summary ("n work
+   items to register · n kept in the minutes only · n removed"), then Transcript (pressed while shown, remembered per browser),
+   Export (Word, PDF, HTML and Draft the follow-up email), Re-extract (asks creaite, which drafts the minutes again from the
+   transcript) and Approve minutes, the one labelled button.
+   Approve minutes is one click: the record is brought in line with the Track column (track.reconcileOps: the existing
+   remove, keep-the-line and restore changes), then the minutes and every ticked item are applied in one apply
+   (/api/minutes/approve), with Undo on the snack. Only when a ticked item has a real problem does the Before approving box
+   ask first. Nothing here sends anything. */
 import { render } from "preact";
+import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
 import { countRedraft, redrafter } from "../report/redraft.js";
 import { Sheet } from "../report/Sheet.jsx";
 import { ApprovePopup } from "./ApprovePopup.jsx";
 import { MinutesCtx } from "./context.js";
 import { Coverage } from "./Coverage.jsx";
-import { ItemRow } from "./ItemRow.jsx";
-import { checksOf, distributedOf, leftOut } from "./minutesDoc.js";
-import { TextLines } from "./TextLines.jsx";
+import { ItemTable } from "./ItemTable.jsx";
+import { checksOf } from "./minutesDoc.js";
+import { SummaryText, TextLines } from "./TextLines.jsx";
+import { approveProblems, ownTicked, reconcileOps, trackCounts, trackSummary } from "./track.js";
 import { jumpTo, TranscriptPane } from "./TranscriptPane.jsx";
 import { REV } from "../../core/data.js";
 import { $ } from "../../core/dom.js";
-import { openPath } from "../../core/fields.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
-import { snack } from "../../core/server.js";
+import { reloadData, snack, undoApply } from "../../core/server.js";
+import { openChat } from "../../ask.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
-import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc, minutesMode,
-  minutesView, paneOpen, saveMinutesPage } from "../../stores/minutes.js";
+import { approveMinutes, approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc,
+  minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane } from "../../stores/minutes.js";
+import { signal } from "@preact/signals";
 
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./minutesDoc.js").Check} Check */
 
+/** #268: the minutes' zoom, against the sheet area's width (1 = fit to width). */
+export const MN_ZOOM = { min: 0.5, max: 2.5 };
+/** The Export menu (Word is an export only: editing the exported file never flows back). */
+export const MN_EXPORTS = [
+  { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
+  { id: "pdf", name: "PDF", line: "Printed from the page" },
+  { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
+  { id: "sep", sep: true },
+  { id: "followup", name: "Draft the follow-up email", line: "From these minutes; copied, never sent" }];
+
 let dirty = false;
+const approving = signal(false);
 
 /** The staged item of a row ("@3") in the peek: its Review proposal. @param {string} ref */
 function openStaged(ref) {
@@ -43,65 +64,98 @@ function openStaged(ref) {
   return true;
 }
 
-/** The bar's buttons (the sheet's `toolbar` slot). @param {{doc: SheetDoc, checks: Check[]}} props */
-function Bar({ doc, checks }) {
-  const v = minutesView.value, versions = (v && v.versions) || [], draft = doc.state === "draft";
-  const dist = !!(doc.layout || {}).distributed, mode = minutesMode.value;
-  const setDist = (/** @type {boolean} */ on) => { onDoc({ ...doc, layout: { ...(doc.layout || {}), distributed: on } }, on ? "Distributed version on" : "One version"); if (!on) minutesMode.value = "internal"; };
-  const exp = async (/** @type {string} */ id) => {
-    if (id.startsWith("followup")) {            // Draft the follow-up email, from the version shown (saved edits first)
-      const d = minutesDoc.value;
-      if (dirty && d) { const s = await saveMinutesPage({ doc: d, base_version: minutesBase.value }); if (!s.ok) { snack(s.message || "The minutes weren't saved"); return; } dirty = false; }
-      openMinutesFollowup(v && v.path, id.endsWith(":distributed") ? "distributed" : "internal");
-      return;
+/** Page edits not yet saved: saved before anything that changes the record. */
+async function mnSaveFirst() {
+  const d = minutesDoc.value;
+  if (!dirty || !d) return true;
+  const s = await saveMinutesPage({ doc: d, base_version: minutesBase.value });
+  if (!s.ok) { snack(s.message || "The minutes weren't saved"); return false; }
+  dirty = false;
+  return true;
+}
+
+/** Export, or draft the follow-up email (saved edits first). @param {string} id */
+async function exportAs(id) {
+  if (!(await mnSaveFirst())) return;
+  const v = minutesView.value;
+  if (id === "followup") { openMinutesFollowup(v && v.path, "internal"); return; }
+  const r = await exportMinutes(id);
+  snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
+}
+
+/** Re-extract: creaite's chat with the request written, to send when Alan is ready (cx-minutes drafts the minutes again from
+    the transcript). @param {SheetDoc} doc */
+function reExtract(doc) {
+  openChat();
+  const box = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("chIn"));
+  if (box) { box.value = `re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`; box.focus(); }
+}
+
+/** Approve minutes: the Track column first, then one apply. @param {boolean} anyway past the Before approving box */
+async function approveNow(anyway) {
+  const v = minutesView.value, doc = minutesDoc.value;
+  if (!v || !v.plan || !doc || approving.value) return;
+  const plan = v.plan.items;
+  if (!anyway && approveProblems(doc, plan, unknownOwner).length) { approveOpen.value = true; return; }
+  approving.value = true;
+  try {
+    if (!(await mnSaveFirst())) return;
+    const own = ownTicked(doc, plan);
+    for (const op of reconcileOps(doc, plan)) {
+      const r = await changeMinutes(op);
+      if (!r.ok) { snack(r.message || "The minutes weren't approved; nothing was applied."); return; }
     }
-    const [fmt, which] = id.split(":"), version = which === "distributed" ? "distributed" : "internal";
-    const out = version === "distributed" ? leftOut(doc, v && v.withheld) : [];
-    const r = await exportMinutes(fmt, version);
-    const left = out.length ? ` · leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}` : "";
-    snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}${left}` : String(r.message || "Not exported").split("\n")[0]);
-  };
-  const formats = [{ id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" }, { id: "docx", name: "Word", line: "The minutes template" },
-    { id: "pdf", name: "PDF", line: "Printed from the page" }];
-  const exports = dist ? [...formats.map(f => ({ ...f, id: `${f.id}:internal`, name: `Internal: ${f.name}` })),
-    ...formats.map(f => ({ ...f, id: `${f.id}:distributed`, name: `Distributed: ${f.name}`,
-      line: draft ? "Once the internal minutes are approved" : `${f.line}, under a new name` }))] : formats;
-  const follow = { id: "followup", name: "Draft the follow-up email", line: "From this version; copied, never sent" };
-  const shown = mode === "distributed" ? ["distributed"] : mode === "side" ? ["internal", "distributed"] : ["internal"];
-  const mails = !dist ? [follow] : shown.map(w => ({ ...follow, id: `followup:${w}`, name: `${w === "distributed" ? "Distributed" : "Internal"}: Draft the follow-up email`,
-    line: w === "distributed" ? "Without Internal only lines or withheld items" : "Marked Internal" }));
+    const r = await approveMinutes(true, own);
+    if (!r.ok) { snack(String(r.message || "The apply didn't run; nothing was changed.").split("\n")[0]); return; }
+    const n = r.approved || 0, left = (r.waiting || []).length;
+    snack(`Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
+      r.apply_id ? () => undoApply(r.apply_id) : null);
+    await reloadData();
+    if (v.plan.files[0]) loadMinutes({ path: v.plan.files[0] });
+  } finally { approving.value = false; }
+}
+
+/** The bar (the sheet's renderBar): one row. @param {{doc: SheetDoc, zoom: number, setZoom: (z: number) => void, exported: boolean,
+    setExported: (on: boolean) => void, status: string, bad: boolean}} props */
+function Bar({ doc, zoom, setZoom, exported, setExported, status, bad }) {
+  const v = minutesView.value, draft = doc.state === "draft", plan = v && v.plan ? v.plan.items : null;
+  const c = draft && plan ? trackCounts(doc, plan) : null;
+  const z = (/** @type {1|-1} */ d) => setZoom(Math.round((zoom + d * 0.1) * 10) / 10);
   return (
-    <span class="mnbarr">
-      <Menu label={`Version ${doc.version || 1}`} icon="history" btnCls="btn sm" cls="rb-x" menuLabel="Versions of these minutes" data={{ mnversions: "" }}
-        items={versions.map(x => ({ id: String(x.version), name: `Version ${x.version}${x.current ? " · on screen" : ""}`,
-          line: `${x.at ? fd(x.at) : ""}${x.why ? ` · ${x.why}` : ""}${!x.current && x.backup ? " · opens the kept copy" : ""}` }))}
-        onPick={id => { const x = versions.find(y => String(y.version) === id); if (x && !x.current && x.backup) openPath(x.backup); }} />
-      <span class="seg rb-x" role="group" aria-label="Versions to keep">
-        <button type="button" aria-pressed={dist ? "false" : "true"} disabled={!draft} onClick={() => setDist(false)}>One version</button>
-        <button type="button" aria-pressed={dist ? "true" : "false"} disabled={!draft} onClick={() => setDist(true)}>Internal + distributed</button>
+    <>
+      <span class="sheet-mini"><b>{doc.title}</b><span class="sub">{doc.project_name || ""} · {fd(doc.date)}</span></span>
+      <span class="sheet-zoom" role="group" aria-label="Zoom">
+        <button type="button" class="btn sm" aria-label="Zoom out" data-tip="Zoom out" onClick={() => z(-1)} disabled={zoom <= MN_ZOOM.min}>−</button>
+        <button type="button" class="sheet-zv mnzv" aria-live="polite" data-zoom={zoom} data-tip="Back to 80%" aria-label={`Zoom ${Math.round(zoom * 100)}%. Back to 80%`}
+          onClick={() => setZoom(0.8)}>{Math.round(zoom * 100)}%</button>
+        <button type="button" class="btn sm" aria-label="Zoom in" data-tip="Zoom in" onClick={() => z(1)} disabled={zoom >= MN_ZOOM.max}>+</button>
       </span>
-      {dist ? <span class="seg rb-x" role="group" aria-label="Show">
-        {[["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k, l]) =>
-          <button key={k} type="button" data-mnmode={k} aria-pressed={mode === k ? "true" : "false"} onClick={() => { minutesMode.value = /** @type {any} */ (k); }}>{l}</button>)}
-      </span> : null}
-      <button type="button" class="btn sm rb-x" aria-pressed={paneOpen.value ? "true" : "false"} onClick={() => { paneOpen.value = !paneOpen.value; }}>Transcript</button>
-      <Menu label="Export" icon="filetext" btnCls="btn sm" menuLabel="Export the minutes" data={{ mnexport: "" }}
-        items={[...exports, ...mails]} onPick={exp} />
-      {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan)} data-tip={v && v.plan ? undefined : "Nothing pending to approve"}
-        onClick={() => { approveOpen.value = true; }}>Approve minutes</button> : null}
-    </span>
+      <button type="button" class="ib sm sheet-exp" aria-pressed={exported ? "true" : "false"} aria-label="Show as exported" data-tip="Show as exported"
+        onClick={() => setExported(!exported)}><Icon name="filetext" /></button>
+      <span class="sub sheet-status" role="status" data-bad={bad ? "1" : undefined}>{status}</span>
+      {c ? <span class="mnsum" id="mnSum" role="status" data-y={c.y} data-k={c.k} data-n={c.n}>{trackSummary(c)}</span> : null}
+      <span class="sheet-barr"><span class="mnbarr">
+        <button type="button" class="ib sm" id="mnTrBtn" aria-pressed={paneOpen.value ? "true" : "false"} aria-label="Transcript" data-tip={paneOpen.value ? "Hide the transcript" : "Show the transcript"}
+          onClick={() => setPane(!paneOpen.value)}><Icon name="chat" /></button>
+        <Menu label="" icon="upload" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
+          items={/** @type {any} */ (MN_EXPORTS)} onPick={exportAs} />
+        {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: draft the minutes again from the transcript"
+          data-tip="Re-extract: draft the minutes again from the transcript" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}
+        {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan) || approving.value}
+          data-tip={v && v.plan ? undefined : "Nothing pending to approve"} onClick={() => approveNow(false)}>{approving.value ? "Approving…" : "Approve minutes"}</button> : null}
+      </span></span>
+    </>
   );
 }
 
-/** Every edit from the sheet: kept on the page, saved by the sheet (⌘S, Save) or before the next row change.
+/** Every edit from the sheet: kept on the page, saved by the sheet (⌘S, after a pause) or before the next row change.
     @param {SheetDoc} d @param {string} _why */
 function onDoc(d, _why) { minutesDoc.value = d; dirty = true; }
 
 /** One row or coverage change: page edits saved first, then the change; Undo on the toast when there is one.
     @param {Record<string, any>} op @param {Record<string, any>|null} [undo] */
 async function change(op, undo) {
-  const d = minutesDoc.value;
-  if (dirty && d) { const s = await saveMinutesPage({ doc: d, base_version: minutesBase.value }); if (!s.ok) { snack(s.message || "The minutes weren't saved"); return false; } dirty = false; }
+  if (!(await mnSaveFirst())) return false;
   const r = await changeMinutes(op);
   if (!r.ok) { snack(r.message || "That didn't change"); return false; }
   snack(r.message || "Changed", undo ? () => { change(undo); } : null);
@@ -113,23 +167,23 @@ function onCheck(c, action) {
   if (action === "keep") keptChecks.value = [...keptChecks.value, c.id];
   else if (action === "show" && c.turn) jumpTo(c.turn);
   else if (action === "use" && c.kind === "due" && c.n && c.words) change({ op: "deadline", n: c.n, words: c.words });
-  else if (action === "pick") /** @type {HTMLElement|null} */ (document.querySelector(`[data-owner="${c.n}"]`))?.click();
 }
 
-const RENDER = { byType: { text: (/** @type {any} */ ctx) => <TextLines ctx={ctx} />, header: (/** @type {any} */ ctx) => <TextLines ctx={ctx} /> },
-  row: { actions: (/** @type {any} */ rc) => <ItemRow rc={rc} />, decisions: (/** @type {any} */ rc) => <ItemRow rc={rc} />, raid: (/** @type {any} */ rc) => <ItemRow rc={rc} /> } };
+const RENDER = { byId: { summary: (/** @type {any} */ ctx) => <SummaryText ctx={ctx} />, decisions: (/** @type {any} */ ctx) => <ItemTable ctx={ctx} />,
+  raid: (/** @type {any} */ ctx) => <ItemTable ctx={ctx} />, actions: (/** @type {any} */ ctx) => <ItemTable ctx={ctx} /> },
+  byType: { text: (/** @type {any} */ ctx) => <TextLines ctx={ctx} />, header: (/** @type {any} */ ctx) => <TextLines ctx={ctx} /> } };
 const EXTRAS = [{ key: "coverage", after: "open_questions", render: (/** @type {any} */ c) => <Coverage c={c} /> }];
 
 /** The view. */
 export function MinutesView() {
-  const v = minutesView.value, doc = minutesDoc.value, mode = minutesMode.value;
-  const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
+  const v = minutesView.value, doc = minutesDoc.value;
   if (!v) return <div class="mnview"><p class="sub">{minutesBusy.value || "Opening the minutes…"}</p></div>;
   if (!v.ok || !doc) return <div class="mnview"><h1 id="mnTitle">Minutes</h1><p class="mnerr" role="alert">{v.message || "Couldn't open the minutes"}</p></div>;
-  const draft = doc.state === "draft", turns = (v.turns || { turns: [] }).turns;
+  const draft = doc.state === "draft", turns = (v.turns || { turns: [] }).turns, plan = v.plan ? v.plan.items : null;
   const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
-  const held = v.withheld || {}, shown = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
-  const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
+  const project = String(((doc.meta || {}).projects || [])[0] || doc.project || "");
+  const ctx = { checks, onCheck, change, doc, day: doc.date, plan, project, openItem: openStaged };
+  const problems = draft && plan ? approveProblems(doc, plan, unknownOwner) : [];
   return (
     <div class="mnview">
       <header class="mnhead">
@@ -141,33 +195,35 @@ export function MinutesView() {
       <div class={`mnwrap${paneOpen.value ? " withpane" : ""}`}>
         <div class="mnsheet">
           <MinutesCtx.Provider value={ctx}>
-            <Sheet doc={shown} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}:${mode}`} readOnly={!draft || (dist && mode === "distributed")}
+            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
-              partner={side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {} } : null} leftReadOnly={false}
-              onChange={onDoc} onSave={async req => { const r = await saveMinutesPage(req); if (r.ok) dirty = false; return r; }}
-              ai={{ place: "minutes", project: () => String((doc.meta || {}).projects ? doc.meta.projects[0] : doc.project || ""), confidential: () => false }}
-              onRedraft={side ? undefined : redrafter(() => ({ path: v.path, version: dist && mode === "distributed" ? "distributed" : "internal" }), "minutes")}
+              onChange={onDoc} onSave={async req => {
+                const now = minutesView.value;            // a late save of a draft once the minutes are filed is never sent (filed minutes are never saved over)
+                if (!now || !now.doc || now.doc.state !== "draft" || req.doc.state !== "draft") return { ok: true, version: minutesBase.value };
+                const r = await saveMinutesPage(req); if (r.ok) dirty = false; return r; }}
+              ai={{ place: "minutes", project: () => project, confidential: () => false }}
+              onRedraft={redrafter(() => ({ path: v.path, version: "internal" }), "minutes")}
               onEvent={ev => { if (ev.type === "reload") loadMinutes({ path: v.path }); else countRedraft(ev, "minutes"); }}
-              banner={{ title: doc.title, sub: `${doc.project_name || ""} · ${fd(doc.date)}` }} toolbar={<Bar doc={doc} checks={checks} />} />
+              renderBar={b => <Bar doc={doc} {...b} />} />
           </MinutesCtx.Provider>
         </div>
         <TranscriptPane />
       </div>
-      <ApprovePopup checks={checks} />
+      <ApprovePopup problems={problems} busy={approving.value} onApprove={() => approveNow(true)} />
     </div>
   );
 }
 
 let mnMounted = false;
 /** Draw the minutes view into #v-minutes and open the minutes: {file} (a proposal), {path} (a record) or the path as a string.
-    @param {{file?: string, path?: string}|string|null} arg */
+    The transcript is shown or hidden as last chosen (#268). @param {{file?: string, path?: string}|string|null} arg */
 export function renderMinutes(arg) {
   const el = $("#v-minutes");
   if (!el) return;
   if (!mnMounted) { render(<MinutesView />, el); mnMounted = true; }
   const a = typeof arg === "string" ? { path: arg } : arg;
   if (a && (a.file || a.path)) {
-    dirty = false; keptChecks.value = []; minutesMode.value = "internal";
+    dirty = false; keptChecks.value = []; approveOpen.value = false; paneRemembered();
     loadMinutes(a).then(() => { navWrite(false); tabTitle(); });
   }
 }
