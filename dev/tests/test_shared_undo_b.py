@@ -1,6 +1,6 @@
 """BL-316 / #89: part b of the Undo check (a change from a menu or a list offers Undo). Part a is test_shared_undo.py; the screens
 of each are UNDO_PARTS in test_shared_behaviour.py, and each part has a sample vault of its own (this check changes data), so the
-two run side by side (about 230 s each where the whole took about 470 s). Nothing in the script changed.
+two run side by side (218 s and 266 s measured where the whole took 473 s). Nothing in the script changed.
 
 Run: python3 dev/tests/test_shared_undo_b.py   (needs Google Chrome; SB_REPORT=1 and SB_ONLY=today,work as there)
 """

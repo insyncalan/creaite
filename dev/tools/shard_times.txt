@@ -1,3 +1,4 @@
+# Lines starting with # are ignored. test_shared_undo.py and test_shared_undo_b.py are an ESTIMATE (measured 218 s and 266 s locally, scaled to the old CI 400 s plus set-up); refresh from a real CI run.
 test_activity_item_links.py 44
 test_activity_search.py 27
 test_activity_undo.py 198

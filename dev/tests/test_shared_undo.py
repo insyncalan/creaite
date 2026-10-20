@@ -1,6 +1,6 @@
 """BL-316 / #89: the Undo half of the shared behaviour test, in files of their own so they run in parallel with the keys half
 (dev/tests/test_shared_behaviour.py, _b and _c; the parts share no state). Part a is here and part b is test_shared_undo_b.py
-(UNDO_PARTS in test_shared_behaviour.py lists the screens of each; about 200 s each where the whole took about 400 s). Nothing in
+(UNDO_PARTS in test_shared_behaviour.py lists the screens of each; 218 s and 266 s measured where the whole took 473 s). Nothing in
 it changed when it moved: the class, its helper and the script are the same, and they use the same Driver, screens and probe.
 
 **Undo:** in a sample vault of its own (this one changes data) each menu and list is opened once more and an item chosen

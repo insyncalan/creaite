@@ -415,6 +415,16 @@ class Inventory(unittest.TestCase):
             notes = {n for n, p in parts.items() if any(s.startswith("notes") for s in p)}
             self.assertEqual(len(notes), 1, f"{label}: the Notes screens are in more than one part")
 
+    def test_every_part_is_run_by_exactly_one_test_file(self):
+        """#89: a part nobody calls would silently skip its screens. Each key of KEYS_PARTS is run (a call of run_part with its key) by exactly
+        one test file of test_shared_behaviour*.py, each key of UNDO_PARTS by exactly one of test_shared_undo*.py, and no file
+        runs a part that has no screens listed."""
+        for label, parts, pattern in (("keys", KEYS_PARTS, "test_shared_behaviour*.py"), ("undo", UNDO_PARTS, "test_shared_undo*.py")):
+            calls = []
+            for f in sorted(HERE.glob(pattern)):
+                calls += [(f.name, k) for k in re.findall(r'self\.run_part\("(\w+)"\)', f.read_text(encoding="utf-8"))]
+            self.assertEqual(sorted(k for _, k in calls), sorted(parts), f"{label}: each part run by one test file: {calls}")
+
     def test_the_witnesses_cover_every_site_in_the_code(self):
         """#89: each popup site in the code has the screen (or dialog script) whose run must reach it, or is listed as unreached.
         A new site: add it to a screen, then run the parts with SB_WITNESS=<file> and dev/tests/behaviour_witness.py."""
@@ -540,6 +550,10 @@ class Keys(Driver):
         """Opened again, Tab closes a menu or a list."""
         self.b.eval(f"SB.focus({i})")
         self.press("Enter", 0.4)
+        for _ in range(16):          # #89: a list that asks the live server first (aria-busy) opens when it answers; leaving before then
+            if not self.state(i)["busy"]:   # let it open under the next opener (Review's "Update an existing item instead" did, and
+                break                       # the next chip then saw it open: "aria-expanded is false when open")
+            self.b.pump(0.25)
         if not self.state(i)["open"]:
             return []
         self.press("Tab", 0.3)
