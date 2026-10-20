@@ -1195,10 +1195,13 @@ $("#panel").addEventListener("click",async e=>{ const b=e.target.closest("[data-
   const /** @type {any} */ mine=shared.PKDRC={key:PK.key,host:pkDrHost(f),f,kind,feature:DRAFTKIND[kind],html:""};
   const res=await draftAsk(body,{label:(PKDRTITLE[kind]?PKDRTITLE[kind](f):"Drafting").replace(/^Draft of/,"Drafting"),status:h=>{ if(shared.PKDRC===mine){ mine.html=h?`<div class="drstatus" role="status">${h}</div>`:""; pkDrDraw(); } }});
   if(shared.PKDRC!==mine){ if(res.ok&&!res.nothing) draftStat(mine.feature,"rejected"); return; }     /* the item was left while it ran */
-  if(res.nothing){ mine.html=`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`; pkDrDraw(); return; }
+  if(res.nothing){ mine.nothing=true; mine.html=`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`; pkDrDraw(); return; }
   if(!res.ok){ shared.PKDRC=null; pkDrDraw(); snack(res.message||"No draft came back"); return; }
   mine.d=res; mine.html=draftCardHtml(res,{title:PKDRTITLE[kind]?PKDRTITLE[kind](f):"Draft",extra:PKDREXTRA[kind]?PKDREXTRA[kind](res,k):"",use:"Use this",from:kind==="thinking"?"Suggested from":""}); pkDrDraw();
   $(`#${mine.host} .drcard`)?.focus?.(); });
+/* #272: the "nothing to suggest" note goes on the next action in the peek (typing, or a click anywhere but the note) */
+const pkDrNoneGo=e=>{ const c=shared.PKDRC; if(c&&c.nothing&&!(e.target.closest&&e.target.closest(".drnone"))) pkDrDrop(); };
+$("#panel").addEventListener("input",pkDrNoneGo,true); $("#panel").addEventListener("pointerdown",pkDrNoneGo,true);
 $("#panel").addEventListener("click",e=>{ const a=e.target.closest(".pkdrhost [data-drdo]"); if(!a||!shared.PKDRC||!shared.PKDRC.d) return; e.preventDefault(); e.stopPropagation();
   const c=shared.PKDRC; if(a.dataset.drdo==="discard"){ pkDrDrop(); $(`#panel [data-drf="${c.f}"]`)?.focus(); return; } pkDrUse(c); });
 document.addEventListener("focusout",e=>{ const el=e.target.closest&&e.target.closest("#panel [data-pkf][contenteditable]"); if(!el||!shared.CUR) return;
