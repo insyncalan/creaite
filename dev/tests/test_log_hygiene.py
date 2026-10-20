@@ -1,5 +1,6 @@
 """Tests for log hygiene (board #253): the sweep's done line is counts only, no `sweep` debug-log call is handed a
-free-text summary, and an unhandled route error is logged by route, class and frame, never its words, once a minute.
+free-text summary, and an unhandled route error is logged by route, class and frame, never its words, once a minute
+(the result routes /api/apply, /api/undo and /api/review too: "not ok", and a fault's class, never its message).
 
 Run: python3 dev/tests/test_log_hygiene.py
 Fictional names only. The live-server test (c) needs the guarded change in dev/proposals/log-hygiene/; until that diff is
@@ -176,6 +177,18 @@ def reset(keys):
 '''
 
 
+# A stand-in tracker.py for the result routes (#253): `apply` fails with item-like words; `read applies` answers [] (mode
+# "notok") or something that isn't JSON (mode "fault"), so the apply route raises and is answered as a 500.
+FAKE_TRACKER = """import pathlib, sys
+mode = (pathlib.Path(__file__).with_name("fake-mode")).read_text().strip()
+if sys.argv[1:3] == ["read", "applies"]:
+    print("[]" if mode == "notok" else "CANARY-NOT-JSON")
+    sys.exit(0)
+print("Validation failed: ABC-A-999 description 'CANARY-APPLY-WORDS' is too long")
+sys.exit(1)
+"""
+
+
 class LiveServerFault(unittest.TestCase):
     """(c) A route that raises: the class and the route are logged, never the words; once a minute; a page that left is info."""
 
@@ -200,6 +213,53 @@ class LiveServerFault(unittest.TestCase):
         self.assertEqual(len(causes), 1, text)                            # the second, within a minute, adds no line
         self.assertNotIn("secret words", text)
         self.assertNotIn("CANARY-FAULT", text)
+
+    def fake_tracker(self, mode):
+        scripts = self.s.v.root / "system/scripts"
+        real = (scripts / "tracker.py").read_bytes()
+        (scripts / "fake-mode").write_text(mode)
+        (scripts / "tracker.py").write_text(FAKE_TRACKER)               # run as a script by the route; the server's import is done
+        self.addCleanup((scripts / "tracker.py").write_bytes, real)
+
+    @_maybe_expected
+    def test_a_failed_apply_logs_not_ok_and_never_its_message(self):
+        """RESULT_ROUTES: a refused apply (200, ok false) is logged as "not ok", without tracker.py's words."""
+        self.fake_tracker("notok")
+        code, body = self.s.post("/api/apply", {})
+        self.assertEqual((code, body.get("ok")), (200, False))
+        self.assertIn("CANARY-APPLY-WORDS", body.get("message", ""))       # the page still gets the reason
+        text = self.s.wait_for(r"POST /api/apply 200 \d+ms not ok")
+        self.assertRegex(text, r"WARN  server\s+POST /api/apply 200 \d+ms not ok\n")
+        self.assertNotIn("CANARY-APPLY-WORDS", text)
+        self.assertNotIn("Validation failed", text)
+
+    @_maybe_expected
+    def test_an_apply_that_raises_logs_its_class_and_route_only(self):
+        """RESULT_ROUTES: a fault on /api/apply (a 500 from fault()) names the class twice (the cause line at ERROR, the result
+        line at WARN) and never str(e)."""
+        self.fake_tracker("fault")
+        code, body = self.s.post("/api/apply", {})
+        self.assertEqual(code, 500)
+        self.assertIn("Expecting value", body.get("message", ""))          # str(e) reaches the page, as before
+        text = self.s.wait_for(r"POST /api/apply 500 \d+ms not ok")
+        self.assertRegex(text, r"WARN  server\s+POST /api/apply 500 \d+ms not ok: JSONDecodeError\n")
+        self.assertRegex(text, r"ERROR server\s+POST /api/apply raised JSONDecodeError at \S+\.py:\d+ in ")
+        self.assertNotIn("Expecting value", text)
+        self.assertNotIn("CANARY", text)
+
+    @_maybe_expected
+    def test_a_background_thread_error_logs_its_class_and_thread_once(self):
+        """A thread's uncaught error (the VIP timer, the apply worker...) is logged by thread, class and frame, never str(e)."""
+        code = ("import sys, threading; sys.path.insert(0, 'system/scripts'); import live_server\n"
+                "def boom():\n    raise RuntimeError('CANARY-THREAD-WORDS')\n"
+                "for _ in range(2):\n    t = threading.Thread(target=boom, name='canary-worker'); t.start(); t.join()\n")
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.s.v.root, capture_output=True, text=True, timeout=120,
+                           env={**os.environ, "CREAITE_PORT": "1"})
+        self.assertIn("CANARY-THREAD-WORDS", r.stderr)                     # Python's own hook still prints it to the console
+        text = self.s.wait_for(r"thread canary-worker raised")
+        lines = re.findall(r"ERROR server\s+thread canary-worker raised RuntimeError at <string>:\d+ in boom.*", text)
+        self.assertEqual(len(lines), 1, text)                               # the second, within a minute, adds no line
+        self.assertNotIn("CANARY-THREAD-WORDS", text)
 
     def test_a_page_that_left_stays_at_info(self):
         try:

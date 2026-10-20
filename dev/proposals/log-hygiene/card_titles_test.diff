@@ -1,0 +1,15 @@
+diff --git a/dev/tests/test_debug_log_wiring.py b/dev/tests/test_debug_log_wiring.py
+index 20958415..782302c4 100644
+--- a/dev/tests/test_debug_log_wiring.py
++++ b/dev/tests/test_debug_log_wiring.py
+@@ -292,7 +292,9 @@ class LiveServerLog(unittest.TestCase):
+         while "tool refused" not in self.s.text() and time.time() < deadline:
+             time.sleep(0.1)
+         text = self.s.text()
+-        self.assertRegex(text, r"WARN  run\s+r-\w+ card c-\w+: 1 changes for approval, 0 refused: Allow Read\(projects/\*\*\)")   # BL-141: on the one card
++        self.assertRegex(text, r"WARN  run\s+r-\w+ card c-\w+: 1 changes for approval, 0 refused: edit 1\n")   # BL-141, #253: ops only
++        self.assertNotIn("Allow Read(projects/**)", text)                        # #253: a card item's title (it can name a path) is not logged
++        self.assertNotIn(".claude/settings.json", text)
+         self.assertRegex(text, r"WARN  run\s+r-\w+ tool refused: Bash")
+         for canary in ("CANARY-WHY", "CANARY-DENIED-INPUT"):
+             self.assertNotIn(canary, text)                                       # not the reason, not the tool's input
