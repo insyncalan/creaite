@@ -40,17 +40,19 @@
 
 The diff needs the ordinary branch (`paths.is_skipped`, `paths.OLD_ARCHIVES`): apply that first.
 
-## How to apply, how to undo
+## How to apply, how to undo (this branch, `proposal-252-on-255`)
+
+This branch is `origin/v253-release` (with #255 landed) plus #252, the ordinary conflicts resolved. Order:
 
 ```
-git merge proposal-252                                   # or cherry-pick f74ce105 and its follow-ups
-git apply dev/proposals/archive-99/guarded.diff          # or: patch -p1 < dev/proposals/archive-99/guarded.diff
-python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check   # 12 sentences; then again without --check
+git merge proposal-252-on-255                                  # the ordinary code, tests, help, dashboard (no guarded file)
+git apply dev/proposals/archive-99/guarded.diff                # reach.py, tracker.py, live_server.py, permissions.py (or patch -p1 <)
+python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check     # 12 sentences; then again without --check
 ```
 
-- **Checked:** `guarded.diff` applies cleanly (`git apply --check`) to `origin/main` (dcd8a7b6) **and** to `origin/v252-release` (fd60c7c0). `patch -p1 --dry-run` is clean on main.
-- `rules_edit.py` is the one set of `creaite-rules.md` sentences (12, the same places as the other proposal's `creaite-rules.diff`: folder map row, `locations` cell, scripts row, Project documents, Read, Retention, Archiving); it replaces exact sentences, so it applies on any base, with or without #255 (checked on main, v253-release and main + #255). Nothing in the result says `_Archive` alone.
-- **Undo:** `git apply -R dev/proposals/archive-99/guarded.diff` (and revert the ordinary commits). Without the diff the branch still works for the new name (the guarded code reads `paths.ARCHIVE`), but an old-name restore or move back is refused and `rename` is still accepted until the diff lands.
+- **`guarded.diff` here is made against this branch's head** (v253-release + #255 + #252's ordinary code): `git apply --check` is clean on it, and on `origin/v253-release` itself. `guarded-on-main.diff` is the same change against a tree **without** #255 (kept for reference; use the other one).
+- `rules_edit.py` is the one set of `creaite-rules.md` sentences (12: folder map row, `locations` cell, scripts row, Project documents, Read, Retention, Archiving); it replaces exact sentences, so it applies on any base, including with #255's rules text; nothing in the result says `_Archive` alone.
+- **Undo:** `git apply -R dev/proposals/archive-99/guarded.diff` (and revert the merge). Without the diff the branch still works for the new name (the guarded code reads `paths.ARCHIVE`), but an old-name restore or move back is refused and `rename` is still accepted until the diff lands.
 
 ## Which tests prove it
 
@@ -99,12 +101,9 @@ python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check  
 | `test_archive_folder_99.py` | Its cases that fit this design are in `test_archive_99.py` (`AfterAHandRename`, the portfolio shapes, the emptied list); the Health, update-rename, folder-in-use and rename-apply tests are not (they test what Alan declined or the rule he reversed); its "new archive goes into the old `_Archive` where one exists" cases are replaced by `AlwaysTheNewName`, which expects `99 Archive` |
 | `DESIGN.md` | `DESIGN.md` here lists every place that names the folder |
 
-## With #255 (Delete note with no card, `origin/v26-delete-note-card` b73a31a4)
+## With #255 (Delete note without a card; landed)
 
-#255 lands first; this rebases onto it. Dry-run in both orders:
-- **#255 first, then #252:** `guarded-on-255.diff` (this folder) applies on main + #255's `reach.diff`, `tracker.diff`, `live_server.diff` (checked with `git apply --check`); `rules_edit.py` applies. The ordinary branch conflicts in two places: `DeleteNote.jsx` (the header comment) and `help.md` (the Delete note bullet). Resolution: take #255's text and change its `_Archive` to `99 Archive`. #255's `tests.diff` then needs the same rename in `test_card_only_moves`, `test_notes_card_only_ops`, `test_notes_delete` and `test_notes_delete_browser` (apply it to main's versions, then `sed s/_Archive/99 Archive/`).
-- **#252 first, then #255:** #255's `reach.diff` (1 hunk) and `live_server.diff` (2 of 4 hunks) fail against `guarded.diff` because both rewrite the same comments; `tracker.diff` and `creaite-rules.diff` apply; the two ordinary conflicts above are the same. Use the first order.
-- A scratch copy of main + #255 + this branch + `guarded-on-255.diff` + #255's tests with the rename passed `test_delete_note_no_card`, `test_notes_delete`, `test_card_only_moves`, `test_notes_card_only_ops`, `test_archive_99` and `test_reach` (results in the report).
+#255 is in `origin/v253-release`. The seven ordinary conflicts of merging #252 onto it were resolved by taking #255's side and renaming `_Archive` to `99 Archive`: `test_card_only_moves`, `test_notes_card_only_ops`, `test_notes_delete`, `test_notes_delete_browser`, `DeleteNote.jsx`, `help.md`, and `archive.py` (where #255's `_source_problem` and `archive_folder_problem` stay and Delete note uses `paths.free_archive_path`, the N1 fix). The guarded diff conflicted only in two comment blocks of `live_server.py` (#255's text kept, `_Archive` renamed).
 
 ## Decisions Alan still has to make
 
