@@ -55,7 +55,7 @@ About an hour, most of it telling creaite about your projects and the people on 
 1. **Install**: Download **creaite-{version}.zip** from the release, not "Source code". Run `python3 ~/Downloads/creaite-{version}.zip` and choose a folder outside OneDrive and iCloud.
 2. **Say "setup"**: Open the folder in Claude Code, connect Microsoft 365, and say ``setup``. It asks before each step: git, your name and role, projects, people, a memory file for each project, and the **creaite** launcher (say yes).
 3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.command` in the vault). It starts the live server and opens creaite in its own Chrome window. If you have no launcher yet: in Terminal, `system/scripts/run live_server.py`, then open the address it prints in Chrome or Edge, not Safari.
-4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sweep** on Today. Then open Review and approve what's right. Until set-up is done, Today shows a short checklist of these steps, each with its button. **Settings › Health › Set-up** runs the health check and rebuilds the views from the page, and says how to do the two things it can't (connect Microsoft 365, make the launcher), with **Copy** and **Check again**.
+4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sweep** on Today. Then open Intake and approve what's right. Until set-up is done, Today shows a short checklist of these steps, each with its button. **Settings › Health › Set-up** runs the health check and rebuilds the views from the page, and says how to do the two things it can't (connect Microsoft 365, make the launcher), with **Copy** and **Check again**.
 
 ## The twelve jobs
 
@@ -174,7 +174,7 @@ Where: Today · ⌘K
 1. At the end of the day, press the door icon at the bottom right of Today's header (its tooltip says **Close the day**), or type "close the day" in [[⌘K]]. A short card opens with four steps, the same every evening, and takes about three minutes. Move with **Back** and **Next** or the ← and → keys; Esc is **Not yet** and keeps your place for later.
 2. **Catch up.** If the last sweep is more than 30 minutes old, a catch-up sweep of your Inbox, Sent Items and Teams starts as the card opens. It shows what it is reading, with **Stop** and **Skip**, and runs on while you read the next steps. When it ends it lists what it found. It only proposes items for Review: nothing is applied and nothing changes in Microsoft 365. Swept recently, it says "Caught up at 17:41" with a quiet **Sweep again**. Settings › Essentials › Your day can make it ask first or turn it off, and sets the 30 minutes.
 3. **Today.** What moved today and what you promised. A promise still waiting in Review has **Add it to your commitments**, which approves it there.
-4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Review, files and transcripts waiting in Intake, and your actions and RAID items due today or overdue. Give each a place: **Review now** (after you close, Review opens with them highlighted, or Work, or Intake), **First thing tomorrow** (the default) or **Leave**. A long list shows the first eight and "and n more", and one row sets them all at once. Nothing is approved or rejected here.
+4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Intake, files and transcripts waiting there, and your actions and RAID items due today or overdue. Give each a place: **Review now** (after you close, Intake opens with them highlighted, or Work), **First thing tomorrow** (the default) or **Leave**. A long list shows the first eight and "and n more", and one row sets them all at once. Nothing is approved or rejected here.
 5. **Tomorrow.** The next working day's meetings with their prep pages. **Make prep page** queues one to be made after you close, one at a time. On a Friday it adds the weekly report.
 6. Press **Close the day**. It ends on "Day closed at 18:04. Everything has a place." with the counts. Closing while the catch-up sweep is still running closes the day when it finishes, and anything it found that you didn't place goes to First thing tomorrow. Only the time and references to your choices are noted (`system/staging/day-closed.json`); nothing is written to the tracker and nothing is sent. Steps with nothing in them are passed over on a quiet day.
 7. The next morning, **First thing** heads Today's brief with what you put there that is still open, and the session-start line in Claude Code lists it too. It is cleared when you close that day.
@@ -219,7 +219,7 @@ Where: ⌘K, anywhere
 1. Press [[⌘K]] and type the change in words: "move ABC-A-002 to fri", "mark the UAT room action done", "Omar owns the SOW action", "reopen ABC-A-004", "set ABC-005 priority to high" or "add action for ABC: send the SOW, Sara, Friday". An item can be named by its ID or by words from its title.
 2. The change is listed first, marked **Change**, and the preview under the list shows each field before and after, and what else it touches: items tied to a milestone, a milestone it would pass, a weekend date, an owner creaite doesn't know. For "add an action", **chips** suggest an owner, due date, workstream, milestone or priority read from the words; a click adds that one field before you press Enter, and a vague title says so.
 3. If two items or people match, it asks which one; pick it and the palette stays open.
-4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Undo last**. [[⌘↵]] stages it and opens Review. Esc changes nothing.
+4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Undo last**. [[⌘↵]] stages it and opens Intake. Esc changes nothing.
 5. A request it can't read as a change is offered to ask creaite ("Give it to ask creaite"). Nothing in ⌘K deletes.
 
 Or say: `move ABC-A-002 to fri` `Omar owns the SOW action` (cx-edit shows the change and waits for `apply`)
@@ -305,7 +305,7 @@ Where: Today · Intake · Files
 2. **After it:** on **Intake**, press **Process** on the meeting ([Turn a meeting into minutes](#turn-a-meeting-into-minutes)). Past days on Today's day line show where each meeting is: **Transcript ready**, **Draft in Review** or **Minutes made**.
 3. In Review, **Open draft** opens the minutes beside the transcript. Whether the agenda was covered, carrying a missed point to the next agenda and the follow-up email all live in the minutes.
 4. **The follow-up email** has the attendees as **To** (from the invite, or the people register), a short thanks, the minutes' own summary, the decisions and the actions grouped by owner. **Lead with** puts one person's actions first. Copy it into Outlook: nothing is sent.
-5. An old meeting link opens the meeting's Prep before it starts, Review while its minutes wait, and the filed minutes afterwards.
+5. An old meeting link opens the meeting's Prep before it starts, Intake while its minutes wait, and the filed minutes afterwards.
 
 Or say: `prep for the ABC steering` `process Tuesday's ABC steering`
 
@@ -601,7 +601,7 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 ## Keyboard shortcuts
 | Keys | Does |
 |---|---|
-| Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), projects, items, milestones, files, Intake and commands. On a project page it also offers that project's actions (generate or edit current state, add a milestone or image, edit health). Type a change in words ("move ABC-A-002 to fri") to see it before and after; Enter stages it, Cmd/Ctrl + Enter stages it and opens Review |
+| Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), projects, items, milestones, files, Intake and commands. On a project page it also offers that project's actions (generate or edit current state, add a milestone or image, edit health). Type a change in words ("move ABC-A-002 to fri") to see it before and after; Enter stages it, Cmd/Ctrl + Enter stages it and opens Intake |
 | / or Cmd/Ctrl + J | ask creaite. In Help, / goes to Help's search box |
 | Cmd/Ctrl + Shift + N | A new note, from any page (the note drawer; Esc closes it and keeps the draft, Cmd/Ctrl + Enter is Done) |
 | N | A new note too, when you aren't typing in a box: the same drawer. Use it in an ordinary Chrome tab, where Cmd/Ctrl + Shift + N opens an incognito window |
@@ -822,7 +822,7 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 ## Minutes view
 Where: Review › Open draft on minutes · address `#minutes=`
 
-- **Open draft** on a meeting's minutes in Review opens them as a page under Review (it needs the live server). The decisions, risks, issues and actions in them are the items under them in Review: a change to a row changes the item. Filed minutes are never saved over; a change is saved as a new version.
+- **Open draft** on a meeting's minutes in Intake opens them as a page under Intake (it needs the live server). The decisions, risks, issues and actions in them are the items under them in Intake: a change to a row changes the item. Filed minutes are never saved over; a change is saved as a new version.
 - **The bar:** the versions, **Internal**, **Distributed** or **Side by side**, **Transcript**, the checks, **Export** and **Approve minutes**. With the transcript open, a line's time tag jumps to the place it came from. Time tags are for you: they are never exported.
 - **Each item row** has an owner and a deadline. A deadline said in words (Friday, next week, end of month) is worked out from the meeting's date and marked as a guess: click it to see the words and change the date. **Looks like** shows an item it repeats. **Remove** drops the item and its line, and **Keep the line** keeps the line as text; both have Undo.
 - **Coverage:** an agenda point the meeting didn't cover can be carried on, made a separate session or marked no longer needed, with Undo, and optionally a line under "Not covered in this meeting".

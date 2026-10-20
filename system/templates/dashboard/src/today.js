@@ -25,7 +25,7 @@ import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S,
 import { api, oneLine, onceFor, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
-import { irReveal } from "./stores/intakeReview.js";   /* #232-C */
+import { irFreshFiles, irReveal } from "./stores/intakeReview.js";   /* #232-C */
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MTG } from "./core/intakeApi.js";
 import { irProcessById, irRefreshCalendar } from "./components/intakeReview/actions.js";   /* #232-C2: Today's day line and Refresh calendar go through the Intake page's own actions */
@@ -578,7 +578,7 @@ export function tdToReview(n){ go("intake-review"); const r=REV.find(x=>x.n===n&
 /** the place a phrase of the line opens (#232, v2.6: Review is part of Intake, one page): proposals go to its "To approve" stage (drafted), meetings and new files to its "Arrived" stage; renderIntakeLine splits the address into a page and a stage */
 export const intakeTarget=/** @param {string} key */key=>key==="proposals"?"intake-review&stage=drafted":"intake-review&stage=arrived";
 /** @returns {{key:string,n:number,text:string,go:string}[]} meetings first, then proposals, then new files; none at zero */
-export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(txReady).length, fl=(D.inbox||[]).filter(f=>f.state==="new").length, L=[];
+export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(txReady).length, fl=irFreshFiles().ready.length, L=[];   /* the files the rail's badge counts: ready ones, not a transcript already loaded for a meeting */
   if(nTr) L.push({key:"meetings",n:nTr,text:`${nTr} meeting${nTr===1?"":"s"} ready to process`,go:intakeTarget("meetings")});
   if(pr) L.push({key:"proposals",n:pr,text:`${pr} proposal${pr===1?"":"s"} to approve`,go:intakeTarget("proposals")});
   if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} to process`,go:intakeTarget("files")});
@@ -598,7 +598,7 @@ const tqHash=/** @param {string} s */s=>{ let h=0x811c9dc5; for(let i=0;i<s.leng
 function intakeIds(){ return {
   meetings:MTG().filter(txReady).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
   proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}`:`n${r.n}`))),
-  files:(D.inbox||[]).filter(f=>f.state==="new").map(f=>tqHash("f|"+(f.path||f.name))) }; }
+  files:irFreshFiles().ready.map(f=>tqHash("f|"+(f.path||f.name))) }; }
 /* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
    storage event); the memory is read instead when the store can't be read, or when this page's last write to it failed (a store
    that reads but won't write). All storage in try/catch. */

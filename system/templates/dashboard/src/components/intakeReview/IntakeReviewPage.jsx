@@ -180,7 +180,7 @@ export function renderIntakeReview() {
 
 /* Keyboard: up and down move between meetings; Enter processes the one with focus when its transcript is ready and otherwise opens
    or closes it (232-A); N asks why it is Not needed and H sets it aside for Later (232-A; here, not in core/keys.js); Esc closes the
-   peek and then the open meeting. The Review side's keys (232-B) are core/keys.js's. */
+   peek and then the open meeting. The Review side's keys (232-B) are proposals.jsx's bootIrReviewKeys. */
 function bootIrKeys() {
   document.addEventListener("keydown", e => {
     if (shared.VIEW !== "intake-review" || e.metaKey || e.ctrlKey || e.altKey) return;

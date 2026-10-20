@@ -18,9 +18,10 @@ KEY = "creaite-intakeline-dismissed"
 VISIBLE = "(()=>{const e=document.getElementById('tdQuiet'); return !!e && !e.hidden && e.offsetParent!==null && getComputedStyle(e).display!=='none';})()"
 # exactly p proposals, m meetings with a transcript ready (the last one confidential when conf), f new files in Intake. po, mo and fo
 # shift the ids of the proposals, meetings and files, so a test can say "a different one" (the x keeps ids, not counts)
-SET = """window.setWaiting=(p,m,f,conf,po=0,mo=0,fo=0)=>{ REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000));
+SET = """window.setWaiting=(p,m,f,conf,po=0,mo=0,fo=0)=>{ shared.LIVE=false;   /* the fixture stands for the lists: opening Intake would read the real inbox again (refreshFiles) and replace the files set here */
+  REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000));
   for(let i=0;i<p;i++) REV.push({n:9000+po+i,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:po+i+1,rec:{t:'Late one '+i},src:''});
-  D.inbox=Array.from({length:f},(_,i)=>({state:'new',name:'f'+(fo+i)+'.docx',path:'inbox/f'+(fo+i)+'.docx'}));
+  D.inbox=Array.from({length:f},(_,i)=>({state:'new',name:'f'+(fo+i)+'.docx',path:'inbox/f'+(fo+i)+'.docx',ft:'transcript'}));   /* kind known: ready to process */
   D.meetings={rows:Array.from({length:m},(_,i)=>{ const c=conf&&i===m-1; return c?{key:TODAY+'|09:00|SECRETBOARD',id:null,title:'SECRETBOARD',p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:true}
     :{id:'mx'+(mo+i),key:'mx'+(mo+i),title:'Steering '+i,p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:false}; })};
   renderBadge(); renderToday(); return true; }"""
@@ -73,6 +74,28 @@ class Shows(Line):
         self.waiting(4, 1, 2)
         self.assertEqual(self.text(), "Intake: 1 meeting ready to process, 4 proposals to approve and 2 new files to process.")
         self.assertEqual(self.b.eval("document.querySelector('#tdQuiet [data-tdq=files]').getAttribute('href')"), "#intake-review&stage=arrived")
+
+    def test_a_file_of_unknown_kind_is_not_a_new_file_to_process(self):
+        """Decision (a), 20-10-2026: the line and the rail badge are one number. A file whose kind is unknown (Plan.docx: ft "") is
+        'need a type' on the page and not in the badge, so the line does not count it either."""
+        b = self.b
+        self.waiting(0, 0, 1)
+        before = b.eval("irLiveCounts()")
+        b.eval("D.inbox.push({state:'new',name:'Plan.docx',path:'inbox/Plan.docx',ft:''}); renderBadge(); renderToday()")
+        self.assertEqual(self.text(), "Intake: 1 new file to process.")                  # the known file only
+        after = b.eval("irLiveCounts()")
+        self.assertEqual(after["need_type"], before["need_type"] + 1)                    # the page says "1 need a type"...
+        self.assertEqual(after["badge"], before["badge"])                                # ...and the badge, like the line, does not count it
+        b.eval("D.inbox=[{state:'new',name:'Plan.docx',path:'inbox/Plan.docx',ft:''}]; renderBadge(); renderToday()")
+        self.assertFalse(b.eval(VISIBLE))                                                # only the unknown one: no line
+
+    def test_a_transcript_already_loaded_for_a_meeting_is_not_a_second_item(self):
+        """Decision (a): an inbox file with an event is the meeting's own transcript (Calendar import loaded it); the page folds it into
+        the meeting's row and irLiveCounts leaves it out, so the line counts the meeting and not the file as well."""
+        b = self.b
+        self.waiting(0, 1, 0)
+        b.eval("D.inbox=[{state:'new',name:'Steering 0.vtt',path:'inbox/Steering 0.vtt',ft:'transcript',event:'mx0'}]; renderBadge(); renderToday()")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process.")
 
     def test_the_line_has_no_live_role_and_a_small_hidden_region_announces_the_count_politely(self):
         b = self.b

@@ -6,8 +6,8 @@ import { howLink } from "./helpscreen.js";
 import { FILES, fpName, P, pName, WEEKSTART } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, paintIcons, putHTML, raw } from "./core/dom.js";
 import { D, DDATE, fd, S, store, toIso } from "./core/page.js";
-import { api, oneLine, renderBadge, SERVED, snack, viaServer } from "./core/server.js";
-import { irTick } from "./stores/intakeReview.js";   /* #232-C */
+import { api, oneLine, reloadData, renderBadge, SERVED, snack, viaServer } from "./core/server.js";
+import { irModelBehind, irTick } from "./stores/intakeReview.js";   /* #232-C */
 import { shared } from "./core/state.js";
 import { pendingEdit } from "./ask.js";
 import { renderToday } from "./today.js";
@@ -95,12 +95,14 @@ export async function refreshFiles(force){ if(!SERVED||!shared.LIVE||shared.FBUS
     [...FNEW].forEach(p=>{ if(!FSEEN.has(p)) FNEW.delete(p); }); }
   catch(e){ FERR=`Couldn't refresh the file list (${e.message}); showing the list from ${clockOf(FAT||D.built_at)||"the last build"}.`; }
   finally{ clearTimeout(slow); shared.FBUSY=false; }
-  renderBadge(); irTick.value++; if(shared.VIEW==="files") renderFiles(); else if(shared.VIEW==="today") renderToday(); return true; }   /* #208: the line on Today counts new files */
+  renderBadge(); irTick.value++; if(shared.VIEW==="files") renderFiles(); else if(shared.VIEW==="today") renderToday();
+  if(shared.VIEW==="intake-review"&&irModelBehind()) await reloadData();   /* a file dropped in inbox/ has a row only in a rebuilt model (the counts took it at once) */
+  return true; }   /* #208: the line on Today counts new files */
 /* looking at Files again clears what was new last time */
 export function filesOpened(){ if(FSEEN){ FNEW.clear(); FSEEN=new Set(FILES.map(f=>f.path)); } else FSEEN=new Set(FILES.map(f=>f.path)); refreshFiles(true); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootFiles0069(){
-window.addEventListener("focus",()=>{ if(shared.VIEW==="files"||shared.VIEW==="inbox") refreshFiles(false); });
+window.addEventListener("focus",()=>{ if(shared.VIEW==="files"||shared.VIEW==="intake-review") refreshFiles(false); });
 $("#filesRefresh").onclick=()=>{ refreshFiles(true); if(!SERVED) snack("Refresh needs the live server; this page shows the file list of the last build"); };
 $("#filesTbl").addEventListener("click",e=>{ const mb=e.target.closest("[data-moveback]"); if(mb){ moveBack(mb.dataset.moveback); return; } const tr=e.target.closest("tr[data-fp]"); if(!tr||e.target.closest("a,button")) return; shared.FSELFILE=tr.dataset.fp; $$("#filesTbl tr[data-fp]").forEach(r=>r.classList.toggle("sel",r===tr)); });
 }

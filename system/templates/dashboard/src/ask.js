@@ -1145,7 +1145,7 @@ export function ckPreview(c){ if(c.ask) return `<div class="ckpv"><div class="ck
   else { const x=c.k==="milestones"?ckMs(c.id):REC(c.k,c.id); title=`${c.id} · ${x.t}`;
     rows=Object.entries(c.patch).map(([f,v])=>{ const was=c.k==="milestones"?(f==="fc"?x.due:""):x[f]; return `<div class="ckln"><span class="ckf">${CKFN[f]||f}</span><span class="ckdel" aria-label="Before">− ${esc(ckShow(f,was))}</span><span class="ckadd" aria-label="After">+ ${esc(ckShow(f,v))}</span></div>`; }).join(""); }
   const t=ckTouches(c);
-  return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows}${t.length?`<div class="cktch"><div class="sub">What else it touches</div><ul>${t.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:'<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Review · <kbd>Esc</kbd> nothing changes</div></div>`; }
+  return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows}${t.length?`<div class="cktch"><div class="sub">What else it touches</div><ul>${t.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:'<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`; }
 export function ckSummary(c){ if(c.new) return `Add: ${c.new.t}`; const x=c.k==="milestones"?ckMs(c.id):REC(c.k,c.id), f=Object.keys(c.patch)[0];
   return `${c.label}: ${c.id} ${x?"· "+x.t:""} → ${ckShow(f,c.patch[f])}`; }
 /* ---- staging: the peek's path, never applied here ---- */

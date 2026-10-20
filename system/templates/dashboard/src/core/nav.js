@@ -14,7 +14,7 @@ import { reloadData, snack } from "./server.js";
 import { shared } from "./state.js";
 import { rjLoadGuesses } from "../review.js";
 import { setRailView } from "../stores/rail.js";
-import { filesOpened, renderFiles } from "../files.js";
+import { filesOpened, refreshFiles, renderFiles } from "../files.js";
 import { helpNorm, renderHelp } from "../help.js";
 import { helpScreenSync } from "../helpscreen.js";
 import { meetingRoute } from "../meetings.js";
@@ -155,6 +155,7 @@ export function go(v,arg,opt){ if(v==="review"||v==="inbox"||v==="intake") v="in
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,"intake-review":renderIntakeReview,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&v==="files") filesOpened();
+  else if(r!==false&&v==="intake-review"&&!shared.LOADING) refreshFiles(true);   /* the inbox is read again on opening Intake: a file dropped in since the last look gets its row */
   if(r!==false&&v==="intake-review"&&!shared.LOADING&&irModelBehind()) setTimeout(reloadData,0);   /* #232-C: proposals the quick refresh brought in since the model was built */
   if(r!==false&&v==="intake-review"&&!shared.LOADING) rjLoadGuesses();   /* the reject menu's guesses, as the old page asked for them when it drew (once for each set of pending rows) */
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */

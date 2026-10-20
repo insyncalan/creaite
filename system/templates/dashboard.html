@@ -5793,6 +5793,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irFixed: () => irFixed,
     irFoldClick: () => irFoldClick,
     irFolded: () => irFolded,
+    irFreshFiles: () => irFreshFiles,
     irGroupsShown: () => irGroupsShown,
     irHeld: () => irHeld,
     irHold: () => irHold,
@@ -9312,7 +9313,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ]);
     return REV.filter((r4) => !r4.done && !have.has(r4.n)).map((r4) => r4.n);
   };
-  var irModelBehind = () => irMissing().length > 0;
+  var irFreshFiles = () => {
+    const m5 = (
+      /** @type {any} */
+      irModel()
+    ), kinds = irFileKinds.value, idOf = (x5) => x5.path || x5.key, aside = new Set([...m5.later || [], ...m5.not_needed || []].map(idOf).filter(Boolean)), known2 = new Set((m5.meetings || []).map((x5) => x5.path).filter(Boolean)), waiting = (
+      /** @type {any} */
+      (D.inbox || []).filter((f5) => f5.state === "new" && f5.uploaded !== false && !f5.event && !aside.has(f5.path))
+    ), sure = (f5) => !!irKindOf({ src: "upload", path: f5.path, ft: f5.ft, size: f5.size, day: f5.date }, kinds), fresh = waiting.filter((f5) => !known2.has(f5.path));
+    return { waiting, fresh, ready: waiting.filter(sure), sure: fresh.filter(sure) };
+  };
+  var irModelBehind = () => irMissing().length > 0 || irFreshFiles().fresh.length > 0;
   var irHeld = (n4) => {
     const r4 = irRow(n4);
     return !!(r4 && r4.hold);
@@ -9368,12 +9379,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irTick.value++;
   }
   var irLiveCounts = () => {
-    const kinds = irFileKinds.value, c5 = irCounts(irModel(), irDone, kinds), known2 = new Set((irModel().meetings || []).map((m5) => m5.path).filter(Boolean));
-    const fresh = (
-      /** @type {any} */
-      (D.inbox || []).filter((f5) => f5.state === "new" && f5.uploaded !== false && !f5.event && !known2.has(f5.path))
-    );
-    const extra = fresh.length, sure = fresh.filter((f5) => irKindOf({ src: "upload", path: f5.path, ft: f5.ft, size: f5.size, day: f5.date }, kinds)).length;
+    const c5 = irCounts(irModel(), irDone, irFileKinds.value), fr2 = irFreshFiles();
+    const extra = fr2.fresh.length, sure = fr2.sure.length;
     const late = irMissing().length;
     const k5 = { ...c5, to_approve: c5.to_approve + late, badge: c5.badge + late };
     return extra ? { ...k5, arrived: k5.arrived + extra, ready: k5.ready + sure, need_type: k5.need_type + extra - sure, badge: k5.badge + sure, all: k5.all + extra } : k5;
@@ -44441,7 +44448,7 @@ ${s5}`;
     (key2) => key2 === "proposals" ? "intake-review&stage=drafted" : "intake-review&stage=arrived"
   );
   function intakeParts() {
-    const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(txReady).length, fl2 = (D.inbox || []).filter((f5) => f5.state === "new").length, L3 = [];
+    const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(txReady).length, fl2 = irFreshFiles().ready.length, L3 = [];
     if (nTr) L3.push({ key: "meetings", n: nTr, text: `${nTr} meeting${nTr === 1 ? "" : "s"} ready to process`, go: intakeTarget("meetings") });
     if (pr2) L3.push({ key: "proposals", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} to approve`, go: intakeTarget("proposals") });
     if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} to process`, go: intakeTarget("files") });
@@ -44467,7 +44474,7 @@ ${s5}`;
     return {
       meetings: MTG().filter(txReady).map((m5) => tqHash("m|" + (m5.key || m5.id || `${m5.day}|${m5.start}|${m5.title}`))),
       proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}` : `n${r4.n}`))),
-      files: (D.inbox || []).filter((f5) => f5.state === "new").map((f5) => tqHash("f|" + (f5.path || f5.name)))
+      files: irFreshFiles().ready.map((f5) => tqHash("f|" + (f5.path || f5.name)))
     };
   }
   function tqRead() {
@@ -44997,6 +45004,7 @@ ${s5}`;
     irTick.value++;
     if (shared.VIEW === "files") renderFiles();
     else if (shared.VIEW === "today") renderToday();
+    if (shared.VIEW === "intake-review" && irModelBehind()) await reloadData();
     return true;
   }
   function filesOpened() {
@@ -45008,7 +45016,7 @@ ${s5}`;
   }
   function bootFiles0069() {
     window.addEventListener("focus", () => {
-      if (shared.VIEW === "files" || shared.VIEW === "inbox") refreshFiles(false);
+      if (shared.VIEW === "files" || shared.VIEW === "intake-review") refreshFiles(false);
     });
     $("#filesRefresh").onclick = () => {
       refreshFiles(true);
@@ -68214,6 +68222,7 @@ ${d5.text}`);
       return true;
     })(v5, arg, opt);
     if (r4 !== false && v5 === "files") filesOpened();
+    else if (r4 !== false && v5 === "intake-review" && !shared.LOADING) refreshFiles(true);
     if (r4 !== false && v5 === "intake-review" && !shared.LOADING && irModelBehind()) setTimeout(reloadData, 0);
     if (r4 !== false && v5 === "intake-review" && !shared.LOADING) rjLoadGuesses();
     if (r4 !== false) helpScreenSync();
@@ -73124,7 +73133,7 @@ ${d5.text}`);
       }).join("");
     }
     const t47 = ckTouches(c5);
-    return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows2}${t47.length ? `<div class="cktch"><div class="sub">What else it touches</div><ul>${t47.map((x5) => `<li>${esc(x5)}</li>`).join("")}</ul></div>` : '<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Review · <kbd>Esc</kbd> nothing changes</div></div>`;
+    return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows2}${t47.length ? `<div class="cktch"><div class="sub">What else it touches</div><ul>${t47.map((x5) => `<li>${esc(x5)}</li>`).join("")}</ul></div>` : '<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`;
   }
   function ckSummary(c5) {
     if (c5.new) return `Add: ${c5.new.t}`;
@@ -76495,6 +76504,7 @@ ${d5.text}`);
         "irFixed",
         "irFoldClick",
         "irFolded",
+        "irFreshFiles",
         "irGroupsShown",
         "irHold",
         "irIfApproved",
@@ -76509,6 +76519,7 @@ ${d5.text}`);
         "irMergeEdits",
         "irMissing",
         "irModel",
+        "irModelBehind",
         "irNameOk",
         "irNotNeeded",
         "irNoteText",

@@ -31,7 +31,19 @@ export const irMissing = () => {
     ...["mail", "other"].flatMap(k => [...(m[k].needs || []), ...(m[k].routine || [])])]);
   return REV.filter(r => !r.done && !have.has(r.n)).map(r => r.n);
 };
-export const irModelBehind = () => irMissing().length > 0;
+/** The files in D.inbox that wait to be processed: new, an upload, not a loaded meeting's transcript and not set aside (those are
+    listed in the model's later or not_needed, by path). `fresh` are those the model lacks (one dropped in inbox/ since it was built:
+    the quick file refresh brings D.inbox but not D.intake_review); `ready` those whose kind is known, `sure` the fresh ones among
+    them (the rest need a type). Today's line, the badge and the page all count from this. */
+export const irFreshFiles = () => {
+  const m = /** @type {any} */ (irModel()), kinds = irFileKinds.value, idOf = (/** @type {any} */ x) => x.path || x.key,
+    aside = new Set([...(m.later || []), ...(m.not_needed || [])].map(idOf).filter(Boolean)),
+    known = new Set((m.meetings || []).map((/** @type {any} */ x) => x.path).filter(Boolean)),
+    waiting = ((/** @type {any} */ (D)).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !aside.has(f.path)),
+    sure = (/** @type {any} */ f) => !!irKindOf({ src: "upload", path: f.path, ft: f.ft, size: f.size, day: f.date }, kinds), fresh = waiting.filter((/** @type {any} */ f) => !known.has(f.path));
+  return { waiting, fresh, ready: waiting.filter(sure), sure: fresh.filter(sure) };
+};
+export const irModelBehind = () => irMissing().length > 0 || irFreshFiles().fresh.length > 0;
 /** Whether proposal n now has a hold (a peek edit made it a new risk, say): the groups move it from Routine to Needs. @param {number} n */
 export const irHeld = n => { const r = irRow(n); return !!(r && r.hold); };
 
@@ -58,11 +70,10 @@ export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, 
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irPruneKinds(); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
 export const irLiveCounts = () => {
-  const kinds = irFileKinds.value, c = irCounts(irModel(), irDone, kinds), known = new Set((irModel().meetings || []).map(m => m.path).filter(Boolean));
+  const c = irCounts(irModel(), irDone, irFileKinds.value), fr = irFreshFiles();
   /* #232-C: a file that arrived since the model was built (the quicker file refresh does not rebuild it) counts at once, as the
      Intake badge did; a transcript Calendar import loaded belongs to its meeting's row */
-  const fresh = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path));
-  const extra = fresh.length, sure = fresh.filter((/** @type {any} */ f) => irKindOf({ src: "upload", path: f.path, ft: f.ft, size: f.size, day: f.date }, kinds)).length;   /* a file of unknown kind is not ready */
+  const extra = fr.fresh.length, sure = fr.sure.length;   /* a file of unknown kind is not ready */
   const late = irMissing().length;   /* proposals the quick refresh brought into Review before the model was rebuilt */
   const k = { ...c, to_approve: c.to_approve + late, badge: c.badge + late };
   return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + sure, need_type: k.need_type + extra - sure, badge: k.badge + sure, all: k.all + extra } : k;
