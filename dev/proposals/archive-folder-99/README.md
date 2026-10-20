@@ -27,10 +27,13 @@ Each was checked with `git apply --check` against origin/main 4e564fcf.
 
 ## Verified in a scratch copy
 
-All five diffs applied to the branch head in a scratch worktree: `test_archive_folder_99` 20/20, plus the archive, reach, card-only, notes, Health, OneDrive and update tests (results in the report on the board).
+All five diffs applied to the branch head in a scratch worktree, tests run one at a time: `test_archive_folder_99` 20/20; `test_reach`, `test_archive_items`, `test_archive_items_marks`, `test_archive_projects`, `test_archive_reports`, `test_archive_move_back`, `test_card_only_moves`, `test_notes_delete`, `test_notes_card_only_ops`, `test_file_access`, `test_fs_newfile`, `test_agendas_files`, `test_fast_save`, `test_pages`, `test_portability`, `test_onedrive_projects`, `test_update` and the `test_health*` tests all OK. The browser tests and the v1.9.5 hand check need Chrome and a live server slot and were not run.
+
+Eleven older tests named `_Archive` as the place a new archive goes; they were changed deliberately to `99 Archive` (a vault engagement has no archive folder yet, so the new name is used), except where the test's engagement already holds the skeleton's old `_Archive`, which stays the folder in use. No guard was loosened in a test. `permissions.diff` now names the refused folder (`99 Archive is never read or written…`), so the existing `_Archive` refusal text still matches.
 
 ## With #255 (Delete note without the card, `dev/proposals/delete-note-no-card/`)
 
 - `reach.diff` and `tracker.diff` compose with #255's in either order.
 - `creaite-rules.diff` and `live_server.diff` conflict textually with #255's in either order: comments and rules prose only (`move_back_route`'s docstring, the #124 Delete note comment block, the Archiving paragraph). **Resolution:** take #255's text, then apply this proposal's renaming to it: every `_Archive` in #255's new lines becomes "its archive folder" or `99 Archive` (four places: the move-back docstring, the Delete note block twice, `notes_delete_now`'s docstring, and the Archiving paragraph). No code conflict: #255 builds the move with `archive.note_delete_spec`, which this branch already points at the folder in use.
+- Tests: #255's `tests.diff` and this branch both change `test_card_only_moves.py` and `test_notes_delete.py`, so they conflict. Take #255's version of both files, then change `_Archive` to `99 Archive` where a note goes into a vault engagement or the portfolio, as this branch does.
 - Order: land #255 first (it is the larger change), then rebase these two diffs onto it.
