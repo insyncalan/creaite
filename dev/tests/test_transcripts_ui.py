@@ -171,7 +171,7 @@ class Loading(Case):
         b.wait("/Couldn.t|Draft ready/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').cells[6].innerText)", 40)
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
         self.assertTrue(seen["prompt"].startswith("Process these Intake files"))           # #264: Process's own run kind
-        self.assertIn(f"- `inbox/{DAY} ABC Steering.vtt`", seen["prompt"])              # the file the server wrote, never a re-typed transcript
+        self.assertIn(f'1. path: "inbox/{DAY} ABC Steering.vtt"', seen["prompt"])              # the file the server wrote, never a re-typed transcript
         self.assertEqual(self.inbox(), [f"{DAY} ABC Steering.vtt"])
 
     @needs_diff
@@ -188,7 +188,7 @@ class Loading(Case):
         self.assertIn("Skipped", state("ev-2"))
         self.assertIn("Not transcribed yet", state("ev-2"))
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
-        self.assertEqual(re.findall(r"^- `(inbox/[^`]+)`", seen["prompt"], re.M), [f"inbox/{DAY} ABC Steering.vtt"])   # only the loadable one ran; Claude never looked for the others
+        self.assertEqual(re.findall(r'^\d+\. path: "(inbox/[^"]+)"', seen["prompt"], re.M), [f"inbox/{DAY} ABC Steering.vtt"])   # only the loadable one ran; Claude never looked for the others
         self.assertEqual(self.inbox(), [f"{DAY} ABC Steering.vtt"])
 
     def test_only_skipped_rows_run_nothing_and_open_nothing(self):
