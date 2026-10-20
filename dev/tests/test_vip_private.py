@@ -77,8 +77,8 @@ class WeeklyAndClient(NoLabel, unittest.TestCase):
                                  "period_start": "2026-10-01"}))
         self.assertNoVip(self.v.at("client-data", "ABC", "--since", "2026-10-01", script="report.py").stdout, "client-data")
         self.assertNoVip(self.v.at("client-stage", str(f), script="report.py").stdout, "client-stage's output")
-        prop = next((self.v.root / "system/staging").glob("proposed-*-client-ABC.json"))
-        self.assertNoVip(docx_text(self.v.root / json.loads(prop.read_text())["report"]["draft"]), "the client report")
+        draft = next((self.v.root / "system/staging/drafts").glob("*Client report*.html"))   # v2.5.1: the hub's own, no Word file
+        self.assertNoVip(draft.read_text(encoding="utf-8"), "the client report")
 
     def test_a_one_off_document_never_says_vip(self):
         f = self.v.root / "system/staging/drafts/adhoc.json"

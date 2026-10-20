@@ -36,6 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import confusables  # noqa: E402
 import status_checks  # noqa: E402
 
 MAX_TEXT = 12000            # characters of selected text
@@ -212,7 +213,10 @@ def client_ids(con, code):
 # #123 review: a client reply's IDs and the word VIP are matched after normalising, so a look-alike, a zero-width character, a
 # non-breaking hyphen, lower case or a missing space can't slip an item past the check (client_leak.text_findings matches IDs
 # the same way since #127).
-LOOK_ALIKE = str.maketrans({**{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
+# v2.5.1 (#239): every look-alike letter of confusables.TABLE (Cyrillic, Greek, Armenian, Lisu, Cherokee, small capitals; ѕ, ԁ, у,
+# օ and ꓮ among them), with the older entries below kept as they were where both name a character.
+LOOK_ALIKE = str.maketrans({**{chr(k): v for k, v in confusables.TABLE.items()},
+                            **{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
                             **{c: "I" for c in "\u0399\u0406\u04c0\u01c0\u0131\u03b9\u0456"},
                             **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"},
                             # #127 review: the other Cyrillic and Greek letters that look Latin (a project code's "АВС")
@@ -275,7 +279,8 @@ def normal(text):
     """Text as the client check matches it: NFKC, invisible characters gone (unseen, before and after NFKC, which can make a
     filler of a compatibility one), combining marks gone (unmarked), dashes and look-alike letters made plain."""
     import unicodedata
-    t = unseen(unicodedata.normalize("NFKC", unmarked(unseen(text)))).translate(LOOK_ALIKE)
+    t = unmarked(unseen(text).translate(LOOK_ALIKE)).translate(LOOK_ALIKE)      # v2.5.1: before NFKD/NFKC too (Ϲ would be Σ)
+    t = unseen(unicodedata.normalize("NFKC", t)).translate(LOOK_ALIKE)
     return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 

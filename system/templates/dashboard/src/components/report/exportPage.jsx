@@ -1,5 +1,5 @@
 // @ts-check
-/* exportPage (#226, #219): the report's HTML and PDF export is the sheet's own "Show as exported" page. This draws that page once more,
+/* exportPage (#226, #219): the weekly report's HTML and PDF export is the sheet's own "Show as exported" page. This draws that page once more,
    off screen, in a throwaway frame fixed to the light theme (so a dark dashboard never reaches a file), with the same SheetPage and the
    same renderers the screen uses, and hands back what the server needs to make the file: the page's markup, the style rules that
    apply to it (the dashboard's own stylesheet, cut down to the rules some element of the page matches, so the file draws as the screen
@@ -13,7 +13,8 @@ import { SheetPage } from "./SheetPage.jsx";
 /** @typedef {{viewId: string, viewClass: string, sheetClass: string}} ExportView */
 
 export const WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
-export const CLIENT_EXPORT = { viewId: "v-clientreport", viewClass: "crview", sheetClass: "crsheet" };
+/* v2.5.1 (#239 step 3): there is no client export view here: a client report's files are made by the server from its checked copy, and
+   its Show as exported is the server's render (ClientParts.jsx ServerExported). */
 
 const PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
 const NOOP = () => {};

@@ -1,0 +1,32 @@
+{
+  "created": "2026-10-09T13:00:00",
+  "source_run": "cx-steerco",
+  "files": [],
+  "items": [],
+  "report": {
+    "kind": "steerco",
+    "version": "client",
+    "title": "Example Programme steering one-pager (client), 09-10-2026",
+    "project": "ABC",
+    "projects": [
+      "ABC"
+    ],
+    "draft": "system/staging/drafts/2026-10-09 Example Programme Steerco one-pager (client).docx",
+    "report_decision": "pending",
+    "file_ops": [
+      {
+        "op": "mkdir",
+        "path": "projects/ABC Example Programme/reports/Steerco"
+      },
+      {
+        "op": "copy",
+        "from": "draft",
+        "to": "projects/ABC Example Programme/reports/Steerco/2026-10-09 Example Programme Steerco one-pager (client).docx"
+      },
+      {
+        "op": "remove",
+        "path": "system/staging/drafts/2026-10-09 Example Programme Steerco one-pager (client).docx"
+      }
+    ]
+  }
+}

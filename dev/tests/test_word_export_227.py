@@ -21,6 +21,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "system" / "scripts"))
 import creaite_doc  # noqa: E402
+import client_snapshot  # noqa: E402  (v2.5.1: the Word writer as client_export calls it)
 import docx_tools  # noqa: E402
 import launch  # noqa: E402
 import paths  # noqa: E402
@@ -133,6 +134,13 @@ class Base(unittest.TestCase):
             return png(int(w), int(h))
         creaite_doc.picture_png = fake
         self.addCleanup(setattr, creaite_doc, "picture_png", self.real_pic)
+        # v2.5.1 (#239, b): a report draws only the project's own logo files (report_doc.logos), never a path a draft stored, so the
+        # test's logos are the project's logo files
+        import report_doc
+        real_logos = report_doc.logos
+        report_doc.logos = lambda code, wanted=None, _t=self.tmp: [{"kind": "firm", "path": str(_t / "firm.png")},
+                                                                    {"kind": "client", "path": str(_t / "client.svg")}]
+        self.addCleanup(setattr, report_doc, "logos", real_logos)
         (self.tmp / "images").mkdir()
         (self.tmp / "images" / "site.png").write_bytes(png(40, 20, (0, 150, 0, 255)))
         (self.tmp / "firm.png").write_bytes(png(60, 20))
@@ -148,7 +156,7 @@ class Base(unittest.TestCase):
     def build(self, doc=None):
         doc = doc or self.doc()
         self.out = self.tmp / "out.docx"
-        creaite_doc.word_export(doc, self.out)
+        creaite_doc.word_export(doc, self.out, token=client_snapshot.TOKEN)
         self.parts = {i.filename: raw for i, raw in docx_tools.read_parts(self.out)}
         self.xml = self.parts["word/document.xml"].decode("utf-8")
         self.root = ET.fromstring(self.xml)

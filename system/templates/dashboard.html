@@ -4127,6 +4127,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .tdquiet svg.i{width:16px;height:16px;flex:none} .tdquiet .tdq{flex:1} .tdquiet a{color:inherit;text-decoration:underline dotted;text-underline-offset:3px} .tdquiet a:hover{color:var(--accent);text-decoration:underline}
 .tdquiet[hidden]{display:none}
 .tdquiet .ib svg.i{width:14px;height:14px}
+/* v2.5.1 (#239): the client report's Show as exported is the server's render of its checked preview snapshot, in a sandboxed frame */
+.crx{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px}
+.crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
+.crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:#fff}
+.crx-wait,.crx-err{padding:16px}
 </style>
 </head>
 <body>
@@ -67402,7 +67407,7 @@ ${d5.text}`);
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
   }
-  async function exportClientReport(fmt, makePage) {
+  async function exportClientReport(fmt) {
     const a5 = crArg.value, d5 = crDoc.value;
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     const opened = crIdentity(d5);
@@ -67411,8 +67416,7 @@ ${d5.text}`);
       if (!s5.ok) return s5;
     }
     if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
-    const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
-    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
+    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
   }
   var matchChain = Promise.resolve();
   var sameWeek = (i5, c5) => !!i5 && !!c5 && i5.project === c5.project && i5.date === c5.date;
@@ -67540,11 +67544,12 @@ ${d5.text}`);
   }
   var textMsg = y3("");
   var PICS = /* @__PURE__ */ new Map();
-  var mapOf = (code) => {
-    let m5 = PICS.get(code);
+  var mapOf = (code, kind = "") => {
+    const key2 = `${code}|${kind === "client" ? "client" : ""}`;
+    let m5 = PICS.get(key2);
     if (!m5) {
       m5 = /* @__PURE__ */ new Map();
-      PICS.set(code, m5);
+      PICS.set(key2, m5);
     }
     return m5;
   };
@@ -67553,17 +67558,17 @@ ${d5.text}`);
     for (const m5 of String(text || "").matchAll(/!\[[^\]\n]*\]\((_images\/[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(?:png|jpe?g))\)/gi)) out.add(m5[1]);
     return [...out];
   }
-  var reportImageSrc = (code, ref) => mapOf(code).get(ref) || null;
-  async function loadReportImages(code, refs) {
-    const m5 = mapOf(code), want = refs.filter((r5) => !m5.has(r5));
+  var reportImageSrc = (code, ref, kind = "") => mapOf(code, kind).get(ref) || null;
+  async function loadReportImages(code, refs, kind = "") {
+    const m5 = mapOf(code, kind), want = refs.filter((r5) => !m5.has(r5));
     if (!want.length || !viaServer()) return;
-    const r4 = await api("/api/report/images", { code, refs: want });
+    const r4 = await api("/api/report/images", { code, refs: want, kind: kind === "client" ? "client" : void 0 });
     if (r4 && r4.ok && r4.images) for (const [k5, v5] of Object.entries(
       /** @type {Record<string, string>} */
       r4.images
     )) m5.set(k5, v5);
   }
-  async function addReportImage(code, file) {
+  async function addReportImage(code, file, kind = "") {
     if (!/^image\/(png|jpeg)$/.test(file.type)) {
       textMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`;
       return null;
@@ -67582,13 +67587,13 @@ ${d5.text}`);
       fr2.onerror = () => res("");
       fr2.readAsDataURL(file);
     });
-    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1) }) : null;
+    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1), kind: kind === "client" ? "client" : void 0 }) : null;
     if (!r4 || !r4.ok) {
       textMsg.value = oneLine(r4 && r4.message || `${file.name} couldn't be added.`);
       return null;
     }
     textMsg.value = "";
-    mapOf(code).set(r4.ref, String(src));
+    mapOf(code, kind).set(r4.ref, String(src));
     return (
       /** @type {string} */
       r4.ref
@@ -67830,12 +67835,12 @@ ${d5.text}`);
     on2.current = onText;
     const marks = A2(checks);
     marks.current = checks;
-    const code = text ? text.code : "";
+    const code = text ? text.code : "", kind = text ? text.kind || "" : "";
     const [ready, setReady] = d2(!text || !imageRefsIn(value).length);
     h2(() => {
       if (!text || ready) return void 0;
       let live = true;
-      loadReportImages(code, imageRefsIn(value)).then(() => {
+      loadReportImages(code, imageRefsIn(value), kind).then(() => {
         if (live) setReady(true);
       });
       return () => {
@@ -67851,7 +67856,7 @@ ${d5.text}`);
     });
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
-        const ref = await addReportImage(code, f5), h5 = ed3.current;
+        const ref = await addReportImage(code, f5, kind), h5 = ed3.current;
         if (!ref || !h5) continue;
         const st2 = h5.editor.state, end = st2.doc.content.size, at2 = st2.doc.resolve(Math.min(st2.selection.from, end)), after = at2.depth ? at2.after(1) : end;
         h5.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
@@ -67869,7 +67874,7 @@ ${d5.text}`);
         box.current
       );
       const editorProps = { handleScrollToSelection: keepCaretInView };
-      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
+      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref, kind), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
       ed3.current = h5;
       h5.editor.setEditable(editable);
       const slashOff = text ? attachSlash(h5, { profile: "textsection", host: hostRows() }) : () => {
@@ -68195,7 +68200,7 @@ ${d5.text}`);
       {
         value: s5.text || "",
         rich: true,
-        text: { code: String(ctx.doc.project || "") },
+        text: { code: String(ctx.doc.project || ""), kind: String(ctx.doc.kind || "") },
         label: s5.heading || "Text section",
         onText: (t47) => h5.update({ text: t47 }, "Text edited"),
         ai: h5.ai,
@@ -69520,7 +69525,7 @@ ${d5.text}`);
           onEvent({ type: "reload", partner: true });
         }, children: "Reload" })
       ] }) : null,
-      /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: partner && !together ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: exported && props.exportedView && !partner ? props.exportedView : partner && !together ? /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
         /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
       ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
@@ -70175,6 +70180,47 @@ ${d5.text}`);
   }
 
   // components/report/ClientParts.jsx
+  function ServerExported({ doc, version, save: save2 }) {
+    const [got, setGot] = d2(
+      /** @type {any} */
+      null
+    );
+    const asked2 = `${doc.project}|${doc.date}|${version}`;
+    h2(() => {
+      let live = true;
+      setGot(null);
+      if (!viaServer()) {
+        setGot({ ok: false, message: "Show as exported needs the live server." });
+        return void 0;
+      }
+      (async () => {
+        const s5 = save2 ? await save2() : null;
+        if (!live) return;
+        if (s5 && !s5.ok) {
+          setGot({ ok: false, message: s5.message || "The report wasn't saved." });
+          return;
+        }
+        const r4 = await api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date });
+        const id2 = r4 && r4.identity || null;
+        if (live && r4 && (id2 ? id2.code === doc.project && id2.week_ending === doc.date : !r4.ok)) setGot(r4);
+      })();
+      return () => {
+        live = false;
+      };
+    }, [asked2]);
+    if (!got) return /* @__PURE__ */ u2("p", { class: "sub crx-wait", role: "status", children: "Making the page as it is exported…" });
+    if (!got.ok) {
+      const why = (got.findings || []).join("; ") || got.message || "it couldn't be made";
+      return /* @__PURE__ */ u2("p", { class: "mnerr crx-err", role: "alert", children: [
+        "This client report can't be exported as it is: ",
+        why
+      ] });
+    }
+    return /* @__PURE__ */ u2("div", { class: "crx", "data-preview": got.preview ? "1" : void 0, children: [
+      got.preview ? /* @__PURE__ */ u2("span", { class: "crx-badge", children: "Preview" }) : null,
+      /* @__PURE__ */ u2("iframe", { class: "crx-frame", title: "The client report as it is exported", sandbox: "", srcdoc: got.html })
+    ] });
+  }
   var crAskWhy = y3(false);
   function setClientDoc(next) {
     if (!sameReport(next)) return;
@@ -70433,131 +70479,6 @@ ${d5.text}`);
     // #218: a text section, with its Matching internal line when the internal report has it
   };
 
-  // components/report/exportPage.jsx
-  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
-  var CLIENT_EXPORT = { viewId: "v-clientreport", viewClass: "crview", sheetClass: "crsheet" };
-  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
-  var NOOP = () => {
-  };
-  function used(d5, selector) {
-    try {
-      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
-    } catch (e4) {
-      return true;
-    }
-  }
-  function usedRules(win, d5, from) {
-    const out = [];
-    const walk = (rules) => {
-      for (const r4 of Array.from(rules)) {
-        if (r4.constructor.name === "CSSStyleRule") {
-          if (used(
-            d5,
-            /** @type {CSSStyleRule} */
-            r4.selectorText
-          )) out.push(r4.cssText);
-        } else if (r4.constructor.name === "CSSMediaRule") {
-          const m5 = (
-            /** @type {CSSMediaRule} */
-            r4
-          ), cond = m5.conditionText || m5.media.mediaText;
-          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
-        } else if (r4.constructor.name === "CSSSupportsRule") {
-          const sr2 = (
-            /** @type {CSSSupportsRule} */
-            r4
-          );
-          if (
-            /** @type {any} */
-            win.CSS.supports(sr2.conditionText)
-          ) walk(sr2.cssRules);
-        }
-      }
-    };
-    for (const sheet of Array.from(from.styleSheets)) {
-      const rules = (() => {
-        try {
-          return sheet.cssRules;
-        } catch (e4) {
-          return null;
-        }
-      })();
-      if (rules) walk(rules);
-    }
-    return out.join("\n");
-  }
-  async function reportExportPage(doc, renderers, view, version) {
-    const frame = document.createElement("iframe");
-    frame.setAttribute("aria-hidden", "true");
-    frame.tabIndex = -1;
-    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
-    document.body.append(frame);
-    try {
-      const w6 = (
-        /** @type {Window} */
-        frame.contentWindow
-      ), d5 = (
-        /** @type {Document} */
-        frame.contentDocument
-      );
-      const palette = document.documentElement.dataset.palette || "";
-      d5.open();
-      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
-      d5.close();
-      for (const st2 of Array.from(document.querySelectorAll("style"))) {
-        const c5 = d5.createElement("style");
-        c5.textContent = st2.textContent;
-        d5.head.append(c5);
-      }
-      const host2 = d5.createElement("div");
-      host2.id = view.viewId;
-      host2.className = "export-view";
-      d5.body.append(host2);
-      const props = {
-        doc,
-        renderers,
-        extras: [],
-        exported: true,
-        readOnly: true,
-        peerDoc: null,
-        peerLabel: "",
-        side: (
-          /** @type {""} */
-          ""
-        ),
-        onChange: NOOP,
-        onOpenItem: void 0,
-        onEvent: NOOP,
-        onRedraft: void 0,
-        aiFor: () => void 0,
-        checks: [],
-        refocus: { current: null },
-        match: null
-      };
-      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
-      await new Promise((r4) => setTimeout(r4, 250));
-      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
-        i5.onload = i5.onerror = () => r4(null);
-      })));
-      const copy = (
-        /** @type {HTMLElement} */
-        host2.cloneNode(true)
-      );
-      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
-        e4.removeAttribute("data-ref");
-        e4.removeAttribute("data-row");
-      });
-      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
-      R(null, host2);
-      return html2 && css ? { html: html2, css, palette, version } : null;
-    } catch (e4) {
-      console.error("export page:", e4);
-      return null;
-    } finally {
-      frame.remove();
-    }
-  }
-
   // components/report/ClientView.jsx
   async function openCheck() {
     const d5 = crDoc.value;
@@ -70573,7 +70494,7 @@ ${d5.text}`);
     await runCheck();
   }
   async function doExport(fmt) {
-    const r4 = await exportClientReport(fmt, (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5));
+    const r4 = await exportClientReport(fmt);
     if (r4 && (r4.ok || r4.clash)) crDialog.value = false;
     else await runCheck();
   }
@@ -73779,6 +73700,130 @@ ${d5.text}`);
     ] });
   }
 
+  // components/report/exportPage.jsx
+  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
+  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
+  var NOOP = () => {
+  };
+  function used(d5, selector) {
+    try {
+      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
+    } catch (e4) {
+      return true;
+    }
+  }
+  function usedRules(win, d5, from) {
+    const out = [];
+    const walk = (rules) => {
+      for (const r4 of Array.from(rules)) {
+        if (r4.constructor.name === "CSSStyleRule") {
+          if (used(
+            d5,
+            /** @type {CSSStyleRule} */
+            r4.selectorText
+          )) out.push(r4.cssText);
+        } else if (r4.constructor.name === "CSSMediaRule") {
+          const m5 = (
+            /** @type {CSSMediaRule} */
+            r4
+          ), cond = m5.conditionText || m5.media.mediaText;
+          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
+        } else if (r4.constructor.name === "CSSSupportsRule") {
+          const sr2 = (
+            /** @type {CSSSupportsRule} */
+            r4
+          );
+          if (
+            /** @type {any} */
+            win.CSS.supports(sr2.conditionText)
+          ) walk(sr2.cssRules);
+        }
+      }
+    };
+    for (const sheet of Array.from(from.styleSheets)) {
+      const rules = (() => {
+        try {
+          return sheet.cssRules;
+        } catch (e4) {
+          return null;
+        }
+      })();
+      if (rules) walk(rules);
+    }
+    return out.join("\n");
+  }
+  async function reportExportPage(doc, renderers, view, version) {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
+    document.body.append(frame);
+    try {
+      const w6 = (
+        /** @type {Window} */
+        frame.contentWindow
+      ), d5 = (
+        /** @type {Document} */
+        frame.contentDocument
+      );
+      const palette = document.documentElement.dataset.palette || "";
+      d5.open();
+      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
+      d5.close();
+      for (const st2 of Array.from(document.querySelectorAll("style"))) {
+        const c5 = d5.createElement("style");
+        c5.textContent = st2.textContent;
+        d5.head.append(c5);
+      }
+      const host2 = d5.createElement("div");
+      host2.id = view.viewId;
+      host2.className = "export-view";
+      d5.body.append(host2);
+      const props = {
+        doc,
+        renderers,
+        extras: [],
+        exported: true,
+        readOnly: true,
+        peerDoc: null,
+        peerLabel: "",
+        side: (
+          /** @type {""} */
+          ""
+        ),
+        onChange: NOOP,
+        onOpenItem: void 0,
+        onEvent: NOOP,
+        onRedraft: void 0,
+        aiFor: () => void 0,
+        checks: [],
+        refocus: { current: null },
+        match: null
+      };
+      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
+      await new Promise((r4) => setTimeout(r4, 250));
+      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
+        i5.onload = i5.onerror = () => r4(null);
+      })));
+      const copy = (
+        /** @type {HTMLElement} */
+        host2.cloneNode(true)
+      );
+      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
+        e4.removeAttribute("data-ref");
+        e4.removeAttribute("data-row");
+      });
+      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
+      R(null, host2);
+      return html2 && css ? { html: html2, css, palette, version } : null;
+    } catch (e4) {
+      console.error("export page:", e4);
+      return null;
+    } finally {
+      frame.remove();
+    }
+  }
+
   // components/report/hub/hubActions.js
   function clashAnswered() {
     return new Promise((resolve) => {
@@ -73809,8 +73854,7 @@ ${d5.text}`);
       crDialog.value = true;
       return;
     }
-    const mk2 = (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5);
-    const c5 = await exportClientReport(fmt, mk2);
+    const c5 = await exportClientReport(fmt);
     if (c5 && !c5.ok && !c5.clash) {
       crDialog.value = true;
       await runCheck();
@@ -74263,6 +74307,11 @@ ${d5.text}`);
   var internalAi = (doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
   var internalRedraft = (doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
   var clientRedraft = (cd2) => redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply);
+  var saveForShow = async () => {
+    const d5 = crDoc.value;
+    if (!d5 || !(crDirty.value || crInfo.value && crInfo.value.where === "new")) return { ok: true };
+    return saveClientPage({ doc: d5, base_version: crBase.value });
+  };
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
     const iLocked = doc.state === "approved" && !weeklyEditing.value;
@@ -74321,6 +74370,7 @@ ${d5.text}`);
           onSave: saveClientPage,
           ai: clientAi,
           onRedraft: clientRedraft(cd2),
+          exportedView: /* @__PURE__ */ u2(ServerExported, { doc: cd2, version: crBase.value, save: saveForShow }),
           onEvent: (ev) => {
             if (ev.type === "reload") reloadClient();
             else countRedraft(ev, "report");
@@ -76178,6 +76228,7 @@ ${d5.text}`);
         "SourceLink",
         "StatusDot",
         "TEMPLATES",
+        "TEXT_TYPE",
         "THEMES",
         "TICK24",
         "TIP_CLOSE",

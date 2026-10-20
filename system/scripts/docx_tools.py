@@ -1001,6 +1001,31 @@ def add_relationships(parts, media, link_rels):
     return out_parts + [(zipfile.ZipInfo(name), data) for name, data, _ in media]
 
 
+def client_template(template):
+    """Whether a file is the client report's Word template, or a copy of it (by its bytes, so a renamed or copied one counts too)."""
+    import hashlib
+    import paths
+    try:
+        f = Path(template)
+        if f.resolve() == paths.CLIENT_TEMPLATE.resolve():
+            return True
+        digest = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()       # noqa: E731
+        return f.is_file() and paths.CLIENT_TEMPLATE.is_file() and digest(f) == digest(paths.CLIENT_TEMPLATE)
+    except OSError:
+        return True             # can't tell: fails closed
+
+
+def fill_command(template, values_file, out):
+    """The fill command (cmd_fill) as the command line and report.py run it, but never the client report's template (v2.5.1, #239
+    step 3): returns 2. A client report's Word file is made only by creaite_doc.word_export from its checked copy (a template it
+    derives for the one export, through client_snapshot.client_export)."""
+    if client_template(template):
+        print("creaite: a client report's Word file is made only from its checked copy (the Reporting hub's Export); "
+              "the client report template isn't filled here.")
+        return 2
+    return cmd_fill(template, values_file, out)
+
+
 def cmd_fill(template, values_file, out):
     """The fill command: fill a template's {{PLACEHOLDERS}} from values.json (text, lists, Markdown, images, topic groups, table rows) and
     write out.docx. Returns 1, writing nothing, if any is left unfilled."""
@@ -1389,7 +1414,7 @@ def main(argv):
     if cmd == "build-adhoc" and len(args) == 3:
         return cmd_build_adhoc(*args)
     if cmd == "fill" and len(args) == 3:
-        return cmd_fill(*args)
+        return fill_command(*args)
     if cmd == "text" and len(args) == 1:
         return cmd_text(args[0])
     if cmd == "clean" and len(args) in (1, 2):

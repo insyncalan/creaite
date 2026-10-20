@@ -44,9 +44,11 @@ class TheSectionAudienceIsBoundOnTheServer(Base):
             self.assertIn(why, got.get("refused", ""), (req, got))
 
     def test_a_saved_client_report_that_reads_as_internal_is_refused(self):
+        # v2.5.1 (#239): dumps derives a client report's audience again, so the file is edited by hand (its data block written as is)
         got = self.py("d = report_doc.client_doc('ABC')\nr = report_doc.save_draft(d)\n"
-                      "doc = creaite_doc.read(r['path'])\ndoc['audience'] = 'internal'\n"
-                      "open(report_doc.paths.resolve(r['path']), 'w', encoding='utf-8').write(creaite_doc.dumps(doc))\n"
+                      "f = report_doc.paths.resolve(r['path'])\ntext = f.read_text(encoding='utf-8')\n"
+                      "m = creaite_doc.BLOCK.search(text)\ndoc = json.loads(m.group(1))\ndoc['audience'] = 'internal'\n"
+                      "f.write_text(text[:m.start(1)] + creaite_doc.data_json(doc) + text[m.end(1):], encoding='utf-8')\n"
                       f"print(json.dumps(drafts.context({{**{SECTION!r}, 'document': {DOC!r}}})))")
         self.assertIn("isn't a report", got.get("refused", ""), got)
 
@@ -112,13 +114,9 @@ class WordDraftsGetTheWholeGate(Base):
     plain_findings; an approval from Excel goes through the same check; cx-document refuses a client audience."""
 
     def stage(self):
-        spec = self.v.root / "system/staging/drafts/client.json"
-        spec.write_text(json.dumps({"code": "ABC", "summary": ["Phase two is being prepared."], "progress": ["Plan revised"],
-                                    "next_steps": ["Sign the statement of work"], "input_needed": ["Signature by 16-10"],
-                                    "period_start": "2026-10-01"}))
-        self.v.at("client-stage", str(spec), script="report.py")
-        prop = next((self.v.root / "system/staging").glob("proposed-*-client-ABC.json"))
-        return prop, self.v.root / json.loads(prop.read_text())["report"]["draft"]
+        # v2.5.1 (#239 step 3): client-stage makes no Word file now (the hub's own client report, exported from its checked copy);
+        # the Word client report this gate still meets is one staged before the update: v2.5.0's own output for this vault
+        return R.legacy_word_proposal(self.v, "gate-word-client-report")
 
     def word_findings(self, block):
         return self.py(f"import review\nprint(json.dumps(review.client_findings({block!r})))")

@@ -815,7 +815,7 @@ RECORD_PATH = re.compile(r"(?:system/staging/drafts|projects)/[^\x00]+\.html")
 
 def record_at(path):
     """(stored path, the record) for a minutes record the view may open: a draft in system/staging/drafts/ or filed minutes in a
-    project folder. Raises RecordError."""
+    project folder. Raises RecordError, also for a file that is a report by any sign (creaite_doc.report_signs; v2.5.1)."""
     rel = str(path or "")
     if not RECORD_PATH.fullmatch(rel) or ".." in Path(rel).parts or "\\" in rel:
         raise RecordError("Those aren't minutes creaite can open.")
@@ -825,6 +825,9 @@ def record_at(path):
         raise RecordError(str(e)) from None
     if doc.get("kind") != "minutes" or _report_place(rel, doc):
         raise RecordError("That creaite document isn't a meeting's minutes.")
+    signs = creaite_doc.report_signs(rel, doc)        # v2.5.1 (#239, e): a client report edited to say minutes is still a report
+    if signs:
+        raise RecordError("That file is a report, not minutes (" + "; ".join(signs) + "), so it isn't opened here.")
     return rel, doc
 
 
@@ -900,7 +903,7 @@ def export(path, fmt, file_beside=True, version="internal"):
         return distributed_export(rel, doc, fmt, file_beside)
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
-    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)    # v2.5.0: one read
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)   # v2.5.0: one read; v2.5.1: minutes only
 
 
 def _followup_rows(use, doc, sid):

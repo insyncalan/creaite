@@ -1,6 +1,6 @@
 ---
 name: cx-client-report
-description: creaite client report. Drafts a client-safe Word status report for one project, filed in that project's reports folder on approval. Never sends anything and never creates email drafts. Use when Alan says "client report ABC", "client report ABC since 2026-09-01", or responds to a client-report reminder.
+description: creaite client report. Drafts a client-safe status report for one project as the Reporting hub's client report (approved there, and exported to Word, HTML or PDF from its checked copy), filed in that project's reports folder on approval. Never sends anything and never creates email drafts. Use when Alan says "client report ABC", "client report ABC since 2026-09-01", or responds to a client-report reminder.
 ---
 
 # cx-client-report
@@ -19,12 +19,12 @@ Read these first:
 
 ## Script
 
-`system/scripts/run report.py client-data <CODE> [--since YYYY-MM-DD]` gives the client-safe facts (the filter below, already applied), what's excluded and what needs client messaging. `report.py client-stage <spec.json>` fills the report and stages it; the tables, decisions and risks come from the tracker's client messaging, never from Claude. Spec: `{"code", "period_start", "summary": [..], "progress": [..], "next_steps": [..], "input_needed": [..], "force": false}`. Write it in `system/staging/drafts/`; `client-stage` deletes it itself once the report is staged.
+`system/scripts/run report.py client-data <CODE> [--since YYYY-MM-DD]` gives the client-safe facts (the filter below, already applied), what's excluded and what needs client messaging. `report.py client-stage <spec.json>` saves the week's client report draft, the Reporting hub's own (v2.5.1, #239: no Word file and nothing staged); the tables, decisions and risks come from the tracker's client messaging, never from Claude. Spec: `{"code", "period_start", "week_ending" (optional, default this week), "summary": [..], "progress": [..], "next_steps": [..], "input_needed": [..], "health_reason" (optional, client wording), "force": false, "replace": false}`; any other key is refused. Write it in `system/staging/drafts/`; `client-stage` deletes it itself once the draft is saved.
 
 ## Triggers
 
 - **Manual:** "client report ABC", "client report ABC since 2026-09-01".
-- **Reminder only** (a session-start rule in `CLAUDE.md`): each project's `CLAUDE.md` holds `Client report rhythm: weekly | fortnightly | monthly | off` (default **weekly**). When the last approved client report (the latest `* Client report.docx` in the project's client-reports folder: `reports/` by default) is older than the rhythm, open with "ABC client report due (last: YYYY-MM-DD) — say client report ABC". Never draft anything without being asked. A project whose `CLAUDE.md` says `Client report: off` ("This project needs a separate client report", H3 of the Reporting hub; no line means on) has no client report and no client reminder: say so and make no draft unless Alan switches it on first. Turning it off deletes nothing.
+- **Reminder only** (a session-start rule in `CLAUDE.md`): each project's `CLAUDE.md` holds `Client report rhythm: weekly | fortnightly | monthly | off` (default **weekly**). When the last approved client report (the latest client report in the project's client-reports folder: `reports/` by default) is older than the rhythm, open with "ABC client report due (last: YYYY-MM-DD) — say client report ABC". Never draft anything without being asked. A project whose `CLAUDE.md` says `Client report: off` ("This project needs a separate client report", H3 of the Reporting hub; no line means on) has no client report and no client reminder: say so and make no draft unless Alan switches it on first. Turning it off deletes nothing.
 
 ## Flow
 
@@ -45,14 +45,14 @@ Read these first:
    - anything marked confidential;
    - internal commentary and internal owners' remarks.
 5. **Write** the summary, progress, next steps and input needed in a professional, client-facing tone, in British English, from tracker facts only. Use the executive voice (BL-106): read `system/templates/executive-style.md` (its client-safe audience: the same shape, plainer, no internal remarks) and run `system/scripts/run report.py facts <CODE> --audience client` for the ranked client-safe sheet (only client-visible items in their client wording, including any decision the client is asked to make). Open the summary with the position and the one thing that matters; put what the client must do, by when, under input needed. The dashboard's client-safe Generate uses the same guide and sheet.
-6. **Stage** with `report.py client-stage <spec.json>`: it fills `system/templates/client-report-template.docx` (house style) into `system/staging/drafts/YYYY-MM-DD Client report - <Project name>.docx` and stages a `report` block (`kind: "client"`, `source_run: "cx-client-report"`) that files it to `projects/<CODE> <Name>/reports/YYYY-MM-DD Client report - <Project name>.docx` on approval and removes the draft. Then enrich it for search (BL-07): a two-line summary and three to eight topic tags, with `system/scripts/run search.py enrich set --path "projects/<CODE> <Name>/reports/YYYY-MM-DD Client report - <Project name>.docx" --summary '<line 1>\n<line 2>' --tags "tag, tag, tag"` (the summary in single quotes and without an apostrophe: the guard refuses a backslash inside double quotes); the summary is internal (kept in `system/search/`, never in the report). It refuses while items are pending unless `"force": true` (Alan's choice), and asks for a start date for the first report.
-7. **At approval** `review.py` scans the (possibly edited) draft for internal content: IDs or wording of items not client-visible, lines marked `Client-safe: no`, "confidential", "restricted" and `documents/`. Show each finding; only on Alan's say-so use `approve <n> --as-staged` to file it anyway.
+6. **Save the draft** with `report.py client-stage <spec.json>`: it saves the week's client report draft in `system/staging/drafts/YYYY-MM-DD Client report - <Project name> (<Client>).html` (the Reporting hub's own client report: its week ending is the Friday of the period's end) and prints the inclusion list and anything the check would stop Approve at (the internal week not approved yet, possible internal content). It makes **no Word file and stages nothing** (v2.5.1, #239): a client report's Word, HTML and PDF files are made only from its checked copy, and it is filed only by Approve in the Reporting hub. It refuses while items are pending unless `"force": true` (Alan's choice), asks for a start date for the first report, and never replaces a draft already open for that week unless `"replace": true` (Alan's choice).
+7. **Approval is in the Reporting hub** (Client report, that week): Approve builds and checks the report's snapshot (IDs or wording of items not client-visible, lines marked `Client-safe: no`, "confidential", "restricted", `documents/`, another project's hidden items, pictures and logos) and files it with its checked copy; Export makes the Word, HTML or PDF file from that copy and checks the file made. Nothing is filed or exported with a finding, and there is no override. After Alan approves, enrich the filed report for search (BL-07): a two-line summary and three to eight topic tags, with `system/scripts/run search.py enrich set --path "<the filed report's path>" --summary '<line 1>\n<line 2>' --tags "tag, tag, tag"` (the summary in single quotes and without an apostrophe: the guard refuses a backslash inside double quotes); the summary is internal (kept in `system/search/`, never in the report).
 8. **Show:**
    - a link to the draft;
    - a **client-visible inclusion list:** every flagged item included, so nothing surprises Alan;
    - anything excluded that he might expect to see, such as Urgent risks not flagged client-visible.
 
-   Then stop; Alan decides with cx-review.
+   Then stop; Alan checks and approves it in the Reporting hub.
 
 ## Rules
 

@@ -745,6 +745,8 @@ def report_files(code: str, online: bool = False) -> list:
         for f in sorted(d.rglob("*")):
             if not f.is_file() or f.name.startswith((".", "~$")) or f.resolve() in taken or not (online or not is_online_only(f)):
                 continue
+            if f.name.endswith(".client.json"):           # v2.5.1 (#239): a client report's checked snapshot, creaite's own record
+                continue
             taken.add(f.resolve())
             out.append((f, "Adhoc" if label == "Weekly" and shared and re.search(r"ad[ _-]?hoc", f.name, re.I) else label))
     return out
