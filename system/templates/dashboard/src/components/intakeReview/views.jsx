@@ -5,9 +5,9 @@
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
 import { IR_STAGES, irLive } from "../../core/irFold.js";
-import { irBusy, irClickMeeting, irDone, irHeld, irNotes, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
+import { irBusy, irClickMeeting, irDone, irHeld, irLiveCounts, irNotes, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
-import { FileFacts, MeetingRow, Progress, RowActions, irRunningWords, irStateWords } from "./rows.jsx";
+import { FileFacts, MeetingRow, Progress, RowActions, StageTrack, irRunningWords, irStateWords, irWhen } from "./rows.jsx";
 
 export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
 const IR_EMPTY = "Nothing here. Meetings appear when they end.";
@@ -39,7 +39,7 @@ function MeetingBlock({ m }) {
 /** @param {{model: any, list: any[]}} props */
 export function ListView({ model, list }) {
   return <div data-irv="list">
-    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock m={m} />)}</tbody></table></div> : <div class="empty">{irNone()}</div>}
+    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock key={m.id} m={m} />)}</tbody></table></div> : <div class="empty">{irNone()}</div>}
     <MailSections model={model} />
   </div>;
 }
@@ -53,7 +53,7 @@ export function BoardView({ model }) {
       return <div class="iccol" data-ircol={g}>
         <h2>{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (g)]} <span class="sub rgc">{l.length}</span></h2>
         {l.length ? l.map((/** @type {any} */ m) => (
-          <div class="card iccard click" data-irm={m.id} data-stage={m.stage} data-state={irBusy.value.includes(m.id) ? "running" : m.state} tabindex={0}
+          <div key={m.id} class="card iccard click" data-irm={m.id} data-stage={m.stage} data-state={irBusy.value.includes(m.id) ? "running" : m.state} tabindex={0}
             onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
             <div class="t">{m.title}</div>
             {m.src === "upload" ? <FileFacts m={m} n={m.groups.needs.length + m.groups.routine.length} /> : <>
@@ -74,19 +74,26 @@ export function BoardView({ model }) {
 
 /** @param {{model: any, list: any[]}} props */
 export function TwoPanes({ model, list }) {
-  const sel = list.find(m => m.id === irSel.value) || list[0];
+  const sel = list.find(m => m.id === irSel.value) || list[0], c = irLiveCounts();
+  const hidden = (/** @type {any} */ m) => m.private || m.confidential;      /* title and times only */
+  const right = (/** @type {any} */ m) => { const n = m.groups.needs.length + m.groups.routine.length; return n ? `${n} proposal${n === 1 ? "" : "s"}` : m.stage === "arrived" && m.state === "ready" ? "ready" : ""; };
   return <div data-irv="two">
     <div class="icsplit">
-      <div>{list.length ? <div class="tbl"><table><tbody>{list.map(m => (
-        <tr class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={() => { irSel.value = m.id; }}>
-          <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div></td>
+      <div>
+        <div class="icpipe icsum"><span class="icsub">Arrived {c.arrived} → Drafted {c.drafted} → Approved {c.approved}</span></div>
+        {list.length ? <div class="tbl"><table><tbody>{list.map(m => (
+        <tr key={m.id} class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={() => { irSel.value = m.id; }}>
+          <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]} · {irWhen(m)}</div></td>
+          <td class="icsub irright">{right(m)}</td>
         </tr>
       ))}</tbody></table></div> : <div class="empty">{irNone()}</div>}</div>
       <div class="card icdet" data-irdet={sel ? sel.id : ""}>
         {sel ? <>
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>
-          <div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (sel.stage)]}{sel.src !== "upload" && sel.p && !sel.private && !sel.confidential ? ` · ${pName(sel.p)}` : ""}</div>
+          <div class="why">{irWhen(sel)}{sel.src !== "upload" && sel.p && !hidden(sel) ? ` · ${pName(sel.p)}` : ""}</div>
+          <div class="icrack"><StageTrack m={sel} /></div>
           {sel.src === "upload" ? <FileFacts m={sel} n={sel.groups.needs.length + sel.groups.routine.length} /> : <div class="why">{irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length)}</div>}
+          {sel.stage === "arrived" && sel.state === "waiting" ? <div class="empty">Waiting for the transcript. It appears here when the meeting’s transcript arrives.</div> : null}
           {irBusy.value.includes(sel.id) ? <Progress words={irRunningWords(sel)} /> : null}
           {irNotes.value[sel.id] ? <div class="why irnote" role="status">{irNotes.value[sel.id]}</div> : null}
           <div class="iccardacts"><RowActions m={sel} mini /></div>

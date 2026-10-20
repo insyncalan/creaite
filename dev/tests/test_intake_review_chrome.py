@@ -107,6 +107,23 @@ class AddFiles(IntakeBase):
         b.wait("D.intake_review.meetings.some(m=>m.title==='a.vtt' && m.src==='upload')", 30)
         (self.v.root / "inbox" / "a.vtt").unlink(missing_ok=True)
 
+    def test_the_entry_points_other_screens_call(self):
+        """irPickFiles opens the chooser from anywhere; irProcessById takes a row id, an event ID or a file path."""
+        b = self.b
+        b.eval("""window.PICKED=[]; window.REALCLICK=HTMLInputElement.prototype.click; HTMLInputElement.prototype.click=function(){ window.PICKED.push([this.type,this.multiple,this.accept,this.isConnected]); }; irPickFiles(); 0""")
+        self.addCleanup(lambda: b.eval("HTMLInputElement.prototype.click=window.REALCLICK; 0"))
+        self.assertEqual(b.eval("PICKED"), [["file", True, ".vtt,.docx,.txt,.md,.pdf", True]])
+        b.eval("document.body.lastElementChild.dispatchEvent(new Event('cancel'))")
+        self.assertFalse(b.eval("!!document.querySelector('body > input[type=file]')"))                    # a cancelled chooser leaves nothing behind
+        ids = ("ev-1", b.eval("D.intake_review.meetings.find(m=>m.title==='ABC Steering'&&m.src!=='draft').id"))
+        for i, ident in enumerate(ids):
+            if i:
+                self.setUp()                                                                                # a fresh page and no draft for the second id
+            self.stage_stub()
+            b.eval("irProcessById(%s)" % json.dumps(ident))
+            b.wait("ASKED.length===1 && irBusy.value.length===0", 30)
+            self.assertEqual(b.eval("ASKED[0][0]"), f"process inbox/{DAY} ABC Steering.vtt")
+
 
 class StageBoxes(IntakeBase):
     shared_server = True
@@ -136,6 +153,52 @@ class StageBoxes(IntakeBase):
         b.eval("document.querySelector('[data-irstage=all]').click()")                                 # Show all shows everything again
         b.wait("document.querySelector('[data-irstage=all]').getAttribute('aria-pressed')==='true'")
         self.assertEqual(b.eval("document.querySelectorAll('#v-intake-review [data-irv=list] tr[data-irm]').length"), total)
+
+
+class Gaps(IntakeBase):
+    """#232-A7: the icon on each row, and Two panes' summary line, right-hand words and stage track."""
+    shared_server = True
+
+    def setUp(self):
+        (self.v.root / "inbox" / "Spare notes.vtt").write_text("WEBVTT\n\n00:00:01.000 --> 00:00:05.000\nNotes\n")
+        super().setUp()
+        self.b.eval("reloadData().then(()=>irTick.value++)")
+        self.b.wait(f"!!{self.row('Spare notes.vtt')}")
+
+    def tearDown(self):
+        (self.v.root / "inbox" / "Spare notes.vtt").unlink(missing_ok=True)
+        super().tearDown()
+
+    def test_each_row_has_the_icon_of_what_it_is(self):
+        b = self.b
+        self.assertEqual(b.eval(f"{self.row('ABC Steering')}.querySelector('.ki svg').dataset.iric"), "meeting")
+        self.assertEqual(b.eval(f"{self.row('Spare notes.vtt')}.querySelector('.ki svg').dataset.iric"), "file")
+        self.assertEqual(b.eval(f"{self.row('Busy')}.querySelector('.ki').getAttribute('aria-hidden')"), "true")        # a picture only: the words beside it carry the meaning
+
+    def test_two_panes_summary_right_hand_words_and_the_stage_track(self):
+        b = self.b
+        b.eval("document.querySelector('[data-irview=two]').click()")
+        b.wait("!!document.querySelector('[data-irv=two] .icsum')")
+        c = b.eval("irLiveCounts()")
+        self.assertEqual(b.eval("document.querySelector('[data-irv=two] .icsum').textContent"), f"Arrived {c['arrived']} → Drafted {c['drafted']} → Approved {c['approved']}")
+        mid = b.eval("D.intake_review.meetings.find(m=>m.title==='ABC Steering'&&m.src==='draft').id")
+        self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{mid}\"] .irright').textContent"), "4 proposals")
+        rid = b.eval("D.intake_review.meetings.find(m=>m.title==='Weekly sync 12').id")
+        self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"] .irright').textContent"), "ready")
+        b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"]').click()")
+        b.wait(f"document.querySelector('[data-irdet]').dataset.irdet==={json.dumps(rid)}")
+        self.assertEqual(b.eval("document.querySelector('[data-irdet] .ictrack').dataset.irtrack"), "arrived")
+        self.assertEqual(b.eval("[...document.querySelectorAll('[data-irdet] .ictrack i')].map(i=>i.className)"), ["now", "", ""])
+        self.assertEqual(b.eval("document.querySelector('[data-irdet] .ictrack').textContent"), "ArrivedDraftedApproved")
+        self.assertEqual(b.eval("document.querySelector('[data-irdet] .ictrack span.on').textContent"), "Arrived")
+        bid = b.eval("D.intake_review.meetings.find(m=>m.title==='Busy').id")
+        b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{bid}\"]').click()")
+        b.wait(f"document.querySelector('[data-irdet]').dataset.irdet==={json.dumps(bid)}")
+        self.assertIn("Waiting for the transcript. It appears here when the meeting’s transcript arrives.", b.eval("document.querySelector('[data-irdet]').innerText"))
+        b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{mid}\"]').click()")
+        b.wait(f"document.querySelector('[data-irdet]').dataset.irdet==={json.dumps(mid)}")
+        self.assertEqual(b.eval("[...document.querySelectorAll('[data-irdet] .ictrack i')].map(i=>i.className)"), ["done", "now", ""])
+        b.eval("document.querySelector('[data-irview=list]').click()")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import { pName } from "../../core/data.js";
 import { fd, TODAY } from "../../core/page.js";
 import { irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen } from "../../stores/intakeReview.js";
 import { IconButton } from "../IconButton.jsx";
+import { IrIcon } from "./icons.js";
 import { irAskReason, irCanCheck, irCanProcess, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
@@ -45,7 +46,20 @@ export function irStateWords(m, n) {
 export function Progress({ words }) { return <div class="icprog" role="progressbar" aria-label={words || "Drafting in the background"}><i></i></div>; }
 
 /** "Added today" or "Added 14-10-2026". @param {any} m */
-const irAdded = m => (!m.day || m.day === TODAY ? "Added today" : `Added ${fd(m.day)}`);
+export const irAdded = m => (!m.day || m.day === TODAY ? "Added today" : `Added ${fd(m.day)}`);
+
+/** When a row's meeting was, or when its file was added: "14-10-2026 15:00" or "Added today". @param {any} m */
+export const irWhen = m => (m.src === "upload" ? irAdded(m) : `${m.day ? fd(m.day) : ""}${m.start ? ` ${m.start}` : ""}`.trim());
+
+/** Where a row is on its way: Arrived, Drafted, Approved, with a dot for each (done, now, to come). Two panes' detail. @param {{m: any}} props */
+export function StageTrack({ m }) {
+  const names = ["Arrived", "Drafted", "Approved"], at = ["arrived", "drafted", "approved"].indexOf(m.stage);
+  return (
+    <span class="ictrack" aria-label={`Stage: ${names[at] || ""}`} data-irtrack={m.stage}>
+      {names.map((n, k) => <><i class={k < at ? "done" : k === at ? "now" : ""}></i><span class={k === at ? "on" : ""}>{n}</span></>)}
+    </span>
+  );
+}
 
 /** A file's kind in words, with the link that switches it (a transcript is turned into minutes first; someone else's minutes are only
     read for work items); a file that is not sure asks. Shown while the file waits. @param {{m: any}} props */
@@ -110,6 +124,7 @@ export function MeetingRow({ m, live }) {
       aria-expanded={can ? open : undefined}
       onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
       <td class="title">
+        <span class="ki" aria-hidden="true" data-irki={m.src === "upload" ? "file" : "meeting"}><IrIcon name={m.src === "upload" ? "file" : "meeting"} /></span>
         <b class="icmeethd">{m.title}</b>
         {m.stale ? <> <span class="tag stale">Stale · {ageWords(m.age)}</span></> : null}
         {m.src === "upload" ? <FileFacts m={m} n={n} /> : <>

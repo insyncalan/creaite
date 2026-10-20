@@ -8,7 +8,6 @@ Run: python3 dev/tests/test_intake_review_files.py   (needs Google Chrome; skipp
 """
 import json
 import os
-import shutil
 import sys
 import unittest
 from pathlib import Path

@@ -222,3 +222,23 @@ export function irFilterModel(model, q) {
   const keep = (/** @type {{needs: number[], routine: number[]}} */ g) => ({ needs: g.needs.filter(n => irMatches(q, irRowFields(n))), routine: g.routine.filter(n => irMatches(q, irRowFields(n))) });
   return { ...model, meetings: model.meetings.filter((/** @type {any} */ m) => irMatches(q, irMeetingFields(m))), mail: keep(model.mail), other: keep(model.other) };
 }
+
+/* ---- the entry points other screens call (the interface contract of #232: Today's day line, the palette, the rail) ---- */
+/** Process the row with this id: its row id, its calendar event ID or key, or its file path. Resolves to whether a draft came back.
+    @param {string} id @returns {Promise<boolean>} */
+export function irProcessById(id) {
+  const m = irModel().meetings.find((/** @type {any} */ x) => x.id === id || x.key === id || x.mkey === id || x.mkey === `calendar:${id}` || x.path === id);
+  if (!m) { snack("That meeting isn't on the Intake page"); return Promise.resolve(false); }
+  return irProcess(m);
+}
+
+/** Open the file chooser, from anywhere (a detached input, so it needs no Intake page on screen); the files chosen are added.
+    Call it from a click or a key press: the browser allows a chooser only then. */
+export function irPickFiles() {
+  const el = document.createElement("input");
+  el.type = "file"; el.multiple = true; el.accept = IR_UPLOAD_TYPES.join(","); el.hidden = true;
+  el.addEventListener("change", () => { irAddFiles([...(el.files || [])]); el.remove(); });
+  el.addEventListener("cancel", () => el.remove());
+  document.body.appendChild(el);
+  el.click();
+}
