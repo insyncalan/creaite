@@ -248,7 +248,16 @@ class RejectsUI(LiveBrowserCase):
         b.eval("go('activity')")
         b.click("#actTabQ")
         b.wait("!!document.querySelector('#qRejects li[data-rjkey=\"proposed-rj.json#6\"] [data-rjok]')", 15)
-        b.click('#qRejects li[data-rjkey="proposed-rj.json#6"] [data-rjok]')
+        b.pump(1.5)                                                                # the list is drawn again after the Undo's reload: click the settled one
+        for _ in range(3):                                                         # (a click on the list as it was redrawn is lost: try again)
+            b.click('#qRejects li[data-rjkey="proposed-rj.json#6"] [data-rjok]')
+            try:
+                b.wait(f"REV.some(r=>r.rec.t==={RISK!r}&&!r.done)", 8)
+                break
+            except TimeoutError:
+                b.eval("go('activity')")
+                b.click("#actTabQ")
+                b.wait("!!document.querySelector('#qRejects li[data-rjkey=\"proposed-rj.json#6\"] [data-rjok]')", 15)
         b.wait(f"REV.some(r=>r.rec.t==={RISK!r}&&!r.done)", 20)
         b.wait("VIEW==='intake-review' && CUR && CUR.mode==='proposal' && document.getElementById('panel').classList.contains('on')", 10)
         self.assertFalse(b.eval(f"R.some(r=>r.t==={RISK!r})"))

@@ -58,15 +58,14 @@ class IntakeNameTests(PageTests):
           go("inbox"); const h1=document.querySelector("#v-intake-review h1").textContent;
           const names=ckItems("").map(i=>`${i.g}|${i.l}`), files=ckItems("recording").map(i=>`${i.g}|${i.l}`);
           go("files"); const tree=[...document.querySelectorAll("#tree button")].map(b=>b.textContent), chips=[...document.querySelectorAll("#fquick button")].map(b=>b.textContent);
-          window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, names, files, tree, chips,
-            drop:document.getElementById("inboxDrop").getAttribute("aria-label")};""")
+          window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, names, files, tree, chips};""")
         self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake", "Intake", "Intake"))
         self.assertEqual([n for n in o["names"] if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake"])   # #232-C: one entry
         self.assertIn("Actions|Add files to Intake", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
         self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" not in o["chips"])   # #192: Intake is in the tree once, not a pill)
-        self.assertEqual(o["drop"], "Add files to Intake")
+        # #232 C2: the old drop zone (#inboxDrop) is gone; Add files is the page's icon button (test_intake_review_chrome)
 
     def test_the_address(self):
         o = self.probe("""
