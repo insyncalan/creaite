@@ -601,7 +601,7 @@ export function cxShow(c,x,y){ const from=document.activeElement&&document.activ
    greyed with the reason, and Add details (for a name not on the register and for a registered person with no address) opens the person's page at its details. No counts, no modes. */
 export function cxPerson(name,only){ const x=PERS().find(y=>y.name===name), p=x&&x.p, email=(p&&p.email)||"", first=String(name).split(/\s+/)[0],
     starts=only&&x&&deItems(x).some(i=>i.id===only&&!deBarred(i))?only:undefined, /** @type {any[]} */ out=[];
-  out.push({label:"Draft email",icon:"mail",disabled:!email,hint:email?"":"No email on record: add details first",run:()=>openDraftEmail(name,"update",starts)},
+  out.push({label:"Draft email",icon:"mail",hint:email?"":"No email on record: the draft is still made, with nothing in To",run:()=>openDraftEmail(name,"update",starts)},   /* #247: a person with no email still gets a draft (Alan, 19-10-2026) */
     {label:`Open ${first}'s page`,icon:"user",run:()=>go("person",name)});
   if(email) out.push({label:"Copy email address",icon:"copy",run:()=>cxCopy(email,"the email address")});
   if(!email) out.push({label:"Add details",icon:"pencil",run:()=>{ go("person",name); let n=0; const tick=()=>{ const b=$("#ppEdit"); if(b){ b.click(); return; } if(++n<30) requestAnimationFrame(tick); }; tick(); }});

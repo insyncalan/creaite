@@ -5,6 +5,11 @@ Run: python3 dev/tests/test_project_settings.py   (needs Google Chrome; skipped 
 Brief: dev/sprints/project-settings-brief.md and the locked mockup dev/mockups/project-settings-mockup.html (pm-intake-briefs).
 Part A is the shell and four categories (General, People and partners, Milestones, Archive) with Logos and Reporting as marked
 placeholders that open what exists today. No Workstreams category: they stay in Settings > People and projects.
+
+#247 (Project settings v2, Alan, 19-10-2026) deliberately changed the page: one scrolling page whose side list is anchors (the tabs went),
+the sections Project, People and partners, Workstreams (moved in), Milestones, Client report and logos (one section), Archive and close.
+These tests follow it: a category is now a section the list marks (aria-current) instead of a selected tab; the new behaviour is
+dev/tests/test_project_settings_v2.py.
 """
 import base64
 import re
@@ -18,7 +23,18 @@ import test_dashboard
 from live_browser import TEST_PALETTES, LiveBrowserCase
 from test_tracker import ABC
 
-CATS = ["general", "people", "logos", "miles", "rep", "arch"]
+def scroll_clicks(b):
+    """#247: the page is one long scroll, so a control can be below the fold; the browser helper clicks where a thing is now,
+    so each click on the project settings page first scrolls its target into view (the tabs used to keep it on screen)."""
+    click = b.click
+
+    def scrolled(sel, *a, **kw):
+        b.eval(f"(()=>{{ const e=document.querySelector({sel!r}); if(e&&e.closest('#v-psettings')) e.scrollIntoView({{block:'center'}}); }})()")
+        return click(sel, *a, **kw)
+    b.click = scrolled
+
+
+CATS = ["general", "people", "ws", "miles", "rep", "arch"]     # #247: sections (Workstreams in; Logos with the client report)
 
 
 class ProjectSettings(LiveBrowserCase):
@@ -44,14 +60,17 @@ class ProjectSettings(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         self.memory.write_text(self.original)
+        scroll_clicks(self.b)
         self.b.reload("typeof go==='function' && LIVE")
         # the server is shared, so a test that changed the record puts it back (through the page's own functions)
         self.b.eval("(async()=>{ if(P.find(p=>p.code==='ABC').name!=='Example Programme') await renameProject('ABC','Example Programme'); if(projectState('ABC')!=='active') await setProjectActive('ABC',true); return 1; })()")
         self.b.eval("window.__errs=[]; addEventListener('error',e=>__errs.push(e.message)); addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)))")
 
     def open(self, cat="general", code="ABC"):
+        cat = {"logos": "rep"}.get(cat, cat)        # #247: the logos are in the Client report and logos section
         self.b.eval(f"go('psettings', {code!r}); psCat.value={cat!r}; navWrite(false)")
-        self.b.wait(f"VIEW==='psettings' && !!document.querySelector('#psBody [data-pscard]') && document.querySelector('#pscats [aria-selected=true]').dataset.pscat==={cat!r}")
+        self.b.wait(f"VIEW==='psettings' && !!document.querySelector('#psBody [data-pscard]') && document.querySelector('#pscats [aria-current=true]')?.dataset.pscat==={cat!r}")
+        time.sleep(0.3)          # #247: the page jumps to the address's section a moment after it opens; click after that
 
     def line(self, label):
         m = re.search(r"\*\*" + re.escape(label) + r":\*\*[ \t]*([^\n]*)", self.text())
@@ -115,20 +134,19 @@ class ProjectSettings(LiveBrowserCase):
         self.assertEqual(b.eval("location.hash"), "#project-settings=ABC&c=people")
         b.goto(self.base + "/#project-settings=ABC&c=miles")
         b.wait("typeof go==='function' && LIVE && VIEW==='psettings'")
-        b.wait("document.querySelector('#pscats [aria-selected=true]').dataset.pscat==='miles'")
+        b.wait("document.querySelector('#pscats [aria-current=true]').dataset.pscat==='miles'")
         b.eval("history.back()")
         self.assertEqual(b.eval("(parseHash('#project-settings=NOPE')===null)"), True)
 
     # ----- the categories
 
-    def test_the_categories_are_these_six_and_there_is_no_workstreams(self):
+    def test_the_sections_are_these_six_with_workstreams(self):          # #247: was test_the_categories_are_these_six_and_there_is_no_workstreams (tabs)
         b = self.b
         self.open()
-        self.assertEqual(b.eval("[...document.querySelectorAll('#pscats [role=tab]')].map(t=>t.dataset.pscat)"), CATS)
-        labels = b.eval("[...document.querySelectorAll('#pscats [role=tab]')].map(t=>t.textContent.trim())")
-        self.assertEqual(labels, ["General", "People and partners", "Logos", "Milestones", "Reporting", "Archive"])
-        self.assertNotIn("Workstreams", " ".join(labels))
-        self.assertEqual(b.eval("document.querySelector('#pscats').getAttribute('aria-orientation')"), "vertical")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#pscats [data-pscat]')].map(t=>t.dataset.pscat)"), CATS)
+        labels = b.eval("[...document.querySelectorAll('#pscats [data-pscat]')].map(t=>t.textContent.trim())")
+        self.assertEqual(labels, ["Project", "People and partners", "Workstreams", "Milestones", "Client report and logos", "Archive and close"])
+        self.assertEqual(b.eval("document.querySelectorAll('#pscats [role=tab]').length"), 0)
 
     def test_each_category_shows_its_content(self):
         b = self.b
@@ -140,7 +158,7 @@ class ProjectSettings(LiveBrowserCase):
         self.assertIn("projects/ABC", b.eval("document.querySelector('#psFolder').textContent"))
         self.open("people")
         self.assertTrue(b.eval("[...document.querySelectorAll('#psPeople tbody tr')].length>0"))
-        self.assertEqual(b.eval("[...document.querySelectorAll('#psPeople thead th')].slice(0,3).map(x=>x.textContent)"), ["Name", "Role", "Organisation"])
+        self.assertEqual(b.eval("[...document.querySelectorAll('#psPeople thead th')].slice(0,3).map(x=>x.textContent)"), ["Name", "Email", "Organisation · role"])   # #247: the register's own columns
         self.assertTrue(b.eval("!!document.querySelector('#psPartners') && !!document.querySelector('#psAddPartner') && !!document.querySelector('#psAddPerson')"))
         self.open("miles")
         ids = b.eval("[...document.querySelectorAll('#psMiles tbody tr td:first-child')].map(x=>x.textContent)")
@@ -240,7 +258,7 @@ class ProjectSettings(LiveBrowserCase):
         self.open("people")
         rows = b.eval("[...document.querySelectorAll('#psPeople tbody tr')].map(r=>[...r.children].slice(0,3).map(c=>c.textContent.trim()))")
         names = [r[0] for r in rows]
-        self.assertIn("Sara Example", names)
+        self.assertTrue(any(n.startswith("Sara Example") for n in names), names)     # #247: the cell also carries "needs details" and project codes
 
     def test_the_partners_line_round_trip(self):
         b = self.b
@@ -366,7 +384,7 @@ class ProjectSettings(LiveBrowserCase):
         self.open("general")
         self.b.eval("(()=>{ const e=document.querySelector('#psq'); e.value='milestone'; e.dispatchEvent(new Event('input',{bubbles:true})); })()")
         b.wait("!!document.querySelector('#psMiles') && !document.querySelector('#psMiles').closest('[data-pscard]').hidden && document.querySelector('#psName').closest('[data-pscard]').hidden")
-        self.assertEqual(b.eval("document.querySelector('#pscats [aria-selected=true]')"), None)      # nothing chosen while searching
+        self.assertEqual(b.eval("document.querySelector('#pscats [aria-current=true]')"), None)      # nothing marked while searching
         self.b.eval("(()=>{ const e=document.querySelector('#psq'); e.value='folder'; e.dispatchEvent(new Event('input',{bubbles:true})); })()")
         b.wait("!document.querySelector('#psFolder').closest('[data-psrow]').hidden && document.querySelector('#psMiles').closest('[data-pscard]').hidden")
         self.assertEqual(b.eval("[...document.querySelectorAll('#psBody .srow:not([hidden])')].map(r=>r.firstElementChild.firstElementChild.textContent)"), ["Folder", "Archive this project"])
@@ -376,14 +394,15 @@ class ProjectSettings(LiveBrowserCase):
         self.b.eval("(()=>{ const e=document.querySelector('#psq'); e.value='Archive'; e.dispatchEvent(new Event('input',{bubbles:true})); })()")
         b.wait("!document.querySelector('#psArchive').closest('[data-pscard]').hidden")
 
-    def test_the_categories_are_keyboard_operable(self):
+    def test_the_sections_list_is_keyboard_operable(self):        # #247: links, so Tab and Enter (was ArrowDown and End on tabs)
         b = self.b
         self.open("general")
-        b.eval("document.querySelector('#pscats [aria-selected=true]').focus()")
-        b.key("ArrowDown")
-        b.wait("document.querySelector('#pscats [aria-selected=true]').dataset.pscat==='people'")
-        b.key("End")
-        b.wait("document.querySelector('#pscats [aria-selected=true]').dataset.pscat==='arch'")
+        b.eval("document.querySelector('#pscats [data-pscat=people]').focus()")
+        b.key("Enter")
+        b.wait("document.querySelector('#pscats [aria-current=true]').dataset.pscat==='people'")
+        b.eval("document.querySelector('#pscats [data-pscat=arch]').focus()")
+        b.key("Enter")
+        b.wait("document.querySelector('#pscats [aria-current=true]').dataset.pscat==='arch'")
         self.assertEqual(b.eval("document.activeElement.dataset.pscat"), "arch")
 
     def test_no_duplicate_ids_on_any_category_and_no_script_errors(self):

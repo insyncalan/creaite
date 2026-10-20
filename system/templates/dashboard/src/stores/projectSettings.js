@@ -15,15 +15,18 @@ import { shared } from "../core/state.js";
 import { PARTNERS_MAX, PARTNER_NAME_MAX, cleanPartnerName, partnerKey, partnerNameProblem } from "../core/partners.js";
 import { resolver } from "../settings.js";
 
-/** The categories, in the order the page lists them. The third is what the search matches besides the words on the page. */
+/** The page's sections, in the order of use (#247: one scrolling page; the side list jumps to each). The third is what the search
+    matches besides the words on the page. */
 export const PS_CATS = [
-  ["general", "General", "name client code status folder project details"],
+  ["general", "Project", "name client code status folder project details general"],
   ["people", "People and partners", "people partners partner organisations organisation role register"],
-  ["logos", "Logos", "logos firm client partner header picture"],
+  ["ws", "Workstreams", "workstreams workstream lead keywords rename merge retire"],
   ["miles", "Milestones", "milestones plan agreed expected dates add edit"],
-  ["rep", "Reporting", "reporting client report how often reminder weekly report day"],
-  ["arch", "Archive", "archive close restore project nothing is deleted"],
+  ["rep", "Client report and logos", "reporting client report how often reminder logos firm partner header picture"],
+  ["arch", "Archive and close", "archive close restore project nothing is deleted"],
 ];
+/** an address's section, with the old category names (#228's Logos and Reporting are one section now) @param {string} c */
+export const psCatOf = c => c === "logos" ? "rep" : PS_CATS.some(x => x[0] === c) ? c : "general";
 
 export const psCode = signal("");          // the project the page is open for
 export const psCat = signal("general");
@@ -188,7 +191,7 @@ export function removePartner(code, i) {
   });
 }
 
-/** Open the page for a project, at General (the cog, the Projects list and Settings › People and projects all come here).
+/** Open the page for a project, at its top (the cog, the Projects list and Settings › People and projects all come here).
     @param {string} code */
 export function openProjectSettings(code) {
   if (!P.some(p => p.code === code)) { snack("That project isn't open here"); return false; }

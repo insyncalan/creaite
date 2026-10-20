@@ -23,7 +23,7 @@ import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx"
 import { CALI, closeCal, DATE_HELP, formProject, onCmdEnter, WK, wkAsk } from "./core/fields.js";
 import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll, tabTitle } from "./core/nav.js";
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, MOD, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
-import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
+import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, SKEY, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { draftBtn, draftStat, draftWhyNot, DRRUN, GENFM, genFormDraft, genFormOptions, genReset, refineAsk, refineHtml, refineStatusHtml, versBarHtml } from "./drafts.js";
 import { FOPEN } from "./files.js";
@@ -38,11 +38,18 @@ import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
 import { openProjectSettings } from "./stores/projectSettings.js";   /* #228 */
 import { draftOn, pencil, SPARKI } from "./review.js";
-import { nm, renderSettings, row } from "./settings.js";
+import { nm, projArchive, renderSettings, row } from "./settings.js";
 import { legBtn, pfResize, plur, portfolioTable, spark, tl } from "./today.js";
 import { allBucket, boardMove, hit, isoAdd, PRIOS, rows } from "./work.js";
 /* ======================= Projects + cockpit ======================= */
-export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. ${raw(howLink("projects"))} <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
+export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. ${raw(howLink("projects"))} <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); drawProjArchived(); }
+/* #247: Show archived and Restore on the Projects page (they leave Settings › People and projects): the same setting (showArchived:
+   archived projects' items in Work, Today and the Excel export) and the same archive card (settings.js projArchive). */
+export function projArchivedHtml(){ const L=(D.project_states||[]).filter(p=>p.state==="archived");
+  return html`<div class="projarch"><label class="settick"><input type="checkbox" class="switch" id="projShowArch" ${S.showArchived?"checked":""}> Show archived projects</label>${S.showArchived?(L.length?html`<div class="tbl"><table class="mgr" id="projArchived" aria-label="Archived projects"><tbody>${L.map(p=>html`<tr><td>${p.name}</td><td class="sub">Archived</td><td class="mgract"><button type="button" class="mini" data-parch="restore" data-pcode="${p.code}" aria-label="Restore ${p.name}">Restore</button></td></tr>`)}</tbody></table></div>`:html`<p class="sub" id="projArchNone">No archived projects.</p>`):""}</div>`; }
+export function drawProjArchived(){ const h=$("#projArchHost"); if(!h) return; putHTML(h,projArchivedHtml());
+  const tick=$("#projShowArch"); if(tick) tick.onchange=async()=>{ const on=tick.checked; if(!await writeSettings({[SKEY.showArchived]:on})){ tick.checked=!on; return; } S.showArchived=on; await reloadData(); renderProjects(); };
+  $$("#projArchived [data-parch]").forEach(b=>b.onclick=()=>projArchive(b.dataset.pcode,"restore",false)); }
 export const DRAFTKIND={};                                   /* kind → feature; each kind's block adds its own */
 /* BL-300: Top risks and issues: the text under each item is its latest update, falling back to the response (Alan,
    13-10-2026), cut at two lines (.rk-txt; #107, Alan 15-10-2026, was five); a cut one gets a quiet "More" and its full text as a tooltip, and the row

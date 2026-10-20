@@ -23,7 +23,7 @@ import { parseWeekly } from "../components/report/weekly/WeeklyView.jsx";
 import { parseKey } from "../components/report/ClientView.jsx";   /* #221: the old weekly and client addresses; the hub opens them */
 import { renderReports } from "../components/reporting/ReportsPage.jsx";   /* BL-337 */
 import { renderProjectSettings } from "../components/project/ProjectSettings.jsx";   /* #228 */
-import { PS_CATS, psCat, psCode } from "../stores/projectSettings.js";
+import { psCat, psCatOf, psCode } from "../stores/projectSettings.js";
 import { openSpace, renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { parseReporting, repWeek, reportingHref, spaceCode, spaceWeek } from "../stores/reporting.js";
 import { hubView } from "../stores/hub.js";
@@ -73,7 +73,7 @@ export function hashOf(st){
 export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), a=mm&&parseWeekly(mm[1]); if(a&&P.some(p=>p.code===a.code)) return {v:"reporting",arg:a.code,rw:a.week||"",rv:"internal",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* v2.1.0 P6; #221: the old weekly address opens the hub */
   { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm){ const to=meetingRoute(mm[1]), st=to&&parseHash(to); if(st) return st; snack("That meeting isn't in creaite's records any more"); return {v:"today",arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* v2.1.0 P10: the retired meeting page (BL-233) opens its Prep or its minutes */
   { const mm=/^#?project-settings=([^&]+)(?:&c=([a-z]+))?$/.exec(String(h||"")); if(mm){ let code=""; try{ code=decodeURIComponent(mm[1]); }catch(e){ return null; }
-    if(!P.some(p=>p.code===code)) return null; return {v:"psettings",arg:code,cat:mm[2]&&PS_CATS.some(c=>c[0]===mm[2])?mm[2]:"general",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* #228: #project-settings=<code>[&c=<category>] */
+    if(!P.some(p=>p.code===code)) return null; return {v:"psettings",arg:code,cat:psCatOf(mm[2]||""),wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* #228: #project-settings=<code>[&c=<category>] */
   { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,rv:r.view,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
   { const mm=/^#?client-report=(.+)$/.exec(String(h||"")); if(mm){ const a=parseKey(mm[1]); return a&&P.some(p=>p.code===a.code)?{v:"reporting",arg:a.code,rw:a.week||"",rv:"client",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P8; #221: the old client report address opens the hub's Client view */

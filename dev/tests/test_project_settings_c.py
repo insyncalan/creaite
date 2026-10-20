@@ -282,6 +282,7 @@ class Page(LiveBrowserCase):
 
     def setUp(self):
         LiveBrowserCase.setUp(self)
+        tps.scroll_clicks(self.b)            # #247: one long page
         self.memory.write_text(self.original)
         self.d = self.v.root / "system/branding/logos"
         self.d.mkdir(parents=True, exist_ok=True)
@@ -308,7 +309,7 @@ class Page(LiveBrowserCase):
         self.add_partners("Acme Labs", "Beta Works")
         self.open("logos")
         self.wait_for(lambda: kinds() == ["firm", "client", "partner:acme-labs", "partner:beta-works"], "a row for each partner")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#psBody .srow > div:first-child > span')].map(x=>x.textContent)"),
+        self.assertEqual(b.eval("[...document.querySelectorAll('#psBody .pslogo[data-kind]')].map(x=>x.closest('.srow').querySelector('div:first-child > span').textContent)"),   # #247: every section is on the page, so only the logo rows
                          ["The firm", "The client", "Partner: Acme Labs", "Partner: Beta Works"])
         self.assertEqual(b.eval("(async()=>{ const was=partners.peek().list; return await renamePartner('ABC',0,'Acme Group'); })()"), "")
         self.wait_for(lambda: kinds()[2:] == ["partner:acme-group", "partner:beta-works"], "renamed: " + str(kinds()))
