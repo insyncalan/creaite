@@ -1,0 +1,17 @@
+Minutes: Budget review, 19-10-2026
+Attendees: Lena Park (chair), Jane Doe, Sara Example, Omar Ali
+Written by: Lena Park
+
+Decisions
+- The pilot budget is approved at the level in the revised SOW.
+
+Actions
+- Sara Example to share the revised SOW with the client by Friday 23 October.
+- Omar Ali to confirm the licence costs with procurement by Thursday 22 October.
+- Jane Doe to sign off the change request by Tuesday 27 October.
+
+Risks
+- Licence costs may rise if the seat count is higher than 90.
+
+Issues
+- The invoice schedule is not agreed with the supplier.
