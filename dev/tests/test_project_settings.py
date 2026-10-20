@@ -4,7 +4,8 @@ Run: python3 dev/tests/test_project_settings.py   (needs Google Chrome; skipped 
 
 Brief: dev/sprints/project-settings-brief.md and the locked mockup dev/mockups/project-settings-mockup.html (pm-intake-briefs).
 Part A is the shell and four categories (General, People and partners, Milestones, Archive) with Logos and Reporting as marked
-placeholders that open what exists today. No Workstreams category: they stay in Settings > People and projects.
+placeholders that open what exists today. No Workstreams category: they stayed in Settings > People and projects
+(until #247 moved them in and the Settings line retired that section).
 
 #247 (Project settings v2, Alan, 19-10-2026) deliberately changed the page: one scrolling page whose side list is anchors (the tabs went),
 the sections Project, People and partners, Workstreams (moved in), Milestones, Client report and logos (one section), Archive and close.
@@ -114,19 +115,18 @@ class ProjectSettings(LiveBrowserCase):
         b.wait("VIEW==='projects' && !!document.querySelector('#projTbl tbody tr')")
         self.assertEqual(b.eval("document.querySelectorAll('#projTbl [data-psettings], #pfTbl [data-psettings]').length"), 0)
 
-    def test_the_page_opens_from_settings_people_and_projects_which_stays_a_list(self):
+    def test_the_old_settings_addresses_open_the_projects_page_or_the_projects_settings(self):
+        """The Settings line (v2.6) deliberately retired Settings › People and projects' list: its old addresses open the
+        Projects page, and Workstreams from a project opens that project's settings at Workstreams. What the list held is
+        here: each project's client report switch and its Archive."""
         b = self.b
-        b.eval("STAB='people'; go('settings')")
-        b.wait("VIEW==='settings' && !!document.querySelector('#projSetList')")
-        secs = b.eval("[...document.querySelectorAll('#settingsBody [data-sec]')].map(c=>c.dataset.sec)")
-        self.assertIn("workstreams", secs)                           # Workstreams stays in Settings
-        self.assertIn("projects", secs)
-        self.assertEqual(b.eval("[...document.querySelectorAll('#projSetList [data-psopen]')].map(x=>x.dataset.psopen)"), ["ABC", "DEF"])
-        self.assertTrue(b.eval("!!document.querySelector('#crSet')"), "the client report switches are still there")
-        self.assertTrue(b.eval("!!document.querySelector('#projArch')"), "Archive and Restore are still there")
-        b.click("#projSetList [data-psopen=DEF]")
-        b.wait("VIEW==='psettings' && psCode.value==='DEF'")
+        b.eval("go('today'); go('settings','projects')")
+        b.wait("VIEW==='projects' && location.hash==='#projects'")
+        b.eval("go('cockpit','DEF'); go('settings','workstreams')")
+        b.wait("VIEW==='psettings' && psCode.value==='DEF' && psCat.value==='ws' && !!document.querySelector('#psWs')")
         self.assertEqual(b.eval("document.querySelector('#psName').value"), "Digital Enablement")
+        self.assertTrue(b.eval("!!document.querySelector('#psRepOn')"), "the client report switch is here")
+        self.assertTrue(b.eval("!!document.querySelector('#psArchive,#psRestore')"), "Archive (or Restore) is here")
 
     def test_the_address_restores_the_project_and_the_category_and_back_works(self):
         b = self.b

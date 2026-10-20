@@ -93,25 +93,25 @@ class NoProjects(Base):
             b.wait(f"document.querySelector('#v-{page} .choose .empty')")
             self.assertEqual(b.eval(f"document.querySelector('#v-{page} h1').textContent"), "Choose a project")
             self.assertEqual(b.eval(f"document.querySelector('#v-{page} .empty').textContent"),
-                             "No projects yet. Add one in Settings › People and projects.")
+                             "No projects yet. Add one on the Projects page.")     # the Settings line: projects are added there
             b.click(f"#v-{page} .empty a")
-            b.wait("VIEW==='settings'")
+            b.wait("VIEW==='projects'")
         self.assertEqual(b.errors, [])
 
-    def test_enter_on_the_settings_link_opens_people_and_projects(self):
+    def test_enter_on_the_link_opens_the_projects_page(self):
         b = self.b
         b.eval("P.splice(0)")
         b.eval("go('cockpit')")
         b.wait("document.querySelector('#v-cockpit .empty a')")
         b.eval("document.querySelector('#v-cockpit .empty a').focus()")
         b.key("Enter")
-        b.wait("VIEW==='settings'")
-        b.wait("location.hash==='#settings/people'", 10)                  # the link and its words agree: People and projects
-        # v2.6 (#246): People and projects is no longer a tab; its address opens its sections, no tab chosen, until they move
-        b.wait("!!document.getElementById('setMovingNote') && !!document.querySelector('#settingsBody [data-sec=projects]')")
-        self.assertEqual(b.eval("document.querySelectorAll('#setcats [aria-selected=true]').length"), 0)
+        b.wait("VIEW==='projects'")
+        b.wait("location.hash==='#projects'", 10)                           # the link and its words agree: the Projects page
+        # the Settings line: People and projects left Settings; a project is added from the Projects page (in ask creaite)
+        b.wait("!!document.querySelector('#projTbl .empty [data-setup=proj]')")
+        b.click("#projTbl .empty [data-setup=proj]")                         # there, Add a project starts it in ask creaite, unsent
+        b.wait("document.getElementById('chat').classList.contains('on') && document.getElementById('chIn').value==='add project '")
         self.assertEqual(b.errors, [])
-
 
 if __name__ == "__main__":
     unittest.main()

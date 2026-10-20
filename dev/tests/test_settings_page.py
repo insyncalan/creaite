@@ -1,7 +1,8 @@
 """The Settings page (BL-115, sprint-settings): categories on the left, the settings on the right, one list of sections.
 BL-320 (v1.9.2): four categories; test_settings_calmer.py covers the new parts. v2.6 (#246, Alan 19-10-2026): eight tabs
 (Essentials, Work and reports, Sweep and Intake, Reports and minutes, AI drafts, Look and help, Advanced with five sub-tabs,
-Health); People and projects is no tab, its sections open only from their old addresses until they move.
+Health). People and projects has left Settings (the Settings line): its old addresses open the People page, the Projects
+page or the project's settings page.
 
 Run: python3 dev/tests/test_settings_page.py   (needs Google Chrome; skipped otherwise)
 
@@ -96,14 +97,23 @@ class SettingsPage(LiveBrowserCase):
         self.assertIn("archive.after_months.actions", keys)
         self.assertEqual(self.b.eval("document.querySelectorAll('#settingsBody [data-more]').length"), 1)
 
-    def test_people_and_projects_open_only_from_their_old_addresses_with_no_tab_chosen(self):   # v2.6 (#246): moving
-        self.b.eval("STAB='people'; go('settings')")
-        self.b.wait("VIEW==='settings' && SCAT==='people' && !!document.getElementById('peopleMgr')")
-        self.assertEqual(self.sections(), ["people", "workstreams", "projects"])
-        self.assertEqual(self.b.eval("document.querySelectorAll('#setcats [aria-selected=true]').length"), 0)
-        self.assertIn("moving", self.b.eval("document.getElementById('setMovingNote').textContent"))
+    def test_the_old_people_and_projects_addresses_open_their_new_homes(self):   # the Settings line: the sections left Settings
+        self.open("essentials")
         self.assertIn("People page", self.b.eval("document.getElementById('setMoved').textContent"))   # the side column says where
-        self.assertFalse(self.b.eval("!!document.querySelector('#settingsBody [data-sk=showArchived],#projArch ~ [data-k=showArchived]')"))
+        self.assertFalse(self.b.eval("SETSECTIONS.some(s=>['people','workstreams','projects'].includes(s.id))"))
+        self.assertFalse(self.b.eval("!!document.querySelector('#peopleMgr,#wsMgr,#projArch,#projSetList,#crSet')"))
+        self.b.eval("go('settings','people')")                                  # People: the People page
+        self.b.wait("VIEW==='people' && location.hash.startsWith('#people')")
+        for old in ("projects", "admin"):                                       # Projects and register, and the old admin tab: Projects
+            self.b.eval("go('today')")
+            self.b.eval(f"go('settings','{old}')")
+            self.b.wait("VIEW==='projects' && location.hash==='#projects'")
+        self.b.eval("go('today'); go('settings','workstreams')")               # Workstreams with no project known: Projects
+        self.b.wait("VIEW==='projects'")
+        self.b.eval("go('cockpit','ABC'); go('settings','workstreams')")       # from a project: its settings, at Workstreams
+        self.b.wait("VIEW==='psettings' && psCode.value==='ABC' && psCat.value==='ws' && location.hash.startsWith('#project-settings=ABC')")
+        self.b.eval("STAB='people'; go('settings')")                            # an old name for a tab that is gone: Essentials
+        self.b.wait("VIEW==='settings' && SCAT==='essentials'")
 
     def test_client_report_rhythms_are_no_longer_in_reminders(self):          # v2.6 (#246): each project's settings hold them
         self.open("reports")
@@ -111,9 +121,10 @@ class SettingsPage(LiveBrowserCase):
         self.assertTrue(self.b.eval("!!document.querySelector('[data-sec=reminders] [data-k=remindersOn]') && !!document.getElementById('remRestore')"))
 
     def test_sections_come_from_one_list_and_the_page_has_no_wrappers(self):
-        # v2.6 (#246): 33: You and People I follow joined Essentials, Everything else became each tab's More, Help joined
-        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 33)
-        self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.id && (SETCATS.some(c=>c[0]===catOf(s))||catOf(s)===MOVING[0]) && typeof s.kw==='string' && (typeof s.render==='function' || typeof s.mount==='function'))"))
+        # v2.6 (#246): 33: You and People I follow joined Essentials, Everything else became each tab's More, Help joined;
+        # the Settings line: 30, as People, Workstreams and Projects and register left for their own pages
+        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 30)
+        self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.id && SETCATS.some(c=>c[0]===catOf(s)) && typeof s.kw==='string' && (typeof s.render==='function' || typeof s.mount==='function'))"))
         self.assertEqual(self.b.eval("renderSettings.toString().includes('const rs=')"), False)
 
     def test_the_old_tab_names_open_a_sensible_category(self):
@@ -122,9 +133,9 @@ class SettingsPage(LiveBrowserCase):
             self.b.eval(f"STAB={old!r}; go('settings')")
             self.b.wait("VIEW==='settings'")
             self.assertEqual(self.b.eval("document.querySelector('#setcats [aria-selected=true]').dataset.scat"), cat, old)
-        for old in ("admin", "people", "projects", "workstreams"):                # moving: no tab, the old sections
-            self.b.eval(f"STAB={old!r}; go('settings')")
-            self.b.wait("VIEW==='settings' && SCAT==='people'")
+        for old, view in [("admin", "projects"), ("people", "people"), ("projects", "projects"), ("workstreams", "projects")]:
+            self.b.eval(f"go('today'); go('settings',{old!r})")                  # the Settings line: they left Settings for these pages
+            self.b.wait(f"VIEW==={view!r}")
 
     def test_the_diagnostics_link_opens_system(self):
         self.b.eval("STAB='general'; go('settings')")
@@ -282,8 +293,8 @@ class SettingsPage(LiveBrowserCase):
         self.b.wait("SCAT==='sweep' && !!document.querySelector('[data-sec=sweep]')")
 
     def test_a_fresh_page_opens_the_category_in_its_address_and_a_bare_settings_address_still_works(self):
-        self.b.goto(self.base + "/#settings/people")
-        self.b.wait("typeof go==='function' && LIVE && VIEW==='settings' && SCAT==='people'")
+        self.b.goto(self.base + "/#settings/people")                           # the Settings line: a section that left opens its page
+        self.b.wait("typeof go==='function' && LIVE && VIEW==='people' && location.hash.startsWith('#people')")
         self.b.goto(self.base + "/?fresh=0#settings/server")                    # an Advanced sub-tab's address
         self.b.wait("typeof go==='function' && LIVE && VIEW==='settings' && SCAT==='advanced' && SSUB==='server'")
         self.b.goto(self.base + "/?fresh=1#settings")
@@ -575,16 +586,13 @@ class SettingsPage(LiveBrowserCase):
     def test_every_section_has_one_id_one_category_and_keywords(self):
         ids = self.b.eval("SETSECTIONS.map(s=>s.id)")
         self.assertEqual(len(ids), len(set(ids)))
-        self.assertEqual(sorted(set(self.b.eval("SETSECTIONS.map(s=>catOf(s))"))), sorted(CATS + ["people"]))
+        self.assertEqual(sorted(set(self.b.eval("SETSECTIONS.map(s=>catOf(s))"))), sorted(CATS))
         self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.kw.length>5 && s.title)"))
         # the page shows each section exactly once across the categories
         shown = []
         for cat in PAGES:
             self.open(cat)
             shown += self.sections()
-        self.b.eval("STAB='people'; go('settings')")                       # the moving sections, by their old address
-        self.b.wait("SCAT==='people' && !!document.getElementById('peopleMgr')")
-        shown += self.sections()
         self.assertEqual(sorted(shown), sorted(ids))
 
     def test_the_word_label_setting_is_not_on_the_page(self):          # BL-121 removed it
