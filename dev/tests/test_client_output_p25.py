@@ -107,10 +107,15 @@ class P25(M.Base):
         self.assertEqual(fails, [], json.dumps(fails, indent=1)[:4000])
 
     def test_P25_the_client_slash_menu_offers_no_item_row(self):
-        self.open_side()
-        self.focus_in(CLI, "summary")
-        self.b.type(" /")
-        self.b.wait("!!document.querySelector('.slashroot [role=option]')", 8)
+        self.open_hub()
+        self.b.click("#hubSeg [data-hv='client']")
+        self.b.wait("document.querySelectorAll('#v-reporting .page[data-audience=client]').length==1", 20)
+        self.b.click("#v-reporting [data-addtext]")                # a client text section: where the slash menu lives
+        ed = "#v-reporting .page[data-audience=client] .sheet-ft.ProseMirror"
+        self.b.wait(f"!!document.querySelector({json.dumps(ed)})", 10)
+        self.b.click(ed)
+        self.b.type("/")
+        self.b.wait("!!document.querySelector('.slashroot [role=option]')", 10)
         rows = self.q("[...document.querySelectorAll('.slashroot [role=option]')].map(x=>x.textContent)")
         self.assertTrue(rows, "the slash menu opened")
         self.assertNotRegex(" | ".join(rows), ITEM_ROW, rows)
