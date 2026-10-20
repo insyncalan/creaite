@@ -1,14 +1,19 @@
 // @ts-check
-/* ProjectSettings (#228 part A): the project's settings as a full page, #project-settings=<CODE>. The app's own settings layout:
-   a search box and the categories on the left, cards of labelled rows on the right (a label, a line of help, the control).
-   Categories: General, People and partners, Logos, Milestones, Reporting and Archive. Logos and Reporting are the reporting hub's
-   cog panel in rows (#228 C): the same stores and the same logo controls (components/report/hub/LogoTile.jsx). No Workstreams: they stay in Settings › People and projects.
+/* ProjectSettings (#228, v2 #247): the project's settings as one scrolling page, #project-settings=<CODE>[&c=<section>]. A search box
+   and a sticky list of the sections on the left (it marks the one you are in, and a click scrolls to it; the tabs are gone), the
+   sections on the right, in order of use: Project, People and partners (the register's own table, components/project/ProjectPeople.jsx),
+   Workstreams (moved here from Settings), Milestones, Client report and logos (together: the reporting hub's cog panel in rows, the
+   same stores and logo controls, components/report/hub/LogoTile.jsx) and, last and set apart, Archive and close.
    Every change saves on its own with Undo, through the flow that already saves it (stores/projectSettings.js, stores/reportingSettings.js,
-   the milestones page, the archive card); this page holds no write of its own. */
+   stores/peopleRegister.js, stores/workstreams.js, the milestones page, the archive card); this page holds no write of its own. */
 import { render } from "preact";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { Tabs } from "../Tabs.jsx";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { ProjectPeople } from "./ProjectPeople.jsx";
+import { Workstreams } from "./ProjectWorkstreams.jsx";
+import { wsActive } from "../../stores/workstreams.js";
+import { registerRows } from "../../stores/peopleRegister.js";
+import { reduced } from "../../core/page.js";
 import { openSpace } from "../reporting/ReportingSpace.jsx";
 import { closeClientReport, openClientReport } from "../report/hub/ClientReportPanel.jsx";
 import { D, fd } from "../../core/page.js";
@@ -48,6 +53,10 @@ function PsRow({ label, help, kw, children, id }) {
     </div>
   );
 }
+
+const PEOPLE_KW = "people person register email aliases organisation role add a person needs details followed";
+/** Whether the search matches these words (or the section's name). @param {string} text */
+function useMatch(text) { const f = useContext(Find); return !f.q || f.all || psNorm(text).includes(f.q); }
 
 /** A table row that a search can hide. @param {{text: string, children?: any}} props */
 function Item({ text, children }) {
@@ -148,24 +157,15 @@ function PartnerRow({ code, name, i }) {
 
 /** @param {{code: string}} props */
 function PeoplePartners({ code }) {
-  crTick.value;
-  const ppl = projectPeople(code), list = partners.value.list, [err, setErr] = useState(""), box = useRef(/** @type {HTMLInputElement|null} */ (null));
+  crTick.value; psTick.value;
+  const list = partners.value.list, [err, setErr] = useState(""), box = useRef(/** @type {HTMLInputElement|null} */ (null));
   const add = async () => {
     const el = box.current; if (!el) return;
     const bad = await addPartner(code, el.value); setErr(bad); if (!bad) { el.value = ""; el.focus(); }
   };
   return (
     <>
-      <div class="card" data-pscard data-cat="people"><h2>People on this project</h2>
-        <div class="tbl"><table class="pstbl" id="psPeople" aria-label="People on this project"><thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Organisation</th><th scope="col"><span class="vh">Actions</span></th></tr></thead>
-          <tbody>{ppl.length ? ppl.map(x => (
-            <Item key={x.name} text={`${x.name} ${x.role} ${x.org} people`}>
-              <td>{x.name}</td><td>{x.role || <span class="sub">Not set</span>}</td><td>{x.org || <span class="sub">Not set</span>}</td>
-              <td class="mgract"><button type="button" class="mini" data-pspeople-edit aria-label={`Edit ${x.name} in the people register`} onClick={() => go("settings", "people")}>Edit</button></td>
-            </Item>)) : <tr><td class="sub" colSpan={4}>Nobody owns an item of this project yet.</td></tr>}</tbody></table></div>
-        <p class="psfoot"><button type="button" class="btn sm" id="psAddPerson" onClick={() => go("settings", "people")}>Add a person</button>
-          <span class="psnote"> People come from the people register: who owns an item or made a decision here. Adding or editing one opens the register in Settings.</span></p>
-      </div>
+      <ProjectPeople code={code} match={useMatch(PEOPLE_KW + " " + registerRows().filter(x => x.on.includes(code) || !x.on.length).map(x => `${x.n} ${x.email} ${x.org} ${x.role} ${x.aliases.join(" ")}`).join(" "))} />
       <div class="card" data-pscard data-cat="people"><h2>Partner organisations</h2>
         <div class="tbl"><table class="pstbl" id="psPartners" aria-label="Partner organisations"><thead><tr><th scope="col">Organisation</th><th scope="col">People</th><th scope="col"><span class="vh">Actions</span></th></tr></thead>
           <tbody>{list.length ? list.map((n, i) => <PartnerRow key={n} code={code} name={n} i={i} />) : <tr><td class="sub" colSpan={3}>No partner organisations.</td></tr>}</tbody></table></div>
@@ -195,7 +195,7 @@ function Logos({ code }) {
   const ticked = clientLogosOn(code), orphans = crLogoOrphans.value, tiles = tilesOf(code);
   return (
     <>
-      <div class="card" data-pscard data-cat="logos"><h2>Logos in the reports' header</h2>
+      <div class="card" data-pscard data-cat="rep"><h2>Logos in the reports' header</h2>
         {tiles.map(t => {
           const has = !!crLogoPaths.value[t.kind];
           return (
@@ -212,7 +212,7 @@ function Logos({ code }) {
         <p class="psnote psfoot">Partners come from People and partners: add or remove a partner organisation there and its logo row appears or goes here. These are the same logos as in the reporting hub's client report settings. A transparent PNG or SVG sits better than a JPEG; the picture you choose is kept as it is and a trimmed copy is drawn. The tick puts the logo in the header of this project's reports.</p>
       </div>
       {orphans.length ? (
-        <div class="card" data-pscard data-cat="logos"><h2>Logos not used</h2>
+        <div class="card" data-pscard data-cat="rep"><h2>Logos not used</h2>
           {orphans.map(o => (
             <PsRow key={o.kind} id={`psOrphan-${o.slug}`} label={o.slug} help="A logo kept after its partner was renamed or removed from the list. It is not drawn in any report." kw="logos not used unused orphan partner">
               <span class="pslogo" data-orphan={o.kind}>
@@ -233,7 +233,7 @@ function Reporting({ code }) {
   crTick.value;
   const p = psProject(code), on = clientReportOn(code), rhythms = REP_RHYTHMS.includes(p.rhythm) ? REP_RHYTHMS : [...REP_RHYTHMS, p.rhythm];
   return (
-    <div class="card" data-pscard data-cat="rep"><h2>Reporting</h2>
+    <div class="card" data-pscard data-cat="rep"><h2>Client report</h2>
       <PsRow label="Client report" help="Turn off if the client only receives the internal report, or nothing at all. This holds for every future report of this project until you change it; reports already written are kept and turning it off deletes nothing." kw="client report needs a separate on off">
         <label class="settick"><input type="checkbox" id="psRepOn" checked={on} aria-label="This project needs a separate client report"
           onChange={e => setClientReport(code, /** @type {HTMLInputElement} */ (e.target).checked)} /> Needs a separate client report</label>
@@ -287,23 +287,52 @@ function Milestones({ code }) {
 function Archive({ code }) {
   const state = projectState(code), name = pName(code);
   return (
-    <div class="card" data-pscard data-cat="arch"><h2>Archive</h2>
-      <PsRow label="Archive this project" help="Moves its folder to the archive and keeps everything; it can be restored. It goes on the approval card in ask creaite first." kw="archive restore">
-        <AskButton id="psArchive" label="Archive…" ask={`Archive ${name}?`} yes="Archive" onYes={() => projArchive(code, "archive", false)} />
-      </PsRow>
+    <div class="psdanger"><div class="card" data-pscard data-cat="arch"><h2>Archive and close</h2>
+      {state === "archived"
+        ? <PsRow label="Restore this project" help="Brings its folder back from the archive. It goes on the approval card in ask creaite first." kw="archive restore">
+            <button type="button" class="btn" id="psRestore" onClick={() => projArchive(code, "restore", false)}>Restore</button></PsRow>
+        : <PsRow label="Archive this project" help="Moves its folder to the archive and keeps everything; it can be restored from the Projects page (Show archived). It goes on the approval card in ask creaite first." kw="archive restore">
+            <AskButton id="psArchive" label="Archive…" ask={`Archive ${name}?`} yes="Archive" onYes={() => projArchive(code, "archive", false)} />
+          </PsRow>}
       {state === "closed"
         ? <PsRow label="Reopen this project" help="Makes it active again: it is swept and reported again." kw="active">
             <button type="button" class="btn" id="psReopen" onClick={() => setProjectActive(code, true)}>Reopen</button></PsRow>
         : <PsRow label="Close this project" help="Marks it closed in the tracker; nothing is deleted." kw="close closed">
             <AskButton id="psClose" label="Close…" ask={`Close ${name}?`} yes="Close it" danger onYes={() => setProjectActive(code, false)} />
           </PsRow>}
-    </div>
+    </div></div>
   );
 }
 
 // ----- the page
 
-const BODY = { general: General, people: PeoplePartners, logos: Logos, miles: Milestones, rep: Reporting, arch: Archive };
+/** Logos and the client report: one section. @param {{code: string}} props */
+const ClientAndLogos = ({ code }) => <><Reporting code={code} /><Logos code={code} /></>;
+/** @param {{code: string}} props */
+const Ws = ({ code }) => { psTick.value; return <Workstreams code={code} match={useMatch(`workstreams workstream lead keywords ${wsActive(code).map(w => `${w.name} ${w.keywords || ""}`).join(" ")}`)} />; };
+const BODY = { general: General, people: PeoplePartners, ws: Ws, miles: Milestones, rep: ClientAndLogos, arch: Archive };
+
+/** the section the list marks while the page scrolls (one a click chose holds while its scroll runs) */
+let spyHold = 0;
+/** @param {HTMLElement} view */
+function spy(view) {
+  if (performance.now() < spyHold || psQ.peek().trim()) return;
+  const secs = [...view.querySelectorAll("[data-pssec]")], top = view.getBoundingClientRect().top + view.clientHeight / 3;
+  let cur = secs.length ? /** @type {HTMLElement} */ (secs[0]).dataset.pssec || "general" : "general";
+  secs.forEach(s => { if (s.getBoundingClientRect().top < top) cur = /** @type {HTMLElement} */ (s).dataset.pssec || cur; });
+  const last = secs[secs.length - 1];
+  if (last && view.scrollTop + view.clientHeight >= view.scrollHeight - 4) cur = /** @type {HTMLElement} */ (last).dataset.pssec || cur;
+  if (cur !== psCat.peek()) { psCat.value = cur; navWrite(false); }
+}
+/** Scroll the page to a section. @param {string} id @param {boolean} [smooth] */
+export function psJump(id, smooth) {
+  const el = document.getElementById(`s-${id}`), view = $("#v-psettings");
+  if (!el || !view) return;
+  spyHold = performance.now() + 900;
+  const behavior = smooth && !reduced() ? "smooth" : "auto";
+  if (id === "general") view.scrollTo({ top: 0, behavior });
+  else el.scrollIntoView({ block: "start", behavior });         // the section's scroll-margin keeps a little space above it
+}
 
 export function ProjectSettings() {
   psTick.value; partners.value;
@@ -313,16 +342,20 @@ export function ProjectSettings() {
     const apply = () => {
       const el = root.current; if (!el) return;
       el.querySelectorAll("[data-pscard]").forEach(c => { /** @type {HTMLElement} */ (c).hidden = !!q && !c.querySelector("[data-psrow]:not([hidden])"); });
+      el.querySelectorAll("[data-pssec]").forEach(s => { /** @type {HTMLElement} */ (s).hidden = !!q && !s.querySelector("[data-pscard]:not([hidden])"); });
       const any = [...el.querySelectorAll("[data-pscard]")].some(c => !(/** @type {HTMLElement} */ (c)).hidden);
       const none = el.querySelector("#psNone"); if (none) /** @type {HTMLElement} */ (none).hidden = !q || any;
     };
     apply(); const t = setTimeout(apply, 0); return () => clearTimeout(t);
   });
+  useEffect(() => {
+    const view = $("#v-psettings"); if (!view) return;
+    const on = () => spy(/** @type {HTMLElement} */ (view));
+    view.addEventListener("scroll", on, { passive: true }); return () => view.removeEventListener("scroll", on);
+  }, []);
   if (!p) return (
     <div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" onClick={e => { e.preventDefault(); go("projects"); }}>Projects</a><span aria-hidden="true">›</span><span aria-current="page">Settings</span></nav>
       <h1 id="psTitle">Project settings</h1><p class="sub" id="psMissing">That project isn't open here. It may be closed or archived.</p></div>);
-  const cats = PS_CATS.map(([id, label]) => ({ id, label, data: { pscat: id } }));
-  const shown = q ? PS_CATS : PS_CATS.filter(c => c[0] === cat);
   return (
     <div class="wrapmax" ref={root}>
       <nav class="crumb" aria-label="Breadcrumb"><a href="#" id="psBackP" onClick={e => { e.preventDefault(); go("projects"); }}>Projects</a><span aria-hidden="true">›</span>
@@ -333,14 +366,20 @@ export function ProjectSettings() {
         <div class="setside">
           <input type="search" id="psq" class="setq" placeholder="Search these settings" aria-label="Search these settings" autocomplete="off" value={psQ.value}
             onInput={e => { psQ.value = /** @type {HTMLInputElement} */ (e.target).value; }} />
-          <div class="tabhost"><Tabs id="pscats" className="setcats" label="Project settings categories" vertical controls="psBody" items={cats}
-            selected={q ? "" : cat} onSelect={id => { psQ.value = ""; psCat.value = id; navWrite(false); }} /></div>
+          <nav class="setcats psnav" id="pscats" aria-label="On this page">
+            {PS_CATS.map(([id, label]) => (
+              <a key={id} href={`#project-settings=${encodeURIComponent(code)}${id === "general" ? "" : `&c=${id}`}`} data-pscat={id} aria-current={!q && cat === id ? "true" : undefined}
+                onClick={e => { e.preventDefault(); psQ.value = ""; psCat.value = id; navWrite(false); requestAnimationFrame(() => psJump(id, true)); }}>{label}</a>))}
+          </nav>
         </div>
-        <div id="psBody" role="tabpanel">
+        <div id="psBody">
           <div class="setstack">
-            {shown.map(([id, label]) => {
+            {PS_CATS.map(([id, label]) => {
               const Body = BODY[/** @type {keyof typeof BODY} */ (id)];
-              return <Find.Provider key={id} value={{ q, all: !!q && psNorm(label).includes(q) }}><Body code={code} /></Find.Provider>;
+              return (
+                <section key={id} class="pssec" id={`s-${id}`} data-pssec={id} aria-label={label}>
+                  <Find.Provider value={{ q, all: !!q && psNorm(label).includes(q) }}><Body code={code} /></Find.Provider>
+                </section>);
             })}
           </div>
           <p class="sub setnone" id="psNone" role="status" hidden>No settings match “{psQ.value.trim()}”.</p>
@@ -351,14 +390,16 @@ export function ProjectSettings() {
 }
 
 let psMounted = false;
-/** go()'s renderer for #project-settings=<code>. @param {string} code */
+/** go()'s renderer for #project-settings=<code>[&c=<section>]: the page, then the section the address names. @param {string} code */
 export function renderProjectSettings(code) {
   const el = $("#v-psettings"); if (!el) return;
   closeClientReport();                 // the hub's cog panel does not stay over this page
+  const fresh = psCode.peek() !== code || !psMounted;
   psCode.value = code;
   const read = partners.peek();
   if (read.code !== code || !read.loaded) loadPartners(code);
   readClientLogos(code);               // which logo files exist, to offer removing one a renamed partner left behind
   if (!psMounted) { render(<ProjectSettings />, el); psMounted = true; }
   else psTick.value++;
+  if (fresh || psCat.peek() !== "general") setTimeout(() => psJump(psCat.peek()), 60);     // after go()'s own scroll restore; the section chosen by then
 }

@@ -4114,6 +4114,48 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+/* #247: project settings v2 (one scrolling page): the side list of sections, the sections, People on this project and the
+   person form (components/project/ProjectPeople.jsx, components/people/PeopleParts.jsx), Workstreams, Archive and close set apart */
+#v-psettings .psnav a{display:block;text-align:left;border-left:2px solid transparent;padding:8px 12px;border-radius:0 var(--r-md) var(--r-md) 0;color:var(--muted);font-weight:500;text-decoration:none}
+#v-psettings .psnav a:hover{color:var(--ink);background:var(--sunk)}
+#v-psettings .psnav a[aria-current="true"]{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--accent-soft)}
+#v-psettings .pssec{scroll-margin-top:12px}
+#v-psettings .pssec[hidden]{display:none}
+#v-psettings .pssec>.card+.card,#v-psettings .pssec>.card+.psdanger{margin-top:16px}
+#v-psettings .psdanger .card{border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+#v-psettings .psdanger h2{color:var(--bad)}
+#v-psettings .pshl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#v-psettings .pshl h2{flex:1}
+#v-psettings .psintro{margin:4px 0 8px}
+#v-psettings .psunh{margin:16px 0 2px;font-size:var(--fs-md)}
+#v-psettings .psunp{margin:2px 0 6px}
+#v-psettings #psUnas tr.off td,#v-psettings #psPeople tr.off td{color:var(--muted)}
+#v-psettings .wsedit input{height:var(--ctl-h-sm);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 8px;background:var(--surface);color:var(--ink);font:inherit;width:100%;min-width:0}
+#v-psettings .wsacts{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pstar{width:14px;height:14px;color:var(--warn);vertical-align:-2px;margin-left:2px}
+.tag.pcodetag{font-size:var(--fs-2xs)}
+#personEdit .pdgrid{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;align-items:center}
+#personEdit .pdgrid>label,#personEdit .pdgrid>.pdlab{color:var(--muted);font-size:var(--fs-sm)}
+#personEdit .pdgrid>input[type=text]{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg);color:var(--ink);font:inherit}
+#personEdit .pdgrid>input[readonly]{color:var(--muted);background:var(--sunk)}
+#personEdit .pdgrid .pdh{grid-column:2;color:var(--muted);font-size:var(--fs-xs);margin:-4px 0 4px}
+#personEdit .setticks{display:flex;flex-wrap:wrap;gap:4px 14px}
+#personEdit .pemsg{color:var(--bad);min-height:1em;margin-top:8px}
+#personEdit .deacts{display:flex;gap:8px;align-items:center;margin-top:14px}
+#v-projects .projarch{margin-top:14px;display:grid;gap:8px}
+/* #248: the People page v2, the home of the whole register (components/people/PeoplePage.jsx) */
+#v-people .plhead{display:flex;align-items:center;gap:12px}
+#v-people .plhead h1{flex:1;margin:0}
+#v-people .plintro{margin:4px 0 14px}
+#v-people #peopleTbl td{vertical-align:middle}
+#v-people #peopleTbl th:not(.num){text-align:left}
+#v-people #peopleTbl tr.nr td:first-child{box-shadow:inset 2px 0 0 var(--warn)}
+#v-people #peopleTbl td.title{white-space:nowrap}
+#v-people #peopleTbl .pj a{color:var(--accent);white-space:nowrap}
+#v-people #peopleTbl td.mgract{white-space:nowrap;text-align:right}
+#v-people #peopleTbl td.num .late{color:var(--bad);font-weight:600}
+#v-people .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;white-space:normal}
+#v-people .plnone{padding:16px}
 </style>
 </head>
 <body>
@@ -4161,14 +4203,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         </div>
         <p class="calfoot" id="calFoot" hidden></p><!-- BL-270: "Calendar as read on …", at the page's foot -->
       </section>
-      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
+      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div><div id="projArchHost"></div></div></section>
       <section class="view" id="v-cockpit" hidden></section>
       <section class="view" id="v-reports" hidden aria-label="Reports"></section><!-- BL-337: Reports, every project's week (components/reporting/ReportsPage.jsx) -->
       <section class="view" id="v-reporting" hidden aria-label="Reporting"></section><!-- BL-337: one project's reporting space (components/reporting/ReportingSpace.jsx) -->
       <section class="view" id="v-psettings" hidden aria-labelledby="psTitle"></section><!-- #228: the full-page project settings (components/project/ProjectSettings.jsx) -->
       <section class="view" id="v-notes" hidden></section><!-- BL-301 B: a project's Notes tab, and the portfolio's notes -->
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
-            <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
+            <section class="view" id="v-people" hidden><div class="wrapmax"><div class="plhead"><h1>People</h1><button type="button" class="btn primary" id="plAdd" aria-haspopup="dialog">Add a person</button></div><div id="peopleRoot"></div></div></section><!-- #248: the People page v2 (components/people/PeoplePage.jsx draws #peopleRoot) -->
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
       <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
@@ -4640,7 +4682,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PROMS: () => PROMS,
     PRS: () => PRS,
     PSORTS: () => PSORTS,
-    PSORTT: () => PSORTT,
     PS_CATS: () => PS_CATS,
     PULSE: () => PULSE,
     PageDialogs: () => PageDialogs,
@@ -5527,6 +5568,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     drawPeekBar: () => drawPeekBar,
     drawPeekNotes: () => drawPeekNotes,
     drawPrep: () => drawPrep,
+    drawProjArchived: () => drawProjArchived,
     drawReviewFilters: () => drawReviewFilters,
     drawStatusDot: () => drawStatusDot,
     drawTabs: () => drawTabs,
@@ -6222,12 +6264,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     peopleAll: () => peopleAll,
     peopleCk: () => peopleCk,
     peopleParse: () => peopleParse,
-    peopleTabs: () => peopleTabs,
     peopleText: () => peopleText,
     permissionFlow: () => permissionFlow,
     permissionInfo: () => permissionInfo,
     permissionInfoText: () => permissionInfoText,
-    personCounts: () => personCounts,
     personFlags: () => personFlags,
     personLink: () => personLink,
     personLinks: () => personLinks,
@@ -6420,6 +6460,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     projArchive: () => projArchive,
     projArchiveBind: () => projArchiveBind,
     projArchiveHtml: () => projArchiveHtml,
+    projArchivedHtml: () => projArchivedHtml,
     projFeedItems: () => projFeedItems,
     projFirst: () => projFirst,
     projHistory: () => projHistory,
@@ -6435,8 +6476,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     promWaiting: () => promWaiting,
     promWho: () => promWho,
     psCat: () => psCat,
+    psCatOf: () => psCatOf,
     psChanged: () => psChanged,
     psCode: () => psCode,
+    psJump: () => psJump,
     psProject: () => psProject,
     psQ: () => psQ,
     psTick: () => psTick,
@@ -28528,7 +28571,7 @@ ${s5}`;
       null
     );
     const [cur, setCur] = d2(0);
-    const [, tick] = d2(0);
+    const [, tick2] = d2(0);
     const tools = profileTools(profile, Object.keys(host2 || {}));
     const buttons = (
       /** @type {import("../core/editorProfiles.js").ToolDef[]} */
@@ -28537,7 +28580,7 @@ ${s5}`;
     const refresh = () => {
       const root2 = bar.current, h5 = handle2();
       if (!root2 || !h5 || h5.editor.isDestroyed) return;
-      tick((n4) => n4 + 1);
+      tick2((n4) => n4 + 1);
       for (
         const b5 of
         /** @type {NodeListOf<HTMLElement>} */
@@ -28590,7 +28633,7 @@ ${s5}`;
         t47.closest ? t47.closest("button[data-nt]") : null
       );
       if (!b5) return;
-      if (e4.key === "ArrowDown") tick((n4) => n4 + 1);
+      if (e4.key === "ArrowDown") tick2((n4) => n4 + 1);
       const i5 = buttons.findIndex((x5) => x5.id === b5.dataset.nt);
       let to2 = -1;
       if (e4.key === "ArrowRight") to2 = (i5 + 1) % buttons.length;
@@ -28677,7 +28720,7 @@ ${s5}`;
           if (
             /** @type {Element} */
             e4.target.closest(".rtemenu")
-          ) tick((n4) => n4 + 1);
+          ) tick2((n4) => n4 + 1);
         },
         onClick: (e4) => {
           const b5 = (
@@ -30410,70 +30453,6 @@ ${s5}`;
     ] });
   }
 
-  // components/work/NewTile.jsx
-  function NewTile({ word, decisions, hidden, onNew, onDecision, id: id2 = "newBtn", popup }) {
-    if (decisions) {
-      return /* @__PURE__ */ u2(
-        Menu,
-        {
-          label: word,
-          ariaLabel: word,
-          tip: word,
-          icon: "plus",
-          labelCls: "w",
-          id: "newBtn",
-          btnCls: "newb hasmenu",
-          hidden,
-          menuId: "newDecMenu",
-          menuLabel: "New decision",
-          onPick: (id3) => onDecision(id3 === "needed" ? "needed" : "made"),
-          items: [
-            { id: "made", icon: "check", name: "Record a decision", line: "Already taken. Opens as Made, dated today.", data: { newd: "made" } },
-            { id: "needed", icon: "flag", name: "Ask for a decision", line: "Waiting on someone. Opens as Pending, with a needed-by date.", data: { newd: "needed" } }
-          ]
-        }
-      );
-    }
-    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: id2, "aria-label": word, "data-tip": word, hidden, "aria-haspopup": popup, onClick: onNew, children: [
-      /* @__PURE__ */ u2(Icon, { name: "plus" }),
-      /* @__PURE__ */ u2("span", { class: "w", children: word }),
-      /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
-    ] }) });
-  }
-  function drawNewTile(host2, props) {
-    R(/* @__PURE__ */ u2(NewTile, { ...props }), host2);
-  }
-
-  // components/Peek.jsx
-  function Peek({ id: id2, label, cls, open: open2 = true, children }) {
-    return /* @__PURE__ */ u2("aside", { class: cls, id: id2, role: "dialog", "aria-label": label, hidden: !open2, children });
-  }
-  function PeekBar({ onClose, closeKey = "Esc", onExpand, expandLabel = "Expand to full width", onPrev, onNext, prevOff, nextOff, ids = {}, children }) {
-    return /* @__PURE__ */ u2("div", { class: "pk-bar", children: [
-      /* @__PURE__ */ u2(IconButton, { icon: "arrowright", label: "Close", sm: false, id: ids.close, keyHint: closeKey, onClick: onClose }),
-      onExpand ? /* @__PURE__ */ u2(IconButton, { icon: "expand", label: expandLabel, sm: false, id: ids.expand, onClick: onExpand }) : null,
-      onPrev || onNext ? /* @__PURE__ */ u2("span", { class: "pk-sep", "aria-hidden": "true" }) : null,
-      onPrev ? /* @__PURE__ */ u2(IconButton, { icon: "chevup", label: "Previous item", sm: false, id: ids.prev, why: prevOff ? "This is the first item" : void 0, onClick: onPrev }) : null,
-      onNext ? /* @__PURE__ */ u2(IconButton, { icon: "chevdown", label: "Next item", sm: false, id: ids.next, why: nextOff ? "This is the last item" : void 0, onClick: onNext }) : null,
-      children
-    ] });
-  }
-  function peekFrame(id2, { label, cls }) {
-    const was = document.getElementById(id2);
-    if (was) return was;
-    const host2 = document.createElement("div");
-    R(/* @__PURE__ */ u2(Peek, { id: id2, label, cls, open: false }), host2);
-    const el2 = (
-      /** @type {HTMLElement} */
-      host2.firstElementChild
-    );
-    document.body.appendChild(el2);
-    return el2;
-  }
-  function drawPeekBar(host2, props) {
-    R(/* @__PURE__ */ u2(PeekBar, { ...props }), host2);
-  }
-
   // stores/settings.js
   var catalogue = y3(null);
   var catalogueError = y3("");
@@ -31516,13 +31495,14 @@ ${s5}`;
 
   // stores/projectSettings.js
   var PS_CATS = [
-    ["general", "General", "name client code status folder project details"],
+    ["general", "Project", "name client code status folder project details general"],
     ["people", "People and partners", "people partners partner organisations organisation role register"],
-    ["logos", "Logos", "logos firm client partner header picture"],
+    ["ws", "Workstreams", "workstreams workstream lead keywords rename merge retire"],
     ["miles", "Milestones", "milestones plan agreed expected dates add edit"],
-    ["rep", "Reporting", "reporting client report how often reminder weekly report day"],
-    ["arch", "Archive", "archive close restore project nothing is deleted"]
+    ["rep", "Client report and logos", "reporting client report how often reminder logos firm partner header picture"],
+    ["arch", "Archive and close", "archive close restore project nothing is deleted"]
   ];
+  var psCatOf = (c5) => c5 === "logos" ? "rep" : PS_CATS.some((x5) => x5[0] === c5) ? c5 : "general";
   var psCode = y3("");
   var psCat = y3("general");
   var psQ = y3("");
@@ -32860,15 +32840,15 @@ ${s5}`;
       } else showForm();
       let done = false;
       const onClose = () => {
-        if (!dlg.open) finish(null);
-      }, finish = (v5) => {
+        if (!dlg.open) finish2(null);
+      }, finish2 = (v5) => {
         if (!done) {
           done = true;
           dlg.removeEventListener("close", onClose);
           res(v5);
         }
       }, fin = (v5) => {
-        finish(v5);
+        finish2(v5);
         if (dlg.open) dlg.close();
       };
       $("#pdMatch").onclick = (e4) => {
@@ -34452,6 +34432,739 @@ ${s5}`;
     xcueSoon();
   }
 
+  // stores/peopleRegister.js
+  var COL_ON = "Projects", COL_OFF = "Left projects";
+  var codesOf = (v5) => String(v5 || "").split(",").map((x5) => x5.trim()).filter(Boolean);
+  var NO_FOLLOW = /^(no|n|false|0|-)$/i;
+  var regCache = { text: (
+    /** @type {string|null} */
+    null
+  ), list: (
+    /** @type {any[]} */
+    []
+  ) };
+  function regList() {
+    const live = D.people_register && typeof D.people_register.text === "string" ? D.people_register.text : null;
+    const text = REGPEND === null && live !== null && D.people_register.exists !== false ? live : REGTEXT || "";
+    if (regCache.text !== text) regCache = { text, list: peopleParse(text) };
+    return regCache.list;
+  }
+  function regExtra(name) {
+    const r4 = pFind(regList(), name);
+    return r4 && r4.extra || {};
+  }
+  var followedIn = (x5) => {
+    const v5 = String(x5.VIP || "").trim();
+    return !!v5 && !NO_FOLLOW.test(v5);
+  };
+  function rowOf(map, n4) {
+    if (!map.has(n4)) map.set(n4, { n: n4, it: {}, oa: [], al: [], or: [], dw: [], items: [] });
+    return map.get(n4);
+  }
+  function countsOf(x5, c5) {
+    if (!x5.it[c5]) x5.it[c5] = { a: 0, r: 0, d: 0, st: false };
+    return x5.it[c5];
+  }
+  function registerRows() {
+    const rs2 = resolver(), canon = (n4) => (rs2(n4) || {}).name || n4, map = /* @__PURE__ */ new Map();
+    regList().forEach((p6) => {
+      if (!p6.hidden) rowOf(map, p6.name);
+    });
+    const own = (i5, owner, k5) => {
+      if (!owner || owner === "TBC") return null;
+      const x5 = rowOf(map, canon(owner));
+      countsOf(x5, i5.p)[k5]++;
+      x5.items.push(i5);
+      return x5;
+    };
+    A4.forEach((a5) => {
+      const x5 = own(a5, a5.o, "a");
+      if (x5 && a5.st === "Open") x5.oa.push(a5);
+      if (x5 && open(a5)) x5.al.push(a5);
+    });
+    R3.forEach((r4) => {
+      const x5 = own(r4, r4.o, "r");
+      if (x5 && open(r4)) x5.or.push(r4);
+    });
+    DEC.forEach((d5) => {
+      const x5 = own(d5, d5.by, "d");
+      if (x5 && d5.st === "Pending") x5.dw.push(d5);
+    });
+    const st2 = D.stakeholders || {};
+    Object.keys(st2).forEach((c5) => (st2[c5] || []).forEach((s5) => {
+      if (s5 && s5 !== "TBC") countsOf(rowOf(map, canon(s5)), c5).st = true;
+    }));
+    const codes = new Set(P4.map((p6) => p6.code));
+    return [...map.values()].filter((x5) => !isHiddenPerson(x5.n)).map((x5) => finish(x5, codes)).sort((a5, b5) => a5.n.localeCompare(b5.n));
+  }
+  function finish(x5, codes) {
+    const p6 = pFind(regList(), x5.n) || null, me2 = isMe(x5.n), extra = regExtra(x5.n);
+    const derived = Object.keys(x5.it).filter((c5) => codes.has(c5));
+    const left = new Set(codesOf(extra[COL_OFF]));
+    const on2 = [.../* @__PURE__ */ new Set([...derived, ...codesOf(extra[COL_ON]).filter((c5) => codes.has(c5))])].filter((c5) => !left.has(c5));
+    const email = p6 && p6.email || "", org = p6 && p6.org || "", role = p6 && p6.role || "";
+    const missing = me2 ? [] : [...email ? [] : ["email"], ...org ? [] : ["organisation"], ...role ? [] : ["role"]];
+    const lateItems = [...x5.al, ...x5.or].filter((i5) => i5.due && i5.due < TODAY);
+    return { ...x5, p: p6, me: me2, email, org, role, aliases: p6 && p6.aliases || [], followed: followedIn(extra), derived, on: P4.map((q5) => q5.code).filter((c5) => on2.includes(c5)), missing, late: lateItems.length, lateItems };
+  }
+  var missingWords = (x5) => x5.missing.length ? `Missing: ${x5.missing.join(", ")}` : "";
+  function countsIn(x5, code) {
+    const cs2 = code ? [code] : Object.keys(x5.it);
+    return cs2.reduce((s5, c5) => {
+      const t47 = x5.it[c5];
+      if (t47) {
+        s5.a += t47.a;
+        s5.r += t47.r;
+        s5.d += t47.d;
+      }
+      return s5;
+    }, { a: 0, r: 0, d: 0 });
+  }
+  var PF_FIELDS = ["proj", "inv", "org", "fol", "att"];
+  var newFilter = () => ({ q: "", f: Object.fromEntries(PF_FIELDS.map((k5) => [k5, /* @__PURE__ */ new Set()])), pk: "proj" });
+  function clearFilter(s5) {
+    PF_FIELDS.forEach((k5) => s5.f[k5].clear());
+    s5.q = "";
+  }
+  function peopleFields(L3, s5, opt) {
+    const code = opt.code || "", has = (f5) => L3.some(f5);
+    const scope = () => code ? [code] : s5.f.proj.size ? [...s5.f.proj].filter((v5) => v5 !== "none") : P4.map((p6) => p6.code);
+    const others = P4.filter((p6) => p6.code !== code && has((x5) => x5.on.includes(p6.code)));
+    const proj = (
+      /** @type {[string, string][]} */
+      [
+        ...others.map((p6) => [p6.code, code ? `Also on ${p6.name}` : p6.name]),
+        ...code && has((x5) => x5.on.length === 1) ? [["only", "Only on this project"]] : [],
+        ...!code && has((x5) => !x5.on.length) ? [["none", "On no project"]] : []
+      ]
+    );
+    const inv = (
+      /** @type {[string, string][]} */
+      [["a", "Owns actions"], ["r", "Owns risks and issues"], ["d", "Decides"], ["named", "Named only"]]
+    );
+    const invHit = (x5, v5) => scope().some((c5) => {
+      const t47 = x5.it[c5];
+      if (v5 === "named") return x5.on.includes(c5) && !(t47 && (t47.a || t47.r || t47.d));
+      return !!t47 && t47[
+        /** @type {"a"|"r"|"d"} */
+        v5
+      ] > 0;
+    });
+    const orgs = [...new Set(L3.map((x5) => x5.org).filter(Boolean))].sort();
+    const F5 = [
+      [
+        "proj",
+        code ? "Other projects" : "Project",
+        "Who",
+        proj,
+        (x5, v5) => v5 === "only" ? x5.on.length === 1 : v5 === "none" ? !x5.on.length : x5.on.includes(v5),
+        code ? "Also on another project, or on this one only." : "Owns an item there, is named on it, or was added to it."
+      ],
+      ["inv", "How they're involved", "Who", inv.filter(([v5]) => has((x5) => invHit(x5, v5))), invHit, code ? "In this project." : "In the projects chosen under Project, or in any project."],
+      [
+        "org",
+        "Organisation",
+        "Who",
+        [...orgs.map((o5) => (
+          /** @type {[string, string]} */
+          [o5, o5]
+        )), ...has((x5) => !x5.org) ? [
+          /** @type {[string, string]} */
+          ["—", "No organisation"]
+        ] : []],
+        (x5, v5) => v5 === "—" ? !x5.org : x5.org === v5,
+        ""
+      ],
+      ["fol", "Followed", "Who", opt.follow && has((x5) => x5.followed) ? [["yes", "Followed"], ["no", "Not followed"]] : [], (x5, v5) => v5 === "yes" ? x5.followed : !x5.followed, "Set in each person's details."],
+      [
+        "att",
+        "Needs attention",
+        "Tidy up",
+        /** @type {[string, string][]} */
+        [["email", "No email"], ["organisation", "No organisation"], ["role", "No role"]].filter(([v5]) => has((x5) => x5.missing.includes(v5))),
+        (x5, v5) => x5.missing.includes(v5),
+        "Details worth filling in, so mail and minutes map to the right person."
+      ]
+    ];
+    return F5.filter((f5) => f5[3].length);
+  }
+  var searchHit = (x5, q5) => {
+    const t47 = q5.trim().toLowerCase();
+    return !t47 || [x5.n, x5.email, x5.org, x5.role, ...x5.aliases].some((v5) => v5 && v5.toLowerCase().includes(t47));
+  };
+  function personPasses(x5, F5, s5, skip) {
+    for (const f5 of F5) {
+      const set = s5.f[f5[0]];
+      if (f5[0] === skip || !set || !set.size) continue;
+      if (![...set].some((v5) => f5[4](x5, v5))) return false;
+    }
+    return skip === "q" || searchHit(x5, s5.q);
+  }
+  var filterCount = (F5, s5) => F5.filter((f5) => s5.f[f5[0]].size).length;
+  var filterAny = (F5, s5) => !!s5.q.trim() || filterCount(F5, s5) > 0;
+  function rowIn(L3, name) {
+    let r4 = pFind(L3, name);
+    if (!r4) {
+      r4 = pBlank(name);
+      L3.push(r4);
+    }
+    r4.extra = { ...r4.extra || {} };
+    return r4;
+  }
+  function setOn(r4, derived, want) {
+    const on2 = new Set(codesOf(r4.extra[COL_ON])), off = new Set(codesOf(r4.extra[COL_OFF]));
+    P4.forEach(({ code }) => {
+      const yes = want.includes(code), auto = derived.includes(code);
+      if (yes) {
+        off.delete(code);
+        if (auto) on2.delete(code);
+        else on2.add(code);
+      } else {
+        on2.delete(code);
+        if (auto) off.add(code);
+        else off.delete(code);
+      }
+    });
+    r4.extra[COL_ON] = [...on2].join(", ");
+    r4.extra[COL_OFF] = [...off].join(", ");
+  }
+  var derivedOf = (name) => (registerRows().find((x5) => x5.n === name) || { derived: [] }).derived;
+  var onOf = (name) => (registerRows().find((x5) => x5.n === name) || { on: [] }).on;
+  function savePerson(name, f5) {
+    const derived = derivedOf(name);
+    return regSave(`Changed ${name} in the people register`, (L3) => {
+      const r4 = rowIn(L3, name);
+      Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+      if (f5.follow !== void 0) {
+        const cur = String(r4.extra.VIP || "").trim();
+        r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+      }
+      if (f5.projects) setOn(r4, derived, f5.projects);
+      return L3;
+    });
+  }
+  function addPerson(name, f5) {
+    return regSave(`Added ${name} to the people register`, (L3) => {
+      const r4 = rowIn(L3, name);
+      Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+      if (f5.projects) setOn(r4, [], f5.projects);
+      return L3;
+    });
+  }
+  function addToProject(name, code) {
+    const derived = derivedOf(name), want = [.../* @__PURE__ */ new Set([...onOf(name), code])];
+    return regSave(`Added ${name} to ${projName(code)}`, (L3) => {
+      setOn(rowIn(L3, name), derived, want);
+      return L3;
+    });
+  }
+  function removeFromProject(name, code) {
+    const derived = derivedOf(name), want = onOf(name).filter((c5) => c5 !== code);
+    return regSave(`Removed ${name} from ${projName(code)}`, (L3) => {
+      setOn(rowIn(L3, name), derived, want);
+      return L3;
+    });
+  }
+  function removeFromRegister(name) {
+    return regSave(`Removed ${name} from the people register`, (L3) => L3.filter((p6) => pKey(p6.name) !== pKey(name)));
+  }
+  var projName = (code) => (P4.find((p6) => p6.code === code) || { name: code }).name;
+  var inRegister = (name) => !!pFind(regList(), name);
+  function nameTaken(name) {
+    const r4 = resolver()(name);
+    return r4.status === "alias" || r4.status === "email" || r4.status === "known" && !!r4.registered || pKey(name) === pKey(S.me);
+  }
+
+  // components/people/PeopleParts.jsx
+  var peoplePlural = (n4, w6) => `${n4} ${w6}${n4 === 1 ? "" : "s"}`;
+  var peopleWord = (n4) => peoplePlural(n4, "person").replace(/persons$/, "people");
+  function Count({ n: n4, label, nav, extra, late }) {
+    if (!n4) return /* @__PURE__ */ u2("span", { class: late ? "late" : void 0, children: "0" });
+    return /* @__PURE__ */ u2("a", { href: "#", class: `cntl${late ? " late" : ""}`, "data-nav": navOf(nav, extra), "data-n": String(n4), "aria-label": `${label}, open in Work`, children: n4 });
+  }
+  var Star = () => /* @__PURE__ */ u2("svg", { class: "i pstar", viewBox: "0 0 24 24", fill: "currentColor", stroke: "currentColor", "stroke-width": "1.5", "stroke-linejoin": "round", role: "img", "aria-label": "Followed", children: /* @__PURE__ */ u2("path", { d: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.2 9.5l6.1-.9z" }) });
+  function NameCell({ x: x5, code, follow, codes, you }) {
+    const also = codes ? x5.on.filter((c5) => c5 !== code) : [];
+    return /* @__PURE__ */ u2("td", { class: "title", children: [
+      /* @__PURE__ */ u2("a", { href: "#", class: "plink2", "data-person": x5.n, title: x5.me ? "Open My work" : `Open ${x5.n}’s work`, children: you && x5.me ? `You (${x5.n})` : x5.n }),
+      follow && x5.followed ? /* @__PURE__ */ u2(S2, { children: [
+        " ",
+        /* @__PURE__ */ u2(Star, {})
+      ] }) : null,
+      x5.me && !you ? /* @__PURE__ */ u2(S2, { children: [
+        " ",
+        /* @__PURE__ */ u2("span", { class: "tag", children: "(you)" })
+      ] }) : null,
+      x5.missing.length ? /* @__PURE__ */ u2(S2, { children: [
+        " ",
+        /* @__PURE__ */ u2("span", { class: "tag warn", "data-needs": true, title: missingWords(x5), children: "needs details" })
+      ] }) : null,
+      also.map((c5) => /* @__PURE__ */ u2("span", { children: [
+        " ",
+        /* @__PURE__ */ u2("span", { class: "tag pcodetag", title: `Also on ${pName(c5)}`, children: c5 })
+      ] }, c5))
+    ] });
+  }
+  var Dash = ({ v: v5 }) => v5 ? /* @__PURE__ */ u2(S2, { children: v5 }) : /* @__PURE__ */ u2("span", { class: "sub", children: "—" });
+  function PeopleTools({ L: L3, F: F5, s: s5, ids, onChange }) {
+    const host2 = A2(
+      /** @type {HTMLSpanElement|null} */
+      null
+    );
+    _2(() => {
+      if (host2.current) drawBar(host2.current, L3, F5, s5, ids, onChange);
+    });
+    return /* @__PURE__ */ u2("div", { class: "toolbar pmtools", role: "search", children: [
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          id: `${ids}Q`,
+          type: "search",
+          placeholder: "Search name, alias, email or role",
+          "aria-label": "Search people",
+          autocomplete: "off",
+          value: s5.q,
+          onInput: (e4) => {
+            s5.q = /** @type {HTMLInputElement} */
+            e4.target.value;
+            onChange();
+          },
+          onKeyDown: (e4) => {
+            if (e4.key === "Escape" && s5.q) {
+              e4.preventDefault();
+              e4.stopPropagation();
+              s5.q = "";
+              onChange();
+            }
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("span", { class: "dd", id: `${ids}Fdd`, ref: host2 })
+    ] });
+  }
+  function drawBar(h5, L3, F5, s5, ids, onChange) {
+    if (F5.length && !F5.some((f5) => f5[0] === s5.pk)) s5.pk = F5[0][0];
+    const shown2 = L3.filter((x5) => personPasses(x5, F5, s5)).length, n4 = filterCount(F5, s5);
+    drawFilterBar(h5, {
+      bare: true,
+      fields: F5.map((f5) => ({
+        id: f5[0],
+        label: f5[1],
+        section: f5[2],
+        note: f5[5] || void 0,
+        on: s5.f[f5[0]].size > 0,
+        selected: s5.f[f5[0]],
+        mark: s5.f[f5[0]].size ? String(s5.f[f5[0]].size) : "",
+        options: () => f5[3].map(([v5, l6]) => ({ value: v5, label: l6, count: L3.filter((x5) => personPasses(x5, F5, s5, f5[0]) && f5[4](x5, v5)).length }))
+      })),
+      onSelect: (k5, vals) => {
+        const set = s5.f[k5];
+        if (!set) return;
+        set.clear();
+        vals.forEach((v5) => set.add(v5));
+        onChange();
+      },
+      more: {
+        id: `${ids}FBtn`,
+        menuId: `${ids}FMenu`,
+        label: n4 ? `Filter people: ${n4} on` : "Filter people",
+        menuLabel: "Filter people",
+        count: n4,
+        on: !!n4,
+        key: "F",
+        listLabel: "Filters",
+        headId: `${ids}Fph`,
+        field: s5.pk,
+        onField: (k5) => {
+          s5.pk = k5;
+          onChange();
+        },
+        result: `Showing ${shown2} of ${L3.length}`,
+        resultId: `${ids}FpResult`,
+        doneId: `${ids}FpDone`,
+        clearAll: filterAny(F5, s5) ? { id: `${ids}FpClear`, run: () => {
+          clearFilter(s5);
+          onChange();
+        } } : null
+      }
+    });
+  }
+  function PeopleApplied({ F: F5, s: s5, ids, count, onChange }) {
+    const on2 = F5.filter((f5) => s5.f[f5[0]].size);
+    const label = (f5) => {
+      const v5 = [...s5.f[f5[0]]];
+      return `${f5[1]}: ${v5.length <= 2 ? v5.map((x5) => (f5[3].find((o5) => o5[0] === x5) || [x5, x5])[1]).join(", ") : v5.length + " chosen"}`;
+    };
+    return /* @__PURE__ */ u2("div", { class: "wapplied", id: `${ids}Applied`, children: [
+      on2.map((f5) => /* @__PURE__ */ u2("span", { class: "fchip", children: [
+        label(f5),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            "aria-label": `Remove the ${f5[1].toLowerCase()} filter`,
+            "data-tip": `Remove the ${f5[1].toLowerCase()} filter`,
+            onClick: () => {
+              s5.f[f5[0]].clear();
+              onChange();
+            },
+            children: /* @__PURE__ */ u2(Icon, { name: "x" })
+          }
+        )
+      ] }, f5[0])),
+      s5.q.trim() ? /* @__PURE__ */ u2("span", { class: "fchip", children: [
+        "Search: “",
+        s5.q.trim(),
+        "”",
+        /* @__PURE__ */ u2("button", { type: "button", "aria-label": "Clear the search", "data-tip": "Clear the search", onClick: () => {
+          s5.q = "";
+          onChange();
+        }, children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
+      ] }) : null,
+      filterAny(F5, s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", id: `${ids}ClearF`, onClick: () => {
+        clearFilter(s5);
+        onChange();
+      }, children: "Clear all" }) : null,
+      /* @__PURE__ */ u2("span", { class: "sp" }),
+      /* @__PURE__ */ u2("span", { class: "sub", id: `${ids}Count`, role: "status", children: count })
+    ] });
+  }
+  function useFields(L3, s5, opt) {
+    return peopleFields(L3, s5, opt);
+  }
+  function useRedraw() {
+    const [, set] = d2(0);
+    return () => set((n4) => n4 + 1);
+  }
+  var personForm = y3(
+    /** @type {{t: FormTarget, h: FormHandlers}|null} */
+    null
+  );
+  var formHost = (
+    /** @type {HTMLElement|null} */
+    null
+  );
+  function openPersonForm(t47, h5) {
+    if (!formHost) {
+      formHost = document.createElement("div");
+      formHost.id = "personEditHost";
+      document.body.appendChild(formHost);
+      R(/* @__PURE__ */ u2(PersonFormHost, {}), formHost);
+    }
+    personForm.value = { t: t47, h: h5 };
+  }
+  function PersonFormHost() {
+    const cur = personForm.value;
+    return /* @__PURE__ */ u2(PersonForm, { t: cur ? cur.t : null, onClose: () => {
+      personForm.value = null;
+    }, onSave: cur ? cur.h.onSave : async () => null, onRemove: cur ? cur.h.onRemove : void 0 });
+  }
+  function PersonForm({ t: t47, onClose, onSave, onRemove }) {
+    const x5 = t47 && t47.x, open2 = !!t47, ref = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    ), [err, setErr] = d2("");
+    const val2 = (id2) => (
+      /** @type {HTMLInputElement|null} */
+      (ref.current && ref.current.querySelector("#" + id2) || { value: "" }).value.trim()
+    );
+    const save2 = async () => {
+      const name = t47 && t47.isNew ? val2("peName") : x5 ? x5.n : "";
+      if (!name) {
+        setErr("A full name is required.");
+        return;
+      }
+      if (t47 && t47.isNew && nameTaken(name)) {
+        setErr(`${name} is already in the register.`);
+        return;
+      }
+      const ticks = [...ref.current && ref.current.querySelectorAll("[data-pe-proj]") || []].filter((b5) => (
+        /** @type {HTMLInputElement} */
+        b5.checked
+      )).map((b5) => (
+        /** @type {HTMLElement} */
+        b5.dataset.peProj || ""
+      ));
+      const fol = (
+        /** @type {HTMLInputElement|null} */
+        ref.current && ref.current.querySelector("#peFollow")
+      );
+      setErr("");
+      const v5 = { email: val2("peEmail"), aliases: val2("peAliases").split(",").map((a5) => a5.trim()).filter(Boolean), org: val2("peOrg"), role: val2("peRole"), projects: ticks };
+      if (t47 && t47.follow && fol) v5.follow = fol.checked;
+      onClose();
+      await onSave(name, v5, !!(t47 && t47.isNew));
+    };
+    const k5 = t47 ? t47.isNew ? "new" : x5 ? x5.n : "" : "";
+    return /* @__PURE__ */ u2(Dialog, { id: "personEdit", class: "prepdlg", open: open2, onClose: () => {
+      setErr("");
+      onClose();
+    }, labelledBy: "peTitle", focus: t47 && t47.isNew ? "#peName" : "#peEmail", children: open2 ? /* @__PURE__ */ u2("div", { ref, children: [
+      /* @__PURE__ */ u2("div", { class: "prephead", children: [
+        /* @__PURE__ */ u2("div", { style: "flex:1", children: [
+          /* @__PURE__ */ u2("div", { class: "sub", children: "One record for the person, the same on every project" }),
+          /* @__PURE__ */ u2("h2", { id: "peTitle", children: t47 && t47.isNew ? "Add a person" : `Edit ${x5 ? x5.n : ""}` })
+        ] }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "iconbtn", id: "peClose", "aria-label": "Close", onClick: onClose, children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "prepbody", children: [
+        /* @__PURE__ */ u2("div", { class: "pdgrid", children: [
+          /* @__PURE__ */ u2("label", { for: "peName", children: "Full name" }),
+          /* @__PURE__ */ u2("input", { type: "text", id: "peName", autocomplete: "off", defaultValue: x5 ? x5.n : "", readOnly: !(t47 && t47.isNew) }),
+          t47 && t47.isNew ? null : /* @__PURE__ */ u2("span", { class: "pdh", children: "Names are not changed here; ask creaite fixes a spelling across every item." }),
+          /* @__PURE__ */ u2("label", { for: "peEmail", children: "Email" }),
+          /* @__PURE__ */ u2("input", { type: "text", id: "peEmail", autocomplete: "off", placeholder: "name@company.com", defaultValue: x5 ? x5.email : "" }),
+          /* @__PURE__ */ u2("span", { class: "pdh", children: "Used to match mail and to address a drafted email. With none, a draft is still made, with nothing in To." }),
+          /* @__PURE__ */ u2("label", { for: "peAliases", children: "Aliases" }),
+          /* @__PURE__ */ u2("input", { type: "text", id: "peAliases", autocomplete: "off", placeholder: "Short forms, separated by commas", defaultValue: x5 ? x5.aliases.join(", ") : "" }),
+          /* @__PURE__ */ u2("span", { class: "pdh", children: "Other names and addresses that mean this person in minutes and mail." }),
+          /* @__PURE__ */ u2("label", { for: "peOrg", children: "Organisation" }),
+          /* @__PURE__ */ u2("input", { type: "text", id: "peOrg", autocomplete: "off", defaultValue: x5 ? x5.org : "" }),
+          /* @__PURE__ */ u2("label", { for: "peRole", children: "Role" }),
+          /* @__PURE__ */ u2("input", { type: "text", id: "peRole", autocomplete: "off", defaultValue: x5 ? x5.role : "" }),
+          /* @__PURE__ */ u2("span", { class: "pdh", children: "Organisation and role are one entry for the person, the same on every project." }),
+          /* @__PURE__ */ u2("span", { class: "pdlab", id: "peProjL", children: "On projects" }),
+          /* @__PURE__ */ u2("div", { id: "peProj", class: "setticks", role: "group", "aria-labelledby": "peProjL", children: P4.map((p6) => /* @__PURE__ */ u2("label", { class: "settick", children: [
+            /* @__PURE__ */ u2("input", { type: "checkbox", "data-pe-proj": p6.code, defaultChecked: x5 ? x5.on.includes(p6.code) : (t47 && t47.code) === p6.code }),
+            " ",
+            p6.name
+          ] }, p6.code)) }),
+          /* @__PURE__ */ u2("span", { class: "pdh", children: "Tick the projects they belong to; with none ticked they sit in Not on any project yet." }),
+          t47 && t47.follow ? /* @__PURE__ */ u2(S2, { children: [
+            /* @__PURE__ */ u2("span", { class: "pdlab", children: "Follow" }),
+            /* @__PURE__ */ u2("label", { class: "settick", children: [
+              /* @__PURE__ */ u2("input", { type: "checkbox", id: "peFollow", defaultChecked: !!(x5 && x5.followed) }),
+              " Follow this person (VIP alerts)"
+            ] }),
+            /* @__PURE__ */ u2("span", { class: "pdh", children: "Their mail and chats are flagged for you first, and a star shows beside their name in this list, for you only. It never appears in a report, an export or a draft." })
+          ] }) : null
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "sub pemsg", id: "peErr", role: "alert", children: err }),
+        /* @__PURE__ */ u2("div", { class: "deacts", children: [
+          onRemove && x5 && t47 && t47.code && x5.on.includes(t47.code) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "peRemove", onClick: () => {
+            onClose();
+            onRemove(x5.n);
+          }, children: "Remove from this project" }) : null,
+          /* @__PURE__ */ u2("span", { class: "sp" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "peCancel", onClick: onClose, children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "peSave", onClick: save2, children: "Save" })
+        ] })
+      ] })
+    ] }, k5) : null });
+  }
+
+  // components/people/PeoplePage.jsx
+  var PTABS = [["all", "Everyone"], ["work", "With work"], ["none", "Nothing assigned"], ["att", "Needs attention"]];
+  var ptabOf = (t47) => PTABS.some((x5) => x5[0] === t47) ? String(t47) : "all";
+  var TAB_KEY = "creaite-peopletab";
+  var hasWork = (x5) => x5.oa.length + x5.or.length + x5.dw.length > 0;
+  var IN_TAB = { all: () => true, work: (x5) => hasWork(x5) || x5.me, none: (x5) => !hasWork(x5) && !x5.me, att: (x5) => x5.missing.length > 0 };
+  function setPeopleTab(t47) {
+    shared.PTAB = ptabOf(t47);
+    store.set(TAB_KEY, shared.PTAB);
+  }
+  var savedPeopleTab = () => ptabOf(store.get(TAB_KEY, "all"));
+  var SORTS = {
+    name: (x5) => x5.n.toLowerCase(),
+    email: (x5) => x5.email.toLowerCase(),
+    org: (x5) => x5.org.toLowerCase(),
+    role: (x5) => x5.role.toLowerCase(),
+    oa: (x5) => x5.oa.length,
+    or: (x5) => x5.or.length,
+    dw: (x5) => x5.dw.length,
+    late: (x5) => x5.late
+  };
+  var PL_COLS = [
+    ["name", "Name"],
+    ["email", "Email"],
+    ["org", "Organisation"],
+    ["role", "Role"],
+    ["", "Projects"],
+    ["oa", "Actions", "Open actions"],
+    ["or", "RAID", "Open risks and issues"],
+    ["dw", "Decisions", "Decisions waiting on them"],
+    ["late", "Overdue"]
+  ];
+  var ST = { s: newFilter() };
+  var sortOf = () => shared.PSORT && SORTS[shared.PSORT.col] ? shared.PSORT : { col: "late", dir: "desc" };
+  var plOwners = (L3) => [...new Set(L3.map((i5) => i5.o || i5.by).filter(Boolean))];
+  var plHandlers = {
+    onSave: (name, v5, isNew) => isNew ? addPerson(name, v5) : savePerson(name, v5)
+  };
+  function RemoveButton({ x: x5 }) {
+    const [ask2, setAsk] = d2(false);
+    if (!inRegister(x5.n)) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove ${x5.n} from the register`, why: "Only their items name them: there is no record to remove" });
+    if (!ask2) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove ${x5.n} from the register`, cls: "no", data: { "pl-remove": x5.n }, onClick: () => setAsk(true) });
+    return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": `Remove ${x5.n} from the register?`, children: [
+      /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: [
+        "Remove ",
+        x5.n,
+        " from the register? Their items keep the name."
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn danger sm", "data-pl-remove-yes": x5.n, onClick: () => {
+        setAsk(false);
+        removeFromRegister(x5.n);
+      }, children: "Remove" }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-pl-remove-no": x5.n, onClick: () => setAsk(false), children: "Keep" })
+    ] });
+  }
+  function PlRow({ x: x5 }) {
+    const nm3 = x5.me ? "you" : x5.n, late = x5.lateItems;
+    const edit = () => openPersonForm({ x: x5 }, plHandlers);
+    return /* @__PURE__ */ u2("tr", { "data-pn": x5.n, "data-pp": x5.n, class: `click${x5.missing.length ? " nr" : ""}`, children: [
+      /* @__PURE__ */ u2(NameCell, { x: x5, you: true }),
+      /* @__PURE__ */ u2("td", { children: x5.email ? x5.email : /* @__PURE__ */ u2(Dash, {}) }),
+      /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(Dash, { v: x5.org }) }),
+      /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(Dash, { v: x5.role }) }),
+      /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("span", { class: "pj", children: x5.on.length ? x5.on.map((c5, i5) => /* @__PURE__ */ u2("span", { children: [
+        i5 ? " " : "",
+        /* @__PURE__ */ u2("span", { class: "pcode plink", "data-proj": c5, role: "link", tabindex: 0, title: `Open ${pName(c5)}`, children: pName(c5) })
+      ] }, c5)) : /* @__PURE__ */ u2(Dash, {}) }) }),
+      /* @__PURE__ */ u2("td", { class: "num", children: /* @__PURE__ */ u2(Count, { n: x5.oa.length, label: `${peoplePlural(x5.oa.length, "open action")} owned by ${nm3}`, nav: "actions:open:", extra: { o: plOwners(x5.oa) } }) }),
+      /* @__PURE__ */ u2("td", { class: "num", children: /* @__PURE__ */ u2(Count, { n: x5.or.length, label: `${peoplePlural(x5.or.length, "open RAID item")} owned by ${nm3}`, nav: "raid:open:", extra: { o: plOwners(x5.or) } }) }),
+      /* @__PURE__ */ u2("td", { class: "num", children: /* @__PURE__ */ u2(Count, { n: x5.dw.length, label: `${peoplePlural(x5.dw.length, "decision")} waiting on ${nm3}`, nav: "decisions:pending:", extra: { o: plOwners(x5.dw) } }) }),
+      /* @__PURE__ */ u2("td", { class: `num${x5.late ? " late" : ""}`, children: /* @__PURE__ */ u2(
+        Count,
+        {
+          n: x5.late,
+          label: `${peoplePlural(x5.late, "overdue item")} owned by ${nm3}`,
+          nav: "all:open:",
+          extra: { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: plOwners(late) }
+        }
+      ) }),
+      /* @__PURE__ */ u2("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u2("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u2(S2, { children: [
+        x5.missing.length ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pl-details": x5.n, "aria-haspopup": "dialog", "aria-label": `Add details for ${x5.n}`, onClick: edit, children: "Add details" }) : null,
+        /* @__PURE__ */ u2(IconButton, { icon: "pencil", label: "Edit details", name: `Edit ${x5.n}`, haspopup: "dialog", data: { "pl-edit": x5.n }, onClick: edit }),
+        /* @__PURE__ */ u2(RemoveButton, { x: x5 })
+      ] }) })
+    ] });
+  }
+  function Head({ col, so: so2 }) {
+    const [k5, label, tip] = col;
+    if (!k5) return /* @__PURE__ */ u2("th", { scope: "col", children: label });
+    const on2 = so2.col === k5, num = !["name", "email", "org", "role"].includes(k5);
+    return /* @__PURE__ */ u2("th", { scope: "col", class: num ? "num" : void 0, "aria-sort": on2 ? so2.dir === "asc" ? "ascending" : "descending" : "none", "data-psort": k5, children: /* @__PURE__ */ u2("button", { type: "button", class: "thsort", title: tip, children: [
+      label,
+      on2 ? so2.dir === "asc" ? " ▲" : " ▼" : ""
+    ] }) });
+  }
+  function PeoplePage(_props) {
+    const s5 = ST.s, tab = ptabOf(shared.PTAB);
+    const all = registerRows(), F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
+    const so2 = sortOf(), f5 = SORTS[so2.col], dir = so2.dir === "asc" ? 1 : -1;
+    const L3 = hit2.filter(IN_TAB[tab]).sort((a5, b5) => (a5.me ? -1 : b5.me ? 1 : 0) || (() => {
+      const x5 = f5(a5), y5 = f5(b5);
+      return (x5 < y5 ? -1 : x5 > y5 ? 1 : 0) * dir;
+    })() || a5.n.localeCompare(b5.n));
+    const need = all.filter(IN_TAB.att).length;
+    const count = `Showing ${L3.length} of ${peopleWord(all.length)}${need ? ` · ${need} need${need === 1 ? "s" : ""} attention` : ""}`;
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("p", { class: "sub plintro", children: "Everyone creaite knows, one record each. A name on any item has a record here; one marked “needs details” is missing an email, organisation or role. Select a name for their page; right-click to draft an email with their work. Counts only." }),
+      /* @__PURE__ */ u2("div", { class: "tabhost", children: /* @__PURE__ */ u2(
+        Tabs,
+        {
+          id: "ptabs",
+          className: "tabs",
+          label: "People",
+          controls: "peopleTbl",
+          wrap: true,
+          selected: tab,
+          items: PTABS.map(([id2, label]) => ({ id: id2, label, count: hit2.filter(IN_TAB[id2]).length, data: { ptab: id2 } })),
+          onSelect: (id2) => {
+            if (id2 === tab) return;
+            setPeopleTab(id2);
+            navWrite(false);
+            drawPeoplePage();
+          }
+        }
+      ) }),
+      /* @__PURE__ */ u2(PeopleTools, { L: all, F: F5, s: s5, ids: "pl", onChange: drawPeoplePage }),
+      /* @__PURE__ */ u2(PeopleApplied, { F: F5, s: s5, ids: "pl", count, onChange: drawPeoplePage }),
+      /* @__PURE__ */ u2("div", { class: "tbl", id: "peopleTbl", role: "tabpanel", children: /* @__PURE__ */ u2("table", { class: "plt", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          PL_COLS.map((c5) => /* @__PURE__ */ u2(Head, { col: c5, so: so2 }, c5[0] || c5[1])),
+          /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions on the person" }) })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { id: "plRows", children: L3.length ? L3.map((x5) => /* @__PURE__ */ u2(PlRow, { x: x5 }, x5.n)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { colSpan: 10, class: "sub plnone", children: "No one matches. Try another tab or clear a filter." }) }) })
+      ] }) })
+    ] });
+  }
+  var tick = 0, bound = false;
+  function drawPeoplePage() {
+    const el2 = document.getElementById("peopleRoot");
+    if (!el2) return;
+    const add = document.getElementById("plAdd");
+    if (add && !bound) {
+      bound = true;
+      add.addEventListener("click", () => openPersonForm({ x: null, isNew: true }, plHandlers));
+    }
+    R(/* @__PURE__ */ u2(PeoplePage, { t: ++tick }, "pl"), el2);
+  }
+
+  // components/work/NewTile.jsx
+  function NewTile({ word, decisions, hidden, onNew, onDecision, id: id2 = "newBtn", popup }) {
+    if (decisions) {
+      return /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: word,
+          ariaLabel: word,
+          tip: word,
+          icon: "plus",
+          labelCls: "w",
+          id: "newBtn",
+          btnCls: "newb hasmenu",
+          hidden,
+          menuId: "newDecMenu",
+          menuLabel: "New decision",
+          onPick: (id3) => onDecision(id3 === "needed" ? "needed" : "made"),
+          items: [
+            { id: "made", icon: "check", name: "Record a decision", line: "Already taken. Opens as Made, dated today.", data: { newd: "made" } },
+            { id: "needed", icon: "flag", name: "Ask for a decision", line: "Waiting on someone. Opens as Pending, with a needed-by date.", data: { newd: "needed" } }
+          ]
+        }
+      );
+    }
+    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: id2, "aria-label": word, "data-tip": word, hidden, "aria-haspopup": popup, onClick: onNew, children: [
+      /* @__PURE__ */ u2(Icon, { name: "plus" }),
+      /* @__PURE__ */ u2("span", { class: "w", children: word }),
+      /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
+    ] }) });
+  }
+  function drawNewTile(host2, props) {
+    R(/* @__PURE__ */ u2(NewTile, { ...props }), host2);
+  }
+
+  // components/Peek.jsx
+  function Peek({ id: id2, label, cls, open: open2 = true, children }) {
+    return /* @__PURE__ */ u2("aside", { class: cls, id: id2, role: "dialog", "aria-label": label, hidden: !open2, children });
+  }
+  function PeekBar({ onClose, closeKey = "Esc", onExpand, expandLabel = "Expand to full width", onPrev, onNext, prevOff, nextOff, ids = {}, children }) {
+    return /* @__PURE__ */ u2("div", { class: "pk-bar", children: [
+      /* @__PURE__ */ u2(IconButton, { icon: "arrowright", label: "Close", sm: false, id: ids.close, keyHint: closeKey, onClick: onClose }),
+      onExpand ? /* @__PURE__ */ u2(IconButton, { icon: "expand", label: expandLabel, sm: false, id: ids.expand, onClick: onExpand }) : null,
+      onPrev || onNext ? /* @__PURE__ */ u2("span", { class: "pk-sep", "aria-hidden": "true" }) : null,
+      onPrev ? /* @__PURE__ */ u2(IconButton, { icon: "chevup", label: "Previous item", sm: false, id: ids.prev, why: prevOff ? "This is the first item" : void 0, onClick: onPrev }) : null,
+      onNext ? /* @__PURE__ */ u2(IconButton, { icon: "chevdown", label: "Next item", sm: false, id: ids.next, why: nextOff ? "This is the last item" : void 0, onClick: onNext }) : null,
+      children
+    ] });
+  }
+  function peekFrame(id2, { label, cls }) {
+    const was = document.getElementById(id2);
+    if (was) return was;
+    const host2 = document.createElement("div");
+    R(/* @__PURE__ */ u2(Peek, { id: id2, label, cls, open: false }), host2);
+    const el2 = (
+      /** @type {HTMLElement} */
+      host2.firstElementChild
+    );
+    document.body.appendChild(el2);
+    return el2;
+  }
+  function drawPeekBar(host2, props) {
+    R(/* @__PURE__ */ u2(PeekBar, { ...props }), host2);
+  }
+
   // components/peek/SneakPeek.jsx
   var SNEAK_ICON = [
     ["path", { d: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" }],
@@ -34483,7 +35196,7 @@ ${s5}`;
     ask: "Open ask creaite",
     project_page: "Open the project page",
     settings: "Open Settings",
-    people: "Open Settings › People",
+    people: "Open People",
     milestone_form: null,
     cx_edit: null
   };
@@ -35400,9 +36113,10 @@ ${s5}`;
           return;
         }
         if (to2 === "people") {
-          go2("settings", "people");
+          go2("people", "all");
         }
       },
+      /* #248: the People page is the register's home */
       ask: (text) => sneakAsk(at2, text),
       people: () => sneakPeople(),
       current: (field) => {
@@ -40259,59 +40973,18 @@ ${s5}`;
     ];
     if (!Array.isArray(shared.SAVED.all)) shared.SAVED.all = [];
   }
-  var PSORTT = { work: { col: "late", dir: "desc" }, none: { col: "name", dir: "asc" } };
-  shared.PTAB = store.get("creaite-peopletab", "work") === "none" ? "none" : "work";
+  shared.PTAB = savedPeopleTab();
   function setPTab(t47) {
-    t47 = t47 === "none" ? "none" : "work";
-    PSORTT[shared.PTAB] = shared.PSORT;
-    shared.PTAB = t47;
-    shared.PSORT = PSORTT[t47];
-    store.set("creaite-peopletab", t47);
-  }
-  function peopleTabs() {
-    const L3 = PERS().filter((x5) => !isHiddenPerson(x5.name)).map((x5) => Object.assign(x5, { dw: x5.D.filter((d5) => d5.st === "Pending"), cl: [...x5.A, ...x5.R].filter((i5) => !open(i5)).length + x5.D.filter((d5) => d5.st !== "Pending").length }));
-    const has = (x5) => x5.oa.length || x5.or.length || x5.dw.length;
-    return { work: L3.filter((x5) => has(x5) || isMe(x5.name)), none: L3.filter((x5) => !has(x5) && !isMe(x5.name)) };
+    setPeopleTab(t47);
   }
   function renderPeople() {
-    const T6 = peopleTabs(), none = shared.PTAB === "none", f5 = PSORTS[shared.PSORT.col] || PSORTS.name;
-    const L3 = T6[shared.PTAB].sort((a5, b5) => !none && (isMe(a5.name) ? -1 : isMe(b5.name) ? 1 : 0) || (() => {
-      const x5 = f5(a5), y5 = f5(b5);
-      return (x5 < y5 ? -1 : x5 > y5 ? 1 : 0) * (shared.PSORT.dir === "asc" ? 1 : -1);
-    })() || a5.name.localeCompare(b5.name));
-    if (!$("#ptabsHost")) addHTML($("#peopleTbl"), "beforebegin", html`<div class="tabhost" id="ptabsHost"></div>`);
-    drawTabs($("#ptabsHost"), {
-      items: [["work", "With work"], ["none", "Nothing assigned"]].map(([k5, l6]) => ({ id: k5, label: l6, count: T6[k5].length, data: { ptab: k5 } })),
-      selected: shared.PTAB,
-      onSelect: (k5) => {
-        if (k5 === shared.PTAB) return;
-        setPTab(k5);
-        renderPeople();
-        navWrite(false);
-      },
-      label: "People",
-      className: "tabs",
-      id: "ptabs",
-      controls: "peopleTbl",
-      wrap: true
-    });
-    const th2 = (c5, l6, num) => `<th class="${num ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
-    const nameCell = (x5) => `<td class="title"><a href="#" class="plink2" data-person="${esc(x5.name)}">${esc(isMe(x5.name) ? `You (${x5.name})` : x5.name)}</a>${x5.p || isMe(x5.name) ? "" : ` <span class="tag warn" title="${none ? "Seen on items but isn’t in the people register" : "Owns items but isn’t in the people register"}">not in register</span>`}</td>
-    <td>${x5.p && x5.p.org ? esc(x5.p.org) : '<span class="sub">—</span>'}</td><td>${x5.p && x5.p.role ? esc(x5.p.role) : '<span class="sub">—</span>'}</td><td>${x5.codes.map(pLink).join(" ") || '<span class="sub">—</span>'}</td>`;
-    $("#peopleTbl").setAttribute("role", "tabpanel");
-    putHTML($("#peopleTbl"), !L3.length ? html`<div class="empty">${none ? "Everyone creaite knows has something assigned." : "No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>` : none ? html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("cl", "Closed items", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}<td class="num">${raw(countLink(`${plur(x5.cl, "closed item")} of ${x5.name}`, x5.cl, "all:closed:", { st: ["Closed", "Cancelled"], o: ownersOf([...x5.A, ...x5.R, ...x5.D]) }, x5.cl))}</td></tr>`)}</tbody></table>` : html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("oa", "Open actions", 1))}${raw(th2("or", "Open RAID", 1))}${raw(th2("dw", "Decisions waiting", 1))}${raw(th2("late", "Overdue", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}
-    ${raw(personCounts(x5))}</tr>`)}</tbody></table>`);
+    drawPeoplePage();
   }
   function bootWork0148() {
-    shared.PSORT = PSORTT[shared.PTAB];
-    Object.assign(PSORTS, { dw: (x5) => x5.dw.length, cl: (x5) => x5.cl });
+    shared.PSORT = { col: "late", dir: "desc" };
   }
   var ownersOf = (L3) => [...new Set(L3.map((i5) => i5.o || i5.by).filter(Boolean))];
   var latesOf = (x5) => [...x5.oa, ...x5.or].filter((i5) => i5.due && i5.due < TODAY);
-  function personCounts(x5) {
-    const nm3 = isMe(x5.name) ? "you" : x5.name, late = latesOf(x5);
-    return `<td class="num">${countLink(`${plur(x5.oo.length, "open action")} owned by ${nm3}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) })}</td><td class="num">${countLink(`${plur(x5.or.length, "open RAID item")} owned by ${nm3}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) })}</td><td class="num">${countLink(`${plur(x5.dw.length, "decision")} waiting on ${nm3}`, x5.dw.length, "decisions:pending:", { o: ownersOf(x5.dw) })}</td><td class="num ${x5.late ? "late" : ""}">${countLink(`${plur(late.length, "overdue item")} owned by ${nm3}`, late.length, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(late) })}</td>`;
-  }
   function bootWork0150() {
   }
 
@@ -42504,7 +43177,7 @@ ${s5}`;
       }
       if (a5 === "help") go2("help", "start");
       else if (a5 === "proj") go2("settings", "projects");
-      else if (a5 === "people") go2("settings", "people");
+      else if (a5 === "people") go2("people", "all");
       else if (a5 === "review") go2("review");
       else if (a5 === "sweep") {
         if (shared.BUSY) {
@@ -45467,22 +46140,23 @@ ${s5}`;
   function cxPerson(name, only) {
     const x5 = PERS().find((y5) => y5.name === name), p6 = x5 && x5.p, email = p6 && p6.email || "", first = String(name).split(/\s+/)[0], starts = only && x5 && deItems(x5).some((i5) => i5.id === only && !deBarred(i5)) ? only : void 0, out = [];
     out.push(
-      { label: "Draft email", icon: "mail", disabled: !email, hint: email ? "" : "No email on record: add details first", run: () => openDraftEmail(name, "update", starts) },
+      { label: "Draft email", icon: "mail", hint: email ? "" : "No email on record: the draft is still made, with nothing in To", run: () => openDraftEmail(name, "update", starts) },
+      /* #247: a person with no email still gets a draft (Alan, 19-10-2026) */
       { label: `Open ${first}'s page`, icon: "user", run: () => go2("person", name) }
     );
     if (email) out.push({ label: "Copy email address", icon: "copy", run: () => cxCopy(email, "the email address") });
     if (!email) out.push({ label: "Add details", icon: "pencil", run: () => {
       go2("person", name);
       let n4 = 0;
-      const tick = () => {
+      const tick2 = () => {
         const b5 = $("#ppEdit");
         if (b5) {
           b5.click();
           return;
         }
-        if (++n4 < 30) requestAnimationFrame(tick);
+        if (++n4 < 30) requestAnimationFrame(tick2);
       };
-      tick();
+      tick2();
     } });
     return out;
   }
@@ -47949,6 +48623,28 @@ ${s5}`;
     putHTML($("#projTbl"), raw(portfolioTable("pj")));
     pfResize($("#projTbl"));
     if (!shared.LOADING && !P4.length) putHTML($("#projTbl"), html`<div class="empty">No projects yet. ${raw(howLink("projects"))} <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`);
+    drawProjArchived();
+  }
+  function projArchivedHtml() {
+    const L3 = (D.project_states || []).filter((p6) => p6.state === "archived");
+    return html`<div class="projarch"><label class="settick"><input type="checkbox" class="switch" id="projShowArch" ${S.showArchived ? "checked" : ""}> Show archived projects</label>${S.showArchived ? L3.length ? html`<div class="tbl"><table class="mgr" id="projArchived" aria-label="Archived projects"><tbody>${L3.map((p6) => html`<tr><td>${p6.name}</td><td class="sub">Archived</td><td class="mgract"><button type="button" class="mini" data-parch="restore" data-pcode="${p6.code}" aria-label="Restore ${p6.name}">Restore</button></td></tr>`)}</tbody></table></div>` : html`<p class="sub" id="projArchNone">No archived projects.</p>` : ""}</div>`;
+  }
+  function drawProjArchived() {
+    const h5 = $("#projArchHost");
+    if (!h5) return;
+    putHTML(h5, projArchivedHtml());
+    const tick2 = $("#projShowArch");
+    if (tick2) tick2.onchange = async () => {
+      const on2 = tick2.checked;
+      if (!await writeSettings({ [SKEY.showArchived]: on2 })) {
+        tick2.checked = !on2;
+        return;
+      }
+      S.showArchived = on2;
+      await reloadData();
+      renderProjects();
+    };
+    $$("#projArchived [data-parch]").forEach((b5) => b5.onclick = () => projArchive(b5.dataset.pcode, "restore", false));
   }
   var DRAFTKIND = {};
   var rkText = (r4) => String(r4.upd || "").trim() || String(r4.resp || "").trim() || "No response yet";
@@ -60675,7 +61371,7 @@ ${d5.text}`);
   // helpscreen.js
   var SCREEN_OF = { today: "today", work: "work", mine: "work", review: "review", projects: "projects", cockpit: "projects", people: "people", person: "people", notes: "notes", inbox: "intake", files: "files" };
   var LINE_OF = { today: "today", work: "work", mine: "work", review: "review", projects: "projects", people: "people", notes: "notes", inbox: "intake", files: "files" };
-  var TITLE = { today: "#v-today .dayband", work: "#v-work h1", review: "#v-review h1", projects: "#v-projects .hhead", people: "#v-people h1", notes: "#v-notes h1", intake: "#v-inbox h1", files: "#v-files h1" };
+  var TITLE = { today: "#v-today .dayband", work: "#v-work h1", review: "#v-review h1", projects: "#v-projects .hhead", people: "#v-people .plhead", notes: "#v-notes h1", intake: "#v-inbox h1", files: "#v-files h1" };
   var FOOT = { today: "#v-today", work: "#v-work .wrapmax", review: "#v-review .wrapmax", projects: "#v-projects .wrapmax", people: "#v-people .wrapmax", notes: "#v-notes", intake: "#v-inbox .wrapmax", files: "#v-files .wrapmax" };
   var screenKey = () => SCREEN_OF[shared.VIEW] || "";
   var screenInfo = (k5) => HD.screens[k5] || null;
@@ -60784,7 +61480,7 @@ ${d5.text}`);
       foot.dataset.k = key2;
       putHTML(foot, raw(`Press ${kbd} for help with ${esc(sc2.title)}`));
     }
-    foot.hidden = !host2;
+    foot.hidden = !host2 || key2 === "people";
     const title = $(TITLE[key2]);
     const due = S.helpLine !== false && !lineSeen(key2) && !!title && !blocked();
     if (!due) {
@@ -62262,7 +62958,7 @@ ${d5.text}`);
     const notYet = () => {
       cdOpen.value = false;
     };
-    const finish = () => {
+    const finish2 = () => {
       const o5 = closed && closed.open;
       cdOpen.value = false;
       if (o5) cdOpenPlaces(o5);
@@ -62306,7 +63002,7 @@ ${d5.text}`);
         ] }),
         /* @__PURE__ */ u2("div", { class: "cdacts", children: [
           /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-cdagain": "1", onClick: again, children: "Look at the day again" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdfinish": "1", onClick: finish, children: toReview ? "Review now" : "Done" })
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdfinish": "1", onClick: finish2, children: toReview ? "Review now" : "Done" })
         ] })
       ] }) : pending ? /* @__PURE__ */ u2("div", { class: "cddone", children: [
         /* @__PURE__ */ u2("span", { class: "spin", "aria-hidden": "true" }),
@@ -66825,7 +67521,7 @@ ${d5.text}`);
     ] }, j5)) }, i5)) });
   }
   function Rich({ ctx, text, field, pane, row: row2, col, label, cls = "", empty = "Click to write", after }) {
-    const [on2, setOn] = d2(false), box = A2(
+    const [on2, setOn2] = d2(false), box = A2(
       /** @type {HTMLDivElement|null} */
       null
     );
@@ -66844,12 +67540,12 @@ ${d5.text}`);
             /** @type {HTMLElement|null} */
             e4.relatedTarget
           );
-          if (!to2 || !(box.current?.contains(to2) || to2.closest && to2.closest("#aiLayer, .linkpop"))) setOn(false);
+          if (!to2 || !(box.current?.contains(to2) || to2.closest && to2.closest("#aiLayer, .linkpop"))) setOn2(false);
         },
         onKeyDown: (e4) => {
           if (e4.key === "Escape") {
             e4.stopPropagation();
-            setOn(false);
+            setOn2(false);
           }
         },
         children: /* @__PURE__ */ u2(Text2, { field, pane, row: row2, col, label, rich: true })
@@ -66864,12 +67560,12 @@ ${d5.text}`);
         "aria-label": `${label || ctx.section.heading}: edit`,
         onClick: (e4) => {
           if (!/** @type {HTMLElement} */
-          e4.target.closest("button,a")) setOn(true);
+          e4.target.closest("button,a")) setOn2(true);
         },
         onKeyDown: (e4) => {
           if ((e4.key === "Enter" || e4.key === " ") && e4.target === e4.currentTarget) {
             e4.preventDefault();
-            setOn(true);
+            setOn2(true);
           }
         },
         children: String(text || "").trim() ? /* @__PURE__ */ u2(Md2, { text, after }) : /* @__PURE__ */ u2("span", { class: "sub", children: empty })
@@ -67309,18 +68005,18 @@ ${d5.text}`);
     ), held = (
       /** @type {{id: string, heading: string, findings: string[]}[]} */
       []
-    ), clean = (
+    ), clean2 = (
       /** @type {string[]} */
       []
     );
     cands.forEach((c5, n4) => {
       const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
       if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
-      else clean.push(c5.id);
+      else clean2.push(c5.id);
     });
-    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
+    const kept = (on2) => sameDoc(on2, d02) ? clean2.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
     const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
-    if (clean.length) {
+    if (clean2.length) {
       for (let tries = 0; ; tries++) {
         const now = crDoc.value;
         if (!now || moved()) return;
@@ -70439,6 +71135,322 @@ ${d5.text}`);
     return { code: m5[1], week: m5[2] || void 0, client: client || void 0 };
   }
 
+  // components/project/ProjectPeople.jsx
+  var ME_NOTE = "Change in Settings › Essentials › You";
+  var IDS = "psPm";
+  var psPersonHandlers = (code) => ({
+    onSave: async (name, v5, isNew) => {
+      const ok2 = await (isNew ? addPerson(name, v5) : savePerson(name, v5));
+      psChanged();
+      return ok2;
+    },
+    onRemove: async (name) => {
+      await removeFromProject(name, code);
+      psChanged();
+    }
+  });
+  function PsPersonRow({ x: x5, code }) {
+    const c5 = countsIn(x5, code);
+    const edit = () => openPersonForm({ x: x5, code, follow: true }, psPersonHandlers(code));
+    return /* @__PURE__ */ u2("tr", { "data-pn": x5.n, children: [
+      /* @__PURE__ */ u2(NameCell, { x: x5, code, follow: true, codes: true }),
+      /* @__PURE__ */ u2("td", { children: x5.email ? x5.email : /* @__PURE__ */ u2(Dash, {}) }),
+      /* @__PURE__ */ u2("td", { children: x5.org || x5.role ? `${x5.org}${x5.org && x5.role ? " · " : ""}${x5.role}` : /* @__PURE__ */ u2(Dash, {}) }),
+      /* @__PURE__ */ u2("td", { class: "sub", children: x5.aliases.length ? x5.aliases.join(", ") : "—" }),
+      /* @__PURE__ */ u2("td", { class: "num", children: /* @__PURE__ */ u2(Count, { n: c5.a, label: `${peoplePlural(c5.a, "action")} owned by ${x5.n} in this project, any status`, nav: `actions:open:${code}`, extra: { st: [], o: [x5.n] } }) }),
+      /* @__PURE__ */ u2("td", { class: "num", children: /* @__PURE__ */ u2(Count, { n: c5.r, label: `${peoplePlural(c5.r, "RAID item")} owned by ${x5.n} in this project, any status`, nav: `raid:open:${code}`, extra: { st: [], o: [x5.n] } }) }),
+      /* @__PURE__ */ u2("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u2("span", { class: "x", children: ME_NOTE }) : /* @__PURE__ */ u2(S2, { children: [
+        x5.missing.length ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pm-details": x5.n, "aria-haspopup": "dialog", "aria-label": `Add details for ${x5.n}`, onClick: edit, children: "Add details" }) : null,
+        /* @__PURE__ */ u2(IconButton, { icon: "pencil", label: "Edit details", name: `Edit ${x5.n}`, haspopup: "dialog", data: { "pm-edit": x5.n }, onClick: edit }),
+        /* @__PURE__ */ u2(
+          IconButton,
+          {
+            icon: "trash",
+            label: "Remove from this project",
+            name: `Remove ${x5.n} from this project`,
+            cls: "no",
+            data: { "pm-remove": x5.n },
+            onClick: async () => {
+              await removeFromProject(x5.n, code);
+              psChanged();
+            }
+          }
+        )
+      ] }) })
+    ] });
+  }
+  var Unassigned = ({ x: x5, code }) => /* @__PURE__ */ u2("tr", { "data-pn": x5.n, class: "off", children: [
+    /* @__PURE__ */ u2(NameCell, { x: x5 }),
+    /* @__PURE__ */ u2("td", { children: x5.email ? x5.email : /* @__PURE__ */ u2(Dash, {}) }),
+    /* @__PURE__ */ u2("td", { children: x5.org || x5.role ? `${x5.org}${x5.org && x5.role ? " · " : ""}${x5.role}` : /* @__PURE__ */ u2(Dash, {}) }),
+    /* @__PURE__ */ u2("td", { class: "mgract", children: /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: "mini",
+        "data-pm-addto": x5.n,
+        "aria-label": `Add ${x5.n} to this project`,
+        onClick: async () => {
+          await addToProject(x5.n, code);
+          psChanged();
+        },
+        children: "Add to this project"
+      }
+    ) })
+  ] });
+  function ProjectPeople({ code, match = true }) {
+    psTick.value;
+    const st2 = A2(
+      /** @type {{code: string, s: any}} */
+      { code: "", s: newFilter() }
+    ), redraw = useRedraw();
+    if (st2.current.code !== code) st2.current = { code, s: newFilter() };
+    const s5 = st2.current.s, all = registerRows(), here = all.filter((x5) => x5.on.includes(code)), none = all.filter((x5) => !x5.on.length && !x5.me);
+    const F5 = useFields(here, s5, { code, follow: true }), shown2 = here.filter((x5) => personPasses(x5, F5, s5));
+    const noneShown = none.filter((x5) => personPasses(x5, F5.filter((f5) => f5[0] !== "proj"), s5));
+    const count = `Showing ${shown2.length} of ${peopleWord(here.length)} on this project${none.length ? ` · ${none.length} on no project` : ""}`;
+    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "people", id: "psPeopleCard", children: [
+      /* @__PURE__ */ u2("div", { class: "pshl", children: [
+        /* @__PURE__ */ u2("h2", { children: "People on this project" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psAddPerson", "aria-haspopup": "dialog", onClick: () => openPersonForm({ x: null, isNew: true, code, follow: true }, psPersonHandlers(code)), children: "Add a person" })
+      ] }),
+      /* @__PURE__ */ u2("div", { "data-psrow": true, hidden: !match, children: [
+        /* @__PURE__ */ u2("p", { class: "sub psintro", children: "Everyone who owns an item here or is named on this project. Counts are for this project. Click a name for their work; right-click to draft an email with their work items. A small code beside a name means they are also on that project. Everything except the counts belongs to the person and is the same on every project: email, aliases, organisation and role." }),
+        /* @__PURE__ */ u2(PeopleTools, { L: here, F: F5, s: s5, ids: IDS, onChange: redraw }),
+        /* @__PURE__ */ u2(PeopleApplied, { F: F5, s: s5, ids: IDS, count, onChange: redraw }),
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "mgr", id: "psPeople", "aria-label": "People on this project", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Name" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Email" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Organisation · role" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Aliases" }),
+            /* @__PURE__ */ u2("th", { scope: "col", class: "num", children: "Actions" }),
+            /* @__PURE__ */ u2("th", { scope: "col", class: "num", children: "RAID" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions on the person" }) })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { id: "psPeopleRows", children: shown2.length ? shown2.map((x5) => /* @__PURE__ */ u2(PsPersonRow, { x: x5, code }, x5.n)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { class: "sub", colSpan: 7, children: here.length ? "Nobody matches." : "Nobody owns an item of this project yet." }) }) })
+        ] }) }),
+        noneShown.length ? /* @__PURE__ */ u2("div", { id: "psUnas", children: [
+          /* @__PURE__ */ u2("h3", { class: "psunh", children: [
+            "Not on any project yet ",
+            /* @__PURE__ */ u2("span", { class: "sub", children: noneShown.length })
+          ] }),
+          /* @__PURE__ */ u2("p", { class: "sub psunp", children: "These people are in the register but on no project. They show here, and on every project, until you add them to one." }),
+          /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "mgr", "aria-label": "Not on any project yet", children: /* @__PURE__ */ u2("tbody", { children: noneShown.map((x5) => /* @__PURE__ */ u2(Unassigned, { x: x5, code }, x5.n)) }) }) })
+        ] }) : null
+      ] })
+    ] });
+  }
+
+  // stores/workstreams.js
+  var wsActive = (code) => WSD().filter((w6) => w6.p === code && w6.st === "Active").sort((a5, b5) => a5.name.localeCompare(b5.name));
+  var itemsOf = (code, name) => [...A4, ...R3].filter((x5) => x5.p === code && String(x5.ws || "").toLowerCase() === name.toLowerCase());
+  var tableOf = (x5) => A4.includes(x5) ? "actions" : "raid";
+  var clean = (v5) => String(v5 || "").replace(/\s+/g, " ").trim();
+  async function leadOf(lead) {
+    const v5 = clean(lead);
+    if (!v5) return "";
+    const o5 = await ownerFinal(v5);
+    return o5 === null ? null : o5;
+  }
+  async function wsAdd(code, v5) {
+    const name = clean(v5.name);
+    if (!name) return "Give the workstream a name.";
+    if (wsRow(code, name)) return `This project already has “${name}”.`;
+    const lead = await leadOf(v5.lead);
+    if (lead === null) return "Not saved.";
+    const s5 = wsSuggest(code, name), made = wsNewOf({ project: code, name, lead, keywords: clean(v5.keywords) || s5.keywords, aliases: s5.aliases, channel: s5.channel }, `${S.me} (dashboard), ${TODAY}`);
+    const ok2 = await save(
+      `Workstream ${name} added`,
+      [made.item],
+      null,
+      () => {
+        if (!D.ws_table) D.ws_table = [];
+        D.ws_table.push(made.row);
+      },
+      () => {
+        const i5 = WSD().indexOf(made.row);
+        if (i5 >= 0) D.ws_table.splice(i5, 1);
+      }
+    );
+    return ok2 === false ? "Not saved." : "";
+  }
+  async function wsUpdate(id2, v5) {
+    const w6 = WSD().find((x5) => x5.id === id2);
+    if (!w6) return "That workstream isn't here any more.";
+    const name = clean(v5.name);
+    if (!name) return "Give the workstream a name.";
+    const lead = await leadOf(v5.lead);
+    if (lead === null) return "Not saved.";
+    const changes = {}, next = { name, lead, keywords: clean(v5.keywords) };
+    Object.entries(next).forEach(([k5, x5]) => {
+      if (x5 !== (w6[k5] || "")) changes[k5] = x5 || null;
+    });
+    if (!Object.keys(changes).length) return "";
+    if (changes.name && WSD().some((x5) => x5 !== w6 && x5.p === w6.p && x5.name.toLowerCase() === name.toLowerCase())) return `This project already has “${name}”: use Merge into to join them.`;
+    const before = { ...w6 }, old = w6.name, moved = changes.name ? itemsOf(w6.p, old) : [];
+    const ok2 = await save(
+      `Workstream ${old} ${changes.name ? `renamed ${name}` : "updated"}`,
+      [{ op: "update", table: "workstreams", id: id2, changes, based_on: w6.updated_at }],
+      null,
+      () => {
+        Object.assign(w6, Object.fromEntries(Object.entries(changes).map(([k5, x5]) => [k5, x5 || ""])));
+        moved.forEach((x5) => {
+          x5.ws = name;
+        });
+      },
+      () => {
+        Object.assign(w6, before);
+        moved.forEach((x5) => {
+          x5.ws = old;
+        });
+      }
+    );
+    return ok2 === false ? "Not saved." : "";
+  }
+  async function wsMerge(id2, intoId) {
+    const w6 = WSD().find((x5) => x5.id === id2), to2 = WSD().find((x5) => x5.id === intoId);
+    if (!w6 || !to2 || w6 === to2 || w6.p !== to2.p) return false;
+    const moved = itemsOf(w6.p, w6.name);
+    const ops = [
+      ...moved.map((x5) => ({ op: "update", table: tableOf(x5), id: x5.id, changes: { workstream: to2.name }, based_on: x5.updated_at })),
+      { op: "cancel", table: "workstreams", id: id2, based_on: w6.updated_at }
+    ];
+    const ok2 = await save(
+      `Workstream ${w6.name} merged into ${to2.name}`,
+      ops,
+      null,
+      () => {
+        moved.forEach((x5) => {
+          x5.ws = to2.name;
+        });
+        w6.st = "Closed";
+      },
+      () => {
+        moved.forEach((x5) => {
+          x5.ws = w6.name;
+        });
+        w6.st = "Active";
+      }
+    );
+    return ok2 !== false;
+  }
+  async function wsRetire(id2) {
+    const w6 = WSD().find((x5) => x5.id === id2);
+    if (!w6) return false;
+    const ok2 = await save(
+      `Workstream ${w6.name} retired`,
+      [{ op: "cancel", table: "workstreams", id: id2, based_on: w6.updated_at }],
+      null,
+      () => {
+        w6.st = "Closed";
+      },
+      () => {
+        w6.st = "Active";
+      }
+    );
+    if (ok2 === false) snack("Not saved");
+    return ok2 !== false;
+  }
+
+  // components/project/ProjectWorkstreams.jsx
+  var valuesOf = (tr2) => Object.fromEntries([...tr2.querySelectorAll("[data-wsf]")].map((i5) => [
+    /** @type {HTMLElement} */
+    i5.dataset.wsf,
+    /** @type {HTMLInputElement} */
+    i5.value
+  ]));
+  function EditRow({ code, w: w6, others, done }) {
+    const [err, setErr] = d2("");
+    const save2 = async (tr2) => {
+      const v5 = (
+        /** @type {{name: string, lead: string, keywords: string}} */
+        valuesOf(tr2)
+      );
+      const bad = w6 ? await wsUpdate(w6.id, v5) : await wsAdd(code, v5);
+      setErr(bad);
+      if (!bad) {
+        done();
+        psChanged();
+      }
+    };
+    const nm3 = w6 ? w6.name : "new workstream";
+    return /* @__PURE__ */ u2("tr", { class: "wsedit", "data-wsid": w6 ? w6.id : "", children: [
+      /* @__PURE__ */ u2("td", { children: [
+        /* @__PURE__ */ u2("input", { type: "text", "data-wsf": "name", "aria-label": w6 ? `Name of ${w6.name}` : "Name of the new workstream", defaultValue: w6 ? w6.name : "", ref: (el2) => {
+          if (el2 && !el2.dataset.f) {
+            el2.dataset.f = "1";
+            el2.focus();
+          }
+        } }),
+        err ? /* @__PURE__ */ u2("span", { class: "psmsg", role: "alert", id: "psWsErr", children: err }) : null
+      ] }),
+      /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("input", { type: "text", "data-wsf": "lead", "aria-label": `Lead of ${nm3}`, placeholder: "A person from the people register", defaultValue: w6 ? w6.lead || "" : "" }) }),
+      /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("input", { type: "text", "data-wsf": "keywords", "aria-label": `Keywords of ${nm3}`, placeholder: "Words that point to it", defaultValue: w6 ? w6.keywords || "" : "" }) }),
+      /* @__PURE__ */ u2("td", { class: "num", children: w6 ? (w6.nA || 0) + (w6.nR || 0) : "" }),
+      /* @__PURE__ */ u2("td", { class: "mgract", children: /* @__PURE__ */ u2("span", { class: "wsacts", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ws-save": true, onClick: (e4) => save2(
+          /** @type {Element} */
+          /** @type {HTMLElement} */
+          e4.currentTarget.closest("tr")
+        ), children: "Save" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ws-cancel": true, onClick: done, children: "Cancel" }),
+        w6 && others.length ? /* @__PURE__ */ u2("select", { class: "mini", "data-ws-merge": true, "aria-label": `Merge ${w6.name} into`, onChange: async (e4) => {
+          const to2 = (
+            /** @type {HTMLSelectElement} */
+            e4.target.value
+          );
+          if (!to2) return;
+          if (await wsMerge(w6.id, to2)) {
+            done();
+            psChanged();
+          }
+        }, children: [
+          /* @__PURE__ */ u2("option", { value: "", children: "Merge into…" }),
+          others.map((o5) => /* @__PURE__ */ u2("option", { value: o5.id, children: o5.name }, o5.id))
+        ] }) : null,
+        w6 ? /* @__PURE__ */ u2("button", { type: "button", class: "mini no", "data-ws-retire": true, "aria-label": `Retire ${w6.name}`, onClick: async () => {
+          if (await wsRetire(w6.id)) {
+            done();
+            psChanged();
+          }
+        }, children: "Retire" }) : null
+      ] }) })
+    ] });
+  }
+  function Workstreams({ code, match = true }) {
+    psTick.value;
+    const [edit, setEdit] = d2(
+      /** @type {string|null} */
+      null
+    ), L3 = wsActive(code);
+    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "ws", children: [
+      /* @__PURE__ */ u2("h2", { children: "Workstreams" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", "data-psrow": true, hidden: !match, children: /* @__PURE__ */ u2("table", { class: "pstbl", id: "psWs", "aria-label": "Workstreams", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Workstream" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Lead" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Keywords" }),
+          /* @__PURE__ */ u2("th", { scope: "col", class: "num", children: "Open items" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions" }) })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: [
+          L3.map((w6) => edit === w6.id ? /* @__PURE__ */ u2(EditRow, { code, w: w6, others: L3.filter((o5) => o5 !== w6), done: () => setEdit(null) }, w6.id) : /* @__PURE__ */ u2("tr", { "data-ws": w6.name, children: [
+            /* @__PURE__ */ u2("td", { children: w6.name }),
+            /* @__PURE__ */ u2("td", { children: w6.lead ? who(w6.lead) : /* @__PURE__ */ u2("span", { class: "sub", children: "—" }) }),
+            /* @__PURE__ */ u2("td", { children: w6.keywords ? /* @__PURE__ */ u2("span", { class: "sub", children: w6.keywords }) : /* @__PURE__ */ u2("span", { class: "sub", children: "—" }) }),
+            /* @__PURE__ */ u2("td", { class: "num", children: (w6.nA || 0) + (w6.nR || 0) }),
+            /* @__PURE__ */ u2("td", { class: "mgract", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ws-edit": w6.name, "aria-label": `Edit ${w6.name}`, onClick: () => setEdit(w6.id), children: "Edit" }) })
+          ] }, w6.id)),
+          edit === "new" ? /* @__PURE__ */ u2(EditRow, { code, w: null, others: [], done: () => setEdit(null) }) : null,
+          !L3.length && edit !== "new" ? /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { class: "sub", colSpan: 5, children: "No workstreams yet." }) }) : null
+        ] })
+      ] }) }),
+      /* @__PURE__ */ u2("p", { class: "psfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "psAddWs", onClick: () => setEdit("new"), children: "Add a workstream" }) }),
+      /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "A lead and keywords help creaite match items from minutes and mail to the workstream. A rename renames its items too; Merge into moves its items to the other one; a retired workstream is no longer offered for new items, and its items keep the name. Each change has Undo." })
+    ] });
+  }
+
   // stores/hub.js
   var hubView = y3(
     /** @type {HubView} */
@@ -70733,20 +71745,25 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "setctl", role: "group", "aria-labelledby": rid, children })
     ] });
   }
+  var PEOPLE_KW = "people person register email aliases organisation role add a person needs details followed";
+  function useMatch(text) {
+    const f5 = x2(Find);
+    return !f5.q || f5.all || psNorm(text).includes(f5.q);
+  }
   function Item({ text, children }) {
     const f5 = x2(Find);
     return /* @__PURE__ */ u2("tr", { "data-psrow": true, hidden: !!f5.q && !f5.all && !psNorm(text).includes(f5.q), children });
   }
   function AskButton({ label, ask: ask2, yes, onYes, id: id2, danger }) {
-    const [on2, setOn] = d2(false);
-    if (!on2) return /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2, onClick: () => setOn(true), children: label });
+    const [on2, setOn2] = d2(false);
+    if (!on2) return /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2, onClick: () => setOn2(true), children: label });
     return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": ask2, children: [
       /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: ask2 }),
       /* @__PURE__ */ u2("button", { type: "button", class: `btn${danger ? " danger" : ""}`, id: id2 + "Yes", onClick: () => {
-        setOn(false);
+        setOn2(false);
         onYes();
       }, children: yes }),
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2 + "No", onClick: () => setOn(false), children: "Keep it" })
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2 + "No", onClick: () => setOn2(false), children: "Keep it" })
     ] });
   }
   var PsProblem = ({ msg, id: id2 }) => msg ? /* @__PURE__ */ u2("span", { class: "psmsg", role: "alert", id: id2, children: msg }) : null;
@@ -70919,7 +71936,8 @@ ${d5.text}`);
   }
   function PeoplePartners({ code }) {
     crTick.value;
-    const ppl = projectPeople(code), list = partners.value.list, [err, setErr] = d2(""), box = A2(
+    psTick.value;
+    const list = partners.value.list, [err, setErr] = d2(""), box = A2(
       /** @type {HTMLInputElement|null} */
       null
     );
@@ -70934,27 +71952,7 @@ ${d5.text}`);
       }
     };
     return /* @__PURE__ */ u2(S2, { children: [
-      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "people", children: [
-        /* @__PURE__ */ u2("h2", { children: "People on this project" }),
-        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "pstbl", id: "psPeople", "aria-label": "People on this project", children: [
-          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
-            /* @__PURE__ */ u2("th", { scope: "col", children: "Name" }),
-            /* @__PURE__ */ u2("th", { scope: "col", children: "Role" }),
-            /* @__PURE__ */ u2("th", { scope: "col", children: "Organisation" }),
-            /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions" }) })
-          ] }) }),
-          /* @__PURE__ */ u2("tbody", { children: ppl.length ? ppl.map((x5) => /* @__PURE__ */ u2(Item, { text: `${x5.name} ${x5.role} ${x5.org} people`, children: [
-            /* @__PURE__ */ u2("td", { children: x5.name }),
-            /* @__PURE__ */ u2("td", { children: x5.role || /* @__PURE__ */ u2("span", { class: "sub", children: "Not set" }) }),
-            /* @__PURE__ */ u2("td", { children: x5.org || /* @__PURE__ */ u2("span", { class: "sub", children: "Not set" }) }),
-            /* @__PURE__ */ u2("td", { class: "mgract", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspeople-edit": true, "aria-label": `Edit ${x5.name} in the people register`, onClick: () => go2("settings", "people"), children: "Edit" }) })
-          ] }, x5.name)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { class: "sub", colSpan: 4, children: "Nobody owns an item of this project yet." }) }) })
-        ] }) }),
-        /* @__PURE__ */ u2("p", { class: "psfoot", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "psAddPerson", onClick: () => go2("settings", "people"), children: "Add a person" }),
-          /* @__PURE__ */ u2("span", { class: "psnote", children: " People come from the people register: who owns an item or made a decision here. Adding or editing one opens the register in Settings." })
-        ] })
-      ] }),
+      /* @__PURE__ */ u2(ProjectPeople, { code, match: useMatch(PEOPLE_KW + " " + registerRows().filter((x5) => x5.on.includes(code) || !x5.on.length).map((x5) => `${x5.n} ${x5.email} ${x5.org} ${x5.role} ${x5.aliases.join(" ")}`).join(" ")) }),
       /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "people", children: [
         /* @__PURE__ */ u2("h2", { children: "Partner organisations" }),
         /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "pstbl", id: "psPartners", "aria-label": "Partner organisations", children: [
@@ -71009,7 +72007,7 @@ ${d5.text}`);
     partners.value;
     const ticked = clientLogosOn(code), orphans = crLogoOrphans.value, tiles = tilesOf(code);
     return /* @__PURE__ */ u2(S2, { children: [
-      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
+      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "rep", children: [
         /* @__PURE__ */ u2("h2", { children: "Logos in the reports' header" }),
         tiles.map((t47) => {
           const has = !!crLogoPaths.value[t47.kind];
@@ -71022,7 +72020,7 @@ ${d5.text}`);
         crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "psnote psfoot", role: "status", id: "psLogoNote", children: crLogoNote.value }) : null,
         /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "Partners come from People and partners: add or remove a partner organisation there and its logo row appears or goes here. These are the same logos as in the reporting hub's client report settings. A transparent PNG or SVG sits better than a JPEG; the picture you choose is kept as it is and a trimmed copy is drawn. The tick puts the logo in the header of this project's reports." })
       ] }),
-      orphans.length ? /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
+      orphans.length ? /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "rep", children: [
         /* @__PURE__ */ u2("h2", { children: "Logos not used" }),
         orphans.map((o5) => /* @__PURE__ */ u2(PsRow, { id: `psOrphan-${o5.slug}`, label: o5.slug, help: "A logo kept after its partner was renamed or removed from the list. It is not drawn in any report.", kw: "logos not used unused orphan partner", children: /* @__PURE__ */ u2("span", { class: "pslogo", "data-orphan": o5.kind, children: [
           /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: crLogoData.value[o5.path] ? /* @__PURE__ */ u2("img", { alt: "", src: crLogoData.value[o5.path] }) : "P" }),
@@ -71046,7 +72044,7 @@ ${d5.text}`);
     crTick.value;
     const p6 = psProject(code), on2 = clientReportOn(code), rhythms = REP_RHYTHMS.includes(p6.rhythm) ? REP_RHYTHMS : [...REP_RHYTHMS, p6.rhythm];
     return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "rep", children: [
-      /* @__PURE__ */ u2("h2", { children: "Reporting" }),
+      /* @__PURE__ */ u2("h2", { children: "Client report" }),
       /* @__PURE__ */ u2(PsRow, { label: "Client report", help: "Turn off if the client only receives the internal report, or nothing at all. This holds for every future report of this project until you change it; reports already written are kept and turning it off deletes nothing.", kw: "client report needs a separate on off", children: /* @__PURE__ */ u2("label", { class: "settick", children: [
         /* @__PURE__ */ u2(
           "input",
@@ -71145,13 +72143,49 @@ ${d5.text}`);
   }
   function Archive({ code }) {
     const state = projectState(code), name = pName(code);
-    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "arch", children: [
-      /* @__PURE__ */ u2("h2", { children: "Archive" }),
-      /* @__PURE__ */ u2(PsRow, { label: "Archive this project", help: "Moves its folder to the archive and keeps everything; it can be restored. It goes on the approval card in ask creaite first.", kw: "archive restore", children: /* @__PURE__ */ u2(AskButton, { id: "psArchive", label: "Archive…", ask: `Archive ${name}?`, yes: "Archive", onYes: () => projArchive(code, "archive", false) }) }),
+    return /* @__PURE__ */ u2("div", { class: "psdanger", children: /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "arch", children: [
+      /* @__PURE__ */ u2("h2", { children: "Archive and close" }),
+      state === "archived" ? /* @__PURE__ */ u2(PsRow, { label: "Restore this project", help: "Brings its folder back from the archive. It goes on the approval card in ask creaite first.", kw: "archive restore", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psRestore", onClick: () => projArchive(code, "restore", false), children: "Restore" }) }) : /* @__PURE__ */ u2(PsRow, { label: "Archive this project", help: "Moves its folder to the archive and keeps everything; it can be restored from the Projects page (Show archived). It goes on the approval card in ask creaite first.", kw: "archive restore", children: /* @__PURE__ */ u2(AskButton, { id: "psArchive", label: "Archive…", ask: `Archive ${name}?`, yes: "Archive", onYes: () => projArchive(code, "archive", false) }) }),
       state === "closed" ? /* @__PURE__ */ u2(PsRow, { label: "Reopen this project", help: "Makes it active again: it is swept and reported again.", kw: "active", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psReopen", onClick: () => setProjectActive(code, true), children: "Reopen" }) }) : /* @__PURE__ */ u2(PsRow, { label: "Close this project", help: "Marks it closed in the tracker; nothing is deleted.", kw: "close closed", children: /* @__PURE__ */ u2(AskButton, { id: "psClose", label: "Close…", ask: `Close ${name}?`, yes: "Close it", danger: true, onYes: () => setProjectActive(code, false) }) })
-    ] });
+    ] }) });
   }
-  var BODY = { general: General, people: PeoplePartners, logos: Logos, miles: Milestones, rep: Reporting, arch: Archive };
+  var ClientAndLogos = ({ code }) => /* @__PURE__ */ u2(S2, { children: [
+    /* @__PURE__ */ u2(Reporting, { code }),
+    /* @__PURE__ */ u2(Logos, { code })
+  ] });
+  var Ws2 = ({ code }) => {
+    psTick.value;
+    return /* @__PURE__ */ u2(Workstreams, { code, match: useMatch(`workstreams workstream lead keywords ${wsActive(code).map((w6) => `${w6.name} ${w6.keywords || ""}`).join(" ")}`) });
+  };
+  var BODY = { general: General, people: PeoplePartners, ws: Ws2, miles: Milestones, rep: ClientAndLogos, arch: Archive };
+  var spyHold = 0;
+  function spy(view) {
+    if (performance.now() < spyHold || psQ.peek().trim()) return;
+    const secs = [...view.querySelectorAll("[data-pssec]")], top = view.getBoundingClientRect().top + view.clientHeight / 3;
+    let cur = secs.length ? (
+      /** @type {HTMLElement} */
+      secs[0].dataset.pssec || "general"
+    ) : "general";
+    secs.forEach((s5) => {
+      if (s5.getBoundingClientRect().top < top) cur = /** @type {HTMLElement} */
+      s5.dataset.pssec || cur;
+    });
+    const last = secs[secs.length - 1];
+    if (last && view.scrollTop + view.clientHeight >= view.scrollHeight - 4) cur = /** @type {HTMLElement} */
+    last.dataset.pssec || cur;
+    if (cur !== psCat.peek()) {
+      psCat.value = cur;
+      navWrite(false);
+    }
+  }
+  function psJump(id2, smooth) {
+    const el2 = document.getElementById(`s-${id2}`), view = $("#v-psettings");
+    if (!el2 || !view) return;
+    spyHold = performance.now() + 900;
+    const behavior = smooth && !reduced() ? "smooth" : "auto";
+    if (id2 === "general") view.scrollTo({ top: 0, behavior });
+    else el2.scrollIntoView({ block: "start", behavior });
+  }
   function ProjectSettings() {
     psTick.value;
     partners.value;
@@ -71167,6 +72201,9 @@ ${d5.text}`);
         el2.querySelectorAll("[data-pscard]").forEach((c5) => {
           c5.hidden = !!q5 && !c5.querySelector("[data-psrow]:not([hidden])");
         });
+        el2.querySelectorAll("[data-pssec]").forEach((s5) => {
+          s5.hidden = !!q5 && !s5.querySelector("[data-pscard]:not([hidden])");
+        });
         const any = [...el2.querySelectorAll("[data-pscard]")].some((c5) => !/** @type {HTMLElement} */
         c5.hidden);
         const none = el2.querySelector("#psNone");
@@ -71176,6 +72213,16 @@ ${d5.text}`);
       const t47 = setTimeout(apply2, 0);
       return () => clearTimeout(t47);
     });
+    h2(() => {
+      const view = $("#v-psettings");
+      if (!view) return;
+      const on2 = () => spy(
+        /** @type {HTMLElement} */
+        view
+      );
+      view.addEventListener("scroll", on2, { passive: true });
+      return () => view.removeEventListener("scroll", on2);
+    }, []);
     if (!p6) return /* @__PURE__ */ u2("div", { class: "wrapmax", children: [
       /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
         /* @__PURE__ */ u2("a", { href: "#", onClick: (e4) => {
@@ -71188,8 +72235,6 @@ ${d5.text}`);
       /* @__PURE__ */ u2("h1", { id: "psTitle", children: "Project settings" }),
       /* @__PURE__ */ u2("p", { class: "sub", id: "psMissing", children: "That project isn't open here. It may be closed or archived." })
     ] });
-    const cats = PS_CATS.map(([id2, label]) => ({ id: id2, label, data: { pscat: id2 } }));
-    const shown2 = q5 ? PS_CATS : PS_CATS.filter((c5) => c5[0] === cat);
     return /* @__PURE__ */ u2("div", { class: "wrapmax", ref: root2, children: [
       /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
         /* @__PURE__ */ u2("a", { href: "#", id: "psBackP", onClick: (e4) => {
@@ -71229,31 +72274,31 @@ ${d5.text}`);
               }
             }
           ),
-          /* @__PURE__ */ u2("div", { class: "tabhost", children: /* @__PURE__ */ u2(
-            Tabs,
+          /* @__PURE__ */ u2("nav", { class: "setcats psnav", id: "pscats", "aria-label": "On this page", children: PS_CATS.map(([id2, label]) => /* @__PURE__ */ u2(
+            "a",
             {
-              id: "pscats",
-              className: "setcats",
-              label: "Project settings categories",
-              vertical: true,
-              controls: "psBody",
-              items: cats,
-              selected: q5 ? "" : cat,
-              onSelect: (id2) => {
+              href: `#project-settings=${encodeURIComponent(code)}${id2 === "general" ? "" : `&c=${id2}`}`,
+              "data-pscat": id2,
+              "aria-current": !q5 && cat === id2 ? "true" : void 0,
+              onClick: (e4) => {
+                e4.preventDefault();
                 psQ.value = "";
                 psCat.value = id2;
                 navWrite(false);
-              }
-            }
-          ) })
+                requestAnimationFrame(() => psJump(id2, true));
+              },
+              children: label
+            },
+            id2
+          )) })
         ] }),
-        /* @__PURE__ */ u2("div", { id: "psBody", role: "tabpanel", children: [
-          /* @__PURE__ */ u2("div", { class: "setstack", children: shown2.map(([id2, label]) => {
+        /* @__PURE__ */ u2("div", { id: "psBody", children: [
+          /* @__PURE__ */ u2("div", { class: "setstack", children: PS_CATS.map(([id2, label]) => {
             const Body = BODY[
               /** @type {keyof typeof BODY} */
               id2
             ];
-            return /* @__PURE__ */ u2(Find.Provider, { value: { q: q5, all: !!q5 && psNorm(label).includes(q5) }, children: /* @__PURE__ */ u2(Body, { code }) }, id2);
+            return /* @__PURE__ */ u2("section", { class: "pssec", id: `s-${id2}`, "data-pssec": id2, "aria-label": label, children: /* @__PURE__ */ u2(Find.Provider, { value: { q: q5, all: !!q5 && psNorm(label).includes(q5) }, children: /* @__PURE__ */ u2(Body, { code }) }) }, id2);
           }) }),
           /* @__PURE__ */ u2("p", { class: "sub setnone", id: "psNone", role: "status", hidden: true, children: [
             "No settings match “",
@@ -71269,6 +72314,7 @@ ${d5.text}`);
     const el2 = $("#v-psettings");
     if (!el2) return;
     closeClientReport();
+    const fresh = psCode.peek() !== code || !psMounted;
     psCode.value = code;
     const read = partners.peek();
     if (read.code !== code || !read.loaded) loadPartners(code);
@@ -71277,6 +72323,7 @@ ${d5.text}`);
       R(/* @__PURE__ */ u2(ProjectSettings, {}), el2);
       psMounted = true;
     } else psTick.value++;
+    if (fresh || psCat.peek() !== "general") setTimeout(() => psJump(psCat.peek()), 60);
   }
 
   // components/report/redraft.js
@@ -71440,7 +72487,7 @@ ${d5.text}`);
     if (!plan) return /* @__PURE__ */ u2(Dialog, { open: false, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", children: /* @__PURE__ */ u2("span", {}) });
     const items2 = plan.items, grp = items2.filter((i5) => i5.group === "group"), ones = items2.filter((i5) => i5.group === "own");
     const waits = items2.filter((i5) => i5.group === "waits" || i5.group === "milestone"), removed = items2.filter((i5) => i5.group === "removed");
-    const tick = (n4, on2) => setOwn(on2 ? [...own, n4] : own.filter((x5) => x5 !== n4));
+    const tick2 = (n4, on2) => setOwn(on2 ? [...own, n4] : own.filter((x5) => x5 !== n4));
     const go3 = async () => {
       setBusy(true);
       setErr("");
@@ -71502,7 +72549,7 @@ ${d5.text}`);
               type: "checkbox",
               "data-own": i5.n,
               checked: own.includes(i5.n),
-              onChange: (e4) => tick(
+              onChange: (e4) => tick2(
                 i5.n,
                 /** @type {HTMLInputElement} */
                 e4.currentTarget.checked
@@ -72797,7 +73844,7 @@ ${d5.text}`);
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
     if (st2 && st2.v === "minutes") return `#minutes=${encodeURIComponent(typeof st2.arg === "string" ? st2.arg : "")}`;
     if (st2 && st2.v === "milestones") return `#milestones${st2.arg ? `=${st2.arg}` : ""}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
-    if (st2 && st2.v === "people") return "#people" + (st2.arg === "none" ? "/none" : "");
+    if (st2 && st2.v === "people") return "#people" + (st2.arg && st2.arg !== "all" ? "/" + st2.arg : "");
     let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? st2.arg ? `cockpit=${st2.arg}` : "cockpit" : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : st2.v === "inbox" ? "intake" : st2.v;
     if (st2.item) h5 += `&item=${st2.item.id}`;
     h5 = "#" + h5;
@@ -72836,7 +73883,7 @@ ${d5.text}`);
           return null;
         }
         if (!P4.some((p6) => p6.code === code)) return null;
-        return { v: "psettings", arg: code, cat: mm2[2] && PS_CATS.some((c5) => c5[0] === mm2[2]) ? mm2[2] : "general", wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+        return { v: "psettings", arg: code, cat: psCatOf(mm2[2] || ""), wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
       }
     }
     {
@@ -72890,8 +73937,8 @@ ${d5.text}`);
       }
     }
     {
-      const m5 = /^#?people(?:\/(none|work))?$/.exec(h5 || "");
-      if (m5) return { v: "people", arg: m5[1] || "work", wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+      const m5 = /^#?people(?:\/(all|work|none|att))?$/.exec(h5 || "");
+      if (m5) return { v: "people", arg: m5[1] || "all", wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
     }
     let x5 = String(h5 || "");
     if (/^#?activity\?/.test(x5)) x5 = x5.replace("?", "&");
@@ -73089,7 +74136,7 @@ ${d5.text}`);
       rjCloseMenu(false);
       rjLeave();
     }
-    if (v5 === "people" && (arg === "none" || arg === "work")) setPTab(arg);
+    if (v5 === "people" && ["all", "work", "none", "att"].includes(arg)) setPTab(arg);
     const r4 = ((v6, arg2, opt2 = {}) => {
       if (!opt2.restore) {
         if (navBlocked(() => go2(v6, arg2, opt2))) return false;
@@ -75906,6 +76953,7 @@ ${d5.text}`);
         "ClientReportPanel",
         "CloseDay",
         "Combobox",
+        "Count",
         "Coverage",
         "CurrentState",
         "D",
@@ -75979,6 +77027,7 @@ ${d5.text}`);
         "PULSE",
         "PageShape",
         "Peek",
+        "PeoplePage",
         "PrepPage",
         "PrepPopup",
         "PrepShape",
@@ -76038,6 +77087,7 @@ ${d5.text}`);
         "WeekAhead",
         "WeekMenu",
         "Words",
+        "Workstreams",
         "acClose",
         "acDraw",
         "acItems",
@@ -76379,6 +77429,7 @@ ${d5.text}`);
         "openProject",
         "openProposal",
         "openRecord",
+        "openSearch",
         "openSpace",
         "orderedCols",
         "overdue",
@@ -76401,6 +77452,7 @@ ${d5.text}`);
         "peopleAll",
         "peopleText",
         "permissionInfoText",
+        "personForm",
         "pfDraw",
         "pfOpen",
         "pfResize",
@@ -76491,6 +77543,7 @@ ${d5.text}`);
         "renderMilestones",
         "renderPeople",
         "renderPerson",
+        "renderProjects",
         "renderPromises",
         "renderReview",
         "renderSettings",

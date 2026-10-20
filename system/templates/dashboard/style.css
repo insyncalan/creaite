@@ -4104,3 +4104,45 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+/* #247: project settings v2 (one scrolling page): the side list of sections, the sections, People on this project and the
+   person form (components/project/ProjectPeople.jsx, components/people/PeopleParts.jsx), Workstreams, Archive and close set apart */
+#v-psettings .psnav a{display:block;text-align:left;border-left:2px solid transparent;padding:8px 12px;border-radius:0 var(--r-md) var(--r-md) 0;color:var(--muted);font-weight:500;text-decoration:none}
+#v-psettings .psnav a:hover{color:var(--ink);background:var(--sunk)}
+#v-psettings .psnav a[aria-current="true"]{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--accent-soft)}
+#v-psettings .pssec{scroll-margin-top:12px}
+#v-psettings .pssec[hidden]{display:none}
+#v-psettings .pssec>.card+.card,#v-psettings .pssec>.card+.psdanger{margin-top:16px}
+#v-psettings .psdanger .card{border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+#v-psettings .psdanger h2{color:var(--bad)}
+#v-psettings .pshl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#v-psettings .pshl h2{flex:1}
+#v-psettings .psintro{margin:4px 0 8px}
+#v-psettings .psunh{margin:16px 0 2px;font-size:var(--fs-md)}
+#v-psettings .psunp{margin:2px 0 6px}
+#v-psettings #psUnas tr.off td,#v-psettings #psPeople tr.off td{color:var(--muted)}
+#v-psettings .wsedit input{height:var(--ctl-h-sm);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 8px;background:var(--surface);color:var(--ink);font:inherit;width:100%;min-width:0}
+#v-psettings .wsacts{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pstar{width:14px;height:14px;color:var(--warn);vertical-align:-2px;margin-left:2px}
+.tag.pcodetag{font-size:var(--fs-2xs)}
+#personEdit .pdgrid{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;align-items:center}
+#personEdit .pdgrid>label,#personEdit .pdgrid>.pdlab{color:var(--muted);font-size:var(--fs-sm)}
+#personEdit .pdgrid>input[type=text]{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg);color:var(--ink);font:inherit}
+#personEdit .pdgrid>input[readonly]{color:var(--muted);background:var(--sunk)}
+#personEdit .pdgrid .pdh{grid-column:2;color:var(--muted);font-size:var(--fs-xs);margin:-4px 0 4px}
+#personEdit .setticks{display:flex;flex-wrap:wrap;gap:4px 14px}
+#personEdit .pemsg{color:var(--bad);min-height:1em;margin-top:8px}
+#personEdit .deacts{display:flex;gap:8px;align-items:center;margin-top:14px}
+#v-projects .projarch{margin-top:14px;display:grid;gap:8px}
+/* #248: the People page v2, the home of the whole register (components/people/PeoplePage.jsx) */
+#v-people .plhead{display:flex;align-items:center;gap:12px}
+#v-people .plhead h1{flex:1;margin:0}
+#v-people .plintro{margin:4px 0 14px}
+#v-people #peopleTbl td{vertical-align:middle}
+#v-people #peopleTbl th:not(.num){text-align:left}
+#v-people #peopleTbl tr.nr td:first-child{box-shadow:inset 2px 0 0 var(--warn)}
+#v-people #peopleTbl td.title{white-space:nowrap}
+#v-people #peopleTbl .pj a{color:var(--accent);white-space:nowrap}
+#v-people #peopleTbl td.mgract{white-space:nowrap;text-align:right}
+#v-people #peopleTbl td.num .late{color:var(--bad);font-weight:600}
+#v-people .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;white-space:normal}
+#v-people .plnone{padding:16px}

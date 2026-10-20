@@ -39,7 +39,7 @@ MS_STATE_WORDS = {"achieved": "Achieved", "on track": "On track", "at risk": "At
                   "overdue": "Overdue", "late": "Overdue"}
 POINT = {"draft_chase": "Draft email (C in the peek)", "ask": "ask creaite (one /), with this item attached",
          "cx_edit": "cx-edit in Claude Code", "milestone_form": "the milestone form", "project_page": "the project page",
-         "settings": "Settings", "people": "Settings › People"}
+         "settings": "Settings", "people": "the People page"}
 
 
 def today():
@@ -362,7 +362,7 @@ NEVER = [   # (what it looks like, why, where to go instead); the first that mat
     (re.compile(r"\b(?:health|rag|project details?|sponsor|phase)\b"),
      "That isn't part of this item. Health and project details are on the project page.", "project_page"),
     (re.compile(r"\bsettings?\b"), "Settings aren't changed from here.", "settings"),
-    (re.compile(r"\b(?:people register|add (?:a )?person|new person)\b"), "The people register is changed in Settings › People.",
+    (re.compile(r"\b(?:people register|add (?:a )?person|new person)\b"), "The people register is changed on the People page.",
      "people"),
     (re.compile(r"\b(?:baseline|agreed date|rebaseline)\b"),
      "The baseline (agreed) date changes only in the milestone form, because a rebaseline also records a decision.", "milestone_form"),

@@ -1,48 +1,80 @@
 <section class="view" id="v-people">
 <div class="wrapmax">
+<div class="plhead">
 <h1>People</h1>
+<button type="button" class="btn primary" id="plAdd" aria-haspopup="dialog">Add a person</button>
+</div>
 <p id="hFirst" class="hfirst" data-k="people">Press <kbd>?</kbd> for help with People</p>
-<p class="sub" style="margin:#px 0 #px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p>
-<div class="tabhost" id="ptabsHost">
+<div id="peopleRoot">
+<p class="sub plintro">Everyone creaite knows, one record each. A name on any item has a record here; one marked “needs details” is missing an email, organisation or role. Select a name for their page; right-click to draft an email with their work. Counts only.</p>
+<div class="tabhost">
 <div class="tabs" id="ptabs" role="tablist" aria-label="People">
-<button type="button" role="tab" aria-selected="true" aria-controls="peopleTbl" tabindex="0" data-tab="work" data-ptab="work">With work <span class="sub">3</span>
+<button type="button" role="tab" aria-selected="true" aria-controls="peopleTbl" tabindex="0" data-tab="all" data-ptab="all">Everyone <span class="sub">6</span>
 </button>
-<button type="button" role="tab" aria-selected="false" aria-controls="peopleTbl" tabindex="-1" data-tab="none" data-ptab="none">Nothing assigned <span class="sub">1</span>
+<button type="button" role="tab" aria-selected="false" aria-controls="peopleTbl" tabindex="-1" data-tab="work" data-ptab="work">With work <span class="sub">3</span>
+</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="peopleTbl" tabindex="-1" data-tab="none" data-ptab="none">Nothing assigned <span class="sub">3</span>
+</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="peopleTbl" tabindex="-1" data-tab="att" data-ptab="att">Needs attention <span class="sub">2</span>
 </button>
 </div>
 </div>
-<div class="tbl" id="peopleTbl" role="tabpanel">
-<table>
+<div class="toolbar pmtools" role="search">
+<input id="plQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off">
+<span class="dd" id="plFdd">
+<button type="button" class="ib bd fbtn" id="plFBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="plFMenu" data-key="F" aria-label="Filter people" data-tip="Filter people">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel">
+<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
+</path>
+</svg>
+</button>
+<div class="ddmenu left fpmenu" id="plFMenu" role="dialog" aria-label="Filter people">
+</div>
+</span>
+</div>
+<div class="wapplied" id="plApplied">
+<span class="sp">
+</span>
+<span class="sub" id="plCount" role="status">Showing 6 of 6 people · 2 need attention</span>
+</div>
+<div class="tbl" id="peopleTbl" role="tabpanel" data-xc="1" style="--xstick: #px;">
+<table class="plt">
 <thead>
 <tr>
-<th class="" data-psort="name" aria-sort="none">
+<th scope="col" aria-sort="none" data-psort="name">
 <button type="button" class="thsort">Name</button>
 </th>
-<th class="" data-psort="org" aria-sort="none">
+<th scope="col" aria-sort="none" data-psort="email">
+<button type="button" class="thsort">Email</button>
+</th>
+<th scope="col" aria-sort="none" data-psort="org">
 <button type="button" class="thsort">Organisation</button>
 </th>
-<th class="" data-psort="role" aria-sort="none">
+<th scope="col" aria-sort="none" data-psort="role">
 <button type="button" class="thsort">Role</button>
 </th>
-<th>Projects</th>
-<th class="num" data-psort="oa" aria-sort="none">
-<button type="button" class="thsort">Open actions</button>
+<th scope="col">Projects</th>
+<th scope="col" class="num" aria-sort="none" data-psort="oa">
+<button type="button" class="thsort" title="Open actions">Actions</button>
 </th>
-<th class="num" data-psort="or" aria-sort="none">
-<button type="button" class="thsort">Open RAID</button>
+<th scope="col" class="num" aria-sort="none" data-psort="or">
+<button type="button" class="thsort" title="Open risks and issues">RAID</button>
 </th>
-<th class="num" data-psort="dw" aria-sort="none">
-<button type="button" class="thsort">Decisions waiting</button>
+<th scope="col" class="num" aria-sort="none" data-psort="dw">
+<button type="button" class="thsort" title="Decisions waiting on them">Decisions</button>
 </th>
-<th class="num" data-psort="late" aria-sort="descending">
+<th scope="col" class="num" aria-sort="descending" data-psort="late">
 <button type="button" class="thsort">Overdue ▼</button>
+</th>
+<th scope="col">
+<span class="vh">Actions on the person</span>
 </th>
 </tr>
 </thead>
-<tbody>
-<tr class="click" data-pp="Alan Carter">
+<tbody id="plRows">
+<tr data-pn="Alan Carter" data-pp="Alan Carter" class="click">
 <td class="title">
-<a href="#" class="plink2" data-person="Alan Carter">You (Alan Carter)</a>
+<a href="#" class="plink2" data-person="Alan Carter" title="Open My work">You (Alan Carter)</a>
 </td>
 <td>
 <span class="sub">—</span>
@@ -51,52 +83,272 @@
 <span class="sub">—</span>
 </td>
 <td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="pj">
+<span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</span>
+</span>
 </td>
 <td class="num">
 <a href="#" class="cntl" data-nav="actions:open::o=Alan%20Carter" data-n="1" aria-label="1 open action owned by you, open in Work">1</a>
 </td>
-<td class="num">0</td>
-<td class="num">0</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
 <td class="num late">
 <a href="#" class="cntl" data-nav="all:open::st=Open&amp;due=overdue&amp;ty=Action,Risk,Issue,Assumption,Dependency&amp;o=Alan%20Carter" data-n="1" aria-label="1 overdue item owned by you, open in Work">1</a>
 </td>
-</tr>
-<tr class="click" data-pp="Omar Ali">
-<td class="title">
-<a href="#" class="plink2" data-person="Omar Ali">Omar Ali</a>
+<td class="mgract">
+<span class="x">Change in Settings › Essentials › You</span>
 </td>
+</tr>
+<tr data-pn="Example Person" data-pp="Example Person" class="click nr">
+<td class="title">
+<a href="#" class="plink2" data-person="Example Person" title="Open Example Person’s work">Example Person</a>
+<span class="tag warn" data-needs="true" title="Missing: email, organisation, role">needs details</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="pj">
+<span>
+<span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</span>
+<span>
+<span class="pcode plink" data-proj="DEF" role="link" tabindex="0" title="Open Digital Enablement">Digital Enablement</span>
+</span>
+</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="mgract">
+<button type="button" class="mini" data-pl-details="Example Person" aria-haspopup="dialog" aria-label="Add details for Example Person">Add details</button>
+<button type="button" class="ib sm" aria-label="Edit Example Person" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Example Person">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Remove Example Person from the register" data-tip="Only their items name them: there is no record to remove" aria-disabled="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-pn="Jane Doe" data-pp="Jane Doe" class="click">
+<td class="title">
+<a href="#" class="plink2" data-person="Jane Doe" title="Open Jane Doe’s work">Jane Doe</a>
+</td>
+<td>jane.doe@client.com</td>
+<td>Example Client Ltd</td>
+<td>Sponsor</td>
+<td>
+<span class="pj">
+<span>
+<span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</span>
+</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Edit Jane Doe" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Jane Doe">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm no" aria-label="Remove Jane Doe from the register" data-tip="Remove from the register" data-pl-remove="Jane Doe">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-pn="Omar Ali" data-pp="Omar Ali" class="click">
+<td class="title">
+<a href="#" class="plink2" data-person="Omar Ali" title="Open Omar Ali’s work">Omar Ali</a>
+</td>
+<td>omar@def.example</td>
 <td>Enable</td>
 <td>Project manager</td>
 <td>
+<span class="pj">
+<span>
+<span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</span>
+<span>
 <span class="pcode plink" data-proj="DEF" role="link" tabindex="0" title="Open Digital Enablement">Digital Enablement</span>
+</span>
+</span>
 </td>
 <td class="num">
 <a href="#" class="cntl" data-nav="actions:open::o=Omar%20Ali" data-n="1" aria-label="1 open action owned by Omar Ali, open in Work">1</a>
 </td>
-<td class="num">0</td>
-<td class="num">0</td>
-<td class="num ">0</td>
-</tr>
-<tr class="click" data-pp="Sara Example">
-<td class="title">
-<a href="#" class="plink2" data-person="Sara Example">Sara Example</a>
+<td class="num">
+<span>0</span>
 </td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Edit Omar Ali" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Omar Ali">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm no" aria-label="Remove Omar Ali from the register" data-tip="Remove from the register" data-pl-remove="Omar Ali">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-pn="Sam" data-pp="Sam" class="click nr">
+<td class="title">
+<a href="#" class="plink2" data-person="Sam" title="Open Sam’s work">Sam</a>
+<span class="tag warn" data-needs="true" title="Missing: email, organisation, role">needs details</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="pj">
+<span>
+<span class="pcode plink" data-proj="DEF" role="link" tabindex="0" title="Open Digital Enablement">Digital Enablement</span>
+</span>
+</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="mgract">
+<button type="button" class="mini" data-pl-details="Sam" aria-haspopup="dialog" aria-label="Add details for Sam">Add details</button>
+<button type="button" class="ib sm" aria-label="Edit Sam" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Sam">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Remove Sam from the register" data-tip="Only their items name them: there is no record to remove" aria-disabled="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-pn="Sara Example" data-pp="Sara Example" class="click">
+<td class="title">
+<a href="#" class="plink2" data-person="Sara Example" title="Open Sara Example’s work">Sara Example</a>
+</td>
+<td>sara.example@client.com</td>
 <td>Example Client Ltd</td>
 <td>Delivery lead</td>
 <td>
+<span class="pj">
+<span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</span>
+</span>
 </td>
 <td class="num">
 <a href="#" class="cntl" data-nav="actions:open::o=Sara%20Example" data-n="1" aria-label="1 open action owned by Sara Example, open in Work">1</a>
 </td>
-<td class="num">0</td>
-<td class="num">0</td>
-<td class="num ">0</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="num">
+<span>0</span>
+</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Edit Sara Example" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Sara Example">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm no" aria-label="Remove Sara Example from the register" data-tip="Remove from the register" data-pl-remove="Sara Example">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
 </tr>
 </tbody>
 </table>
 </div>
-<p id="hFoot" class="hfoot" data-k="people">Press <kbd>?</kbd> for help with People</p>
+</div>
+<p id="hFoot" class="hfoot" data-k="people" hidden="">Press <kbd>?</kbd> for help with People</p>
 </div>
 </section>

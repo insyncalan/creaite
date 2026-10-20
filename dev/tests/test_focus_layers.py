@@ -31,6 +31,7 @@ class FocusAndLayers(LiveBrowserCase):
         b.eval("go('people')")
         b.wait("document.querySelectorAll('#peopleTbl th[data-psort] button.thsort').length>1")
         b.eval("document.querySelector('#peopleTbl th[data-psort=\"name\"] button.thsort').focus()")
+        b.key("Tab")                                                     # #248: Email comes after Name now
         b.key("Tab")                                                     # Tab on to the next heading: Organisation
         tag, cls, col, sort0, rows0 = b.eval(HEAD)
         self.assertEqual((tag, cls, col, sort0), ("BUTTON", "thsort", "org", "none"))
