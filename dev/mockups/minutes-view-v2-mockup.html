@@ -363,10 +363,14 @@ $$('#turns li').forEach(function(l,i){l.onmouseenter=function(){$$('tr.mi').forE
 $('#trX').onclick=function(){showPane(false)};$('#trBtn').onclick=function(){showPane(!$('.mnwrap').classList.contains('withpane'))};
 // disappearing header: scrolling the sheet slims the bar and hides the page header (the reporting behaviour)
 $('#body').addEventListener('scroll',function(){var s=$('.sheet-root'),on=this.scrollTop>40;if(s.classList.contains('rpt-slim')!=on){s.classList.toggle('rpt-slim',on);setTimeout(fit,0)}});
-$('#apBtn').onclick=function(){var y=ITEMS.filter(function(x){return x.trk=='y'});
- $('#apSub').textContent=y.length+' work items will be registered. Everything else stays in the minutes; removed lines are left out.';
- $('#apList').innerHTML=ITEMS.map(function(x){var s=x.trk=='y'?'Register':x.trk=='n'?'Removed':'Minutes only';return '<div class="row'+(x.trk=='n'?' rm':'')+'"><span class="k">'+s+'</span><span>'+esc(x.t)+'</span></div>'}).join('');$('#mnApprove').showModal()};
-$('#apCancel').onclick=$('#apNone').onclick=$('#apGo').onclick=function(){$('#mnApprove').close()};
+function snack(t){closePop();var s=document.createElement('div');s.className='mnpop';s.setAttribute('role','status');s.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:var(--r-md);box-shadow:var(--shadow-md);font-size:13px;display:flex;gap:14px;align-items:center';s.innerHTML='<span>'+t+'</span><button type="button" style="border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Undo</button>';document.body.appendChild(s);s.querySelector('button').onclick=function(){s.remove()};setTimeout(function(){s.remove()},6000)}
+function approved(){var y=ITEMS.filter(function(x){return x.trk=='y'}).length;snack('Minutes approved \u00b7 '+(y?y+' work item'+(y==1?'':'s')+' registered':'no work items registered'))}
+$('#apBtn').onclick=function(){var w=ITEMS.filter(function(x){return x.trk=='y'&&(P[x.o]===0||x.dup)});
+ if(!w.length){approved();return}
+ $('#apSub').textContent='Before these minutes are approved, '+(w.length==1?'one ticked item has':w.length+' ticked items have')+' something worth a look. Nothing else needs checking.';
+ $('#apList').innerHTML=w.map(function(x){return '<div class="row"><span class="k" style="width:auto;flex:none;min-width:140px;color:var(--warn)">'+(P[x.o]===0?x.o+' needs details':'Possible duplicate')+'</span><span>'+esc(x.t)+'</span></div>'}).join('');$('#mnApprove').showModal()};
+$('#apNone').style.display='none';$('#apCancel').textContent='Go back';$('#apGo').textContent='Approve anyway';
+$('#apCancel').onclick=function(){$('#mnApprove').close()};$('#apGo').onclick=function(){$('#mnApprove').close();approved()};
 function zoom(z){Z=Math.max(.5,Math.min(2.5,z));fit()}
 $('#zIn').onclick=function(){zoom(Z+.1)};$('#zOut').onclick=function(){zoom(Z-.1)};
 $('#body').addEventListener('wheel',function(e){if(!e.ctrlKey)return;e.preventDefault();zoom(Z*Math.exp(-e.deltaY*.01))},{passive:false});
