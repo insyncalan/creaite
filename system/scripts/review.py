@@ -512,11 +512,37 @@ def section(lines, start, end):
     return out
 
 
+def rejected(item):
+    """Whether Alan rejected this staged item (#261)."""
+    return item.get("decision") == "rejected"
+
+
+def action_field_differences(k, item, row):
+    """An approved or pending staged action against its line in the draft: owner and due date."""
+    diffs, v = [], item["values"]
+    for field, draft_value in (("owner", row["owner"]), ("due_date", row["due"])):
+        staged_value = v.get(field) or None
+        if field == "owner":  # the tracker writes "Name (Company)"; minutes may show the name alone
+            staged_value = re.sub(r"\s*\([^)]*\)$", "", staged_value or "TBC")
+            draft_value = re.sub(r"\s*\([^)]*\)$", "", draft_value or "TBC")
+        if staged_value != (draft_value or None):
+            label = "owner" if field == "owner" else "due"
+            shown_draft = tracker.shown(draft_value) if field == "due_date" else draft_value
+            shown_staged = tracker.shown(v.get(field)) if field == "due_date" else v.get(field, "TBC")
+            diffs.append({"item": item, "field": field, "value": draft_value,
+                          "msg": f"Action {k} {label}: draft says {shown_draft or 'none'}; "
+                                 f"staged {shown_staged or 'none'}"})
+    return diffs
+
+
 def minutes_differences(data, block):
-    """Compare the (possibly edited) draft minutes with the staged items: owners, due dates, missing items."""
+    """Compare the (possibly edited) draft minutes with the staged items: owners, due dates, missing items.
+    #261: the draft is compared with every staged item, rejected ones included: a rejection is a decision about the staged
+    item, not a difference from the draft, so a drafted line that matches a rejected item is neither "not staged" nor checked
+    for owner and due date, and a rejected item missing from the draft is no difference either."""
     import minutes
     parsed = minutes.parse_draft(paths.resolve(block["draft"]))
-    live = [i for i in data.get("items", []) if i.get("decision") != "rejected" and i.get("op") == "new"]
+    live = [i for i in data.get("items", []) if i.get("op") == "new"]
     actions = [((i["values"].get("description") or ""), i) for i in live if i["table"] == "actions"]
     diffs, matched = [], set()
     for k, row in enumerate(parsed["actions"], start=1):
@@ -524,35 +550,19 @@ def minutes_differences(data, block):
         if not hit:
             diffs.append({"msg": f"Action {k} is in the draft but not staged: {row['text']}"})
             continue
-        item = hit[1]
-        matched.add(id(item))
-        v = item["values"]
-        for field, draft_value in (("owner", row["owner"]), ("due_date", row["due"])):
-            staged_value = v.get(field) or None
-            if field == "owner":  # the tracker writes "Name (Company)"; minutes may show the name alone
-                staged_value = re.sub(r"\s*\([^)]*\)$", "", staged_value or "TBC")
-                draft_value = re.sub(r"\s*\([^)]*\)$", "", draft_value or "TBC")
-            if staged_value != (draft_value or None):
-                label = "owner" if field == "owner" else "due"
-                shown_draft = tracker.shown(draft_value) if field == "due_date" else draft_value
-                shown_staged = tracker.shown(v.get(field)) if field == "due_date" else v.get(field, "TBC")
-                diffs.append({"item": item, "field": field, "value": draft_value,
-                              "msg": f"Action {k} {label}: draft says {shown_draft or 'none'}; "
-                                     f"staged {shown_staged or 'none'}"})
-    for text, item in actions:
-        if id(item) not in matched:
-            diffs.append({"msg": f"Staged action not in the draft: {text}"})
+        matched.add(id(hit[1]))
+        if not rejected(hit[1]):
+            diffs += action_field_differences(k, hit[1], row)
+    diffs += [{"msg": f"Staged action not in the draft: {text}"} for text, item in actions
+              if id(item) not in matched and not rejected(item)]
     for kind, table, drafted in (("decision", "decisions", parsed["decisions"]),
                                  ("RAID item", "raid", [f"{d['type'] or 'Risk'}: {d['text']}" for d in parsed["raid"]])):
         staged = [((f"{i['values'].get('type')}: " if table == "raid" else "") +
                    (i["values"].get("decision") or i["values"].get("description") or ""), i)
                   for i in live if i["table"] == table]
-        for text in drafted:
-            if not best(text, staged, 0.6):
-                diffs.append({"msg": f"Draft has a {kind} that isn't staged: {text}"})
-        for text, _ in staged:
-            if not best(text, [(t, None) for t in drafted], 0.6):
-                diffs.append({"msg": f"Staged {kind} not in the draft: {text}"})
+        diffs += [{"msg": f"Draft has a {kind} that isn't staged: {text}"} for text in drafted if not best(text, staged, 0.6)]
+        diffs += [{"msg": f"Staged {kind} not in the draft: {text}"} for text, item in staged
+                  if not rejected(item) and not best(text, [(t, None) for t in drafted], 0.6)]
     return diffs
 
 
@@ -902,7 +912,14 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
     block[field] = decision
     save(p, data)
     what = {"meeting": "Minutes", "report": "Report"}.get(ref, "File change")
-    return f"{n}: {what} {decision} — {block.get('title', '')}" + (f". {msg}" if msg else "")
+    return f"{n}: {what} {decision}{none_taken(data, ref, decision)} — {block.get('title', '')}" + (f". {msg}" if msg else "")
+
+
+def none_taken(data, ref, decision):
+    """#261: minutes approved with every one of their items rejected are an approval, said in words."""
+    own = [i for i in data.get("items", []) if i.get("op") == "new"]
+    return "; no items were taken into your work" if ref == "meeting" and decision == "approved" and own and \
+        all(rejected(i) for i in own) else ""
 
 
 DUP_ID = r"[A-Z][A-Z0-9]{1,6}-(?:[A-Z]-)?\d{3,}"
