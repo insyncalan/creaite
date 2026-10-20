@@ -799,7 +799,10 @@ def bash_problem(command):
     if not m:
         return ("ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; "
                 "file changes go through filechange.py")
-    return _script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), cmd.split())
+    # #174 F5: the settings rule reads the command twice, as the shell hands it over (quotes removed) and as str.split cuts it
+    # (the old reading, which also cuts at a non-breaking space or a form feed the shell doesn't), so it only ever refuses more
+    return (_script_refused(m.group(1)) or _shell_refused(cmd) or _glob_refused(cmd)
+            or _settings_refused(m.group(1), _unquoted_words(cmd)) or _settings_refused(m.group(1), cmd.split()))
 
 
 def _script_refused(script):
@@ -836,9 +839,48 @@ def _shell_refused(cmd):
     return "the command has an unclosed quote" if quote else None
 
 
+def _glob_refused(cmd):
+    """Why the command has a character outside quotes that the shell could turn into another word, or None (#174 F5, review of
+    5b20e38c and 3f186de5). The guard reads a script call as the words it sees, but the shell expands a pattern against the folder
+    the run starts in (the vault), where `filechange.py create setting` can make a file of any name: `propose.py setti?g`,
+    `people migrat?`, `tracker.py validat?` and `reach.py wra?` then become the commands a fixed-word rule refuses. So an unquoted
+    `*`, `?`, `[` is refused in every word, and so are `^`, `#` and a `~` that doesn't start a word (zsh's extended patterns
+    `x#`, `^x` and `x~y`, when that option is on). In quotes the shell leaves them as text: `'SOW [signed].docx'`, `'inbox/x [1].vtt'`
+    and a name with a `?` still run (the bounded expansion check, held_arg_paths, still looks at what a script might do with them)."""
+    quote, prev = None, " "
+    for ch in cmd:
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch in "*?[^#" or (ch == "~" and prev not in " \t=:,"):
+            return ("the command has a wildcard or pattern character (* ? [ ^ # ~) outside quotes, which the shell would expand into "
+                    "another word: name the file or word itself, and put a name that has one of them in quotes")
+        prev = ch
+    return None
+
+
+def _unquoted_words(cmd):
+    """The command's words as the shell hands them to the program, quotes removed (#174 F5: `'setting'`, `se""tting` and
+    `"retire-settings"` are the words setting and retire-settings). Called after _shell_refused, so a quote always opens and closes
+    as the shell reads it and shlex agrees with the shell; None if it still can't be split (defence in depth: the strings that pass
+    _shell_refused always split, so the settings rule's refusal of None is not reached today)."""
+    import shlex
+    try:
+        return shlex.split(cmd)
+    except ValueError:
+        return None
+
+
 def _settings_refused(script, words):
-    if script == "propose.py" and len(words) > 2 and words[2] == "setting" or \
-            script == "propose.py" and "retire-settings" in words:
+    """Why a propose.py call is refused as a settings change, or None. `words` are the command's words, the script's own arguments
+    from the third on. propose.py's main() takes argv[0] as the command, so `setting` is refused as that first argument;
+    `retire-settings` (workstreams' subcommand) and `people migrate` clear settings.json lists through cmd_setting: refused in any
+    place (`migrate` after `people`)."""
+    args = (words or [])[2:]
+    if script == "propose.py" and (words is None or args[:1] == ["setting"] or "retire-settings" in args
+                                   or (args[:1] == ["people"] and "migrate" in args[1:])):
         return ("settings are changed on the approval card: put the new settings.json in system/staging/drafts/ and run "
                 "python3 system/scripts/filechange.py edit system/config/settings.json --from <that file> --why \"…\"")
     return None
@@ -927,6 +969,9 @@ def command_kind(script, words):
     pos = [w for w in words if not w.startswith("-")]
     if not pos:
         return READ, script
+    if len(pos) > 1 and f"{pos[0]} {pos[1]}" not in table and any(k.startswith(pos[0] + " ") for k in table):
+        # #174: `people migrat?` is not `people`: a first word with commands of its own fails closed
+        return "unknown", f"{script} {pos[0]}"
     name = f"{pos[0]} {pos[1]}" if len(pos) > 1 and f"{pos[0]} {pos[1]}" in table else pos[0]
     kind = table.get(name, "unknown")
     if isinstance(kind, tuple):
@@ -1461,11 +1506,32 @@ def is_report_file(path):
     return bool(area and area[1] in ("weekly_reports", "client_reports")) and bool(REPORT_NAME.search(p.name))
 
 
+def _stages_a_report(cmd):
+    """True when the command's words run report.py's weekly-stage or client-stage: the first word after `report.py` that isn't an
+    option. #174 (a hole in 2.5.1): the raw-text match above is spliced apart by quotes (`'weekly-stage'`, `weekly''-stage`,
+    `"client-stage"`), so the words are read as the shell hands them over (shlex) and as str.split cuts them (the old reading);
+    a command that can't be split is refused if it names report.py at all."""
+    import shlex
+    readings = []
+    try:
+        readings.append(shlex.split(cmd))
+    except ValueError:
+        return "report.py" in cmd
+    readings.append(cmd.split())
+    for words in readings:
+        for i, w in enumerate(words):
+            if w.rsplit("/", 1)[-1] == "report.py":
+                first = next((x for x in words[i + 1:] if not x.startswith("-")), "")
+                if re.match(r"(?:weekly|client)-stage\b", first):
+                    return True
+    return False
+
+
 def report_command_refusal(command):
     """Why an ask creaite Bash call is refused for reports, or None: report.py weekly-stage or client-stage, or a path argument
     that is a report file."""
     cmd = vault_relative(command or "")
-    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd):
+    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd) or _stages_a_report(cmd):
         return REPORTS_ARE_THE_USERS
     try:
         for p in ask_arg_paths(command, expand=False):

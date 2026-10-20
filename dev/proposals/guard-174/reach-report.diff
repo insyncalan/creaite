@@ -1,0 +1,36 @@
+--- system/scripts/reach.py
++++ system/scripts/reach.py
+@@ -1460,11 +1460,32 @@
+     return bool(area and area[1] in ("weekly_reports", "client_reports")) and bool(REPORT_NAME.search(p.name))
+ 
+ 
++def _stages_a_report(cmd):
++    """True when the command's words run report.py's weekly-stage or client-stage: the first word after `report.py` that isn't an
++    option. #174 (a hole in 2.5.1): the raw-text match above is spliced apart by quotes (`'weekly-stage'`, `weekly''-stage`,
++    `"client-stage"`), so the words are read as the shell hands them over (shlex) and as str.split cuts them (the old reading);
++    a command that can't be split is refused if it names report.py at all."""
++    import shlex
++    readings = []
++    try:
++        readings.append(shlex.split(cmd))
++    except ValueError:
++        return "report.py" in cmd
++    readings.append(cmd.split())
++    for words in readings:
++        for i, w in enumerate(words):
++            if w.rsplit("/", 1)[-1] == "report.py":
++                first = next((x for x in words[i + 1:] if not x.startswith("-")), "")
++                if re.match(r"(?:weekly|client)-stage\b", first):
++                    return True
++    return False
++
++
+ def report_command_refusal(command):
+     """Why an ask creaite Bash call is refused for reports, or None: report.py weekly-stage or client-stage, or a path argument
+     that is a report file."""
+     cmd = vault_relative(command or "")
+-    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd):
++    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd) or _stages_a_report(cmd):
+         return REPORTS_ARE_THE_USERS
+     try:
+         for p in ask_arg_paths(command, expand=False):

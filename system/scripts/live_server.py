@@ -1528,7 +1528,10 @@ class Handler(BaseHTTPRequestHandler):
         run = RUNS.get(req.get("run"))
         if not run or run.done:
             return self.send(200, {"ok": False, "message": "Nothing is running."})
-        return self.send(200, {"ok": True, "deferred": run.request_stop(), "cleared": queue_clear()})   # BL-257: Stop clears the queue
+        # BL-257: Stop clears the queue; counted first (#152f): once the child ends, the reader's queue_after empties it too
+        # and the count would be 0
+        cleared = queue_clear()
+        return self.send(200, {"ok": True, "deferred": run.request_stop(), "cleared": cleared})
 
     def ask_running(self, req):
         """The run in progress, or the last one if no page has seen its end yet (a confirmation may be waiting)."""
