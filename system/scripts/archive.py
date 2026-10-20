@@ -311,15 +311,15 @@ def archived_moves(con=None, kind="reports"):
             if not isinstance(r, dict) or r.get("op") != "move":
                 continue
             if r.get("kind") == kind:
-                out[r.get("to")] = r.get("from")
+                out[paths.canonical_archive(r.get("to"))] = (r.get("to"), r.get("from"))
             elif r.get("kind") == back:
-                out.pop(r.get("from"), None)
+                out.pop(paths.canonical_archive(r.get("from")), None)      # #252: whichever name each record has
     return _followed(out)
 
 
 def _followed(moves):
     """#252: the record keeps the archive folder's name as it was; after Alan renames the folder by hand a key is where it is now."""
-    return {paths.follow_stored(k): v for k, v in moves.items() if k}
+    return {paths.follow_stored(to): frm for to, frm in moves.values() if to}
 
 
 def moved_back(con=None):
@@ -445,7 +445,7 @@ def note_delete_spec(rel):
         return None, "that isn't a note that is there"
     code, p = hit
     base = paths.portfolio_dir() if code == "_portfolio" else paths.project_dir(code)
-    dest = paths.free_path(base / paths.ARCHIVE / paths.folder_name("notes").strip("/"), p.stem, p.suffix)
+    dest = paths.free_archive_path(base, paths.folder_name("notes").strip("/"), p.stem, p.suffix)
     title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
     return {"source_run": "notes", "items": [], "file_changes": {
         "title": f"Delete note \u201c{title}\u201d (move it to the archive)", "project": None if code == "_portfolio" else code,

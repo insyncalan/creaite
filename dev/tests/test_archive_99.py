@@ -165,6 +165,31 @@ class NewMovesGoToTheNewName(OneDriveCase):
         self.assertEqual(ops[0]["to"], "projects/Example Programme/99 Archive/08 Notes/Plan.md")
         self.assertTrue(notes.exists())
 
+    def test_delete_note_numbers_its_name_across_all_three_archives(self):
+        """N1: an old archive already holds a deleted note of that name: the new one is numbered in 99 Archive, never followed to the
+        old file, and the shape check accepts it."""
+        notes = touch(self.eng("ABC", "08 Notes", "Plan.md"), "---\ntitle: Plan\n---\nBody\n")
+        stored = "projects/Example Programme/08 Notes/Plan.md"
+        taken = []
+        for name in (*OLDS, NEW):
+            touch(self.eng("ABC", name, "08 Notes", "Plan.md" if not taken else f"Plan-{len(taken) + 1}.md"))
+            taken.append(name)
+            spec = self.py(f"import archive; print(json.dumps(archive.note_delete_spec({stored!r})))")[0]
+            op = spec["file_changes"]["file_ops"][0]
+            want = f"projects/Example Programme/99 Archive/08 Notes/Plan-{len(taken) + 1}.md"
+            self.assertEqual(op["to"], want, name)
+            why = self.py(f"import reach; print(json.dumps(reach.archive_move_problem({op['from']!r}, {op['to']!r}, 'notes')))")
+            self.assertIsNone(why, (name, why))
+        self.assertTrue(notes.exists())
+
+    def test_the_reports_move_skips_a_name_taken_in_any_of_the_three(self):
+        for i, name in enumerate(ALL):
+            f = f"2024-0{i + 1}-05 Steering.docx"
+            touch(self.eng("ABC", "02 Meetings", "Minutes", f))
+            touch(self.eng("ABC", name, "02 Meetings", "Minutes", f))
+        got = self.py("import archive; print(json.dumps([d['from'] for d in archive.due_reports(__import__('datetime').date(2026, 10, 20))]))")
+        self.assertEqual(got, [])
+
     def test_a_new_project_gets_99_archive_from_a_skeleton_with_either_old_name(self):
         sk = self.root / "_Templates" / "_Skeleton"
         for old in (*OLDS, "_ARCHIVE", "zz archive", "99 archive"):         # exact names and lower or upper case (F3)
@@ -405,6 +430,107 @@ class HandRenamed(unittest.TestCase):
                                "except tracker.Invalid as e:\n    print(json.dumps(str(e)))")
                 self.assertEqual(code, "ok", (src, code))
         self.each(check)
+
+
+class FollowRules(unittest.TestCase):
+    """Round 3 (Opus review): the record is cleared by a Move back whichever names it and the folder have (N2), a symlinked archive
+    folder or a `..` is never followed (N3), 99 Archive wins over an old name, and a follow never leaves the engagement."""
+
+    run_at, py, files, spec = mb.MoveBack.run_at, mb.MoveBack.py, mb.MoveBack.files, mb.MoveBack.spec
+    stage_from_guard, apply_as_card = mb.MoveBack.stage_from_guard, mb.MoveBack.apply_as_card
+
+    def setUp(self):
+        self.v = Vault()
+        self.v.run("init")
+        self.abc = mb.archive_old_files(self.v.root)
+        self.base = f"projects/{self.abc.name}"
+        self.pf = self.v.root / "projects/_portfolio"
+        self.other = self.v.root / "projects" / "ZZZ Other"
+        self.addCleanup(self.v.cleanup)
+
+    def follow(self, stored):
+        return self.py(f"import paths; print(json.dumps([paths.follow_stored({stored!r}), str(paths.resolve({stored!r}))]))")
+
+    def check_move(self, src, dst, kind):
+        return self.py("import tracker\n"
+                       f"try:\n    tracker.check_move({{'from': {src!r}, 'to': {dst!r}}}, {{'archive': {kind!r}}})\n"
+                       "    print(json.dumps('ok'))\n"
+                       "except tracker.Invalid as e:\n    print(json.dumps(str(e)))")
+
+    def test_a_move_back_clears_the_record_in_all_four_combinations(self):
+        """N2: the record said one name, the folder had another, when the file was moved back; the archive record must be gone
+        (a file Alan later puts under that name in the archive folder is not listed as archived)."""
+        stored = f"{self.base}/{mb.DUE[0]}"
+        for old in OLDS:
+            for how in ("new_new", "old_record_new_folder", "new_record_old_folder", "both"):
+                with self.subTest(old=old, how=how):
+                    self.setUp()                                    # a fresh vault each time (cleaned up at the end)
+                    folder = NEW
+                    if how == "old_record_new_folder":
+                        rewrite_records(self.v.root, NEW, old)
+                    elif how in ("new_record_old_folder", "both"):
+                        if not PATCHED:
+                            continue
+                        for b in (self.abc, self.pf):
+                            (b / NEW).rename(b / old)
+                        folder = old
+                        if how == "both":
+                            rewrite_records(self.v.root, NEW, old)
+                            (self.abc / NEW).mkdir()
+                    spec, why = self.spec(stored)
+                    self.assertIsNone(why)
+                    r = self.stage_from_guard(spec)
+                    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                    self.apply_as_card(r)
+                    (self.abc / mb.DUE[0]).rename(self.abc / "minutes" / "elsewhere.md")
+                    touch(self.abc / folder / mb.DUE[0], "a different file Alan put there\n")
+                    ghost = [a["at"] for a in self.files()[1] if a["path"] == stored]
+                    self.assertEqual(ghost, [])
+                    self.assertIsNone(self.spec(stored)[0])
+
+    def test_dotdot_is_never_followed(self):
+        touch(self.other / "secret.md", "s\n")
+        for tail in ("_Archive/../../ZZZ Other/secret.md", "_Archive/../_Archive/../../ZZZ Other/secret.md", "99 Archive/../../ZZZ Other/secret.md"):
+            stored = f"{self.base}/{tail}"
+            self.assertEqual(self.follow(stored)[0], stored)
+            self.assertIsNone(self.spec(stored)[0])
+
+    def test_a_follow_never_leaves_the_engagement(self):
+        touch(self.other / NEW / "minutes" / "2025-09-30 Steering committee.md", "other engagement's\n")
+        (self.abc / NEW).rename(self.abc / "moved away")
+        got = self.follow(f"{self.base}/_Archive/minutes/2025-09-30 Steering committee.md")
+        self.assertNotIn("ZZZ Other", got[1])
+        self.assertEqual(got[0], f"{self.base}/_Archive/minutes/2025-09-30 Steering committee.md")
+
+    def test_a_symlinked_archive_folder_is_not_followed_or_listed(self):
+        touch(self.other / NEW / mb.DUE[0], "other engagement's minutes\n")
+        rewrite_records(self.v.root, NEW, "_Archive")
+        (self.abc / NEW).rename(self.abc / "moved-away")
+        os.symlink(self.other / NEW, self.abc / NEW)
+        stored = f"{self.base}/_Archive/{mb.DUE[0]}"
+        self.assertEqual(self.follow(stored)[0], stored)                 # the symlink is skipped: nothing to follow to
+        self.assertEqual([a["at"] for a in self.files()[1] if a["p"] == "ABC" and a["path"] == f"{self.base}/{mb.DUE[0]}"], [])
+        self.assertIsNone(self.spec(f"{self.base}/{mb.DUE[0]}")[0])
+
+    def test_99_archive_wins_when_two_archive_folders_hold_the_same_stored_path(self):
+        rewrite_records(self.v.root, NEW, "zz Archive")                  # the record names a folder that is no longer there
+        touch(self.abc / "_Archive" / mb.DUE[0], "the older copy\n")
+        stored = f"{self.base}/zz Archive/{mb.DUE[0]}"
+        self.assertEqual(self.follow(stored)[0], f"{self.base}/{NEW}/{mb.DUE[0]}")
+        at = next(a["at"] for a in self.files()[1] if a["path"] == f"{self.base}/{mb.DUE[0]}")
+        self.assertEqual(at, f"{self.base}/{NEW}/{mb.DUE[0]}")
+
+    def test_both_present_the_recorded_name_wins_when_it_is_there(self):
+        rewrite_records(self.v.root, NEW, "_Archive")
+        (self.abc / NEW).rename(self.abc / "_Archive")
+        touch(self.abc / NEW / mb.DUE[0], "a different file Alan put there\n")
+        at = [a["at"] for a in self.files()[1] if a["path"] == f"{self.base}/{mb.DUE[0]}"]
+        self.assertEqual(at, [f"{self.base}/_Archive/{mb.DUE[0]}"])
+
+    @needs_diff
+    def test_a_restore_whose_followed_form_is_no_archive_folder_is_refused(self):
+        for src in (f"projects/zz Archive/{self.abc.name}", f"projects/_Archive/{self.abc.name}"):
+            self.assertNotEqual(self.check_move(src, f"projects/{self.abc.name} 2", "restore"), "ok")
 
 
 class HandRenamedProject(unittest.TestCase):

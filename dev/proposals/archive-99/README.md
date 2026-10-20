@@ -66,6 +66,12 @@ python3 dev/proposals/archive-99/rules_edit.py system/creaite-rules.md --check  
 4. **Removing `rename`** removes a guarded move kind. A proposal staged by an earlier release with `archive: "rename"` and still waiting is refused ("a folder is moved only by an archive or a restore").
 5. **One release only.** After it, `OLD_ARCHIVES`, `paths.OLD_ARCHIVE` (kept as an alias so an unpatched `reach.py` still imports), the old-name arms of `_archive_part`, and the two names in `never_index` must be dropped, or restores from them stop working.
 
+## Left as they are (on purpose)
+
+- Comments only, still saying `_Archive`: `tracker.py:1426` ("a whole folder into or out of _Archive") and `tracker.py:1996-2013` (the `in_notes_folder` and `_named_notes` docstrings). They are accurate for the old name and harmless; the next guarded pass can reword them.
+- `paths.ALWAYS_NEVER_INDEX` names `99 Archive` and `_Archive` but not `zz Archive`: that name is added by `paths.skipped_names()` (and is in the new `never_index` default), so it is skipped whatever a saved list says (`OldNamesAreStillSkipped` proves it, and the mutation of dropping it from `skipped_names` fails that test). It stays out of `never_index_patterns()` as before (Alan, 14-10-2026).
+- `handchecks/test_v195` (browser): it is red on clean `origin/main` too (12 failures, 5 errors); the branch, and the branch with the diff, show 13 failures and 9 errors. None of the extra ones is #252's: the Files › Archived checks c35-c40 compare original stored paths with the archived list's `at` names (since #124), c23 failing with c24-c29 erroring also happens on clean `origin/main` when the 21-30 group is run on its own, and c25 and c30 read Health's text while it still says "Checking…" (seen under heavy load).
+
 ## Found while reviewing (not part of #252, not fixed here)
 
 `Grep` is not blocked from the archive folders. The guard hook allows `Grep(path=<engagement folder>, output_mode=content)`, and `reach.never_inside` ignores project folders that are skipped by name, so a search from the engagement folder goes into `99 Archive` and `zz Archive` (there is no deny pattern for `zz Archive`; `99 Archive` and `_Archive` have one). It relies on Claude Code's own `Read` deny rules covering `Grep`. Worth a separate look; this proposal does not change it.

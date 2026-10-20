@@ -298,7 +298,7 @@ def follow_stored(stored) -> str:
     s = str(stored).replace("\\", "/")
     parts = s.split("/")
     at = [i for i, x in enumerate(parts) if i and is_archive_name(x)]
-    if parts[0] != LOGICAL or not at or len(at) > 2 or os.path.lexists(_resolve_raw(s, False)):
+    if parts[0] != LOGICAL or not at or len(at) > 2 or ".." in parts or os.path.lexists(_resolve_raw(s, False)):
         return s
     import itertools
     for names in itertools.product(archive_names(), repeat=len(at)):
@@ -306,9 +306,33 @@ def follow_stored(stored) -> str:
         for i, n in zip(at, names):
             q[i] = n
         cand = "/".join(q)
-        if os.path.lexists(_resolve_raw(cand, False)):
+        if not _archive_symlink(cand, at) and os.path.lexists(_resolve_raw(cand, False)):
             return cand
     return s
+
+
+def _archive_symlink(stored, at) -> bool:
+    """#252: whether any archive folder part of the stored path (at: their positions) is a symlink, which is never followed
+    (archive_dirs skips one too): a link to another engagement's archive must not list or move that engagement's files."""
+    parts = stored.split("/")
+    return any(_resolve_raw("/".join(parts[:i + 1]), False).is_symlink() for i in at)
+
+
+def canonical_archive(stored):
+    """#252: a stored path with each archive folder part (99 Archive, _Archive, zz Archive, any case) named 99 Archive, to tell
+    whether two records mean the same file whichever name the archive folder had when each was made. Not a path to open."""
+    return "/".join(ARCHIVE if i and is_archive_name(x) else x for i, x in enumerate(str(stored or "").split("/")))
+
+
+def free_archive_path(base, sub: str, stem: str, ext: str = "") -> Path:
+    """#252: <base>/99 Archive/<sub>/<stem><ext>, or <stem>-2<ext>, -3… until the name is free in 99 Archive and in every old
+    archive folder beside it: a destination in 99 Archive that isn't there must not be followed (follow_stored) to a file of that
+    name in _Archive or zz Archive, which would make a free move look like one onto an existing file."""
+    dirs = [Path(base) / ARCHIVE] + [d for d in archive_dirs(base) if d != Path(base) / ARCHIVE]
+    p, n = f"{stem}{ext}", 2
+    while any(os.path.lexists(d / sub / p) for d in dirs):
+        p, n = f"{stem}-{n}{ext}", n + 1
+    return dirs[0] / sub / p
 
 
 def archived_path(p: Path) -> Path:
