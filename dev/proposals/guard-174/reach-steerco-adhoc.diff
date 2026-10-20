@@ -1,6 +1,6 @@
 --- system/scripts/reach.py
 +++ system/scripts/reach.py
-@@ -1474,8 +1474,114 @@
+@@ -1475,8 +1475,129 @@
          return None if not REPORT_NAME.search(command or "") else REPORTS_ARE_THE_USERS
      return None
  # ===== end reports =====
@@ -15,24 +15,37 @@
 +# report, weekly or client. Ordinary one-off documents and internal Steerco one-pagers stay allowed; so does reading.
 +# The arguments are taken from the exact positions the scripts parse (report.py: argv[0] the verb, argv[1] the one spec, nothing
 +# else; docx_tools.py: the verb and exactly three arguments, clean one or two), a dash does not make a word an option, and anything
-+# the scripts would not run, a spec that can't be read (or is over 1 MB), a path starting with ~ (the shell expands it unquoted, not
-+# quoted) or an odd shape is treated as report-named: refused.
++# the scripts would not run, a spec that can't be read (or is over 1 MB), a path word with a ~ in it or starting with = (the shell may
++# expand them, bash after an =, zsh any =name; the guard can't tell) or an odd shape is treated as report-named: refused.
 +REPORT_WORDS = re.compile(REPORT_NAME.pattern + r"|report|weekly|client", re.I)
 +
 +
++BIDI_CONTROLS = "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
++FILLERS = "\u115f\u1160\u17b4\u17b5\u180e\u2800\u3164\uffa0"      # blank-looking letters (Lo, So, Mn); the Cf ones go with the category
++
++
 +def _plain(text):
-+    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width) and combining marks
-+    (accents), and case folding."""
++    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), combining marks (accents)
++    and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
 +    import unicodedata
 +    spread = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
-+    return "".join(c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Mn", "Me")).casefold()
++    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Mn", "Me") and c not in FILLERS)
++    return "".join(kept).casefold()
 +
 +
 +def _report_word(text):
-+    """True when the text has report, weekly or client in it (as _plain reads it)."""
-+    return bool(REPORT_WORDS.search(_plain(text)))
++    """True when the text has report, weekly or client in it (as _plain reads it, forwards or backwards: a right-to-left override
++    shows the reversed letters as the word), or has a bidirectional control character at all."""
++    plain = _plain(text)
++    return any(c in BIDI_CONTROLS for c in text) or bool(REPORT_WORDS.search(plain) or REPORT_WORDS.search(plain[::-1]))
 +
- 
++
++def _odd_word(word):
++    """True for a path word the shell may expand in a way the guard doesn't model: a ~ anywhere (bash expands one after an =, zsh also
++    after a :, and a leading one) or a leading = (zsh's =cmd)."""
++    return "~" in word or word.startswith("=")
++
++
 +def _command_words(cmd):
 +    """The command's words as the shell hands them over (shlex: quotes removed, a quoted space is not a break); None if it can't be
 +    split. str.split's cut (at a non-breaking space, say) is not read: the shell doesn't cut there, so no script sees such a word."""
@@ -41,12 +54,12 @@
 +        return shlex.split(cmd)
 +    except ValueError:
 +        return None
- 
++
 +
 +def _spec_fields(path):
 +    """([every title value], [every version value]) of the top-level object of a staged spec file (JSON, a duplicate key counts every
 +    time), or None when it can't be read the way the scripts read it: relative to the vault, no ~ expansion, at most 1 MB, an object."""
-+    if path.startswith("~"):
++    if _odd_word(path):
 +        return None
 +    try:
 +        p = Path(path)
@@ -54,7 +67,7 @@
 +        if p.stat().st_size > 1_000_000:
 +            return None
 +        objects = []
-+
+ 
 +        def hook(pairs):
 +            """json's object_pairs_hook: keep every pair (a duplicate key too) of each object, innermost first."""
 +            objects.append(pairs)
@@ -65,7 +78,7 @@
 +        return ([str(v) for k, v in top if str(k).lower() == "title"], [str(v) for k, v in top if str(k).lower() == "version"])
 +    except Exception:  # noqa: BLE001  unreadable: refused by the caller
 +        return None
-+
+ 
 +
 +def _spec_is_report_named(verb, spec):
 +    """True when `report.py adhoc|steerco-stage <spec>`, or build-adhoc's spec, would write a report-named draft: a title with a report
@@ -79,6 +92,8 @@
 +
 +def _docx_named_like_a_report(verb, rest):
 +    """True when `docx_tools.py <verb> <rest>` would write a report-named file (or fill/build-adhoc has an odd shape)."""
++    if any(_odd_word(w) for w in rest):
++        return True
 +    if verb == "clean":
 +        return len(rest) not in (1, 2) or _report_word(rest[-1].rsplit("/", 1)[-1])
 +    if len(rest) != 3 or _report_word(rest[2].rsplit("/", 1)[-1]):
@@ -115,7 +130,7 @@
  def _direct_write_refusal(inp, mode):
      """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
      outside the run's direct-write folder."""
-@@ -1525,7 +1631,8 @@
+@@ -1526,7 +1647,8 @@
      form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
      # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
      return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)

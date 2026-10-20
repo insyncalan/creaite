@@ -54,7 +54,16 @@ MUTATIONS = {
                            'script, argv = w.rsplit("/", 1)[-1], list(words[i + 1:])',
                            'script, argv = w.rsplit("/", 1)[-1], [x for x in words[i + 1:] if not x.startswith("-")]'),
     "expanduser-tilde": ("a ~ path is expanded by the guard, though the shell doesn't expand a quoted one",
-                         '    if path.startswith("~"):\n        return None\n', "    path = os.path.expanduser(path)\n"),
+                         '    if _odd_word(path):\n        return None\n', "    path = os.path.expanduser(path)\n"),
+    "tilde-only-at-start": ("only a leading ~ is refused (x=~/spec is read as a neutral file)", 'return "~" in word or word.startswith("=")',
+                            'return word.startswith(("~", "="))'),
+    "no-equals-start": ("a word starting with = is let through", 'or word.startswith("=")', ""),
+    "no-filler-strip": ("filler letters are kept: a Hangul filler hides the word", 'and c not in FILLERS)', ")"),
+    "no-bidi-refuse": ("a bidirectional control character is let through", "return any(c in BIDI_CONTROLS for c in text) or bool(",
+                       "return bool("),
+    "no-reversed-match": ("the reversed text isn't matched: a bidi override hides the word", " or REPORT_WORDS.search(plain[::-1]))", ")"),
+    "odd-words-in-docx-open": ("path words are not checked for ~ and = in docx_tools calls", "    if any(_odd_word(w) for w in rest):\n        return True\n",
+                               ""),
     "no-nfkc": ("no NFKC: fullwidth letters don't match", 'unicodedata.normalize("NFKC", text)', "text"),
     "no-mark-strip": ("combining marks are kept: accents hide the word", '("Cf", "Cc", "Mn", "Me")', '("Cf", "Cc")'),
     "no-zero-width-strip": ("format characters are kept: a zero-width space hides the word", '("Cf", "Cc", "Mn", "Me")', '("Mn", "Me")'),
@@ -81,6 +90,13 @@ SPECS = {                                 # file name (relative to the drafts fo
     "spec-acc1.json": {"title": "Wéekly pack"}, "spec-acc2.json": {"title": "Ｗｅｅｋｌｙ pack"},
     "spec-acc3.json": {"title": "Wee​kly pack"}, "spec-acc4.json": {"title": "Cliént list"},
     "spec-acc5.json": {"title": "Réport pack"},
+    # blank-looking letters inside the words, and a right-to-left override
+    "spec-fill1.json": {"title": "Wee\u3164kly re\u3164port"}, "spec-fill2.json": {"title": "Wee\uffa0kly pack"},
+    "spec-fill3.json": {"title": "Wee\u2800kly pack"}, "spec-fill4.json": {"title": "Cli\u115fent list"},
+    "spec-fill5.json": {"title": "Repo\u1160rt pack"}, "spec-fill6.json": {"title": "Wee\u17b4kly pack"},
+    "spec-fill7.json": {"title": "Wee\u180ekly pack"}, "spec-fill8.json": {"title": "Wee\u2063kly pack"},
+    "spec-rlo.json": {"title": "\u202etroper ylkeeW"}, "spec-rev.json": {"title": "troper ylkeeW"},
+    "spec-bidi.json": {"title": "Open \u2066risks\u2069 register"},
     # over 1 MB: the script reads it anyway
     "spec-big.json": {"title": "Example Programme Weekly report", "pad": "x" * 1_100_000},
     "spec-big-n.json": {"title": "Open risks register", "pad": "x" * 1_100_000},
@@ -169,7 +185,7 @@ def report_calls(root, specs, words, script="report.py"):
     out = {}
     for lname, launcher in LAUNCHERS.items():
         for spec in specs:
-            arg = spec if spec.startswith(("-", "~", "'", "system/")) else f"{D}{spec}"
+            arg = spec if spec.startswith(("-", "~", "'", "system/", "x=", "a:", "=")) else f"{D}{spec}"
             for w in words:
                 out[f"{lname} | {w} | {spec}"] = launcher.format(s=script, ROOT=root) + f" {w} {arg}"
     return out
@@ -196,6 +212,15 @@ def docx_calls(root):
         calls[f"{lname} | clean in place, report-named"] = (d("clean 'system/staging/drafts/Example Client pack.docx'", lname), True)
         calls[f"{lname} | clean, dashed input"] = (d(f"clean -x.docx '{D}Weekly pack.docx'", lname), True)
         calls[f"{lname} | clean, spliced"] = (d(f"cl''ean {D}a.docx {D}client.docx", lname), True)
+        calls[f"{lname} | fill, tilde after ="] = (d(f"fill x=~/t.docx {D}spec-n.json {D}out.docx", lname), True)
+        calls[f"{lname} | fill, tilde in the output"] = (d(f"fill {TEMPLATE} {D}spec-n.json {D}out~.docx", lname), True)
+        calls[f"{lname} | fill, = first"] = (d(f"fill =t {D}spec-n.json {D}out.docx", lname), True)
+        calls[f"{lname} | build-adhoc, tilde spec"] = (d(f"build-adhoc {TEMPLATE} a:~/s.json {D}out.docx", lname), True)
+        calls[f"{lname} | clean, tilde"] = (d("clean x=~/a.docx", lname), True)
+        for tag, name in (("hangul filler", "Wee\u3164kly status"), ("halfwidth filler", "Wee\uffa0kly"), ("braille blank", "Client\u2800 list"),
+                          ("bidi override", "\u202etroper"), ("reversed", "ylkeeW pack"), ("zero-width joiner", "Re\u2063port pack")):
+            calls[f"{lname} | fill, {tag} in the output name"] = (d(f"fill {TEMPLATE} {D}spec-n.json '{D}{name}.docx'", lname), True)
+            calls[f"{lname} | clean, {tag} in the output name"] = (d(f"clean {D}a.docx '{D}{name}.docx'", lname), True)
         calls[f"{lname} | fill, too few arguments"] = (d(f"fill {TEMPLATE} {D}out.docx", lname), True)
         calls[f"{lname} | build-adhoc, too many arguments"] = (d(f"build-adhoc {TEMPLATE} {D}spec-n.json {D}out.docx extra", lname), True)
         calls[f"{lname} | clean, no arguments"] = (d("clean", lname), True)
@@ -209,11 +234,14 @@ def docx_calls(root):
 
 REFUSED_ADHOC = ("spec-a.json", "spec-b.json", "spec-c.json", "spec-d.json", "spec-weekly-pack.json", "spec-dup1.json", "spec-dup2.json",
                  "spec-dup3.json", "spec-acc1.json", "spec-acc2.json", "spec-acc3.json", "spec-acc4.json", "spec-acc5.json",
+                 "spec-fill1.json", "spec-fill2.json", "spec-fill3.json", "spec-fill4.json", "spec-fill5.json", "spec-fill6.json",
+                 "spec-fill7.json", "spec-fill8.json", "spec-rlo.json", "spec-rev.json", "spec-bidi.json",
                  "spec-big.json", "spec-big-n.json", "spec-bad.json", "spec-list.json", "spec-missing.json")
 REFUSED_STEERCO = ("spec-s-client.json", "spec-s-title.json", "spec-dup-v2.json", "spec-dup-v.json", "spec-big-c.json", "spec-bad.json",
                    "spec-missing.json", "spec-list.json")
-DASHED_ADHOC = ("-w.json", "-", "-s.json", "'~/spec-n.json'", "~/spec-n.json")        # step 2 of the review's bypasses (steps 1: filechange create)
-DASHED_STEERCO = ("-c.json", "'~/spec-n.json'")
+DASHED_ADHOC = ("-w.json", "-", "-s.json", "'~/spec-n.json'", "~/spec-n.json", "x=~/spec-n.json", "a:~/spec-n.json", "'a~b.json'",
+                "system/staging/drafts/spec~n.json", "=spec-n.json", "=ls")        # step 2 of the review's bypasses (steps 1: filechange create)
+DASHED_STEERCO = ("-c.json", "'~/spec-n.json'", "x=~/spec-s-int.json", "=spec-s-int.json")
 ALLOWED_ADHOC = ("spec-n.json", "spec-n2.json", "spec-notitle.json")
 ALLOWED_STEERCO = ("spec-s-int.json", "spec-s-none.json")
 ODD_SHAPES = ("python3 system/scripts/report.py adhoc", "python3 system/scripts/report.py adhoc system/staging/drafts/spec-n.json x",
@@ -335,6 +363,17 @@ class Premise(unittest.TestCase):
                 r = self.run_adhoc(spec)
                 self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
                 self.assertGreater(len(self.drafts()), len(before), spec)       # a report-named draft was written
+
+
+class ShellPremise(unittest.TestCase):
+    """What the shell does that the guard can't see: bash expands a ~ after an = in an argument."""
+
+    def test_bash_expands_a_tilde_after_an_equals_sign(self):
+        bash = shutil.which("bash")
+        if not bash:
+            self.skipTest("bash is not installed")
+        r = subprocess.run([bash, "-c", "printf '%s' x=~/spec-n.json"], capture_output=True, text=True, env={**os.environ, "HOME": "/fake-home"})
+        self.assertEqual(r.stdout, "x=/fake-home/spec-n.json")
 
 
 class Hole(unittest.TestCase):
