@@ -6,6 +6,7 @@
 <div class="acttabs" role="tablist" aria-label="Activity">
 <button type="button" role="tab" aria-selected="true" id="actTabCh" aria-controls="actTbl" tabindex="0" data-tab="ch">Changes</button>
 <button type="button" role="tab" aria-selected="false" id="actTabQ" aria-controls="actQuality" tabindex="-1" data-tab="q">Quality</button>
+<button type="button" role="tab" aria-selected="false" id="actTabU" aria-controls="actUsage" tabindex="-1" data-tab="u">Usage</button>
 </div>
 </div>
 <!-- BL-316: Changes and Quality, the Tabs building block -->
@@ -100,6 +101,9 @@
 </table>
 </div>
 </div>
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden="">
+</div>
+<!-- #238: Usage, drawn by components/activity/UsagePanel.jsx -->
 <div id="actTools">
 <div class="acttools">
 <label class="actsearch">

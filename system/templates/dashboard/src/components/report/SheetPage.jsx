@@ -110,7 +110,7 @@ function SheetDefault({ ctx, rowFn }) {
     same editor, read only). Its heading is the section's own, named by Alan. @param {{ctx: SectionCtx}} props */
 export function FreeText({ ctx }) {
   const h = /** @type {Here} */ (useContext(SHEET_HERE)), s = /** @type {any} */ (ctx.section);
-  return <SheetEditor value={s.text || ""} rich text={{ code: String(ctx.doc.project || "") }} label={s.heading || "Text section"}
+  return <SheetEditor value={s.text || ""} rich text={{ code: String(ctx.doc.project || ""), kind: String(ctx.doc.kind || "") }} label={s.heading || "Text section"}
     onText={t => h.update({ text: t }, "Text edited")} ai={h.ai} editable={h.editing}
     placeholder="Write here. Anything you add is part of the report and its exports." />;
 }

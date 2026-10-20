@@ -27,6 +27,7 @@ from test_word_export_227 import ITEMS, W, png  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "system" / "scripts"))
 import creaite_doc  # noqa: E402
+import client_snapshot  # noqa: E402  (v2.5.1: the Word writer as client_export calls it)
 import docx_tools  # noqa: E402
 import paths  # noqa: E402
 
@@ -257,7 +258,7 @@ class WordWrite(Tmp):
 
     def build(self, doc=None):
         self.out = self.tmp / "out.docx"
-        creaite_doc.word_export(doc or self.doc(), self.out)
+        creaite_doc.word_export(doc or self.doc(), self.out, token=client_snapshot.TOKEN)
         self.parts = {i.filename: raw for i, raw in docx_tools.read_parts(self.out)}
         self.xml = self.parts["word/document.xml"].decode("utf-8")
         self.root = ET.fromstring(self.xml)
@@ -408,7 +409,7 @@ class ClientRule(Tmp):
             self.assertNotIn("walrus", page)
             self.assertNotIn("Internal musings", page)
         self.out = self.tmp / "client.docx"
-        creaite_doc.word_export(d, self.out)
+        creaite_doc.word_export(d, self.out, token=client_snapshot.TOKEN)
         xml = next(raw for i, raw in docx_tools.read_parts(self.out) if i.filename == "word/document.xml").decode("utf-8")
         self.assertNotIn("walrus", xml)
         self.assertNotIn("Internal musings", xml)

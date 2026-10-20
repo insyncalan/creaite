@@ -84,12 +84,9 @@ class ClientWords(Case):
         spec.parent.mkdir(parents=True, exist_ok=True)
         spec.write_text(json.dumps({"code": "ABC", "period_start": iso(-30), "summary": ["A quiet week."], "force": True}))
         self.v.run("client-stage", str(spec), script="report.py")
-        drafts = list((self.v.root / "system/staging/drafts").glob("*.docx"))
-        self.assertTrue(drafts)
-        for dr in drafts:
-            text = self.v.run("text", str(dr), script="docx_tools.py").stdout
-            self.assertIn("On track", text)
-            self.assertNotIn("On plan", text)
+        text = __import__("test_reports").client_draft_text(self, self.v)        # v2.5.1: the hub's own client draft, no Word file
+        self.assertIn("On track", text)
+        self.assertNotIn("On plan", text)
         self.assertNotIn("On plan", one)
 
 

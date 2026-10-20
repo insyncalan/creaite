@@ -1,0 +1,13 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index fb5a714f..37cba89f 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -1055,7 +1055,7 @@ MS_CLIENT_WORD = {"Achieved": "Achieved", "On track": "On track", "At risk": "At
+ def suggested_state(row, on=None):
+     """What the dates say: Achieved when Done; Overdue when the agreed date has passed; Slipped when the forecast is later than
+     the agreed date; On track otherwise. At risk is only ever Alan's call."""
+-    on = on or today()
++    on = on or clock_day().isoformat()      # creaite's clock: CREAITE_NOW fixes it in tests, as the dashboard build does
+     if row.get("status") == "Done":
+         return "Achieved"
+     base = row.get("baseline_date")
