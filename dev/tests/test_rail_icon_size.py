@@ -138,7 +138,7 @@ class IconSize(IconSizeBase):
 
     def test_settings_advanced_and_customise_stay_in_step_without_a_reload(self):
         b = self.b
-        b.eval("location.hash='#settings/advanced'")
+        b.eval("location.hash='#settings/look'")
         self.assertEqual(self.adv_value(), "small")
         self.assertEqual(b.eval(f"[...{self.ADV}.options].map(o=>o.textContent)"), ["Small", "Medium", "Large"])
         b.eval(f"(s=>{{s.value='large'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})({self.ADV})")   # Advanced -> rail and dialog
@@ -158,7 +158,7 @@ class IconSize(IconSizeBase):
             self.set_stored(value)
             b.reload(wait_for="typeof go==='function' && LIVE")
             self.assertEqual(self.icon(), [20, 20], value)
-            b.eval("location.hash='#settings/advanced'")
+            b.eval("location.hash='#settings/look'")
             self.assertEqual(self.adv_value(), "small", value)                                # Small, not blank
             self.open_customise()
             self.assertEqual(b.eval("document.querySelector('#railCust .rcsz[data-size=small]').getAttribute('aria-pressed')"), "true", value)

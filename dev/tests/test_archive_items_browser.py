@@ -65,8 +65,8 @@ class AgeArchivedInThePage(LiveBrowserCase):
             self.assertIn("Archived", tags)
             live = b.eval("[...document.querySelectorAll('#workTbl tr[data-row] td.title .tag')].filter(t=>t.textContent==='Archived').length")
             self.assertEqual(live, 1)                                     # only the archived one
-            b.eval("go('settings','people')")
-            b.wait("!!document.querySelector('#projArch')", 15)
+            b.eval("go('settings','views')")                              # v2.6 (#246): Work and reports › Opening views
+            b.wait("!!document.querySelector('#set-views [data-k=showArchived]')", 15)
             help_ = b.eval("[...document.querySelectorAll('.srow')].find(r=>/Show archived projects/.test(r.textContent)).querySelector('small').textContent")
             self.assertIn("archived for their age", help_)
         finally:

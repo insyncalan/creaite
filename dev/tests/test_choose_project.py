@@ -107,8 +107,9 @@ class NoProjects(Base):
         b.key("Enter")
         b.wait("VIEW==='settings'")
         b.wait("location.hash==='#settings/people'", 10)                  # the link and its words agree: People and projects
-        self.assertEqual(b.eval("document.querySelector('.view:not([hidden]) .setcat[aria-selected=true], .view:not([hidden]) [role=tab][aria-selected=true]')"
-                                ".textContent.trim()"), "People and projects")
+        # v2.6 (#246): People and projects is no longer a tab; its address opens its sections, no tab chosen, until they move
+        b.wait("!!document.getElementById('setMovingNote') && !!document.querySelector('#settingsBody [data-sec=projects]')")
+        self.assertEqual(b.eval("document.querySelectorAll('#setcats [aria-selected=true]').length"), 0)
         self.assertEqual(b.errors, [])
 
 
