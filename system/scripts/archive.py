@@ -286,7 +286,8 @@ BACK = "reports_back"
 
 def archived_moves(con=None, kind="reports"):
     """{the archived file's stored path: its original stored path} for each file an apply (not undone) archived (kind "reports";
-    #124: "notes", a deleted note) and no later apply (not undone) moved back, oldest first. Read from the applies table only."""
+    #124: "notes", a deleted note) and no later apply (not undone) moved back, oldest first. Read from the applies table only.
+    #252: keys follow an archive folder renamed by hand (paths.follow_stored)."""
     back = BACK if kind == "reports" else f"{kind}_back"
     own = con is None
     if own:
@@ -313,7 +314,8 @@ def archived_moves(con=None, kind="reports"):
                 out[r.get("to")] = r.get("from")
             elif r.get("kind") == back:
                 out.pop(r.get("from"), None)
-    return out
+    # #252: the record keeps the archive folder's name as it was; after Alan renames the folder by hand the key is where it is now
+    return {paths.follow_stored(k) if k else k: v for k, v in out.items()}
 
 
 def moved_back(con=None):
@@ -400,7 +402,7 @@ def back_spec(path):
     path = str(path or "")
     if not path.startswith("projects/") or ".." in Path(path).parts:
         return None, "that isn't a stored project path"
-    kind, at, original = _archived_hit(path)
+    kind, at, original = _archived_hit(paths.follow_stored(path))     # #252: a folder renamed by hand
     if not at:
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)

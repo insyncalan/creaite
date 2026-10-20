@@ -300,6 +300,189 @@ class RestoreFromAnOldArchive(unittest.TestCase):
         self.assertEqual(got, [False, False, False, False])
 
 
+# ── F1 (Opus review): Alan renames his archive folders by hand, and the apply records keep the old name ───────────────────
+
+import test_archive_move_back as mb  # noqa: E402
+
+PORT = f"projects/_portfolio/{mb.PORTFOLIO}"
+
+
+def rewrite_records(root, old, new):
+    """What an earlier release left behind: the apply records and the project's archive history name `old` where a later
+    archive says `new`."""
+    with closing(sqlite3.connect(root / "system/tracker.db")) as con:
+        con.execute("UPDATE applies SET file_ops = REPLACE(file_ops, ?, ?)", (old, new))
+        con.execute("UPDATE change_log SET new_value = REPLACE(new_value, ?, ?) WHERE field = 'folder'", (old, new))
+        con.commit()
+
+
+class HandRenamed(unittest.TestCase):
+    """Files › Archived, Move back, Undo, a project Restore and tracker.check_move still find a file the archive moved when the
+    archive folder was renamed by hand: old record + new folder, new record + old folder, and both folders there. Each with the
+    old name `_Archive` and with `zz Archive`."""
+
+    run_at, py, files, spec = mb.MoveBack.run_at, mb.MoveBack.py, mb.MoveBack.files, mb.MoveBack.spec
+    stage_from_guard, apply_as_card = mb.MoveBack.stage_from_guard, mb.MoveBack.apply_as_card
+
+    v = None
+
+    def make(self):
+        self.v = Vault()
+        self.v.run("init")
+        self.abc = mb.archive_old_files(self.v.root)
+        self.base = f"projects/{self.abc.name}"
+        self.pf = self.v.root / "projects/_portfolio"
+
+    def tearDown(self):
+        if self.v:
+            self.v.cleanup()
+            self.v = None
+
+    def rename(self, how, old):
+        """Put the vault in one of the three states. Returns whether a file is now in an OLD-named folder."""
+        if how == "old_record_new_folder":
+            rewrite_records(self.v.root, NEW, old)
+            return False
+        for base in (self.abc, self.pf):
+            (base / NEW).rename(base / old)
+        if how == "both":
+            rewrite_records(self.v.root, NEW, old)
+            (self.abc / NEW).mkdir()
+        return True
+
+    def each(self, test):
+        for old in OLDS:
+            for how in ("old_record_new_folder", "new_record_old_folder", "both"):
+                with self.subTest(old=old, how=how):
+                    self.make()
+                    try:
+                        in_old = self.rename(how, old)
+                        if in_old and not PATCHED:
+                            continue                   # a move out of an old name is the guarded diff's
+                        test(old, in_old)
+                    finally:
+                        self.tearDown()
+
+    def test_files_archived_lists_and_opens_every_file(self):
+        def check(old, in_old):
+            listed, archived = self.files()
+            want = {f"{self.base}/{f}" for f in mb.DUE} | {PORT}
+            self.assertEqual({a["path"] for a in archived}, want)
+            for a in archived:
+                self.assertTrue(Path(self.py(f"import paths; print(json.dumps(str(paths.resolve({a['at']!r}))))")).is_file(), a)
+        self.each(check)
+
+    def test_move_back_works(self):
+        def check(old, in_old):
+            stored = f"{self.base}/{mb.DUE[0]}"
+            spec, why = self.spec(stored)
+            self.assertIsNone(why)
+            r = self.stage_from_guard(spec)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.apply_as_card(r)
+            self.assertTrue((self.abc / mb.DUE[0]).is_file())
+            self.assertEqual(self.spec(stored)[0], None)         # nothing left to move back
+        self.each(check)
+
+    def test_undo_of_the_archive_puts_every_file_back(self):
+        def check(old, in_old):
+            self.run_at("undo", script="tracker.py")
+            for f in mb.DUE:
+                self.assertTrue((self.abc / f).is_file(), f)
+            self.assertTrue((self.pf / mb.PORTFOLIO).is_file())
+        self.each(check)
+
+    @needs_diff
+    def test_check_move_compares_the_names_as_equals(self):
+        def check(old, in_old):
+            at = self.files()[1][0]["at"]
+            original = next(a["path"] for a in self.files()[1] if a["at"] == at)
+            recorded = at.replace(NEW, old) if NEW in at else at.replace(old, NEW)
+            for src in (at, recorded):                    # the name the record has, or the one the folder has
+                code = self.py("import tracker\n"
+                               f"try:\n    tracker.check_move({{'from': {src!r}, 'to': {original!r}}}, {{'archive': 'reports_back'}})\n"
+                               "    print(json.dumps('ok'))\n"
+                               "except tracker.Invalid as e:\n    print(json.dumps(str(e)))")
+                self.assertEqual(code, "ok", (src, code))
+        self.each(check)
+
+
+class HandRenamedProject(unittest.TestCase):
+    """Restore project and Undo of the archive, with the project's archive folder renamed by hand after the archive."""
+
+    def make(self):
+        self.v = Vault()
+        self.v.run("init")
+        self.abc = next(d for d in (self.v.root / "projects").iterdir() if d.name.startswith("ABC "))
+        touch(self.abc / "minutes" / "m.md", "m\n")
+        self.stage_and_apply("archive", "ABC")
+
+    def stage_and_apply(self, *args):
+        spec = self.v.run(*args, script="propose.py").stdout
+        f = self.v.root / "system/staging/drafts/a.json"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(spec, encoding="utf-8")
+        self.v.run("stage", str(f), script="propose.py")
+        self.v.run("apply")
+
+    def scenes(self, test):
+        proj = None
+        for old in OLDS:
+            for how in ("old_record_new_folder", "new_record_old_folder"):
+                with self.subTest(old=old, how=how):
+                    if how == "new_record_old_folder" and not PATCHED:
+                        continue                           # a restore out of an old name is the guarded diff's
+                    self.make()
+                    try:
+                        proj = self.v.root / "projects"
+                        if how == "old_record_new_folder":
+                            rewrite_records(self.v.root, NEW, old)
+                        else:
+                            (proj / NEW).rename(proj / old)
+                        test()
+                    finally:
+                        self.v.cleanup()
+
+    def test_restore_follows_the_folder_wherever_it_is_called(self):
+        def check():
+            self.stage_and_apply("restore", "ABC")
+            self.assertEqual((self.abc / "minutes" / "m.md").read_text(), "m\n")
+            self.assertEqual(self.v.rows("projects")[0]["archived"], 0)
+        self.scenes(check)
+
+    def test_undo_of_the_archive_follows_it_too(self):
+        def check():
+            self.v.run("undo")
+            self.assertEqual((self.abc / "minutes" / "m.md").read_text(), "m\n")
+            self.assertEqual(self.v.rows("projects")[0]["archived"], 0)
+        self.scenes(check)
+
+
+class OldNamesAreStillSkipped(OneDriveCase):
+    """Test gap (Opus review): zz Archive and _Archive stay skipped for one release even when a saved never_index lacks them."""
+
+    def test_a_saved_list_without_the_old_names_still_skips_them(self):
+        cfg = self.v.root / "system/config/settings.json"
+        data = json.loads(cfg.read_text())
+        data["locations"]["never_index"] = ["_Templates", "99 System"]            # as an older release saved it
+        cfg.write_text(json.dumps(data))
+        for name in ALL:
+            touch(self.eng("ABC", name, f"{name} plan.docx"))
+        touch(self.eng("ABC", "03 Delivery", "Design", "Plan.docx"))
+        o = self.py("import paths, tracker, reach\n"
+                    "print(json.dumps([paths.skipped_names(), [str(f) for f in paths.document_files('ABC')], "
+                    "[str(f) for f, _, _ in tracker.index_files()], "
+                    f"[reach.classify(str(paths.project_dir('ABC') / n / 'x.md'), 'read')[0] for n in {list(ALL)!r}], "
+                    "[paths.project_path_problem(f'projects/Example Programme/{n}/x.md') for n in %r]]))" % (list(ALL),))
+        for n in ALL:
+            self.assertIn(n, o[0])
+        for listed in (o[1], o[2]):
+            self.assertTrue(any(s.endswith("Plan.docx") and "Design" in s for s in listed))
+            self.assertFalse(any(f"/{n}/" in s for s in listed for n in ALL), listed)
+        self.assertEqual(o[3], ["never", "never", "never"])
+        self.assertTrue(all(o[4]), o[4])                                  # a project file under any of the three is refused
+
+
 def subprocess_json(v, code):
     import subprocess
     src = f"import sys, json; sys.path.insert(0, {str(v.root / 'system/scripts')!r})\n{code}"

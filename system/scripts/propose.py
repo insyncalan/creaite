@@ -318,11 +318,11 @@ def folder_ops(folder, adopting=False):
 
 
 def skeleton_renamed(op):
-    """BL-09, #252: a folder the skeleton still calls _Archive or zz Archive is made as 99 Archive in the new project (nothing else
-    is renamed)."""
+    """BL-09, #252: a folder the skeleton still calls _Archive or zz Archive is made as 99 Archive in the new project (any case;
+    nothing else is renamed)."""
     def fix(p):
         """The path with each old archive part named 99 Archive."""
-        return "/".join(paths.ARCHIVE if part in paths.OLD_ARCHIVES else part for part in str(p).split("/"))
+        return "/".join(paths.ARCHIVE if paths.is_archive_name(part) else part for part in str(p).split("/"))
     out = dict(op)
     for k in ("path", "to"):
         if k in out:
@@ -684,7 +684,7 @@ def restore_spec(code):
     last = tracker.last_archive(con, code)
     if not last or not last.get("folder") or not last.get("register_row"):
         sys.exit(f"The archive of {code} isn't in the history, so it can't be restored here.")
-    src, orig = last["folder"]["to"], last["folder"]["from"]
+    src, orig = paths.follow_stored(last["folder"]["to"]), last["folder"]["from"]     # #252: followed if renamed by hand
     if not paths.resolve(src, archived=False).is_dir():
         sys.exit(f"{src} isn't there any more, so {code} can't be restored.")
     name = free_folder(paths.projects_root(), orig.split("/", 1)[1])

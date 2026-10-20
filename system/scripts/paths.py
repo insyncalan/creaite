@@ -221,7 +221,18 @@ def rel(p: Path) -> str:
 
 def resolve(stored, archived=True) -> Path:
     """The inverse of rel: a stored path as a real path. Not checked for safety; tracker.safe_path does that. An archived project's
-    path is mapped into 99 Archive (BL-09) unless `archived` is False (the apply's own folder moves)."""
+    path is mapped into 99 Archive (BL-09) unless `archived` is False (the apply's own folder moves). #252: a stored path that
+    names an archive folder (an apply's record keeps the name it had) follows a folder renamed by hand: see follow_stored."""
+    p = _resolve_raw(stored, archived)
+    if os.path.lexists(p):
+        return p
+    s = str(stored).replace("\\", "/")
+    f = follow_stored(s)
+    return _resolve_raw(f, archived) if f != s else p
+
+
+def _resolve_raw(stored, archived=True) -> Path:
+    """resolve without following a renamed archive folder."""
     s = str(stored).replace("\\", "/")
     if Path(s).is_absolute():
         return Path(s)
@@ -277,6 +288,27 @@ def archive_dirs(base: Path) -> list:
         if d.is_dir() and not d.is_symlink() and not any(os.path.samefile(d, x) for x in out):   # one folder, two cases: once
             out.append(d)
     return out
+
+
+def follow_stored(stored) -> str:
+    """#252: the stored path `stored`, or, when nothing is at it and its archive folder's name (99 Archive, _Archive or zz Archive)
+    has been renamed by hand (no migration: Alan renames his own), the same stored path with that part named as the folder that is
+    there now (99 Archive tried first). An apply's record keeps the name the folder had when it was made, so a restore, Files'
+    Archived list, Move back and Undo look the file up through this. Anything else is returned as it is."""
+    s = str(stored).replace("\\", "/")
+    parts = s.split("/")
+    at = [i for i, x in enumerate(parts) if i and is_archive_name(x)]
+    if parts[0] != LOGICAL or not at or len(at) > 2 or os.path.lexists(_resolve_raw(s, False)):
+        return s
+    import itertools
+    for names in itertools.product(archive_names(), repeat=len(at)):
+        q = list(parts)
+        for i, n in zip(at, names):
+            q[i] = n
+        cand = "/".join(q)
+        if os.path.lexists(_resolve_raw(cand, False)):
+            return cand
+    return s
 
 
 def archived_path(p: Path) -> Path:
