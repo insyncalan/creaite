@@ -9349,14 +9349,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           /* @__PURE__ */ u2("label", { for: "pd_org", children: "Organisation" }),
           /* @__PURE__ */ u2("input", { id: "pd_org", type: "text", autocomplete: "off" }),
           /* @__PURE__ */ u2("label", { for: "pd_role", children: "Role" }),
-          /* @__PURE__ */ u2("input", { id: "pd_role", type: "text", autocomplete: "off" }),
-          /* @__PURE__ */ u2("label", { for: "pd_vip", class: "pdvip", children: "VIP" }),
-          /* @__PURE__ */ u2("select", { id: "pd_vip", class: "pdvip", children: [
-            /* @__PURE__ */ u2("option", { value: "", children: "No" }),
-            /* @__PURE__ */ u2("option", { value: "management", children: "Management" }),
-            /* @__PURE__ */ u2("option", { value: "client", children: "Client" }),
-            /* @__PURE__ */ u2("option", { value: "yes", children: "Yes" })
-          ] })
+          /* @__PURE__ */ u2("input", { id: "pd_role", type: "text", autocomplete: "off" })
         ] }),
         /* @__PURE__ */ u2("div", { class: "sub", id: "pdErr", role: "alert", style: "color:var(--bad)" }),
         /* @__PURE__ */ u2("div", { class: "curacts", children: [
@@ -32259,14 +32252,7 @@ ${s5}`;
       };
       openDialog(dlg);
     });
-    const keep2 = !!(o5 && (o5.edit || o5.details)), cur = (o5 && o5.person && o5.person.extra || {}).VIP || "";
-    $$(".pdvip").forEach((el2) => el2.hidden = !keep2);
-    const sel = $("#pd_vip");
-    sel.value = [...sel.options].some((x5) => x5.value === cur.toLowerCase()) ? cur.toLowerCase() : cur ? "yes" : "";
-    return pr2.then((res) => {
-      if (res && res.person && keep2) res.person.extra = { ...o5.person && o5.person.extra || {}, VIP: sel.value };
-      return res;
-    });
+    return pr2;
   }
   async function ownerFinal(typed2, opt = {}) {
     typed2 = String(typed2 || "").trim();
@@ -33465,15 +33451,17 @@ ${s5}`;
   }
   var derivedOf = (name) => (registerRows().find((x5) => x5.n === name) || { derived: [] }).derived;
   var onOf = (name) => (registerRows().find((x5) => x5.n === name) || { on: [] }).on;
+  function applyFollow(r4, f5) {
+    if (f5.follow === void 0) return;
+    const cur = String(r4.extra.VIP || "").trim();
+    r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+  }
   function savePerson(name, f5) {
     const derived = derivedOf(name);
     return regSave(`Changed ${name} in the people register`, (L3) => {
       const r4 = rowIn(L3, name);
       Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
-      if (f5.follow !== void 0) {
-        const cur = String(r4.extra.VIP || "").trim();
-        r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
-      }
+      applyFollow(r4, f5);
       if (f5.projects) setOn(r4, derived, f5.projects);
       return L3;
     });
@@ -33482,6 +33470,7 @@ ${s5}`;
     return regSave(`Added ${name} to the people register`, (L3) => {
       const r4 = rowIn(L3, name);
       Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+      applyFollow(r4, f5);
       if (f5.projects) setOn(r4, [], f5.projects);
       return L3;
     });
@@ -33769,7 +33758,7 @@ ${s5}`;
             /* @__PURE__ */ u2("span", { class: "pdlab", children: "Follow" }),
             /* @__PURE__ */ u2("label", { class: "settick", children: [
               /* @__PURE__ */ u2("input", { type: "checkbox", id: "peFollow", defaultChecked: !!(x5 && x5.followed) }),
-              " Follow this person (VIP alerts)"
+              " Follow this person"
             ] }),
             /* @__PURE__ */ u2("span", { class: "pdh", children: "Their mail and chats are flagged for you first, and a star shows beside their name in this list, for you only. It never appears in a report, an export or a draft." })
           ] }) : null

@@ -171,6 +171,14 @@ const onOf = name => (registerRows().find(x => x.n === name) || { on: [] }).on;
 
 /** @typedef {{email: string, aliases: string[], org: string, role: string, projects?: string[], follow?: boolean}} PersonFields */
 
+/** The Follow tick into the register row's followed column (the project settings page only); no `follow` leaves it as it is.
+    A value already set (Management, Client) is kept when the tick stays on. @param {any} r @param {PersonFields} f */
+function applyFollow(r, f) {
+  if (f.follow === undefined) return;
+  const cur = String(r.extra.VIP || "").trim();
+  r.extra.VIP = f.follow ? (cur && !NO_FOLLOW.test(cur) ? cur : "yes") : "";
+}
+
 /** Save a person's details (one entry, the same on every project); `projects` the ticked projects; `follow` only from the project
     settings page. A VIP value already set (Management, Client) is kept when the tick stays on. @param {string} name @param {PersonFields} f */
 export function savePerson(name, f) {
@@ -178,16 +186,17 @@ export function savePerson(name, f) {
   return regSave(`Changed ${name} in the people register`, L => {
     const r = rowIn(L, name);
     Object.assign(r, { email: f.email, aliases: f.aliases, org: f.org, role: f.role });
-    if (f.follow !== undefined) { const cur = String(r.extra.VIP || "").trim(); r.extra.VIP = f.follow ? (cur && !NO_FOLLOW.test(cur) ? cur : "yes") : ""; }
+    applyFollow(r, f);
     if (f.projects) setOn(r, derived, f.projects);
     return L;
   });
 }
-/** A new person (the People page's Add a person). @param {string} name @param {PersonFields} f */
+/** A new person (Add a person, on the People page or the project settings page; `follow` only from the latter). @param {string} name @param {PersonFields} f */
 export function addPerson(name, f) {
   return regSave(`Added ${name} to the people register`, L => {
     const r = rowIn(L, name);
     Object.assign(r, { email: f.email, aliases: f.aliases, org: f.org, role: f.role });
+    applyFollow(r, f);
     if (f.projects) setOn(r, [], f.projects);
     return L;
   });

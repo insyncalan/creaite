@@ -230,6 +230,50 @@ class People(Base):
         self.tap("#snackU")
         self.wait_for(lambda: "sara@example.com" in self.register, "Undo puts her record back")
 
+    def test_add_a_person_with_the_follow_tick_is_saved_followed(self):
+        """M1: Add a person ignored the Follow tick (the add function dropped it), so the new row had an empty followed column."""
+        b = self.b
+        self.open("people")
+        self.tap("#psAddPerson")
+        b.wait("!!document.querySelector('#personEdit[open] #peFollow')")
+        self.assertFalse(b.eval("document.querySelector('#peFollow').checked"), "new people start unfollowed")
+        b.eval("document.querySelector('#peName').value='Nora Probe'; document.querySelector('#peOrg').value='Example Client Ltd'; "
+               "document.querySelector('#peFollow').checked=true")
+        self.tap("#peSave")
+        self.applied()
+        row = lambda: [ln for ln in self.register.splitlines() if ln.startswith("| Nora Probe")]
+        self.wait_for(lambda: bool(row()), "the new person is in the register")
+        self.assertEqual([c.strip() for c in row()[0].strip().strip("|").split("|")][5:7], ["", "yes"], "Hidden empty, VIP (followed) yes")
+        b.wait("!!document.querySelector('#psPeopleRows tr[data-pn=\"Nora Probe\"] .pstar')")
+        # added without the tick: unfollowed
+        self.tap("#psAddPerson")
+        b.wait("!!document.querySelector('#personEdit[open] #peFollow')")
+        b.eval("document.querySelector('#peName').value='Otto Probe'")
+        self.tap("#peSave")
+        self.applied()
+        self.wait_for(lambda: "| Otto Probe" in self.register, "the second person is in the register")
+        line = [ln for ln in self.register.splitlines() if ln.startswith("| Otto Probe")][0]
+        self.assertNotIn("yes", line)
+
+    def test_person_page_edit_details_has_no_followed_field_and_keeps_the_flag(self):
+        """Alan, 19-10-2026: following is this page's alone. The person page's Edit details has no VIP select, and saving it
+        leaves a followed person followed."""
+        b = self.b
+        b.eval("go('person','Sara Example')")
+        b.wait("VIEW==='person' && !!document.querySelector('#ppEdit')")
+        self.tap("#ppEdit")
+        b.wait("document.getElementById('personDlg').open && document.getElementById('pd_name').value==='Sara Example'")
+        self.assertEqual(b.eval("document.querySelectorAll('#personDlg #pd_vip, #personDlg .pdvip, #personDlg select').length"), 0)
+        self.assertNotRegex(b.eval("document.getElementById('personDlg').innerText"), re.compile(r"\bVIP\b|Follow"))
+        b.eval("document.getElementById('pd_role').value='Programme lead'")
+        self.tap("#pdSave")
+        self.applied()
+        self.wait_for(lambda: "| Programme lead |" in self.register, "saved")
+        line = [ln for ln in self.register.splitlines() if ln.startswith("| Sara Example")][0]
+        self.assertEqual([c.strip() for c in line.strip().strip("|").split("|")][5:7], ["", "yes"], "still followed")
+        self.open("people")
+        self.assertEqual(b.eval("document.querySelectorAll('#psPeopleRows tr[data-pn=\"Sara Example\"] .pstar').length"), 1)
+
     def test_the_bin_removes_from_this_project_only_and_undo_puts_her_back(self):
         b = self.b
         self.open("people")

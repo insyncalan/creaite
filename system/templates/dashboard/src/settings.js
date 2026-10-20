@@ -465,9 +465,7 @@ export function askPerson(o){ const pr=new Promise(res=>{ const dlg=$("#personDl
       fin({person:{name,email:f("email"),aliases,org:f("org"),role:f("role")}}); };
     $("#personForm").onsubmit=e=>{ if(e.submitter&&e.submitter.value==="cancel") return; e.preventDefault(); if(!$("#pdSave").hidden) $("#pdSave").click(); };
     dlg.addEventListener("close",onClose); $("#personForm [value=cancel]").onclick=e=>{ e.preventDefault(); fin(null); }; openDialog(dlg); });
-  const keep=!!(o&&(o.edit||o.details)), cur=((o&&o.person&&o.person.extra)||{}).VIP||"";
-    $$(".pdvip").forEach(el=>el.hidden=!keep); const sel=$("#pd_vip"); sel.value=[...sel.options].some(x=>x.value===cur.toLowerCase())?cur.toLowerCase():cur?"yes":"";
-    return pr.then(res=>{ if(res&&res.person&&keep) res.person.extra={...((o.person&&o.person.extra)||{}),VIP:sel.value}; return res; }); }
+  return pr; }   /* #247: no followed field here (Alan, 19-10-2026): the result carries no `extra`, so regEdit leaves the register row's followed column as it is */
 /* an owner typed or picked: mapped to the full name if known, otherwise ask (matches first). null = cancelled */
 export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); if(!typed||typed==="TBC") return typed||"TBC"; const r=resolvePerson(typed);
   if(r.status==="known"||r.status==="alias"||r.status==="email") return r.name;
@@ -808,7 +806,7 @@ PKDRAW.push(alertPeekDraw);
 setInterval(vipPoll,60*1000);
 vipBadge();
 /* Review: proposals from a VIP (flag "vip", set by sweep.py stage) first, labelled VIP */
-/* the VIP chip on a person's page; the VIP field in the person dialog (when editing) */
+/* no VIP chip on a person's page and no followed field in the person dialog (BL-288, #247): followed is set on the project settings page only */
 FX.vip=new Set();
 ["actions","raid","decisions"].forEach(t=>FDEFS[t].push(["vip","People I follow",()=>[["yes",t==="decisions"?"Made by someone I follow":"Owned by someone I follow"],["no","Not followed"]],x=>vipKind(x.o||x.by)?"yes":"no",1]));
 WSIG.push(["vip_overdue","Overdue item owned by someone you follow closely","days","Overdue by at least (days)"]);
