@@ -1,5 +1,45 @@
 # Proposal #174: guard hardening, F5 (a guarded-file change: Alan's to approve)
 
+# FINAL, for Jarvis to apply (approved by Alan, 20-10-2026)
+
+Three independent diffs for `system/scripts/reach.py` (the only file they touch), in `dev/proposals/guard-174/`. From the repo root, **in this order**, each with `-p0` (the headers read `--- system/scripts/reach.py`, so no `-p1`):
+
+```
+patch -p0 < dev/proposals/guard-174/reach.diff
+patch -p0 < dev/proposals/guard-174/reach-report.diff
+patch -p0 < dev/proposals/guard-174/reach-steerco-adhoc.diff
+```
+
+Add `--dry-run` first to check. Every order of the three applies cleanly (checked, 7 orders, with `patch --dry-run` and for real) on `origin/main` (dcd8a7b6) **and** on `origin/v252-release` (afb8c30c, whose `reach.py` differs from main by one added table row): **no rebase is needed and no `-rebased.diff` exists**. `reach.diff` and `reach-report.diff` are byte for byte the diffs of 6a911a7b and dffd8fc7.
+
+| Diff | What it refuses (only ever adds refusals) |
+|------|------------------------------------------|
+| `reach.diff` | `propose.py setting` and `workstreams retire-settings` however quoted or spliced; `people migrate` (the word anywhere after `people`); an unquoted `* ? [ ^ #` or inner `~` in any creaite script call (a shell pattern turned into another word by a file in the vault root); `command_kind` fails closed for `people`/`workstreams` with an unknown second word. |
+| `reach-report.diff` | `report.py weekly-stage` / `client-stage` spelled with quotes, splices, `run`, `python`, an absolute path (a hole in v2.5.1 on `main`). Reading reports stays allowed. |
+| `reach-steerco-adhoc.diff` | `report.py adhoc` and `steerco-stage`, `docx_tools.py fill` and `build-adhoc`, **only when the draft is named like a report** (below). |
+
+**Regressions accepted** (all three diffs; the first two are already in the sections below):
+1. `reach.diff`: an unquoted pattern character in any script call is refused (`minutes.py new [CODE]`, `search.py query ABC#12`, `a~b`; quote the argument and it runs). `people resolve|list|add migrate` (a person named Migrate) are refused (not narrowed, so the diff is the one shown).
+2. `reach.diff`: an unknown `people`/`workstreams` second word is refused in a plain chat and in held/prep runs.
+3. `reach-steerco-adhoc.diff` matches the **words** report, weekly and client as substrings in the spec title or the output file name, so a title like "Quarterly reporting" or "Client list", and a `docx_tools.py fill` of minutes into a file called "... Weekly sync minutes.docx", are refused in ask, confirmed and sweep. Alan's own Claude Code session is not guarded, so he can run these himself; or name the draft without those words. Narrowing the matcher to the existing `REPORT_NAME` (weekly/client followed by report) is a one-line change if Alan prefers.
+4. A client-safe Steerco one-pager (`steerco-stage` with `"version": "client"`) is refused: its file is called "... (client).docx". Internal one-pagers are allowed.
+
+**Verify after applying** (from the repo root, one at a time; each takes minutes on a loaded machine):
+
+```
+python3 dev/tests/test_guard_174.py              # 25 tests: the tests now guard the applied file
+python3 dev/tests/test_guard_report_quoted.py    # 8 tests
+python3 dev/tests/test_guard_steerco_adhoc.py    # 11 tests
+python3 dev/tools/run_tests.py -j 3 test_reach test_guard_ test_held_bash_arg_forms test_record_commands test_ask_reports_refused test_permission_panel test_no_real_names
+python3 dev/tools/check.py --no-js
+```
+
+Each of the three proposal tests notices its marker in the real `reach.py` (`def _glob_refused`, `def _stages_a_report`, `def report_named_draft_refusal`), skips the patch step, and makes its "unpatched" copy with `patch -R`. `GUARD_174_UNPATCHED=1`, `GUARD_REPORT_UNPATCHED=1` and `GUARD_STEERCO_UNPATCHED=1` run them against the file without the fix (they must go red).
+
+**Undo:** reverse in the opposite order, `patch -p0 -R < dev/proposals/guard-174/reach-steerco-adhoc.diff`, then `reach-report.diff`, then `reach.diff` (checked: the result is byte for byte the original `reach.py`); or `git checkout -- system/scripts/reach.py` before committing, or `git revert` the commit that applied them.
+
+---
+
 **This is a proposal, not an edit.** `system/scripts/reach.py` is a guarded file (BL-141): nothing here changes it. `reach.diff` is a unified diff for `reach.py` only, for Alan (or Jarvis, on his say) to apply with `patch -p0 < dev/proposals/guard-174/reach.diff` from the repo root. `dev/tests/test_guard_174.py` proves it against a patched scratch copy and, once the diff is applied, goes on guarding the real file. `permissions.py` is not touched. F6 (the tracked `.bak`) is a plain deletion, done in this branch.
 
 **Version 3.** Version 1 (5b20e38c) fixed quoting. The independent review found the glob bypass (v2, 3f186de5, closed it for `propose.py setting` and `workstreams retire-settings`). The re-review of v2 found that the glob class is general. v3 closes the class in one place.
@@ -107,7 +147,7 @@ The test file also covers, in all five modes: 5 launchers (`python3 system/scrip
 
 ## Tests, fail-first and mutations
 
-- `python3 dev/tests/test_guard_174.py`: 24 tests, ~3 min.
+- `python3 dev/tests/test_guard_174.py`: 25 tests, ~3 min unloaded (about 10 on a loaded machine).
 - Fail-first: `GUARD_174_UNPATCHED=1` leaves the scratch copy unpatched: 326 failures and the docs test (the quoting forms, 135 pattern forms, 85 other-word forms, 6 `people migrate`, the hook, the fail-closed tests); `Defect` and `Normal` stay green. `Defect` is always on: it shows the unpatched file lets through a confirmed run `'setting'`, `se""tting`, `"retire-settings"`, `setti?g`, `[s]etting`, `workstreams retire-*`, `people migrate`, `tracker.py validat?`, `reach.py wra?`, `settingx#` and `^zzz`, and through **ask, confirmed and sweep** `people migrat?`, `ad?`, `edi?`, `renam?`, `merg?`, `ma?` and `people zzz`.
 - Against version 2 (`GUARD_174_DIFF=<the v2 diff>`): 228 failures (135 pattern, 85 other-word, 6 `people migrate`, command_kind, hunk count).
 - Mutations (the `Mutations` test runs them; `GUARD_174_MUTATE=<name>` runs one), each red: `no-glob-call` 220; `no-glob-bracket` (drop `[` from the pattern characters) 35; `no-glob-star` 60; `no-glob-question` 85; `no-glob-caret` 5; `no-glob-hash` 10; `no-glob-tilde` 20; `no-unquoted` 101; `no-split` 10; `no-shlex` 102; `no-setting` 77; `no-retire` 47; `no-people-migrate` 6; `no-failclosed-kind` (hunk 3) 1; `fail-open` 1.
@@ -135,6 +175,20 @@ v2.5.1 (hand checks 38 to 40) says ask creaite never stages a weekly or client r
 The fix (one hunk, +21/-1) adds `_stages_a_report(cmd)`: the first word after `report.py` that is not an option must not be `weekly-stage` or `client-stage`, read as the shell hands the words over (`shlex`) and as `str.split` cuts them; a command that can't be split is refused if it names `report.py`. The raw-text regex stays as well, so it only refuses more. It runs where the old rule runs (`report_command_refusal`, called from `ask_bash_refusal`), so the modes are the same as today's rule. It uses `shlex` itself and needs nothing from `reach.diff`. Reading stays allowed: `report.py weekly-data|client-data|steerco-data|facts|current-context|adhoc-data` (also quoted, and with a file called `weekly-stage-notes` as an argument) and the Read tool on a report draft (hand check 40). Pattern spellings (`weekly-stag?` with a decoy file) are closed by `reach.diff`'s pattern rule, not by this diff. `steerco-stage` is not in v2.5.1's rule and is not touched.
 
 Tests: `dev/tests/test_guard_report_quoted.py` (8 tests, ~2.5 min): 17 stage forms (plain, single, double and empty quotes, spliced, `run`, `python`, absolute path, after an option) refused in every mode, with the report reason in ask, confirmed and sweep; two forms refused earlier; 8 read forms allowed; the unsplittable command; the hole shown on the unpatched file (13 quoted forms allowed in ask, confirmed and sweep); the plain forms refused unpatched too (so they can't fail first); both orders with `reach.diff`. `GUARD_REPORT_UNPATCHED=1` gives 14 failures. Mutations: `raw-text` (back to raw matching) 13 red, `first-word` (only `weekly-stage` counts) 6 red, `fail-open` 1 red.
+
+## Report-named drafts through the other builders (`reach-steerco-adhoc.diff`)
+
+v2.5.1's rule covers `report.py weekly-stage` and `client-stage`. The review found that `report.py steerco-stage` and `adhoc`, and `docx_tools.py fill` and `build-adhoc`, are allowed in ask, confirmed and sweep and write a Word draft into `system/staging/drafts/`, and that `adhoc` names its file from the spec's title: a title such as "Example Programme Weekly report" writes a report-named draft outside the rule (the file rule only sees a command that names a report file).
+
+**Interpretation taken (Jarvis and Alan to correct).** "Narrow" is read as: refuse these builders **only when the draft is named like a report**, in every mode that refuses `weekly-stage` today (ask, confirmed, sweep; held and prep refuse these as stage commands anyway):
+- `report.py adhoc <spec.json>`: when the spec file's `title` contains `report`, `weekly` or `client` (case-insensitive; the pattern is the existing `REPORT_NAME` plus the three words, so any spelling the report-name rule matches is included). `adhoc` has no output argument: its file is "<date> <title>.docx".
+- `report.py steerco-stage <spec.json>`: when the spec's `title` has one of the words, or its `version` is `client` (the draft is "... Steerco one-pager (client).docx"). The spec carries no title otherwise and the file name is built from the project's name, which the guard does not look up.
+- `docx_tools.py fill <template> <values> <out.docx>` and `build-adhoc <template> <spec> <out.docx>`: when the **output file name** has one of the words; for `build-adhoc` also when the spec's title has one.
+- Fail closed, as asked: a spec that can't be read or has no title is treated as report-named only for `adhoc` and only when the spec file's own name has one of the words; a command that can't be split is refused if it names one of these scripts and has a word. Everything else is allowed, and reading is untouched (`adhoc-data`, `steerco-data`, `weekly-data`, `client-data`, `docx_tools.py text` and `status`).
+
+It reads the staged spec with the guard's own `json.loads` (a file in reach, at most 1 MB, nothing printed), decides on the words as the shell hands them over and as `str.split` cuts them (quotes, splices, `run`, `python3`, `python`, absolute paths), and is added as one more check in `ask_bash_refusal` after `report_command_refusal`, so it needs nothing from the other two diffs and does not touch the lines they change.
+
+Tests: `dev/tests/test_guard_steerco_adhoc.py` (11 tests): 175 refused `adhoc`/`steerco-stage` calls (5 launchers, 5 spellings of the subcommand, 7 specs) and 45 `docx_tools.py` calls in every mode, with the report reason in ask, confirmed and sweep; ordinary documents, internal one-pagers, neutral `fill`/`build-adhoc` and 6 reads allowed in ask, confirmed and sweep and decided exactly as on the unpatched file; the hole shown on the unpatched file; all 6 orders of the three diffs. `GUARD_STEERCO_UNPATCHED=1`: 221 failures. Mutations (each red): `drop-weekly` 66, `drop-title-read` 130, `fail-open-unreadable` 25, `drop-client-version` 25, `drop-output-name` 40, `unsplittable-open` 1.
 
 ## What Alan must approve
 

@@ -1,0 +1,87 @@
+--- system/scripts/reach.py
++++ system/scripts/reach.py
+@@ -1474,8 +1474,74 @@
+         return None if not REPORT_NAME.search(command or "") else REPORTS_ARE_THE_USERS
+     return None
+ # ===== end reports =====
++
++
++# ===== #174 (Alan, via Jarvis): a report-named draft can't be written through the other builders either =====
++# v2.5.1's rule covers report.py weekly-stage and client-stage. report.py steerco-stage and adhoc, and docx_tools.py fill and
++# build-adhoc, also write a Word draft into system/staging/drafts/, and `adhoc` names it from the spec's title (a title such as
++# 'Example Programme Weekly report' writes a report-named draft that the file rule never sees as a command). Narrow scope: they are
++# refused only when the draft is named like a report: the output file's name (fill, build-adhoc), the spec's title (adhoc,
++# build-adhoc, steerco-stage), or a client-safe one-pager (steerco-stage with version client, whose file is "... (client).docx"),
++# contains report, weekly or client. Ordinary one-off documents and internal Steerco one-pagers stay allowed; so does reading.
++REPORT_WORDS = re.compile(REPORT_NAME.pattern + r"|report|weekly|client", re.I)
++
++
++def _command_readings(cmd):
++    """The command's words as the shell hands them over (shlex) and as str.split cuts them; None if it can't be split."""
++    import shlex
++    try:
++        return [shlex.split(cmd), cmd.split()]
++    except ValueError:
++        return None
+ 
+ 
++def _spec_fields(path):
++    """(title, version) from a staged spec file (JSON), or (None, None) if it can't be read: a file in reach, read only here."""
++    try:
++        p = Path(os.path.expanduser(path))
++        p = p if p.is_absolute() else Path(paths.ROOT) / p
++        if p.stat().st_size > 1_000_000:
++            return None, None
++        spec = json.loads(p.read_text(encoding="utf-8"))
++        return str(spec.get("title") or ""), str(spec.get("version") or "")
++    except Exception:  # noqa: BLE001  unreadable: the caller decides
++        return None, None
++
++
++def _named_like_a_report(words):
++    """True when these words run a builder that would write a report-named draft."""
++    for i, w in enumerate(words):
++        script = w.rsplit("/", 1)[-1]
++        pos = [x for x in words[i + 1:] if not x.startswith("-")]
++        if script == "report.py" and pos[:1] in (["adhoc"], ["steerco-stage"]) and len(pos) > 1:
++            title, version = _spec_fields(pos[1])
++            if title is None:           # unreadable: only a report-named spec file is taken as a report-named draft (adhoc)
++                if pos[0] == "adhoc" and REPORT_WORDS.search(pos[1].rsplit("/", 1)[-1]):
++                    return True
++            elif REPORT_WORDS.search(title) or (pos[0] == "steerco-stage" and version.lower() == "client"):
++                return True
++        if script == "docx_tools.py" and pos[:1] in (["fill"], ["build-adhoc"]) and len(pos) > 3:
++            if REPORT_WORDS.search(pos[3].rsplit("/", 1)[-1]):
++                return True
++            if pos[0] == "build-adhoc" and REPORT_WORDS.search(_spec_fields(pos[2])[0] or ""):
++                return True
++    return False
++
++
++def report_named_draft_refusal(command):
++    """Why an ask creaite Bash call is refused as writing a report-named draft (see above), or None."""
++    cmd = vault_relative(command or "")
++    readings = _command_readings(cmd)
++    if readings is None:       # can't be split: refuse if it names one of these builders and a report word
++        rest = re.sub(r"report\.py|docx_tools\.py", "", cmd)         # (the script's own name has the word report in it)
++        return REPORTS_ARE_THE_USERS if rest != cmd and REPORT_WORDS.search(rest) else None
++    if any(_named_like_a_report(words) for words in readings):
++        return (REPORTS_ARE_THE_USERS + " (the draft would be named like a report: report, weekly or client in its title or "
++                "file name; give an ordinary document a name without them)")
++    return None
++# ===== end #174 report-named drafts =====
++
++
+ def _direct_write_refusal(inp, mode):
+     """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
+     outside the run's direct-write folder."""
+@@ -1525,7 +1591,8 @@
+     form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
+     # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
+     return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)
+-            or report_command_refusal(command) or handover_refusal(command) or read_write_refusal(command)
++            or report_command_refusal(command) or report_named_draft_refusal(command) or handover_refusal(command)
++            or read_write_refusal(command)
+             or ask_glob_reason(command))
+ 
+ 

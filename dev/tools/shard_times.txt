@@ -150,7 +150,8 @@ test_generate_dialog.py 246
 test_generate_refine.py 354
 test_guard_174.py 160
 test_guard_backslash.py 5
-test_guard_report_quoted.py 150
+test_guard_report_quoted.py 230
+test_guard_steerco_adhoc.py 150
 test_guard_glob_deadline.py 18
 test_guard_pinned.py 26
 test_health_fixes.py 25
