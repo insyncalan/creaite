@@ -18,8 +18,8 @@ in the development repository. The last run is kept in system/staging/archive-st
 Settings › Health.
 
 BL-03, files, on a yes: weekly and client reports, minutes and Steerco one-pagers dated (by their file name) more than
-archive.reports_after_months months ago (12) move into their engagement's own archive folder (99 Archive, or the old _Archive
-until Alan renames it: paths.archive_name), keeping their place below it. Health shows a line once a month while any are due ("Archive 14 reports and minutes older than 12 months"); its Fix it puts this command's spec
+archive.reports_after_months months ago (12) move into their engagement's own 99 Archive, keeping their place below it. Health shows
+a line once a month while any are due ("Archive 14 reports and minutes older than 12 months"); its Fix it puts this command's spec
 on the approval card, and Approve applies it through tracker.py apply (a `move` of kind "reports", the BL-09 guard exception: only
 the apply moves into 99 Archive). Stored paths keep resolving (paths.resolve). Transcripts, agendas, documents and applied proposals
 are never moved. BL-331: Files lists the archived ones with Move back, the exact reverse move ("reports_back"), which only the
@@ -190,7 +190,7 @@ def due_reports(on=None):
                 if f not in seen and paths.rel(f) not in back and not any((d / sub / f.name).exists() for d in paths.archive_dirs(base)):
                     seen.add(f)
                     out.append({"code": code, "kind": kind, "from": paths.rel(f),
-                                "to": paths.rel(base / paths.archive_name(base) / sub / f.name)})
+                                "to": paths.rel(base / paths.ARCHIVE / sub / f.name)})
     return out
 
 
@@ -438,8 +438,7 @@ NOTE, NOTE_BACK = "notes", "notes_back"
 
 
 def note_delete_spec(rel):
-    """(spec, None) that moves the note at stored path `rel` into its own folder's archive folder in use (paths.archive_name), or
-    (None, why not)."""
+    """(spec, None) that moves the note at stored path `rel` into its own folder's 99 Archive, or (None, why not)."""
     import notes
     hit = notes.note_of(rel)
     if not hit or hit[1].is_symlink() or not hit[1].is_file():
