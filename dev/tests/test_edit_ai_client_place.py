@@ -60,7 +60,9 @@ def cases():
         for o in opts:
             text = "the uat start date is not confirmed" if place == "line" else NOTE
             out.append((f"{place}/{o}", {"option": o, "text": text, "code": "ABC", "place": place,
-                                         **({"instruction": ASK} if o == "custom" else {})}))
+                                         **({"instruction": ASK} if o == "custom" else {}),
+                                         # #186: an email to a colleague (an older edit_ai.py ignores the key)
+                                         **({"recipients": ["sam.patel@brightwater.example"]} if place == "email" else {})}))
     return out
 
 

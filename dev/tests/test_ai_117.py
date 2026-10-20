@@ -74,6 +74,8 @@ class TheServerSide(unittest.TestCase):
         cls.v.cleanup()
 
     def ctx(self, body):
+        if body.get("place") == "email" and "recipients" not in body:      # #186: an email to a colleague (the server decides by address)
+            body = {**body, "recipients": ["sam.patel@brightwater.example"]}
         r = subprocess.run([sys.executable, "system/scripts/edit_ai.py", "context"], input=json.dumps(body), capture_output=True,
                            text=True, cwd=self.v.root)
         return json.loads(r.stdout)

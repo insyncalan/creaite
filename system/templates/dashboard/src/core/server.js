@@ -65,7 +65,7 @@ export const OLDSERVER="The live server is older than this dashboard and doesn't
 /* ===== BL-253 (sprint-live-updates) ===== when the page last saved through the server: its own change event waits for its reload */
 export let OWNPOST=0;
 /* ===== end BL-253 ===== */
-export let api = async function(path,body){ if(!/^\/api\/(here|pulse|vip|files|ask\/running|review\/guesses|review\/rejects|review\/candidates)$/.test(path)) OWNPOST=Date.now();   /* reads are not the page's own saves (BL-315's too) */ try{ const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify(body||{})});
+export let api = async function(path,body){ if(!/^\/api\/(here|pulse|vip|files|ask\/running|review\/guesses|review\/rejects|review\/candidates|edit\/ai\/caps)$/.test(path)) OWNPOST=Date.now();   /* reads are not the page's own saves (BL-315's too) */ try{ const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify(body||{})});
     const j=await r.json().catch(()=>({ok:false,message:`HTTP ${r.status}`})); if(!r.ok) j.ok=false;
     if(r.status===404&&j.message==="Not found") j.message=OLDSERVER;   /* the page is newer than the running server */
     return j; }

@@ -255,8 +255,10 @@ async function ask(s) {
   const cur = { ...s, status: /** @type {"running"} */ ("running"), steps: 0 };
   aiSug.value = cur;
   const doc = s.ai.document ? s.ai.document() : null;                 // #123: the client sheet names its report; the server binds the place
+  const to = s.ai.recipients ? s.ai.recipients() : null;              // #186: the Draft email's addresses; the server decides who is outside
   const r = await draftAsk({ option: s.option, instruction: s.instruction, text: s.range.text, place: s.ai.place,
-    code: (s.ai.project && s.ai.project()) || "", ...(doc ? { document: doc } : {}) }, { url: "/api/edit/ai", label: `${s.label}, with Claude`, status: () => {} });
+    code: (s.ai.project && s.ai.project()) || "", ...(doc ? { document: doc } : {}), ...(Array.isArray(to) ? { recipients: to } : {}) },
+  { url: "/api/edit/ai", label: `${s.label}, with Claude`, status: () => {} });
   if (aiSug.value !== cur) return;                                     // discarded, or the editor closed, while it ran
   if (r.ok && r.text) { draftStat(AI_FEATURE, "offered"); aiSug.value = { ...cur, status: "ready", text: String(r.text), notes: r.notes || [] }; }
   else aiSug.value = { ...cur, status: "failed", message: r.message || "No suggestion came back" };
