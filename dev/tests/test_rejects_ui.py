@@ -197,7 +197,7 @@ class RejectsUI(LiveBrowserCase):
         self.assertEqual([guesses.get(f"proposed-rj.json#{i}") for i in (1, 2, 3, 4, 5)], ["Chatter", "Duplicate", "Doesn't need tracking", "Chatter", None])
         b.click(self.reject_button(self.dup_text))
         self.menu_open()
-        self.assertIn(f"Duplicate", b.eval("document.querySelector('#rvReason [data-reason=guess]').textContent"))
+        self.assertIn("Duplicate", b.eval("document.querySelector('#rvReason [data-reason=guess]').textContent"))
         b.key("G", modifiers=8)
         its = self.wait_rejected([2])
         self.assertEqual(its[2].get("reject_reason"), "Duplicate")
