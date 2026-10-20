@@ -10,9 +10,10 @@ Mockup (locked once Alan signs off): `dev/mockups/minutes-view-v2-mockup.html`. 
 5. **Transcript highlight both ways.** Hovering a row lights its transcript turn; hovering a turn lights its rows. The transcript hides from the Transcript button or its close button, and the page rescales.
 6. **Disappearing header.** Scrolling the sheet slims the bar and hides the app bar and page header, as Reporting does (`rpt-slim`). The slim bar shows the title.
 7. **Zoom.** Keep fit-to-width and add trackpad pinch and Ctrl+scroll (50% to 250%), as well as the − and + buttons. Must not be lost.
-8. **Export menu.** Word, PDF, HTML, each with its description line, plus "Draft the follow-up email". Word is an export only: editing the exported file never flows back.
-9. **Approve minutes is one click.** No popup. A snack says "Minutes approved · n work items registered · Undo". A small "Before approving" box appears only when a ticked item has a real problem (an owner who needs details, a possible duplicate): it lists just those, with Go back and Approve anyway. Approving with nothing ticked is the "take no items" case (#261).
-10. **Wording.** "Needs details" replaces "not in the people register" (#266).
+8. **Icon toolbar.** Show as exported, Transcript (pressed state), Export and Re-extract are icon buttons with hover tips (the app's `.ib`); only Approve minutes keeps a label, as the one primary action. The bar fits one row.
+9. **Export menu.** Word, PDF, HTML, each with its description line, plus "Draft the follow-up email". Word is an export only: editing the exported file never flows back.
+10. **Approve minutes is one click.** No popup. A snack says "Minutes approved · n work items registered · Undo". A small "Before approving" box appears only when a ticked item has a real problem (an owner who needs details, a possible duplicate): it lists just those, with Go back and Approve anyway. Approving with nothing ticked is the "take no items" case (#261).
+11. **Wording.** "Needs details" replaces "not in the people register" (#266).
 
 ## Not in scope
 Re-extract, Show as exported, Coverage and the checks list keep their current behaviour unless Alan says otherwise.
