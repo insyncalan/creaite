@@ -751,8 +751,13 @@ def client_apply_problem(blk, field):
     """v2.5.1 (#239 step 3): why tracker.py apply must not file an approved client Word draft (an older cx-client-report one, or the
     client-safe steerco one-pager), else None: the file is not the one whose check passed at approval (`checked_sha256`: none, or
     the draft changed since), or the client check finds something now. For tracker.py apply's file step (a guarded proposal,
-    dev/proposals/client-output-step3/tracker.diff), before the draft is stamped and copied."""
-    if field != "report_decision" or blk.get(field) != "approved" or not client_block(blk) or not word_draft(blk.get("draft")):
+    dev/proposals/client-output-step3/tracker.diff), before the draft is stamped and copied. v2.5.3 (#259): a creaite-format client
+    report's staged write is checked too (creaite_client_problem)."""
+    if field != "report_decision" or blk.get(field) != "approved" or not client_block(blk):
+        return None
+    if blk.get("format") == "creaite":
+        return creaite_client_problem(blk)
+    if not word_draft(blk.get("draft")):
         return None
     draft = paths.resolve(blk["draft"])
     if not draft.is_file():
@@ -764,6 +769,57 @@ def client_apply_problem(blk, field):
     if left:
         return f"draft: {blk['draft']} holds possible internal content now, so it isn't filed: " + "; ".join(left)
     return None
+
+
+CREAITE_CHANGED = ("the client report to be filed isn't the one whose client check passed at approval (the proposal was changed "
+                   "since): approve it again")
+
+
+def creaite_client_problem(blk):
+    """v2.5.3 (#259): why tracker.py apply must not file an approved creaite-format client report, else None. Its file is written
+    from the proposal's own `write` (report_doc._file_ops), so that write is checked again here, as a filed report is
+    (client_output.filed_findings: its page, its data block and its pictures), and it must be exactly the file Approve checked: the
+    snapshot written beside it is one the registry recorded at approval (client_snapshot.record) and names that file's SHA-256 as its
+    source. A client report is never filed by a copy (the draft as it is on disk) nor without its snapshot."""
+    import client_output
+    import creaite_doc
+    filed, snap = _creaite_client_writes(blk)
+    if filed is None:
+        return CREAITE_CHANGED
+    try:
+        doc = creaite_doc.loads(filed["content"])
+    except creaite_doc.DocError:
+        return CREAITE_CHANGED
+    if doc.get("kind") != "client":
+        return CREAITE_CHANGED
+    found = client_output.filed_findings(creaite_doc.force_client_audience(doc), filed["content"])
+    if found:
+        return "the client report to be filed holds possible internal content now, so it isn't filed: " + "; ".join(found)
+    return None if _snapshot_vouches(snap, filed["content"]) else CREAITE_CHANGED
+
+
+def _creaite_client_writes(blk):
+    """(the filed report's write, its snapshot's write) of a creaite-format client block, or (None, None) unless it has exactly one
+    of each and no copy."""
+    import client_snapshot
+    ops = [o for o in blk.get("file_ops") or [] if isinstance(o, dict)]
+    writes = [o for o in ops if o.get("op") == "write" and isinstance(o.get("content"), str)]
+    snaps = [o for o in writes if client_snapshot.is_snapshot_name(str(o.get("path") or ""))]
+    filed = [o for o in writes if o not in snaps and str(o.get("path") or "").lower().endswith(".html")]
+    if any(o.get("op") == "copy" for o in ops) or len(filed) != 1 or len(snaps) != 1:
+        return None, None
+    return filed[0], snaps[0]
+
+
+def _snapshot_vouches(snap, content):
+    """Whether a snapshot write is one the registry recorded at approval and names `content` (the filed write) as its source."""
+    import client_snapshot
+    try:
+        source = (json.loads(snap["content"]).get("source") or {}).get("sha256")
+    except (ValueError, AttributeError):
+        return False
+    known = (client_snapshot.entry(snap["path"]) or {}).get("hashes") or []
+    return client_snapshot.sha(snap["content"]) in known and source == client_snapshot.sha(content)
 
 
 def client_refusal(n, block, mode=None):

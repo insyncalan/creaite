@@ -170,8 +170,19 @@ def save_route(handler, req):
     with handler_lock(handler):
         out = report_doc.save_draft(own_header_logos(doc), req.get("base_version"))
         if out.get("ok"):
-            report_doc.remember_layout(code, kind, doc.get("layout"), client)
+            report_doc.remember_layout(code, kind, remembered(doc), client)
     return answer(handler, out)
+
+
+def remembered(doc):
+    """The layout Save remembers for the next report. v2.5.3 (#259, K3): a client report's layout keeps only the headings its
+    sections show as well (creaite_doc.derived_headings), never words stored only in its layout, which the next report would show."""
+    lay = doc.get("layout")
+    if doc.get("kind") != "client" or not isinstance(lay, dict):
+        return lay
+    shown = creaite_doc.derived_headings([s for s in doc.get("sections") or [] if isinstance(s, dict)])
+    heads = lay.get("headings") if isinstance(lay.get("headings"), dict) else {}
+    return {**lay, "headings": {k: v for k, v in heads.items() if isinstance(v, str) and shown.get(k) == v.strip()[:120]}}
 
 
 def own_header_logos(doc):
@@ -216,7 +227,8 @@ def _relock_one(f, code, fri):
     if doc.get("kind") != "client" or doc.get("project") != code or doc["date"] < fri or doc.get("state") == "approved":
         return False
     base = report_doc.baseline(code, doc["date"])
-    if not base or doc.get("based_on") == {"path": base["path"], "version": base["version"]}:
+    stored = creaite_doc.read(f).get("based_on")      # v2.5.3 (#259, K3): read_report derives based_on; the file's own says if it's locked
+    if not base or stored == {"path": base["path"], "version": base["version"]}:
         return False
     facts = (creaite_doc.read(base["path"]).get("meta") or {}).get("client_facts") or {}
     allowed = {x["id"]: x for t in ("actions", "decisions", "raid", "milestones") for x in facts.get(t) or []}

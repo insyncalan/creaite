@@ -34,13 +34,15 @@ MUTANTS_ON = os.environ.get("CREAITE_PROPS_MUTANTS") == "1"
 # cases per property: (smoke, full), as the list sets them
 SIZES = {"P1": (50, 2000), "P2": (50, 2000), "P3": (50, 2000), "P4": (50, 2000), "P5": (1, 1), "P6": (50, 2000), "P7": (50, 2000),
          "P8": (50, 2000), "P9": (50, 2000), "P10": (50, 2000), "P11": (50, 200), "P13": (50, 2000), "P13shared": (3, 3),
-         "P14": (50, 500), "P15": (6, 50), "P16": (50, 2000), "P16json": (22, 22), "P17": (50, 500), "P18": (50, 2000), "P19": (50, 500),
+         "P14": (50, 500), "P15": (6, 50), "P16": (50, 2000), "P16json": (22, 22), "P16out": (52, 2000), "P17": (50, 500), "P18": (50, 2000),
+         "P18facts": (27, 500), "P19": (50, 500),
          "P20": (50, 2000), "P21": (50, 500), "P22": (50, 500), "P23": (20, 500), "P24": (20, 200)}
 # the guard each property must go red without (PROPERTIES.md "Mutation proof"), as a mutant of client_output_props._mutant
 MUTANTS = {"P1": "gate_off", "P2": "reread", "P3": "derive_off", "P4": "derive_off", "P5": "gate_off+allow_off", "P6": "same_report_off",
-           "P7": "allow_off", "P8": "signs_off", "P9": "names_off", "P10": "page_used+output_off", "P11": "gate_off",
-           "P13": "pictures_off+output_off", "P13shared": "gap_c_off+output_off", "P14": "logos_off+derive_off+output_off", "P15": "metadata_kept", "P16": "decoder_off", "P17": "audience_flip",
-           "P18": "stub_off", "P19": "output_off", "P20": "allow_off", "P21": "other_parser+gate_off", "P22": "match_raw", "P23": "gate_off"}
+           "P7": "allow_off+facts_off", "P8": "signs_off", "P9": "names_off", "P10": "page_used+output_off", "P11": "gate_off+trust_on",
+           "P13": "pictures_off+output_off+trust_on",
+           "P13shared": "gap_c_off+output_off+trust_on", "P14": "logos_off+derive_off+output_off", "P15": "metadata_kept", "P16": "decoder_off", "P16out": "loose_off",
+           "P17": "audience_flip", "P18": "stub_off", "P18facts": "facts_off", "P19": "output_off", "P20": "allow_off", "P21": "other_parser+gate_off", "P22": "match_raw", "P23": "gate_off+trust_on+apply_check_off"}
 
 try:
     import hypothesis
@@ -129,8 +131,17 @@ class Properties(A.Audience):
         """The JSON-escaped form (\\u0061 for a) is read by client_leak.findings since the guarded gate diff (client-output-step1) is in."""
         self.check("P16json")
 
+    def test_P16_output_check_reads_loose_ids_and_separators(self):
+        """v2.5.3 (#259): the output check every client file passes reads an ID with its letters or digits spaced, more zeros or
+        fewer, and a wording with hyphens, dots or underscores for its spaces, as the plain form."""
+        self.check("P16out")
+
     def test_P17_internal_sections(self): self.check("P17")
     def test_P18_hidden_rows_items_tags_and_milestones(self): self.check("P18")
+
+    def test_P18_stored_fields_are_derived_and_items_are_the_facts(self):
+        """v2.5.3 (#259, K3 / I19): plain words in a stored field no output draws reach no output; a kept item is the facts'."""
+        self.check("P18facts")
     def test_P19_the_post_render_check_on_its_own(self): self.check("P19")
     def test_P20_the_filed_data_block(self): self.check("P20")
     def test_P21_raw_transforms(self): self.check("P21")

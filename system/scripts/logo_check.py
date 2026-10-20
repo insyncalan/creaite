@@ -322,19 +322,6 @@ def _state(parent, el, scale):
     return hidden, fill, stroke, size
 
 
-def _text_drawn(el, state, box):
-    """Whether a text or tspan with this state is drawn where it can be seen."""
-    hidden, fill, stroke, _size = state
-    if hidden or not (fill or stroke):
-        return False
-    x0, y0, w, h = box
-    for key, lo, span in (("x", x0, w), ("y", y0, h)):
-        n = _num(el.get(key))
-        if n is not None and not (lo - 10 * span <= n <= lo + 11 * span):
-            return False
-    return True
-
-
 def _attr(n, v, names):
     """One kept attribute's value (ids and classes renamed, style declarations filtered), or None when it is left out."""
     if n == "id":
@@ -357,10 +344,8 @@ def _attrs(el, names):
 
 
 def _own_text(el, tag, names):
-    """What an element holds as its own text in the rebuilt picture: a style's rules, a text's or tspan's words, nothing else."""
-    if tag == "style":
-        return html.escape(_rules(el.text or "", names), quote=False)
-    return html.escape(el.text or "", quote=False) if tag in ("text", "tspan") else ""
+    """What an element holds as its own text in the rebuilt picture: a style's rules, nothing else (#259 K5: never words)."""
+    return html.escape(_rules(el.text or "", names), quote=False) if tag == "style" else ""
 
 
 def _rebuild(el, names, state, box, scale, inside, out):
@@ -370,23 +355,23 @@ def _rebuild(el, names, state, box, scale, inside, out):
     if ns != SVG_NS or tag not in DRAWN_TAGS:
         return
     state = _state(state, el, scale)
-    tail = html.escape(el.tail or "", quote=False) if tag == "tspan" else ""     # a tspan's tail is its text's words
-    if tag in ("text", "tspan") and (inside or not _text_drawn(el, state, box)):
-        out.append(tail)
-        return
+    if tag in ("text", "tspan"):
+        return              # v2.5.3 (#259, K5): no text at all, drawn or not (a tspan's tail is its text's words: gone with it)
     name = el.tag.rsplit("}", 1)[-1] if tag != "a" else "g"
     out.append(f"<{name}{_attrs(el, names)}>{_own_text(el, tag, names)}")
     for child in el:
         _rebuild(child, names, state, box, scale, inside or tag in NOT_DRAWN_INSIDE, out)
-    out.append(f"</{name}>{tail}")
+    out.append(f"</{name}>")
 
 
 def clean_svg(raw):
     """2.5.1 M2: the SVG logo `raw` (bytes) rebuilt for a client file from an allow-list of drawn shapes, or None when it can't be
     read. Comments, processing instructions, title, desc, metadata, editor elements and attributes (any namespace but SVG's), links,
-    scripts, pictures, text that isn't drawn (hidden, transparent, of no size, far off the picture, or inside defs, a clip or a mask)
-    and every word in an id or class name are left out; shapes, gradients, styles and drawn text keep their values, so a logo of
-    plain shapes draws the same."""
+    scripts, pictures and every word in an id or class name are left out; shapes, gradients and styles keep their values, so a logo
+    of plain shapes draws the same. v2.5.3 (#259, K5): ALL text is left out, drawn or not (every <text> and <tspan> and its words):
+    the safer of the two choices, since whether a text is drawn where a reader sees it (a colour a shade off the background, a
+    textLength of half a unit, an opacity of 0.0001) can't be told for certain; a wordmark logo should be uploaded as shapes or
+    a PNG. Rejecting a logo that holds text was the other choice: it would leave a client report with no logo at all."""
     try:
         text = raw.decode("utf-8")
     except (UnicodeDecodeError, AttributeError):
