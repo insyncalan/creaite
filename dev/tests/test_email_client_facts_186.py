@@ -119,12 +119,27 @@ def patched_vault():
     return v
 
 
+# Proposals that apply on top of this one: (marker in edit_ai.py, their diff). Taking #186 out of a copy that has them takes them out first.
+LATER = (("CLIENT_FIELDS = {", REPO / "dev" / "proposals" / "client-messaging-263" / "edit_ai.diff"),
+         ("MINUTES_PLACES = {", REPO / "dev" / "proposals" / "minutes-reply-262" / "edit_ai.diff"))
+
+
+def unpatch(root):
+    """Take #186 out of a copy that has it, the proposals on top of it first."""
+    for marker, diff in LATER:
+        if marker in (root / "system/scripts/edit_ai.py").read_text(encoding="utf-8"):
+            subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(diff)], check=True)
+    subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(DIFF)], check=True)
+
+
 def prepare(root):
     """Patch (or unpatch) and mutate the vault's copy of the scripts."""
     scripts = root / "system" / "scripts"
     has = MARKER in (scripts / "edit_ai.py").read_text(encoding="utf-8")
-    if has == UNPATCHED:                                  # apply the proposal, or take it out of an applied repo's copy
-        r = subprocess.run(["patch", "-p0", "-s", "-d", str(root), *(["-R"] if has else []), "-i", str(DIFF)],
+    if has and UNPATCHED:
+        unpatch(root)
+    elif not has and not UNPATCHED:                                  # apply the proposal, or take it out of an applied repo's copy
+        r = subprocess.run(["patch", "-p0", "-s", "-d", str(root), "-i", str(DIFF)],
                            capture_output=True, text=True)
         if r.returncode:
             raise AssertionError(f"patch failed:\n{r.stdout}{r.stderr}")
@@ -393,7 +408,9 @@ class TheLiveServer(_Vault):
         self.assertEqual(b[1]["recipients"], many)
         for i in range(2, 7):
             self.assertIsNone(b[i], i)                                 # a 400: nothing goes to edit_ai.py or Claude
-        self.assertEqual(out["caps"], [200, {"ok": True, "email_audience": "recipients", "own_domains": "ok"}])
+        code, caps = out["caps"]                                       # later proposals (#263) add keys of their own
+        self.assertEqual((code, {k: caps.get(k) for k in ("ok", "email_audience", "own_domains")}),
+                         (200, {"ok": True, "email_audience": "recipients", "own_domains": "ok"}))
 
     def test_addresses_with_any_other_place_are_refused(self):
         doc = {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}
@@ -544,7 +561,7 @@ if LiveBrowserCase is not None:
             R.populate(v)
             ls = v.root / "system/scripts/edit_ai.py"
             if MARKER in ls.read_text(encoding="utf-8"):             # the repo has the diff: take it out of this vault's copy
-                subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(DIFF)], check=True)
+                unpatch(v.root)
 
         def test_an_old_server_keeps_the_bar_off_and_is_asked_once(self):
             b = self.b

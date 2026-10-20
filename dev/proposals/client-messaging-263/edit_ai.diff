@@ -59,7 +59,7 @@
      outside = bool(ctx.get("outside")) or (ctx.get("place") in EMAIL_PLACES and email_outside(body.get("request") or {}))   # #186
      bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") \
 -        if ctx.get("place") in CLIENT_PLACES or outside else []
-+        if ctx.get("place") in CLIENT_PLACES or outside or _client_reply(ctx, body) else []
++        if outside or _client_reply(ctx, body) else []
      if bad:
          return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"),
                  "message": refusal(bad, True, outside)}
@@ -68,10 +68,10 @@
  
  
 +def _client_reply(ctx, body):
-+    """Whether a reply is for a client field (#263): the context says so, or the request names one (decided again, never only the
-+    context's word). A request whose field can't be read counts as a client field (fails closed)."""
++    """Whether a reply gets the client check: the client place (#123), or a client field (#263): the context says so, or the request
++    names one (decided again, never only the context's word). A request whose field can't be read counts as one (fails closed)."""
 +    req = body.get("request") if isinstance(body.get("request"), dict) else {}
-+    return bool(ctx.get("client")) or "field" in req
++    return ctx.get("place") in CLIENT_PLACES or bool(ctx.get("client")) or "field" in req
 +
 +
  def main(argv):
@@ -88,18 +88,43 @@
  EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
  
  
-@@ -6025,6 +6025,10 @@
+@@ -6025,11 +6025,8 @@
      body = {k: str(req.get(k) or "")[:40] for k in ("option", "code", "place")}
      body["text"] = str(req.get("text") or "")[:12001]
      body["instruction"] = str(req.get("instruction") or "")[:401]
-+    if "field" in req:                             # #263: a field whose text goes to a client; edit_ai.client_field checks it
+-    d = req.get("document")
+-    if d is not None:
+-        if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
+-            return None
+-        body["document"] = {k: x[:120] for k, x in d.items()}
++    if not _edit_ai_document_and_field(req, body):
++        return None
+     rc = req.get("recipients")                     # #186: the Draft email's addresses, passed whole (edit_ai.email_outside decides)
+     if rc is not None:
+         if edit_ai_recipients_problem(req):
+@@ -6038,6 +6035,21 @@
+     return body
+ 
+ 
++def _edit_ai_document_and_field(req, body):
++    """Copy the request's `document` (#123: a small object of strings) and `field` (#263: a field whose text goes to a client, text of
++    at most 40 characters; edit_ai.client_field checks it) into `body`; False for either when it isn't that shape."""
++    d = req.get("document")
++    if d is not None:
++        if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
++            return False
++        body["document"] = {k: x[:120] for k, x in d.items()}
++    if "field" in req:
 +        if not isinstance(req["field"], str) or len(req["field"]) > 40:
-+            return None
++            return False
 +        body["field"] = req["field"]
-     d = req.get("document")
-     if d is not None:
-         if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
-@@ -6072,7 +6076,8 @@
++    return True
++
++
+ def edit_ai_recipients_problem(req):
+     """Why a request's `recipients` can't be taken (#186), as the message the page shows, or "" when they can (or there are none):
+     only the Draft email sends addresses, at most 50, each text of at most 320 characters. Never cut: a list is taken whole or not."""
+@@ -6072,7 +6084,8 @@
      """POST /api/edit/ai/caps (#186): what this server's edit_ai.py decides for itself, so the page can show the Draft email's AI bar
      for an outside recipient (an older server answers 404 and the page keeps the bar off), and whether the own-domains setting is
      usable (a setting that isn't a list makes every recipient outside)."""

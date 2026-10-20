@@ -21,7 +21,6 @@ What it proves (test_reports' fictional ABC fixture, as test_email_client_facts_
 - the page: the Client messaging field has no bar until the server lists the field; then the request names it. The other longer fields
   keep their bar.
 """
-import json
 import os
 import subprocess
 import sys
@@ -44,10 +43,11 @@ MUTATIONS = {   # (file, what it breaks, old text, new text)
     "no-client-rules": ("edit_ai.py", "the field doesn't get the client rules in context()",
                         "client = place in CLIENT_PLACES or client_field(req, place)", "client = place in CLIENT_PLACES"),
     "no-reply-check": ("edit_ai.py", "the reply isn't checked for the field",
-                       "if ctx.get(\"place\") in CLIENT_PLACES or outside or _client_reply(ctx, body) else []",
-                       "if ctx.get(\"place\") in CLIENT_PLACES or outside else []"),
-    "ctx-only": ("edit_ai.py", "result() believes the context only", "    return bool(ctx.get(\"client\")) or \"field\" in req\n",
-                 "    return bool(ctx.get(\"client\"))\n"),
+                       "    return ctx.get(\"place\") in CLIENT_PLACES or bool(ctx.get(\"client\")) or \"field\" in req\n",
+                       "    return ctx.get(\"place\") in CLIENT_PLACES\n"),
+    "ctx-only": ("edit_ai.py", "result() believes the context only",
+                 "    return ctx.get(\"place\") in CLIENT_PLACES or bool(ctx.get(\"client\")) or \"field\" in req\n",
+                 "    return ctx.get(\"place\") in CLIENT_PLACES or bool(ctx.get(\"client\"))\n"),
     "any-place": ("edit_ai.py", "the field may come with any place",
                   "if req.get(\"field\") not in CLIENT_FIELDS or CLIENT_FIELDS[req.get(\"field\")] != place:",
                   "if req.get(\"field\") not in CLIENT_FIELDS:"),
@@ -90,7 +90,17 @@ class _Vault(E._Vault):
         prepare(cls.root)
 
     def assertClientRules(self, ctx, why=""):
-        self.assertClientFacts(ctx, why)
+        """Client facts and the client rule. The facts are read from "The project:" on: Make it executive's style guide carries a
+        fictional example with item IDs of its own, which is the guide, not the tracker's facts."""
+        self.assertNotIn("refused", ctx, why)
+        facts = ctx["prompt"].split("\nThe project:", 1)[1]
+        for i in E.INTERNAL_IDS:
+            self.assertNotIn(i, facts, f"{why}: internal {i} in the facts")
+        for n in E.OWNERS:
+            self.assertNotIn(n, ctx["prompt"], f"{why}: owner {n} in the prompt")
+        self.assertIn("Its people: none listed", facts, why)
+        for i in E.CLIENT_IDS:
+            self.assertIn(i, facts, why)
         self.assertIn("This text is for the client.", ctx["prompt"], why)
 
 
