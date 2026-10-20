@@ -588,19 +588,22 @@ export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG()
   return L; }
 /* The x hides the line until something new arrives or the next morning. This browser keeps the day and, per kind, which items were
    waiting when it was pressed (localStorage creaite-intakeline-dismissed): never text, only a short hash of each item's id (a
-   proposal's file and item, a meeting's calendar key, an Intake file's path), at most TQCAP a kind. An item waiting now that is not
-   in its kind's set is new and shows the line again; what has gone since needs nothing (a set, not a count, so approving older
-   ones never hides a newer one, and a swap is new). Kept in memory too, so a store that can't be read or written still hides it
+   proposal's file, item and created time, as minutes.py may reuse a file name a minute later; a meeting's calendar key; an Intake
+   file's path), at most TQCAP a kind. An item waiting now that is not in its kind's set is new and shows the line again; what has
+   gone since needs nothing (a set, not a count, so approving older ones never hides a newer one, and a swap is new). A kind longer
+   than TQCAP also keeps one digest of its whole set (order-independent, with its size): the line stays hidden when everything
+   waiting is in the kept list or the set is the very one dismissed, and shows otherwise. So a swap is never hidden; the cost of
+   the cap is only that, past it, approving one of the items left out of the list can show the line again. Kept in memory too, so a store that can't be read or written still hides it
    for this page load, as the Sweep due banner's x does. */
 const TQKEY="creaite-intakeline-dismissed", TQCAP=200, TQKINDS=["meetings","proposals","files"];
-/** @typedef {{day:string,ids:Record<string,string[]>,over?:Record<string,number>}} TqKept */
+/** @typedef {{day:string,ids:Record<string,string[]>,all?:Record<string,string>}} TqKept */
 let TQMEM=/** @type {TqKept|null} */(null), TQSTUCK=false;   /* TQSTUCK: the last write failed, so the memory is newer than the store */
 /** a short, stable hash of an id (FNV-1a, 32 bits, 8 hex digits): the store holds no title, file name or other text */
 const tqHash=/** @param {string} s */s=>{ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(16).padStart(8,"0"); };
 /** each kind's waiting ids, hashed: what intakeParts() counts, item by item */
 function intakeIds(){ return {
   meetings:MTG().filter(mtgHasTx).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
-  proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}`:`n${r.n}`))),
+  proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}|${r.made||""}`:`n${r.n}`))),
   files:(D.inbox||[]).filter(f=>f.state==="new").map(f=>tqHash("f|"+(f.path||f.name))) }; }
 /* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
    storage event); the memory is read instead when the store can't be read, or when this page's last write to it failed (a store
@@ -608,14 +611,18 @@ function intakeIds(){ return {
 function tqRead(){ if(TQSTUCK) return TQMEM; try{ const v=localStorage.getItem(TQKEY); return v?JSON.parse(v):null; }catch(e){ return TQMEM; } }
 /** @returns {boolean} whether the store took it (the memory has it either way) */
 function tqWrite(d){ TQMEM=d; try{ localStorage.setItem(TQKEY,JSON.stringify(d)); TQSTUCK=false; return true; }catch(e){ TQSTUCK=true; return false; } }
-/** what the x keeps: today and each kind's ids, the last TQCAP of a longer list (and how many were left out, so that many unknown
-    still read as dismissed: a queue longer than the cap can still be hidden; one more than that shows it) */
-function tqKeep(){ const all=intakeIds(), ids=/** @type {Record<string,string[]>} */({}), over=/** @type {Record<string,number>} */({});
-  TQKINDS.forEach(k=>{ const l=[...new Set(all[k])]; ids[k]=l.slice(-TQCAP); if(l.length>TQCAP) over[k]=l.length-TQCAP; });
-  return Object.keys(over).length?{day:TODAY,ids,over}:{day:TODAY,ids}; }
+/** one hash of a whole set of hashed ids, whatever their order, with its size: "1a2b3c4d:250" */
+const tqDigest=/** @param {string[]} l */l=>`${tqHash([...l].sort().join(","))}:${l.length}`;
+/** what the x keeps: today and each kind's ids, the last TQCAP of a longer list (and then the digest of the whole set) */
+function tqKeep(){ const now=intakeIds(), ids=/** @type {Record<string,string[]>} */({}), all=/** @type {Record<string,string>} */({});
+  TQKINDS.forEach(k=>{ const l=[...new Set(now[k])]; ids[k]=l.slice(-TQCAP); if(l.length>TQCAP) all[k]=tqDigest(l); });
+  return Object.keys(all).length?{day:TODAY,ids,all}:{day:TODAY,ids}; }
+/* hidden only when, for every kind, each id waiting now is in the kept list, or the set waiting now is the whole set dismissed
+   (an older entry's "over" count is not read: such an entry can only show the line, never hide a new item) */
 function intakeDismissed(){ const d=tqRead(); if(!d||d.day!==TODAY||!d.ids||typeof d.ids!=="object") return false;
   const now=intakeIds();
-  return TQKINDS.every(k=>{ const kept=new Set(Array.isArray(d.ids[k])?d.ids[k]:[]); return now[k].filter(h=>!kept.has(h)).length<=((d.over&&+d.over[k])||0); }); }
+  return TQKINDS.every(k=>{ const l=[...new Set(now[k])], kept=new Set(Array.isArray(d.ids[k])?d.ids[k]:[]);
+    return l.every(h=>kept.has(h))||(!!d.all&&typeof d.all[k]==="string"&&d.all[k]===tqDigest(l)); }); }
 export function renderIntakeLine(){ const host=$("#tdQuietHost"); if(!host) return;
   const parts=intakeParts(), hid=parts.length>0&&intakeDismissed();
   drawIntakeLine(host,hid?[]:parts,pg=>go(pg)); }

@@ -42816,7 +42816,7 @@ ${s5}`;
   function intakeIds() {
     return {
       meetings: MTG().filter(mtgHasTx).map((m5) => tqHash("m|" + (m5.key || m5.id || `${m5.day}|${m5.start}|${m5.title}`))),
-      proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}` : `n${r4.n}`))),
+      proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}|${r4.made || ""}` : `n${r4.n}`))),
       files: (D.inbox || []).filter((f5) => f5.state === "new").map((f5) => tqHash("f|" + (f5.path || f5.name)))
     };
   }
@@ -42840,28 +42840,32 @@ ${s5}`;
       return false;
     }
   }
+  var tqDigest = (
+    /** @param {string[]} l */
+    (l6) => `${tqHash([...l6].sort().join(","))}:${l6.length}`
+  );
   function tqKeep() {
-    const all = intakeIds(), ids = (
+    const now = intakeIds(), ids = (
       /** @type {Record<string,string[]>} */
       {}
-    ), over = (
-      /** @type {Record<string,number>} */
+    ), all = (
+      /** @type {Record<string,string>} */
       {}
     );
     TQKINDS.forEach((k5) => {
-      const l6 = [...new Set(all[k5])];
+      const l6 = [...new Set(now[k5])];
       ids[k5] = l6.slice(-TQCAP);
-      if (l6.length > TQCAP) over[k5] = l6.length - TQCAP;
+      if (l6.length > TQCAP) all[k5] = tqDigest(l6);
     });
-    return Object.keys(over).length ? { day: TODAY, ids, over } : { day: TODAY, ids };
+    return Object.keys(all).length ? { day: TODAY, ids, all } : { day: TODAY, ids };
   }
   function intakeDismissed() {
     const d5 = tqRead();
     if (!d5 || d5.day !== TODAY || !d5.ids || typeof d5.ids !== "object") return false;
     const now = intakeIds();
     return TQKINDS.every((k5) => {
-      const kept = new Set(Array.isArray(d5.ids[k5]) ? d5.ids[k5] : []);
-      return now[k5].filter((h5) => !kept.has(h5)).length <= (d5.over && +d5.over[k5] || 0);
+      const l6 = [...new Set(now[k5])], kept = new Set(Array.isArray(d5.ids[k5]) ? d5.ids[k5] : []);
+      return l6.every((h5) => kept.has(h5)) || !!d5.all && typeof d5.all[k5] === "string" && d5.all[k5] === tqDigest(l6);
     });
   }
   function renderIntakeLine() {
