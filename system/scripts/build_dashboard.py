@@ -477,8 +477,9 @@ def files(folders, documents=False):
 
 
 def archived_files(folders):
-    """BL-331: the reports and minutes BL-03 archived that are still in their _Archive, for the listed projects and the portfolio
-    (archive.archived_files: names, sizes and dates from the apply records; nothing in _Archive is read or indexed)."""
+    """BL-331: the reports and minutes BL-03 archived that are still in their archive folder (99 Archive, #252), for the listed
+    projects and the portfolio (archive.archived_files: names, sizes and dates from the apply records; nothing in an archive
+    folder is read or indexed)."""
     import archive
     return [f for f in archive.archived_files() if f["p"] in folders or f["p"] == "_portfolio"]
 

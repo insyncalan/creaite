@@ -1,7 +1,7 @@
 // @ts-check
 /* DeleteNote (#124, Alan 15-10-2026): "Delete note…", last in the note's … menu. Two steps, and both always show:
    1. this confirm box, naming the note (Cancel is the default; Esc and a click outside cancel);
-   2. on Delete note, the live server puts the note's move into its own engagement's (or the portfolio's) _Archive on the one
+   2. on Delete note, the live server puts the note's move into its own engagement's (or the portfolio's) 99 Archive on the one
       approval card in ask creaite (/api/notes/delete). Only Approve there moves it (tracker.py apply, the BL-09 guard exception);
       Reject leaves it where it is. The confirm box never replaces the card.
    On Approve the note closes, the list drops it and a toast says "Moved … to the archive" with Undo (tracker.py undo of that

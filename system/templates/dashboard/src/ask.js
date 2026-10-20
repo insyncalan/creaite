@@ -294,7 +294,7 @@ export async function pendingEdit(){ if(!viaServer()) return; const r=await api(
   if(r.card.chat&&r.card.chat!==shared.ASKCHAT){ setChat(r.card.chat,r.card.chat); await loadChat(r.card.chat,true); }
   openChat(); if(resumeDeleteNote(r.card)) return;   /* #124: a Delete note card this tab started is watched as the first time */
   editFlow(r.card); }
-/* #124 Delete note: a card the server made for the page's own action (a note's move into _Archive), shown in ask creaite and
+/* #124 Delete note: a card the server made for the page's own action (a note's move into its archive folder, 99 Archive), shown in ask creaite and
    answered there like any change card. Resolves to {apply} (the apply's number, for Undo) once Approve has applied it, else
    null (rejected, failed, or only staged for Review when another job was writing). */
 export async function serverCardFlow(card,o={}){ openChat(); const m=await editFlow(card,o);

@@ -55966,7 +55966,7 @@ ${pre}**Current state title:** ${title}`);
     for (const [code, L3] of Object.entries(allNotes())) if ((L3 || []).some((n4) => n4.path === path)) return code;
     return null;
   }
-  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/_Archive\//.test(path));
+  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/(99 Archive|_Archive|zz Archive)\//i.test(path));
   var notesCodeOk = (code) => code === "_portfolio" || P4.some((p6) => p6.code === code);
   function renderNotes(code) {
     const el2 = $("#v-notes");
