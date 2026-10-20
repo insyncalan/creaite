@@ -262,11 +262,15 @@ class Links(LiveBrowserCase):
         self.check_all("#v-person .ppcounts", page, "person", minimum=3)
         self.check_all("#decWaiting", page, "person")
 
-    def test_nothing_assigned_closed_items(self):
+    def test_nothing_assigned_has_nothing_open(self):
+        """#248 (People page v2): every tab has the register's columns (open counts); the Closed items column went with the old
+        Nothing assigned tab, so there each figure is a plain 0 (a zero is never a link). Was test_nothing_assigned_closed_items."""
         b = self.b
-        page = lambda: (b.eval("setPTab('none'); go('people','none')"), b.wait("document.querySelector('#peopleTbl tr[data-pp]')"))    # noqa: E731
-        L = self.check_all("#peopleTbl", page, "people")
-        self.assertTrue(all(x["nav"].startswith("all:closed::st=Closed,Cancelled&o=") for x in L))
+        b.eval("setPTab('none'); go('people','none')")
+        b.wait("document.querySelector('#peopleTbl tr[data-pp]')")
+        cells = b.eval("[...document.querySelectorAll('#peopleTbl tbody td.num')].map(td=>[td.textContent.trim(), !!td.querySelector('a')])")
+        self.assertTrue(cells)
+        self.assertTrue(all(c == ["0", False] for c in cells), cells)
         b.eval("setPTab('work')")
 
     def test_project_page_cards(self):

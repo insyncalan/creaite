@@ -291,7 +291,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["noList"], ["help", False])                                  # no list: Help, on the tab used last
         self.assertEqual(o["find"], ["help", "helpQ", False])
 
-    def test_the_foot_line_is_on_the_eight_screens(self):
+    def test_the_foot_line_is_on_the_eight_screens(self):          # #248: seven now; People has the first-visit line only
         o = self.probe("""
           const names={today:"Today",work:"Work",review:"Review",projects:"Projects",people:"People",notes:"Notes",intake:"Intake",files:"Files"};
           const view={today:["today"],work:["work"],review:["review"],projects:["projects"],people:["people"],notes:["notes",P[0].code],intake:["inbox"],files:["files"]};
@@ -303,6 +303,9 @@ class PageTests(unittest.TestCase):
         names = {"today": "Today", "work": "Work", "review": "Review", "projects": "Projects", "people": "People",
                  "notes": "Notes", "intake": "Intake", "files": "Files"}
         for k, n in names.items():
+            if k == "people":           # #248: the People page v2 drops the permanent line (Alan, 19-10-2026); its first-visit line stays
+                self.assertTrue(o["res"][k][0], k)
+                continue
             self.assertEqual(o["res"][k][:2], [False, f"Press ? for help with {n}"], k)
         self.assertTrue(o["res"]["activity"])
 
