@@ -3,7 +3,7 @@
 Run: python3 dev/tests/test_today_intake_line.py   (Chrome tier; skipped without Chrome)
 The "Intake and Review" section (heading, count, "new" mark, fold, line) is gone from Today. In its place one muted line at the foot
 of Your commitments: "Intake: 1 meeting ready to process and 4 proposals to approve.", each phrase a link, and a small x. Nothing
-waiting, no line. The x hides it until something new arrives (a count rises) or the next morning, kept in this browser. Today's
+waiting, no line. The x hides it until something new arrives (an item not waiting when it was pressed) or the next morning, kept in this browser. Today's
 rows have no quick Approve or Reject. Messages from people Alan follows (BL-334) keep their cards, now in a section of their own.
 """
 import os
@@ -16,11 +16,13 @@ from live_browser import LiveBrowserCase  # noqa: E402
 
 KEY = "creaite-intakeline-dismissed"
 VISIBLE = "(()=>{const e=document.getElementById('tdQuiet'); return !!e && !e.hidden && e.offsetParent!==null && getComputedStyle(e).display!=='none';})()"
-# exactly p proposals, m meetings with a transcript ready (the last one confidential when conf), f new files in Intake
-SET = """window.setWaiting=(p,m,f,conf)=>{ REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000));
-  for(let i=0;i<p;i++) REV.push({n:9000+i,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:1,rec:{t:'Late one '+i},src:''});
-  D.inbox=Array.from({length:f},(_,i)=>({state:'new',name:'f'+i+'.docx'}));
-  D.meetings={rows:Array.from({length:m},(_,i)=>({id:'mx'+i,title:(conf&&i===m-1)?'SECRETBOARD':'Steering '+i,p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:!!(conf&&i===m-1)}))};
+# exactly p proposals, m meetings with a transcript ready (the last one confidential when conf), f new files in Intake. po, mo and fo
+# shift the ids of the proposals, meetings and files, so a test can say "a different one" (the x keeps ids, not counts)
+SET = """window.setWaiting=(p,m,f,conf,po=0,mo=0,fo=0)=>{ REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000));
+  for(let i=0;i<p;i++) REV.push({n:9000+po+i,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:po+i+1,rec:{t:'Late one '+i},src:''});
+  D.inbox=Array.from({length:f},(_,i)=>({state:'new',name:'f'+(fo+i)+'.docx',path:'inbox/f'+(fo+i)+'.docx'}));
+  D.meetings={rows:Array.from({length:m},(_,i)=>{ const c=conf&&i===m-1; return c?{key:TODAY+'|09:00|SECRETBOARD',id:null,title:'SECRETBOARD',p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:true}
+    :{id:'mx'+(mo+i),key:'mx'+(mo+i),title:'Steering '+i,p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:false}; })};
   renderBadge(); renderToday(); return true; }"""
 
 
@@ -35,8 +37,8 @@ class Line(LiveBrowserCase):
         b.eval("go('today')")
         b.eval(SET)
 
-    def waiting(self, p, m, f=0, conf=False):
-        self.b.eval(f"setWaiting({p},{m},{f},{'true' if conf else 'false'})")
+    def waiting(self, p, m, f=0, conf=False, po=0, mo=0, fo=0):
+        self.b.eval(f"setWaiting({p},{m},{f},{'true' if conf else 'false'},{po},{mo},{fo})")
 
     def text(self):
         return self.b.eval("(document.getElementById('tdQuiet')||{textContent:''}).textContent.replace(/\\s+/g,' ').trim()")
@@ -246,7 +248,8 @@ class Dismiss(Line):
         b.pump(0.2)
         self.waiting(1, 1)                                              # Alan approved three: nothing new, still quiet
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
-        self.waiting(2, 1)                                              # one new proposal since: back, though 2 < the 4 hidden
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        b.eval("REV.push({...REV.find(r=>r.n===9000), n:9010, ref:11}); renderToday()")   # one new proposal since: back, though 2 < the 4 hidden
         self.assertTrue(b.eval(VISIBLE))
 
     def test_a_swap_is_new(self):
@@ -260,17 +263,102 @@ class Dismiss(Line):
     def test_it_comes_back_the_next_morning(self):
         b = self.b
         self.waiting(4, 1)
-        b.eval(f"localStorage.setItem('{KEY}', JSON.stringify({{day:'2000-01-01', c:{{meetings:1, proposals:4, files:0}}}}))")   # dismissed yesterday
+        b.click("#tdQx")
+        b.pump(0.2)
+        b.eval(f"(()=>{{ const d=JSON.parse(localStorage.getItem('{KEY}')); d.day='2000-01-01'; localStorage.setItem('{KEY}', JSON.stringify(d)); }})()")   # dismissed yesterday
         self.reload()
         self.waiting(4, 1)
         self.assertTrue(b.eval(VISIBLE))
 
-    def test_dismissed_today_with_the_same_counts_stays_hidden_after_reload(self):
+    def test_dismissed_today_with_the_same_ids_stays_hidden_after_reload(self):
+        b = self.b
+        self.waiting(4, 1)
+        b.click("#tdQx")
+        b.pump(0.2)
+        kept = b.eval(f"localStorage.getItem('{KEY}')")
+        self.reload()
+        b.eval(f"localStorage.setItem('{KEY}', {kept!r})")
+        self.waiting(4, 1)
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+
+    def test_a_count_only_entry_is_not_read_as_a_dismissal(self):
+        """The first #245 build kept counts (so new arrivals could stay hidden); such an entry is ignored, and the line shows."""
         b = self.b
         self.waiting(4, 1)
         b.eval(f"localStorage.setItem('{KEY}', JSON.stringify({{day:TODAY, c:{{meetings:1, proposals:4, files:0}}}}))")
         b.eval("renderToday()")
+        self.assertTrue(b.eval(VISIBLE))
+
+    def test_approve_two_and_two_new_staged_while_on_review_shows_it_on_return(self):
+        """Repro (a): 4 waiting, x; in Review 2 are approved and 2 new ones are staged; back on Today the line shows (4 is not more than
+        4, but 2 of the 4 are new)."""
+        b = self.b
+        self.waiting(4, 1)
+        b.click("#tdQx")
+        b.pump(0.2)
+        b.eval("go('review')")
+        b.eval("""REV.filter(r=>r.n===9000||r.n===9001).forEach(r=>r.done='approved');
+          REV.push({...REV.find(r=>r.n===9002), n:9004, ref:5}, {...REV.find(r=>r.n===9002), n:9005, ref:6}); true""")
+        b.eval("go('today')")
+        b.pump(0.2)
+        self.assertTrue(b.eval(VISIBLE))
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 proposals to approve.")
+
+    def test_a_fifth_shows_it_and_approving_an_older_one_keeps_it_showing(self):
+        """Repro (b): 4 dismissed, a 5th arrives (shows); one of the older 4 is approved: the new one still waits, so the line stays."""
+        b = self.b
+        self.waiting(4, 1)
+        b.click("#tdQx")
+        b.pump(0.2)
+        b.eval("REV.push({...REV.find(r=>r.n===9000), n:9004, ref:5}); renderToday()")
+        self.assertTrue(b.eval(VISIBLE))
+        b.eval("REV.find(r=>r.n===9000).done='approved'; renderToday()")
+        self.assertTrue(b.eval(VISIBLE))
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 proposals to approve.")
+
+    def test_what_is_kept_is_hashed_ids_per_kind_and_never_text(self):
+        b = self.b
+        self.waiting(3, 2, 2, conf=True)
+        b.click("#tdQx")
+        b.pump(0.2)
+        raw = b.eval(f"localStorage.getItem('{KEY}')")
+        import json
+        d = json.loads(raw)
+        self.assertEqual(set(d), {"day", "ids"})
+        self.assertEqual({k: len(v) for k, v in d["ids"].items()}, {"meetings": 2, "proposals": 3, "files": 2})
+        for v in d["ids"].values():
+            for h in v:
+                self.assertRegex(h, r"^[0-9a-f]{8}$")
+        for word in ("SECRETBOARD", "Steering", "proposed-", ".docx", "inbox", "Late one", "mx"):
+            self.assertNotIn(word, raw)
+
+    def test_the_kept_ids_are_capped_at_200_a_kind_and_many_waiting_still_hide(self):
+        b = self.b
+        self.waiting(250, 1)
+        b.click("#tdQx")
+        b.pump(0.2)
+        n = b.eval(f"JSON.parse(localStorage.getItem('{KEY}')).ids.proposals.length")
+        self.assertLessEqual(n, 200)
+        self.assertLess(len(b.eval(f"localStorage.getItem('{KEY}')")), 4000)
+        b.eval("renderToday()")
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        self.reload()
+        self.waiting(250, 1)
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        b.eval("REV.push({...REV.find(r=>r.n===9000), n:9999, ref:999}); renderToday()")   # one more, not kept: back
+        self.assertTrue(b.eval(VISIBLE))
+
+    def test_a_store_that_reads_but_will_not_write_still_hides_it_for_this_page_load(self):
+        b = self.b
+        self.waiting(4, 1)
+        b.eval("Storage.prototype.setItem=function(){ throw 1; }; true")
+        b.click("#tdQx")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        b.eval("renderToday()")
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        b.eval("REV.push({...REV.find(r=>r.n===9000), n:9004, ref:5}); renderToday()")   # and something new still shows it
+        self.assertTrue(b.eval(VISIBLE))
 
     def test_nothing_waiting_then_something_arrives_after_a_dismiss_shows_it(self):
         b = self.b
@@ -279,7 +367,7 @@ class Dismiss(Line):
         b.pump(0.2)
         self.waiting(0, 0)
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
-        self.waiting(1, 0)                                              # one new one: 1 is more than the 0 it was left at
+        self.waiting(1, 0, po=5)                                        # one new one (an id not dismissed): shows
         self.assertTrue(b.eval(VISIBLE))
 
     def test_dismiss_from_the_keyboard_keeps_focus_in_the_page(self):
@@ -359,6 +447,51 @@ class TwoTabs(Line):
         a.eval(f"localStorage.removeItem('{KEY}')")                             # the store (the truth) says: not dismissed
         c.eval("renderToday()")
         self.assertTrue(c.eval(VISIBLE))
+
+
+class Staged(LiveBrowserCase):
+    """Repro (a) through the vault: real proposal files in staging, the page's own reload of the data, Review and back."""
+
+    def stage(self, name, title):
+        import json
+        item = {"n": 1, "op": "new", "table": "actions", "decision": "pending",
+                "values": {"project": "ABC", "description": title, "owner": "Jane Doe", "source": "minutes"}}
+        (self.v.root / "system/staging" / f"proposed-2026-10-20-{name}.json").write_text(json.dumps({"items": [item]}))
+
+    def decide(self, name):
+        import json
+        f = self.v.root / "system/staging" / f"proposed-2026-10-20-{name}.json"
+        d = json.loads(f.read_text())
+        d["items"][0]["decision"] = "approved"
+        f.write_text(json.dumps(d))
+
+    def pending(self):
+        return self.b.eval("REV.filter(r=>!r.done).length")
+
+    def test_approve_two_and_stage_two_while_on_review_then_today_shows_the_line(self):
+        b = self.b
+        b.eval(f"try{{localStorage.removeItem('{KEY}')}}catch(e){{}}")
+        for i in range(4):
+            self.stage(f"w{i}", f"Waiting {i}")
+        b.eval("reloadData().then(()=>window.__ok=1); true")
+        b.wait("window.__ok===1", 30)
+        b.eval("go('today')")
+        before = self.pending()
+        self.assertTrue(b.eval(VISIBLE))
+        b.click("#tdQx")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        b.eval("go('review')")
+        self.decide("w0")
+        self.decide("w1")
+        self.stage("n0", "New 0")
+        self.stage("n1", "New 1")
+        b.eval("window.__ok=0; reloadData().then(()=>window.__ok=1); true")
+        b.wait("window.__ok===1", 30)
+        self.assertEqual(self.pending(), before)                       # the same count waits: only which ones has changed
+        b.eval("go('today')")
+        b.pump(0.2)
+        self.assertTrue(b.eval(VISIBLE))
 
 
 class Messages(Line):

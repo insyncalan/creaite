@@ -3133,14 +3133,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tres>details[open]>summary .th::before{transform:rotate(90deg)}
 .tres>details[open]>summary{margin-bottom:8px}
 .tres>details>summary:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
-/* #168: Intake and Review folds like Week ahead; an unseen message keeps a dot and "new" on the folded heading */
-.tdnew{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--warn,var(--accent))}
-.tdnew[hidden]{display:none}
-.tdnew::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 #hTd{gap:4px}
-/* #208: the one line for Review and Intake: quiet text, each count a link */
-.tdline{margin:2px 0 6px;font-size:var(--fs-sm);color:var(--ink2,var(--muted))}
-.tdline a{font-weight:600}
 @media (max-width:480px){
   #tBrief ol.bl>li>.tb{flex:1 1 calc(100% - 40px)}   /* a row's buttons go under its words, never squeezing them to a word a line */
   #tBrief .tdrow{flex-wrap:wrap} #tBrief .tdrow .tb{flex-basis:calc(100% - 90px)}
