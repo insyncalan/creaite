@@ -1,6 +1,7 @@
-"""BL-316 / #89: the Undo half of the shared behaviour test, in a file of its own so it runs in parallel with the keys half
-(dev/tests/test_shared_behaviour.py, about 1000 s on its own; the two halves share no state). Nothing in it changed when it moved:
-the class, its test and its helper are the same, and they use the same Driver, screens and probe.
+"""BL-316 / #89: the Undo half of the shared behaviour test, in files of their own so they run in parallel with the keys half
+(dev/tests/test_shared_behaviour.py, _b and _c; the parts share no state). Part a is here and part b is test_shared_undo_b.py
+(UNDO_PARTS in test_shared_behaviour.py lists the screens of each; about 200 s each where the whole took about 400 s). Nothing in
+it changed when it moved: the class, its helper and the script are the same, and they use the same Driver, screens and probe.
 
 **Undo:** in a sample vault of its own (this one changes data) each menu and list is opened once more and an item chosen
 (down, Enter); when that saves a change, the message at the foot (or, in the peek, its staging bar's Undo last) must offer Undo
@@ -20,7 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "tools"))
 import test_ui_sweep as us  # noqa: E402
-from test_shared_behaviour import SCREENS, VIEW_ONLY, Driver, judge, screen_area  # noqa: E402
+from test_shared_behaviour import UNDO_PARTS, VIEW_ONLY, Driver, judge, screen_area  # noqa: E402
 
 
 def undo_group(name):
@@ -28,8 +29,9 @@ def undo_group(name):
     return re.sub(r"\b[A-Z][A-Z0-9]{2,6}-[A-Z]+-\d+\b", "", name.split(":")[0]).strip()
 
 
-class SharedUndo(Driver, us.UiSweepCase):
-    """BL-316: a change made from a menu or a list offers Undo (a sample vault of its own: this one changes data)."""
+class Undo(Driver):
+    """BL-316: a change made from a menu or a list offers Undo (a sample vault of its own: this one changes data). The helper and
+    the script for one part of the screens (UNDO_PARTS); the test classes are SharedUndo here and SharedUndoB in test_shared_undo_b.py."""
 
     def pick(self, i, o):
         """Open, ↓, Enter. What it got wrong when it saved a change (no Undo on offer), or None when nothing was saved
@@ -56,9 +58,10 @@ class SharedUndo(Driver, us.UiSweepCase):
             b.pump(0.25)
         return ["a change is saved with no Undo"]
 
-    def test_a_change_from_a_menu_or_list_offers_undo(self):
+    def run_part(self, part):
         report = os.environ.get("SB_REPORT")
-        only = os.environ.get("SB_ONLY", "").split(",") if os.environ.get("SB_ONLY") else list(SCREENS)
+        want = set(os.environ["SB_ONLY"].split(",")) if os.environ.get("SB_ONLY") else None
+        only = [s for s in UNDO_PARTS[part] if want is None or s in want]
         found = set()
         for name in only:
             done = set()
@@ -78,6 +81,13 @@ class SharedUndo(Driver, us.UiSweepCase):
                     found.add((screen_area(name), f"undo: {name} {o['sig']} “{undo_group(o['name'])}”: {'; '.join(bad)}"))
         msg = judge("undo", found, set(only))
         self.assertFalse(msg, "\n".join(msg))
+
+
+class SharedUndo(Undo, us.UiSweepCase):
+    """Part a of the Undo check (the other is test_shared_undo_b.py)."""
+
+    def test_a_change_from_a_menu_or_list_offers_undo(self):
+        self.run_part("a")
 
 
 if __name__ == "__main__":
