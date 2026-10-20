@@ -161,6 +161,49 @@ class PeoplePage(Base):
         self.assertEqual(dup, [])
         self.assertEqual(b.eval("__errs"), [])
 
+    def marks(self, scope=""):
+        """Visible followed markers (the star, anything named Followed, the Follow tick) outside the project settings page, plus
+        100 when a shown view or the given dialog says "Followed" in words."""
+        return self.b.eval(f"""[...document.querySelectorAll('.pstar,[aria-label=Followed],#peFollow')].filter(e=>!e.closest('#v-psettings')&&e.getClientRects().length).length
+            + ([...document.querySelectorAll('.view:not([hidden]){', ' + scope if scope else ''}')].filter(v=>v.id!=='v-psettings').some(v=>/\\bFollowed\\b/.test(v.innerText))?100:0)""")
+
+    def test_no_followed_marker_on_the_people_page_or_any_surface(self):
+        """BL-288 (spec, Followed people): Sara Example is followed; the star shows on the project settings page and nowhere else."""
+        b = self.b
+        Base.open(self, "people")
+        self.assertEqual(b.eval("document.querySelectorAll('#v-psettings .pstar').length"), 1, "the one place it shows")
+        for tab in ("all", "work", "none", "att"):                     # every tab of the People page
+            self.open(tab)
+            self.assertEqual(self.marks(), 0, tab)
+        self.open("all")
+        self.tap("#plFBtn")                                            # the People page's filter has no Followed field
+        b.wait("!!document.querySelector('#plFMenu .fpf')")
+        self.assertNotIn("Followed", b.eval("document.querySelector('#plFMenu').textContent"))
+        self.tap("#plFpDone")
+        self.tap("[data-pl-edit='Sara Example']")                       # the People page's edit form has no Follow tick
+        b.wait("!!document.querySelector('#personEdit[open] #peEmail')")
+        self.assertEqual(self.marks("#personEdit"), 0)
+        self.assertFalse(b.eval("!!document.querySelector('#peFollow')"))
+        self.tap("#peCancel")
+        b.wait("!document.querySelector('#personEdit[open]')")
+        for js, ready in (("go('work')", "VIEW==='work'"), ("go('today')", "VIEW==='today'"), ("go('review')", "VIEW==='review'"),
+                          ("go('inbox')", "VIEW==='inbox'"), ("go('person','Sara Example')", "VIEW==='person'"),
+                          ("go('work'); openRecord('actions', A.find(a=>a.o==='Sara Example').id)", "!!document.querySelector('#panel.on, .peek')")):
+            b.eval(js)
+            b.wait(ready)
+            time.sleep(0.3)
+            self.assertEqual(self.marks(), 0, js)
+        b.eval("go('today'); openCk(); const q=document.getElementById('cmdkIn'); q.value='Sara'; q.dispatchEvent(new Event('input',{bubbles:true}))")
+        b.wait("document.getElementById('cmdk').open && document.querySelectorAll('#cmdkList button').length>0")
+        self.assertTrue(b.eval("/Sara Example/.test(document.getElementById('cmdkList').textContent)"), "search finds her")
+        self.assertEqual(self.marks("#cmdk"), 0, "the command palette's search")
+        self.assertEqual(b.eval("document.querySelectorAll('#cmdk .pstar,#cmdk [aria-label=Followed]').length"), 0)
+        b.eval("document.getElementById('cmdk').close()")
+        b.eval("openSearch('Sara Example')")                           # the vault search (Files)
+        b.wait("VIEW==='files'")
+        time.sleep(0.5)
+        self.assertEqual(self.marks(), 0, "the vault search")
+
     def test_the_address_keeps_the_tab(self):
         b = self.b
         b.goto(self.base + "/#people/att")
