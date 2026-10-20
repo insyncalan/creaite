@@ -82,6 +82,7 @@ except ImportError:
         main = staticmethod(lambda script, fn, *a: fn(*a))
 import tracker  # noqa: E402
 import extraction  # noqa: E402  (sprint-drafts-extraction)
+import invite_clean  # noqa: E402  (#265 review M1, M2: what a saved invite may keep)
 
 LOCK = paths.STAGING / "sweep.lock"
 STALE = timedelta(minutes=30)
@@ -682,13 +683,19 @@ def local_time(value, day):
     return loc.strftime("%Y-%m-%d"), loc.strftime("%H:%M")
 
 
+def bad_label(ev):
+    """An event named in a message about times that can't be read: its title cleaned of any key, or nothing for a private or
+    confidential one (#265 review round 2: a passcode in a title never reaches the output)."""
+    return invite_clean.scrub(ev.get("title"), 60) if invite_clean.sensitivity(ev) == "normal" else "(not shown)"
+
+
 def localise(spec_days, bad):
     """The spec's days with each timed meeting converted to local time and filed under its local start date. A
     meeting ending after local midnight ends at 23:59 that day; one that can't be read is named in bad."""
     out = {}
     for day, events in (spec_days or {}).items():
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(day)) or not isinstance(events, list):
-            bad.append(str(day))
+            bad.append(str(day)[:20])
             continue
         for ev in events:
             if not isinstance(ev, dict):
@@ -698,7 +705,7 @@ def localise(spec_days, bad):
                 continue
             s, e = local_time(ev.get("start"), day), local_time(ev.get("end"), day)
             if not s or not e:
-                bad.append(f"{day} {ev.get('title', '')} (time not readable)".strip())
+                bad.append(f"{day} {bad_label(ev)} (time not readable)".strip())
                 continue
             end = e[1] if e[0] == s[0] else "23:59"
             out.setdefault(s[0], []).append({**ev, "start": s[1], "end": end})
@@ -714,14 +721,14 @@ def keep_held_past_days(days, start_day, today_day):
         held = {}
     for day, rows in held.items():
         if start_day <= str(day) < today_day and isinstance(rows, list):
-            days[day] = rows
+            days[day] = [invite_clean.clean_row(r) for r in rows if isinstance(r, dict)]     # rows saved by an earlier version too
     return dict(sorted(days.items()))
 
 
 def organiser_of(ev):
     """True when Alan organised the event, else the organiser's name (or False)."""
     org = ev.get("organiser")
-    return (str(org).strip()[:80] or False) if isinstance(org, str) else bool(org)
+    return (invite_clean.scrub(org, 80) or False) if isinstance(org, str) else bool(org)
 
 
 def spec_meetings(spec):
@@ -747,20 +754,94 @@ EMPTY_SPEC = "The reply held no meetings; kept the saved calendar."
 
 
 def calendar_row(ev, start, end, all_day):
-    """One saved meeting (BL-98, BL-97, #265 review L5): a private one is "Busy" (ID and Teams kept, nothing else); a
+    """One saved meeting (BL-98, BL-97, #265 review L5, M1, M2): a private one is "Busy" (ID and Teams kept, nothing else); a
     confidential one keeps only its title and times (and ID): no place, organiser, Teams flag, recurrence, body or
-    attendees; any other keeps its place, Teams, organiser and the invite's details for prep."""
-    sens = str(ev.get("sensitivity") or "").lower()
-    private = bool(ev.get("private")) or sens in ("private", "personal")
-    title = "Busy" if private else str(ev.get("title") or "Meeting")[:140]
+    attendees; any other keeps its place, Teams, organiser and the invite's details for prep. The title and place never carry
+    a join link or a key; the sensitivity is read by invite_clean.sensitivity, which fails closed."""
+    sens = invite_clean.sensitivity(ev)
+    private = sens == "private"
+    title = "Busy" if private else invite_clean.scrub(ev.get("title"), 140) or "Meeting"
     row = {"start": "" if all_day else start, "end": "" if all_day else end, "all_day": all_day, "title": title,
-           "where": "", "teams": bool(ev.get("teams")) and not sens == "confidential", "private": private, "organiser": False}
-    if sens == "confidential" and not private:
+           "where": "", "teams": bool(ev.get("teams")) and sens != "confidential", "private": private, "organiser": False}
+    if sens == "confidential":
         row["sensitivity"] = "confidential"
     elif not private:
-        row.update(where=str(ev.get("where") or "")[:80], organiser=organiser_of(ev))
+        row.update(where=invite_clean.scrub(ev.get("where"), 80), organiser=organiser_of(ev))
         row.update(invite_details(ev))                                                    # BL-98
     return row
+
+
+CAL_MAX_EVENTS = 500                    # #265 review L2: more meetings than this in one reply is not a diary
+CAL_MAX_SPEC = 24_000_000               # bytes of a calendar reply read
+CAL_MAX_SAVED = 6_000_000               # bytes of the saved calendar
+CAL_REFUSED = "The calendar reply is too large; kept the saved calendar."
+CAL_NOT_A_CALENDAR = "The calendar reply is not a calendar (its days are not a list of days); kept the saved calendar."
+
+
+def calendar_entry(ev, day, rules, vips, bad, ignored):
+    """One event of a calendar reply as a saved row, or None when an ignore rule drops it (counted in `ignored`) or its times
+    can't be read (named in `bad`)."""
+    rule = ignored_by(message_of_event(ev), rules, vips)
+    if rule:
+        ignored[rule] = ignored.get(rule, 0) + 1
+        return None
+    all_day = bool(ev.get("all_day"))
+    start, end = str(ev.get("start") or ""), str(ev.get("end") or "")
+    if not all_day and not (HHMM.match(start) and HHMM.match(end) and end > start):
+        bad.append(f"{day} {start[:20]}-{end[:20]} {bad_label(ev)}".strip())
+        return None
+    row = calendar_row(ev, start, end, all_day)
+    if str(ev.get("id") or "").strip():                  # the calendar event ID (BL-42): processed state, picking
+        row = {"id": str(ev["id"]).strip()[:512], **row}
+    return row
+
+
+def calendar_days(spec, bad, ignored):
+    """(rows by day, how many fell outside the window or repeated an ID) from a calendar reply (#265 review L2): days before the
+    window start and after its last day are dropped, and a repeated event ID on a day is kept once."""
+    days, rules, vips, skipped = {}, ignore_rules(), vip_addresses(), 0          # BL-97: ignored events are never saved
+    first, last = (d.isoformat() for d in calendar_window())
+    for day, events in sorted(localise(spec.get("days"), bad).items()):          # BL-107: local times, local dates
+        if day < first:                  # before the window (BL-42): not kept
+            continue
+        if day > last:
+            skipped += len(events)
+            continue
+        kept, ids = [], set()
+        for ev in events:
+            row = calendar_entry(ev, day, rules, vips, bad, ignored)
+            if row is None:
+                continue
+            if row.get("id") and row["id"] in ids:
+                skipped += 1
+                continue
+            ids.add(row.get("id"))
+            kept.append(row)
+        days[day] = sorted(kept, key=lambda e: (not e["all_day"], e["start"]))
+    return days, skipped
+
+
+def read_calendar_spec(spec_file):
+    """The calendar reply as a dict, or None (the reason printed and logged): unreadable, over the size limit, or holding more
+    than CAL_MAX_EVENTS meetings (#265 review L2)."""
+    try:
+        if Path(spec_file).stat().st_size > CAL_MAX_SPEC:
+            raise ValueError("over the size limit")
+        spec = json.loads(Path(spec_file).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"Can't read {spec_file}: {e}" if not str(e).startswith("over") else CAL_REFUSED)
+        debuglog.warn("sweep", f"calendar: the spec could not be read ({type(e).__name__})")
+        return None
+    days = spec.get("days") if isinstance(spec, dict) else False
+    if days is not None and not isinstance(days, dict):             # a list, text or a number where the days belong
+        print(CAL_NOT_A_CALENDAR)
+        debuglog.warn("sweep", "calendar: a reply whose days were not a day-by-day object was refused")
+        return None
+    if spec_meetings(spec) > CAL_MAX_EVENTS:
+        print(CAL_REFUSED)
+        debuglog.warn("sweep", f"calendar: a reply of {spec_meetings(spec)} meetings was refused (limit {CAL_MAX_EVENTS})")
+        return None
+    return spec
 
 
 def calendar(spec_file):
@@ -768,51 +849,37 @@ def calendar(spec_file):
     organiser, and the invite's details for prep (BL-98, see invite_details). Ignored events (BL-97: private ones,
     ToDo invites…) are dropped and counted; a private meeting the rules let through becomes "Busy" (ID and Teams
     kept, nothing else); a confidential one keeps only its title and times (#265 review L5). Days before the window
-    start are dropped. A spec with no meetings at all never replaces a saved calendar that still holds today's or later
-    meetings (#265 review L4: an empty reply is far likelier a failed read than an empty diary). The file is written
+    start or after its last day are dropped, an event ID repeated on a day is kept once, a reply of more than
+    CAL_MAX_EVENTS meetings or CAL_MAX_SAVED bytes is refused (#265 review L2). A reply with no meeting to keep from today on
+    never replaces a saved calendar that still holds today's or later meetings (#265 review L4, L1: counted after the events
+    are filtered, so one event with unreadable times, or only past days, is no reason to wipe it). The file is written
     atomically: a reader sees the old calendar or the new one, never half of one."""
-    try:
-        spec = json.loads(Path(spec_file).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as e:
-        print(f"Can't read {spec_file}: {e}")
-        debuglog.warn("sweep", f"calendar: the spec could not be read ({type(e).__name__})")
+    spec = read_calendar_spec(spec_file)
+    if spec is None:
         return 1
-    days, bad, ignored = {}, [], {}
-    rules, vips = ignore_rules(), vip_addresses()                  # BL-97: ignored events are never saved
-    start_day = calendar_window()[0].isoformat()
+    bad, ignored = [], {}
     today_day = now().date().isoformat()
-    if not spec_meetings(spec) and saved_meetings_from(today_day):
-        print(EMPTY_SPEC)
-        debuglog.warn("sweep", "calendar: an empty spec was refused; the saved calendar still holds today's or later meetings")
-        return 1
     fetch_from = calendar_fetch_from().isoformat()       # before the save: the save moves the "fetched" stamp
-    for day, events in sorted(localise(spec.get("days"), bad).items()):     # BL-107: local times, local dates
-        if day < start_day:              # before the window (BL-42): not kept
-            continue
-        kept = []
-        for ev in events:
-            rule = ignored_by(message_of_event(ev), rules, vips)
-            if rule:
-                ignored[rule] = ignored.get(rule, 0) + 1
-                continue
-            all_day = bool(ev.get("all_day"))
-            start, end = str(ev.get("start") or ""), str(ev.get("end") or "")
-            if not all_day and not (HHMM.match(start) and HHMM.match(end) and end > start):
-                bad.append(f"{day} {start}-{end} {ev.get('title', '')}".strip())
-                continue
-            row = calendar_row(ev, start, end, all_day)
-            if str(ev.get("id") or "").strip():              # the calendar event ID (BL-42): processed state, picking
-                row = {"id": str(ev["id"]).strip()[:512], **row}
-            kept.append(row)
-        days[day] = sorted(kept, key=lambda e: (not e["all_day"], e["start"]))
-    days = keep_held_past_days(days, start_day, today_day)
-    paths.write_text_atomic(paths.CALENDAR, json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days},
-                                                      indent=1, ensure_ascii=False))       # #265 review L3
+    days, skipped = calendar_days(spec, bad, ignored)
+    if not sum(len(v) for d, v in days.items() if d >= today_day) and saved_meetings_from(today_day):
+        print(EMPTY_SPEC)
+        debuglog.warn("sweep", "calendar: a reply with no meeting to keep from today was refused; the saved calendar still holds "
+                      f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")
+        return 1
+    days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
+    saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days}, indent=1, ensure_ascii=False)
+    if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
+        print(CAL_REFUSED)
+        debuglog.warn("sweep", f"calendar: a reply that would save {len(saved.encode('utf-8'))} bytes was refused")
+        return 1
+    paths.write_text_atomic(paths.CALENDAR, saved)                                      # #265 review L3
     n = sum(len(v) for v in days.values())
     debuglog.info("sweep", f"calendar saved: {n} meeting(s) over {len(days)} day(s) in {datetime.now().astimezone():%Z (%z)}, "
-                  f"{len(bad)} with times that could not be read, {sum(ignored.values())} ignored")
+                  f"{len(bad)} with times that could not be read, {sum(ignored.values())} ignored, {skipped} outside the window "
+                  "or repeated")
     print(f"Calendar saved: {n} meeting{'s' if n != 1 else ''} over {len(days)} day{'s' if len(days) != 1 else ''}."
           + (f" Skipped (bad times): {'; '.join(bad)}." if bad else "")
+          + (f" Skipped (outside the window, or repeated): {skipped}." if skipped else "")
           + (f" {ignored_text(ignored)}." if ignored else "")
           + (" Calendar from today (past days kept as saved)." if fetch_from >= today_day
              else f" Calendar from {tracker.shown(fetch_from)} (filling a gap; past days kept as saved)."))
@@ -861,6 +928,7 @@ def vip_addresses():
 
 def address_of(text):
     """The address in "Name <a@b.c>" (or the text itself when it is an address), lower case; else ""."""
+    text = str(text or "")[:2000]                  # bounded: a crafted field cannot stall the match
     m = re.search(r"<([^<>@\s]+@[^<>\s]+)>", text or "") or re.search(r"([^\s<>@]+@[^\s<>]+)", text or "")
     return m.group(1).strip().lower() if m else ""
 
@@ -876,7 +944,7 @@ def message_of_source(source):
 def message_of_event(ev):
     """A calendar event as an ignore-check message: its title, organiser address and sensitivity."""
     return {"kind": "calendar", "subject": ev.get("title") or "", "from": ev.get("organiser_email") or "",
-            "private": bool(ev.get("private")) or str(ev.get("sensitivity") or "").lower() in ("private", "personal")}
+            "private": invite_clean.sensitivity(ev) == "private"}
 
 
 def rule_matches(rule, msg):
@@ -886,7 +954,7 @@ def rule_matches(rule, msg):
     if not rule.get("on", True) or msg.get("kind") not in (rule.get("where") or ["mail", "teams", "calendar"]):
         return False
     if rule.get("builtin") == "private":
-        return bool(msg.get("private")) or str(msg.get("sensitivity") or "").lower() in ("private", "personal")
+        return invite_clean.sensitivity(msg) == "private"             # fails closed on a variant ("Private ", "strictly private")
     want = str(rule.get("text") or "").strip().lower()
     if not want:
         return False
@@ -1011,39 +1079,18 @@ def ignore_cmd(spec_file):
 # boilerplate (Teams and Outlook join links, meeting ID, passcode, dial-in numbers) taken out; those act as a key to
 # the meeting and are no use for prep. #265 review L5: any line with a URL that carries a key (pwd=, passcode=, pin=…)
 # and any PIN or passcode line goes too, whatever the provider.
-BODY_MAX = 20000
-JOIN_LINE = re.compile(
-    r"(microsoft teams (meeting|need help)|join (the meeting|on your computer|with a video conferencing|by phone|"
-    r"conference)|click here to join|meeting id\b|passcode|password:|dial[- ]in|phone conference id|find a local number|"
-    r"reset dial[- ]in pin|conference id|tel:|teams\.microsoft\.com|teams\.live\.com|aka\.ms/|meet\.google\.com|"
-    r"zoom\.us/|webex\.com|for organi[sz]ers: meeting options|learn more( about teams)?\s*(\||$)|meeting options|"
-    r"^\s*\+\d[\d ,#()-]{7,}|^\s*_{8,}\s*$|^\s*\.{3,}\s*$|system reference|"
-    r"this meeting is being recorded|join microsoft teams meeting|"
-    r"[?&;](pwd|passcode|pass|password|pin|tk|token)=|"                 # #265 review L5: a URL carrying a key, any provider
-    r"\bpin\b\s*(code|number|no\.?)?\s*[:#]?\s*\d{3,}|\bpin\s*:|pass\s*code)", re.I)   # and a PIN or passcode line
+BODY_MAX = invite_clean.BODY_MAX
+JOIN_LINE = invite_clean.JOIN_LINE
 
 
 def invite_text(body):
-    """An invite body as plain text: HTML removed, the joining boilerplate stripped, blank runs collapsed."""
-    import html as htmllib
-    t = str(body or "")
-    if re.search(r"<(html|body|div|p|br|span|table|a)\b", t, re.I):
-        t = re.sub(r"(?is)<(script|style|head)\b.*?</\1>", " ", t)
-        t = re.sub(r"(?i)<br\s*/?>|</(p|div|li|tr|h\d)>", "\n", t)
-        t = re.sub(r"(?i)<li\b[^>]*>", "\n- ", t)
-        t = re.sub(r"<[^>]+>", " ", t)
-        t = htmllib.unescape(t)
-    t = t.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
-    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in t.split("\n")]
-    lines = [re.sub(r"https?://\S*(teams\.microsoft|teams\.live|zoom\.us|webex|meet\.google)\S*", "", ln) for ln in lines
-             if not JOIN_LINE.search(ln)]
-    out = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
-    return out[:BODY_MAX]
+    """An invite body as plain text, with every join link and key to the meeting taken out (invite_clean.py, #265 review M1)."""
+    return invite_clean.invite_text(body)
 
 
 def invite_details(ev, confidential=False):
     """The invite fields meeting prep uses (BL-98). A confidential event keeps none of the body or attendees."""
-    out = {"sensitivity": "confidential" if confidential else str(ev.get("sensitivity") or "normal").lower()[:20]}
+    out = {"sensitivity": "confidential" if confidential else "normal"}       # a private event never gets here
     addr = address_of(ev.get("organiser_email"))
     if addr:
         out["organiser_email"] = addr
@@ -1054,35 +1101,61 @@ def invite_details(ev, confidential=False):
     body = invite_text(ev.get("body"))
     if body:
         out["body"] = body
+    attendees = invite_attendees(ev)
+    if attendees:
+        out["attendees"] = attendees[:80]
+    files = [str(f.get("name") if isinstance(f, dict) else f).strip()[:160] for f in listed(ev.get("attachments"))]
+    files = [f for f in files if f and not invite_clean.flagged(f)]                  # #265 review M1: no link or key in a name
+    if files:
+        out["attachments"] = files[:40]
+    return out
+
+
+def register_name(probes, people, others):
+    """The people register's full name for the first probe (an address, a name) it matches, else None."""
+    import propose
+    for probe in probes:
+        if probe and people:
+            r = propose.resolve_person(probe, people, others)
+            if r["status"] in ("known", "alias", "email"):
+                return r["name"]
+    return None
+
+
+def listed(value, limit=200):
+    """The first `limit` entries of a list from a calendar reply (anything else is no list)."""
+    return value[:limit] if isinstance(value, list) else []
+
+
+def attendee_status(a):
+    """An attendee's kind (required or optional) and response, as saved."""
+    return {"type": "optional" if str(a.get("type") or "").lower().startswith("opt") else "required",
+            "response": str(a.get("response") or "none").lower()[:12]}
+
+
+def attendee_entry(a, people, others):
+    """One attendee as saved, or None. A name that carries a join link or a key is replaced by the address (None without one)."""
+    a = {"name": a} if isinstance(a, str) else a if isinstance(a, dict) else {}
+    raw = str(a.get("name") or a.get("email") or "").strip()[:invite_clean.LINE_MAX]
+    email = address_of(a.get("email") or raw)
+    name = re.sub(r"\s*<[^>]*>\s*", "", raw).strip() or email
+    if invite_clean.flagged(name):
+        name = email if email and not invite_clean.flagged(email) else ""
+    if not name:
+        return None
+    res = register_name((email, name), people, others)
+    return {"name": (res or name)[:80], "email": email[:120], **({"registered": True} if res else {}), **attendee_status(a)}
+
+
+def invite_attendees(ev):
+    """An invite's attendees, each mapped to the people register's full name where it matches (#265 review M1)."""
     try:
         import propose
         people, others = propose.people_pool()
     except Exception:  # noqa: BLE001  mapping names is a nicety
         people, others = [], []
-    attendees = []
-    for a in ev.get("attendees") or []:
-        a = {"name": a} if isinstance(a, str) else a if isinstance(a, dict) else {}
-        raw = str(a.get("name") or a.get("email") or "").strip()
-        email = address_of(a.get("email") or raw)
-        name = re.sub(r"\s*<[^>]*>\s*", "", raw).strip() or email
-        if not name:
-            continue
-        res = None
-        for probe in (email, name):
-            if probe and people:
-                r = propose.resolve_person(probe, people, others)
-                if r["status"] in ("known", "alias", "email"):
-                    res = r["name"]
-                    break
-        attendees.append({"name": (res or name)[:80], "email": email[:120], **({"registered": True} if res else {}),
-                          "type": "optional" if str(a.get("type") or "").lower().startswith("opt") else "required",
-                          "response": str(a.get("response") or "none").lower()[:12]})
-    if attendees:
-        out["attendees"] = attendees[:80]
-    files = [str(f.get("name") if isinstance(f, dict) else f).strip()[:160] for f in ev.get("attachments") or []]
-    if [f for f in files if f]:
-        out["attachments"] = [f for f in files if f][:40]
-    return out
+    entries = (attendee_entry(a, people, others) for a in listed(ev.get("attendees")))
+    return [e for e in entries if e]
 
 
 # BL-99 VIPs. Anything sent by a VIP (mail, Teams, a calendar invite or update) is recorded as an alert in
@@ -1246,8 +1319,8 @@ def msg_record(st, m, vips, how, have):
 
 def marker_of(m):
     """"private", "confidential" or None, from a message's or conversation's sensitivity."""
-    sens = str(m.get("sensitivity") or "").lower()
-    return "private" if sens in ("private", "personal") else "confidential" if sens == "confidential" else None
+    sens = invite_clean.sensitivity(m)             # fails closed: "Private ", "Strictly Confidential", "restricted"; none = normal
+    return None if sens == "normal" else sens
 
 # ===== BL-334: alerts read the conversation, not the message =====
 # The unit is the conversation (a Teams chat ID or a mail conversation ID): one card per conversation, updated in place when
