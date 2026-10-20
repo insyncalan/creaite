@@ -221,10 +221,14 @@ def report(rows, context_rows=None, days=JSON_DAYS, today=None, skills_dir=None)
             "context": usage_log.changes(context_rows or [], today=today.isoformat())}
 
 
-def json_report(days=JSON_DAYS, usage_file=None, context_file=None, skills_dir=None) -> dict:
-    """report() over the two files in the vault's staging folder (or the paths given); a missing or broken file is empty."""
+def json_report(days=JSON_DAYS, usage_file=None, context_file=None, skills_dir=None, reviews_root=None) -> dict:
+    """report() over the two files in the vault's staging folder (or the paths given); a missing or broken file is empty.
+    v2.5.3: with Alan's own review notes (usage_reviews.load: date, saw, decided only) and whether this process can save one."""
     import usage_log
-    return report(load(usage_file), usage_log.read(context_file), days=days, skills_dir=skills_dir)
+    import usage_reviews
+    out = report(load(usage_file), usage_log.read(context_file), days=days, skills_dir=skills_dir)
+    out.update(reviews=usage_reviews.load(reviews_root), reviews_save=usage_reviews.REGISTERED)
+    return out
 # ===== end #238 =====
 
 
