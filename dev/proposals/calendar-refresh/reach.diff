@@ -1,0 +1,116 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index 78c67014..18aff34a 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -1572,6 +1572,10 @@ def hook_decision(tool, inp, mode, run):
+         why = outside_reason(tool, inp, data.get("outside"))
+         if why:
+             mark(run, why)
++    if mode == "calendar":                                  # #265: Calendar import's Refresh has its own short list of tools
++        why = calendar_tool_problem(tool, inp)
++        if why:
++            return False, why
+     for p in tool_paths(tool, inp):
+         kind, why = classify(p, "read")
+         if kind == "never":
+@@ -1772,9 +1776,12 @@ def bash_refusal(command, mode):
+ # own draft (`propose.py people map <a file in system/staging/drafts/>`), which changes nothing but that draft. Nothing else.
+ def record_gate(command, mode):
+     """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
+-    an Intake Process run (#264) runs only its read and minutes steps (process_gate)."""
++    an Intake Process run (#264) runs only its read and minutes steps (process_gate); a calendar refresh (#265) only the sweep's
++    calendar steps (calendar_gate)."""
+     if mode == "process":
+         return process_gate(command)
++    if mode == "calendar":
++        return calendar_gate(command)
+     if mode == "confirmed" or (mode == "sweep" and sweep_maps_draft(command)):
+         return None
+     return record_problem(command)
+@@ -1897,6 +1904,75 @@ def process_gate(command):
+ # ===== end #264 =====
+ 
+ 
++# ===== #265: Calendar import's Refresh (mode "calendar") =====
++# Pressing Refresh in Calendar import starts the run kind "calendar" (live_server, POST /api/calendar/refresh) under this mode. The
++# click is Alan's go-ahead to read his Outlook calendar and save it for Intake and Today (the sweep's calendar steps, cx-sweep 8
++# and 8b), and nothing more. Tighter than the sweep mode: the run may call only CALENDAR_TOOLS (the two Microsoft 365 calls the
++# calendar steps make, and no other connector tool); Read only the cx-sweep skill and its own two input files; Write or Edit only
++# those two files (system/staging/drafts/calendar.json and transcripts.json, never a link); and Bash only the five sweep.py
++# commands in CALENDAR_COMMANDS, exactly as written. Every other command is refused, read commands included: no tracker.py,
++# review.py, propose.py, minutes.py, filechange.py or sweep.py stage, lock, done or vip. Every check a plain chat has still runs
++# too (the never list, one creaite script on its own, no shell characters, reports).
++CALENDAR_SPEC = "system/staging/drafts/calendar.json"
++CALENDAR_FACTS = "system/staging/drafts/transcripts.json"
++CALENDAR_COMMANDS = ("calendar-window", f"calendar {CALENDAR_SPEC}", "transcripts todo", "transcripts show",
++                     f"transcripts record {CALENDAR_FACTS}")
++CALENDAR_M365 = ("mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource")
++CALENDAR_TOOLS = ("Read", "Bash", "Write", "Edit", "ToolSearch", *CALENDAR_M365)
++CALENDAR_SKILL = ".claude/skills/cx-sweep"
++
++
++def _calendar_file(arg):
++    """The input file `arg` names (calendar.json or transcripts.json directly in drafts), or None: never a link (nor a drafts
++    folder that is one), never a file with a second hard link, and the real path must be one of the two exactly."""
++    try:
++        given = Path(os.path.expanduser(str(arg)))
++        given = given if given.is_absolute() else paths.ROOT / given
++        if given.is_symlink() or Path(paths.DRAFTS).is_symlink() or (given.exists() and os.lstat(given).st_nlink > 1):
++            return None
++        target = real(arg)
++    except (OSError, ValueError, RuntimeError):
++        return None
++    ok = {Path(os.path.realpath(paths.ROOT / CALENDAR_SPEC)), Path(os.path.realpath(paths.ROOT / CALENDAR_FACTS))}
++    return target if target in ok else None
++
++
++def calendar_tool_problem(tool, inp):
++    """Why a calendar refresh may not make this tool call, or None (#265): only CALENDAR_TOOLS; Read only the cx-sweep skill and
++    its two input files; Write and Edit only those two files."""
++    if tool not in CALENDAR_TOOLS:
++        _debug("warn", f"calendar run refused: {tool}")
++        return (f"{tool} isn't one of the calendar refresh's tools: it reads the calendar and saves it with the sweep's "
++                f"calendar commands, nothing else")
++    p = (inp or {}).get("file_path") or ""
++    if tool == "Read":
++        try:
++            rp, skill = real(p), Path(os.path.realpath(paths.ROOT / CALENDAR_SKILL))
++        except (OSError, ValueError, RuntimeError):
++            return f"{p}: the calendar refresh can't read this"
++        if parts_under(rp, skill) is None and _calendar_file(p) is None:
++            return f"{p}: the calendar refresh reads only the cx-sweep skill and its own input files"
++    if tool in ("Write", "Edit") and _calendar_file(p) is None:
++        _debug("warn", "calendar run refused a write")
++        return f"{p}: the calendar refresh writes only {CALENDAR_SPEC} and {CALENDAR_FACTS}"
++    return None
++
++
++def calendar_gate(command):
++    """Why a calendar refresh may not run this command, or None (#265): exactly one of CALENDAR_COMMANDS, its input file
++    directly in drafts and never a link. Fails closed."""
++    import re
++    m = re.fullmatch(r"(?:python3? system/scripts/|system/scripts/run )sweep\.py ([a-z -]+(?: system/staging/drafts/[a-z]+\.json)?)",
++                     (command or "").strip())
++    rest = m.group(1) if m else ""
++    if rest not in CALENDAR_COMMANDS or (" system/" in rest and _calendar_file(rest.rsplit(" ", 1)[1]) is None):
++        _debug("warn", "calendar run refused a command")
++        return ("the calendar refresh runs only the sweep's calendar commands, exactly: "
++                + "; ".join(f"system/scripts/run sweep.py {c}" for c in CALENDAR_COMMANDS))
++    return None
++# ===== end #265 =====
++
++
+ def vault_relative(command):
+     """`python3 <this vault>/system/scripts/x.py …` or `<this vault>/system/scripts/run x.py …` as the relative form the checks
+     know (BL-268: a run that wrote a file by its full path then named the script the same way, and was refused). Only when the
+@@ -1910,8 +1986,8 @@ def vault_relative(command):
+ 
+ 
+ def hook_main(argv):
+-    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
+-    run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
++    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|calendar|prep|held [--held 1]`: Claude Code's PreToolUse hook
++    for an ask creaite run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
+     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
+     error refuses: the guard fails closed."""
+     try:

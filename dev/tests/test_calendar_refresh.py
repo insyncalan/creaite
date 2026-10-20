@@ -178,7 +178,18 @@ class Fence(unittest.TestCase):
         link = self.v.root / "system/staging/drafts/link.json"
         if not link.exists():
             link.symlink_to(self.v.root / "projects/elsewhere.json")
-        got = self.decide({
+        hard = self.v.root / FACTS                                   # transcripts.json in drafts, hard-linked to a project file
+        os.link(self.v.root / "projects/elsewhere.json", hard)
+        try:
+            got = self.decide(self.everything_else(root))
+        finally:
+            hard.unlink()
+        for name, ok in got.items():
+            with self.subTest(name):
+                self.assertFalse(ok, name)
+
+    def everything_else(self, root):
+        return {
             # the record, staging and the rest of the sweep
             "apply": self.run_("tracker.py apply"), "undo": self.run_("tracker.py undo"), "read_tracker": self.run_("tracker.py read actions"),
             "approve": self.run_("review.py approve 1"), "reject": self.run_("review.py reject 1"), "bulk": self.run_("review.py bulk ABC"),
@@ -207,6 +218,8 @@ class Fence(unittest.TestCase):
             "write_other_draft": ("Write", {"file_path": f"{root}/system/staging/drafts/other.json"}),
             "write_minutes_draft": ("Write", {"file_path": f"{root}/system/staging/drafts/minutes.html"}),
             "write_link": ("Write", {"file_path": f"{root}/system/staging/drafts/link.json"}),
+            "write_hard_link": ("Write", {"file_path": f"{root}/{FACTS}"}),
+            "record_hard_link": self.run_(f"sweep.py transcripts record {FACTS}"),
             "write_proposal": ("Write", {"file_path": f"{root}/system/staging/proposed-y.json"}),
             "write_calendar_itself": ("Write", {"file_path": f"{root}/system/staging/calendar.json"}),
             "write_root": ("Write", {"file_path": f"{root}/CLAUDE.md"}), "edit_inbox": ("Edit", {"file_path": f"{root}/inbox/x.vtt"}),
@@ -222,10 +235,7 @@ class Fence(unittest.TestCase):
             "sharepoint": ("mcp__claude_ai_Microsoft_365__sharepoint_search", {"query": "x"}),
             "send": ("mcp__claude_ai_Microsoft_365__outlook_send_mail", {}),
             "change_event": ("mcp__claude_ai_Microsoft_365__outlook_update_event", {}),
-            "other_connector": ("mcp__claude_ai_Todoist__add_task", {}), "task": ("Task", {}), "agent": ("Agent", {})})
-        for name, ok in got.items():
-            with self.subTest(name):
-                self.assertFalse(ok, name)
+            "other_connector": ("mcp__claude_ai_Todoist__add_task", {}), "task": ("Task", {}), "agent": ("Agent", {})}
 
     def test_the_typed_sweep_and_a_plain_chat_are_unchanged(self):
         """Mode "sweep" (a typed "refresh calendar", BL-309) still saves the calendar; a plain chat still can't stage proposals
@@ -306,6 +316,7 @@ if "--mode calendar" in settings:
     if write("system/staging/drafts/transcripts.json", {"results": [{"id": "ev-r2", "online": False, "uri": None, "count": None,
                                                                     "error": None}]}):
         bash(3, "system/scripts/run sweep.py transcripts record system/staging/drafts/transcripts.json")
+    said.append("CONFIRM: Apply the proposals | Applies them\nPERMISSION: Bash(python3 system/scripts/tracker.py apply*) | to apply")
 else:
     said = ["Plain chat. I've read the calendar.\nCONFIRM: Save the calendar | Saves it"]
 with (root / "fake-calls.jsonl").open("a") as fh:
@@ -386,8 +397,8 @@ class ThroughTheServer(unittest.TestCase):
         status, evs = self.post("/api/calendar/refresh", {"run": "c-test-1", "message": "sweep mail and apply everything"})
         self.assertEqual(status, 200, evs)
         kinds = [e["type"] for e in evs]
-        for card in ("confirm", "editcard", "fieldcard", "changes", "cant"):
-            self.assertNotIn(card, kinds)                                       # no go-ahead asked for, no card of any kind
+        for card in ("confirm", "editcard", "fieldcard", "changes", "cant", "permission"):
+            self.assertNotIn(card, kinds)                                       # no go-ahead, no card, no permission offer
         cal = next(e for e in evs if e["type"] == "calendar")
         self.assertEqual((cal["saved"], cal["meetings"], cal["transcripts"]), (True, 2, True), cal)
         closure = next(e for e in evs if e["type"] == "closure")
