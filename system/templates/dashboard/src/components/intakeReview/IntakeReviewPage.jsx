@@ -12,11 +12,12 @@
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
-import { IR_STAGES, IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
-import { fd } from "../../core/page.js";
+import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
+import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irFolded, irLiveCounts, irModel, irOpen, irPeek, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCanProcess, irCanSetAside, IR_REASONS, irLater, irNotNeeded, irProcess, irProcessAll, irReady, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
@@ -30,19 +31,21 @@ const VIEWICON = {
 };
 const irPlural = (/** @type {number} */ n, /** @type {string} */ w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-/** The stage counts: each a filter (one click shows that stage, a second shows all). @param {{c: Record<string, number>}} props */
+/** The stage counts: each a filter (one click shows that stage, a second shows all), with an icon, and Show all as a fourth box
+    after a thin rule. @param {{c: Record<string, number>}} props */
 export function StagePipe({ c }) {
-  const sub = { arrived: `${c.ready} ready to process`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week" };
+  const sub = { arrived: `${c.ready} ready to process${c.need_type ? ` · ${c.need_type} need a type` : ""}`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+  const word = { ...IR_STAGE_NAMES, all: "Show all" };
+  const box = (/** @type {"arrived"|"drafted"|"approved"|"all"} */ g) => (
+    <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
+      onClick={() => irClickStage(g)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irClickStage(g); } }}>
+      <div class="icbv"><span class="icbi" aria-hidden="true"><IrIcon name={g === "arrived" ? "tray" : g} /></span><div class="v">{c[g]}</div></div>
+      <div class="l">{word[g]}</div><div class="icsub">{sub[g]}</div>
+    </div>);
   return (
     <div class="icpipe" role="group" aria-label="Stages">
-      {IR_STAGES.map((g, i) => <>
-        {i ? <span class="ar" aria-hidden="true">→</span> : null}
-        <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
-          onClick={() => irClickStage(g)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irClickStage(g); } }}>
-          <div class="v">{c[g]}</div><div class="l">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (g)]}</div><div class="icsub">{sub[/** @type {keyof sub} */ (g)]}</div>
-        </div>
-      </>)}
-      <button type="button" class="btn" data-irstage="all" onClick={() => irClickStage("all")}>Show all</button>
+      {box("arrived")}<span class="ar" aria-hidden="true">→</span>{box("drafted")}<span class="ar" aria-hidden="true">→</span>{box("approved")}
+      <span class="icsep" aria-hidden="true"></span>{box("all")}
     </div>
   );
 }
@@ -59,20 +62,43 @@ function FoldSection({ sec, title, n, children }) {
 }
 
 
-/** Process all ready (n): the meetings and files whose transcript is ready, one after another. */
-function ProcessAll() {
-  const n = irReady().length, blocked = irBlocked();
-  return <button type="button" class="btn" data-ira="processall" disabled={!n || blocked}
-    title={blocked ? "ask creaite is busy; try again when it's finished" : n ? "" : "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
+/** Process all ready (n): the meetings and files whose transcript is ready, one after another. A private or confidential meeting and a
+    file that is not sure what it is are left out, and the page says how many (counts only). `n` and `left` are passed in, so the button
+    redraws when they change (a component whose props are the same is left as it was). @param {{n: number, left: number}} props */
+function ProcessAll({ n, left }) {
+  const blocked = irBlocked();
+  const lefts = left ? `${left} left out: ${IR_LEFT_WHY}` : "";
+  return <button type="button" class="btn" data-ira="processall" disabled={!n || blocked} data-left={left || undefined}
+    title={blocked ? "ask creaite is busy; try again when it's finished" : n ? lefts : lefts || "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
 
-/** Upload files: choose them here, or drop them anywhere on the page. */
+/** Add files: an icon button (choose them here), or drop them anywhere on the page. */
 function UploadFiles() {
   const pick = useRef(/** @type {HTMLInputElement | null} */ (null));
+  const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
   return <>
-    <button type="button" class="btn" data-irpick="1" title={`Drop files anywhere on this page: ${IR_UPLOAD_TYPES.join(" ")}, up to 25 MB each`} onClick={() => pick.current && pick.current.click()}>Upload files</button>
+    <button type="button" class="ib" data-irpick="1" aria-label="Add files" data-tip={tip} onClick={() => pick.current && pick.current.click()}><IrIcon name="upload" /></button>
     <input type="file" ref={pick} multiple hidden accept={IR_UPLOAD_TYPES.join(",")} aria-label="Choose transcripts or minutes to add"
       onChange={e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget); irAddFiles([...(el.files || [])]); el.value = ""; }} />
+  </>;
+}
+
+/** The overlay while files are dragged over the page. It takes no pointer events, so a drop on ask creaite's panel still reaches it. */
+function DropOverlay() {
+  const types = IR_UPLOAD_TYPES.slice(0, -1).join(", ") + " or " + IR_UPLOAD_TYPES[IR_UPLOAD_TYPES.length - 1];
+  return <div class={`icdrop${irDropOn.value ? " on" : ""}`} data-irdrop="1" aria-hidden="true"><div><b>Drop to add files</b><br /><span class="sub">Transcripts or minutes: {types}, up to 25 MB each</span></div></div>;
+}
+
+/** "Calendar read hh:mm" and the icon that reads it again (the run engine; ask creaite's panel stays closed). `text` is passed in
+    (not read here) so the line redraws when the time changes: a component whose props are the same is left as it was.
+    @param {{text: string}} props */
+function CalendarRead({ text }) {
+  const busy = irBlocked() || irRefreshing.value;
+  const why = irRefreshing.value ? "Reading the calendar" : busy ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
+  return <>
+    <span class="sub" data-ircalread="1">{irRefreshing.value ? "Refreshing…" : text}</span>{" "}
+    <button type="button" class="ib sm" id="icRef" data-ira="refreshcal" aria-label="Refresh the calendar" data-tip={why} disabled={busy}
+      onClick={() => irRefreshCalendar()}><IrIcon name="refresh" /></button>
   </>;
 }
 
@@ -106,17 +132,21 @@ function AsideMenu() {
 
 function IntakeReviewView() {
   const tick = irTick.value;   /* read for real: a bare `irTick.value;` is dropped by the bundler and nothing would redraw */
-  const model = irModel(), c = irLiveCounts(), view = irView.value;
+  const c = irLiveCounts(), view = irView.value, q = irQuery.value;
+  const model = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
   const list = irFiltered(model, irStage.value);
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
-      <h1 id="irTitle">Intake and Review</h1>
-      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve</p>
+      <h1 id="irTitle">Intake</h1>
+      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
-        <ProcessAll />
-        <UploadFiles />
+        <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
+          onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
+          onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; } }} />
         <span class="sp"></span>
-        <span class="seg" role="group" aria-label="How you see Intake and Review">
+        <ProcessAll n={irReady().length} left={irLeftOut().length} />
+        <UploadFiles />
+        <span class="seg" role="group" aria-label="How you see Intake">
           {IR_VIEWS.map(([v, l]) => (
             <button type="button" data-irview={v} aria-pressed={view === v} title={l} onClick={() => irSetView(v)}>
               <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">{VIEWICON[/** @type {keyof VIEWICON} */ (v)]}</svg>
@@ -125,6 +155,7 @@ function IntakeReviewView() {
           ))}
         </span>
       </div>
+      {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: {IR_LEFT_WHY}.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
       <FoldSection sec="later" title="Later" n={model.later.length}>
         {model.later.length ? <ul class="irlist">{model.later.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing set aside for later. A meeting comes back here when its transcript arrives.</div>}
@@ -133,7 +164,7 @@ function IntakeReviewView() {
         {model.not_needed.length ? <ul class="irlist">{model.not_needed.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null}{x.reason ? <span class="sub"> · {x.reason}</span> : null}{x.note ? <span class="sub"> · {x.note}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing marked Not needed.</div>}
       </FoldSection>
       <AsideMenu />
-      <p class="sub irold">While this page is being built, the earlier pages are here: <a href="#" data-go="inbox">Intake</a> · <a href="#" data-go="review">Review</a></p>
+      <DropOverlay />
     </div>
   );
 }
@@ -177,7 +208,7 @@ function bootIrKeys() {
 
 /* Upload files: a file dropped anywhere on the page becomes a row (the drop target is the whole view, not a zone). */
 function bootIrDrop() {
-  const over = (/** @type {boolean} */ on) => { const el = $("#v-intake-review"); if (el) el.classList.toggle("irdrop", on); };
+  const over = (/** @type {boolean} */ on) => { irDropOn.value = on; };
   const files = (/** @type {DragEvent} */ e) => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
   const inChat = (/** @type {Event} */ e) => e.target instanceof Element && !!e.target.closest("#chat");
   document.addEventListener("dragover", e => { if (shared.VIEW === "intake-review" && files(e)) { if (inChat(e)) over(false); else { e.preventDefault(); over(true); } } });

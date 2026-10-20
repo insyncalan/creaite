@@ -42,7 +42,8 @@ def model(**over):
                 "cleared": [cal(5, "2026-10-06", "12:00", "Chat", reason="Informal chat", note="just a catch-up")],
                 "later": [cal(6, "2026-10-07", "16:00", "Snoozed", later_since="2026-10-07")]}
     files = [{"name": "notes.vtt", "path": "inbox/notes.vtt", "state": "draft", "event": None, "p": "ABC", "date": "2026-10-06", "ext": "vtt"},
-             {"name": "fresh.docx", "path": "inbox/fresh.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "docx"},
+             {"name": "fresh.docx", "path": "inbox/fresh.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "docx",
+              "ft": "transcript"},
              {"name": "gone.vtt", "path": "inbox/gone.vtt", "state": "processed", "event": None, "p": None, "date": "2026-10-01", "ext": "vtt"}]
     queue = [q(1, "proposed-steer.json", "minutes", kind="draft", age=3), q(2, "proposed-steer.json", "new decision"),
              q(3, "proposed-steer.json"), q(4, "proposed-steer.json"), q(5, "proposed-steer.json", "need a project", p=None),
@@ -97,19 +98,108 @@ class RowModelTests(unittest.TestCase):
     def test_counts_and_badge(self):
         c = self.m["counts"]
         self.assertEqual((c["arrived"], c["ready"], c["drafted"], c["approved"]), (3, 2, 3, 1))
-        self.assertEqual(c["to_approve"], 10)
+        self.assertEqual((c["to_approve"], c["need_type"]), (10, 0))
         self.assertEqual(c["badge"], 12)                                                    # ready meetings and files + proposals
 
     def test_empty(self):
         m = build_dashboard.intake_review_model({}, [], [], {}, TODAY, 14)
         self.assertEqual(m["meetings"], [])
-        self.assertEqual(m["counts"], {"arrived": 0, "ready": 0, "drafted": 0, "approved": 0, "to_approve": 0, "badge": 0})
+        self.assertEqual(m["counts"], {"arrived": 0, "ready": 0, "drafted": 0, "approved": 0, "to_approve": 0, "badge": 0, "need_type": 0})
 
     def test_a_loaded_transcript_is_its_calendar_row_not_a_second_row(self):
         meetings = {"rows": [cal(2, "2026-10-05", "15:00", "Weekly sync", loaded="inbox/Weekly sync.vtt")]}
         files = [{"name": "Weekly sync.vtt", "path": "inbox/Weekly sync.vtt", "state": "new", "event": "ev-2", "p": None, "date": "2026-10-05"}]
         m = build_dashboard.intake_review_model(meetings, files, [], {}, TODAY, 14)
         self.assertEqual([(r["src"], r["state"]) for r in m["meetings"]], [("calendar", "ready")])
+
+
+class FileKindTests(unittest.TestCase):
+    """#232-A1: transcript, minutes (by someone else) or not sure, from the name and the start of the file. First match wins."""
+
+    TURNS = "00:01 Sara Khan: Hello\n00:05 Omar Hale: Hi there\n00:09 Sara Khan: Shall we start\n"
+
+    def kind(self, name, head="", event=None):
+        return build_dashboard.file_kind(name, head, event)
+
+    def test_rule_table(self):
+        rows = [("ABC weekly sync.vtt", "", None, "transcript"),                                  # .vtt
+                ("Sync-20261001_100000-Meeting Transcript.docx", "", None, "transcript"),         # Teams' own name
+                ("Supplier workshop minutes (from Sam Okoro).docx", "", None, "minutes"),
+                ("Supplier_workshop_minutes_v2.docx", "", None, "minutes"),                        # an underscore is not a word break
+                ("Meeting notes.docx", "", None, "minutes"),
+                ("Transcript and minutes.docx", "", None, ""),                                     # both words: not sure
+                ("transcript notes.txt", "", None, ""),
+                ("Steering.docx", "", None, ""),                                                   # neither: not sure
+                ("denotes.docx", "", None, ""),                                                    # a word, not a substring
+                ("Steering.txt", self.TURNS, None, "transcript"),                                  # three speaker turns
+                ("Steering.md", "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\nHi", None, "transcript"),
+                ("Steering.txt", "Two turns only\n00:01 Sara: a\n00:02 Omar: b\n", None, ""),
+                ("Steering.txt", "Attendees\nSara\n\nDecisions:\nHold\n", None, "minutes"),    # two headings
+                ("Steering.md", "## Summary\nWent well\n## Action items\n- x\n", None, "minutes"),
+                ("Steering.md", "Summary\nOne heading is not enough\n", None, ""),
+                ("Steering.pdf", self.TURNS, None, ""),                                            # a pdf or docx is judged by its name only
+                ("Steering.docx", self.TURNS, None, ""),
+                ("Weekly sync.txt", "", "ev-1", "transcript"),                                     # loaded from the calendar
+                ("Steering minutes.docx", "", "ev-1", "transcript"),                               # the event ID wins
+                ("Draft minutes.txt", "Draft, generated by creaite\nDecisions\nSummary\n", None, "")]   # our own draft
+        for name, head, ev, want in rows:
+            with self.subTest(name=name, head=head[:20], event=ev):
+                self.assertEqual(self.kind(name, head, ev), want)
+
+    def test_only_the_first_4_kb_is_read(self):
+        self.assertEqual(self.kind("a.txt", "x" * 4096 + self.TURNS), "")
+
+    def test_inbox_files_and_upload_rows_carry_the_kind_and_size(self):
+        files = [{"name": "x.vtt", "path": "inbox/x.vtt", "state": "new", "event": None, "p": "ABC", "date": "2026-10-08", "ext": "vtt",
+                  "size": 1500, "ft": "transcript"},
+                 {"name": "Plan.docx", "path": "inbox/Plan.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "docx", "size": 38000},
+                 {"name": "Plan minutes.docx", "path": "inbox/Plan minutes.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08",
+                  "ext": "docx"}]
+        m = build_dashboard.intake_review_model({}, files, [], {}, TODAY, 14)
+        by = {r["title"]: r for r in m["meetings"]}
+        self.assertEqual((by["x.vtt"]["ft"], by["x.vtt"]["size"]), ("transcript", 1500))
+        self.assertEqual((by["Plan.docx"]["ft"], by["Plan.docx"]["size"]), ("", 38000))        # derived from the name when the file has no ft
+        self.assertEqual(by["Plan minutes.docx"]["ft"], "minutes")
+
+    def test_a_file_not_sure_is_not_ready_and_not_in_the_badge(self):
+        files = [{"name": "a.vtt", "path": "inbox/a.vtt", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "vtt", "ft": "transcript"},
+                 {"name": "b.docx", "path": "inbox/b.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "docx", "ft": ""}]
+        c = build_dashboard.intake_review_model({}, files, [], {}, TODAY, 14)["counts"]
+        self.assertEqual((c["arrived"], c["ready"], c["need_type"], c["badge"]), (2, 1, 1, 1))
+
+    def test_a_file_already_filed_is_a_done_row_for_this_week_only(self):
+        files = [{"name": "again.vtt", "path": "inbox/again.vtt", "state": "processed", "event": None, "p": None, "date": "2026-10-07", "ext": "vtt", "ft": "transcript"},
+                 {"name": "old.vtt", "path": "inbox/old.vtt", "state": "processed", "event": None, "p": None, "date": "2026-10-01", "ext": "vtt", "ft": "transcript"}]
+        m = build_dashboard.intake_review_model({}, files, [], {}, TODAY, 14)
+        self.assertEqual([(r["title"], r["stage"], r["state"], r["already"]) for r in m["meetings"]], [("again.vtt", "approved", "done", True)])
+        self.assertEqual(m["counts"]["ready"], 0)
+
+
+class UnreadableFileTests(ClearData, unittest.TestCase):
+    """#232-A round 2: a file in inbox/ that cannot be read (no permission, removed while the page is built) does not stop the build."""
+    NOW = MONDAY
+
+    def test_an_unreadable_text_file_is_listed_as_not_sure_and_the_build_goes_on(self):
+        import os
+        (self.v.root / "inbox").mkdir(exist_ok=True)
+        f = self.v.root / "inbox" / "locked.txt"
+        f.write_text("WEBVTT\n\n00:00:01.000 --> 00:00:05.000\nHi\n")
+        (self.v.root / "inbox" / "open.txt").write_text("00:01 Sara Khan: a\n00:02 Omar Hale: b\n00:03 Sara Khan: c\n")
+        os.chmod(f, 0)
+        self.addCleanup(lambda: f.exists() and os.chmod(f, 0o644))
+        if os.access(f, os.R_OK):
+            self.skipTest("the files are readable whatever their mode here (running as root)")
+        self.v.run(script="build_dashboard.py")
+        d = page_data(self.v)
+        files = {x["name"]: x for x in d["inbox"]}
+        self.assertEqual((files["locked.txt"]["ft"], files["open.txt"]["ft"]), ("", "transcript"))
+        rows = {r["title"]: r for r in d["intake_review"]["meetings"]}
+        self.assertEqual((rows["locked.txt"]["ft"], rows["locked.txt"]["fixed"]), ("", False))
+
+    def test_a_vtt_is_fixed_as_a_transcript(self):
+        files = [{"name": "x.vtt", "path": "inbox/x.vtt", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "vtt", "size": 1}]
+        r = build_dashboard.intake_review_model({}, files, [], {}, TODAY, 14)["meetings"][0]
+        self.assertEqual((r["ft"], r["fixed"]), ("transcript", True))
 
 
 class HoldReasonTests(unittest.TestCase):

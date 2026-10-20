@@ -95,17 +95,42 @@ export function irFoldClick(folded, sec) { return { ...folded, [sec]: !irIsFolde
 /** Whether a section is folded (its default until clicked). @param {Record<string, boolean>} folded @param {string} sec */
 export const irIsFolded = (folded, sec) => (sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec));
 
+/** The kinds a file can be (#232-A5). */
+export const IR_KINDS = ["transcript", "minutes"];
+/** A file whose kind cannot be switched: a .vtt or .srt is always a transcript (the server also says so, `fixed`). @param {any} m */
+export const irFixed = m => !!m && m.src === "upload" && (!!m.fixed || /\.(vtt|srt)$/i.test(String(m.path || m.title || "")));
+/** A file's kind: the person's choice for that file (`kinds`, by path), else the server's guess (`ft`, "" when it could not tell).
+    A choice counts only for the file it was made for: it records the file's size and day, and an entry that no longer matches (the
+    file was replaced by another with the same path) is ignored. A .vtt or .srt is a transcript whatever was chosen. Everything that is
+    not an uploaded file is a transcript. @param {any} m @param {Record<string, any>} [kinds] {path: {k, size, day}} */
+export function irKindOf(m, kinds) {
+  if (!m || m.src !== "upload" || irFixed(m)) return "transcript";
+  const e = kinds && m.path ? kinds[m.path] : null;
+  if (e && typeof e === "object" && IR_KINDS.includes(e.k) && e.size === (m.size || 0) && e.day === (m.day || "")) return e.k;
+  return m.ft || "";
+}
+/** Whether a file name may be sent to ask creaite inside a command: no control character (a newline, tab or NUL), backtick, double
+    quote or angle bracket. Such a file must be renamed first. @param {string|null|undefined} name */
+export function irNameOk(name) {
+  for (const ch of String(name == null ? "" : name)) { const c = ch.charCodeAt(0); if (c < 32 || c === 127 || "`\"<>".includes(ch)) return false; }
+  return true;
+}
+/** Whether a file row's kind is not known yet: it is not ready to process, and not in the badge. */
+export const irUnsure = (/** @type {any} */ m, /** @type {Record<string, any>} */ kinds) => !!m && m.src === "upload" && !irKindOf(m, kinds);
+
 /** The live counts: the server's, less what the page has decided since. A meeting whose proposals are all decided counts as
     approved. @param {IrModel} model @param {(n:number)=>boolean} done */
-export function irCounts(model, done) {
+export function irCounts(model, done, kinds) {
   const ms = model.meetings || [], left = (/** @type {IrMeeting} */ m) => { const l = irLive(m.groups, done); return l.needs.length + l.routine.length; };
   const stage = (/** @type {IrMeeting} */ m) => (m.stage === "drafted" && !left(m) ? "approved" : m.stage);
   const all = [...ms.flatMap(m => [...(m.groups.needs || []), ...(m.groups.routine || [])]),
     ...["mail", "other"].flatMap(k => [...((/** @type {any} */ (model)[k] || {}).needs || []), ...((/** @type {any} */ (model)[k] || {}).routine || [])])];
   const toApprove = new Set(all.filter(n => !done(n))).size;
-  const ready = ms.filter(m => m.stage === "arrived" && m.state === "ready").length;
-  return { arrived: ms.filter(m => stage(m) === "arrived").length, ready, drafted: ms.filter(m => stage(m) === "drafted").length,
-    approved: ms.filter(m => stage(m) === "approved").length, to_approve: toApprove, badge: ready + toApprove };
+  const arrivedReady = ms.filter(m => m.stage === "arrived" && m.state === "ready"), needType = arrivedReady.filter(m => irUnsure(m, kinds)).length;
+  const ready = arrivedReady.length - needType;       /* a file whose kind is not known is not ready (the mockup's nProc) and not in the badge */
+  return { need_type: needType, arrived: ms.filter(m => stage(m) === "arrived").length, ready, drafted: ms.filter(m => stage(m) === "drafted").length,
+    approved: ms.filter(m => stage(m) === "approved").length, to_approve: toApprove, badge: ready + toApprove,
+    all: ms.length };   /* #232-A4: the fourth box, Show all: every meeting and file on the page */
 }
 
 /** Esc: the peek closes first, then the open meeting. @param {{peek: any, open: string|null}} st */
@@ -115,3 +140,14 @@ export const irEsc = st => (st.peek != null ? { ...st, peek: null } : { ...st, o
 export const IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
 /** A remembered view made safe. @param {any} v */
 export const irViewNorm = v => (IR_VIEWS.some(x => x[0] === v) ? v : "list");
+
+/* The Search box (#232-A6): a client-side filter. Every word typed must be found (any case) somewhere in the row's fields. */
+/** @param {string} q */
+export const irQueryWords = q => String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+/** Whether a row matches the search `q`: an empty search matches everything. @param {string} q @param {(string|null|undefined)[]} fields */
+export function irMatches(q, fields) {
+  const w = irQueryWords(q);
+  if (!w.length) return true;
+  const hay = (fields || []).filter(Boolean).join("\n").toLowerCase();
+  return w.every(x => hay.includes(x));
+}
