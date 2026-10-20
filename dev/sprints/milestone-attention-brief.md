@@ -24,9 +24,9 @@ Time-critical, so milestone rows sit first in Needs attention, soonest milestone
 ## Not guarded
 Today's page and its data only (`build_dashboard.py`, the Today view); no guarded file; no write; nothing leaves the laptop.
 
-## Open points
-1. Are risks left out, as proposed?
-2. Should a row be dismissible ("hide until an item changes")? Proposed: no, it clears itself when the work is done; the "…" menu is the same as the other rows.
+## Decided (Alan, 20-10-2026)
+1. **Risks are left out** (recommendation accepted): only open actions, open issues and pending decisions count.
+2. **No dismiss** on the row: it clears itself when the work is done; the "…" menu is the same as on the other rows.
 
 ## Done when
 A milestone due in 5 days with 3 open items gives one row with the right words and counts; a milestone due in 9 days (window 7) gives none; closing the items removes the row; late items are first and red; a milestone with no attached items gives no row; an achieved milestone gives none; the count and the page agree; light and dark; desktop and 900 px. Hand check: the row, its links, and clearing it by closing the items.
