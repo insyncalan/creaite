@@ -3,8 +3,11 @@
    Everything comes from P4's routes: /api/minutes/draft (the record, its versions, the transcript's turns and, while its items
    are pending, the approve popup's plan), /api/minutes/save (the page as a new version, or one row or coverage change: the
    record and its proposal change together), /api/minutes/approve (the minutes and the ticked items in one apply) and
-   /api/minutes/export. Nothing here writes any other way; nothing is sent. */
+   /api/minutes/export. Nothing here writes any other way; nothing is sent.
+   #275: trackApprove is Approve minutes by the Track column, the one implementation: the minutes view's Approve minutes and
+   Review's Approve (and Approve n routine) on minutes kept as a record all call it, so both give the same result. */
 import { signal } from "@preact/signals";
+import { ownTicked, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
 import { api, oneLine, viaServer } from "../core/server.js";
 
@@ -46,6 +49,22 @@ export const keptChecks = signal(/** @type {string[]} */ ([]));
 export const approveOpen = signal(false);
 
 let mnAsked = 0;
+/** A minutes record's view answer (/api/minutes/draft), settled first (#268): after Undo of Approve minutes the record still holds
+    the approve's own changes (lines taken out or kept as lines only) while their items are pending again, so they are put back
+    first and the minutes are exactly as they were before Approve. `stale` says a newer request has taken over (null then).
+    @param {{file?: string, path?: string}} arg @param {() => boolean} [stale] @returns {Promise<MinutesView|null>} */
+export async function openMinutesRecord(arg, stale = () => false) {
+  let r = await api("/api/minutes/draft", arg);
+  if (stale()) return null;
+  if (r && r.ok && r.doc && r.doc.state === "draft" && Array.isArray(r.settle) && r.settle.length) {
+    const s = await api("/api/minutes/save", { path: r.path, op: { op: "settle" }, base_version: Number(r.doc.version) || undefined });
+    if (stale()) return null;
+    if (s && s.ok) r = await api("/api/minutes/draft", { path: r.path });
+    if (stale()) return null;
+  }
+  return r;
+}
+
 /** Open (or reload) the minutes: by the proposal's file name or the record's stored path.
     @param {{file?: string, path?: string}} arg */
 export async function loadMinutes(arg) {
@@ -53,16 +72,8 @@ export async function loadMinutes(arg) {
   minutesArg.value = arg;
   if (!viaServer()) { minutesView.value = { ok: false, message: "The minutes view needs the live server." }; return; }
   minutesBusy.value = "Opening the minutes…";
-  let r = await api("/api/minutes/draft", arg);
-  if (mine !== mnAsked) return;
-  if (r && r.ok && r.doc && r.doc.state === "draft" && Array.isArray(r.settle) && r.settle.length) {
-    // #268: after Undo of Approve minutes the record still holds the approve's own changes (lines taken out or kept as lines
-    // only) while their items are pending again: settled first, so the minutes are exactly as they were before Approve.
-    const s = await api("/api/minutes/save", { path: r.path, op: { op: "settle" }, base_version: Number(r.doc.version) || undefined });
-    if (mine !== mnAsked) return;
-    if (s && s.ok) r = await api("/api/minutes/draft", { path: r.path });
-    if (mine !== mnAsked) return;
-  }
+  const r = await openMinutesRecord(arg, () => mine !== mnAsked);
+  if (r === null) return;
   minutesBusy.value = "";
   take(r && r.ok ? r : { ok: false, message: oneLine((r && r.message) || "") || "Couldn't open the minutes" });
 }
@@ -114,12 +125,48 @@ export async function saveMinutesPage(req) {
   return { ok: !!(r && r.ok), version: r && r.version, conflict: !!(r && r.conflict), message: oneLine((r && r.message) || "") };
 }
 
-/** Approve the minutes and the ticked items in one apply. @param {boolean} group @param {number[]} own */
-export async function approveMinutes(group, own) {
-  const v = minutesView.value;
-  if (!v || !v.ok || !v.proposal) return { ok: false, message: "These minutes have nothing pending." };
-  const r = await api("/api/minutes/approve", { file: v.proposal, group, own });
-  return r || { ok: false, message: "The apply didn't run; nothing was changed." };
+/** @typedef {{ok: boolean, message?: string, made: number, apply_id?: number|null, approved?: number, waiting?: number[]}} TrackApproved */
+
+/** #275: Approve minutes by the Track column, the one implementation (the minutes view's Approve minutes, Review's Approve and
+    Approve n routine). The record is first brought in line with the Track column (track.reconcileOps: a cross is `remove`,
+    neither `remove` with `keep_line`, a tick on a kept line `restore`), then the minutes and every ticked item are applied in one
+    apply (/api/minutes/approve, `group` and `own` = the ticked items approved one by one). `v` is the record's view answer, as
+    on screen. `how.change` makes one change (the view's keeps its page in step; by default straight to /api/minutes/save, each
+    on the version the last one made); `how.only` limits the changes to some items (Review's Approve n routine, one project's);
+    `how.approve` false makes the changes only (the bulk rule: Approve n routine never approves the minutes).
+    @param {MinutesView} v @param {{change?: (op: Record<string, any>) => Promise<{ok: boolean, message: string}>,
+    only?: (n: number) => boolean, approve?: boolean}} [how] @returns {Promise<TrackApproved>} */
+export async function trackApprove(v, how = {}) {
+  const doc = v && v.ok ? v.doc : null, plan = v && v.plan ? v.plan.items : null;
+  if (!doc || !plan || !v.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
+  const own = ownTicked(doc, plan);
+  let base = Number(doc.version) || undefined, made = 0;
+  const change = how.change || (async (/** @type {Record<string, any>} */ op) => {
+    const r = await api("/api/minutes/save", { path: v.path, op, base_version: base });
+    if (r && r.ok) base = Number(r.version) || base;
+    return { ok: !!(r && r.ok), message: oneLine((r && r.message) || "") };
+  });
+  for (const op of reconcileOps(doc, plan)) {
+    if (how.only && !how.only(op.n)) continue;
+    const r = await change(op);
+    if (!r.ok) return { ok: false, message: r.message, made };
+    made++;
+  }
+  if (how.approve === false) return { ok: true, made };
+  if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
+  const r = await api("/api/minutes/approve", { file: v.proposal, group: true, own });
+  return { ...(r || { ok: false, message: "The apply didn't run; nothing was changed." }), made };
+}
+
+/** What a failed trackApprove says (review M1: and that some of the Track column's changes were made). @param {TrackApproved} r
+    @param {string} button the button to press again */
+export const trackFailWords = (r, button) => (r.made ? `${r.message ? `${oneLine(r.message)} ` : ""}Some changes were made to the minutes; press ${button} again.`
+  : String(r.message || "The minutes weren't approved; nothing was applied.").split("\n")[0]);
+
+/** What an approve says: "Minutes approved · 3 work items registered · 1 wait in Review". @param {TrackApproved} r */
+export function trackApprovedWords(r) {
+  const n = r.approved || 0, left = (r.waiting || []).length;
+  return `Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
 }
 
 /** Export the minutes as HTML, Word or PDF (P2's export, opened once made). #268: one version only: the view never asks for

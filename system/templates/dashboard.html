@@ -4971,6 +4971,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     applyView: () => applyView,
     applyWords: () => applyWords,
     approveGroup: () => approveGroup,
+    approveTracked: () => approveTracked,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
     askDeleteNote: () => askDeleteNote,
@@ -5807,6 +5808,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isMin: () => isMin,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
+    isRecordMin: () => isRecordMin,
     isStale: () => isStale,
     isSteering: () => isSteering,
     isStub: () => isStub,
@@ -6955,6 +6957,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toggleGroup: () => toggleGroup,
     toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
+    trackGroup: () => trackGroup,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
     typedLinkUrl: () => typedLinkUrl,
@@ -43863,6 +43866,227 @@ ${s5}`;
     return /* @__PURE__ */ u2(S2, { children: LV.map((lv, i5) => /* @__PURE__ */ u2(Level, { lv, i: i5 }, lv.key)) });
   }
 
+  // components/minutes/track.js
+  var TRACK_SECTIONS = ["decisions", "raid", "actions"];
+  var rowN = (rw2) => {
+    if (rw2 && typeof rw2.n === "number") return rw2.n;
+    const m5 = /^@(\d+)$/.exec(String(rw2 && rw2.was || ""));
+    return m5 ? Number(m5[1]) : null;
+  };
+  function trackRows(doc) {
+    const out = [];
+    for (const s5 of doc && doc.sections || []) {
+      if (!TRACK_SECTIONS.includes(s5.id) || s5.type !== "table") continue;
+      const srows = (
+        /** @type {any[]} */
+        s5.rows || []
+      );
+      for (const rw2 of srows) {
+        const n4 = rowN(rw2);
+        if (n4 == null || !rw2.ref && !rw2.kept_line) continue;
+        out.push({ n: n4, section: s5.id, "row": rw2, item: rw2.ref ? (doc.items || {})[rw2.ref] || null : null, kept: !!rw2.kept_line });
+      }
+    }
+    return out;
+  }
+  var planGroupOf = (plan, n4) => ((plan || []).find((i5) => i5.n === n4) || { group: "" }).group;
+  var defaultTrack = (section, item, group) => (
+    /** @type {Track} */
+    group === "own" || section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
+  );
+  var waitsWhenNeither = (r4, plan) => !r4.kept && !!r4.item && r4.item.op === "update" && planGroupOf(plan, r4.n) === "own";
+  var trackChoices = (doc) => {
+    const t47 = (doc && doc.layout || {}).track;
+    return t47 && typeof t47 === "object" && !Array.isArray(t47) ? t47 : {};
+  };
+  function trackOf(doc, r4, plan) {
+    const c5 = trackChoices(doc)[String(r4.n)];
+    if (c5 === "y" || c5 === "n" || c5 === "") return c5;
+    return r4.kept ? "" : defaultTrack(r4.section, r4.item, planGroupOf(plan, r4.n));
+  }
+  var nextTrack = (now, pressed) => now === pressed ? "" : pressed;
+  function setTrack(doc, n4, t47) {
+    const lay = { ...doc.layout || {} };
+    lay.track = { ...trackChoices(doc), [String(n4)]: t47 };
+    return { ...doc, layout: lay };
+  }
+  function trackCounts(doc, plan) {
+    const c5 = { y: 0, k: 0, n: 0, w: 0 };
+    for (const r4 of trackRows(doc)) {
+      const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
+      if (t47 === "n") c5.n++;
+      else if (t47 === "y") {
+        if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
+        else c5.w++;
+      } else if (waitsWhenNeither(r4, plan)) c5.w++;
+      else c5.k++;
+    }
+    return c5;
+  }
+  var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
+  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
+  function reconcileOps(doc, plan) {
+    const ops = [];
+    for (const r4 of trackRows(doc)) {
+      const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
+      if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
+      if (r4.kept) {
+        ops.push({ op: "restore", n: r4.n });
+        if (want === "n") ops.push({ op: "remove", n: r4.n, keep_line: false });
+      } else ops.push({ op: "remove", n: r4.n, keep_line: want === "" });
+    }
+    return ops;
+  }
+  var ownTicked = (doc, plan) => trackRows(doc).filter((r4) => planGroupOf(plan, r4.n) === "own" && trackOf(doc, r4, plan) === "y").map((r4) => r4.n);
+  function approveProblems(doc, plan, needsDetails) {
+    const out = [];
+    for (const r4 of trackRows(doc)) {
+      if (trackOf(doc, r4, plan) !== "y" || !r4.item || r4.item.op !== "new") continue;
+      const v5 = r4.item.values || {}, text = String(v5.description || v5.decision || "");
+      const owner = String((r4.section === "decisions" ? v5.made_by : v5.owner) || "").trim();
+      if (owner && owner !== "TBC" && needsDetails(owner)) out.push({ n: r4.n, what: `${owner} needs details`, text });
+      const ll2 = r4.item.looks_like || {};
+      if (ll2.id && !ll2.kept && !ll2.merged) out.push({ n: r4.n, what: `Possible duplicate of ${ll2.id}`, text });
+    }
+    return out;
+  }
+
+  // stores/minutes.js
+  var minutesArg = y3(
+    /** @type {{file?: string, path?: string}|null} */
+    null
+  );
+  var minutesView = y3(
+    /** @type {MinutesView|null} */
+    null
+  );
+  var minutesDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var minutesBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var minutesBusy = y3("");
+  var PANE_KEY = "creaite-minutes-transcript";
+  var paneOpen = y3(true);
+  function setPane(on2) {
+    paneOpen.value = !!on2;
+    store.set(PANE_KEY, !!on2);
+  }
+  function paneRemembered() {
+    paneOpen.value = store.get(PANE_KEY, true) !== false;
+  }
+  var hoverTurn = y3(
+    /** @type {{turn: number, from: "row"|"pane"}|null} */
+    null
+  );
+  var paneTurn = y3(
+    /** @type {number|null} */
+    null
+  );
+  var paneQuery = y3("");
+  var keptChecks = y3(
+    /** @type {string[]} */
+    []
+  );
+  var approveOpen = y3(false);
+  var mnAsked = 0;
+  async function openMinutesRecord(arg, stale = () => false) {
+    let r4 = await api("/api/minutes/draft", arg);
+    if (stale()) return null;
+    if (r4 && r4.ok && r4.doc && r4.doc.state === "draft" && Array.isArray(r4.settle) && r4.settle.length) {
+      const s5 = await api("/api/minutes/save", { path: r4.path, op: { op: "settle" }, base_version: Number(r4.doc.version) || void 0 });
+      if (stale()) return null;
+      if (s5 && s5.ok) r4 = await api("/api/minutes/draft", { path: r4.path });
+      if (stale()) return null;
+    }
+    return r4;
+  }
+  async function loadMinutes(arg) {
+    const mine = ++mnAsked;
+    minutesArg.value = arg;
+    if (!viaServer()) {
+      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
+      return;
+    }
+    minutesBusy.value = "Opening the minutes…";
+    const r4 = await openMinutesRecord(arg, () => mine !== mnAsked);
+    if (r4 === null) return;
+    minutesBusy.value = "";
+    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
+  }
+  function take(r4) {
+    minutesView.value = r4;
+    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function reloadMinutes() {
+    const v5 = minutesView.value;
+    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
+    if (minutesArg.value) return loadMinutes(minutesArg.value);
+  }
+  async function changeMinutes(op2) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
+    if (r4 && r4.ok && r4.doc) {
+      minutesDoc.value = r4.doc;
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      minutesView.value = { ...v5, doc: r4.doc };
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
+  }
+  async function refreshPlan() {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return;
+    const r4 = await api("/api/minutes/draft", { path: v5.path });
+    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
+  }
+  async function saveMinutesPage(req) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
+  }
+  async function trackApprove(v5, how = {}) {
+    const doc = v5 && v5.ok ? v5.doc : null, plan = v5 && v5.plan ? v5.plan.items : null;
+    if (!doc || !plan || !v5.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
+    const own = ownTicked(doc, plan);
+    let base = Number(doc.version) || void 0, made = 0;
+    const change2 = how.change || (async (op2) => {
+      const r5 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: base });
+      if (r5 && r5.ok) base = Number(r5.version) || base;
+      return { ok: !!(r5 && r5.ok), message: oneLine(r5 && r5.message || "") };
+    });
+    for (const op2 of reconcileOps(doc, plan)) {
+      if (how.only && !how.only(op2.n)) continue;
+      const r5 = await change2(op2);
+      if (!r5.ok) return { ok: false, message: r5.message, made };
+      made++;
+    }
+    if (how.approve === false) return { ok: true, made };
+    if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
+    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: true, own });
+    return { ...r4 || { ok: false, message: "The apply didn't run; nothing was changed." }, made };
+  }
+  var trackFailWords = (r4, button) => r4.made ? `${r4.message ? `${oneLine(r4.message)} ` : ""}Some changes were made to the minutes; press ${button} again.` : String(r4.message || "The minutes weren't approved; nothing was applied.").split("\n")[0];
+  function trackApprovedWords(r4) {
+    const n4 = r4.approved || 0, left = (r4.waiting || []).length;
+    return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
+  }
+  async function exportMinutes(format) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+  }
+
   // review.js
   shared.RSEL = 0;
   var CHK = /* @__PURE__ */ new Set(), RHL = /* @__PURE__ */ new Set();
@@ -43941,6 +44165,7 @@ ${s5}`;
         openProposal(n4);
         return;
       }
+      if (viaServer() && v5 === "approved" && isRecordMin(r4)) return approveTracked(r4);
       if (viaServer() && v5 === "approved" && r4.kind === "draft") return reviewViaServer(r4, "approved", []);
       if (viaServer() && v5 === "approved" && (r4.flags || []).includes("conflict")) return conflictChoice(r4);
       if (v5 === "approved" && r4.kind === "draft") {
@@ -44125,6 +44350,7 @@ ${s5}`;
   async function approveGroup(m5, g5) {
     RVINBATCH = true;
     try {
+      if (viaServer() && isRecordMin(m5) && !await trackGroup(m5, g5)) return;
       const kids = kidsOf(m5, g5), ks2 = kids.filter(routineKid), left = kids.filter((x5) => !x5.done && !routineKid(x5)).length;
       for (const k5 of ks2) {
         CHK.delete(k5.n);
@@ -44135,6 +44361,44 @@ ${s5}`;
     } finally {
       RVINBATCH = false;
     }
+  }
+  var isRecordMin = (r4) => isMin(r4) && /\.html$/i.test(r4.src || "");
+  async function approveTracked(r4) {
+    const v5 = await openMinutesRecord({ file: r4.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return;
+    }
+    if (v5.doc && v5.plan && approveProblems(v5.doc, v5.plan.items, unknownOwner).length) {
+      go2("minutes", { file: r4.file, approve: true });
+      return;
+    }
+    const res = await trackApprove(v5);
+    if (!res.ok) {
+      snack(trackFailWords(res, "Approve"));
+      await reloadData();
+      return;
+    }
+    snack(trackApprovedWords(res), res.apply_id ? async () => {
+      await undoApply(res.apply_id);
+      await openMinutesRecord({ file: r4.file });
+      await reloadData();
+    } : null);
+    await reloadData();
+  }
+  async function trackGroup(m5, g5) {
+    const v5 = await openMinutesRecord({ file: m5.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return false;
+    }
+    const mine = new Set(kidsOf(m5, g5).filter((k5) => !k5.done).map((k5) => k5.ref)), res = await trackApprove(v5, { only: (n4) => mine.has(n4), approve: false });
+    if (res.made) await reloadData();
+    if (!res.ok) {
+      snack(trackFailWords(res, `Approve routine`));
+      return false;
+    }
+    return true;
   }
   async function rejectMinutes(m5) {
     await decide(m5.n, "rejected");
@@ -71442,117 +71706,6 @@ ${d5.text}`);
     draftStat(ev.section === "health" ? HS_FEATURE : REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
   }
 
-  // stores/minutes.js
-  var minutesArg = y3(
-    /** @type {{file?: string, path?: string}|null} */
-    null
-  );
-  var minutesView = y3(
-    /** @type {MinutesView|null} */
-    null
-  );
-  var minutesDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var minutesBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var minutesBusy = y3("");
-  var PANE_KEY = "creaite-minutes-transcript";
-  var paneOpen = y3(true);
-  function setPane(on2) {
-    paneOpen.value = !!on2;
-    store.set(PANE_KEY, !!on2);
-  }
-  function paneRemembered() {
-    paneOpen.value = store.get(PANE_KEY, true) !== false;
-  }
-  var hoverTurn = y3(
-    /** @type {{turn: number, from: "row"|"pane"}|null} */
-    null
-  );
-  var paneTurn = y3(
-    /** @type {number|null} */
-    null
-  );
-  var paneQuery = y3("");
-  var keptChecks = y3(
-    /** @type {string[]} */
-    []
-  );
-  var approveOpen = y3(false);
-  var mnAsked = 0;
-  async function loadMinutes(arg) {
-    const mine = ++mnAsked;
-    minutesArg.value = arg;
-    if (!viaServer()) {
-      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
-      return;
-    }
-    minutesBusy.value = "Opening the minutes…";
-    let r4 = await api("/api/minutes/draft", arg);
-    if (mine !== mnAsked) return;
-    if (r4 && r4.ok && r4.doc && r4.doc.state === "draft" && Array.isArray(r4.settle) && r4.settle.length) {
-      const s5 = await api("/api/minutes/save", { path: r4.path, op: { op: "settle" }, base_version: Number(r4.doc.version) || void 0 });
-      if (mine !== mnAsked) return;
-      if (s5 && s5.ok) r4 = await api("/api/minutes/draft", { path: r4.path });
-      if (mine !== mnAsked) return;
-    }
-    minutesBusy.value = "";
-    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
-  }
-  function take(r4) {
-    minutesView.value = r4;
-    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function reloadMinutes() {
-    const v5 = minutesView.value;
-    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
-    if (minutesArg.value) return loadMinutes(minutesArg.value);
-  }
-  async function changeMinutes(op2) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
-    if (r4 && r4.ok && r4.doc) {
-      minutesDoc.value = r4.doc;
-      minutesBase.value = Number(r4.version) || minutesBase.value;
-      minutesView.value = { ...v5, doc: r4.doc };
-      refreshPlan();
-    }
-    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
-  }
-  async function refreshPlan() {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return;
-    const r4 = await api("/api/minutes/draft", { path: v5.path });
-    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
-  }
-  async function saveMinutesPage(req) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
-    if (r4 && r4.ok) {
-      minutesBase.value = Number(r4.version) || minutesBase.value;
-      refreshPlan();
-    }
-    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
-  }
-  async function approveMinutes(group, own) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.proposal) return { ok: false, message: "These minutes have nothing pending." };
-    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group, own });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportMinutes(format) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
-  }
-
   // components/minutes/ApprovePopup.jsx
   function ApprovePopup({ problems, busy: busy2, onApprove }) {
     const close = () => {
@@ -71897,91 +72050,6 @@ ${d5.text}`);
         cells
       ] })
     ] });
-  }
-
-  // components/minutes/track.js
-  var TRACK_SECTIONS = ["decisions", "raid", "actions"];
-  var rowN = (rw2) => {
-    if (rw2 && typeof rw2.n === "number") return rw2.n;
-    const m5 = /^@(\d+)$/.exec(String(rw2 && rw2.was || ""));
-    return m5 ? Number(m5[1]) : null;
-  };
-  function trackRows(doc) {
-    const out = [];
-    for (const s5 of doc && doc.sections || []) {
-      if (!TRACK_SECTIONS.includes(s5.id) || s5.type !== "table") continue;
-      const srows = (
-        /** @type {any[]} */
-        s5.rows || []
-      );
-      for (const rw2 of srows) {
-        const n4 = rowN(rw2);
-        if (n4 == null || !rw2.ref && !rw2.kept_line) continue;
-        out.push({ n: n4, section: s5.id, "row": rw2, item: rw2.ref ? (doc.items || {})[rw2.ref] || null : null, kept: !!rw2.kept_line });
-      }
-    }
-    return out;
-  }
-  var planGroupOf = (plan, n4) => ((plan || []).find((i5) => i5.n === n4) || { group: "" }).group;
-  var defaultTrack = (section, item, group) => (
-    /** @type {Track} */
-    group === "own" || section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
-  );
-  var waitsWhenNeither = (r4, plan) => !r4.kept && !!r4.item && r4.item.op === "update" && planGroupOf(plan, r4.n) === "own";
-  var trackChoices = (doc) => {
-    const t47 = (doc && doc.layout || {}).track;
-    return t47 && typeof t47 === "object" && !Array.isArray(t47) ? t47 : {};
-  };
-  function trackOf(doc, r4, plan) {
-    const c5 = trackChoices(doc)[String(r4.n)];
-    if (c5 === "y" || c5 === "n" || c5 === "") return c5;
-    return r4.kept ? "" : defaultTrack(r4.section, r4.item, planGroupOf(plan, r4.n));
-  }
-  var nextTrack = (now, pressed) => now === pressed ? "" : pressed;
-  function setTrack(doc, n4, t47) {
-    const lay = { ...doc.layout || {} };
-    lay.track = { ...trackChoices(doc), [String(n4)]: t47 };
-    return { ...doc, layout: lay };
-  }
-  function trackCounts(doc, plan) {
-    const c5 = { y: 0, k: 0, n: 0, w: 0 };
-    for (const r4 of trackRows(doc)) {
-      const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
-      if (t47 === "n") c5.n++;
-      else if (t47 === "y") {
-        if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
-        else c5.w++;
-      } else if (waitsWhenNeither(r4, plan)) c5.w++;
-      else c5.k++;
-    }
-    return c5;
-  }
-  var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
-  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
-  function reconcileOps(doc, plan) {
-    const ops = [];
-    for (const r4 of trackRows(doc)) {
-      const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
-      if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
-      if (r4.kept) {
-        ops.push({ op: "restore", n: r4.n });
-        if (want === "n") ops.push({ op: "remove", n: r4.n, keep_line: false });
-      } else ops.push({ op: "remove", n: r4.n, keep_line: want === "" });
-    }
-    return ops;
-  }
-  var ownTicked = (doc, plan) => trackRows(doc).filter((r4) => planGroupOf(plan, r4.n) === "own" && trackOf(doc, r4, plan) === "y").map((r4) => r4.n);
-  function approveProblems(doc, plan, needsDetails) {
-    const out = [];
-    for (const r4 of trackRows(doc)) {
-      if (trackOf(doc, r4, plan) !== "y" || !r4.item || r4.item.op !== "new") continue;
-      const v5 = r4.item.values || {}, text = String(v5.description || v5.decision || "");
-      const owner = String((r4.section === "decisions" ? v5.made_by : v5.owner) || "").trim();
-      if (owner && owner !== "TBC" && needsDetails(owner)) out.push({ n: r4.n, what: `${owner} needs details`, text });
-      const ll2 = r4.item.looks_like || {};
-      if (ll2.id && !ll2.kept && !ll2.merged) out.push({ n: r4.n, what: `Possible duplicate of ${ll2.id}`, text });
-    }
-    return out;
   }
 
   // components/minutes/ItemTable.jsx
@@ -72825,24 +72893,13 @@ ${d5.text}`);
     approving.value = true;
     try {
       if (!await mnSaveFirst()) return;
-      const own = ownTicked(doc, plan);
-      let made = 0;
-      for (const op2 of reconcileOps(doc, plan)) {
-        const r5 = await changeMinutes(op2);
-        if (!r5.ok) {
-          snack(made ? `${r5.message ? `${r5.message} ` : ""}Some changes were made to the minutes; press Approve minutes again.` : r5.message || "The minutes weren't approved; nothing was applied.");
-          return;
-        }
-        made++;
-      }
-      const r4 = await approveMinutes(true, own);
+      const r4 = await trackApprove({ ...v5, doc }, { change: changeMinutes });
       if (!r4.ok) {
-        snack(String(r4.message || "The apply didn't run; nothing was changed.").split("\n")[0]);
+        snack(trackFailWords(r4, "Approve minutes"));
         return;
       }
-      const n4 = r4.approved || 0, left = (r4.waiting || []).length;
       snack(
-        `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
+        trackApprovedWords(r4),
         r4.apply_id ? async () => {
           await undoApply(r4.apply_id);
           if (v5.proposal) loadMinutes({ file: v5.proposal });
@@ -73091,6 +73148,7 @@ ${d5.text}`);
       loadMinutes(a5).then(() => {
         navWrite(false);
         tabTitle();
+        if (a5.approve) approveNow(false);
       });
     }
   }
@@ -77084,6 +77142,7 @@ ${d5.text}`);
         "thisWeek",
         "tl",
         "toIso",
+        "trackApprove",
         "trackCounts",
         "trackOf",
         "trackRows",

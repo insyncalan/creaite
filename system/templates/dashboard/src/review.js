@@ -29,6 +29,8 @@ import { mountRejectMenu } from "./components/review/RejectMenu.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { contextMenuOpen, openContextMenu, openContextMenuAt } from "./components/review/ContextMenu.jsx";
 import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
+import { openMinutesRecord, trackApprove, trackApprovedWords, trackFailWords } from "./stores/minutes.js";
+import { approveProblems } from "./components/minutes/track.js";
 import { rjAddGone, rjCloseMenu, rjDropGone, rjGone, rjGuesses, rjGuessFor, rjMenu, rjOpenMenu, rjReasons, rjRecent, rjSetGone } from "./stores/rejects.js";
 import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, cell, ceOpts, funnelTip, hit, HL, hlOnly, items, kOfId, msLabel, recordFromBoard, rows, rvfCount, rvOnly, rvPaint, rvPick, srcKind, thisFriday } from "./work.js";
 /* ======================= Review ======================= */
@@ -51,6 +53,7 @@ export let decide = async function(n,v,written){ const tr=$(`#reviewBody tr[data
     const before=was&&was.done;
   const res=await (async()=>{ const r=REV.find(x=>x.n===n); if(!r||r.done) return; if(v==="approved"&&r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 point 4 (fix-minutes-approve): never approved; Reject still works */
   if(v==="approved"&&!r.p&&r.kind!=="files"){ snack("Choose a project first — open the item to set it"); openProposal(n); return; }
+  if(viaServer()&&v==="approved"&&isRecordMin(r)) return approveTracked(r);   /* #275: the Track column, as the minutes view's Approve minutes */
   if(viaServer()&&v==="approved"&&r.kind==="draft") return reviewViaServer(r,"approved",[]);
   if(viaServer()&&v==="approved"&&(r.flags||[]).includes("conflict")) return conflictChoice(r);
   if(v==="approved"&&r.kind==="draft"){ snack(`Approving a draft needs the live server, which checks and cleans it first; or say “approve ${r.rec.t.replace(/^Minutes: /,"minutes for ").replace(/^Report: /,"report for ")}” in Claude Code`); return; }   /* BL-149 */
@@ -135,9 +138,32 @@ export function renderReview(){ { const v=r=>(r.flags||[]).includes("vip")?0:1; 
   const bar=$("#rvfilters"); if(bar&&!$("#rvFocusBtn")) addHTML(bar,"afterend",html`<button type="button" class="btn rvfocusbtn" id="rvFocusBtn" data-rvfocus="1" title="Decide one proposal at a time, with its source beside it">One at a time</button>`);
     if(shared.RF) rfDraw(); } }   /* BL-206 */   /* BL-133 (sprint-work-views): filters, grouping and order are in rvRender; grouped by project it draws as before */
 export function toggleGroup(m,g,on){ const ks=kidsOf(m,g).filter(routineKid); if(on===undefined) on=!ks.every(k=>CHK.has(k.n)); ks.forEach(k=>on?CHK.add(k.n):CHK.delete(k.n)); renderReview(); }
-export async function approveGroup(m,g){ RVINBATCH=true; try{ const kids=kidsOf(m,g), ks=kids.filter(routineKid), left=kids.filter(x=>!x.done&&!routineKid(x)).length;
+export async function approveGroup(m,g){ RVINBATCH=true; try{ if(viaServer()&&isRecordMin(m)&&!await trackGroup(m,g)) return;
+  const kids=kidsOf(m,g), ks=kids.filter(routineKid), left=kids.filter(x=>!x.done&&!routineKid(x)).length;
   for(const k of ks){ CHK.delete(k.n); await decide(k.n,"approved"); }
   snack(`Approved ${ks.length} item${ks.length===1?"":"s"} from these minutes${left?` · ${left} still need approving one by one`:""}`); renderReview(); } finally{ RVINBATCH=false; } }
+/* #275: minutes kept as a record (the minutes view's) are approved from Review by their Track column, exactly as the view's Approve
+   minutes (stores/minutes.trackApprove, the one implementation): a tick registers a work item, a cross takes the line out of
+   the minutes, neither keeps it in the minutes untracked (an update approved one by one stays here, review H2). A ticked item
+   worth a look (an owner who needs details, a possible duplicate) opens the minutes with the view's Before approving box.
+   Undo puts the apply back and the minutes exactly as they were (openMinutesRecord settles them). */
+export const isRecordMin=r=>isMin(r)&&/\.html$/i.test(r.src||"");
+export async function approveTracked(r){ const v=await openMinutesRecord({file:r.file});
+  if(!v||!v.ok){ snack(oneLine((v&&v.message)||"")||"Couldn't open the minutes"); return; }
+  if(v.doc&&v.plan&&approveProblems(v.doc,v.plan.items,unknownOwner).length){ go("minutes",{file:r.file,approve:true}); return; }
+  const res=await trackApprove(v);
+  if(!res.ok){ snack(trackFailWords(res,"Approve")); await reloadData(); return; }
+  snack(trackApprovedWords(res),res.apply_id?async()=>{ await undoApply(res.apply_id); await openMinutesRecord({file:r.file}); await reloadData(); }:null);
+  await reloadData(); }
+/* #275: Approve n routine on such minutes: the Track column's crosses and neithers on this group's items first (the same changes),
+   then the ticked routine items as before; the minutes, and a ticked item approved one by one, still wait for their own Approve
+   (the bulk rule). False when a change was refused. */
+export async function trackGroup(m,g){ const v=await openMinutesRecord({file:m.file});
+  if(!v||!v.ok){ snack(oneLine((v&&v.message)||"")||"Couldn't open the minutes"); return false; }
+  const mine=new Set(kidsOf(m,g).filter(k=>!k.done).map(k=>k.ref)), res=await trackApprove(v,{only:n=>mine.has(n),approve:false});
+  if(res.made) await reloadData();
+  if(!res.ok){ snack(trackFailWords(res,`Approve routine`)); return false; }
+  return true; }
 export async function rejectMinutes(m){ await decide(m.n,"rejected"); const pend=REV.filter(x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done);
   if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay for review.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); renderReview(); },`Reject ${pend.length===1?"it":"them"} too`); }
    /* BL-198: the open peek follows the click. BL-122: a click highlights (repainted in place, so a double-click still lands on the row); a double-click opens */

@@ -12,8 +12,9 @@
    transcript) and Approve minutes, the one labelled button.
    Approve minutes is one click: the record is brought in line with the Track column (track.reconcileOps: the existing
    remove, keep-the-line and restore changes), then the minutes and every ticked item are applied in one apply
-   (/api/minutes/approve), with Undo on the snack. Only when a ticked item has a real problem does the Before approving box
-   ask first. Nothing here sends anything. */
+   (/api/minutes/approve), with Undo on the snack: stores/minutes.trackApprove, which Review's Approve calls too (#275).
+   Only when a ticked item has a real problem does the Before approving box ask first (also when Review's Approve opens the
+   view for it: renderMinutes' `approve`). Nothing here sends anything. */
 import { render } from "preact";
 import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
@@ -25,7 +26,7 @@ import { Coverage } from "./Coverage.jsx";
 import { ItemTable } from "./ItemTable.jsx";
 import { checksOf } from "./minutesDoc.js";
 import { SummaryText, TextLines } from "./TextLines.jsx";
-import { approveProblems, ownTicked, reconcileOps, trackCounts, trackSummary } from "./track.js";
+import { approveProblems, trackCounts, trackSummary } from "./track.js";
 import { jumpTo, TranscriptPane } from "./TranscriptPane.jsx";
 import { REV } from "../../core/data.js";
 import { $ } from "../../core/dom.js";
@@ -36,8 +37,8 @@ import { ckAsk, openChat } from "../../ask.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
-import { approveMinutes, approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc,
-  minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane } from "../../stores/minutes.js";
+import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc,
+  minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
 import { signal } from "@preact/signals";
 
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -103,21 +104,9 @@ async function approveNow(anyway) {
   approving.value = true;
   try {
     if (!(await mnSaveFirst())) return;
-    const own = ownTicked(doc, plan);
-    let made = 0;
-    for (const op of reconcileOps(doc, plan)) {
-      const r = await changeMinutes(op);
-      if (!r.ok) {                                          // review M1: say so when some of the Track column's changes were made
-        snack(made ? `${r.message ? `${r.message} ` : ""}Some changes were made to the minutes; press Approve minutes again.`
-          : r.message || "The minutes weren't approved; nothing was applied.");
-        return;
-      }
-      made++;
-    }
-    const r = await approveMinutes(true, own);
-    if (!r.ok) { snack(String(r.message || "The apply didn't run; nothing was changed.").split("\n")[0]); return; }
-    const n = r.approved || 0, left = (r.waiting || []).length;
-    snack(`Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
+    const r = await trackApprove({ ...v, doc }, { change: changeMinutes });      // #275: the one implementation, Review's too
+    if (!r.ok) { snack(trackFailWords(r, "Approve minutes")); return; }
+    snack(trackApprovedWords(r),
       r.apply_id ? async () => { await undoApply(r.apply_id); if (v.proposal) loadMinutes({ file: v.proposal }); } : null);   // Undo: the draft comes back, so does its page
     await reloadData();
     if (v.plan.files[0]) loadMinutes({ path: v.plan.files[0] });
@@ -241,7 +230,8 @@ export function MinutesView() {
 
 let mnMounted = false;
 /** Draw the minutes view into #v-minutes and open the minutes: {file} (a proposal), {path} (a record) or the path as a string.
-    The transcript is shown or hidden as last chosen (#268). @param {{file?: string, path?: string}|string|null} arg */
+    The transcript is shown or hidden as last chosen (#268). With `approve` (#275: Review's Approve on minutes with a ticked item
+    worth a look) the Before approving box opens once they are open. @param {{file?: string, path?: string, approve?: boolean}|string|null} arg */
 export function renderMinutes(arg) {
   const el = $("#v-minutes");
   if (!el) return;
@@ -249,7 +239,7 @@ export function renderMinutes(arg) {
   const a = typeof arg === "string" ? { path: arg } : arg;
   if (a && (a.file || a.path)) {
     dirty = false; keptChecks.value = []; approveOpen.value = false; paneRemembered();
-    loadMinutes(a).then(() => { navWrite(false); tabTitle(); });
+    loadMinutes(a).then(() => { navWrite(false); tabTitle(); if (a.approve) approveNow(false); });   // #275: from Review's Approve
   }
 }
 
