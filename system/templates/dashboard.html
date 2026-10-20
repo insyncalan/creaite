@@ -4140,6 +4140,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
 #v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 #v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
+/* #232-B (release 2.6): an update proposal in the peek shows the whole item with the changed fields highlighted (the locked mockup's .chg, .updiff and a pending activity line) */
+.pk-chip.chg{background:var(--warn-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)} .pk-chip.chg s{color:var(--muted)} .pk-chip.chg b{color:var(--ink)}
+.pk-chip.chg:hover{background:var(--warn-soft)}
+.updiff{display:grid;gap:6px;font-size:var(--fs-lg);line-height:var(--lh-22);margin:6px 0} .updiff .old{color:var(--muted)} .updiff .old s{text-decoration-thickness:1px}
+.updiff .new{background:var(--warn-soft);border-radius:var(--r-md);padding:6px 8px;margin-left:-8px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)}
+.pk-fe.pending>div{background:var(--warn-soft);border-radius:var(--r-md);padding:4px 8px}
+.pk-desc.updnew{background:var(--warn-soft);border-radius:var(--r-md);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)}
+.pk-updtext{font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);overflow-wrap:anywhere} .pk-updact{margin-top:14px}
 /* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
    data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
    failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
@@ -6509,6 +6517,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkTitleL: () => pkTitleL,
     pkUndoLast: () => pkUndoLast,
     pkUpdLabel: () => pkUpdLabel,
+    pkUpdMount: () => pkUpdMount,
+    pkUpdReset: () => pkUpdReset,
     pkWho: () => pkWho,
     pkWide: () => pkWide,
     pkWrite: () => pkWrite,
@@ -7081,9 +7091,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     unknownOwner: () => unknownOwner,
     unmountChase: () => unmountChase,
     unmountSneak: () => unmountSneak,
+    updDraw: () => updDraw,
+    updFeed: () => updFeed,
+    updModel: () => updModel,
     updMsg: () => updMsg,
+    updOpen: () => updOpen,
     updOut: () => updOut,
+    updPeekable: () => updPeekable,
     updReview: () => updReview,
+    updSave: () => updSave,
     updUndo: () => updUndo,
     updUpload: () => updUpload,
     updateView: () => updateView,
@@ -59794,6 +59810,360 @@ ${d5.text}`);
     return [...box.childNodes];
   }
 
+  // core/irUpdate.js
+  var UI = (
+    /** @type {Record<string, Record<string, string>>} */
+    {
+      actions: { description: "t", project: "p", workstream: "ws", owner: "o", priority: "pr", due_date: "due", status: "st", raised: "raised", closed: "closed", latest_update: "upd", client_visible: "client", client_message: "cm", milestone: "ms" },
+      raid: { description: "t", project: "p", type: "type", workstream: "ws", owner: "o", response_action: "resp", due_date: "due", impact: "imp", likelihood: "lik", status: "st", raised: "raised", closed: "closed", client_visible: "client", client_message: "cm", milestone: "ms" },
+      decisions: { decision: "t", project: "p", made_by: "by", date: "date", client_visible: "client", client_message: "cmd", status: "st", needed_by: "due", reasoning: "why", options: "opts", revisit: "revisit", replaces: "replaces" }
+    }
+  );
+  var EDITABLE = (
+    /** @type {Record<string, string[]>} */
+    { actions: ["status", "due_date", "latest_update"], raid: ["status", "due_date"], decisions: ["status", "needed_by"] }
+  );
+  var SIDE = (
+    /** @type {Record<string, string[]>} */
+    { actions: [], raid: [], decisions: ["date"] }
+  );
+  var LABEL = (
+    /** @type {Record<string, string>} */
+    {
+      status: "Status",
+      owner: "Owner",
+      due_date: "Due date",
+      needed_by: "Needed by",
+      priority: "Priority",
+      project: "Project",
+      workstream: "Workstream",
+      milestone: "Milestone",
+      client_visible: "Client-visible",
+      latest_update: "Latest update",
+      description: "Description",
+      decision: "Decision",
+      response_action: "Response",
+      reasoning: "Reasoning",
+      options: "Options considered",
+      revisit: "Revisit",
+      client_message: "Client messaging",
+      made_by: "Decision maker",
+      date: "Date made",
+      impact: "Impact",
+      likelihood: "Likelihood",
+      type: "Type",
+      raised: "Raised",
+      closed: "Date closed",
+      replaces: "Replaces"
+    }
+  );
+  var SHORT = (
+    /** @type {Record<string, string>} */
+    { due_date: "due", needed_by: "needed by", made_by: "made by", client_visible: "client-visible" }
+  );
+  var PHRASE = (
+    /** @type {Record<string, string>} */
+    {
+      latest_update: "the latest update",
+      description: "the description",
+      decision: "the decision",
+      response_action: "the response",
+      reasoning: "the reasoning",
+      options: "the options considered",
+      client_message: "the client messaging",
+      health_reason: "the health reason"
+    }
+  );
+  var ORDER = [
+    "status",
+    "due_date",
+    "needed_by",
+    "owner",
+    "made_by",
+    "priority",
+    "project",
+    "workstream",
+    "milestone",
+    "client_visible",
+    "impact",
+    "likelihood",
+    "type",
+    "date",
+    "description",
+    "decision",
+    "latest_update",
+    "response_action",
+    "reasoning",
+    "options",
+    "revisit",
+    "replaces",
+    "client_message",
+    "raised",
+    "closed"
+  ];
+  function irSame(a5, b5) {
+    const n4 = (v5) => v5 == null || v5 === "" ? "" : v5 === true ? "1" : v5 === false ? "0" : String(v5).trim();
+    return n4(a5) === n4(b5);
+  }
+  var irLabel = (col) => LABEL[col] || col.charAt(0).toUpperCase() + col.slice(1).replace(/_/g, " ");
+  var irIsText = (col) => col in PHRASE;
+  function irWord(col, v5) {
+    if (col === "client_visible") return v5 === 1 || v5 === true || v5 === "1" ? "on" : "off";
+    if (v5 == null || String(v5).trim() === "") return "—";
+    const s5 = String(v5).trim().replace(/\s+/g, " ");
+    const m5 = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}))?/.exec(s5);
+    if (m5) return `${m5[3]}-${m5[2]}-${m5[1]}${m5[4] ? " " + m5[4] : ""}`;
+    return s5.length > 60 ? s5.slice(0, 59) + "…" : s5;
+  }
+  function irUpdateList(live, now, proposed) {
+    const cols = new Set(proposed);
+    for (const col of Object.keys(now)) if (!irSame(live[col], now[col])) cols.add(col);
+    const at2 = (c5) => {
+      const i5 = ORDER.indexOf(c5);
+      return i5 < 0 ? ORDER.length : i5;
+    };
+    return [...cols].sort((a5, b5) => at2(a5) - at2(b5) || proposed.indexOf(a5) - proposed.indexOf(b5)).map((col) => ({ col, label: irLabel(col), was: live[col], now: now[col], same: irSame(live[col], now[col]), proposed: proposed.includes(col) }));
+  }
+  var irChanged = (list) => list.filter((c5) => !c5.same);
+  function irNowRow(table, live, changes, draft) {
+    const now = { ...live, ...changes };
+    for (const col of [...EDITABLE[table] || [], ...SIDE[table] || []]) if (col in draft) now[col] = draft[col];
+    return now;
+  }
+  function irPhrase(c5, short) {
+    if (irIsText(c5.col)) return { label: PHRASE[c5.col], delta: "", text: true };
+    const label = short && SHORT[c5.col] ? SHORT[c5.col] : irLabel(c5.col).toLowerCase();
+    return { label, delta: `${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`, text: false };
+  }
+  function irNoteWords(changed2) {
+    const ph2 = changed2.map((c5) => irPhrase(c5));
+    return ph2.map((p6) => p6.text ? p6.label : `${p6.label} ${p6.delta}`).join(" and ");
+  }
+  function irNoteText(id2, title, changed2) {
+    const what = [id2, title].filter(Boolean).join(" · ");
+    return changed2.length ? `What changes if you approve: ${what}: ${irNoteWords(changed2)}. The rest of the item stays as it is.` : `Nothing changes if you approve: ${what} already has every value in this update.`;
+  }
+  function irIfApproved(changed2) {
+    return changed2.map((c5) => irIsText(c5.col) ? `${c5.label} replaced` : `${c5.label} ${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`).join(" · ");
+  }
+  function irLineParts(changes) {
+    const chs = changes.filter((c5) => c5.col).map((c5) => ({ col: c5.col, was: "was" in c5 ? c5.was : c5.from, now: "now" in c5 ? c5.now : c5.to }));
+    const scalar = chs.filter((c5) => !irIsText(c5.col)).map((c5) => {
+      const p6 = irPhrase(c5, true);
+      return `${p6.label} ${p6.delta}`;
+    });
+    const text = chs.filter((c5) => irIsText(c5.col)).map((c5) => PHRASE[c5.col]);
+    if (!text.length) return scalar;
+    const tail = text.join(" and ");
+    return scalar.length ? [...scalar.slice(0, -1), `${scalar[scalar.length - 1]} and ${tail}`] : [tail];
+  }
+  function irVerb(changes) {
+    const st2 = changes.find((c5) => c5.col === "status");
+    const to2 = st2 ? "now" in st2 ? st2.now : st2.to : null;
+    return to2 === "Closed" ? "Closes" : to2 === "Cancelled" ? "Cancels" : "Updates";
+  }
+  var irLineHead = (verb, id2, title) => (id2 ? `${verb} ${id2}${title ? `: ${title}` : ""}` : `${verb} ${title || ""}`).trim();
+  var LATEST_MAX = 2e3;
+  var isoDate = (v5) => {
+    if (typeof v5 !== "string") return "";
+    const s5 = v5.trim();
+    const m5 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s5);
+    if (!m5) return "";
+    const d5 = new Date(Date.UTC(+m5[1], +m5[2] - 1, +m5[3]));
+    return d5.getUTCFullYear() === +m5[1] && d5.getUTCMonth() === +m5[2] - 1 && d5.getUTCDate() === +m5[3] ? s5 : "";
+  };
+  var STATUSES = (
+    /** @type {Record<string, string[]>} */
+    { actions: ["Open", "Delayed", "Closed", "Cancelled"], raid: ["Open", "Closed", "Cancelled"], decisions: ["Pending", "Made", "Withdrawn"] }
+  );
+  function irSaveChanges(table, changes, live, opened, draft) {
+    const out = { ...changes }, edited = [];
+    const clean = (col, v5) => {
+      const s5 = typeof v5 === "string" ? v5.trim() : v5;
+      return s5 === "" || s5 == null ? null : s5;
+    };
+    for (const col of EDITABLE[table] || []) {
+      if (!(col in draft) || irSame(draft[col], opened[col])) continue;
+      const v5 = clean(col, draft[col]);
+      if (v5 != null && typeof v5 !== "string") return { error: `${irLabel(col)} must be text.` };
+      if (col === "status" && !(STATUSES[table] || []).includes(String(v5))) return { error: `Status must be one of ${(STATUSES[table] || []).join(", ")}.` };
+      if (col === "latest_update" && v5 != null && v5.length > LATEST_MAX) return { error: `The latest update is ${v5.length} characters; the limit is ${LATEST_MAX}. Shorten it.` };
+      if ((col === "due_date" || col === "needed_by") && v5 != null && !isoDate(v5)) return { error: "That is not a date creaite knows. Use DD-MM-YYYY." };
+      edited.push(col);
+      if (irSame(v5, live[col])) delete out[col];
+      else out[col] = v5;
+    }
+    if (table === "decisions" && edited.includes("status") && out.status === "Made" && !live.date && isoDate(draft.date)) {
+      out.date = draft.date;
+      edited.push("date");
+    }
+    if (!Object.keys(out).length) return { error: "Nothing would change if this were approved: reject it instead, or change a value first." };
+    return { changes: out, edited };
+  }
+  function irMergeEdits(fresh, plan) {
+    const out = { ...fresh };
+    for (const col of plan.edited) {
+      if (col in plan.changes) out[col] = plan.changes[col];
+      else delete out[col];
+    }
+    if (!Object.keys(out).length) return { error: "Nothing would change if this were approved: reject it instead, or change a value first." };
+    return { changes: out };
+  }
+
+  // components/intakeReview/UpdatePeek.jsx
+  function ConflictBlock({ rec }) {
+    const ch2 = rec.changes && rec.changes.length ? rec.changes : rec.field ? [{ field: rec.field, from: rec.from, to: rec.to }] : [];
+    const v5 = (x5) => x5 == null || x5 === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x5)) ? fd(String(x5)) : String(x5);
+    const isCm = (c5) => c5.col === "client_message" || /^client messag/i.test(String(c5.field || ""));
+    return /* @__PURE__ */ u4("div", { class: "cfvs", children: ch2.length ? ch2.map((c5) => isCm(c5) ? /* @__PURE__ */ u4("div", { children: [
+      /* @__PURE__ */ u4("span", { class: "cff", children: c5.field }),
+      /* @__PURE__ */ u4("span", { class: "cfnew", children: "client message: changed (its wording is not shown)" })
+    ] }) : /* @__PURE__ */ u4("div", { children: [
+      /* @__PURE__ */ u4("span", { class: "cff", children: c5.field }),
+      /* @__PURE__ */ u4("span", { class: "cfnow", children: [
+        "Now: ",
+        /* @__PURE__ */ u4("b", { children: v5(c5.from) })
+      ] }),
+      /* @__PURE__ */ u4("span", { class: "cfnew", children: [
+        "This one: ",
+        /* @__PURE__ */ u4("b", { children: v5(c5.to) })
+      ] })
+    ] })) : /* @__PURE__ */ u4("div", { class: "sub", children: "Changed in the tracker after this was proposed." }) });
+  }
+  function updateChips(table, list, now, show) {
+    const editable = EDITABLE[table] || [];
+    const chip = (col, f5, name, mark, popup) => {
+      const c5 = list.find((x5) => x5.col === col), changed2 = !!c5 && !c5.same;
+      const shownNow = show(col, now[col]);
+      return { f: f5, name, mark, was: changed2 ? show(col, c5.was) : shownNow, now: shownNow, changed: changed2, editable: editable.includes(col), popup, empty: now[col] == null || now[col] === "" };
+    };
+    const dueCol = table === "decisions" ? "needed_by" : "due_date", ownerCol = table === "decisions" ? "made_by" : "owner";
+    const row1 = [
+      chip("status", "st", "Status", { st: String(now.status || "") }),
+      chip(ownerCol, "o", table === "decisions" ? "Decision maker" : "Owner", { who: show(ownerCol, now[ownerCol]) === "—" ? "" : show(ownerCol, now[ownerCol]) }),
+      chip(dueCol, "due", table === "decisions" ? "Needed by" : "Due date", { icon: "calendar" }, "dialog")
+    ];
+    if (table === "actions") row1.push(chip("priority", "pr", "Priority", { pr: String(now.priority || "Medium") }));
+    row1.push(chip("project", "p", "Project", { icon: "projects" }));
+    const row2 = [];
+    if (table !== "decisions") row2.push(chip("workstream", "ws", "Workstream", { icon: "layers" }), chip("milestone", "ms", "Milestone", { icon: "flag" }));
+    if (table === "raid") row2.push(chip("impact", "imp", "Impact", { icon: "alert" }), chip("likelihood", "lik", "Likelihood", { icon: "alert" }));
+    if (table === "decisions" && (now.status === "Made" || list.some((c5) => c5.col === "date"))) row2.push(chip("date", "date", "Date made", { icon: "calendar" }));
+    row2.push(chip("client_visible", "client", "Client-visible", { icon: "eye" }));
+    return { row1, row2 };
+  }
+  function UChip({ c: c5 }) {
+    const words = c5.changed ? /* @__PURE__ */ u4("span", { children: [
+      /* @__PURE__ */ u4("s", { children: c5.was }),
+      " → ",
+      /* @__PURE__ */ u4("b", { children: c5.now })
+    ] }) : /* @__PURE__ */ u4("span", { children: c5.now });
+    const label = c5.changed ? `${c5.name}: was ${c5.was}, now ${c5.now}` : `${c5.name}: ${c5.empty ? "not set" : c5.now}`;
+    const mark = peekMark(c5.changed && c5.mark.st != null ? { st: c5.now } : c5.mark);
+    const cls = ["pk-chip", c5.changed ? "chg" : "", c5.empty && !c5.changed ? "empty" : ""].filter(Boolean).join(" ");
+    if (!c5.editable) return /* @__PURE__ */ u4("div", { class: "pk-prop", children: /* @__PURE__ */ u4(Chip, { cls: `${cls} ro`, role: "note", "aria-label": label, tip: c5.changed ? `${c5.name}: changes if approved (read-only here)` : `${c5.name} (read-only here)`, children: [
+      mark,
+      words
+    ] }) });
+    return /* @__PURE__ */ u4("div", { class: "pk-prop", children: /* @__PURE__ */ u4(Chip, { button: true, cls, "data-pkp": c5.f, "aria-haspopup": (
+      /** @type {any} */
+      c5.popup || "listbox"
+    ), name: label, tip: c5.changed ? `${c5.name}: changes if approved` : c5.name, children: [
+      mark,
+      words
+    ] }) });
+  }
+  function updateChipNodes(chips) {
+    const box = document.createElement("div");
+    R(/* @__PURE__ */ u4(S2, { children: chips.map((c5) => /* @__PURE__ */ u4(UChip, { c: c5 }, c5.f)) }), box);
+    return [...box.childNodes];
+  }
+  function TextDiff({ label, was, now }) {
+    return /* @__PURE__ */ u4("div", { class: "updiff", children: [
+      label ? /* @__PURE__ */ u4("div", { class: "pk-dl", children: label }) : null,
+      /* @__PURE__ */ u4("div", { class: "old", children: [
+        /* @__PURE__ */ u4("span", { class: "icsub", children: "Now" }),
+        " ",
+        was == null || was === "" ? /* @__PURE__ */ u4("i", { children: "not set" }) : /* @__PURE__ */ u4("s", { children: String(was) })
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "new", children: [
+        /* @__PURE__ */ u4("span", { class: "tag", children: "New" }),
+        " ",
+        now == null || now === "" ? /* @__PURE__ */ u4("i", { children: "not set" }) : String(now)
+      ] })
+    ] });
+  }
+  var DIFF_TEXT = ["description", "decision", "response_action", "reasoning", "options"];
+  function UpdateBody({ id: id2, title, table, list, rec, conflict, current }) {
+    const changed2 = irChanged(list), diffs = changed2.filter((c5) => DIFF_TEXT.includes(c5.col));
+    const plain = table === "raid" ? "response_action" : table === "decisions" ? "reasoning" : "";
+    const shownPlain = plain && !changed2.some((c5) => c5.col === plain) && current[plain] ? current[plain] : "";
+    const cm2 = changed2.some((c5) => c5.col === "client_message");
+    return /* @__PURE__ */ u4(S2, { children: [
+      conflict ? /* @__PURE__ */ u4(S2, { children: [
+        /* @__PURE__ */ u4("div", { class: "pk-dl", children: "This proposal and the tracker disagree" }),
+        /* @__PURE__ */ u4(ConflictBlock, { rec })
+      ] }) : null,
+      diffs.map((c5) => /* @__PURE__ */ u4(TextDiff, { label: irLabel(c5.col), was: c5.was, now: c5.now }, c5.col)),
+      cm2 ? /* @__PURE__ */ u4("div", { class: "pk-dl", children: "The client messaging changes (its wording is not shown here)" }) : null,
+      shownPlain ? /* @__PURE__ */ u4(S2, { children: [
+        /* @__PURE__ */ u4("div", { class: "pk-dl", children: irLabel(plain) }),
+        /* @__PURE__ */ u4("div", { class: "pk-updtext", children: String(shownPlain) })
+      ] }) : null,
+      /* @__PURE__ */ u4("div", { class: "pk-note", id: "pkUpdNote", role: "status", children: /* @__PURE__ */ u4(NoteWords, { id: id2, title, changed: changed2 }) })
+    ] });
+  }
+  function NoteWords({ id: id2, title, changed: changed2 }) {
+    const what = [id2, title].filter(Boolean).join(" · ");
+    if (!changed2.length) return /* @__PURE__ */ u4(S2, { children: irNoteText(id2, title, changed2) });
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4("b", { children: "What changes if you approve" }),
+      ": ",
+      what,
+      ": ",
+      changed2.map((c5, i5) => {
+        const p6 = irPhrase(c5);
+        return /* @__PURE__ */ u4(S2, { children: [
+          i5 ? " and " : "",
+          p6.text ? p6.label : /* @__PURE__ */ u4(S2, { children: [
+            p6.label,
+            " ",
+            /* @__PURE__ */ u4("b", { children: p6.delta })
+          ] })
+        ] });
+      }),
+      ". The rest of the item stays as it is."
+    ] });
+  }
+  function LatestWas({ was, changed: changed2 }) {
+    return changed2 ? /* @__PURE__ */ u4("div", { class: "updiff", children: /* @__PURE__ */ u4("div", { class: "old", children: [
+      /* @__PURE__ */ u4("span", { class: "icsub", children: "Now" }),
+      " ",
+      was == null || was === "" ? /* @__PURE__ */ u4("i", { children: "not set" }) : /* @__PURE__ */ u4("s", { children: String(was) })
+    ] }) }) : null;
+  }
+  function Last({ id: id2, at: at2 }) {
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4("div", { class: "pk-dl", children: [
+        "Last updated ",
+        at2 ? fd(at2) : "—"
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "pk-dl pk-updact", children: [
+        "Activity on ",
+        id2
+      ] })
+    ] });
+  }
+  function drawUpdateBody(host2, props) {
+    R(props ? /* @__PURE__ */ u4(UpdateBody, { ...props }) : null, host2);
+  }
+  function drawLatestWas(host2, props) {
+    R(props ? /* @__PURE__ */ u4(LatestWas, { ...props }) : null, host2);
+  }
+  function drawLast(host2, props) {
+    R(props ? /* @__PURE__ */ u4(Last, { ...props }) : null, host2);
+  }
+
   // core/instant.js
   var INFLIGHT = /* @__PURE__ */ new Map();
   var RECORD_KINDS = ["actions", "raid", "decisions"];
@@ -60325,10 +60695,143 @@ ${d5.text}`);
       snack("Ask Claude to change a file change; approve or reject it here");
       return;
     }
+    if (r4.kind === "update") {
+      const u5 = updOpen(r4);
+      if (u5) {
+        shared.CUR = { mode: "proposal", k: u5.table, n: n4, draft: u5.draft, upd: u5.upd };
+        shared.EDITING = true;
+        drawPanel();
+        $("#panel").classList.add("on");
+        return;
+      }
+    }
     shared.CUR = { mode: "proposal", k: r4.kind, n: n4, draft: Object.assign({ p: r4.p }, r4.rec) };
     shared.EDITING = true;
     drawPanel();
     $("#panel").classList.add("on");
+  }
+  var updPeekable = (r4) => {
+    const rec = r4 && r4.rec || {};
+    return PKK.includes(rec.table) && !!REC(rec.table, rec.target) && (rec.changes || []).some((c5) => c5.col);
+  };
+  function updOpen(r4) {
+    const rec = r4.rec || {}, t47 = rec.table, id2 = rec.target, x5 = PKK.includes(t47) ? REC(t47, id2) : null;
+    if (!x5) {
+      if (PKK.includes(t47)) snack(`${id2} is no longer in the tracker: its change is shown in the old form`);
+      return null;
+    }
+    const cols = (rec.changes || []).filter((c5) => c5.col);
+    if (!cols.length) return null;
+    const live = { ...x5 }, liveDb = toDb(t47, live), changes = Object.fromEntries(cols.map((c5) => [c5.col, c5.to])), draft = { ...live };
+    for (const col of [...EDITABLE[t47] || []]) if (col in changes && UI[t47][col]) draft[UI[t47][col]] = changes[col] ?? "";
+    return { table: t47, draft, upd: { table: t47, id: id2, live, liveDb, changes, opened: toDb(t47, draft) } };
+  }
+  function updModel() {
+    const u5 = shared.CUR.upd, x5 = shared.CUR.draft, now = irNowRow(u5.table, u5.liveDb, u5.changes, toDb(u5.table, x5));
+    const list = irUpdateList(u5.liveDb, now, Object.keys(u5.changes));
+    return { u: u5, x: x5, now, list, changed: irChanged(list) };
+  }
+  function pkUpdMount() {
+    if ($("#pkUpd")) return;
+    addHTML($("#pkNote"), "afterend", html`<div id="pkUpd"></div>`);
+    addHTML($(".pk-dlrow"), "beforebegin", html`<div id="pkUpdWas"></div>`);
+    addHTML($("#pkDesc"), "afterend", html`<div id="pkUpdLast"></div>`);
+  }
+  function pkUpdReset(on2) {
+    if (on2) pkUpdMount();
+    const t47 = $("#pkTitle"), ed3 = t47.cxed && t47.cxed.editor;
+    if (ed3 && ed3.isEditable === on2) ed3.setEditable(!on2, false);
+    if (on2) t47.setAttribute("aria-readonly", "true");
+    else t47.removeAttribute("aria-readonly");
+    const a5 = on2 && shared.CUR.k === "actions";
+    $(".pk-dlrow").hidden = on2 && !a5;
+    $("#pkDesc").hidden = on2 && !a5;
+    const det = $("#pkDetT")?.closest("section");
+    if (det) det.hidden = on2;
+    $("#pkPSaveA").hidden = on2 && isConflict(pkRev());
+    $("#pkDesc").classList.toggle("updnew", false);
+    if (!on2 && $("#pkUpd")) {
+      drawUpdateBody($("#pkUpd"), null);
+      drawLatestWas($("#pkUpdWas"), null);
+      drawLast($("#pkUpdLast"), null);
+    }
+  }
+  function updDraw(x5, k5, r4) {
+    const { u: u5, now, list } = updModel(), t47 = u5.table;
+    putHTML($("#pkId"), html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u5.id}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}`);
+    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>`);
+    $("#pkPropEnd").textContent = "";
+    const show = (col, v5) => col === "project" ? v5 ? pName(v5) || v5 : "—" : col === "owner" || col === "made_by" ? pkWho(v5) || "—" : col === "milestone" ? v5 ? msName(v5) : "—" : irWord(col, v5);
+    const { row1, row2 } = updateChips(t47, list, now, show);
+    $("#pkProps").replaceChildren(...updateChipNodes(row1));
+    $("#pkProps2").replaceChildren(...updateChipNodes(row2));
+    drawUpdateBody($("#pkUpd"), { id: u5.id, title: u5.live.t || "", table: t47, list, rec: r4.rec, conflict: isConflict(r4), current: u5.liveDb });
+    const lc2 = list.find((c5) => c5.col === "latest_update"), lat = !!lc2 && !lc2.same;
+    drawLatestWas($("#pkUpdWas"), t47 === "actions" ? { was: u5.liveDb.latest_update, changed: lat } : null);
+    if (t47 === "actions") {
+      $("#pkDescL").textContent = lat ? "New latest update" : "Latest update";
+      $("#pkDesc").classList.toggle("updnew", lat);
+    }
+    drawLast($("#pkUpdLast"), { id: u5.id, at: u5.live.upd_at || "" });
+    updFeed();
+  }
+  function updFeed() {
+    const { u: u5, changed: changed2 } = updModel(), r4 = pkRev(), tab = PK.tab || "all";
+    if (!r4 || !$("#pkFeed")) return;
+    const items2 = [...feedLines(pkHistory(u5.id), (ch2) => /^created\b/.test(ch2) ? "src" : ch2.toLowerCase().startsWith(pkUpdLabel(u5.table) + ":") ? "upd" : "act"), { type: "src", who: "Source", html: `<div class="pk-src">${srcHTML(r4.src)}</div>`, when: "" }];
+    const pend = changed2.length && (tab === "all" || tab === "act") ? html`<div class="pk-fe pending" data-t="act"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>If approved</b> · ${irIfApproved(changed2)}</div></div>` : html``;
+    putHTML($("#pkFeed"), html`${pend}${raw(feedListHtml(items2, tab))}`);
+  }
+  async function updSave(approve) {
+    const u5 = shared.CUR.upd, r4 = pkRev(), x5 = shared.CUR.draft;
+    if (!r4) return;
+    const plan = irSaveChanges(u5.table, u5.changes, u5.liveDb, u5.opened, toDb(u5.table, x5));
+    if ("error" in plan) {
+      pkNote(plan.error);
+      return;
+    }
+    if (!plan.edited.length) {
+      closePanel();
+      if (approve) decide(r4.n, "approved", true);
+      else snack("Nothing was changed");
+      return;
+    }
+    if (!await needVault()) return;
+    let fin = null;
+    try {
+      await editProposal(r4.file, (data) => {
+        const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
+        if (!it2 || it2.applied) throw new Error("that proposal has already been applied");
+        const m5 = irMergeEdits(it2.changes || {}, plan);
+        if ("error" in m5) throw new Error(m5.error);
+        const cols2 = Object.keys(m5.changes).sort((a5, b5) => (a5 === "status" ? -1 : 0) - (b5 === "status" ? -1 : 0));
+        fin = Object.fromEntries(cols2.map((c5) => [c5, m5.changes[c5]]));
+        it2.changes = fin;
+        it2.edited_in = "dashboard";
+        if (approve) {
+          it2.decision = "approved";
+          it2.decided_in = "dashboard";
+        }
+      });
+    } catch (e4) {
+      snack("Not saved: " + e4.message);
+      return;
+    }
+    const was = r4.rec.changes || [], cols = Object.keys(fin);
+    r4.rec.changes = cols.map((c5) => ({ field: irLabel(c5).toLowerCase(), col: c5, from: u5.liveDb[c5] ?? null, to: fin[c5] }));
+    const f5 = r4.rec.changes[0];
+    r4.rec.field = f5.col;
+    r4.rec.from = f5.from;
+    r4.rec.to = f5.to;
+    if (was.length && String(r4.rec.t || "").startsWith(u5.id + ":") && !("why" in r4.rec)) r4.rec.t = `${u5.id}: ${irLineParts(r4.rec.changes).join("; ")}`;
+    r4.edited = true;
+    if ("hold" in r4) r4.hold = irHold(r4);
+    closePanel();
+    if (approve) decide(r4.n, "approved", true);
+    else {
+      refreshAll();
+      snack(`Proposal updated — still waiting for review`);
+    }
   }
   function openProject(code, what) {
     if (curGuard(() => openProject(code, what))) return;
@@ -60971,6 +61474,7 @@ ${d5.text}`);
       pkNote("");
     }
     const a5 = document.activeElement, af2 = !fresh && a5 && a5.closest && a5.closest("#panel [data-pkp]") ? a5.dataset.pkp : null;
+    pkUpdReset(!!shared.CUR.upd);
     pkDrawId(x5, k5);
     pkDrawProps(x5, k5);
     pkDrawText(x5, k5);
@@ -61772,6 +62276,10 @@ ${d5.text}`);
       id: "pkTabs",
       wrap: true
     });
+    if (shared.CUR && shared.CUR.upd) {
+      updFeed();
+      return;
+    }
     putHTML($("#pkFeed"), raw(feedListHtml(pkFeedItems(x5, k5), tab)));
   }
   function bootPanel0171() {
@@ -61803,6 +62311,10 @@ ${d5.text}`);
     }
     const r4 = pkRev();
     if (!r4) return;
+    if (shared.CUR.upd) {
+      updDraw(x5, k5, r4);
+      return;
+    }
     putHTML($("#pkId"), html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}${k5 === "raid" ? html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x5.type ?? ""}" data-tip="Type">${x5.type ?? ""}${raw(ic("chevdown"))}</button>` : ""}`);
     putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x5.p ? "" : html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r4) && !r4.done ? raw(llNoteHtml(r4)) : ""}${raw(rtNoteHtml(r4))}`);
     const sig = learnable(r4), was = $("#f_learn")?.checked;
@@ -61817,6 +62329,10 @@ ${d5.text}`);
       const a5 = document.activeElement;
       if (a5 && a5.matches && a5.matches("#panel [data-pkf][contenteditable]")) a5.blur();
       await shared.PKQ;
+      if (shared.CUR.upd) {
+        await updSave(approve);
+        return;
+      }
       if (PK.pc) {
         pkNote(PKMSGNEED(PK.pc.k) + " Or turn Client-visible off.");
         return;
@@ -62544,7 +63060,7 @@ ${d5.text}`);
   }
   function pkDrPlace(x5, k5) {
     $("#pkDescDr")?.replaceChildren();
-    PKDRBTN.flatMap((fn2) => fn2(x5, k5, shared.CUR.mode) || []).forEach((b5) => {
+    PKDRBTN.flatMap((fn2) => fn2(x5, k5, shared.CUR.upd ? "update" : shared.CUR.mode) || []).forEach((b5) => {
       const btn = draftBtn(b5.kind, b5.word, b5.tip, `data-drf="${b5.f}"`);
       if (["upd", "resp", "why", "t"].includes(b5.f)) {
         const l6 = b5.f === "t" ? $("#pkChips") : $("#pkDescDr");
@@ -62610,7 +63126,7 @@ ${d5.text}`);
     }
     const n4 = res.staged || 0, skip = (res.skipped || []).length;
     await reloadData();
-    snack(n4 ? `${plur(n4, "drafted update")} in Review, each approved on its own${skip ? `; ${skip} had nothing new` : ""}. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Review");
+    snack(n4 ? `${plur(n4, "drafted update")} in Intake, each approved on its own${skip ? `; ${skip} had nothing new` : ""}. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Intake");
   }
   function bootPanel0197() {
     Object.assign(DRAFTKIND, { update: "update", "update-bulk": "update" });
@@ -62728,7 +63244,7 @@ ${d5.text}`);
       }
       const n4 = res.staged || 0;
       await reloadData();
-      snack(n4 ? `${plur(n4, "client wording")} drafted, in Review: each is approved on its own. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Review");
+      snack(n4 ? `${plur(n4, "client wording")} drafted, in Intake: each is approved on its own. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Intake");
     });
   }
   var PKDRTHINK = { resp: "response_action", why: "reasoning", opts: "options" };
@@ -74976,20 +75492,15 @@ ${d5.text}`);
   }
   var irDueWords = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
   var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
-  var irVal = (v5) => v5 == null || v5 === "" ? "—" : fd(String(v5));
+  var colOf = (field) => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action").replace(/^client_messaging$/, "client_message");
   function irChange(r4) {
     const x5 = r4.rec || {}, owner = (o5) => !o5 || o5 === "TBC" ? { t: "No owner", warn: true } : { t: o5 };
     if (r4.kind === "actions") return [owner(x5.o), { t: irDueWords(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
     if (r4.kind === "raid") return [owner(x5.o), { t: x5.imp && x5.lik ? `Impact ${x5.imp} · Likelihood ${x5.lik}` : "Impact and likelihood not set", warn: !(x5.imp && x5.lik) }, ...x5.due ? [{ t: irDueWords(x5.due) }] : []];
     if (r4.kind === "decisions") return [{ t: x5.by ? `Made by ${x5.by}` : "Made by not recorded", warn: !x5.by }, ...x5.date ? [{ t: fd(x5.date) }] : []];
     if (r4.kind === "update") {
-      const closing = x5.field === "status" && ["Closed", "Cancelled"].includes(String(x5.to)), verb = closing ? x5.to === "Cancelled" ? "Cancels" : "Closes" : "Updates";
-      const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field);
-      return [
-        { t: `${verb} ${x5.target || ""}`.trim() },
-        ...ch2.map((c5) => ({ t: `${String(c5.field).toLowerCase()} ${irVal(c5.from)} → ${irVal(c5.to)}` })),
-        ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []
-      ];
+      const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ col: x5.col || x5.field, field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field || c5.col).map((c5) => ({ col: c5.col || colOf(c5.field), from: c5.from, to: c5.to }));
+      return [{ t: irLineHead(irVerb(ch2), x5.table === "projects" ? "" : x5.target || "", x5.title || "") }, ...irLineParts(ch2).map((t47) => ({ t: t47 })), ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []];
     }
     return [];
   }
@@ -75022,21 +75533,6 @@ ${d5.text}`);
         link
       ] }) : null
     ] });
-  }
-  function ConflictBlock({ r: r4 }) {
-    const ch2 = r4.rec.changes && r4.rec.changes.length ? r4.rec.changes : r4.rec.field ? [{ field: r4.rec.field, from: r4.rec.from, to: r4.rec.to }] : [];
-    const v5 = (x5) => x5 == null || x5 === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x5)) ? fd(String(x5)) : String(x5);
-    return /* @__PURE__ */ u4("div", { class: "cfvs", children: ch2.length ? ch2.map((c5) => /* @__PURE__ */ u4("div", { children: [
-      /* @__PURE__ */ u4("span", { class: "cff", children: c5.field }),
-      /* @__PURE__ */ u4("span", { class: "cfnow", children: [
-        "Now: ",
-        /* @__PURE__ */ u4("b", { children: v5(c5.from) })
-      ] }),
-      /* @__PURE__ */ u4("span", { class: "cfnew", children: [
-        "This one: ",
-        /* @__PURE__ */ u4("b", { children: v5(c5.to) })
-      ] })
-    ] })) : /* @__PURE__ */ u4("div", { class: "sub", children: "Changed in the tracker after this was proposed." }) });
   }
   function WeekendNote({ r: r4 }) {
     const f5 = WKRVF[
@@ -75072,7 +75568,7 @@ ${d5.text}`);
     if (!r4 || r4.done || !PEEKABLE.includes(r4.kind) && r4.kind !== "draft") return;
     shared.PKSRC = {
       view: "intake-review",
-      order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter((t47) => ["actions", "raid", "decisions"].includes(t47.getAttribute("data-kind") || "")).map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
+      order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter((t47) => ["actions", "raid", "decisions"].includes(t47.getAttribute("data-kind") || "") || t47.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t47.getAttribute("data-irn") || 0)))).map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
       step: (o5) => {
         irPeek.value = o5.n;
         openProposal(o5.n);
@@ -75149,7 +75645,7 @@ ${d5.text}`);
                 r4.drafted === "client" ? "Drafted wording" : "Drafted"
               ] })
             ] }) : null,
-            conflict ? /* @__PURE__ */ u4(ConflictBlock, { r: r4 }) : null,
+            conflict ? /* @__PURE__ */ u4(ConflictBlock, { rec: r4.rec }) : null,
             /* @__PURE__ */ u4("div", { class: "icchg", "data-tip": tip || void 0, children: [
               /* @__PURE__ */ u4("span", { class: "ickind", children: irPill(r4) }),
               parts.map((p6) => /* @__PURE__ */ u4(S2, { children: [
@@ -77331,6 +77827,7 @@ ${d5.text}`);
         "DayMeetings",
         "Decisions",
         "Dialog",
+        "EDITABLE",
         "ED_PROFILES",
         "ED_SLASH",
         "EVS",
@@ -77340,6 +77837,7 @@ ${d5.text}`);
         "ExportSave",
         "FDEFS",
         "FF",
+        "FIELD",
         "FILES",
         "FOPEN",
         "FX",
@@ -77417,6 +77915,7 @@ ${d5.text}`);
         "SETSECTIONS",
         "SKEY",
         "SORT",
+        "STATUSES",
         "SU",
         "SWEPT",
         "SafeHTML",
@@ -77437,6 +77936,7 @@ ${d5.text}`);
         "TextEditor",
         "ToDecide",
         "Toast",
+        "UI",
         "VIPS",
         "WARNS",
         "WEEKSTART",
@@ -77667,6 +78167,7 @@ ${d5.text}`);
         "irAsk",
         "irBulk",
         "irBusy",
+        "irChanged",
         "irChecking",
         "irChooseKind",
         "irCounts",
@@ -77680,25 +78181,33 @@ ${d5.text}`);
         "irFolded",
         "irGroupsShown",
         "irHold",
+        "irIfApproved",
         "irIsFolded",
         "irKeepOpen",
         "irKindOf",
         "irLeftOut",
+        "irLineHead",
+        "irLineParts",
         "irLive",
         "irLiveCounts",
+        "irMergeEdits",
         "irMissing",
         "irModel",
         "irNameOk",
         "irNotNeeded",
+        "irNoteText",
         "irNotes",
+        "irNowRow",
         "irOpen",
         "irPeek",
+        "irPhrase",
         "irPickFiles",
         "irProcess",
         "irProcessById",
         "irQuery",
         "irReady",
         "irRefreshing",
+        "irSaveChanges",
         "irSel",
         "irSetChecking",
         "irSetView",
@@ -77706,7 +78215,10 @@ ${d5.text}`);
         "irStageClick",
         "irTick",
         "irToggle",
+        "irUpdateList",
+        "irVerb",
         "irViewNorm",
+        "irWord",
         "isMe",
         "isMin",
         "isNotePath",
@@ -78051,6 +78563,7 @@ ${d5.text}`);
         "undoWords",
         "unescHtml",
         "updReview",
+        "updSave",
         "uploadClientLogo",
         "validate",
         "viaServer",

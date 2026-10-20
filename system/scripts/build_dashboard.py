@@ -806,23 +806,30 @@ def new_decision_record(v):
 NEW_RECORDS = {"actions": new_action_record, "raid": new_raid_record, "decisions": new_decision_record}
 
 
+def _target_row(con, table, item_id):
+    """The row an update or a change is about, as it is now ({} when it is gone or not a table the page reads)."""
+    if not item_id or table not in ("actions", "raid", "decisions", "milestones", "projects"):
+        return {}
+    keycol = "code" if table == "projects" else "id"
+    found = rows(con, f"SELECT * FROM {table} WHERE {keycol} = ?", item_id)
+    return found[0] if found else {}
+
+
 def update_record(con, item):
     """An update (or any other item) with what it changes, before → after, from the row as it is now."""
     table = item.get("table")
     what, text, _, _ = review.describe(item)
     changes = item.get("changes") or {}
     field = next(iter(changes), "")
-    before = {}
-    if item.get("id") and table in ("actions", "raid", "decisions", "milestones", "projects"):
-        keycol = "code" if table == "projects" else "id"
-        found = rows(con, f"SELECT * FROM {table} WHERE {keycol} = ?", item["id"])
-        before = found[0] if found else {}
+    before = _target_row(con, table, item.get("id"))
     current = before.get(field) if field else None
     if item.get("op") == "update" and item.get("table") in ("actions", "raid", "decisions") and "why" in item:   # BL-65
         text = review.update_parts(item)[0]          # the item; its changes are listed as before → after
+    # ===== #232-B (B1): the peek of an update proposal reads the target's table and each change's database column ("col") =====
     return {"t": text if item.get("op") != "new" else f"{what}: {text}", "target": item.get("id"),
+            "table": table, "title": before.get(TEXT_FIELD.get(table, "")) or "",
             "field": field, "from": current, "to": changes.get(field),
-            "changes": [{"field": FIELD_LABELS.get(k, k.replace("_", " ")), "from": before.get(k), "to": v}
+            "changes": [{"field": FIELD_LABELS.get(k, k.replace("_", " ")), "col": k, "from": before.get(k), "to": v}
                         for k, v in changes.items()] if item.get("op") != "new" else [],
             **({"why": item.get("why") or ""} if "why" in item else {})}
 
