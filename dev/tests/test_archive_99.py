@@ -302,6 +302,12 @@ class MoveRules(OneDriveCase):
         touch(self.root / "_Portfolio" / "_Archive" / f)
         self.assertIsNone(self.problem(f"projects/_portfolio/_Archive/{f}", a, "reports_back"))
 
+    def test_the_permission_refusal_names_the_folder_that_was_hit(self):
+        for name in ALL + ("99 archive",):
+            why = self.py("import permissions; print(json.dumps(permissions._path_rule_refused('Write', 'projects/Example Programme/%s/**')))" % name)
+            self.assertIn(f"{name} is never read or written by creaite", why or "", name)
+        self.assertIsNone(self.py("import permissions; print(json.dumps(permissions._path_rule_refused('Write', 'projects/Example Programme/99 Archivement/**')))"))
+
     def test_the_rename_kind_is_gone(self):
         touch(self.eng("ABC", "zz Archive", "x.md"))
         for new in ("99 Archive", "_Archive"):
