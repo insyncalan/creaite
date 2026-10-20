@@ -7,13 +7,20 @@ minutes_record.change and review.approve_minutes on test_minutes_approve's stage
   on a kept line = `restore`; a cross on a kept line = `restore` then `remove`;
 - nothing ticked (#261, "take no items"): every item rejected, and the minutes are still filed with no work items;
 - a mix: only the ticked items are written, in one apply;
+- track.js itself (TrackJs, with Node): its defaults (the plan's "own" group, updates among them, start with neither; new
+  actions and issues ticked), what its reconcileOps sends through the real minutes_record.change, and that neither on an
+  update approved one by one leaves it in Review instead of rejecting it (review H2);
 - Approve, Undo, Approve again (#268's bug): Undo leaves the minutes exactly as they were before Approve (the rows the approve
   took out or kept as lines come back as item rows, with their items pending and no "Removed in the minutes"), so the second
   Approve gives the same result as the first: nothing leaks to Review.
 """
+import json
 import os
+import shutil
+import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from test_minutes_approve import ABC, FILED, Base  # noqa: E402
@@ -101,6 +108,67 @@ class TrackOps(Base):
         self.assertEqual(self.view()["settle"], [])
         self.assertTrue(any(x.get("ref") == "@4" for x in self.rows(self.doc(), "decisions")), "the decision is an item row again")
 
+
+
+TRACK_JS = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/minutes/track.js").as_uri()
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class TrackJs(Base):
+    """components/minutes/track.js run for real (Node) on the record and plan the view gets, its ops sent to the server."""
+    def view(self):
+        return self.js("import minutes_record\n"
+                       f"r = minutes_record.view(file={self.name!r})\nprint(json.dumps({{'doc': r['doc'], 'plan': r['plan']['items']}}))")
+
+    def track(self, expr, choices=None):
+        v = self.view()
+        script = (f"import * as T from {json.dumps(TRACK_JS)};\n"
+                  f"let doc = {json.dumps(v['doc'])}; const plan = {json.dumps(v['plan'])};\n"
+                  f"for (const [n, t] of Object.entries({json.dumps(choices or {})})) doc = T.setTrack(doc, Number(n), t);\n"
+                  f"console.log(JSON.stringify({expr}));")
+        r = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    def states(self, choices=None):
+        return {str(k): t for k, t in self.track("Object.fromEntries(T.trackRows(doc).map(r => [r.n, T.trackOf(doc, r, plan)]))", choices).items()}
+
+    def test_the_defaults_follow_the_plan(self):
+        self.assertEqual(self.states(), {"1": "y", "2": "y", "3": "y", "4": "", "5": "", "6": "", "7": ""},
+                         "a new action, a new issue and an update in the group ticked; a new decision, a new risk, a closure and a "
+                         "decision recorded (each approved one by one) neither")
+        self.assertEqual(self.track("T.defaultTrack('raid', {op: 'new', values: {type: 'Issue'}})"), "y", "a new issue starts ticked")
+        self.assertEqual(self.track("T.defaultTrack('raid', {op: 'new', values: {type: 'Risk'}})"), "")
+        self.assertEqual(self.track("T.defaultTrack('actions', {op: 'update'}, 'own')"), "", "anything approved one by one starts neither")
+        self.assertEqual(self.track("T.defaultTrack('actions', {op: 'new'}, 'group')"), "y")
+
+    def test_neither_on_an_update_decided_one_by_one_leaves_it_in_review(self):
+        self.assertEqual(self.track("T.reconcileOps(doc, plan)"),
+                         [{"op": "remove", "n": 4, "keep_line": True}, {"op": "remove", "n": 5, "keep_line": True}],
+                         "nothing for the closure (6) and the decision recorded (7)")
+        self.assertEqual(self.track("T.trackSummary(T.trackCounts(doc, plan))"),
+                         "3 work items to register · 2 kept in the minutes only · 2 left in Review", "counts only what will register")
+        for op in self.track("T.reconcileOps(doc, plan)"):
+            self.assertTrue(self.change(op)["ok"], op)
+        r = self.approve(group=True, own=self.track("T.ownTicked(doc, plan)"))
+        self.assertTrue(r["ok"], r)
+        self.assertEqual((r["approved"], sorted(r["waiting"])), (3, [6, 7]))
+        items = {i["n"]: i for i in self.data()["items"]}
+        self.assertEqual((items[6]["decision"], items[7]["decision"]), ("pending", "pending"), "not rejected: still in Review")
+
+    def test_a_ticked_closure_is_approved_with_the_minutes(self):
+        self.assertEqual(self.track("T.ownTicked(doc, plan)", {"6": "y"}), [6])
+        self.assertEqual(self.track("T.trackCounts(doc, plan)", {"6": "y"})["y"], 4)
+
+    def test_a_kept_line_ticked_is_restored_and_crossed_is_restored_then_removed(self):
+        self.assertTrue(self.change({"op": "remove", "n": 4, "keep_line": True})["ok"])
+        self.assertTrue(self.change({"op": "remove", "n": 2, "keep_line": True})["ok"])
+        ops = self.track("T.reconcileOps(doc, plan)", {"4": "y", "2": "n", "5": "y"})
+        self.assertEqual(ops, [{"op": "restore", "n": 4}, {"op": "restore", "n": 2}, {"op": "remove", "n": 2, "keep_line": False}])
+        self.assertEqual(self.track("T.reconcileOps(doc, plan)", {"4": "", "2": "", "5": "y"}), [], "kept lines left as they are")
+        for op in ops:
+            self.assertTrue(self.change(op)["ok"], op)
+        self.assertEqual(self.track("T.reconcileOps(doc, plan)", {"4": "y", "2": "n", "5": "y"}), [], "in line now")
 
 
 class RaidWorkstream(Base):
