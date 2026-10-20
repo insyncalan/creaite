@@ -40,8 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))      # dev/tests
 import hcbase
-import measure
-from hcbase import NOTES, SCREENS, HandcheckCase, db_rows
+from hcbase import NOTES, SCREENS, HandcheckCase
 from test_v240 import resolve, run_named                      # Team Stark's wrapper, as the 2.4.0 checks call it
 
 FORCE = os.environ.get("CREAITE_HC_260_FORCE") == "1"        # run a direct check although its feature is not in the vault
@@ -63,13 +62,7 @@ NOTES.update({
     20: "struck: Q9, deferred to 2.6.1 (the plan's Q9); the locked mockup draws the result, the branch does not",
     31: "the card's words and place are scripted; the real Outlook access is check 41",
     32: "the stand-in answers the access check; a real Check against Microsoft 365 is live only (41)",
-    40: "waits for Alan to apply dev/proposals/draft-delivery/live_server.diff (guarded) and move test_draft_route.py to dev/tests",
     41: "live only: Microsoft 365",
-    49: "FAIL-expected on 3014848d: C closes the cursor row and takes the key from Draft email (BL-298) whenever the peek is open; "
-        "waits for Alan's decision on which binding",
-    51: "FAIL-expected on 3014848d (review MEDIUM 2 and 3): the letter keys do not check for an open dialog or menu or for key repeat",
-    53: "FAIL-expected on 3014848d (review LOW 4): a wrong-typed value in creaite-listgrp stops the Work page drawing",
-    54: "waits for v26-work-items-d (the history) and its guarded route (dev/proposals/work-item-history/live_server.diff)",
     59: "two tabs are scripted by the builder's own test (a second page in the same browser)",
 })
 
