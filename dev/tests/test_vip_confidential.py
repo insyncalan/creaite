@@ -100,6 +100,41 @@ class ConfidentialRecordTests(unittest.TestCase):
         self.assertEqual((a["gist"], a["marker"], a.get("confidential")), (GIST, "confidential", True))
 
 
+class SensitivityVariantTests(unittest.TestCase):
+    """#265 review round 2: a sensitivity written as a variant ("Private ", "Strictly Confidential") is read as it is meant, so the
+    card is neutral or carries the Sensitive label and the client-visible block; Graph's own values behave as before."""
+
+    def setUp(self):
+        self.v = vault()
+        self.addCleanup(self.v.cleanup)
+
+    def test_a_private_variant_keeps_only_the_neutral_line(self):
+        for variant in ("Private ", "PERSONAL", "Priv\u200bate"):
+            with self.subTest(variant):
+                record(self.v, [{**CONF, "sensitivity": variant}], "2026-10-08 09:30")
+                a = vip_file(self.v)["alerts"][0]
+                self.assertEqual((a["summary"], a["candidates"], a["marker"]), ("private conversation", [], "private"))
+                self.assertNotIn("confidential", a)
+
+    def test_a_confidential_variant_is_confidential_and_its_item_is_blocked_from_clients(self):
+        for variant in ("Strictly Confidential", "restricted", "Confidential "):
+            with self.subTest(variant):
+                v = vault()                                    # a made item is made once: a vault for each variant
+                self.addCleanup(v.cleanup)
+                record(v, [{**CONF, "sensitivity": variant}], "2026-10-08 09:30")
+                a = vip_file(v)["alerts"][0]
+                self.assertEqual((a["marker"], a.get("confidential"), a["attachments"]), ("confidential", True, []))
+                made = make(v, a["id"], 1, {"client_visible": 1, "client_message": "x"})["values"]
+                self.assertEqual((made["client_visible"], made["labels"]), (0, ["Sensitive"]))
+                self.assertNotIn("client_message", made)
+
+    def test_graphs_own_values_and_a_missing_one_are_as_before(self):
+        record(self.v, [{**CHAT, "sensitivity": "normal"}], "2026-10-08 09:30")
+        a = vip_file(self.v)["alerts"][0]
+        self.assertIsNone(a["marker"])
+        self.assertNotIn("confidential", a)
+
+
 class ConfidentialClientOutputTests(unittest.TestCase):
     """Nothing from a confidential alert reaches client output: a made item is not client-visible and is labelled Sensitive;
     the client report and the client-safe one-pager for the project never carry the summary or the item."""

@@ -37,7 +37,7 @@ HOSTS = re.compile(
     r"livestorm\.co|aka\.ms|bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|is\.gd|rb\.gy|cutt\.ly|tiny\.cc|lnkd\.in|buff\.ly|"
     r"rebrand\.ly|shorturl\.at|s\.id|v\.gd|t\.ly|bl\.ink)(?![\w-])", re.I)
 SCHEME = re.compile(r"(?<![\w-])(?:tel|sip|sips|callto|msteams|zoommtg|zoomus|webex|webexteams|skype|facetime|gotomeeting):", re.I)
-URL = re.compile(r"(?:\b[a-z][a-z0-9+.-]{1,12}://|\bwww\.)\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,24}(?::\d+)?/\S*", re.I)
+URL = re.compile(r"(?:\b[a-z][a-z0-9+.-]{1,12}://|\bwww\.)\S+|\b(?:[a-z0-9-]{1,63}\.){1,8}[a-z]{2,24}(?::\d+)?/\S*", re.I)
 KEYED = re.compile(r"[?&;#/](?:pwd|passcode|passwd|pass|password|pin|tk|token|key|secret|sig|signature|auth|code|access_token|otp|"
                    r"mtid|meetingid|meetingnumber|conferenceid|confid|jid)=", re.I)
 JOINPATH = re.compile(r"/(?:j|join|joinme|meet|meeting|meetings|webinar|conference|room|rooms|call|invite|video)(?:[/?#]|$)|/\d{9,}",
@@ -46,21 +46,33 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
                       r"click\s+(?:here\s+)?to)\b", re.I)
 
 # ---- keys: passcodes, PINs, meeting IDs, dial-in numbers ----
-_VAL = r"(?:\s*(?:[:=#\-–]\s*\S|\bis\b\s*\S)|\s+(?:no\.?\s*)?\S*\d)"            # a label followed by a value
-_EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|teilnehmer\s*codes?|"
-               r"code\s+secret|code\s+d.acc[eè]s|c[oó]digo\s+de\s+(?:acceso|acesso|reuni[oó]n)|codice\s+di\s+accesso|"
-               r"toegangs\s*codes?|(?:access|participant|conference|attendee|host|meeting|moderator|presenter|guest|security|entry|"
+_VAL = r"(?:\s*(?:[:=#\-\u2013]\s*\S|\bis\b\s*\S)|\s+(?:no\.?\s*)?\S*\d)"            # a label followed by a value
+_EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
+               r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
+               r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
+               r"codice\s+(?:di\s+(?:accesso|partecipazione)|riunione)|password\s+(?:della\s+)?riunione|"
+               r"one[- ]time[\s-]*(?:pass)?codes?|conference\s+bridge|"
+               r"(?:host|moderator|presenter|security|entry|access|meeting|participant|attendee|guest)[\s-]*keys?|"
+               r"(?:access|participant|conference|attendee|host|meeting|moderator|presenter|guest|security|entry|"
                r"dial[- ]?in|audio|phone|call[- ]?in|room|webinar|panell?ist|leader)[\s-]*(?:code|pin)s?")
-_WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[nñ]a|contrasena|senha|wachtwoord|"
-               r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|meeting\s*(?:id|number|no\.?)|"
-               r"(?:phone\s+)?conference\s+id|meeting\s+id")
+_WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
+               r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
+               r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
+_BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
-                    "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|비밀번호|пароль|код\\s+доступа|пин-код")
-LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|secret|codes?)(?![\w-]){_VAL}"
-                   rf"|(?:{_OTHER_ALPHABETS})", re.I)
+                    "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
+                    "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
+                    "идентификатор\\s+(?:конференции|встречи)|пин-код")
+LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
+                   rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
-DIAL = re.compile(r"\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
-                  r"[^\n]{0,60}\+?\(?\d[\d ()./-]{6,}", re.I)
+_PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
+DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
+                  r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
+                  r"[^\n]{0,60}\+?\(?\d[\d ()./-]{6,40}"
+                  rf"|(?<![\w-])(?:tel|telefon|phone|fon|ph|mobile|call)\.?\s*[:.]?\s*{_PH}"
+                  r"|(?<!\d)\d[\d ()./-]{5,40}\d\s*(?:ext\.?|extension|x|pause|;)\s*\d{3,}"
+                  r"|(?<![\w/])\+\d{1,3}[ .-]?\(?\d[\d ()./-]{6,40}\d", re.I)
 # BL-98: the Teams and Outlook joining boilerplate, one line at a time (the lines the keys above do not already catch)
 JOIN_LINE = re.compile(
     r"(microsoft teams (meeting|need help)|join (the meeting|on your computer|with a video conferencing|by phone|"
@@ -96,7 +108,7 @@ def _bad_url(url):
 
 def _views(text):
     """The skeleton, and the same with look-alike letters (a Cyrillic "а" for an "a") read as the Latin ones."""
-    s = skeleton(text)
+    s = skeleton(str(text if text is not None else "")[:LINE_MAX + 200])       # every test runs on a bounded text (timing)
     t = s.translate(confusables.TABLE)
     return [s, t] if t != s else [s]
 
@@ -124,28 +136,56 @@ def flagged(text):
 
 
 def scrub(text, limit):
-    """A title, place or organiser: join links taken out; the whole text dropped when a key or dial-in is left in it."""
-    t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), normal(text))
+    """A title, place or organiser: join links taken out; the whole text dropped when a key or dial-in is left in it. Only the
+    first LINE_MAX characters are looked at (and a field is kept far shorter)."""
+    t = normal(str(text if text is not None else "")[:LINE_MAX])
+    t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
     t = re.sub(r"\s+", " ", t).strip()
     return "" if is_secret(t) else t[:limit]
 
 
+_HREF = re.compile(r"""\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))""", re.I)
+_BLOCK = re.compile(r"<(script|style|head)\b", re.I)
+_ENDS = {k: re.compile(rf"</{k}\b[^<>]{{0,200}}>", re.I) for k in ("script", "style", "head")}
+
+
 def _anchor(m):
-    """<a href=…>text</a> as text, with the address beside it so a line can be judged by it (removed again after)."""
-    href = m.group(1) or m.group(2) or m.group(3) or ""
-    return f"{m.group(4)}{OPEN}{href}{CLOSE}" if href else m.group(4)
+    """<a href=…> as the address beside the link text, so a line can be judged by it (removed again after)."""
+    h = _HREF.search(m.group(1))
+    href = (h.group(1) or h.group(2) or h.group(3) or "") if h else ""
+    return f"{OPEN}{href}{CLOSE}" if href else ""
+
+
+def _strip_blocks(t):
+    """The text without its script, style and head blocks (one pass; a block never closed is left, its tags removed later)."""
+    out, i, dead = [], 0, set()
+    while True:
+        m = _BLOCK.search(t, i)
+        if not m:
+            break
+        tag = m.group(1).lower()
+        end = None if tag in dead else _ENDS[tag].search(t, m.end())
+        if end is None:
+            dead.add(tag)                      # no closing tag anywhere after: never look for it again
+            out.append(t[i:m.end()])
+            i = m.end()
+            continue
+        out.append(t[i:m.start()] + " ")
+        i = end.end()
+    return "".join(out) + t[i:]
 
 
 def plain_text(body):
-    """An invite body as text: HTML removed (inline tags without a gap, so "Pass<b>code</b>" is one word), entities decoded."""
+    """An invite body as text: HTML removed (inline tags without a gap, so "Pass<b>code</b>" is one word), entities decoded.
+    Every pattern here is bounded (no tag is searched past 2000 characters), so a crafted body cannot stall it."""
     t = normal(str(body or "")[:RAW_MAX])
     if re.search(r"<(html|body|div|p|br|span|table|a)\b", t, re.I):
-        t = re.sub(r"(?is)<(script|style|head)\b.*?</\1>", " ", t)
-        t = re.sub(r"(?is)<a\b[^>]*?\bhref\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s>]+))[^>]*>(.*?)</a\s*>", _anchor, t)
-        t = re.sub(r"(?i)<br\s*/?>|</(p|div|li|tr|h\d)>", "\n", t)
-        t = re.sub(r"(?i)<li\b[^>]*>", "\n- ", t)
-        t = re.sub(r"(?i)</?(span|b|i|u|em|strong|font|a|small|big|sup|sub|mark)\b[^>]*>", "", t)
-        t = re.sub(r"<[^>]+>", " ", t)
+        t = _strip_blocks(t)
+        t = re.sub(r"(?i)<a\b([^<>]{0,2000})>", _anchor, t)
+        t = re.sub(r"(?i)<br\s{0,20}/?>|</(p|div|li|tr|h\d)>", "\n", t)
+        t = re.sub(r"(?i)<li\b[^<>]{0,2000}>", "\n- ", t)
+        t = re.sub(r"(?i)</?(span|b|i|u|em|strong|font|a|small|big|sup|sub|mark)\b[^<>]{0,2000}>", "", t)
+        t = re.sub(r"<[^<>]{1,2000}>", " ", t)
     for _ in range(3):
         u = htmllib.unescape(t)
         if u == t:
@@ -164,19 +204,36 @@ def _pieces(line):
     return out + [line]
 
 
+def _lines(t):
+    """(line, tail): each line of the text, a very long one in pieces; a piece after the first carries the end of the one before
+    it, so a label cut from its value is still seen."""
+    for x in t.split("\n"):
+        tail = ""
+        for piece in _pieces(re.sub(r"[ \t]+", " ", x).strip()):
+            yield piece, tail
+            tail = piece[-60:] if piece else ""
+
+
+def _alone(line):
+    """Whether a dropped line is a label with no value (its value is on a later line)."""
+    return any(LABEL_ALONE.search(s) for s in _views(_MARK.sub(" ", line)))
+
+
 def invite_text(body):
-    """An invite body as plain text: HTML removed, every line with a join link or a key to the meeting dropped (and the line
-    after a label that stands alone), blank runs collapsed."""
+    """An invite body as plain text: HTML removed, every line with a join link or a key to the meeting dropped, and the next
+    line with text (up to two blank lines on) after a label that stands alone; blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, skip_next = [], False
-    for ln in (p for x in t.split("\n") for p in _pieces(re.sub(r"[ \t]+", " ", x).strip())):
-        if skip_next and ln:
-            skip_next = False
+    kept, waiting, blanks = [], False, 0
+    for ln, tail in _lines(t):
+        if waiting and not ln:
+            blanks += 1
+            waiting = blanks <= 2
+        elif waiting:
+            waiting = False                    # the value of a label that stood alone
             continue
-        if _drop_line(ln):
-            skip_next = any(LABEL_ALONE.search(s) for s in _views(_MARK.sub(" ", ln)))
+        if ln and (_drop_line(ln) or (tail and _drop_line(tail + " " + ln))):
+            waiting, blanks = _alone(ln), 0
             continue
-        skip_next = False
         kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
 
@@ -197,3 +254,38 @@ def sensitivity(ev):
     if v in ("", "normal", "none"):
         return "confidential" if _flag(ev.get("confidential")) else "normal"
     return "private" if ("private" in v or "personal" in v) else "confidential"
+
+
+def _clean_names(row):
+    """A saved row's attachment and attendee names with any that carry a join link or a key dropped."""
+    files = [f for f in (row.get("attachments") or []) if isinstance(f, str) and not flagged(f)]
+    people = []
+    for a in row.get("attendees") or []:
+        if not isinstance(a, dict):
+            continue
+        name = a.get("name") if isinstance(a.get("name"), str) and not flagged(a["name"]) else str(a.get("email") or "")
+        if name and not flagged(name):
+            people.append({**a, "name": name[:80]})
+    return files, people
+
+
+def clean_row(row):
+    """A meeting already in the saved calendar (written by an earlier version) put through today's cleaning: the sensitivity
+    read again (fails closed), the title, place and organiser scrubbed, the body cleaned of join links and keys, and names
+    that carry them dropped. A cleaned row cleans to itself."""
+    sens = sensitivity({"sensitivity": row.get("sensitivity"), "private": row.get("private")})
+    private = sens == "private"
+    out = {k: row[k] for k in ("id", "start", "end", "all_day") if k in row}
+    out.update(title="Busy" if private else scrub(row.get("title"), 140) or "Meeting", where="", private=private, organiser=False,
+               teams=bool(row.get("teams")) and sens != "confidential")
+    if sens == "confidential":
+        out["sensitivity"] = "confidential"
+    elif not private:
+        org = row.get("organiser")
+        out.update({k: v for k, v in row.items() if k not in out and k not in ("body", "attachments", "attendees")},
+                   where=scrub(row.get("where"), 80), sensitivity="normal",
+                   organiser=(scrub(org, 80) or False) if isinstance(org, str) else bool(org))
+        body = invite_text(row.get("body"))
+        files, people = _clean_names(row)
+        out.update({k: v for k, v in (("body", body), ("attachments", files), ("attendees", people)) if v})
+    return out

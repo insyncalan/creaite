@@ -14,6 +14,7 @@ All names, addresses and numbers are made up.
 """
 import json
 import sys
+import time
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
@@ -21,6 +22,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1] / "system" / "scripts"))
+import invite_clean  # noqa: E402
 import sweep  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
@@ -71,6 +73,30 @@ BODIES = {
     "cyrillic look-alike label": "P\u0430sscode: 4321",
     "cyrillic look-alike host": "https://z\u043e\u043em.us/j/1",
     "password": "Meeting password 7788",
+    "webinar id": "Webinar ID: 812 345 678",
+    "bare id": "ID: 812 345 678",
+    "hyphenated meeting-id": "Meeting-ID 812 345 678",
+    "passkey": "Passkey: tr0ub4",
+    "host key": "Host key 456789",
+    "key": "Key: tr0ub4dor",
+    "token": "Token: abcdef",
+    "otp": "OTP: 123456",
+    "access": "Access: 445566",
+    "conference bridge": "Conference bridge: 55512",
+    "italian": "Codice: 99887\nPassword riunione: abc",
+    "portuguese": "C\u00f3digo da reuni\u00e3o: 777",
+    "dutch": "Vergadercode: 1234",
+    "turkish": "\u015eifre: 1234\nToplant\u0131 kimli\u011fi: 812 345",
+    "russian": "\u041a\u043e\u0434 \u043a\u043e\u043d\u0444\u0435\u0440\u0435\u043d\u0446\u0438\u0438: 4444",
+    "japanese": "\u4f1a\u8b70\uff29\uff24: 812 345 678",
+    "korean": "\ud68c\uc758 \uc554\ud638: 1234",
+    "german tel with extension": "Tel.: +49 30 1234567 ext. 445566",
+    "number with pause": "0800 000 0000 pause 445566",
+    "number with extension": "+44 20 7946 0000 x 445566",
+    "international number": "+1 555 000 1111",
+    "label then blank lines": "Passcode:\n\nab12cd",
+    "label then two blank lines": "Passcode:\n\n\nab12cd",
+    "table with an empty row": "<table><tr><td>PIN</td></tr><tr><td></td></tr><tr><td>445566</td></tr></table>",
     "pwd": "Pwd: 7788",
     "pin and number": "PIN number 998877",
     "dial-in word": "Dial-in: +44 20 0000 0000",
@@ -82,7 +108,8 @@ BODIES = {
 BENIGN = ["Agenda: budget and the pilot plan", "Pinned items: three risks", "Code review of the supplier SOW",
           "Release 2.4 planning, see https://docs.example.test/plan/v2", "Passwords policy review",
           "Please read https://docs.example.test/a/b.pdf before", "Room 101", "Budget 2026 total 1,200,000 #3",
-          "Call Sam about the pilot", "Attendees: Jane Doe, Sam Lee"]
+          "Call Sam about the pilot", "Attendees: Jane Doe, Sam Lee", "Key takeaways: three risks",
+          "Review on 20.10.2026, 15 attendees expected", "Access to the building from 08:00"]
 
 
 def event(**kw):
@@ -131,6 +158,71 @@ class BodyAndFields(unittest.TestCase):
         self.assertNotIn("4321", json.dumps(row))
 
 
+    def test_a_label_cut_from_its_value_by_a_very_long_line_does_not_let_the_value_through(self):
+        """A line over the look-at limit is cut at a space; "Meeting" at the end of one piece and "ID 812 345" at the start of the
+        next must not let the value through, wherever the cut falls."""
+        for label in ("Meeting ID", "Passcode", "PIN", "Host key"):
+            for pad in range(1950, 2010, 4):
+                with self.subTest(label=label, pad=pad):
+                    line = "word " * (pad // 5) + label + " 812345678 end"
+                    self.assertNotIn("812345678", sweep.invite_text(line))
+
+    def test_a_cleaned_row_cleans_to_itself(self):
+        row = sweep.calendar_row(event(body="Agenda: budget\nPasscode: 4321", where="Room 2", attachments=["pack.pdf"]),
+                                 "09:00", "10:00", False)
+        self.assertEqual(invite_clean.clean_row({"id": "e", **row}), {"id": "e", **row})
+
+
+class Timing(unittest.TestCase):
+    """Round 2: a crafted invite cannot stall the calendar save. Every case is 60,000 characters (the body's look-at limit; a title
+    or name 20,000 and 60,000) and must finish well inside two seconds; the times are printed."""
+
+    N = 60000
+    BODIES = {
+        "unclosed a href": "<a href=" * (N // 8), "a repeated": "<a " * (N // 3), "li repeated": "<p><li " * (N // 7),
+        "script repeated": "<p><script " * (N // 11), "style then script": "<p><style>" + "<script " * (N // 8),
+        "one a href and text": "<a href=" + "x" * N, "spaces": "a" + " " * N, "zero-width": "a\u200b" * (N // 2),
+        "combining marks": "a" + "\u0301" * N, "nested tags": "<div><span>" * (N // 11), "digit run": "1" * N,
+        "digits and spaces": "1 " * (N // 2), "many %3F": "%3F" * (N // 3), "dotted": "a." * (N // 2),
+        "pass repeated": "pass " * (N // 5), "meeting repeated": "meeting " * (N // 8), "dial repeated": "dial 1 " * (N // 7),
+        "pin repeated": "pin " * (N // 4), "scheme repeated": "http://" * (N // 7), "at signs": "a@" * (N // 2),
+        "angle at": "<a@b>" * (N // 5), "hash digits": "123#" * (N // 4), "plus digits": "+1 " * (N // 3),
+        "entities": "&amp;" * (N // 5), "long label then digits": "Meeting ID " + "1" * N,
+        "tags with spaces": "<br " + " " * N, "unclosed comment": "<!--" * (N // 4), "html then long text": "<p>" + "a b " * (N // 4),
+    }
+    FIELDS = {"20k words": "a. " * 6666, "60k dots": "a." * (N // 2), "60k spaces": "x" + " " * N, "60k digits": "1" * N,
+              "60k words": "a.b " * (N // 4), "60k at signs": "a@" * (N // 2), "60k urls": "http://a.b/ " * (N // 12)}
+
+    def timed(self, name, fn, *args):
+        start = time.perf_counter()
+        fn(*args)
+        took = time.perf_counter() - start
+        print(f"  timing {name:28} {took:6.2f}s", file=sys.stderr)
+        self.assertLess(took, 2.0, f"{name} took {took:.1f}s")
+
+    def test_adversarial_bodies(self):
+        for name, body in self.BODIES.items():
+            with self.subTest(name):
+                self.timed("body: " + name, sweep.invite_text, body)
+
+    def test_adversarial_titles_places_and_names(self):
+        for name, text in self.FIELDS.items():
+            with self.subTest(name):
+                ev = event(title=text, where=text, organiser=text, attendees=[{"name": text, "email": text}], attachments=[text])
+                self.timed("event: " + name, sweep.calendar_row, ev, "09:00", "10:00", False)
+
+    def test_thousands_of_attendees_and_attachments(self):
+        ev = event(attendees=[{"name": f"Person {i}", "email": f"p{i}@example.test"} for i in range(20000)],
+                   attachments=[f"file {i}.pdf" for i in range(20000)])
+        rows = []
+        self.timed("20,000 attendees", lambda: rows.append(sweep.calendar_row(ev, "09:00", "10:00", False)))
+        self.assertLessEqual((len(rows[0]["attendees"]), len(rows[0]["attachments"])), (80, 40))
+
+    def test_a_whole_event_of_the_worst_cases(self):
+        ev = event(body=self.BODIES["unclosed a href"], title=self.FIELDS["60k dots"], where=self.FIELDS["60k digits"])
+        self.timed("whole event", sweep.calendar_row, ev, "09:00", "10:00", False)
+
+
 class Sensitivity(unittest.TestCase):
     """M2: the sensitivity fails closed."""
 
@@ -175,6 +267,20 @@ class Sensitivity(unittest.TestCase):
         ev = event(organiser_email="jane.doe@example.test")
         del ev["sensitivity"]
         self.assertEqual(sweep.calendar_row(ev, "09:00", "10:00", False)["where"], "Room 2")
+
+    def test_the_built_in_private_rule_and_the_followed_card_marker_read_variants(self):
+        rule = {"builtin": "private", "on": True}
+        for kind in ("mail", "teams", "calendar"):
+            for value, private in (("Private ", True), ("personal", True), ("Priv\u200bate", True), ("Strictly Confidential", False),
+                                   ("normal", False), (None, False), ("", False)):
+                with self.subTest(kind=kind, value=value):
+                    self.assertEqual(sweep.rule_matches(rule, {"kind": kind, "sensitivity": value}), private)
+        for value, marker in (("Private ", "private"), ("PERSONAL", "private"), ("Strictly Confidential", "confidential"),
+                              ("restricted", "confidential"), ("confidential", "confidential"), ("private", "private"),
+                              ("normal", None), ("Normal ", None), (None, None), ("", None)):
+            with self.subTest(marker=value):
+                self.assertEqual(sweep.marker_of({"sensitivity": value}), marker)
+        self.assertIsNone(sweep.marker_of({}))
 
     def test_the_ignore_rule_reads_the_same_sensitivity(self):
         self.assertTrue(sweep.message_of_event(event(sensitivity="Private​"))["private"])
@@ -261,6 +367,68 @@ class SavedCalendar(unittest.TestCase):
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("too large", r.stdout)
         self.assertEqual(self.cal.read_text(), kept)
+
+    def test_the_size_limit_counts_bytes(self):
+        """Under 6 million characters but over 6 million bytes (Japanese text is three bytes a character) is refused."""
+        kept = self.seed()
+        body = "\u4f1a\u8b70\u306e\u8b70\u984c" * 3800
+        spec = self.v.root / "system/staging/drafts/calendar.json"
+        spec.write_text(json.dumps({"days": {self.tomorrow: [self.meeting(id=f"e{i}", body=body) for i in range(150)]}},
+                                   ensure_ascii=False), encoding="utf-8")
+        r = self.v.run("calendar", str(spec), script="sweep.py", ok=False)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("too large", r.stdout)
+        self.assertEqual(self.cal.read_text(), kept)
+
+    def test_days_that_are_not_an_object_give_a_message_and_keep_the_saved_calendar(self):
+        kept = self.seed()
+        for days in ([self.meeting()], "x", 7, [[]]):
+            with self.subTest(days=days):
+                r = self.save(days)
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn("not a calendar", r.stdout)
+                self.assertNotIn("Traceback", r.stdout + r.stderr)
+                self.assertEqual(self.cal.read_text(), kept)
+        spec = self.v.root / "system/staging/drafts/calendar.json"
+        spec.write_text("[1, 2]")
+        r = self.v.run("calendar", str(spec), script="sweep.py", ok=False)
+        self.assertEqual((r.returncode, "not a calendar" in r.stdout), (1, True))
+
+    def test_the_bad_times_message_never_carries_a_key_from_a_title(self):
+        bad = [self.meeting(id="b1", start="xx", end="yy", title="Sync Passcode: 4321"),
+               self.meeting(id="b2", start="xx", end="yy", title="Board https://zoom.us/j/1?pwd=abc", sensitivity="confidential"),
+               self.meeting(id="b3", start="xx", end="yy", title="Secret plan", private=True),
+               self.meeting(id="b4", start="xx", end="yy", title="Budget review")]
+        r = self.save({self.tomorrow: [self.meeting(id="ok"), *bad]})
+        self.assertEqual(r.returncode, 0, r.stdout)
+        out = r.stdout + r.stderr
+        for gone in ("4321", "pwd", "zoom", "Board", "Secret plan"):
+            self.assertNotIn(gone, out)
+        self.assertIn("Budget review", out)                                          # an ordinary title is still named
+        self.assertIn("Skipped (bad times)", out)
+
+    def test_rows_saved_by_an_earlier_version_are_cleaned_when_kept(self):
+        """Past days of the saved calendar are kept as saved, but now through the same cleaning."""
+        settings = self.v.root / "system/config/settings.json"
+        cfg = json.loads(settings.read_text())
+        cfg.setdefault("inbox", {})["meetings_from"] = 5
+        settings.write_text(json.dumps(cfg))
+        past = (date.today() - timedelta(days=2)).isoformat()
+        old = [{"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Sync Passcode: 4321", "where":
+                "https://zoom.us/j/1?pwd=abc", "teams": True, "private": False, "organiser": "Jane Doe", "sensitivity": "restricted",
+                "body": "Notes\nPasscode: 4321\nPIN 998877", "attendees": [{"name": "Sam Lee", "email": "sam@example.test"}]},
+               {"id": "o2", "start": "11:00", "end": "12:00", "all_day": False, "title": "Budget", "where": "Room 2", "teams": False,
+                "private": False, "organiser": True, "sensitivity": "normal", "body": "Agenda: budget\nJoin https://bit.ly/abc",
+                "attachments": ["pack.pdf", "PIN 4321.ics"], "attendees": [{"name": "Dial-in PIN 4321", "email": "x@example.test"}]}]
+        self.cal.write_text(json.dumps({"fetched": past + " 08:00", "days": {past: old}}))
+        self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
+        rows = {r["id"]: r for r in self.held()[past]}
+        self.assertEqual(rows["o1"], {"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Meeting", "where": "",
+                                      "teams": False, "private": False, "organiser": False, "sensitivity": "confidential"})
+        self.assertEqual((rows["o2"]["body"], rows["o2"]["attachments"], rows["o2"]["attendees"][0]["name"]),
+                         ("Agenda: budget", ["pack.pdf"], "x@example.test"))
+        for gone in ("4321", "pwd", "bit.ly", "998877", "zoom"):
+            self.assertNotIn(gone, self.cal.read_text())
 
     def test_a_saved_calendar_holds_no_key_from_a_whole_event(self):
         ev = self.meeting(where="https://us02web.zoom.us/j/8123?pwd=abcdef", body="Agenda: budget\nPasscode: 4321\nhttps://bit.ly/3xYzAbC",
