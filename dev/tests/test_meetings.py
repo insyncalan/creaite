@@ -430,7 +430,7 @@ class InboxPageTests(unittest.TestCase):
         self.assertEqual(after["ABC Steering"], "Draft ready in Review")
         self.assertTrue(after["Weekly sync 12"].startswith("Skipped"))                         # nothing to load: the reason is on its row
         self.assertIn("No transcript could be loaded", after["Weekly sync 12"])
-        self.assertEqual(r["refresh"], [["refresh calendar", "Refresh the calendar for Intake and Today"]])
+        self.assertEqual(r["refresh"], [["refresh calendar", None]])
 
 
 if __name__ == "__main__":
