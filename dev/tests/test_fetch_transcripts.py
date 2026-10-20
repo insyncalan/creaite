@@ -386,7 +386,10 @@ class Fetch(unittest.TestCase):
 
     def test_low9_the_catalogue_help_is_the_briefs_wording(self):
         import settings_catalogue
-        self.assertEqual(settings_catalogue.CATALOGUE["sweep.fetch_transcripts"][2], HELP)
+        _, label, line, reason = settings_catalogue.CATALOGUE["sweep.fetch_transcripts"]
+        self.assertEqual(label, "Fetch transcripts as they appear")
+        self.assertEqual(reason, HELP)                                             # the brief's help text, word for word
+        self.assertTrue(HELP.endswith(line))                                       # the one-line summary is its own words
         self.assertIn(HELP, (REPO / "system/templates/dashboard/src/settings.js").read_text())
 
     # ── every eligibility rule, each on its own (mutation survivors in the review) ──
