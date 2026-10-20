@@ -60,6 +60,9 @@ class AgeArchivedInThePage(LiveBrowserCase):
         self.show_archived(True)
         try:
             b.eval("go('work'); WT='actions'; clearAllFilters(); applyFilters({st:['Closed','Open']}); renderWork()")
+            # #241 b: the Closed group starts folded where nothing is saved; open it, as a person does, to see the closed item
+            b.wait("!!document.querySelector('#workTbl tr.wgh.coll[data-gk=\"actions|due|closed\"]')", 15)
+            b.click('#workTbl [data-gtog="actions|due|closed"]')
             b.wait(f"!!document.querySelector('#workTbl tr[data-row=\"{self.aid}\"]')", 15)
             tags = b.eval(f"[...document.querySelectorAll('#workTbl tr[data-row=\"{self.aid}\"] td.title .tag')].map(t=>t.textContent)")
             self.assertIn("Archived", tags)

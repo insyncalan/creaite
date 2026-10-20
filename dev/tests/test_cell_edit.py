@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import work_data as W  # noqa: E402
 from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 
 META = 4
@@ -33,6 +34,10 @@ def shown(s):
 
 class CellEdit(LiveBrowserCase):
     width, height = 1500, 1000
+
+    def setUp(self):
+        super().setUp()
+        W.closed_open(self.b)            # #241 b: an item closed here stays on screen in its open Closed group, as before
 
     def open_work(self, tab="actions"):
         b = self.b

@@ -46,6 +46,7 @@ class Picker(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         self.b.eval("localStorage.clear()")
+        W.closed_open(self.b)            # #241 b: these tests count closed rows too; Closed is folded only where nothing is saved
 
     def open_work(self, tab="actions", none=True):
         b = self.b

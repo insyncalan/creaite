@@ -670,6 +670,10 @@ export async function decBoardDrop(id,key){ const t="decisions", x=REC(t,id), g=
    across a column and a lane states both changes and saves them as one proposal (one Undo); Move to… offers the column and the
    lane as two steps. Decisions keep their board rules (FR-110); a lane move reassigns who is asked. */
 export const LCOLL=store.get("creaite-listcoll",{});
+/* #241 b (Alan, 19-10-2026): a Closed group under the due grouping starts folded where nothing is saved for it; opening it stores
+   false for that group, so an explicit choice is never mistaken for unset. A saved state is never overridden. */
+export const LFOLD=k=>/\|due\|closed$/.test(k);
+export const lcollOf=k=>k in LCOLL?!!LCOLL[k]:LFOLD(k);
 export let HLNOTE=""; shared.HLALL=false;                       /* HLALL: "Select all N matching" is in force; HLNOTE: what the bar says after a collapse */
 export const grpOK=(t,g)=>groupsOf(t).some(x=>x[0]===g);
 /* #241 A: where nothing is saved for a tab, the List groups by its plan (LDEFG: Actions by due, RAID by priority, Decisions
@@ -713,14 +717,14 @@ export function grpHead(t,gr,lvl,key,coll,n){ if(t==="all") t="raid"; const late
   return `<tr class="wgh lv${lvl}${coll?" coll":""}" data-gk="${esc(key)}"><td colspan="${n}"><button type="button" class="wgtog" data-gtog="${esc(key)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(gr.label)}">${ic("chevdown","chev")}</button><input type="checkbox" class="wgtick" data-gtick="${esc(key)}" aria-label="Select the rows in ${esc(gr.label)}" ${coll||!gr.items.length?"disabled":""}> <b class="wgn">${esc(gr.label)}</b> <span class="sub">${grpNoun(t,gr.items.length)}${late?` · <span class="late">${late} overdue</span>`:""}${coll?" · collapsed":""}</span></td></tr>`; }
 export function listBody(t,C,L){ const g=listGroupOf(t), row=(x,a)=>rowHtml(t,x,C,{sel:shared.SEL,tr:a}); if(g==="none"||!L.length) return L.map(x=>row(x,"")).join("");
   const sg=subOf(t,"list"); let h="";
-  wgGroups(t,g,L,!BHIDE[t]).forEach(gr=>{ const k=`${t}|${g}|${gr.key}`, coll=!!LCOLL[k]; h+=grpHead(t,gr,1,k,coll,C.length); if(coll) return;
+  wgGroups(t,g,L,!BHIDE[t]).forEach(gr=>{ const k=`${t}|${g}|${gr.key}`, coll=lcollOf(k); h+=grpHead(t,gr,1,k,coll,C.length); if(coll) return;
     if(sg==="none"){ h+=gr.items.map(x=>row(x,` data-g1="${esc(k)}"`)).join(""); return; }
-    wgGroups(t,sg,gr.items,false).forEach(s2=>{ const k2=`${k}|${sg}|${s2.key}`, c2=!!LCOLL[k2]; h+=grpHead(t,s2,2,k2,c2,C.length); if(!c2) h+=s2.items.map(x=>row(x,` data-g1="${esc(k)}" data-g2="${esc(k2)}"`)).join(""); }); });
+    wgGroups(t,sg,gr.items,false).forEach(s2=>{ const k2=`${k}|${sg}|${s2.key}`, c2=lcollOf(k2); h+=grpHead(t,s2,2,k2,c2,C.length); if(!c2) h+=s2.items.map(x=>row(x,` data-g1="${esc(k)}" data-g2="${esc(k2)}"`)).join(""); }); });
   return h; }
 export const grpRows=k=>$$(`#workTbl tr[data-row]`).filter(r=>r.dataset.g1===k||r.dataset.g2===k);
 export function grpTicks(){ $$("#workTbl .wgtick").forEach(c=>{ const rs=grpRows(c.dataset.gtick), n=rs.filter(r=>HL.has(r.dataset.row)).length; c.checked=!!rs.length&&n===rs.length; c.indeterminate=n>0&&n<rs.length; }); }
-export function grpToggle(k){ const sel="#workTbl tbody tr", key=e=>e.dataset.row||("g:"+e.dataset.gk), snap=reduced()?null:mSnapRows(sel,key), open=!!LCOLL[k];
-  const before=HL.size; LCOLL[k]=!LCOLL[k]; if(!LCOLL[k]) delete LCOLL[k]; store.set("creaite-listcoll",LCOLL); renderWork();   /* after "Select all N matching" the selection keeps every matching item */
+export function grpToggle(k){ const sel="#workTbl tbody tr", key=e=>e.dataset.row||("g:"+e.dataset.gk), snap=reduced()?null:mSnapRows(sel,key), open=lcollOf(k);
+  const before=HL.size; LCOLL[k]=!open; if(!LCOLL[k]&&!LFOLD(k)) delete LCOLL[k]; store.set("creaite-listcoll",LCOLL); renderWork();   /* after "Select all N matching" the selection keeps every matching item */
   const left=before-HL.size; if(left>0){ HLNOTE=`${left} left the selection: ${left===1?"its group is":"their group is"} collapsed`; hlPaint(); snack(`${left} selected item${left===1?"":"s"} left the selection: the group is collapsed`); }
   if(!snap) return; mFlipRows(snap,sel,key,320,true); const b=$(`#workTbl [data-gtog="${CSS.escape(k)}"]`); if(b) anim(b,[{transform:`rotate(${open?-90:90}deg)`},{transform:"none"}],{duration:320,easing:"inout"}); }
 /* the Board's new columns (Project, Priority, Workstream, Type) come from the same groups */

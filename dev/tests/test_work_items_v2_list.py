@@ -1,7 +1,7 @@
 """#241 A: Work items v2, the list. Row density (Compact, one line with the ID beside the title, by default where nothing
 is saved, Comfortable on request, row height only, the Board untouched), the status and priority marks beside the existing columns (words for screen readers; the Status and
 Priority columns stay, in Display too), the client-visible tag, and the List's default grouping (Actions by due with Closed
-last, RAID by priority, Decisions by status) only where nothing is saved, with an explicit "no grouping" kept as a choice.
+last and folded, RAID by priority, Decisions by status) only where nothing is saved, with an explicit "no grouping" kept as a choice.
 A real browser against the real live server.
 
 Run: python3 dev/tests/test_work_items_v2_list.py   (needs Google Chrome; skipped otherwise)
@@ -146,15 +146,45 @@ class ListV2(LiveBrowserCase):
         self.open_work("raid")
         self.assertEqual(b.eval("layoutOf('raid')"), "list")
 
-    def test_closed_comes_last_and_keeps_its_rows(self):
-        # the brief asks for Closed folded; folding by default hides rows the Work filter tests count (they must pass unchanged),
-        # so Closed is the last group and opens drawn: a decision for Jarvis (see the report)
-        b = self.open_work()
+    CLOSED_ROWS = "[...document.querySelectorAll('#workTbl tr[data-row]')].filter(r=>REC('actions',r.dataset.row).st==='Closed').length"
+    CLOSED_HEAD = "document.querySelector('#workTbl tr.wgh[data-gk=\"actions|due|closed\"]')"
+
+    def show_closed(self):
+        b = self.b
         b.eval("applyFilters({st:['Open','Closed']}); renderWork()")
-        b.wait("document.querySelector('#workTbl tr.wgh[data-gk=\"actions|due|closed\"]')")
+        b.wait(self.CLOSED_HEAD)
+
+    def test_closed_comes_last_folded_where_nothing_is_saved(self):
+        # Alan's decision b (19-10-2026): Closed is the last group and starts folded where nothing is saved for it
+        b = self.open_work()
+        self.show_closed()
         self.assertEqual(self.groups()[-1], "Closed")
-        self.assertGreater(b.eval("[...document.querySelectorAll('#workTbl tr[data-row]')].filter(r=>REC('actions',r.dataset.row).st==='Closed').length"), 0)
-        self.assertIsNone(self.stored("creaite-listcoll"))
+        self.assertTrue(b.eval(self.CLOSED_HEAD + ".classList.contains('coll')"))
+        self.assertEqual(b.eval(self.CLOSED_ROWS), 0)
+        self.assertIsNone(self.stored("creaite-listcoll"))                                           # nothing written unasked
+        b.click('#workTbl [data-gtog="actions|due|closed"]')                                          # opening it is a choice, stored
+        b.wait("!" + self.CLOSED_HEAD + ".classList.contains('coll')")
+        self.assertGreater(b.eval(self.CLOSED_ROWS), 0)
+        self.assertEqual(self.stored("creaite-listcoll"), {"actions|due|closed": False})
+        b.reload(READY)
+        self.open_work()
+        self.show_closed()
+        self.assertFalse(b.eval(self.CLOSED_HEAD + ".classList.contains('coll')"))                    # not mistaken for unset
+        self.assertGreater(b.eval(self.CLOSED_ROWS), 0)
+        b.click('#workTbl [data-gtog="actions|due|closed"]')
+        b.wait(self.CLOSED_HEAD + ".classList.contains('coll')")
+        self.assertEqual(self.stored("creaite-listcoll"), {"actions|due|closed": True})
+
+    def test_a_saved_fold_state_is_never_overridden(self):
+        b = self.b
+        saved = {"actions|due|overdue": True, "actions|due|closed": False}
+        b.eval(f"localStorage.setItem('creaite-listcoll', {json.dumps(json.dumps(saved))})")
+        b.reload(READY)
+        self.open_work()
+        self.show_closed()
+        self.assertFalse(b.eval(self.CLOSED_HEAD + ".classList.contains('coll')"))
+        self.assertTrue(b.eval("document.querySelector('#workTbl tr.wgh[data-gk=\"actions|due|overdue\"]').classList.contains('coll')"))
+        self.assertEqual(self.stored("creaite-listcoll"), saved)
 
     def test_no_grouping_is_kept_as_a_choice_and_reset_returns_to_the_default(self):
         b = self.open_work()

@@ -4533,6 +4533,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     LASTVISIT: () => LASTVISIT,
     LCOLL: () => LCOLL,
     LDEFG: () => LDEFG,
+    LFOLD: () => LFOLD,
     LINK_MAX: () => LINK_MAX,
     LINK_REFUSED: () => LINK_REFUSED,
     LINK_REL: () => LINK_REL,
@@ -5815,6 +5816,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     lastDays: () => lastDays,
     latesOf: () => latesOf,
     layoutOf: () => layoutOf,
+    lcollOf: () => lcollOf,
     learnLabel: () => learnLabel,
     learnSignal: () => learnSignal,
     learnable: () => learnable,
@@ -39314,6 +39316,8 @@ ${s5}`;
     return await boardMove(t47, id2, { due: d5 }, what);
   }
   var LCOLL = store.get("creaite-listcoll", {});
+  var LFOLD = (k5) => /\|due\|closed$/.test(k5);
+  var lcollOf = (k5) => k5 in LCOLL ? !!LCOLL[k5] : LFOLD(k5);
   var HLNOTE = "";
   shared.HLALL = false;
   var grpOK = (t47, g5) => groupsOf(t47).some((x5) => x5[0] === g5);
@@ -39400,7 +39404,7 @@ ${s5}`;
     const sg2 = subOf(t47, "list");
     let h5 = "";
     wgGroups(t47, g5, L3, !BHIDE[t47]).forEach((gr2) => {
-      const k5 = `${t47}|${g5}|${gr2.key}`, coll = !!LCOLL[k5];
+      const k5 = `${t47}|${g5}|${gr2.key}`, coll = lcollOf(k5);
       h5 += grpHead(t47, gr2, 1, k5, coll, C5.length);
       if (coll) return;
       if (sg2 === "none") {
@@ -39408,7 +39412,7 @@ ${s5}`;
         return;
       }
       wgGroups(t47, sg2, gr2.items, false).forEach((s22) => {
-        const k22 = `${k5}|${sg2}|${s22.key}`, c22 = !!LCOLL[k22];
+        const k22 = `${k5}|${sg2}|${s22.key}`, c22 = lcollOf(k22);
         h5 += grpHead(t47, s22, 2, k22, c22, C5.length);
         if (!c22) h5 += s22.items.map((x5) => row2(x5, ` data-g1="${esc(k5)}" data-g2="${esc(k22)}"`)).join("");
       });
@@ -39424,10 +39428,10 @@ ${s5}`;
     });
   }
   function grpToggle(k5) {
-    const sel = "#workTbl tbody tr", key2 = (e4) => e4.dataset.row || "g:" + e4.dataset.gk, snap = reduced() ? null : mSnapRows(sel, key2), open2 = !!LCOLL[k5];
+    const sel = "#workTbl tbody tr", key2 = (e4) => e4.dataset.row || "g:" + e4.dataset.gk, snap = reduced() ? null : mSnapRows(sel, key2), open2 = lcollOf(k5);
     const before = HL.size;
-    LCOLL[k5] = !LCOLL[k5];
-    if (!LCOLL[k5]) delete LCOLL[k5];
+    LCOLL[k5] = !open2;
+    if (!LCOLL[k5] && !LFOLD(k5)) delete LCOLL[k5];
     store.set("creaite-listcoll", LCOLL);
     renderWork();
     const left = before - HL.size;
@@ -75897,6 +75901,7 @@ ${d5.text}`);
         "Icon",
         "IconButton",
         "LASTVISIT",
+        "LCOLL",
         "MAC",
         "MFIRST",
         "MM",
