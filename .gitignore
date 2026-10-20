@@ -69,3 +69,8 @@ dev/.cache/
 # BL-231 phase 1: the dashboard cut into pieces by split_dashboard.py and for typecheck.py (scratch, development only)
 dev/scratch-split/
 dev/tests/.last-failed
+
+# Product and design thinking stays local (Alan, 20-10-2026). Last tracked at 9c8bf371.
+/dev/mockups/
+/dev/sprints/
+/dev/roadmap/
