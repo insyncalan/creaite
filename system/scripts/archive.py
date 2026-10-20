@@ -19,9 +19,7 @@ Settings › Health.
 
 BL-03, files, on a yes: weekly and client reports, minutes and Steerco one-pagers dated (by their file name) more than
 archive.reports_after_months months ago (12) move into their engagement's own archive folder (99 Archive, or the old _Archive
-until Alan renames it: paths.archive_name), keeping their place below it.
-Health shows a line once a month while any are due
-("Archive 14 reports and minutes older than 12 months"); its Fix it puts this command's spec
+until Alan renames it: paths.archive_name), keeping their place below it. Health shows a line once a month while any are due ("Archive 14 reports and minutes older than 12 months"); its Fix it puts this command's spec
 on the approval card, and Approve applies it through tracker.py apply (a `move` of kind "reports", the BL-09 guard exception: only
 the apply moves into 99 Archive). Stored paths keep resolving (paths.resolve). Transcripts, agendas, documents and applied proposals
 are never moved. BL-331: Files lists the archived ones with Move back, the exact reverse move ("reports_back"), which only the
