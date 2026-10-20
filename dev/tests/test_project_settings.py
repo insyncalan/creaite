@@ -88,6 +88,8 @@ class ProjectSettings(LiveBrowserCase):
     def change(self, sel, value):
         self.b.eval(f"(()=>{{ const e=document.querySelector({sel!r}); e.value={value!r}; e.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
 
+    CLEARED = "document.querySelector('#psPartnerIn').value===''"
+
     def set_partner(self, name):
         self.b.eval(f"(()=>{{ const e=document.querySelector('#psPartnerIn'); e.value={name!r}; e.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         self.b.click("#psAddPartner")
@@ -267,6 +269,7 @@ class ProjectSettings(LiveBrowserCase):
         self.wait_for(lambda: self.line("Partners") == "Northgate Analytics", "the Partners line is written in the project's memory file")
         self.assertIn("- **Partners:** Northgate Analytics", self.text())
         self.assertTrue(list((self.v.root / "system/backups/files").glob("ABC-CLAUDE-*.md")), "a backup of the file was kept first")
+        b.wait(self.CLEARED)   # the add has finished (it clears the box after the save), so the next name isn't wiped
         self.set_partner("Harbour Labs")
         self.wait_for(lambda: self.line("Partners") == "Northgate Analytics; Harbour Labs", "a second partner")
         # reload: the list is read back from the file
@@ -294,6 +297,7 @@ class ProjectSettings(LiveBrowserCase):
         self.open("people")
         self.set_partner("Northgate Analytics")
         self.wait_for(lambda: self.line("Partners") == "Northgate Analytics", "first saved")
+        b.wait(self.CLEARED)
         self.set_partner("  northgate   ANALYTICS ")
         b.wait("!!document.querySelector('#psPartnerErr')")
         self.assertEqual(b.eval("document.querySelector('#psPartnerErr').textContent"), "Northgate Analytics is already listed.")

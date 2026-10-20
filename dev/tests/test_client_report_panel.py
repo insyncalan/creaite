@@ -187,7 +187,7 @@ class ClientReportPanel(LiveBrowserCase):
         b.wait("!!document.querySelector('#psRepOn')")
         self.assertEqual(b.eval("document.querySelector('#psRepOn').checked"), True)
         self.assertIn("this project needs a separate client report", (b.eval("document.querySelector('#psRepOn').getAttribute('aria-label')") or "").lower())
-        b.click("#psRepOn")
+        b.click("#psRepOn", exact=True)                                                                 # the one scrolling page may still be settling (#152)
         self.wait_line("Client report", "off")
         self.open_panel()                                                                              # the panel shows what the page set
         self.assertEqual(b.eval("document.querySelector('#cfgOn').checked"), False)

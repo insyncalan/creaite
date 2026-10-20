@@ -67,14 +67,14 @@ class WideTables(LiveBrowserCase):
     def test_the_cue_goes_at_the_end_and_the_button_scrolls(self):
         b = self.b
         self.setup_page("people", 900)
-        b.click("#v-settings .tbl .xmore")
-        b.wait("document.querySelector('#v-settings .tbl').scrollLeft>0", 5)
-        b.eval("(()=>{ const f=document.querySelector('#v-settings .tbl'); f.scrollLeft=f.scrollWidth; })()")
+        b.click("#v-people .tbl .xmore")
+        b.wait("document.querySelector('#v-people .tbl').scrollLeft>0", 5)
+        b.eval("(()=>{ const f=document.querySelector('#v-people .tbl'); f.scrollLeft=f.scrollWidth; })()")
         b.pump(0.3)
         s = self.state("people")
         self.assertFalse(s["cue"])
         self.assertFalse(s["fade"])
-        b.eval("document.querySelector('#v-settings .tbl').scrollLeft=0")
+        b.eval("document.querySelector('#v-people .tbl').scrollLeft=0")
         b.pump(0.3)
         self.assertTrue(self.state("people")["cue"])                                      # back at the start: it shows again
 
@@ -82,14 +82,14 @@ class WideTables(LiveBrowserCase):
         b = self.b
         self.setup_page("people", 900)
         self.assertTrue(self.state("people")["stick"])
-        first = "document.querySelector('#v-settings .tbl tbody tr td:first-child').getBoundingClientRect().left"
-        second = "document.querySelector('#v-settings .tbl tbody tr td:nth-child(2)').getBoundingClientRect().left"
+        first = "document.querySelector('#v-people .tbl tbody tr td:first-child').getBoundingClientRect().left"
+        second = "document.querySelector('#v-people .tbl tbody tr td:nth-child(2)').getBoundingClientRect().left"
         x1, x2 = b.eval(first), b.eval(second)
-        b.eval("document.querySelector('#v-settings .tbl').scrollLeft=120")
+        b.eval("document.querySelector('#v-people .tbl').scrollLeft=120")
         b.pump(0.3)
         self.assertAlmostEqual(b.eval(first), x1, delta=1)                                # the name stays
         self.assertLess(b.eval(second), x2 - 60)                                          # the rest moves
-        hit = b.eval("""(()=>{ const td=document.querySelector('#v-settings .tbl tbody tr td:first-child'), r=td.getBoundingClientRect();
+        hit = b.eval("""(()=>{ const td=document.querySelector('#v-people .tbl tbody tr td:first-child'), r=td.getBoundingClientRect();
           return td.contains(document.elementFromPoint(r.left+8, r.top+r.height/2)); })()""")
         self.assertTrue(hit)                                                              # drawn over the scrolled columns
 
