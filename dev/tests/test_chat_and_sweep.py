@@ -105,7 +105,8 @@ class SweepRebuild(VaultCase):
         note = self.root / NOTE
         note.parent.mkdir(parents=True, exist_ok=True)
         note.write_text("# Quick note\n\n- Date: 2026-10-09\n- Project: ABC\n\nSara will send the revised statement of work.\n")
-        spec = self.root / "system" / "staging" / "note.json"
+        spec = self.root / "system" / "staging" / "drafts" / "note.json"      # #269: a meeting spec is read only from drafts
+        spec.parent.mkdir(parents=True, exist_ok=True)
         spec.write_text(json.dumps({"title": "Quick note - catch-up", "date": "2026-10-09", "event_id": None, "projects": ["ABC"],
                                     "note": NOTE, "status_signals": [], "items": [
                                         {"table": "actions", "section": "Actions", "flags": [],

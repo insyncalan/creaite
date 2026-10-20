@@ -250,13 +250,13 @@ class PageInputTests(unittest.TestCase):
         self.assertEqual(self.moved_in(doc.replace("v3", "v4")), ["built", "cache", "new", True])
 
     def test_folders_only_and_never_index_skipped(self):
-        put(self.v, f"{ABC}/reports/_Archive/Old/.keep", "")
+        put(self.v, f"{ABC}/reports/99 Archive/Old/.keep", "")
         r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts'); import live_server\n"
                             "print('\\n'.join(map(str, live_server.page_inputs())))"], cwd=self.v.root, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         got = r.stdout.splitlines()
         self.assertTrue(any(g.endswith(f"{ABC}/reports/2026") for g in got))
-        self.assertFalse(any("_Archive" in g for g in got))
+        self.assertFalse(any("99 Archive" in g for g in got))
         self.assertFalse(any(g.endswith(f"{ABC}/documents/Plans") for g in got))   # documents set aside by default
 
 

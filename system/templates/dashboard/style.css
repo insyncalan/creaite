@@ -681,6 +681,7 @@ h2{font:500 var(--fs-h2)/var(--lh-h2) var(--font);margin:0}   /* BL-325: the one
 #hWeek,#hRes{gap:4px}   /* "Week ahead to 09-10" reads as one phrase, not a count */ .th .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)} .th a{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)}
 ol.bl{list-style:none;margin:0;padding:0} ol.bl>li{position:relative;display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--day-rule)}
 ol.bl>li[hidden],.tsec .sub[hidden]{display:none}
+ol.bl>li[data-msattn] .t u{text-decoration:underline;text-underline-offset:3px;font-weight:700}   /* #251: "Milestone <u>name</u> is due …", the name the link */
 .bl .n{flex:none;width:16px;font-size:var(--fs-md);color:var(--day-muted)} .bl .tb{min-width:0;flex:1}
 .bl .tb p,.tb .none{margin:4px 0 0;font-size:var(--fs-md);color:var(--day-muted)}
 .tbrief a.t{color:var(--day-ink);font-weight:700;text-decoration:none} .tbrief a.t:hover{text-decoration:underline}
@@ -837,6 +838,9 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .cimgdel{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:var(--lh-1);font-size:var(--fs-lg)} .cimgdel:hover{color:var(--bad);border-color:var(--bad)} .pencil[aria-disabled="true"]{opacity:.3;cursor:default}
 tr.mchild td.title{padding-left:32px;position:relative} tr.mchild td.title::before{content:"";position:absolute;left:16px;top:0;bottom:0;border-left:2px solid var(--line)}
 tr.mparent td.title{font-weight:500} .mini.tog{margin-right:4px}
+/* #271: Review never scrolls sideways. The title cell takes the room the buttons leave (max-width:0 stops its nowrap meta line
+   setting the column's width), the meta line truncates with an ellipsis (full text on its tip) and a long title or tag wraps */
+@media (min-width:641px){ #reviewBody td.title{width:100%;max-width:0;overflow-wrap:anywhere} }
 .wfilters{display:flex;gap:6px;flex-wrap:wrap} .fbtn.on{border-color:var(--ink);font-weight:500}
 .wapplied{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;min-height:24px;font-size:var(--fs-sm)}
 .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--sunk);border-radius:var(--r-pill);padding:2px 4px 2px 10px} .fchip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-1);padding:0 4px} .fchip button:hover{color:var(--ink)}
@@ -2652,6 +2656,10 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
 .ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
 #actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+#actUsage .urev .qtab td,#actUsage .urev .qtab th{white-space:normal;overflow-wrap:anywhere} #actUsage .urev .qtab td:first-child{white-space:nowrap;width:7.5em}   /* v2.5.3: Your reviews */
+.urevact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0} .urevact .sub{margin:0}
+.urevform{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;align-items:center;max-width:760px;margin:10px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.urevform label{font-size:var(--fs-sm);color:var(--muted)} .urevform input{width:100%;min-width:0} .urevform .urevdate{width:auto} .urevform .urevact{margin:4px 0 0}
 /* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
@@ -3414,7 +3422,10 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 /* ===== v2.1.0 P5 (BL-335, BL-338): the A4 sheet (components/report/Sheet.jsx). The chrome (bar, handles, pop-ups) uses the page's
    tokens; the page itself is a document, the same in every theme as it exports (creaite_doc.CSS: paper, ink, rules), so it has
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
-:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
+:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F
+  /* #268 (Cap's review M2): the state colours on the paper, light in every theme, as the paper is */
+  --paper-ok:#2E6B3A; --paper-ok-soft:#E3F2E5; --paper-bad:#B3261E; --paper-bad-soft:#FBE7E5; --paper-warn:#8A5A00; --paper-warn-soft:#FBF0DA;
+  --paper-accent-soft:#D3EAEE; --paper-focus:#0B6E7F}
 .sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
 /* #202 (mockup report-banner, A): the header is in the layout. On a down scroll the search bar and the title block collapse to nothing
    (still focusable: a Tab into one brings the header back) and the toolbar is the one slim bar. Nothing slides, so reduced motion needs no rule. */
@@ -3536,7 +3547,8 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnwrap{display:flex;flex:1;min-height:0}
 .mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
 /* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
-#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
+#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--faint:var(--paper-mute);--line:var(--paper-rule);--line-strong:var(--paper-rule);--accent:var(--paper-link);--accent-ink:var(--paper);
+  --ok:var(--paper-ok);--ok-soft:var(--paper-ok-soft);--bad:var(--paper-bad);--bad-soft:var(--paper-bad-soft);--warn:var(--paper-warn);--warn-soft:var(--paper-warn-soft);--accent-soft:var(--paper-accent-soft);--focus:var(--paper-focus)}   /* #268 M2: the paper stays white in a dark theme, so its state colours stay light ones */
 #v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
 .mnlines p,.mnlines li{margin:0 0 4px}
@@ -3573,10 +3585,10 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 #v-minutes .sheet-status{white-space:nowrap}
 .mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;min-height:24px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
-.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:12px;position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
+.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:var(--fs-xs);position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
 .sheet-a4 .page table.mnt td{padding:7px 8px}
 .mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
-.mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:12px}
+.mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:var(--fs-xs)}
 .mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
 .mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
 .mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
@@ -3592,12 +3604,12 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mck{max-width:100%;flex-wrap:wrap;column-gap:6px;row-gap:0} .mck>*{white-space:nowrap}
 .mck.info{background:var(--sunk);color:var(--muted)} .mck .linkbtn{font-size:var(--fs-xs);min-height:26px}
 .mnrow2 .mncheck{font-size:var(--fs-xs);min-height:26px}
-.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:12px;padding:0 8px;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;appearance:none;-webkit-appearance:none;background-image:none}
-.mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:24px}
+.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:var(--fs-xs);padding:0 8px;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;appearance:none;-webkit-appearance:none;background-image:none}
+.mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:var(--lh-24)}
 .msel.mnro{cursor:default} .msel.mnro:hover{border-color:transparent;background:var(--sunk)} .msel.mnro.empty:hover{background:none;border-color:var(--line)}
 .msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
 .msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
-.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:12px}
+.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -3625,6 +3637,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-err{color:var(--bad)}
 .mnap-l{list-style:none;margin:10px 0 0;padding:0} .mnap-l li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .mnap-l li b{color:var(--warn);font-weight:600;flex:none;min-width:140px}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.mnap-filed{margin:0 0 4px} .mnap-ck{margin:12px 0 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);font-size:var(--fs-sm)} .mnap-ck ul{margin:4px 0 0}
 @media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
   #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
   #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}

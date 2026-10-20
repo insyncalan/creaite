@@ -743,8 +743,73 @@ def enrich_check(path):
     return p.as_posix()
 
 
+# #269: a summary is written once. `enrich set` writes one for a file that has none; it replaces one only for a file a proposal
+# waiting in Review files (the `to` of a copy or move in its file_ops: cx-minutes and the report skills enrich what they just staged,
+# so a re-extract or a redraft still updates it), never a client report's, and never for a path whose file leads outside the vault
+# and the projects folder. Checked here, so it holds in every mode (a plain chat, a confirmed run, Process, Terminal).
+def staged_targets():
+    """The vault paths the proposals waiting in Review file things to (copy and move `to`s in their file_ops) that don't exist yet
+    (review M2: a copy onto a file already filed is refused at apply, never overwriting it, so it never unlocks that file's summary)."""
+    out = set()
+
+    def walk(node):
+        """Collect the copy and move targets anywhere in one proposal's JSON."""
+        if isinstance(node, dict):
+            ops = node.get("file_ops") if isinstance(node.get("file_ops"), list) else []
+            for op in ops:
+                if isinstance(op, dict) and op.get("op") in ("copy", "move") and isinstance(op.get("to"), str) \
+                        and not os.path.lexists(paths.resolve(op["to"])):
+                    out.add(op["to"])
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+    for p in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            walk(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue                             # unreadable: tracker.py validate reports it; it files nothing meanwhile
+    return out
+
+
+def is_client_report(rel):
+    """True for a file in a project's client reports folder that is a client report (that folder may be the weekly one)."""
+    try:
+        target = paths.resolve(rel).resolve()
+        folders = paths.project_folders()
+    except (OSError, LookupError, ValueError):
+        return True                              # can't tell: treated as one, so its summary is never replaced
+    for code, _ in folders:
+        try:
+            client, weekly = paths.folder(code, "client_reports").resolve(), paths.folder(code, "weekly_reports").resolve()
+        except (OSError, LookupError, ValueError):
+            continue                             # a project with no folder: no report of its own to protect
+        if client in target.parents and (client != weekly or " Client report" in target.name):
+            return True
+    return False
+
+
+def enrich_refusal(rel, staged):
+    """Why this summary may not be written, or None (#269)."""
+    target = paths.resolve(rel)
+    if os.path.lexists(target):
+        real = target.resolve()
+        if not any(real == base or base in real.parents for base in paths.allowed_roots()):
+            return f"{rel} leads outside the vault and the projects folder"
+    if not tracker.sidecar_path(rel).exists():
+        return None
+    if is_client_report(rel):
+        return f"{rel} already has a summary, and a client report's summary is never replaced"
+    if rel not in staged:
+        return (f"{rel} already has a summary; it is replaced only for a file a proposal waiting in Review files "
+                f"(staged again, as after a re-extract)")
+    return None
+
+
 def enrich_set(rels, summary, tags):
-    """Write one sidecar per path (the same text for every copy of a meeting). Returns the sidecar files written."""
+    """Write one sidecar per path (the same text for every copy of a meeting). Returns the sidecar files written. #269: every
+    path is checked first (enrich_refusal), so one refused writes none."""
     lines = [ln.strip() for ln in str(summary).strip().splitlines() if ln.strip()]
     if not 1 <= len(lines) <= 2 or any(len(ln) > 300 for ln in lines):
         sys.exit("creaite search: the summary is one or two lines of at most 300 characters each")
@@ -752,10 +817,15 @@ def enrich_set(rels, summary, tags):
     tag_list = list(dict.fromkeys(tag_list))
     if not 3 <= len(tag_list) <= 8:
         sys.exit(f"creaite search: give three to eight topic tags (got {len(tag_list)})")
+    rels = [enrich_check(rel) for rel in rels]
+    staged = staged_targets()
+    for rel in rels:
+        why = enrich_refusal(rel, staged)
+        if why:
+            sys.exit(f"creaite search: {why}. Nothing written.")
     paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
     out = []
     for rel in rels:
-        rel = enrich_check(rel)
         f = tracker.sidecar_path(rel)
         f.write_text(json.dumps({"path": rel, "summary": "\n".join(lines), "tags": tag_list}, ensure_ascii=False, indent=1),
                      encoding="utf-8")

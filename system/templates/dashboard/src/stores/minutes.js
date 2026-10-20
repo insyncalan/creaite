@@ -7,7 +7,7 @@
    #275: trackApprove is Approve minutes by the Track column, the one implementation: the minutes view's Approve minutes and
    Review's Approve (and Approve n routine) on minutes kept as a record all call it, so both give the same result. */
 import { signal } from "@preact/signals";
-import { ownTicked, reconcileOps } from "../components/minutes/track.js";
+import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
 import { api, oneLine, viaServer } from "../core/server.js";
 
@@ -129,8 +129,9 @@ export async function saveMinutesPage(req) {
 
 /** #275: Approve minutes by the Track column, the one implementation (the minutes view's Approve minutes, Review's Approve and
     Approve n routine). The record is first brought in line with the Track column (track.reconcileOps: a cross is `remove`,
-    neither `remove` with `keep_line`, a tick on a kept line `restore`), then the minutes and every ticked item are applied in one
-    apply (/api/minutes/approve, `group` and `own` = the ticked items approved one by one). `v` is the record's view answer, as
+    neither `remove` with `keep_line`, a tick on a kept line `restore`), then the minutes and every ticked row are applied in one
+    apply (/api/minutes/approve with track.approveArgs: `group` false and `own` the ticked rows' numbers, so an item the minutes
+    show no row for, such as a promise, is never registered unseen and waits in Review, Cap's #268 review H1). `v` is the record's view answer, as
     on screen. `how.change` makes one change (the view's keeps its page in step; by default straight to /api/minutes/save, each
     on the version the last one made); `how.only` limits the changes to some items (Review's Approve n routine, one project's);
     `how.approve` false makes the changes only (the bulk rule: Approve n routine never approves the minutes).
@@ -139,7 +140,7 @@ export async function saveMinutesPage(req) {
 export async function trackApprove(v, how = {}) {
   const doc = v && v.ok ? v.doc : null, plan = v && v.plan ? v.plan.items : null;
   if (!doc || !plan || !v.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
-  const own = ownTicked(doc, plan);
+  const args = approveArgs(doc, plan);                     // review H1: only the ticked rows, never an item with no row
   let base = Number(doc.version) || undefined, made = 0;
   const change = how.change || (async (/** @type {Record<string, any>} */ op) => {
     const r = await api("/api/minutes/save", { path: v.path, op, base_version: base });
@@ -154,7 +155,7 @@ export async function trackApprove(v, how = {}) {
   }
   if (how.approve === false) return { ok: true, made };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
-  const r = await api("/api/minutes/approve", { file: v.proposal, group: true, own });
+  const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: args.own });
   return { ...(r || { ok: false, message: "The apply didn't run; nothing was changed." }), made };
 }
 

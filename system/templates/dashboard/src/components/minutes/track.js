@@ -78,8 +78,15 @@ export function setTrack(doc, n, t) {
   return { ...doc, layout: lay };
 }
 
+/** The plan's pending items the minutes show no row for (a promise, a milestone): no Track control, so Approve minutes never
+    registers them (Cap's #268 review H1); they wait in Review. @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan */
+export function rowlessPending(doc, plan) {
+  const shown = new Set(trackRows(doc).map(r => r.n));
+  return (plan || []).filter(i => ["group", "own", "waits", "milestone"].includes(i.group) && !shown.has(i.n)).map(i => i.n);
+}
+
 /** How many rows will register (ticked, in a group Approve minutes applies), are kept in the minutes only, will be left in
-    Review (ticked but needing a project or Review, or an update approved one by one left with neither) and are removed.
+    Review (ticked but needing a project or Review, an update approved one by one left with neither, or an item with no row) and are removed.
     @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan */
 export function trackCounts(doc, plan) {
   const c = { y: 0, k: 0, n: 0, w: 0 };
@@ -90,6 +97,7 @@ export function trackCounts(doc, plan) {
     else if (waitsWhenNeither(r, plan)) c.w++;
     else c.k++;
   }
+  c.w += rowlessPending(doc, plan).length;              // shown nowhere, so never registered here: left in Review
   return c;
 }
 
@@ -113,8 +121,12 @@ export function reconcileOps(doc, plan) {
   return ops;
 }
 
-/** The items approved one by one that are ticked: Approve minutes' `own`. @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan */
-export const ownTicked = (doc, plan) => trackRows(doc).filter(r => planGroupOf(plan, r.n) === "own" && trackOf(doc, r, plan) === "y").map(r => r.n);
+
+/** What Approve minutes sends (review H1): never the whole group, only the numbers of the rows ticked in a group it applies
+    ("group" or "own"), so an item with no row (a promise) is never registered unseen. @param {SheetDoc} doc
+    @param {PlanItem[]|null|undefined} plan @returns {{group: false, own: number[]}} */
+export const approveArgs = (doc, plan) => ({ group: false, own: trackRows(doc)
+  .filter(r => ["group", "own"].includes(planGroupOf(plan, r.n)) && trackOf(doc, r, plan) === "y").map(r => r.n) });
 
 /** What is worth a look before approving: only ticked items with a real problem (an owner who needs details, a possible
     duplicate). `needsDetails(name)` is the people register's check. @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan

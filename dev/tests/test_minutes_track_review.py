@@ -6,6 +6,8 @@ Review, by the minutes' own Approve and by Approve n routine ("Approve all from 
 registered, the crossed one is gone from the minutes (rejected) and the one left with neither stays in the minutes untracked;
 the decision and the risk (neither, their default) stay in the minutes only. Undo of the single Approve puts the apply back and
 the minutes exactly as they were before (as the view's Undo does). Both paths call stores/minutes.trackApprove, the view's code.
+A promise has no row in the minutes, so no Track control: approved from Review it is never registered and waits in Review (Cap's
+#268 review H1, track.approveArgs).
 
 Run: python3 dev/tests/test_minutes_track_review.py      (Chrome tier; skipped without Chrome)
 """
@@ -16,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
+from test_dashboard import populate  # noqa: E402
 import test_minutes_view_v2 as mv  # noqa: E402
 
 ROW = mv.ROW
@@ -120,13 +123,48 @@ class TrackFromReview(LiveBrowserCase):
         b.eval(MIN + ".querySelector('[data-act=a]').click()")
         b.wait("location.hash.startsWith('#minutes') && document.getElementById('mnApprove') && document.getElementById('mnApprove').open", 20)
         lis = self.ev("[...document.querySelectorAll('#mnApprove li')].map(l=>l.textContent)")
-        self.assertEqual(lis, ["Pat Unknown needs details" + CUT], "the view's box, just the ticked item worth a look")
+        self.assertIn("Pat Unknown needs details" + CUT, lis, "the view's box, with the ticked item worth a look")
+        self.assertFalse([x for x in lis if "Possible duplicate" in x], "the crossed item isn't listed")
         self.assertEqual(self.staged(1)["decision"], "pending", "nothing approved yet")
         b.click("#mnApproveGo")
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 2 work items registered", self.snack())
         self.assertIn(CUT, self.descs())
         self.assertNotIn(UAT, self.descs())
+
+
+class RowlessPromiseFromReview(LiveBrowserCase):
+    """Cap's #268 review H1 from Review: the minutes' Approve registers the ticked action, never the promise with no row."""
+    @classmethod
+    def load(cls, v):
+        populate(v)
+        f = v.root / "system/staging/drafts/promise.json"
+        f.write_text(json.dumps({"title": "[ABC] Promise check-in", "date": "2026-10-14", "projects": ["ABC"],
+                                 "minutes": {"start": "12:00", "end": "12:30", "summary": ["A short check-in."], "chat": False},
+                                 "items": [{"table": "actions", "values": {"project": "ABC", "description": "Draft the cutover runbook",
+                                                                           "owner": "Jane Doe"}},
+                                           {"table": "promises", "section": "Jane Doe, 12:05", "values": {
+                                               "project": "ABC", "promised_by": "Jane Doe", "promised_to": "Alan Carter",
+                                               "description": "Send the vendor's rate card", "due_date": "2026-10-20"}}]}),
+                     encoding="utf-8")
+        before = {p.name for p in (v.root / "system/staging").glob("proposed-*.json")}
+        v.run("stage", str(f), script="minutes.py")
+        cls.proposal = next(p.name for p in (v.root / "system/staging").glob("proposed-*.json") if p.name not in before)
+
+    ev, staged, snack, rows_of = mv.MinutesViewV2.ev, mv.MinutesViewV2.staged, mv.MinutesViewV2.snack, mv.MinutesViewV2.rows_of
+
+    def test_the_ticked_row_registers_and_the_promise_waits_in_review(self):
+        b = self.b
+        b.eval("go('review')")
+        b.wait(MIN + " && " + MIN + ".querySelector('[data-act=a]')", 15)
+        b.pump(0.3)
+        b.eval(MIN + ".querySelector('[data-act=a]').click()")
+        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.assertIn("Minutes approved · 1 work item registered · 1 wait in Review", self.snack())
+        self.assertIn("Draft the cutover runbook", [a["description"] for a in self.rows_of("actions")])
+        self.assertNotIn("Send the vendor's rate card", [x["description"] for x in self.rows_of("promises")],
+                         "a promise nobody saw is never registered")
+        self.assertEqual(self.staged(2)["decision"], "pending", "the promise waits in Review")
 
 
 if __name__ == "__main__":

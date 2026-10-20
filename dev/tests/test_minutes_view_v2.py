@@ -411,7 +411,7 @@ class MinutesViewV2(LiveBrowserCase):
             self.assertNotIn(gone, txt)
         self.assertFalse(self.ev("!!document.querySelector('#v-minutes [data-mnmode], #v-minutes .mnio')"), "no switch, no Internal only marks")
         icons = self.ev(f"[...document.querySelectorAll('{bar} .ib')].map(b=>b.getAttribute('aria-label'))")
-        self.assertEqual(icons, ["Show as exported", "Transcript", "Export", "Re-extract: draft the minutes again from the transcript"])
+        self.assertEqual(icons, ["Show as exported", "Transcript", "Export", "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"])
         labelled = self.ev(f"[...document.querySelectorAll('{bar} button')].filter(b=>!b.classList.contains('ib') && b.textContent.trim().length>4).map(b=>b.textContent.trim())")
         self.assertEqual(labelled, ["Approve minutes"], "only Approve minutes keeps a label")
         self.assertIn("M12 4v11", self.ev("document.querySelector('#v-minutes [data-mnexport] svg').innerHTML"), "Export is the download arrow")
@@ -434,7 +434,12 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertEqual(self.ev("document.getElementById('mnApproveH').textContent"), "Approve the minutes")
         self.assertIn("Before these minutes are approved, 2 ticked items have", self.ev("document.querySelector('#mnApprove .sub').textContent"))
         self.assertGreater(self.ev("document.getElementById('mnApprove').getBoundingClientRect().width"), 700, "as wide as the mockup's")
-        lis = self.ev("[...document.querySelectorAll('#mnApprove li')].map(l=>l.textContent)")
+        self.assertRegex(self.ev("(document.querySelector('#mnApprove .mnap-filed')||{}).textContent||''"),
+                         r"^Files the minutes as 2026-10-\d\d .+\.html in .+", "where the minutes are filed (review L1)")
+        open_checks = self.ev("document.querySelectorAll('#v-minutes .mncheck').length")      # the owner one is listed above already
+        self.assertTrue(open_checks, "the meeting has checks open")
+        self.assertEqual(self.ev("document.querySelectorAll('#mnApprove .mnap-ck li').length"), open_checks, "the checks still open (review L1)")
+        lis = self.ev("[...document.querySelectorAll('#mnApprove .mnap-l li')].map(l=>l.textContent)")
         self.assertEqual(sorted(lis), ["Pat Unknown needs detailsShare the cut-over plan with the client",
                                        "Possible duplicate of ABC-A-002Book the UAT test environment"], "just the ticked items with a real problem")
         b.click("#mnApproveBack")
@@ -616,6 +621,50 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertEqual(got["actions"][:2], ["Actions", "3"], "Actions, as the mockup")
         for sec, (_, _, gap) in got.items():
             self.assertLess(gap, 14, f"{sec}: the count sits beside the heading, as the mockup: {got}")
+
+    def test_18_dark_theme_the_white_paper_keeps_light_state_colours(self):
+        """Cap's #268 review M2: in a dark theme the paper stays white, so the hover row, an Urgent or High priority and the
+        "needs details" chip use light values: text 4.5:1 or more, and the hover row clearly differs from the paper."""
+        got = self.ev("""(()=>{
+          const rgb=c=>{const m=c.match(/[\\d.]+/g).map(Number); return m.length>3&&m[3]===0?null:m.slice(0,3)};
+          const lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4}; return .2126*f(r)+.7152*f(g)+.0722*f(b)};
+          const ratio=(a,b)=>{const x=lum(a),y=lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+          const bg=e=>{for(;e;e=e.parentElement){const c=rgb(getComputedStyle(e).backgroundColor); if(c) return c} return [255,255,255]};
+          const out={};
+          for (const mode of ['dark','light']) {
+            document.documentElement.setAttribute('data-theme',mode);
+            const row=document.querySelector("#v-minutes tr.mi[data-n='1']"); row.classList.add('hl');
+            const td=row.querySelector('td:nth-child(2)'), paper=rgb(getComputedStyle(document.querySelector('#v-minutes .sheet-a4 .page')).backgroundColor);
+            const sel=row.querySelector('.msel'), cls=sel.className;
+            const r={hover:ratio(rgb(getComputedStyle(td).color),bg(td)), hoverVsPaper:ratio(bg(td),paper)};
+            row.classList.remove('hl');
+            for (const p of ['U','H']) { sel.className=cls+' pr-'+p; r['pr'+p]=ratio(rgb(getComputedStyle(sel).color),bg(sel)); }
+            sel.className=cls;
+            const chip=document.querySelector('#v-minutes .mck:not(.info)'); r.chip=chip?ratio(rgb(getComputedStyle(chip).color),bg(chip)):0;
+            r.paper=paper.join(','); out[mode]=r;
+          }
+          document.documentElement.removeAttribute('data-theme');
+          return out; })()""")
+        for mode, r in got.items():
+            self.assertEqual(r["paper"], "255,255,255", f"{mode}: the paper stays white")
+            for k in ("hover", "prU", "prH", "chip"):
+                self.assertGreaterEqual(r[k], 4.5, f"{mode}: {k} legible on the paper: {r}")
+            self.assertGreaterEqual(r["hoverVsPaper"], 1.15, f"{mode}: the hover row is clearly visible: {r}")
+
+    def test_19_a_sensitive_item_shows_a_read_only_tag(self):
+        """Cap's #268 review L2: an item marked Sensitive (or partner-only, or excluded) carries a read-only tag on its row."""
+        p = self.v.root / "system/staging" / self.proposal
+        data = json.loads(p.read_text(encoding="utf-8"))
+        next(i for i in data["items"] if i["n"] == 4)["flags"] = ["sensitive"]
+        p.write_text(json.dumps(data), encoding="utf-8")
+        subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts'); import minutes_record; "
+                        f"minutes_record.change({me.DRAFT!r}, {{'op': 'deadline', 'n': 1, 'words': 'Friday'}})"],
+                       cwd=self.v.root, capture_output=True, text=True, check=True)       # any change re-reads the staged items
+        self.open()
+        self.b.wait(f"document.querySelector(\"{ROW % 4} .mnsens\")", 15)
+        self.assertEqual(self.ev(f"document.querySelector(\"{ROW % 4} .mnsens\").textContent"), "Sensitive")
+        self.assertEqual(self.ev("document.querySelectorAll('#v-minutes .mnsens').length"), 1, "only the marked row")
+        self.assertEqual(self.ev(f"document.querySelectorAll(\"{ROW % 4} .mnsens button\").length"), 0, "read only")
 
 
 if __name__ == "__main__":

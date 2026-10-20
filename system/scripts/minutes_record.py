@@ -956,6 +956,82 @@ def save_page(path, page, base_version=None, via="dashboard"):
     return {**r, "doc": creaite_doc.read(rel)}
 
 
+# ── #268 (Cap's review M3): the Track column's choices, applied to a copy ──
+# Until Approve minutes the choices live only in the record's layout (`layout.track`, components/minutes/track.js); the follow-up
+# email and a draft's export are built from the record, so they take the record with the choices applied first: a crossed line out,
+# a line left with neither kept as a line only, a ticked kept line back as its row; exactly what Approve minutes will file. The
+# rules mirror track.js (defaultTrack, trackOf, waitsWhenNeither, reconcileOps). Nothing is written.
+TRACK_SECTIONS = ("decisions", "raid", "actions")
+
+
+def _row_n(row):
+    """A row's item number: its own, or the one a kept line was ("@3")."""
+    if isinstance(row.get("n"), int):
+        return row["n"]
+    m = re.fullmatch(r"@(\d+)", str(row.get("was") or row.get("ref") or ""))
+    return int(m.group(1)) if m else None
+
+
+def _track_default(sid, item, group):
+    """track.js defaultTrack: decisions, risks and anything approved one by one start with neither; the rest ticked."""
+    v = item.get("values") or {}
+    risk = sid == "raid" and item.get("op") == "new" and (v.get("type") or "Risk") == "Risk"
+    return "" if group == "own" or sid == "decisions" or risk else "y"
+
+
+def _track_rows(doc):
+    """(section id, item number, row) for each trackable row of the record, in page order (track.js trackRows)."""
+    for s in doc.get("sections") or []:
+        if s.get("id") not in TRACK_SECTIONS or s.get("type") != "table":
+            continue
+        for row in s.get("rows") or []:
+            n = _row_n(row)
+            if n is not None and (row.get("ref") or row.get("kept_line")):
+                yield s["id"], n, row
+
+
+def _track_want(choices, sid, row, item, group):
+    """What the Track column wants for a row ("y", "n" or ""), or None when the record already shows it (track.js trackOf and
+    reconcileOps: neither on an update decided one by one leaves it in Review)."""
+    kept = bool(row.get("kept_line"))
+    want = choices.get(str(item.get("n")))
+    want = want if want in ("y", "n", "") else "" if kept else _track_default(sid, item, group)
+    if want == ("" if kept else "y") or (want == "" and item.get("op") == "update" and group == "own"):
+        return None
+    return want
+
+
+def _track_apply(out, data, n, kept, want):
+    """One row in line with its choice, on the copy (the changes Approve minutes makes); a row that can't be is left as it is."""
+    try:
+        if kept:
+            restore(out, data, n)
+        if want != "y":
+            remove(out, data, n, keep_line=want == "")
+    except RecordError:
+        pass        # an item no longer pending (applied, or taken out in Review): the record already shows it as it is
+
+
+def tracked_of(doc):
+    """A copy of a draft minutes record with its Track choices applied (see above); any other record as it is."""
+    import review
+    if doc.get("state") != "draft":
+        return doc
+    try:
+        data = json.loads(json.dumps(proposal_for(doc)[1]))
+    except RecordError:
+        return doc
+    choices = (doc.get("layout") or {}).get("track")
+    choices = choices if isinstance(choices, dict) else {}
+    out, items = json.loads(json.dumps(doc)), {i.get("n"): i for i in data.get("items") or []}
+    for sid, n, row in list(_track_rows(doc)):
+        item = items.get(n)
+        want = _track_want(choices, sid, row, item, review.minutes_group(item)) if item else None
+        if want is not None:
+            _track_apply(out, data, n, bool(row.get("kept_line")), want)
+    return out
+
+
 def export(path, fmt, file_beside=True, version="internal"):
     """An export of the minutes (HTML, Word or PDF) through creaite_doc.export (v2.1.0 P2, the contract's call). `version`
     "distributed" exports the distributed version instead (distributed_export)."""
@@ -966,18 +1042,32 @@ def export(path, fmt, file_beside=True, version="internal"):
         return distributed_export(rel, doc, fmt, file_beside)
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
-    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)   # one read, minutes only
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes",
+                              doc=tracked_of(doc))   # one read, minutes only; #268 M3: a draft's Track choices applied
+
+
+def _followup_does(row, removed):
+    """What a row does; for a line kept in the minutes only, what its row did (#268: a kept update is still an update)."""
+    if row.get("does") or not row.get("kept_line"):
+        return str(row.get("does") or "")
+    return str(((removed.get(str(row.get("was") or "").lstrip("@")) or {}).get("row") or {}).get("does") or "")
 
 
 def _followup_rows(use, doc, sid):
     """The rows of section `sid` in `use` that are new in the minutes (not an update, a closure or a record of an existing item)."""
     sec = next((s for s in use.get("sections") or [] if s.get("id") == sid), None) or {}
+    removed = (use.get("meta") or {}).get("removed") or {}
     out = []
     for r in sec.get("rows") or []:
         it = (doc.get("items") or {}).get(r.get("ref")) or {}
-        if it.get("op", "new") == "new" and not str(r.get("does") or "").startswith(("Updates", "Closes", "Records")):
+        if it.get("op", "new") == "new" and not _followup_does(r, removed).startswith(("Updates", "Closes", "Records")):
             out.append((r, it))
     return out
+
+
+def _followup_base(r, kind):
+    """A follow-up item's id and kind; a line kept in the minutes only says so (#268 M3: not a work item)."""
+    return {"k": kind, "id": str(r.get("ref") or r.get("was") or ""), **({"kept": True} if r.get("kept_line") else {})}
 
 
 def _followup_items(use, doc):
@@ -986,11 +1076,11 @@ def _followup_items(use, doc):
     for r, _ in _followup_rows(use, doc, "decisions"):
         c = r.get("cells") or {}
         if c.get("decision"):
-            out.append({"k": "decisions", "id": str(r.get("ref") or ""), "t": c["decision"], "by": c.get("by") or ""})
+            out.append({**_followup_base(r, "decisions"), "t": c["decision"], "by": c.get("by") or ""})
     for r, it in _followup_rows(use, doc, "actions"):
         c, due = r.get("cells") or {}, str((it.get("values") or {}).get("due_date") or "")
         if c.get("action"):
-            out.append({"k": "actions", "id": str(r.get("ref") or ""), "t": c["action"], "o": c.get("owner") or "",
+            out.append({**_followup_base(r, "actions"), "t": c["action"], "o": c.get("owner") or "",
                         "due": due if re.fullmatch(r"\d{4}-\d\d-\d\d", due) else None})
     return out
 
@@ -1018,6 +1108,7 @@ def followup_facts(path, version="internal"):
     if version not in (None, "", "internal", "distributed"):
         raise RecordError("Draft from the internal or the distributed version.")
     rel, doc = record_at(path)
+    doc = tracked_of(doc)                                   # #268 M3: a draft's Track choices applied (crossed lines out)
     dist = version == "distributed"
     held = withheld(doc)
     use = distributed_of(doc, held) if dist else doc

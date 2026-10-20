@@ -1,0 +1,13 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index d9ea3040..20db4b02 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2256,7 +2256,7 @@ NARROW_BUILTINS = ["--tools", "ToolSearch"]     # a narrowed run (`only`: Micros
+ KIND_ARGS["ask"] = ["--tools", ",".join(CHAT_BUILTINS)]
+ KIND_ARGS["sweep"] = ["--tools", ",".join(SWEEP_BUILTINS)]
+ KIND_ARGS["process"] = ["--tools", ",".join(PROCESS_BUILTINS), "--strict-mcp-config"]       # #264: no MCP server at all
+-KIND_ARGS["calendar"] = ["--tools", ",".join(CALENDAR_BUILTINS)]        # #265: Microsoft 365 stays loaded, its allow list two tools
++KIND_ARGS["calendar"] = ["--tools", ",".join(CALENDAR_BUILTINS), "--strict-mcp-config"]    # #265 review L6 (optional, probe first)
+ for _k in ("prep", "generate", "check", "load"):
+     KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
+ for _k in ("shape-closed", "notes-find"):

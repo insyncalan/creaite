@@ -61,8 +61,6 @@ PLAIN = {
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
     "vault_not_synced": ("The vault is in a synced folder", "manual"),
     "online_only": ("Some project files are online-only", "manual"),
-    "old_archive_folders": ("Folders still called zz Archive", "manual"),        # BL-09: health_fixes builds its Fix it
-    "skeleton_archive": ("The project skeleton still holds zz Archive", "manual"),   # BL-09: Alan renames it in Finder
     "archive_reports": ("Old reports and minutes to archive", "manual"),     # BL-03: health_fixes builds its Fix it (the card)
     "archive_items": ("Archiving of old items", "manual"),                   # BL-10: information only (never a warning)
     "extraction_scope": ("Something was extracted from documents or reports", "manual"),

@@ -71,11 +71,11 @@ def check(folder) -> dict:
 
 
 def engagements(root: Path) -> list:
-    """Engagement folders: every folder under the root except hidden ones and those starting with _ (_Templates, _Portfolio)."""
+    """Engagement folders: every folder under the root except hidden ones, those starting with _ (_Templates, _Portfolio) and the skipped ones (99 Archive, 99 System)."""
     if not root.is_dir():
         return []
     return sorted(d.name for d in root.iterdir() if d.is_dir() and not d.name.startswith((".", "_"))
-                  and d.name not in paths.skipped_names())             # BL-09: never _Archive (or the old zz Archive)
+                  and not paths.is_skipped(d.name))                    # BL-09, #252: never 99 Archive (or the old _Archive, zz Archive)
 
 
 def subfolders(base: Path, depth=3) -> list:

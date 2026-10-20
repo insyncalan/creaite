@@ -724,11 +724,53 @@ def organiser_of(ev):
     return (str(org).strip()[:80] or False) if isinstance(org, str) else bool(org)
 
 
+def spec_meetings(spec):
+    """#265 review L4: how many meetings a calendar spec holds (events in its days' lists), before any is read or dropped."""
+    held = spec.get("days") if isinstance(spec, dict) else None
+    if not isinstance(held, dict):
+        return 0
+    return sum(1 for v in held.values() if isinstance(v, list) for ev in v if isinstance(ev, dict))
+
+
+def saved_meetings_from(day):
+    """#265 review L4: how many meetings the saved calendar holds on `day` (YYYY-MM-DD) or later."""
+    try:
+        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+    except (OSError, ValueError, AttributeError):
+        return 0
+    if not isinstance(held, dict):
+        return 0
+    return sum(len(v) for d, v in held.items() if str(d) >= day and isinstance(v, list))
+
+
+EMPTY_SPEC = "The reply held no meetings; kept the saved calendar."
+
+
+def calendar_row(ev, start, end, all_day):
+    """One saved meeting (BL-98, BL-97, #265 review L5): a private one is "Busy" (ID and Teams kept, nothing else); a
+    confidential one keeps only its title and times (and ID): no place, organiser, Teams flag, recurrence, body or
+    attendees; any other keeps its place, Teams, organiser and the invite's details for prep."""
+    sens = str(ev.get("sensitivity") or "").lower()
+    private = bool(ev.get("private")) or sens in ("private", "personal")
+    title = "Busy" if private else str(ev.get("title") or "Meeting")[:140]
+    row = {"start": "" if all_day else start, "end": "" if all_day else end, "all_day": all_day, "title": title,
+           "where": "", "teams": bool(ev.get("teams")) and not sens == "confidential", "private": private, "organiser": False}
+    if sens == "confidential" and not private:
+        row["sensitivity"] = "confidential"
+    elif not private:
+        row.update(where=str(ev.get("where") or "")[:80], organiser=organiser_of(ev))
+        row.update(invite_details(ev))                                                    # BL-98
+    return row
+
+
 def calendar(spec_file):
     """Keep the day view's, the Inbox's and meeting prep's meetings: event ID, times, title, place, Teams or not, the
     organiser, and the invite's details for prep (BL-98, see invite_details). Ignored events (BL-97: private ones,
     ToDo invites…) are dropped and counted; a private meeting the rules let through becomes "Busy" (ID and Teams
-    kept, nothing else). Days before the window start are dropped."""
+    kept, nothing else); a confidential one keeps only its title and times (#265 review L5). Days before the window
+    start are dropped. A spec with no meetings at all never replaces a saved calendar that still holds today's or later
+    meetings (#265 review L4: an empty reply is far likelier a failed read than an empty diary). The file is written
+    atomically: a reader sees the old calendar or the new one, never half of one."""
     try:
         spec = json.loads(Path(spec_file).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
@@ -739,6 +781,10 @@ def calendar(spec_file):
     rules, vips = ignore_rules(), vip_addresses()                  # BL-97: ignored events are never saved
     start_day = calendar_window()[0].isoformat()
     today_day = now().date().isoformat()
+    if not spec_meetings(spec) and saved_meetings_from(today_day):
+        print(EMPTY_SPEC)
+        debuglog.warn("sweep", "calendar: an empty spec was refused; the saved calendar still holds today's or later meetings")
+        return 1
     fetch_from = calendar_fetch_from().isoformat()       # before the save: the save moves the "fetched" stamp
     for day, events in sorted(localise(spec.get("days"), bad).items()):     # BL-107: local times, local dates
         if day < start_day:              # before the window (BL-42): not kept
@@ -754,23 +800,14 @@ def calendar(spec_file):
             if not all_day and not (HHMM.match(start) and HHMM.match(end) and end > start):
                 bad.append(f"{day} {start}-{end} {ev.get('title', '')}".strip())
                 continue
-            sens = str(ev.get("sensitivity") or "").lower()
-            private = bool(ev.get("private")) or sens in ("private", "personal")
-            org = organiser_of(ev)                          # True: Alan; else a name
-            row = {"start": "" if all_day else start, "end": "" if all_day else end, "all_day": all_day,
-                   "title": "Busy" if private else str(ev.get("title") or "Meeting")[:140],
-                   "where": "" if private else str(ev.get("where") or "")[:80],
-                   "teams": bool(ev.get("teams")), "private": private,
-                   "organiser": False if private else org}
-            if not private:
-                row.update(invite_details(ev, confidential=sens == "confidential"))     # BL-98
+            row = calendar_row(ev, start, end, all_day)
             if str(ev.get("id") or "").strip():              # the calendar event ID (BL-42): processed state, picking
                 row = {"id": str(ev["id"]).strip()[:512], **row}
             kept.append(row)
         days[day] = sorted(kept, key=lambda e: (not e["all_day"], e["start"]))
     days = keep_held_past_days(days, start_day, today_day)
-    paths.CALENDAR.write_text(json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days}, indent=1,
-                                         ensure_ascii=False), encoding="utf-8")
+    paths.write_text_atomic(paths.CALENDAR, json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days},
+                                                      indent=1, ensure_ascii=False))       # #265 review L3
     n = sum(len(v) for v in days.values())
     debuglog.info("sweep", f"calendar saved: {n} meeting(s) over {len(days)} day(s) in {datetime.now().astimezone():%Z (%z)}, "
                   f"{len(bad)} with times that could not be read, {sum(ignored.values())} ignored")
@@ -972,7 +1009,8 @@ def ignore_cmd(spec_file):
 
 # BL-98: what the saved calendar keeps of an invite for meeting prep. The body becomes plain text with the joining
 # boilerplate (Teams and Outlook join links, meeting ID, passcode, dial-in numbers) taken out; those act as a key to
-# the meeting and are no use for prep.
+# the meeting and are no use for prep. #265 review L5: any line with a URL that carries a key (pwd=, passcode=, pin=…)
+# and any PIN or passcode line goes too, whatever the provider.
 BODY_MAX = 20000
 JOIN_LINE = re.compile(
     r"(microsoft teams (meeting|need help)|join (the meeting|on your computer|with a video conferencing|by phone|"
@@ -980,7 +1018,9 @@ JOIN_LINE = re.compile(
     r"reset dial[- ]in pin|conference id|tel:|teams\.microsoft\.com|teams\.live\.com|aka\.ms/|meet\.google\.com|"
     r"zoom\.us/|webex\.com|for organi[sz]ers: meeting options|learn more( about teams)?\s*(\||$)|meeting options|"
     r"^\s*\+\d[\d ,#()-]{7,}|^\s*_{8,}\s*$|^\s*\.{3,}\s*$|system reference|"
-    r"this meeting is being recorded|join microsoft teams meeting)", re.I)
+    r"this meeting is being recorded|join microsoft teams meeting|"
+    r"[?&;](pwd|passcode|pass|password|pin|tk|token)=|"                 # #265 review L5: a URL carrying a key, any provider
+    r"\bpin\b\s*(code|number|no\.?)?\s*[:#]?\s*\d{3,}|\bpin\s*:|pass\s*code)", re.I)   # and a PIN or passcode line
 
 
 def invite_text(body):

@@ -68,6 +68,8 @@ def make_vault():
               "settings_catalogue.py", "health.py",                # BL-320
               "archive.py",                                        # BL-10, BL-03
               "usage_log.py", "usage_report.py",                   # #197, #238: the Usage figures in the page's data
+              "usage_reviews.py",                                  # #238 delta (v2.5.3): Your reviews on the Usage tab
+              "vip_schedule.py",                                   # #97: the alert check's quiet hours
               "notes.py",                                          # BL-301: the note format, read by search
               "capture.py",                                        # BL-301 C: the capture drawer's server side
               "edit_ai.py",                                        # BL-301 D: AI on selected text
@@ -79,9 +81,12 @@ def make_vault():
               "logo_check.py",     # p240-leakfix: a logo is looked into before it is saved
               "creaite_doc.py",                                    # v2.1.0 P1: creaite's document format
               "minutes_record.py", "date_words.py",                # v2.1.0 P4: the minutes record, dates in words
+              "minutes_spec.py",                                   # #269: what minutes.py stage accepts as a meeting spec
               "linktext.py",                                       # #121: links in plain text, read by the reports, search and the Excel export
               "confusables.py", "client_output.py",                # v2.5.1 (#239): the look-alike skeleton, the client output check
               "client_snapshot.py",                                # v2.5.1 (#239, step 2): the checked snapshot, the one client export
+              "intake_process.py",                                 # #264: Intake's Process, its own run kind
+              "calendar_refresh.py",                               # #265: Calendar import's Refresh, its own run kind
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)
