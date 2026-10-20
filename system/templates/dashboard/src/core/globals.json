@@ -602,6 +602,7 @@
    "refreshFiles",
    "refreshRecords",
    "regAddAlias",
+   "regAddPerson",
    "regSetHidden",
    "rel",
    "reloadData",

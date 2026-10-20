@@ -1096,7 +1096,7 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 .fchip.neg{background:color-mix(in srgb,var(--bad) 14%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bad) 45%,transparent)}
 @media (max-width:640px){ .fpick{grid-template-columns:1fr} }
 /* BL-264: Settings › People's filter (Work's picker, chips and empty state) */
-.pmtools{margin:6px 0 4px} #pmQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;min-width:240px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
+.pmtools{margin:6px 0 4px} #pmQ,#plQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;min-width:240px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
 .fchip .cl{color:inherit;font-size:inherit;padding:2px 0;margin:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px} .fchip .cl:hover{text-decoration:underline}
 .fchip.def{background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
 #pmRows mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:var(--r-sm)} .pmvia{display:block;font-size:var(--fs-xs);margin-top:2px}
@@ -76808,6 +76808,7 @@ ${d5.text}`);
         "refreshFiles",
         "refreshRecords",
         "regAddAlias",
+        "regAddPerson",
         "regSetHidden",
         "rel",
         "reloadData",
