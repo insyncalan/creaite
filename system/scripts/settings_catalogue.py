@@ -112,10 +112,10 @@ CATALOGUE = {
                                     "Messages that may belong to a project are shown in Review to place, not dropped.",
                                     "A weak match you can place is better than a message silently lost."),
     "sweep.fetch_transcripts": ("Sweep", "Fetch transcripts as they appear",                 # #250 (#181 C2)
-                                "Each sweep fetches ended meetings' transcripts so Intake has them ready. Reads only; never a "
-                                "confidential meeting.",
-                                "Off: a transcript is fetched when you press Process, until you choose to have them ready. "
-                                "On, it only reads: no AI runs and nothing is written to the tracker."),
+                                "Off: creaite fetches a transcript when you press Process. On: each sweep fetches the "
+                                "transcripts of meetings that have ended, so they are ready when you open Intake. It only reads: "
+                                "no AI runs and nothing is written to the tracker. Confidential meetings are never fetched.",
+                                "Off until you choose to have transcripts ready: fetching only reads, and it is your call."),
     "sweep.ignore": ("Sweep", "Ignore rules", "Mail, Teams and invites the sweep skips (counted, never read into proposals).",
                      "Private items are always skipped; the rest are common noise you can switch off or edit."),
     # ── People I follow

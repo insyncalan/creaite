@@ -941,9 +941,10 @@ def done_log_line(normal, started, counts, run, fetch=None):
     line = (f"done{' (normal)' if normal else ''}: {items} item{'s' if items != 1 else ''} "
             f"({int(run.get('possible', 0))} possible), {int(run.get('alerts', 0))} alerts, "
             f"{int(run.get('skipped', 0))} skipped, {sum(int(n) for n in counts.values())} ignored")
-    fetch = {k: int((fetch or {}).get(k) or 0) for k in ("fetched", "failed", "left")}
+    fetch = {k: int((fetch or {}).get(k) or 0) for k in ("fetched", "failed", "left", "error")}
     if any(fetch.values()):
-        line += f", transcripts {fetch['fetched']} fetched, {fetch['failed']} failed, {fetch['left']} left"
+        line += (f", transcripts {fetch['fetched']} fetched, {fetch['failed']} failed, {fetch['left']} left, "
+                 f"{fetch['error']} not saved")
     try:
         began = datetime.strptime(str(started)[:16].replace("T", " "), "%Y-%m-%d %H:%M")
         line += f", {max(0, int((now() - began).total_seconds() // 60))} min"
