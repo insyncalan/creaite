@@ -54,7 +54,10 @@ class FloatingBar(LiveBrowserCase):
             self.assertLessEqual(bar["bottom"], b.eval("innerHeight"))
             self.assertGreaterEqual(bar["left"], 0)
             self.assertLessEqual(bar["right"], b.eval("innerWidth"))
-        # the last row clears the bar
+        # the last row clears the bar. Scrolling down hides the top bar (#207) and the page grows by its height, so the end moved:
+        # let that settle, then go to the end again (without this the check raced the bar on a slower page)
+        b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,150))))")
+        b.eval("document.getElementById('v-review').scrollTop=document.getElementById('v-review').scrollHeight")
         last = b.eval("[...document.querySelectorAll('#reviewBody tr[data-n]')].pop().getBoundingClientRect().bottom")
         self.assertLessEqual(last, b.eval(BAR)["top"])
         # a row far down can be ticked and the bar is still there

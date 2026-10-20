@@ -124,7 +124,7 @@ class ToDecide(Home):
         before = b.eval("tdLine().map(x=>x.key+':'+x.n).join()")
         n0 = b.eval("irLiveCounts().ready")
         # the refresh path (files.js refreshFiles) re-renders Today: simulate its last line
-        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx',path:'inbox/later.docx'}]})}); refreshFiles(true)""")
+        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx',path:'inbox/later.docx',ft:'transcript'}]})}); refreshFiles(true)""")
         b.wait(f"/{n0 + 1} ready to process/.test(document.getElementById('tdLine').textContent)")
         self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=ready]').textContent"), f"{n0 + 1} ready to process")
         self.assertEqual(b.eval("document.getElementById('revBadge').textContent.trim()"), b.eval("String(irLiveCounts().badge)"))
@@ -136,7 +136,7 @@ class ToDecide(Home):
     def test_the_ready_part_says_what_the_rail_counts(self):
         b = self.b
         self.today()
-        o = b.eval("""(()=>{ const f=irLiveCounts().ready; D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx',path:'inbox/a.docx'},{state:'new',name:'b.docx',path:'inbox/b.docx'}];
+        o = b.eval("""(()=>{ const f=irLiveCounts().ready; D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx',path:'inbox/a.docx',ft:'transcript'},{state:'new',name:'b.docx',path:'inbox/b.docx',ft:'transcript'}];
           const n=f+2; renderBadge(); renderToday(); const a=document.querySelector('#tdLine [data-tdline=ready]');
           return {text:a&&a.textContent, n, rail:document.getElementById('revBadge').textContent.trim(), badge:irLiveCounts().badge}; })()""")
         self.assertEqual(o["text"], f"{o['n']} ready to process")
