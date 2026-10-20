@@ -70,7 +70,7 @@ NOTES.update({
     51: "FAIL-expected on 3014848d (review MEDIUM 2 and 3): the letter keys do not check for an open dialog or menu or for key repeat",
     53: "FAIL-expected on 3014848d (review LOW 4): a wrong-typed value in creaite-listgrp stops the Work page drawing",
     54: "waits for v26-work-items-d (the history) and its guarded route (dev/proposals/work-item-history/live_server.diff)",
-    58: "the dismissal is kept per browser; two tabs are scripted by the builder's own test",
+    59: "two tabs are scripted by the builder's own test (a second page in the same browser)",
 })
 
 # Check number: [(file in dev/tests, [test names or "Class" or "Class.name"], the branch that brings it)]. A bare name means every class
@@ -491,7 +491,7 @@ class Called(unittest.TestCase):
 
     # ── #245 The Intake line on Today ──
 
-    def test_c56_the_line_on_the_hand_check_vault_is_in_the_locked_wording(self):
+    def test_c56_the_line_and_its_wording(self):
         """56. Today: one quiet line at the foot of Your commitments, "Intake: 3 meetings ready to process, 2 proposals to approve and 1 new
         file to process." (singular and plural right, a part left out at zero), none when nothing waits."""
         self.named(56)
