@@ -156,6 +156,7 @@ class MilestoneRows(Seeded):
         self.b.eval(f"""[...document.querySelectorAll('#attnList li[data-msattn="{ms}"] .tb p a.s')].find(a=>/^Open all/.test(a.textContent)).click()""")
         self.b.wait("VIEW==='work' && WT==='all'")
         got = self.b.eval("items().filter(x=>passes(x)).map(x=>x.t).sort()")
+        self.assertEqual(self.b.eval("[[...FX.mi],WQ]"), [[ms], ""], "the Milestone filter, not a search")
         self.assertEqual(got, sorted(["Confirm licence count with procurement", "Schedule training sessions",
                                       "Order pilot laptops", "Training room not booked"]))
 

@@ -37271,7 +37271,7 @@ ${s5}`;
   shared.SEL = null;
   shared.WQ = "";
   var OWN = /* @__PURE__ */ new Set(), PROJF = /* @__PURE__ */ new Set(), PRIF = /* @__PURE__ */ new Set();
-  var FX = { st: /* @__PURE__ */ new Set(), due: /* @__PURE__ */ new Set(), ws: /* @__PURE__ */ new Set(), ty: /* @__PURE__ */ new Set(), rs: /* @__PURE__ */ new Set(), src: /* @__PURE__ */ new Set(), cv: /* @__PURE__ */ new Set(), dt: /* @__PURE__ */ new Set(), ms: /* @__PURE__ */ new Set() };
+  var FX = { st: /* @__PURE__ */ new Set(), due: /* @__PURE__ */ new Set(), ws: /* @__PURE__ */ new Set(), ty: /* @__PURE__ */ new Set(), rs: /* @__PURE__ */ new Set(), src: /* @__PURE__ */ new Set(), cv: /* @__PURE__ */ new Set(), dt: /* @__PURE__ */ new Set(), ms: /* @__PURE__ */ new Set(), mi: /* @__PURE__ */ new Set() };
   var RR = { from: "", to: "" };
   shared.DR = { from: "", to: "" };
   shared.CR = { from: "", to: "" };
@@ -40123,7 +40123,8 @@ ${s5}`;
         return x5.st === "Open" && a5 !== null && a5 >= (+S.staleDays || 7) ? "yes" : "no";
       }, 1],
       ["lu", "Last updated", () => lastDays, (x5) => x5.upd_at, 1, (x5, set) => within(x5.upd_at, set)],
-      ["rd", "Raised", () => lastDays, (x5) => x5.raised, 1, (x5, set) => within(x5.raised, set)]
+      ["rd", "Raised", () => lastDays, (x5) => x5.raised, 1, (x5, set) => within(x5.raised, set)],
+      ["mi", "Milestone", () => P4.flatMap((p6) => (p6.ms || []).filter((m5) => m5[3]).map((m5) => [m5[3], P4.length > 1 ? `${m5[0]} (${p6.name})` : m5[0]])), (x5) => x5.ms || "", 1]
     ];
     DEFSORT.all = (a5, b5) => allLate(b5) - allLate(a5) || (a5.due || "9").localeCompare(b5.due || "9") || a5.id.localeCompare(b5.id);
     CLOSEDST.all = ["Closed", "Cancelled"];
@@ -41674,10 +41675,7 @@ ${s5}`;
   function msAttnOpenWork(id2) {
     const r4 = msAttention().find((x5) => x5.ms === id2);
     if (!r4) return;
-    openWork(r4.p, "all", "open", { st: ["Open"], ty: ["Action", "Issue"] });
-    shared.WQ = r4.ms;
-    renderWork();
-    navWrite(false);
+    openWork(r4.p, "all", "open", { st: ["Open"], ty: ["Action", "Issue"], mi: [r4.ms] });
   }
   var msAttnWorkWord = (r4) => r4.its.length === 1 ? "Open in Work" : `Open all ${r4.its.length} in Work`;
   function msAttnRow(n4, r4) {
