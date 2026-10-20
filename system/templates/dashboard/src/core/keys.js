@@ -7,7 +7,7 @@ import { openCapture } from "../components/notes/CaptureDrawer.jsx";
 import { $ } from "./dom.js";
 import { closeCal } from "./fields.js";
 import { go, switchProject } from "./nav.js";
-import { closeHelpPanel, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
+import { closeHelpPanel, helpOutsidePress, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
 import { helpFocusSearch } from "../help.js";
 import { copied, MAC, START_CMD } from "./page.js";
 import { snack } from "./server.js";
@@ -25,6 +25,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-copycmd]"
   if(navigator.clipboard) navigator.clipboard.writeText(START_CMD).then(done,()=>prompt("Copy this command:",START_CMD)); else prompt("Copy this command:",START_CMD); });
 $("#alertCmd").textContent=START_CMD;
 document.addEventListener("mousedown",e=>{
+  helpOutsidePress(e);   /* #249: a press outside the ? panel closes it (not on its opener, not in a layer above it) */
   if(e.target.closest(".snack,.cal,dialog")) return;
   if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")&&!e.target.closest(OPENERS)&&!e.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();   /* #108 (Alan, 15-10-2026): a click outside clears a bulk selection too; the rows, the bulk bar, its menus and any control stay as they were */
   if($("#chat").classList.contains("on")&&!e.target.closest("#chat")&&!e.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();   /* BL-176: the peek stays usable beside the chat; fix-peek-140: so does the errors banner (closing the chat under the pointer moved its buttons) */

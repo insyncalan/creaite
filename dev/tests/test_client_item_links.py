@@ -13,6 +13,7 @@ redraft request (drafts.report_request), what a client draft is shown (report.cu
 status_facts) and Word (docx_tools).
 """
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -371,8 +372,8 @@ print(json.dumps(res))""")
 
 
 class ClientSheetOffersNoItems(unittest.TestCase):
-    """#123 (Alan's decision 8): the client sheet offers no work item, so no internal one: its editor has no `#` picker, no `/` menu
-    (whose Work item row needs that host) and draws no chips."""
+    """#123 (Alan's decision 8, narrowed by Alan on 19-10-2026): the client sheet offers no work item, so no internal one: its editor has
+    no `#` picker, no note, person or work-item row in its `/` menu and draws no chips. The text section's `/` menu itself stays."""
 
     def test_the_sheet_editor_has_no_item_picker_slash_menu_or_chips(self):
         src = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src" / "components" / "report"
@@ -383,8 +384,17 @@ class ClientSheetOffersNoItems(unittest.TestCase):
             if not f.exists():
                 continue
             code = f.read_text(encoding="utf-8")
-            for hook in ("attach" + "ItemPick", "insert" + "Hash", "item" + "Chip", "attach" + "Slash", "item" + "Options"):
+            for hook in ("attach" + "ItemPick", "insert" + "Hash", "item" + "Chip", "item" + "Options"):         # "attachSlash" is no longer banned
                 self.assertNotIn(hook, code, f"{name} wires {hook}: a client sheet would offer or draw work items")
+        # Alan, 19-10-2026: the text section keeps its `/` menu (the Notes menu with the "textsection" profile: text, headings, lists,
+        # task, quote, code block, table, image, link); what must hold is that its rows offer no note, person or work item
+        prof = (src.parent.parent / "core" / "editorProfiles.js").read_text(encoding="utf-8")
+        m = re.search(r"^\s*textsection: \[([^\]]*)\]", prof, re.M)
+        self.assertIsNotNone(m, "ED_SLASH_ROWS.textsection not found")
+        row = m.group(1)
+        self.assertIn('"text"', row, "the textsection row list was read empty: the check would pass vacuously")
+        for bad in ("item", "note", "person", "mention", "hash", "wiki"):
+            self.assertNotIn(bad, row, f"the textsection menu rows offer {bad}: a client sheet could insert an internal item")
 
 
 class DropItemLinks(unittest.TestCase):

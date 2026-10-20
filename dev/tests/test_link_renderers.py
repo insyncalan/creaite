@@ -275,8 +275,6 @@ INTERNAL_HREFS = [
     ("components/prep/PrepPage.jsx", "href", 1, "`href` is sourceHref(s), declared on the line above"),
     ("components/prep/PrepShape.jsx", "href", 1, "`href` is sourceHref(s), declared on the line above"),
     ("components/today/ToDecide.jsx", "href", 1, "`href` is linkUrl(r.link), declared at the top of TdLine"),
-    ("components/reporting/ReportingCard.jsx", "weeklyHref(code, week)", 1, "a hash address built by weeklyHref"),
-    ("components/reporting/ReportingCard.jsx", "clientReportHref(code, week, c.client)", 1, "a hash address built by clientReportHref"),
     ("core/fields.js", 'p.split("/").map(encodeURIComponent).join("/")', 1, "openPath without the server: a path inside the vault, each part encoded, opened relative to the page"),
     ("core/server.js", "http://127.0.0.1:${Number(S.port)}/", 1, "the live server's own address on this laptop; the port is made a number"),
     ("meetings.js", "${u}", 1, "a blob: address the page made itself (URL.createObjectURL) for the prep page it just built"),

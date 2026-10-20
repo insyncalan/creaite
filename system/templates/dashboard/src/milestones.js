@@ -14,6 +14,7 @@ import { D, DATE, fd, fdText, MOD, mScroll, reduced, S, TODAY } from "./core/pag
 import { needVault, reloadData, renderBadge, save, snack, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { draftStat } from "./drafts.js";
+import { helpPanelOpen } from "./helpscreen.js";
 import { drFcDraw, drSame, pkHistory, PKMON, pkShort, PKTABS, readForm } from "./panel.js";
 import { closePanel, depWarn, chooseProject, renderCockpit } from "./projects.js";
 import { nm, ownerFinal, PKAPPLIED, sw } from "./settings.js";
@@ -613,7 +614,7 @@ document.addEventListener("keydown",e=>{ const t=e.target; if(!t.matches) return
   if((e.key==="Enter"||e.key===" ")&&t.matches(".mv-prow[data-mvedit],.mv-lrow[data-mvsel]")){ e.preventDefault(); t.click(); return; }
   if(e.key==="Enter"&&t.id==="mvName"){ e.preventDefault(); if(shared.MV.add) mvAddCommit(); else t.blur(); return; }
   if(e.key==="Enter"&&["mvFlWhy","mvFcWhy","mvRbWhy","mvAdjWhy"].includes(t.id)){ e.preventDefault(); ({mvFlWhy:()=>mvAct("flok"),mvFcWhy:()=>mvAct("fcok"),mvRbWhy:mvRebaseline,mvAdjWhy:mvAdjust})[t.id](); return; }
-  if(e.key==="Escape"&&(shared.MV.peek||shared.MV.add)&&!($("#mvCal")&&!$("#mvCal").hidden)&&!($("#mvPop")&&!$("#mvPop").hidden)&&!document.querySelector("#personDlg[open]")){
+  if(e.key==="Escape"&&(shared.MV.peek||shared.MV.add)&&!helpPanelOpen()&&!($("#mvCal")&&!$("#mvCal").hidden)&&!($("#mvPop")&&!$("#mvPop").hidden)&&!document.querySelector("#personDlg[open]")){
     if(shared.MV.flow||shared.MV.pend){ e.preventDefault(); shared.MV.flow=null; shared.MV.pend=null; mvEdDraw(); return; }
     if(t.matches("#mvPeek input[type=text],#mvPeek textarea")&&t.value!==t.defaultValue){ t.value=t.defaultValue; }
     e.preventDefault(); mvEdClose(); } });

@@ -12,6 +12,7 @@ import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core
 import { parseWhen } from "./core/fields.js";
 import { typing } from "./core/keys.js";
 import { go, navWrite } from "./core/nav.js";
+import { helpPanelOpen } from "./helpscreen.js";
 import { D, DATE, fd, KI, nowStamp } from "./core/page.js";
 import { api, oneLine, refreshAll, reloadData, snack, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -19,6 +20,7 @@ import { msFind } from "./milestones.js";
 import { REC } from "./panel.js";
 import { HL, hlClear, hlPick, hlToggle } from "./work.js";
 import { mountRejectsList } from "./components/review/RejectsList.jsx";
+import { mountUsage } from "./components/activity/UsagePanel.jsx";   /* #238 */
 import { rjApproveInstead, rjLoadRecent, rjReasonFor, rjUnreject } from "./review.js";
 /* ======================= Activity ======================= */
 /* BL-43: each line names the item: the ID (a link to it), its text cut to about 80 characters (full text on hover),
@@ -92,7 +94,7 @@ export function actRow(a,i){ const rid=a.rowid&&!a.reverted&&!a.undone?`r${a.row
     :viaServer()&&a.apply_id&&a.apply_id===D.latest_apply&&!a.undone?raw(ibtn("undo","Undo this apply",html`data-undoapply="${a.apply_id}"`,"sm")):html`<span class="x" title="Only the latest apply can be undone here; tick older changes to undo them">Applied</span>`;
   return html`<tr${rid?html` data-row="${rid}"`:""}${a.reverted?html` class="undone"`:""}><td class="actck">${rid?html`<input type="checkbox" aria-label="Select: ${actId(a)} ${a.change||a.what||""}">`:html`<input type="checkbox" disabled title="This change can't be undone here" aria-label="Not selectable: ${actId(a)} ${a.change||a.what||""}">`}</td><td class="actwhen" style="white-space:nowrap">${fd(a.at)}</td><td class="actchg">${actIcon(a)}${actLine(a)}</td><td class="x">${a.by}</td><td style="text-align:right">${end}</td></tr>`; }
 export const ACTSHOW=300;
-export function renderActivity(){ actTools(); [...HL].forEach(([id,k])=>{ if(k!=="act") HL.delete(id); });
+export function renderActivity(){ if(ACTTAB==="u") usageDraw(); actTools(); [...HL].forEach(([id,k])=>{ if(k!=="act") HL.delete(id); });
   const LA=shared.ACT.map((a,i)=>[a,i]).filter(([a])=>actMatch(a)), on=actOn(), L=on?LA:LA.slice(0,ACTSHOW);   /* tidy-up (sprint-milestones): search looks through every line read; the list shows the newest 300 until then */
   $("#actCount").textContent=on?`${L.length} of ${shared.ACT.length}`:`${L.length} of ${shared.ACT.length}`; $("#actClear").hidden=!on;
   const what=[(shared.ACTF.q||"").trim()?`“${shared.ACTF.q.trim()}”`:"",(shared.ACTF.types||[]).map(t=>(actKindOf(t)||[,t])[1]).join(" or "),shared.ACTF.from?`from ${fd(shared.ACTF.from)}`:"",shared.ACTF.to?`to ${fd(shared.ACTF.to)}`:""].filter(Boolean).join(", ");
@@ -149,7 +151,7 @@ $("#actTbl").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-ro
 $("#actTbl").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.closest("tr[data-row]")) e.preventDefault(); });
 document.addEventListener("keydown",e=>{ if(shared.VIEW!=="activity") return;
   if(e.key==="/"&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!actTyping()&&!document.querySelector("dialog[open]")&&!$("#chat").classList.contains("on")){ e.preventDefault(); e.stopImmediatePropagation(); $("#actQ")?.focus(); $("#actQ")?.select(); return; }
-  if(e.key==="Escape"&&actSel().length&&!filterBarOpen($("#actFbar"))&&!document.querySelector("dialog[open]")&&!$("#panel").classList.contains("on")&&!actTyping()){ e.preventDefault(); e.stopImmediatePropagation(); hlClear(); actPaint(); } },true);
+  if(e.key==="Escape"&&actSel().length&&!helpPanelOpen()&&!filterBarOpen($("#actFbar"))&&!document.querySelector("dialog[open]")&&!$("#panel").classList.contains("on")&&!actTyping()){ e.preventDefault(); e.stopImmediatePropagation(); hlClear(); actPaint(); } },true);
 }
 
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -177,10 +179,24 @@ export function renderQuality(){ const q=D.quality||{}; if(q.error){ $("#qPeriod
   (q.fields||[]).forEach(r=>qRow(fl,r.field,[r.text,Object.entries(r.by_source||{}).map(([k,n])=>`${lab[k]||k} ${n}`).join(" · ")])); if(!(q.fields||[]).length) qEmpty(fl,3,"No edits with a known field in this period.");
   const u=q.unknown||{}; $("#qUnknown").textContent=u.n?`${u.n} of ${u.of} edited proposals were edited before creaite kept what was first proposed: field unknown.`:"";
   const dr=$("#qDrafts"); dr.replaceChildren(); (q.drafts||[]).forEach(r=>qRow(dr,r.label,r.offered?[String(r.offered),r.used.text,r.edited.text,r.rejected.text]:["0","—","—","—"],qNR(r.rated,r.offered,"offered"))); }
-/* BL-316: Activity's two tabs, Changes and Quality, are the Tabs building block (drawn into #actTabsHost) */
-export function actTabsDraw(q){ drawTabs($("#actTabsHost"),{items:[{id:"ch",label:"Changes",tabId:"actTabCh",controls:"actTbl"},{id:"q",label:"Quality",tabId:"actTabQ",controls:"actQuality"}],
-  selected:q?"q":"ch",onSelect:id=>actShowQuality(id==="q"),label:"Activity",className:"acttabs",wrap:true}); }
-export function actShowQuality(q){ $("#v-activity").classList.toggle("q",q); $("#actQuality").hidden=!q; actTabsDraw(q); if(q){ renderQuality(); rjLoadRecent(); } }   /* BL-315: What you rejected, fresh each time */
+/* BL-316: Activity's tabs are the Tabs building block (drawn into #actTabsHost). #238: a third, Usage (read only, counts only) */
+export const ACTTABS=[{id:"ch",label:"Changes",tabId:"actTabCh",controls:"actTbl"},{id:"q",label:"Quality",tabId:"actTabQ",controls:"actQuality"},{id:"u",label:"Usage",tabId:"actTabU",controls:"actUsage"}];
+let ACTTAB="ch";
+export function actTabsDraw(tab){ drawTabs($("#actTabsHost"),{items:ACTTABS,selected:tab,onSelect:id=>actShowTab(id),label:"Activity",className:"acttabs",wrap:true}); }
+export function actShowTab(tab){ ACTTAB=tab; const v=$("#v-activity"); v.classList.toggle("q",tab==="q"); v.classList.toggle("u",tab==="u");
+  $("#actQuality").hidden=tab!=="q"; $("#actUsage").hidden=tab!=="u"; actTabsDraw(tab);
+  if(tab==="q"){ renderQuality(); rjLoadRecent(); }   /* BL-315: What you rejected, fresh each time */
+  if(tab==="u") usageOpen(); }
+export const actShowQuality=q=>actShowTab(q?"q":"ch");
+/* #238: Usage draws D.usage (built into the page from usage_report.py --json) and, where the live server has GET /api/usage, the fresh figures. Absent
+   (a 404, a refusal, no server): the page's own copy stays, and the route is not asked again. Nothing is sent; the tab has no control. */
+let USAGE_ROUTE=true;
+export function usageDraw(){ mountUsage($("#actUsage"),{usage:D.usage,fd}); }
+export async function usageOpen(){ usageDraw();
+  if(!USAGE_ROUTE||!viaServer()) return;
+  try{ const r=await fetch("/api/usage",{headers:{"X-Creaite-Token":D.token||""}});
+    if(r.status===404||r.status===405){ USAGE_ROUTE=false; return; }
+    const j=r.ok?await r.json():null; if(j&&j.cards&&Array.isArray(j.by_day)){ D.usage=j; if(ACTTAB==="u") usageDraw(); } }catch(e){ USAGE_ROUTE=true; /* a failed read keeps the page's own figures */ } }
  
 /* ===== end BL-233 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -188,5 +204,5 @@ export function bootActivity0205(){
 /* BL-315: Activity › Quality › What you rejected: the chip changes the reason, Approve instead, Undo (review.js does each) */
 mountRejectsList($("#qRejects"),{onReason:(r,el)=>rjReasonFor([{key:r.key,file:r.file,ref:r.ref,t:r.text||"",reason:r.reason||"",dup:r.duplicate_of||null,guess:null}],el),
   onApprove:r=>rjApproveInstead([r]),onUndo:r=>rjUnreject([r]),name:pName,when:at=>`${fd(String(at).slice(0,10))}${String(at).length>15?" "+String(at).slice(11,16):""}`});
-actTabsDraw(false);
+actTabsDraw("ch");
 }

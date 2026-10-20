@@ -29,7 +29,7 @@ export function openHelpPanel(/** @type {string} */ key){ const sc=screenInfo(ke
   const from=document.activeElement, p=$("#helpPanel"); closeChat();
   const task=id=>HD.tasks.find(t=>t.id===id), ref=HD.sections.find(x=>x.id===sc.ref);
   putHTML(p,raw(`<div class="hpn-h"><h2 id="hpnT">Help · ${esc(sc.title)}</h2><button type="button" class="iconbtn" id="hpnX" aria-label="Close Help">×</button></div>
-    <p class="sub">Esc closes it and you are back where you were.</p>
+    <p class="sub">Esc or a click outside closes it, and you are back where you were.</p>
     <ul class="hpn-jobs">${sc.ids.map(id=>task(id)).filter(Boolean).map(t=>`<li><a href="#help-howto-${esc(t.id)}" data-hpn="howto-${esc(t.id)}"><b>${esc(t.title)}</b>${t.where?`<span>${esc(t.where)}</span>`:""}</a></li>`).join("")}</ul>
     <div class="hpn-f">${ref?`<a href="#help-reference-${esc(ref.id)}" data-hpn="reference-${esc(ref.id)}">How ${esc(sc.title)} works</a>`:""}<button type="button" class="linkbtn" id="hpnFind">Search all of Help</button></div>`));
   p.setAttribute("aria-labelledby","hpnT"); p.classList.add("on");
@@ -39,6 +39,19 @@ export function closeHelpPanel(/** @type {boolean=} */ noReturn){ const p=$("#he
   p.classList.remove("on"); const t=PANELFROM; PANELFROM=null;
   if(p.contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
   if(!noReturn&&t&&t.isConnected) /** @type {HTMLElement} */ (t).focus(); }
+/** #249: the header's ? (Today) toggles the panel: open, it closes and focus stays on the button. */
+export function toggleHelpPanel(/** @type {string} */ key){ if(helpPanelOpen()){ closeHelpPanel(); return true; } return openHelpPanel(key); }
+/** #249: what a press outside the panel may be on and leave it open: the panel, its opener, and the layers above it. */
+const HELP_KEEP="#helpPanel,[data-thelp],dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
+const CONTROL="a[href],button,input,select,textarea,[contenteditable=true],[contenteditable=''],[tabindex]:not([tabindex='-1'])";
+/** #249 (Alan, 19-10-2026): a press outside the panel closes it. The press still does its own job (the panel is a side sheet
+    with no backdrop, not a modal: what is beside it is in plain sight, so a press there means that thing). Focus goes back to
+    the opener unless the press put it on a control of its own. Called by the shared outside-press handler (core/keys.js). */
+export function helpOutsidePress(/** @type {MouseEvent} */ e){ const t=/** @type {HTMLElement} */ (e.target);
+  if(!helpPanelOpen()||!t||!t.closest||t.closest(HELP_KEEP)) return;
+  const back=PANELFROM; closeHelpPanel(true);
+  if(t.closest(CONTROL)||!back) return;
+  setTimeout(()=>{ const a=document.activeElement; if(back.isConnected&&(!a||a===document.body||!a.closest(CONTROL))) /** @type {HTMLElement} */ (back).focus(); },0); }
 
 /* ----- the first-visit line and the foot line ----- */
 const MEM=new Set();

@@ -815,7 +815,7 @@ RECORD_PATH = re.compile(r"(?:system/staging/drafts|projects)/[^\x00]+\.html")
 
 def record_at(path):
     """(stored path, the record) for a minutes record the view may open: a draft in system/staging/drafts/ or filed minutes in a
-    project folder. Raises RecordError."""
+    project folder. Raises RecordError, also for a file that is a report by any sign (creaite_doc.report_signs; v2.5.1)."""
     rel = str(path or "")
     if not RECORD_PATH.fullmatch(rel) or ".." in Path(rel).parts or "\\" in rel:
         raise RecordError("Those aren't minutes creaite can open.")
@@ -823,9 +823,27 @@ def record_at(path):
         doc = creaite_doc.read(rel)
     except creaite_doc.DocError as e:
         raise RecordError(str(e)) from None
-    if doc.get("kind") != "minutes":
+    if doc.get("kind") != "minutes" or _report_place(rel, doc):
         raise RecordError("That creaite document isn't a meeting's minutes.")
+    signs = creaite_doc.report_signs(rel, doc)        # v2.5.1 (#239, e): a client report edited to say minutes is still a report
+    if signs:
+        raise RecordError("That file is a report, not minutes (" + "; ".join(signs) + "), so it isn't opened here.")
     return rel, doc
+
+
+REPORT_NAME = re.compile(r" (?:Client|Weekly) report - ")
+
+
+def _report_place(rel, doc):
+    """v2.5.0: whether a path is a report's (a weekly or client report's file name, or a file in the project's reports folders),
+    so a report edited on disk to say minutes is never opened or exported as minutes, beside itself and ungated."""
+    if REPORT_NAME.search(Path(rel).name):
+        return True
+    try:
+        here = creaite_doc.real(rel).resolve().parent
+        return any(here == Path(paths.folder(doc.get("project"), creaite_doc.FOLDER[k])).resolve() for k in ("weekly", "client"))
+    except (LookupError, OSError, KeyError, TypeError, AttributeError, ValueError):
+        return False                  # no reports folder to be in (the portfolio's minutes); the name check above still ran
 
 
 def view(file=None, path=None):
@@ -885,7 +903,7 @@ def export(path, fmt, file_beside=True, version="internal"):
         return distributed_export(rel, doc, fmt, file_beside)
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
-    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False)
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)   # one read, minutes only
 
 
 def _followup_rows(use, doc, sid):
@@ -1093,7 +1111,7 @@ def distributed_export(rel, doc, fmt, file_beside=True):
     work.write_text(creaite_doc.dumps(dist), encoding="utf-8")
     try:
         folder = str(Path(rel).parent) if file_beside else None
-        out = creaite_doc.export(paths.rel(work), fmt, out_dir=folder, file_beside=False, open_after=False)
+        out = creaite_doc.export(paths.rel(work), fmt, out_dir=folder, file_beside=False, open_after=False, kind="minutes")
     finally:
         work.unlink(missing_ok=True)
     return {**out, "version": "distributed"}

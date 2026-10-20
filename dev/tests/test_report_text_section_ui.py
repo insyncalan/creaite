@@ -391,8 +391,23 @@ class ClientRuleUI(LiveBrowserCase):
         self.internal_with_text()
         self.open_side()
         self.b.eval("document.querySelector('#v-reporting [data-crmatchall]').click()")
-        self.b.pump(0.5)
+        self.b.wait("!!document.querySelector('[data-crskipsec=free_int]')", 10)     # the match has finished (it names the skipped section)
         self.assertEqual(self.b.eval(f"{self.pages(1)}.querySelectorAll('section[data-id=free_int]').length"), 0)
+        self.assertEqual(self.b.eval("document.querySelector('[data-crskipsec=free_int]').textContent"),
+                         "Vendor notes: internal only, add it to the client report yourself")
+
+    def test_match_internal_for_every_section_leaves_a_client_written_section_alone_and_says_nothing_without_internal_text(self):
+        self.internal_with_text()
+        self.open_side()
+        self.b.click("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit [data-addtext]")
+        self.b.wait(f"{self.pages(1)}.querySelectorAll('section[data-id^=free_]').length===1", 10)
+        mine = self.b.eval(f"{self.pages(1)}.querySelector('section[data-id^=free_]').dataset.id")
+        self.b.eval("document.querySelector('#v-reporting [data-crmatchall]').click()")
+        self.b.pump(1)
+        self.assertEqual(self.b.eval(f"{self.pages(1)}.querySelectorAll('section[data-id=free_int]').length"), 0)
+        self.assertEqual(self.b.eval(f"{self.pages(1)}.querySelectorAll('section[data-id={mine}]').length"), 1, "the client-written section stays")
+        self.assertNotIn("walrus", self.b.eval(f"{self.pages(1)}.innerText"))
+        self.assertEqual(self.b.eval(f"document.querySelectorAll('[data-crskipsec={mine}]').length"), 0, "only internal-only sections are named")
 
     def test_a_section_written_in_the_client_report_says_so_and_an_added_one_matches_internal(self):
         self.internal_with_text()

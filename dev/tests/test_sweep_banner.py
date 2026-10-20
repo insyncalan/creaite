@@ -47,7 +47,7 @@ class SweepDue(DueCase):
         self.assertEqual(b.eval("document.getElementById('sweepRun').textContent"), "Run sweep")
         self.assertEqual(b.eval("document.getElementById('sweepDue').nextElementSibling.id"), "tBrief")      # between the day band and the sections
         self.assertTrue(b.eval("!!document.querySelector('#v-today > .dayband ~ #sweepDue')"))
-        self.assertFalse(b.eval("!!document.querySelector('#sweepDue [data-dismiss],#sweepDue .x')"))   # not dismissible
+        self.assertEqual(b.eval("document.getElementById('sweepX').getAttribute('aria-label')"), "Dismiss until the next sweep is due")   # #243
 
     def test_the_button_sends_sweep_like_a_typed_one(self):
         b = self.b
@@ -88,6 +88,87 @@ class SweepDue(DueCase):
         self.today()
         b.eval("D.dev=true; renderSweepDue()")
         self.assertFalse(b.eval(VISIBLE))
+
+
+class SweepDismiss(DueCase):
+    """#243: a quiet x at the banner's right edge hides it for the rest of the day; it comes back the next day, or when the
+    last-swept time changes, and only the 'due' message is ever hidden by it."""
+    KEY = "creaite-sweepdue-dismissed"
+
+    def setUp(self):
+        super().setUp()
+        self.b.eval(f"localStorage.removeItem('{self.KEY}')")
+
+    def reload(self):
+        self.b.reload(wait_for="typeof go==='function' && LIVE")
+        self.today()
+
+    def test_the_x_is_quiet_and_at_the_right_edge(self):
+        b = self.b
+        self.today()
+        self.assertTrue(b.eval("document.getElementById('sweepX').classList.contains('ib')"))
+        self.assertEqual(b.eval("document.getElementById('sweepX').dataset.tip"), "Dismiss until the next sweep is due")
+        self.assertTrue(b.eval("!!document.querySelector('#sweepX svg')"))
+        self.assertEqual(b.eval("getComputedStyle(document.getElementById('sweepX')).borderTopColor"), "rgba(0, 0, 0, 0)")
+        self.assertTrue(b.eval("(()=>{const x=document.getElementById('sweepX').getBoundingClientRect(), r=document.getElementById('sweepRun').getBoundingClientRect(), box=document.getElementById('sweepDue').getBoundingClientRect(); return x.left>r.right && box.right-x.right<40;})()"))
+
+    def test_dismiss_hides_it_for_today_and_survives_a_reload(self):
+        b = self.b
+        self.today()
+        self.assertTrue(b.eval(VISIBLE))
+        b.click("#sweepX")
+        b.pump(0.2)
+        self.assertFalse(b.eval(VISIBLE))
+        self.assertNotEqual(b.eval("document.activeElement"), None)
+        self.assertNotEqual(b.eval("document.activeElement===document.body"), True)     # focus is not lost to the body
+        self.assertEqual(b.eval(f"JSON.parse(localStorage.getItem('{self.KEY}')).day"), b.eval("TODAY"))
+        self.reload()
+        self.assertFalse(b.eval(VISIBLE))
+
+    def test_dismiss_from_the_keyboard(self):
+        b = self.b
+        self.today()
+        b.eval("document.getElementById('sweepX').focus()")
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertFalse(b.eval(VISIBLE))
+        self.assertFalse(b.eval("document.activeElement===document.body"))
+        self.assertTrue(b.eval("!!document.activeElement.closest('#v-today')"))
+
+    def test_it_returns_the_next_day(self):
+        b = self.b
+        self.today()
+        b.eval(f"localStorage.setItem('{self.KEY}', JSON.stringify({{day:'2026-10-08', last:D.sweep_due.last||''}}))")   # dismissed yesterday
+        self.reload()
+        self.assertTrue(b.eval(VISIBLE))
+
+    def test_it_returns_when_the_last_sweep_changes(self):
+        b = self.b
+        self.today()
+        b.click("#sweepX")
+        b.pump(0.2)
+        self.assertFalse(b.eval(VISIBLE))
+        b.eval("D.sweep_due.last='2026-10-09 07:05'; renderSweepDue()")    # a sweep ran, and the next one is due again
+        self.assertTrue(b.eval(VISIBLE))
+
+    def test_run_sweep_still_works(self):
+        b = self.b
+        self.today()
+        b.eval("send=((orig)=>function(t){ window.SENT=t; })(send)")
+        b.click("#sweepRun")
+        b.pump(0.2)
+        self.assertEqual(b.eval("window.SENT"), "sweep")
+        self.assertTrue(b.eval("!!document.getElementById('sweepX')"))        # the x doesn't get in Run sweep's way
+
+    def test_storage_failing_is_harmless(self):
+        b = self.b
+        self.today()
+        b.eval("Object.defineProperty(window,'localStorage',{get(){ throw new Error('blocked'); }}); true")
+        b.eval("renderSweepDue()")
+        self.assertTrue(b.eval(VISIBLE))
+        b.click("#sweepX")
+        b.pump(0.2)
+        self.assertFalse(b.eval(VISIBLE))         # still hides for this page load
 
 
 class SweepDueNarrow(SweepDue):

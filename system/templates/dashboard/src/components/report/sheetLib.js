@@ -199,3 +199,9 @@ export function pageBreaks(sections, page, total) {
 }
 
 /* #202 / #207: the header's rule (headerPolicy and its three constants) is shared with the app's top bar, so it lives in core/scrollPolicy.js (Sheet.jsx imports it from there). */
+
+const NOTHING = /<[^<>]{0,200}>|&nbsp;|&#160;|\u00a0/g;
+/** Whether a row's cells hold nothing to show: each one empty, only markup or spaces (an editor's "<p></p>"), or only the row's own
+    reference (#234; creaite_doc.blank_row is the same rule, and an export leaves such a row out). @param {Record<string, any>|undefined} cells
+    @param {string} [ref] */
+export const blankCells = (cells, ref) => Object.values(cells || {}).every(v => v == null || v === ref || !String(v).replace(NOTHING, "").trim());

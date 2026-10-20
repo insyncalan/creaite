@@ -246,17 +246,18 @@ class TheReviewOf199ac40(Base):
                     f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = 'See {INTERNAL_ID}.'\n"
                     "p = Path('system/staging/drafts/probe-client.html'); p.parent.mkdir(parents=True, exist_ok=True)\n"
                     "p.write_text(creaite_doc.dumps(d))\nprint(1)")
-        return self.py("import review, tracker\np = 'system/staging/drafts/probe-client.html'\nclosed = []\nreal = tracker.connect\n"
-                       "class Con:\n    def __init__(s): s.c = real()\n    def execute(s, *a): return s.c.execute(*a)\n"
+        return self.py("import review, tracker\np = 'system/staging/drafts/probe-client.html'\nclosed = []\nopened = []\nreal = tracker.connect\n"
+                       "class Con:\n    def __init__(s): opened.append(1); s.c = real()\n    def execute(s, *a): return s.c.execute(*a)\n"
                        "    def close(s): closed.append(1); s.c.close()\n    def __getattr__(s, n): return getattr(s.c, n)\n"
                        "tracker.connect = Con\n" + setup +
                        "out = {}\nfor name, blk in (('doc', {'draft': p, 'project': 'ABC'}), ('word', {'draft': 'x.docx', 'project': 'ABC'})):\n"
                        f"    review.draft_lines = lambda _p: ['See {INTERNAL_ID}.']\n"
-                       "    out[name] = review.client_findings(blk)\nout['closed'] = len(closed)\nprint(json.dumps(out))")
+                       "    out[name] = review.client_findings(blk)\nout['closed'] = len(closed)\nout['opened'] = len(opened)\nprint(json.dumps(out))")
 
     def test_a_label_check_failure_is_reported_only_for_the_labels_and_keeps_the_other_findings(self):
         ok = self.client_findings()
-        self.assertEqual(ok["closed"], 2)                                             # the connection is closed each time
+        self.assertEqual(ok["closed"], ok["opened"])                                  # every connection opened is closed (the gate now opens
+        self.assertGreaterEqual(ok["closed"], 2)                                      # one more per report for the header fields: the count is not fixed)
         for k in ("doc", "word"):
             self.assertEqual(ok[k], [f"{INTERNAL_ID} isn't client-visible but its ID appears"], k)
         got = self.client_findings("import sqlite3\nfor f in ('findings', 'plain_findings'):\n"
@@ -265,7 +266,8 @@ class TheReviewOf199ac40(Base):
             self.assertEqual(len(got[k]), 1, got[k])
             self.assertTrue(got[k][0].startswith("Couldn't check the client report against the tracker"), got[k])
             self.assertIn("no such table: actions", got[k][0])
-        self.assertEqual(got["closed"], 2)
+        self.assertEqual(got["closed"], got["opened"])
+        self.assertGreaterEqual(got["closed"], 2)
         with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:     # a test vault: break the labels directly
             con.execute("DROP TABLE labels")
             con.execute("CREATE VIEW labels AS SELECT name FROM item_labels")
@@ -274,7 +276,8 @@ class TheReviewOf199ac40(Base):
         for k in ("doc", "word"):
             self.assertTrue(got[k][0].startswith("Couldn't check the label exclusions"), got[k])
             self.assertIn(f"{INTERNAL_ID} isn't client-visible but its ID appears", got[k][1:])
-        self.assertEqual(got["closed"], 2)
+        self.assertEqual(got["closed"], got["opened"])
+        self.assertGreaterEqual(got["closed"], 2)
 
 
 # #127 round 4: characters Word shows as nothing (format characters, variation selectors, fillers), as code points

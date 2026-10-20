@@ -1,11 +1,10 @@
 // @ts-check
-/* ToDecide (BL-319 v1.9.2, #168, #208 v2.3.0): Intake and Review, just above Week ahead. It is one quiet line (#tdLine), such as
-   "2 ready to process and 4 proposals to approve", each count a link (a real href, so Tab and Enter work) to its stage on
-   Intake and Review (#232-C). The counts are the rail's badge and the page's. Nothing is listed: no proposal or
-   transcript rows, no Approve, Reject or Process icons (Review and Intake have them). Under the line, messages from people
-   Alan follows (BL-288: never labelled; "Message") keep their cards, newest first, the top five with "+n more" (a
-   [data-more] button, today.js's handler); a message opens in Outlook or Teams from its link.
-   today.js builds the line (tdLine) and the cards (toDecideRows) and does the navigation; this only draws them.
+/* ToDecide (BL-319 v1.9.2, #168, #208 v2.3.0; #245 v2.5.2): the cards of messages from people Alan follows, in their own
+   section ("Messages", just above Week ahead). It was Intake and Review, with a line saying how many proposals, transcripts and
+   files waited; #245 moved that count to IntakeLine.jsx, one quiet dismissible line at the foot of Your commitments, and took the
+   section's fold away. Messages (BL-288: never labelled; "Message") keep their cards, newest first, the top five with "+n more"
+   (a [data-more] button, today.js's handler); a message opens in Outlook or Teams from its link.
+   today.js builds the cards (toDecideRows); this only draws them.
    BL-334: a message row is a conversation's card: its summary, then each candidate item (a quiet tag for its type, the item,
    its owner and due date) with Create work item and Dismiss (data-alertdo buttons, run by the page-wide handler in settings.js,
    with their Undo). A conversation with nothing for Alan is a quiet row (td-quiet): one line, no buttons. A confidential
@@ -25,9 +24,8 @@ import { LINK_REL, linkUrl } from "../../core/linkUrl.js";
     owners?: string, files?: string, rel?: string, relId?: string, relT?: string, relWhy?: string, count?: string,
     closeWhy?: string, closeStaged?: string, closeCard?: string, proms?: TdProm[], keptWhy?: string, keptStaged?: string,
     keptCard?: string}} TdRow */
-/** @typedef {{key: string, n: number, text: string, go: string}} TdPart */
-/** @typedef {{rows: TdRow[], line?: TdPart[], total: number, cap: number, open: boolean, onAct?: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
-    onOpen?: (row: TdRow) => void, onReview: () => void, onGo?: (page: string) => void, blocked: (why: string) => void}} ToDecideProps */
+/** @typedef {{rows: TdRow[], cap: number, open: boolean, onAct?: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
+    onOpen?: (row: TdRow) => void, blocked: (why: string) => void}} ToDecideProps */
 
 /** One row. @param {{r: TdRow, hidden: boolean, p: ToDecideProps}} props */
 function TdLine({ r, hidden, p }) {
@@ -115,32 +113,20 @@ function TdLine({ r, hidden, p }) {
 
 /** The list and its foot. @param {ToDecideProps} props */
 export function ToDecide(props) {
-  const { rows, total, cap, open, onReview } = props, more = rows.length - cap;
-  /** @param {MouseEvent} e */
-  const line = props.line || [];
-  /** @param {string} page @param {MouseEvent} e */
-  const go = (page, e) => { e.preventDefault(); if (props.onGo) props.onGo(page); else onReview(); };
+  const { rows, cap, open } = props, more = rows.length - cap;
   return (
     <>
-      {line.length ? (
-        <p class="tdline" id="tdLine">
-          {line.map((x, i) => (
-            <>{i ? (i === line.length - 1 ? " and " : ", ") : ""}<a href={`#${x.go}`} class="s" data-tdline={x.key} onClick={e => go(x.go, e)}>{x.text}</a></>
-          ))}
-        </p>
-      ) : null}
       <ol class="bl tdlist" id="tdList" aria-labelledby="hTd">
         {rows.map((r, i) => <TdLine key={r.key} r={r} hidden={!open && i >= cap} p={props} />)}
       </ol>
       <div class="moreline tdfoot">
-        {more > 0 ? <><button type="button" class="qa" aria-expanded={open ? "true" : "false"} data-more="td">{open ? "Show fewer" : `+${more} more`}</button>{" · "}</> : null}
-        {line.length || !rows.length ? null : <span class="none">Nothing waits in Intake.</span>}
+        {more > 0 ? <button type="button" class="qa" aria-expanded={open ? "true" : "false"} data-more="td">{open ? "Show fewer" : `+${more} more`}</button> : null}
       </div>
     </>
   );
 }
 
-/** Draw Intake and Review (was To decide) into #tdBody (only today.js calls it). @param {Element} host @param {ToDecideProps} props */
+/** Draw the Messages section (was To decide, then Intake and Review) into #tdBody (only today.js calls it). @param {Element} host @param {ToDecideProps} props */
 export function drawToDecide(host, props) {
   render(<ToDecide {...props} />, host);
 }

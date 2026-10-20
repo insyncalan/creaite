@@ -3669,6 +3669,30 @@ collect = _collect_with_quality
 # ===== end BL-233 =====
 
 
+# ===== #238 (v2.5.1) ===== Activity › Usage: what each Claude run costs and what every run loads (usage_report.py --json, read only). Counts
+# only: the figures, never a line's text. Internal; no report or export reads D.usage. The page also refreshes it from GET /api/usage where
+# the live server has that route; this copy is what shows without it (and in the first paint).
+_collect_before_usage = collect
+
+
+def _collect_with_usage(now=None, timings=None):
+    """The dashboard's data, with the Usage figures (a fault is named on the tab; the rest of the page is unaffected)."""
+    data = _collect_before_usage(now, timings)
+    t0 = time.monotonic()
+    try:
+        import usage_report
+        data["usage"] = usage_report.json_report()
+    except Exception as e:  # noqa: BLE001  whatever an odd line does, the build goes on and the tab says it couldn't be read
+        data["usage"] = {"error": type(e).__name__}
+    if timings is not None:
+        timings["usage"] = time.monotonic() - t0
+    return data
+
+
+collect = _collect_with_usage
+# ===== end #238 =====
+
+
 # ===== BL-209 (sprint-insight) ===== the meeting hub: one record per meeting, from invite to follow-up, gathered from what
 # creaite already keeps (calendar.json, prep-pages.json, transcripts.json, the staged and applied proposals' meeting block,
 # processed.txt, carried.json) and the tracker rows the meeting produced. Read only: nothing here writes or extracts.

@@ -32,6 +32,7 @@ import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
 import { hsAsk, hsCardHtml, hsSparkHtml, hsStat, hsUse } from "./healthSuggest.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
+import { helpPanelOpen } from "./helpscreen.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
 import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
 import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
@@ -452,7 +453,7 @@ $("#pkNext").onclick=()=>pkStep(1);
 $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+location.pathname+actHref(shared.CUR.k,pkCid()), b=$("#pkLink");
   const done=()=>{ copied(b); snack(`Link to ${shared.CUR?pkCid():"the item"} copied`); };
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
-window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
+window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING||helpPanelOpen()) return;   /* #249: the ? panel over the peek takes Esc first (core/keys.js); the peek stays */
   const a=document.activeElement;
   if(pkEscMenu(a)) return;
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }

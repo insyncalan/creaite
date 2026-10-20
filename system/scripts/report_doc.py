@@ -257,6 +257,21 @@ def logos(code, wanted=None):
     return [{"kind": k, "path": paths.rel(f)} for k in kinds for f in [logo_file(code, k)] if f]
 
 
+def client_logos(code, layout=None):
+    """v2.5.1 (#239, b): the logos a client report draws NOW, never the list a draft stored: the project's logo files (logos) that the
+    report's layout ticks (`layout.logos`; none listed is all, as the screen reads it) and that the project's Client report logos
+    setting still ticks (the firm's always). [] when anything can't be read (fail closed)."""
+    try:
+        chosen = (layout or {}).get("logos") if isinstance(layout, dict) else None
+        kinds = set(resolve_logos(code, [k for k in chosen if isinstance(k, str)]) if isinstance(chosen, list) else logo_kinds(code))
+        ticked = project_logos(code)
+        if ticked is not None:
+            kinds &= set(resolve_logos(code, ticked)) | {"firm"}
+        return [x for x in logos(code) if x["kind"] in kinds]
+    except Exception:  # noqa: BLE001  a project or setting that can't be read: no logo at all
+        return []
+
+
 # ── Arranging the sections as the layout says ───────────────────────────────
 
 def _figures_in_order(figures, glance):
@@ -614,6 +629,52 @@ def pickable(doc):
     return {sid: [c for c in found if c["ref"] not in have.get(sid, set())] for sid, found in out.items() if sid in have}
 
 
+RESHOW_MAX = 50       # rows asked for in one call
+
+
+def reshow(doc, sid, refs):
+    """A row left out and saved, shown again (#234). A saved report keeps a left-out row as its reference only and drops its item (the
+    leak guard, creaite_doc.clean), so the page can't make its cells; this makes them from the tracker as it stands, the way Add from
+    the tracker would. Read only: nothing is written. Only a row of that table that is left out (or saved with nothing in its cells,
+    creaite_doc.blank_row) is filled; a client report only from its client-safe facts (_pick_client: client-visible, complete client
+    wording, no label that keeps it out), never the tracker's own words. Those are the live facts, as Add from the tracker offers them,
+    not the approved week's locked ones: the save, approve and export checks (client_leak) still run on whatever is filled.
+    {rows: {ref: {row, item}}, missing: {ref: why}}: a row the tracker can't give (closed, archived, gone, or not client-safe)
+    is missing, and stays left out."""
+    import tracker
+    kind, code, left_out = _reshow_table(doc, sid, refs)
+    found = {c["ref"]: c for c in ((_pick_client(code) if kind == "client" else _pick_weekly(code)).get(sid) or [])}
+    why = "it is no longer client-visible and open in the tracker" if kind == "client" else "it is no longer open in the tracker"
+    rows, missing = {}, {}
+    with tracker.connect() as con:
+        for ref in dict.fromkeys(refs):
+            c = found.get(ref) if ref in left_out and not (item(con, ref) or {}).get("archived") else None
+            if c is None:
+                missing[ref] = why if ref in left_out else "it isn't a row left out of this table"
+            else:
+                rows[ref] = {"row": {"ref": ref, "shown": True, "cells": dict(c["row"]["cells"])}, "item": c["item"]}
+    return {"rows": rows, "missing": missing}
+
+
+def _reshow_table(doc, sid, refs):
+    """(kind, code, the refs of the table's left-out rows) for reshow; raises ReportError for a request it can't answer."""
+    kind, code = doc.get("kind"), str(doc.get("project") or "")
+    if kind not in KINDS or not CODE.match(code):
+        raise ReportError("Say which report: weekly or client, and the project's code.")
+    if not _ref_list(refs):
+        raise ReportError("Say which rows to show again.")
+    sec = next((s for s in doc.get("sections") or [] if isinstance(s, dict) and s.get("id") == sid and s.get("type") == "table"), None)
+    if sec is None:
+        raise ReportError("That table isn't in the report.")
+    return kind, code, {r.get("ref") for r in sec.get("rows") or [] if isinstance(r, dict) and r.get("ref")
+                        and (not r.get("shown", True) or creaite_doc.blank_row(r))}
+
+
+def _ref_list(refs):
+    """Whether `refs` is a list of 1 to RESHOW_MAX item references."""
+    return isinstance(refs, list) and 0 < len(refs) <= RESHOW_MAX and all(isinstance(r, str) and r for r in refs)
+
+
 def baseline(code, on):
     """The approved internal week a client report dated `on` locks to: the latest approved week ending on or before it, as
     {date, path, version}, or None (BL-336: a fortnightly or monthly client uses the latest approved week)."""
@@ -828,7 +889,7 @@ def client_item_links(doc, con=None):
     may see stays as it is. An internal document is returned as it is. Fails closed: when the tracker can't be read, ReportError
     (nothing is built or saved)."""
     import client_leak
-    if (doc.get("audience") or "internal") == "internal":
+    if not creaite_doc.is_client(doc):
         return doc, []
     code = doc.get("project") or ""
     try:
@@ -898,18 +959,30 @@ def where(kind, code, week_ending, client=None):
     return None, draft_path(kind, code, week_ending, client)
 
 
+def same_report(doc, kind, code, fri):
+    """v2.5.0: raise ReportError unless a stored report is the one the route names (its project and week ending): a draft edited on
+    disk to name another project or week is never approved, exported or filed as this one. Its kind is creaite_doc.read_report's
+    check (each check fails its own test when removed); `kind` only words the refusal."""
+    if (doc.get("project"), doc.get("date")) != (code, fri):
+        raise ReportError(f"That {kind} draft isn't this report (its project or week was changed), so nothing was done. "
+                          "Open the report again from creaite.")
+
+
 def save_draft(doc, base_version=None, why=None):
     """Save a report's edits as its draft (system/staging/drafts/, an ordinary change through creaite_doc.save and filechange.py).
     A filed report is never changed in place (Alan, 15-10-2026: option C): Save on a filed report starts a new draft from it, and the
     filed file stays exactly as it is until that draft is approved (stage_weekly or stage_client, one apply with Undo).
     `base_version` is the version the editor opened: the draft's, or the filed report's when there is no draft yet."""
     import client_leak
+    creaite_doc.check_audience(doc)                 # v2.5.0 audience bypass: a client report whose audience isn't client is refused
+    doc = creaite_doc.force_client_audience(dict(doc))      # and its project name and client derived again, before the file's name
     kind, code, fri, client = doc.get("kind"), doc.get("project"), doc.get("date"), doc.get("client")
     if kind not in KINDS:
         raise ReportError("Only a weekly or client report is saved here.")
     doc, removed = client_leak.make_safe(doc)
     doc, dropped = client_item_links(doc)
-    removed = removed + dropped
+    doc, pictures = creaite_doc.drop_outside_pictures(doc)     # v2.5.0 leak fix: no picture line naming an outside file
+    removed = removed + dropped + pictures
     draft, filed = draft_path(kind, code, fri, client), filed_path(kind, code, fri, client)
     if not paths.resolve(draft).is_file() and paths.resolve(filed).is_file():
         now = int(creaite_doc.read(filed).get("version") or 0)
@@ -940,7 +1013,7 @@ def _current_ops(doc, folder):
     return [{"op": "write", "path": paths.rel(memory), "content": new, "previous": old}] if new != old else []
 
 
-def _file_ops(kind, code, fri, client, draft):
+def _file_ops(kind, code, fri, client, draft, checked=None):
     """How Approve files the draft: a first filing of a weekly report copies it; a filed report is replaced whole by the approved new
     version (a write whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). A client report is
     always written whole, without meta.health_diff (the health difference and its reason stay in the draft, Alan 15-10-2026). The
@@ -951,7 +1024,10 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read(draft))
+    # v2.5.0: filed as a client report, header derived; v2.5.1 (#239): `checked`, the document Approve read once and checked, is the
+    # one filed (never the file read again)
+    doc = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(checked)) if checked is not None
+                            else creaite_doc.read_report(draft, kind))
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -959,7 +1035,52 @@ def _file_ops(kind, code, fri, client, draft):
         # Alan, 15-10-2026: the client health difference and its reason live only in the draft. The filed client file, its data
         # block included, never holds them (the internal flag would be in them): the whole key goes, not just the reason.
         doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
-    return [{"op": "write", "path": filed, "content": creaite_doc.dumps(doc), "previous": old}, {"op": "remove", "path": draft}]
+        filed_client_data(doc)
+    content = creaite_doc.dumps(doc)
+    snap = []
+    if kind == "client":
+        import client_output                                     # v2.5.1 (#239, c): what is filed is checked as an export is
+        found = client_output.filed_findings(doc, content)
+        if found:
+            raise ReportError("Not approved: the file to be filed held possible internal content: " + "; ".join(found))
+        snap = _snapshot_ops(doc, content, filed)
+    return [{"op": "write", "path": filed, "content": content, "previous": old}, *snap, {"op": "remove", "path": draft}]
+
+
+def _snapshot_ops(doc, content, filed):
+    """v2.5.1 (#239, step 2): the write of the client report's checked snapshot beside the filed report (`<name>.client.json`, made
+    from exactly the document filed, its hash recorded now: client_snapshot.for_filing), so Undo takes it back with the filing.
+    Raises ReportError when the snapshot's check finds anything."""
+    import client_snapshot
+    try:
+        stored, text = client_snapshot.for_filing(doc, content, filed)
+    except client_snapshot.SnapshotError as e:
+        raise ReportError(str(e)) from None
+    p = paths.resolve(stored)
+    prev = p.read_text(encoding="utf-8") if p.is_file() else None
+    return [{"op": "write", "path": stored, "content": text, "previous": prev}]
+
+
+CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
+
+
+def filed_client_data(doc):
+    """v2.5.0 (D): the filed client file's data block holds only what creaite puts there, in place: meta's dates (YYYY-MM-DD) and its
+    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes.
+    v2.5.1 (#239, a): every other level too (creaite_doc.client_shape: top-level, section, row and data keys)."""
+    shaped = creaite_doc.client_shape(doc)
+    doc.clear()
+    doc.update(shaped)
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    out = {k: meta[k] for k in CLIENT_META_DATES if isinstance(meta.get(k), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[k])}
+    if isinstance(meta.get("locked"), bool):
+        out["locked"] = meta["locked"]
+    doc["meta"] = out
+    week = out.get("facts_week")
+    doc["sources"] = [{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending {shown(week)}" if week else "")}]
+    lay = doc.get("layout") if isinstance(doc.get("layout"), dict) else {}
+    doc["layout"] = {k: v for k, v in lay.items() if k in default_layout("client")}
+    return doc
 
 
 def _section(doc, sid):
@@ -967,7 +1088,7 @@ def _section(doc, sid):
     return next((s for s in doc["sections"] if s["id"] == sid and not s.get("hidden")), {})
 
 
-def stage_weekly(draft, force=False):
+def stage_weekly(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a weekly report draft: the week's update row and any health change (approved), the Current state
     written to the project's memory, and the draft filed as the creaite report (its state set to approved by tracker.py apply).
     The client facts are kept in it first (meta.client_facts), so the week's client reports lock to them. Returns the proposal's
@@ -976,7 +1097,8 @@ def stage_weekly(draft, force=False):
     import report
     import sweep
     import tracker
-    doc = creaite_doc.read(draft)
+    doc = creaite_doc.read_report(draft, "weekly")          # v2.5.0: a draft whose kind was edited on disk is refused
+    same_report(doc, "weekly", code or doc["project"], fri or doc["date"])
     code, fri = doc["project"], doc["date"]
     data = report.weekly_data(code, fri)
     health_s = _section(doc, "health")
@@ -1006,18 +1128,20 @@ def stage_weekly(draft, force=False):
                    "file_ops": ops, "health": health, "health_reason": reason, "summary": summary}})
 
 
-def stage_client(draft, force=False):
+def stage_client(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a client report draft: filed as the creaite report beside the internal one. Raises ReportError
     before the internal week is approved, while items await review (unless forced), or when the leak check finds anything."""
-    import client_leak
+    import client_snapshot
     import report
     import sweep
-    doc = creaite_doc.read(draft)
+    doc = creaite_doc.read_report(draft, "client")  # v2.5.0 audience bypass: the gate sees a client report as one; another kind refused
+    same_report(doc, "client", code or doc["project"], fri or doc["date"])      # the route's project and week
     code, fri = doc["project"], doc["date"]
-    ok, why = client_ready(doc)
-    if not ok:
-        raise ReportError(why)
-    found = client_leak.findings(doc)
+    if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
+        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")
+    _snap, left, found = client_snapshot.build(doc)       # v2.5.1 step 2: the snapshot's one check (left_out and the gate) is Approve's
+    if not left["ready"]:
+        raise ReportError(left["not_ready"] or "The client report isn't ready to approve.")
     if found:
         raise ReportError("Not approved: possible internal content in the client report: " + "; ".join(found))
     blocked = report.pending_for(code)
@@ -1036,4 +1160,4 @@ def stage_client(draft, force=False):
         "report": {"kind": "client", "format": "creaite", "title": f"{doc.get('project_name') or code} client report, week ending "
                                                                     f"{shown(fri)}" + (f" ({client})" if client else ""),
                    "project": code, "projects": [code], "week_ending": fri, "draft": draft, "report_decision": "approved",
-                   "file_ops": _file_ops("client", code, fri, client, draft)}})
+                   "file_ops": _file_ops("client", code, fri, client, draft, checked=doc)}})

@@ -685,10 +685,12 @@ class EntryPoints(Hub):
         self.assertNotEqual(r["display"], "grid")
         self.assertNotEqual(r["dot"], "8px")
 
-    def test_the_projects_reporting_card(self):
-        self.start_at("go('cockpit','ABC')", "document.querySelector('[data-rpcard=space]')")
-        self.b.click("[data-rpcard=space]")
+    def test_the_project_settings_open_reporting(self):     # #254: was test_the_projects_reporting_card; the card is gone
+        self.start_at("go('psettings','ABC'); psCat.value='rep'; navWrite(false)", "document.querySelector('#psRepHub')")
+        self.assertEqual(self.q("!!document.querySelector('[data-rpcard]')"), False)
+        self.b.click("#psRepHub")
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
+        self.assertEqual(self.q("shared.VIEW"), "reporting")
 
     def test_the_command_palette_entries(self):
         self.start_at("go('today')", "typeof openSpace==='function'")

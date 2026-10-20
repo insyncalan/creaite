@@ -323,7 +323,7 @@ class TodayBriefTests(PageTests):
         # #168: First thing and BL-210's Decisions needed; BL-125 A's two inside
         # Your commitments; Resolved after the Week ahead (folded); Portfolio last (the hidden ones are in the page too)
         self.assertEqual(o["heads"], ["First thing", "Decisions needed", "Needs attention", "Your commitments", "You owe", "Waiting on",
-                                      "Intake", "Week ahead", "Resolved", "Portfolio"])
+                                      "Messages", "Week ahead", "Resolved", "Portfolio"])   # #245: Intake and Review is gone; Messages (BL-334) is its own section
         self.assertTrue(o["bandFirst"])
         self.assertAlmostEqual(o["ratios"][0], 0.8, delta=0.005)                   # #113: the header's content in the 80% column (the band itself is full width: test_today_home)
         self.assertLessEqual(o["ratios"][1]*o["inner"], 980.5)                     # the sections at a 980px reading width, centred
@@ -342,11 +342,11 @@ class TodayBriefTests(PageTests):
           setRev([meet,...grp("proposed-2026-10-05-0900.json",2,[{}]),...grp("proposed-0000-00-01-demo.json",10,[{},{}])]);
            D.inbox=[]; D.intake_review={v:1,meetings:[],mail:{needs:[],routine:REV.map(r=>r.n)},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; go("today"); renderToday();
           window.OUT={attn:document.getElementById("attnList").textContent, qa:document.querySelectorAll("#attnList [data-qa]").length,
-            td:(document.getElementById("tdLine")||{textContent:""}).textContent};""")
+            td:(document.getElementById("tdQuiet")||{textContent:""}).textContent};""")
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertTrue(o["td"].startswith("4 proposals to approve"))                  # #208: every proposal is counted in Intake's one line
+        self.assertIn("4 proposals to approve", o["td"])                                # #245: every proposal is counted in Intake's one quiet line, not listed
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """
@@ -496,7 +496,7 @@ class TodayHeadingTests(PageTests):
             for sig, count, height, text in v["rows"]:
                 self.assertEqual(sig, v["ref"], key)                                       # exactly the shared h2
                 self.assertEqual(sig[4], "none", key)                                      # no capitals
-                self.assertEqual(text[:1] + text[1:].lower(), text, key)   # #168: Review is the tab's name, as Alan wrote it                  # sentence case in the words themselves
+                self.assertEqual(text[:1] + text[1:].lower(), text, key)                   # sentence case in the words themselves (#245: no heading names a tab any more)
                 self.assertIn(count, (None, "400"), key)                                   # the count beside it stays light
                 self.assertLess(height, 30, key)                                           # one line
 

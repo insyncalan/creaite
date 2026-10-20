@@ -38,7 +38,7 @@
         <div class="dayband"><div class="bandin">
           <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
-        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270 -->
+        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button><button type="button" class="dhelp" data-thelp="1" aria-label="Help for Today" data-tip="Help for Today">?</button></div><!-- BL-270 -->
         <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
@@ -47,8 +47,9 @@
           <section class="tsec" id="mineSec" aria-labelledby="hMine"><h2 class="th" id="hMine">Your commitments <span class="cnt" id="nMine"></span><a href="#" data-go="mine">All mine</a></h2><ol class="bl" id="mineList"></ol><div class="moreline" id="mineMore"></div>
             <div class="tsub" id="tOwe" hidden><h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe"></span></h3><ol class="bl" id="oweList"></ol><div class="moreline" id="oweMore"></div></div>
             <div class="tsub" id="tWait" hidden><h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait"></span><a href="#" data-nav="all:chase:">Chase view</a></h3><ol class="bl" id="waitList"></ol><div class="moreline" id="waitMore"></div></div>
+            <div id="tdQuietHost"></div><!-- #245: Intake as one quiet, dismissible line (components/today/IntakeLine.jsx) -->
           </section><!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-          <section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd" hidden><details id="tdFold" open><summary><h2 class="th" id="hTd">Intake <span class="cnt" id="nTd"></span><span class="tdnew" id="tdNew" hidden>new</span></h2></summary><div id="tdBody"></div></details></section><!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
+          <section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden><h2 class="th" id="hTd">Messages <span class="cnt" id="nTd"></span></h2><div id="tdBody"></div></section><!-- #245: the cards of messages from people Alan follows (BL-334); the Intake and Review section, its line and its fold are gone: Intake is one quiet line at the foot of Your commitments -->
           <section class="tsec tres" id="weekSec" aria-labelledby="hWeek"><details id="weekFold" open><summary><h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo"></span></h2></summary><div id="weekList"></div></details></section><!-- #105: folds like Resolved; open unless hidden, and remembered in this browser -->
           <section class="tsec tres" id="resSec" aria-labelledby="hRes"><details id="resFold"><summary><h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle"></span></h2></summary><ol class="bl" id="chgList"></ol><div class="moreline" id="chgMore"></div></details></section><!-- BL-319: folded to one line -->
           <section class="tsec" id="pfSec" aria-labelledby="hPort"><h2 class="th" id="hPort">Portfolio</h2><div class="tbl" id="pfTbl"></div></section>
@@ -110,6 +111,7 @@
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
 <h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden></div><!-- #238: Usage, drawn by components/activity/UsagePanel.jsx -->
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>

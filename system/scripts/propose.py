@@ -165,7 +165,7 @@ def milestone_notes(item, cur, changes):
     """BL-186: what the dates suggest when a state is set, and the decision a rebaseline will record."""
     row, out = {**cur, **changes}, []
     if changes.get("state") and changes["state"] != "Achieved":
-        sug = tracker.suggested_state(row)
+        sug = tracker.suggested_state(row, (os.environ.get("CREAITE_NOW") or tracker.today())[:10])   # creaite's clock
         if sug != changes["state"]:
             out.append(f"    The dates suggest {sug}" + (" (a better state needs a one-line reason)"
                                                          if tracker.MS_RANK[changes["state"]] < tracker.MS_RANK[sug] else ""))

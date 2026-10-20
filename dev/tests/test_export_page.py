@@ -2,8 +2,11 @@
 
 Run: python3 dev/tests/test_export_page.py
 The posted page is never trusted: its markup is rebuilt through an allow-list, its style rules are checked, and it is compared with
-the saved report (sections, rows, words that belong to hidden content, a client report's wording). Anything refused gives the plain
-file, whose own tests are test_report_exports.py. Acceptance check 8 (client) and 12 (fallback) of the #226 brief are here too.
+the saved report (sections, rows, words that belong to hidden content). Anything refused gives the plain file, whose own tests are
+test_report_exports.py. Acceptance check 8 (client) and 12 (fallback) of the #226 brief are here too.
+v2.5.1 (#239 step 3): a client report's page is never used at all (export_page.build refuses it before reading it: its files are made
+from its checked copy, client_snapshot.client_export), so every case that posted a client page now asserts that refusal, which is
+stronger than the client rules it replaced (the short attribute list, the picture rules, the client wording check, all gone).
 """
 import base64
 import json
@@ -21,8 +24,21 @@ GOOD = ('<div id="v-weekly" class="export-view"><div class="wrsheet"><div class=
         '<p>Progress on the lighthouse cutover.</p></section></div></div></div>')
 
 
+CLIENT_PAGE = "a client report is made by creaite from its checked copy, never from a page the browser drew"
+
+
 def page(markup=GOOD, css=".page{color:#123}", version=1, palette="creaite"):
     return {"html": markup, "css": css, "palette": palette, "version": version}
+
+
+def refused(case, kind, got, reason="leaves out", msg=""):
+    """An internal report's page refused for `reason`; a client report's refused outright, nothing of it kept (v2.5.1 step 3)."""
+    out, why = got
+    if kind == "client":
+        case.assertIsNone(out, f"client: {msg}")
+        case.assertEqual(why, CLIENT_PAGE, f"client: {msg}")
+    else:
+        case.assertIn(reason, why or "", f"{kind}: {msg}")
 
 
 class Server(Base):
@@ -103,16 +119,16 @@ except export_page.PageRefused as e:
         self.assertEqual(self.py("import export_page\ntry:\n    export_page.clean_markup('x' * (export_page.MAX_HTML + 1))\nexcept export_page.PageRefused as e:\n    print(json.dumps(str(e)))"),
                          "the page was too large")
 
-    def test_c08_a_client_report_page_is_checked_for_internal_wording_too(self):
-        """Check 8: the client report's page goes through the same checks, plus the client wording check."""
+    def test_c08_a_client_report_page_is_never_used_clean_or_not(self):
+        """Check 8, v2.5.1 (#239 step 3): a client report's page is refused outright, a clean one too (it used to be checked and
+        kept): the file is made from the report's checked copy, never from a page."""
         approved = self.saved(pre="doc.update(state='approved', approved_at='2026-10-16 15:00:00')")
         secs = [s for s in SECTIONS if s["id"] in ("health", "summary")]
         path = self.saved("client", sections=secs, pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}",
                           audience="client", client="Harbour Board")
-        ok = self.build(path, page())
-        self.assertIsNone(ok[1], ok)
+        refused(self, "client", self.build(path, page()), msg="a clean page")
         bad = GOOD.replace("</section></div>", "</section><p>This one is restricted: internal only.</p></div>", 1)
-        self.assertIn("client report must not show", self.build(path, page(bad))[1])
+        refused(self, "client", self.build(path, page(bad)), msg="a page with internal words")
 
 
 class LeakFix(Base):
@@ -139,27 +155,21 @@ class LeakFix(Base):
                     '<img src="data:image/png;base64,iVBORw0KGgo=" alt="Walrus budget cut">'):
             self.assertIn("leaves out", self.build(path, page(self.wrap(svg)))[1], svg)
 
-    def test_leak1_a_client_file_drops_every_attribute_off_the_list_and_still_reads_the_rest(self):
+    def test_leak1_a_client_page_with_attributes_off_the_old_list_is_never_used(self):
+        # v2.5.1 step 3: the client file's short attribute list went with the page: the whole page is refused, so none of it is kept
         path = self.client()
-        out, why = self.build(path, page(self.wrap('<p title="Zanzibar" aria-label="Zanzibar" data-row="ABC-005" data-note="q">x</p>'
-                                                   '<img alt="Zanzibar" src="data:image/png;base64,iVBORw0KGgo=">')))
-        self.assertIsNone(why)
-        for gone in ("title=", "aria-label", "data-row", "data-note", "alt=", "ABC-005", "Zanzibar"):
-            self.assertNotIn(gone, out.split("</style>", 2)[-1], gone)
-        self.assertIn('data-id="health"', out)
-        self.assertIn("leaves out", self.build(path, page(self.wrap('<p class="Walrus budget cut">x</p>')))[1])
-        self.assertIn("leaves out", self.build(path, page(self.wrap('<p style="content:\'Walrus budget cut\'">x</p>')))[1])
+        for inner in ('<p title="Zanzibar" aria-label="Zanzibar" data-row="ABC-005" data-note="q">x</p>'
+                      '<img alt="Zanzibar" src="data:image/png;base64,iVBORw0KGgo=">', '<p class="Walrus budget cut">x</p>',
+                      '<p style="content:\'Walrus budget cut\'">x</p>'):
+            refused(self, "client", self.build(path, page(self.wrap(inner))), msg=inner)
 
     def test_leak1_style_rules_with_a_hidden_word_in_content_are_refused(self):
-        for path in (self.saved(date="2026-10-09"), self.client()):
-            why = self.build(path, page(css='.a::after{content:"Walrus budget cut"}'))[1]
-            self.assertIn("leaves out", why)
+        for kind, path in (("internal", self.saved(date="2026-10-09")), ("client", self.client())):
+            refused(self, kind, self.build(path, page(css='.a::after{content:"Walrus budget cut"}')))
 
     def test_leak4_item_ids_never_reach_a_client_file_as_attributes(self):
-        out, why = self.build(self.client(), page(self.wrap(
-            '<table><tbody><tr data-row="ABC-005" data-ref="ABC-A-003"><td>x</td></tr></tbody></table>')))
-        self.assertIsNone(why)
-        self.assertNotRegex(out.split("</style>", 2)[-1], r"[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+")
+        refused(self, "client", self.build(self.client(), page(self.wrap(
+            '<table><tbody><tr data-row="ABC-005" data-ref="ABC-A-003"><td>x</td></tr></tbody></table>'))))
 
     def test_leak5_a_page_without_a_version_is_refused(self):
         pg = page()
@@ -194,8 +204,8 @@ class ResidualLeaks(Base):
         for kind, path in self.both():
             for css in ('.a::after{content:"\\0057alrus budget cut"}', '.a::after{content:"Wal" "rus budget cut"}',
                         '.a::after{content:"Wal"/**/"rus bu" \'dget cut\'}', '.a::after{content:"\\57 alrus budget \\63 ut"}'):
-                self.assertIn("leaves out", self.build(path, page(css=css))[1] or "", f"{kind}: {css}")
-            self.assertIn("leaves out", self.build(path, page(self.wrap('<p style="content:\'\\0057alrus budget cut\'">x</p>')))[1] or "", kind)
+                refused(self, kind, self.build(path, page(css=css)), msg=css)
+            refused(self, kind, self.build(path, page(self.wrap('<p style="content:\'\\0057alrus budget cut\'">x</p>'))))
 
     def test_a_picture_that_is_an_svg_data_address_is_read_for_the_needle(self):
         import base64
@@ -205,25 +215,21 @@ class ResidualLeaks(Base):
                     '<svg xmlns="http://www.w3.org/2000/svg" data-n="Walrus budget cut"><rect/></svg>'):
             src = "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
             for kind, path in self.both():
-                self.assertIn("leaves out", self.build(path, page(self.wrap(f'<img src="{src}">')))[1] or "", f"{kind}: {svg}")
+                refused(self, kind, self.build(path, page(self.wrap(f'<img src="{src}">'))), msg=svg)
         ok = "data:image/svg+xml;base64," + base64.b64encode(b'<svg xmlns="http://www.w3.org/2000/svg"><rect width="3" height="3"/></svg>').decode()
-        self.assertIsNone(self.build(self.both()[1][1], page(self.wrap(f'<img src="{ok}">')))[1], "an SVG with nothing hidden in it is kept")
+        self.assertIsNone(self.build(self.both()[0][1], page(self.wrap(f'<img src="{ok}">')))[1], "an SVG with nothing hidden in it is kept")
 
     def test_zero_width_characters_and_the_soft_hyphen_do_not_hide_a_word(self):
         for mark in ("​", "‌", "‍", "⁠", "﻿", "­"):
             word = f"Wal{mark}rus budget cut"
             for kind, path in self.both():
-                self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p>{word}</p>")))[1] or "", f"{kind}: {mark!r} in the text")
-                self.assertIn("leaves out", self.build(path, page(css=f'.a::after{{content:"{word}"}}'))[1] or "", f"{kind}: {mark!r} in css")
+                refused(self, kind, self.build(path, page(self.wrap(f"<p>{word}</p>"))), msg=f"{mark!r} in the text")
+                refused(self, kind, self.build(path, page(css=f'.a::after{{content:"{word}"}}')), msg=f"{mark!r} in css")
             self.assertIn("leaves out", self.build(self.both()[0][1], page(self.wrap(f'<p title="{word}">x</p>')))[1] or "", f"{mark!r} in an attribute")
 
-    def test_ids_joined_to_each_other_are_found_in_a_client_attribute(self):
-        out, why = self.build(self.client(), page(self.wrap('<p class="ABC-A-001ABC-A-002">x</p><p class="a ABC-005,ABC-A-003">y</p>'
-                                                            '<p class="xxABC-A-004yy">z</p>')))
-        self.assertIsNone(why)
-        tail = out.split("</style>", 2)[-1]
-        for gone in ("ABC-A-001", "ABC-A-002", "ABC-005", "ABC-A-003", "ABC-A-004"):
-            self.assertNotIn(gone, tail, gone)
+    def test_ids_joined_to_each_other_never_reach_a_client_file(self):
+        refused(self, "client", self.build(self.client(), page(self.wrap(
+            '<p class="ABC-A-001ABC-A-002">x</p><p class="a ABC-005,ABC-A-003">y</p><p class="xxABC-A-004yy">z</p>'))))
 
 
 class LeakPass2(Base):
@@ -264,13 +270,15 @@ class LeakPass2(Base):
                         self.assertIsNotNone(why, f"a client file takes no SVG address in its styles: {url[:60]}")
 
     def test_a_client_file_refuses_any_unreadable_or_odd_data_address_in_styles(self):
-        path = self.client()
-        for css in (".page{background:url(data:text/html;base64,PHA+)}", ".page{background:url(data:image/svg+xml;base64,@@@)}",
-                    ".page{background:url(data:application/x;base64,AAAA)}"):
-            self.assertIsNotNone(self.build(path, page(css=css))[1], css)
+        (_k, internal), (_c, path) = self.both()
         png = b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + bytes(13) + b"\0\0\0\0" + b"\0\0\0\0IEND\0\0\0\0"
-        self.assertIsNone(self.build(path, page(css=".page{background:url(data:image/png;base64," + base64.b64encode(png).decode() + ")}"))[1])
-        self.assertIsNotNone(self.build(path, page(css=".page{background:url(data:image/png;base64,iVBORw0KGgo=)}"))[1])    # can't be checked
+        for css in (".page{background:url(data:text/html;base64,PHA+)}", ".page{background:url(data:image/svg+xml;base64,@@@)}",
+                    ".page{background:url(data:application/x;base64,AAAA)}",
+                    ".page{background:url(data:image/png;base64,iVBORw0KGgo=)}",                  # can't be checked
+                    ".page{background:url(data:image/png;base64," + base64.b64encode(png).decode() + ")}"):   # v2.5.1: even a clean one
+            refused(self, "client", self.build(path, page(css=css)), msg=css)
+        for css in (".page{background:url(data:text/html;base64,PHA+)}", ".page{background:url(data:image/svg+xml;base64,@@@)}"):
+            self.assertIsNotNone(self.build(internal, page(css=css))[1], css)          # an internal page: refused by its rules
 
     def test_an_internal_file_keeps_a_css_svg_with_nothing_hidden_in_it(self):
         import base64
@@ -281,8 +289,8 @@ class LeakPass2(Base):
         for mark in ("⁣", "͏", "︀", "᠎", "⁤", "‪", "\U000e0020", "؜"):
             word = f"Wal{mark}rus budget cut"
             for kind, path in self.both():
-                self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p>{word}</p>")))[1] or "", f"{kind}: {mark!r} text")
-                self.assertIn("leaves out", self.build(path, page(css=f'.a::after{{content:"{word}"}}'))[1] or "", f"{kind}: {mark!r} css")
+                refused(self, kind, self.build(path, page(self.wrap(f"<p>{word}</p>"))), msg=f"{mark!r} text")
+                refused(self, kind, self.build(path, page(css=f'.a::after{{content:"{word}"}}')), msg=f"{mark!r} css")
             self.assertIn("leaves out", self.build(self.both()[0][1], page(self.wrap(f'<p title="{word}">x</p>')))[1] or "", f"{mark!r} attr")
 
     def test_an_svg_picture_inside_an_svg_picture_is_not_kept(self):
@@ -328,6 +336,9 @@ class PictureMetadata(LeakPass2):
     def test_a_png_in_an_img_loses_its_text_chunks_in_client_and_internal_files(self):
         for kind, path in self.both():
             out, why = self.build(path, page(self.wrap(f'<img src="{self.tagged()}">')))
+            if kind == "client":                          # v2.5.1 step 3: a client page is never used: nothing of it is kept
+                refused(self, kind, (out, why))
+                continue
             self.assertIsNone(why, f"{kind}: {why}")
             src = re.search(r'<img[^>]*src="data:image/png;base64,([^"]+)"', out.split("</style>", 2)[-1])
             self.assertIsNotNone(src, kind)
@@ -420,8 +431,11 @@ class Leak4(LeakPass2):
                     ".x{background:u\\72l(https://beacon.example/a.png"):
             for kind, _out, why in self.both_out(page(css=css)):
                 self.assertIsNotNone(why, f"{kind}: {css}")
-        for kind, _out, why in self.both_out(page(css=".x{background:url(#a);content:'a(b'}")):
-            self.assertIsNone(why, kind)
+        for kind, out, why in self.both_out(page(css=".x{background:url(#a);content:'a(b'}")):
+            if kind == "client":                          # v2.5.1 step 3: a client page is never used
+                refused(self, kind, (out, why))
+            else:
+                self.assertIsNone(why, kind)
 
     def seg(self, marker, body):
         return bytes([0xFF, marker]) + struct.pack(">H", len(body) + 2) + body

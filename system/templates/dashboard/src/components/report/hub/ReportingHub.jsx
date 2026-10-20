@@ -11,7 +11,7 @@
 import { useEffect } from "preact/hooks";
 import { LeftOutDialog } from "../LeftOutDialog.jsx";
 import { ExportSave } from "../ExportSave.jsx";
-import { CLIENT_RENDERERS, setClientDoc } from "../ClientParts.jsx";
+import { CLIENT_RENDERERS, ServerExported, setClientDoc } from "../ClientParts.jsx";
 import { doExport, clientHealthApply } from "../ClientView.jsx";
 import { MatchHeldDialog } from "../MatchHeldDialog.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
@@ -96,7 +96,11 @@ function HubNote() {
 
 /** What the internal report's pane does (the internal view and the left pane of Side by side are the same): an edit is kept on the page and
     is what Match internal reads; the save is its own. */
-const internalChange = (/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; };
+const internalChange = (/** @type {SheetDoc} */ d) => {
+  if (!editDoc(d)) return;                         // #234: another report's late edit lands nowhere
+  const ci = crInternal.value;
+  if (ci && ci.project === d.project && ci.date === d.date) crInternal.value = d;
+};
 const internalSave = async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; };
 /** The AI bar's account of the internal report's pane: its own place and no client document. @param {SheetDoc} doc */
 const internalAi = (/** @type {SheetDoc} */ doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
@@ -104,6 +108,13 @@ const internalAi = (/** @type {SheetDoc} */ doc) => ({ place: "report", project:
 const internalRedraft = (/** @type {SheetDoc} */ doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
 /** ✦ on the client report. @param {SheetDoc} cd */
 const clientRedraft = (/** @type {SheetDoc} */ cd) => redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply);
+
+/** Show as exported for the client report: the page saved first when it has edits or was never saved (as Export does). */
+const saveForShow = async () => {
+  const d = crDoc.value;
+  if (!d || !(crDirty.value || (crInfo.value && crInfo.value.where === "new"))) return { ok: true };
+  return saveClientPage({ doc: d, base_version: crBase.value });
+};
 
 /** The sheet for what is in view. @param {{code: string, view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
 function HubSheet({ code, view, on, doc }) {
@@ -123,7 +134,7 @@ function HubSheet({ code, view, on, doc }) {
   if (view === "client" && cd) {
     return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
       readOnly={cFiled} renderers={CLIENT_RENDERERS} onChange={setClientDoc} onSave={saveClientPage} ai={clientAi}
-      onRedraft={clientRedraft(cd)}
+      onRedraft={clientRedraft(cd)} exportedView={<ServerExported doc={cd} version={crBase.value} save={saveForShow} />}
       onEvent={ev => { if (ev.type === "reload") reloadClient(); else countRedraft(ev, "report"); }} />;
   }
   if (side && cd) {

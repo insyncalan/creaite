@@ -79,7 +79,12 @@ export function railCustomise(opener) {
 }
 /** ⌘K's "Customise the rail" (ask.js, Team 1's) calls this name: the same dialog. */
 export const railPopOpen = railCustomise;
-function railCustClosed() { railCustOpen.value = false; const o = RAILOPENER; RAILOPENER = null; if (o && o.isConnected && o.getClientRects().length) o.focus(); else $("#railMore")?.focus(); }
+/* 2.5.2 gate: a page drawn from a string (Settings) may redraw while the dialog is open, so a detached opener is looked up again by its id */
+function railCustClosed() {
+  railCustOpen.value = false; const was = RAILOPENER; RAILOPENER = null;
+  const o = was && !was.isConnected && was.id ? document.getElementById(was.id) : was;
+  if (o && o.isConnected && o.getClientRects().length) o.focus(); else $("#railMore")?.focus();
+}
 /** #232: the sidebar's Intake and Review entry keeps the id "review" (its button's data-v, its badge #revBadge, saved
     sidebars), and opens the combined page. @param {string} id */
 export const railGo = id => (id === "review" ? "intake-review" : id);

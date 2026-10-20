@@ -54,6 +54,7 @@ INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intak
 TRANSCRIPTS = STAGING / "transcripts.json"       # each meeting's transcript status from the sweep (BL-42 phase 3): never text, a passcode or a PIN
 NOTES_SENT  = STAGING / "notes-sent.json"        # BL-301: what Find updates applied from each note (paragraph, fingerprint, IDs)
 RUN_USAGE   = STAGING / "run-usage.jsonl"       # #197: one counts-only line per finished Claude run (usage_log.py appends; usage_report.py reads)
+CONTEXT_SIZE = STAGING / "context-size.jsonl"    # #238: what every run loads, once a day (usage_log.py; counts only)
 MINUTES_TEMPLATE = TEMPLATES / "minutes-template.docx"
 WEEKLY_TEMPLATE  = TEMPLATES / "weekly-report-template.docx"
 CLIENT_TEMPLATE  = TEMPLATES / "client-report-template.docx"
@@ -405,11 +406,61 @@ def folder(code: str, kind: str) -> Path:
 
 def resolve_image(project_folder: Path, ref: str) -> Path:
     """A Current-state image reference. In CLAUDE.md it is written `images/<name>` whichever folder holds the pictures; with an outside
-    projects root the `images` folder is the mapped one (locations.folders.images), so references never contain spaces."""
+    projects root the `images` folder is the mapped one (locations.folders.images), so references never contain spaces.
+    v2.5.0 leak fix: a reference that is absolute, holds `..`, a backslash, a URL or a drive letter, or whose real path leaves the
+    project folder, gives a path that does not exist (REFUSED_IMAGE), never the outside file."""
     ref = str(ref)
+    refused = Path(project_folder) / REFUSED_IMAGE
+    if not safe_image_ref(ref):
+        return refused
     if external() and ref.startswith("images/"):
-        return Path(project_folder) / folder_name("images") / ref[len("images/"):]
-    return Path(project_folder) / ref
+        f = Path(project_folder) / folder_name("images") / ref[len("images/"):]
+    else:
+        f = Path(project_folder) / ref
+    try:
+        if Path(project_folder).resolve() not in f.resolve().parents:
+            return refused
+    except (OSError, RuntimeError, ValueError):
+        return refused
+    return f
+
+
+REFUSED_IMAGE = ".creaite-refused-image/none"      # what resolve_image gives for a reference it won't follow: never a real file
+
+
+def safe_image_ref(ref) -> bool:
+    """Whether a picture reference is a plain relative path: no absolute path, `..`, backslash, URL, drive letter or control character."""
+    ref = str(ref or "")
+    if not ref or ref.startswith(("/", "~")) or "\\" in ref or ":" in ref or any(ord(c) < 32 for c in ref):
+        return False
+    return all(p not in ("", ".", "..") for p in ref.split("/"))
+
+
+def image_file(project_folder: Path, ref: str):
+    """The real picture file an `images/<name>` reference names, or None: only a safe relative reference under `images/`, a regular
+    file (never a symlink, nor reached through one, never a hard link) whose real path sits in the project's own images folder, itself
+    inside the project folder (v2.5.0 leak fix)."""
+    ref = str(ref or "")
+    if not (ref.startswith("images/") and safe_image_ref(ref)):
+        return None
+    root = Path(project_folder) / (folder_name("images") if external() else "images")
+    f = root / ref[len("images/"):]
+    try:
+        real_root = root.resolve()
+        if Path(project_folder).resolve() not in real_root.parents:     # a mapped images folder outside the project (`../..`)
+            return None
+        if root.is_symlink() or not f.is_file() or f.stat().st_nlink > 1:     # a hard link may name an outside file
+            return None
+        p = f
+        while p != root:                        # no symlink anywhere between the images folder and the file
+            if p.is_symlink():
+                return None
+            p = p.parent
+        if real_root not in f.resolve().parents:
+            return None
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return f
 
 
 def extract_dirs(code: str) -> list:
@@ -693,6 +744,8 @@ def report_files(code: str, online: bool = False) -> list:
             continue
         for f in sorted(d.rglob("*")):
             if not f.is_file() or f.name.startswith((".", "~$")) or f.resolve() in taken or not (online or not is_online_only(f)):
+                continue
+            if f.name.endswith(".client.json"):           # v2.5.1 (#239): a client report's checked snapshot, creaite's own record
                 continue
             taken.add(f.resolve())
             out.append((f, "Adhoc" if label == "Weekly" and shared and re.search(r"ad[ _-]?hoc", f.name, re.I) else label))

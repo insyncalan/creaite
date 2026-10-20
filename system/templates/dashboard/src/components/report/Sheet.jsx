@@ -56,7 +56,7 @@ export { openSheetRef as openRef };
     match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
-    exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
+    exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
     checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
       document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
@@ -290,6 +290,10 @@ function useBannerHide(root) {
   }, []);
 }
 
+/** Whether a changed document is the one this pane shows (its kind, project, week and client): a late answer for another report is
+    never taken as an edit of this one (#234). @param {SheetDoc} nd @param {SheetDoc|undefined} cur */
+const sameSheetDoc = (nd, cur) => !cur || !nd || (nd.kind === cur.kind && nd.project === cur.project && nd.date === cur.date && (nd.client || "") === (cur.client || ""));
+
 /** The A4 sheet. @param {SheetProps} props */
 export function Sheet(props) {
   const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {} } = props;
@@ -331,8 +335,8 @@ export function Sheet(props) {
   };
   useEffect(() => { if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT)); }, [scrollKey]);
 
-  const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO) return; props.onChange(nd, why); main.change(nd); };
-  const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (!partner || partner.readOnly) return; partner.onChange(nd, why); side.change(nd); };
+  const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO || !sameSheetDoc(nd, P.current.doc)) return; props.onChange(nd, why); main.change(nd); };
+  const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { const pt = P.current.partner; if (!pt || pt.readOnly || !sameSheetDoc(nd, pt.doc)) return; pt.onChange(nd, why); side.change(nd); };
 
   /** The AI bar's account of one section of one pane (p241: each pane has its own: its report, its place, its key). */
   const aiFor = (/** @type {SheetSection} */ s, /** @type {boolean} */ ro, /** @type {boolean} */ right = false) => {
@@ -460,7 +464,7 @@ export function Sheet(props) {
       {main.removed ? <div class="sheet-note sheet-removed" role="status">{main.removed}</div> : null}
       {partner && side.conflict ? <div class="sheet-note" role="alert">{partner.label}: {side.conflict} <button type="button" class="btn sm" onClick={() => { side.reload(); onEvent({ type: "reload", partner: true }); }}>Reload</button></div> : null}
       <div class={`sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`}>
-        {partner && !together
+        {exported && props.exportedView && !partner ? props.exportedView : partner && !together
           ? <>
             <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
             <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>

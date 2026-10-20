@@ -322,6 +322,19 @@ class Sidebar(LiveBrowserCase):
         b.key("Enter")
         b.wait("document.getElementById('railCust').open")
 
+    def test_focus_goes_back_to_customise_after_settings_redraws_under_the_dialog(self):
+        """2.5.2 gate: Settings redraws its page while Customise is open (a refresh under load), so the button that opened it is a new
+        node by Esc; focus goes to the new button of the same id, not to More."""
+        b = self.b
+        b.eval("go('settings','appearance')")
+        b.wait("document.getElementById('railCustSet')")
+        b.click("#railCustSet")
+        b.wait("document.getElementById('railCust').open")
+        b.eval("(()=>{const o=document.getElementById('railCustSet'); const n=o.cloneNode(true); o.replaceWith(n);})()")
+        b.key("Escape")
+        b.wait("!document.getElementById('railCust').open")
+        self.assertEqual(b.eval("document.activeElement.id"), "railCustSet")
+
     def test_a_page_in_more_still_opens_from_cmd_k(self):
         b = self.b
         b.key("k", META)

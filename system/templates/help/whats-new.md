@@ -2,6 +2,70 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.5.2
+
+Client exports are now made from one checked copy of the report, so nothing can slip in between checking and exporting. Activity gets a Usage tab, and Intake becomes a quiet line on Today.
+
+
+- **Client exports come from one checked copy.** When you approve a client report, creaite freezes the checked copy, and every client file (Word, HTML and PDF) is made from that one copy, then checked again after it is made. Nothing can slip in between checking and exporting.
+  - A page posted with a client export is never used, and a client report is always treated as a client report, whatever its file says.
+  - The header, the logos and the audience come from the project at the moment you export. Only the project's own logo files and the report's own pictures can be drawn, and any extra fields are dropped.
+  - The older Word report route goes through the same check. Words hidden in look-alike letters or escapes are caught, and so are another project's words and owners.
+  - The minutes export refuses a client report, and a typed export name can't claim another report's filing name.
+  - This closes the client-export items listed as "still to come" in 2.5.1.
+- **A Usage tab on Activity.** It shows what each Claude run costs and what it loads before it starts, over time: summary cards, a 14-day chart (cost per day, and what each run loads at the start, in two aligned panels), a table by kind of run, what every run loads (the always-loaded files, measured once a day) and the skills used. It counts only: it never records what anything said.
+- **Intake is a quiet line on Today.** The Intake and Review section on Today is replaced by one small line at the foot of Your commitments saying how many meetings are ready to process and how many proposals wait. Its links go to Intake and Review, and a small x hides it until something new arrives. With nothing waiting there is no line. The quick Approve and Reject on Today's rows are gone: approve in Intake and Review.
+- **Messages from people you follow** sit in their own Messages section on Today, above Week ahead, only when there are any: each is a card with Make a work item and Dismiss.
+
+- **No Reporting card on the project page.** The Reporting card is gone from the project page; Reports (the icon beside Browse files), Project settings › Open reporting, the Reports page and Today's reminder still open the project's reporting.
+- **Intake line dismiss is exact.** The small x on Today's Intake line now remembers which items you dismissed, so something new always brings it back.
+- **Quieter debug log.** The sweep's log line now holds counts only.
+
+
+Nothing.
+
+
+- The Settings tabs, Project settings, the People page, the new Work list and Draft email in Outlook are in 2.6, not in this release.
+- The Usage tab's "Your reviews" notes (your own dated notes, with a CSV download) are planned for the release after this one.
+
+## creaite 2.5.1
+
+A release of fixes: you can clear health items and dismiss the Sweep banner, the filter panel is no longer cut off, weekly report rows left out by mistake are fixed, and ask creaite no longer writes reports. Client exports are safer.
+
+
+- **Clear health items.** In Settings › Health each problem has a Dismiss button (with an optional reason). A dismissed problem stops counting in the number in your menu; it comes back by itself if its detail changes, and "Dismissed" lists them with Restore. Problems that mean creaite itself is not safe to use cannot be dismissed.
+- **Dismiss the Sweep banner.** A small close icon on the "Sweep due" banner on Today hides it for the day without running a sweep. It returns the next day, or when the last-swept time changes.
+- **The Work filter panel is never cut off.** On a short list the filter panel used to be clipped near the bottom; it now stays fully visible.
+- **Weekly report rows left out.** A work item that showed blank with "Click to write" and the left-out eye now keeps its text; a row you leave out and save says it is left out, and its eye refills it from the tracker.
+- **No cog on the Projects list.** The cog beside each project name in the Projects list is gone; project settings open from the project page (the cog beside Reports and Browse files) and from Settings.
+- **Today.** The permanent "How Today works" box under an empty Needs attention is gone.
+- **ask creaite no longer writes reports.** Reports are yours to edit in the Reporting hub; ask creaite can read them and answer questions about them, but cannot create or change a weekly or client report or its draft.
+- **Safer client exports.** A client export is checked on exactly the report it was made from, a client report is always treated as a client report whatever its file says, weekly reports stay internal, the minutes export no longer accepts a client report, a page posted with a client export is used only when its words are the saved report's own, typed export names can no longer claim another report's filing name, and client logos come only from the project's own logo files.
+
+
+- Some client-export hardening is still to come in the next release (a single checked snapshot that every client export reads from).
+- The usage monitor and the Intake and Review pages are not in this release.
+
+## creaite 2.5.0
+
+Project settings get a page of their own, both reports can be edited side by side, and the report logos can be added by clicking their place in the header.
+
+
+- **Project settings on one page.** A cog on the project page (beside Reports and Browse files) and in the Projects list opens it, and Settings › People and projects stays as a list that links in. It has General (name, client, status), People and partners, Milestones, Reporting, Logos and Archive. Each change saves on its own. Workstreams stay where they were.
+- **Partners and their logos.** List a project's partner organisations once; each gets its own logo row, and every logo you tick prints in the header of that project's reports. Add or change a logo from this page, from the cog panel, or by clicking its place in the report header (an empty place shows a dashed "Add … logo" tile; nothing shows for a logo you have turned off, in Show as exported or in an export). The firm's logo is shared by every project, so it asks before it is replaced or removed. A "Logos not used" list lets you remove a logo left behind when a partner is renamed.
+- **Both reports editable side by side.** In the reporting hub's Side by side view you can edit the internal and the client report at the same time. Each keeps its own edits, autosave and save line ("Saved · version 2 · Client: Saved · version 1"); ⌘S saves the pane you are in; the menus, pickers and shortcuts belong to that pane; the panes share one zoom and scroll together. Nothing from the internal report reaches the client report except through "Match internal" or "Add to the client report". An approved internal report no longer locks the client page.
+- **Match internal checks first.** Before it copies internal text into the client report, it checks the wording the way export does: a section with internal wording is held back and named, and the rest is copied. Internal-only text sections are never copied by "every section".
+- **ask creaite shows when it has finished.** With the panel closed, a small mark appears on the ask creaite button when a run ends (a tick for done, a different mark for stopped or failed). It goes after 30 seconds, or when you open the panel.
+- **A tidier report hub.** The label row (name, status, Match internal, Refresh, Edit again) sits inside each grey pane and scrolls with it, and the weeks in the week menu show their real health colours.
+- **A roomier Add actions picker.** The picker in the report no longer feels cramped.
+- **Safer settings and exports.** Settings that change a project's memory file refuse a file that changed in another window, keep the rest of a line, and never show full file paths in messages. Client exports drop more kinds of hidden content (unclosed styles, damaged pictures, GIF and WebP pictures).
+
+
+- With a project's client report switched off, creaite now refuses to create, save, export or approve a client report for it; existing client reports can still be opened.
+- Partner names are 1 to 60 characters (letters, digits, spaces and . , & ' - ( )); other names on the Partners line are ignored.
+- Intake and Review are still two separate pages in this release.
+- In Side by side, only one click-to-edit summary box is open at a time (clicking into the other pane closes it), and the section menu is one popup.
+
 ## creaite 2.4.1
 
 A security fix for client exports; nothing else changes.

@@ -21,6 +21,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "system" / "scripts"))
 import creaite_doc  # noqa: E402
+import client_snapshot  # noqa: E402  (v2.5.1: the Word writer as client_export calls it)
 import docx_tools  # noqa: E402
 import launch  # noqa: E402
 import paths  # noqa: E402
@@ -59,7 +60,7 @@ def sections(tmp):
     return [
         {"id": "header", "type": "header", "heading": "Weekly report", "hidden": False, "text": "",
          "data": {"label": "Weekly report · Internal",
-                  "logos": [{"kind": "firm", "path": str(tmp / "firm.png")}, {"kind": "client", "path": str(tmp / "client.svg")}]}},
+                  "logos": [{"kind": "firm", "path": str(tmp / "firm.png")}, {"kind": "client", "path": str(tmp / "ABC-client.svg")}]}},
         {"id": "health", "type": "health", "heading": "Health", "hidden": False, "text": "The harbour migration slipped.",
          "data": {"flag": "Off track", "trend": [{"date": d, "flag": f}
                                                  for d, f in (("2026-09-11", "On track"), ("2026-09-18", "On track"),
@@ -79,7 +80,7 @@ def sections(tmp):
          "data": {"timeline": ["ABC-M-001", "ABC-M-002", "ABC-M-003", "ABC-M-004", "ABC-M-005"], "milestones": ["ABC-M-001", "ABC-M-002"]}},
         {"id": "this_week", "type": "text", "heading": "This week", "hidden": False,
          "text": "**Done:** the plan.\n\n- [ ] book room\n- [x] order kit\n- plain point\n\n"
-                 f"![Site photo]({tmp / 'images' / 'site.png'})\n\n![Lost photo]({tmp / 'images' / 'lost.png'})"},
+                 "![Site photo](images/site.png)\n\n![Lost photo](images/lost.png)"},
         {"id": "risks", "type": "table", "heading": "Risks and issues", "hidden": False,
          "columns": [{"key": "id", "label": "ID"}, {"key": "risk", "label": "Risk or issue"},
                      {"key": "priority", "label": "Priority"}, {"key": "owner", "label": "Owner"}],
@@ -110,6 +111,17 @@ class Base(unittest.TestCase):
         self.sizes = []
         self.real_pic = getattr(creaite_doc, "picture_png", None)
 
+        # v2.5.0 leak fix: a picture is read only as `images/<name>` under the project's own folder (never an absolute path), so the
+        # test's project folder is its temp folder
+        real_dir = paths.project_dir
+        paths.project_dir = lambda code, _t=self.tmp: _t
+        self.addCleanup(setattr, paths, "project_dir", real_dir)
+        # 2.5.1 M1 (v251-logofix): a header logo is drawn only from the project's own logo files (report_doc.logos: firm.<ext> and
+        # <CODE>-client.<ext> in paths.REPORT_LOGOS, stored relative to the vault root), never from a path the document names; so the
+        # test's vault root and logos folder are its temp folder, and the logos are written there under those names
+        for name, value in (("ROOT", self.tmp.resolve()), ("REPORT_LOGOS", self.tmp)):
+            self.addCleanup(setattr, paths, name, getattr(paths, name))
+            setattr(paths, name, value)
         self.svgs = []
         # the tracker's client-safe milestones (M-004 and M-005 are not): the writer re-reads them and fails closed (LEAK 3)
         real_safe = creaite_doc.client_safe_ids
@@ -122,10 +134,17 @@ class Base(unittest.TestCase):
             return png(int(w), int(h))
         creaite_doc.picture_png = fake
         self.addCleanup(setattr, creaite_doc, "picture_png", self.real_pic)
+        # v2.5.1 (#239, b): a report draws only the project's own logo files (report_doc.logos), never a path a draft stored, so the
+        # test's logos are the project's logo files
+        import report_doc
+        real_logos = report_doc.logos
+        report_doc.logos = lambda code, wanted=None, _t=self.tmp: [{"kind": "firm", "path": str(_t / "firm.png")},
+                                                                    {"kind": "client", "path": str(_t / "ABC-client.svg")}]
+        self.addCleanup(setattr, report_doc, "logos", real_logos)
         (self.tmp / "images").mkdir()
         (self.tmp / "images" / "site.png").write_bytes(png(40, 20, (0, 150, 0, 255)))
         (self.tmp / "firm.png").write_bytes(png(60, 20))
-        (self.tmp / "client.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="30" viewBox="0 0 80 30">'
+        (self.tmp / "ABC-client.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="30" viewBox="0 0 80 30">'
                                              '<rect width="80" height="30" fill="red"/></svg>')
 
     def doc(self, kind="weekly", **kw):
@@ -137,7 +156,7 @@ class Base(unittest.TestCase):
     def build(self, doc=None):
         doc = doc or self.doc()
         self.out = self.tmp / "out.docx"
-        creaite_doc.word_export(doc, self.out)
+        creaite_doc.word_export(doc, self.out, token=client_snapshot.TOKEN)
         self.parts = {i.filename: raw for i, raw in docx_tools.read_parts(self.out)}
         self.xml = self.parts["word/document.xml"].decode("utf-8")
         self.root = ET.fromstring(self.xml)
@@ -344,7 +363,7 @@ class Checks(Base):
     def test_logo1_a_bad_logo_file_is_skipped_and_never_fails_the_export(self):
         """p240-leakfix LOGO 1: a bare PNG header (what the old save accepted) and a zero-height PNG used to fail every export."""
         (self.tmp / "firm.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        (self.tmp / "client.svg").write_bytes(b"not a picture")
+        (self.tmp / "ABC-client.svg").write_bytes(b"not a picture")
         self.build()
         self.assertFalse([n for n in self.parts if n.startswith("word/media/") and self.parts[n][:8] == b"\x89PNG\r\n\x1a\n"
                           and len(self.parts[n]) == 8], "the bad file is not in the package")
