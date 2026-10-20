@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts
 import settings_catalogue  # noqa: E402
 
 CATS = ["essentials", "people", "advanced", "health"]
-ADVANCED = ["you", "appearance", "drafts", "closeday", "views", "board", "projpage", "files", "thresholds", "warnings", "sweep", "vip",
+ADVANCED = ["you", "appearance", "drafts", "closeday", "views", "board", "projpage", "files", "thresholds", "warnings", "transcripts", "sweep", "vip",
             "reminders", "more"]
 
 
@@ -79,7 +79,7 @@ class SettingsPage(LiveBrowserCase):
             self.assertEqual(self.sections(), secs, cat)
 
     def test_sections_come_from_one_list_and_the_page_has_no_wrappers(self):
-        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 24)      # BL-320: Essentials, Health, Everything else in; Saving, Today, the old Advanced out; BL-295: Close the day
+        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 25)      # #250: Transcripts; BL-320: Essentials, Health, Everything else in; Saving, Today, the old Advanced out; BL-295: Close the day
         self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.id && SETCATS.some(c=>c[0]===catOf(s)) && typeof s.kw==='string' && (typeof s.render==='function' || typeof s.mount==='function'))"))
         self.assertEqual(self.b.eval("renderSettings.toString().includes('const rs=')"), False)
 
