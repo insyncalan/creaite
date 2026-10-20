@@ -280,7 +280,7 @@ class MinutesTop(Report, Common, LiveBrowserCase):
 
     def open_view(self):
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
-        self.b.wait("document.querySelector('#v-minutes .mnrow')", 15)
+        self.b.wait("document.querySelector('#v-minutes tr.mi')", 15)     # #268: the item rows are the Track tables' rows
 
 
 if __name__ == "__main__":
