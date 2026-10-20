@@ -137,11 +137,16 @@ LOCATION_DEFAULTS = {"projects_root": "", "portfolio": "_Portfolio", "skeleton":
                                  "steerco": "04 Reporting/Steerco",       # BL-93, BL-87: listed in Files; creaite may file into it when asked
                                  "agendas": "02 Meetings/Agendas",                     # BL-98: meeting prep pages
                                  "notes": "08 Notes"},                                 # BL-301: Alan's notes, made on the first note
-                     "never_index": ["_Archive", "_Templates", "99 System"],     # BL-112: 99 System holds the backup copies
+                     "never_index": ["99 Archive", "_Templates", "99 System"],   # BL-112: 99 System holds the backup copies
                      "offsite_backup": "_Portfolio/99 System/creaite backups"}
-ARCHIVE = "_Archive"               # BL-09: archived projects (<projects root>/_Archive/<folder>) and each engagement's own archive folder
-OLD_ARCHIVE = "zz Archive"         # BL-09: the old name, still skipped for one release (Health offers to rename it)
-ALWAYS_NEVER_INDEX = (ARCHIVE, "_Templates", "99 System")      # skipped whatever the saved list says (BL-112, BL-09)
+ARCHIVE = "99 Archive"             # #252: archived projects (<projects root>/99 Archive/<folder>) and each engagement's own archive
+#                                     folder; it sorts last in OneDrive, beside 99 System (Alan, 20-10-2026)
+LEGACY_ARCHIVE = "_Archive"        # #252: the name before 2.6 (BL-09). Where it is the only archive folder it is still the one used,
+#                                     so one place never holds two, until Health's "Rename to 99 Archive" is approved
+OLD_ARCHIVES = (LEGACY_ARCHIVE, "zz Archive")    # #252: both old names, still resolved and skipped for one release (BL-09's rule)
+ARCHIVE_NAMES = (ARCHIVE,) + OLD_ARCHIVES        # every name an archive folder may have during that release, the new one first
+ALWAYS_NEVER_INDEX = (ARCHIVE, LEGACY_ARCHIVE, "_Templates", "99 System")   # skipped whatever the saved list says (BL-112, BL-09);
+#                                     _Archive stays on the deny lists while vaults still hold one (#252)
 DEFAULT_FOLDERS = {"minutes": "minutes", "transcripts": "transcripts", "weekly_reports": "reports", "client_reports": "reports",
                    "adhoc_documents": "reports", "images": "images", "documents": "documents", "steerco": "reports/Steerco",
                    "agendas": "agendas", "notes": "notes"}   # the default layout (Steerco its own folder so Files can label it;
@@ -222,22 +227,61 @@ def resolve(stored, archived=True) -> Path:
         return Path(s)
     if external():
         if s == LOGICAL_PORTFOLIO or s.startswith(LOGICAL_PORTFOLIO + "/"):
-            p = portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/")
+            p = archive_alias(portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/"))   # #252
             return archived_file(portfolio_dir(), p.relative_to(portfolio_dir()).parts, p) if archived else p   # BL-03
         if s == LOGICAL or s.startswith(LOGICAL + "/"):
-            p = projects_root() / s[len(LOGICAL):].lstrip("/")
+            p = archive_alias(projects_root() / s[len(LOGICAL):].lstrip("/"))       # #252
             return archived_path(p) if archived else p
-    return archived_path(ROOT / s) if archived and (s == LOGICAL or s.startswith(LOGICAL + "/")) else ROOT / s
+    if s == LOGICAL or s.startswith(LOGICAL + "/"):
+        p = archive_alias(ROOT / s)                                                    # #252
+        return archived_path(p) if archived else p
+    return ROOT / s
 
 
 # ===== BL-09: archived projects =====
-# An archived project's folder is <projects root>/_Archive/<folder>. Stored paths never change (Alan, 14-10-2026): resolve maps
-# projects/<folder>/… to _Archive/<folder>/… when <folder> is not in the projects root but is in _Archive, so every link still
-# opens and a restore rewrites nothing. A move into or out of _Archive is made only by tracker.py apply (reach.archive_move_problem).
+# An archived project's folder is <projects root>/99 Archive/<folder> (#252; _Archive before 2.6). Stored paths never change (Alan,
+# 14-10-2026): resolve maps projects/<folder>/… to <archive>/<folder>/… when <folder> is not in the projects root but is in an
+# archive folder, so every link still opens and a restore rewrites nothing. A move into or out of an archive folder is made only by
+# tracker.py apply (reach.archive_move_problem).
+
+def archive_name(base) -> str:
+    """#252: the archive folder's name at `base` (the projects root, an engagement or project folder, or the portfolio): 99 Archive,
+    unless the old _Archive is there and 99 Archive isn't (a vault Health hasn't renamed yet), so that one place never gets a second
+    archive folder that the rename could not merge. zz Archive is never used for a new move (BL-09)."""
+    b = Path(base)
+    old = b / LEGACY_ARCHIVE
+    if not (b / ARCHIVE).is_dir() and old.is_dir() and not old.is_symlink():
+        return LEGACY_ARCHIVE
+    return ARCHIVE
+
+
+def is_archive_name(name) -> bool:
+    """#252: `name` is one of the archive folder's names (99 Archive, or _Archive or zz Archive for one release), any case."""
+    return _fold(name) in _arch_names()
+
+
+def archive_alias(p: Path) -> Path:
+    """#252: p, or, when p is below an archive folder with an old name (_Archive, zz Archive) that is no longer there, in the
+    projects root, one engagement or project folder, or the portfolio, the same place in the 99 Archive beside it: Health's rename
+    moved it, and the stored paths (the apply's records, Files › Archived, a restore) keep working. The archive folder itself is
+    never mapped, so undoing the rename still names the old folder."""
+    root = projects_root()
+    try:
+        parts = Path(p).relative_to(root).parts
+    except ValueError:
+        return p
+    for i in (0, 1):
+        if len(parts) > i + 1 and parts[i] in OLD_ARCHIVES:
+            base = root.joinpath(*parts[:i])
+            if not os.path.lexists(base / parts[i]) and (base / ARCHIVE).is_dir():
+                return base.joinpath(ARCHIVE, *parts[i + 1:])
+            return p
+    return p
+
 
 def archive_dir() -> Path:
-    """<projects root>/_Archive: where archived projects' folders are (BL-09)."""
-    return projects_root() / ARCHIVE
+    """<projects root>/99 Archive (or the old _Archive, archive_name): where archived projects' folders go (BL-09, #252)."""
+    return projects_root() / archive_name(projects_root())
 
 
 def archived_path(p: Path) -> Path:
@@ -250,11 +294,14 @@ def archived_path(p: Path) -> Path:
         return p
     if parts and parts[0] == portfolio_dir().name and (root / parts[0]) == portfolio_dir():
         return archived_file(root / parts[0], parts[1:], p)              # BL-03: portfolio minutes in _Portfolio/_Archive
-    if not parts or parts[0] in (ARCHIVE, OLD_ARCHIVE) or parts[0].startswith((".", "_")):
+    if not parts or parts[0] in ARCHIVE_NAMES or parts[0].startswith((".", "_")):
         return p
     if (root / parts[0]).exists():
         return archived_file(root / parts[0], parts[1:], p)              # BL-03: a report or minutes moved into its own _Archive
-    return root / ARCHIVE / Path(*parts) if (root / ARCHIVE / parts[0]).is_dir() else p
+    for name in ARCHIVE_NAMES:                                           # #252: wherever this vault's archive is, new name first
+        if (root / name / parts[0]).is_dir():
+            return root / name / Path(*parts)
+    return p
 
 
 def archived_file(base: Path, rest, p: Path) -> Path:
@@ -262,10 +309,13 @@ def archived_file(base: Path, rest, p: Path) -> Path:
     report, minutes or Steerco one-pager archived into the engagement's own _Archive keeps its stored path (Alan, 14-10-2026).
     #124: only those folders' files. A deleted note in <…>/_Archive/<notes folder>/ is not mapped, so a new note may take its old
     name (its stored path is the notes folder's again), and the deleted one is reached only by Move back."""
-    if not rest or rest[0] in (ARCHIVE, OLD_ARCHIVE) or os.path.lexists(p):
+    if not rest or rest[0] in ARCHIVE_NAMES or os.path.lexists(p) or "/".join(rest[:-1]) not in archivable_folders():
         return p
-    moved = base / ARCHIVE / Path(*rest)
-    return moved if moved.is_file() and "/".join(rest[:-1]) in archivable_folders() else p
+    for name in ARCHIVE_NAMES:                                           # #252: 99 Archive first, then the old names
+        moved = base / name / Path(*rest)
+        if moved.is_file():
+            return moved
+    return p
 
 
 ARCHIVED_FILE_KINDS = ("minutes", "weekly_reports", "client_reports", "steerco")    # BL-03: what moves into an engagement's _Archive
@@ -279,25 +329,27 @@ def archivable_folders() -> list:
 
 
 def old_archive_folders() -> list:
-    """Folders still called zz Archive (BL-09): in the projects root itself and in each engagement or project folder (never in
-    _Templates, _Portfolio or another _ folder, which creaite doesn't write in). A folder listing only; nothing inside is read."""
+    """Archive folders still called _Archive or zz Archive (BL-09, #252): in the projects root itself, in each engagement or project
+    folder and in the portfolio folder (never in _Templates or another _ folder, which creaite doesn't write in), _Archive first in
+    each place. A folder listing only; nothing inside is read."""
     root = projects_root()
     if not root.is_dir():
         return []
-    out = [root / OLD_ARCHIVE] if (root / OLD_ARCHIVE).is_dir() else []
-    for d in sorted(x for x in root.iterdir() if x.is_dir() and not x.name.startswith((".", "_")) and x.name not in skipped_names()):
-        if (d / OLD_ARCHIVE).is_dir() and not (d / OLD_ARCHIVE).is_symlink():
-            out.append(d / OLD_ARCHIVE)
-    return out
+    places = [root] + sorted(x for x in root.iterdir() if x.is_dir() and not x.is_symlink() and not x.name.startswith((".", "_"))
+                             and x.name not in skipped_names())
+    if portfolio_dir().is_dir() and not portfolio_dir().is_symlink() and portfolio_dir().parent == root:
+        places.append(portfolio_dir())                                   # #252: BL-03's minutes and #124's notes go there too
+    return [d / n for d in places for n in OLD_ARCHIVES if (d / n).is_dir() and not (d / n).is_symlink()]
 
 
 def skeleton_old_archive() -> list:
-    """The folders called zz Archive in the project skeleton (locations.skeleton, BL-09), relative to it: a listing of folder names
-    only, as setup already reads the skeleton. creaite never writes in _Templates: Alan renames them in Finder."""
+    """The folders called _Archive or zz Archive in the project skeleton (locations.skeleton, BL-09, #252), relative to it: a
+    listing of folder names only, as setup already reads the skeleton. creaite never writes in _Templates: Alan renames them in
+    Finder (a new project gets 99 Archive either way)."""
     sk = projects_root() / str(locations().get("skeleton") or "_Templates/_Skeleton")
     if not external() or not sk.is_dir():
         return []
-    return sorted(d.relative_to(sk).as_posix() for d in sk.rglob("*") if d.is_dir() and d.name == OLD_ARCHIVE)
+    return sorted(d.relative_to(sk).as_posix() for d in sk.rglob("*") if d.is_dir() and d.name in OLD_ARCHIVES)
 # ===== end BL-09 =====
 
 
@@ -476,10 +528,11 @@ def never_index() -> list:
 
 
 def skipped_names() -> list:
-    """never_index plus the old archive name, zz Archive (BL-09): still never listed, indexed, read or written for one release,
-    and never for reach.classify, but left out of ask creaite's deny lists and permission patterns (Alan, 14-10-2026: _Archive only)."""
+    """never_index plus every old archive name (BL-09, #252): never listed, indexed, read or written for one release, and never
+    for reach.classify. zz Archive is left out of ask creaite's deny lists and permission patterns (Alan, 14-10-2026); _Archive
+    stays in them through ALWAYS_NEVER_INDEX while vaults still hold one."""
     names = never_index()
-    return names + ([OLD_ARCHIVE] if OLD_ARCHIVE not in names else [])
+    return names + [n for n in OLD_ARCHIVES if n not in names]
 
 
 def _excluded_dirs(code: str) -> list:
@@ -583,7 +636,8 @@ def notes_folder_clash(folders=None) -> list:
 
 
 # #128: where an engagement's notes can be, below the projects folder: <eng>/<notes>, and (archived) <eng>/_Archive/<notes>,
-# _Archive/<eng>/<notes>, _Archive/<eng>/_Archive/<notes> ("*" an engagement, "A" _Archive or zz Archive). tracker's copy guard
+# _Archive/<eng>/<notes>, _Archive/<eng>/_Archive/<notes> ("*" an engagement, "A" any archive name: 99 Archive, _Archive or zz
+# Archive, #252). tracker's copy guard
 # matches these shapes (notes_shape) and the rename check lists them (notes_places): one list, so the two never disagree.
 NOTES_SHAPES = (("*",), ("*", "A"), ("A", "*"), ("A", "*", "A"))
 NOT_A_NOTE = (".DS_Store", "Icon\r")             # Finder's own files (and ._* AppleDouble) are never notes
@@ -595,7 +649,7 @@ def _fold(x) -> str:
 
 
 def _arch_names() -> set:
-    return {_fold(ARCHIVE), _fold(OLD_ARCHIVE)}
+    return {_fold(n) for n in ARCHIVE_NAMES}
 
 
 def _exempt(parts, loc=None) -> bool:
@@ -684,7 +738,7 @@ def notes_rename_problem(old, new):
     for root in dict.fromkeys([_loc_root(old), _loc_root(new)]):
         bases = notes_places(root, a, old) + notes_places(root, a, new)
         pf = root / str((new or {}).get("portfolio") or "_Portfolio")
-        bases += [pf / a, pf / ARCHIVE / a, ROOT / "projects" / "_portfolio" / a]
+        bases += [pf / a] + [pf / n / a for n in ARCHIVE_NAMES] + [ROOT / "projects" / "_portfolio" / a]
         for d in dict.fromkeys(bases):
             if os.path.lexists(d) and _holds_files(d):
                 return f"Not saved: notes are still in “{a}” ({d.parent.name}): {why}, then change the setting."
@@ -698,7 +752,7 @@ def _engagement_top(top, new) -> bool:
     if _fold(top) in _arch_names() | engagements:
         return True
     d, name = _loc_root(new) / top, _loc_notes(new)
-    return _fold(top) != "_templates" and any((d / x / name).is_dir() for x in ("", ARCHIVE, OLD_ARCHIVE))
+    return _fold(top) != "_templates" and any((d / x / name).is_dir() for x in ("",) + ARCHIVE_NAMES)
 
 
 def skeleton_problem(old, new):
@@ -907,5 +961,6 @@ def tool_pattern(sub: str) -> str:
 
 
 def never_index_patterns():
-    """Permission patterns (below the projects root) for the folders creaite never reads or writes: _Archive, _Templates, 99 System."""
-    return [f"**/{n}/**" for n in never_index() if n != OLD_ARCHIVE]      # BL-09: _Archive only (Alan, 14-10-2026)
+    """Permission patterns (below the projects root) for the folders creaite never reads or writes: 99 Archive and _Archive (#252),
+    _Templates, 99 System."""
+    return [f"**/{n}/**" for n in never_index() if n != "zz Archive"]      # BL-09: never zz Archive (Alan, 14-10-2026)

@@ -75,7 +75,7 @@ def engagements(root: Path) -> list:
     if not root.is_dir():
         return []
     return sorted(d.name for d in root.iterdir() if d.is_dir() and not d.name.startswith((".", "_"))
-                  and d.name not in paths.skipped_names())             # BL-09: never _Archive (or the old zz Archive)
+                  and d.name not in paths.skipped_names())             # BL-09, #252: never 99 Archive (or the old _Archive, zz Archive)
 
 
 def subfolders(base: Path, depth=3) -> list:
