@@ -16,6 +16,7 @@ from live_browser import TEST_PALETTES, LiveBrowserCase, pin_page_clock  # noqa:
 from test_dashboard import populate  # noqa: E402
 from test_meetings import week_calendar  # noqa: E402
 from test_transcripts import DAY, NOW, STUB, route_steps, event, read, transcript_result  # noqa: E402
+from test_intake_process import needs_diff  # noqa: E402  #264: Process's own route is a guarded diff
 
 
 class Case(LiveBrowserCase):
@@ -160,6 +161,7 @@ class Loading(Case):
         self.assertEqual(b.eval("document.getElementById('mtgLoad').disabled"), True)    # nothing ticked any more
         self.assertIn("Loaded", b.eval("document.getElementById('chLog').textContent"))
 
+    @needs_diff
     def test_process_selected_loads_then_hands_the_file_to_the_minutes_run(self):
         """BL-119: the one Process button does what Load and process did."""
         b = self.open_intake()
@@ -168,9 +170,11 @@ class Loading(Case):
         b.click("#mtgGo")
         b.wait("/Couldn.t|Draft ready/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').cells[6].innerText)", 40)
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
-        self.assertEqual(seen["prompt"], f"process inbox/{DAY} ABC Steering.vtt")        # the file the server wrote, never a re-typed transcript
+        self.assertTrue(seen["prompt"].startswith("Process these Intake files"))           # #264: Process's own run kind
+        self.assertIn(f"- `inbox/{DAY} ABC Steering.vtt`", seen["prompt"])              # the file the server wrote, never a re-typed transcript
         self.assertEqual(self.inbox(), [f"{DAY} ABC Steering.vtt"])
 
+    @needs_diff
     def test_rows_without_a_transcript_are_skipped_with_the_reason_and_the_others_carry_on(self):
         b = self.open_intake()
         self.script(route_steps(chat=False))
@@ -184,7 +188,7 @@ class Loading(Case):
         self.assertIn("Skipped", state("ev-2"))
         self.assertIn("Not transcribed yet", state("ev-2"))
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
-        self.assertEqual(seen["prompt"], f"process inbox/{DAY} ABC Steering.vtt")        # only the loadable one ran; Claude never looked for the others
+        self.assertEqual(re.findall(r"^- `(inbox/[^`]+)`", seen["prompt"], re.M), [f"inbox/{DAY} ABC Steering.vtt"])   # only the loadable one ran; Claude never looked for the others
         self.assertEqual(self.inbox(), [f"{DAY} ABC Steering.vtt"])
 
     def test_only_skipped_rows_run_nothing_and_open_nothing(self):
