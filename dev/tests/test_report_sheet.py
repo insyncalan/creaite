@@ -448,6 +448,10 @@ class ClientSheet(SheetChecks, LiveBrowserCase):
         return [f for f in (self.v.root / "projects").rglob("*Client report*.html")]
 
     def test_picker_offers_client_visible_items_only(self):
+        # v2.5.1 step 2: Show as exported saves the client page first, so an earlier test's picked row may now sit in the shared
+        # client draft (and so isn't offered again): this test starts from a fresh draft
+        for f in (self.v.root / "system/staging/drafts").glob("*Client report*.html"):
+            f.unlink()
         self.start()
         self.open_picker("overdue")
         text = " ".join(self.pick_rows("overdue"))
