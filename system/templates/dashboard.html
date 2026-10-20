@@ -61556,8 +61556,9 @@ ${d5.text}`);
   var railPopOpen = railCustomise;
   function railCustClosed() {
     railCustOpen.value = false;
-    const o5 = RAILOPENER;
+    const was = RAILOPENER;
     RAILOPENER = null;
+    const o5 = was && !was.isConnected && was.id ? document.getElementById(was.id) : was;
     if (o5 && o5.isConnected && o5.getClientRects().length) o5.focus();
     else $("#railMore")?.focus();
   }
