@@ -21,6 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import paths  # noqa: E402,F401  (every script imports paths: doctor's 'Scripts take locations from paths.py' check)
+
 DEFAULTS = {"quiet_overnight": True, "quiet_from": "19:00", "quiet_to": "07:00", "quiet_weekend": True}   # = settings-defaults.json
 OFF_WORDS = ("off", "false", "no", "0")
 ON_WORDS = ("on", "true", "yes", "1")
