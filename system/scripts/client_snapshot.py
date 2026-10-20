@@ -29,13 +29,13 @@ import os
 import re
 import sys
 import threading
-from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 import creaite_doc  # noqa: E402
 import report_doc  # noqa: E402
+import sweep  # noqa: E402
 
 FORMAT, SCHEMA = "creaite-client-snapshot", 1
 REGISTRY = paths.STAGING / "client-snapshots.json"
@@ -244,7 +244,7 @@ def build(doc, *, source=None, state="draft", preview=False):
     found += gap_c
     code = str(snap_doc.get("project") or "")
     snap = {"format": FORMAT, "schema": SCHEMA, "project": code, "week_ending": snap_doc.get("date"), "state": state,
-            "preview": bool(preview), "made_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "preview": bool(preview), "made_at": sweep.now().strftime("%Y-%m-%dT%H:%M:%S"),
             "source": dict(source or {}), "doc": snap_doc, "pictures": pictures,
             "logos": logo_table(code, snap_doc.get("layout"))}
     return snap, left, list(dict.fromkeys(found))

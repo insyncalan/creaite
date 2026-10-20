@@ -13,15 +13,20 @@ Client exports are now made from one checked copy of the report, so nothing can 
   - The older Word report route goes through the same check. Words hidden in look-alike letters or escapes are caught, and so are another project's words and owners.
   - The minutes export refuses a client report, and a typed export name can't claim another report's filing name.
   - This closes the client-export items listed as "still to come" in 2.5.1.
-- **A Usage tab on Activity.** It shows what each Claude run costs and what it loads before it starts, over time: summary cards, a 14-day chart (cost per day, and what each run loads at the start, in two aligned panels), a table by kind of run, what every run loads (the always-loaded files, measured once a day), the skills used, and a "Your reviews" list where you write down what you saw and decided, with a CSV download. It counts only: it never records what anything said.
+- **A Usage tab on Activity.** It shows what each Claude run costs and what it loads before it starts, over time: summary cards, a 14-day chart (cost per day, and what each run loads at the start, in two aligned panels), a table by kind of run, what every run loads (the always-loaded files, measured once a day) and the skills used. It counts only: it never records what anything said.
 - **Intake is a quiet line on Today.** The Intake and Review section on Today is replaced by one small line at the foot of Your commitments saying how many meetings are ready to process and how many proposals wait. Its links go to Intake and Review, and a small x hides it until something new arrives. With nothing waiting there is no line. The quick Approve and Reject on Today's rows are gone: approve in Intake and Review.
 - **Messages from people you follow** sit in their own Messages section on Today, above Week ahead, only when there are any: each is a card with Make a work item and Dismiss.
+
+- **No Reporting card on the project page.** The Reporting card is gone from the project page; Reports (the icon beside Browse files), Project settings › Open reporting, the Reports page and Today's reminder still open the project's reporting.
+- **Intake line dismiss is exact.** The small x on Today's Intake line now remembers which items you dismissed, so something new always brings it back.
+- **Quieter debug log.** The sweep's log line now holds counts only.
 
 
 Nothing.
 
 
 - The Settings tabs, Project settings, the People page, the new Work list and Draft email in Outlook are in 2.6, not in this release.
+- The Usage tab's "Your reviews" notes (your own dated notes, with a CSV download) are planned for the release after this one.
 
 ## creaite 2.5.1
 
