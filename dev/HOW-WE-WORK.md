@@ -72,6 +72,7 @@ The account hit its monthly limit overnight (Team Cap lost 2h40; Team Stark's ag
 
 A lead session that runs for a day re-reads, and re-caches, everything it has said and been told on every turn; long reports between sessions make that worse. To keep it small:
 
+- **Minimise chatter (Alan, 20-10-2026):** facts only, one or two lines; say nothing when nothing changed; no explanations, recaps or suggestions unless an exception needs his decision. If he needs more, he asks.
 - **Reports between sessions are short:** the answer first, at most about 15 lines (what changed, the commit or branch, what needs a decision). The detail goes on the issue and is linked, never pasted into a message. A reviewer's tables and per-test lists belong in the issue comment.
 - **Compact or restart at item boundaries:** when an item lands or a release is cut, a lead runs `/compact` (or restarts from a written handover) rather than carrying the whole day. A session that has been up for a day without a compact is a cost to look at first.
 - **Agents are the unit of work:** one agent per item with its own fresh context, a brief that names the files, the tests and the stopping point; the lead keeps only the result and the commit.
