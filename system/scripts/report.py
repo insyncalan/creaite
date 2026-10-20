@@ -123,13 +123,13 @@ def friday_of(d):
 def milestones(con, code):
     """A project's milestones, Cancelled left out, in order, each with its slip in days, percent complete and state (BL-186: the five
     states, and the client's word for each)."""
-    out = []
+    out, on = [], today().isoformat()                 # creaite's clock (CREAITE_NOW in tests), not the real date
     for m in rows(con, "SELECT * FROM milestones WHERE project = ? AND status != 'Cancelled' ORDER BY sort_order, "
                        "forecast_date", code):
         slip = 0
         if m["baseline_date"] and m["forecast_date"]:
             slip = (date.fromisoformat(m["forecast_date"]) - date.fromisoformat(m["baseline_date"])).days
-        st = tracker.milestone_state(m)               # BL-186: one vocabulary (the five states; the client's words for a client)
+        st = tracker.milestone_state(m, on)           # BL-186: one vocabulary (the five states; the client's words for a client)
         out.append({**m, "slip_days": slip, "percent": tracker.milestone_progress(con, m)[0], "state": st,
                     "client_word": tracker.MS_CLIENT_WORD[st]})   # BL-29
     return out
