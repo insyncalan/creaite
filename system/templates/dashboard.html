@@ -35078,7 +35078,7 @@ ${s5}`;
     ask: "Open ask creaite",
     project_page: "Open the project page",
     settings: "Open Settings",
-    people: "Open Settings › People",
+    people: "Open People",
     milestone_form: null,
     cx_edit: null
   };
@@ -35995,9 +35995,10 @@ ${s5}`;
           return;
         }
         if (to2 === "people") {
-          go2("settings", "people");
+          go2("people", "all");
         }
       },
+      /* #248: the People page is the register's home */
       ask: (text) => sneakAsk(at2, text),
       people: () => sneakPeople(),
       current: (field) => {
@@ -43058,7 +43059,7 @@ ${s5}`;
       }
       if (a5 === "help") go2("help", "start");
       else if (a5 === "proj") go2("settings", "projects");
-      else if (a5 === "people") go2("settings", "people");
+      else if (a5 === "people") go2("people", "all");
       else if (a5 === "review") go2("review");
       else if (a5 === "sweep") {
         if (shared.BUSY) {

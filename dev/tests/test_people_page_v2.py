@@ -204,6 +204,13 @@ class PeoplePage(Base):
         time.sleep(0.5)
         self.assertEqual(self.marks(), 0, "the vault search")
 
+    def test_the_add_people_links_open_the_people_page(self):
+        """The register's home moved: Today's setup checklist's Add people opens the People page, not Settings."""
+        b = self.b
+        b.eval("go('today'); const x=document.createElement('button'); x.dataset.setup='people'; x.id='tSetupPeople'; document.body.append(x); x.click(); x.remove()")
+        b.wait("VIEW==='people' && !!document.querySelector('#plRows')")
+        self.assertEqual(b.eval("location.hash"), "#people")
+
     def test_the_address_keeps_the_tab(self):
         b = self.b
         b.goto(self.base + "/#people/att")

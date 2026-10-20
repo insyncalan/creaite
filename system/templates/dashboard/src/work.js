@@ -1158,7 +1158,7 @@ shared.PSORT={col:"late",dir:"desc"};
 export const ownersOf=L=>[...new Set(L.map(i=>i.o||i.by).filter(Boolean))];
 export const latesOf=x=>[...x.oa,...x.or].filter(i=>i.due&&i.due<TODAY);
 /* ===== end BL-190 (People) ===== */
-/* the address: #people is With work, #people/none Nothing assigned; go("people") with no tab keeps the one last used */
+/* the address: #people is Everyone, #people/work, #people/none and #people/att the other tabs; go("people") with no tab keeps the one last used */
 /* ===== end BL-138 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0150(){
