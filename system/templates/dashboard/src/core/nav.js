@@ -36,7 +36,7 @@ import { openRecord, pkNewAsk, pkNewTitle } from "../panel.js";
 import { askDiscard, closePanel, curGuard, PKN, renderCockpit, renderProjects } from "../projects.js";
 import { renderReview } from "../review.js";
 import { rjCloseMenu, rjLeave } from "../stores/rejects.js";
-import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, sw, VIPS } from "../settings.js";
+import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, settingsMoved, sw, VIPS } from "../settings.js";
 import { renderToday, SETUPK } from "../today.js";
 import { allViews, applyFilters, applyView, clearAllFilters, closeDisp, FDEFS, groupOf, groupsOf, layoutOf, listGroupOf, PROJF, renderPeople, renderWork, setPTab, snapshot, SORT, subOf, syncView, WB, WGRP, WINIT, WLAY, WLGRP, workChanged, WSUB } from "../work.js";
 /* ======================= navigation ======================= */
@@ -88,7 +88,7 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), 
   let x=String(h||""); if(/^#?activity\?/.test(x)) x=x.replace("?","&");
   const st=(h=>{ const q=(h||"").replace(/^#/,""); if(!q) return null; const parts=q.split("&"), [v,arg]=parts[0].split("=").map(decodeURIComponent), kv=Object.fromEntries(parts.slice(1).map(x=>{ const [k,val=""]=x.split("="); return [k,k==="v"||k==="q"||k==="vb"?decodeURIComponent(val):val]; }));
   const st={v,arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0};
-  { const sm=/^settings(?:\/([^/]+))?$/.exec(v); if(sm){ st.v="settings"; st.arg=sm[1]||arg||null; if(st.arg&&!setResolve(st.arg)) st.arg=null; return st; } }   /* BL-115: #settings/<category or section>; the old #settings and #settings=<tab> too */
+  { const sm=/^settings(?:\/([^/]+))?$/.exec(v); if(sm){ st.v="settings"; st.arg=sm[1]||arg||null; if(st.arg&&!setResolve(st.arg)&&!settingsMoved(st.arg)) st.arg=null; return st; } }   /* v2.6: an old address of a section that left Settings is kept, so go() opens its new place */   /* BL-115: #settings/<category or section>; the old #settings and #settings=<tab> too */
   if(/^help(-|$)/.test(v)){ st.v="help"; st.arg=helpNorm(v.slice(5))||null; return st; }   /* BL-84: #help-start, #help-howto-<task>… */
   if(v==="cockpit"){ if(arg){ if(!P.some(p=>p.code===arg)) return null; st.arg=arg; } }   /* #204: bare #cockpit is the Choose a project page */
   else if(v==="work"){ st.wt=["actions","raid","decisions","all"].includes(arg)?arg:"actions";   /* BL-134: #work=all */ st.wv=kv.v||null; st.vb=kv.vb||null; st.p=(kv.p||"").split(",").filter(c=>P.some(p=>p.code===c)); st.q=kv.q||""; st.from=P.some(p=>p.code===kv.from)?kv.from:null;
@@ -128,6 +128,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
 export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
   if(v==="weekly"||v==="clientreport"){ const a=typeof arg==="string"?(v==="weekly"?parseWeekly(arg):parseKey(arg)):arg; if(!a||!a.code||!P.some(p=>p.code===a.code)) return false; spaceWeek.value=a.week||""; hubView.value=v==="clientreport"?"client":"internal"; v="reporting"; arg=a.code; }   /* #221: the weekly and client report pages are retired; their names open the hub */
+  let moved=false; if(v==="settings"){ const m=settingsMoved(arg,shared.VIEW==="cockpit"?shared.COCK:shared.VIEW==="psettings"?psCode.value:PROJF.size===1?[...PROJF][0]:""); if(m){ [v,arg]=m; moved=true; } }   /* v2.6: #settings/people is the People page, admin and projects the Projects page, workstreams the project's settings */
   if(v==="psettings"&&(!arg||!P.some(p=>p.code===arg))) return false;   /* #228 */
   if(v==="milestones"){ if(arg&&!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg||null; }   /* #204: no project is the Choose a project page */
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
@@ -149,6 +150,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
+  if(r!==false&&moved&&opt&&opt.restore) navWrite(false);   /* v2.6: a reload or bookmark of an old address: the address names the new place */
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */
   tabTitle();

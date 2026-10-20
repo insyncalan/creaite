@@ -4588,7 +4588,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     MOREMARK: () => MOREMARK,
     MOREOPEN: () => MOREOPEN,
     MOUNTS: () => MOUNTS,
-    MOVING: () => MOVING,
     MQ_REDUCE: () => MQ_REDUCE,
     MRUN: () => MRUN,
     MSEL: () => MSEL,
@@ -4645,13 +4644,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PEOPLE: () => PEOPLE,
     PEOPLE_MOVE: () => PEOPLE_MOVE,
     PERS: () => PERS,
-    PF: () => PF,
-    PFASK: () => PFASK,
     PFCOLS: () => PFCOLS,
     PFIELD: () => PFIELD,
-    PF_KEY: () => PF_KEY,
-    PF_MULTI: () => PF_MULTI,
-    PF_REM: () => PF_REM,
     PK: () => PK,
     PKAPPLIED: () => PKAPPLIED,
     PKDRAW: () => PKDRAW,
@@ -4763,6 +4757,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     SETALIAS: () => SETALIAS,
     SETCATS: () => SETCATS,
     SETFLASH: () => SETFLASH,
+    SETMOVED: () => SETMOVED,
     SETOLD: () => SETOLD,
     SETSECTIONS: () => SETSECTIONS,
     SETUPID: () => SETUPID,
@@ -4858,7 +4853,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     WSIG: () => WSIG,
     WSIG_MORE: () => WSIG_MORE,
     WSL: () => WSL,
-    WSM: () => WSM,
     WSUB: () => WSUB,
     WS_FIELDS: () => WS_FIELDS,
     WS_STOP: () => WS_STOP,
@@ -4906,6 +4900,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     addInboxFiles: () => addInboxFiles,
     addNoteImage: () => addNoteImage,
     addPartner: () => addPartner,
+    addProject: () => addProject,
     addReportImage: () => addReportImage,
     addTextCopy: () => addTextCopy,
     addTextSection: () => addTextSection,
@@ -5303,7 +5298,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     clientReportCogLabel: () => clientReportCogLabel,
     clientReportHref: () => clientReportHref,
     clientReportOn: () => clientReportOn,
-    clientReportsHtml: () => clientReportsHtml,
     clockOf: () => clockOf,
     closeCal: () => closeCal,
     closeCapture: () => closeCapture,
@@ -5579,7 +5573,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     drawWeekAhead: () => drawWeekAhead,
     drawWorkFilters: () => drawWorkFilters,
     drawWorkTabs: () => drawWorkTabs,
-    drawWsMgr: () => drawWsMgr,
     dueBucket: () => dueBucket,
     dueField: () => dueField,
     dueKey: () => dueKey,
@@ -5948,7 +5941,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     menuItemsIn: () => menuItemsIn,
     menuMove: () => menuMove,
     menuOpenFor: () => menuOpenFor,
-    mgrLink: () => mgrLink,
     mins: () => mins,
     minsOf: () => minsOf,
     moreHasValue: () => moreHasValue,
@@ -6192,6 +6184,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     openPrep: () => openPrep,
     openProject: () => openProject,
     openProjectSettings: () => openProjectSettings,
+    openProjectWs: () => openProjectWs,
     openProposal: () => openProposal,
     openRecord: () => openRecord,
     openRef: () => openSheetRef,
@@ -6277,36 +6270,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     personRedraw: () => personRedraw,
     personTbl: () => personTbl,
     personWork: () => personWork,
-    pfAny: () => pfAny,
-    pfApplied: () => pfApplied,
-    pfBar: () => pfBar,
-    pfBind: () => pfBind,
-    pfChip: () => pfChip,
-    pfClear: () => pfClear,
-    pfClearAll: () => pfClearAll,
-    pfClose: () => pfClose,
-    pfDot: () => pfDot,
-    pfDraw: () => pfDraw,
-    pfEmpty: () => pfEmpty,
-    pfFields: () => pfFields,
-    pfHl: () => pfHl,
-    pfLink: () => pfLink,
-    pfLoad: () => pfLoad,
-    pfNoEmail: () => pfNoEmail,
-    pfNoOrg: () => pfNoOrg,
-    pfOn: () => pfOn,
-    pfOpen: () => pfOpen,
-    pfPass: () => pfPass,
-    pfPeople: () => pfPeople,
-    pfProjOf: () => pfProjOf,
-    pfQOK: () => pfQOK,
-    pfRemOK: () => pfRemOK,
-    pfReset: () => pfReset,
     pfResize: () => pfResize,
-    pfRow: () => pfRow,
-    pfSave: () => pfSave,
-    pfScope: () => pfScope,
-    pfWord: () => pfWord,
     pickImage: () => pickImage,
     pickedAnchor: () => pickedAnchor,
     pickerOpenFor: () => pickerOpenFor,
@@ -6458,15 +6422,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     processMeetings: () => processMeetings,
     profileTools: () => profileTools,
     projArchive: () => projArchive,
-    projArchiveBind: () => projArchiveBind,
-    projArchiveHtml: () => projArchiveHtml,
     projArchivedHtml: () => projArchivedHtml,
     projFeedItems: () => projFeedItems,
     projFirst: () => projFirst,
     projHistory: () => projHistory,
     projLink: () => projLink,
     projPeople: () => projPeople,
-    projSettingsListHtml: () => projSettingsListHtml,
     projectPeople: () => projectPeople,
     projectState: () => projectState,
     promDue: () => promDue,
@@ -6574,13 +6535,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     removeLink: () => removeLink,
     removeLoaded: () => removeLoaded,
     removePartner: () => removePartner,
-    renameAll: () => renameAll,
     renameHeading: () => renameHeading,
     renamePartner: () => renamePartner,
     renamePerson: () => renamePerson,
     renameProject: () => renameProject,
     renameView: () => renameView,
-    renameWs: () => renameWs,
     renderActivity: () => renderActivity,
     renderApplied: () => renderApplied,
     renderAskChanges: () => renderAskChanges,
@@ -6595,11 +6554,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderInbox: () => renderInbox,
     renderLayoutBar: () => renderLayoutBar,
     renderMeetings: () => renderMeetings,
-    renderMgr: () => renderMgr,
     renderMilestones: () => renderMilestones,
     renderNotes: () => renderNotes,
     renderPeople: () => renderPeople,
-    renderPeopleMgr: () => renderPeopleMgr,
     renderPerson: () => renderPerson,
     renderPrep: () => renderPrep,
     renderProjectSettings: () => renderProjectSettings,
@@ -6858,6 +6815,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setSynced: () => setSynced,
     setToday: () => setToday,
     setUnmount: () => setUnmount,
+    settingsMoved: () => settingsMoved,
     setupShown: () => setupShown,
     setupSteps: () => setupSteps,
     shRvHtml: () => shRvHtml,
@@ -7071,7 +7029,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     writeDoc: () => writeDoc,
     writeProposal: () => writeProposal,
     writeSettings: () => writeSettings,
-    wsCells: () => wsCells,
     wsConfirm: () => wsConfirm,
     wsFor: () => wsFor,
     wsHidden: () => wsHidden,
@@ -7083,8 +7040,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     wsSuggest: () => wsSuggest,
     wsTable: () => wsTable,
     wsUsed: () => wsUsed,
-    wsmSave: () => wsmSave,
-    wsmStatus: () => wsmStatus,
     xcueAll: () => xcueAll,
     xcueOne: () => xcueOne,
     xcueSoon: () => xcueSoon,
@@ -31696,6 +31651,15 @@ ${s5}`;
     psQ.value = "";
     return go2("psettings", code);
   }
+  function openProjectWs(code) {
+    if (!P4.some((p6) => p6.code === code)) {
+      snack("That project isn't open here");
+      return false;
+    }
+    psCat.value = "ws";
+    psQ.value = "";
+    return go2("psettings", code);
+  }
 
   // settings.js
   var SETCATS = [
@@ -31709,14 +31673,28 @@ ${s5}`;
     ["health", "Health"]
   ];
   var ADVSUBS = [["review", "Review and warnings"], ["state", "Current state"], ["arch", "Archiving and backups"], ["folders", "Folders and OneDrive"], ["server", "Server, search and logs"]];
-  var MOVING = ["people", "People and projects"];
+  var SETMOVED = { people: "people", admin: "projects", projects: "projects", workstreams: "ws" };
+  function settingsMoved(t47, code) {
+    const to2 = SETMOVED[String(t47 || "").toLowerCase()];
+    if (!to2) return null;
+    if (to2 === "people") return ["people", "all"];
+    if (to2 === "ws") {
+      const c5 = code && P4.some((p6) => p6.code === code) ? code : "";
+      if (c5) {
+        psCat.value = "ws";
+        psQ.value = "";
+        return ["psettings", c5];
+      }
+    }
+    return ["projects", null];
+  }
   var CATOF = { general: "look", capture: "sweep", review: "advanced", system: "health" };
   var OLDCATS = { general: "You and the look", work: "Work and views", review: "Review and warnings", capture: "Capture and alerts", advanced: "Everything else" };
   var catOf = (s5) => CATOF[s5.cat] || s5.cat;
-  var SETOLD = { prefs: "essentials", admin: "people", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials" };
+  var SETOLD = { prefs: "essentials", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials" };
   function setResolve(t47) {
     t47 = String(t47 || "").toLowerCase();
-    if (SETCATS.some((c5) => c5[0] === t47) || t47 === MOVING[0]) return { cat: t47 };
+    if (SETCATS.some((c5) => c5[0] === t47)) return { cat: t47 };
     if (ADVSUBS.some((c5) => c5[0] === t47)) return { cat: "advanced", sub: t47 };
     if (SETOLD[t47]) return { cat: SETOLD[t47] };
     const a5 = SETALIAS[t47] || t47;
@@ -31757,14 +31735,6 @@ ${s5}`;
       return `<${tag} aria-label="${esc(srText(l6) + (ex2 ? ": " + ex2 : ""))}"${rest}>`;
     });
   }
-  var PSTATE = { active: "Active", closed: "Closed", archived: "Archived" };
-  function projArchiveHtml() {
-    const L3 = (D.project_states || []).filter((p6) => p6.state !== "archived" || S.showArchived);
-    return `<p class="sub" style="margin:8px 0 0">An archived project is listed here while Show archived projects (Work and reports › Opening views) is on.</p><div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L3.map((p6) => {
-      const back2 = p6.state === "archived";
-      return `<tr><td>${esc(p6.name)}</td><td>${PSTATE[p6.state] || esc(p6.state)}</td><td class="mgract"><button class="mini" data-parch="${back2 ? "restore" : "archive"}" data-pcode="${esc(p6.code)}" aria-label="${back2 ? "Restore" : "Archive"} ${esc(p6.name)}">${back2 ? "Restore" : "Archive"}</button></td></tr>`;
-    }).join("") || '<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`;
-  }
   function openItemsAsk(name, open2) {
     return new Promise((res) => {
       const dlg = $("#parchDlg") || makeArchiveAskDialog();
@@ -31797,15 +31767,10 @@ ${s5}`;
     snack(r4.message);
     await pendingEdit();
   }
-  function projArchiveBind() {
-    $$("#projArch [data-parch]").forEach((b5) => b5.onclick = () => projArchive(b5.dataset.pcode, b5.dataset.parch, false));
-  }
   var row = (l6, c5, h5) => {
     const id2 = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id2}">${l6}</span>${h5 ? `<small id="${id2}h">${h5}</small>` : ""}</div><div>${srName(c5, id2, h5, l6)}</div></div>`;
   };
-  var projSettingsListHtml = () => `<div class="srows" id="projSetList"><h3 style="margin:12px 0 0">Project settings</h3><p class="sub" style="margin:4px 0 0">Each project's name, client, people and partners, milestones, reporting and archive are on its own page.</p>` + P4.map((p6) => row(esc(p6.name), `<button type="button" class="mini" data-psopen="${esc(p6.code)}" aria-label="Open the settings of ${esc(p6.name)}">Open settings</button>`)).join("") + `</div>`;
-  var clientReportsHtml = () => `<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>` + P4.map((p6) => row(`${esc(p6.name)}: this project needs a separate client report`, `<input type="checkbox" class="switch" data-crsw="${p6.code}" ${clientReportOn(p6.code) ? "checked" : ""}>`)).join("") + `</div>`;
   var SHOWARCH_ROW = () => row("Show archived projects", sw2("showArchived"), "Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived");
   var moreSection = (cat, sub) => {
     const tab = sub ? `advanced/${sub}` : cat;
@@ -31846,7 +31811,7 @@ ${s5}`;
       kw: "default priority new action actions raid open status filter view opening page sort archived projects show",
       render: () => row("New action priority", sl2("defPriority", ["Urgent", "High", "Medium", "Low"])) + row("Actions open with", sl2("defActionView", viewsList("actions"))) + row("RAID opens with", sl2("defRaidView", viewsList("raid"))) + row("Decisions open with", sl2("defDecisionView", viewsList("decisions"))) + SHOWARCH_ROW()
     },
-    /* BL-131; BL-09's switch, from Projects and register */
+    /* BL-131; BL-09's switch (also on the Projects page, #247) */
     {
       id: "board",
       cat: "work",
@@ -31935,23 +31900,6 @@ ${s5}`;
     moreSection("advanced", "arch"),
     moreSection("advanced", "folders"),
     moreSection("advanced", "server"),
-    /* People and projects (MOVING): no tab; their old addresses still open them until the People page and each project's
-       settings hold them (v26-project-settings-v2) */
-    { id: "people", cat: "people", title: "People", raw: true, kw: "people owners register email aliases organisation role rename merge vip", render: () => '<div class="card wide" id="peopleMgr" data-sec="people"></div>', after: () => renderPeopleMgr() },
-    { id: "workstreams", cat: "people", title: "Workstreams", raw: true, kw: "workstreams lead keywords rename merge retire project", render: () => '<div class="card wide" id="wsMgr" data-sec="workstreams"></div>', after: () => renderMgr("ws") },
-    {
-      id: "projects",
-      cat: "people",
-      title: "Projects and register",
-      wide: true,
-      kw: "projects register add close archive restore archived code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projSettingsListHtml() + clientReportsHtml() + projArchiveHtml(),
-      after: () => {
-        projArchiveBind();
-        $$("#projSetList [data-psopen]").forEach((b5) => b5.onclick = () => openProjectSettings(b5.dataset.psopen));
-      }
-    },
-    /* BL-09; #228: each project opens its own settings page */
     {
       id: "health",
       cat: "health",
@@ -32101,7 +32049,7 @@ ${s5}`;
     }, 60 * 1e3);
   }
   var setCard = (s5) => s5.mount ? `<div class="setmount" id="set-${s5.id}" data-sec="${s5.id}" data-mount></div>` : s5.raw ? s5.render() : `<div class="card${s5.wide ? " wide" : ""}" id="${s5.elid || "set-" + s5.id}" data-sec="${s5.id}"><h2>${s5.title}</h2>${s5.render()}${s5.groups ? `<div class="setembed" data-embed="${s5.id}" data-mount></div>` : ""}</div>`;
-  var catName = (id2) => id2 === MOVING[0] ? MOVING[1] : (SETCATS.find((c5) => c5[0] === id2) || [])[1] || "";
+  var catName = (id2) => (SETCATS.find((c5) => c5[0] === id2) || [])[1] || "";
   var subName = (id2) => (ADVSUBS.find((c5) => c5[0] === id2) || [])[1] || "";
   var crumbOf = (s5) => [catName(catOf(s5)), catOf(s5) === "advanced" ? subName(s5.sub || "review") : "", s5.more ? "" : s5.title].filter(Boolean).join(" › ");
   var embedHit = (s5, w6) => {
@@ -32146,9 +32094,9 @@ ${s5}`;
     MOUNTS = [];
   }
   function renderSettings() {
-    if (!SETCATS.some((c5) => c5[0] === shared.SCAT) && shared.SCAT !== MOVING[0]) shared.SCAT = "essentials";
+    if (!SETCATS.some((c5) => c5[0] === shared.SCAT)) shared.SCAT = "essentials";
     if (!ADVSUBS.some((c5) => c5[0] === shared.SSUB)) shared.SSUB = "review";
-    const searching = !!shared.SQ.trim(), moving = !searching && shared.SCAT === MOVING[0];
+    const searching = !!shared.SQ.trim();
     query.value = shared.SQ.trim();
     if (SERVED && !catalogue.value) loadCatalogue();
     drawTabs($("#setcatsHost"), {
@@ -32158,16 +32106,16 @@ ${s5}`;
       vertical: true,
       controls: "settingsBody",
       items: SETCATS.map(([id2, t47]) => ({ id: id2, label: t47, data: { scat: id2 } })),
-      selected: searching || moving ? "" : shared.SCAT,
+      selected: searching ? "" : shared.SCAT,
       onSelect: setOpen
     });
-    putHTML($("#setcatsel"), raw((searching ? `<option value="">Search results</option>` : moving ? `<option value="">${esc(MOVING[1])}</option>` : "") + SETCATS.map(([id2, t47]) => `<option value="${id2}" ${!searching && id2 === shared.SCAT ? "selected" : ""}>${esc(t47)}</option>`).join("")));
+    putHTML($("#setcatsel"), raw((searching ? `<option value="">Search results</option>` : "") + SETCATS.map(([id2, t47]) => `<option value="${id2}" ${!searching && id2 === shared.SCAT ? "selected" : ""}>${esc(t47)}</option>`).join("")));
     const adv = !searching && shared.SCAT === "advanced";
     const secs = searching ? setSearchSections() : SETSECTIONS.filter((s5) => catOf(s5) === shared.SCAT && (!adv || (s5.sub || "review") === shared.SSUB));
     const head = (s5) => !searching || s5.mount && !s5.more ? "" : `<div class="setcrumb">${esc(crumbOf(s5))}</div>`;
     setUnmount();
     const none = `No settings match “${shared.SQ.trim()}”.`;
-    const top = adv ? `<p class="sub advnote">For tuning and rarely changed settings. Everything has a sensible default, so most people never open this.</p><div class="tabhost" id="setsubHost"></div>` : moving ? `<p class="sub advnote" id="setMovingNote">People, workstreams and archiving are moving out of Settings: people to the People page, workstreams and archive to each project's settings. Until then they are here.</p>` : "";
+    const top = adv ? `<p class="sub advnote">For tuning and rarely changed settings. Everything has a sensible default, so most people never open this.</p><div class="tabhost" id="setsubHost"></div>` : "";
     putHTML($("#settingsBody"), !secs.length ? html`<p class="sub setnone" role="status">${none}</p>` : html`${raw(top)}<div class="setstack">${raw(secs.map((s5) => head(s5) + setCard(s5)).join(""))}</div>`);
     if (adv) drawTabs($("#setsubHost"), {
       id: "subtabs",
@@ -32374,84 +32322,6 @@ ${s5}`;
     updOut(updMsg(r4.message, !r4.ok));
     if (r4.ok) snack("Update undone; restart the live server");
   }
-  function renderMgr(kind) {
-    if (kind === "ws" && D.ws_table && (wsTable() || ![...A4, ...R3].some((x5) => x5.ws))) {
-      drawWsMgr();
-      return;
-    }
-    const isP = kind === "people", L3 = isP ? PEOPLE : WSL;
-    const names = isP ? [.../* @__PURE__ */ new Set([...A4.map((a5) => a5.o), ...R3.map((r4) => r4.o), ...L3.added, ...L3.hidden])].filter((n4) => n4 && n4 !== "TBC") : [.../* @__PURE__ */ new Set([...wsUsed(), ...L3.added.filter((k5) => k5.includes("|")), ...L3.hidden.filter((k5) => k5.includes("|"))])];
-    const on2 = (x5, k5) => {
-      const [pc2, nm3] = wsParts(k5);
-      return x5.p === pc2 && x5.ws === nm3;
-    };
-    const active = isP ? peopleAll() : null;
-    const cA = (n4) => isP ? A4.filter((a5) => a5.o === n4).length : A4.filter((a5) => on2(a5, n4)).length, cR = (n4) => isP ? R3.filter((r4) => r4.o === n4).length : R3.filter((r4) => on2(r4, n4)).length;
-    const label = (n4) => isP ? esc(n4) : (([pc2, nm3]) => `<span class="pcode">${esc(pc2)}</span> ${esc(nm3)}`)(wsParts(n4)), off = (n4) => isP ? L3.hidden.includes(n4) : wsHidden(...wsParts(n4));
-    const mergeTo = (n4) => isP ? active.filter((x5) => x5 !== n4) : ((pc2, nm3) => wsFor(pc2).filter((x5) => x5 !== nm3).map((x5) => wsKey(pc2, x5)))(...wsParts(n4));
-    putHTML($(isP ? "#peopleMgr" : "#wsMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">${isP ? "People (owners)" : "Workstreams"}</h2>${isP ? "" : html`<select id="wsAddP" aria-label="Project">${P4.map((p6) => html`<option value="${p6.code}">${p6.name}</option>`)}</select>`}<input id="${raw(kind)}Add" type="text" placeholder="${isP ? "Add a person" : "Add a workstream"}" style="height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px"><button class="btn" data-mg="add" data-kind="${raw(kind)}">Add</button></div>
-   <p class="sub" style="margin:4px 0 8px">${isP ? "Rename or merge to fix spellings across every item (applied with Undo). Removing hides a name from the owner picker; items keep it." : html`Each project has its own workstreams. Rename or merge changes that project's items only (you'll be offered the same change in other projects using the name). Retiring hides it from that project's picker; items keep it.`}</p>
-   <div class="tbl"><table class="mgr"><thead><tr><th>${isP ? "Name" : "Workstream"}</th><th class="num">Actions</th><th class="num">RAID</th><th></th></tr></thead><tbody>${raw(names.sort().map((n4) => {
-      const isOff = off(n4), me2 = isP && isMe(n4);
-      return `<tr class="${isOff ? "off" : ""}"><td>${label(n4)}${me2 ? ' <span class="tag">(you)</span>' : ""}${isOff ? ` <span class="tag warn">${isP ? "removed from list" : "retired"}</span>` : ""}</td><td class="num">${mgrLink(isP, n4, "actions", cA(n4))}</td><td class="num">${mgrLink(isP, n4, "raid", cR(n4))}</td><td class="mgract">${me2 ? '<span class="x">Change in Settings › Essentials › You</span>' : `${ibtn("type", "Rename", `data-mg="ren" data-kind="${kind}" data-n="${esc(n4)}"`, "sm")}<select class="mgsel" data-kind="${kind}" data-n="${esc(n4)}"><option value="">Merge into…</option>${mergeTo(n4).map((x5) => `<option value="${esc(x5)}">${esc(isP ? x5 : wsParts(x5)[1])}</option>`).join("")}</select>${isOff ? ibtn("undo", "Restore", `data-mg="restore" data-kind="${kind}" data-n="${esc(n4)}"`, "sm") : ibtn("trash", isP ? "Remove from list" : "Retire", `data-mg="hide" data-kind="${kind}" data-n="${esc(n4)}"`, "sm no")}`}</td></tr>`;
-    }).join(""))}</tbody></table></div>`);
-  }
-  function mgrLink(isP, k5, t47, c5) {
-    const w6 = t47 === "actions" ? "action" : "RAID item";
-    if (isP) return countLink(`${plur(c5, w6)} owned by ${k5}, any status`, c5, `${t47}:open:`, { st: [], o: [k5] });
-    const [pc2, nm3] = wsParts(k5);
-    return countLink(`${plur(c5, w6)} in the ${nm3} workstream of ${pName(pc2)}, any status`, c5, `${t47}:open:${pc2}`, { st: [], ws: [nm3] });
-  }
-  async function renameAll(kind, from, to2, also) {
-    to2 = (to2 || "").trim();
-    const isP = kind === "people";
-    if (!isP) {
-      if (to2.includes("|")) to2 = wsParts(to2)[1];
-      return renameWs(from, to2, also);
-    }
-    await renamePerson(from, to2);
-    renderSettings();
-  }
-  async function renameWs(key2, to2, also) {
-    const [pc2, nm3] = wsParts(key2);
-    if (!to2 || to2 === nm3) return;
-    const touched = [], merge = wsFor(pc2).includes(to2);
-    const items2 = [...A4.map((x5) => ["actions", x5]), ...R3.map((x5) => ["raid", x5])].filter(([, x5]) => x5.p === pc2 && x5.ws === nm3).map(([t47, x5]) => ({ op: "update", table: t47, id: x5.id, changes: { workstream: to2 }, based_on: x5.updated_at }));
-    const keep2 = () => {
-      if (!WSL.added.includes(wsKey(pc2, to2))) WSL.added.push(wsKey(pc2, to2));
-      WSL.added = WSL.added.filter((k5) => k5 !== key2);
-    };
-    if (!items2.length) {
-      keep2();
-      WSL.hidden = [.../* @__PURE__ */ new Set([...WSL.hidden, key2])];
-      saveWs();
-      renderSettings();
-    } else await save(
-      `${merge ? "Merged" : "Renamed"} ${pc2} workstream “${nm3}” ${merge ? "into" : "to"} “${to2}”`,
-      items2,
-      null,
-      () => {
-        [...A4, ...R3].forEach((x5) => {
-          if (x5.p === pc2 && x5.ws === nm3) {
-            x5.ws = to2;
-            touched.push(x5);
-          }
-        });
-        keep2();
-        saveWs();
-      },
-      () => {
-        touched.forEach((x5) => {
-          x5.ws = nm3;
-        });
-      }
-    );
-    renderSettings();
-    const others = also === false ? [] : [...new Set([...A4, ...R3].filter((x5) => x5.p !== pc2 && x5.ws === nm3).map((x5) => x5.p))];
-    if (others.length) snack(`${pc2} done. ${others.join(", ")} also ${others.length === 1 ? "has" : "have"} “${nm3}”.`, async () => {
-      for (const o5 of others) await renameWs(wsKey(o5, nm3), to2, false);
-    }, `Also rename in ${others.join(", ")}`);
-  }
   function bootSettings0078() {
     $("#setcatsel").onchange = (e4) => {
       if (e4.target.value) setOpen(e4.target.value);
@@ -32470,23 +32340,6 @@ ${s5}`;
     }, true);
     $("#settingsBody").addEventListener("change", async (e4) => {
       const el2 = e4.target;
-      if (el2.dataset.crsw) {
-        const p6 = P4.find((x5) => x5.code === el2.dataset.crsw), on2 = el2.checked;
-        if (await setClientReport(p6.code, on2)) {
-          snack(`${p6.name}: client report ${on2 ? "on" : "off"}`);
-          savedNow();
-        } else el2.checked = !on2;
-        return;
-      }
-      if (el2.dataset.rhythm) {
-        const p6 = P4.find((x5) => x5.code === el2.dataset.rhythm), was2 = p6.rhythm;
-        if (await setRhythm(p6.code, el2.value)) {
-          p6.rhythm = el2.value;
-          snack(`Saved to ${p6.name}'s CLAUDE.md`);
-          savedNow();
-        } else el2.value = was2;
-        return;
-      }
       const k5 = el2.dataset.k;
       if (!k5 || !SKEY[k5]) return;
       let v5 = el2.type === "checkbox" ? el2.checked : el2.type === "number" ? Number(el2.value) : el2.value;
@@ -32515,62 +32368,6 @@ ${s5}`;
       status();
       snack("Saved to settings.json");
     });
-    $("#settingsBody").addEventListener("click", (e4) => {
-      const b5 = e4.target.closest("[data-mg]");
-      if (!b5) return;
-      const kind = b5.dataset.kind;
-      if (kind !== "ws") return;
-      const isP = false, L3 = WSL, save2 = saveWs, n4 = b5.dataset.n;
-      if (b5.dataset.mg === "add") {
-        let v5 = $("#" + kind + "Add").value.trim();
-        if (!v5) return;
-        if (!isP) v5 = wsKey($("#wsAddP").value, v5);
-        L3.added.push(v5);
-        L3.hidden = L3.hidden.filter((x5) => x5 !== v5);
-        save2();
-        renderSettings();
-        snack(`Added “${isP ? v5 : wsParts(v5).join(" · ")}”`);
-      }
-      if (b5.dataset.mg === "hide") {
-        L3.hidden.push(n4);
-        save2();
-        renderSettings();
-        snack(isP ? `Removed “${n4}” from the owner list` : `Retired ${wsParts(n4).join(" · ")}`, () => {
-          L3.hidden = L3.hidden.filter((x5) => x5 !== n4);
-          save2();
-          renderSettings();
-        });
-      }
-      if (b5.dataset.mg === "restore") {
-        L3.hidden = L3.hidden.filter((x5) => x5 !== n4 && (isP || x5 !== wsParts(n4)[1]));
-        save2();
-        renderSettings();
-      }
-      if (b5.dataset.mg === "ren") {
-        const td2 = b5.closest("tr").cells[0];
-        putHTML(td2, html`<span style="display:flex;gap:6px"><input type="text" value="${isP ? n4 : wsParts(n4)[1]}" style="height:30px;border:1px solid var(--faint);border-radius:6px;padding:0 8px"><button class="mini ok">Save</button><button class="mini">Cancel</button></span>`);
-        const inp = td2.querySelector("input");
-        inp.focus();
-        inp.select();
-        const [ok2, cn2] = td2.querySelectorAll("button");
-        ok2.onclick = () => renameAll(kind, n4, inp.value);
-        cn2.onclick = () => renderSettings();
-        inp.onkeydown = (ev) => {
-          if (ev.key === "Enter") renameAll(kind, n4, inp.value);
-          if (ev.key === "Escape") {
-            ev.stopPropagation();
-            renderSettings();
-          }
-        };
-      }
-    });
-    $("#settingsBody").addEventListener("change", (e4) => {
-      const s5 = e4.target.closest("select.mgsel");
-      if (s5 && s5.value) {
-        e4.stopPropagation();
-        renameAll(s5.dataset.kind, s5.dataset.n, s5.value);
-      }
-    }, true);
   }
   var PCOLS = ["Full name", "Email", "Aliases", "Organisation", "Role", "Hidden", "Labels"], PFIELD = { "Full name": "name", "Email": "email", "Aliases": "aliases", "Organisation": "org", "Role": "role", "Hidden": "hidden", "Labels": "labels" };
   var pKey = (t47) => String(t47 || "").replace(/\([^)]*\)/g, " ").toLowerCase().replace(/[.,]/g, " ").split(/\s+/).filter(Boolean).join(" ");
@@ -32908,366 +32705,6 @@ ${s5}`;
     }
     return await regAddPerson(res.person) ? res.person.name : null;
   }
-  function renderPeopleMgr() {
-    pfLoad();
-    putHTML($("#peopleMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd" aria-haspopup="dialog">Add a person</button></div>
-   <p class="sub" style="margin:4px 0 8px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
-   ${PEOPLE.added.length || PEOPLE.hidden.length ? html`<p class="sub" id="pmLegacy"><span class="tag warn">${PEOPLE.added.length + PEOPLE.hidden.length} name${PEOPLE.added.length + PEOPLE.hidden.length === 1 ? "" : "s"} still in settings.json</span> ${viaServer() ? html`<button class="mini" data-ask="${PEOPLE_MOVE}">Move them into the register</button> <span class="sub">(ask creaite does it, asking first)</span>` : "Say “setup” in Claude Code to move them into the register."}</p>` : ""}
-   <div class="toolbar pmtools" role="search"><input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="${PF.q}"><span class="dd" id="pmFdd"></span></div>
-   <div class="wapplied" id="pmApplied"></div><div class="vh" id="pmLive" role="status" aria-live="polite"></div>
-   <div class="tbl"><table class="mgr"><thead><tr><th>Name</th><th>Email</th><th>Organisation · role</th><th>Aliases</th><th class="num" id="pmHA">Actions</th><th class="num" id="pmHR">RAID</th><th></th></tr></thead><tbody id="pmRows"></tbody></table></div>`);
-    pfDraw();
-  }
-  var PF_KEY = "creaite-people-filters", PF_MULTI = ["proj", "inv", "org", "vip", "reg", "att"], PF_REM = ["hide", "show", "only"];
-  var PF = { q: "", rem: "hide", neg: /* @__PURE__ */ new Set(), f: Object.fromEntries(PF_MULTI.map((k5) => [k5, /* @__PURE__ */ new Set()])), pk: "proj", loaded: false };
-  Object.defineProperty(PF, "open", { get: () => filterBarOpen($("#pmFdd")) === "more" });
-  function pfReset() {
-    PF_MULTI.forEach((k5) => PF.f[k5] = /* @__PURE__ */ new Set());
-    PF.rem = "hide";
-    PF.neg = /* @__PURE__ */ new Set();
-    PF.q = "";
-  }
-  function pfLoad() {
-    if (PF.loaded) return;
-    PF.loaded = true;
-    const s5 = store.get(PF_KEY, null);
-    if (!s5 || typeof s5 !== "object") return;
-    PF_MULTI.forEach((k5) => {
-      if (Array.isArray(s5[k5])) PF.f[k5] = new Set(s5[k5].map(String));
-    });
-    if (PF_REM.includes(s5.rem)) PF.rem = s5.rem;
-    if (Array.isArray(s5.neg)) PF.neg = new Set(s5.neg.filter((k5) => k5 === "proj" || k5 === "org"));
-  }
-  function pfSave() {
-    const o5 = { rem: PF.rem, neg: [...PF.neg] };
-    PF_MULTI.forEach((k5) => o5[k5] = [...PF.f[k5]]);
-    store.set(PF_KEY, o5);
-  }
-  function pfPeople() {
-    const rs2 = resolver(), canon = (n4) => rs2(n4).name || n4, st2 = D.stakeholders || {};
-    const names = [.../* @__PURE__ */ new Set([...shared.REG.map((p6) => p6.name), ...A4.map((a5) => a5.o), ...R3.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...PEOPLE.added, ...PEOPLE.hidden])].filter((n4) => n4 && n4 !== "TBC");
-    return names.sort((a5, b5) => a5.localeCompare(b5)).map((n4) => {
-      const p6 = shared.REG.find((x5) => x5.name === n4) || null, me2 = isMe(n4), it2 = {}, add = (c5, i5) => {
-        if (!it2[c5]) it2[c5] = [0, 0, 0];
-        it2[c5][i5]++;
-      };
-      A4.forEach((a5) => {
-        if (a5.o === n4) add(a5.p, 0);
-      });
-      R3.forEach((r4) => {
-        if (r4.o === n4) add(r4.p, 1);
-      });
-      DEC.forEach((d5) => {
-        if (d5.by === n4) add(d5.p, 2);
-      });
-      const vk2 = p6 ? String((p6.extra || {}).VIP || "").trim() : "";
-      return {
-        n: n4,
-        p: p6,
-        me: me2,
-        off: isHiddenPerson(n4),
-        reg: !!p6 || me2,
-        email: p6 && p6.email || "",
-        org: p6 && p6.org || "",
-        role: p6 && p6.role || "",
-        aliases: p6 && p6.aliases || [],
-        vip: !!vk2 && !/^(no|n|false|0|-)$/i.test(vk2),
-        it: it2,
-        st: Object.keys(st2).filter((c5) => (st2[c5] || []).some((s5) => s5 === n4 || canon(s5) === n4))
-      };
-    });
-  }
-  var pfNoEmail = (x5) => !x5.email && !x5.me, pfNoOrg = (x5) => !x5.me && (!x5.org || !x5.role);
-  var pfProjOf = (x5) => [.../* @__PURE__ */ new Set([...Object.keys(x5.it), ...x5.st])];
-  var pfScope = () => PF.f.proj.size && !PF.neg.has("proj") ? [...PF.f.proj] : null;
-  function pfFields(L3) {
-    const has = (f5) => L3.some(f5), scope = () => pfScope() || P4.map((p6) => p6.code);
-    return [
-      ["proj", "Project", "Who", P4.filter((p6) => has((x5) => pfProjOf(x5).includes(p6.code))).map((p6) => [p6.code, p6.name]), (x5, v5) => pfProjOf(x5).includes(v5), "Owns an action, RAID item or decision in it, or is one of its stakeholders in the project register."],
-      ["inv", "How they're involved", "Who", [...has((x5) => Object.keys(x5.it).length) ? [["own", "Owns items"]] : [], ...has((x5) => x5.st.length) ? [["stake", "Named as a stakeholder"]] : []], (x5, v5) => v5 === "own" ? scope().some((c5) => x5.it[c5]) : scope().some((c5) => x5.st.includes(c5)), "In the projects chosen under Project, or in any project."],
-      ["org", "Organisation", "Who", [...[...new Set(L3.map((x5) => x5.org).filter(Boolean))].sort().map((o5) => [o5, o5]), ...has((x5) => !x5.org) ? [["—", "No organisation"]] : []], (x5, v5) => v5 === "—" ? !x5.org : x5.org === v5, ""],
-      ["vip", "People I follow", "Who", has((x5) => x5.vip) ? [["yes", "Followed"], ["no", "Not followed"]] : [], (x5, v5) => v5 === "yes" ? x5.vip : !x5.vip, "Set in each person’s details."],
-      ["reg", "In the register", "Tidy up", has((x5) => !x5.reg) ? [["in", "In the register"], ["out", "Not in the register (on items only)"]] : [], (x5, v5) => v5 === "in" ? x5.reg : !x5.reg, ""],
-      ["att", "Needs attention", "Tidy up", [...has(pfNoEmail) ? [["email", "No email"]] : [], ...has(pfNoOrg) ? [["orgrole", "No organisation or role"]] : []], (x5, v5) => v5 === "email" ? pfNoEmail(x5) : pfNoOrg(x5), "Details worth filling in, so mail and minutes map to the right person."],
-      ["rem", "Removed people", "Tidy up", has((x5) => x5.off) ? [["hide", "Hidden"], ["show", "Shown with everyone"], ["only", "Removed only"]] : [], null, "Removed from the owner list; their items keep the name."]
-    ].filter((f5) => f5[3].length);
-  }
-  var pfRemOK = (x5, r4) => r4 === "show" || (r4 === "only" ? x5.off : !x5.off);
-  var pfQOK = (x5) => {
-    const t47 = PF.q.trim().toLowerCase();
-    return !t47 || [x5.n, x5.email, x5.role, ...x5.aliases].some((s5) => s5 && s5.toLowerCase().includes(t47));
-  };
-  function pfPass(x5, F5, skip) {
-    for (const f5 of F5) {
-      const k5 = f5[0], set = PF.f[k5];
-      if (k5 === "rem" || k5 === skip || !set || !set.size) continue;
-      const h5 = [...set].some((v5) => f5[4](x5, v5));
-      if (PF.neg.has(k5) ? h5 : !h5) return false;
-    }
-    if (skip !== "rem" && F5.some((f5) => f5[0] === "rem") && !pfRemOK(x5, PF.rem)) return false;
-    return skip === "q" || pfQOK(x5);
-  }
-  var pfOn = (k5) => k5 === "rem" ? PF.rem !== "hide" : !!(PF.f[k5] && PF.f[k5].size);
-  var pfDot = (F5) => F5.filter((f5) => f5[0] === "rem" ? PF.rem === "only" : pfOn(f5[0])).length;
-  var pfAny = (F5) => !!PF.q.trim() || F5.some((f5) => pfOn(f5[0]));
-  function pfChip(f5) {
-    const k5 = f5[0], lab = (v6) => (f5[3].find((o5) => o5[0] === v6) || [v6, v6])[1];
-    if (k5 === "rem") return PF.rem === "hide" ? "Removed: hidden" : PF.rem === "only" ? "Removed only" : "";
-    const v5 = [...PF.f[k5]];
-    return `${f5[1]}: ${PF.neg.has(k5) ? "not " : ""}${v5.length <= 2 ? v5.map(lab).join(", ") : v5.length + " chosen"}`;
-  }
-  var pfWord = (n4) => `${n4} ${n4 === 1 ? "person" : "people"}`;
-  function pfHl(s5) {
-    s5 = String(s5 || "");
-    const t47 = PF.q.trim(), i5 = t47 ? s5.toLowerCase().indexOf(t47.toLowerCase()) : -1;
-    return i5 < 0 ? html`${s5}` : html`${s5.slice(0, i5)}<mark>${s5.slice(i5, i5 + t47.length)}</mark>${s5.slice(i5 + t47.length)}`;
-  }
-  function pfLink(n4, t47, c5, sc2) {
-    if (!sc2) return mgrLink(true, n4, t47, c5);
-    const w6 = t47 === "actions" ? "action" : "RAID item";
-    return countLink(`${plur(c5, w6)} owned by ${n4} in ${sc2.map(pName).join(", ")}, any status`, c5, `${t47}:open:${sc2.length === 1 ? sc2[0] : ""}`, sc2.length === 1 ? { st: [], o: [n4] } : { st: [], o: [n4], p: sc2 });
-  }
-  function pfRow(x5, sc2, active) {
-    const { n: n4, p: p6, me: me2, off } = x5, a5 = sc2 ? sc2.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[0] || 0), 0) : A4.filter((i5) => i5.o === n4).length, r4 = sc2 ? sc2.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[1] || 0), 0) : R3.filter((i5) => i5.o === n4).length;
-    const via = sc2 && !sc2.some((c5) => x5.it[c5]) && sc2.some((c5) => x5.st.includes(c5)), mergeTo = active.filter((y5) => y5 !== n4);
-    return html`<tr class="${off ? "off" : ""}" data-pn="${n4}"><td>${pfHl(n4)}${me2 ? raw(' <span class="tag">(you)</span>') : ""}${p6 || me2 ? "" : raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p6 && !p6.email ? raw(' <span class="tag warn" title="Add email">no email</span>') : ""}${off ? raw(' <span class="tag warn">removed from list</span>') : ""}${via ? html`<span class="sub pmvia">named in the project’s stakeholders</span>` : ""}</td>
-     <td>${p6 && p6.email ? pfHl(p6.email) : raw('<span class="sub">—</span>')}</td><td>${p6 && (p6.org || p6.role) ? html`${p6.org || ""}${p6.org && p6.role ? " · " : ""}${pfHl(p6.role)}` : raw('<span class="sub">—</span>')}</td><td class="sub">${p6 && p6.aliases.length ? p6.aliases.map((s5, i5) => html`${i5 ? ", " : ""}${pfHl(s5)}`) : "—"}</td>
-     <td class="num">${raw(pfLink(n4, "actions", a5, sc2))}</td><td class="num">${raw(pfLink(n4, "raid", r4, sc2))}</td>
-     <td class="mgract">${me2 ? raw('<span class="x">Change in Settings › Essentials › You</span>') : html`${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", `data-pm="edit" data-n="${esc(n4)}" aria-haspopup="dialog"`, "sm"))}${raw(ibtn("type", "Rename", `data-pm="ren" data-n="${esc(n4)}"`, "sm"))}<select class="mgsel pmsel" data-n="${n4}" aria-label="Merge ${n4} into"><option value="">Merge into…</option>${mergeTo.map((y5) => html`<option value="${y5}">${y5}</option>`)}</select>${raw(off ? ibtn("undo", "Restore", `data-pm="restore" data-n="${esc(n4)}"`, "sm") : ibtn("trash", "Remove from list", `data-pm="hide" data-n="${esc(n4)}"`, "sm no"))}`}</td></tr>`;
-  }
-  function pfEmpty(L3, F5) {
-    const act = F5.filter((f5) => f5[0] === "rem" ? PF.rem === "only" : pfOn(f5[0])).map((f5) => ({ k: f5[0], label: pfChip(f5) }));
-    if (PF.q.trim()) act.push({ k: "q", label: `Search “${PF.q.trim()}”` });
-    const ways = act.map((r4) => ({ ...r4, n: L3.filter((x5) => pfPass(x5, F5, r4.k) && (r4.k !== "rem" || !x5.off)).length }));
-    const head = act.length === 1 && act[0].k === "q" ? `Nobody matches “${esc(PF.q.trim())}”` : `Nobody matches ${act.length === 1 ? "this filter" : `these ${act.length} filters`}`;
-    return relaxHtml(head, ways, pfWord, "", "people");
-  }
-  var PFASK = null;
-  function pfBar(L3, F5, n4) {
-    const h5 = $("#pmFdd");
-    if (!h5) return;
-    if (F5.length && !F5.some((f5) => f5[0] === PF.pk)) PF.pk = F5[0][0];
-    const shown2 = L3.filter((x5) => pfPass(x5, F5)).length;
-    drawFilterBar(h5, {
-      bare: true,
-      fields: F5.map((f5) => {
-        const k5 = f5[0], rem = k5 === "rem";
-        return {
-          id: k5,
-          label: f5[1],
-          section: f5[2],
-          note: f5[5] || void 0,
-          on: pfOn(k5),
-          single: rem,
-          selected: rem ? [PF.rem] : PF.f[k5],
-          not: k5 === "proj" || k5 === "org" ? PF.neg.has(k5) : void 0,
-          mark: rem ? PF.rem === "hide" ? "default" : PF.rem === "only" ? "only" : "shown" : pfOn(k5) ? (PF.neg.has(k5) ? "not · " : "") + PF.f[k5].size : "",
-          options: () => f5[3].map(([v5, l6]) => ({
-            value: v5,
-            label: l6,
-            extra: rem && v5 === "hide" ? "default" : void 0,
-            count: rem ? L3.filter((x5) => pfPass(x5, F5, "rem") && pfRemOK(x5, v5)).length : L3.filter((x5) => pfPass(x5, F5, k5) && f5[4](x5, v5)).length
-          }))
-        };
-      }),
-      onSelect: (k5, vals) => {
-        if (k5 === "rem") PF.rem = vals[0] || "hide";
-        else {
-          const set = PF.f[k5];
-          if (!set) return;
-          set.clear();
-          vals.forEach((v5) => set.add(v5));
-          if (!set.size) PF.neg.delete(k5);
-        }
-        pfDraw();
-      },
-      onNot: (k5, neg) => {
-        neg ? PF.neg.add(k5) : PF.neg.delete(k5);
-        pfDraw();
-      },
-      more: {
-        id: "pmFBtn",
-        menuId: "pmFMenu",
-        label: funnelTip(n4, "Filter people"),
-        menuLabel: "Filter people",
-        count: n4,
-        on: !!n4,
-        key: "F",
-        listLabel: "Filters",
-        headId: "pmFph",
-        field: PF.pk,
-        onField: (k5) => {
-          PF.pk = k5;
-          pfDraw();
-        },
-        result: `Showing ${shown2} of ${L3.length}`,
-        resultId: "pmFpResult",
-        doneId: "pmFpDone",
-        clearAll: pfAny(F5) ? { id: "pmFpClear", run: () => {
-          pfClearAll();
-          pfDraw();
-        } } : null,
-        onOpen: () => {
-          const k5 = PFASK;
-          PFASK = null;
-          if (k5) PF.pk = k5;
-          else if (!pfOn(PF.pk)) {
-            const L22 = pfPeople(), F22 = pfFields(L22);
-            PF.pk = (F22.find((f5) => f5[0] !== "rem" && pfOn(f5[0])) || F22[0] || ["proj"])[0];
-          }
-          pfDraw();
-        }
-      }
-    });
-  }
-  function pfApplied(L3, F5) {
-    const el2 = $("#pmApplied");
-    if (!el2) return;
-    const chips = [];
-    F5.forEach((f5) => {
-      const k5 = f5[0];
-      if (k5 === "rem") {
-        if (PF.rem !== "show") chips.push(fchipHtml(pfChip(f5), k5, PF.rem === "hide" ? "Show removed people" : "Stop showing only removed people", { def: PF.rem === "hide", edit: "pfedit", attr: "data-pfclr" }));
-        return;
-      }
-      if (pfOn(k5)) chips.push(fchipHtml(pfChip(f5), k5, `Remove the ${f5[1].toLowerCase()} filter`, { neg: PF.neg.has(k5), edit: "pfedit", attr: "data-pfclr" }));
-    });
-    if (PF.q.trim()) chips.push(fchipHtml(`Search: “${PF.q.trim()}”`, "q", "Clear the search", { edit: "pfedit", attr: "data-pfclr" }));
-    const shown2 = L3.filter((x5) => pfPass(x5, F5)).length, remF = F5.some((f5) => f5[0] === "rem"), hid = remF && PF.rem === "hide" ? L3.filter((x5) => pfPass(x5, F5, "rem") && x5.off).length : 0;
-    const att = F5.find((f5) => f5[0] === "att"), need = att && !PF.f.att.size ? L3.filter((x5) => pfPass(x5, F5) && att[3].some(([v5]) => att[4](x5, v5))).length : 0;
-    const bits = [html`Showing ${shown2} of ${pfWord(L3.length)}`];
-    if (hid) bits.push(html`${hid} removed hidden <button type="button" class="linkbtn" data-pfquick="showrem">Show</button>`);
-    if (remF && PF.rem === "show") bits.push(html`removed shown <button type="button" class="linkbtn" data-pfquick="hiderem">Hide</button>`);
-    if (need) bits.push(html`${need} need${need === 1 ? "s" : ""} attention <button type="button" class="linkbtn" data-pfquick="att">Show</button>`);
-    const extra = !!PF.q.trim() || F5.some((f5) => f5[0] !== "rem" && pfOn(f5[0])) || remF && PF.rem !== "hide";
-    putHTML(el2, html`${raw(chips.join(""))}${extra ? html`<button type="button" class="linkbtn" id="pmClearF">Clear all</button>` : ""}<span class="sp"></span><span class="sub" id="pmCount">${bits.map((b5, i5) => html`${i5 ? " · " : ""}${b5}`)}</span>`);
-    const live = $("#pmLive");
-    if (live && live.textContent !== `Showing ${shown2} of ${pfWord(L3.length)}`) live.textContent = `Showing ${shown2} of ${pfWord(L3.length)}`;
-  }
-  function pfDraw(focus) {
-    if (!$("#peopleMgr") || !$("#pmRows")) return;
-    const L3 = pfPeople(), F5 = pfFields(L3), n4 = pfDot(F5);
-    pfBar(L3, F5, n4);
-    pfApplied(L3, F5);
-    const sc2 = pfScope(), tail = sc2 ? ` · ${sc2.length === 1 ? "this project" : sc2.length + " projects"}` : "", active = peopleAll(), list = L3.filter((x5) => pfPass(x5, F5));
-    $("#pmHA").textContent = "Actions" + tail;
-    $("#pmHR").textContent = "RAID" + tail;
-    [$("#pmHA"), $("#pmHR")].forEach((h5) => {
-      if (sc2) h5.title = `Counted in ${sc2.map(pName).join(", ")}`;
-      else h5.removeAttribute("title");
-    });
-    putHTML($("#pmRows"), list.length ? list.map((x5) => pfRow(x5, sc2, active)) : html`<tr><td colspan="7">${raw(pfEmpty(L3, F5))}</td></tr>`);
-    pfSave();
-    if (focus) {
-      const el2 = $(focus);
-      if (el2) el2.focus();
-    }
-  }
-  function pfOpen(k5) {
-    if (!pfFields(pfPeople()).length) return;
-    PFASK = k5 || null;
-    openFilterBar($("#pmFdd"), "more");
-  }
-  function pfClose(back2) {
-    closeFilterBar($("#pmFdd"), back2);
-  }
-  function pfClear(k5) {
-    if (k5 === "q") {
-      PF.q = "";
-      const q5 = $("#pmQ");
-      if (q5) q5.value = "";
-    } else if (k5 === "rem") PF.rem = PF.rem === "hide" ? "show" : "hide";
-    else if (PF.f[k5]) {
-      PF.f[k5].clear();
-      PF.neg.delete(k5);
-    }
-  }
-  function pfClearAll() {
-    pfReset();
-    const q5 = $("#pmQ");
-    if (q5) q5.value = "";
-  }
-  function pfBind() {
-    const body2 = $("#settingsBody"), inMgr = (e4) => e4.target.closest && e4.target.closest("#peopleMgr");
-    body2.addEventListener("click", (e4) => {
-      if (!inMgr(e4)) return;
-      const t47 = e4.target;
-      if (t47.closest("#pmFdd")) return;
-      const c5 = t47.closest("[data-pfclr]");
-      if (c5) {
-        pfClear(c5.dataset.pfclr);
-        pfDraw("#pmFBtn");
-        return;
-      }
-      const ed3 = t47.closest("[data-pfedit]");
-      if (ed3) {
-        e4.stopPropagation();
-        if (ed3.dataset.pfedit === "q") {
-          $("#pmQ").focus();
-          $("#pmQ").select();
-        } else pfOpen(ed3.dataset.pfedit);
-        return;
-      }
-      const qk2 = t47.closest("[data-pfquick]");
-      if (qk2) {
-        const w6 = qk2.dataset.pfquick;
-        if (w6 === "showrem") PF.rem = "show";
-        else if (w6 === "hiderem") PF.rem = "hide";
-        else {
-          const L3 = pfPeople(), a5 = pfFields(L3).find((f5) => f5[0] === "att");
-          if (a5) a5[3].forEach(([v5]) => PF.f.att.add(v5));
-        }
-        pfDraw("#pmFBtn");
-        return;
-      }
-      const rl2 = t47.closest("[data-relax]");
-      if (rl2) {
-        const k5 = rl2.dataset.relax;
-        if (k5 === "all") {
-          pfClearAll();
-          snack("All filters cleared");
-        } else if (k5 === "rem") PF.rem = "hide";
-        else pfClear(k5);
-        pfDraw("#pmQ");
-        return;
-      }
-      if (t47.id === "pmClearF") {
-        pfClearAll();
-        pfDraw("#pmQ");
-        snack("Filters cleared");
-      }
-    });
-    body2.addEventListener("input", (e4) => {
-      if (e4.target.id !== "pmQ") return;
-      PF.q = e4.target.value;
-      pfDraw();
-    });
-    body2.addEventListener("keydown", (e4) => {
-      const t47 = e4.target;
-      if (!inMgr(e4)) return;
-      if (t47.id === "pmQ" && e4.key === "Escape" && PF.q) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        pfClear("q");
-        pfDraw("#pmQ");
-      }
-    });
-    document.addEventListener("keydown", (e4) => {
-      if (shared.VIEW !== "settings" || e4.metaKey || e4.ctrlKey || e4.altKey || typing()) return;
-      const b5 = $("#pmFBtn");
-      if (!b5 || !b5.offsetParent || document.querySelector("dialog[open]") || $("#chat").classList.contains("on")) return;
-      if (e4.key === "f" || e4.key === "F") {
-        e4.preventDefault();
-        e4.stopImmediatePropagation();
-        PF.open ? pfClose(true) : pfOpen();
-      } else if (e4.key === "/") {
-        e4.preventDefault();
-        e4.stopImmediatePropagation();
-        $("#pmQ").focus();
-        $("#pmQ").select();
-      }
-    }, true);
-  }
   var mailLink = (e4) => {
     const u5 = linkUrl("mailto:" + e4);
     return u5 ? html`<a href="${u5}">${e4}</a>` : html`${e4}`;
@@ -33405,49 +32842,6 @@ ${s5}`;
     }));
   }
   function bootSettings0079() {
-    pfBind();
-    $("#settingsBody").addEventListener("click", async (e4) => {
-      const b5 = e4.target.closest("[data-pm],#pmAdd");
-      if (!b5) return;
-      const n4 = b5.dataset.n, k5 = b5.id === "pmAdd" ? "add" : b5.dataset.pm, p6 = pFind(shared.REG, n4 || "");
-      if (k5 === "add") {
-        const res = await askPerson({});
-        if (res && res.person) await regAddPerson(res.person);
-      } else if (k5 === "edit") {
-        const res = await askPerson(p6 ? { edit: true, person: p6 } : { details: true, person: pBlank(n4) });
-        if (res && res.person) {
-          const { name, ...f5 } = res.person;
-          await regEdit(n4, f5);
-        }
-      } else if (k5 === "hide") await regSetHidden(n4, true);
-      else if (k5 === "restore") {
-        PEOPLE.hidden = PEOPLE.hidden.filter((x5) => x5 !== n4);
-        await regSetHidden(n4, false);
-      } else if (k5 === "ren") {
-        const td2 = b5.closest("tr").cells[0];
-        putHTML(td2, html`<span style="display:flex;gap:6px"><input type="text" value="${n4}" style="height:30px;border:1px solid var(--faint);border-radius:6px;padding:0 8px"><button class="mini ok">Save</button><button class="mini">Cancel</button></span>`);
-        const inp = td2.querySelector("input");
-        inp.focus();
-        inp.select();
-        const [ok2, cn2] = td2.querySelectorAll("button");
-        ok2.onclick = () => renamePerson(n4, inp.value);
-        cn2.onclick = () => renderSettings();
-        inp.onkeydown = (ev) => {
-          if (ev.key === "Enter") renamePerson(n4, inp.value);
-          if (ev.key === "Escape") {
-            ev.stopPropagation();
-            renderSettings();
-          }
-        };
-      }
-    });
-    $("#settingsBody").addEventListener("change", (e4) => {
-      const s5 = e4.target.closest("select.pmsel");
-      if (s5 && s5.value) {
-        e4.stopPropagation();
-        renamePerson(s5.dataset.n, s5.value);
-      }
-    }, true);
     document.addEventListener("click", (e4) => {
       const a5 = e4.target.closest("[data-person]");
       if (!a5) return;
@@ -33504,7 +32898,7 @@ ${s5}`;
   var WS_FIELDS = [["lead", "Lead"], ["keywords", "Keywords"], ["aliases", "Aliases"], ["channel", "Teams channel"]];
   function wsConfirm(p6, name) {
     const w6 = wsRow(p6, name);
-    if (w6 && w6.st === "Closed") return `“${w6.name}” is closed in ${p6}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+    if (w6 && w6.st === "Closed") return `“${w6.name}” is retired in ${pName(p6)}: choose another (${pName(p6)}'s settings › Workstreams lists the ones in use).`;
     if (w6) return null;
     const k5 = wsKey(p6, name.trim());
     if (shared.CUR.wsNew !== k5 || !$("#wsNewBox")) {
@@ -33522,86 +32916,6 @@ ${s5}`;
   function wsNewOf(nv, src) {
     const values = Object.fromEntries(Object.entries({ project: nv.project, name: nv.name, lead: nv.lead, keywords: nv.keywords, aliases: nv.aliases, channel: nv.channel, source: src || `${S.me} (dashboard), ${TODAY}` }).filter(([, v5]) => v5));
     return { item: { op: "new", table: "workstreams", values }, row: { id: "", p: nv.project, name: nv.name, lead: nv.lead || "", keywords: nv.keywords || "", aliases: nv.aliases || "", channel: nv.channel || "", st: "Active", nA: 0, nR: 0 } };
-  }
-  var WSM = { edit: null, closed: false, proj: "" };
-  function wsCells(w6) {
-    return WS_FIELDS.map(([f5]) => `<td>${f5 === "lead" && w6.lead ? esc(who(w6.lead)) : esc(w6[f5] || "") || '<span class="sub">—</span>'}</td>`).join("");
-  }
-  function drawWsMgr() {
-    const L3 = WSD().filter((w6) => (WSM.closed || w6.st === "Active" || WSM.edit === w6.id) && (!WSM.proj || w6.p === WSM.proj)), nClosed = WSD().filter((w6) => w6.st === "Closed").length;
-    const ed3 = (w6, isNew) => `<tr class="wsedit" data-wsid="${esc(w6.id || "")}"><td>${isNew ? `<select data-wf="project">${P4.map((p6) => `<option value="${p6.code}" ${p6.code === w6.p ? "selected" : ""}>${esc(p6.name)}</option>`).join("")}</select>` : `<span class="pcode">${esc(pName(w6.p))}</span>`}</td><td><input type="text" data-wf="name" value="${esc(w6.name || "")}" aria-label="Workstream"></td>${WS_FIELDS.map(([f5, l6]) => `<td><input type="text" data-wf="${f5}" value="${esc(w6[f5] || "")}" aria-label="${l6}"></td>`).join("")}<td colspan="2"></td><td class="mgract"><button class="mini" data-wsm="save">Save</button><button class="mini" data-wsm="cancel">Cancel</button></td></tr>`;
-    putHTML($("#wsMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">Workstreams</h2><select id="wsmP" aria-label="Project"><option value="">All projects</option>${P4.map((p6) => html`<option value="${p6.code}" ${WSM.proj === p6.code ? "selected" : ""}>${p6.name}</option>`)}</select><input id="wsmName" type="text" placeholder="New workstream" aria-label="New workstream"><button class="btn" data-wsm="add">Add…</button>${nClosed ? html`<label class="sub"><input type="checkbox" id="wsmClosed" ${WSM.closed ? "checked" : ""}> Show closed (${raw(nClosed)})</label>` : ""}</div>
-    <p class="sub" style="margin:6px 0 10px">Each project's own workstreams. A lead, keywords and aliases (e.g. UAT for Testing) help creaite match items from minutes and mail. Renaming one renames its items too; closing one stops it being chosen for new items. Every change is a proposal, with Undo.</p>
-    <div class="tbl"><table class="mgr"><thead><tr><th>Project</th><th>Workstream</th>${raw(WS_FIELDS.map(([, l6]) => `<th>${l6}</th>`).join(""))}<th class="num">Open</th><th>Status</th><th></th></tr></thead><tbody>
-    ${WSM.edit === "new" ? raw(ed3(WSM.draft, true)) : ""}${raw(L3.map((w6) => WSM.edit === w6.id ? ed3(w6, false) : `<tr class="${w6.st === "Closed" ? "off" : ""}"><td><span class="pcode">${esc(pName(w6.p))}</span></td><td>${esc(w6.name)}</td>${wsCells(w6)}<td class="num">${w6.nA + w6.nR}</td><td>${w6.st}</td><td class="mgract"><button class="mini" data-wsm="edit" data-wsid="${w6.id}">Edit</button><button class="mini" data-wsm="${w6.st === "Active" ? "close" : "reopen"}" data-wsid="${w6.id}">${w6.st === "Active" ? "Close" : "Reopen"}</button></td></tr>`).join("") || `<tr><td colspan="9" class="sub">No workstreams yet${WSM.proj ? ` for ${WSM.proj}` : ""}. Add one, or say “setup” to bring them in from the items.</td></tr>`)}</tbody></table></div>`);
-  }
-  async function wsmSave(tr2) {
-    const v5 = Object.fromEntries([...tr2.querySelectorAll("[data-wf]")].map((i5) => [i5.dataset.wf, i5.value.trim()])), id2 = tr2.dataset.wsid;
-    if (!v5.name) {
-      snack("Give the workstream a name");
-      return;
-    }
-    if (v5.lead) {
-      const o5 = await ownerFinal(v5.lead);
-      if (o5 === null) return;
-      v5.lead = o5;
-    }
-    if (!id2) {
-      const p6 = v5.project;
-      if (wsRow(p6, v5.name)) {
-        snack(`${p6} already has “${v5.name}”`);
-        return;
-      }
-      const { item, row: row2 } = wsNewOf({ ...v5, project: p6 });
-      WSM.edit = null;
-      await save(`${p6} workstream ${v5.name} added`, [item], null, () => {
-        (D.ws_table = D.ws_table || []).push(row2);
-      }, () => {
-        const i5 = WSD().indexOf(row2);
-        if (i5 >= 0) D.ws_table.splice(i5, 1);
-      });
-      drawWsMgr();
-      return;
-    }
-    const w6 = WSD().find((x5) => x5.id === id2), changes = {};
-    ["name", ...WS_FIELDS.map((f5) => f5[0])].forEach((f5) => {
-      if ((v5[f5] || "") !== (w6[f5] || "")) changes[f5] = v5[f5] || null;
-    });
-    WSM.edit = null;
-    if (!Object.keys(changes).length) {
-      drawWsMgr();
-      return;
-    }
-    if (changes.name && WSD().some((x5) => x5 !== w6 && x5.p === w6.p && x5.name.toLowerCase() === changes.name.toLowerCase())) {
-      snack(`${pName(w6.p)} already has “${changes.name}”`);
-      drawWsMgr();
-      return;
-    }
-    const before = { ...w6 }, old = w6.name, moved = [...A4, ...R3].filter((x5) => x5.p === w6.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
-    await save(
-      `${pName(w6.p)} workstream ${old} ${changes.name ? `renamed ${changes.name}` : "updated"}`,
-      [{ op: "update", table: "workstreams", id: id2, changes, based_on: w6.updated_at }],
-      null,
-      () => {
-        Object.assign(w6, Object.fromEntries(Object.entries(changes).map(([k5, x5]) => [k5, x5 || ""])));
-        if (changes.name) moved.forEach((x5) => x5.ws = changes.name);
-      },
-      () => {
-        Object.assign(w6, before);
-        moved.forEach((x5) => x5.ws = old);
-      }
-    );
-    drawWsMgr();
-  }
-  async function wsmStatus(id2, st2) {
-    const w6 = WSD().find((x5) => x5.id === id2);
-    if (!w6) return;
-    await save(`${pName(w6.p)} workstream ${w6.name} ${st2 === "Closed" ? "closed" : "reopened"}`, [st2 === "Closed" ? { op: "cancel", table: "workstreams", id: id2, based_on: w6.updated_at } : { op: "update", table: "workstreams", id: id2, changes: { status: "Active" }, based_on: w6.updated_at }], null, () => {
-      w6.st = st2;
-    }, () => {
-      w6.st = st2 === "Closed" ? "Active" : "Closed";
-    });
-    drawWsMgr();
   }
   var P1_DAYS = 14;
   var ownedBy = (name, i5) => i5.o && i5.o !== "TBC" && personOf(i5.o) === name;
@@ -33626,61 +32940,6 @@ ${s5}`;
     else renderPerson(name);
   }
   function bootSettings0127() {
-    document.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest("#wsMgr [data-wsm]");
-      if (!b5) return;
-      e4.preventDefault();
-      const a5 = b5.dataset.wsm, tr2 = b5.closest("tr");
-      if (a5 === "add") {
-        const name = $("#wsmName").value.trim(), p6 = WSM.proj || P4[0].code;
-        WSM.draft = { id: "", p: p6, name, ...name ? wsSuggest(p6, name) : {} };
-        WSM.edit = "new";
-        drawWsMgr();
-        $('#wsMgr .wsedit [data-wf="name"]').focus();
-      } else if (a5 === "edit") {
-        WSM.edit = b5.dataset.wsid;
-        drawWsMgr();
-      } else if (a5 === "cancel") {
-        WSM.edit = null;
-        drawWsMgr();
-      } else if (a5 === "save") wsmSave(tr2);
-      else if (a5 === "close") wsmStatus(b5.dataset.wsid, "Closed");
-      else if (a5 === "reopen") wsmStatus(b5.dataset.wsid, "Active");
-    });
-    document.addEventListener("change", (e4) => {
-      if (e4.target.id === "wsmP") {
-        WSM.proj = e4.target.value;
-        drawWsMgr();
-      }
-      if (e4.target.id === "wsmClosed") {
-        WSM.closed = e4.target.checked;
-        drawWsMgr();
-      }
-      if (e4.target.closest && e4.target.closest("#wsMgr .wsedit [data-wf=project]")) {
-        const tr2 = e4.target.closest("tr"), name = tr2.querySelector('[data-wf="name"]').value.trim();
-        if (name) {
-          const s5 = wsSuggest(e4.target.value, name);
-          WS_FIELDS.forEach(([f5]) => {
-            const i5 = tr2.querySelector(`[data-wf="${f5}"]`);
-            if (i5 && !i5.value) i5.value = s5[f5] || "";
-          });
-        }
-      }
-    });
-    document.addEventListener("keydown", (e4) => {
-      const tr2 = e4.target.closest && e4.target.closest("#wsMgr .wsedit");
-      if (!tr2) return;
-      if (e4.key === "Enter") {
-        e4.preventDefault();
-        wsmSave(tr2);
-      }
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        WSM.edit = null;
-        drawWsMgr();
-      }
-    });
     document.addEventListener("click", async (e4) => {
       const b5 = e4.target.closest("[data-wsq]");
       if (!b5) return;
@@ -33709,7 +32968,7 @@ ${s5}`;
       if (add && !wsRow(r4.p, name)) (D.ws_table = D.ws_table || []).push({ id: "", p: r4.p, name, lead: s5.lead, keywords: s5.keywords, aliases: s5.aliases, channel: s5.channel, st: "Active", nA: 0, nR: 0 });
       if (add && r4.rec) r4.rec.ws = name;
       renderReview();
-      snack(add ? `Workstream ${name} will be added to ${pName(r4.p)} with this item — check its details in Settings › People and projects › Workstreams` : "Left without a workstream");
+      snack(add ? `Workstream ${name} will be added to ${pName(r4.p)} with this item — check its details in ${pName(r4.p)}'s settings › Workstreams` : "Left without a workstream", add ? () => openProjectWs(r4.p) : void 0, add ? "Open its workstreams" : void 0);
     }, true);
     document.addEventListener("click", (e4) => {
       const t47 = e4.target;
@@ -34260,7 +33519,7 @@ ${s5}`;
   }
   function vipSectionHtml() {
     const v5 = VIPD();
-    return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow in People and projects › People.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v5.notify !== false ? "checked" : ""} aria-label="Browser notification"></div></div>`;
+    return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow on each project's settings page, under People and partners.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v5.notify !== false ? "checked" : ""} aria-label="Browser notification"></div></div>`;
   }
   function bootSettings0140() {
     document.addEventListener("click", (e4) => {
@@ -43157,6 +42416,21 @@ ${s5}`;
     openChat();
     send("sweep");
   });
+  function addProject() {
+    if (shared.VIEW !== "projects") {
+      go2("projects");
+      return;
+    }
+    openChat();
+    const i5 = (
+      /** @type {HTMLTextAreaElement|null} */
+      $("#chIn")
+    );
+    if (i5) {
+      if (!i5.value.trim()) i5.value = "add project ";
+      i5.focus();
+    }
+  }
   function bootToday0159() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-setup]");
@@ -43176,7 +42450,7 @@ ${s5}`;
         return;
       }
       if (a5 === "help") go2("help", "start");
-      else if (a5 === "proj") go2("settings", "projects");
+      else if (a5 === "proj") addProject();
       else if (a5 === "people") go2("people", "all");
       else if (a5 === "review") go2("review");
       else if (a5 === "sweep") {
@@ -48667,7 +47941,7 @@ ${s5}`;
     if (!el2) return;
     const name = page === "milestones" ? "Milestones" : "The project page";
     putHTML(el2, P4.length ? html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><p class="sub">${name} shows one project. Pick the one to open.</p>
-    <ul class="chooselist card" aria-labelledby="chooseH">${raw(P4.map((p6) => `<li><a href="#${page}=${esc(p6.code)}" class="chooselink" data-choose="${page}" data-code="${esc(p6.code)}"><span class="chname">${esc(p6.name)}</span>${health(p6.health)}</a></li>`).join(""))}</ul></div></div>` : html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><div class="empty card">No projects yet. Add one in <a href="#settings/people" data-go-settings="people">Settings › People and projects</a>.</div></div></div>`);
+    <ul class="chooselist card" aria-labelledby="chooseH">${raw(P4.map((p6) => `<li><a href="#${page}=${esc(p6.code)}" class="chooselink" data-choose="${page}" data-code="${esc(p6.code)}"><span class="chname">${esc(p6.name)}</span>${health(p6.health)}</a></li>`).join(""))}</ul></div></div>` : html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><div class="empty card">No projects yet. Add one on the <a href="#projects" data-go="projects">Projects page</a>.</div></div></div>`);
   }
   document.addEventListener("click", (e4) => {
     const a5 = e4.target.closest && e4.target.closest("[data-choose]");
@@ -48675,11 +47949,6 @@ ${s5}`;
       e4.preventDefault();
       go2(a5.dataset.choose === "milestones" ? "milestones" : "cockpit", a5.dataset.code);
       return;
-    }
-    const s5 = e4.target.closest && e4.target.closest("[data-go-settings]");
-    if (s5) {
-      e4.preventDefault();
-      go2("settings", s5.dataset.goSettings);
     }
   });
   function renderCockpit(code) {
@@ -58743,11 +58012,20 @@ ${d5.text}`);
   };
   var pkLabel = (k5, f5, x5) => f5 === "t" ? pkTitleL(k5) : f5 === "resp" ? RESPL(x5.type) : f5 === "due" ? k5 === "decisions" ? "Needed by" : "Due date" : PKFL[f5] || f5;
   var PKDRAW = [];
-  function pkNote(msg) {
+  function pkNote(msg, ws2) {
     const n4 = $("#pkNote");
     if (!n4) return;
     n4.hidden = !msg;
     n4.textContent = msg || "";
+    if (msg && ws2) {
+      const b5 = document.createElement("button");
+      b5.type = "button";
+      b5.className = "linkbtn";
+      b5.id = "pkWsLink";
+      b5.textContent = "Open its workstreams";
+      b5.onclick = () => openProjectWs(ws2);
+      n4.append(" ", b5);
+    }
   }
   function pkDrawId(x5, k5) {
     putHTML($("#pkId"), html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p)}</a>` : html`<span>needs a project</span>`}${k5 === "raid" ? html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x5.type}" data-tip="Type">${x5.type}${raw(ic("chevdown"))}</button>` : ""}`);
@@ -59564,7 +58842,7 @@ ${d5.text}`);
       if (typed2) {
         const m5 = wsFor(x5.p).find((w6) => w6.toLowerCase() === v5.toLowerCase());
         if (!m5) {
-          pkNote(`“${v5}” isn't one of ${pName(x5.p)}'s workstreams yet. Add it in Settings › People and projects › Workstreams, then choose it here.`);
+          pkNote(`“${v5}” isn't one of ${pName(x5.p)}'s workstreams yet. Add it in ${pName(x5.p)}'s settings › Workstreams, then choose it here.`, x5.p);
           return;
         }
         v5 = m5;
@@ -60281,7 +59559,7 @@ ${d5.text}`);
       note: `${name ? `Suggested from ${s5.items} item${s5.items === 1 ? "" : "s"}; change anything.` : "A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
       onAdd: async (v5) => {
         const w6 = wsRow(p6, v5.name);
-        if (w6 && w6.st === "Closed") return `“${w6.name}” is closed in ${pName(p6)}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+        if (w6 && w6.st === "Closed") return `“${w6.name}” is retired in ${pName(p6)}: choose another (${pName(p6)}'s settings › Workstreams lists the ones in use).`;
         const known2 = w6 ? w6.name : wsFor(p6).find((n4) => n4.toLowerCase() === v5.name.toLowerCase());
         closePicker("pick");
         if (known2) return void pkCommit(k5, id2, { ws: known2 }, "Workstream", x5.ws || "none", known2);
@@ -63158,7 +62436,7 @@ ${d5.text}`);
     const [g5, i5] = key2.split(":"), r4 = SRCH.res && SRCH.res.groups[g5] && SRCH.res.groups[g5][+i5];
     if (r4) openFound(r4);
   }
-  var SHOWARCH = "Show archived projects (Settings › Work and reports › Opening views)";
+  var SHOWARCH = "Show archived projects (on the Projects page, or in Settings › Work and reports › Opening views)";
   async function openFound(r4) {
     const o5 = r4.opens;
     if (o5.type === "item" && o5.archived && !S.showArchived) {
@@ -71677,7 +70955,7 @@ ${d5.text}`);
             crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null
           ] })
         ] }),
-        /* @__PURE__ */ u2("p", { class: "sub", children: "The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects." })
+        /* @__PURE__ */ u2("p", { class: "sub", children: "The client report takes its facts from the internal report once that is approved. This is the same setting as the project's settings page, under Client report and logos." })
       ] }) : /* @__PURE__ */ u2("p", { class: "sub cfgoff", id: "cfgOff", children: "This project has no client report." }),
       /* @__PURE__ */ u2("div", { class: "cfgfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "cfgDone", onClick: onClose, children: "Done" }) })
     ] });
@@ -73955,7 +73233,7 @@ ${d5.text}`);
         if (sm2) {
           st3.v = "settings";
           st3.arg = sm2[1] || arg || null;
-          if (st3.arg && !setResolve(st3.arg)) st3.arg = null;
+          if (st3.arg && !setResolve(st3.arg) && !settingsMoved(st3.arg)) st3.arg = null;
           return st3;
         }
       }
@@ -74123,6 +73401,14 @@ ${d5.text}`);
       v5 = "reporting";
       arg = a5.code;
     }
+    let moved = false;
+    if (v5 === "settings") {
+      const m5 = settingsMoved(arg, shared.VIEW === "cockpit" ? shared.COCK : shared.VIEW === "psettings" ? psCode.value : PROJF.size === 1 ? [...PROJF][0] : "");
+      if (m5) {
+        [v5, arg] = m5;
+        moved = true;
+      }
+    }
     if (v5 === "psettings" && (!arg || !P4.some((p6) => p6.code === arg))) return false;
     if (v5 === "milestones") {
       if (arg && !P4.some((p6) => p6.code === arg)) return false;
@@ -74180,6 +73466,7 @@ ${d5.text}`);
       if (!opt2.restore) navWrite(true);
       return true;
     })(v5, arg, opt);
+    if (r4 !== false && moved && opt && opt.restore) navWrite(false);
     if (r4 !== false && (v5 === "files" || v5 === "inbox")) filesOpened();
     if (r4 !== false) helpScreenSync();
     tabTitle();
@@ -76999,7 +76286,6 @@ ${d5.text}`);
         "MFIRST",
         "MM",
         "MOD",
-        "MOVING",
         "MRUN",
         "MSEL",
         "MTG",
@@ -77018,7 +76304,6 @@ ${d5.text}`);
         "PARTNERS_MAX",
         "PARTNER_NAME_MAX",
         "PEOPLE",
-        "PF",
         "PK",
         "PKPROP",
         "PRIF",
@@ -77453,8 +76738,6 @@ ${d5.text}`);
         "peopleText",
         "permissionInfoText",
         "personForm",
-        "pfDraw",
-        "pfOpen",
         "pfResize",
         "pickerOpenFor",
         "pkAdd",

@@ -43,7 +43,7 @@ import { legBtn, pfResize, plur, portfolioTable, spark, tl } from "./today.js";
 import { allBucket, boardMove, hit, isoAdd, PRIOS, rows } from "./work.js";
 /* ======================= Projects + cockpit ======================= */
 export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. ${raw(howLink("projects"))} <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); drawProjArchived(); }
-/* #247: Show archived and Restore on the Projects page (they leave Settings › People and projects): the same setting (showArchived:
+/* #247: Show archived and Restore on the Projects page (they left Settings › People and projects): the same setting (showArchived:
    archived projects' items in Work, Today and the Excel export) and the same archive card (settings.js projArchive). */
 export function projArchivedHtml(){ const L=(D.project_states||[]).filter(p=>p.state==="archived");
   return html`<div class="projarch"><label class="settick"><input type="checkbox" class="switch" id="projShowArch" ${S.showArchived?"checked":""}> Show archived projects</label>${S.showArchived?(L.length?html`<div class="tbl"><table class="mgr" id="projArchived" aria-label="Archived projects"><tbody>${L.map(p=>html`<tr><td>${p.name}</td><td class="sub">Archived</td><td class="mgract"><button type="button" class="mini" data-parch="restore" data-pcode="${p.code}" aria-label="Restore ${p.name}">Restore</button></td></tr>`)}</tbody></table></div>`:html`<p class="sub" id="projArchNone">No archived projects.</p>`):""}</div>`; }
@@ -65,9 +65,8 @@ export function rkClamp(v){ if(!v) return;
 export function chooseProject(el,page){ if(!el) return; const name=page==="milestones"?"Milestones":"The project page";
   putHTML(el,P.length?html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><p class="sub">${name} shows one project. Pick the one to open.</p>
     <ul class="chooselist card" aria-labelledby="chooseH">${raw(P.map(p=>`<li><a href="#${page}=${esc(p.code)}" class="chooselink" data-choose="${page}" data-code="${esc(p.code)}"><span class="chname">${esc(p.name)}</span>${health(p.health)}</a></li>`).join(""))}</ul></div></div>`
-    :html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><div class="empty card">No projects yet. Add one in <a href="#settings/people" data-go-settings="people">Settings › People and projects</a>.</div></div></div>`); }
-document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest("[data-choose]"); if(a){ e.preventDefault(); go(a.dataset.choose==="milestones"?"milestones":"cockpit",a.dataset.code); return; }
-  const s=e.target.closest&&e.target.closest("[data-go-settings]"); if(s){ e.preventDefault(); go("settings",s.dataset.goSettings); } });
+    :html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><div class="empty card">No projects yet. Add one on the <a href="#projects" data-go="projects">Projects page</a>.</div></div></div>`); }
+document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest("[data-choose]"); if(a){ e.preventDefault(); go(a.dataset.choose==="milestones"?"milestones":"cockpit",a.dataset.code); return; } });
 export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if(!p){ if(!code) chooseProject($("#v-cockpit"),"cockpit"); return; } queueMicrotask(mountCurEdit);   /* an open editor survives re-renders */
   const acts=A.filter(x=>x.p===code&&open(x)&&(overdue(x)||soon(x))).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
   const order=["Urgent","High","Medium","Low"];

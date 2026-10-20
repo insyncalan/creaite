@@ -191,10 +191,17 @@ export function removePartner(code, i) {
   });
 }
 
-/** Open the page for a project, at its top (the cog, the Projects list and Settings › People and projects all come here).
+/** Open the page for a project, at its top (the cog and the Projects list come here).
     @param {string} code */
 export function openProjectSettings(code) {
   if (!P.some(p => p.code === code)) { snack("That project isn't open here"); return false; }
   psCat.value = "general"; psQ.value = "";
+  return go("psettings", code);
+}
+/** Open a project's settings at its Workstreams (v2.6: where a workstream is added, edited or reopened; the old
+    Settings › People and projects › Workstreams, now gone). @param {string} code */
+export function openProjectWs(code) {
+  if (!P.some(p => p.code === code)) { snack("That project isn't open here"); return false; }
+  psCat.value = "ws"; psQ.value = "";
   return go("psettings", code);
 }

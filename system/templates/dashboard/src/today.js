@@ -359,7 +359,7 @@ document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".c
 /* ===== BL-156 (sprint-ux) ===== first run: a short checklist on Today. On a vault that hasn't finished set-up (no project, no
    people in the register, or no sweep yet) Today starts with five steps, each with a button that does it or opens where it is
    done, ticked as it is done: Connect Microsoft 365 (ticked by the first sweep, which needs it; the button opens Help's first
-   hour), Add a project (Settings › Projects and register), Add people (the People page, #248), Run the first sweep (ask creaite,
+   hour), Add a project (the Projects page, then ask creaite), Add people (the People page, #248), Run the first sweep (ask creaite,
    "sweep"), Open Review (ticked once Review has been opened in this browser). It goes when all five are ticked, or for good with
    Dismiss (kept with the dismissed reminders, so Settings › Reminders › Restore brings it back). Nothing it does is new. */
 export function setupSteps(){ const seen=store.get(SETUPK,{});
@@ -404,11 +404,15 @@ document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; 
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepRun")) return; e.preventDefault();
   if(!viaServer()){ snack("Needs the live server"); return; }
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); });
+/** v2.6 (the Settings line): Add a project opens the Projects page; there (its empty state's button) it starts “add project ” in
+    ask creaite, unsent, as Settings › Projects and register used to say: a project is added in plain English (cx-edit). */
+export function addProject(){ if(shared.VIEW!=="projects"){ go("projects"); return; }
+  openChat(); const i=/** @type {HTMLTextAreaElement|null} */($("#chIn")); if(i){ if(!i.value.trim()) i.value="add project "; i.focus(); } }
 export function bootToday0159(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-setup]"); if(!b) return; e.preventDefault(); const a=b.dataset.setup;
   if(a==="dismiss"){ const l=dismissedF(); l.push(SETUPID); store.set("creaite-dismiss",l); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...l])]}); renderSetup();
     snack("Checklist dismissed. Settings › Reminders › Restore brings it back",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==SETUPID)); renderSetup(); }); return; }
-  if(a==="help") go("help","start"); else if(a==="proj") go("settings","projects"); else if(a==="people") go("people","all");   /* #248: the People page, Add a person */
+  if(a==="help") go("help","start"); else if(a==="proj") addProject(); else if(a==="people") go("people","all");   /* #248: the People page, Add a person; v2.6: Add a project, below */
   else if(a==="review") go("review"); else if(a==="sweep"){ if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); } });
 if(shared.VIEW==="today") renderSetup();
 }
