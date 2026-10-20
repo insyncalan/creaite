@@ -128,7 +128,7 @@
 +        return ("The suggestion was dropped: it held something that shouldn't go outside your company (an internal item, a name or "
 +                "internal wording). Try again, or edit the email yourself." if suggestion else
 +                "This email goes outside your company, and the text you selected already holds something internal (an item that "
-+                "isn't client-visible, a name or internal wording). Nothing was sent to Claude.")
++                "isn't client-visible, or internal wording). Nothing was sent to Claude.")
      return ("The suggestion was dropped: it held something that isn't client-safe. Try again." if suggestion else
              "This text already holds something that isn't client-safe. Fix it first; nothing was sent to Claude.")
  

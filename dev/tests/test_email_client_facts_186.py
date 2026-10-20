@@ -119,12 +119,31 @@ def patched_vault():
     return v
 
 
+# Proposals that apply on top of this one: (marker in edit_ai.py, their diff). Taking #186 out of a copy that has them takes them out first.
+LATER = (("CLIENT_FIELDS = {", REPO / "dev" / "proposals" / "client-messaging-263" / "edit_ai.diff"),
+         ("MINUTES_PLACES = {", REPO / "dev" / "proposals" / "minutes-reply-262" / "edit_ai.diff"))
+
+
+def unpatch(root):
+    """Take #186 out of a copy that has it, the proposals on top of it first, the last applied first (#262 after #263 has a diff of
+    its own)."""
+    src = lambda: (root / "system/scripts/edit_ai.py").read_text(encoding="utf-8")   # noqa: E731
+    for marker, diff in reversed(LATER):
+        if marker in src():
+            if marker.startswith("MINUTES") and LATER[0][0] in src():
+                diff = diff.with_name("edit_ai-after-263.diff")
+            subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(diff)], check=True)
+    subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(DIFF)], check=True)
+
+
 def prepare(root):
     """Patch (or unpatch) and mutate the vault's copy of the scripts."""
     scripts = root / "system" / "scripts"
     has = MARKER in (scripts / "edit_ai.py").read_text(encoding="utf-8")
-    if has == UNPATCHED:                                  # apply the proposal, or take it out of an applied repo's copy
-        r = subprocess.run(["patch", "-p0", "-s", "-d", str(root), *(["-R"] if has else []), "-i", str(DIFF)],
+    if has and UNPATCHED:
+        unpatch(root)
+    elif not has and not UNPATCHED:                                  # apply the proposal, or take it out of an applied repo's copy
+        r = subprocess.run(["patch", "-p0", "-s", "-d", str(root), "-i", str(DIFF)],
                            capture_output=True, text=True)
         if r.returncode:
             raise AssertionError(f"patch failed:\n{r.stdout}{r.stderr}")
@@ -393,7 +412,9 @@ class TheLiveServer(_Vault):
         self.assertEqual(b[1]["recipients"], many)
         for i in range(2, 7):
             self.assertIsNone(b[i], i)                                 # a 400: nothing goes to edit_ai.py or Claude
-        self.assertEqual(out["caps"], [200, {"ok": True, "email_audience": "recipients", "own_domains": "ok"}])
+        code, caps = out["caps"]                                       # later proposals (#263) add keys of their own
+        self.assertEqual((code, {k: caps.get(k) for k in ("ok", "email_audience", "own_domains")}),
+                         (200, {"ok": True, "email_audience": "recipients", "own_domains": "ok"}))
 
     def test_addresses_with_any_other_place_are_refused(self):
         doc = {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}
@@ -544,7 +565,7 @@ if LiveBrowserCase is not None:
             R.populate(v)
             ls = v.root / "system/scripts/edit_ai.py"
             if MARKER in ls.read_text(encoding="utf-8"):             # the repo has the diff: take it out of this vault's copy
-                subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(DIFF)], check=True)
+                unpatch(v.root)
 
         def test_an_old_server_keeps_the_bar_off_and_is_asked_once(self):
             b = self.b
@@ -556,11 +577,61 @@ if LiveBrowserCase is not None:
                 b.pump(0.4)
             self.assertFalse(b.eval("deAiSafe()"))
             self.assertEqual(b.eval("CAPS"), 1)
-            b.click("#dePrev")
-            b.key("a", 4)
-            b.pump(0.4)
+            select_words(b, "I hope you")                               # #186 review F1: a real selection (the editor's own)
             self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"), "an old server: no bar for an outside email")
             b.eval("document.getElementById('deDlg')?.close(); true")
+
+    class ThePageBeforeCaps(LiveBrowserCase):
+        """With the diff, before /api/edit/ai/caps has answered (held here): the bar is off for an outside recipient, and a suggestion
+        for an internal one sends no addresses (#186 review F1)."""
+        shared_server = True
+        width, height = 1400, 900
+
+        @classmethod
+        def load(cls, v):
+            R.populate(v)
+            prepare(v.root)
+            cls.fake = v.root / "fake_claude.py"
+            cls.fake.write_text(t117.FAKE)
+            cls.fake.chmod(0o755)
+
+        @classmethod
+        def server_env(cls):
+            return {"CREAITE_CLAUDE": str(cls.fake)}
+
+        def test_before_caps_answers_no_bar_outside_and_no_addresses_sent(self):
+            if UNPATCHED:
+                self.skipTest("without the diff caps never answers yes: ThePageOldServer")
+            b = self.b
+            b.eval("""window.__f2=window.__f2||window.fetch; window.fetch=(u,o)=>String(u).endsWith("/api/edit/ai/caps")?new Promise(()=>{}):window.__f2(u,o); true""")
+            b.eval(PREP % json.dumps(OUTSIDE))                         # PREP's own fetch wrapper records /api/edit/ai bodies
+            b.eval('openDraftEmail("Jane Doe"); true')
+            b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+            b.pump(0.4)
+            self.assertFalse(b.eval("deAiSafe()"))
+            select_words(b, "I hope you")
+            self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"), "outside, caps not answered: no bar")
+            b.eval('REG[0].email=%s; openDraftEmail("Jane Doe"); true' % json.dumps(INSIDE))   # an internal recipient: the bar is on
+            b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+            b.pump(0.4)
+            select_words(b, "I hope you")
+            b.wait(f"document.querySelector('{LAYER} .aispark')")
+            b.click(f"{LAYER} .aispark")
+            b.wait(f"document.querySelector('{LAYER} .aibar')")
+            b.click(f'{LAYER} .aibar button[data-tip="AI: improve"]')
+            b.wait(f"document.querySelector('{LAYER} [role=menu]')")
+            b.click(f"{LAYER} [role=menu] [data-ai=rewrite]")
+            b.wait("SENT.length>0", 30)
+            self.assertNotIn("recipients", b.eval("Object.keys(SENT.at(-1))"))      # no addresses before the server says yes
+            b.eval("aiSug.value=null; aiBar.value=null; document.getElementById('deDlg')?.close(); true")
+
+
+    def select_words(b, words):
+        """Select `words` in the Draft email's preview by the editor's own selection, after a click into it."""
+        b.click("#dePrev")
+        b.eval("""((w)=>{ const h=edOf(document.querySelector('#dePrev')); let at=-1; h.editor.state.doc.descendants((n,pos)=>{ if(at<0&&n.isText){ const i=n.text.indexOf(w); if(i>=0) at=pos+i; } });
+          h.focus(); h.editor.commands.setTextSelection({from:at,to:at+w.length}); })(%s)""" % json.dumps(words))
+        b.pump(0.4)
 
 
 if __name__ == "__main__":

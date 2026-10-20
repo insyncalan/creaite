@@ -51,7 +51,8 @@ removes.
 - An email to someone outside: the AI bar is there again. The note under the subject adds "AI suggestions on this email use
   client-visible items only, and one that brings in anything internal is dropped."
 - If you select words holding an internal item: "This email goes outside your company, and the text you selected already holds
-  something internal (an item that isn't client-visible, a name or internal wording). Nothing was sent to Claude."
+  something internal (an item that isn't client-visible, or internal wording). Nothing was sent to Claude." (A name you typed
+  yourself never triggers it: your own words are yours, decision 3.)
 - If Claude's reply brings in something internal: "The suggestion was dropped: it held something that shouldn't go outside your
   company (an internal item, a name or internal wording). Try again, or edit the email yourself."
 
@@ -64,6 +65,7 @@ removes.
 | `"sam.patel@brightwater.example" <jane@client.example>` (the name says inside, the address isn't) | outside |
 | A display name that isn't plain words (round 2): another address in it (`x@client.example Sam <sam@brightwater.example>`), a line break, a tab or another control character, brackets (`Sam (x@client.example) <…>`), a colon | outside |
 | Group syntax: `undisclosed-recipients:;`, `Team: sam@brightwater.example;` | outside |
+| Old source-routing forms on an own domain: `x%out.example@brightwater.example`, `out!x@brightwater.example` | inside: the address is on your own domain, so mail goes to your own mail server, which doesn't relay it onwards; in practice it goes nowhere outside |
 | An `own_domains` (in any spelling) sent with the request | refused by the server; edit_ai.py reads the domains only from settings |
 | `jane@mail.brightwater.example` (a subdomain), `jane@brightwater.example.client.example`, `jane@brightwater.example.` | outside |
 | A look-alike or punycode domain (`brіghtwater.example` with a Cyrillic і, `xn--…`), a full-width `＠`, two `@` | outside |
