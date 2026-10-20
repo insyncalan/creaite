@@ -87,3 +87,6 @@ Built on the existing People page (`dev/mockups/people-page-v2-mockup.html`): ta
 
 ## Correction (Alan, 19-10-2026): everyone on an item is in the register
 A name on any item **is** in the register; what can be wrong is the record. So there is no "not in the register" state anywhere: the People page and the project page's People view show **needs details** (with the missing parts in a tooltip: email, organisation, role), an **Add details** button that opens the edit form, and a **Needs attention** filter with No email, No organisation and No role. "Add to register" and the "In the register" filter are gone. A drafted email to someone with no email is still made, with nothing in To.
+
+## #252 the archive folder name: Alan's decisions (20-10-2026)
+Standardise to **"99 Archive"**. (1) **No migration and no Health rename offer: Alan renames his own existing archive folders by hand.** (2) The old names (`_Archive`, `zz Archive`) keep being read and skipped for one release, then dropped. (3) Stored paths stay `projects/<folder>/…`. (4) Archived projects' folders (`<projects root>/99 Archive/<engagement folder>`) and each engagement's own archive use the same one name. Release: not yet fixed (Jarvis plans 2.6).
