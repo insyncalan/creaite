@@ -636,11 +636,12 @@ def marked_sessions():
         return set()
 
 
-def start_run(run, mode, outside, session=None):
-    """The server, as an ask creaite run starts: write the run (marked already if its chat was)."""
+def start_run(run, mode, outside, session=None, files=None):
+    """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
+    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
     _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside, "marked": marked,
-                           "session": session})
+                           "session": session, **({"files": [str(f) for f in files]} if files is not None else {})})
 
 
 def mark(run, reason):
@@ -1545,9 +1546,13 @@ def report_command_refusal(command):
 
 def _direct_write_refusal(inp, mode):
     """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
-    outside the run's direct-write folder."""
+    outside the run's direct-write folder. #264: a Process run writes only its own .json input files in drafts."""
     p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
     rp = real(p)
+    if mode == "process":
+        why = process_write_problem(rp)
+        if why:
+            return f"{p}: {why}"
     kind, why = classify(p, "change" if rp.exists() else "create")
     if kind == "never":
         return f"{p}: {why}"
@@ -1766,7 +1771,10 @@ def bash_refusal(command, mode):
 # direct writes only in system/staging/drafts/), with the one step cx-sweep needs that a plain chat lacks: mapping the names in its
 # own draft (`propose.py people map <a file in system/staging/drafts/>`), which changes nothing but that draft. Nothing else.
 def record_gate(command, mode):
-    """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft."""
+    """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
+    an Intake Process run (#264) runs only its read and minutes steps (process_gate)."""
+    if mode == "process":
+        return process_gate(command)
     if mode == "confirmed" or (mode == "sweep" and sweep_maps_draft(command)):
         return None
     return record_problem(command)
@@ -1783,6 +1791,190 @@ def sweep_maps_draft(command):
 # ===== end BL-295 =====
 
 
+# ===== #264: Intake's Process (mode "process") =====
+# Pressing Process in Intake starts the run kind "process" (live_server, POST /api/intake/process) under this mode. The click is
+# Alan's go-ahead to stage proposals for the Intake files the server checked and wrote into system/guard/run.json ("files"), and
+# nothing more. A creaite script command runs only when it is a read command (SCRIPT_COMMANDS; not one of HELD_NOT_READ, which
+# delete or write their input) or one of the minutes steps in process_step_problem. Everything else is refused: every record,
+# guarded (filechange.py) and unknown command, and every other stage or derived command (propose.py stage, sweep.py stage,
+# minutes.py refresh and carry, report.py, tracker.py apply and undo, review.py approve and reject...). Direct Edit and Write stay
+# in system/staging/drafts/ (direct_write_area), and every check a plain chat has still runs first (bash_refusal and the rest).
+PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
+
+
+def process_files():
+    """The Intake paths this Process run may stage, from system/guard/run.json (only the server writes it); none if the run in
+    progress isn't a Process run (fail closed)."""
+    data = guard_run()
+    if not data or data.get("mode") != "process" or not isinstance(data.get("files"), list):
+        return set()
+    return {f for f in data["files"] if isinstance(f, str)}
+
+
+def _in_drafts(arg, suffix):
+    """The real path when `arg` is a file name with this suffix directly in system/staging/drafts/, else None."""
+    try:
+        target = real(arg)
+    except (OSError, ValueError, RuntimeError):
+        return None
+    return target if target.suffix == suffix and target.parent == Path(os.path.realpath(paths.DRAFTS)) else None
+
+
+def _older_than_run(rp):
+    """True when the file exists and was last written before this Process run started (another flow's file), and whenever that
+    can't be told (no Process run in progress, an unreadable time): fail closed. A file that doesn't exist yet is new."""
+    data = guard_run() or {}
+    try:
+        if data.get("mode") != "process":
+            return True
+        return rp.exists() and rp.stat().st_mtime < float(data["started"]) - 1
+    except (OSError, ValueError, TypeError, KeyError):     # can't tell: another flow's, so refused (fail closed)
+        return True
+
+
+def _runs_proposals():
+    """The proposals this Process run staged: in system/staging/, written since it started, for one of its files."""
+    files, out = process_files(), []
+    for p in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            if _older_than_run(p):
+                continue
+            m = json.loads(p.read_text(encoding="utf-8")).get("meeting")
+        except (OSError, ValueError):     # an unreadable proposal isn't this run's: nothing may be enriched or validated for it
+            continue
+        if isinstance(m, dict) and isinstance(m.get("transcript"), str) and m["transcript"] in files:
+            out.append((Path(os.path.realpath(p)), m))
+    return out
+
+
+def _process_stage_problem(words):
+    """Why `minutes.py stage` is refused in a Process run, or None: a spec in drafts for one of the run's files, no note, and a
+    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes)."""
+    spec = _in_drafts(words[1], ".json") if len(words) == 2 else None
+    if spec is None:
+        return "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
+    try:
+        data = json.loads(spec.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "the meeting spec can't be read"
+    if isinstance(data, dict) and not isinstance(data.get("transcript"), str):
+        return "the meeting spec's \"transcript\" must be one of the Intake files Alan pressed Process on, as a path"
+    if not isinstance(data, dict) or data.get("note") or data.get("transcript") not in process_files():
+        return ("Process stages only the Intake files Alan pressed Process on: the spec's \"transcript\" must be one of "
+                "them, exactly as listed, and it can't stage a note")
+    draft = data.get("draft")
+    if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
+        return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
+    if draft is not None and _older_than_run(_in_drafts(draft, ".docx")):
+        return "a Word draft named in the spec must be one this run filled, never another draft waiting in drafts"
+    return None
+
+
+def _has_image(value):
+    """True when a values file asks for a picture anywhere ("image" or "images" in any entry)."""
+    if isinstance(value, dict):
+        return "image" in value or "images" in value or any(_has_image(v) for v in value.values())
+    return isinstance(value, list) and any(_has_image(v) for v in value)
+
+
+def _process_fill_problem(words):
+    """Why `docx_tools.py fill` is refused in a Process run, or None: the minutes template, from a values file this run wrote
+    (fill deletes it) with no pictures, into a new .docx in drafts (never over another flow's Word draft)."""
+    ok = (len(words) == 4 and words[1] == PROCESS_TEMPLATE and _in_drafts(words[2], ".json") is not None
+          and _in_drafts(words[3], ".docx") is not None)
+    if not ok:
+        return f"Process fills only {PROCESS_TEMPLATE} from a values file in system/staging/drafts/ into a draft there"
+    values, target = _in_drafts(words[2], ".json"), _in_drafts(words[3], ".docx")
+    if _older_than_run(values) or _older_than_run(target):
+        return "Process fills only from its own values file into a new Word draft: never another draft waiting in drafts"
+    try:
+        pictures = _has_image(json.loads(values.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return "the values file can't be read"
+    return "Process's Word minutes have no pictures: take the \"image\" entries out of the values file" if pictures else None
+
+
+def _process_enrich_problem(words):
+    """Why `search.py enrich set` is refused in a Process run, or None: only `--path`, `--summary` and `--tags` pairs, and each
+    path the `to` of a copy in a proposal this run staged, whose summary (if any) this run wrote: never another file's summary."""
+    if words[:2] != ["enrich", "set"] or len(words) % 2:
+        return "Process enriches only as `search.py enrich set --path <a copy this run staged> --summary '…' --tags '…'`"
+    pairs = list(zip(words[2::2], words[3::2]))
+    if any(k not in ("--path", "--summary", "--tags") for k, _ in pairs):
+        return "Process enriches only with --path, --summary and --tags"
+    mine = {op.get("to") for _, m in _runs_proposals() for op in (m.get("file_ops") or [])
+            if isinstance(op, dict) and op.get("op") == "copy" and isinstance(op.get("to"), str)}
+    given = [v for k, v in pairs if k == "--path"]
+    for v in given:
+        rel = Path(v).as_posix()
+        if rel not in mine:
+            return f"{v}: Process enriches only the minutes and transcript copies of a meeting this run staged"
+        if _older_than_run(paths.SEARCH_DIR / (hashlib.sha256(rel.encode("utf-8")).hexdigest() + ".json")):
+            return f"{v}: that file already has a summary; Process never replaces one"
+    return None if given else "Process enriches only with --path"
+
+
+def _process_validate_problem(words):
+    """Why `tracker.py validate` is refused in a Process run, or None: it writes its findings into the file, so only on a
+    proposal this run staged (never another proposal waiting in Review)."""
+    pos = [w for w in words if not w.startswith("-")]
+    target = real(pos[1]) if len(pos) == 2 and pos[0] == "validate" else None
+    return None if target is not None and target in {p for p, _ in _runs_proposals()} else \
+        "Process validates only a proposal it staged itself"
+
+
+def process_step_problem(name, words):
+    """Why one of Process's own minutes steps is refused, or None; "" when the command isn't one of them."""
+    if name == "minutes.py stage":
+        return _process_stage_problem(words)
+    if name == "propose.py people map":
+        if len(words) == 3 and _in_drafts(words[2], ".json") is not None and _older_than_run(_in_drafts(words[2], ".json")):
+            return "Process maps names only in a spec this run wrote, never another flow's draft"
+        return None if sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])) else \
+            "Process maps names only in its own spec in system/staging/drafts/"
+    if name == "docx_tools.py fill":
+        return _process_fill_problem(words)
+    if name == "search.py enrich" and [w for w in words if not w.startswith("-")][:2] == ["enrich", "set"]:
+        return _process_enrich_problem(words)
+    if name == "tracker.py validate":
+        return _process_validate_problem(words)
+    return ""
+
+
+def process_write_problem(rp):
+    """Why a Process run may not write this file directly, or None: only a .json directly in system/staging/drafts/ that is new or
+    that this run wrote (never another flow's draft: minutes waiting in Review, a note, a sweep's input)."""
+    if _in_drafts(str(rp), ".json") is None:
+        return "a Process run writes only its own .json input files directly in system/staging/drafts/"
+    data = guard_run() or {}
+    old = _older_than_run(rp)
+    if old or data.get("mode") != "process":
+        return "a Process run doesn't change a draft it didn't write: write a new file in system/staging/drafts/"
+    return None
+
+
+def process_gate(command):
+    """Why a Process run may not run this creaite script command, or None (#264)."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", (command or "").strip())
+    if not m:
+        return None                          # bash_problem has already refused anything that isn't one creaite script
+    words = bash_args(command)
+    kind, name = command_kind(m.group(1), words)
+    step = process_step_problem(name, words)
+    if step is None:
+        return None
+    if step:
+        _debug("warn", f"process run refused: {name}")
+        return step
+    if kind == READ and name not in HELD_NOT_READ:
+        return None
+    _debug("warn", f"process run refused: {name}")
+    return (f"{name} isn't one of Process's steps: an Intake Process run reads, drafts the minutes and stages them for "
+            f"Review, nothing else")
+# ===== end #264 =====
+
+
 def vault_relative(command):
     """`python3 <this vault>/system/scripts/x.py …` or `<this vault>/system/scripts/run x.py …` as the relative form the checks
     know (BL-268: a run that wrote a file by its full path then named the script the same way, and was refused). Only when the
@@ -1796,7 +1988,7 @@ def vault_relative(command):
 
 
 def hook_main(argv):
-    """`reach.py hook --run <id> --mode ask|confirmed|sweep|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
+    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
     run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
     error refuses: the guard fails closed."""
