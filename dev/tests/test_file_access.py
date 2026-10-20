@@ -160,6 +160,7 @@ class ProjectPermissionTests(OneDriveCase):
         self.assertTrue(self.checked("Write(projects/Example Programme/04 Reporting/Steerco/**)")["ok"])
         for rule, why in (("Write(projects/**)", "name the project folder"), ("Edit(projects/*/04 Reporting/**)", "name the project folder"),
                           ("Write(projects/Example Programme/_Archive/**)", "_Archive"),
+                          ("Write(projects/Example Programme/99 Archive/**)", "99 Archive is never"),     # #252
                           ("Write(projects/Example Programme/_Templates/**)", "_Templates"),
                           ("Write(~/Documents/**)", "inside the vault"), ("Write(//Users/x/**)", "inside the vault"),
                           ("Write(projects/../system/scripts/x.py)", "inside the vault")):
@@ -225,7 +226,8 @@ class AssistantRunTests(OneDriveCase):
 print(json.dumps({'dirs': L.extra_dirs(), 'deny': L.deny_tools(), 'read': L.READ_TOOLS, 'write': L.WRITE_TOOLS}))""")
         self.assertEqual(o["dirs"], [str(self.root)])
         for tool in ("Read", "Edit", "Write"):
-            self.assertIn(f"{tool}({ROOT_PATTERN}/**/_Archive/**)", o["deny"])
+            self.assertIn(f"{tool}({ROOT_PATTERN}/**/99 Archive/**)", o["deny"])         # #252: the archive folder's name
+            self.assertIn(f"{tool}({ROOT_PATTERN}/**/_Archive/**)", o["deny"])           # and the old one, while vaults hold one
             self.assertIn(f"{tool}({ROOT_PATTERN}/**/_Templates/**)", o["deny"])
             self.assertIn(f"{tool}({ROOT_PATTERN}/**/99 System/**)", o["deny"])            # BL-112: creaite's own folder (the backups)
         self.assertIn("Bash(python3 system/scripts/filechange.py *)", o["write"])
@@ -238,7 +240,10 @@ print(json.dumps({'dirs': L.extra_dirs(), 'deny': L.deny_tools(), 'read': L.READ
         try:
             src = f"import sys, json; sys.path.insert(0, {str(v.root / 'system/scripts')!r})\nimport live_server as L; print(json.dumps([L.extra_dirs(), [d for d in L.deny_tools() if d.startswith('Write(projects/**/')]]))"
             r = subprocess.run([sys.executable, "-c", src], capture_output=True, text=True, cwd=tempfile.gettempdir())
-            self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]), [[], ["Write(projects/**/_Archive/**)", "Write(projects/**/_Templates/**)", "Write(projects/**/99 System/**)"]])
+            dirs, deny = json.loads(r.stdout.strip().splitlines()[-1])
+            self.assertEqual(dirs, [])
+            self.assertEqual(sorted(deny), sorted(["Write(projects/**/99 Archive/**)", "Write(projects/**/_Archive/**)",   # #252
+                                                   "Write(projects/**/_Templates/**)", "Write(projects/**/99 System/**)"]))
         finally:
             v.cleanup()
 

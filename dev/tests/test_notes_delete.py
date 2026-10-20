@@ -1,17 +1,17 @@
-"""#124: Delete note (Alan, 15-10-2026): the confirm box in the Notes tab AND the one approval card for the move into _Archive.
+"""#124: Delete note (Alan, 15-10-2026): the confirm box in the Notes tab AND the one approval card for the move into 99 Archive.
 
 Run: python3 dev/tests/test_notes_delete.py
 
 What is covered, on a live server over a throwaway vault (and, for the shapes, a vault whose projects are in a fake OneDrive):
-- POST /api/notes/delete puts exactly one change card up ("Delete note “…”", one "Move file … → …/_Archive/<notes folder>/…"
+- POST /api/notes/delete puts exactly one change card up ("Delete note “…”", one "Move file … → …/99 Archive/<notes folder>/…"
   line) and moves nothing; Reject moves nothing; Approve moves the note through tracker.py apply (a `move` of kind "notes");
 - the route alone never moves anything: no card answered, a wrong card, a used card and an expired request all leave the note;
 - after the move: the notes list, the search index, Mentioned in (the other notes' links, left as written: missing) drop it;
   Files › Archived lists it with Move back; undo (tracker.py undo, the toast's Undo) brings it back, and so does Move back
   (kind "notes_back"), never onto a note that is there;
-- a name taken in _Archive gets -2; a stale save, typing not yet saved, a path that isn't a note and a bad request are refused;
+- a name taken in 99 Archive gets -2; a stale save, typing not yet saved, a path that isn't a note and a bad request are refused;
 - never while ask creaite has read outside content (the rename's rule); a confidential note deletes the same way;
-- ask creaite can't do it: _Archive stays never for classify(), propose.py stages a "notes" move only from the server's own
+- ask creaite can't do it: 99 Archive stays never for classify(), propose.py stages a "notes" move only from the server's own
   snapshot, a CHANGE card with one is refused;
 - reach.archive_move_problem's "notes" and "notes_back" are exactly the one-note shape, in both layouts.
 - a name taken between the check and the move is never overwritten (os.link, never os.rename over a file), and Undo or an
@@ -50,7 +50,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         return r
 
     def archive(self):
-        return self.v.root / ABC / "_Archive" / "notes"
+        return self.v.root / ABC / "99 Archive" / "notes"
 
     def titles(self, code="ABC"):
         return [n["title"] for n in self.post("/api/notes/list", {"code": code})["notes"]]
@@ -82,7 +82,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertTrue(d["ok"], d)
         card = d["card"]
         self.assertEqual(card["title"], "Delete note “Working session” (move it to the archive)")
-        self.assertEqual(card["lines"], [f"Move file {ABC}/notes/Working session.md → {ABC}/_Archive/notes/Working session.md"])
+        self.assertEqual(card["lines"], [f"Move file {ABC}/notes/Working session.md → {ABC}/99 Archive/notes/Working session.md"])
         self.assertTrue(card["valid"])
         self.assertEqual(self.post("/api/edit/pending", {})["card"]["card"], card["card"])            # exactly that one card
         self.assertTrue(f.is_file())                                                                   # nothing moved yet
@@ -122,7 +122,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         back = self.post("/api/files/move-back", {"path": stored})
         self.assertTrue(back["ok"], back)
         card = self.post("/api/edit/pending", {})["card"]
-        self.assertEqual(card["lines"], [f"Move file {ABC}/_Archive/notes/Lessons.md → {stored}"])
+        self.assertEqual(card["lines"], [f"Move file {ABC}/99 Archive/notes/Lessons.md → {stored}"])
         self.assertTrue(self.post("/api/edit/approve", {"card": card["card"]})["ok"])
         self.assertTrue((self.folder() / "Lessons.md").is_file())
         self.assertIn("Lessons", self.titles())
@@ -135,7 +135,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertTrue(got["ok"], got)
         card = self.post("/api/edit/pending", {})["card"]
         self.assertEqual(card["title"], "Move back Lessons.md as Lessons-2.md (a note has its name)")
-        self.assertEqual(card["lines"], [f"Move file {ABC}/_Archive/notes/Lessons.md → {ABC}/notes/Lessons-2.md"])
+        self.assertEqual(card["lines"], [f"Move file {ABC}/99 Archive/notes/Lessons.md → {ABC}/notes/Lessons-2.md"])
         self.assertFalse(card["stage"])                                                               # L2: Approve or Reject only
         done = self.post("/api/edit/approve", {"card": card["card"]})
         self.assertTrue(done["ok"], done)
@@ -289,19 +289,19 @@ class NotesDelete(test_notes_tab.NotesServer):
             self.assertTrue(self.post("/api/edit/approve", {"card": self.post("/api/notes/delete", {"path": s["note"]["path"],
                                                             "base": s["base"]})["card"]["card"]})["ok"])
         rows = [a for a in self.files()["archived"] if a["path"] == f"{ABC}/notes/Twice.md"]
-        self.assertEqual(sorted(a["at"] for a in rows), [f"{ABC}/_Archive/notes/Twice-2.md", f"{ABC}/_Archive/notes/Twice.md"])
+        self.assertEqual(sorted(a["at"] for a in rows), [f"{ABC}/99 Archive/notes/Twice-2.md", f"{ABC}/99 Archive/notes/Twice.md"])
         second = next(a["at"] for a in rows if a["at"].endswith("Twice-2.md"))
         opened = self.post("/api/open", {"path": second})                                          # Open: that file, read in place
         self.assertTrue(opened["ok"], opened)
         self.assertIn("The second one.", Path(opened["path"]).read_text())
         self.assertTrue(self.post("/api/files/move-back", {"path": second})["ok"])
         card = self.post("/api/edit/pending", {})["card"]
-        self.assertEqual(card["lines"], [f"Move file {ABC}/_Archive/notes/Twice-2.md → {ABC}/notes/Twice.md"])
+        self.assertEqual(card["lines"], [f"Move file {ABC}/99 Archive/notes/Twice-2.md → {ABC}/notes/Twice.md"])
         self.assertTrue(self.post("/api/edit/approve", {"card": card["card"]})["ok"])
         self.assertIn("The second one.", (self.folder() / "Twice.md").read_text())                 # the row's own note
         self.assertIn("The first one.", (self.archive() / "Twice.md").read_text())                 # the other stays archived
         first = [a for a in self.files()["archived"] if a["path"] == f"{ABC}/notes/Twice.md"]
-        self.assertEqual([a["at"] for a in first], [f"{ABC}/_Archive/notes/Twice.md"])
+        self.assertEqual([a["at"] for a in first], [f"{ABC}/99 Archive/notes/Twice.md"])
 
     # ── L2: no Stage for review on a note's card ──
     def test_l_a_notes_card_cant_be_staged_for_review(self):
@@ -332,9 +332,9 @@ class NotesDelete(test_notes_tab.NotesServer):
         report = self.py_json("import reach, tracker\nreach.NOTES_BACK_RENAMES = False\n"
                               f"import pathlib; d = pathlib.Path({str(self.archive())!r}); d.mkdir(parents=True, exist_ok=True)\n"
                               "(d / 'Taken back.md').write_text('x')\nout = []\n"
-                              f"tracker._reverse_move({{'from': '{ABC}/notes/Taken back.md', 'to': '{ABC}/_Archive/notes/Taken back.md', "
+                              f"tracker._reverse_move({{'from': '{ABC}/notes/Taken back.md', 'to': '{ABC}/99 Archive/notes/Taken back.md', "
                               "'kind': 'notes'}, out)\nprint(json.dumps(out))")
-        self.assertEqual(report, [f"skipped moving {ABC}/_Archive/notes/Taken back.md back: {ABC}/notes/Taken back.md is there again"])
+        self.assertEqual(report, [f"skipped moving {ABC}/99 Archive/notes/Taken back.md back: {ABC}/notes/Taken back.md is there again"])
 
     def test_n_move_back_renames_switch_off_refuses(self):
         r = self.new("Switch")
@@ -342,18 +342,18 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.new("Switch")
         got = self.py_json(
             "import reach, archive, tracker\nreach.NOTES_BACK_RENAMES = False\n"
-            f"spec, why = archive.back_spec('{ABC}/_Archive/notes/Switch.md')\n"
-            f"shape = reach.archive_move_problem('{ABC}/_Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
+            f"spec, why = archive.back_spec('{ABC}/99 Archive/notes/Switch.md')\n"
+            f"shape = reach.archive_move_problem('{ABC}/99 Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
             "try:\n"
-            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-2.md'}}, {{'archive': 'notes_back'}}); chk = None\n"
+            f"    tracker.check_move({{'from': '{ABC}/99 Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-2.md'}}, {{'archive': 'notes_back'}}); chk = None\n"
             "except tracker.Invalid as e:\n    chk = str(e)\n"
             "reach.NOTES_BACK_RENAMES = True\n"
-            f"on = reach.archive_move_problem('{ABC}/_Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
+            f"on = reach.archive_move_problem('{ABC}/99 Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
             "try:\n"
-            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-3.md'}}, {{'archive': 'notes_back'}}); ok = None\n"
+            f"    tracker.check_move({{'from': '{ABC}/99 Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-3.md'}}, {{'archive': 'notes_back'}}); ok = None\n"
             "except tracker.Invalid as e:\n    ok = str(e)\n"
             "try:\n"
-            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Other.md'}}, {{'archive': 'notes_back'}}); other = None\n"
+            f"    tracker.check_move({{'from': '{ABC}/99 Archive/notes/Switch.md', 'to': '{ABC}/notes/Other.md'}}, {{'archive': 'notes_back'}}); other = None\n"
             "except tracker.Invalid as e:\n    other = str(e)\n"
             "print(json.dumps([spec, why, shape, chk, on, ok, other]))")
         spec, why, shape, chk, on, ok, other = got
@@ -380,7 +380,7 @@ class NotesDelete(test_notes_tab.NotesServer):
             "    return real(a, b, kind)\n"
             "def undo(name):\n"
             "    (arc / name).write_text('the archived one'); racing.done = False; out = []\n"
-            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/_Archive/notes/' + name, 'kind': 'notes'}}, out)\n"
+            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/99 Archive/notes/' + name, 'kind': 'notes'}}, out)\n"
             "    return out\n"
             "tracker._move = racing\n"
             "on = undo('Late.md')\n"
@@ -391,7 +391,7 @@ class NotesDelete(test_notes_tab.NotesServer):
             "reach.NOTES_BACK_RENAMES = True\n"
             "(note / 'Apply.md').write_text('the note to delete'); racing.done = False\n"
             "try:\n"
-            f"    tracker._op_move(1, {{'from': '{ABC}/notes/Apply.md', 'to': '{ABC}/_Archive/notes/Apply.md'}}, {{'archive': 'notes'}}, [])\n"
+            f"    tracker._op_move(1, {{'from': '{ABC}/notes/Apply.md', 'to': '{ABC}/99 Archive/notes/Apply.md'}}, {{'archive': 'notes'}}, [])\n"
             "    applied = None\n"
             "except tracker.Invalid as e:\n"
             "    applied = str(e)\n"
@@ -411,7 +411,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         on, on_files, off, off_files, applied, apply_files, fall, fall_files, moved = got
         self.assertEqual(on, [f"restored {ABC}/notes/Late.md as Late-2.md: a note took its name"])
         self.assertEqual(on_files, ["the new note", "the archived one", False])                        # the next free name
-        self.assertEqual(off, [f"skipped moving {ABC}/_Archive/notes/Later.md back: {ABC}/notes/Later.md is there again"])
+        self.assertEqual(off, [f"skipped moving {ABC}/99 Archive/notes/Later.md back: {ABC}/notes/Later.md is there again"])
         self.assertEqual(off_files, ["the new note", "the archived one"])                              # both as they were
         self.assertIn("already exists", applied)                                                        # the apply rolls back
         self.assertEqual(apply_files, ["the note to delete", "the new note"])
@@ -484,7 +484,7 @@ class NotesDelete(test_notes_tab.NotesServer):
             "tracker.card_move_problem = lambda *a: None       # the mover past the card's marker (#124 F3, tested on its own)\n"
             "def st(): return [os.stat(outside).st_nlink, os.stat(inner).st_nlink, outside.read_text()]\n"
             f"def fop(name, back=False):\n"
-            f"    n, a = '{ABC}/notes/' + name, '{ABC}/_Archive/notes/' + name\n"
+            f"    n, a = '{ABC}/notes/' + name, '{ABC}/99 Archive/notes/' + name\n"
             "    return ({'from': a, 'to': n}, {'archive': 'notes_back'}) if back else ({'from': n, 'to': a}, {'archive': 'notes'})\n"
             "def refused(call):\n"
             "    try:\n"
@@ -515,10 +515,10 @@ class NotesDelete(test_notes_tab.NotesServer):
             "               os.path.lexists(note / 'Nowhere.md')]\n"
             "for name, target in (('Back out.md', outside), ('Back note.md', inner)):\n"
             "    os.symlink(target, arc / name); rep = []\n"
-            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/_Archive/notes/' + name, 'kind': 'notes'}}, rep)\n"
+            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/99 Archive/notes/' + name, 'kind': 'notes'}}, rep)\n"
             "    out[name] = [rep, os.path.islink(arc / name), os.path.lexists(note / name)]\n"
             "(arc / 'Back swap.md').write_text('archived'); os.link = swap; rep = []\n"
-            f"tracker._reverse_move({{'from': '{ABC}/notes/Back swap.md', 'to': '{ABC}/_Archive/notes/Back swap.md', 'kind': 'notes'}}, rep)\n"
+            f"tracker._reverse_move({{'from': '{ABC}/notes/Back swap.md', 'to': '{ABC}/99 Archive/notes/Back swap.md', 'kind': 'notes'}}, rep)\n"
             "os.link = real_link\n"
             "out['back_swap'] = [rep, os.path.islink(arc / 'Back swap.md'), os.path.lexists(note / 'Back swap.md')]\n"
             "out['st'] = st()\n"
@@ -527,7 +527,7 @@ class NotesDelete(test_notes_tab.NotesServer):
             chk, mover, still, archived = got[name]
             self.assertIn("never follows a symlink", chk)
             self.assertIn("is a symlink", mover)
-            self.assertEqual([still, archived], [True, False])                     # the symlink stays; nothing in _Archive
+            self.assertEqual([still, archived], [True, False])                     # the symlink stays; nothing in 99 Archive
         for case in ("swap", "swap_no_flag"):                                      # with and without follow_symlinks=False
             self.assertIn("is a symlink", got[case][0])
             self.assertEqual(got[case][1:], [True, False])
@@ -594,7 +594,8 @@ class NotesDelete(test_notes_tab.NotesServer):
 
 
 class NoteShapes(OneDriveCase):
-    """reach.archive_move_problem's "notes" and "notes_back": one note, into (or back from) its own folder's _Archive."""
+    """reach.archive_move_problem's "notes" and "notes_back": one note, into (or back from) its own folder's archive (#252: the OneDrive engagements still hold
+    the skeleton's old _Archive, so it stays the folder in use there; the portfolio has none, so 99 Archive)."""
 
     def problems(self, cases, kind):
         return self.py("import reach; c = " + json.dumps(cases) + "\n"
@@ -613,7 +614,7 @@ class NoteShapes(OneDriveCase):
         (self.root / "_Portfolio" / "08 Notes" / "Cross.md").write_text("x")
         ok = {"same name": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note.md"),
               "numbered": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note-2.md"),
-              "the portfolio": ("projects/_portfolio/08 Notes/Cross.md", "projects/_portfolio/_Archive/08 Notes/Cross.md")}
+              "the portfolio": ("projects/_portfolio/08 Notes/Cross.md", "projects/_portfolio/99 Archive/08 Notes/Cross.md")}
         self.assertEqual(self.problems(ok, "notes"), {k: None for k in ok})
         bad = {"another engagement": (f"{e}/08 Notes/Note.md", "projects/Digital Enablement/_Archive/08 Notes/Note.md"),
                "another name": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Other.md"),

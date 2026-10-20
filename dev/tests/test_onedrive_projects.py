@@ -329,7 +329,8 @@ class RegisterAndNewProjectTests(OneDriveCase):
         self.v.run("stage", str(spec_file), script="propose.py")
         self.v.run("apply")
         new = self.root / "Green Harbour Pilot"
-        for d in TEMPLATE_DIRS:
+        for d in TEMPLATE_DIRS:                                                 # #252: the skeleton's _Archive is made as 99 Archive
+            d = "99 Archive" if d == "_Archive" else d
             self.assertTrue((new / d).is_dir(), d)                              # the whole template, not the vault's default folders
         self.assertTrue((new / "00 Admin/Contract/Contract checklist.docx").is_file())
         self.assertTrue((new / "CLAUDE.md").is_file())
@@ -661,7 +662,7 @@ class OffsiteBackupTests(OneDriveCase):
         o = self.py("""import paths
 print(json.dumps({'never': paths.never_index(), 'docs': [paths.rel(f) for f in paths.document_files('_portfolio')],
                   'patterns': paths.never_index_patterns(), 'problem': paths.project_path_problem('projects/_portfolio/99 System/notes.md')}))""")
-        self.assertEqual(o["never"], ["_Archive", "_Templates", "99 System"])
+        self.assertEqual(o["never"], ["_Archive", "_Templates", "99 Archive", "99 System"])   # #252: 99 Archive is reserved too
         self.assertTrue(any("Strategy/plan.md" in f for f in o["docs"]))
         self.assertFalse(any("99 System" in f for f in o["docs"]))
         self.assertIn("**/99 System/**", o["patterns"])

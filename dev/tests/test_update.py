@@ -512,7 +512,7 @@ class TestBackupFolderMigration(unittest.TestCase):
         self.assertEqual(self.saved()["offsite_backup"], self.OLD + "/")               # inspect changed nothing
         self.v.update("install", str(self.zip))
         loc = self.saved()
-        self.assertEqual((loc["offsite_backup"], loc["never_index"]), (self.NEW, ["_Archive", "_Templates", "99 System"]))
+        self.assertEqual((loc["offsite_backup"], loc["never_index"]), (self.NEW, ["99 Archive", "_Templates", "99 System"]))  # #252
         log = [json.loads(ln) for ln in (self.v.root / "system/config/settings-log.jsonl").read_text().splitlines()]
         moved = next(r for r in log if r["key"] == "locations.offsite_backup")
         self.assertEqual((moved["old"], moved["new"]), (self.OLD + "/", self.NEW))

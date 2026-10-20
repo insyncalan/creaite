@@ -294,7 +294,7 @@ class FixRoutes(unittest.TestCase):
         self.assertTrue(got["ok"], got)
         self.assertIn("no OneDrive copy to make", got["message"])
 
-    # ── BL-09: the zz Archive rename goes on the approval card, and moves nothing before Approve ──
+    # ── BL-09: the zz Archive rename (to 99 Archive, #252) goes on the approval card, and moves nothing before Approve ──
     def test_old_archive_fix_with_nothing_to_rename(self):
         code, got = self.post("/api/health/fix/old_archive")
         self.assertFalse(got["ok"], got)
@@ -306,18 +306,18 @@ class FixRoutes(unittest.TestCase):
         (old / "sub").mkdir(parents=True)
         (old / "sub" / "a.md").write_text("a")
         self.addCleanup(shutil.rmtree, old, True)
-        self.addCleanup(shutil.rmtree, abc / "_Archive", True)
+        self.addCleanup(shutil.rmtree, abc / "99 Archive", True)
         code, got = self.post("/api/health/fix/old_archive")
         self.assertTrue(got["ok"] and got["card"], got)
         self.assertTrue(old.is_dir())                                      # nothing moved yet
         _, pend = self.post("/api/edit/pending", {})
         card = pend["card"]
         self.assertTrue(card["valid"], card)
-        self.assertIn(f"Move folder projects/{abc.name}/zz Archive/ → projects/{abc.name}/_Archive/", card["lines"])
+        self.assertIn(f"Move folder projects/{abc.name}/zz Archive/ → projects/{abc.name}/99 Archive/", card["lines"])
         _, done = self.post("/api/edit/approve", {"card": card["card"]})
         self.assertTrue(done["ok"], done)
         self.assertFalse(old.exists())
-        self.assertEqual((abc / "_Archive" / "sub" / "a.md").read_text(), "a")
+        self.assertEqual((abc / "99 Archive" / "sub" / "a.md").read_text(), "a")
         self.assertEqual(self.fix_log()[-1]["fix"], "old_archive")
 
     def test_a_fix_waits_for_a_running_job(self):

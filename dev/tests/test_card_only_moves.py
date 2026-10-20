@@ -86,7 +86,7 @@ class CardOnly(CardOnlyMoves):
 
     def test_a_a_hand_staged_note_delete_is_refused(self):
         self.new("Hand delete")
-        src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/_Archive/notes/Hand delete.md"
+        src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/99 Archive/notes/Hand delete.md"
         self.assert_refused_both_ways("notes", src, dst, self.folder() / "Hand delete.md", self.archive() / "Hand delete.md")
         d = self.delete(self.post("/api/notes/get", {"path": src}))                   # the card still moves it
         done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
@@ -100,7 +100,7 @@ class CardOnly(CardOnlyMoves):
     def test_b_a_hand_staged_note_move_back_is_refused(self):
         r = self.new("Hand back")
         self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])
-        src, dst = f"{ABC}/_Archive/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
+        src, dst = f"{ABC}/99 Archive/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
         self.assert_refused_both_ways("notes_back", src, dst, self.archive() / "Hand back.md", self.folder() / "Hand back.md")
         self.assertTrue(self.post("/api/files/move-back", {"path": dst})["ok"])       # Move back on the card still works
         card = self.post("/api/edit/pending", {})["card"]
@@ -110,10 +110,10 @@ class CardOnly(CardOnlyMoves):
 
     def test_c_a_hand_staged_report_move_back_is_refused(self):
         abc = archive_old_files(self.v.root)                                          # "reports": applied with no marker
-        self.assertTrue((abc / "_Archive" / DUE[1]).is_file())
+        self.assertTrue((abc / "99 Archive" / DUE[1]).is_file())
         stored = f"projects/{abc.name}/{DUE[1]}"
-        src = f"projects/{abc.name}/_Archive/{DUE[1]}"
-        self.assert_refused_both_ways("reports_back", src, stored, abc / "_Archive" / DUE[1], abc / DUE[1])
+        src = f"projects/{abc.name}/99 Archive/{DUE[1]}"
+        self.assert_refused_both_ways("reports_back", src, stored, abc / "99 Archive" / DUE[1], abc / DUE[1])
         self.assertTrue(self.post("/api/files/move-back", {"path": stored})["ok"])   # Move back on the card still works
         card = self.post("/api/edit/pending", {})["card"]
         self.assertTrue(self.post("/api/edit/approve", {"card": card["card"]})["ok"])
@@ -158,7 +158,7 @@ class CardOnly(CardOnlyMoves):
         self.new("Marker")
         got = self.py_json(
             "import hashlib, os, pathlib, time, reach, tracker, paths\n"
-            f"src, dst = {f'{ABC}/notes/Marker.md'!r}, {f'{ABC}/_Archive/notes/Marker.md'!r}\n"
+            f"src, dst = {f'{ABC}/notes/Marker.md'!r}, {f'{ABC}/99 Archive/notes/Marker.md'!r}\n"
             "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
             "prop = paths.STAGING / 'proposed-2026-10-16-marker.json'\n"
             "prop.write_text(json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}))\n"
@@ -201,7 +201,7 @@ class CardOnly(CardOnlyMoves):
         """An Approve that stopped before its apply finished (a crash) leaves an approved card-only proposal in staging with no
         marker: a full Apply leaves it there, says which file, and applies the rest; named, it is refused before the backup."""
         self.new("Leftover")
-        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/_Archive/notes/Leftover.md"
+        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/99 Archive/notes/Leftover.md"
         left = Path(self.hand("notes", src, dst, via="file")).name
         normal = self.v.root / "system/staging/proposed-2026-10-16-normal.json"
         normal.write_text(json.dumps({"source_run": "dashboard", "items": [action(1, description="Send the plan")]}),
@@ -284,7 +284,7 @@ class CardOnly(CardOnlyMoves):
         self.new("Loaded")
         got = self.py_json(
             "import hashlib, reach, tracker, paths\n"
-            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/_Archive/notes/Loaded.md'!r}\n"
+            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/99 Archive/notes/Loaded.md'!r}\n"
             "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
             "prop = paths.STAGING / 'proposed-2026-10-16-loaded.json'\n"
             "card = json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}).encode()\n"

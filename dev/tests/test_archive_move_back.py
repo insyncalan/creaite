@@ -2,15 +2,15 @@
 
 Run: python3 dev/tests/test_archive_move_back.py     (one live server; the last class needs Google Chrome, skipped otherwise)
 
-What is covered, with the clock pinned (CREAITE_NOW), after BL-03's archive has moved old reports and minutes into _Archive:
+What is covered, with the clock pinned (CREAITE_NOW), after BL-03's archive has moved old reports and minutes into 99 Archive:
 - Files lists the files the archive moved, marked archived, each with Move back, and only those: the ordinary list never has them;
 - Move back goes on the approval card ("Move file … → …"), and Approve moves the file back through tracker.py apply;
 - the stored path still opens the file, it is indexed and found by search again, and it leaves the archived list;
-- undo puts it back in _Archive (not indexed again, listed as archived again);
+- undo puts it back in 99 Archive (not indexed again, listed as archived again);
 - refused when its place is taken (never overwritten), for a file the archive didn't move, and for any other shape (another
   engagement, another folder, a transcript, the portfolio's transcripts, `..`): reach.archive_move_problem's "reports_back" is
   exactly the reverse of the approved "reports" shape;
-- ask creaite still can't read or move anything in _Archive: classify() says never, a CHANGE card with a move back is refused, and
+- ask creaite still can't read or move anything in 99 Archive: classify() says never, a CHANGE card with a move back is refused, and
   propose.py stage refuses one from anywhere but the live server's own snapshot.
 Everything is fictional and temporary.
 """
@@ -123,7 +123,7 @@ class MoveBack(unittest.TestCase):
         self.assertEqual({a["path"] for a in archived}, want)
         self.assertTrue(all(a["archived"] is True for a in archived))
         self.assertFalse(want & set(listed))                                   # never in the ordinary list
-        self.assertFalse(any(f.startswith(f"{self.base}/_Archive") for f in listed))
+        self.assertFalse(any(f.startswith(f"{self.base}/99 Archive") for f in listed))
         kinds = {a["n"]: (a["p"], a["f"], a["sub"]) for a in archived}
         self.assertEqual(kinds["2025-09-30 Steering committee.md"], ("ABC", "minutes", ""))
         self.assertEqual(kinds["2025-10-03 Weekly report - Example Programme.docx"], ("ABC", "reports", "Weekly"))
@@ -139,13 +139,13 @@ class MoveBack(unittest.TestCase):
         self.assertIsNone(why)
         fc = spec["file_changes"]
         self.assertEqual((fc["archive"], fc["title"]), ("reports_back", "Move back 2025-09-30 Steering committee.md"))
-        self.assertEqual(fc["file_ops"], [{"op": "move", "from": f"{self.base}/_Archive/{DUE[0]}", "to": stored}])
+        self.assertEqual(fc["file_ops"], [{"op": "move", "from": f"{self.base}/99 Archive/{DUE[0]}", "to": stored}])
         r = self.stage_from_guard(spec)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn(f"Move file {self.base}/_Archive/{DUE[0]} → {stored}", r.stdout)
+        self.assertIn(f"Move file {self.base}/99 Archive/{DUE[0]} → {stored}", r.stdout)
         self.apply_as_card(r)                                                 # #124 F3: as Approve on the card applies it
         self.assertTrue((self.abc / DUE[0]).is_file())
-        self.assertFalse((self.abc / "_Archive" / DUE[0]).exists())
+        self.assertFalse((self.abc / "99 Archive" / DUE[0]).exists())
         o = self.where(stored)
         self.assertEqual(o[0], str((self.abc / DUE[0]).resolve()))           # its stored path opens it in place
         self.assertNotEqual(o[1], "never")
@@ -157,13 +157,13 @@ class MoveBack(unittest.TestCase):
         self.assertEqual(self.spec(stored)[0], None)                           # nothing left to move back
         out = self.run_at("undo", script="tracker.py").stdout
         self.assertNotIn("skipped", out)
-        self.assertFalse((self.abc / DUE[0]).exists())                       # back in _Archive
-        self.assertTrue((self.abc / "_Archive" / DUE[0]).is_file())
+        self.assertFalse((self.abc / DUE[0]).exists())                       # back in 99 Archive
+        self.assertTrue((self.abc / "99 Archive" / DUE[0]).is_file())
         self.assertIn(stored, [a["path"] for a in self.files()[1]])
         o = self.where(stored)
-        self.assertEqual(o[0], str((self.abc / "_Archive" / DUE[0]).resolve()))
+        self.assertEqual(o[0], str((self.abc / "99 Archive" / DUE[0]).resolve()))
         self.assertEqual(o[1], "never")
-        self.assertFalse(any("/_Archive/" in f for f in o[2]))
+        self.assertFalse(any("/99 Archive/" in f for f in o[2]))
 
     def test_a_moved_back_file_is_never_offered_again(self):
         stored = f"{self.base}/{DUE[1]}"
@@ -178,8 +178,8 @@ class MoveBack(unittest.TestCase):
         (self.abc / "minutes/2025-08-01 Another old one.md").unlink()
         self.assertEqual(self.run_at("reports", script="archive.py", ok=False).returncode, 1)   # nothing else: never offered again
         self.assertEqual(self.py("import archive; print(json.dumps(archive.status()['reports']['due']))"), 0)
-        self.run_at("undo", script="tracker.py")                              # undoing the move back: in _Archive again
-        self.assertTrue((self.abc / "_Archive" / DUE[1]).is_file())
+        self.run_at("undo", script="tracker.py")                              # undoing the move back: in 99 Archive again
+        self.assertTrue((self.abc / "99 Archive" / DUE[1]).is_file())
         self.assertEqual(self.py("import archive; print(json.dumps(sorted(archive.moved_back())))"), [])
 
     def test_portfolio_minutes_move_back_into_the_portfolio(self):
@@ -191,7 +191,7 @@ class MoveBack(unittest.TestCase):
         self.apply_as_card(r)
         pf = self.v.root / "projects/_portfolio"
         self.assertTrue((pf / PORTFOLIO).is_file())
-        self.assertFalse((pf / "_Archive" / PORTFOLIO).exists())
+        self.assertFalse((pf / "99 Archive" / PORTFOLIO).exists())
 
     def test_refused_when_its_place_is_taken(self):
         stored = f"{self.base}/{DUE[1]}"
@@ -208,39 +208,39 @@ class MoveBack(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("never overwrites", r.stdout)
         self.assertEqual((self.abc / DUE[1]).read_text(), "a newer file with the same name\n")    # never overwritten
-        self.assertTrue((self.abc / "_Archive" / DUE[1]).is_file())
+        self.assertTrue((self.abc / "99 Archive" / DUE[1]).is_file())
 
     def test_refused_for_a_file_the_archive_didnt_move(self):
         name = "minutes/2025-01-01 Never archived.md"
-        touch(self.abc / "_Archive" / name)                                  # put there by hand, not by the archive
+        touch(self.abc / "99 Archive" / name)                                  # put there by hand, not by the archive
         stored = f"{self.base}/{name}"
         spec, why = self.spec(stored)
         self.assertIsNone(spec)
         self.assertIn("isn't one the archive moved", why)
         self.assertNotIn(stored, [a["path"] for a in self.files()[1]])      # not listed as archived either
         fc = {"title": "x", "archive": "reports_back", "file_changes_decision": "approved",
-              "file_ops": [{"op": "move", "from": f"{self.base}/_Archive/{name}", "to": stored}]}
+              "file_ops": [{"op": "move", "from": f"{self.base}/99 Archive/{name}", "to": stored}]}
         self.v.propose("hand", [], file_changes=fc)
         r = self.run_at("apply", "proposed-hand.json", script="tracker.py", ok=False)    # named: a full apply leaves it (#124 F3)
         self.assertIn("isn't a file the archive moved there", r.stdout)
-        self.assertTrue((self.abc / "_Archive" / name).is_file())
+        self.assertTrue((self.abc / "99 Archive" / name).is_file())
         self.assertEqual(self.spec(f"{self.base}/../x/{name}")[1], "that isn't a stored project path")
 
     def test_only_the_exact_reverse_of_the_archive_shape(self):
-        b, a = self.base, f"{self.base}/_Archive/{DUE[0]}"
+        b, a = self.base, f"{self.base}/99 Archive/{DUE[0]}"
         (self.v.root / "projects/DEF Other/minutes").mkdir(parents=True)
-        touch(self.abc / "_Archive/transcripts/2024-01-01 Old.vtt")
-        touch(self.v.root / "projects/_portfolio/_Archive/transcripts/2025-06-01 Portfolio sync.vtt")
+        touch(self.abc / "99 Archive/transcripts/2024-01-01 Old.vtt")
+        touch(self.v.root / "projects/_portfolio/99 Archive/transcripts/2025-06-01 Portfolio sync.vtt")
         cases = {
             "another engagement": (a, f"projects/DEF Other/{DUE[0]}"),
             "another folder": (a, f"{b}/reports/2025-09-30 Steering committee.md"),
             "deeper": (a, f"{b}/minutes/x/2025-09-30 Steering committee.md"),
             "the engagement root": (a, f"{b}/2025-09-30 Steering committee.md"),
-            "a transcript": (f"{b}/_Archive/transcripts/2024-01-01 Old.vtt", f"{b}/transcripts/2024-01-01 Old.vtt"),
-            "the portfolio's transcripts": ("projects/_portfolio/_Archive/transcripts/2025-06-01 Portfolio sync.vtt",
+            "a transcript": (f"{b}/99 Archive/transcripts/2024-01-01 Old.vtt", f"{b}/transcripts/2024-01-01 Old.vtt"),
+            "the portfolio's transcripts": ("projects/_portfolio/99 Archive/transcripts/2025-06-01 Portfolio sync.vtt",
                                             "projects/_portfolio/transcripts/2025-06-01 Portfolio sync.vtt"),
-            "a folder": (f"{b}/_Archive/minutes", f"{b}/minutes2"),
-            "dot dot": (f"{b}/_Archive/minutes/../{DUE[0]}", f"{b}/{DUE[0]}"),
+            "a folder": (f"{b}/99 Archive/minutes", f"{b}/minutes2"),
+            "dot dot": (f"{b}/99 Archive/minutes/../{DUE[0]}", f"{b}/{DUE[0]}"),
             "into the archive (the other way)": (f"{b}/{DUE[0]}", a),
         }
         o = self.py("import reach; c = " + json.dumps(cases) + "\n"
@@ -251,7 +251,7 @@ class MoveBack(unittest.TestCase):
                                   "'reports_back')))"))
 
     def test_ask_creaite_still_cant_read_or_move_anything_there(self):
-        arch = self.abc / "_Archive" / DUE[0]
+        arch = self.abc / "99 Archive" / DUE[0]
         o = self.py(f"import reach; print(json.dumps([reach.classify({str(arch)!r}, op)[0] for op in "
                     "('read', 'change', 'move', 'delete', 'create')]))")
         self.assertEqual(set(o), {"never"})
@@ -326,15 +326,15 @@ class MoveBackRoute(unittest.TestCase):
         self.assertIn(stored, [a["path"] for a in files["archived"]])
         got = self.post(route, {"path": stored})
         self.assertTrue(got["ok"] and got["card"], got)
-        self.assertTrue((self.abc / "_Archive" / DUE[2]).is_file())          # nothing moves before Approve
+        self.assertTrue((self.abc / "99 Archive" / DUE[2]).is_file())          # nothing moves before Approve
         card = self.post("/api/edit/pending", {})["card"]
         self.assertEqual(card["title"], "Move back 2025-02-01 Example Programme Steerco one-pager.docx")
-        self.assertEqual(card["lines"], [f"Move file projects/{self.abc.name}/_Archive/{DUE[2]} → {stored}"])
+        self.assertEqual(card["lines"], [f"Move file projects/{self.abc.name}/99 Archive/{DUE[2]} → {stored}"])
         self.assertTrue(card["valid"])
         done = self.post("/api/edit/approve", {"card": card["card"]})
         self.assertTrue(done["ok"], done)
         self.assertTrue((self.abc / DUE[2]).is_file())
-        self.assertFalse((self.abc / "_Archive" / DUE[2]).exists())
+        self.assertFalse((self.abc / "99 Archive" / DUE[2]).exists())
         files = json.loads(urllib.request.urlopen(req).read())
         self.assertNotIn(stored, [a["path"] for a in files["archived"]])
         self.assertIn(stored, [f["path"] for f in files["files"]])
@@ -377,7 +377,7 @@ class FilesMoveBack(LiveBrowserCase):
                 break
             time.sleep(0.1)
         self.assertTrue((abc / DUE[0]).is_file())
-        self.assertFalse((abc / "_Archive" / DUE[0]).exists())
+        self.assertFalse((abc / "99 Archive" / DUE[0]).exists())
 
 
 if __name__ == "__main__":

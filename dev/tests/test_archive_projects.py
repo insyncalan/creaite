@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_onedrive_projects import OneDriveCase, touch  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
-OLD, NEW = "zz Archive", "_Archive"
+OLD, NEW = "zz Archive", "99 Archive"   # #252: zz Archive (and _Archive) are renamed 99 Archive
 
 
 class OneDriveArchive(OneDriveCase):
@@ -35,8 +35,8 @@ class OneDriveArchive(OneDriveCase):
 
     def setUp(self):
         super().setUp()
-        for code in ("ABC", "DEF"):                     # the engagements as they are today: a zz Archive, no _Archive yet
-            shutil.rmtree(self.eng(code, NEW))
+        for code in ("ABC", "DEF"):                     # the engagements as BL-09 found them: a zz Archive, no other archive
+            shutil.rmtree(self.eng(code, "_Archive"))   # (the fixture's skeleton gives each the old _Archive, #252)
 
     def run_script(self, script, *args, ok=True):
         r = self.v.run(*args, script=script, ok=ok)
@@ -58,7 +58,8 @@ class OneDriveArchive(OneDriveCase):
         for listed in (o[0], o[1]):
             self.assertTrue(any(s.endswith("Plan.docx") and "Design" in s for s in listed))
             self.assertFalse(any(OLD in s or f"/{NEW}/" in s for s in listed), listed)
-        self.assertEqual(o[2], ["_Archive", "_Templates", "99 System"])           # the deny lists name _Archive only (Alan, 14-10-2026)
+        self.assertEqual(set(o[2]), {"99 Archive", "_Archive", "_Templates", "99 System"})   # #252: 99 Archive and the old _Archive
+        self.assertNotIn(OLD, o[2])                                # the deny lists never name zz Archive (Alan, 14-10-2026)
         self.assertIn(OLD, o[3])                                   # the old name, still skipped for one release whatever the setting says
         self.assertFalse(any(OLD in g for g in o[4]), o[4])        # and never in ask creaite's deny patterns
 
@@ -81,18 +82,18 @@ class OneDriveArchive(OneDriveCase):
         touch(self.eng("ABC", OLD, "x.md"))
         touch(self.root / NEW / "Old Engagement" / "y.md")
         cases = {   # (from, to, kind): allowed?
-            ("projects/Example Programme", "projects/_Archive/Example Programme", "archive"): True,
-            ("projects/_Archive/Old Engagement", "projects/Old Engagement", "restore"): True,
-            ("projects/Example Programme/zz Archive", "projects/Example Programme/_Archive", "rename"): True,
-            ("projects/Example Programme", "projects/_Archive/Example Programme", "restore"): False,       # the wrong kind
-            ("projects/Example Programme/02 Meetings", "projects/_Archive/02 Meetings", "archive"): False,  # not a project folder
-            ("projects/Example Programme/zz Archive/x.md", "projects/_Archive/x.md", "archive"): False,     # a file, inside
-            ("projects/Example Programme", "projects/_Archive/Old Engagement", "archive"): False,           # onto one that exists
-            ("projects/_Templates", "projects/_Archive/_Templates", "archive"): False,
-            ("projects/_portfolio", "projects/_Archive/Portfolio", "archive"): False,
+            ("projects/Example Programme", "projects/99 Archive/Example Programme", "archive"): True,
+            ("projects/99 Archive/Old Engagement", "projects/Old Engagement", "restore"): True,
+            ("projects/Example Programme/zz Archive", "projects/Example Programme/99 Archive", "rename"): True,
+            ("projects/Example Programme", "projects/99 Archive/Example Programme", "restore"): False,       # the wrong kind
+            ("projects/Example Programme/02 Meetings", "projects/99 Archive/02 Meetings", "archive"): False,  # not a project folder
+            ("projects/Example Programme/zz Archive/x.md", "projects/99 Archive/x.md", "archive"): False,     # a file, inside
+            ("projects/Example Programme", "projects/99 Archive/Old Engagement", "archive"): False,           # onto one that exists
+            ("projects/_Templates", "projects/99 Archive/_Templates", "archive"): False,
+            ("projects/_portfolio", "projects/99 Archive/Portfolio", "archive"): False,
             ("projects/Example Programme", "projects/../Example Programme", "archive"): False,
             ("projects/Example Programme/zz Archive", "projects/Example Programme/Other", "rename"): False,
-            ("projects/Example Programme", "projects/_Archive/Example Programme", "delete"): False,
+            ("projects/Example Programme", "projects/99 Archive/Example Programme", "delete"): False,
         }
         for (a, b, kind), ok in cases.items():
             with self.subTest(a=a, b=b, kind=kind):
@@ -102,9 +103,9 @@ class OneDriveArchive(OneDriveCase):
     def test_a_move_without_its_kind_or_outside_the_shapes_is_refused_by_apply(self):
         touch(self.eng("ABC", OLD, "x.md"))
         for blk in ({"file_ops": [{"op": "move", "from": "projects/Example Programme/zz Archive",
-                                   "to": "projects/Example Programme/_Archive"}]},                       # no "archive" kind
+                                   "to": "projects/Example Programme/99 Archive"}]},                       # no "archive" kind
                     {"archive": "rename", "file_ops": [{"op": "move", "from": "projects/Example Programme/02 Meetings",
-                                                        "to": "projects/Example Programme/_Archive"}]}):
+                                                        "to": "projects/Example Programme/99 Archive"}]}):
             with self.subTest(blk=blk):
                 p = self.v.propose("move", [], file_changes={"title": "x", "file_changes_decision": "approved", **blk})
                 r = self.v.run("apply", ok=False)
@@ -132,9 +133,9 @@ class OneDriveArchive(OneDriveCase):
         spec = json.loads(out)
         self.assertEqual(spec["file_changes"]["archive"], "rename")
         self.assertEqual(sorted(o["to"] for o in spec["file_changes"]["file_ops"]),
-                         ["projects/Digital Enablement/_Archive", "projects/Example Programme/_Archive"])
+                         ["projects/Digital Enablement/99 Archive", "projects/Example Programme/99 Archive"])
         preview = self.stage(spec).stdout
-        self.assertIn("Move folder projects/Example Programme/zz Archive/ → projects/Example Programme/_Archive/", preview)
+        self.assertIn("Move folder projects/Example Programme/zz Archive/ → projects/Example Programme/99 Archive/", preview)
         self.v.run("apply")
         self.assertFalse(self.eng("ABC", OLD).exists())
         self.assertEqual(self.eng("ABC", NEW, "Old plan.docx").read_text(), "plan")       # moved whole, contents untouched
@@ -167,10 +168,10 @@ class OneDriveArchive(OneDriveCase):
         self.assertIn("_Templates/_Skeleton still holds zz Archive", c["detail"])
         spec = json.loads(self.run_script("propose.py", "new-project", "--code", "GHI", "--name", "Growth Hub").stdout)
         paths_made = [o.get("path") or o.get("to") for o in spec["file_changes"]["file_ops"]]
-        self.assertIn("projects/Growth Hub/_Archive", paths_made)
+        self.assertIn("projects/Growth Hub/99 Archive", paths_made)
         self.assertFalse(any(OLD in p for p in paths_made), paths_made)
         self.assertTrue((self.root / "_Templates/_Skeleton" / OLD).is_dir())             # creaite never writes in _Templates
-        (self.root / "_Templates/_Skeleton" / OLD).rename(self.root / "_Templates/_Skeleton/_Archive")
+        (self.root / "_Templates/_Skeleton" / OLD).rename(self.root / "_Templates/_Skeleton" / NEW)   # #252: _Archive would warn too
         self.assertEqual(self.doctor()["skeleton_archive"]["status"], "pass")
 
     # ── stored paths never change ──
@@ -187,7 +188,7 @@ class OneDriveArchive(OneDriveCase):
 
 
 class VaultArchive(unittest.TestCase):
-    """With the projects in the vault: projects/_Archive is never a project, and a project's zz Archive is renamed the same way."""
+    """With the projects in the vault: projects/99 Archive is never a project, and a project's zz Archive is renamed the same way."""
 
     def setUp(self):
         self.v = Vault()
@@ -221,7 +222,7 @@ class VaultArchive(unittest.TestCase):
 
 
 class UpdateRenamesTheSetting(unittest.TestCase):
-    """The update replaces zz Archive with _Archive in a saved locations.never_index, keeping every other value."""
+    """The update replaces zz Archive with 99 Archive in a saved locations.never_index, keeping every other value."""
 
     def setUp(self):
         self.v = Vault()
@@ -246,11 +247,11 @@ class UpdateRenamesTheSetting(unittest.TestCase):
                              "offsite_backup": "_Portfolio/99 System/creaite backups"}
         data.setdefault("dashboard", {})["palette"] = "creaite"
         after, added, note = self.migrate(json.dumps(data))
-        self.assertEqual(after["locations"]["never_index"], ["_Archive", "_Templates", "Private", "99 System"])
+        self.assertEqual(after["locations"]["never_index"], ["99 Archive", "_Templates", "Private", "99 System"])
         self.assertIn("locations.never_index", added)
-        self.assertIn("zz Archive is renamed _Archive", note)
+        self.assertIn("The archive folder's name is now 99 Archive", note)   # #252
         same = json.loads(json.dumps(data))
-        same["locations"]["never_index"][0] = "_Archive"
+        same["locations"]["never_index"][0] = "99 Archive"
         self.assertEqual(after, self.migrate(json.dumps(same))[0])        # the rename is the only difference it makes
         self.assertEqual(after["locations"]["projects_root"], "~/x")
         again, added2, _ = self.migrate(json.dumps(after))
@@ -261,7 +262,7 @@ class UpdateRenamesTheSetting(unittest.TestCase):
         data = json.loads(self.cfg.read_text())
         data["locations"] = {"never_index": ["zz Archive", "_Templates"]}
         after, added, note = self.migrate(json.dumps(data))
-        self.assertEqual(after["locations"]["never_index"], ["_Archive", "_Templates", "99 System"])
+        self.assertEqual(after["locations"]["never_index"], ["99 Archive", "_Templates", "99 System"])
         self.assertEqual(added.count("locations.never_index"), 1)
         self.assertIn("99 System is added", note)
 
@@ -270,7 +271,7 @@ class UpdateRenamesTheSetting(unittest.TestCase):
         data["locations"] = {"never_index": ["zz Archive", "_Templates", "99 System"]}
         self.cfg.write_text(json.dumps(data, indent=2))
         self.v.run("tidy", script="update.py")
-        self.assertEqual(json.loads(self.cfg.read_text())["locations"]["never_index"], ["_Archive", "_Templates", "99 System"])
+        self.assertEqual(json.loads(self.cfg.read_text())["locations"]["never_index"], ["99 Archive", "_Templates", "99 System"])
         log = [json.loads(ln) for ln in (self.v.root / "system/config/settings-log.jsonl").read_text().splitlines()]
         row = next(r for r in log if r["key"] == "locations.never_index")
         self.assertEqual(row["old"], ["zz Archive", "_Templates", "99 System"])
@@ -356,8 +357,8 @@ class ArchiveRestore(unittest.TestCase):
         preview = self.archive()
         self.assertIn("ABC-A-001 · Status: Open → Cancelled", preview)
         self.assertIn("Archive Example Programme (ABC)", preview)
-        self.assertIn(f"Move folder projects/{self.abc.name}/ → projects/_Archive/{self.abc.name}/", preview)
-        moved = self.v.root / "projects" / "_Archive" / self.abc.name
+        self.assertIn(f"Move folder projects/{self.abc.name}/ → projects/99 Archive/{self.abc.name}/", preview)
+        moved = self.v.root / "projects" / "99 Archive" / self.abc.name
         self.assertTrue(moved.is_dir() and not self.abc.exists())                    # the folder, whole
         reg = self.reg.read_text(encoding="utf-8")
         projects = reg.split("## Projects")[1].split("## ")[0]
@@ -390,7 +391,7 @@ class ArchiveRestore(unittest.TestCase):
         self.assertEqual(x, [])                                                      # the Excel export leaves them out too
         items = self.found("zebrafish")["items"]
         self.assertEqual(items, [("ABC-A-002", True, "Closed · Alan Carter · Archived")])   # still found, marked Archived
-        self.assertNotIn("meetings", self.found("quokka"))                            # its files in _Archive aren't indexed
+        self.assertNotIn("meetings", self.found("quokka"))                            # its files in 99 Archive aren't indexed
         stored = f"projects/{self.abc.name}/minutes/2026-10-01 Steering.md"
         o = self.py(f"import reach, paths; print(json.dumps([reach.classify({stored!r}, 'read')[0], "
                     f"paths.resolve({stored!r}).is_file()]))")
@@ -429,7 +430,7 @@ class ArchiveRestore(unittest.TestCase):
         self.assertEqual(self.state(), before)                                       # folder, register, items, search
         self.v.run("undo")                                                           # the restore undone: archived again
         self.assertEqual(self.v.rows("projects")[0]["archived"], 1)
-        self.assertTrue((self.v.root / "projects/_Archive" / self.abc.name).is_dir())
+        self.assertTrue((self.v.root / "projects/99 Archive" / self.abc.name).is_dir())
 
     def test_restore_never_overwrites_a_folder_that_took_its_name(self):
         self.archive()
@@ -447,7 +448,7 @@ def paths_of(root):
 
 
 class ArchiveInOneDrive(OneDriveCase):
-    """With the projects in a OneDrive root: the engagement folder goes to <root>/_Archive and back, the register in code order."""
+    """With the projects in a OneDrive root: the engagement folder goes to <root>/99 Archive and back, the register in code order."""
 
     def test_archive_and_restore_an_engagement(self):
         reg = self.root / "_Portfolio" / "project-register.md"
@@ -459,7 +460,7 @@ class ArchiveInOneDrive(OneDriveCase):
             self.v.run("stage", str(f), script="propose.py")
             self.v.run("apply")
             if args[0] == "archive":
-                self.assertTrue((self.root / "_Archive" / "Example Programme" / "CLAUDE.md").is_file())
+                self.assertTrue((self.root / "99 Archive" / "Example Programme" / "CLAUDE.md").is_file())
                 self.assertFalse(self.eng("ABC").exists())
                 o = self.py("import paths; print(json.dumps([c for c, _ in paths.project_folders()]))")
                 self.assertEqual(o, ["DEF", "_portfolio"])
@@ -597,7 +598,7 @@ class ArchiveRoutes(unittest.TestCase):
         done = self.post("/api/edit/approve", {"card": card["card"]})
         self.assertTrue(done["ok"], done)
         self.assertEqual(self.v.rows("projects")[0]["archived"], 1)
-        self.assertTrue((self.v.root / "projects/_Archive" / self.abc.name).is_dir())
+        self.assertTrue((self.v.root / "projects/99 Archive" / self.abc.name).is_dir())
         got = self.post("/api/project/archive", {"code": "ABC", "action": "restore"})
         self.assertTrue(got["ok"], got)
         card = self.post("/api/edit/pending", {})["card"]
