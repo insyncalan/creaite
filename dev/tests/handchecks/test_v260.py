@@ -22,12 +22,20 @@ Run a check with its item absent, to see it red:                      CREAITE_HC
                           Its selectors are read from the spec (text, roles), not a build: confirm them when it lands
   Fetch250     58 to 63   #250 fetch transcripts (v26-fetch-transcripts): 58 off by default (direct), 59 to 62 the builder's tests, called;
                           63 live only (a real sweep fetching a real transcript)
+  Fetch250Review 64 to 68 #250's independent review (Team Cap, 20-10-2026), H1 to H5, each in a throwaway vault (no browser): a
+                          result with no created date, a path inside a result file, record's reach class, another meeting's
+                          transcript, a confidential meeting with no sensitivity saved. Red until the review's fixes land
+  Markup183    69         #183's Outlook-safe markup on a chase built from the hand-check vault
+  SettingsLine 70         the Settings line (v26-settings-line): the old People, Projects and Workstreams addresses
+  Quiet97      71 to 74   #97 step 1 quiet hours (v26-quiet-hours; skip until vip.quiet_overnight exists); 74 needs its live_server.diff
+  Archive252   75 to 82   #252 99 Archive (v26-archive-name-proposal; skip until present); 80 needs its guarded diffs; 82 live only
 
 Adding a check is one small function in its item's class:
   @needs("<item>")                       the item it waits for (FEATURES; a new item is one entry there)
   def test_cNN_<words>(self):            NN the sheet's number
       \"\"\"NN. the check's words\"\"\"
       ...assertions on the hand-check vault (self.b, self.vault, self.py), then optionally self.called(NN, *CALLS)
+or, for a direct check that makes its own throwaway vault (no browser): @needs(...) then @offline on the function;
 or, for a check that only runs Team Stark's own tests (no browser, no vault):
   @needs("<item>")
   @calls(("test_file", ["Class", "Class.test_name", "test_name"], "the branch that brings it"))
@@ -59,7 +67,7 @@ NOCALL = os.environ.get("CREAITE_HC_260_NOCALL") == "1"     # a quick run: the d
 READY = "typeof go==='function' && LIVE"
 
 KIND = {**{n: "scriptable" for n in (*range(1, 10), 12, *range(13, 23), 26, *range(28, 38), *range(40, 45), *range(46, 52),
-                                     *range(53, 57), *range(58, 63))},
+                                     *range(53, 57), *range(58, 63), *range(64, 82))},
         **{n: "measurable" for n in (23, 24, 25)},
         **{n: "judgement" for n in (10, 11, 38, 45, 52, 57)}}
 LIVE_ONLY = {
@@ -68,6 +76,8 @@ LIVE_ONLY = {
         "still gets the draft with nothing in To (Jarvis asked for it; nothing here may call Microsoft 365)",
     39: "the Outlook access Check against a real mailbox (one that can write drafts, and one that cannot); the app side is check 29",
     63: "a real sweep with the setting on fetches a real ended meeting's transcript once, and Intake shows it Transcript ready",
+    82: "with Alan: the real company OneDrive archive folder renamed to 99 Archive once (Health's Rename on the card); other people's "
+        "files inside are untouched and still there, and the Files page and search find them",
 }
 
 NOTES.clear()          # test_v230 (imported for its helpers) put its own notes here
@@ -90,8 +100,13 @@ FEATURES = {
     "183r": ("#183's draft route (Jarvis's live_server.diff)", [("system/scripts/live_server.py", r"/api/email/draft")]),
     "246": ("#246 Settings tabs (v26-settings-tabs)", [("system/scripts/settings_catalogue.py", r"ADVANCED_SUBS")]),
     "247": ("#247 Project settings v2 (v26-project-settings-v2)", [("dashboard.html", r"psPeopleRows")]),
-    "248": ("#248 People page v2", [("dashboard.html", r"ptabsHost[\s\S]{0,600}?Everyone")]),
+    "248": ("#248 People page v2", [("dashboard.html", r"\"Everyone\"\][\s\S]{0,80}?\"Nothing assigned\"")]),
     "250": ("#250 fetch transcripts (v26-fetch-transcripts)", [("system/scripts/settings_catalogue.py", r"sweep\.fetch_transcripts")]),
+    "line": ("the Settings line (v26-settings-line)", [("dashboard.html", r"setMoved")]),
+    "97": ("#97 step 1 quiet hours (v26-quiet-hours)", [("system/scripts/settings_catalogue.py", r"vip\.quiet_overnight")]),
+    "97w": ("#97's alert-check wiring (its live_server.diff)", [("system/scripts/live_server.py", r"vip_schedule")]),
+    "252": ("#252 the 99 Archive name (v26-archive-name-proposal)", [("system/scripts/paths.py", r'ARCHIVE = "99 Archive"')]),
+    "252g": ("#252's guarded moves (its reach.py and live_server.py diffs)", [("system/scripts/reach.py", r"99 Archive")]),
 }
 
 SCREENS.update({
@@ -121,6 +136,13 @@ def needs(*items):
         test.needs = items
         return test
     return wrap
+
+
+def offline(fn):
+    """A direct check that needs no browser and no hand-check vault (it makes its own throwaway vault from this checkout's code):
+    treated like a called check, so a class of them starts no Chrome."""
+    fn.call_only = True
+    return fn
 
 
 def calls(*specs):
@@ -705,7 +727,7 @@ class Settings246(V260Case):
         self.assertFalse(self.b.eval("!!document.querySelector('#settingsBody [data-rhythm]')"))
         self.assertTrue(self.b.eval("!!document.querySelector('[data-sec=reminders] [data-k=remindersOn]')"))
         self.called(41, (SPAGE, ["test_client_report_rhythms_are_no_longer_in_reminders",
-                                 "test_people_and_projects_open_only_from_their_old_addresses_with_no_tab_chosen"], ST))
+                                 "test_the_old_people_and_projects_addresses_open_their_new_homes"], ST))
 
     @needs("246")
     def test_c42_search_reaches_every_key(self):
@@ -896,23 +918,27 @@ class People248(V260Case):
     def test_c53_the_tabs(self):
         """53. The People page has the tabs Everyone, With work, Nothing assigned, Needs attention, and Add a person."""
         self.open_people()
-        self.assertEqual(self.texts("#v-people [role=tab]")[:4], ["Everyone", "With work", "Nothing assigned", "Needs attention"])
+        tabs = [re.sub(r"\s*\d+$", "", x) for x in self.texts("#v-people [role=tab]")]            # each tab carries its count
+        self.assertEqual(tabs[:4], ["Everyone", "With work", "Nothing assigned", "Needs attention"])
         self.assertIn("Add a person", self.b.eval("document.getElementById('v-people').innerText"))
 
     @needs("248")
     def test_c54_the_columns(self):
         """54. Its columns are Name, Email, Organisation, Role, Projects, Actions, RAID, Decisions, Overdue (the counts open in Work)."""
         self.open_people()
-        heads = [h for h in self.texts("#v-people thead th") if h]
+        heads = [re.sub(r"\s*[▲▼]$", "", h) for h in self.texts("#v-people thead th") if h]       # the sorted column's arrow
         self.assertEqual(heads[:9], ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "RAID", "Decisions", "Overdue"])
 
     @needs("248")
     def test_c55_nothing_that_must_not_be_there(self):
-        """55. No star or "Followed" for followed people, no merge or Fix spellings, no "Press ? for help" banner, no "Add to register"
-        or "not in the register"."""
+        """55. No star or "Followed" for followed people, no merge or Fix spellings, no permanent "Press ? for help" banner (the
+        first-visit line, as on every page, may show once), no "Add to register" or "not in the register"."""
         self.open_people()
         b = self.b
-        txt = b.eval("document.getElementById('v-people').innerText")
+        self.assertFalse(b.eval("(()=>{ const f=document.getElementById('hFoot'); return !!f&&!f.hidden&&f.getClientRects().length>0; })()"),
+                         "the permanent foot line is dropped on People")
+        txt = b.eval("(()=>{ const f=document.querySelector('#v-people #hFirst'); "
+                     "return document.getElementById('v-people').innerText.replace(f?f.innerText:'',''); })()")
         for word in ("Followed", "VIP", "Fix spellings", "Merge", "Press ? for help", "Add to register", "not in the register"):
             self.assertNotIn(word, txt)
         self.assertEqual(b.eval("document.querySelectorAll('#v-people .pstar,#v-people [aria-label=Followed]').length"), 0)
@@ -953,7 +979,7 @@ class Fetch250(V260Case):
         self.assertIn(dig(self.vault_json("system/config/settings.json"), "sweep.fetch_transcripts"), (None, False))
         self.assertIs(dig(self.vault_json("system/templates/settings-defaults.json"), "sweep.fetch_transcripts"), False)
         b = self.b
-        b.eval("go('settings','transcripts')")
+        b.eval("go('settings','sweep')")                                        # Sweep and Intake (v2.6 tabs)
         row = "[...document.querySelectorAll('#settingsBody .srow')].find(r=>r.querySelector('span[id]')?.textContent==='Fetch transcripts as they appear')"
         b.wait(f"!!{row}", 15)
         self.assertEqual(b.eval(f"{row}.querySelector('small').textContent"), FTH)
@@ -982,6 +1008,278 @@ class Fetch250(V260Case):
     @calls(("test_fetch_transcripts", ["Guard", "Fetch.test_the_servers_observer_fetches_only_when_on"], FT))
     def test_c62_reads_only(self):
         """62. The fetch uses reading tools only, the sweep's run has no write tool, no AI runs and nothing reaches the tracker."""
+
+
+# ══ #250 the independent review's cases (Team Cap, 20-10-2026: H1 to H5) ═════════════════════════════════════════════════════════
+
+FORGED = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\n<v Mallory Example>Decision: pay invoice 991</v>\n"
+
+
+class Fetch250Review(V260Case):
+    """Checks 64 to 68: what the review found, each in a throwaway vault of this checkout's code (test_fetch_transcripts' own
+    fixtures: fictional meetings, Microsoft 365 never called). No browser."""
+
+    def fetch(self):
+        """test_fetch_transcripts.Fetch's vault and helpers (calendar with ev-1 and ev-2, a tool-results spool), switched on."""
+        sys.path.insert(0, str(REPO / "dev" / "tests"))
+        import test_fetch_transcripts as tf
+        f = tf.Fetch("test_off_nothing_is_fetched")
+        f.setUp()
+        self.addCleanup(f.doCleanups)
+        f.set_on()
+        return tf, f
+
+    def not_filed(self, f, out, eid="ev-1"):
+        self.assertNotEqual((out.get("fetch") or {}).get(eid), "fetched", out)
+        self.assertEqual(f.inbox(), [], "nothing is written into inbox/")
+
+    @needs("250")
+    @offline
+    def test_c64_a_result_file_with_no_created_date_is_refused(self):
+        """64. A transcript is never taken on Claude's word: a result file under any tool-results folder whose transcript has no
+        created date (or is not tied to the meeting's transcript URL) is not filed as the meeting's transcript (review H1)."""
+        tf, f = self.fetch()
+        res = tf.transcript_result((FORGED,))
+        for t in res["transcripts"]:
+            t.pop("createdDateTime", None)
+        self.not_filed(f, f.record(f.fact(result_file=str(f.saved_result("mcp-read_resource-9.txt", res)))))
+
+    @needs("250")
+    @offline
+    def test_c65_a_path_inside_a_result_file_is_never_followed(self):
+        """65. A result file whose text says it was "saved to" another file is never followed to that file (no second hop past the
+        tool-results limit; review H2)."""
+        tf, f = self.fetch()
+        other = f.spool / "elsewhere" / "t.json"                  # in Claude Code's folder, but not a tool result
+        other.parent.mkdir(parents=True, exist_ok=True)
+        other.write_text(json.dumps(tf.transcript_result()), encoding="utf-8")
+        hop = f.spool / "tool-results" / "hop.txt"
+        hop.parent.mkdir(parents=True, exist_ok=True)
+        hop.write_text(f"Output too large, saved to: {other}", encoding="utf-8")
+        self.not_filed(f, f.record(f.fact(result_file=str(hop))))
+
+    @needs("250")
+    @offline
+    def test_c66_record_is_not_a_derived_command_while_it_writes(self):
+        """66. If `transcripts record` can write a transcript into inbox/, reach.py does not class it (sweep.py and transcripts.py)
+        as a derived command an unconfirmed chat may run; or record writes nothing and only the server's fetch does (review H3)."""
+        tf, f = self.fetch()
+        f.record(f.fact(result_file=str(f.saved_result())))
+        if not f.inbox():
+            self.note(66, "record writes nothing: the fetch is the server's only")
+            return
+        sys.path.insert(0, str(REPO / "system" / "scripts"))
+        import reach
+        cls = {s: reach.SCRIPT_COMMANDS[s][c] for s, c in (("sweep.py", "transcripts"), ("transcripts.py", "record"))}
+        cls = {s: c[0] if isinstance(c, tuple) else c for s, c in cls.items()}
+        self.assertEqual({s: c for s, c in cls.items() if c in (reach.READ, reach.DERIVED)}, {},
+                         "record writes into inbox/ but may run without the card")
+
+    @needs("250")
+    @offline
+    def test_c67_another_meetings_transcript_is_not_filed_under_this_one(self):
+        """67. Another meeting's transcript from the same day (ev-2's, Weekly sync 12, at 15:00) is never filed under ev-1's title
+        (review H4)."""
+        tf, f = self.fetch()
+        res = tf.transcript_result()
+        res["meeting"] = {"id": "m2", "subject": "Weekly sync 12"}
+        for t in res["transcripts"]:
+            t["createdDateTime"] = f"{tf.DAY}T15:00:30Z"
+            t["endDateTime"] = f"{tf.DAY}T15:29:00Z"
+        self.not_filed(f, f.record(f.fact(result_file=str(f.saved_result("mcp-read_resource-7.txt", res)))))
+
+    @needs("250")
+    @offline
+    def test_c68_confidential_never_fetched_even_with_no_sensitivity_saved(self):
+        """68. A confidential meeting is never fetched, even when the saved calendar has no sensitivity for it: the live event's own
+        sensitivity, read in the same run, is checked before the transcript is written (review H5)."""
+        tf, f = self.fetch()
+        cal_p = f.v.root / "system/staging/calendar.json"
+        cal = json.loads(cal_p.read_text())
+        row = next(e for e in cal["days"][tf.DAY] if e.get("id") == "ev-1")
+        self.assertNotIn("sensitivity", row, "premise: the saved calendar says nothing about its sensitivity")
+        ev = tf.event()
+        ev["sensitivity"] = "confidential"
+        steps = [("calendar:///events/ev-1", ev), (tf.URI, tf.transcript_result())]
+        code = ("import json, sys; sys.path.insert(0,'system/scripts'); import transcripts as T; j = T.SweepFetch(); "
+                f"steps = json.loads({json.dumps(json.dumps(steps))}); "
+                "[j.observe(T.M365 + 'read_resource', {'uri': u}, json.dumps(r)) for u, r in steps]; print(json.dumps(j.outcomes))")
+        import subprocess
+        r = subprocess.run([sys.executable, "-c", code], cwd=f.v.root, capture_output=True, text=True, env=f.env)
+        self.assertEqual(r.returncode, 0, r.stderr[-400:])
+        self.not_filed(f, {"fetch": json.loads(r.stdout)})
+
+
+# ══ #183 the Outlook-safe markup, on the hand-check vault ═════════════════════════════════════════════════════════════════════════
+
+OVERDUE_OWNER = """(()=>{ const t=new Date().toISOString().slice(0,10), c={};
+  A.filter(x=>x.st==='Open'&&x.o&&x.o!==S.me&&x.due&&x.due<t).forEach(x=>{ c[x.o]=(c[x.o]||0)+1; });
+  return (Object.entries(c).sort((a,b)=>b[1]-a[1])[0]||[null])[0]; })()"""
+
+
+class Markup183(V260Case):
+    """Check 69. Reads only: the popup is opened and closed, nothing is copied or recorded."""
+
+    @needs("183")
+    def test_c69_the_email_is_markup_outlook_takes(self):
+        """69. A chase built on the hand-check vault (a person's overdue actions: the project heading, the table, the due date in
+        red) is only the markup Outlook's create-draft takes (no span, font, class, id, data-, style element, comment or CSS
+        variable), with the overdue colour on its cell; the same HTML is what Copy email and the draft carry."""
+        b = self.b
+        who = b.eval(OVERDUE_OWNER)
+        self.assertTrue(who, "premise: someone else in the demo vault owns an overdue open action")
+        b.eval(f"openDraftEmail({who!r},'chase')")
+        b.wait("document.getElementById('deDlg')&&document.getElementById('deDlg').open", 15)
+        b.eval("document.querySelectorAll('#deInc [data-deit]').forEach(i=>{ if(!i.checked) i.click(); })")
+        b.wait("!!document.querySelector('#dePrev table')", 10)
+        html = b.eval("deHtml()")
+        try:
+            problem = self.py(f"import draft_delivery as d; print(json.dumps(d.markup_problem({html!r})))")
+            self.assertIsNone(problem, problem)
+            self.assertIn("<table", html)
+            self.assertRegex(html, r'<td style="[^"]*color:#B3261E', "the overdue date in red, on its cell")
+            self.assertNotRegex(html, r"<span\b|<font\b|\sclass=|\sid=|<style|<script|\sdata-|<!--|var\(")
+        finally:
+            b.eval("document.getElementById('deDlg')?.close()")
+        self.note(69, f"a chase to {who}: {len(html)} characters of HTML, all in Outlook's subset")
+
+
+# ══ the Settings line: the old addresses ════════════════════════════════════════════════════════════════════════════════════════
+
+class SettingsLine(V260Case):
+    """Check 70. Reads only."""
+
+    @needs("246", "line")
+    def test_c70_old_settings_addresses_open_the_new_homes(self):
+        """70. People, Workstreams and Projects have left Settings: the old addresses open the People page, Projects, and (from a
+        project) its settings at Workstreams; the side column says where they went."""
+        b = self.b
+        b.eval("go('settings','essentials')")
+        b.wait("VIEW==='settings' && !!document.getElementById('setMoved')", 15)
+        self.assertIn("People page", b.eval("document.getElementById('setMoved').textContent"))
+        self.assertFalse(b.eval("SETSECTIONS.some(s=>['people','workstreams','projects'].includes(s.id))"))
+        b.eval("go('settings','people')")
+        b.wait("VIEW==='people' && location.hash.startsWith('#people')", 10)
+        b.eval("go('today'); go('settings','projects')")
+        b.wait("VIEW==='projects'", 10)
+        b.eval("go('cockpit','FAL'); go('settings','workstreams')")
+        b.wait("VIEW==='psettings' && psCode.value==='FAL' && psCat.value==='ws'", 10)
+        self.called(70, (SPAGE, ["test_the_old_people_and_projects_addresses_open_their_new_homes"], "v26-settings-line"))
+
+
+# ══ #97 step 1: quiet hours for the alert check ══════════════════════════════════════════════════════════════════════════════════
+
+QH = "v26-quiet-hours"
+QROW = "[...document.querySelectorAll('#set-essentials .srow')].find(r=>r.querySelector('span[id]')?.textContent==={!r})"
+
+
+class Quiet97(V260Case):
+    """Checks 71 to 74. Reads only (the saving is the builder's page test)."""
+
+    @needs("97")
+    def test_c71_the_rows_and_their_defaults(self):
+        """71. Settings › Essentials › People I follow has "Pause alert checks overnight" (on, 19:00 to 07:00) and "Pause alert checks
+        on weekend days" (on), after Check every, with the brief's words and never the word VIP."""
+        d = dig(self.vault_json("system/templates/settings-defaults.json"), "vip")
+        self.assertEqual({k: d.get(k) for k in ("quiet_overnight", "quiet_from", "quiet_to", "quiet_weekend")},
+                         {"quiet_overnight": True, "quiet_from": "19:00", "quiet_to": "07:00", "quiet_weekend": True})
+        b = self.b
+        b.eval("go('settings','essentials')")
+        night, wknd = QROW.format("Pause alert checks overnight"), QROW.format("Pause alert checks on weekend days")
+        b.wait(f"!!{night} && !!{wknd}", 15)
+        labels = b.eval("[...document.querySelector('[data-ess=\"People I follow\"]').querySelectorAll('.srow span[id]')].map(s=>s.textContent)")
+        self.assertLess(labels.index("Check every"), labels.index("Pause alert checks overnight"))
+        saved = dig(self.vault_json("system/config/settings.json"), "vip") or {}
+        want_night = saved.get("quiet_overnight", True) is not False
+        self.assertEqual(b.eval(f"{night}.querySelector('input.switch').checked"), want_night)
+        self.assertEqual(b.eval(f"[...{night}.querySelectorAll('input[type=text]')].map(e=>e.value)"),
+                         [saved.get("quiet_from", "19:00"), saved.get("quiet_to", "07:00")])
+        self.assertIn("looks back to the last one, so nothing is missed", b.eval(f"{night}.textContent"))
+        self.assertIn("Uses the weekend days set in Essentials › You.", b.eval(f"{wknd}.textContent"))
+        self.assertNotRegex(b.eval("document.querySelector('[data-ess=\"People I follow\"]').textContent"), r"\bVIP\b")
+        self.called(71, ("test_quiet_hours_page", ["test_the_rows_sit_in_people_i_follow_after_check_every_with_their_defaults",
+                                                   "test_the_times_and_switches_save_to_their_keys"], QH),
+                    ("test_vip_quiet_hours", ["SettingsAndCatalogue"], QH))
+
+    @needs("97")
+    @calls(("test_vip_quiet_hours", ["QuietNow", "NextDue", "LookBack", "DaylightSaving"], QH))
+    def test_c72_quiet_time_and_the_look_back(self):
+        """72. No check falls between 19:00 and 07:00 or on a weekend day; the first check after reads back to the last one (Friday's
+        last on a Monday), daylight saving and a window inside one day included; both switches off is never quiet."""
+
+    @needs("97")
+    @calls(("test_quiet_hours_page", ["test_a_time_that_isnt_hh_mm_is_refused_and_the_box_goes_back", "test_no_script_errors"], QH))
+    def test_c73_a_bad_time_is_refused(self):
+        """73. A time that isn't 24-hour HH:MM is refused with a message and the box goes back; nothing is saved."""
+
+    @needs("97", "97w")
+    @calls(("test_vip_quiet_hours", ["Wiring"], QH + " and its live_server.diff"))
+    def test_c74_the_alert_check_skips_quiet_time(self):
+        """74. With the server's wiring in: no Claude run in quiet time, the first check after it looks back to the last check, the
+        switches off restore today's behaviour, and nothing printed or logged says VIP."""
+
+
+# ══ #252 the archive folder is 99 Archive ═══════════════════════════════════════════════════════════════════════════════════════
+
+AR = "v26-archive-name-proposal"
+A99 = "test_archive_folder_99"
+
+
+class Archive252(V260Case):
+    """Checks 75 to 81 (82 is live only). Reads only."""
+
+    @needs("252")
+    def test_c75_the_name_is_99_archive(self):
+        """75. The archive folder is called 99 Archive: the constants, the never-read default and the saved setting say so; the old
+        _Archive and zz Archive are still never read for one release."""
+        o = self.py("import paths; print(json.dumps([paths.ARCHIVE, list(paths.OLD_ARCHIVES), paths.LOCATION_DEFAULTS['never_index']]))")
+        self.assertEqual(o[0], "99 Archive")
+        self.assertEqual(o[1], ["_Archive", "zz Archive"])
+        self.assertIn("99 Archive", o[2])
+        saved = dig(self.vault_json("system/config/settings.json"), "locations.never_index")
+        if saved is not None:
+            self.assertIn("99 Archive", saved)
+        self.called(75, (A99, ["Names"], AR))
+
+    @needs("252")
+    @calls((A99, ["StoredPaths"], AR))
+    def test_c76_stored_paths_resolve_under_each_name(self):
+        """76. Stored paths never change: an archived project, report or deleted note resolves under 99 Archive, _Archive or zz Archive,
+        and after the rename a path recorded under _Archive resolves into 99 Archive."""
+
+    @needs("252")
+    @calls((A99, ["Moves"], AR))
+    def test_c77_moves_go_to_the_folder_in_use(self):
+        """77. A project archive, the 12-month reports move and Delete note go into 99 Archive in a new engagement, and into the old
+        _Archive where that is the folder in use (one archive folder per place)."""
+
+    @needs("252")
+    @calls((A99, ["Health"], AR))
+    def test_c78_health_offers_the_rename(self):
+        """78. Health names the folders still called _Archive or zz Archive and offers Rename to 99 Archive on the approval card (the
+        portfolio's too); two old folders in one place are never merged; none, nothing to rename."""
+
+    @needs("252")
+    @calls((A99, ["Update", "VaultLayout"], AR))
+    def test_c79_the_update_renames_the_setting_only(self):
+        """79. The update renames the saved never_index value to 99 Archive and moves no folder; 99 Archive is never taken for a
+        project."""
+
+    @needs("252", "252g")
+    @calls((A99, ["GuardedMoves"], AR + " and its guarded diffs"))
+    def test_c80_the_guarded_moves(self):
+        """80. With the guarded diffs in: the card's moves accept only 99 Archive (or the old folder in use), the rename applies and
+        undoes with links still working, and a project archives and restores through 99 Archive."""
+
+    @needs("252")
+    def test_c81_the_page_says_99_archive(self):
+        """81. The dashboard and Help say 99 Archive wherever they name the archive folder; _Archive appears only as an old name."""
+        page = (self.vault / "dashboard.html").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn("99 Archive", page)
+        help_md = (self.vault / "system/templates/help.md").read_text(encoding="utf-8")
+        self.assertIn("99 Archive", help_md)
+        old = [ln.strip()[:120] for ln in help_md.splitlines() if "_Archive" in ln and "99 Archive" not in ln]
+        self.assertEqual(old, [], "a Help line names only the old folder")
 
 
 if __name__ == "__main__":
