@@ -7,7 +7,11 @@
 <div class="tabhost" id="setcatsHost">
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="essentials" data-scat="essentials">Essentials</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="people" data-scat="people">People and projects</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="ai" data-scat="ai">AI drafts</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="advanced" data-scat="advanced">Advanced</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="health" data-scat="health">Health</button>
 </div>
@@ -15,10 +19,15 @@
 <!-- BL-316: the categories (#setcats), the Tabs building block -->
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials" selected="">Essentials</option>
-<option value="people">People and projects</option>
+<option value="work">Work and reports</option>
+<option value="sweep">Sweep and Intake</option>
+<option value="reports">Reports and minutes</option>
+<option value="ai">AI drafts</option>
+<option value="look">Look and help</option>
 <option value="advanced">Advanced</option>
 <option value="health">Health</option>
 </select>
+<p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p>
 </div>
 <div id="settingsBody">
 <div class="setstack">
@@ -62,25 +71,49 @@
 </span>
 </div>
 </div>
+<div class="srow" data-keys="identity.short_forms">
+<div>
+<span id="ss#3">Short forms of your name</span>
+<span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
+</span>
+<small id="ss#3h">Other ways people write your name, comma-separated (Al, AC); also matched as you.</small>
+</div>
+<div class="setctl">
+<input type="text" aria-labelledby="ss#3" aria-describedby="ss#3h" size="18" placeholder="Alan, AC">
+<button type="button" class="mini setreset" aria-label="Reset Short forms of your name to its default" title="Back to the default">Reset</button>
+</div>
+</div>
+<div class="srow" data-keys="identity.own_domains">
+<div>
+<span id="ss#4">Own email domains</span>
+<span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
+</span>
+<small id="ss#4h">Comma-separated; addresses at these domains are inside your company, so Draft email warns about anyone outside.</small>
+</div>
+<div class="setctl">
+<input type="text" aria-labelledby="ss#4" aria-describedby="ss#4h" size="18" placeholder="example.com">
+<button type="button" class="mini setreset" aria-label="Reset Own email domains to its default" title="Back to the default">Reset</button>
+</div>
+</div>
 </div>
 <div class="card" data-ess="Your day">
 <h2>Your day</h2>
 <div class="srow" data-keys="sweep.due_from">
 <div>
-<span id="ss#3">Morning sweep from</span>
-<small id="ss#3h">creaite catches up on mail and Teams when you first open it after this time.</small>
+<span id="ss#5">Morning sweep from</span>
+<small id="ss#5h">creaite catches up on mail and Teams when you first open it after this time.</small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#3" aria-describedby="ss#3h" placeholder="HH:MM" size="8">
+<input type="text" aria-labelledby="ss#5" aria-describedby="ss#5h" placeholder="HH:MM" size="8">
 </div>
 </div>
 <div class="srow" data-keys="sweep.sources.inbox sweep.sources.sent_items sweep.sources.teams_chats sweep.sources.teams_channels sweep.sources.calendar">
 <div>
-<span id="ss#4">What the sweep reads</span>
-<small id="ss#4h">Inbox, Sent Items, Teams chats and channels, your calendar.</small>
+<span id="ss#6">What the sweep reads</span>
+<small id="ss#6h">Inbox, Sent Items, Teams chats and channels, your calendar.</small>
 </div>
 <div class="setctl">
-<span class="setticks" role="group" aria-labelledby="ss#4" aria-describedby="ss#4h">
+<span class="setticks" role="group" aria-labelledby="ss#6" aria-describedby="ss#6h">
 <label class="settick">
 <input type="checkbox"> Inbox</label>
 <label class="settick">
@@ -96,20 +129,20 @@
 </div>
 <div class="srow" data-keys="day.close_from">
 <div>
-<span id="ss#5">Evening, offer Close the day from</span>
-<small id="ss#5h">A quiet dot on the door icon, never a pop-up.</small>
+<span id="ss#7">Evening, offer Close the day from</span>
+<small id="ss#7h">A quiet dot on the door icon, never a pop-up.</small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#5" aria-describedby="ss#5h" placeholder="Off" size="8">
+<input type="text" aria-labelledby="ss#7" aria-describedby="ss#7h" placeholder="Off" size="8">
 </div>
 </div>
 <div class="srow" data-keys="day.catchup_sweep">
 <div>
-<span id="ss#6">Catch up before closing</span>
-<small id="ss#6h">Starts a sweep if the last one was a while ago.</small>
+<span id="ss#8">Catch up before closing</span>
+<small id="ss#8h">Starts a sweep if the last one was a while ago.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#6" aria-describedby="ss#6h">
+<select aria-labelledby="ss#8" aria-describedby="ss#8h">
 <option value="start">Start it when the card opens</option>
 <option value="offer">Ask first</option>
 <option value="off">Off</option>
@@ -118,12 +151,12 @@
 </div>
 <div class="srow" data-keys="reminders.weekly_report_day reminders.weekly_report_from">
 <div>
-<span id="ss#7">Weekly report reminder</span>
-<small id="ss#7h">One line on Today until each report is approved.</small>
+<span id="ss#9">Weekly report reminder</span>
+<small id="ss#9h">One line on Today until each report is approved.</small>
 </div>
 <div class="setctl">
 <span class="setpair">
-<select aria-labelledby="ss#7" aria-describedby="ss#7h">
+<select aria-labelledby="ss#9" aria-describedby="ss#9h">
 <option value="Monday">Monday</option>
 <option value="Tuesday">Tuesday</option>
 <option value="Wednesday">Wednesday</option>
@@ -139,20 +172,20 @@
 <h2>Saving and review</h2>
 <div class="srow" data-keys="dashboard.auto_apply">
 <div>
-<span id="ss#8">Save my changes at once</span>
-<small id="ss#8h">Your own edits are saved straight away, with Undo. What creaite suggests always waits in Review.</small>
+<span id="ss#10">Save my changes at once</span>
+<small id="ss#10h">Your own edits are saved straight away, with Undo. What creaite suggests always waits in Review.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#8" aria-describedby="ss#8h">
+<input type="checkbox" class="switch" aria-labelledby="ss#10" aria-describedby="ss#10h">
 </div>
 </div>
 <div class="srow" data-keys="dashboard.week_ahead_priorities">
 <div>
-<span id="ss#9">Week ahead shows</span>
-<small id="ss#9h">Which priorities appear in Today's Week ahead. Milestones and meetings always do.</small>
+<span id="ss#11">Week ahead shows</span>
+<small id="ss#11h">Which priorities appear in Today's Week ahead. Milestones and meetings always do.</small>
 </div>
 <div class="setctl">
-<span class="setticks" role="group" aria-labelledby="ss#9" aria-describedby="ss#9h">
+<span class="setticks" role="group" aria-labelledby="ss#11" aria-describedby="ss#11h">
 <label class="settick">
 <input type="checkbox" aria-label="Urgent"> Urgent</label>
 <label class="settick">
@@ -169,23 +202,32 @@
 <h2>People I follow</h2>
 <div class="srow" data-keys="vip.enabled">
 <div>
-<span id="ss#10">Tell me when they write</span>
-<small id="ss#10h">Their messages head Today until you dismiss them. Only you see who you follow.</small>
+<span id="ss#12">Tell me when they write</span>
+<small id="ss#12h">Their messages head Today until you dismiss them. Only you see who you follow.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#10" aria-describedby="ss#10h">
+<input type="checkbox" class="switch" aria-labelledby="ss#12" aria-describedby="ss#12h">
 </div>
 </div>
 <div class="srow" data-keys="vip.check_minutes">
 <div>
-<span id="ss#11">Check every</span>
-<small id="ss#11h">While creaite is open.</small>
+<span id="ss#13">Check every</span>
+<small id="ss#13h">While creaite is open.</small>
 </div>
 <div class="setctl">
 <span class="setpair">
-<input type="number" aria-labelledby="ss#11" aria-describedby="ss#11h" min="10" max="240" step="5" style="width: #px;">
+<input type="number" aria-labelledby="ss#13" aria-describedby="ss#13h" min="10" max="240" step="5" style="width: #px;">
 <span class="sub">minutes</span>
 </span>
+</div>
+</div>
+<div class="srow" data-keys="vip.notify">
+<div>
+<span id="ss#14">Browser notification</span>
+<small id="ss#14h">Also a notification on the Mac when they write; your browser asks once.</small>
+</div>
+<div class="setctl">
+<input type="checkbox" class="switch" aria-labelledby="ss#14" aria-describedby="ss#14h">
 </div>
 </div>
 </div>
@@ -193,13 +235,13 @@
 <h2>Look and help</h2>
 <div class="srow" data-keys="dashboard.theme">
 <div>
-<span id="ss#12">Theme</span>
+<span id="ss#15">Theme</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#12h">Light, dark, or follow your Mac.</small>
+<small id="ss#15h">Light, dark, or follow your Mac.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#12" aria-describedby="ss#12h">
+<select aria-labelledby="ss#15" aria-describedby="ss#15h">
 <option value="System">Follow my Mac</option>
 <option value="Light">Light</option>
 <option value="Dark">Dark</option>
@@ -209,11 +251,11 @@
 </div>
 <div class="srow" data-keys="dashboard.palette">
 <div>
-<span id="ss#13">Style</span>
-<small id="ss#13h">The look of the whole app.</small>
+<span id="ss#16">Style</span>
+<small id="ss#16h">The look of the whole app.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#13" aria-describedby="ss#13h">
+<select aria-labelledby="ss#16" aria-describedby="ss#16h">
 <option value="Brightwater">Brightwater</option>
 <option value="creaite">creaite</option>
 <option value="Notion">Notion</option>
@@ -228,11 +270,11 @@
 </div>
 <div class="srow" data-keys="dashboard.motion">
 <div>
-<span id="ss#14">Motion</span>
-<small id="ss#14h">Follows your Mac's Reduce motion unless you choose.</small>
+<span id="ss#17">Motion</span>
+<small id="ss#17h">Follows your Mac's Reduce motion unless you choose.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#14" aria-describedby="ss#14h">
+<select aria-labelledby="ss#17" aria-describedby="ss#17h">
 <option value="System">Follow my Mac</option>
 <option value="Reduce">Reduce</option>
 <option value="Full">Full</option>
@@ -241,29 +283,29 @@
 </div>
 <div class="srow" data-keys="dashboard.rail_labels">
 <div>
-<span id="ss#15">Labels when collapsed</span>
-<small id="ss#15h">A name under each icon when the left rail is collapsed. Off: icons only.</small>
+<span id="ss#18">Labels when collapsed</span>
+<small id="ss#18h">A name under each icon when the left rail is collapsed. Off: icons only.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#15" aria-describedby="ss#15h">
+<input type="checkbox" class="switch" aria-labelledby="ss#18" aria-describedby="ss#18h">
 </div>
 </div>
 <div class="srow" data-keys="help.first_line">
 <div>
-<span id="ss#16">Show the Press ? line on each screen</span>
-<small id="ss#16h">A quiet line under a page's title the first time you visit it. The line at the foot of the page stays.</small>
+<span id="ss#19">Show the Press ? line on each screen</span>
+<small id="ss#19h">A quiet line under a page's title the first time you visit it. The line at the foot of the page stays.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#16" aria-describedby="ss#16h">
+<input type="checkbox" class="switch" aria-labelledby="ss#19" aria-describedby="ss#19h">
 </div>
 </div>
 <div class="srow" data-keys="drafting.update drafting.client drafting.thinking drafting.reason drafting.agenda drafting.email drafting.forms drafting.repeat drafting.done drafting.sharpen drafting.shape drafting.report-section drafting.minutes-section">
 <div>
-<span id="ss#17">AI drafts</span>
-<small id="ss#17h">Suggestions you can use, edit or ignore. Never applied by themselves.</small>
+<span id="ss#20">AI drafts</span>
+<small id="ss#20h">Suggestions you can use, edit or ignore. Never applied by themselves.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#17" aria-describedby="ss#17h">
+<input type="checkbox" class="switch" aria-labelledby="ss#20" aria-describedby="ss#20h">
 </div>
 </div>
 </div>
@@ -271,11 +313,11 @@
 <h2>Safety</h2>
 <div class="srow" data-keys="backups.daily">
 <div>
-<span id="ss#18">Daily backup, and a copy in OneDrive</span>
-<small id="ss#18h">The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.</small>
+<span id="ss#21">Daily backup, and a copy in OneDrive</span>
+<small id="ss#21h">The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#18" aria-describedby="ss#18h">
+<input type="checkbox" class="switch" aria-labelledby="ss#21" aria-describedby="ss#21h">
 </div>
 </div>
 </div>

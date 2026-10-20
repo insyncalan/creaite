@@ -6,21 +6,32 @@
 <input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
 <div class="tabhost" id="setcatsHost">
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
-<button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="people" data-scat="people">People and projects</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="0" data-tab="essentials" data-scat="essentials">Essentials</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="ai" data-scat="ai">AI drafts</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="advanced" data-scat="advanced">Advanced</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="health" data-scat="health">Health</button>
 </div>
 </div>
 <!-- BL-316: the categories (#setcats), the Tabs building block -->
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
+<option value="">People and projects</option>
 <option value="essentials">Essentials</option>
-<option value="people" selected="">People and projects</option>
+<option value="work">Work and reports</option>
+<option value="sweep">Sweep and Intake</option>
+<option value="reports">Reports and minutes</option>
+<option value="ai">AI drafts</option>
+<option value="look">Look and help</option>
 <option value="advanced">Advanced</option>
 <option value="health">Health</option>
 </select>
+<p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p>
 </div>
 <div id="settingsBody">
+<p class="sub advnote" id="setMovingNote">People, workstreams and archiving are moving out of Settings: people to the People page, workstreams and archive to each project's settings. Until then they are here.</p>
 <div class="setstack">
 <div class="card wide" id="peopleMgr" data-sec="people">
 <div style="display:flex;align-items:center;gap:#px;flex-wrap:wrap">
@@ -326,15 +337,7 @@
 </div>
 </div>
 </div>
-<div class="srow">
-<div>
-<span id="sr#5">Show archived projects</span>
-<small id="sr#5h">Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived</small>
-</div>
-<div>
-<input aria-labelledby="sr#5" aria-describedby="sr#5h" type="checkbox" class="switch" data-k="showArchived">
-</div>
-</div>
+<p class="sub" style="margin:#px 0 0">An archived project is listed here while Show archived projects (Work and reports › Opening views) is on.</p>
 <div class="tbl">
 <table class="mgr" id="projArch" aria-label="Projects: archive and restore">
 <tbody>
