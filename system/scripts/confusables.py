@@ -10,6 +10,8 @@ edit_ai.LOOK_ALIKE is built from TABLE, so edit_ai.normal (which client_leak's c
 """
 import unicodedata
 
+import paths  # noqa: F401  (doctor: every script imports paths)
+
 # Look-alikes by script, as (characters, the Latin letters they look like), one for one. Kept to letters a reader takes for the
 # Latin one at a glance in the fonts Word and Chrome use.
 _PAIRS = (
