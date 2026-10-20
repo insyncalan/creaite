@@ -1,10 +1,10 @@
 # Needs attention: open work items on a milestone due in the next week (2.6)
 
-Requested by Alan, 19-10-2026: "other items that get put into Needs attention are any work items attached to a milestone due in the next week, that if not closed will delay the milestone. Include in 2.6." Mockup (for Alan): `dev/mockups/today-milestone-attention-mockup.html`, built on the 2.5.0 Today snapshot. Fictional data.
+Requested by Alan, 19-10-2026: "other items that get put into Needs attention are any work items attached to a milestone due in the next week, that if not closed will delay the milestone. Include in 2.6." **Approved by Alan 20-10-2026 with one change: the row says "Milestone <name>".** Mockup: `dev/mockups/today-milestone-attention-mockup.html`, built on the 2.5.0 Today snapshot. Fictional data.
 
 ## What it does
 For every milestone that is not yet achieved or dropped and is due within the **Due soon window** (the existing setting "Due soon means within (days)", 7 by default; a milestone already past due and still open counts too), Today's **Needs attention** gets **one row**:
-- **Title:** "<Milestone> is due <Thursday 22nd October>: 3 open items must close for it to hold" (singular: "1 open item must close").
+- **Title:** the row says what it is: "Milestone <u>Pilot go-live</u> is due Thursday 22nd October: 3 open items must close for it to hold" (the word Milestone, then its name in bold underline, which opens the milestone; Alan, 20-10-2026) (singular: "1 open item must close").
 - **Sub-line:** up to three of the attached items, the late ones first and in red ("DEF-A-003 Confirm licence count with procurement, 1 day late"), then the others with their due day; "and n more" if there are more; the project's name; and "Open all 3 in Work" (Work filtered to that milestone's open items).
 - The title opens the milestone; the "…" menu works as on the other rows.
 - The row counts in Needs attention's number.
