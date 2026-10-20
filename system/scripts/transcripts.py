@@ -263,13 +263,86 @@ def todo(at=None):
     return {"look_up": look, "recorded_without_lookup": auto}
 
 
-def record(facts_list, at=None):
+FACT_KEYS = ("id", "online", "uri", "count", "error", "start", "end", "thread")      # the only keys a fact may carry
+FACT_ERRORS = (None, "permission", "notfound", "other")
+URI_MAX, THREAD_MAX, ID_MAX, STAMP_MAX = 2048, 512, 512, 40
+KEYED = re.compile(r"[?&;](pwd|passcode|pass|password|pin|tk|token)=", re.I)
+
+
+def _text_field(v, most, spaces=False):
+    """True when v is None, or a string of at most `most` characters with no control character (and no space unless
+    `spaces`)."""
+    if v is None:
+        return True
+    if not isinstance(v, str) or len(v) > most or re.search(r"[\x00-\x1f\x7f]", v):
+        return False
+    return spaces or not re.search(r"\s", v)
+
+
+def _shape_problem(f):
+    """Why a fact's shape is wrong (not an object, another field, no ID), or None."""
+    if not isinstance(f, dict):
+        return "not an object"
+    extra = sorted(str(k) for k in f if k not in FACT_KEYS)
+    if extra:
+        return "fields not allowed: " + ", ".join(extra)[:120]
+    eid = f.get("id")
+    if not isinstance(eid, str) or not eid.strip() or not _text_field(eid, ID_MAX):
+        return "no event ID"
+    return None
+
+
+def _link_problem(f):
+    """Why a fact's uri or thread isn't a short link or ID (too long, a space, a key in it), or None."""
+    if not _text_field(f.get("uri"), URI_MAX) or KEYED.search(f.get("uri") or ""):
+        return "the uri isn't a short link"
+    if not _text_field(f.get("thread"), THREAD_MAX) or KEYED.search(f.get("thread") or ""):
+        return "the thread isn't a short ID"
+    return None
+
+
+def _value_problem(f):
+    """Why a fact's online, count, error, start or end has the wrong type or value, or None."""
+    if not isinstance(f.get("online", False), bool):
+        return "online isn't true or false"
+    c = f.get("count")
+    if c is not None and (isinstance(c, bool) or not isinstance(c, int) or not 0 <= c <= 1000):
+        return "count isn't a whole number"
+    if f.get("error") not in FACT_ERRORS:
+        return "error isn't one of permission, notfound or other"
+    if not (_text_field(f.get("start"), STAMP_MAX) and _text_field(f.get("end"), STAMP_MAX)):
+        return "start or end isn't a short time"
+    return None
+
+
+def fact_problem(f):
+    """Why one fact can't be recorded, or None (#265 review L5): a JSON object of FACT_KEYS only (never a body, a passcode, a
+    PIN or any text), an ID, `online` true or false, a uri and a thread as short strings with no spaces and no key in them,
+    `count` a whole number or null, `error` one of FACT_ERRORS, `start` and `end` short strings or null."""
+    return _shape_problem(f) or _link_problem(f) or _value_problem(f)
+
+
+def _refuse(f, n, why, refused):
+    """Note a refused fact: in the debug log (its place and the reason's kind, never a value) and in `refused` (its ID when it
+    has a usable one, else its place in the list)."""
+    eid = f.get("id") if isinstance(f, dict) else None
+    if refused is not None:
+        refused.append(eid if isinstance(eid, str) and eid.strip() and _text_field(eid, 80) else f"#{n + 1}")
+    debuglog.warn("transcripts", f"record: fact {n + 1} refused ({why.split(':')[0]})")
+
+
+def record(facts_list, at=None, refused=None):
     """Classify what the sweep (or a run) read for each meeting and keep it. facts: {id, online, uri, count, error, start, end,
-    thread}. Returns {id: status or None}."""
+    thread}. A fact that fact_problem refuses is left out (its ID, when it has a usable one, or its place in the list, goes in
+    `refused`). Returns {id: status or None}."""
     at = at or now()
     rows = {str(r["id"]): r for r in calendar_rows()}
     out = {}
-    for f in facts_list:
+    for n, f in enumerate(facts_list if isinstance(facts_list, list) else []):
+        why = fact_problem(f)
+        if why:
+            _refuse(f, n, why, refused)
+            continue
         eid = str(f.get("id") or "")
         row = rows.get(eid)
         past = ended(row, at) if row else True
@@ -568,9 +641,11 @@ def main(argv):
         except (OSError, ValueError) as e:
             print(f"Can't read {argv[1]}: {e}")
             return 1
-        out = record(spec.get("results") or [])
+        refused = []
+        out = record((spec.get("results") if isinstance(spec, dict) else None) or [], refused=refused)
         kept = {k: v for k, v in out.items() if v}
-        print(json.dumps({"recorded": kept, "not_yet": [k for k, v in out.items() if not v]}, indent=1))
+        print(json.dumps({"recorded": kept, "not_yet": [k for k, v in out.items() if not v],
+                          **({"refused": refused} if refused else {})}, indent=1))
         return 0
     if cmd == "show":
         print(json.dumps(load_state(), indent=1, ensure_ascii=False))

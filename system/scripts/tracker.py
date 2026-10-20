@@ -1413,6 +1413,8 @@ def check_file_op(fop, blk):
         src = op_source(fop, blk)
         if not src or not paths.resolve(src).is_file():
             raise Invalid(f"copy: source not found ({src})")
+        if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
+            raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
         safe_path(fop.get("to"), "copy")
     elif op == "remove":
         safe_path(fop.get("path"), "remove")
@@ -1598,6 +1600,8 @@ def stamp_draft(draft, text, on):
 
 def _op_copy(apply_id, fop, blk, done):
     src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
+    if os.path.islink(src) or not src.is_file():   # #269 round 2 (L-B): checked again here, so a swap after the check isn't filed
+        raise Invalid(f"copy: the source is a link or not a plain file ({op_source(fop, blk)}); only a plain file is filed")
     if dst.exists():
         if file_hash(dst) == file_hash(src):
             return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
@@ -1935,10 +1939,11 @@ def _renamed_back(was, dst):
 
 
 def card_move_problem(fop, blk, prop):
-    """#124 F3: why this move can't be applied here, or None. A move only the live server's card makes (reach.CARD_ONLY_MOVES)
-    needs the marker the server writes on Approve (reach.card_move_marker): a regular file (never a symlink), under
-    reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256 of the bytes load() read from it (so
-    of what is applied). Checked only by the apply, never by check_move (propose.py check runs that for the card's preview)."""
+    """#124 F3: why this move can't be applied here, or None. A move only the live server makes (reach.CARD_ONLY_MOVES) needs the
+    marker the server writes on Approve, or (#255, reach.PAGE_MOVES) on the page's own button (reach.card_move_marker): a
+    regular file (never a symlink), under reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256
+    of the bytes load() read from it (so of what is applied). Checked only by the apply, never by check_move (propose.py check
+    runs that for the card's preview)."""
     import reach
     kind = blk.get("archive")
     if kind not in ("notes", "notes_back") and any(in_notes_folder(fop.get(k)) for k in ("from", "to")):
@@ -1947,6 +1952,9 @@ def card_move_problem(fop, blk, prop):
         return None
     if card_marker_ok(reach.card_move_marker(kind, fop.get("from"), fop.get("to")), prop):
         return None
+    if kind in reach.PAGE_MOVES:                  # #255: no card for a note's own move, still only the live server's
+        return (f"move: {fop.get('from')} is moved only by Delete note or Move back on the dashboard (the live server's own "
+                "button)")
     return f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
 
 

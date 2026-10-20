@@ -348,6 +348,42 @@ class Dismiss(Line):
         b.eval("REV.push({...REV.find(r=>r.n===9000), n:9999, ref:999}); renderToday()")   # one more, not kept: back
         self.assertTrue(b.eval(VISIBLE))
 
+    def test_a_swap_beyond_the_cap_is_never_hidden(self):
+        """250 dismissed (50 beyond the cap): one of the 50 left out goes and a new one comes. The count of unknown ids is no more than
+        the 50 left out, but the set has changed, so the line shows."""
+        b = self.b
+        self.waiting(250, 1)
+        b.click("#tdQx")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        # approve the first proposal (the kept list is the last 200, so the first one is beyond the cap) and stage a new one
+        b.eval("REV.find(r=>r.n===9000).done='approved'; REV.push({...REV.find(r=>r.n===9001), n:9998, ref:998}); renderToday()")
+        self.assertTrue(b.eval(VISIBLE))
+        self.assertIn("250 proposals to approve", self.text())
+
+    def test_the_same_set_beyond_the_cap_in_another_order_stays_hidden(self):
+        b = self.b
+        self.waiting(250, 1)
+        b.click("#tdQx")
+        b.pump(0.2)
+        b.eval("REV.reverse(); renderToday()")
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+
+    def test_a_reused_proposal_file_name_with_new_items_shows_it(self):
+        """minutes.py names a proposal file by the minute, so a later proposal can reuse the name and the item numbers: the item's
+        created time is part of its kept id, so the new items are new."""
+        b = self.b
+        b.eval("REV.forEach(r=>{ if(r.n<9000) r.done='approved'; }); REV.splice(0,REV.length,...REV.filter(r=>r.n<9000)); D.inbox=[]; D.meetings={rows:[]};"
+               "REV.push({n:9000,p:'ABC',kind:'actions',why:'',indiv:false,flags:[],file:'proposed-2026-10-20-1000.json',ref:1,made:'2026-10-20T10:00:05',rec:{t:'Old'},src:''});"
+               "renderBadge(); renderToday(); true")
+        self.assertTrue(b.eval(VISIBLE))
+        b.click("#tdQx")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+        b.eval("REV[REV.length-1].done='approved'; REV.push({n:9001,p:'ABC',kind:'actions',why:'',indiv:false,flags:[],file:'proposed-2026-10-20-1000.json',ref:1,"
+               "made:'2026-10-20T10:00:41',rec:{t:'New'},src:''}); renderToday()")
+        self.assertTrue(b.eval(VISIBLE))
+
     def test_a_store_that_reads_but_will_not_write_still_hides_it_for_this_page_load(self):
         b = self.b
         self.waiting(4, 1)
@@ -467,6 +503,17 @@ class Staged(LiveBrowserCase):
 
     def pending(self):
         return self.b.eval("REV.filter(r=>!r.done).length")
+
+    def test_a_staged_row_carries_its_proposal_s_created_time(self):
+        """#245: the created time is part of a proposal's dismissed id, so the page's rows must carry it."""
+        import json
+        b = self.b
+        f = self.v.root / "system/staging" / "proposed-2026-10-20-made.json"
+        f.write_text(json.dumps({"created": "2026-10-20T10:00:41", "items": [{"n": 1, "op": "new", "table": "actions", "decision": "pending",
+                     "values": {"project": "ABC", "description": "Made", "owner": "Jane Doe", "source": "minutes"}}]}))
+        b.eval("window.__ok=0; reloadData().then(()=>window.__ok=1); true")
+        b.wait("window.__ok===1", 30)
+        self.assertEqual(b.eval("(REV.find(r=>r.file==='proposed-2026-10-20-made.json')||{}).made"), "2026-10-20T10:00:41")
 
     def test_approve_two_and_stage_two_while_on_review_then_today_shows_the_line(self):
         b = self.b

@@ -9,7 +9,7 @@ Run: python3 dev/tests/test_notes_row_menu_browser.py   (needs Google Chrome; sk
     works as before;
   - a note changed elsewhere between the menu and the pick: Pin flips the CURRENT state (not the one the menu showed), and Delete note
     is refused with the edit-conflict message (the version is the one read when the confirm box opened);
-  - focus returns to the row after Cancel, Esc and Delete; one key press (keydown plus the native contextmenu) opens one menu.
+  - focus returns to the row after Cancel and Esc, and to the next row (or the list) once Delete has moved it (#255: no card); one key press (keydown plus the native contextmenu) opens one menu.
 """
 import json
 import sys
@@ -172,7 +172,7 @@ class NotesRowMenuBrowser(LiveBrowserCase):
         self.elsewhere("Alpha", body="Typed in another tab")
         b.click("#ndelGo")
         b.wait("!document.getElementById('noteDelDlg').open", 15)
-        b.wait("document.querySelector('.snack')&&document.querySelector('.snack').textContent.includes('the note changed since it was saved')", 15)
+        b.wait("document.querySelector('.snack')&&document.querySelector('.snack').textContent.includes('the note changed since you opened it')", 15)
         self.assertEqual(b.eval("document.querySelectorAll('#chLog .edcard').length"), 0)   # no card: nothing is moved
         self.assertTrue(alpha.is_file())
         self.assertIn("Typed in another tab", alpha.read_text())
@@ -196,12 +196,9 @@ class NotesRowMenuBrowser(LiveBrowserCase):
         self.menu_on("Alpha")
         self.pick("Delete note")
         b.wait("document.getElementById('noteDelDlg').open")
-        b.click("#ndelGo")
-        b.wait("document.querySelector('#chLog .edcard [data-ed=\"approve\"]')", 15)
-        b.eval("document.querySelectorAll('.nlist .ni').forEach(x=>x.dataset.notetitle=x.querySelector('b').textContent.replace('\\u25c6 ',''))")
-        self.assertTrue(self.on_row("Alpha"), "Delete returns focus to the row")
-        b.click("#chLog .edcard [data-ed=\"approve\"]")                                       # Approve: the row has gone
+        b.click("#ndelGo")                                                                     # #255: moved at once, no card
         b.wait("!notesList.value.some(n=>n.title==='Alpha')", 20)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .edcard').length"), 0)
         b.pump(0.3)
         self.assertTrue(b.eval("document.activeElement.classList.contains('ni')||document.activeElement.id==='notesListBody'"),
                         b.eval("document.activeElement.tagName"))                              # the next row or the list, never lost to the page
