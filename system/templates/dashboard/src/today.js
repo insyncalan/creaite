@@ -34,7 +34,7 @@ import { draftOn, RHL } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
-export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
+export const dismissedF=()=>store.list("creaite-dismiss"), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
 /* ===== Today brief (BL-72) ===== */
 /* Today reads as a brief: numbered sentences with a bold linked title and links inside the sentence, worded from
    templates here (no model call). The data for the Week ahead comes from build_dashboard.py (D.week). */

@@ -6753,6 +6753,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvfCount: () => rvfCount,
     rwWrap: () => rwWrap,
     rzApply: () => rzApply,
+    rzOf: () => rzOf,
     sLink: () => sLink,
     safeTriangle: () => safeTriangle,
     sameF: () => sameF,
@@ -6990,6 +6991,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     vipPoll: () => vipPoll,
     vipSectionHtml: () => vipSectionHtml,
     vipWhen: () => vipWhen,
+    visOf: () => visOf,
     vnum: () => vnum,
     vput: () => vput,
     vq: () => vq,
@@ -7871,19 +7873,32 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var kindOf = (t47, x5) => t47 === "actions" ? "action" : t47 === "raid" ? x5 && x5.type || "Risk" : t47 === "decisions" ? "decision" : "milestone";
   var ico = (k5) => KI[k5] ? `<span class="ki" title="${KL[k5] || k5}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k5]}</svg></span>` : "";
   var revIco = (r4) => r4.kind === "actions" ? ico("action") : r4.kind === "raid" ? ico(r4.rec.type || "Risk") : r4.kind === "decisions" ? ico("decision") : "";
-  var store = { get: (k5, d5) => {
-    try {
-      const v5 = localStorage.getItem(k5);
-      return v5 ? JSON.parse(v5) : d5;
-    } catch (e4) {
-      return d5;
+  var store = {
+    get: (k5, d5) => {
+      try {
+        const v5 = localStorage.getItem(k5);
+        return v5 ? JSON.parse(v5) : d5;
+      } catch (e4) {
+        return d5;
+      }
+    },
+    set: (k5, v5) => {
+      try {
+        localStorage.setItem(k5, JSON.stringify(v5));
+      } catch (e4) {
+      }
+    },
+    /* #256: a saved map or list read tolerantly: anything else (null, a number, a string, the other shape) reads as empty. Reading
+       never writes: what is saved stays exactly as saved until Alan changes something. */
+    obj: (k5) => {
+      const v5 = store.get(k5, {});
+      return v5 && typeof v5 === "object" && !Array.isArray(v5) ? v5 : {};
+    },
+    list: (k5) => {
+      const v5 = store.get(k5, []);
+      return Array.isArray(v5) ? v5 : [];
     }
-  }, set: (k5, v5) => {
-    try {
-      localStorage.setItem(k5, JSON.stringify(v5));
-    } catch (e4) {
-    }
-  } };
+  };
   var CMT = "What it is: \nWhat it means for you: \nWhat is being done: ";
   var CMH = ["What it is:", "What it means for you:", "What is being done:"];
   var cmHeads = (t47) => CMH.every((h5) => (t47 || "").split("\n").some((l6) => l6.trim().startsWith(h5)));
@@ -37624,7 +37639,12 @@ ${s5}`;
     /* BL-128: Milestone and Last updated can be shown */
     decisions: [["id", "ID"], ["t", "Decision"], ["st", "Status"], ["by", "Made by"], ["due", "Needed by"], ["date", "Date"], ["src", "Source"]]
   };
-  shared.COLVIS = store.get("creaite-cols", { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] });
+  shared.COLVIS = store.get("creaite-cols", null);
+  if (!shared.COLVIS || typeof shared.COLVIS !== "object" || Array.isArray(shared.COLVIS)) shared.COLVIS = { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] };
+  var visOf = (t47) => {
+    const v5 = shared.COLVIS[t47], known2 = Array.isArray(v5) && COLS[t47] ? v5.filter((k5) => COLS[t47].some((c5) => c5[0] === k5)) : [];
+    return known2.length ? known2 : [...DEFCOLS[t47] || []];
+  };
   var cmTag = (x5) => x5.client && !("cmd" in x5 ? cmdOK(x5.cmd) : cmOK(x5.cm)) ? ' <span class="tag warn">· client messaging to complete</span>' : "";
   function cell(k5, x5, t47 = shared.WT) {
     if (t47 === "all") return allCell(k5, x5);
@@ -37658,7 +37678,7 @@ ${s5}`;
     }
     return ((D.milestone_names || {})[id2] || [id2])[0];
   };
-  var rowHead = (t47, C5, s5, o5 = {}) => `<thead><tr>${o5.pick ? '<th class="pickcol" aria-label="Select"></th>' : ""}${C5.map((c5) => `<th data-col="${c5[0]}"${o5.fixed ? "" : ' draggable="true"'} aria-sort="${s5 && s5.col === c5[0] ? s5.dir === "asc" ? "ascending" : "descending" : "none"}" title="Sort by ${c5[1].toLowerCase()}"${o5.rz && shared.RZ[t47 + "|" + c5[0]] ? ` style="width:${shared.RZ[t47 + "|" + c5[0]]}px;min-width:${shared.RZ[t47 + "|" + c5[0]]}px"` : ""}>${c5[1]}${s5 && s5.col === c5[0] ? `<span class="sarrow">${s5.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("")}</tr></thead>`;
+  var rowHead = (t47, C5, s5, o5 = {}) => `<thead><tr>${o5.pick ? '<th class="pickcol" aria-label="Select"></th>' : ""}${C5.map((c5) => `<th data-col="${c5[0]}"${o5.fixed ? "" : ' draggable="true"'} aria-sort="${s5 && s5.col === c5[0] ? s5.dir === "asc" ? "ascending" : "descending" : "none"}" title="Sort by ${c5[1].toLowerCase()}"${o5.rz && rzOf(t47 + "|" + c5[0]) ? ` style="width:${rzOf(t47 + "|" + c5[0])}px;min-width:${rzOf(t47 + "|" + c5[0])}px"` : ""}>${c5[1]}${s5 && s5.col === c5[0] ? `<span class="sarrow">${s5.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("")}</tr></thead>`;
   var rowHtml = (t47, x5, C5, o5 = {}) => `<tr class="click ${o5.sel === x5.id ? "sel" : ""}${o5.pick ? " handpick" : ""}" data-row="${x5.id}"${o5.tr || ""}>${o5.pick ? `<td class="pickcol"><input type="checkbox" class="handbox" data-hk="${t47}:${x5.id}" aria-label="Hand over ${esc(x5.id)}" ${o5.pick.has(t47 + ":" + x5.id) ? "checked" : ""}></td>` : ""}${C5.map((c5) => cell(c5[0], x5, t47)).join("")}</tr>`;
   function renderWork() {
     const fresh = !WINIT[shared.WT], dv = fresh ? defaultView(shared.WT) : null;
@@ -37714,9 +37734,9 @@ ${s5}`;
       markStagedRows();
     }
   }
-  shared.COLORD = store.get("creaite-colorder", {});
+  shared.COLORD = store.obj("creaite-colorder");
   function orderedCols(t47 = shared.WT) {
-    const vis = COLS[t47].filter((c5) => shared.COLVIS[t47].includes(c5[0]) || c5[0] === "t"), ord = shared.COLORD[t47] || [];
+    const shown2 = visOf(t47), vis = COLS[t47].filter((c5) => shown2.includes(c5[0]) || c5[0] === "t"), ord = Array.isArray(shared.COLORD[t47]) ? shared.COLORD[t47] : [];
     return vis.sort((a5, b5) => {
       const i5 = ord.indexOf(a5[0]), j5 = ord.indexOf(b5[0]);
       return (i5 < 0 ? 99 + COLS[t47].indexOf(a5) : i5) - (j5 < 0 ? 99 + COLS[t47].indexOf(b5) : j5);
@@ -37827,11 +37847,15 @@ ${s5}`;
       return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown2 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
     }).join("");
   }
-  shared.RZ = store.get("creaite-colwidths", {});
+  shared.RZ = store.obj("creaite-colwidths");
+  var rzOf = (k5) => {
+    const w6 = shared.RZ[k5];
+    return typeof w6 === "number" && Number.isFinite(w6) && w6 > 0 ? w6 : 0;
+  };
   function colResizer(th2, k5, after) {
-    if (shared.RZ[k5]) {
-      th2.style.width = shared.RZ[k5] + "px";
-      th2.style.minWidth = shared.RZ[k5] + "px";
+    if (rzOf(k5)) {
+      th2.style.width = rzOf(k5) + "px";
+      th2.style.minWidth = rzOf(k5) + "px";
     }
     const h5 = document.createElement("span");
     h5.className = "colrz";
@@ -37842,7 +37866,7 @@ ${s5}`;
     h5.setAttribute("aria-orientation", "vertical");
     h5.setAttribute("aria-valuemin", "60");
     h5.setAttribute("aria-valuemax", "900");
-    val2(shared.RZ[k5] || th2.getBoundingClientRect().width);
+    val2(rzOf(k5) || th2.getBoundingClientRect().width);
     h5.addEventListener("focus", () => val2(th2.getBoundingClientRect().width));
     const put2 = (w6) => {
       w6 = Math.max(60, Math.min(900, w6));
@@ -38045,10 +38069,10 @@ ${s5}`;
   var DGROUPS = [["status", "Status"], ["owner", "Decision maker"], ["due", "Needed by"]];
   var GROUPS = { actions: [...BGROUPS, ["project", "Project"], ["priority", "Priority"], ["workstream", "Workstream"]], raid: [...BGROUPS, ["project", "Project"], ["priority", "Priority"], ["type", "Type"]], decisions: [...DGROUPS, ["project", "Project"]] };
   var groupsOf = (t47) => GROUPS[t47];
-  var WLAY = store.get("creaite-worklay", {}), WGRP = store.get("creaite-workgrp", {}), BHIDE = store.get("creaite-boardhide", {}), BCOLL = store.get("creaite-boardcoll", {});
+  var WLAY = store.obj("creaite-worklay"), WGRP = store.obj("creaite-workgrp"), BHIDE = store.obj("creaite-boardhide"), BCOLL = store.obj("creaite-boardcoll");
   var BCUR = null, BDRAG = null, BNOCLICK = 0;
   shared.LAYCHOSEN = false;
-  var BSHOWALL = /* @__PURE__ */ new Set(), BCLALL = new Set(store.get("creaite-boardclosedall", []));
+  var BSHOWALL = /* @__PURE__ */ new Set(), BCLALL = new Set(store.list("creaite-boardclosedall"));
   var layoutOf = (t47) => WLAY[t47] === "board" && (shared.LAYCHOSEN || innerWidth >= 640) ? "board" : "list";
   var groupOf = (t47) => {
     const ok2 = (g5) => groupsOf(t47).some((x5) => x5[0] === g5), set = { actions: S.bgActions, raid: S.bgRaid, decisions: S.bgDecisions }[t47];
@@ -38178,7 +38202,7 @@ ${s5}`;
     });
     return out;
   };
-  var BW = bwClean(store.get("creaite-boardw", {}));
+  var BW = bwClean(store.obj("creaite-boardw"));
   var bwBoard = () => BCUR ? `${BCUR.t}|${BCUR.g}` : `${shared.WT}|${groupOf(shared.WT)}`;
   var bwGet = (b5, key2) => {
     const o5 = BW[b5];
@@ -38638,7 +38662,7 @@ ${s5}`;
       }
     }, true);
   }
-  var WLGRP = store.get("creaite-listgrp", {}), WSUB = store.get("creaite-worksub", {});
+  var WLGRP = store.obj("creaite-listgrp"), WSUB = store.obj("creaite-worksub");
   var DEFCOLS = { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] };
   var dispOpen = () => $("#dispMenu").classList.contains("on");
   var SORTOPTS = (t47) => t47 === "decisions" ? [["", "Default order"], ["due", "Needed by"], ["date", "Date"], ["st", "Status"], ["by", "Made by"], ["t", "Title"], ["upd", "Last updated"], ["id", "ID"]] : [["", "Default order"], ["due", "Due date"], ["pr", "Priority"], ["st", "Status"], ["o", "Owner"], ["t", "Title"], ["upd", "Last updated"], ["raised", "Raised"], ["id", "ID"]];
@@ -38816,6 +38840,8 @@ ${s5}`;
         return;
       }
       if (i5.dataset.prop !== void 0) {
+        const cur = shared.COLVIS[t47];
+        if (!Array.isArray(cur) || !cur.some((k5) => COLS[t47].some((c5) => c5[0] === k5))) shared.COLVIS[t47] = visOf(t47);
         const L3 = shared.COLVIS[t47], v5 = i5.value;
         i5.checked ? L3.includes(v5) || L3.push(v5) : L3.splice(L3.indexOf(v5), 1);
         store.set("creaite-cols", shared.COLVIS);
@@ -38911,7 +38937,7 @@ ${s5}`;
     if (!d5) return false;
     return await boardMove(t47, id2, { due: d5 }, what);
   }
-  var LCOLL = store.get("creaite-listcoll", {});
+  var LCOLL = store.obj("creaite-listcoll");
   var HLNOTE = "";
   shared.HLALL = false;
   var grpOK = (t47, g5) => groupsOf(t47).some((x5) => x5[0] === g5);
@@ -41594,7 +41620,7 @@ ${s5}`;
   var selDay = y3("");
 
   // today.js
-  var dismissedF = () => store.get("creaite-dismiss", []), dismissedS = () => {
+  var dismissedF = () => store.list("creaite-dismiss"), dismissedS = () => {
     try {
       return JSON.parse(sessionStorage.getItem("creaite-dismiss-s") || "[]");
     } catch (e4) {
@@ -44061,7 +44087,7 @@ ${s5}`;
   }
   var RVLASTN = null, RVLASTV = null, RVSHOWN = false;
   shared.MREVLEFT = false;
-  var MLV = store.get("creaite-lastviewed", {}), MLVAT = {}, MNEWGONE = /* @__PURE__ */ new Set();
+  var MLV = store.obj("creaite-lastviewed"), MLVAT = {}, MNEWGONE = /* @__PURE__ */ new Set();
   shared.RF = null;
   var mFileAt = (f5) => {
     const m5 = /(\d{4}-\d{2}-\d{2})[-T_ ]?(\d{2})(\d{2})/.exec(f5 || "");
@@ -46457,7 +46483,7 @@ ${s5}`;
   }
   function mLeave(page) {
     if (!page) return;
-    const cur = store.get("creaite-lastviewed", {});
+    const cur = store.obj("creaite-lastviewed");
     cur[page] = `${TODAY} ${(/* @__PURE__ */ new Date()).toTimeString().slice(0, 5)}`;
     store.set("creaite-lastviewed", cur);
   }
@@ -47146,7 +47172,7 @@ ${s5}`;
 
   // files.js
   shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
-  var FOPEN = new Set(store.get("creaite-files-open", []));
+  var FOPEN = new Set(store.list("creaite-files-open"));
   var farch = () => D.files_archived || [];
   var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
   var EMPTY = { archived: "Nothing has been archived.", latest: "No reports yet.", week: "No meetings this week." };
@@ -49890,7 +49916,7 @@ ${pre}**Current state title:** ${title}`);
     const typ = $("#f_type"), ms2 = $("#f_ms");
     if (!typ || !ms2 || typ.value !== "Dependency" || ms2.value) return;
     const code = $("#f_p")?.value || formProject(), dueTxt = $("#f_due")?.value || "", due = DDATE.test(dueTxt) ? toIso(dueTxt) : "", key2 = shared.CUR.id || "new";
-    if (store.get("creaite-dep-none", {})[key2] === depHash($("#f_t")?.value)) return;
+    if (store.obj("creaite-dep-none")[key2] === depHash($("#f_t")?.value)) return;
     const L3 = depSuggest(code, due);
     if (!L3.length) return;
     depSugDraw(ms2.closest("dd"), L3, "depms");
@@ -49981,7 +50007,7 @@ ${pre}**Current state title:** ${title}`);
         ms2.dispatchEvent(new Event("change", { bubbles: true }));
         depFormDraw();
       } else if (n4) {
-        const d5 = store.get("creaite-dep-none", {});
+        const d5 = store.obj("creaite-dep-none");
         d5[shared.CUR.id || "new"] = depHash($("#f_t")?.value);
         store.set("creaite-dep-none", d5);
         depFormDraw();
@@ -59349,7 +59375,7 @@ ${d5.text}`);
     box.textContent = "";
     if (k5 !== "raid" || x5.type !== "Dependency" || x5.ms || !x5.p || !OPENST(x5.st || "Open")) return;
     const key2 = shared.CUR.mode === "new" ? "new" : pkCid();
-    if (store.get("creaite-dep-none", {})[key2] === depHash(x5.t)) return;
+    if (store.obj("creaite-dep-none")[key2] === depHash(x5.t)) return;
     const L3 = depSuggest(x5.p, x5.due || "");
     if (!L3.length) return;
     depSugDraw(box, L3, "pkdep");
@@ -59362,7 +59388,7 @@ ${d5.text}`);
       const a5 = e4.target.closest("[data-pkdep]"), n4 = e4.target.closest("[data-pkdepnone]"), x5 = curObj(), k5 = shared.CUR.k, id2 = pkCid();
       if (a5) pkCommit(k5, id2, { ms: a5.dataset.pkdep }, "Milestone", "none", msName(a5.dataset.pkdep));
       else if (n4) {
-        const d5 = store.get("creaite-dep-none", {});
+        const d5 = store.obj("creaite-dep-none");
         d5[shared.CUR.mode === "new" ? "new" : id2] = depHash(x5.t);
         store.set("creaite-dep-none", d5);
         pkDepDraw(x5, k5);

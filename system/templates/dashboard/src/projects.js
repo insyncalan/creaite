@@ -739,7 +739,7 @@ export function depSugDraw(parent,L,attr){ const g=document.createElement("div")
 export function depFormDraw(){ $("#depSug")?.remove(); if(!shared.EDITING||!shared.CUR||shared.CUR.k!=="raid"||!["record","new"].includes(shared.CUR.mode)) return;
   const typ=$("#f_type"), ms=$("#f_ms"); if(!typ||!ms||typ.value!=="Dependency"||ms.value) return;
   const code=$("#f_p")?.value||formProject(), dueTxt=$("#f_due")?.value||"", due=DDATE.test(dueTxt)?toIso(dueTxt):"", key=shared.CUR.id||"new";
-  if((store.get("creaite-dep-none",{})[key])===depHash($("#f_t")?.value)) return;
+  if((store.obj("creaite-dep-none")[key])===depHash($("#f_t")?.value)) return;
   const L=depSuggest(code,due); if(!L.length) return;
   depSugDraw(ms.closest("dd"),L,"depms"); }
 /* BL-91: the Flow card, in inline SVG drawn to scale (a bar's height is its count times one scale per chart), in the theme's own
@@ -775,7 +775,7 @@ vsAskSync();
 $("#pFields").addEventListener("input",e=>{ if(["f_due","f_type","f_p","f_t"].includes(e.target.id)) depFormDraw(); });
 $("#pFields").addEventListener("change",e=>{ if(["f_due","f_type","f_p","f_ms"].includes(e.target.id)) depFormDraw(); });
 $("#pFields").addEventListener("click",e=>{ const a=e.target.closest("[data-depms]"), n=e.target.closest("[data-depnone]"); if(a){ const ms=$("#f_ms"); ms.value=a.dataset.depms; ms.dispatchEvent(new Event("change",{bubbles:true})); depFormDraw(); }
-  else if(n){ const d=store.get("creaite-dep-none",{}); d[shared.CUR.id||"new"]=depHash($("#f_t")?.value); store.set("creaite-dep-none",d); depFormDraw(); } });
+  else if(n){ const d=store.obj("creaite-dep-none"); d[shared.CUR.id||"new"]=depHash($("#f_t")?.value); store.set("creaite-dep-none",d); depFormDraw(); } });
 }
 /* ===== BL-190 (sprint-links) ===== the Flow card's figures open Work: a week's opened bars (Raised between that week, any status),
    its closed bars (Closed, Closed between that week), an ageing bucket (All items, open actions and RAID items raised in that span)
