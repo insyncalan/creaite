@@ -1617,9 +1617,47 @@ def p24(ctx, seed, n):
     return {}, fails
 
 
+def p26(ctx, seed, n):
+    """P26 exports twice (v2.5.3, #259 round 2, HIGH 1): an approved, filed client report edited on disk to hold a text section
+    marked "client" (words no gate knows) is held on EVERY export, html and docx, in any order and however many: never only on the
+    first, as an export's own rebuilt snapshot never vouches for the file it was built from. Each case's filing is then undone."""
+    fails, r = [], random.Random(seed)
+    for i in range(n):
+        ctx.reset()
+        a = route(report_server.approve_route, {"kind": "client", "code": CODE, "week_ending": WEEK, "force": True})
+        if not a.get("ok"):
+            fails.append({"case": i, "approve": a.get("message")})
+            continue
+        f = ROOT / a["path"]
+        text = f.read_text(encoding="utf-8")
+        d = creaite_doc.loads(text)
+        sid = r.choice(["free_sneak", "free_a", "notes_x", "zz"])
+        d["sections"] = [s for s in d["sections"] if s.get("id") != sid]
+        d["sections"].insert(r.randint(0, len(d["sections"])), {
+            "id": sid, "type": r.choice(["freetext", "freetext", "text"]), "heading": r.choice(["Notes", "Update", ""]),
+            "default_heading": "", "hidden": False, "text": "ZEBRAPAY " + r.choice(["quiet words", "plain", "for the group"]),
+            "audience": "client"})
+        d.setdefault("layout", {})["order"] = [s["id"] for s in d["sections"]]
+        m = creaite_doc.BLOCK.search(text)
+        f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+        order = [r.choice(["html", "docx"]) for _ in range(r.randint(2, 4))]
+        for k, fmt in enumerate(order):
+            e = export(fmt)
+            if not e.get("ok"):
+                continue
+            p = paths.resolve(e["path"])
+            hit = leaks(blobs_of(p), ["ZEBRAPAY"])
+            p.unlink()
+            if hit:
+                fails.append({"case": i, "order": order, "export": k, "fmt": fmt, "leaks": hit})
+        run_script("tracker.py", "undo")
+        ctx.reset()
+    return {}, fails
+
+
 PROPERTIES = {"P1": p1, "P2": p2, "P3": p3, "P4": p4, "P5": p5, "P6": p6, "P7": p7, "P8": p8, "P9": p9, "P10": p10, "P11": p11,
               "P13": p13, "P13shared": p13_shared, "P14": p14, "P15": p15, "P16": p16, "P16json": lambda ctx, seed, n: p16(ctx, seed, n, [f_json]), "P17": p17, "P18": p18, "P18facts": p18_facts, "P16out": p16_out, "P19": p19, "P20": p20, "P21": p21, "P22": p22,
-              "P23": p23, "P24": p24}
+              "P23": p23, "P24": p24, "P26twice": p26}
 
 
 # ── mutants: one guard switched off in this process, for the mutation proofs ─
@@ -1700,6 +1738,17 @@ def _audience_flip():
                                                  and (s.get("audience") or "internal") == "internal")
 
 
+def _launder_on():
+    real = creaite_doc.creaite_wrote
+
+    def old(path, raw):
+        import client_snapshot
+        d = hashlib.sha256(raw).hexdigest()
+        return real(path, raw) or any(e.get("state") == "filed" and e.get("source_sha256") == d
+                                      for e in client_snapshot.registry().values())
+    creaite_doc.creaite_wrote = old
+
+
 MUTANTS = {
     "gate_off": _gate_off, "output_off": _output_off, "reread": _reread, "page_used": _page_used, "decoder_off": _decoder_off,
     "audience_flip": _audience_flip, "other_parser": _other_parser, "pictures_off": _pictures_off,
@@ -1716,6 +1765,8 @@ MUTANTS = {
     # v2.5.3 (#259, K2): every file read as creaite's own, so a text section written on disk as the client's shows again (the
     # properties that plant words there need it with their own guard off, as K2 is a second guard for them)
     "trust_on": lambda: setattr(creaite_doc, "creaite_wrote", lambda path, raw: True),
+    # v2.5.3 (#259 round 2, HIGH 1): c25a28fe's trust put back: any registry entry of a filed state whose source hash matches
+    "launder_on": lambda: _launder_on(),
     # v2.5.3 (#259): tracker.py apply's second check of a creaite-format client report switched off in its own process
     "apply_check_off": lambda: APPLY_PREAMBLE.append(f"sys.path.insert(0, {str(SCRIPTS)!r})\nimport review\n"
                                                      "review.creaite_client_problem = lambda blk: None"),

@@ -133,9 +133,17 @@ def registry():
     return {k: v for k, v in snaps.items() if isinstance(v, dict)} if isinstance(snaps, dict) else {}
 
 
-def record(stored, content, snap):
-    """Record a snapshot's SHA-256 (and when, for which report, and its counts) in the registry, keeping the earlier hashes of the
-    same report (an Undo of an Approve puts an earlier snapshot back). Written whole (a temporary file, then replaced)."""
+MADE = ("approve", "export")           # how a registry entry was made: Approve's checked filing, or an export's own rebuild
+
+
+def record(stored, content, snap, made):
+    """Record a snapshot's SHA-256 (and when, for which report, how it was made, and its counts) in the registry, keeping the
+    earlier hashes of the same report (an Undo of an Approve puts an earlier snapshot back). Written whole (a temporary file, then
+    replaced). v2.5.3 (#259 round 2, HIGH 1): `made` is "approve" (for_filing: the snapshot beside the filed report, built from
+    the document Approve checked) or "export" (ensure: built from a file as it is on disk); only an "approve" entry at the filed
+    report's own snapshot path vouches for a filed file (approved_source)."""
+    if made not in MADE:
+        raise ValueError(f"made must be one of {MADE}")
     reg = registry()
     old = reg.get(key(stored)) or {}
     hashes = [h for h in old.get("hashes") or [] if isinstance(h, str)]
@@ -143,7 +151,7 @@ def record(stored, content, snap):
     hashes = ([x for x in hashes if x != h] + [h])[-KEEP_HASHES:]
     doc = snap.get("doc") or {}
     reg[key(stored)] = {"hashes": hashes, "project": snap.get("project"), "week_ending": snap.get("week_ending"),
-                   "state": snap.get("state"), "made_at": snap.get("made_at"),
+                   "state": snap.get("state"), "made_at": snap.get("made_at"), "made": made,
                    "source_sha256": (snap.get("source") or {}).get("sha256"),
                    "sections": len(doc.get("sections") or []), "pictures": len(snap.get("pictures") or []),
                    "logos": len(snap.get("logos") or [])}
@@ -152,6 +160,39 @@ def record(stored, content, snap):
     tmp.write_text(json.dumps({"format": "creaite-client-snapshots", "schema": 1, "snapshots": reg}, indent=1, sort_keys=True) + "\n",
                    encoding="utf-8")
     os.replace(tmp, REGISTRY)
+
+
+def beside(filed):
+    """The stored path of the snapshot beside the report filed at `filed` (stored or a Path): `<its name>.client.json`, the path
+    filed_snapshot gives for that report."""
+    rel = Path(paths.rel(creaite_doc.real(filed)))
+    return (rel.parent / (rel.stem + SUFFIX)).as_posix()
+
+
+def approved_source(filed):
+    """v2.5.3 (#259 round 2, HIGH 1): the SHA-256 of the filed report's text that the snapshot Approve wrote beside it names as its
+    source, or None. Bound to that one path: the snapshot is the one at beside(filed), its registry entry was made by Approve (an
+    entry an export made is never one), its bytes are a hash that entry recorded, and its source is that same filed path. A
+    snapshot an export built (system/staging/client-snapshots/) never vouches for anything."""
+    rel = paths.rel(creaite_doc.real(filed))
+    stored = beside(filed)
+    e = entry(stored) or {}
+    if e.get("made", "approve") != "approve" or not e.get("hashes"):     # (entries from before 2.5.3 were all Approve's)
+        return None
+    p = paths.resolve(stored)
+    if p.is_symlink() or not p.is_file():
+        return None
+    try:
+        text = p.read_text(encoding="utf-8")
+        snap = json.loads(text)
+    except (OSError, ValueError):
+        return None
+    if sha(text) not in e["hashes"] or not isinstance(snap, dict) or snap.get("state") != "filed":
+        return None
+    source = snap.get("source") if isinstance(snap.get("source"), dict) else {}
+    if source.get("path") != rel or not isinstance(source.get("sha256"), str):
+        return None
+    return source["sha256"]
 
 
 def dumps(snap):
@@ -266,7 +307,7 @@ def for_filing(doc, content, stored_filed):
         raise SnapshotError("Not approved: possible internal content in the client report: " + "; ".join(found), found)
     stored = filed_snapshot(snap["project"], snap["week_ending"], doc.get("client"))
     text = dumps(snap)
-    record(stored, text, snap)
+    record(stored, text, snap, "approve")
     return stored, text
 
 
@@ -353,7 +394,11 @@ def ensure(code, fri, client, preview=False):
         raise report_doc.ReportError("Save the report before exporting it.")
     if state == "filed":
         stored = filed_snapshot(code, fri, client)
-        filed_text = paths.resolve(path).read_text(encoding="utf-8", errors="replace")
+        try:
+            filed_text = paths.resolve(path).read_text(encoding="utf-8", errors="replace")
+        except OSError:                 # v2.5.3 (#259 round 2, LOW 7): a sentence, never a fault
+            raise SnapshotError("The filed client report can't be read (creaite isn't allowed to open it), so nothing was "
+                                "exported.") from None
         if _filed_current(stored, filed_text):
             return (None if preview else stored), load(stored, code, fri), None
     snap, left = _built(code, fri, client, path, state, preview)
@@ -363,7 +408,7 @@ def ensure(code, fri, client, preview=False):
     text = dumps(snap)
     p = paths.resolve(stored)
     p.parent.mkdir(parents=True, exist_ok=True)
-    record(stored, text, snap)
+    record(stored, text, snap, "export")     # #259 round 2, HIGH 1: an export's own rebuild, never a source of trust
     tmp = p.with_name(p.name + ".part")
     tmp.write_text(text, encoding="utf-8")
     os.replace(tmp, p)

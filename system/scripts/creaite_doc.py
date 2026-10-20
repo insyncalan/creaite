@@ -230,16 +230,21 @@ def read_raw(path):
     p = real(path)
     if not p.is_file():
         raise DocError("That file isn't there.")
-    return p.read_bytes()
+    try:
+        return p.read_bytes()
+    except OSError:                     # v2.5.3 (#259 round 2, LOW 7): a sentence, never a fault (nothing is made from it)
+        raise DocError("That file can't be read (creaite isn't allowed to open it), so nothing was done.") from None
 
 
 def creaite_wrote(path, raw):
     """v2.5.3 (#259, K2): whether `raw`, the bytes just read from `path`, are exactly what creaite itself last wrote there: a draft's
-    SHA-256 is the one filechange.py recorded for creaite's last save of it that isn't undone; a filed client report's is the one its
-    snapshot recorded when Approve filed it (client_snapshot's registry, `source_sha256` of a filed snapshot). False for a file
-    edited outside creaite (ask creaite, an editor, any local process), and when it can't be told (fails closed). A save logged by
-    an ask creaite run (filechange's `run` tag, or `via` ask) is not creaite's own: ask creaite can save a draft through
-    filechange.py, never as Alan's Save."""
+    SHA-256 is the one filechange.py recorded for creaite's last save of it that isn't undone; a filed client report's is the one
+    named as its source by the snapshot Approve wrote beside THAT file (client_snapshot.approved_source: the snapshot at
+    filed_snapshot(path), recorded by Approve, never one an export built). False for a file edited outside creaite (ask creaite, an
+    editor, any local process), and when it can't be told (fails closed). A save logged by an ask creaite run (filechange's `run`
+    tag, or `via` ask) is not creaite's own: ask creaite can save a draft through filechange.py, never as Alan's Save.
+    v2.5.3 (#259 round 2, HIGH 1): an export of an edited filed report builds a snapshot of its own and records it; that record is
+    never a source of trust (it was made from the untrusted bytes), so a second export can't launder the first one's file."""
     try:
         digest = hashlib.sha256(raw).hexdigest()
         es = _changes(path)
@@ -247,7 +252,7 @@ def creaite_wrote(path, raw):
         if last.get("after") == digest and not last.get("run") and last.get("via") not in ("ask", None):
             return True
         import client_snapshot
-        return any(e.get("state") == "filed" and e.get("source_sha256") == digest for e in client_snapshot.registry().values())
+        return client_snapshot.approved_source(path) == digest
     except Exception:  # noqa: BLE001  a log or registry that can't be read: not known to be creaite's
         return False
 
@@ -423,10 +428,16 @@ SECTION_LISTS = {"rows": ROW_KEYS, "columns": COLUMN_KEYS, "figures": FIGURE_KEY
 
 
 def _shape_section(s):
-    """One section with only SECTION_KEYS, its rows, columns, figures, panes and tags each with only their own keys."""
+    """One section with only SECTION_KEYS, its rows, columns, figures, panes and tags each with only their own keys. v2.5.3 (#259
+    round 2, MEDIUM 4): its `default_heading` is derived, never stored text: creaite's own heading for one of its own client
+    sections (its id and type, report_doc.SECTIONS), "" for any other."""
+    import report_doc
     out = _only(s, SECTION_KEYS)
     if out is None:
         return None
+    if "default_heading" in out:
+        own = {sid: (typ, h) for sid, typ, h in report_doc.SECTIONS["client"]}.get(out.get("id"))
+        out["default_heading"] = own[1] if own and own[0] == out.get("type") else ""
     if s.get("internal"):
         out["audience"] = "internal"        # an `internal` flag is read as the internal report's audience before the flag goes
     for k, keys in SECTION_LISTS.items():
@@ -455,19 +466,49 @@ def _shape_table(out):
     return out
 
 
-def _shape_layout(lay):
+def _layout_known(doc):
+    """v2.5.3 (#259 round 2, MEDIUM 4): {list key: the values a client report's layout may hold} for `doc`: a section id (creaite's
+    own, report_doc.SECTIONS, or one of the document's own sections), an At a glance key (report_doc.GLANCE), a logo kind the
+    project has (report_doc.logo_kinds, with the bare `partner`; the static kinds when the project's can't be read), and a
+    milestone list of the project's own item IDs. Anything else is words stored where nothing draws them, so it never reaches a
+    file."""
+    import report_doc
+    code = str(doc.get("project") or "")
+    ids = {sid for sid, _t, _h in report_doc.SECTIONS["client"]} | {s.get("id") for s in doc.get("sections") or []
+                                                                    if isinstance(s, dict) and isinstance(s.get("id"), str)}
+    try:
+        logos = set(report_doc.logo_kinds(code)) | {"partner"}
+    except Exception:  # noqa: BLE001  a project whose partners can't be read: the static kinds only
+        logos = set(report_doc.LOGO_KINDS)
+    item = re.compile(rf"{re.escape(code)}-(?:[A-Z]-)?\d{{3}}\Z") if report_doc.CODE.match(code) else None
+    return {"order": ids.__contains__, "hidden": ids.__contains__, "glance": set(report_doc.GLANCE["client"]).__contains__,
+            "logos": logos.__contains__, "milestones": (lambda x: bool(item and item.match(x)))}
+
+
+def _a_top(rule):
+    """Whether a row rule is {top: a whole number}."""
+    return isinstance(rule, dict) and isinstance(rule.get("top"), int) and not isinstance(rule.get("top"), bool)
+
+
+def _known_list(x, ok, empty):
+    """A layout list's strings that `ok` accepts; `empty` when it isn't a list."""
+    return [v for v in x if isinstance(v, str) and ok(v)] if isinstance(x, list) else empty
+
+
+def _shape_layout(lay, doc=None):
     """v2.5.3 (#259, P7): a client report's layout with only its own keys, each list of strings only, `headings` text by section
-    id, `rows` a number (`top`) by section id."""
+    id, `rows` a number (`top`) by section id. Round 2 (MEDIUM 4): each list keeps only the values it may hold (_layout_known)."""
     out = _only(lay, LAYOUT_KEYS)
+    known = _layout_known(doc if isinstance(doc, dict) else {})
     for k in LAYOUT_LISTS:
         if k in out:
-            out[k] = [x for x in out[k] if isinstance(x, str)] if isinstance(out[k], list) else ([] if k != "milestones" else None)
+            out[k] = _known_list(out[k], known[k], None if k == "milestones" else [])
     if "headings" in out:
-        out["headings"] = {k: v for k, v in out["headings"].items() if isinstance(v, str)} if isinstance(out["headings"], dict) else {}
+        out["headings"] = {k: v for k, v in out["headings"].items() if isinstance(v, str) and known["order"](k)} \
+            if isinstance(out["headings"], dict) else {}
     if "rows" in out:
         rows = out["rows"] if isinstance(out["rows"], dict) else {}
-        out["rows"] = {k: {"top": v["top"]} for k, v in rows.items()
-                       if isinstance(v, dict) and isinstance(v.get("top"), int) and not isinstance(v.get("top"), bool)}
+        out["rows"] = {k: {"top": v["top"]} for k, v in rows.items() if known["order"](k) and _a_top(v)}
     return out
 
 
@@ -484,7 +525,7 @@ def client_shape(doc):
         if isinstance(out.get(k), dict):
             out[k] = _only(out[k], keys)
     if isinstance(out.get("layout"), dict):
-        out["layout"] = _shape_layout(out["layout"])
+        out["layout"] = _shape_layout(out["layout"], out)
     if "sources" in out:
         out["sources"] = _list_of(out["sources"], SOURCE_KEYS)
     if "items" in out:          # v2.5.3 (#259, P7): each item with only its own keys (and its values derived: derive_facts)
@@ -500,6 +541,8 @@ def clean(doc, keep_text=False):
     check(doc)
     out = derive_client(client_shape(doc)) if doc.get("kind") == "client" else copy.deepcopy(doc)
     out["sections"] = [s for s in out.get("sections") or [] if not _internal_text(out, s)]
+    if out.get("kind") == "client" and isinstance(out.get("layout"), dict):     # #259 round 2: the layout names only sections
+        out["layout"] = _shape_layout(out["layout"], out)                       # that are left (clean stays a fixed point)
     hidden = _hidden_refs(out.get("sections") or [])
     out["sections"] = [_clean_section(s, keep_text) for s in out.get("sections") or []]
     visible = _visible_text(out["sections"])

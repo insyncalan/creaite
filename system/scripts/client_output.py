@@ -179,7 +179,9 @@ def other_project_findings(con, code, text):
     return found
 
 
-LOOSE_SEP = r"[\W_]{0,4}"           # what may stand between an ID's characters: spaces, dashes, dots, any punctuation (up to four)
+LOOSE_SEP = r"[\W_]{0,8}"           # what may stand between an ID's characters: spaces, dashes, dots, any punctuation (up to eight)
+DIGIT_SEP = r"[\W_]{0,6}"           # and between its digits (round 2, LOW 6: "/", "," and "·" too, up to six)
+INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")    # zero-width and format characters
 
 
 def fold_words(text):
@@ -205,9 +207,9 @@ def _loose_refs(con, text):
     out = set()
     for (code,) in con.execute("SELECT code FROM projects"):
         letters = LOOSE_SEP.join(re.escape(c) for c in str(code).lower())
-        pat = rf"(?<![a-z0-9]){letters}{LOOSE_SEP}(?:([a-z]){LOOSE_SEP})?(\d(?:[\s._\-]{{0,3}}\d)*)(?![\s._\-]{{0,3}}\d)"
+        pat = rf"(?<![a-z0-9]){letters}{LOOSE_SEP}(?:([a-z]){LOOSE_SEP})?(\d(?:{DIGIT_SEP}\d)*)(?!{DIGIT_SEP}\d)"
         for m in re.finditer(pat, t):
-            num = _number(re.split(r"[\s._\-]+", m.group(2))).lstrip("0") or "0"
+            num = _number(re.split(r"[\W_]+", m.group(2))).lstrip("0") or "0"
             if len(num) > 3:
                 continue
             ref = f"{code}-{m.group(1).upper()}-{num.zfill(3)}" if m.group(1) else f"{code}-{num.zfill(3)}"
@@ -227,7 +229,8 @@ def loose_findings(con, code, text, skip=()):
         why = f"{ref} belongs to another project" if ref.split("-")[0] != code else client_leak.item_problem(con, ref, blocking)
         if why:
             found.append(f"{why}, but its ID appears")
-    words = f" {fold_words(text)} "
+    # round 2 (LOW 6): a zero-width or format character may stand for a space as well as inside a word, so both readings are matched
+    words = f" {fold_words(text)} | {fold_words(INVISIBLE.sub(' ', text))} "
     for table, col in OTHER_TEXT:
         for i, w in con.execute(f"SELECT id, {col} FROM {table} WHERE client_visible = 0"):
             if i not in skip and len((w or "").strip()) >= 15 and f" {fold_words(w)} " in words:

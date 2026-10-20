@@ -129,6 +129,8 @@ def guarded(fn):
         except (LookupError, ValueError, TypeError, AttributeError):     # v2.5.1 (#239): a document edited into a shape creaite
             return refuse(handler, "That report can't be read as it is (it was changed outside creaite), so nothing was done. "
                                    "Open the report again from creaite.")         # can't read is refused, never a fault
+        except OSError:                      # v2.5.3 (#259 round 2, LOW 7): a file creaite can't open is a sentence too
+            return refuse(handler, "That report's file can't be read (creaite isn't allowed to open it), so nothing was done.")
     route.__doc__ = fn.__doc__
     return route
 

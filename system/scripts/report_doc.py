@@ -522,10 +522,19 @@ def client_facts(code):
     """The project's client-safe facts as they stand: health's flag, and every client-visible milestone, action, decision and open
     risk or issue with complete client wording that no label keeps out (client_leak.item_problem). Kept in an approved internal
     report (meta.client_facts) so the week's client reports lock to it (BL-336)."""
+    import tracker
+    con = tracker.connect()
+    try:                                # #259 round 2: K3 reads the facts on every clean, so the connection is closed each time
+        return _client_facts(con, code)
+    finally:
+        con.close()
+
+
+def _client_facts(con, code):
+    """client_facts with the tracker connection `con`."""
     import client_leak
     import report
     import tracker
-    con = tracker.connect()
     p, _folder, mem = report.project(con, code)
     client = mem.get("client") or ""
     blocking = client_leak.blocking_labels(con)
