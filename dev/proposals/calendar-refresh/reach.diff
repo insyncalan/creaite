@@ -1,8 +1,8 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index 78c67014..18aff34a 100644
+index aea4c9e6..d5ec0b23 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
-@@ -1572,6 +1572,10 @@ def hook_decision(tool, inp, mode, run):
+@@ -1583,6 +1583,10 @@ def hook_decision(tool, inp, mode, run):
          why = outside_reason(tool, inp, data.get("outside"))
          if why:
              mark(run, why)
@@ -13,7 +13,7 @@ index 78c67014..18aff34a 100644
      for p in tool_paths(tool, inp):
          kind, why = classify(p, "read")
          if kind == "never":
-@@ -1772,9 +1776,12 @@ def bash_refusal(command, mode):
+@@ -1783,9 +1787,12 @@ def bash_refusal(command, mode):
  # own draft (`propose.py people map <a file in system/staging/drafts/>`), which changes nothing but that draft. Nothing else.
  def record_gate(command, mode):
      """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
@@ -27,7 +27,7 @@ index 78c67014..18aff34a 100644
      if mode == "confirmed" or (mode == "sweep" and sweep_maps_draft(command)):
          return None
      return record_problem(command)
-@@ -1897,6 +1904,75 @@ def process_gate(command):
+@@ -2011,6 +2018,76 @@ def process_gate(command):
  # ===== end #264 =====
  
  
@@ -44,7 +44,8 @@ index 78c67014..18aff34a 100644
 +CALENDAR_FACTS = "system/staging/drafts/transcripts.json"
 +CALENDAR_COMMANDS = ("calendar-window", f"calendar {CALENDAR_SPEC}", "transcripts todo", "transcripts show",
 +                     f"transcripts record {CALENDAR_FACTS}")
-+CALENDAR_M365 = ("mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource")
++from permissions import M365 as _M365  # noqa: E402  review L6: one home for the connector's prefix (permissions imports only paths)
++CALENDAR_M365 = tuple(_M365 + t for t in ("outlook_calendar_search", "read_resource"))
 +CALENDAR_TOOLS = ("Read", "Bash", "Write", "Edit", "ToolSearch", *CALENDAR_M365)
 +CALENDAR_SKILL = ".claude/skills/cx-sweep"
 +
@@ -103,7 +104,7 @@ index 78c67014..18aff34a 100644
  def vault_relative(command):
      """`python3 <this vault>/system/scripts/x.py …` or `<this vault>/system/scripts/run x.py …` as the relative form the checks
      know (BL-268: a run that wrote a file by its full path then named the script the same way, and was refused). Only when the
-@@ -1910,8 +1986,8 @@ def vault_relative(command):
+@@ -2024,8 +2101,8 @@ def vault_relative(command):
  
  
  def hook_main(argv):

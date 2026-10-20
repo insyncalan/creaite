@@ -12,6 +12,8 @@ module is what the route and the page share, all plain code:
     outcome(started)    -> {saved, meetings, days, transcripts}: what reached system/staging/calendar.json since `started`
     closure_line(res)   -> the run's one closure line
     closer()            -> the run's closer (live_server.Run(closer=…)): emits the "calendar" event, returns the closure
+    stopped_line(run)   -> the closure line when Alan pressed Stop: whether the calendar was saved before he did (#265 review L3)
+    lines()             -> the run's lines (live_server.Run(lines=…)): {"stopped": stopped_line}
 
 The request is `{"run": "<id>"?}` and nothing else. The stream is the run engine's events, plus one "calendar" event before the
 closure: {"type": "calendar", "saved": bool, "meetings": n, "days": n, "transcripts": bool}. Counts only, never a title or a body.
@@ -112,3 +114,23 @@ def closer():
         run.emit("calendar", **res)
         return {"ok": res["saved"], "line": closure_line(res), "href": "#inbox", "link": "Intake"}
     return close
+
+
+STOPPED_SAVED = "Stopped after the calendar was saved: {n} meeting{s} over {d} day{ds}."
+STOPPED_NOT_SAVED = "Stopped: the calendar was not saved. Press Refresh to start again."
+
+
+def stopped_line(run):
+    """#265 review L3: the closure line when Alan pressed Stop. The save is one atomic write, so it either finished before Stop
+    or never began: say which (counts only), and emit the "calendar" event so the page reads the saved calendar again."""
+    res = outcome(run.started)
+    run.emit("calendar", **res)                   # the run engine catches a fault here and says the plain Stop line
+    if not res["saved"]:
+        return STOPPED_NOT_SAVED
+    n, d = res["meetings"], res["days"]
+    return STOPPED_SAVED.format(n=n, s="" if n == 1 else "s", d=d, ds="" if d == 1 else "s")
+
+
+def lines():
+    """The run's lines (live_server.Run(lines=…)): the Stop line is worked out when the run stops (stopped_line)."""
+    return {"stopped": stopped_line}

@@ -1,8 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index f83c5d48..b971cb22 100644
+index cadcd932..d9ea3040 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -1253,7 +1253,8 @@ class Handler(BaseHTTPRequestHandler):
+@@ -1258,7 +1258,8 @@ class Handler(BaseHTTPRequestHandler):
          route = route or DRAFT_ROUTES.get(self.path) and (lambda r, f=DRAFT_ROUTES[self.path]: f(self, r))  # AI drafts (sprint-drafts-fields)
          # ── Sprint 4a routes (BL-104 Clear day) ──
          route = route or {"/api/intake/clear": self.intake_clear,
@@ -12,7 +12,7 @@ index f83c5d48..b971cb22 100644
          # ── Sprint 4b routes (BL-42 phase 3: transcripts) ──
          route = route or {"/api/transcripts/check": lambda r: self.transcript_run(r, "check"),
                            "/api/transcripts/load": lambda r: self.transcript_run(r, "load")}.get(self.path)
-@@ -1757,6 +1758,38 @@ class Handler(BaseHTTPRequestHandler):
+@@ -1767,6 +1768,39 @@ class Handler(BaseHTTPRequestHandler):
                  return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
          return self.follow(task, numbered=self.numbered())
  
@@ -43,7 +43,8 @@ index f83c5d48..b971cb22 100644
 +                                       "message": "A sweep is running: the calendar comes in with it."})
 +            try:
 +                task = Run(run_id, calendar_refresh.build_prompt(), None, None, None, kind="calendar",
-+                           label=calendar_refresh.label(), closer=calendar_refresh.closer())
++                           label=calendar_refresh.label(), closer=calendar_refresh.closer(),
++                           lines=calendar_refresh.lines())             # review L3: the Stop line says whether it was saved
 +            except OSError as e:
 +                return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
 +        return self.follow(task, numbered=self.numbered())
@@ -51,7 +52,7 @@ index f83c5d48..b971cb22 100644
      # ===== Sprint 4a: Clear day (BL-104) =====
      def intake_clear(self, req):
          """Set meetings aside in Intake's Calendar import, or bring them back. {op: "clear", items: [{key, day, start,
-@@ -2089,6 +2122,37 @@ KIND_PROMPTS["process"] = (
+@@ -2099,6 +2133,38 @@ KIND_PROMPTS["process"] = (
      "QUESTION: <its path> | <one short question for Alan>." + VIP_PRIVATE_RULE)
  NO_CARD_KINDS = ("process",)       # its reply never offers a card (CHANGE, EDIT, a permission): the run only stages
  # ===== end #264 =====
@@ -70,6 +71,7 @@ index f83c5d48..b971cb22 100644
 +    f"Bash(python3 system/scripts/sweep.py transcripts record {CALENDAR_FACTS})",
 +    f"Write({CALENDAR_SPEC})", f"Edit({CALENDAR_SPEC})", f"Write({CALENDAR_FACTS})", f"Edit({CALENDAR_FACTS})"])]
 +CALENDAR_DENIES = ["WebFetch", "WebSearch", *[t for t in vault_permissions.m365_read_tools() if t not in CALENDAR_M365],
++                   *vault_permissions.run_deny_extras(),       # review L6: the other connectors and the acting built-ins too
 +                   *with_wrapper([f"Bash(python3 system/scripts/{s}*)" for s in (
 +                       "tracker.py", "review.py", "propose.py", "minutes.py", "filechange.py", "report.py", "excel_sync.py",
 +                       "docx_tools.py", "prep_page.py", "archive.py", "backup.py", "update.py", "session.py")] + [
@@ -89,7 +91,7 @@ index f83c5d48..b971cb22 100644
  # ===== BL-309 (sprint-panel-sweep): "sweep" typed in the panel is its own confirmation (Alan, 13-10-2026) =====
  # The live server, never the model, decides from the request's words that it is a plain sweep (cx-sweep's triggers, a short fixed
  # list), and runs it as a chat under BL-295's guarded "sweep" mode: it may stage proposals for Review, never apply, undo, approve,
-@@ -2129,6 +2193,7 @@ PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
+@@ -2139,6 +2205,7 @@ PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
  KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools(),
                                  "Edit", "Write", "MultiEdit", "NotebookEdit"]}
  KIND_DENIES["process"] = PROCESS_DENIES                      # #264: belt and braces beside the hook's mode "process"
@@ -97,7 +99,7 @@ index f83c5d48..b971cb22 100644
  # ===== BL-301 D (v20-ai-select) ===== AI on selected text (/api/edit/ai): Claude sees only the prompt edit_ai.py builds (the selected
  # text, the option, the project's name, people and open item IDs). The run "edit-ai" has no tools at all: its allow list is empty,
  # Claude Code is started with no built-in tools (`--tools ""`) and no MCP servers (`--strict-mcp-config`), no --add-dir, and every
-@@ -2179,6 +2244,7 @@ NARROW_BUILTINS = ["--tools", "ToolSearch"]     # a narrowed run (`only`: Micros
+@@ -2189,6 +2256,7 @@ NARROW_BUILTINS = ["--tools", "ToolSearch"]     # a narrowed run (`only`: Micros
  KIND_ARGS["ask"] = ["--tools", ",".join(CHAT_BUILTINS)]
  KIND_ARGS["sweep"] = ["--tools", ",".join(SWEEP_BUILTINS)]
  KIND_ARGS["process"] = ["--tools", ",".join(PROCESS_BUILTINS), "--strict-mcp-config"]       # #264: no MCP server at all
@@ -105,7 +107,7 @@ index f83c5d48..b971cb22 100644
  for _k in ("prep", "generate", "check", "load"):
      KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
  for _k in ("shape-closed", "notes-find"):
-@@ -2265,8 +2331,8 @@ def run_prompt(kind, confirmed):
+@@ -2275,8 +2343,8 @@ def run_prompt(kind, confirmed):
  
  def guard_mode(kind, confirmed):
      """The guard hook's mode for a guarded run: "sweep" for Close the day's catch-up (BL-295), else confirmed or ask."""
@@ -116,7 +118,7 @@ index f83c5d48..b971cb22 100644
      return "sweep" if kind == "sweep" else "confirmed" if confirmed else "ask"
  
  
-@@ -2330,7 +2396,7 @@ def guard_args(run_id, mode, held, session, files=None):
+@@ -2340,7 +2408,7 @@ def guard_args(run_id, mode, held, session, files=None):
  def run_dirs(policy, guarded):
      """A run's --add-dir folders: none for a tool-less run; the home folder too for a guarded chat or sweep (BL-141); the
      projects folder only otherwise (#264: a Process run too)."""
@@ -125,7 +127,7 @@ index f83c5d48..b971cb22 100644
          return []
      return reach_dirs() if guarded and policy != "process" else extra_dirs()
  
-@@ -2587,7 +2653,7 @@ class Run:
+@@ -2597,7 +2665,7 @@ class Run:
                  self.emit("confirm", title=m.group(1).strip(), body=m.group(2).strip())
          self._prep_offer(final, m)                   # BL-307: the live server's Prep page, offered on its own card
          p = re.search(r"^PERMISSION:\s*(.+?)\s*\|\s*(.+)$", final, re.M)
@@ -134,7 +136,7 @@ index f83c5d48..b971cb22 100644
          if self.guarded and self.kind not in NO_CARD_KINDS:     # #264: a Process run only stages
              build_card(self, rule_item)
              build_edit_card(self, final)             # BL-258: a tracker change on one card
-@@ -2628,6 +2694,11 @@ class Run:
+@@ -2638,6 +2706,11 @@ class Run:
                    project=ctx.get("project_name") or "", day=ctx.get("day"))
      # ===== end BL-307 =====
  
@@ -146,7 +148,23 @@ index f83c5d48..b971cb22 100644
      def _permission(self, p):
          """BL-75, BL-140, BL-141: a rule the run needs becomes an item on the one card; otherwise the panel says why not."""
          why = p.group(2).strip()[:300]
-@@ -2820,7 +2891,8 @@ class Run:
+@@ -2678,8 +2751,14 @@ class Run:
+         (a draft that couldn't be read, a transcript's outcome) or the kind's own done line, with its link."""
+         lines = getattr(self, "lines", None) or {}
+         if self.stop:
++            stopped = lines.get("stopped")
++            if callable(stopped):                          # #265 review L3: a line worked out at the stop (was it saved?)
++                try:
++                    stopped = stopped(self)
++                except Exception:  # noqa: BLE001  never let the line break the closure
++                    stopped = None
+             return {"ok": False, "stopped": True,
+-                    "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else lines.get("stopped") or PLAIN_STOPPED}
++                    "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else stopped or PLAIN_STOPPED}
+         if failed:
+             return {"ok": False, "line": lines.get("failed") or PLAIN_FAILED}
+         got = self._closer()
+@@ -2830,7 +2909,8 @@ class Run:
  # the message, Shape, Edit with AI and Find updates are "draft"; Generate and Make it executive are "generate". The label is the
  # engine's kind or the draft's kind: fixed words, never the text of a prompt, a reply or a name. A failure never touches the run.
  USAGE_KIND = {"ask": "ask", "search": "ask", "sweep": "sweep", "prep": "prep", "check": "check", "load": "load",
@@ -156,7 +174,7 @@ index f83c5d48..b971cb22 100644
  
  
  def usage_kind(run):
-@@ -3171,7 +3243,8 @@ def describe_tool(name, inp):
+@@ -3181,7 +3261,8 @@ def describe_tool(name, inp):
  # `claude -p` call of its own, vip_check) and never shows in ask creaite.
  PLAIN_ASK = {"prep": "Make a prep page", "generate": "Draft with Claude", "shape-closed": "Shape the meeting",
               "check": "Check a meeting's transcript", "load": "Load a meeting's transcript",

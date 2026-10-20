@@ -114,6 +114,22 @@ class Helpers(unittest.TestCase):
         self.assertEqual(ev, [["calendar", after]])                                       # counts only, never a title
         self.assertFalse(later["saved"])                                                  # an older save isn't this run's
 
+    def test_the_stop_line_says_whether_the_calendar_was_saved(self):
+        """Review L3: Stop after the save says it was saved (counts only), never "nothing was saved"; before it, not saved."""
+        code = ("import calendar_refresh as cr, paths, time\n"
+                "ev = []\n"
+                "class R: started = time.time() + 100\n"
+                "R.emit = staticmethod(lambda k, **d: ev.append(k))\n"
+                "before = cr.lines()['stopped'](R())\n"
+                "R.started = time.time()\n"
+                "paths.CALENDAR.write_text(json.dumps({'days': {'2026-10-20': [{'title': 'A'}, {'title': 'B'}]}}))\n"
+                "print(json.dumps([before, cr.lines()['stopped'](R()), ev]))")
+        before, after, ev = in_vault(self.v, code)
+        self.assertEqual(before, "Stopped: the calendar was not saved. Press Refresh to start again.")
+        self.assertEqual(after, "Stopped after the calendar was saved: 2 meetings over 1 day.")
+        self.assertNotIn("nothing was saved", after)
+        self.assertEqual(ev, ["calendar", "calendar"])                                    # the page reads the calendar again
+
     def test_the_usage_monitor_has_the_kind_and_its_label(self):
         import usage_log
         self.assertIn("calendar", usage_log.KINDS)
@@ -184,6 +200,33 @@ class Fence(unittest.TestCase):
             got = self.decide(self.everything_else(root))
         finally:
             hard.unlink()
+        for name, ok in got.items():
+            with self.subTest(name):
+                self.assertFalse(ok, name)
+
+    @needs_diff
+    def test_a_drafts_folder_that_is_a_link_is_refused(self):
+        """Review L2: when system/staging/drafts is itself a link (to a folder elsewhere), the run may neither write its input
+        files through it nor run the calendar commands on them, although their real paths look like the run's own."""
+        v = Vault()
+        self.addCleanup(v.cleanup)
+        v.run("init")
+        drafts = v.root / "system/staging/drafts"
+        if drafts.exists():
+            import shutil
+            shutil.rmtree(drafts)
+        elsewhere = v.root / "projects/linked-drafts"
+        elsewhere.mkdir(parents=True)
+        (elsewhere / "calendar.json").write_text('{"days": {}}')
+        drafts.symlink_to(elsewhere, target_is_directory=True)
+        root = str(v.root)
+        code = ("import reach; a = json.loads(sys.stdin.read()); reach.start_run('c-2', 'calendar', {}, None); "
+                "print(json.dumps({k: reach.decide(t, i, 'calendar', 'c-2', True)[0] for k, (t, i) in a.items()}))")
+        got = in_vault(v, code, {"write_spec": ("Write", {"file_path": f"{root}/{SPEC}"}),
+                                 "write_facts": ("Write", {"file_path": f"{root}/{FACTS}"}),
+                                 "read_spec": ("Read", {"file_path": f"{root}/{SPEC}"}),
+                                 "save": self.run_(f"sweep.py calendar {SPEC}"),
+                                 "record": self.run_(f"sweep.py transcripts record {FACTS}")})
         for name, ok in got.items():
             with self.subTest(name):
                 self.assertFalse(ok, name)
@@ -316,6 +359,8 @@ if "--mode calendar" in settings:
     if write("system/staging/drafts/transcripts.json", {"results": [{"id": "ev-r2", "online": False, "uri": None, "count": None,
                                                                     "error": None}]}):
         bash(3, "system/scripts/run sweep.py transcripts record system/staging/drafts/transcripts.json")
+    if (root / "slow-calendar").exists():                    # review L3: Alan presses Stop after the save
+        time.sleep(20)
     said.append("CONFIRM: Apply the proposals | Applies them\nPERMISSION: Bash(python3 system/scripts/tracker.py apply*) | to apply")
 else:
     said = ["Plain chat. I've read the calendar.\nCONFIRM: Save the calendar | Saves it"]
@@ -424,7 +469,8 @@ class ThroughTheServer(unittest.TestCase):
             self.assertFalse(any(absent in t for t in allowed), absent)
         denied = a[a.index("--disallowedTools") + 1]
         for d in ("mcp__claude_ai_Microsoft_365__outlook_email_search", "Bash(python3 system/scripts/tracker.py*)",
-                  "Bash(python3 system/scripts/sweep.py stage*)", "WebFetch"):
+                  "Bash(python3 system/scripts/sweep.py stage*)", "WebFetch",
+                  "mcp__claude_ai_Todoist", "SendMessage", "NotebookEdit"):         # review L6: the other connectors too
             self.assertIn(d, denied)
         self.assertIn("#265", a[a.index("--append-system-prompt") + 1])
         v = c["verdicts"]
@@ -462,6 +508,48 @@ class ThroughTheServer(unittest.TestCase):
             self.assertTrue(got.get("busy"))
         finally:
             first.join(timeout=60)
+
+    @needs_diff
+    def test_3b_not_while_a_sweep_holds_its_lock(self):
+        """Review L1: a sweep reads the calendar itself, so Refresh is a 409 while one holds the lock, and starts once it's gone."""
+        from datetime import datetime
+        lock = self.v.root / "system/staging/sweep.lock"
+        lock.write_text(datetime.now().strftime("%Y-%m-%d %H:%M") + "\n")       # a sweep from Claude Code: no run, fresh
+        try:
+            status, got = self.post("/api/calendar/refresh", {})
+            self.assertEqual(status, 409, got)
+            self.assertTrue(got.get("busy"))
+            self.assertIn("A sweep is running", got["message"])
+            self.assertNotIn("run", got)                                           # no run of ours to follow
+        finally:
+            lock.unlink()
+        status, got = self.post("/api/calendar/refresh", {"run": "c-after-lock"})
+        self.assertEqual(status, 200, got)
+
+    @needs_diff
+    def test_3c_stop_after_the_save_says_it_was_saved(self):
+        """Review L3: Stop pressed after the calendar was saved says so, never "nothing was saved"."""
+        marker, cal = self.v.root / "slow-calendar", self.v.root / "system/staging/calendar.json"
+        marker.write_text("")
+        got = {}
+        started = time.time()
+        t = threading.Thread(target=lambda: got.update(r=self.post("/api/calendar/refresh", {"run": "c-stop-1"})))
+        t.start()
+        try:
+            for _ in range(300):
+                if cal.exists() and cal.stat().st_mtime >= started - 1 and (self.v.root / "system/staging/transcripts.json").exists():
+                    break
+                time.sleep(0.05)
+            time.sleep(0.5)
+            self.post("/api/ask/stop", {"run": "c-stop-1"})
+            t.join(timeout=60)
+        finally:
+            marker.unlink()
+        status, evs = got["r"]
+        closure = next(e for e in evs if e["type"] == "closure")
+        self.assertTrue(closure.get("stopped"), closure)
+        self.assertTrue(closure["line"].startswith("Stopped after the calendar was saved: 2 meetings"), closure)
+        self.assertNotIn("nothing was saved", closure["line"])
 
     @needs_diff
     def test_4_not_when_the_calendar_is_off_or_in_the_development_repository(self):
@@ -502,6 +590,103 @@ class ThroughTheServer(unittest.TestCase):
         self.assertEqual(status, 200, evs)
         a = self.call(lambda c: c["prompt"] == "refresh calendar")["args"]
         self.assertIn("--mode sweep", a[a.index("--settings") + 1])              # BL-309, unchanged
+
+
+class SweepCalendarSave(unittest.TestCase):
+    """sweep.py calendar and transcripts record (plain code; review L3, L4, L5), in a throwaway vault."""
+
+    def setUp(self):
+        from datetime import date, timedelta
+        self.v = Vault()
+        self.addCleanup(self.v.cleanup)
+        self.v.run("init")
+        self.today = date.today().isoformat()
+        self.tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        self.cal = self.v.root / "system/staging/calendar.json"
+
+    def save(self, days):
+        spec = self.v.root / SPEC
+        spec.parent.mkdir(parents=True, exist_ok=True)
+        spec.write_text(json.dumps({"days": days}))
+        return self.v.run("calendar", str(spec), script="sweep.py", ok=False)
+
+    def held(self):
+        return json.loads(self.cal.read_text())["days"]
+
+    def meeting(self, **kw):
+        return {"id": "ev-1", "start": "09:00", "end": "09:30", "title": "Pilot readiness review", "where": "Room 2",
+                "teams": True, "organiser": "Jane Doe", "sensitivity": "normal", **kw}
+
+    def test_the_save_is_atomic(self):
+        """L3: the calendar is written through a new file and a rename (a reader never sees half a file): a new inode."""
+        self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
+        before = self.cal.stat().st_ino
+        r = self.save({self.tomorrow: [self.meeting(title="Supplier checkpoint")]})
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotEqual(self.cal.stat().st_ino, before)
+        self.assertEqual([e["title"] for e in self.held()[self.tomorrow]], ["Supplier checkpoint"])
+        self.assertEqual(list(self.cal.parent.glob(".calendar.json.*")), [])               # no temporary file left behind
+
+    def test_an_empty_reply_keeps_a_saved_calendar_with_meetings_ahead(self):
+        """L4: no meetings at all (no days, or only empty days) never wipes today's and later saved meetings."""
+        self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
+        kept = self.cal.read_text()
+        for days in ({}, {self.today: [], self.tomorrow: []}):
+            with self.subTest(days=days):
+                r = self.save(days)
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn("The reply held no meetings; kept the saved calendar.", r.stdout)
+                self.assertEqual(self.cal.read_text(), kept)
+
+    def test_an_empty_reply_saves_when_nothing_ahead_is_saved(self):
+        """L4: with no meeting today or later in the saved calendar, an empty week is saved as it is."""
+        r = self.save({})
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("Calendar saved: 0 meetings", r.stdout)
+
+    def test_a_confidential_meeting_keeps_only_its_title_and_times(self):
+        """L5: a confidential meeting keeps its ID, title and times: no place, organiser, address, recurrence, Teams flag,
+        body or attendees."""
+        ev = self.meeting(sensitivity="confidential", organiser_email="jane.doe@example.test", recurrence="weekly",
+                          body="Board pack attached. Join https://example.test/j/1?pwd=abc", attendees=["Sam Lee"],
+                          attachments=["pack.pdf"])
+        self.assertEqual(self.save({self.tomorrow: [ev]}).returncode, 0)
+        row = self.held()[self.tomorrow][0]
+        self.assertEqual(row, {"id": "ev-1", "start": "09:00", "end": "09:30", "all_day": False, "title": "Pilot readiness review",
+                               "where": "", "teams": False, "private": False, "organiser": False, "sensitivity": "confidential"})
+        text = self.cal.read_text()
+        for gone in ("Room 2", "Jane Doe", "jane.doe", "weekly", "Board pack", "Sam Lee", "pack.pdf", "pwd"):
+            self.assertNotIn(gone, text)
+
+    def test_keyed_links_and_pin_lines_never_reach_a_saved_body(self):
+        """L5: any provider's link that carries a key, and any PIN or passcode line, are taken out of an invite's body."""
+        body = ("Agenda: budget and the pilot plan\nJoin: https://meet.example.org/j/123?pwd=abcXYZ\n"
+                "https://video.example.net/room?pin=5566\nPIN 4321\nConference PIN: 99887#\nPasscode: kq7\n"
+                "Pass code 2468\nPinned items: three risks")
+        self.assertEqual(self.save({self.tomorrow: [self.meeting(body=body)]}).returncode, 0)
+        saved = self.held()[self.tomorrow][0]["body"]
+        self.assertEqual(saved, "Agenda: budget and the pilot plan\nPinned items: three risks")
+
+    def test_transcripts_record_keeps_only_well_formed_facts(self):
+        """L5: a fact with any other field (a body, a passcode), a uri or thread that isn't a short link, or a value of the
+        wrong type is refused and named; a good one is recorded."""
+        self.assertEqual(self.save({self.today: [self.meeting(id="ev-ok", start="00:00", end="00:01")]}).returncode, 0)
+        good = {"id": "ev-ok", "online": True, "uri": "meeting-transcript:///a", "count": 1, "error": None}
+        bad = [dict(good, id="ev-body", body="Join with passcode 1234"), dict(good, id="ev-pass", passcode="1234"),
+               dict(good, id="ev-long", uri="x" * 5000), dict(good, id="ev-type", uri=["a"]),
+               dict(good, id="ev-key", uri="https://example.test/t?pwd=abc"), dict(good, id="ev-space", thread="a b"),
+               dict(good, id="ev-online", online="yes"), dict(good, id="ev-count", count="1"),
+               dict(good, id="ev-error", error="Your PIN is 1234"), "not an object"]
+        facts = self.v.root / FACTS
+        facts.write_text(json.dumps({"results": [good, *bad]}))
+        r = self.v.run("transcripts", "record", str(facts), script="sweep.py")
+        out = json.loads(r.stdout)
+        self.assertEqual(out["recorded"], {"ev-ok": "available"})
+        self.assertEqual(out["refused"], [b["id"] for b in bad[:-1]] + ["#11"])
+        kept = (self.v.root / "system/staging/transcripts.json").read_text()
+        self.assertEqual(list(json.loads(kept)["checked"]), ["ev-ok"])
+        for secret in ("passcode", "1234", "pwd", "x" * 50):
+            self.assertNotIn(secret, kept)
 
 
 if __name__ == "__main__":
