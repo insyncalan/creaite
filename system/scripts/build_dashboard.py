@@ -288,11 +288,11 @@ def milestones(con, project, actions):
     events = tracker.milestone_events(con, [m["id"] for m in found])
     import forecast                                     # BL-184: the slip range (internal; Movement only)
     likely = forecast.ranges(con, {m["id"] for m in found})
-    today = date.today()
+    today = clock().date()                               # CREAITE_NOW fixes it for tests, as everywhere else in this build
     for m in found:
         when = m["forecast_date"] or m["baseline_date"] or ""
         late = bool(m["baseline_date"] and m["forecast_date"] and m["forecast_date"] > m["baseline_date"])
-        state = tracker.milestone_state(m)
+        state = tracker.milestone_state(m, today.isoformat())
         status = "done" if m["status"] == "Done" else "slip" if (late or state in ("Slipped", "Overdue")) else ""
         linked = [a for a in actions if a["ms"] == m["id"] and a["st"] != "Cancelled"]
         closed = sum(a["st"] == "Closed" for a in linked)
@@ -329,7 +329,8 @@ def milestone_detail(con, m, events, today):
     the forecast, client visibility and wording, how often it moved and whether it was re-baselined, a weekly history of
     its dates, and a log of its changes, one entry per apply, with why."""
     import tracker
-    st, sug = tracker.milestone_state(m), tracker.suggested_state(m)
+    on = today.isoformat()                       # the build's day (CREAITE_NOW in tests), not the real clock
+    st, sug = tracker.milestone_state(m, on), tracker.suggested_state(m, on)
     orig = tracker.milestone_original(con, m["id"], m["baseline_date"])
     cvis = bool(tracker.client_milestones([m]))
     log, moves, rb = [], 0, None
