@@ -995,7 +995,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-pknd]"); 
    new or existing. Attach is the milestone chip's own change (staged, or into the new item's draft). Nothing is attached by itself. */
 export function pkDepDraw(x,k){ const box=$("#pkDep"); if(!box) return; box.textContent="";
   if(k!=="raid"||x.type!=="Dependency"||x.ms||!x.p||!OPENST(x.st||"Open")) return; const key=shared.CUR.mode==="new"?"new":pkCid();
-  if((store.get("creaite-dep-none",{})[key])===depHash(x.t)) return;
+  if((store.obj("creaite-dep-none")[key])===depHash(x.t)) return;
   const L=depSuggest(x.p,x.due||""); if(!L.length) return;
   depSugDraw(box,L,"pkdep"); }
 /* ===== end BL-179 (dependency suggestions) ===== */
@@ -1005,7 +1005,7 @@ addHTML($("#pkProps2"),"afterend",html`<div id="pkDep"></div>`);
 PKDRAW.push(pkDepDraw);
 $("#pkDep").addEventListener("click",e=>{ if(!shared.CUR||!pkOn()) return; const a=e.target.closest("[data-pkdep]"), n=e.target.closest("[data-pkdepnone]"), x=curObj(), k=shared.CUR.k, id=pkCid();
   if(a) pkCommit(k,id,{ms:a.dataset.pkdep},"Milestone","none",msName(a.dataset.pkdep));
-  else if(n){ const d=store.get("creaite-dep-none",{}); d[shared.CUR.mode==="new"?"new":id]=depHash(x.t); store.set("creaite-dep-none",d); pkDepDraw(x,k); } });
+  else if(n){ const d=store.obj("creaite-dep-none"); d[shared.CUR.mode==="new"?"new":id]=depHash(x.t); store.set("creaite-dep-none",d); pkDepDraw(x,k); } });
 if(shared.CUR&&pkOn()) drawPanel();
 }
 /* ===== BL-180 (sprint-peek-new) ===== errors: a banner to dismiss or investigate, not a permanent header link. When the debug log

@@ -112,7 +112,7 @@ export function revRow(r,idx,g,cls,head){ const minKids=isMin(r)&&head.kids.some
   return h; }
 export let RVLASTN=null, RVLASTV=null, RVSHOWN=false;   /* BL-263: the cleared tick's memory of the last draw */
 shared.MREVLEFT=false;   /* declared before renderReview, which runs at load */
-export const MLV=store.get("creaite-lastviewed",{}), MLVAT={}, MNEWGONE=new Set();   /* declared before renderReview, which runs at load */
+export const MLV=store.obj("creaite-lastviewed"), MLVAT={}, MNEWGONE=new Set();   /* declared before renderReview, which runs at load */
 shared.RF=null;      /* {q:[n…], i, key} while the mode is on */
 export const mFileAt=f=>{ const m=/(\d{4}-\d{2}-\d{2})[-T_ ]?(\d{2})(\d{2})/.exec(f||""); return m?`${m[1]} ${m[2]}:${m[3]}`:null; };   /* declared before renderReview, which runs at load */
 shared.MNEWIO=null;   /* declared before renderReview, which runs at load */

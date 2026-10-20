@@ -12,7 +12,7 @@ import { pendingEdit } from "./ask.js";
 import { inboxBadge, renderInbox } from "./intake.js";
 import { renderToday } from "./today.js";
 /* ======================= Files ======================= */
-shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.get("creaite-files-open",[]));
+shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.list("creaite-files-open"));
 /* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
 export const farch=()=>D.files_archived||[];
 export const FNAME=Object.assign({_portfolio:"projects/_portfolio",inbox:"inbox"},D.folders);
