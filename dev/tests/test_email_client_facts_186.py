@@ -125,9 +125,13 @@ LATER = (("CLIENT_FIELDS = {", REPO / "dev" / "proposals" / "client-messaging-26
 
 
 def unpatch(root):
-    """Take #186 out of a copy that has it, the proposals on top of it first."""
-    for marker, diff in LATER:
-        if marker in (root / "system/scripts/edit_ai.py").read_text(encoding="utf-8"):
+    """Take #186 out of a copy that has it, the proposals on top of it first, the last applied first (#262 after #263 has a diff of
+    its own)."""
+    src = lambda: (root / "system/scripts/edit_ai.py").read_text(encoding="utf-8")   # noqa: E731
+    for marker, diff in reversed(LATER):
+        if marker in src():
+            if marker.startswith("MINUTES") and LATER[0][0] in src():
+                diff = diff.with_name("edit_ai-after-263.diff")
             subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(diff)], check=True)
     subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(DIFF)], check=True)
 
@@ -573,11 +577,61 @@ if LiveBrowserCase is not None:
                 b.pump(0.4)
             self.assertFalse(b.eval("deAiSafe()"))
             self.assertEqual(b.eval("CAPS"), 1)
-            b.click("#dePrev")
-            b.key("a", 4)
-            b.pump(0.4)
+            select_words(b, "I hope you")                               # #186 review F1: a real selection (the editor's own)
             self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"), "an old server: no bar for an outside email")
             b.eval("document.getElementById('deDlg')?.close(); true")
+
+    class ThePageBeforeCaps(LiveBrowserCase):
+        """With the diff, before /api/edit/ai/caps has answered (held here): the bar is off for an outside recipient, and a suggestion
+        for an internal one sends no addresses (#186 review F1)."""
+        shared_server = True
+        width, height = 1400, 900
+
+        @classmethod
+        def load(cls, v):
+            R.populate(v)
+            prepare(v.root)
+            cls.fake = v.root / "fake_claude.py"
+            cls.fake.write_text(t117.FAKE)
+            cls.fake.chmod(0o755)
+
+        @classmethod
+        def server_env(cls):
+            return {"CREAITE_CLAUDE": str(cls.fake)}
+
+        def test_before_caps_answers_no_bar_outside_and_no_addresses_sent(self):
+            if UNPATCHED:
+                self.skipTest("without the diff caps never answers yes: ThePageOldServer")
+            b = self.b
+            b.eval("""window.__f2=window.__f2||window.fetch; window.fetch=(u,o)=>String(u).endsWith("/api/edit/ai/caps")?new Promise(()=>{}):window.__f2(u,o); true""")
+            b.eval(PREP % json.dumps(OUTSIDE))                         # PREP's own fetch wrapper records /api/edit/ai bodies
+            b.eval('openDraftEmail("Jane Doe"); true')
+            b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+            b.pump(0.4)
+            self.assertFalse(b.eval("deAiSafe()"))
+            select_words(b, "I hope you")
+            self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"), "outside, caps not answered: no bar")
+            b.eval('REG[0].email=%s; openDraftEmail("Jane Doe"); true' % json.dumps(INSIDE))   # an internal recipient: the bar is on
+            b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+            b.pump(0.4)
+            select_words(b, "I hope you")
+            b.wait(f"document.querySelector('{LAYER} .aispark')")
+            b.click(f"{LAYER} .aispark")
+            b.wait(f"document.querySelector('{LAYER} .aibar')")
+            b.click(f'{LAYER} .aibar button[data-tip="AI: improve"]')
+            b.wait(f"document.querySelector('{LAYER} [role=menu]')")
+            b.click(f"{LAYER} [role=menu] [data-ai=rewrite]")
+            b.wait("SENT.length>0", 30)
+            self.assertNotIn("recipients", b.eval("Object.keys(SENT.at(-1))"))      # no addresses before the server says yes
+            b.eval("aiSug.value=null; aiBar.value=null; document.getElementById('deDlg')?.close(); true")
+
+
+    def select_words(b, words):
+        """Select `words` in the Draft email's preview by the editor's own selection, after a click into it."""
+        b.click("#dePrev")
+        b.eval("""((w)=>{ const h=edOf(document.querySelector('#dePrev')); let at=-1; h.editor.state.doc.descendants((n,pos)=>{ if(at<0&&n.isText){ const i=n.text.indexOf(w); if(i>=0) at=pos+i; } });
+          h.focus(); h.editor.commands.setTextSelection({from:at,to:at+w.length}); })(%s)""" % json.dumps(words))
+        b.pump(0.4)
 
 
 if __name__ == "__main__":
