@@ -357,7 +357,7 @@ function wire(){
  var sb=$('[data-sum]');if(sb){sb.onblur=function(){SUMM=sb.textContent.trim()||SUMM};sb.onkeydown=function(k){if(k.key=='Escape'){sb.textContent=SUMM;sb.blur()}}}
  $$('[data-dueb]').forEach(function(b){b.onclick=function(e){e.stopPropagation();dpop(b,itm(b.dataset.dueb))}});
  $$('select.msel').forEach(function(e){e.onchange=function(){var x=itm(e.dataset.id),v=e.value;if(e.dataset.f=='due'&&v&&!/^\d\d-\d\d-\d{4}$/.test(v)){e.value=x.due||'';return}x[e.dataset.f]=v;draw()}})}
-function showPane(on){$('.mnwrap').classList.toggle('withpane',on);$('#trBtn').setAttribute('aria-pressed',on);setTimeout(fit,0)}
+function showPane(on,keep){if(keep!==false){try{localStorage.setItem('mn.transcript',on?'1':'0')}catch(e){}}$('.mnwrap').classList.toggle('withpane',on);$('#trBtn').setAttribute('aria-pressed',on);setTimeout(fit,0)}
 $('#turns').innerHTML=TURNS.map(function(t){return '<li><span class="mnwho">'+t[0]+'</span> <span class="mntime">'+t[1]+'</span><div>'+t[2]+'</div></li>'}).join('');
 $('#turnN').textContent=TURNS.length+' turns';
 $$('#turns li').forEach(function(l,i){l.onmouseenter=function(){$$('tr.mi').forEach(function(r){r.classList.toggle('hl',itm(r.dataset.id).turn==i)})};l.onmouseleave=function(){$$('tr.mi').forEach(function(r){r.classList.remove('hl')})}});
@@ -401,6 +401,7 @@ function dpop(b,x){closePop();var cur=parseD(x.due)||new Date(2026,9,20),vm=new 
 $('#exBtn').onclick=function(e){e.stopPropagation();var o=$('.mnpop.exm');closePop();if(o)return;var r=this.getBoundingClientRect(),d=document.createElement('div');d.className='pkpop mnpop exm';d.setAttribute('role','menu');d.style.cssText='position:fixed;z-index:var(--z-pop);left:auto;top:'+(r.bottom+4)+'px;right:'+(innerWidth-r.right)+'px;width:290px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px';
  d.innerHTML=[['Word','The minutes template'],['PDF','Printed from the page'],['HTML','A read-only page, filed beside the minutes'],['',''],['Draft the follow-up email','From these minutes; copied, never sent']].map(function(f){return f[0]?'<button type="button" role="menuitem" class="exi" style="display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:6px;cursor:pointer;font:inherit"><b style="font-weight:600">'+f[0]+'</b><div class="sub" style="font-size:12px">'+f[1]+'</div></button>':'<hr style="border:0;border-top:1px solid var(--line);margin:4px 0">'}).join('');
  document.body.appendChild(d);$$('.exi',d).forEach(function(b){b.onmouseenter=function(){b.style.background='var(--sunk)'};b.onmouseleave=function(){b.style.background='none'};b.onclick=closePop})};
+try{if(localStorage.getItem('mn.transcript')=='0')showPane(false,false)}catch(e){}
 draw();
 })();
 </script></body></html>
