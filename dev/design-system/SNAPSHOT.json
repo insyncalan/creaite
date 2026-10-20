@@ -1,9 +1,9 @@
 {
- "commit": "c237a088",
- "branch": "origin/v220-int-gate",
- "version_file": "2.1.0",
- "subject": "cdp.py and test_current_state_live: the JS probes on short lines and the re-raise chained (check.py ",
- "taken": "2026-10-17",
+ "commit": "5e6770d0",
+ "branch": "v252-no-reporting-card",
+ "version_file": "2.5.2",
+ "subject": "#254: cockpit golden without the Reporting card (run_tests.py --update-snapshots cockpit); two comme",
+ "taken": "2026-10-20",
  "palette": "creaite",
  "mode": "light",
  "viewport": "1400x1000"

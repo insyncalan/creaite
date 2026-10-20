@@ -1,0 +1,24 @@
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -104,7 +104,9 @@
+                          approve_minutes, through tracker.py apply); unticked items wait in Review
+ - POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (read only)
+ - POST /api/minutes/export {path, format, file_beside, version}: HTML, Word or PDF through creaite_doc.export (P2), opened once
+-                         made; version "distributed" exports the distributed version (approved minutes only; never overwriting)
++                         made; version "distributed" exports the distributed version (approved minutes only; never overwriting);
++                         a file that is a report by any sign is refused (v2.5.1), and creaite_doc.export never renders a client
++                         report but from client_snapshot.client_export
+ - POST /api/day/close    {choices, prep}: close the day: the time and BL-295's plan (First thing tomorrow, Review now: references
+                          only) in system/staging/day-closed.json, and the prep pages queued; waits for a running catch-up sweep
+ - POST /api/day/card, /api/day/catchup {force}, /catchup/status, /catchup/skip, /api/day/prep {op, keys}: Close the day as a
+@@ -158,7 +160,9 @@
+ - POST /api/log/error    a page script error, short and redacted, into the debug log; /api/diagnostics {report}: Settings ›
+                          Diagnostics' errors, or the plain-text report to paste (BL-102)
+ - POST /api/report/draft, /save, /approve, /check, /export, /logo: the weekly and client reports
+-                         (report_server.py; /check and /logo are read only)
++                         (report_server.py; /check and /logo are read only); /exported-view: Show as exported for a client
++                         report, the server's render of a preview snapshot (v2.5.1, #239: every client file is made by
++                         client_snapshot.client_export from the report's checked snapshot; read only, writes nothing)
+ - POST /api/settings/catalogue  every setting: group, Essentials or Advanced, label, line, reason, default, value, changed,
+                          resettable, last changed; the Essentials rows; counts (BL-320, settings_catalogue.py). Read only
+ - POST /api/settings/reset {key | keys}: put settings back to their defaults, saved as the page's own settings save is (a backup,

@@ -1,0 +1,83 @@
+--- a/system/scripts/live_server.py	2026-10-20 11:02:54
++++ b/system/scripts/live_server.py	2026-10-20 11:02:54
+@@ -184,6 +184,7 @@
+ import tempfile
+ import threading
+ import time
++import traceback
+ from datetime import date, datetime, timedelta
+ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+ from pathlib import Path
+@@ -1211,6 +1212,7 @@
+         except CLIENT_LEFT:                                       # BL-284: the page left; not a 500
+             raise
+         except Exception as e:                                    # the page keeps its old list and says so
++            log_fault(self, e)                                    # #253: the cause, by class and frame
+             self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
+ 
+     def usage_get(self):
+@@ -1221,6 +1223,7 @@
+         except CLIENT_LEFT:                                       # the page left; not a 500
+             raise
+         except Exception as e:                                    # the tab keeps the figures built into the page
++            log_fault(self, e)                                    # #253: the cause, by class and frame
+             self.send(500, {"ok": False, "message": f"{type(e).__name__}"})
+ 
+     def do_POST(self):
+@@ -1270,6 +1273,7 @@
+         logged at info, never answered or logged as a 500 (BL-284)."""
+         if isinstance(e, CLIENT_LEFT):
+             raise e
++        log_fault(self, e)                                        # #253: the cause, by route, class and frame, once a minute
+         return self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
+ 
+     def fs(self, req):
+@@ -7847,6 +7851,37 @@
+ # ===== end BL-269 =====
+ 
+ 
++# ===== #253 (log hygiene) ===== an unhandled route error's cause: the route, the exception's class and its innermost
++# frames (file name, line, function), at ERROR, once per route per minute so a loop cannot flood the log. Never str(e):
++# an exception's message can carry the request's own text. A page that left mid-reply (CLIENT_LEFT) stays at info.
++FAULT_EVERY = 60
++FAULT_SEEN = {}                     # "METHOD route" → when its cause was last logged (monotonic seconds)
++FAULT_LOCK = threading.Lock()
++
++
++def fault_frames(e, depth=3):
++    """e's innermost traceback frames as "file.py:line in function", innermost first: file names only, no source text."""
++    frames = traceback.extract_tb(e.__traceback__)[-depth:] if e.__traceback__ else []
++    return " < ".join(f"{Path(f.filename).name}:{f.lineno} in {f.name}" for f in reversed(frames))
++
++
++def log_fault(handler, e):
++    """Log a route error's cause (#253): never its message; at most once per route per minute; a page that left is not one."""
++    if isinstance(e, CLIENT_LEFT):
++        return
++    try:
++        key, at = f"{handler.command} {log_route(handler)}", time.monotonic()
++        with FAULT_LOCK:
++            if at - FAULT_SEEN.get(key, at - FAULT_EVERY) < FAULT_EVERY:
++                return
++            FAULT_SEEN[key] = at
++        where = fault_frames(e)
++        debuglog.error("server", f"{key} raised {type(e).__name__}" + (f" at {where}" if where else ""))
++    except Exception:  # noqa: BLE001  a log line never stops the answer
++        pass
++# ===== end #253 =====
++
++
+ def log_request(handler, started):
+     """Write one debug-log line for a finished request: method, route, status and time, at a level fitting the result (BL-102)."""
+     code, route = getattr(handler, "_log_code", None), log_route(handler)
+@@ -8011,8 +8046,8 @@
+                 self._log_code = None                 # BL-284: whatever was being sent never arrived; not logged as its status
+                 return None
+             # ===== end BL-263 =====
+-            except Exception:
+-                debuglog.exception("server", f"{self.command} {log_route(self)} failed")
++            except Exception as e:
++                log_fault(self, e)                    # #253: class and frame, never str(e) (debuglog.exception printed it)
+                 raise
+             finally:
+                 log_request(self, started)

@@ -2,7 +2,7 @@
 /* ReportsPage (BL-337, v2.1.0 P9): Reports in the left menu, #reports[&w=<week>]. One row per active project for the week: its
    health, the internal weekly report's state and each client's report with its rhythm. Needs me keeps the projects with a report
    to check or a client report due; All projects shows everything. Open goes to the project's reporting space, the same one the
-   cockpit's Reporting card opens. The Friday reminder on Today points here. Read only (stores/reporting.js). */
+   project page's Reports icon opens. The Friday reminder on Today points here. Read only (stores/reporting.js). */
 import { render } from "preact";
 import { StatusDot } from "../StatusDot.jsx";
 import { StateChip, openSpace } from "./ReportingSpace.jsx";

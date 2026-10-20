@@ -835,12 +835,23 @@ def findings(doc, con=None):
     con = con or connect()
     blocking = blocking_labels(con)
     code, text = doc.get("project") or "", with_decoded(doc_text(doc))     # #127 round 4: encoded words read too
+    text = folded(text)                                                    # v2.5.1 (#239): the skeleton and JSON escapes too
     bad = {r: why for r, why in ((r, item_problem(con, r, blocking)) for r in sorted(refs(doc))) if why}
     found = list(bad.values()) + text_findings(con, code, text, skip=bad)
     found += [f"it holds {why}" for why in internal_findings(con, code, doc)]             # #123: the gate at the end, any route
     import creaite_doc                                     # #127 review: an address too long or too encoded, as stored
     found += [f for f in unreadable_findings(raw_strings(creaite_doc.clean(doc))) if f not in found]
-    return found + name_findings(con, code, text, blocking)
+    import client_output                                   # v2.5.1 (#239, B): another project's hidden wording and owners
+    return found + name_findings(con, code, text, blocking) + client_output.other_project_findings(con, code, text)
+
+
+def folded(text):
+    """v2.5.1 (#239): a text with its confusables skeleton (confusables.skeleton: NFKC, invisible characters gone, look-alike letters
+    of Cyrillic, Greek, Armenian, Lisu, Cherokee, small capitals made Latin) and its JSON \\uXXXX escapes read (client_output.unescaped)
+    joined to it, so every check below reads the words in every form a reader sees them."""
+    import client_output
+    import confusables
+    return joined(text, confusables.skeleton(text), client_output.unescaped(text))
 
 
 CODE_RULES = (          # (stable code, a test on the message), first match wins; the messages themselves are never changed
@@ -878,7 +889,7 @@ def marked(text):
     invisible character or a look-alike dash hides none; #127 round 4)."""
     import drafts
     import edit_ai
-    return bool(drafts.INTERNAL_MARK.search(drafts.unescaped(edit_ai.normal(as_shown(text)))))       # round 6: as the exports show it too
+    return bool(drafts.INTERNAL_MARK.search(drafts.unescaped(edit_ai.normal(as_shown(folded(text))))))   # round 6; v2.5.1: folded
 
 
 HEALTH_FLAG = re.compile(r"\s*(?:ON TRACK|AT RISK|OFF TRACK)\b")      # a Word report's health line starts with its flag, in capitals
@@ -894,7 +905,7 @@ def plain_findings(con, code, text):
     import drafts
     lines = text.splitlines()
     shown = next((i for i, ln in enumerate(lines) if HEALTH_FLAG.match(ln)), None)
-    text = with_addresses(text)       # #127: every link address in the text, decoded; round 4: its %- or entity-encoded words too
+    text = folded(with_addresses(text))   # #127: every link address, decoded; round 4: %- or entity-encoded; v2.5.1: skeleton, JSON
     found = drafts.internal_findings(con, code, with_addresses("\n".join(ln for i, ln in enumerate(lines) if i != shown)))
     if marked(text) and "an internal-only marker" not in found:
         found.append("an internal-only marker")
@@ -925,8 +936,8 @@ def internal_findings(con, code, doc):
     rest = "\n\n".join([clean.get("title") or ""] + [f"{h}\n\n{t}" if i not in health_ids else h for i, h, t in shown]) \
         + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) + "\n" + raw_text(raw) + _addresses(raw)
     health += "\n" + raw_text(health_raw) + _addresses(health_raw)   # #127 review: the stored words and addresses too
-    found = drafts.internal_findings(con, code, with_decoded(as_shown(rest)))   # round 4: encoded words; round 6: as shown
-    health = with_decoded(health)
+    found = drafts.internal_findings(con, code, folded(with_decoded(as_shown(rest))))   # round 4, 6; v2.5.1: skeleton, JSON
+    health = folded(with_decoded(health))
     if marked(health) and "an internal-only marker" not in found:
         found.append("an internal-only marker")
     return found

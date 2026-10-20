@@ -234,9 +234,12 @@ class Audience(unittest.TestCase):
                       f"p = report_doc.stage_client({str(self.draft_file())!r}, force=True, code='ABC', fri={WEEK!r})\n"
                       "prop = json.loads(p.read_text())\np.unlink()\n"
                       "print(json.dumps([o.get('content') or '' for o in prop['report']['file_ops'] if o.get('op') == 'write']))")
-        self.assertEqual(len(out), 1, out)
-        low = out[0].lower()
-        self.assertEqual([n for n in self.needles() if n.lower() in low], [])
+        # #239 step 2: Approve writes the filed report and its checked snapshot beside it; neither holds a needle
+        self.assertEqual(len(out), 2, out)
+        self.assertEqual(sum('"creaite-client-snapshot"' in o for o in out), 1, "one of the two writes is the snapshot")
+        for o in out:
+            low = o.lower()
+            self.assertEqual([n for n in self.needles() if n.lower() in low], [])
 
     # ── a weekly report is always internal ──────────────────────────────────────────────────────────────────────────────
     def weekly_file(self):

@@ -447,7 +447,15 @@ class ClientSheet(SheetChecks, LiveBrowserCase):
     def filed_reports(self):
         return [f for f in (self.v.root / "projects").rglob("*Client report*.html")]
 
+    def drop_client_drafts(self):
+        """Since 2.5.1 step 2 (220abfef) Show as exported saves a client page first, so a test that adds a row and then shows the
+        export leaves a saved draft holding it for the next test in this shared vault. A test that needs the report as built
+        from the tracker drops those drafts first."""
+        for f in (self.v.root / "system" / "staging" / "drafts").glob("*Client report*.html"):
+            f.unlink()
+
     def test_picker_offers_client_visible_items_only(self):
+        self.drop_client_drafts()          # ABC-A-002 is offered only while it is not in the report already (pickable's rule)
         self.start()
         self.open_picker("overdue")
         text = " ".join(self.pick_rows("overdue"))

@@ -260,27 +260,39 @@
 <div class="moreline" id="waitMore">
 </div>
 </div>
+<div id="tdQuietHost">
+<span class="vh" id="tdQuietLive" role="status" aria-live="polite" aria-atomic="true">6 waiting in Intake</span>
+<p class="tdquiet" id="tdQuiet">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="inbox">
+<path d="M4 13h4l2 3h4l2-3h4">
+</path>
+<path d="M5.5 5h13L21 13v6H3v-6z">
+</path>
+</svg>
+<span class="tdq">Intake: <a href="#review" data-tdq="proposals">4 proposals to approve</a> and <a href="#inbox" data-tdq="files">2 new files to process</a>.</span>
+<button type="button" class="ib sm" id="tdQx" aria-label="Dismiss until something new arrives" data-tip="Dismiss until something new arrives">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</p>
+</div>
+<!-- #245: Intake as one quiet, dismissible line (components/today/IntakeLine.jsx) -->
 </section>
 <!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-<section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd">
-<details id="tdFold" open="">
-<summary>
-<h2 class="th" id="hTd">Intake and Review <span class="cnt" id="nTd">6</span>
-<span class="tdnew" id="tdNew" hidden="">new</span>
+<section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden="">
+<h2 class="th" id="hTd">Messages <span class="cnt" id="nTd">
+</span>
 </h2>
-</summary>
 <div id="tdBody">
-<p class="tdline" id="tdLine">
-<a href="#review" class="s" data-tdline="review">4 proposals in Review</a> and <a href="#inbox" class="s" data-tdline="files">2 new files in Intake</a>
-</p>
 <ol class="bl tdlist" id="tdList" aria-labelledby="hTd">
 </ol>
 <div class="moreline tdfoot">
 </div>
 </div>
-</details>
 </section>
-<!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
+<!-- #245: the cards of messages from people Alan follows (BL-334); the Intake and Review section, its line and its fold are gone: Intake is one quiet line at the foot of Your commitments -->
 <section class="tsec tres" id="weekSec" aria-labelledby="hWeek">
 <details id="weekFold" open="">
 <summary>

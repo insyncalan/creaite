@@ -320,21 +320,24 @@ class TodayLineChecks:
 
     def test_c04_intake_and_review_one_line(self):
         """4. Today's Intake and Review is one quiet line, not a list, and opens Review/Intake when clicked; with nothing waiting
-        the line is absent."""
+        the line is absent. (Since #245 in 2.5.2 the line is "Intake: …" at the foot of Your commitments, and the section that held
+        it is Messages, hidden when empty.)"""
         b = self.b
         self.screen("today")
-        b.wait("document.getElementById('tdLine')", 15)
-        o = b.eval("""(()=>{ const l=document.getElementById('tdLine'); return {rows:document.querySelectorAll('#tdList>li.td-review,#tdList>li.td-transcript').length,
-          text:l.textContent.trim(), links:[...l.querySelectorAll('a')].map(a=>[a.dataset.tdline,a.getAttribute('href')]),
-          pending:REV.filter(r=>!r.done).length, h:Math.round(l.getBoundingClientRect().height), next:document.getElementById('tdSec').nextElementSibling.id}; })()""")
+        b.wait("document.getElementById('tdQuiet')", 15)
+        o = b.eval("""(()=>{ const l=document.getElementById('tdQuiet'); return {rows:document.querySelectorAll('#tdList>li.td-review,#tdList>li.td-transcript').length,
+          text:l.textContent.trim(), links:[...l.querySelectorAll('a')].map(a=>[a.dataset.tdq,a.getAttribute('href')]),
+          pending:REV.filter(r=>!r.done).length, h:Math.round(l.getBoundingClientRect().height), last:document.getElementById('mineSec').lastElementChild.contains(l),
+          next:document.getElementById('tdSec').nextElementSibling.id}; })()""")
         self.assertEqual(o["rows"], 0, "no per-item rows")
         self.assertGreater(o["pending"], 0, "the demo has proposals waiting")
         self.assertIn(f"{o['pending']} proposal", o["text"])
         self.assertLess(o["h"], 60, f"one line, not a list ({o['h']} px)")
-        self.assertEqual(o["next"], "weekSec", "just above the Week ahead")
-        href = dict(o["links"])["review"]
+        self.assertTrue(o["last"], "the line is the last thing in Your commitments")
+        self.assertEqual(o["next"], "weekSec", "Messages (hidden when empty) sits just above the Week ahead")
+        href = dict(o["links"])["proposals"]
         self.assertEqual(href, "#review")
-        b.click("#tdLine [data-tdline=review]")
+        b.click("#tdQuiet [data-tdq=proposals]")
         b.wait("VIEW==='review'", 10)
         self.sheet(4, "today", palettes=measure.themes(b)[:2], widths=(1400, 900))
         # nothing waiting: reject every proposal in Review, and the line is absent
@@ -349,10 +352,9 @@ class TodayLineChecks:
         self.screen("today")
         b.pump(0.6)
         self.assertEqual(b.eval("REV.filter(r=>!r.done).length"), 0, "Review is empty")
-        left = b.eval("({line:tdLine().map(x=>x.key+':'+x.n), text:(document.getElementById('tdLine')||{}).textContent, hidden:document.getElementById('tdSec').hidden})")
+        left = b.eval("({line:[...document.querySelectorAll('#tdQuiet a')].map(a=>a.dataset.tdq), text:(document.getElementById('tdQuiet')||{}).textContent})")
         self.assertEqual(left["line"], [], f"nothing waits in Review or Intake: {left}")
-        self.assertTrue(b.eval("!document.getElementById('tdLine') || document.getElementById('tdSec').hidden || !document.getElementById('tdLine').textContent.trim()"),
-                        f"with nothing waiting the line is absent: {left}")
+        self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"), f"with nothing waiting the line is absent: {left}")
 
     def test_c05_sweep_due_banner(self):
         """5. When the last sweep is before 07:00 today and it is later than 07:00, Today shows "Sweep due since 07:00" with a Run

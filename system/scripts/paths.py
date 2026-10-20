@@ -54,6 +54,7 @@ INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intak
 TRANSCRIPTS = STAGING / "transcripts.json"       # each meeting's transcript status from the sweep (BL-42 phase 3): never text, a passcode or a PIN
 NOTES_SENT  = STAGING / "notes-sent.json"        # BL-301: what Find updates applied from each note (paragraph, fingerprint, IDs)
 RUN_USAGE   = STAGING / "run-usage.jsonl"       # #197: one counts-only line per finished Claude run (usage_log.py appends; usage_report.py reads)
+CONTEXT_SIZE = STAGING / "context-size.jsonl"    # #238: what every run loads, once a day (usage_log.py; counts only)
 MINUTES_TEMPLATE = TEMPLATES / "minutes-template.docx"
 WEEKLY_TEMPLATE  = TEMPLATES / "weekly-report-template.docx"
 CLIENT_TEMPLATE  = TEMPLATES / "client-report-template.docx"
@@ -743,6 +744,8 @@ def report_files(code: str, online: bool = False) -> list:
             continue
         for f in sorted(d.rglob("*")):
             if not f.is_file() or f.name.startswith((".", "~$")) or f.resolve() in taken or not (online or not is_online_only(f)):
+                continue
+            if f.name.endswith(".client.json"):           # v2.5.1 (#239): a client report's checked snapshot, creaite's own record
                 continue
             taken.add(f.resolve())
             out.append((f, "Adhoc" if label == "Weekly" and shared and re.search(r"ad[ _-]?hoc", f.name, re.I) else label))

@@ -2,7 +2,7 @@
 /* ReportingSpace (BL-337, v2.1.0 P9; #221 H1): the door to a project's reporting. The separate reporting space (weeks down the left, two
    cards, Edit both) is gone: #reporting=<CODE> is the Reporting hub (components/report/hub/ReportingHub.jsx), one page with the
    Internal, Client and Side by side views and the week Menu. This file keeps what every way in uses: `openSpace` (the Reports page, the
-   cockpit's Reporting card, ⌘K and Today's reminder all come through it), `StateChip` and `renderReporting` (go()'s renderer). */
+   project page's Reports icon, Project settings, ⌘K and Today's reminder all come through it), `StateChip` and `renderReporting` (go()'s renderer). */
 import { render } from "preact";
 import { Chip } from "../Chip.jsx";
 import { $ } from "../../core/dom.js";

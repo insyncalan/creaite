@@ -1,4 +1,7 @@
-"""#226: the HTML and PDF export of a weekly or client report is the report page's own "Show as exported" view.
+"""#226: the HTML and PDF export of a weekly report (or minutes) is the report page's own "Show as exported" view. v2.5.1 (#239 step
+3): never a client report's: its files are made by creaite from its checked copy (client_snapshot.client_export), and `build` refuses
+a client report's page outright, so this module holds no client rules of its own any more (its short attribute list, its picture
+rules and its client wording check went with the page).
 
 The dashboard draws the report in its exported mode and posts the result with `/api/report/export` as
 `page: {html, css, palette, version}`: `html` the page's markup, `css` the style rules that apply to it (the dashboard's own stylesheet,
@@ -11,8 +14,7 @@ the saved draft it was drawn from. A library: no command line. This module never
     version saved, every section in it is a shown section of `creaite_doc.clean(doc)`, no table has more rows than the report shows,
     and none of the words of the items the report's hidden rows name (read from the tracker: a saved report keeps only their
     references) or of hidden figures appear in it. A hidden section is kept out by its place (its id may not be in the page): a saved
-    report keeps nothing of it, so its words can't be compared. A client report's words also go through client_leak.plain_findings, the
-    check export and approve already use.
+    report keeps nothing of it, so its words can't be compared.
   - The file is fixed to the light theme and A4, with its colours kept in print; Chrome prints that same file for the PDF.
 
 creaite_doc.render stays the fallback for the command line, for minutes and for any export with no page or a page that fails here;
@@ -48,16 +50,6 @@ SVG_TAGS = {"svg", "g", "line", "circle", "ellipse", "rect", "path", "polyline",
 GLOBAL_ATTRS = {"class", "role", "title", "lang", "dir", "colspan", "rowspan", "scope", "span", "headers", "datetime",
                 "width", "height", "alt", "aria-label", "aria-hidden", "aria-describedby", "aria-live", "tabindex"}
 NEVER_ATTRS = {"href", "xlink:href", "srcset", "action", "formaction", "srcdoc", "ping", "poster", "background"}
-# LEAK 1 (p240-leakfix): a CLIENT file keeps only these attributes (anything else could carry a hidden item's words or an item ID);
-# the needles still run over every attribute that is kept. `data-id` only as a section's own marker, `data-type` for task lists.
-CLIENT_ATTRS = {"class", "id", "colspan", "rowspan", "scope", "span", "width", "height", "role", "lang", "dir", "style", "src",
-                "data-id", "data-type", "data-checked"}
-CLIENT_SVG_ATTRS = {"viewbox", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke",
-                    "stroke-width", "stroke-dasharray", "stroke-linecap", "stroke-linejoin", "opacity", "fill-opacity",
-                    "stroke-opacity", "fill-rule", "transform", "font-size", "font-weight", "font-family", "text-anchor",
-                    "dominant-baseline", "preserveaspectratio", "xmlns", "offset", "stop-color", "stop-opacity", "gradientunits",
-                    "gradienttransform", "dx", "dy", "letter-spacing", "text-decoration", "class", "style", "width", "height", "id"}
-ITEM_ID = re.compile(r"[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+")   # no \b: joined IDs are found too
 
 
 class _Invisible:
@@ -80,7 +72,6 @@ INVISIBLE = _Invisible()
 SVG_URI = re.compile(r"data:image/svg\+xml(?:;charset=[\w-]+)?;base64,([A-Za-z0-9+/=\s]+)", re.I)
 SVG_MAX = 1_000_000
 SVG_ADDR = re.compile(r"data:image/svg\+xml", re.I)
-CSS_CONTENT = re.compile(r"content\s*:\s*([^;}]*)", re.I)
 ID_OK = re.compile(r"^[A-Za-z][\w:.-]{0,60}$")
 DATA_ATTR = re.compile(r"^data-[a-z0-9_.:-]{1,40}$")
 SVG_ATTR = re.compile(r"^[a-z][a-z0-9:-]{0,30}$")
@@ -136,32 +127,27 @@ def urls_whole(text):
     return len(re.findall(r"url\(", text, re.I)) == len(URL_IN_CSS.findall(text))
 
 
-def css_closed(v, decoded, squashed, client):
-    """Whether style text is closed (no unclosed url( or string, no unbalanced brackets at its end) and, in a client file, holds no GIF
-    or WebP picture address (their comments can't be cleaned out)."""
-    if not (balanced(v) and urls_whole(v) and urls_whole(decoded) and urls_whole(squashed)):
-        return False
-    return not (client and re.search(r"data:image/(?:gif|webp)", squashed))
+def css_closed(v, decoded, squashed):
+    """Whether style text is closed (no unclosed url( or string, no unbalanced brackets at its end)."""
+    return balanced(v) and urls_whole(v) and urls_whole(decoded) and urls_whole(squashed)
 
 
-def safe_css_value(v, client=False):
+def safe_css_value(v):
     """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
-    or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
-    words can be read (css_svg_words), and those are then checked like the page's own."""
+    or a fragment of the file itself. An SVG picture in its styles is kept only if its words can be read (css_svg_words), and those
+    are then checked like the page's own."""
     decoded = css_decode(v)
     squashed = re.sub(r"\s+", "", decoded).lower()
     if BAD_STYLE.search(v) or BAD_STYLE.search(decoded):
         return False
     if NO_FUNCTIONS.search(squashed) or re.search(r"(?<![\w-])src\(", decoded, re.I):
         return False     # a picture or address in a string the url() checks never see (image-set, cross-fade, src())
-    if not css_closed(v, decoded, squashed, client):
+    if not css_closed(v, decoded, squashed):
         return False
     if not urls_ok(v) or not urls_ok(decoded):      # as written and as the browser reads it (u\72l( is url()
         return False
-    if client and not metadata_free(v):
-        return False
     if SVG_ADDR.search(decoded) or SVG_ADDR.search(v) or SVG_ADDR.search(squashed):
-        return not client and css_svg_words(v) is not None
+        return css_svg_words(v) is not None
     return True
 
 
@@ -205,13 +191,6 @@ def css_svg_words(css):
     return words
 
 
-def client_attr_ok(svg, name, value):
-    """Whether a CLIENT file may keep this attribute: only the short allow-list, and never a value that holds an item ID."""
-    if ITEM_ID.search(value) or not (name in CLIENT_ATTRS or (svg and name in CLIENT_SVG_ATTRS)):
-        return False
-    return name != "data-id" or bool(ID_OK.match(value))
-
-
 def svg_words(value, depth=0):
     """The words of a `data:image/svg+xml;base64,…` picture (its text, title, desc and every attribute), or None when it can't be
     read or holds another data address (a picture inside a picture, however it is written): such a picture is not kept. Read like
@@ -251,51 +230,24 @@ def clean_picture(value):
     return head + ";base64," + base64.b64encode(clean).decode("ascii")
 
 
-def clean_svg_addr(value):
-    """2.5.1 M2: an SVG picture's data address rebuilt for a CLIENT file by logo_check.clean_svg (its comments, title, desc, metadata,
-    editor names, links and text that isn't drawn left out; its shapes as they were), or None when it can't be read (it is dropped)."""
-    import logo_check
-    m = SVG_URI.fullmatch(value.strip())
-    if m is None:
-        return None
-    try:
-        raw = base64.b64decode(re.sub(r"\s+", "", m.group(1)), validate=True)
-    except ValueError:
-        return None
-    clean = logo_check.clean_svg(raw) if len(raw) <= SVG_MAX else None
-    return None if clean is None else "data:image/svg+xml;base64," + base64.b64encode(clean).decode("ascii")
-
-
-def metadata_free(css):
-    """Whether every PNG or JPEG address in style rules is already without metadata (a client file takes no other)."""
-    for m in URL_IN_CSS.finditer(css):
-        a = m.group(2).strip()
-        if RASTER_ADDR.match(a) and clean_picture(a) != a:      # None (can't be checked) differs too
-            return False
-    return True
-
-
-def src_ok(tag, value, client=False):
-    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words). A CLIENT file
-    takes no GIF or WebP (their comments can't be cleaned out), and no PNG or JPEG that can't be checked."""
+def src_ok(tag, value):
+    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words); no PNG or
+    JPEG that can't be checked."""
     if not (tag == "img" and DATA_IMAGE.match(value)):
-        return False
-    if client and re.match(r"data:image/(?:gif|webp)", value.strip(), re.I):
         return False
     if RASTER_ADDR.match(value.strip()) and clean_picture(value) is None:
         return False
     return not SVG_URI.match(value) or svg_words(value) is not None
 
 
-def keep_attr(tag, svg, name, value, client=False):
-    """Whether the attribute `name`="`value`" of an element `tag` (inside an svg when `svg`) is written. In a client file only the
-    short allow-list survives, and never a value that holds an item ID."""
-    if name.startswith("on") or name in NEVER_ATTRS or (client and not client_attr_ok(svg, name, value)):
+def keep_attr(tag, svg, name, value):
+    """Whether the attribute `name`="`value`" of an element `tag` (inside an svg when `svg`) is written."""
+    if name.startswith("on") or name in NEVER_ATTRS:
         return False
     if name == "style":
-        return safe_css_value(value, client)
+        return safe_css_value(value)
     if name == "src":
-        return src_ok(tag, value, client)
+        return src_ok(tag, value)
     if name == "id":
         return bool(ID_OK.match(value))
     if name.startswith("data-"):
@@ -309,9 +261,8 @@ class Clean(HTMLParser):
     """Rebuild markup from an allow-list. `out` is the clean HTML; `text` the words of it; `sections` the data-id of every
     section; `rows` {section id: body rows}. Nothing outside the lists is written."""
 
-    def __init__(self, client=False):
+    def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.client = client
         self.attr_values = []   # every attribute value that is written (checked like the text)
         self.out, self.text, self.sections, self.rows = [], [], [], {}
         self.skip = 0           # depth inside a dropped element
@@ -319,11 +270,6 @@ class Clean(HTMLParser):
         self.stack = []         # (tag, written?)
         self.cur = None         # the section being read
         self.body = 0           # depth inside a tbody
-        self.within = [None]    # v2.5.0 page subset: the section each text belongs to (None: outside every section)
-        self.parts = []         # (section id or None, text) in order
-        self.dropped = 0        # elements dropped with their content, and comments (a client page may hold none)
-        self.bad = None         # why a client page can't be used (a style attribute with foreign words)
-        self.data_ids = []      # every data-id written (each must be a shown section's)
 
     def attrs_of(self, tag, attrs):
         """The attributes to keep, as a string."""
@@ -331,67 +277,16 @@ class Clean(HTMLParser):
         keep = []
         for name, value in attrs:
             name, value = name.lower(), "" if value is None else value
-            value = self.kept_value(tag, svg, name, value)
-            if value is None:
-                continue
-            keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
-            self.note_value(name, value, keep[-1][1])
+            if keep_attr(tag, svg, name, value):
+                value = clean_picture(value) if name == "src" else value
+                keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
+                if name != "src":
+                    self.attr_values.append(keep[-1][1])
+                    if name == "style":
+                        self.attr_values.extend(css_svg_words(value) or [])
+                elif SVG_URI.match(value):
+                    self.attr_values.extend(svg_words(value) or [])      # an SVG picture is read like the page: its words and attributes
         return "".join(f' {n}="{html.escape(v, quote=True)}"' for n, v in keep)
-
-    def kept_value(self, tag, svg, name, value):
-        """One attribute's value as it is written, or None when it is dropped."""
-        if not keep_attr(tag, svg, name, value, self.client):
-            return None
-        if name == "src":
-            return self.picture(value)
-        return self.client_value(tag, svg, name, value) if self.client else value
-
-    def note_value(self, name, value, written):
-        """Record what a kept attribute holds, for the leak checks (an SVG picture is read like the page: its words and attributes)."""
-        if name != "src":
-            self.attr_values.append(written)
-            if name == "style":
-                self.attr_values.extend(css_svg_words(value) or [])
-        elif SVG_URI.match(value):
-            self.attr_values.extend(svg_words(value) or [])
-
-    def client_value(self, tag, svg, name, value):
-        """v2.5.0 page subset: a CLIENT file's attribute value as written, or None when it isn't written. A class keeps only the class
-        names the dashboard's own stylesheet defines (a name no rule uses changes nothing drawn, so nothing typed into a class reaches
-        the file); an id, a role and the small set-valued attributes only a value from their list; a style attribute only words the
-        dashboard's stylesheet uses (anything else refuses the page: `self.bad`)."""
-        v = str(value).strip()
-        if name in ("class", "id", "style", "data-id"):
-            return self.client_named(name, v)
-        rule = CLIENT_VALUES.get(name)
-        if rule is not None:
-            return v if rule.match(v) else None
-        if svg:                           # an svg attribute: numbers, and words the stylesheet or the svg list holds
-            return v if all(w in own_styles()["words"] or w in SVG_WORDS for w in css_words(v)) else None
-        return None
-
-    def client_named(self, name, v):
-        """client_value for a class, an id, a style and a data-id."""
-        if name == "class":
-            keep = [c for c in v.split() if c in own_styles()["classes"]]
-            return " ".join(keep) or None
-        if name == "id":
-            return v if v in own_styles()["ids"] or v in VIEW_IDS else None
-        if name == "style":
-            if not css_words_ok(v):
-                self.bad = "the page's style held words the dashboard's stylesheet doesn't"
-            return v
-        self.data_ids.append(v)
-        return v
-
-    def picture(self, value):
-        """An img's kept src as it is written: metadata cleaned out of a PNG or JPEG, and in a CLIENT file an SVG picture rebuilt
-        from its shapes (2.5.1 M2; what it held is still read for the leak checks, as before); None when it is dropped."""
-        value = clean_picture(value)
-        if value is not None and self.client and SVG_URI.match(value):
-            self.attr_values.extend(svg_words(value) or [])
-            value = clean_svg_addr(value)
-        return value
 
     def note_structure(self, tag, attrs):
         """Count a section and the body rows of a table in it."""
@@ -401,7 +296,6 @@ class Clean(HTMLParser):
                 self.cur = sid
                 self.sections.append(sid)
                 self.rows.setdefault(sid, 0)
-            self.within.append(sid or self.within[-1])
         elif tag == "tbody":
             self.body += 1
         elif tag == "tr" and self.body and self.cur:
@@ -415,7 +309,6 @@ class Clean(HTMLParser):
             return
         if tag in DROP_WITH_CONTENT:
             self.skip = int(tag not in VOID)
-            self.dropped += 1
             return
         in_svg = self.svg > 0 or tag == "svg"
         if tag == "svg":
@@ -453,8 +346,6 @@ class Clean(HTMLParser):
         """Write one closing tag and keep the depth counters."""
         if written:
             self.out.append(f"</{tag}>")
-        if written and tag == "section" and len(self.within) > 1:
-            self.within.pop()
         if tag == "tbody":
             self.body = max(0, self.body - 1)
         if tag == "svg":
@@ -465,15 +356,6 @@ class Clean(HTMLParser):
         if not self.skip:
             self.out.append(html.escape(data, quote=False))
             self.text.append(data)
-            self.parts.append((self.within[-1], data))
-
-    def handle_comment(self, data):
-        """A comment is never written; on a client page it is refused (it is not part of the report)."""
-        self.dropped += 1
-
-    def handle_pi(self, data):
-        """Nor a processing instruction."""
-        self.dropped += 1
 
     def close(self):
         """End of input: close what is still open."""
@@ -483,29 +365,26 @@ class Clean(HTMLParser):
         self.stack = []
 
 
-def clean_markup(markup, client=False, attr_values=None, info=None):
-    """(clean HTML, its text, section ids, {section id: body rows}) for posted markup. `client`: the short attribute allow-list;
-    `attr_values`, a list, receives every attribute value written; `info`, a dict, receives the parser's own record (`parts`: (section
-    id, text) in order, `dropped`, `bad`, `data_ids`) for the client subset check."""
+def clean_markup(markup, attr_values=None):
+    """(clean HTML, its text, section ids, {section id: body rows}) for posted markup. `attr_values`, a list, receives every
+    attribute value written."""
     if not isinstance(markup, str) or not markup.strip():
         raise PageRefused("the page was empty")
     if len(markup) > MAX_HTML:
         raise PageRefused("the page was too large")
-    p = Clean(client)
+    p = Clean()
     p.feed(markup)
     p.close()
     if attr_values is not None:
         attr_values.extend(p.attr_values)
-    if info is not None:
-        info.update(parts=p.parts, dropped=p.dropped, bad=p.bad, data_ids=p.data_ids)
     return "".join(p.out), squash(" ".join(p.text)), p.sections, p.rows
 
 
-def clean_css(css, client=False):
+def clean_css(css):
     """The posted style rules, or raises PageRefused."""
     if not isinstance(css, str) or not css.strip() or len(css) > MAX_CSS:
         raise PageRefused("the style rules were missing or too large")
-    if not safe_css_value(css, client):
+    if not safe_css_value(css):
         raise PageRefused("the style rules held an address or a command")
     return css
 
@@ -620,7 +499,7 @@ def fold(t):
 
 
 def is_client(doc):
-    """True for a client report."""
+    """True for a client report (whose page is never used: build refuses it)."""
     return doc.get("kind") == "client" or doc.get("audience") == "client"
 
 
@@ -637,12 +516,7 @@ def css_decode(css):
     return "\n".join(out)
 
 
-def css_strings(css):
-    """The words a stylesheet can draw with `content:` (read as the browser reads them)."""
-    return " ".join(m.group(1) for m in CSS_CONTENT.finditer(css_decode(css)))
-
-
-def check_page(doc, page, text, sections, rows, attrs=(), css="", info=None):
+def check_page(doc, page, text, sections, rows, attrs=(), css=""):
     """Raises PageRefused when the page isn't the saved report as the report may be exported. `attrs` are the attribute values the
     file keeps and `css` its style rules: they are read like the text (LEAK 1); the version is required (LEAK 5); words are
     matched without case or accents-as-written (LEAK 6)."""
@@ -657,180 +531,6 @@ def check_page(doc, page, text, sections, rows, attrs=(), css="", info=None):
                 + " " + " ".join(css_svg_words(css) or []))
     if any(fold(n) in bare for n in hidden_needles(doc)):
         raise PageRefused("the page held words the report leaves out")
-    if is_client(doc):
-        import client_leak
-        everything = INVISIBLE.sub("", "\n".join([text] + list(attrs) + [css_decode(a) for a in attrs] + [css_strings(css)]))
-        with client_leak.connect() as con:
-            if client_leak.plain_findings(con, doc.get("project"), everything):
-                raise PageRefused("the page held content a client report must not show")
-        check_client_subset(doc, info, css)
-
-
-# ── A client page is the saved report's words and nothing else (v2.5.0 page subset) ─────────────────────────────────────
-# The words of a posted client page are matched with the saved, gated report, section by section: the folded text of each section
-# (and of the frame outside every section) must be made up wholly of the server's own words for that section (every string the shown
-# section holds, as the page draws it: Markdown marks and bullets dropped, dates as DD-MM-YYYY, the items its rows and milestones name)
-# and the client view's own fixed labels below. Anything else (another project's words, a hidden owner's name, an internal section's
-# text, any text at all the report doesn't hold) refuses the page, and the route makes the plain file from the saved report. The style
-# rules and a style attribute may use only words the dashboard's own stylesheet uses (system/templates/dashboard.html, which holds no
-# data); a comment, a script or any element dropped with its content refuses a client page too.
-
-CLIENT_UI = ("Client report · Client", "Client report", "Client", "Period", "to", "for", "Where we are", "What happens next",
-             "No client-visible milestones yet.", "Milestone", "Expected", "State", "Not set", "New", "On track", "At risk",
-             "Off track", "Firm", "Partner", "·", ",", ".", ":", ";", "-", "–", "—", "(", ")", "/")
-VIEW_IDS = {"v-clientreport", "v-weekly"}
-CLIENT_VALUES = {"role": re.compile(r"^(?:list|listitem|img|group|status|note|region|presentation|none|table|row|cell|rowheader|"
-                                    r"columnheader|heading)$"),
-                 "lang": re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$"), "dir": re.compile(r"^(?:ltr|rtl|auto)$"),
-                 "scope": re.compile(r"^(?:row|col|rowgroup|colgroup)$"), "colspan": re.compile(r"^\d{1,3}$"),
-                 "rowspan": re.compile(r"^\d{1,3}$"), "span": re.compile(r"^\d{1,3}$"),
-                 "width": re.compile(r"^\d{1,5}(?:\.\d+)?(?:px|%|em|mm)?$"), "height": re.compile(r"^\d{1,5}(?:\.\d+)?(?:px|%|em|mm)?$"),
-                 "data-type": re.compile(r"^(?:text|table|figures|timeline|panes|health|header|freetext)$"),
-                 "data-checked": re.compile(r"^(?:true|false)$")}
-SVG_WORDS = {"none", "round", "butt", "square", "miter", "bevel", "middle", "start", "end", "central", "currentcolor", "evenodd",
-             "nonzero", "translate", "rotate", "scale", "matrix", "xmidymid", "meet", "slice", "userspaceonuse", "objectboundingbox",
-             "http", "www", "w", "org", "svg", "bold", "normal", "sans", "serif", "px", "em", "e"}
-BROWSER_CSS = {"alternates", "asian", "caps", "east", "emoji", "feature", "kerning", "optical", "override", "variation", "numeric",
-               "ligatures", "position", "settings", "synthesis", "stretch", "variant", "initial", "normal", "auto", "none", "rgb",
-               "rgba", "px", "em", "deg", "ms", "s"}
-_OWN = {}
-
-
-def own_styles():
-    """{words, classes, ids} of the dashboard's own stylesheet (system/templates/dashboard.html: the built page, no data in it).
-    Raises PageRefused when it can't be read: a client page is then never used."""
-    f = paths.TEMPLATES / "dashboard.html"
-    try:
-        stamp = f.stat().st_mtime_ns
-        if _OWN.get("stamp") != stamp:
-            sheet = "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", f.read_text(encoding="utf-8"), re.S | re.I) + [PRINT_CSS])
-            _OWN.update(stamp=stamp, words=set(css_words(sheet)) | set(css_words(css_decode(sheet))),
-                        classes=set(re.findall(r"\.(-?[A-Za-z_][\w-]*)", sheet)), ids=set(re.findall(r"#(-?[A-Za-z_][\w-]*)", sheet)))
-    except OSError as e:
-        raise PageRefused("the dashboard's own stylesheet couldn't be read to check the page") from e
-    return _OWN
-
-
-def css_words(css):
-    """The words of style rules (letters only, lower case), leaving out colours written in hex."""
-    t = re.sub(r"#[0-9A-Fa-f]{3,8}(?![\w-])", " ", unicodedata.normalize("NFKC", str(css or "")))
-    t = re.sub(r"data:image/[\w.+-]+(?:;[\w=-]+)*;base64,[A-Za-z0-9+/=\s]*", " ", t, flags=re.I)   # a picture: checked as one
-    return [w.casefold() for w in re.findall(r"[^\W\d_]+", t)]
-
-
-def css_words_ok(css):
-    """Whether every word of the style rules (as written and as the browser reads them) is one the dashboard's own stylesheet uses."""
-    own = own_styles()["words"]
-    return all(w in own or w in BROWSER_CSS for w in css_words(css) + css_words(css_decode(css)) + css_words(INVISIBLE.sub("", css)))
-
-
-DMY = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
-
-
-def unit_forms(s):
-    """The ways the page may draw one string of the report: as written, line by line, without bullets and inline marks, with dates
-    as DD-MM-YYYY."""
-    out = set()
-    for t in (str(s), DMY.sub(lambda m: f"{m.group(3)}-{m.group(2)}-{m.group(1)}", str(s))):
-        out.add(t)
-        for line in t.splitlines():
-            bare = re.sub(r"^\s*[-*+]\s+", "", line)
-            out.update((line, bare, bare.replace("*", ""), line.replace("*", "")))
-            out.update(plain_words(line))
-    return {f for f in (fold(x) for x in out) if f}
-
-
-def section_units(shown, s):
-    """The folded strings one shown section may draw: its own strings (shown rows and figures only) and its items' drawn fields."""
-    sec = dict(s, rows=[r for r in s.get("rows") or [] if r.get("shown", True)],
-               figures=[f for f in s.get("figures") or [] if f.get("shown", True)])
-    units = set()
-    for x in strings(sec):
-        units |= unit_forms(x)
-    data = s.get("data") or {}
-    refs = [r.get("ref") for r in sec["rows"]] + list(data.get("milestones") or data.get("timeline") or [])
-    return units | item_units(shown, refs)
-
-
-def item_units(shown, refs):
-    """The folded strings the items `refs` draw: their title, date, state and status."""
-    units = set()
-    for ref in refs:
-        it = (shown.get("items") or {}).get(ref) if isinstance(ref, str) else None
-        for k in ("title", "shown_date", "state", "status"):
-            if isinstance((it or {}).get(k), str):
-                units |= unit_forms(it[k])
-    return units
-
-
-def logo_names(code):
-    """The names the header draws for a logo whose picture is missing: the project's partners' names (from its memory, as the
-    dashboard reads them). Fails closed to none."""
-    try:
-        import report_doc
-        return [p.get("name") for p in report_doc.partners(code) if isinstance(p.get("name"), str)]
-    except Exception:
-        return []
-
-
-def tiled(text, units):
-    """Whether the folded text is wholly made of the units, one after another."""
-    t = fold(text)
-    by = {}
-    for u in units:
-        by.setdefault(u[0], []).append(u)
-    reach, n = {0}, len(t)
-    for i in range(n):
-        if i in reach:
-            for u in by.get(t[i], ()):
-                if t.startswith(u, i):
-                    reach.add(i + len(u))
-    return n in reach
-
-
-def check_page_record(info, css):
-    """The first checks of check_client_subset: a record of the page's text, nothing dropped, no foreign style words."""
-    if not isinstance(info, dict) or "parts" not in info:
-        raise PageRefused("the page's words couldn't be matched with the report")
-    if info.get("dropped"):
-        raise PageRefused("the page held a comment, a script or other content a client report never has")
-    if info.get("bad"):
-        raise PageRefused(info["bad"])
-    if not css_words_ok(css):
-        raise PageRefused("the style rules held words the dashboard's stylesheet doesn't")
-
-
-def common_units(shown):
-    """The folded strings any part of the page may draw: the title, the project and client names, and the client view's own words."""
-    common = set()
-    for x in [shown.get("title"), shown.get("project_name"), shown.get("client")] + list(CLIENT_UI):
-        if isinstance(x, str):
-            common |= unit_forms(x)
-    return common
-
-
-def check_client_subset(doc, info, css):
-    """Raises PageRefused unless the client page's words are the saved report's own (see above). Fails closed: no record of the
-    page's text is a refusal."""
-    check_page_record(info, css)
-    shown = creaite_doc.clean(doc)
-    ok_ids = {s["id"]: s for s in shown["sections"] if not s.get("hidden")}
-    if any(v not in ok_ids for v in info.get("data_ids") or []):
-        raise PageRefused("the page named a section the report leaves out")
-    common = common_units(shown)
-    texts = {}
-    for sid, t in info["parts"]:
-        texts.setdefault(sid, []).append(t)
-    hdr = set()
-    if "header" in ok_ids:                # a logo with no picture is drawn as its name: the firm, the client or a partner
-        for name in logo_names(shown.get("project")):
-            hdr |= unit_forms(name)
-    for sid, ts in texts.items():
-        units = common | (section_units(shown, ok_ids[sid]) if sid in ok_ids else set()) | (hdr if sid == "header" else set())
-        if sid is not None and sid not in ok_ids:
-            raise PageRefused("the page held a section the report leaves out")
-        if not tiled("".join(ts), units):
-            raise PageRefused("the page held words the saved report doesn't")
 
 
 # ── The file ──────────────────────────────────────────────────────────────────
@@ -863,15 +563,20 @@ tr,.wr-stat,.wr-health{break-inside:avoid}
 """
 
 
+CLIENT_PAGE = "a client report is made by creaite from its checked copy, never from a page the browser drew"
+
+
 def build(doc, page, title):
     """The finished HTML file for the report `doc` (the saved draft or filed report, as creaite_doc.read gives it) drawn as `page`.
     Raises PageRefused."""
+    if is_client(doc):
+        raise PageRefused(CLIENT_PAGE)
     if not isinstance(page, dict):
         raise PageRefused("no page was sent")
-    attrs, info = [], {}
-    markup, text, sections, rows = clean_markup(page.get("html"), is_client(doc), attrs, info)
-    css = clean_css(page.get("css"), is_client(doc))
-    check_page(doc, page, text, sections, rows, attrs, css, info)
+    attrs = []
+    markup, text, sections, rows = clean_markup(page.get("html"), attrs)
+    css = clean_css(page.get("css"))
+    check_page(doc, page, text, sections, rows, attrs, css)
     palette = str(page.get("palette") or "")
     attr = f' data-palette="{html.escape(palette, quote=True)}"' if PALETTE.match(palette) else ""
     return (f'<!doctype html>\n<html lang="en-GB" data-theme="light"{attr}><head><meta charset="utf-8">'

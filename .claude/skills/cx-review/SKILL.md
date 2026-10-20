@@ -105,7 +105,7 @@ Alan may edit a draft in Word before approving it. When he approves a draft indi
    - **Weekly report:** compare health, health reason, summary and key changes with the staged `updates` row and the health change, and the current-state text with the memory `write`.
 
    If anything differs, show it ("Draft says Off track; staged health is At risk") and ask "Update the staged proposal to match the draft? (yes/no)". Update only on yes. "re-extract" does the same at any time.
-3. **Client reports:** re-scan the edited draft for internal-only content: risks, issues or decisions not flagged `client_visible`, lines marked `Client-safe: no`, anything from `documents/`, and anything marked confidential. Flag each finding and ask before filing.
+3. **Client reports:** re-scan the edited draft for internal-only content: risks, issues or decisions not flagged `client_visible`, lines marked `Client-safe: no`, anything from `documents/`, and anything marked confidential. Flag each finding. Since v2.5.1 (#239) a client Word draft (an older client report staged before the update, or the client-safe steerco one-pager) is never filed with a finding: `--as-staged` doesn't override the client check (only the one-pager's labelled items Alan chose to include stand); Alan edits the draft and approves again. A client report from the Reporting hub is approved there, not here.
 4. **Tracked changes and comments:** approving a draft accepts all tracked changes and removes all comments (`docx_tools.py clean`, standard library; LibreOffice isn't needed). Pass on its message: "Accepted 6 tracked changes and removed 2 comments".
 5. Then mark the draft approved. On apply, the edited version is filed as is, with only the status line changed to "Approved by Alan on YYYY-MM-DD".
 
