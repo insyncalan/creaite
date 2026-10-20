@@ -1,4 +1,4 @@
-"""#232-B: shared fixture for the Review side of Intake and Review's browser tests. A real vault, real proposals, the real row
+"""#232-B: shared fixture for the Review side of Intake's browser tests. A real vault, real proposals, the real row
 model: one meeting ("Example steering") with routine actions and the items that need a decision, and mail and Teams proposals."""
 import json
 

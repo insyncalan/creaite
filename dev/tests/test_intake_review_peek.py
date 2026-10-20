@@ -1,4 +1,4 @@
-"""#232-B (v2.5.0): a mail or Teams proposal opens in the peek (the app's right-hand panel) from Intake and Review: an editable title,
+"""#232-B (v2.5.0): a mail or Teams proposal opens in the peek (the app's right-hand panel) from Intake: an editable title,
 the key fields by kind (Status for an update; Impact and Likelihood for a risk), Reject, Cancel, Save and Save and approve, previous and
 next over the proposals on the page. Esc closes the peek first, then the open meeting. Nothing reaches the tracker until it is approved.
 

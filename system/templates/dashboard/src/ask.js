@@ -996,7 +996,7 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
   const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length, nIr=irLiveCounts().badge;   /* #232-C: one Go to entry, with the rail's number */   /* BL-337 */
-  [["today","Today",""],["intake-review","Intake and Review",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
+  [["today","Today",""],["intake-review","Intake",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v),v==="intake-review"?"review inbox proposals approve":""));   /* #232-C: the old names still find it */
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
@@ -1004,7 +1004,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
   if(q) P.filter(p=>clientReportOn(p.code)).forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>openSpace(p.code,thisWeek(),"client"),`client report ${p.code}`));   /* #221: the hub's Client view (only for a project that has a client report); P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
-  add("Actions","Add files to Intake and Review","",()=>{ go("intake-review"); $("#inboxFile").click(); });
+  add("Actions","Add files to Intake","",()=>{ go("intake-review"); $("#inboxFile").click(); });
   if(nNew) add("Actions","Process new files",`${nNew} new`,()=>{ go("intake-review",{stage:"arrived"}); $("#inboxNew").click(); });
   if(shared.VIEW==="cockpit"&&shared.COCK){ const c=shared.COCK;   /* the project page you're on */
     add("Actions",`Generate current state: ${c}`,"",()=>openGen(c)); add("Actions",`Edit current state: ${c}`,"",()=>startCurEdit(c));
@@ -1020,7 +1020,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   const sc=searchCkItems(), askRow=sc.filter(x=>String(x.l).startsWith("ask creaite:")), restSc=sc.filter(x=>!askRow.includes(x));   /* a question's ask row stays first, ahead of the Help rows */
   return [...askRow,...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...restSc]; })(q);
   if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
-  MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake and Review: process meeting ${m.title}`;
+  MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
     if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("intake-review",{stage:"arrived"}); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
   { const c=ckParse(q); if(c){ const pre=[], ql=String(q||"").trim().toLowerCase();
     if(!(c.ask&&(ql.split(/\s+/).length<3||out.some(x=>String(x.l).toLowerCase().startsWith(ql))))){   /* "New action" is the palette's own entry, not a request */

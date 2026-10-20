@@ -1095,8 +1095,8 @@ HELP_PARTS = {"start-here": "start", "how-do-i": "howto", "reference": "referenc
 HELP_FILES = {"start": "guide-first-day.html", "howto": "guide-how-to.html"}
 HELP_SCREEN_RE = re.compile(r"^Screen:.*\n?", re.M)
 HELP_NEWS_FILE = "help/whats-new.md"      # #158: the plain release notes, copied in at release (never read from dev/)
-HELP_SCREENS = {"today": "Today", "work": "Work", "intake and review": "Intake and Review", "projects": "Projects", "people": "People",
-                "notes": "Notes", "files": "Files"}   # #232-C: Intake and Review is one screen
+HELP_SCREENS = {"today": "Today", "work": "Work", "intake": "Intake", "projects": "Projects", "people": "People",
+                "notes": "Notes", "files": "Files"}   # #232-C: Intake (was Intake and Review) is one screen
 HELP_STAGE_ICONS = [
     '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13L21 13v6H3v-6z"/>',
     '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',

@@ -1,4 +1,4 @@
-"""#232-0 (v2.5.0): Intake and Review on one page. The merged row model (build_dashboard.intake_review_model, pure), the
+"""#232-0 (v2.5.0): Intake on one page. The merged row model (build_dashboard.intake_review_model, pure), the
 routine rule it shares with `review.py bulk` (review.hold_reason), and the Later and Not needed store (intake-cleared.json).
 No browser. The folding rules (core/irFold.js) are tested in test_intake_review_fold.py; the page in test_intake_review_page.py."""
 import json

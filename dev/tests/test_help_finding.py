@@ -21,7 +21,7 @@ sys.path.insert(0, str(REPO / "system" / "scripts"))
 sys.path.insert(0, str(REPO / "dev" / "tools"))
 import build_dashboard as bd  # noqa: E402
 
-SCREENS = ["today", "work", "intake and review", "projects", "people", "notes", "files"]   # #232-C: Intake and Review is one screen
+SCREENS = ["today", "work", "intake", "projects", "people", "notes", "files"]   # #232-C: Intake is one screen
 
 
 class DataTests(unittest.TestCase):
@@ -271,7 +271,7 @@ class PageTests(unittest.TestCase):
         o = self.probe("""
           go("review"); const btn=$q("#themeBtn"); btn.focus(); key("?");
           const p=$q("#helpPanel");
-          out.open=[p.classList.contains("on"),p.textContent.includes("Help · Intake and Review"),$a("#helpPanel .hpn-jobs li").length,!!$q("#helpPanel [data-hpn^=reference]"),!!$q("#hpnFind"),VIEW];
+          out.open=[p.classList.contains("on"),p.textContent.includes("Help · Intake"),$a("#helpPanel .hpn-jobs li").length,!!$q("#helpPanel [data-hpn^=reference]"),!!$q("#hpnFind"),VIEW];
           openChat(); out.exclusive=[p.classList.contains("on"),$q("#chat").classList.contains("on")];
           key("?"); out.back=[p.classList.contains("on"),$q("#chat").classList.contains("on")];
           key("Escape"); out.esc=[p.classList.contains("on"),$q("#chat").classList.contains("on")]; btn.focus(); await wait(10);
@@ -293,14 +293,14 @@ class PageTests(unittest.TestCase):
 
     def test_the_foot_line_is_on_the_eight_screens(self):
         o = self.probe("""
-          const names={today:"Today",work:"Work",ir:"Intake and Review",projects:"Projects",people:"People",notes:"Notes",files:"Files"};
+          const names={today:"Today",work:"Work",ir:"Intake",projects:"Projects",people:"People",notes:"Notes",files:"Files"};
           const view={today:["today"],work:["work"],ir:["intake-review"],projects:["projects"],people:["people"],notes:["notes",P[0].code],files:["files"]};
           const res={};
           for(const k of Object.keys(names)){ go(...view[k]); await wait(20); helpScreenSync(); const f=$q("#hFoot");
             res[k]=[f.hidden,f.textContent.trim(),f.closest(".view")&&f.closest(".view").id]; }
           go("activity"); helpScreenSync(); res.activity=$q("#hFoot").hidden;
           out.res=res; window.OUT=out;""")
-        names = {"today": "Today", "work": "Work", "ir": "Intake and Review", "projects": "Projects", "people": "People",
+        names = {"today": "Today", "work": "Work", "ir": "Intake", "projects": "Projects", "people": "People",
                  "notes": "Notes", "files": "Files"}
         for k, n in names.items():
             self.assertEqual(o["res"][k][:2], [False, f"Press ? for help with {n}"], k)
@@ -308,12 +308,12 @@ class PageTests(unittest.TestCase):
 
     def test_the_empty_state_links_to_how_the_screen_works(self):
         o = self.probe("""
-          out.link=howLink("intake and review"); go("review"); await wait(20);
+          out.link=howLink("intake"); go("review"); await wait(20);
           const a=document.createElement("a"); a.innerHTML=out.link; document.body.append(a); a.firstElementChild.click(); await wait(30);
           out.went=[VIEW,HELPARG];
           window.OUT=out;""")
-        self.assertIn("How Intake and Review works", o["link"])
-        self.assertEqual(o["went"], ["help", "reference-intake-and-review"])
+        self.assertIn("How Intake works", o["link"])
+        self.assertEqual(o["went"], ["help", "reference-intake"])
 
     def test_the_first_visit_line(self):
         o = self.probe("""
@@ -359,7 +359,7 @@ class PageTests(unittest.TestCase):
 
     def test_the_question_mark_clears_the_line_and_opens_the_panel(self):
         o = self.probe("""
-          try{ localStorage.removeItem("creaite-help-line-intake and review"); }catch(e){}
+          try{ localStorage.removeItem("creaite-help-line-intake"); }catch(e){}
           S.helpLine=true; go("review"); helpScreenSync(); out.before=isOn($q("#hFirst"));
           key("?"); helpScreenSync(); out.after=[!isOn($q("#hFirst")),$q("#helpPanel").classList.contains("on")];
           closeHelpPanel(); helpScreenSync(); out.later=!isOn($q("#hFirst"));
@@ -466,7 +466,7 @@ class NoShiftTests(LiveBrowserCase):
         self.b.resize(1400, 900)
         self.fresh("today")
         self.b.click("#dayHead")
-        self.b.eval("localStorage.setItem('creaite-help-line-intake and review','1'); go('review'); helpScreenSync()")
+        self.b.eval("localStorage.setItem('creaite-help-line-intake','1'); go('review'); helpScreenSync()")
         self.assertEqual(self.b.eval("document.getElementById('hFirst').hidden"), True)
 
     def test_the_foot_line_is_at_the_foot_of_the_page_never_inside_the_day_band(self):

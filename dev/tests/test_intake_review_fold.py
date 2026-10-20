@@ -1,4 +1,4 @@
-"""#232-0 (v2.5.0): Intake and Review's folding rules and live counts (src/core/irFold.js), run under Node: no browser.
+"""#232-0 (v2.5.0): Intake's folding rules and live counts (src/core/irFold.js), run under Node: no browser.
 One click opens a meeting with proposals and one closes it; one open at a time; an apply never closes it; Later and Not needed
 start folded; the stage counts are a filter; Approve routine never reaches the first group; Esc closes the peek first."""
 import json

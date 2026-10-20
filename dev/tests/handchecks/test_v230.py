@@ -9,7 +9,7 @@ a vault is the slow step:
   TopBar        1                   the top bar hides on scroll and comes back at the top (shared vault)
   FilesToday    3, 7, 8, 13         Files, Choose a project, People, the design scale (shared vault, nothing changed)
   SideBar       2                   Customise sidebar: Small, Medium, Large
-  TodayLine     4, 5                Intake and Review as one line; the late-sweep banner
+  TodayLine     4, 5                Intake as one line; the late-sweep banner
   NotesMenu     6                   right-click a note
   ActivityHand  9                   "You, by hand"
   DraftEmail    10, 12              the two Review items and the person menu
@@ -319,7 +319,7 @@ class TodayLineChecks:
     """Checks 4 and 5: own vault (4 rejects what waits in Review; 5 writes last-sweep.txt)."""
 
     def test_c04_intake_and_review_one_line(self):
-        """4. Today's Intake and Review is one quiet line, not a list, and opens Review/Intake when clicked; with nothing waiting
+        """4. Today's Intake is one quiet line, not a list, and opens Review/Intake when clicked; with nothing waiting
         the line is absent."""
         b = self.b
         self.screen("today")
