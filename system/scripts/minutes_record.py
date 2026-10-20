@@ -903,7 +903,7 @@ def export(path, fmt, file_beside=True, version="internal"):
         return distributed_export(rel, doc, fmt, file_beside)
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
-    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)   # v2.5.0: one read; v2.5.1: minutes only
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)   # one read, minutes only
 
 
 def _followup_rows(use, doc, sid):
