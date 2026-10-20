@@ -393,6 +393,16 @@ def _archived_hit(path):
     return first
 
 
+def _source_problem(kind, src):
+    """Why the archived file `src` can't be moved back, or None: it must be a plain file there and, for a note (#255 L6), not
+    reached through a linked archive folder."""
+    if src.is_symlink() or not src.is_file():
+        return f"{src.name} isn't in {paths.ARCHIVE} any more"
+    if kind == NOTE and (src.parent.is_symlink() or src.parent.parent.is_symlink()):     # never through a link
+        return archive_folder_problem(src.parent.parent.parent) or f"the {paths.ARCHIVE} folder isn't a plain folder"
+    return None
+
+
 def back_spec(path):
     """(spec, None) that moves an archived file back, or (None, why not). `path` is the archived file's own stored path (Files'
     `at`, #124: unique, where two deleted notes may share one first name), or, as before, the stored path it came from."""
@@ -404,8 +414,9 @@ def back_spec(path):
     if not at:
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
-    if src.is_symlink() or not src.is_file():
-        return None, f"{src.name} isn't in {paths.ARCHIVE} any more"
+    why = _source_problem(kind, src)
+    if why:
+        return None, why
     name = dst.name
     if os.path.lexists(dst):
         if kind != NOTE or not reach.NOTES_BACK_RENAMES:
@@ -431,6 +442,16 @@ def back_spec(path):
 NOTE, NOTE_BACK = "notes", "notes_back"
 
 
+def archive_folder_problem(base):
+    """#255 L6: why the engagement folder `base`'s own _Archive (or its notes folder) can't take a note, or None: each must be a
+    plain folder in place, or not there yet. A link (or a file) there is never followed: the note would leave the vault's places."""
+    arch = Path(base) / paths.ARCHIVE
+    for p in (arch, arch / paths.folder_name("notes").strip("/")):
+        if p.is_symlink() or (os.path.lexists(p) and not p.is_dir()):
+            return f"the {paths.ARCHIVE} folder isn't a plain folder in the project (a link or a file has its name), so nothing moves"
+    return None
+
+
 def note_delete_spec(rel):
     """(spec, None) that moves the note at stored path `rel` into its own folder's _Archive, or (None, why not)."""
     import notes
@@ -439,6 +460,9 @@ def note_delete_spec(rel):
         return None, "that isn't a note that is there"
     code, p = hit
     base = paths.portfolio_dir() if code == "_portfolio" else paths.project_dir(code)
+    why = archive_folder_problem(base)
+    if why:
+        return None, why
     dest = paths.free_path(base / paths.ARCHIVE / paths.folder_name("notes").strip("/"), p.stem, p.suffix)
     title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
     return {"source_run": "notes", "items": [], "file_changes": {
