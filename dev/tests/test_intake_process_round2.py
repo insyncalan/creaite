@@ -84,9 +84,9 @@ class Round2(unittest.TestCase):
         (dr / "values.json").write_text("{}")
         (dr / "board.json").write_text(json.dumps({"title": "Board", "transcript": cls.files[0],
                                                    "draft": D + "2026-10-20 Board minutes.docx"}))
-        (dr / "own.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0],
+        (dr / "own.json").write_text(json.dumps({"title": "Pilot", "date": "2026-10-20", "projects": ["ABC"], "transcript": cls.files[0],
                                                  "draft": D + "own minutes.docx"}))
-        (dr / "pilot.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0]}))
+        (dr / "pilot.json").write_text(json.dumps({"title": "Pilot", "date": "2026-10-20", "projects": ["ABC"], "transcript": cls.files[0]}))
         st = cls.v.root / "system/staging"
         cls.mine = "projects/ABC Example/minutes/2026-10-20 Pilot readiness review.docx"
         cls.theirs = "projects/ABC Example/reports/2026-10-01 ABC client report.docx"
