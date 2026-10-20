@@ -14,10 +14,12 @@ import { store, TODAY } from "../core/page.js";
 import { api, writeSettings } from "../core/server.js";
 
 /** @typedef {{key:string, tier:string, group:string, label:string, line:string, reason:string, default:any, value:any,
-     changed:boolean, resettable:boolean, fixed_why:string, last_changed:(string|null)}} Setting */
+     changed:boolean, resettable:boolean, fixed_why:string, last_changed:(string|null), tab?:(string|null)}} Setting
+    `tab` (v2.6, #246): the Settings tab it is drawn on, "advanced/<sub>" in Advanced, null for a hidden one (Legacy). */
 /** @typedef {{section:string, label:string, line:string, keys:string[], changed:boolean}} EssentialRow */
 /** @typedef {{settings:Setting[], essentials:EssentialRow[], groups:string[], changed:number, essentials_count:number,
-     advanced_count:number, retire_candidates:number, retire_after_days:number}} Catalogue */
+     advanced_count:number, retire_candidates:number, retire_after_days:number, tabs?:string[][], advanced_subs?:string[][],
+     group_tabs?:Record<string, string|null>}} Catalogue */
 /** A problem's fix. A built one (health_fixes.py) also has its id, title, what it does, and its command or the page it opens.
     @typedef {{kind:string, button:string, would_run:string, waits_for:string, how:string, built:boolean, id?:string,
      title?:string, does?:string, command?:string, url?:string}} Fix */

@@ -8,7 +8,7 @@
    reminder is on and every logo is ticked (the way projects were before the setting); a new project is made with it off.
    There is no per-week question: the setting holds for every future report. Turning it off deletes nothing.
 
-   The same functions serve the hub's panel (components/report/hub/ClientReportPanel.jsx) and Settings › Projects, so there is one
+   The same functions serve the hub's panel (components/report/hub/ClientReportPanel.jsx) and the project's settings page (Client report and logos), so there is one
    setting. The logo files are in the live vault's system/branding/logos/, saved by /api/report/logo/save (report_server.py). */
 import { signal } from "@preact/signals";
 import { P, REMINDERS } from "../core/data.js";

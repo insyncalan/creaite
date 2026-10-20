@@ -1,0 +1,22 @@
+--- a/system/scripts/client_leak.py
++++ b/system/scripts/client_leak.py
+@@ -438,7 +438,7 @@
+     return out
+ 
+ 
+-REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it in Settings › People "
++REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it on the People page "
+                    "(or say \"setup\"), then try again")
+ 
+ 
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -3233,7 +3233,7 @@
+         raise
+     if added:
+         print(f"Workstreams added from items and settings ({len(added)}): {', '.join(added)}. Leads and keywords are "
+-              "yours to fill (Settings › Workstreams or cx-edit).")
++              "yours to fill (each project's settings › Workstreams, or cx-edit).")
+ 
+ 
+ def cmd_migrate():

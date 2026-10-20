@@ -17,7 +17,10 @@ ROOT = Path(__file__).resolve().parents[2]
 BANNED = [r"\bcx-", r"\bBL-\d", r"/api/", r"\.json\b", r"\bstaging\b", r"system/", r"\bAlan\b", r"To decide", r"press Esc twice",
           r"\b320\b", r"\b640\b", r"high-contrast", r"\bWindows\b", r"\bCtrl\b", r"this rewrite", r"this base"]
 PARTS = ["Start here", "How do I…", "Reference"]
-SETTINGS_TOP = {"Essentials", "People and projects", "Advanced", "Health"}
+# v2.6 (#246): the tabs. People and projects has left Settings (the People page, each project's settings page), so a help
+# line naming "Settings › People and projects" is flagged
+SETTINGS_TOP = {"Essentials", "Work and reports", "Sweep and Intake", "Reports and minutes", "AI drafts", "Look and help", "Advanced",
+                "Health"}
 TOLERANCE = 0.15            # a page may run this far over its target before it is flagged
 
 

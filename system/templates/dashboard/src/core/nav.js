@@ -23,7 +23,7 @@ import { parseWeekly } from "../components/report/weekly/WeeklyView.jsx";
 import { parseKey } from "../components/report/ClientView.jsx";   /* #221: the old weekly and client addresses; the hub opens them */
 import { renderReports } from "../components/reporting/ReportsPage.jsx";   /* BL-337 */
 import { renderProjectSettings } from "../components/project/ProjectSettings.jsx";   /* #228 */
-import { PS_CATS, psCat, psCode } from "../stores/projectSettings.js";
+import { psCat, psCatOf, psCode } from "../stores/projectSettings.js";
 import { openSpace, renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { parseReporting, repWeek, reportingHref, spaceCode, spaceWeek } from "../stores/reporting.js";
 import { hubView } from "../stores/hub.js";
@@ -36,7 +36,7 @@ import { openRecord, pkNewAsk, pkNewTitle } from "../panel.js";
 import { askDiscard, closePanel, curGuard, PKN, renderCockpit, renderProjects } from "../projects.js";
 import { renderReview } from "../review.js";
 import { rjCloseMenu, rjLeave } from "../stores/rejects.js";
-import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, sw, VIPS } from "../settings.js";
+import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, settingsMoved, sw, VIPS } from "../settings.js";
 import { renderToday, SETUPK } from "../today.js";
 import { allViews, applyFilters, applyView, clearAllFilters, closeDisp, FDEFS, groupOf, groupsOf, layoutOf, listGroupOf, PROJF, renderPeople, renderWork, setPTab, snapshot, SORT, subOf, syncView, WB, WGRP, WINIT, WLAY, WLGRP, workChanged, WSUB } from "../work.js";
 /* ======================= navigation ======================= */
@@ -44,7 +44,7 @@ shared.VIEW="today"; shared.COCK=null; shared.FROMPROJ=null; shared.NAVSTATE=nul
 /* BL-38: every view writes its place to the address, so Back, Forward, reload and bookmarks work:
    #cockpit=ABC · #work=raid&v=open&p=ABC&from=ABC · …&item=ABC-003 (the open item). An open edit blocks leaving. */
 export const viewEl=()=>$("#"+({cockpit:"v-cockpit",mine:"v-work"}[shared.VIEW]||"v-"+shared.VIEW));
-export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?shared.COCK:shared.VIEW==="person"?shared.PERSON:shared.VIEW==="help"?shared.HELPARG:shared.VIEW==="settings"?shared.SCAT:null,wt:shared.WT,wv:shared.WVIEW,p:[...PROJF],q:shared.WQ,from:shared.FROMPROJ,fx:shared.VIEW==="work"?snapshot():null,sort:SORT[shared.WT]||null,vb:shared.VIEW==="work"&&!shared.WVIEW?WB[shared.WT]||null:null,lay:shared.VIEW==="work"&&layoutOf(shared.WT)==="board"?"board":"list",g:shared.VIEW==="work"?groupOf(shared.WT):null,lg:shared.VIEW==="work"?listGroupOf(shared.WT):null,sg:shared.VIEW==="work"?subOf(shared.WT,layoutOf(shared.WT)):null,
+export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?shared.COCK:shared.VIEW==="person"?shared.PERSON:shared.VIEW==="help"?shared.HELPARG:shared.VIEW==="settings"?(shared.SCAT==="advanced"&&shared.SSUB&&shared.SSUB!=="review"?shared.SSUB:shared.SCAT):null,wt:shared.WT,wv:shared.WVIEW,p:[...PROJF],q:shared.WQ,from:shared.FROMPROJ,fx:shared.VIEW==="work"?snapshot():null,sort:SORT[shared.WT]||null,vb:shared.VIEW==="work"&&!shared.WVIEW?WB[shared.WT]||null:null,lay:shared.VIEW==="work"&&layoutOf(shared.WT)==="board"?"board":"list",g:shared.VIEW==="work"?groupOf(shared.WT):null,lg:shared.VIEW==="work"?listGroupOf(shared.WT):null,sg:shared.VIEW==="work"?subOf(shared.WT,layoutOf(shared.WT)):null,
   item:shared.CUR&&shared.CUR.mode==="record"?{k:shared.CUR.k,id:shared.CUR.id}:null,scroll:viewEl()?viewEl().scrollTop:0}; 
   if(shared.VIEW==="activity") st.aq={...shared.ACTF,types:[...(shared.ACTF.types||[])]};
   if(st.v==="people") st.arg=shared.PTAB;   /* BL-190 */
@@ -64,7 +64,7 @@ export function hashOf(st){
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
   if(st&&st.v==="minutes") return `#minutes=${encodeURIComponent(typeof st.arg==="string"?st.arg:"")}`;   /* v2.1.0 P7 */
   if(st&&st.v==="milestones") return `#milestones${st.arg?`=${st.arg}`:""}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
-  if(st&&st.v==="people") return "#people"+(st.arg==="none"?"/none":"");   /* BL-190 */
+  if(st&&st.v==="people") return "#people"+(st.arg&&st.arg!=="all"?"/"+st.arg:"");   /* BL-190; #248: the four tabs */
   let h=st.v==="help"?`help-${st.arg||"start"}`:st.v==="settings"?`settings/${st.arg||"general"}`:st.v==="cockpit"?(st.arg?`cockpit=${st.arg}`:"cockpit"):st.v==="person"?`person=${encodeURIComponent(st.arg)}`:st.v==="work"?`work=${st.wt}${st.wv?`&v=${encodeURIComponent(st.wv)}`:""}${st.p&&st.p.length?`&p=${st.p.join(",")}`:""}${!st.wv&&st.fx?(Object.keys(st.fx).length?Object.entries(st.fx).map(([k,v])=>`&${k}=${v.map(encodeURIComponent).join(",")}`).join(""):"&f=none"):""}${st.lay==="board"?`&lay=board&g=${st.g}`:st.lg&&st.lg!=="none"?`&lg=${st.lg}`:""}${st.sg&&st.sg!=="none"?`&sg=${st.sg}`:""}${st.sort?`&s=${st.sort.col}.${st.sort.dir}`:""}${st.q&&st.q.trim()?`&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g," "))}`:""}${st.from?`&from=${st.from}`:""}${!st.wv&&st.vb?`&vb=${encodeURIComponent(st.vb)}`:""}`:st.v==="inbox"?"intake":st.v;
   if(st.item) h+=`&item=${st.item.id}`; h="#"+h;
   if(st&&st.v==="activity"&&st.aq){ const a=st.aq, p=[];
@@ -73,7 +73,7 @@ export function hashOf(st){
 export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), a=mm&&parseWeekly(mm[1]); if(a&&P.some(p=>p.code===a.code)) return {v:"reporting",arg:a.code,rw:a.week||"",rv:"internal",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* v2.1.0 P6; #221: the old weekly address opens the hub */
   { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm){ const to=meetingRoute(mm[1]), st=to&&parseHash(to); if(st) return st; snack("That meeting isn't in creaite's records any more"); return {v:"today",arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* v2.1.0 P10: the retired meeting page (BL-233) opens its Prep or its minutes */
   { const mm=/^#?project-settings=([^&]+)(?:&c=([a-z]+))?$/.exec(String(h||"")); if(mm){ let code=""; try{ code=decodeURIComponent(mm[1]); }catch(e){ return null; }
-    if(!P.some(p=>p.code===code)) return null; return {v:"psettings",arg:code,cat:mm[2]&&PS_CATS.some(c=>c[0]===mm[2])?mm[2]:"general",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* #228: #project-settings=<code>[&c=<category>] */
+    if(!P.some(p=>p.code===code)) return null; return {v:"psettings",arg:code,cat:psCatOf(mm[2]||""),wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* #228: #project-settings=<code>[&c=<category>] */
   { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,rv:r.view,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
   { const mm=/^#?client-report=(.+)$/.exec(String(h||"")); if(mm){ const a=parseKey(mm[1]); return a&&P.some(p=>p.code===a.code)?{v:"reporting",arg:a.code,rw:a.week||"",rv:"client",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P8; #221: the old client report address opens the hub's Client view */
@@ -84,11 +84,11 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), 
     if(mm){ const code=mm[1]?decodeURIComponent(mm[1]):""; if(code&&!P.some(p=>p.code===code)) return null;
     const kv=Object.fromEntries(mm[2].split("&").filter(Boolean).map(x=>x.split("=")));
     return {v:"milestones",arg:code||null,mv:kv.v==="movement"?"move":"plan",ms:kv.ms?decodeURIComponent(kv.ms):null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-245 */
-  { const m=/^#?people(?:\/(none|work))?$/.exec(h||""); if(m) return {v:"people",arg:m[1]||"work",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-190 */
+  { const m=/^#?people(?:\/(all|work|none|att))?$/.exec(h||""); if(m) return {v:"people",arg:m[1]||"all",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-190 */
   let x=String(h||""); if(/^#?activity\?/.test(x)) x=x.replace("?","&");
   const st=(h=>{ const q=(h||"").replace(/^#/,""); if(!q) return null; const parts=q.split("&"), [v,arg]=parts[0].split("=").map(decodeURIComponent), kv=Object.fromEntries(parts.slice(1).map(x=>{ const [k,val=""]=x.split("="); return [k,k==="v"||k==="q"||k==="vb"?decodeURIComponent(val):val]; }));
   const st={v,arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0};
-  { const sm=/^settings(?:\/([^/]+))?$/.exec(v); if(sm){ st.v="settings"; st.arg=sm[1]||arg||null; if(st.arg&&!setResolve(st.arg)) st.arg=null; return st; } }   /* BL-115: #settings/<category or section>; the old #settings and #settings=<tab> too */
+  { const sm=/^settings(?:\/([^/]+))?$/.exec(v); if(sm){ st.v="settings"; st.arg=sm[1]||arg||null; if(st.arg&&!setResolve(st.arg)&&!settingsMoved(st.arg)) st.arg=null; return st; } }   /* v2.6: an old address of a section that left Settings is kept, so go() opens its new place */   /* BL-115: #settings/<category or section>; the old #settings and #settings=<tab> too */
   if(/^help(-|$)/.test(v)){ st.v="help"; st.arg=helpNorm(v.slice(5))||null; return st; }   /* BL-84: #help-start, #help-howto-<task>… */
   if(v==="cockpit"){ if(arg){ if(!P.some(p=>p.code===arg)) return null; st.arg=arg; } }   /* #204: bare #cockpit is the Choose a project page */
   else if(v==="work"){ st.wt=["actions","raid","decisions","all"].includes(arg)?arg:"actions";   /* BL-134: #work=all */ st.wv=kv.v||null; st.vb=kv.vb||null; st.p=(kv.p||"").split(",").filter(c=>P.some(p=>p.code===c)); st.q=kv.q||""; st.from=P.some(p=>p.code===kv.from)?kv.from:null;
@@ -128,13 +128,14 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
 export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
   if(v==="weekly"||v==="clientreport"){ const a=typeof arg==="string"?(v==="weekly"?parseWeekly(arg):parseKey(arg)):arg; if(!a||!a.code||!P.some(p=>p.code===a.code)) return false; spaceWeek.value=a.week||""; hubView.value=v==="clientreport"?"client":"internal"; v="reporting"; arg=a.code; }   /* #221: the weekly and client report pages are retired; their names open the hub */
+  let moved=false; if(v==="settings"){ const m=settingsMoved(arg,shared.VIEW==="cockpit"?shared.COCK:shared.VIEW==="psettings"?psCode.value:PROJF.size===1?[...PROJF][0]:""); if(m){ [v,arg]=m; moved=true; } }   /* v2.6: #settings/people is the People page, admin and projects the Projects page, workstreams the project's settings */
   if(v==="psettings"&&(!arg||!P.some(p=>p.code===arg))) return false;   /* #228 */
   if(v==="milestones"){ if(arg&&!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg||null; }   /* #204: no project is the Choose a project page */
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
   if(from==="notes"&&v!=="notes") notesLeave();   /* BL-301 B: leaving the note ends its editing session (its file is written) */
   if(!shared.LOADING&&from==="review"&&v!=="review"){ shared.MREVLEFT=true; rjCloseMenu(false); rjLeave(); }   /* BL-263; BL-315: the greyed rejected rows go when Review is left */
-  if(v==="people"&&(arg==="none"||arg==="work")) setPTab(arg);   /* BL-190 */
+  if(v==="people"&&["all","work","none","att"].includes(arg)) setPTab(arg);   /* BL-190; #248 */
   const r=((v,arg,opt={})=>{ if(!opt.restore){ if(navBlocked(()=>go(v,arg,opt))) return false; navWrite(false); }   /* keep this entry's item and scroll for Back */
   /* BL-77: "Your commitments" / "All mine" is Work on the Mine view, with nothing left over from earlier filters or a search, and its
      own address (#work=actions&v=mine) so a refresh, Back and a copied link keep any change made to it */
@@ -149,6 +150,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
+  if(r!==false&&moved&&opt&&opt.restore) navWrite(false);   /* v2.6: a reload or bookmark of an old address: the address names the new place */
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */
   tabTitle();

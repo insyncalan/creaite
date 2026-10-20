@@ -97,10 +97,11 @@ SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.
                       "document.querySelector('#v-reports tbody tr')", "#v-reports")
 SCREENS["reporting"] = ("openSpace('ABC', '', 'client')", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
 
-# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
-# ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
-SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=document.querySelector('#projArch [data-parch=archive][data-pcode=ABC]'); "
-                          "b ? (b.focus(), b.click()) : n && setTimeout(()=>t(n-1),50); })(100)",
+# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): ABC's settings › Archive and close
+# (Settings › Projects and register until the Settings line), Archive… and its Archive pressed; the server only lists the
+# open items (nothing is staged until "Cancel them all and archive").
+SCREENS["archive-ask"] = ("go('psettings','ABC'); (function t(n){ const y=document.getElementById('psArchiveYes'), b=document.getElementById('psArchive'); "
+                          "y ? (y.focus(), y.click()) : b ? (b.click(), setTimeout(()=>t(n-1),50)) : n && setTimeout(()=>t(n-1),50); })(100)",
                           "document.getElementById('parchDlg')?.open && document.querySelector('#parchDlg .parchlist li')", "#parchDlg")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"

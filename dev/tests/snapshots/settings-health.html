@@ -7,7 +7,11 @@
 <div class="tabhost" id="setcatsHost">
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="people" data-scat="people">People and projects</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="ai" data-scat="ai">AI drafts</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="advanced" data-scat="advanced">Advanced</button>
 <button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="health" data-scat="health">Health</button>
 </div>
@@ -15,10 +19,15 @@
 <!-- BL-316: the categories (#setcats), the Tabs building block -->
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
-<option value="people">People and projects</option>
+<option value="work">Work and reports</option>
+<option value="sweep">Sweep and Intake</option>
+<option value="reports">Reports and minutes</option>
+<option value="ai">AI drafts</option>
+<option value="look">Look and help</option>
 <option value="advanced">Advanced</option>
 <option value="health" selected="">Health</option>
 </select>
+<p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p>
 </div>
 <div id="settingsBody">
 <div class="setstack">
@@ -73,6 +82,23 @@
 <li>Asks Chrome to refresh its copy of the app's icon</li>
 <li>Restarts the live server on the new version, and runs the health check</li>
 </ul>
+</div>
+</div>
+<div class="setmount" id="set-more-health" data-sec="more-health" data-mount="">
+<div class="setstack">
+<div class="card" data-more="Health check">
+<h2>Health check</h2>
+<div class="srow" data-keys="health.dismissed">
+<div>
+<span id="ss#1">Dismissed health problems</span>
+<small id="ss#1h">Problems you dismissed in Settings › Health: they stop counting until their detail changes.<span class="setnote"> Default: none. None: every problem counts until you dismiss it. Reset brings them all back.</span>
+</small>
+</div>
+<div class="setctl">
+<input type="text" aria-labelledby="ss#1" aria-describedby="ss#1h" size="18" placeholder="Comma-separated">
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="card" id="liveCard" data-sec="live">

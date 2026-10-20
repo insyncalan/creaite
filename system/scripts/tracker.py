@@ -3260,7 +3260,7 @@ def migrate_workstreams(con):
         raise
     if added:
         print(f"Workstreams added from items and settings ({len(added)}): {', '.join(added)}. Leads and keywords are "
-              "yours to fill (Settings › Workstreams or cx-edit).")
+              "yours to fill (each project's settings › Workstreams, or cx-edit).")
 
 
 def cmd_migrate():

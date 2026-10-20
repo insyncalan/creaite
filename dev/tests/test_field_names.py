@@ -52,17 +52,24 @@ class FieldNames(LiveBrowserCase):
 
     def test_every_settings_category(self):
         cats = self.b.eval("SETCATS.map(c=>c[0])")
-        self.assertGreaterEqual(len(cats), 4)            # BL-320: Essentials, People and projects, Advanced, Health
+        self.assertEqual(len(cats), 8)                   # v2.6 (#246): eight tabs (BL-320 had four)
         bad = []
-        for cat in cats:
+        # every tab and every Advanced sub-tab (the Settings line: People and projects left Settings; its homes are checked below)
+        for cat, scat in [(c, c) for c in cats] + [(x, "advanced") for x in self.b.eval("ADVSUBS.map(c=>c[0])")]:
             self.b.eval(f"go('settings'); STAB='{cat}'; renderSettings();")
-            self.b.wait(f"VIEW==='settings'&&SCAT==='{cat}'")
+            self.b.wait(f"VIEW==='settings'&&SCAT==='{scat}'")
             self.b.pump(0.2)
             bad += self.unnamed(f"settings/{cat}")
+        for go, ready, where in (("go('people')", "VIEW==='people'&&!!document.getElementById('plRows')", "people"),
+                                 ("go('psettings','ABC')", "VIEW==='psettings'&&!!document.getElementById('psName')", "project-settings")):
+            self.b.eval(go)
+            self.b.wait(ready)
+            self.b.pump(0.2)
+            bad += self.unnamed(where)
         self.assertEqual(bad, [])
 
     def test_a_settings_row_ties_its_label_to_its_field(self):
-        self.b.eval("go('settings'); STAB='general'; renderSettings();")
+        self.b.eval("go('settings'); STAB='work'; renderSettings();")      # v2.6 (#246): 'general' is Look and help, whose rows are buttons
         self.b.wait("VIEW==='settings'&&document.querySelector('#v-settings .srow')")
         tied = self.b.eval("""[...document.querySelectorAll('#v-settings .srow')].filter(r=>r.querySelectorAll('input:not([type=hidden]),select,textarea').length===1)
           .map(r=>{ const f=r.querySelector('input:not([type=hidden]),select,textarea'), ids=(f.getAttribute('aria-labelledby')||'').split(' ');

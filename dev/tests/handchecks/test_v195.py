@@ -428,7 +428,7 @@ class Measured2(HandcheckCase):
         # own tables have none. Chrome's accessibility tree gives no sort property over CDP, so the order VoiceOver is given
         # is read from aria-sort on the heading, whose role must be columnheader (where aria-sort is allowed).
         b = self.b
-        self.screen("settings-people")
+        self.screen("settings-essentials")                    # the Settings line: Settings › People is the People page now
         in_settings = b.eval("document.querySelectorAll('#v-settings th[data-psort], #v-settings th button').length")
         self.screen("people")
         heads = b.eval("[...document.querySelectorAll('#v-people th[data-psort]')].map(th=>th.dataset.psort)")
@@ -471,9 +471,9 @@ class Measured2(HandcheckCase):
         # textarea grows with its text and is left out. Settings is all three of its tabs. Section headings are the pages' h2;
         # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note.
         b = self.b
-        pages = ("today", "work", "review", "intake", "settings-essentials", "settings-advanced", "settings-people", "activity", "files")
+        pages = ("today", "work", "review", "intake", "settings-essentials", "settings-advanced", "project-settings", "activity", "files")
         views = {"today": "#v-today", "work": "#v-work", "review": "#v-review", "intake": "#v-inbox", "activity": "#v-activity",
-                 "files": "#v-files", "settings-essentials": "#v-settings", "settings-advanced": "#v-settings", "settings-people": "#v-settings"}
+                 "files": "#v-files", "settings-essentials": "#v-settings", "settings-advanced": "#v-settings", "project-settings": "#v-psettings"}
         fields = ("input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),"
                   " select")
         head_js = """(v)=>[...document.querySelectorAll(v+' h2')].filter(e=>e.offsetParent).map(e=>{ const s=getComputedStyle(e);
@@ -971,7 +971,7 @@ class Bl333And10(HandcheckCase):
         """Settings: the show-archived switch (data-k showArchived), clicked as Alan would; waits until the page has reloaded
         its data. Returns the switch row's label and its section."""
         b = self.b
-        self.screen("settings-people")
+        self.screen("settings-work")                           # v2.6 (#246): Work and reports › Opening views
         sel = "input.switch[data-k=showArchived]"
         b.wait(f"document.querySelector('{sel}')")
         where = b.eval(f"""(()=>{{ const e=document.querySelector('{sel}'), r=e.closest('.srow'), s=e.closest('[data-sec]');
@@ -1148,7 +1148,7 @@ class Bl333And10(HandcheckCase):
                       f"({st['archived']}, not 2: the demo's MER-A-003 too; the date is the run's, seven months on)")
 
     def test_c26_show_archived(self):
-        """26. Turn on "Show archived projects" (Settings › People and projects › Projects and register; its help mentions items
+        """26. Turn on "Show archived projects" (Settings › Work and reports › Opening views since v2.6, #246; its help mentions items
         archived for their age) → both are back in Work (Closed and Cancelled shown), each row tagged Archived. Turn it off."""
         b, problems = self.b, []
         self.ensure_archived()
@@ -1172,9 +1172,9 @@ class Bl333And10(HandcheckCase):
                 problems.append(f"the page's records carry no archived flag ({', '.join(k for k, v in marked.items() if not v)}), "
                                 "so nothing can mark them")
             label = "Show archived projects"
-            if where["label"] != label or where["sec"] != "projects" or "projects and register" not in (where["heading"] or "").lower():
+            if where["label"] != label or where["sec"] != "views" or "opening views" not in (where["heading"] or "").lower():
                 problems.append(f"the switch is \"{where['label']}\" in Settings › {where['heading']} ({where['sec']}), not \"{label}\" "
-                                f"in People and projects › Projects and register")
+                                f"in Work and reports › Opening views")
             if "archived for their age" not in where["help"]:
                 problems.append(f"its help doesn't mention items archived for their age: \"{where['help'][:100]}\"")
         finally:

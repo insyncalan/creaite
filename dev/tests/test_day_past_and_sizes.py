@@ -9,7 +9,8 @@ opacity multiplied in):
 Held for a decision, not fixed (HELD below): the sun in Brightwater light, 2.78:1. It is --day-sun, which the Now dot and
 the "Now" label share, so raising it would change them too.
 Check 9: Intake's Clear day (.btn.mtgclr) and the fields Intake's project select, Activity's search, Settings' search (on its
-three tabs), Settings › People's Merge into selects and the Workstreams manager's project select and name are --ctl-h (32 px).
+three tabs), the People page's search and the project settings' Status (where Settings › People's Merge into selects and
+the Workstreams manager's fields were, until the Settings line) are --ctl-h (32 px).
 Files' 40 px search is by design and not here.
 
 Over test_today_days's fixture (Tuesday 13-10-2026 at 11:05: the 09:00 stand-up is past, the sun stands at 11:05, the day
@@ -130,9 +131,11 @@ SCREENS = (
     ("activity", "go('activity')", "document.getElementById('actQ')", ("#actQ",)),
     ("settings-essentials", "go('settings','essentials')", "document.getElementById('setq')?.offsetParent", ("#setq",)),
     ("settings-advanced", "go('settings','advanced')", "document.getElementById('setq')?.offsetParent", ("#setq",)),
-    ("settings-people", "go('settings','people')",
-     "document.querySelector('#peopleMgr select.pmsel') && document.getElementById('wsmP') && document.getElementById('wsmName')",
-     ("#setq", "#peopleMgr select.pmsel", "#settingsBody select.mgsel", "#wsmP", "#wsmName")),
+    # the Settings line: Settings › People's Merge into and the Workstreams manager are gone; their old addresses open the People
+    # page (its search, which #248 had left at 26 px: fixed with Settings › People's own rule) and the project's settings
+    ("people", "go('settings','people')", "document.getElementById('plQ')?.offsetParent", ("#plQ",)),
+    ("project-settings", "go('cockpit','ABC'); go('settings','workstreams')", "document.getElementById('psStatus')?.offsetParent",
+     ("#psStatus",)),
 )
 
 

@@ -60,7 +60,7 @@ export * from "./components/report/redraft.js";   /* #90: the ✦ (redraftAnswer
 
 export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft email in the peek */
 export * from "./components/Tabs.jsx";
-export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and Settings › People */
+export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and the People pages */
 export * from "./components/Toast.jsx";   /* BL-316: the message at the foot of the page */
 export * from "./components/prep/PrepPage.jsx";   /* BL-286 D: Meetings › Prep */
 export * from "./components/settings/Health.jsx";   /* #159: runHealthFix is tested by name (test_link_renderers) */

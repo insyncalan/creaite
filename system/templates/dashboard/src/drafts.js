@@ -423,8 +423,8 @@ Object.assign(ICONS,{spark:ICONS.spark||SPARKI});
 document.addEventListener("click",e=>{ if(e.target.closest("[data-drstop]")&&DRRUN){ api("/api/ask/stop",{run:DRRUN.id}).then(r=>{ if(!r.ok&&DRRUN) DRRUN.ctl.abort(); }); } });
 document.addEventListener("click",async e=>{ const a=e.target.closest("[data-dropen]"); if(!a) return; e.preventDefault();
   if(!viaServer()){ snack("Opening a file needs the live server"); return; } const r=await api("/api/open",{path:a.dataset.dropen}); if(!r.ok) snack(oneLine(r.message)||"Couldn't open it"); });
-/* Settings › Advanced › AI drafts: a switch per feature, and what Alan has done with each kind of draft (from draft-stats.json) */
-SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="appearance")+1,0,{id:"drafts",cat:"general",title:"AI drafts",
+/* Settings › AI drafts: a switch per feature, and what Alan has done with each kind of draft (from draft-stats.json) */
+SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="more-ai"),0,{id:"drafts",cat:"ai",title:"AI drafts",groups:["AI drafts"],   /* v2.6 (#246): its own tab; the agenda style joins it */
   kw:"ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
   render:()=>`<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>`
     +DRAFTFEATURES.map(([f,l,h])=>row(l,`<input type="checkbox" class="switch" data-drsw="${f}" ${draftOn(f)?"checked":""} aria-label="${esc(l)}">`,h)).join("")

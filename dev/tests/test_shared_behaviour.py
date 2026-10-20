@@ -142,7 +142,8 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
-EXTRA = ("clientreport", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+SCREENS["project-settings"] = ("go('psettings','ABC')", "!!document.getElementById('psArchive')", "#v-psettings")   # the Settings line: Archive's home
+EXTRA = ("clientreport", "today-days", "project-settings")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
 ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
@@ -615,13 +616,17 @@ class Keys(Driver):
 
     def parch(self):
         """BL-09: Archive on a project with open items opens #parchDlg only after the server lists them, so its button can't
-        say aria-haspopup: Enter on ABC's Archive (Settings › Projects and register) opens it with focus in it; Esc closes it
-        and focus is back on the button. Nothing is staged: the server only lists the open items."""
+        say aria-haspopup: Enter on ABC's Archive (its settings' Archive and close since the Settings line; it asks first, and
+        Enter on that Archive goes on) opens it with focus in it; Esc closes it and focus is back on the button. Nothing is
+        staged: the server only lists the open items."""
         b = self.b
-        self.goto("settings-people")
+        self.goto("project-settings")
         b.eval(PROBE + ";true")
-        sel = json.dumps('#projArch [data-parch="archive"][data-pcode="ABC"]')
+        sel = json.dumps("#psArchive")
         b.eval(f"(()=>{{ const e=document.querySelector({sel}); e.scrollIntoView({{block:'center'}}); e.focus(); }})()")
+        self.press("Enter", 0.5)
+        b.wait("!!document.getElementById('psArchiveYes')", 10)
+        b.eval("document.getElementById('psArchiveYes').focus()")
         self.press("Enter", 0.5)
         try:
             b.wait("document.getElementById('parchDlg')?.open", 20)

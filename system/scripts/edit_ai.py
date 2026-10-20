@@ -358,10 +358,10 @@ def refusal(found, suggestion=False):
         return ("The suggestion was dropped: there's no project to check it against." if suggestion else
                 "There's no project to check this text against, so nothing was sent to Claude.")
     if REGISTER in found:
-        return ("The suggestion was dropped: the people register couldn't be read, so its names couldn't be checked. Fix it in "
-                "Settings › People, then try again." if suggestion else
-                "The people register couldn't be read, so the names couldn't be checked and nothing was sent to Claude. Fix it in "
-                "Settings › People, then try again.")
+        return ("The suggestion was dropped: the people register couldn't be read, so its names couldn't be checked. Fix it on "
+                "the People page, then try again." if suggestion else
+                "The people register couldn't be read, so the names couldn't be checked and nothing was sent to Claude. Fix it on "
+                "the People page, then try again.")
     if UNCHECKED in found:
         return ("The suggestion was dropped: creaite couldn't check it against the tracker. Try again." if suggestion else
                 "creaite couldn't check this text against the tracker, so nothing was sent to Claude. Try again.")

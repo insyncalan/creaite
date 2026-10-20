@@ -137,7 +137,7 @@ function acts(at) {
       sneakClose(false);
       if (to === "project_page") { const p = projectOf(at); if (p) go("cockpit", p); return; }
       if (to === "settings") { go("settings"); return; }
-      if (to === "people") { go("settings", "people"); } },
+      if (to === "people") { go("people", "all"); } },   /* #248: the People page is the register's home */
     ask: text => sneakAsk(at, text),
     people: () => sneakPeople(),
     current: field => { if (at.where !== "peek") return ""; const x = REC(at.k, at.id) || {};

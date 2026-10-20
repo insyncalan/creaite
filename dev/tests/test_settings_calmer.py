@@ -70,7 +70,7 @@ class SettingsReading(LiveBrowserCase):
     def test_settings_opens_on_essentials_with_the_catalogue_rows(self):
         self.open()
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#setcats button')].map(b=>b.dataset.scat)"),
-                         ["essentials", "people", "advanced", "health"])
+                         ["essentials", "work", "sweep", "reports", "ai", "look", "advanced", "health"])   # v2.6 (#246): tabs
         self.assertEqual(self.b.eval("document.querySelector('#setcats [aria-selected=true]').dataset.scat"), "essentials")
         self.b.wait("document.querySelectorAll('#set-essentials .srow').length>0")
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-essentials [data-ess] h2')].map(h=>h.textContent)"), ESS_SECTIONS)
@@ -95,42 +95,59 @@ class SettingsReading(LiveBrowserCase):
         self.open("essentials")
         self.b.wait("document.querySelectorAll('#set-essentials .srow').length>3")
         self.assertNotIn("VIP", self.b.eval("document.getElementById('set-essentials').innerText"))
-        self.open("follow")
-        self.assertEqual(self.b.eval("document.querySelector('#vipSet h2').textContent"), "People I follow")
-        self.assertNotIn("VIP", self.b.eval("document.getElementById('vipSet').innerText"))
+        self.open("follow")                                   # v2.6 (#246): the old address opens Essentials, one People I follow card
+        self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===5")   # #97: and two quiet-hours rows
+        self.assertNotIn("VIP", self.b.eval("document.querySelector('#set-essentials [data-ess=\"People I follow\"]').innerText"))
+        self.assertFalse(self.b.eval("!!document.getElementById('vipSet')"))
 
-    def test_advanced_holds_the_rest_under_their_old_names_and_everything_else(self):
-        self.open("advanced")
-        self.b.wait("!!document.querySelector('#set-more .srow')")
-        self.assertEqual(self.b.eval("[...document.querySelectorAll('#settingsBody .setgroup')].map(h=>h.textContent)"),
-                         ["You and the look", "Work and views", "Review and warnings", "Capture and alerts", "Everything else"])
-        self.assertTrue(self.b.eval("!!document.querySelector('#set-closeday [data-k=catchupAfter]')"))
-        cat = settings_catalogue.catalogue  # noqa: F841  (the keys below are in it)
-        more = self.b.eval("[...document.querySelectorAll('#set-more .srow')].map(r=>r.dataset.keys)")
-        for k in ("logging.keep_days", "search.debounce_ms", "inbox.meetings_from", "logging.repeat_window_hours", "locations.projects_root"):
-            self.assertIn(k, more)
-        for k in ("identity.name", "sweep.due_from", "work.board.closed_days", "dashboard.week_ahead_priorities",
-                  "day.catchup_after_minutes"):          # BL-295: on Advanced › Close the day
-            self.assertNotIn(k, more)           # an Essential, or on an older card: one home each
-        self.assertFalse(self.b.eval("!!document.querySelector('#settingsBody [data-k=me],#settingsBody [data-k=sweepDue],#settingsBody [data-k=dailyBackup]')"))
-        fixed = "document.querySelector('#set-more .srow[data-keys=\"locations.projects_root\"]')"
+    def test_each_tab_draws_each_catalogue_group_once_and_the_old_headings_are_gone(self):   # v2.6 (#246)
+        """The old Advanced (the older cards under their old names, then Everything else) is gone: each catalogue group is drawn
+        once, inside the card of the same name (Sweep, Reminders, Close the day…) or as its own card on its tab."""
+        cards = {}
+        for page in ("work", "sweep", "reports", "ai", "look", "review", "state", "arch", "folders", "server", "health"):
+            self.open(page)
+            self.b.wait("document.querySelectorAll('#settingsBody .card>h2').length>0")
+            self.b.pump(0.5)
+            self.assertEqual(self.b.eval("document.querySelectorAll('#settingsBody .setgroup').length"), 0, page)
+            for t in self.b.eval("[...document.querySelectorAll('#settingsBody .card>h2')].map(h=>h.textContent)"):
+                cards.setdefault(t, []).append(page)
+        self.assertEqual({t: p for t, p in cards.items() if len(p) != 1}, {}, "a title drawn twice")
+        for gone in ("Everything else", "Legacy", "You and the look", "Capture and alerts", "Safety", "Archiving", "Work and views"):
+            self.assertNotIn(gone, cards)
+        self.open("sweep")
+        self.assertTrue(self.b.eval("!!document.querySelector('#set-closeday [data-k=catchupAfter]')"))     # Close the day: one card
+        self.b.wait("!!document.querySelector('#set-sweep .setembed .srow[data-keys=\"sweep.max_lookback_days\"]')")   # Sweep: one card
+        self.assertTrue(self.b.eval("!!document.querySelector('#settingsBody [data-more=\"Meeting prep and Intake\"] .srow[data-keys=\"prep.series\"]')"))
+        self.open("ai")
+        self.b.wait("!!document.querySelector('#set-drafts .setembed .srow[data-keys=\"drafting.agenda_style\"]')")    # AI drafts: one card
+        self.assertEqual(self.b.eval("document.querySelectorAll('#settingsBody .srow[data-keys^=\"drafting.\"]').length"), 1)
+        self.open("look")
+        self.b.wait("!!document.querySelector('#set-appearance .setembed .srow[data-keys=\"dashboard.rail_icon_size\"]')")
+        self.assertTrue(self.b.eval("!!document.querySelector('#set-help #helpAgain')"))
+        self.assertFalse(self.b.eval("!!document.querySelector('#settingsBody [data-keys=\"help.start_seen\"]')"))   # a button, not a switch
+        self.open("folders")
+        fixed = "document.querySelector('#settingsBody .srow[data-keys=\"locations.projects_root\"]')"
+        self.b.wait(f"!!{fixed}")
         self.assertFalse(self.b.eval(f"!!{fixed}.querySelector('input,select,.setreset')"))
         self.assertIn("Set at set-up", self.b.eval(f"{fixed}.textContent"))
+        for page in ("work", "sweep", "review"):
+            self.open(page)
+            self.assertFalse(self.b.eval("!!document.querySelector('#settingsBody [data-k=me],#settingsBody [data-k=sweepDue],#settingsBody [data-k=dailyBackup]')"))
 
     def test_search_finds_a_setting_by_its_words_or_its_old_key(self):
         self.open()
         for q in ("keep logs", "logging.keep_days"):
             self.b.eval(f"setSearch({q!r})")
-            self.b.wait("!!document.querySelector('#set-more .srow')")
-            self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-more .srow')].map(r=>r.dataset.keys)"), ["logging.keep_days"], q)
+            self.b.wait("!!document.querySelector('#set-more-server .srow')")
+            self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-more-server .srow')].map(r=>r.dataset.keys)"), ["logging.keep_days"], q)
         self.b.eval("setSearch('morning sweep')")
         self.b.wait("document.querySelectorAll('#set-essentials .srow').length===1")
         self.assertEqual(self.b.eval("document.querySelector('#set-essentials .srow span[id]').textContent"), "Morning sweep from")
         self.b.eval("setSearch('')")
 
     def test_old_addresses_still_open_their_card(self):
-        for old, cat in [("general", "advanced"), ("work", "advanced"), ("system", "health"), ("prefs", "essentials"),
-                         ("sweep", "advanced"), ("diagnostics", "health"), ("people", "people"), ("warnings", "advanced")]:
+        for old, cat in [("general", "look"), ("work", "work"), ("system", "health"), ("prefs", "essentials"),   # v2.6 (#246)
+                         ("sweep", "sweep"), ("diagnostics", "health"), ("warnings", "advanced"), ("capture", "sweep")]:
             self.b.eval(f"STAB={old!r}; go('settings')")
             self.b.wait(f"VIEW==='settings' && document.querySelector('#setcats [aria-selected=true]').dataset.scat==={cat!r}")
 
@@ -159,7 +176,7 @@ class SettingsReading(LiveBrowserCase):
         self.assertEqual(b.eval("JSON.parse(localStorage.getItem('creaite-health-count')).n"), 2)
         # the cards that were in System follow Health
         self.assertEqual(b.eval("[...document.querySelectorAll('#settingsBody [data-sec]')].map(c=>c.dataset.sec)"),
-                         ["health", "live", "setup", "diag", "version", "danger"])
+                         ["health", "more-health", "live", "setup", "diag", "version", "danger"])   # v2.6 (#246): Health check's Reset, under Health
 
     def test_a_built_fix_says_what_it_does_and_posts_its_own_route_with_nothing_else(self):
         ans = json.loads(json.dumps(HEALTH))
@@ -272,9 +289,18 @@ class SettingsChanging(LiveBrowserCase):
         self.until(lambda: all(self.settings_file().get("drafting", {}).get(k.split(".")[1]) is False for k in keys))
         self.b.wait(f"!!{row}.querySelector('.setdot')")
 
+    def test_show_the_first_run_help_again_sets_start_seen_back(self):          # v2.6 (#246)
+        self.open("look")
+        self.b.wait("!!document.getElementById('helpAgain')")
+        self.b.click("#helpAgain")
+        self.until(lambda: self.settings_file()["help"]["start_seen"] is False)
+        self.b.wait("S.helpSeen===false")
+        self.b.eval("writeSettings({'help.start_seen':true}).then(()=>{ S.helpSeen=true; })")   # the vault is shared
+        self.until(lambda: self.settings_file()["help"]["start_seen"] is True)
+
     def test_reset_on_an_older_card_and_no_show_changed_only(self):
         """#102: the "Show changed only" switch is gone; the dot and Reset stay."""
-        self.open("advanced")
+        self.open("work")                                        # v2.6 (#246): the Work board card
         b = self.b
         self.assertEqual(b.eval("document.getElementById('setChanged')"), None)
         self.assertNotIn("Show changed only", b.eval("document.getElementById('v-settings').textContent"))
@@ -287,9 +313,9 @@ class SettingsChanging(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelector('[data-k=boardClosedDays]').value"), "14")
 
     def test_an_everything_else_setting_saves_with_its_limits(self):
-        self.open("advanced")
+        self.open("server")                                      # v2.6 (#246): Advanced › Server, search and logs
         b = self.b
-        row = "document.querySelector('#set-more .srow[data-keys=\"logging.keep_days\"]')"
+        row = "document.querySelector('#set-more-server .srow[data-keys=\"logging.keep_days\"]')"
         b.wait(f"!!{row}")
         b.eval(f"(()=>{{ const i={row}.querySelector('input'); i.value='500'; i.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
         b.wait("document.getElementById('snackT').textContent.includes('from 1 to 90')")
