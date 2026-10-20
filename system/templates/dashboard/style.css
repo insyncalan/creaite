@@ -681,6 +681,7 @@ h2{font:500 var(--fs-h2)/var(--lh-h2) var(--font);margin:0}   /* BL-325: the one
 #hWeek,#hRes{gap:4px}   /* "Week ahead to 09-10" reads as one phrase, not a count */ .th .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)} .th a{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)}
 ol.bl{list-style:none;margin:0;padding:0} ol.bl>li{position:relative;display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--day-rule)}
 ol.bl>li[hidden],.tsec .sub[hidden]{display:none}
+ol.bl>li[data-msattn] .t u{text-decoration:underline;text-underline-offset:3px;font-weight:700}   /* #251: "Milestone <u>name</u> is due …", the name the link */
 .bl .n{flex:none;width:16px;font-size:var(--fs-md);color:var(--day-muted)} .bl .tb{min-width:0;flex:1}
 .bl .tb p,.tb .none{margin:4px 0 0;font-size:var(--fs-md);color:var(--day-muted)}
 .tbrief a.t{color:var(--day-ink);font-weight:700;text-decoration:none} .tbrief a.t:hover{text-decoration:underline}
