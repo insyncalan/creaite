@@ -271,7 +271,8 @@ class SettingsPage(LiveBrowserCase):
         self.open("essentials")
         self.b.wait("!!document.querySelector('#set-essentials [data-ess=\"People I follow\"] .srow')")
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow')].map(r=>r.dataset.keys)"),
-                         ["vip.enabled", "vip.check_minutes", "vip.notify"])     # the browser notification joined the first card
+                         ["vip.enabled", "vip.check_minutes", "vip.notify",     # the browser notification joined the first card
+                          "vip.quiet_overnight vip.quiet_from vip.quiet_to", "vip.quiet_weekend"])   # #97: quiet hours
         self.assertFalse(self.b.eval("!!document.getElementById('vipSet')"))
         self.open("sweep")
         self.assertFalse(self.b.eval("!!document.querySelector('[data-sec=sweep] [data-vipk]')"))
@@ -340,7 +341,7 @@ class SettingsPage(LiveBrowserCase):
         self.assertIn("warnings", self.sections())
         self.assertEqual(self.b.eval("[...document.querySelectorAll('[data-sec=warnings] .srow')].filter(r=>r.hidden).length"), 0)
         self.type_query("people i follow")        # the follow section, in Essentials, matches by its title: every row shows
-        self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===3")
+        self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===5")   # #97: and the two quiet-hours rows
         self.assertIn("essentials", self.sections())
         self.type_query("ignore rules")           # the Ignore rules row matches: it shows, with its rules; the sweep's other rows don't
         self.assertIn("sweep", self.sections())

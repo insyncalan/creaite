@@ -230,18 +230,39 @@
 <input type="checkbox" class="switch" aria-labelledby="ss#14" aria-describedby="ss#14h">
 </div>
 </div>
+<div class="srow" data-keys="vip.quiet_overnight vip.quiet_from vip.quiet_to">
+<div>
+<span id="ss#15">Pause alert checks overnight</span>
+<small id="ss#15h">No checks between these times. The first check after them looks back to the last one, so nothing is missed: it is just noticed later.</small>
+</div>
+<div class="setctl">
+<span class="setpair">
+<input type="checkbox" class="switch" aria-labelledby="ss#15" aria-describedby="ss#15h">
+<input type="text" aria-label="Pause alert checks overnight: from" size="6" placeholder="HH:MM"> to <input type="text" aria-label="Pause alert checks overnight: to" size="6" placeholder="HH:MM">
+</span>
+</div>
+</div>
+<div class="srow" data-keys="vip.quiet_weekend">
+<div>
+<span id="ss#16">Pause alert checks on weekend days</span>
+<small id="ss#16h">Uses the weekend days set in Essentials › You.</small>
+</div>
+<div class="setctl">
+<input type="checkbox" class="switch" aria-labelledby="ss#16" aria-describedby="ss#16h">
+</div>
+</div>
 </div>
 <div class="card" data-ess="Look and help">
 <h2>Look and help</h2>
 <div class="srow" data-keys="dashboard.theme">
 <div>
-<span id="ss#15">Theme</span>
+<span id="ss#17">Theme</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#15h">Light, dark, or follow your Mac.</small>
+<small id="ss#17h">Light, dark, or follow your Mac.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#15" aria-describedby="ss#15h">
+<select aria-labelledby="ss#17" aria-describedby="ss#17h">
 <option value="System">Follow my Mac</option>
 <option value="Light">Light</option>
 <option value="Dark">Dark</option>
@@ -251,11 +272,11 @@
 </div>
 <div class="srow" data-keys="dashboard.palette">
 <div>
-<span id="ss#16">Style</span>
-<small id="ss#16h">The look of the whole app.</small>
+<span id="ss#18">Style</span>
+<small id="ss#18h">The look of the whole app.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#16" aria-describedby="ss#16h">
+<select aria-labelledby="ss#18" aria-describedby="ss#18h">
 <option value="Brightwater">Brightwater</option>
 <option value="creaite">creaite</option>
 <option value="Notion">Notion</option>
@@ -270,11 +291,11 @@
 </div>
 <div class="srow" data-keys="dashboard.motion">
 <div>
-<span id="ss#17">Motion</span>
-<small id="ss#17h">Follows your Mac's Reduce motion unless you choose.</small>
+<span id="ss#19">Motion</span>
+<small id="ss#19h">Follows your Mac's Reduce motion unless you choose.</small>
 </div>
 <div class="setctl">
-<select aria-labelledby="ss#17" aria-describedby="ss#17h">
+<select aria-labelledby="ss#19" aria-describedby="ss#19h">
 <option value="System">Follow my Mac</option>
 <option value="Reduce">Reduce</option>
 <option value="Full">Full</option>
@@ -283,29 +304,29 @@
 </div>
 <div class="srow" data-keys="dashboard.rail_labels">
 <div>
-<span id="ss#18">Labels when collapsed</span>
-<small id="ss#18h">A name under each icon when the left rail is collapsed. Off: icons only.</small>
+<span id="ss#20">Labels when collapsed</span>
+<small id="ss#20h">A name under each icon when the left rail is collapsed. Off: icons only.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#18" aria-describedby="ss#18h">
+<input type="checkbox" class="switch" aria-labelledby="ss#20" aria-describedby="ss#20h">
 </div>
 </div>
 <div class="srow" data-keys="help.first_line">
 <div>
-<span id="ss#19">Show the Press ? line on each screen</span>
-<small id="ss#19h">A quiet line under a page's title the first time you visit it. The line at the foot of the page stays.</small>
+<span id="ss#21">Show the Press ? line on each screen</span>
+<small id="ss#21h">A quiet line under a page's title the first time you visit it. The line at the foot of the page stays.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#19" aria-describedby="ss#19h">
+<input type="checkbox" class="switch" aria-labelledby="ss#21" aria-describedby="ss#21h">
 </div>
 </div>
 <div class="srow" data-keys="drafting.update drafting.client drafting.thinking drafting.reason drafting.agenda drafting.email drafting.forms drafting.repeat drafting.done drafting.sharpen drafting.shape drafting.report-section drafting.minutes-section">
 <div>
-<span id="ss#20">AI drafts</span>
-<small id="ss#20h">Suggestions you can use, edit or ignore. Never applied by themselves.</small>
+<span id="ss#22">AI drafts</span>
+<small id="ss#22h">Suggestions you can use, edit or ignore. Never applied by themselves.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#20" aria-describedby="ss#20h">
+<input type="checkbox" class="switch" aria-labelledby="ss#22" aria-describedby="ss#22h">
 </div>
 </div>
 </div>
@@ -313,11 +334,11 @@
 <h2>Safety</h2>
 <div class="srow" data-keys="backups.daily">
 <div>
-<span id="ss#21">Daily backup, and a copy in OneDrive</span>
-<small id="ss#21h">The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.</small>
+<span id="ss#23">Daily backup, and a copy in OneDrive</span>
+<small id="ss#23h">The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.</small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#21" aria-describedby="ss#21h">
+<input type="checkbox" class="switch" aria-labelledby="ss#23" aria-describedby="ss#23h">
 </div>
 </div>
 </div>

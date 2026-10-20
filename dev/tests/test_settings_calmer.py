@@ -96,7 +96,7 @@ class SettingsReading(LiveBrowserCase):
         self.b.wait("document.querySelectorAll('#set-essentials .srow').length>3")
         self.assertNotIn("VIP", self.b.eval("document.getElementById('set-essentials').innerText"))
         self.open("follow")                                   # v2.6 (#246): the old address opens Essentials, one People I follow card
-        self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===3")
+        self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===5")   # #97: and two quiet-hours rows
         self.assertNotIn("VIP", self.b.eval("document.querySelector('#set-essentials [data-ess=\"People I follow\"]').innerText"))
         self.assertFalse(self.b.eval("!!document.getElementById('vipSet')"))
 
