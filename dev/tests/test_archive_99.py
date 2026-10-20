@@ -219,8 +219,10 @@ class MoveRules(OneDriveCase):
             touch(self.eng("ABC", name, f))
             a, b = f"projects/Example Programme/{f}", f"projects/Example Programme/{name}/{f}"
             self.assertIsNone(self.problem(b, a, "reports_back"), name)
-            self.assertEqual(self.problem(a, b, "reports") is None, name == NEW, name)
             (self.eng("ABC", name, f)).unlink()
+            touch(self.eng("ABC", f))                              # forward: the original is there, the archive copy is not
+            self.assertEqual(self.problem(a, b, "reports") is None, name == NEW, name)
+            (self.eng("ABC", f)).unlink()
 
     def test_notes_go_into_the_new_name_and_come_back_from_any(self):
         f = "08 Notes/Plan.md"
@@ -228,8 +230,10 @@ class MoveRules(OneDriveCase):
             touch(self.eng("ABC", name, f))
             a, b = f"projects/Example Programme/{f}", f"projects/Example Programme/{name}/{f}"
             self.assertIsNone(self.problem(b, a, "notes_back"), name)
-            self.assertEqual(self.problem(a, b, "notes") is None, name == NEW, name)
             (self.eng("ABC", name, f)).unlink()
+            touch(self.eng("ABC", f))                              # forward: the original is there, the archive copy is not
+            self.assertEqual(self.problem(a, b, "notes") is None, name == NEW, name)
+            (self.eng("ABC", f)).unlink()
 
     def test_the_rename_kind_is_gone(self):
         touch(self.eng("ABC", "zz Archive", "x.md"))

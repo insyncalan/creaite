@@ -1,17 +1,18 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index ded1d52c..294b9813 100644
+index ded1d52c..4dd77364 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -485,7 +485,7 @@ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), r
+@@ -485,7 +485,8 @@ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), r
                "Refer to a project by its full name, never its short code: the code belongs only inside a work item's ID "
                "(ABC-A-003) and in a command Alan can type. "
                "You may read every project document (the project folders under projects/, or the projects root when the "
 -              "projects are outside the vault); reading is not extracting. Never read _Archive, _Templates or 99 System or an online-only "
-+              "projects are outside the vault); reading is not extracting. Never read 99 Archive (or the old _Archive and zz Archive), _Templates or 99 System or an online-only "
++              "projects are outside the vault); reading is not extracting. Never read 99 Archive (or the old _Archive and zz Archive), "
++              "_Templates or 99 System or an online-only "
                "OneDrive file. Project documents are internal: nothing from them goes into a client report unless Alan says so. "
                "Change a file only when Alan asks for it; nothing is written unattended. "
                "An image Alan attached (a line \"The user attached an image: …\") is for discussion: read it and talk about it; "
-@@ -532,7 +532,7 @@ TRANSCRIPT_CHAT = (
+@@ -532,7 +533,7 @@ TRANSCRIPT_CHAT = (
  
  
  def deny_tools():
@@ -20,7 +21,7 @@ index ded1d52c..294b9813 100644
      extra = [f"{t}({paths.tool_pattern(g)})" for g in paths.never_index_patterns() for t in ("Read", "Edit", "Write")]
      return DENY_TOOLS + extra
  
-@@ -681,10 +681,10 @@ def new_project_file_refused(rel):
+@@ -681,10 +682,10 @@ def new_project_file_refused(rel):
  
  
  def existing_project_folder(name):
@@ -35,7 +36,7 @@ index ded1d52c..294b9813 100644
  
  
  def allowed(op, rel):
-@@ -769,7 +769,7 @@ def page_folders(code, base, documents=False):
+@@ -769,7 +770,7 @@ def page_folders(code, base, documents=False):
      roots = [base / paths.folder_name(k) for k in kinds]
      if documents and code != "_portfolio":
          roots.append(base if paths.external() else base / "documents")
@@ -44,7 +45,7 @@ index ded1d52c..294b9813 100644
  
      def walk(d, depth):
          """d and its subfolders, depth levels down, within the cap."""
-@@ -782,7 +782,7 @@ def page_folders(code, base, documents=False):
+@@ -782,7 +783,7 @@ def page_folders(code, base, documents=False):
          try:
              with os.scandir(d) as it:
                  subs = sorted(e.path for e in it if e.is_dir(follow_symlinks=False) and not e.name.startswith(".")
@@ -53,16 +54,16 @@ index ded1d52c..294b9813 100644
          except OSError:                                  # not there (yet): its stamp is a dash
              return
          for s in subs:
-@@ -4829,7 +4829,7 @@ def edit_public(c):
+@@ -4829,7 +4830,7 @@ def edit_public(c):
  NO_STAGE = ("notes", "notes_back")
  
  
 -# ===== BL-09: a change the server itself prepared (Health's rename of zz Archive folders) goes on the same card =====
-+# ===== BL-09: a change the server itself prepared (a project's archive or restore, a note's delete, a move back) goes on the same card =====
++# ===== BL-09: a change the server itself prepared (an archive, a restore, a note's delete, a move back) goes on the same card =====
  def server_edit_card(title, data, note=None, done=None):
      """Put a spec this server made itself (never the model's) on a change card, as build_edit_card does for a CHANGE line; the
      card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending). #124: `note`
-@@ -5099,7 +5099,7 @@ def project_archive_card(code, action, cancel):
+@@ -5099,7 +5100,7 @@ def project_archive_card(code, action, cancel):
  def move_back_route(handler, req):
      """POST /api/files/move-back {path}: the stored path of a file Files shows as archived. archive.back_spec builds the move
      (never the page): only a file an archive moved, back to the place it came from, never onto a file that is there. It goes on
@@ -71,7 +72,7 @@ index ded1d52c..294b9813 100644
      import archive
      path = req.get("path")
      if not isinstance(path, str) or set(req) - {"path"}:
-@@ -7524,7 +7524,7 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
+@@ -7524,7 +7525,7 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
  
  # ===== #124: Delete note (Alan, 15-10-2026: the confirm box AND the one approval card) =====
  # POST /api/notes/delete {path, base}   after Alan's confirm box in the Notes tab: the note's move into its own engagement's (or
@@ -81,7 +82,7 @@ index ded1d52c..294b9813 100644
  # tracker.py apply makes it, on Approve (server_edit_card: bound to this snapshot, used once, 30 minutes); Reject moves nothing.
  # Undo (tracker.py undo) and Files › Archived's Move back ("notes_back") bring it back, never onto a file that is there. As with
 diff --git a/system/scripts/permissions.py b/system/scripts/permissions.py
-index 1fbde1ef..1fc55de7 100644
+index 1fbde1ef..e4dc3bba 100644
 --- a/system/scripts/permissions.py
 +++ b/system/scripts/permissions.py
 @@ -35,7 +35,7 @@ Rules creaite will add are narrow:
@@ -89,7 +90,7 @@ index 1fbde1ef..1fc55de7 100644
                                                               projects/), inbox/, system/staging/, system/search/ or
                                                               system/history/; never the engine, the database, .claude or .git,
 -                                                             and never _Archive or _Templates. A projects/<folder>/ rule is
-+                                                             and never 99 Archive (or the old _Archive, zz Archive) or _Templates. A projects/<folder>/ rule is
++                                                             and never 99 Archive (or the old two), _Templates. A projects/<folder>/ rule is
                                                               written in the form Claude Code needs (~/… when the projects are
                                                               in a OneDrive projects root)
  Anything else (a blanket Bash or Edit rule, node, curl, a path outside the vault, a deny rule) is refused: edit
@@ -105,7 +106,7 @@ index 1fbde1ef..1fc55de7 100644
          return "that path holds the engine, the database, the settings or .claude: creaite never lets the panel write there"
      return None
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index f52ea4dd..dcb67f0d 100644
+index f52ea4dd..66ce4555 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
 @@ -214,7 +214,7 @@ def _never_verdict(p, operation, where):
@@ -113,7 +114,7 @@ index f52ea4dd..dcb67f0d 100644
      if operation in WRITES and any(x.lower() == ".git" for x in p.parts):
          return "it is inside a .git folder, whose hooks run commands"
 -    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # _Archive, _Templates, 99 System (BL-93, BL-112)
-+    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # 99 Archive, _Archive, zz Archive, _Templates, 99 System (BL-93, BL-112, #252)
++    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))     # 99 Archive and the old two, _Templates, 99 System
      skipped = {n.lower() for n in paths.skipped_names()}
      hit = next((x for x in (below or ()) if x.lower() in skipped), None)
      if hit:
@@ -207,7 +208,7 @@ index f52ea4dd..dcb67f0d 100644
          return False
      if pb[2:] != pa[1:] or pa[-1].startswith((".", "~$")):
          return False
-@@ -342,25 +347,26 @@ def _portfolio_folder(name):
+@@ -342,25 +347,27 @@ def _portfolio_folder(name):
  NOTES_BACK_RENAMES = True
  
  
@@ -234,19 +235,21 @@ index f52ea4dd..dcb67f0d 100644
  
  def _note_back(pa, pb):
 -    """#124: pa is a deleted note in <…>/_Archive/<notes folder>/ and pb its place back in that notes folder: the reverse of a
-+    """#124: pa is a deleted note in <…>/99 Archive (or, #252, _Archive or zz Archive)/<notes folder>/ and pb its place back in that notes folder: the reverse of a
-     "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name gets (both names from one first name)."""
+-    "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name gets (both names from one first name)."""
 -    if not _note_folders(pb, pa):
++    """#124: pa is a deleted note in <…>/99 Archive (or, #252, _Archive or zz Archive)/<notes folder>/ and pb its place back in
++    that notes folder: the reverse of a "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name
++    gets (both names from one first name)."""
 +    if not _note_folders(pb, pa, True):
          return False
      if not NOTES_BACK_RENAMES:
          return _note_name(pb[-1], pa[-1])
-@@ -393,16 +399,16 @@ def _move_shape(kind, pa, pb):
+@@ -393,16 +400,16 @@ def _move_shape(kind, pa, pb):
      if kind == "reports":
          return _report_archive(pa, pb)
      if kind == "reports_back":
 -        return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
-+        return _report_archive(pb, pa, True)          # BL-331: the reverse of the approved shape, nothing wider (#252: from any archive name)
++        return _report_archive(pb, pa, True)          # BL-331: the reverse of the approved shape, nothing wider (#252: any name)
      if kind == "notes":
 -        return _note_archive(pa, pb)                  # #124: one note into its own folder's _Archive
 +        return _note_archive(pa, pb)                  # #124: one note into its own folder's 99 Archive
@@ -262,7 +265,7 @@ index f52ea4dd..dcb67f0d 100644
  
  
  def _not_the_shape(kind):
-@@ -417,15 +423,15 @@ def _not_the_shape(kind):
+@@ -417,15 +424,15 @@ def _not_the_shape(kind):
          return f"that isn't a note (a .md file in a notes folder) moved into its own engagement's {paths.ARCHIVE}"
      if kind == "notes_back":
          return f"that isn't a note moved back from its own engagement's {paths.ARCHIVE} to the same notes folder"
@@ -281,7 +284,7 @@ index f52ea4dd..dcb67f0d 100644
      if any(".." in Path(str(x)).parts for x in (src, dst)):
          return "a path with .. in it"
      root = Path(os.path.realpath(paths.projects_root()))
-@@ -868,7 +874,7 @@ SCRIPT_COMMANDS = {
+@@ -868,7 +875,7 @@ SCRIPT_COMMANDS = {
                    "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
      "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
                     "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
@@ -291,7 +294,7 @@ index f52ea4dd..dcb67f0d 100644
                     "people rename": RECORD, "people merge": RECORD, "people map": RECORD, "people migrate": RECORD,
                     "workstreams": READ, "workstreams list": READ, "workstreams suggest": READ, "workstreams add": RECORD,
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index fb5a714f..13f7cf7b 100644
+index fb5a714f..80e4a082 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -407,10 +407,10 @@ def safe_path(rel_path, purpose):
@@ -303,7 +306,7 @@ index fb5a714f..13f7cf7b 100644
          below = below[:-1]
      hit = next((n for n in paths.skipped_names() if n.lower() in below), None)
 -    if hit:                                     # BL-09: never into _Archive (an archived project's folder), _Templates, 99 System
-+    if hit:                                     # BL-09, #252: never into 99 Archive (or _Archive, zz Archive: an archived project's folder), _Templates, 99 System
++    if hit:                                     # BL-09, #252: never into 99 Archive or the old two, _Templates, 99 System
          raise Invalid(f"{purpose}: {hit} is never written by creaite ({rel_path})")
      return p
  
