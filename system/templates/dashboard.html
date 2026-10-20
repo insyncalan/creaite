@@ -47036,13 +47036,13 @@ ${s5}`;
         renderMeetings();
         continue;
       }
-      if (!chat) {
-        openChat();
-        chat = true;
-      }
       const when2 = `${fd(m5.day)} at ${m5.start}`;
       let now = m5;
       if (!m5.loaded) {
+        if (!chat) {
+          openChat();
+          chat = true;
+        }
         MRUN[m5.id] = "loading";
         renderMeetings();
         runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when2})`}`));
@@ -76653,6 +76653,7 @@ ${d5.text}`);
         "PrepPopup",
         "PrepShape",
         "ProjectSettings",
+        "QUEUE",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -77120,6 +77121,7 @@ ${d5.text}`);
         "previewInbox",
         "prio",
         "processLive",
+        "processMeetings",
         "profileTools",
         "projPeople",
         "projectState",
