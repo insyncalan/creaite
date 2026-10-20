@@ -12,7 +12,7 @@
    - Followed (the register's VIP column, BL-99) is read here only for the project settings page's People view (BL-288: the star
      and the Follow tick are shown there and nowhere else); `follow` on a field list or a save is that page's alone.
    Every change is one proposal holding the register file (settings.js regSave: logged, applied, with Undo). */
-import { A, DEC, P, R } from "../core/data.js";
+import { A, DEC, open, P, R } from "../core/data.js";
 import { D, isMe, S, TODAY } from "../core/page.js";
 import { REGPEND, REGTEXT, isHiddenPerson, pBlank, pFind, pKey, peopleParse, regSave, resolver } from "../settings.js";
 
@@ -38,12 +38,12 @@ const followedIn = x => { const v = String(x.VIP || "").trim(); return !!v && !N
 
 /** @typedef {{a: number, r: number, d: number, st: boolean}} ProjCounts */
 /** @typedef {{n: string, p: any, me: boolean, email: string, org: string, role: string, aliases: string[], followed: boolean,
-    it: Record<string, ProjCounts>, derived: string[], on: string[], missing: string[], oa: any[], or: any[], dw: any[], late: number,
+    it: Record<string, ProjCounts>, derived: string[], on: string[], missing: string[], oa: any[], al: any[], or: any[], dw: any[], late: number, lateItems: any[],
     items: any[]}} PersonRow */
 
 /** @param {Map<string, any>} map @param {string} n */
 function rowOf(map, n) {
-  if (!map.has(n)) map.set(n, { n, it: {}, oa: [], or: [], dw: [], items: [] });
+  if (!map.has(n)) map.set(n, { n, it: {}, oa: [], al: [], or: [], dw: [], items: [] });
   return map.get(n);
 }
 /** @param {any} x @param {string} c @returns {ProjCounts} */
@@ -58,16 +58,14 @@ export function registerRows() {
     if (!owner || owner === "TBC") return null;
     const x = rowOf(map, canon(owner)); countsOf(x, i.p)[k]++; x.items.push(i); return x;
   };
-  A.forEach(a => { const x = own(a, a.o, "a"); if (x && a.st === "Open") x.oa.push(a); });
-  R.forEach(r => { const x = own(r, r.o, "r"); if (x && isOpen(r)) x.or.push(r); });
+  A.forEach(a => { const x = own(a, a.o, "a"); if (x && a.st === "Open") x.oa.push(a); if (x && open(a)) x.al.push(a); });   // Actions counts Open; Overdue keeps Delayed
+  R.forEach(r => { const x = own(r, r.o, "r"); if (x && open(r)) x.or.push(r); });
   DEC.forEach(d => { const x = own(d, d.by, "d"); if (x && d.st === "Pending") x.dw.push(d); });
   const st = D.stakeholders || {};
   Object.keys(st).forEach(c => (st[c] || []).forEach((/** @type {string} */ s) => { if (s && s !== "TBC") countsOf(rowOf(map, canon(s)), c).st = true; }));
   const codes = new Set(P.map(p => p.code));
   return [...map.values()].filter(x => !isHiddenPerson(x.n)).map(x => finish(x, codes)).sort((a, b) => a.n.localeCompare(b.n));
 }
-/** @param {any} i */
-const isOpen = i => !["Closed", "Cancelled"].includes(i.st);
 
 /** @param {any} x @param {Set<string>} codes @returns {PersonRow} */
 function finish(x, codes) {
@@ -77,8 +75,8 @@ function finish(x, codes) {
   const on = [...new Set([...derived, ...codesOf(extra[COL_ON]).filter(c => codes.has(c))])].filter(c => !left.has(c));
   const email = (p && p.email) || "", org = (p && p.org) || "", role = (p && p.role) || "";
   const missing = me ? [] : [...(email ? [] : ["email"]), ...(org ? [] : ["organisation"]), ...(role ? [] : ["role"])];
-  const late = [...x.oa, ...x.or].filter(i => i.due && i.due < TODAY).length;
-  return { ...x, p, me, email, org, role, aliases: (p && p.aliases) || [], followed: followedIn(extra), derived, on: P.map(q => q.code).filter(c => on.includes(c)), missing, late };
+  const lateItems = [...x.al, ...x.or].filter(i => i.due && i.due < TODAY);
+  return { ...x, p, me, email, org, role, aliases: (p && p.aliases) || [], followed: followedIn(extra), derived, on: P.map(q => q.code).filter(c => on.includes(c)), missing, late: lateItems.length, lateItems };
 }
 
 /** "Missing: email, organisation" for the needs-details tag's tooltip. @param {PersonRow} x */

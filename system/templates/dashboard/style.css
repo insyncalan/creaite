@@ -4131,3 +4131,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #personEdit .pemsg{color:var(--bad);min-height:1em;margin-top:8px}
 #personEdit .deacts{display:flex;gap:8px;align-items:center;margin-top:14px}
 #v-projects .projarch{margin-top:14px;display:grid;gap:8px}
+/* #248: the People page v2, the home of the whole register (components/people/PeoplePage.jsx) */
+#v-people .plhead{display:flex;align-items:center;gap:12px}
+#v-people .plhead h1{flex:1;margin:0}
+#v-people .plintro{margin:4px 0 14px}
+#v-people #peopleTbl td{vertical-align:middle}
+#v-people #peopleTbl th:not(.num){text-align:left}
+#v-people #peopleTbl tr.nr td:first-child{box-shadow:inset 2px 0 0 var(--warn)}
+#v-people #peopleTbl td.title{white-space:nowrap}
+#v-people #peopleTbl .pj a{color:var(--accent);white-space:nowrap}
+#v-people #peopleTbl td.mgract{white-space:nowrap;text-align:right}
+#v-people #peopleTbl td.num .late{color:var(--bad);font-weight:600}
+#v-people .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;white-space:normal}
+#v-people .plnone{padding:16px}

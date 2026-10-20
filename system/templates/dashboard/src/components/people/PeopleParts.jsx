@@ -41,14 +41,15 @@ export const Star = () => (
 );
 
 /** The name (it opens their work; a right-click is the person menu, with Draft email), "(you)", "needs details" with what is
-    missing, and the codes of the other projects they are on. @param {{x: PersonRow, code?: string, follow?: boolean, codes?: boolean}} props */
-export function NameCell({ x, code, follow, codes }) {
+    missing, and the codes of the other projects they are on. `you`: Alan's own row reads "You (name)" (the People page).
+    @param {{x: PersonRow, code?: string, follow?: boolean, codes?: boolean, you?: boolean}} props */
+export function NameCell({ x, code, follow, codes, you }) {
   const also = codes ? x.on.filter(c => c !== code) : [];
   return (
     <td class="title">
-      <a href="#" class="plink2" data-person={x.n} title={x.me ? "Open My work" : `Open ${x.n}’s work`}>{x.n}</a>
+      <a href="#" class="plink2" data-person={x.n} title={x.me ? "Open My work" : `Open ${x.n}’s work`}>{you && x.me ? `You (${x.n})` : x.n}</a>
       {follow && x.followed ? <> <Star /></> : null}
-      {x.me ? <> <span class="tag">(you)</span></> : null}
+      {x.me && !you ? <> <span class="tag">(you)</span></> : null}
       {x.missing.length ? <> <span class="tag warn" data-needs title={missingWords(x)}>needs details</span></> : null}
       {also.map(c => <span key={c}> <span class="tag pcodetag" title={`Also on ${pName(c)}`}>{c}</span></span>)}
     </td>

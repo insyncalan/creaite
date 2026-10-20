@@ -2,6 +2,7 @@
 /* work.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0030-work.js, 0031-bl-150-sprint-ux.js, 0032-bl-159-sprint-icons.js, 0033-bl-160-sprint-icons.js, 0034-after-bl-160-js.js, 0035-work-board-bl-103-sprint-4a.js, 0036-bl-128-sprint-work-views.js, 0037-decisions-board-bl-103-sprint-debug-log.js, 0038-bl-129-sprint-work-views.js, 0039-bl-130-sprint-work-views.js, 0040-bl-132-sprint-work-views.js, 0041-bl-131-sprint-work-views.js, 0130-person-rows-bl-68.js, 0131-bl-122-sprint-polish.js, 0132-bl-123-sprint-polish.js, 0133-bl-124-sprint-polish.js, 0147-bl-134-sprint-all-items.js, 0148-bl-138-sprint-all-items.js, 0149-bl-190-sprint-links.js, 0150-after-bl-190-people.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { drawPeoplePage, savedPeopleTab, setPeopleTab } from "./components/people/PeoplePage.jsx";   /* #248 */
 import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml, linkWords } from "./core/linkText.js";
@@ -1139,46 +1140,23 @@ PRESETS.all=[["open","All open",{st:["Open"]}],["mine","Mine",{st:["Open"],o:["@
   ["overdue","Overdue",{st:["Open"],due:["overdue"]},true],["closed","Closed",{st:["Closed","Cancelled"]}]];
 if(!Array.isArray(shared.SAVED.all)) shared.SAVED.all=[];
 }
-/* ===== BL-138 (sprint-all-items) =====
-   People in two tabs. "With work" (first and default): anyone with an open action, an open risk or issue, or a decision waiting
-   on them (a Decision needed where they are the one asked, BL-53); made and withdrawn decisions are history, not an assignment.
-   You are always first on With work. "Nothing assigned": the other people creaite knows (the people register, which meeting
-   attendees, mail, Teams and reports add to, and anyone whose items are all closed), with the projects they appear in, a count
-   of their closed items and "not in register" for a name only seen on items. Nobody is on both; a hidden person (Settings ›
-   People) is on neither. Each tab keeps its own sort. The tab is kept in the address (#people/none) and remembered in this
-   browser, so the rail and the breadcrumbs return to it; a plain #people address opens With work. Counts only (BL-56). */
-export const PSORTT={work:{col:"late",dir:"desc"},none:{col:"name",dir:"asc"}};
-shared.PTAB=store.get("creaite-peopletab","work")==="none"?"none":"work";
-export function setPTab(t){ t=t==="none"?"none":"work"; PSORTT[shared.PTAB]=shared.PSORT; shared.PTAB=t; shared.PSORT=PSORTT[t]; store.set("creaite-peopletab",t); }
-export function peopleTabs(){ const L=PERS().filter(x=>!isHiddenPerson(x.name)).map(x=>Object.assign(x,{dw:x.D.filter(d=>d.st==="Pending"),cl:[...x.A,...x.R].filter(i=>!open(i)).length+x.D.filter(d=>d.st!=="Pending").length}));
-  const has=x=>x.oa.length||x.or.length||x.dw.length;
-  return {work:L.filter(x=>has(x)||isMe(x.name)),none:L.filter(x=>!has(x)&&!isMe(x.name))}; }
-export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none", f=PSORTS[shared.PSORT.col]||PSORTS.name;
-  const L=T[shared.PTAB].sort((a,b)=>(!none&&(isMe(a.name)?-1:isMe(b.name)?1:0))||(()=>{ const x=f(a),y=f(b); return (x<y?-1:x>y?1:0)*(shared.PSORT.dir==="asc"?1:-1); })()||a.name.localeCompare(b.name));
-  if(!$("#ptabsHost")) addHTML($("#peopleTbl"),"beforebegin",html`<div class="tabhost" id="ptabsHost"></div>`);   /* BL-316: the Tabs block */
-  drawTabs($("#ptabsHost"),{items:[["work","With work"],["none","Nothing assigned"]].map(([k,l])=>({id:k,label:l,count:T[k].length,data:{ptab:k}})),selected:shared.PTAB,
-    onSelect:k=>{ if(k===shared.PTAB) return; setPTab(k); renderPeople(); navWrite(false); },label:"People",className:"tabs",id:"ptabs",controls:"peopleTbl",wrap:true});
-  const th=(c,l,num)=>`<th class="${num?"num":""}" data-psort="${c}" aria-sort="${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?"ascending":"descending"):"none"}"><button type="button" class="thsort">${l}${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?" ▲":" ▼"):""}</button></th>`;   /* v1.9.5 (UI audit P1-7): aria-sort stays on the column header; the control is a real button inside it */
-  const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
-    <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
-  $("#peopleTbl").setAttribute("role","tabpanel");
-  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
-    ${raw(personCounts(x))}</tr>`)}</tbody></table>`); }
+/* ===== BL-138 (sprint-all-items), #248 (People page v2) =====
+   The People page is the home of the whole register: components/people/PeoplePage.jsx draws it (tabs Everyone, With work,
+   Nothing assigned, Needs attention; the register's columns; search, the filter, Add a person, edit and Remove from the
+   register). The tab is kept in the address (#people/<tab>) and remembered in this browser. The sort is shared.PSORT, which
+   the headings' click handler (settings.js, [data-psort]) flips; You are first on With work. Counts only (BL-56). */
+shared.PTAB=savedPeopleTab();
+export function setPTab(t){ setPeopleTab(t); }
+export function renderPeople(){ drawPeoplePage(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0148(){
-shared.PSORT=PSORTT[shared.PTAB];
-Object.assign(PSORTS,{dw:x=>x.dw.length,cl:x=>x.cl});
+shared.PSORT={col:"late",dir:"desc"};
 }
 /* ===== BL-190 (sprint-links) ===== the People list's figures open Work filtered to that person (every spelling of their name on
    the items counted, so aliases are included) and that kind: Open actions (status Open only, as All open lists them), Open RAID,
    Decisions waiting (they are the one asked) and Overdue (All items: their Open and Delayed actions and RAID items past due). A zero stays plain and is always written "0" (#190; never a dash). */
 export const ownersOf=L=>[...new Set(L.map(i=>i.o||i.by).filter(Boolean))];
 export const latesOf=x=>[...x.oa,...x.or].filter(i=>i.due&&i.due<TODAY);
-export function personCounts(x){ const nm=isMe(x.name)?"you":x.name, late=latesOf(x);
-  return `<td class="num">${countLink(`${plur(x.oo.length,"open action")} owned by ${nm}`,x.oo.length,"actions:open:",{o:ownersOf(x.oo)})}</td>`
-    +`<td class="num">${countLink(`${plur(x.or.length,"open RAID item")} owned by ${nm}`,x.or.length,"raid:open:",{o:ownersOf(x.or)})}</td>`
-    +`<td class="num">${countLink(`${plur(x.dw.length,"decision")} waiting on ${nm}`,x.dw.length,"decisions:pending:",{o:ownersOf(x.dw)})}</td>`
-    +`<td class="num ${x.late?"late":""}">${countLink(`${plur(late.length,"overdue item")} owned by ${nm}`,late.length,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(late)})}</td>`; }
 /* ===== end BL-190 (People) ===== */
 /* the address: #people is With work, #people/none Nothing assigned; go("people") with no tab keeps the one last used */
 /* ===== end BL-138 ===== */

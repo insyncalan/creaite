@@ -62,7 +62,7 @@
       <section class="view" id="v-psettings" hidden aria-labelledby="psTitle"></section><!-- #228: the full-page project settings (components/project/ProjectSettings.jsx) -->
       <section class="view" id="v-notes" hidden></section><!-- BL-301 B: a project's Notes tab, and the portfolio's notes -->
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
-            <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
+            <section class="view" id="v-people" hidden><div class="wrapmax"><div class="plhead"><h1>People</h1><button type="button" class="btn primary" id="plAdd" aria-haspopup="dialog">Add a person</button></div><div id="peopleRoot"></div></div></section><!-- #248: the People page v2 (components/people/PeoplePage.jsx draws #peopleRoot) -->
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
       <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
