@@ -1,4 +1,8 @@
-"""#124 F3: only Approve on the live server's own card moves a note, moves it back, or moves an archived report back.
+"""#124 F3: only the live server moves a note, moves it back, or moves an archived report back.
+
+#255 (Alan, 20-10-2026) changed this file for "notes" and "notes_back" only: the live server now makes those two moves from the
+page's own button (Delete note, a note's Move back) with no card, writing the same one-time marker; its refusal names Delete note
+(PAGE_REFUSED). Everything about "reports_back" (Approve on the card) is unchanged.
 
 Run: python3 dev/tests/test_card_only_moves.py      (one live server over a throwaway vault; no Chrome)
 
@@ -21,6 +25,7 @@ reach.CARD_MOVE_SECONDS old). What is covered:
 Everything is fictional and temporary.
 """
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -32,6 +37,16 @@ from test_archive_move_back import DUE, archive_old_files  # noqa: E402
 from test_tracker import ABC, action  # noqa: E402
 
 REFUSED = "is moved only by Approve on the live server's approval card"
+PAGE_REFUSED = "is moved only by Delete note or Move back on the dashboard (the live server's own button)"     # #255
+
+
+# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
+ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
+                    .read_text(encoding="utf-8"), re.M).group(1)
+
+def refused(kind):
+    """The apply's refusal for a move of `kind` without the server's marker (#255: a note's own moves name the button)."""
+    return PAGE_REFUSED if kind in ("notes", "notes_back") else REFUSED
 
 
 class CardOnlyMoves(test_notes_delete.NotesDelete):
@@ -69,7 +84,7 @@ class CardOnly(CardOnlyMoves):
         before = self.backups()
         r = self.post("/api/apply", {})                                            # a full apply leaves it in staging
         self.assertTrue(r["ok"], r)
-        self.assertIn(f"Left in staging, not applied: {name} file_changes_decision: move: {src} {REFUSED}", r["message"])
+        self.assertIn(f"Left in staging, not applied: {name} file_changes_decision: move: {src} {refused(kind)}", r["message"])
         self.assertTrue((self.v.root / rel).is_file())
         self.assertTrue(there.is_file())
         self.assertFalse(gone.exists())
@@ -78,7 +93,7 @@ class CardOnly(CardOnlyMoves):
         r = self.run_at("tracker.py", "apply", name)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("Apply stopped. Nothing was written.", r.stdout)            # refused in the dry run
-        self.assertIn(f"{name} file_changes_decision: move: {src} {REFUSED}", r.stdout)
+        self.assertIn(f"{name} file_changes_decision: move: {src} {refused(kind)}", r.stdout)
         self.assertEqual(self.backups(), before)                                   # before the backup
         self.assertTrue(there.is_file())
         self.assertFalse(gone.exists())
@@ -86,10 +101,9 @@ class CardOnly(CardOnlyMoves):
 
     def test_a_a_hand_staged_note_delete_is_refused(self):
         self.new("Hand delete")
-        src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/_Archive/notes/Hand delete.md"
+        src, dst = f"{ABC}/notes/Hand delete.md", f"{ABC}/{ARCHIVE}/notes/Hand delete.md"
         self.assert_refused_both_ways("notes", src, dst, self.folder() / "Hand delete.md", self.archive() / "Hand delete.md")
-        d = self.delete(self.post("/api/notes/get", {"path": src}))                   # the card still moves it
-        done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
+        done = self.delete(self.post("/api/notes/get", {"path": src}))                # #255: the page's button still moves it
         self.assertTrue(done["ok"], done)
         self.assertTrue((self.archive() / "Hand delete.md").is_file())
         self.assertEqual(self.markers(), [])                                           # nothing left on success
@@ -99,12 +113,10 @@ class CardOnly(CardOnlyMoves):
 
     def test_b_a_hand_staged_note_move_back_is_refused(self):
         r = self.new("Hand back")
-        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])
-        src, dst = f"{ABC}/_Archive/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
+        self.assertTrue(self.delete(r)["ok"])
+        src, dst = f"{ABC}/{ARCHIVE}/notes/Hand back.md", f"{ABC}/notes/Hand back.md"
         self.assert_refused_both_ways("notes_back", src, dst, self.archive() / "Hand back.md", self.folder() / "Hand back.md")
-        self.assertTrue(self.post("/api/files/move-back", {"path": dst})["ok"])       # Move back on the card still works
-        card = self.post("/api/edit/pending", {})["card"]
-        self.assertTrue(self.post("/api/edit/approve", {"card": card["card"]})["ok"])
+        self.assertTrue(self.move_back(dst)["ok"])                                     # #255: Move back on the page still works
         self.assertTrue((self.folder() / "Hand back.md").is_file())
         self.assertEqual(self.markers(), [])
 
@@ -121,15 +133,19 @@ class CardOnly(CardOnlyMoves):
         self.assertEqual(self.markers(), [])
 
     def test_d_no_marker_left_when_the_apply_fails_or_raises(self):
-        r = self.new("Fails")
-        d = self.delete(r)
-        (self.archive()).mkdir(parents=True, exist_ok=True)
-        (self.archive() / "Fails.md").write_text("taken after the card went up")    # the apply's own check refuses
-        got = self.post("/api/edit/approve", {"card": d["card"]["card"]})
-        self.assertFalse(got["ok"], got)
-        self.assertEqual(self.markers(), [])
+        self.new("Fails")
+        got = self.py_json(                                                            # #255: the page's move, its apply refused
+            "import archive, live_server as ls, paths\n"
+            f"spec, why = archive.note_delete_spec({f'{ABC}/notes/Fails.md'!r})\n"
+            "dst = paths.resolve(spec['file_changes']['file_ops'][0]['to'], archived=False)\n"
+            "dst.parent.mkdir(parents=True, exist_ok=True); dst.write_text('taken after the check')   # the apply's own check refuses\n"
+            "out = ls.page_move(spec); dst.unlink()\n"
+            "print(json.dumps([out, sorted(f.name for f in paths.GUARD.glob('move-*'))]))")
+        (apply_id, why), after = got
+        self.assertIsNone(apply_id)
+        self.assertIn("already exists", why)
+        self.assertEqual(after, [])
         self.assertTrue((self.folder() / "Fails.md").is_file())
-        (self.archive() / "Fails.md").unlink()
         got = self.py_json(
             "import pathlib, archive, live_server as ls, paths\n"
             f"rel = {f'{ABC}/notes/Fails.md'!r}\n"
@@ -158,7 +174,7 @@ class CardOnly(CardOnlyMoves):
         self.new("Marker")
         got = self.py_json(
             "import hashlib, os, pathlib, time, reach, tracker, paths\n"
-            f"src, dst = {f'{ABC}/notes/Marker.md'!r}, {f'{ABC}/_Archive/notes/Marker.md'!r}\n"
+            f"src, dst = {f'{ABC}/notes/Marker.md'!r}, {f'{ABC}/{ARCHIVE}/notes/Marker.md'!r}\n"
             "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
             "prop = paths.STAGING / 'proposed-2026-10-16-marker.json'\n"
             "prop.write_text(json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}))\n"
@@ -188,11 +204,11 @@ class CardOnly(CardOnlyMoves):
             "out['free_elsewhere'] = {k: tracker.card_move_problem(mins, {'archive': k}, None) for k in ('reports', 'archive', 'restore', 'rename')}\n"
             "prop.unlink(); other.unlink()\n"
             "print(json.dumps(out))")
-        self.assertIn(REFUSED, got["none"])
+        self.assertIn(PAGE_REFUSED, got["none"])
         self.assertIsNone(got["exact"])                                                # only this one
         for k in ("no_proposal", "other_proposal", "bound_elsewhere", "other_version", "other_move", "other_kind", "stale",
                   "future", "symlink", "folder", "garbled"):
-            self.assertIn(REFUSED, got[k] or "", k)
+            self.assertIn(PAGE_REFUSED, got[k] or "", k)
         self.assertEqual(got["free_elsewhere"], {"reports": None, "archive": None, "restore": None, "rename": None})
         for k, why in got["free"].items():                                            # #128: never a note, by any other kind
             self.assertIn("is in a notes folder: a note is moved only by Delete note or Move back", why or "", k)
@@ -201,7 +217,7 @@ class CardOnly(CardOnlyMoves):
         """An Approve that stopped before its apply finished (a crash) leaves an approved card-only proposal in staging with no
         marker: a full Apply leaves it there, says which file, and applies the rest; named, it is refused before the backup."""
         self.new("Leftover")
-        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/_Archive/notes/Leftover.md"
+        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/{ARCHIVE}/notes/Leftover.md"
         left = Path(self.hand("notes", src, dst, via="file")).name
         normal = self.v.root / "system/staging/proposed-2026-10-16-normal.json"
         normal.write_text(json.dumps({"source_run": "dashboard", "items": [action(1, description="Send the plan")]}),
@@ -209,7 +225,7 @@ class CardOnly(CardOnlyMoves):
         before = self.backups()
         r = self.post("/api/apply", {})
         self.assertTrue(r["ok"], r)
-        self.assertIn(f"Left in staging, not applied: {left} file_changes_decision: move: {src} {REFUSED}", r["message"])
+        self.assertIn(f"Left in staging, not applied: {left} file_changes_decision: move: {src} {PAGE_REFUSED}", r["message"])
         self.assertFalse(normal.exists())                                              # the normal one applied
         self.assertEqual(len(self.backups()), len(before) + 1)
         self.assertTrue((self.v.root / "system/staging" / left).is_file())             # the leftover stays, unapplied
@@ -220,8 +236,7 @@ class CardOnly(CardOnlyMoves):
         self.assertTrue(r["ok"], r)
         self.assertIn(f"Left in staging, not applied: {left}", r["message"])
         self.assertEqual(self.backups(), before)
-        d = self.delete(self.post("/api/notes/get", {"path": src}))                   # the card's own Approve still works
-        done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
+        done = self.delete(self.post("/api/notes/get", {"path": src}))                # #255: the page's own button still works
         self.assertTrue(done["ok"], done)
         self.assertTrue((self.archive() / "Leftover.md").is_file())
         self.assertEqual(self.markers(), [])
@@ -237,7 +252,7 @@ class CardOnly(CardOnlyMoves):
             "for op in fc['file_ops']: tracker.check_file_op(op, fc)\n"
             "print(json.dumps([why, len(fc['file_ops'])]))")
         self.assertEqual(got, [None, 1])
-        d = self.delete(self.post("/api/notes/get", {"path": f"{ABC}/notes/Previewed.md"}))
+        d = self.delete(self.post("/api/notes/get", {"path": f"{ABC}/notes/Previewed.md"}))     # #255: moved, marker gone after
         self.assertTrue(d["ok"], d)
         self.assertEqual(self.markers(), [])
 
@@ -266,7 +281,7 @@ class CardOnly(CardOnlyMoves):
         self.assertEqual(len(seen[0]), 1)                                              # the marker was there for the apply
         self.assertFalse(seen[1])                                                      # and the bytes under the name changed
         self.assertFalse(ok, message)
-        self.assertIn(REFUSED, message)
+        self.assertIn(PAGE_REFUSED, message)
         self.assertTrue((self.folder() / "Other bytes.md").is_file())                 # the note stays
         self.assertFalse((self.archive() / "Other bytes.md").exists())
         self.assertEqual(after, [])
@@ -284,7 +299,7 @@ class CardOnly(CardOnlyMoves):
         self.new("Loaded")
         got = self.py_json(
             "import hashlib, reach, tracker, paths\n"
-            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/_Archive/notes/Loaded.md'!r}\n"
+            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/{ARCHIVE}/notes/Loaded.md'!r}\n"
             "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
             "prop = paths.STAGING / 'proposed-2026-10-16-loaded.json'\n"
             "card = json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}).encode()\n"
@@ -298,7 +313,7 @@ class CardOnly(CardOnlyMoves):
             "prop.write_bytes(other); tracker.load(prop); out['unbound_read'] = p()\n"
             "m.unlink(); prop.unlink(); tracker.READ_SHA.clear()\n"
             "print(json.dumps(out))")
-        self.assertIn(REFUSED, got["swapped_back"] or "")
+        self.assertIn(PAGE_REFUSED, got["swapped_back"] or "")
         self.assertIsNone(got["card_loaded"])
         self.assertIsNone(got["unbound_read"])                  # only the apply's own load binds (the last bound one: the card's)
 
@@ -340,7 +355,7 @@ class CardOnly(CardOnlyMoves):
         self.assertFalse(ok, message)
         self.assertIn("the approval couldn't be recorded", message)
         self.assertEqual(left, [])                                                     # nothing written through the symlink
-        self.assertIn(REFUSED, t or "")
+        self.assertIn(PAGE_REFUSED, t or "")
         self.assertTrue((self.folder() / "Guarded.md").is_file())
 
     def test_f_the_lists_agree_and_nobody_else_writes_the_marker(self):
