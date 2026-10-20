@@ -20,7 +20,7 @@ import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, navOf, navWrite, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -33,7 +33,7 @@ import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./project
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn, RHL } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
-import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, renderWork, rvPaint, syncView } from "./work.js";
+import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
 /* ===== Today brief (BL-72) ===== */
@@ -98,10 +98,10 @@ export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} 
   if(n!==null&&n<0) return `<span class="late">${t}, ${-n} day${n===-1?"":"s"} late</span>${own}`;
   const due=n===null?"no due date":n===0?"due today":n===1?"due tomorrow":n<7?`due ${longDay(x.due).split(" ")[0]}`:`due ${longDay(x.due)}`;
   return `${t}, ${due}${own}`; }
-/* "Open all n in Work": All items, the project, open actions and issues, searched for the milestone's ID (each attached item
-   carries it), so Work lists exactly the items counted */
+/* "Open all n in Work": All items, the project, open actions and issues, on the milestone (the Milestone filter), so Work
+   lists exactly the items counted */
 export function msAttnOpenWork(id){ const r=msAttention().find(x=>x.ms===id); if(!r) return;
-  openWork(r.p,"all","open",{st:["Open"],ty:["Action","Issue"]}); shared.WQ=r.ms; renderWork(); navWrite(false); }
+  openWork(r.p,"all","open",{st:["Open"],ty:["Action","Issue"],mi:[r.ms]}); }
 export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its.length} in Work`;
 export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
   const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`

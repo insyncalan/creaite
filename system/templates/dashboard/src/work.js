@@ -32,7 +32,7 @@ import { plur } from "./today.js";
 shared.WT="actions"; shared.WVIEW=null; shared.SEL=null; shared.WQ=""; export const OWN=new Set(), PROJF=new Set(), PRIF=new Set();
 /* BL-45: Work's filters combine. Status, Due, Owner, Project and Priority sit on the toolbar; "+ Filter" holds the
    rest; every menu shows counts. Views are presets that set filters on screen, and Alan can save his own. */
-export const FX={st:new Set(),due:new Set(),ws:new Set(),ty:new Set(),rs:new Set(),src:new Set(),cv:new Set(),dt:new Set(),ms:new Set()};
+export const FX={st:new Set(),due:new Set(),ws:new Set(),ty:new Set(),rs:new Set(),src:new Set(),cv:new Set(),dt:new Set(),ms:new Set(),mi:new Set()};
 export let RR={from:"",to:""}; shared.DR={from:"",to:""}; shared.CR={from:"",to:""};   /* CR: closed between (BL-190) */ export const SORT={}, WINIT={}, NEG=new Set();   /* RR: raised between; NEG: the fields set to "is not" (BL-130) */
 export const PRIOS=["Urgent","High","Medium","Low"];
 /* free-text search: every word must appear somewhere in the item (ID, text, owner, workstream, response, update, source, project…) */
@@ -1086,7 +1086,7 @@ export function allRows(){ if(ALLC) return ALLC;
 export const allLate=x=>x.st==="Open"&&!!x.due&&x.due<TODAY;
 export const kOfId=id=>A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null;
 /* the filters: Status (the three buckets), Due, Owner, Project, Priority on the toolbar; Type, Stale, Last updated and Raised in
-   "+ Filter". Fields that only some types have (Workstream, Response, Milestone, Source, Client-visible) are not offered. */
+   "+ Filter". Fields that only some types have (Workstream, Response, Source, Client-visible) are not offered; Milestone (#251) is, by name (a decision is never attached). */
    /* no priority (a decision) sorts after Low */
 /* The tab (stage 2): BL-128 to BL-132's own components pointed at allRows(). The List only (no Board: the layout switch and the
    Display menu's Layout are hidden here). Read-only: no cell editing (BL-123), no bulk bar (BL-124), no New button; a click
@@ -1123,7 +1123,8 @@ FDEFS.all=[["st","Status",()=>ALL_ST.map(v=>[v,v]),x=>x.st],
   ["o","Owner",ownerOpts,x=>x.o],["p","Project",()=>P.map(p=>[p.code,p.name]),x=>x.p],["pr","Priority",()=>PRIOS.map(v=>[v,v]),x=>x.pr],
   ["ty","Type",()=>ALL_TYPES.map(v=>[v,v]),x=>x.type,1],
   ["sl","Stale",()=>[["yes",`Stale (no change for ${+S.staleDays||7} days)`],["no","Not stale"]],x=>{ const a=staleAge("all",x); return x.st==="Open"&&a!==null&&a>=(+S.staleDays||7)?"yes":"no"; },1],
-  ["lu","Last updated",()=>lastDays,x=>x.upd_at,1,(x,set)=>within(x.upd_at,set)],["rd","Raised",()=>lastDays,x=>x.raised,1,(x,set)=>within(x.raised,set)]];
+  ["lu","Last updated",()=>lastDays,x=>x.upd_at,1,(x,set)=>within(x.upd_at,set)],["rd","Raised",()=>lastDays,x=>x.raised,1,(x,set)=>within(x.raised,set)],
+  ["mi","Milestone",()=>P.flatMap(p=>(p.ms||[]).filter(m=>m[3]).map(m=>[m[3],P.length>1?`${m[0]} (${p.name})`:m[0]])),x=>x.ms||"",1]];   /* #251: Today's milestone rows open the items attached to one milestone */
 /* the default order: overdue first, then due soonest, undated last (a made decision by its date) */
 // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items sort first)
 DEFSORT.all=(a,b)=>(allLate(b)-allLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id);
