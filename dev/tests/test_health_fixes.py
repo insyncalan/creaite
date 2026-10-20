@@ -57,14 +57,13 @@ class Catalogue(unittest.TestCase):
     """The fixes are a fixed list, mapped from doctor's check ids, and none touches Microsoft 365, permissions or the record."""
 
     def test_the_fixes_are_the_ones_alan_decided(self):
-        self.assertEqual(set(health_fixes.FIXES), {"launcher", "rosetta", "icon", "m365", "offsite", "old_archive",
-                                                      "archive_reports", "sweep_lock"})   # BL-09, BL-03; BL-328 (Alan to confirm)
+        self.assertEqual(set(health_fixes.FIXES), {"launcher", "rosetta", "icon", "m365", "offsite",
+                                                      "archive_reports", "sweep_lock"})   # BL-03; BL-328; #252: no old_archive fix
         commands = {k: f.get("command") for k, f in health_fixes.FIXES.items()}
         self.assertEqual(commands, {"launcher": ("launch.py", "make-launcher", "--replace"),
                                     "rosetta": ("launch.py", "make-launcher", "--if-present"),
                                     "icon": ("launch.py", "refresh-icon"), "m365": None,
                                     "offsite": ("session.py", "backup"),
-                                    "old_archive": ("propose.py", "old-archives"),         # BL-09: prints the change for the card
                                     "archive_reports": ("archive.py", "reports"),          # BL-03: the same
                                     "sweep_lock": ("sweep.py", "unlock", "--if-idle")})    # BL-328: only a lock no sweep holds
         self.assertEqual(health_fixes.FIXES["m365"]["url"], "https://claude.ai/settings/connectors")
@@ -102,7 +101,6 @@ class Catalogue(unittest.TestCase):
             self.assertIsNone(fix(check, "anything"), check)          # record, engine, permissions, set-up: never a Fix it
         cat = health_fixes.catalogue()
         self.assertEqual(cat["checks"], {"launcher_vault": "launcher", "python_version": "rosetta", "offsite_backup": "offsite",
-                                         "old_archive_folders": "old_archive",                  # BL-09
                                          "archive_reports": "archive_reports",                  # BL-03
                                          "sweep_lock": "sweep_lock"})                           # BL-328
         self.assertEqual(cat["standalone"], ["icon", "m365"])
@@ -294,31 +292,11 @@ class FixRoutes(unittest.TestCase):
         self.assertTrue(got["ok"], got)
         self.assertIn("no OneDrive copy to make", got["message"])
 
-    # ── BL-09: the zz Archive rename goes on the approval card, and moves nothing before Approve ──
-    def test_old_archive_fix_with_nothing_to_rename(self):
+    # ── #252: no rename of old archive folders is offered (Alan, 20-10-2026) ──
+    def test_there_is_no_old_archive_fix(self):
         code, got = self.post("/api/health/fix/old_archive")
         self.assertFalse(got["ok"], got)
-        self.assertIn("nothing to rename", got["message"])
-
-    def test_old_archive_fix_puts_the_renames_on_the_card_and_approve_makes_them(self):
-        abc = next(d for d in (self.v.root / "projects").iterdir() if d.name.startswith("ABC "))
-        old = abc / "zz Archive"
-        (old / "sub").mkdir(parents=True)
-        (old / "sub" / "a.md").write_text("a")
-        self.addCleanup(shutil.rmtree, old, True)
-        self.addCleanup(shutil.rmtree, abc / "_Archive", True)
-        code, got = self.post("/api/health/fix/old_archive")
-        self.assertTrue(got["ok"] and got["card"], got)
-        self.assertTrue(old.is_dir())                                      # nothing moved yet
-        _, pend = self.post("/api/edit/pending", {})
-        card = pend["card"]
-        self.assertTrue(card["valid"], card)
-        self.assertIn(f"Move folder projects/{abc.name}/zz Archive/ → projects/{abc.name}/_Archive/", card["lines"])
-        _, done = self.post("/api/edit/approve", {"card": card["card"]})
-        self.assertTrue(done["ok"], done)
-        self.assertFalse(old.exists())
-        self.assertEqual((abc / "_Archive" / "sub" / "a.md").read_text(), "a")
-        self.assertEqual(self.fix_log()[-1]["fix"], "old_archive")
+        self.assertNotIn("old_archive", health_fixes.FIXES)
 
     def test_a_fix_waits_for_a_running_job(self):
         """The fix runs under the same lock as Apply: while a job holds it, the fix says so and runs nothing."""
@@ -344,7 +322,7 @@ class FixLogWording(unittest.TestCase):
 
     def test_every_card_fix_says_it_is_waiting_on_the_card(self):
         card_fixes = [k for k, v in health_fixes.FIXES.items() if v.get("card")]
-        self.assertEqual(sorted(card_fixes), ["archive_reports", "old_archive"])
+        self.assertEqual(sorted(card_fixes), ["archive_reports"])
         for fix_id in card_fixes:
             msg, rec = self.log_line(fix_id)
             self.assertEqual(msg, f"fix {fix_id}: on the approval card, waiting for you (exit 0)")
@@ -352,8 +330,8 @@ class FixLogWording(unittest.TestCase):
             self.assertTrue(rec["card"] and rec["ok"], rec)
 
     def test_a_card_fix_that_failed_still_says_failed(self):
-        msg, _ = self.log_line("old_archive", ok=False, code=1)
-        self.assertEqual(msg, "fix old_archive: failed (exit 1)")
+        msg, _ = self.log_line("archive_reports", ok=False, code=1)
+        self.assertEqual(msg, "fix archive_reports: failed (exit 1)")
 
     def test_a_direct_fix_still_says_done(self):
         direct = [k for k, v in health_fixes.FIXES.items() if not v.get("card")]

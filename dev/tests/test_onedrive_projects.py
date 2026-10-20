@@ -27,12 +27,12 @@ ROOT_SETTING = f"~/Library/CloudStorage/{TENANT}/Documents/Engagements"
 TEMPLATE_DIRS = ["00 Admin/Contract", "00 Admin/Commercial", "01 Inputs/Research", "02 Meetings/Transcripts", "02 Meetings/Minutes",
                  "02 Meetings/Agendas", "03 Delivery/Design", "04 Reporting/Weekly", "04 Reporting/Steerco", "04 Reporting/Adhoc",
                  "04 Reporting/Milestones", "05 Governance/RAID", "05 Governance/Decisions", "05 Governance/Change Requests",
-                 "06 Closure", "07 Growth", "_Archive"]
+                 "06 Closure", "07 Growth", "99 Archive"]
 ENGAGEMENTS = {"ABC": "Example Programme", "DEF": "Digital Enablement"}      # code -> folder (the folder name has no code)
 LOCATIONS = {"projects_root": ROOT_SETTING, "portfolio": "_Portfolio", "skeleton": "_Templates/_Skeleton",
              "folders": {"transcripts": "02 Meetings/Transcripts", "minutes": "02 Meetings/Minutes", "weekly_reports": "04 Reporting/Weekly",
                          "client_reports": "04 Reporting/Weekly", "adhoc_documents": "04 Reporting/Adhoc", "images": "04 Reporting/Content"},
-             "never_index": ["_Archive", "_Templates", "99 System"], "offsite_backup": "_Portfolio/99 System/creaite backups"}
+             "never_index": ["99 Archive", "_Archive", "zz Archive", "_Templates", "99 System"], "offsite_backup": "_Portfolio/99 System/creaite backups"}
 
 
 def touch(path, text="x"):
@@ -160,7 +160,7 @@ print(json.dumps({k: str(paths.folder('ABC', k)) for k in ('minutes','transcript
         touch(self.eng("ABC", "04 Reporting", "Adhoc", "Risk register.xlsx"))
         touch(self.eng("ABC", "00 Admin", "Contract", "Statement of work.docx"))
         touch(self.eng("ABC", "01 Inputs", "Research", "Market notes.md"), "market notes about pilots")
-        touch(self.eng("ABC", "_Archive", "Old plan.docx"))
+        touch(self.eng("ABC", "99 Archive", "Old plan.docx"))
         touch(self.root / "_Templates" / "_Skeleton" / "00 Admin" / "Contract" / "Template contract.docx")
         touch(self.eng("DEF", "03 Delivery", "Design", "Design notes.md"), "design notes")
         touch(self.eng("DEF", "02 Meetings", "Minutes", "2026-10-03 Design review.docx"))
@@ -186,13 +186,13 @@ print(json.dumps(sorted([paths.rel(f).split('/', 1)[1], kind, code] for f, kind,
             ("_portfolio/02 Meetings/Minutes/2026-10-04 Portfolio review.docx", "minutes", "_portfolio")})
         names = " ".join(p for p, _, _ in o)
         for left_out in ("Old plan", "Template contract", "CLAUDE.md", ".keep"):
-            self.assertNotIn(left_out, names)                                                  # _Archive, _Templates, memory, hidden files
+            self.assertNotIn(left_out, names)                                                  # 99 Archive, _Templates, memory, hidden files
         self.assertNotIn("_Portfolio/", names)                                                # (it is listed under its logical name)
 
     def test_the_files_view_lists_the_same_folders_with_their_kinds(self):
         touch(self.eng("ABC", "02 Meetings", "Minutes", "2026-10-01 Weekly sync.docx"))
         touch(self.eng("ABC", "00 Admin", "Contract", "Statement of work.docx"))
-        touch(self.eng("ABC", "_Archive", "Old plan.docx"))
+        touch(self.eng("ABC", "99 Archive", "Old plan.docx"))
         o = self.py("""import build_dashboard as bd, paths
 folders = {c: paths.project_dir(c) for c in ('ABC', 'DEF')}
 print(json.dumps([[f['p'], f['f'], f['n'], f['sub'], f['path']] for f in bd.files(folders, True) if f['p'] != 'inbox']))""")   # documents shown (they are set aside by default: BL-87)
@@ -392,7 +392,7 @@ class TeamsNamesTests(OneDriveCase):
         touch(self.eng("ABC", "02 Meetings", "Minutes", "2026-09-20 Board update.docx"), "m1")
         touch(self.eng("ABC", "02 Meetings", "Agendas", "Agenda-20261001.docx"), "agenda")            # a document, not a meeting
         touch(self.eng("ABC", "04 Reporting", "Weekly", "2026-10-02 Weekly report.docx"))
-        touch(self.eng("ABC", "_Archive", "Old call-20250101.docx"))
+        touch(self.eng("ABC", "99 Archive", "Old call-20250101.docx"))
         touch(self.eng("DEF", "02 Meetings", "Transcripts", "Design review-20261002_140000UTC-Meeting Transcript.docx"), "t3")
         out = json.loads(self.v.run("new", script="minutes.py").stdout)
         got = {(r["project"], r["date"], r["title"], r["how"]) for r in out}
@@ -661,7 +661,7 @@ class OffsiteBackupTests(OneDriveCase):
         o = self.py("""import paths
 print(json.dumps({'never': paths.never_index(), 'docs': [paths.rel(f) for f in paths.document_files('_portfolio')],
                   'patterns': paths.never_index_patterns(), 'problem': paths.project_path_problem('projects/_portfolio/99 System/notes.md')}))""")
-        self.assertEqual(o["never"], ["_Archive", "_Templates", "99 System"])
+        self.assertEqual(o["never"], ["_Archive", "_Templates", "99 Archive", "99 System"])      # #252: 99 Archive added, nothing removed
         self.assertTrue(any("Strategy/plan.md" in f for f in o["docs"]))
         self.assertFalse(any("99 System" in f for f in o["docs"]))
         self.assertIn("**/99 System/**", o["patterns"])

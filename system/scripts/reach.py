@@ -216,7 +216,7 @@ def _never_verdict(p, operation, where):
         return why
     if operation in WRITES and any(x.lower() == ".git" for x in p.parts):
         return "it is inside a .git folder, whose hooks run commands"
-    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # _Archive, _Templates, 99 System (BL-93, BL-112)
+    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))     # 99 Archive and the old two, _Templates, 99 System
     skipped = {n.lower() for n in paths.skipped_names()}
     hit = next((x for x in (below or ()) if x.lower() in skipped), None)
     if hit:
@@ -263,29 +263,31 @@ def _whose_file(p):
     return []
 
 
-# ===== BL-09: the one exception for _Archive (agreed, Alan, 14-10-2026) =====
-# _Archive stays on ask creaite's never list for reading and writing (classify above is unchanged: never). The only thing that may
-# move a folder into or out of it is tracker.py apply running an approved archive, restore or rename of an old zz Archive folder:
+# ===== BL-09: the one exception for the archive folders (agreed, Alan, 14-10-2026; renamed 99 Archive, #252, 20-10-2026) =====
+# 99 Archive, and for one release the old _Archive and zz Archive, stay on ask creaite's never list for reading and writing
+# (classify above is unchanged: never). The only thing that may move a folder into or out of one is tracker.py apply running an
+# approved archive or restore. NEW moves go to 99 Archive only; a restore or a move back may come from any of the three names
+# (for one release, then the old two are dropped), and nothing renames an old folder (no migration, no Health offer: Alan does it):
 # its `move` file operation asks archive_move_problem, and nothing else calls it. A model can't use it (filechange.py and the hook
 # go through classify, which says never), and it covers only these whole-folder shapes, nothing inside a folder:
-#   archive  <projects root>/<project folder>      -> <projects root>/_Archive/<same or numbered name>
-#   restore  <projects root>/_Archive/<folder>     -> <projects root>/<same or numbered name>
-#   rename   <projects root>[/<engagement>]/zz Archive -> the same folder's _Archive (Health's Fix it, BL-09)
+#   archive  <projects root>/<project folder>      -> <projects root>/99 Archive/<same or numbered name>
+#   restore  <projects root>/<99 Archive, _Archive or zz Archive>/<folder> -> <projects root>/<same or numbered name>
 #   reports  <projects root>/<engagement>/<minutes, weekly, client or Steerco folder>/<file>
-#                                                  -> <projects root>/<engagement>/_Archive/<that folder>/<file> (BL-03; one file)
+#                                                  -> <projects root>/<engagement>/99 Archive/<that folder>/<file> (BL-03; one file)
 #            <projects root>/<portfolio folder>/<its minutes folder>/<file>
-#                                                  -> <projects root>/<portfolio folder>/_Archive/<minutes folder>/<file> (BL-03)
-#   reports_back  exactly the reverse of a "reports" move: <…>/_Archive/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
+#                                                  -> <projects root>/<portfolio folder>/99 Archive/<minutes folder>/<file> (BL-03)
+#   reports_back  exactly the reverse of a "reports" move: <…>/<any archive name>/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
 #                 the same folders, the same engagement or portfolio; tracker.check_move also requires that an archive moved it)
 #   notes  <projects root>/<engagement or portfolio folder>/<its notes folder>/<note>.md
-#                                                  -> <same folder>/_Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
+#                                                  -> <same folder>/99 Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
 #                                                     name is taken there (#124 Delete note, Alan 15-10-2026; one .md file, only from
 #                                                     the live server: propose.py stages it only from system/guard/; #255, Alan
 #                                                     20-10-2026: from the page's own button, no card)
 #   notes_back  exactly the reverse of a "notes" move (one file, back to the same notes folder; tracker.check_move also requires
 #               that a Delete note moved it there). With NOTES_BACK_RENAMES on, a note that has taken the old name is never
 #               overwritten: the note comes back as <name>-2.md (-3…, paths.free_path), the only difference allowed from its old name
-ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
+ARCHIVE_MOVES = ("archive", "restore", "reports", "reports_back", "notes", "notes_back")      # #252: no "rename" any more
+ARCHIVE99 = True      # #252: marks this reach.py as the one with the 99 Archive rules (dev/tests/test_archive_99.py looks for it)
 FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
 # #124 F3: the moves only the live server makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal): tracker._op_move
 # refuses one unless the server wrote its marker (card_move_marker), for exactly that move and that proposal file, under
@@ -304,13 +306,21 @@ def card_move_marker(kind, src, dst):
 
 
 def _top_folder(name):
-    """A project or engagement folder's own name: not hidden, not _-prefixed (_Archive, _Templates, _Portfolio), not skipped."""
+    """A project or engagement folder's own name: not hidden, not _-prefixed (_Templates, _Portfolio), not skipped
+    (99 Archive, _Archive, zz Archive, _Templates, 99 System)."""
     return not name.startswith((".", "_")) and name.lower() not in {x.lower() for x in paths.skipped_names()}
 
 
-def _in_archive(parts):
-    """parts are <_Archive>/<a project folder>."""
-    return len(parts) == 2 and parts[0].lower() == paths.ARCHIVE.lower() and _top_folder(parts[1])
+def _archive_part(name, old=False):
+    """#252: `name` is the archive folder's name: exactly 99 Archive (case as macOS has it), or, with `old` (a restore or a move
+    back, for one release), _Archive or zz Archive too. Whole names only: 99 Archivement and "99 Archive " are not the archive."""
+    names = (paths.ARCHIVE, *paths.OLD_ARCHIVES) if old else (paths.ARCHIVE,)
+    return name.lower() in {n.lower() for n in names}
+
+
+def _in_archive(parts, old=False):
+    """parts are <99 Archive>/<a project folder> (a restore, with `old`: or <_Archive>/ or <zz Archive>/)."""
+    return len(parts) == 2 and _archive_part(parts[0], old) and _top_folder(parts[1])
 
 
 def _project_folder(parts):
@@ -318,17 +328,12 @@ def _project_folder(parts):
     return len(parts) == 1 and _top_folder(parts[0])
 
 
-def _old_archive_rename(pa, pb):
-    """pa is a zz Archive folder (in the root or one engagement) and pb the _Archive beside it."""
-    same_place = len(pa) == len(pb) and len(pa) in (1, 2) and pa[:-1] == pb[:-1] and (len(pa) == 1 or _top_folder(pa[0]))
-    return same_place and pa[-1].lower() == paths.OLD_ARCHIVE.lower() and pb[-1] == paths.ARCHIVE
-
-
-def _report_archive(pa, pb):
+def _report_archive(pa, pb, old=False):
     """BL-03: pa is <engagement>/<a minutes, weekly, client or Steerco folder>/<file> and pb the same file in that engagement's own
-    _Archive, keeping its place below it (<engagement>/_Archive/<folder>/<file>). Nothing else: no deeper folder, no other folder."""
+    99 Archive, keeping its place below it (<engagement>/99 Archive/<folder>/<file>). Nothing else: no deeper folder, no other
+    folder. `old` (the reverse, a move back, #252): the archive folder may be _Archive or zz Archive too."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
-    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or not _archive_part(pb[1], old):
         return False
     if pb[2:] != pa[1:] or pa[-1].startswith((".", "~$")):
         return False
@@ -348,25 +353,27 @@ def _portfolio_folder(name):
 NOTES_BACK_RENAMES = True
 
 
-def _note_folders(pa, pb):
-    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own _Archive, keeping its place
-    below it (<…>/_Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement."""
+def _note_folders(pa, pb, old=False):
+    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own 99 Archive, keeping its place
+    below it (<…>/99 Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement. `old` (a move back,
+    #252): the archive folder may be _Archive or zz Archive too."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
-    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or not _archive_part(pb[1], old):
         return False
     return pb[2:-1] == pa[1:-1] and "/".join(pa[1:-1]) == paths.folder_name("notes").strip("/")
 
 
 def _note_archive(pa, pb):
-    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own _Archive, or with -2, -3… when
+    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own 99 Archive, or with -2, -3… when
     that name is taken there. Nothing else: no picture, no other file."""
     return _note_folders(pa, pb) and _note_name(pa[-1], pb[-1])
 
 
 def _note_back(pa, pb):
-    """#124: pa is a deleted note in <…>/_Archive/<notes folder>/ and pb its place back in that notes folder: the reverse of a
-    "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name gets (both names from one first name)."""
-    if not _note_folders(pb, pa):
+    """#124: pa is a deleted note in <…>/99 Archive (or, #252, _Archive or zz Archive)/<notes folder>/ and pb its place back in
+    that notes folder: the reverse of a "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name
+    gets (both names from one first name)."""
+    if not _note_folders(pb, pa, True):
         return False
     if not NOTES_BACK_RENAMES:
         return _note_name(pb[-1], pa[-1])
@@ -399,16 +406,16 @@ def _move_shape(kind, pa, pb):
     if kind == "reports":
         return _report_archive(pa, pb)
     if kind == "reports_back":
-        return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
+        return _report_archive(pb, pa, True)          # BL-331: the reverse of the approved shape, nothing wider (#252: any name)
     if kind == "notes":
-        return _note_archive(pa, pb)                  # #124: one note into its own folder's _Archive
+        return _note_archive(pa, pb)                  # #124: one note into its own folder's 99 Archive
     if kind == "notes_back":
         return _note_back(pa, pb)                     # #124: the reverse, or the same note under a free -2 name
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":
-        return _in_archive(pa) and _project_folder(pb)
-    return _old_archive_rename(pa, pb)
+        return _in_archive(pa, True) and _project_folder(pb)           # #252: from 99 Archive, or an old name for one release
+    return False
 
 
 def _not_the_shape(kind):
@@ -423,15 +430,15 @@ def _not_the_shape(kind):
         return f"that isn't a note (a .md file in a notes folder) moved into its own engagement's {paths.ARCHIVE}"
     if kind == "notes_back":
         return f"that isn't a note moved back from its own engagement's {paths.ARCHIVE} to the same notes folder"
-    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
+    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only; a restore may come from an older archive name)"
 
 
 def archive_move_problem(src, dst, kind):
-    """None when moving the folder `src` to `dst` (stored paths, never mapped into _Archive) is the `kind` of move above; else why
+    """None when moving the folder `src` to `dst` (stored paths, never mapped into an archive folder) is the `kind` of move above; else why
     not. Neither end may be a symlink; the source must be a folder that exists (a file, for BL-03's "reports" kind) and the
     destination must not exist."""
     if kind not in ARCHIVE_MOVES:
-        return f"a folder move is an archive, a restore or a rename of an old archive folder (got {kind!r})"
+        return f"a folder move is an archive or a restore (got {kind!r})"
     if any(".." in Path(str(x)).parts for x in (src, dst)):
         return "a path with .. in it"
     root = Path(os.path.realpath(paths.projects_root()))
@@ -957,7 +964,7 @@ SCRIPT_COMMANDS = {
                   "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
     "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
                    "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
-                   "register-columns": RECORD, "old-archives": READ, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
+                   "register-columns": RECORD, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
                    "people": READ, "people list": READ, "people resolve": READ, "people add": RECORD, "people edit": RECORD,
                    "people rename": RECORD, "people merge": RECORD, "people map": RECORD, "people migrate": RECORD,
                    "workstreams": READ, "workstreams list": READ, "workstreams suggest": READ, "workstreams add": RECORD,
@@ -1615,11 +1622,11 @@ FILLERS = "\u115f\u1160\u17b4\u17b5\u180e\u2800\u3164\uffa0"      # blank-lookin
 
 
 def _plain(text):
-    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), combining marks (accents)
-    and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
+    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), unassigned code points,
+    combining marks (accents) and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
     import unicodedata
     spread = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
-    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Mn", "Me") and c not in FILLERS)
+    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Cn", "Mn", "Me") and c not in FILLERS)
     return "".join(kept).casefold()
 
 

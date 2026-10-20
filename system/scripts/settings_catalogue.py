@@ -385,7 +385,8 @@ CATALOGUE = {
     "locations.folders.notes": ("Folders and OneDrive", "Notes folder", "Where each engagement's notes are saved (BL-301).",
                                 "Its own folder, as in your template; made on the first note."),
     "locations.never_index": ("Folders and OneDrive", "Never read", "Folders creaite never reads or indexes.",
-                              "Archive, templates and creaite's own files are never project content."),
+                              "99 Archive (and, for one release, the old _Archive and zz Archive), templates and creaite's own "
+                              "files are never project content."),
     "locations.offsite_backup": ("Folders and OneDrive", "OneDrive backup copy folder", "Where the daily backup's closed copy goes.",
                                  "Inside _Portfolio's 99 System, which creaite keeps for its own files."),
     # ── Help, AI drafts, logging, close the day

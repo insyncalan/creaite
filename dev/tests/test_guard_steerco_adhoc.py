@@ -14,6 +14,8 @@ internal one-pagers and every read stay allowed. A spec that can't be read, is o
 report-named. This file applies the diff with `patch -p0` to a copy of the whole of system/scripts/ in a throwaway vault (with spec
 files in it and a fake home folder) and reads the guard's decisions from that copy (`reach.decide`, as the hook calls it) in every mode.
 After the diff is applied to the repo the marker is found and the same tests keep guarding it (the unpatched copy is made with `patch -R`).
+Round 7 (reach-r7.diff, applied after the others) adds the Cn category to what _plain removes; the scratch copy gets it too, and
+GUARD_STEERCO_NO_R7=1 leaves it out (fail-first for the unassigned-code-point cases).
 """
 import itertools
 import json
@@ -33,6 +35,9 @@ REPO = HERE.parents[1]
 PROPOSALS = REPO / "dev" / "proposals" / "guard-174"
 DIFF = PROPOSALS / "reach-steerco-adhoc.diff"
 OTHER_DIFFS = (PROPOSALS / "reach.diff", PROPOSALS / "reach-report.diff")
+R7 = PROPOSALS / "reach-r7.diff"                  # round 7: _plain also drops unassigned code points (applies after DIFF)
+R7_MARKER = '"Cc", "Cn", "Mn", "Me"'
+NO_R7 = os.environ.get("GUARD_STEERCO_NO_R7") == "1"      # fail-first: the scratch copy is left without round 7
 UNPATCHED = os.environ.get("GUARD_STEERCO_UNPATCHED") == "1"
 MUTATE = os.environ.get("GUARD_STEERCO_MUTATE", "")
 MARKER = "def report_named_draft_refusal"
@@ -65,14 +70,17 @@ MUTATIONS = {
     "odd-words-in-docx-open": ("path words are not checked for ~ and = in docx_tools calls", "    if any(_odd_word(w) for w in rest):\n        return True\n",
                                ""),
     "no-nfkc": ("no NFKC: fullwidth letters don't match", 'unicodedata.normalize("NFKC", text)', "text"),
-    "no-mark-strip": ("combining marks are kept: accents hide the word", '("Cf", "Cc", "Mn", "Me")', '("Cf", "Cc")'),
-    "no-zero-width-strip": ("format characters are kept: a zero-width space hides the word", '("Cf", "Cc", "Mn", "Me")', '("Mn", "Me")'),
+    "no-mark-strip": ("combining marks are kept: accents hide the word", '("Cf", "Cc", "Cn", "Mn", "Me")', '("Cf", "Cc", "Cn")'),
+    "no-zero-width-strip": ("format characters are kept: a zero-width space hides the word", '("Cf", "Cc", "Cn", "Mn", "Me")', '("Cn", "Mn", "Me")'),
+    "no-cn-strip": ("unassigned code points are kept: U+FFF0 or U+2065 hides the word (round 7)", '("Cf", "Cc", "Cn", "Mn", "Me")',
+                    '("Cf", "Cc", "Mn", "Me")'),
     "no-clean": ("clean is not looked at", 'verb in ("fill", "build-adhoc", "clean")', 'verb in ("fill", "build-adhoc")'),
     "unsplittable-open": ("a command that can't be split is let through", "_report_word(rest) else None", "False else None"),
 }
 
 # the mutation test runs this subset (the file must finish inside run_tests.py's 900 s limit); GUARD_STEERCO_ALL_MUTATIONS=1 runs all
-DEFAULT_MUTATIONS = ("drop-title-read", "unreadable-steerco-open", "expanduser-tilde", "no-filler-strip", "no-bidi-refuse")
+DEFAULT_MUTATIONS = ("drop-title-read", "unreadable-steerco-open", "expanduser-tilde", "no-filler-strip", "no-bidi-refuse",
+                     "tilde-only-at-start", "no-equals-start", "no-reversed-match", "no-cn-strip")
 
 WEEKLY = {"title": "Example Programme Weekly report"}
 SPECS = {                                 # file name (relative to the drafts folder) -> content (a str is written as it is)
@@ -98,6 +106,9 @@ SPECS = {                                 # file name (relative to the drafts fo
     "spec-fill3.json": {"title": "Wee\u2800kly pack"}, "spec-fill4.json": {"title": "Cli\u115fent list"},
     "spec-fill5.json": {"title": "Repo\u1160rt pack"}, "spec-fill6.json": {"title": "Wee\u17b4kly pack"},
     "spec-fill7.json": {"title": "Wee\u180ekly pack"}, "spec-fill8.json": {"title": "Wee\u2063kly pack"},
+    # unassigned default-ignorable code points (round 7): U+FFF0 to U+FFF8, U+2065, the unassigned part of U+E0000
+    "spec-cn1.json": {"title": "Example Wee\ufff0kly Rep\u2065ort"}, "spec-cn2.json": {"title": "Cli\U000e0000ent list"},
+    "spec-cn3.json": {"title": "Wee\ufff8kly pack"},
     "spec-rlo.json": {"title": "\u202etroper ylkeeW"}, "spec-rev.json": {"title": "troper ylkeeW"},
     "spec-bidi.json": {"title": "Open \u2066risks\u2069 register"},
     # over 1 MB: the script reads it anyway
@@ -142,6 +153,22 @@ def _write(path, content):
     path.write_text(content if isinstance(content, str) else json.dumps(content, ensure_ascii=False), encoding="utf-8")
 
 
+def _set_patches(root, reach, patched):
+    """Leave reach.py with (or without) reach-steerco-adhoc.diff, and with round 7 on top of it unless NO_R7 (a diff the repo's
+    reach.py already has is not applied again; round 7 comes off first, as it sits on a line the steerco diff adds)."""
+    has = lambda marker: marker in reach.read_text(encoding="utf-8")        # noqa: E731
+    if not patched and has(R7_MARKER):
+        _patch(root, R7, "-R")
+    if patched and not has(MARKER):
+        _patch(root, DIFF)
+    if not patched and has(MARKER):
+        _patch(root, DIFF, "-R")
+    if patched and not NO_R7 and not has(R7_MARKER):
+        _patch(root, R7)
+    if patched and NO_R7 and has(R7_MARKER):
+        _patch(root, R7, "-R")
+
+
 def scratch(patched, mutation=""):
     """A throwaway vault with a copy of the whole of system/scripts/, spec files (in its drafts folder and its root) and a fake home
     folder; reach.py with (or without) reach-steerco-adhoc.diff."""
@@ -157,11 +184,7 @@ def scratch(patched, mutation=""):
     for name, content in HOME_SPECS.items():
         _write(v.home / name, content)
     reach = v.root / "system" / "scripts" / "reach.py"
-    already = MARKER in reach.read_text(encoding="utf-8")
-    if patched and not already:
-        _patch(v.root, DIFF)
-    if not patched and already:
-        _patch(v.root, DIFF, "-R")
+    _set_patches(v.root, reach, patched)
     if mutation:
         _what, old, new = MUTATIONS[mutation]
         text = reach.read_text(encoding="utf-8")
@@ -221,7 +244,8 @@ def docx_calls(root):
         calls[f"{lname} | build-adhoc, tilde spec"] = (d(f"build-adhoc {TEMPLATE} a:~/s.json {D}out.docx", lname), True)
         calls[f"{lname} | clean, tilde"] = (d("clean x=~/a.docx", lname), True)
         for tag, name in (("hangul filler", "Wee\u3164kly status"), ("halfwidth filler", "Wee\uffa0kly"), ("braille blank", "Client\u2800 list"),
-                          ("bidi override", "\u202etroper"), ("reversed", "ylkeeW pack"), ("zero-width joiner", "Re\u2063port pack")):
+                          ("bidi override", "\u202etroper"), ("reversed", "ylkeeW pack"), ("zero-width joiner", "Re\u2063port pack"),
+                          ("unassigned U+FFF0", "Wee\ufff0kly"), ("unassigned U+2065", "Re\u2065port pack")):
             calls[f"{lname} | fill, {tag} in the output name"] = (d(f"fill {TEMPLATE} {D}spec-n.json '{D}{name}.docx'", lname), True)
             calls[f"{lname} | clean, {tag} in the output name"] = (d(f"clean {D}a.docx '{D}{name}.docx'", lname), True)
         calls[f"{lname} | fill, too few arguments"] = (d(f"fill {TEMPLATE} {D}out.docx", lname), True)
@@ -238,7 +262,7 @@ def docx_calls(root):
 REFUSED_ADHOC = ("spec-a.json", "spec-b.json", "spec-c.json", "spec-d.json", "spec-weekly-pack.json", "spec-dup1.json", "spec-dup2.json",
                  "spec-dup3.json", "spec-acc1.json", "spec-acc2.json", "spec-acc3.json", "spec-acc4.json", "spec-acc5.json",
                  "spec-fill1.json", "spec-fill2.json", "spec-fill3.json", "spec-fill4.json", "spec-fill5.json", "spec-fill6.json",
-                 "spec-fill7.json", "spec-fill8.json", "spec-rlo.json", "spec-rev.json", "spec-bidi.json",
+                 "spec-fill7.json", "spec-fill8.json", "spec-cn1.json", "spec-cn2.json", "spec-cn3.json", "spec-rlo.json", "spec-rev.json", "spec-bidi.json",
                  "spec-big.json", "spec-big-n.json", "spec-bad.json", "spec-list.json", "spec-missing.json")
 REFUSED_STEERCO = ("spec-s-client.json", "spec-s-title.json", "spec-dup-v2.json", "spec-dup-v.json", "spec-big-c.json", "spec-bad.json",
                    "spec-missing.json", "spec-list.json")
@@ -418,14 +442,17 @@ class Orders(unittest.TestCase):
                     for diff in order:                      # (a diff already in the repo's reach.py is skipped)
                         if markers[diff.name] not in reach.read_text(encoding="utf-8"):
                             _patch(v.root, diff)
+                    if R7_MARKER not in reach.read_text(encoding="utf-8"):
+                        _patch(v.root, R7)                  # round 7 comes last: it edits a line the steerco diff adds
                     r = str(v.root)
                     refused = report_calls(r, ("spec-a.json",), ("'adhoc'",))["python3 | 'adhoc' | spec-a.json"]
                     dashed = report_calls(r, ("-w.json",), ("adhoc",))["python3 | adhoc | -w.json"]
                     allowed = report_calls(r, ("spec-n.json",), ("adhoc",))["python3 | adhoc | spec-n.json"]
                     stage = "python3 system/scripts/report.py 'weekly-stage' system/staging/drafts/spec-n.json"
-                    got = decisions(v, [refused, dashed, allowed, stage])
+                    unassigned = report_calls(r, ("spec-cn1.json",), ("adhoc",))["python3 | adhoc | spec-cn1.json"]
+                    got = decisions(v, [refused, dashed, allowed, stage, unassigned])
                     for mode in MODES:
-                        for cmd in (refused, dashed, stage):     # the report diff and this one together
+                        for cmd in (refused, dashed, stage, unassigned):     # the report diff and this one together
                             self.assertFalse(got["decide"][mode][cmd][0], (mode, cmd))
                     for mode in ("ask", "confirmed", "sweep"):
                         self.assertEqual(got["decide"][mode][allowed], [True, ""], mode)
