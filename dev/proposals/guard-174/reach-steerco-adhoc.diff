@@ -1,6 +1,6 @@
 --- system/scripts/reach.py
 +++ system/scripts/reach.py
-@@ -1474,8 +1474,113 @@
+@@ -1474,8 +1474,114 @@
          return None if not REPORT_NAME.search(command or "") else REPORTS_ARE_THE_USERS
      return None
  # ===== end reports =====
@@ -32,7 +32,7 @@
 +    """True when the text has report, weekly or client in it (as _plain reads it)."""
 +    return bool(REPORT_WORDS.search(_plain(text)))
 +
-+
+ 
 +def _command_words(cmd):
 +    """The command's words as the shell hands them over (shlex: quotes removed, a quoted space is not a break); None if it can't be
 +    split. str.split's cut (at a non-breaking space, say) is not read: the shell doesn't cut there, so no script sees such a word."""
@@ -41,7 +41,7 @@
 +        return shlex.split(cmd)
 +    except ValueError:
 +        return None
-+
+ 
 +
 +def _spec_fields(path):
 +    """([every title value], [every version value]) of the top-level object of a staged spec file (JSON, a duplicate key counts every
@@ -56,6 +56,7 @@
 +        objects = []
 +
 +        def hook(pairs):
++            """json's object_pairs_hook: keep every pair (a duplicate key too) of each object, innermost first."""
 +            objects.append(pairs)
 +            return dict(pairs)
 +        if not isinstance(json.loads(p.read_text(encoding="utf-8"), object_pairs_hook=hook), dict):
@@ -64,8 +65,8 @@
 +        return ([str(v) for k, v in top if str(k).lower() == "title"], [str(v) for k, v in top if str(k).lower() == "version"])
 +    except Exception:  # noqa: BLE001  unreadable: refused by the caller
 +        return None
- 
- 
++
++
 +def _spec_is_report_named(verb, spec):
 +    """True when `report.py adhoc|steerco-stage <spec>`, or build-adhoc's spec, would write a report-named draft: a title with a report
 +    word, or (steerco-stage) a client version; a spec that can't be read counts as report-named."""
@@ -114,7 +115,7 @@
  def _direct_write_refusal(inp, mode):
      """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
      outside the run's direct-write folder."""
-@@ -1525,7 +1630,8 @@
+@@ -1525,7 +1631,8 @@
      form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
      # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
      return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)

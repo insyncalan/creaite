@@ -193,7 +193,7 @@ def docx_calls(root):
         calls[f"{lname} | build-adhoc, oversized spec"] = (d(f"build-adhoc {TEMPLATE} {D}spec-big-n.json {D}out.docx", lname), True)
         calls[f"{lname} | build-adhoc, accented title"] = (d(f"build-adhoc {TEMPLATE} {D}spec-acc1.json {D}out.docx", lname), True)
         calls[f"{lname} | clean into a report-named file"] = (d(f"clean {D}spec-n.docx 'system/staging/drafts/Example Client pack.docx'", lname), True)
-        calls[f"{lname} | clean in place, report-named"] = (d(f"clean 'system/staging/drafts/Example Client pack.docx'", lname), True)
+        calls[f"{lname} | clean in place, report-named"] = (d("clean 'system/staging/drafts/Example Client pack.docx'", lname), True)
         calls[f"{lname} | clean, dashed input"] = (d(f"clean -x.docx '{D}Weekly pack.docx'", lname), True)
         calls[f"{lname} | clean, spliced"] = (d(f"cl''ean {D}a.docx {D}client.docx", lname), True)
         calls[f"{lname} | fill, too few arguments"] = (d(f"fill {TEMPLATE} {D}out.docx", lname), True)
@@ -347,7 +347,7 @@ class Hole(unittest.TestCase):
             cmds = [*report_calls(r, ("spec-a.json",), ("adhoc", "'adhoc'")).values(),
                     *report_calls(r, ("spec-s-client.json",), ("steerco-stage", "'steerco-stage'")).values(),
                     *report_calls(r, ("-w.json", "-", "spec-big.json", "spec-dup1.json"), ("adhoc",)).values(),
-                    f"python3 system/scripts/report.py steerco-stage -c.json",
+                    "python3 system/scripts/report.py steerco-stage -c.json",
                     f"python3 system/scripts/docx_tools.py fill {TEMPLATE} {D}spec-n.json '{D}Weekly status.docx'",
                     f"python3 system/scripts/docx_tools.py clean {D}a.docx 'system/staging/drafts/Example Client pack.docx'",
                     f"system/scripts/run docx_tools.py build-adhoc {TEMPLATE} {D}spec-a.json {D}out.docx"]
