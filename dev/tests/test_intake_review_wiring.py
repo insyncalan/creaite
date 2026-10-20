@@ -49,10 +49,14 @@ class Wiring(LiveBrowserCase):
         for i in range(ready):
             meetings.append({"id": f"mR{i}", "src": "calendar", "title": f"Ready {i}", "day": "2026-10-05", "start": f"1{i}:00", "p": None,
                              "stage": "arrived", "state": "ready", "age": 0, "stale": False, "groups": {"needs": [], "routine": []}})
-        m = {"v": 1, "meetings": meetings, "mail": {"needs": [], "routine": ns[2:3]}, "other": {"needs": [], "routine": []},
+        m = {"v": 1, "meetings": meetings, "mail": {"needs": [], "routine": ns[2:]}, "other": {"needs": [], "routine": []},
              "later": [], "not_needed": [], "counts": {}}
         # the fixed model stands for the whole page: the sample's two inbox files (rows of the real model) go with the rows they replace
-        self.b.eval(f"D.inbox=[]; D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
+        # #245 (merged in 2.5.2): Today's Intake line counts the meetings from the calendar import (D.meetings), so the `ready` meetings are there too;
+        # and every pending proposal is in the model (the page counts all of them), so the line and the page say the same number
+        rows = [{"id": f"mR{i}", "key": f"mR{i}", "title": f"Ready {i}", "p": "ABC", "day": "2026-10-05", "start": f"1{i}:00", "end": f"1{i}:30",
+                 "transcript": "available", "processed": False, "draft": None, "private": False} for i in range(ready)]
+        self.b.eval(f"D.inbox=[]; D.meetings={{rows:{json.dumps(rows)}}}; D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
         return ns
 
     # --- go() and the addresses ---
@@ -117,7 +121,7 @@ class Wiring(LiveBrowserCase):
         b = self.b
         b.eval("renderToday()")
         o = b.eval("""(()=>{ const c=irLiveCounts(), t=n=>{ const e=document.querySelector(n); return e?e.textContent.trim():null; };
-          const line=[...document.querySelectorAll('#tdLine a')].map(a=>a.textContent.trim());
+          const line=[...document.querySelectorAll('#tdQuiet a')].map(a=>a.textContent.trim());   /* #245's line (#tdQuiet), in the 2.6 merge */
           const num=s=>{ const m=/^(\\d+)/.exec(s); return m?+m[1]:0; };
           return {badge:c.badge, ready:c.ready, to_approve:c.to_approve, rail:t('#revBadge'), line, lineSum:line.reduce((a,s)=>a+num(s),0)}; })()""")
         b.eval("go('intake-review')")
@@ -161,9 +165,9 @@ class Wiring(LiveBrowserCase):
 
     def test_nothing_waiting_no_badge_no_line(self):
         b = self.b
-        b.eval("D.inbox=[]; D.intake_review={v:1,meetings:[],mail:{needs:[],routine:[]},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; REV.forEach(r=>r.done=true); irTick.value++; renderBadge(); renderToday()")
+        b.eval("D.inbox=[]; D.meetings={rows:[]}; D.intake_review={v:1,meetings:[],mail:{needs:[],routine:[]},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; REV.forEach(r=>r.done=true); irTick.value++; renderBadge(); renderToday()")
         self.assertEqual(b.eval("irLiveCounts().badge"), 0)
-        self.assertEqual(b.eval("document.querySelectorAll('#tdLine a').length"), 0)
+        self.assertEqual(b.eval("document.querySelectorAll('#tdQuiet a').length"), 0)
         self.assertIn(b.eval("document.querySelector('#revBadge')?.textContent.trim()||''"), ("", "0"))
         b.eval("REV.forEach(r=>r.done=false)")
 
@@ -173,15 +177,15 @@ class Wiring(LiveBrowserCase):
         b = self.b
         self.model(ready=2)
         b.eval("renderToday()")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#tdLine a')].map(a=>a.dataset.tdline)"), ["ready", "proposals"])
-        self.assertEqual(b.eval("document.querySelector('#tdLine a[data-tdline=ready]').textContent.trim()"), "2 ready to process")
-        self.assertRegex(b.eval("document.querySelector('#tdLine a[data-tdline=proposals]').textContent.trim()"), r"^\d+ proposals? to approve$")
-        self.assertEqual(b.eval("document.querySelector('#tdLine a[data-tdline=ready]').getAttribute('href')"), "#intake-review&stage=arrived")
-        b.eval("document.querySelector('#tdLine a[data-tdline=ready]').click()")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#tdQuiet a')].map(a=>a.dataset.tdq)"), ["meetings", "proposals"])
+        self.assertEqual(b.eval("document.querySelector('#tdQuiet a[data-tdq=meetings]').textContent.trim()"), "2 meetings ready to process")
+        self.assertRegex(b.eval("document.querySelector('#tdQuiet a[data-tdq=proposals]').textContent.trim()"), r"^\d+ proposals? to approve$")
+        self.assertEqual(b.eval("document.querySelector('#tdQuiet a[data-tdq=meetings]').getAttribute('href')"), "#intake-review&stage=arrived")
+        b.eval("document.querySelector('#tdQuiet a[data-tdq=meetings]').click()")
         b.wait("VIEW==='intake-review'")
         self.assertEqual(b.eval("irStage.value"), "arrived")
         b.eval("go('today')")
-        b.eval("document.querySelector('#tdLine a[data-tdline=proposals]').click()")
+        b.eval("document.querySelector('#tdQuiet a[data-tdq=proposals]').click()")
         b.wait("VIEW==='intake-review'")
         self.assertEqual(b.eval("irStage.value"), "drafted")
 
