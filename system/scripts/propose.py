@@ -25,7 +25,7 @@ Commands:
   fields [<table>]           the fields a spec may use for a table, from schema.sql (BL-249); read only, writes nothing
   register-columns           stage adding the Senders and Exclude columns to the register if it lacks them
   archive <CODE> [--open | --cancel-open] [--out <name>.json]
-                             print (or save) the spec that archives a project (BL-09): the folder moved to _Archive, the
+                             print (or save) the spec that archives a project (BL-09): the folder moved to 99 Archive, the
                              register row to Retired codes, the project and its items marked archived. With open items it
                              stops and lists them, unless --cancel-open (which cancels them all first, in the same proposal);
                              --open prints them as JSON and nothing else
@@ -33,7 +33,8 @@ Commands:
                              print (or save) the spec that restores an archived project: the folder back (a number added if the
                              name is taken), the register row back, its items live again
   old-archives [--out <name>.json]
-                             print (or save) the spec that renames each folder still called zz Archive to _Archive (BL-09):
+                             print (or save) the spec that renames each archive folder still called _Archive or zz Archive
+                             to 99 Archive (BL-09, #252):
                              a `move` of the apply, so it is shown, approved and undoable; exit 1 when there is none
   people list|resolve|add|edit|rename|merge|map|migrate
                              the people register (BL-55): see "People register" below, or `propose.py people`
@@ -321,10 +322,11 @@ def folder_ops(folder, adopting=False):
 
 
 def skeleton_renamed(op):
-    """BL-09: a folder the skeleton still calls zz Archive is made as _Archive in the new project (nothing else is renamed)."""
+    """BL-09, #252: a folder the skeleton still calls _Archive or zz Archive is made as 99 Archive in the new project (nothing
+    else is renamed)."""
     def fix(p):
-        """The path with each zz Archive part named _Archive."""
-        return "/".join(paths.ARCHIVE if part == paths.OLD_ARCHIVE else part for part in str(p).split("/"))
+        """The path with each _Archive or zz Archive part named 99 Archive."""
+        return "/".join(paths.ARCHIVE if part in paths.OLD_ARCHIVES else part for part in str(p).split("/"))
     out = dict(op)
     for k in ("path", "to"):
         if k in out:
@@ -332,31 +334,35 @@ def skeleton_renamed(op):
     return out
 
 
-# ===== BL-09: rename the folders still called zz Archive (Health's Fix it) =====
+# ===== BL-09, #252: rename the archive folders still called _Archive or zz Archive (Health's Rename to 99 Archive) =====
 def old_archives_spec():
-    """The spec that renames each folder still called zz Archive to _Archive in the same place (a `move` of the apply), and the
-    folders left as they are (an _Archive already beside them: two folders are never merged)."""
-    ops, kept = [], []
+    """The spec that renames each archive folder still called _Archive or zz Archive to 99 Archive in the same place (a `move` of
+    the apply), and the folders left as they are: a 99 Archive already beside them, or a second old folder in the same place (the
+    _Archive there is renamed first, as it is the one in use): two folders are never merged."""
+    ops, kept, taken = [], [], set()
     for f in paths.old_archive_folders():
         new = f.with_name(paths.ARCHIVE)
-        if new.exists():
+        if new.exists() or new in taken:
             kept.append(paths.rel(f))
             continue
+        taken.add(new)
         ops.append({"op": "move", "from": paths.rel(f), "to": paths.rel(f.parent) + "/" + paths.ARCHIVE})
     n = len(ops)
     spec = {"source_run": "cx-setup", "items": [], "file_changes": {
-        "title": f"Rename {n} zz Archive folder{'s' if n != 1 else ''} to _Archive", "project": None, "archive": "rename",
+        "title": f"Rename {n} archive folder{'s' if n != 1 else ''} to {paths.ARCHIVE}", "project": None, "archive": "rename",
         "file_ops": ops}} if ops else None
     return spec, kept
 
 
 def cmd_old_archives(out=None):
-    """Print (or save with --out) the spec that renames every zz Archive folder to _Archive (BL-09). Nothing to do: says so."""
+    """Print (or save with --out) the spec that renames every _Archive and zz Archive folder to 99 Archive (BL-09, #252). Nothing
+    to do: says so."""
     spec, kept = old_archives_spec()
     for k in kept:
-        print(f"Left as it is: {k} (an _Archive folder is already beside it; move its contents yourself)", file=sys.stderr)
+        print(f"Left as it is: {k} (a {paths.ARCHIVE} folder is already beside it; move its contents yourself)", file=sys.stderr)
     if not spec:
-        print("No folder is called zz Archive any more: nothing to rename.", file=sys.stderr)
+        print(f"No archive folder has an old name any more ({' or '.join(paths.OLD_ARCHIVES)}): nothing to rename.",
+              file=sys.stderr)
         return 1
     return emit_spec(spec, out)
 # ===== end BL-09 =====
@@ -676,7 +682,8 @@ def open_list(con, code):
 
 def archive_spec(code, cancel_open=False):
     """The spec that archives a project: its open items cancelled (only with cancel_open), the archive item, the folder moved
-    to _Archive and the register row moved to Retired codes. Exits with the reason when it can't be done."""
+    to the archive folder (99 Archive, or a vault's old _Archive until it is renamed, #252) and the register row moved to Retired
+    codes. Exits with the reason when it can't be done."""
     con = tracker.connect()
     row = tracker.fetch(con, "projects", code)
     if row is None:
@@ -690,7 +697,7 @@ def archive_spec(code, cancel_open=False):
                  + ". Cancel them all and archive (--cancel-open), or stop.")
     folder = paths.project_dir(code)
     src = paths.rel(folder)
-    dst = f"projects/{paths.ARCHIVE}/{free_folder(paths.archive_dir(), folder.name)}"
+    dst = f"projects/{paths.archive_dir().name}/{free_folder(paths.archive_dir(), folder.name)}"     # #252: the name in use
     reg, old_row = archive_register(paths.REGISTER.read_text(encoding="utf-8"), code, row["name"])
     items = []
     for o in still:

@@ -187,10 +187,10 @@ def due_reports(on=None):
         for kind in kinds:
             sub = paths.folder_name(kind).strip("/")
             for f in due_in(base / sub, kind, cutoff):
-                if f not in seen and paths.rel(f) not in back and not (base / paths.ARCHIVE / sub / f.name).exists():
+                arch = base / paths.archive_name(base)          # #252: 99 Archive, or the old _Archive until it is renamed
+                if f not in seen and paths.rel(f) not in back and not (arch / sub / f.name).exists():
                     seen.add(f)
-                    out.append({"code": code, "kind": kind, "from": paths.rel(f),
-                                "to": paths.rel(base / paths.ARCHIVE / sub / f.name)})
+                    out.append({"code": code, "kind": kind, "from": paths.rel(f), "to": paths.rel(arch / sub / f.name)})
     return out
 
 
@@ -405,7 +405,7 @@ def back_spec(path):
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
     if src.is_symlink() or not src.is_file():
-        return None, f"{src.name} isn't in {paths.ARCHIVE} any more"
+        return None, f"{src.name} isn't in the archive folder any more"
     name = dst.name
     if os.path.lexists(dst):
         if kind != NOTE or not reach.NOTES_BACK_RENAMES:
@@ -439,7 +439,7 @@ def note_delete_spec(rel):
         return None, "that isn't a note that is there"
     code, p = hit
     base = paths.portfolio_dir() if code == "_portfolio" else paths.project_dir(code)
-    dest = paths.free_path(base / paths.ARCHIVE / paths.folder_name("notes").strip("/"), p.stem, p.suffix)
+    dest = paths.free_path(base / paths.archive_name(base) / paths.folder_name("notes").strip("/"), p.stem, p.suffix)   # #252
     title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
     return {"source_run": "notes", "items": [], "file_changes": {
         "title": f"Delete note \u201c{title}\u201d (move it to the archive)", "project": None if code == "_portfolio" else code,
