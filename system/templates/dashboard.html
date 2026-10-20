@@ -3882,11 +3882,11 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 
 /* ===== BL-337 (v2.1.0 P9) ===== Reports, the reporting space and the cockpit's Reporting card (components/reporting/) */
 
-.rp .chip,.rp-cockcard .chip{border:0;padding:0 8px;background:var(--sunk);color:var(--muted);font-weight:500;white-space:nowrap}   /* #193: neutral report chips keep their grey tint, 26px tall */
-.rp .chip.ok,.rp-cockcard .chip.ok{background:var(--ok-soft);color:var(--ok)} .rp .chip.warn,.rp-cockcard .chip.warn{background:var(--warn-soft);color:var(--warn)}
-.rp .chip.plan,.rp-cockcard .chip.plan{background:var(--accent-soft);color:var(--accent)}
+.rp .chip{border:0;padding:0 8px;background:var(--sunk);color:var(--muted);font-weight:500;white-space:nowrap}   /* #193: neutral report chips keep their grey tint, 26px tall */
+.rp .chip.ok{background:var(--ok-soft);color:var(--ok)} .rp .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.rp .chip.plan{background:var(--accent-soft);color:var(--accent)}
 
-.rp .btn.sm,.rp-cockcard .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary,.rp-cockcard .btn.primary{color:var(--accent-ink)}
+.rp .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary{color:var(--accent-ink)}
 .rp-both{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;border:1px dashed var(--accent);border-radius:var(--r-md);padding:10px 14px;background:var(--accent-soft);margin-bottom:16px}
 .rp-both a.btn{text-decoration:none}
 .rp-both.solid{border-style:solid}
@@ -3901,7 +3901,7 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .rp-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:700px){.rp-pair{grid-template-columns:minmax(0,1fr)}}
 .rp-card{border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface);align-content:start;min-width:0}
 .rp-card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .rp-card .top b{font-size:var(--fs-lg)}
-.rp-card .acts,.rp-cockcard .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rp-card .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .rp-thumb{height:150px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:10px 12px;display:grid;gap:6px;align-content:start}
 .rp-thumb i{display:block;height:8px;border-radius:var(--r-xs);background:var(--line-strong)}
 .rp-thumb .rp-flag{height:18px;width:60px} .rp-flag[data-kind="internal"]{background:var(--warn)} .rp-flag[data-kind="client"]{background:var(--ok)}
@@ -3909,8 +3909,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 .rp-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:var(--fs-sm)} .rp-kv span:nth-child(odd){color:var(--muted)}
 .rp-files h2{margin-bottom:8px} .rp-files>div{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .rp-files>div:last-child{border-bottom:0}
 .rp-files .g{flex:1;min-width:0;overflow-wrap:anywhere}
-.rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
-.rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
 /* ===== end BL-337 ===== */
 
 /* ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: Heading, List and Insert are hover menus (components/EditorBar.jsx) */
@@ -5944,7 +5942,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mountPrepShape: () => mountPrepShape,
     mountRejectMenu: () => mountRejectMenu,
     mountRejectsList: () => mountRejectsList,
-    mountReportingCard: () => mountReportingCard,
     mountSneak: () => mountSneak,
     mountStatusDots: () => mountStatusDots,
     mounted: () => mounted,
@@ -25831,6 +25828,74 @@ ${s5}`;
     return c5.run();
   }
 
+  // core/caretPlace.js
+  function placeAtCaret(view, pos, el2, o5 = {}) {
+    const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
+    const put2 = () => {
+      if (!el2.isConnected || view.isDestroyed) return;
+      let c5;
+      try {
+        c5 = view.coordsAtPos(Math.min(pos, view.state.doc.content.size));
+      } catch (e4) {
+        return;
+      }
+      let c02 = c5;
+      if (o5.from !== void 0) {
+        try {
+          c02 = view.coordsAtPos(Math.min(o5.from, view.state.doc.content.size));
+        } catch (e4) {
+        }
+      }
+      const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
+      el2.style.position = "fixed";
+      if (o5.level !== void 0) {
+        const w02 = el2.offsetWidth, h02 = el2.offsetHeight;
+        el2.style.left = `${Math.max(4, Math.min(o5.x ? o5.x() : c5.left, vw2 - w02 - 4))}px`;
+        el2.style.top = `${Math.max(edge, Math.min(c5.top + o5.level, vh2 - h02 - edge))}px`;
+        el2.dataset.side = "level";
+        return;
+      }
+      el2.style.maxHeight = "";
+      if (o5.scroll !== false) el2.style.overflowY = "auto";
+      const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
+      const below = vh2 - c5.bottom - gap - edge, above = c02.top - gap - edge;
+      const up2 = Math.max(natural, o5.need || 0) > below && above > below;
+      if (o5.overlap && natural > below && natural > above) {
+        const h22 = Math.min(natural, vh2 - 2 * edge);
+        el2.style.maxHeight = `${h22}px`;
+        el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
+        el2.style.top = `${Math.max(edge, vh2 - edge - h22)}px`;
+        el2.dataset.side = "over";
+        return;
+      }
+      const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
+      if (o5.scroll !== false) el2.style.maxHeight = `${Math.min(max, room)}px`;
+      el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
+      el2.style.top = `${up2 ? Math.max(edge, c02.top - gap - h5) : c5.bottom + gap}px`;
+      el2.dataset.side = up2 ? "above" : "below";
+    };
+    put2();
+    let raf = 0, tm2 = 0;
+    const on2 = () => {
+      put2();
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      raf = requestAnimationFrame(put2);
+      tm2 = window.setTimeout(put2, 120);
+    };
+    window.addEventListener("scroll", on2, true);
+    window.addEventListener("resize", on2);
+    const vv = window.visualViewport;
+    if (vv) vv.addEventListener("resize", on2);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      window.removeEventListener("scroll", on2, true);
+      window.removeEventListener("resize", on2);
+      if (vv) vv.removeEventListener("resize", on2);
+    };
+  }
+
   // ../../vendor/preact/signals-core/dist/signals-core.module.js
   var i4 = /* @__PURE__ */ Symbol.for("preact-signals");
   function t46() {
@@ -26520,633 +26585,6 @@ ${s5}`;
       return n4[Symbol.dispose];
     }, [n4]);
     return n4;
-  }
-
-  // stores/rail.js
-  var RAIL_ITEMS = [
-    { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
-    { id: "work", title: "Work", icon: "work", group: "top" },
-    { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
-    { id: "projects", title: "Projects", icon: "projects", group: "top" },
-    { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },
-    /* BL-337 */
-    { id: "people", title: "People", icon: "people", group: "top" },
-    { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
-    { id: "files", title: "Files", icon: "folder", group: "more" },
-    { id: "activity", title: "Activity", icon: "activity", group: "more" },
-    { id: "settings", title: "Settings", icon: "gear", group: "more" }
-  ];
-  var RAIL_DEF = {
-    order: RAIL_ITEMS.filter((i5) => i5.group === "top").map((i5) => i5.id),
-    more: RAIL_ITEMS.filter((i5) => i5.group === "more").map((i5) => i5.id),
-    hidden: [],
-    display: "titles"
-  };
-  var railItem = (id2) => RAIL_ITEMS.find((i5) => i5.id === id2);
-  function railNorm(c5) {
-    c5 = c5 && typeof c5 === "object" ? c5 : {};
-    const known2 = new Set(RAIL_ITEMS.map((i5) => i5.id));
-    const seen = /* @__PURE__ */ new Set(["today"]);
-    const keep2 = (a5) => (Array.isArray(a5) ? a5 : []).filter((id2) => typeof id2 === "string" && known2.has(id2) && !seen.has(id2) && !!seen.add(id2));
-    const hidden = Array.isArray(c5.hidden) ? c5.hidden : [];
-    const more = keep2(Array.isArray(c5.more) ? [...c5.more, ...hidden] : [...RAIL_DEF.more, ...hidden]);
-    const order = ["today", ...keep2(c5.order)];
-    for (const it2 of RAIL_ITEMS) if (!seen.has(it2.id)) {
-      seen.add(it2.id);
-      (it2.group === "more" ? more : order).push(it2.id);
-    }
-    return { order, more, hidden: [], display: c5.display === "icons" ? "icons" : "titles" };
-  }
-  var railCfg = y3(RAIL_DEF);
-  var railView = y3("today");
-  var railCounts = y3(
-    /** @type {Record<string, RailCount>} */
-    {}
-  );
-  var railMoreOpen = y3(false);
-  var railCustOpen = y3(false);
-  var railLabelsOn = y3(true);
-  var railIconSize = y3(
-    /** @type {"small"|"medium"|"large"} */
-    "small"
-  );
-  var railSizeNorm = (v5) => v5 === "medium" || v5 === "large" ? v5 : "small";
-  var railWide = y3(true);
-  var railNarrow = y3(false);
-  var RAIL_KEY = "creaite-rail-collapsed";
-  var railUser = y3(
-    /** @type {boolean | null} */
-    null
-  );
-  function railLoadUser() {
-    try {
-      const v5 = store.get(RAIL_KEY, null);
-      railUser.value = typeof v5 === "boolean" ? v5 : null;
-    } catch (x5) {
-      railUser.value = null;
-    }
-  }
-  function railSetUser(v5) {
-    railUser.value = v5;
-    try {
-      store.set(RAIL_KEY, v5);
-    } catch (x5) {
-    }
-  }
-  var railCollapsed = g3(() => railNarrow.value || (railUser.value !== null ? railUser.value : railCfg.value.display === "icons" || !railWide.value));
-  var railLabelled = g3(() => railCollapsed.value && railLabelsOn.value && railCfg.value.display !== "icons");
-  var railMode = g3(() => !railCollapsed.value ? "expanded" : railLabelled.value ? "labels" : "icons");
-  var railMoreWaiting = g3(() => railCfg.value.more.map((id2) => (
-    /** @type {[string, number]} */
-    [railItem(id2).title, (railCounts.value[id2] || { n: 0 }).n]
-  )).filter((x5) => x5[1] > 0));
-  function setRailView(key2) {
-    railView.value = key2;
-  }
-  function setRailCount(id2, n4, label) {
-    const was = railCounts.value[id2];
-    if (was && was.n === n4 && was.label === label) return;
-    railCounts.value = { ...railCounts.value, [id2]: { n: n4, label } };
-  }
-
-  // stores/exportSave.js
-  var exportClash = y3(
-    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
-    null
-  );
-  var exportSaved = y3(
-    /** @type {ExportAnswer|null} */
-    null
-  );
-  var exportFailed = y3("");
-  async function saveExport(body2) {
-    exportFailed.value = "";
-    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
-    if (r4.ok) {
-      exportClash.value = null;
-      exportSaved.value = r4;
-    } else if (r4.clash) {
-      exportSaved.value = null;
-      exportClash.value = { body: body2, r: r4 };
-    } else {
-      exportClash.value = null;
-      exportSaved.value = null;
-      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
-    }
-    return r4;
-  }
-  async function answerClash(choice, newName) {
-    const c5 = exportClash.value;
-    if (!c5) return null;
-    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
-  }
-  function cancelClash() {
-    exportClash.value = null;
-  }
-  var openFolder = (folder) => api("/api/open", { path: folder });
-  var showInFinder = (path) => api("/api/report/reveal", { path });
-  var openSaved = (path) => api("/api/open", { path });
-
-  // stores/weekly.js
-  var weeklyArg = y3(
-    /** @type {{code: string, week?: string}|null} */
-    null
-  );
-  var weeklyView = y3(
-    /** @type {WeeklyView|null} */
-    null
-  );
-  var weeklyDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var weeklyBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var weeklyBusy = y3("");
-  var weeklyEditing = y3(false);
-  var weeklyLogos = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var wkAsked = 0;
-  function wkIdentity(d5) {
-    const x5 = d5 === void 0 ? weeklyDoc.value : d5;
-    return x5 ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x5.project}|${x5.date}` : "";
-  }
-  async function loadWeekly(arg, fresh = false) {
-    const mine = ++wkAsked;
-    weeklyArg.value = arg;
-    weeklyEditing.value = false;
-    if (!viaServer()) {
-      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
-      return;
-    }
-    weeklyBusy.value = "Opening the weekly report…";
-    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
-    if (mine !== wkAsked) return;
-    weeklyBusy.value = "";
-    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
-    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
-  }
-  function takeWeekly(r4) {
-    weeklyView.value = r4;
-    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function readLogos(code, logos) {
-    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
-    if (!want.length) return;
-    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
-    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
-  }
-  async function saveWeekly(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    const ok2 = !!(r4 && r4.ok);
-    if (ok2) {
-      weeklyBase.value = Number(r4.version) || weeklyBase.value;
-      const v5 = weeklyView.value;
-      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
-    }
-    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
-  }
-  async function approveWeekly(doc, force) {
-    const a5 = weeklyArg.value;
-    const r4 = await api("/api/report/approve", {
-      kind: "weekly",
-      code: doc.project || a5 && a5.code,
-      week_ending: doc.date,
-      doc,
-      base_version: weeklyBase.value,
-      force: force || void 0
-    });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportWeekly(doc, fmt, page) {
-    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
-  }
-  var weeklyDirty = false;
-  var setWeeklyDirty = (on2) => {
-    weeklyDirty = on2;
-  };
-  function editDoc(d5, _why) {
-    const c5 = weeklyDoc.value;
-    if (c5 && d5 && (c5.project !== d5.project || c5.date !== d5.date || (c5.kind || "weekly") !== (d5.kind || "weekly"))) return false;
-    weeklyDoc.value = d5;
-    weeklyDirty = true;
-    return true;
-  }
-
-  // stores/reportingSettings.js
-  var LOGO_KINDS = (
-    /** @type {const} */
-    ["firm", "client", "partner"]
-  );
-  var crTick = y3(0);
-  var project = (code) => (
-    /** @type {any} */
-    P4.find((p6) => p6.code === code)
-  );
-  var clientReportOn = (code) => {
-    const p6 = project(code);
-    return !p6 || p6.cr !== false;
-  };
-  var clientReportCogLabel = (code) => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
-  var clientReminderOn = (code) => {
-    const p6 = project(code);
-    return !p6 || p6.crrem !== false;
-  };
-  function partnersOf(code) {
-    const p6 = project(code);
-    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
-  }
-  function logoKindsOf(code) {
-    const ps2 = partnersOf(code);
-    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
-  }
-  function logoKindName(code, kind) {
-    if (kind === "firm") return "Firm";
-    if (kind === "client") return "Client";
-    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
-    return own ? `Partner: ${own.name}` : "Partner";
-  }
-  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
-  function clientLogosOn(code) {
-    const p6 = project(code), kinds = logoKindsOf(code);
-    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
-  }
-  function changed() {
-    crTick.value++;
-    repTick.value++;
-  }
-  async function setClientReport(code, on2) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (!await setMemLine(code, "Client report", on2 ? "on" : "off", "client_report")) return false;
-    p6.cr = on2;
-    if (!on2) {
-      for (let i5 = REMINDERS.length - 1; i5 >= 0; i5--) if (String(REMINDERS[i5].id).startsWith(`client:${code}:`)) REMINDERS.splice(i5, 1);
-    }
-    changed();
-    return true;
-  }
-  async function setClientReminder(code, on2) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (!await setMemLine(code, "Client report reminder", on2 ? "on" : "off", "client_report_reminder")) return false;
-    p6.crrem = on2;
-    changed();
-    return true;
-  }
-  async function setClientLogos(code, kinds) {
-    const p6 = project(code);
-    if (!p6) return false;
-    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
-    const everyPartner = parts.every((k5) => list.includes(k5));
-    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
-    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
-    p6.crlogos = list;
-    changed();
-    return true;
-  }
-  var CLIENT_NAME_MAX = 80;
-  async function setClientName(code, name) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (/[\r\n]/.test(String(name || ""))) {
-      snack("Not saved: the client's name is one line.");
-      return false;
-    }
-    const v5 = String(name || "").replace(/\s+/g, " ").trim();
-    if (v5.length > CLIENT_NAME_MAX) {
-      snack(`Not saved: the client's name is over ${CLIENT_NAME_MAX} characters.`);
-      return false;
-    }
-    if (!await setMemLine(code, "Client / partner", v5, "client_name")) return false;
-    p6.client = v5;
-    changed();
-    return true;
-  }
-  async function setClientRhythm(code, val2) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (!await setRhythm(code, val2)) return false;
-    p6.rhythm = val2;
-    changed();
-    return true;
-  }
-  var crLogoPaths = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var crLogoData = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var crLogoNote = y3("");
-  var crLogoOrphans = y3(
-    /** @type {{kind: string, slug: string, path: string}[]} */
-    []
-  );
-  var crLogoFor = y3("");
-  async function readClientLogos(code) {
-    if (!viaServer()) return;
-    const r4 = await api("/api/report/logo", { code });
-    if (!r4 || !r4.ok) return;
-    crLogoFor.value = code;
-    crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
-    crLogoData.value = r4.logos || {};
-    crLogoOrphans.value = Array.isArray(r4.orphans) ? r4.orphans : [];
-    weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
-    changed();
-  }
-  function toBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const fr2 = new FileReader();
-      fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
-      fr2.onerror = () => reject(fr2.error);
-      fr2.readAsDataURL(blob);
-    });
-  }
-  var MARGIN_WHITE = 245, MARGIN_ALPHA = 8, DRAWN_MAX = 540;
-  function contentBox(px2, w6, h5) {
-    let x02 = w6, y02 = h5, x12 = -1, y12 = -1;
-    for (let y5 = 0; y5 < h5; y5++) for (let x5 = 0; x5 < w6; x5++) {
-      const i5 = (y5 * w6 + x5) * 4;
-      if (px2[i5 + 3] <= MARGIN_ALPHA || px2[i5] >= MARGIN_WHITE && px2[i5 + 1] >= MARGIN_WHITE && px2[i5 + 2] >= MARGIN_WHITE) continue;
-      if (x5 < x02) x02 = x5;
-      if (x5 > x12) x12 = x5;
-      if (y5 < y02) y02 = y5;
-      if (y5 > y12) y12 = y5;
-    }
-    if (x12 < 0) return null;
-    const box = { x: x02, y: y02, w: x12 - x02 + 1, h: y12 - y02 + 1 };
-    return box.w === w6 && box.h === h5 ? null : box;
-  }
-  async function trimmedCopy(file) {
-    try {
-      const bmp = await createImageBitmap(file), c5 = (
-        /** @type {any} */
-        document.createElement("canvas")
-      );
-      c5.width = bmp.width;
-      c5.height = bmp.height;
-      const g5 = (
-        /** @type {CanvasRenderingContext2D} */
-        c5.getContext("2d", { willReadFrequently: true })
-      );
-      g5.drawImage(bmp, 0, 0);
-      const box = contentBox(g5.getImageData(0, 0, c5.width, c5.height).data, c5.width, c5.height);
-      if (!box) return null;
-      const k5 = Math.min(1, DRAWN_MAX / Math.max(box.w, box.h)), out = document.createElement("canvas");
-      out.width = Math.max(1, Math.round(box.w * k5));
-      out.height = Math.max(1, Math.round(box.h * k5));
-      out.getContext("2d").drawImage(c5, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
-      return await new Promise((res) => out.toBlob(res, "image/png"));
-    } catch {
-      return null;
-    }
-  }
-  async function uploadClientLogo(code, kind, file) {
-    crLogoNote.value = "";
-    const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || ["", ""])[1].toLowerCase().replace("jpeg", "jpg");
-    if (!ext) {
-      crLogoNote.value = "Choose a PNG, JPEG or SVG picture.";
-      return false;
-    }
-    if (file.size > 4e5) {
-      crLogoNote.value = "That logo is over 400 kB. Choose a smaller file.";
-      return false;
-    }
-    const trimmed = ext === "svg" ? null : await trimmedCopy(file);
-    const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
-    if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not saved.";
-      return false;
-    }
-    crLogoNote.value = r4.hint || "";
-    await readClientLogos(code);
-    snack(r4.message || "Logo saved");
-    return true;
-  }
-  async function removeClientLogo(code, kind) {
-    crLogoNote.value = "";
-    const r4 = await api("/api/report/logo/remove", { code, kind });
-    if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not removed.";
-      return false;
-    }
-    await readClientLogos(code);
-    snack(r4.message || "Logo removed");
-    return true;
-  }
-
-  // stores/reporting.js
-  var repTick = y3(0);
-  var repFilter = y3(
-    /** @type {"need"|"all"} */
-    "need"
-  );
-  var repWeek = y3("");
-  var REP_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  var GAP = (
-    /** @type {Record<string, number>} */
-    { Weekly: 7, Fortnightly: 14, Monthly: 30 }
-  );
-  var MS = 864e5;
-  var repAddDays = (d5, n4) => new Date(Date.parse(d5) + n4 * MS).toISOString().slice(0, 10);
-  var between = (a5, b5) => Math.round((Date.parse(a5) - Date.parse(b5)) / MS);
-  function thisWeek(today = TODAY, hm2 = nowStamp().slice(11, 16)) {
-    const day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
-    const wd2 = (new Date(today).getUTCDay() + 6) % 7;
-    let start = repAddDays(today, -((wd2 - day + 7) % 7));
-    if (start === today && hm2 < String(S.weeklyTime || "12:00")) start = repAddDays(start, -7);
-    return start;
-  }
-  var shownWeek = () => repWeek.value || thisWeek();
-  function reportRecord(code, kind, week, client) {
-    const L3 = (
-      /** @type {any[]} */
-      D.reports || []
-    );
-    return L3.find((r4) => r4.project === code && r4.kind === kind && r4.date === week && (kind === "weekly" || !client || r4.client === client)) || null;
-  }
-  var inReview = (code, kind) => REV.some((r4) => !r4.done && r4.kind === "draft" && r4.ref === "report" && r4.p === code && (kind === "weekly" ? /weekly/i : /client/i).test(r4.rec && r4.rec.t || ""));
-  function filed(code, kind) {
-    const re2 = kind === "weekly" ? /Weekly report/ : /Client report/;
-    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && re2.test(f5.n) && f5.date).sort((a5, b5) => b5.date.localeCompare(a5.date));
-  }
-  function weekFiles(code, week) {
-    const from = repAddDays(week, -6);
-    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date && f5.date >= from && f5.date <= week).sort((a5, b5) => a5.n.localeCompare(b5.n));
-  }
-  function stateOf(code, kind, week, client, rhythm) {
-    const cur = week === thisWeek(), rec = reportRecord(code, kind, week, client);
-    if (rec) {
-      const s5 = String(rec.state || "draft");
-      return { state: { key: s5, label: s5 === "approved" ? "Approved" : "Draft", tone: s5 === "approved" ? "ok" : "warn", path: rec.path, edited: rec.edited }, due: s5 !== "approved" };
-    }
-    const L3 = filed(code, kind), from = repAddDays(week, -6);
-    const found = L3.find((f5) => kind === "weekly" ? f5.n.startsWith(week + " ") : f5.date >= from && f5.date <= week);
-    if (found) return { state: { key: "filed", label: "Filed", tone: "ok", path: found.path }, due: false };
-    if (cur && inReview(code, kind)) return { state: { key: "draft", label: "Draft", tone: "warn" }, due: true };
-    if (kind === "weekly") return { state: cur ? { key: "due", label: "Not drafted", tone: "warn" } : { key: "missing", label: "Not filed", tone: "" }, due: cur };
-    const gap = GAP[rhythm || "Weekly"] || 7, last = L3.find((f5) => f5.date < from);
-    const due = !last || between(week, last.date) >= gap;
-    if (!due) return { state: { key: "notdue", label: `Not due (${(rhythm || "Weekly").toLowerCase()})`, tone: "" }, due: false };
-    return cur ? { state: { key: "due", label: "Due", tone: "warn" }, due: true } : { state: { key: "missing", label: "Not filed", tone: "" }, due: false };
-  }
-  function weekView(code, week = thisWeek()) {
-    const p6 = P4.find((x5) => x5.code === code) || /** @type {any} */
-    {};
-    const w6 = stateOf(code, "weekly", week);
-    const rhythm = p6.rhythm || "Weekly", name = (p6.client || "").trim() || "Client";
-    const c5 = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
-    const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
-    return { week, internal: w6.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w6.state.key) || clients.some((x5) => ["due", "draft"].includes(x5.state.key)) };
-  }
-  function spaceWeeks(code) {
-    const cur = thisWeek(), set = new Set([0, 1, 2, 3].map((i5) => repAddDays(cur, -7 * i5)));
-    FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date).forEach((f5) => {
-      const wd2 = (new Date(f5.date).getUTCDay() + 6) % 7, day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
-      const end = repAddDays(f5.date, (day - wd2 + 7) % 7);
-      if (end <= cur) set.add(end);
-    });
-    return [...set].sort().reverse().slice(0, 12);
-  }
-  var needsMe = () => P4.filter((p6) => weekView(p6.code).needs).map((p6) => p6.code);
-  function reportsBadge() {
-    const n4 = needsMe().length;
-    setRailCount("reports", n4, `${n4} project${n4 === 1 ? "" : "s"} with a report to check or a client report due`);
-  }
-  var spaceCode = y3("");
-  var spaceWeek = y3("");
-  var weeklyHref = (code, week) => reportingHref(code, week);
-  var clientReportHref = (code, week, _client) => reportingHref(code, week, "client");
-  var weekLabel = (week) => week.split("-").reverse().join("-");
-  function reportingHref(code, week, view) {
-    return `#reporting=${code}${week ? `&w=${week}` : ""}${view === "client" || view === "side" ? `&v=${view}` : ""}`;
-  }
-  function parseReporting(hash, known2) {
-    const m5 = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
-    if (!m5 || !known2(m5[1])) return null;
-    const kv = Object.fromEntries(m5[2].split("&").filter(Boolean).map((x5) => x5.split("=")));
-    return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", view: kv.v === "client" || kv.v === "side" ? kv.v : "internal" };
-  }
-
-  // components/reporting/ReportingCard.jsx
-  function ReportingCardView({ code }) {
-    const week = thisWeek(), v5 = weekView(code, week), c5 = v5.clients[0];
-    const lastFiled = FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date).map((f5) => f5.date).sort().pop();
-    return /* @__PURE__ */ u2("div", { class: "card rp-cockcard", id: "repCard", "aria-label": "Reporting", children: [
-      /* @__PURE__ */ u2("h2", { children: [
-        "Reporting ",
-        /* @__PURE__ */ u2(Chip, { tone: "plan", children: "this week" })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "rp-row", children: [
-        /* @__PURE__ */ u2("span", { class: "g", children: [
-          /* @__PURE__ */ u2("b", { children: "Weekly report" }),
-          " · internal",
-          /* @__PURE__ */ u2("br", {}),
-          /* @__PURE__ */ u2("span", { class: "sub", children: [
-            "Week ending ",
-            weekLabel(week)
-          ] })
-        ] }),
-        /* @__PURE__ */ u2(StateChip, { s: v5.internal }),
-        v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "internal", "data-openfile": v5.internal.path, "aria-label": "Open the weekly report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "internal", "aria-label": "Open the weekly report", href: weeklyHref(code, week), children: "Open" })
-      ] }),
-      c5 ? /* @__PURE__ */ u2("div", { class: "rp-row", children: [
-        /* @__PURE__ */ u2("span", { class: "g", children: [
-          /* @__PURE__ */ u2("b", { children: "Client report" }),
-          " · ",
-          c5.client,
-          /* @__PURE__ */ u2("br", {}),
-          /* @__PURE__ */ u2("span", { class: "sub", children: [
-            c5.rhythm,
-            c5.state.key === "due" ? " · due" : c5.state.key === "notdue" ? " · not due this week" : ""
-          ] })
-        ] }),
-        /* @__PURE__ */ u2(StateChip, { s: c5.state }),
-        c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "client", "data-openfile": c5.state.path, "aria-label": "Open the client report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "client", "aria-label": "Open the client report", href: clientReportHref(code, week, c5.client), children: "Open" })
-      ] }) : null,
-      /* @__PURE__ */ u2("div", { class: "acts", children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary sm", "data-rpcard": "space", onClick: () => openSpace(code), children: "Open reporting" }),
-        /* @__PURE__ */ u2("span", { class: "sub", children: lastFiled ? `Last filed: ${fd(lastFiled)}` : "Nothing filed yet" })
-      ] })
-    ] });
-  }
-  function mountReportingCard(host2, code) {
-    R(/* @__PURE__ */ u2(ReportingCardView, { code }), host2);
-  }
-
-  // core/caretPlace.js
-  function placeAtCaret(view, pos, el2, o5 = {}) {
-    const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
-    const put2 = () => {
-      if (!el2.isConnected || view.isDestroyed) return;
-      let c5;
-      try {
-        c5 = view.coordsAtPos(Math.min(pos, view.state.doc.content.size));
-      } catch (e4) {
-        return;
-      }
-      let c02 = c5;
-      if (o5.from !== void 0) {
-        try {
-          c02 = view.coordsAtPos(Math.min(o5.from, view.state.doc.content.size));
-        } catch (e4) {
-        }
-      }
-      const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
-      el2.style.position = "fixed";
-      if (o5.level !== void 0) {
-        const w02 = el2.offsetWidth, h02 = el2.offsetHeight;
-        el2.style.left = `${Math.max(4, Math.min(o5.x ? o5.x() : c5.left, vw2 - w02 - 4))}px`;
-        el2.style.top = `${Math.max(edge, Math.min(c5.top + o5.level, vh2 - h02 - edge))}px`;
-        el2.dataset.side = "level";
-        return;
-      }
-      el2.style.maxHeight = "";
-      if (o5.scroll !== false) el2.style.overflowY = "auto";
-      const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
-      const below = vh2 - c5.bottom - gap - edge, above = c02.top - gap - edge;
-      const up2 = Math.max(natural, o5.need || 0) > below && above > below;
-      if (o5.overlap && natural > below && natural > above) {
-        const h22 = Math.min(natural, vh2 - 2 * edge);
-        el2.style.maxHeight = `${h22}px`;
-        el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
-        el2.style.top = `${Math.max(edge, vh2 - edge - h22)}px`;
-        el2.dataset.side = "over";
-        return;
-      }
-      const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
-      if (o5.scroll !== false) el2.style.maxHeight = `${Math.min(max, room)}px`;
-      el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
-      el2.style.top = `${up2 ? Math.max(edge, c02.top - gap - h5) : c5.bottom + gap}px`;
-      el2.dataset.side = up2 ? "above" : "below";
-    };
-    put2();
-    let raf = 0, tm2 = 0;
-    const on2 = () => {
-      put2();
-      cancelAnimationFrame(raf);
-      clearTimeout(tm2);
-      raf = requestAnimationFrame(put2);
-      tm2 = window.setTimeout(put2, 120);
-    };
-    window.addEventListener("scroll", on2, true);
-    window.addEventListener("resize", on2);
-    const vv = window.visualViewport;
-    if (vv) vv.addEventListener("resize", on2);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(tm2);
-      window.removeEventListener("scroll", on2, true);
-      window.removeEventListener("resize", on2);
-      if (vv) vv.removeEventListener("resize", on2);
-    };
   }
 
   // stores/aiEdit.js
@@ -31276,6 +30714,93 @@ ${s5}`;
     ] });
   }
 
+  // stores/rail.js
+  var RAIL_ITEMS = [
+    { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
+    { id: "work", title: "Work", icon: "work", group: "top" },
+    { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
+    { id: "projects", title: "Projects", icon: "projects", group: "top" },
+    { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },
+    /* BL-337 */
+    { id: "people", title: "People", icon: "people", group: "top" },
+    { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
+    { id: "files", title: "Files", icon: "folder", group: "more" },
+    { id: "activity", title: "Activity", icon: "activity", group: "more" },
+    { id: "settings", title: "Settings", icon: "gear", group: "more" }
+  ];
+  var RAIL_DEF = {
+    order: RAIL_ITEMS.filter((i5) => i5.group === "top").map((i5) => i5.id),
+    more: RAIL_ITEMS.filter((i5) => i5.group === "more").map((i5) => i5.id),
+    hidden: [],
+    display: "titles"
+  };
+  var railItem = (id2) => RAIL_ITEMS.find((i5) => i5.id === id2);
+  function railNorm(c5) {
+    c5 = c5 && typeof c5 === "object" ? c5 : {};
+    const known2 = new Set(RAIL_ITEMS.map((i5) => i5.id));
+    const seen = /* @__PURE__ */ new Set(["today"]);
+    const keep2 = (a5) => (Array.isArray(a5) ? a5 : []).filter((id2) => typeof id2 === "string" && known2.has(id2) && !seen.has(id2) && !!seen.add(id2));
+    const hidden = Array.isArray(c5.hidden) ? c5.hidden : [];
+    const more = keep2(Array.isArray(c5.more) ? [...c5.more, ...hidden] : [...RAIL_DEF.more, ...hidden]);
+    const order = ["today", ...keep2(c5.order)];
+    for (const it2 of RAIL_ITEMS) if (!seen.has(it2.id)) {
+      seen.add(it2.id);
+      (it2.group === "more" ? more : order).push(it2.id);
+    }
+    return { order, more, hidden: [], display: c5.display === "icons" ? "icons" : "titles" };
+  }
+  var railCfg = y3(RAIL_DEF);
+  var railView = y3("today");
+  var railCounts = y3(
+    /** @type {Record<string, RailCount>} */
+    {}
+  );
+  var railMoreOpen = y3(false);
+  var railCustOpen = y3(false);
+  var railLabelsOn = y3(true);
+  var railIconSize = y3(
+    /** @type {"small"|"medium"|"large"} */
+    "small"
+  );
+  var railSizeNorm = (v5) => v5 === "medium" || v5 === "large" ? v5 : "small";
+  var railWide = y3(true);
+  var railNarrow = y3(false);
+  var RAIL_KEY = "creaite-rail-collapsed";
+  var railUser = y3(
+    /** @type {boolean | null} */
+    null
+  );
+  function railLoadUser() {
+    try {
+      const v5 = store.get(RAIL_KEY, null);
+      railUser.value = typeof v5 === "boolean" ? v5 : null;
+    } catch (x5) {
+      railUser.value = null;
+    }
+  }
+  function railSetUser(v5) {
+    railUser.value = v5;
+    try {
+      store.set(RAIL_KEY, v5);
+    } catch (x5) {
+    }
+  }
+  var railCollapsed = g3(() => railNarrow.value || (railUser.value !== null ? railUser.value : railCfg.value.display === "icons" || !railWide.value));
+  var railLabelled = g3(() => railCollapsed.value && railLabelsOn.value && railCfg.value.display !== "icons");
+  var railMode = g3(() => !railCollapsed.value ? "expanded" : railLabelled.value ? "labels" : "icons");
+  var railMoreWaiting = g3(() => railCfg.value.more.map((id2) => (
+    /** @type {[string, number]} */
+    [railItem(id2).title, (railCounts.value[id2] || { n: 0 }).n]
+  )).filter((x5) => x5[1] > 0));
+  function setRailView(key2) {
+    railView.value = key2;
+  }
+  function setRailCount(id2, n4, label) {
+    const was = railCounts.value[id2];
+    if (was && was.n === n4 && was.label === label) return;
+    railCounts.value = { ...railCounts.value, [id2]: { n: n4, label } };
+  }
+
   // components/settings/MoreSettings.jsx
   var LIMITS = {
     "assistant.run_timeout_minutes": [1, 240],
@@ -31470,6 +30995,432 @@ ${s5}`;
       /* @__PURE__ */ u2("h2", { children: g5 }),
       list.filter((s5) => groupOf2(s5) === g5).map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key))
     ] })) });
+  }
+
+  // stores/exportSave.js
+  var exportClash = y3(
+    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
+    null
+  );
+  var exportSaved = y3(
+    /** @type {ExportAnswer|null} */
+    null
+  );
+  var exportFailed = y3("");
+  async function saveExport(body2) {
+    exportFailed.value = "";
+    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
+    if (r4.ok) {
+      exportClash.value = null;
+      exportSaved.value = r4;
+    } else if (r4.clash) {
+      exportSaved.value = null;
+      exportClash.value = { body: body2, r: r4 };
+    } else {
+      exportClash.value = null;
+      exportSaved.value = null;
+      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
+    }
+    return r4;
+  }
+  async function answerClash(choice, newName) {
+    const c5 = exportClash.value;
+    if (!c5) return null;
+    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
+  }
+  function cancelClash() {
+    exportClash.value = null;
+  }
+  var openFolder = (folder) => api("/api/open", { path: folder });
+  var showInFinder = (path) => api("/api/report/reveal", { path });
+  var openSaved = (path) => api("/api/open", { path });
+
+  // stores/weekly.js
+  var weeklyArg = y3(
+    /** @type {{code: string, week?: string}|null} */
+    null
+  );
+  var weeklyView = y3(
+    /** @type {WeeklyView|null} */
+    null
+  );
+  var weeklyDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var weeklyBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var weeklyBusy = y3("");
+  var weeklyEditing = y3(false);
+  var weeklyLogos = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var wkAsked = 0;
+  function wkIdentity(d5) {
+    const x5 = d5 === void 0 ? weeklyDoc.value : d5;
+    return x5 ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x5.project}|${x5.date}` : "";
+  }
+  async function loadWeekly(arg, fresh = false) {
+    const mine = ++wkAsked;
+    weeklyArg.value = arg;
+    weeklyEditing.value = false;
+    if (!viaServer()) {
+      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      return;
+    }
+    weeklyBusy.value = "Opening the weekly report…";
+    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
+    if (mine !== wkAsked) return;
+    weeklyBusy.value = "";
+    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
+    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
+  }
+  function takeWeekly(r4) {
+    weeklyView.value = r4;
+    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function readLogos(code, logos) {
+    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
+    if (!want.length) return;
+    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
+    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
+  }
+  async function saveWeekly(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    const ok2 = !!(r4 && r4.ok);
+    if (ok2) {
+      weeklyBase.value = Number(r4.version) || weeklyBase.value;
+      const v5 = weeklyView.value;
+      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
+    }
+    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
+  }
+  async function approveWeekly(doc, force) {
+    const a5 = weeklyArg.value;
+    const r4 = await api("/api/report/approve", {
+      kind: "weekly",
+      code: doc.project || a5 && a5.code,
+      week_ending: doc.date,
+      doc,
+      base_version: weeklyBase.value,
+      force: force || void 0
+    });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportWeekly(doc, fmt, page) {
+    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
+  }
+  var weeklyDirty = false;
+  var setWeeklyDirty = (on2) => {
+    weeklyDirty = on2;
+  };
+  function editDoc(d5, _why) {
+    const c5 = weeklyDoc.value;
+    if (c5 && d5 && (c5.project !== d5.project || c5.date !== d5.date || (c5.kind || "weekly") !== (d5.kind || "weekly"))) return false;
+    weeklyDoc.value = d5;
+    weeklyDirty = true;
+    return true;
+  }
+
+  // stores/reporting.js
+  var repTick = y3(0);
+  var repFilter = y3(
+    /** @type {"need"|"all"} */
+    "need"
+  );
+  var repWeek = y3("");
+  var REP_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var GAP = (
+    /** @type {Record<string, number>} */
+    { Weekly: 7, Fortnightly: 14, Monthly: 30 }
+  );
+  var MS = 864e5;
+  var repAddDays = (d5, n4) => new Date(Date.parse(d5) + n4 * MS).toISOString().slice(0, 10);
+  var between = (a5, b5) => Math.round((Date.parse(a5) - Date.parse(b5)) / MS);
+  function thisWeek(today = TODAY, hm2 = nowStamp().slice(11, 16)) {
+    const day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
+    const wd2 = (new Date(today).getUTCDay() + 6) % 7;
+    let start = repAddDays(today, -((wd2 - day + 7) % 7));
+    if (start === today && hm2 < String(S.weeklyTime || "12:00")) start = repAddDays(start, -7);
+    return start;
+  }
+  var shownWeek = () => repWeek.value || thisWeek();
+  function reportRecord(code, kind, week, client) {
+    const L3 = (
+      /** @type {any[]} */
+      D.reports || []
+    );
+    return L3.find((r4) => r4.project === code && r4.kind === kind && r4.date === week && (kind === "weekly" || !client || r4.client === client)) || null;
+  }
+  var inReview = (code, kind) => REV.some((r4) => !r4.done && r4.kind === "draft" && r4.ref === "report" && r4.p === code && (kind === "weekly" ? /weekly/i : /client/i).test(r4.rec && r4.rec.t || ""));
+  function filed(code, kind) {
+    const re2 = kind === "weekly" ? /Weekly report/ : /Client report/;
+    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && re2.test(f5.n) && f5.date).sort((a5, b5) => b5.date.localeCompare(a5.date));
+  }
+  function weekFiles(code, week) {
+    const from = repAddDays(week, -6);
+    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date && f5.date >= from && f5.date <= week).sort((a5, b5) => a5.n.localeCompare(b5.n));
+  }
+  function stateOf(code, kind, week, client, rhythm) {
+    const cur = week === thisWeek(), rec = reportRecord(code, kind, week, client);
+    if (rec) {
+      const s5 = String(rec.state || "draft");
+      return { state: { key: s5, label: s5 === "approved" ? "Approved" : "Draft", tone: s5 === "approved" ? "ok" : "warn", path: rec.path, edited: rec.edited }, due: s5 !== "approved" };
+    }
+    const L3 = filed(code, kind), from = repAddDays(week, -6);
+    const found = L3.find((f5) => kind === "weekly" ? f5.n.startsWith(week + " ") : f5.date >= from && f5.date <= week);
+    if (found) return { state: { key: "filed", label: "Filed", tone: "ok", path: found.path }, due: false };
+    if (cur && inReview(code, kind)) return { state: { key: "draft", label: "Draft", tone: "warn" }, due: true };
+    if (kind === "weekly") return { state: cur ? { key: "due", label: "Not drafted", tone: "warn" } : { key: "missing", label: "Not filed", tone: "" }, due: cur };
+    const gap = GAP[rhythm || "Weekly"] || 7, last = L3.find((f5) => f5.date < from);
+    const due = !last || between(week, last.date) >= gap;
+    if (!due) return { state: { key: "notdue", label: `Not due (${(rhythm || "Weekly").toLowerCase()})`, tone: "" }, due: false };
+    return cur ? { state: { key: "due", label: "Due", tone: "warn" }, due: true } : { state: { key: "missing", label: "Not filed", tone: "" }, due: false };
+  }
+  function weekView(code, week = thisWeek()) {
+    const p6 = P4.find((x5) => x5.code === code) || /** @type {any} */
+    {};
+    const w6 = stateOf(code, "weekly", week);
+    const rhythm = p6.rhythm || "Weekly", name = (p6.client || "").trim() || "Client";
+    const c5 = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
+    const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
+    return { week, internal: w6.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w6.state.key) || clients.some((x5) => ["due", "draft"].includes(x5.state.key)) };
+  }
+  function spaceWeeks(code) {
+    const cur = thisWeek(), set = new Set([0, 1, 2, 3].map((i5) => repAddDays(cur, -7 * i5)));
+    FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date).forEach((f5) => {
+      const wd2 = (new Date(f5.date).getUTCDay() + 6) % 7, day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
+      const end = repAddDays(f5.date, (day - wd2 + 7) % 7);
+      if (end <= cur) set.add(end);
+    });
+    return [...set].sort().reverse().slice(0, 12);
+  }
+  var needsMe = () => P4.filter((p6) => weekView(p6.code).needs).map((p6) => p6.code);
+  function reportsBadge() {
+    const n4 = needsMe().length;
+    setRailCount("reports", n4, `${n4} project${n4 === 1 ? "" : "s"} with a report to check or a client report due`);
+  }
+  var spaceCode = y3("");
+  var spaceWeek = y3("");
+  var weeklyHref = (code, week) => reportingHref(code, week);
+  var clientReportHref = (code, week, _client) => reportingHref(code, week, "client");
+  var weekLabel = (week) => week.split("-").reverse().join("-");
+  function reportingHref(code, week, view) {
+    return `#reporting=${code}${week ? `&w=${week}` : ""}${view === "client" || view === "side" ? `&v=${view}` : ""}`;
+  }
+  function parseReporting(hash, known2) {
+    const m5 = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
+    if (!m5 || !known2(m5[1])) return null;
+    const kv = Object.fromEntries(m5[2].split("&").filter(Boolean).map((x5) => x5.split("=")));
+    return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", view: kv.v === "client" || kv.v === "side" ? kv.v : "internal" };
+  }
+
+  // stores/reportingSettings.js
+  var LOGO_KINDS = (
+    /** @type {const} */
+    ["firm", "client", "partner"]
+  );
+  var crTick = y3(0);
+  var project = (code) => (
+    /** @type {any} */
+    P4.find((p6) => p6.code === code)
+  );
+  var clientReportOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.cr !== false;
+  };
+  var clientReportCogLabel = (code) => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
+  var clientReminderOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.crrem !== false;
+  };
+  function partnersOf(code) {
+    const p6 = project(code);
+    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
+  }
+  function logoKindsOf(code) {
+    const ps2 = partnersOf(code);
+    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
+  }
+  function logoKindName(code, kind) {
+    if (kind === "firm") return "Firm";
+    if (kind === "client") return "Client";
+    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
+    return own ? `Partner: ${own.name}` : "Partner";
+  }
+  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
+  function clientLogosOn(code) {
+    const p6 = project(code), kinds = logoKindsOf(code);
+    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
+  }
+  function changed() {
+    crTick.value++;
+    repTick.value++;
+  }
+  async function setClientReport(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report", on2 ? "on" : "off", "client_report")) return false;
+    p6.cr = on2;
+    if (!on2) {
+      for (let i5 = REMINDERS.length - 1; i5 >= 0; i5--) if (String(REMINDERS[i5].id).startsWith(`client:${code}:`)) REMINDERS.splice(i5, 1);
+    }
+    changed();
+    return true;
+  }
+  async function setClientReminder(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report reminder", on2 ? "on" : "off", "client_report_reminder")) return false;
+    p6.crrem = on2;
+    changed();
+    return true;
+  }
+  async function setClientLogos(code, kinds) {
+    const p6 = project(code);
+    if (!p6) return false;
+    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
+    const everyPartner = parts.every((k5) => list.includes(k5));
+    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
+    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
+    p6.crlogos = list;
+    changed();
+    return true;
+  }
+  var CLIENT_NAME_MAX = 80;
+  async function setClientName(code, name) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (/[\r\n]/.test(String(name || ""))) {
+      snack("Not saved: the client's name is one line.");
+      return false;
+    }
+    const v5 = String(name || "").replace(/\s+/g, " ").trim();
+    if (v5.length > CLIENT_NAME_MAX) {
+      snack(`Not saved: the client's name is over ${CLIENT_NAME_MAX} characters.`);
+      return false;
+    }
+    if (!await setMemLine(code, "Client / partner", v5, "client_name")) return false;
+    p6.client = v5;
+    changed();
+    return true;
+  }
+  async function setClientRhythm(code, val2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setRhythm(code, val2)) return false;
+    p6.rhythm = val2;
+    changed();
+    return true;
+  }
+  var crLogoPaths = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoData = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoNote = y3("");
+  var crLogoOrphans = y3(
+    /** @type {{kind: string, slug: string, path: string}[]} */
+    []
+  );
+  var crLogoFor = y3("");
+  async function readClientLogos(code) {
+    if (!viaServer()) return;
+    const r4 = await api("/api/report/logo", { code });
+    if (!r4 || !r4.ok) return;
+    crLogoFor.value = code;
+    crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
+    crLogoData.value = r4.logos || {};
+    crLogoOrphans.value = Array.isArray(r4.orphans) ? r4.orphans : [];
+    weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
+    changed();
+  }
+  function toBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
+      fr2.onerror = () => reject(fr2.error);
+      fr2.readAsDataURL(blob);
+    });
+  }
+  var MARGIN_WHITE = 245, MARGIN_ALPHA = 8, DRAWN_MAX = 540;
+  function contentBox(px2, w6, h5) {
+    let x02 = w6, y02 = h5, x12 = -1, y12 = -1;
+    for (let y5 = 0; y5 < h5; y5++) for (let x5 = 0; x5 < w6; x5++) {
+      const i5 = (y5 * w6 + x5) * 4;
+      if (px2[i5 + 3] <= MARGIN_ALPHA || px2[i5] >= MARGIN_WHITE && px2[i5 + 1] >= MARGIN_WHITE && px2[i5 + 2] >= MARGIN_WHITE) continue;
+      if (x5 < x02) x02 = x5;
+      if (x5 > x12) x12 = x5;
+      if (y5 < y02) y02 = y5;
+      if (y5 > y12) y12 = y5;
+    }
+    if (x12 < 0) return null;
+    const box = { x: x02, y: y02, w: x12 - x02 + 1, h: y12 - y02 + 1 };
+    return box.w === w6 && box.h === h5 ? null : box;
+  }
+  async function trimmedCopy(file) {
+    try {
+      const bmp = await createImageBitmap(file), c5 = (
+        /** @type {any} */
+        document.createElement("canvas")
+      );
+      c5.width = bmp.width;
+      c5.height = bmp.height;
+      const g5 = (
+        /** @type {CanvasRenderingContext2D} */
+        c5.getContext("2d", { willReadFrequently: true })
+      );
+      g5.drawImage(bmp, 0, 0);
+      const box = contentBox(g5.getImageData(0, 0, c5.width, c5.height).data, c5.width, c5.height);
+      if (!box) return null;
+      const k5 = Math.min(1, DRAWN_MAX / Math.max(box.w, box.h)), out = document.createElement("canvas");
+      out.width = Math.max(1, Math.round(box.w * k5));
+      out.height = Math.max(1, Math.round(box.h * k5));
+      out.getContext("2d").drawImage(c5, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
+      return await new Promise((res) => out.toBlob(res, "image/png"));
+    } catch {
+      return null;
+    }
+  }
+  async function uploadClientLogo(code, kind, file) {
+    crLogoNote.value = "";
+    const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || ["", ""])[1].toLowerCase().replace("jpeg", "jpg");
+    if (!ext) {
+      crLogoNote.value = "Choose a PNG, JPEG or SVG picture.";
+      return false;
+    }
+    if (file.size > 4e5) {
+      crLogoNote.value = "That logo is over 400 kB. Choose a smaller file.";
+      return false;
+    }
+    const trimmed = ext === "svg" ? null : await trimmedCopy(file);
+    const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not saved.";
+      return false;
+    }
+    crLogoNote.value = r4.hint || "";
+    await readClientLogos(code);
+    snack(r4.message || "Logo saved");
+    return true;
+  }
+  async function removeClientLogo(code, kind) {
+    crLogoNote.value = "";
+    const r4 = await api("/api/report/logo/remove", { code, kind });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not removed.";
+      return false;
+    }
+    await readClientLogos(code);
+    snack(r4.message || "Logo removed");
+    return true;
   }
 
   // core/partners.js
@@ -47986,7 +47937,6 @@ ${s5}`;
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}${raw(legBtn())}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v5, b5, nav, ex2]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex2))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v5 && v5 !== "None" ? "bad" : ""}">${v5}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p6))}
-     <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
@@ -47999,10 +47949,6 @@ ${s5}`;
    <div class="cockfoot">${raw(ibtn("filetext", "Reports", `data-reports="${p6.code}"`, "bd"))}${raw(ibtn("folder", "Browse files", `data-files="${p6.code}"`, "bd"))}${raw(ibtn("gear", "Project settings", `data-psettings="${p6.code}"`, "bd"))}</div></div>`);
     })();
     drawCockpitTabs(code);
-    {
-      const rc2 = $("#cockRep");
-      if (rc2) mountReportingCard(rc2, code);
-    }
     csHead(code);
     if (!(shared.CURED && shared.CURED.code === code)) readClaims(code);
     {

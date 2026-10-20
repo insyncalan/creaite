@@ -110,7 +110,6 @@ export * from "./components/reporting/ReportingSpace.jsx";
 export * from "./stores/reportingSettings.js";   /* #221: clientReportOn, the one function the hub asks */
 export * from "./stores/hub.js";   /* #221: the Reporting hub's state */
 export * from "./components/reporting/ReportsPage.jsx";
-export * from "./components/reporting/ReportingCard.jsx";
 export * from "./components/project/ProjectSettings.jsx";   /* #228: the full-page project settings */
 export * from "./stores/projectSettings.js";
 export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */

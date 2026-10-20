@@ -1,8 +1,8 @@
 {
- "commit": "8f278df4",
- "branch": "v252-intake-line",
- "version_file": "2.5.0",
- "subject": "#245 LOWs: dashboard-spec describes the Intake line and Messages section; design-system snapshots an",
+ "commit": "5e6770d0",
+ "branch": "v252-no-reporting-card",
+ "version_file": "2.5.2",
+ "subject": "#254: cockpit golden without the Reporting card (run_tests.py --update-snapshots cockpit); two comme",
  "taken": "2026-10-20",
  "palette": "creaite",
  "mode": "light",
