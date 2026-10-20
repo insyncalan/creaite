@@ -43,7 +43,7 @@ MUTATIONS = {
     "drop-title-read": ("the spec's title is not read", 'return str(spec.get("title") or ""), str(spec.get("version") or "")',
                         'return "", str(spec.get("version") or "")'),
     "fail-open-unreadable": ("an unreadable adhoc spec with a report-named file is let through",
-                             'if pos[0] == "adhoc" and REPORT_WORDS.search(', "if False and REPORT_WORDS.search("),
+                             'return sub == "adhoc" and bool(REPORT_WORDS.search(', 'return False and bool(REPORT_WORDS.search('),
     "drop-client-version": ("a client-safe one-pager is let through", 'version.lower() == "client"', "False"),
     "drop-output-name": ("the output file's name is not looked at", "if REPORT_WORDS.search(pos[3].rsplit", "if False and REPORT_WORDS.search(pos[3].rsplit"),
     "unsplittable-open": ("a command that can't be split is let through", "REPORT_WORDS.search(rest) else None", "False else None"),

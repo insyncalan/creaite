@@ -1,6 +1,6 @@
 --- system/scripts/reach.py
 +++ system/scripts/reach.py
-@@ -1474,8 +1474,74 @@
+@@ -1474,8 +1474,85 @@
          return None if not REPORT_NAME.search(command or "") else REPORTS_ARE_THE_USERS
      return None
  # ===== end reports =====
@@ -23,8 +23,8 @@
 +        return [shlex.split(cmd), cmd.split()]
 +    except ValueError:
 +        return None
- 
- 
++
++
 +def _spec_fields(path):
 +    """(title, version) from a staged spec file (JSON), or (None, None) if it can't be read: a file in reach, read only here."""
 +    try:
@@ -38,23 +38,34 @@
 +        return None, None
 +
 +
++def _spec_is_report_named(sub, spec):
++    """True when `report.py adhoc|steerco-stage <spec>` would write a report-named draft: the spec's title has a report word, or
++    (steerco-stage) its version is client; an unreadable spec counts only for adhoc, and only if the spec file's own name has one."""
++    title, version = _spec_fields(spec)
++    if title is None:
++        return sub == "adhoc" and bool(REPORT_WORDS.search(spec.rsplit("/", 1)[-1]))
++    return bool(REPORT_WORDS.search(title)) or (sub == "steerco-stage" and version.lower() == "client")
+ 
+ 
++def _docx_is_report_named(sub, pos):
++    """True when `docx_tools.py fill|build-adhoc <template> <spec> <out.docx>` writes a report-named file (or, build-adhoc, from a
++    report-titled spec)."""
++    if sub not in ("fill", "build-adhoc") or len(pos) < 4:
++        return False
++    if REPORT_WORDS.search(pos[3].rsplit("/", 1)[-1]):
++        return True
++    return sub == "build-adhoc" and bool(REPORT_WORDS.search(_spec_fields(pos[2])[0] or ""))
++
++
 +def _named_like_a_report(words):
 +    """True when these words run a builder that would write a report-named draft."""
 +    for i, w in enumerate(words):
 +        script = w.rsplit("/", 1)[-1]
 +        pos = [x for x in words[i + 1:] if not x.startswith("-")]
-+        if script == "report.py" and pos[:1] in (["adhoc"], ["steerco-stage"]) and len(pos) > 1:
-+            title, version = _spec_fields(pos[1])
-+            if title is None:           # unreadable: only a report-named spec file is taken as a report-named draft (adhoc)
-+                if pos[0] == "adhoc" and REPORT_WORDS.search(pos[1].rsplit("/", 1)[-1]):
-+                    return True
-+            elif REPORT_WORDS.search(title) or (pos[0] == "steerco-stage" and version.lower() == "client"):
-+                return True
-+        if script == "docx_tools.py" and pos[:1] in (["fill"], ["build-adhoc"]) and len(pos) > 3:
-+            if REPORT_WORDS.search(pos[3].rsplit("/", 1)[-1]):
-+                return True
-+            if pos[0] == "build-adhoc" and REPORT_WORDS.search(_spec_fields(pos[2])[0] or ""):
-+                return True
++        if script == "report.py" and pos[:1] in (["adhoc"], ["steerco-stage"]) and len(pos) > 1 and _spec_is_report_named(pos[0], pos[1]):
++            return True
++        if script == "docx_tools.py" and pos and _docx_is_report_named(pos[0], pos):
++            return True
 +    return False
 +
 +
@@ -75,7 +86,7 @@
  def _direct_write_refusal(inp, mode):
      """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
      outside the run's direct-write folder."""
-@@ -1525,7 +1591,8 @@
+@@ -1525,7 +1602,8 @@
      form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
      # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
      return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)

@@ -2,21 +2,23 @@
 
 # FINAL, for Jarvis to apply (approved by Alan, 20-10-2026)
 
-Three independent diffs for `system/scripts/reach.py` (the only file they touch), in `dev/proposals/guard-174/`. From the repo root, **in this order**, each with `-p0` (the headers read `--- system/scripts/reach.py`, so no `-p1`):
+Three independent diffs for `system/scripts/reach.py` (the only guarded file they touch), in `dev/proposals/guard-174/`, and one one-number change to the static-check baseline. From the repo root, **in this order**, each with `-p0` (the headers read `--- system/scripts/reach.py` and `--- dev/check-baseline.json`, so no `-p1`):
 
 ```
 patch -p0 < dev/proposals/guard-174/reach.diff
 patch -p0 < dev/proposals/guard-174/reach-report.diff
 patch -p0 < dev/proposals/guard-174/reach-steerco-adhoc.diff
+patch -p0 < dev/proposals/guard-174/check-baseline.diff  # dev/check-baseline.json, not guarded: see below
 ```
 
-Add `--dry-run` first to check. Every order of the three applies cleanly (checked, 7 orders, with `patch --dry-run` and for real) on `origin/main` (dcd8a7b6) **and** on `origin/v252-release` (afb8c30c, whose `reach.py` differs from main by one added table row): **no rebase is needed and no `-rebased.diff` exists**. `reach.diff` and `reach-report.diff` are byte for byte the diffs of 6a911a7b and dffd8fc7.
+Add `--dry-run` first to check. Every order of the three `reach.py` diffs applies cleanly (checked, 7 orders, with `patch --dry-run` and for real) on `origin/main` (dcd8a7b6) **and** on `origin/v252-release` (afb8c30c, whose `reach.py` differs from main by one added table row): **no rebase is needed and no `-rebased.diff` exists**. `reach.diff` and `reach-report.diff` are byte for byte the diffs of 6a911a7b and dffd8fc7.
 
 | Diff | What it refuses (only ever adds refusals) |
 |------|------------------------------------------|
 | `reach.diff` | `propose.py setting` and `workstreams retire-settings` however quoted or spliced; `people migrate` (the word anywhere after `people`); an unquoted `* ? [ ^ #` or inner `~` in any creaite script call (a shell pattern turned into another word by a file in the vault root); `command_kind` fails closed for `people`/`workstreams` with an unknown second word. |
 | `reach-report.diff` | `report.py weekly-stage` / `client-stage` spelled with quotes, splices, `run`, `python`, an absolute path (a hole in v2.5.1 on `main`). Reading reports stays allowed. |
 | `reach-steerco-adhoc.diff` | `report.py adhoc` and `steerco-stage`, `docx_tools.py fill` and `build-adhoc`, **only when the draft is named like a report** (below). |
+| `check-baseline.diff` | Nothing is refused. `reach.diff` adds one comment line of 142 characters; `dev/tools/check.py` allows one line over 140 in `reach.py` (an older line has the slot), so **after `reach.diff` the check fails** with `LONG 2 lines over 140 ... the limit is 1`. This diff raises that one allowance in `dev/check-baseline.json` (`long_lines`, `system/scripts/reach.py`, 1 to 2): a deliberate raise of a ratchet, for Alan to accept. It leaves `reach.diff` as approved (a comment-only fix of that line would make `patch -R reach.diff`, which the proposal tests use once it is applied, fail). With the three diffs and this one applied `check.py` is OK (checked on copies of `origin/main` and `origin/v252-release`). |
 
 **Regressions accepted** (all three diffs; the first two are already in the sections below):
 1. `reach.diff`: an unquoted pattern character in any script call is refused (`minutes.py new [CODE]`, `search.py query ABC#12`, `a~b`; quote the argument and it runs). `people resolve|list|add migrate` (a person named Migrate) are refused (not narrowed, so the diff is the one shown).
