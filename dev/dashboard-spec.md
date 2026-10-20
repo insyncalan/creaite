@@ -652,9 +652,9 @@ The routes and data the page reads; the page itself is the next section. Notes: 
 
 ## Archive folders and Health (BL-09, part 1)
 
-- **One name, `_Archive`:** every archive folder creaite knows of (`paths.ARCHIVE`); `paths.skipped_names()` also skips the old `zz Archive` (`paths.OLD_ARCHIVE`) for one release. `projects/_Archive` (or `<projects root>/_Archive`) is never a project folder.
-- **Health lines (doctor checks):** `old_archive_folders` (warn) names the folders still called `zz Archive` in the projects root and each engagement or project folder; `skeleton_archive` (warn) says the project skeleton still holds one (a folder listing; creaite never writes in `_Templates`).
-- **Fix it for `old_archive_folders`** (`health_fixes.FIXES["old_archive"]`, `card: True`): `POST /api/health/fix/old_archive` (empty body) runs `propose.py old-archives`, which only prints the spec (a `move` per folder, file block `archive: "rename"`); the live server puts it on the change card (`server_edit_card`, the BL-258 card) and answers `{ok, card: true}`; the page opens ask creaite on that card (`pendingEdit`). **Approve** stages and applies it through `tracker.py apply`; Undo moves the folders back.
+- **One name, `99 Archive` (#252; Alan, 20-10-2026):** every archive folder creaite makes (`paths.ARCHIVE`); `paths.skipped_names()` also skips the old `_Archive` and `zz Archive` (`paths.OLD_ARCHIVES`) for one release, whatever the saved `never_index` says. Where a place has only an old `_Archive`, it stays the folder in use there (`paths.archive_name`). `projects/99 Archive` (and the old names) is never a project folder.
+- **Health lines (doctor checks), information only:** `old_archive_folders` names the folders still called `_Archive` or `zz Archive`; `skeleton_archive` says the project skeleton holds one. Neither is a warning and neither has a fix.
+- **No rename (#252):** nothing offers or makes a rename, at update time or in Health (the BL-09 `old_archive` Fix it, `propose.py old-archives` and the update's `never_index` rename are gone). Alan renames his own folders by hand; stored paths keep working (`paths.archive_alias`).
 
 ## Archive and restore a project (BL-09, part 2)
 

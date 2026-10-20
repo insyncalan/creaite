@@ -61,8 +61,8 @@ PLAIN = {
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
     "vault_not_synced": ("The vault is in a synced folder", "manual"),
     "online_only": ("Some project files are online-only", "manual"),
-    "old_archive_folders": ("Archive folders not yet called 99 Archive", "manual"),   # BL-09, #252: health_fixes builds its Rename
-    "skeleton_archive": ("The project skeleton has an old archive folder", "manual"),  # BL-09, #252: Alan renames it in Finder
+    "old_archive_folders": ("Archive folders with an old name", "manual"),          # BL-09, #252: information only, no fix
+    "skeleton_archive": ("The project skeleton has an old archive folder", "manual"),  # BL-09, #252: information only
     "archive_reports": ("Old reports and minutes to archive", "manual"),     # BL-03: health_fixes builds its Fix it (the card)
     "archive_items": ("Archiving of old items", "manual"),                   # BL-10: information only (never a warning)
     "extraction_scope": ("Something was extracted from documents or reports", "manual"),

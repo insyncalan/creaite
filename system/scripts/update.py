@@ -172,29 +172,10 @@ def migrate_backup_folder(settings):
     return changed
 
 
-# ===== _Archive and zz Archive become 99 Archive (BL-09, #252) =====
-# The one time an update changes a saved value (Alan, 14-10-2026; again for #252, 20-10-2026): `_Archive` or `zz Archive` in a saved
-# locations.never_index becomes `99 Archive`, in its place, every other value kept. Only the setting: no folder is renamed at update
-# time (Health offers that, on the approval card). paths.skipped_names() still skips both old names for one release, and _Archive
-# stays on the deny lists through paths.ALWAYS_NEVER_INDEX.
-OLD_ARCHIVE_NAMES, NEW_ARCHIVE_NAME = ("_Archive", "zz Archive"), "99 Archive"
-
-
-def rename_archive_folder(settings):
-    """Apply the rename to the parsed settings.json, in place. Returns the changed key (none the second time round)."""
-    loc = settings.get("locations")
-    skipped = loc.get("never_index") if isinstance(loc, dict) else None
-    if not isinstance(skipped, list) or not any(n in skipped for n in OLD_ARCHIVE_NAMES):
-        return []
-    MIGRATED.setdefault("locations.never_index", list(skipped))
-    MIGRATED["archive.renamed"] = True
-    renamed = []
-    for name in skipped:
-        name = NEW_ARCHIVE_NAME if name in OLD_ARCHIVE_NAMES else name
-        if name not in renamed:
-            renamed.append(name)
-    skipped[:] = renamed
-    return ["locations.never_index"]
+# ===== No archive folder migration (#252; Alan, 20-10-2026) =====
+# An update never renames the archive folder or the saved locations.never_index value: Alan renames his own folders by hand.
+# A saved list still naming _Archive or zz Archive keeps working, as paths.skipped_names() skips both old names for one release
+# whatever the list says; a new vault's default is 99 Archive (settings-defaults.json).
 
 
 # ===== No Word label check (BL-121) =====
@@ -262,10 +243,6 @@ def migration_note():
                      "The old folder and its copies stay where they are.")
     if "locations.never_index" in MIGRATED and "99 System" not in MIGRATED["locations.never_index"]:
         lines.append("99 System is added to the folders creaite never lists, indexes or reads (locations.never_index).")
-    if "archive.renamed" in MIGRATED:                     # BL-09, #252
-        lines.append("The archive folder's name is now 99 Archive in the folders creaite never lists, indexes or reads "
-                     "(locations.never_index); every other value is kept. No folder is renamed: folders still called "
-                     "_Archive or zz Archive keep working and stay skipped, and Settings › Health offers to rename them.")
     return ("\n\n" + "\n".join(lines)) if lines else ""
 
 
@@ -278,7 +255,6 @@ def merged_changes(rel, current_text, incoming_text):
         added += migrate_backup_folder(current)          # BL-112 (clears MIGRATED first)
         added += retire_label_setting(current)           # BL-121
         added += retire_old_palette(current)             # BL-142
-        added += [k for k in rename_archive_folder(current) if k not in added]    # BL-09
     return json.dumps(current, indent=2, ensure_ascii=False) + "\n", added
 
 
@@ -490,7 +466,6 @@ def tidy():
         adds = migrate_backup_folder(data)                  # clears MIGRATED first
         adds += retire_label_setting(data)
         adds += retire_old_palette(data)                    # BL-142
-        adds += [k for k in rename_archive_folder(data) if k not in adds]       # BL-09
         if adds:
             paths.SETTINGS.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             log_settings("system/config/settings.json", adds, installed_version())
@@ -948,7 +923,7 @@ def main(argv):
         if cmd == "tidy" and not args:
             changes = tidy()
             print("Tidied after the update: " + "; ".join(changes) if changes else "Nothing to tidy.")
-            if {"documents.require_sensitivity_label", "locations.offsite_backup", "archive.renamed"} & set(MIGRATED):
+            if {"documents.require_sensitivity_label", "locations.offsite_backup"} & set(MIGRATED):
                 print(migration_note().strip())
             return 0
         if cmd == "undo" and len(args) <= 1:

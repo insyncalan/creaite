@@ -142,8 +142,9 @@ LOCATION_DEFAULTS = {"projects_root": "", "portfolio": "_Portfolio", "skeleton":
 ARCHIVE = "99 Archive"             # #252: archived projects (<projects root>/99 Archive/<folder>) and each engagement's own archive
 #                                     folder; it sorts last in OneDrive, beside 99 System (Alan, 20-10-2026)
 LEGACY_ARCHIVE = "_Archive"        # #252: the name before 2.6 (BL-09). Where it is the only archive folder it is still the one used,
-#                                     so one place never holds two, until Health's "Rename to 99 Archive" is approved
+#                                     so one place never holds two. creaite never renames it: Alan renames his own by hand
 OLD_ARCHIVES = (LEGACY_ARCHIVE, "zz Archive")    # #252: both old names, still resolved and skipped for one release (BL-09's rule)
+OLD_ARCHIVE = "zz Archive"         # BL-09's name for it, still read by today's reach.py until #252's reach.diff lands
 ARCHIVE_NAMES = (ARCHIVE,) + OLD_ARCHIVES        # every name an archive folder may have during that release, the new one first
 ALWAYS_NEVER_INDEX = (ARCHIVE, LEGACY_ARCHIVE, "_Templates", "99 System")   # skipped whatever the saved list says (BL-112, BL-09);
 #                                     _Archive stays on the deny lists while vaults still hold one (#252)
@@ -246,8 +247,8 @@ def resolve(stored, archived=True) -> Path:
 
 def archive_name(base) -> str:
     """#252: the archive folder's name at `base` (the projects root, an engagement or project folder, or the portfolio): 99 Archive,
-    unless the old _Archive is there and 99 Archive isn't (a vault Health hasn't renamed yet), so that one place never gets a second
-    archive folder that the rename could not merge. zz Archive is never used for a new move (BL-09)."""
+    unless the old _Archive is there and 99 Archive isn't (a folder Alan hasn't renamed by hand), so that one place never gets a
+    second archive folder. creaite never renames one (#252, Alan 20-10-2026). zz Archive is never used for a new move (BL-09)."""
     b = Path(base)
     old = b / LEGACY_ARCHIVE
     if not (b / ARCHIVE).is_dir() and old.is_dir() and not old.is_symlink():
@@ -262,9 +263,9 @@ def is_archive_name(name) -> bool:
 
 def archive_alias(p: Path) -> Path:
     """#252: p, or, when p is below an archive folder with an old name (_Archive, zz Archive) that is no longer there, in the
-    projects root, one engagement or project folder, or the portfolio, the same place in the 99 Archive beside it: Health's rename
-    moved it, and the stored paths (the apply's records, Files › Archived, a restore) keep working. The archive folder itself is
-    never mapped, so undoing the rename still names the old folder."""
+    projects root, one engagement or project folder, or the portfolio, the same place in the 99 Archive beside it: Alan renamed it
+    by hand, and the stored paths (the apply's records, Files › Archived, a restore) keep working. The archive folder itself is
+    never mapped."""
     root = projects_root()
     try:
         parts = Path(p).relative_to(root).parts

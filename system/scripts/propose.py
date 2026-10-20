@@ -32,10 +32,6 @@ Commands:
   restore <CODE> [--out <name>.json]
                              print (or save) the spec that restores an archived project: the folder back (a number added if the
                              name is taken), the register row back, its items live again
-  old-archives [--out <name>.json]
-                             print (or save) the spec that renames each archive folder still called _Archive or zz Archive
-                             to 99 Archive (BL-09, #252):
-                             a `move` of the apply, so it is shown, approved and undoable; exit 1 when there is none
   people list|resolve|add|edit|rename|merge|map|migrate
                              the people register (BL-55): see "People register" below, or `propose.py people`
   workstreams list [--project X] [--json] | suggest <CODE> <name> | add <CODE> <name> [--lead … --keywords …
@@ -334,38 +330,8 @@ def skeleton_renamed(op):
     return out
 
 
-# ===== BL-09, #252: rename the archive folders still called _Archive or zz Archive (Health's Rename to 99 Archive) =====
-def old_archives_spec():
-    """The spec that renames each archive folder still called _Archive or zz Archive to 99 Archive in the same place (a `move` of
-    the apply), and the folders left as they are: a 99 Archive already beside them, or a second old folder in the same place (the
-    _Archive there is renamed first, as it is the one in use): two folders are never merged."""
-    ops, kept, taken = [], [], set()
-    for f in paths.old_archive_folders():
-        new = f.with_name(paths.ARCHIVE)
-        if new.exists() or new in taken:
-            kept.append(paths.rel(f))
-            continue
-        taken.add(new)
-        ops.append({"op": "move", "from": paths.rel(f), "to": paths.rel(f.parent) + "/" + paths.ARCHIVE})
-    n = len(ops)
-    spec = {"source_run": "cx-setup", "items": [], "file_changes": {
-        "title": f"Rename {n} archive folder{'s' if n != 1 else ''} to {paths.ARCHIVE}", "project": None, "archive": "rename",
-        "file_ops": ops}} if ops else None
-    return spec, kept
-
-
-def cmd_old_archives(out=None):
-    """Print (or save with --out) the spec that renames every _Archive and zz Archive folder to 99 Archive (BL-09, #252). Nothing
-    to do: says so."""
-    spec, kept = old_archives_spec()
-    for k in kept:
-        print(f"Left as it is: {k} (a {paths.ARCHIVE} folder is already beside it; move its contents yourself)", file=sys.stderr)
-    if not spec:
-        print(f"No archive folder has an old name any more ({' or '.join(paths.OLD_ARCHIVES)}): nothing to rename.",
-              file=sys.stderr)
-        return 1
-    return emit_spec(spec, out)
-# ===== end BL-09 =====
+# #252 (Alan, 20-10-2026): there is no command that renames an archive folder (the old `old-archives`): Alan renames his own
+# folders by hand, and a folder with an old name keeps working (paths.archive_name).
 
 
 def emit_spec(spec, out=None):
@@ -682,8 +648,8 @@ def open_list(con, code):
 
 def archive_spec(code, cancel_open=False):
     """The spec that archives a project: its open items cancelled (only with cancel_open), the archive item, the folder moved
-    to the archive folder (99 Archive, or a vault's old _Archive until it is renamed, #252) and the register row moved to Retired
-    codes. Exits with the reason when it can't be done."""
+    to the archive folder in use (99 Archive, or a vault's old _Archive where that is the only one, #252) and the register row
+    moved to Retired codes. Exits with the reason when it can't be done."""
     con = tracker.connect()
     row = tracker.fetch(con, "projects", code)
     if row is None:
@@ -1715,11 +1681,9 @@ def cmd_fields(table=None):
 
 
 def _main_files(cmd, args):
-    """The register and folder commands: register-columns, and old-archives (BL-09). None when cmd is neither."""
+    """The register and folder commands: register-columns, archive and restore (BL-09). None when cmd is none of them."""
     if cmd == "register-columns":
         return cmd_register_columns()
-    if cmd == "old-archives" and (not args or (len(args) == 2 and args[0] == "--out")):
-        return cmd_old_archives(args[1] if args else None)
     if cmd in ("archive", "restore") and args:
         return archive_cli(cmd, args)                                    # BL-09
     return None

@@ -187,7 +187,7 @@ def due_reports(on=None):
         for kind in kinds:
             sub = paths.folder_name(kind).strip("/")
             for f in due_in(base / sub, kind, cutoff):
-                arch = base / paths.archive_name(base)          # #252: 99 Archive, or the old _Archive until it is renamed
+                arch = base / paths.archive_name(base)          # #252: the one in use: 99 Archive, or an old _Archive
                 if f not in seen and paths.rel(f) not in back and not (arch / sub / f.name).exists():
                     seen.add(f)
                     out.append({"code": code, "kind": kind, "from": paths.rel(f), "to": paths.rel(arch / sub / f.name)})
