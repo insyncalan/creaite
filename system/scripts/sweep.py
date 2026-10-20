@@ -26,7 +26,9 @@ Commands:
                            inbox.meetings_from: "monday" = Monday of this week, or a number of days back)
   transcripts todo|record <facts.json>|show
                            BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
-                           was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py
+                           was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py.
+                           #250: with sweep.fetch_transcripts on (off by default) record also fetches each eligible ended
+                           meeting's transcript into inbox/ (never a confidential one), and done adds "Fetched n transcripts"
   vip addresses|record <found.json> [--found sweep|start-up|check]|seen <id…>|--all|list
                            VIPs (BL-99): the addresses to check, recording alerts in system/staging/vip.json (from a
                            VIP only; never ignored, never matched away), marking them seen, listing the unseen ones
@@ -2122,15 +2124,7 @@ def main(argv):
     if a.cmd == "stage":
         return stage(a.spec)
     if a.cmd == "done":
-        if a.normal:
-            paths.SWEEP_STATE.write_text(a.started[:16] + "\n", encoding="utf-8")
-        counts = take_tally()                                   # BL-97: what the ignore rules dropped, counts only
-        summary = "; ".join(x for x in (a.summary, ignored_text(counts) if counts else "") if x)
-        log_line(f"sweep ok{' (normal)' if a.normal else ''}{' | ' + summary if summary else ''}")
-        debuglog.info("sweep", f"done{' (normal)' if a.normal else ''}: {debuglog.rule(summary, 200) or 'no summary'}")
-        print("Recorded." + (f" Last sweep: {tracker.shown(a.started[:16])}." if a.normal else "")
-              + (f" {ignored_text(counts)}." if counts else ""))
-        return 0
+        return done_cmd(a)
     if a.cmd == "calendar":
         return calendar(a.spec)
     if a.cmd == "calendar-window":
@@ -2146,12 +2140,29 @@ def main(argv):
         return transcripts.main([a.what, *a.args])
     if a.cmd == "fail":
         take_tally()
+        import transcripts
+        transcripts.take_fetch_tally()                          # #250: a failed sweep's fetch counts go with it (the files stay)
         log_line(f"sweep FAILED | {a.message}")
         debuglog.error("sweep", f"sweep failed: {debuglog.rule(a.message, 200)}")
         print("Failure recorded; the next sweep will cover the gap.")
         return 0
     ap.print_help()
     return 2
+
+
+def done_cmd(a):
+    """Record a successful sweep: last-sweep.txt (normal sweeps only), the run log, and the summary (fetched, ignored)."""
+    if a.normal:
+        paths.SWEEP_STATE.write_text(a.started[:16] + "\n", encoding="utf-8")
+    counts = take_tally()                                   # BL-97: what the ignore rules dropped, counts only
+    import transcripts
+    fetched = transcripts.fetch_text(transcripts.take_fetch_tally())     # #250: "Fetched n transcripts", counts only
+    summary = "; ".join(x for x in (a.summary, fetched, ignored_text(counts) if counts else "") if x)
+    log_line(f"sweep ok{' (normal)' if a.normal else ''}{' | ' + summary if summary else ''}")
+    debuglog.info("sweep", f"done{' (normal)' if a.normal else ''}: {debuglog.rule(summary, 200) or 'no summary'}")
+    print("Recorded." + (f" Last sweep: {tracker.shown(a.started[:16])}." if a.normal else "")
+          + (f" {fetched}." if fetched else "") + (f" {ignored_text(counts)}." if counts else ""))
+    return 0
 
 
 REBUILD_AFTER = ("stage", "calendar", "done", "fail")      # BL-110: these change what the dashboard shows, so the dashboard is rebuilt

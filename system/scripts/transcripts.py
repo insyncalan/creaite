@@ -14,7 +14,9 @@ Claude never re-types a transcript.
 Commands (the daily sweep, cx-sweep, uses them through sweep.py):
   todo                    the meetings in the Calendar import window still to look up, as JSON; meetings that aren't
                           online are recorded as "No transcript" at once
-  record <facts.json>     classify what the sweep read for each meeting and keep the statuses
+  record <facts.json>     classify what the sweep read for each meeting and keep the statuses; with
+                          sweep.fetch_transcripts on (#250, off by default), also fetch each eligible meeting's transcript into
+                          inbox/ from the tool result Claude Code saved to a file (`result_file`), never from re-typed text
   show                    the statuses kept so far
 Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
 """
@@ -39,7 +41,8 @@ except ImportError:
 STATUSES = {"available": "Transcript available", "not_transcribed": "Not transcribed", "none": "No transcript",
             "no_access": "No access"}
 M365 = "mcp__claude_ai_Microsoft_365__"
-KEEP = ("status", "uri", "start", "end", "count", "checked", "thread")     # the only fields ever stored
+KEEP = ("status", "uri", "start", "end", "count", "checked", "thread", "fetched")     # the only fields ever stored
+# #250: "fetched" is when a sweep fetched the transcript into inbox/ (a time, never text), so it is fetched exactly once
 
 
 def now():
@@ -71,6 +74,9 @@ def keep(entry_id, record):
     if not str(entry_id).strip() or record.get("status") not in STATUSES:
         return False
     state = load_state()
+    before = state["checked"].get(str(entry_id)) or {}
+    if before.get("fetched") and not record.get("fetched"):            # #250: a later look-up keeps when it was fetched
+        record = {**record, "fetched": before["fetched"]}
     state["checked"][str(entry_id)] = {k: record[k] for k in KEEP if record.get(k) not in (None, "")}
     state["version"] = 1
     save_state(state)
@@ -246,6 +252,7 @@ def todo(at=None):
     at = at or now()
     start = build_dashboard.meetings_start(paths.load_settings(), at.date()).isoformat()
     state, cleared = load_state()["checked"], {e["key"] for e in build_dashboard.cleared_load(today=at.date())}
+    eligible = set(fetch_ids(at)) if fetch_on() else None              # #250: off by default; when off, nothing below changes
     look, auto = [], []
     for row in calendar_rows():
         eid = str(row["id"])
@@ -258,9 +265,22 @@ def todo(at=None):
                 keep(eid, {"status": "none", "checked": at.strftime("%Y-%m-%d %H:%M")})
                 auto.append(eid)
             continue
-        if (state.get(eid) or {}).get("status") in (None, "not_transcribed"):
-            look.append({"id": eid, "title": row.get("title"), "day": row["day"], "start": row.get("start"), "end": row.get("end")})
-    return {"look_up": look, "recorded_without_lookup": auto}
+        if wanted(state, eid, eligible):
+            look.append(look_entry(row, eid, eligible))
+    return {"look_up": look, "recorded_without_lookup": auto, "fetch_transcripts": eligible is not None}
+
+
+def wanted(state, eid, eligible):
+    """Whether the sweep looks a meeting up: new or still Not transcribed, or (#250) its transcript is to be fetched."""
+    return (state.get(eid) or {}).get("status") in (None, "not_transcribed") or eid in (eligible or ())
+
+
+def look_entry(row, eid, eligible=None):
+    """One meeting to look up; with the fetch on (#250, `eligible` given) whether its transcript is to be fetched."""
+    out = {"id": eid, "title": row.get("title"), "day": row["day"], "start": row.get("start"), "end": row.get("end")}
+    if eligible is not None:
+        out["fetch"] = eid in eligible
+    return out
 
 
 def record(facts_list, at=None):
@@ -283,6 +303,301 @@ def record(facts_list, at=None):
         tally[s or "undecided"] = tally.get(s or "undecided", 0) + 1
     debuglog.info("transcripts", f"looked up {len(out)} meeting(s): " + (", ".join(f"{k} {v}" for k, v in sorted(tally.items())) or "none"))
     return out
+
+
+# ===== #250 (#181 C2): fetch transcripts as they appear, a sweep step (Alan, 19-10-2026) =====
+# Off by default (settings sweep.fetch_transcripts). When on, each sweep fetches the transcript of every meeting the user could
+# Process (ended, in the Calendar import window, a Teams meeting, not private, not cleared, not processed, not in Review, not
+# already in inbox/ and not fetched before) into inbox/, exactly as Load does (Job.write), so Intake shows it as loaded. Confidential
+# meetings are never fetched. It is a read: no AI works on the text and nothing is written to the tracker. The text comes only from
+# what Microsoft 365 returned (the live server's own copy of the run's tool results, SweepFetch, or the file Claude Code saved a
+# large result to, `result_file`), never from text Claude typed. transcripts.json gains only "fetched", a time.
+FETCH_TOOLS = (M365 + "outlook_calendar_search", M365 + "read_resource")     # the only tools the fetch uses: the ones Process uses
+FETCH_TALLY = paths.STAGING / "sweep-fetched.json"                           # this sweep's fetch counts, read and cleared by done
+RESULT_FILE_MAX = 25 * 1024 * 1024                                           # a saved tool result larger than this isn't read
+
+
+def fetch_on(settings=None):
+    """Whether the sweep fetches transcripts as they appear (sweep.fetch_transcripts; off unless it is exactly true)."""
+    try:
+        s = settings if settings is not None else paths.load_settings()
+    except (OSError, ValueError):
+        return False
+    return (s.get("sweep") or {}).get("fetch_transcripts") is True
+
+
+def confidential(row):
+    """A meeting marked confidential in the saved calendar (it keeps only its title and times there)."""
+    return str(row.get("sensitivity") or "").strip().lower() == "confidential" or row.get("confidential") is True
+
+
+def snoozed_ids():
+    """Meetings set aside with Later until a transcript arrives (#232). No such record exists yet, so none; when #232 keeps one,
+    its event IDs are returned here and the fetch leaves those meetings alone."""
+    return set()
+
+
+def fetch_context(at):
+    """What every meeting's eligibility is judged against, read once."""
+    import build_dashboard
+    import review
+    drafts = set()
+    try:
+        for _, d in review.proposals():
+            m = d.get("meeting") or {}
+            if m.get("key") and not m.get("applied"):
+                drafts.add(m["key"])
+    except (OSError, ValueError):  # a proposal that can't be read: Review shows it as broken; here it just isn't a draft
+        pass
+    return {"start": build_dashboard.meetings_start(paths.load_settings(), at.date()).isoformat(),
+            "cleared": {e["key"] for e in build_dashboard.cleared_load(today=at.date())}, "drafts": drafts,
+            "state": load_state()["checked"], "inbox": inbox_event_ids(), "snoozed": snoozed_ids()}
+
+
+def meeting_skip(row, at, ctx):
+    """Why a meeting itself is left alone (confidential, private, outside the window, not ended, not online), or None."""
+    if not str(row.get("id") or ""):
+        return "no id"
+    if confidential(row):
+        return "confidential"
+    if row.get("private") or row.get("all_day"):
+        return "private"
+    if not (ctx["start"] <= row.get("day", "") <= at.date().isoformat()):
+        return "outside the window"
+    if not ended(row, at):
+        return "not ended"
+    return None if row.get("teams") else "not online"
+
+
+SKIP_SETS = (("cleared", "cleared"), ("snoozed", "later"), ("inbox", "loaded"))
+
+
+def state_skip(eid, ctx):
+    """Why a meeting's transcript is already dealt with (cleared, Later, processed, in Review, loaded, fetched), or None."""
+    import minutes
+    for key, why in SKIP_SETS:
+        if eid in ctx[key]:
+            return why
+    if minutes.processed_on(f"calendar:{eid}"):
+        return "processed"
+    if f"calendar:{eid}" in ctx["drafts"]:
+        return "in review"
+    entry = ctx["state"].get(eid) or {}
+    if entry.get("fetched"):
+        return "fetched"
+    return entry["status"] if entry.get("status") in ("none", "no_access") else None
+
+
+def fetch_skip(row, at, ctx):
+    """Why a meeting's transcript isn't fetched, in a word or two, or None when it is to be fetched."""
+    return meeting_skip(row, at, ctx) or state_skip(str(row["id"]), ctx)
+
+
+def fetch_ids(at=None):
+    """The event IDs whose transcript a sweep fetches now (none when the setting is off)."""
+    if not fetch_on():
+        return []
+    at = at or now()
+    ctx = fetch_context(at)
+    return [str(r["id"]) for r in calendar_rows() if fetch_skip(r, at, ctx) is None]
+
+
+def result_file_text(path):
+    """The text of a tool result Claude Code saved to a file, only from its own tool-results folders (tests add their own)."""
+    try:
+        full = Path(str(path)).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError):
+        return None
+    roots = [r.resolve() for r in spool_roots()]
+    home = roots[0]
+    ok = any(root in full.parents and (root != home or "tool-results" in full.parts) for root in roots)
+    try:
+        if not ok or not full.is_file() or full.stat().st_size > RESULT_FILE_MAX:
+            return None
+        return full.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def same_meeting(found, row):
+    """Whether what a transcript read returned can be this meeting's: each transcript started within a day of the meeting."""
+    try:
+        day = datetime.strptime(row["day"], "%Y-%m-%d").date()
+    except (KeyError, ValueError):
+        return False
+    for t in found:
+        made = when(t.get("created"))
+        if made is not None and abs((made.astimezone().date() - day).days) > 1:
+            return False
+    return True
+
+
+def organiser_name(row):
+    """The organiser's name for the transcript's header: Alan's own name when he organised it."""
+    org = row.get("organiser")
+    if org is True:
+        try:
+            return (paths.load_settings().get("identity") or {}).get("name") or None
+        except (OSError, ValueError):
+            return None
+    return org if isinstance(org, str) and org.strip() else None
+
+
+def unusable(found, row):
+    """Why what a transcript read returned can't be written for this meeting, or None."""
+    if not found or not any(str(t.get("content") or "").strip() for t in found):
+        return "empty"
+    return None if same_meeting(found, row) else "another meeting"
+
+
+def mark_fetched(eid, found, uri, at, ctx, path):
+    """Keep when the meeting was fetched (and its status, URL and window), so it is fetched exactly once."""
+    s, e = uri_window(uri)
+    stamp = at.strftime("%Y-%m-%d %H:%M")
+    entry = ctx["state"].get(str(eid)) or {}
+    keep(eid, {**entry, "status": "available", "uri": uri or entry.get("uri"), "count": len(found), "start": s or entry.get("start"),
+               "end": e or entry.get("end"), "checked": entry.get("checked") or stamp, "fetched": stamp})
+    ctx["inbox"][str(eid)] = path
+
+
+def fetch_one(eid, found, uri, at=None, ctx=None):
+    """Write one meeting's transcript into inbox/ as Load does, if it is to be fetched: "fetched", or why not."""
+    at = at or now()
+    ctx = ctx or fetch_context(at)
+    row = next((r for r in calendar_rows() if str(r["id"]) == str(eid)), None)
+    if row is None:
+        return "not in the calendar"
+    why = fetch_skip(row, at, ctx) or unusable(found, row)
+    if why:
+        return why
+    job = Job(eid, row.get("title") or "Meeting", row["day"], row.get("start") or "", row.get("end") or "", "load")
+    job.event = {"organiser": organiser_name(row), "attendees": names(row.get("attendees"))}
+    job.transcripts = found
+    out = job.write(at, STATUSES["available"])
+    if not out.get("files") or out.get("already"):
+        return "loaded"
+    mark_fetched(eid, found, uri, at, ctx, out["files"][0])
+    return "fetched"
+
+
+def fetch_after_record(facts_list, statuses, at=None):
+    """After `record`: fetch each eligible meeting the sweep found a transcript for, from the result file Claude Code saved.
+    {id: outcome}; outcome is "fetched", "failed" (Microsoft 365 couldn't be reached), "left" (no saved result: it is fetched on
+    Process, as today) or why it was left alone. Does nothing when the setting is off."""
+    if not fetch_on():
+        return {}
+    at = at or now()
+    ctx = fetch_context(at)
+    eligible = {str(r["id"]) for r in calendar_rows() if fetch_skip(r, at, ctx) is None}
+    out = {}
+    for f in facts_list:
+        eid = str(f.get("id") or "")
+        if eid not in eligible:
+            continue
+        status = statuses.get(eid)
+        if status is None and f.get("error"):
+            out[eid] = "failed"
+        elif status != "available":
+            continue
+        else:
+            raw = result_file_text(f.get("result_file")) if f.get("result_file") else None
+            found = transcripts_in(as_json(raw)) if raw else None
+            out[eid] = fetch_one(eid, found, f.get("uri"), at, ctx) if found is not None else "left"
+    tally_fetch(out)
+    return out
+
+
+def tally_fetch(outcomes):
+    """Add this step's outcomes to the sweep's tally (system/staging/sweep-fetched.json): event IDs by outcome, never text. Kept by
+    ID so the live server's copy and the sweep's own record of one meeting count once."""
+    add = {k: sorted(e for e, v in outcomes.items() if v == k) for k in ("fetched", "failed", "left")}
+    if not any(add.values()):
+        return
+    try:
+        have = json.loads(FETCH_TALLY.read_text(encoding="utf-8"))
+        have = have if isinstance(have, dict) else {}
+    except (OSError, ValueError):
+        have = {}
+    for k, ids in add.items():
+        have[k] = sorted(set(str(x) for x in (have.get(k) or []) if isinstance(have.get(k), list)) | set(ids))
+    FETCH_TALLY.parent.mkdir(parents=True, exist_ok=True)
+    FETCH_TALLY.write_text(json.dumps(have), encoding="utf-8")
+    debuglog.info("transcripts", "fetch: " + ", ".join(f"{k} {len(v)}" for k, v in add.items()))
+
+
+def take_fetch_tally():
+    """This sweep's fetch counts {fetched, failed, left}, cleared once read. A meeting fetched after a failed try counts as fetched."""
+    try:
+        have = json.loads(FETCH_TALLY.read_text(encoding="utf-8"))
+        have = have if isinstance(have, dict) else {}
+    except (OSError, ValueError):
+        have = {}
+    FETCH_TALLY.unlink(missing_ok=True)
+    ids = {k: set(have.get(k) or []) if isinstance(have.get(k), list) else set() for k in ("fetched", "failed", "left")}
+    ids["failed"] -= ids["fetched"]
+    ids["left"] -= ids["fetched"] | ids["failed"]
+    return {k: len(v) for k, v in ids.items()}
+
+
+def fetch_text(counts):
+    """The sweep summary's words: "Fetched 2 transcripts; 1 couldn't be fetched (Microsoft 365 couldn't be reached: the next sweep
+    tries again)"; "" when nothing was tried."""
+    n, failed, left = (int(counts.get(k) or 0) for k in ("fetched", "failed", "left"))
+    if not (n or failed or left):
+        return ""
+    parts = [f"Fetched {n} transcript{'s' if n != 1 else ''}"]
+    if failed:
+        parts.append(f"{failed} couldn't be fetched (Microsoft 365 couldn't be reached: the next sweep tries again)")
+    if left:
+        parts.append(f"{left} left to fetch on Process")
+    return "; ".join(parts)
+
+
+class SweepFetch:
+    """The live server's copy of a sweep run's Microsoft 365 reads (proposal: dev/proposals/fetch-transcripts/). It is handed each
+    tool call and result, as a transcript Job is, and fetches a transcript the moment its read comes back. Nothing here comes from
+    what Claude says; with the setting off it does nothing."""
+
+    def __init__(self):
+        self.uris = {}                       # meeting-transcript URL -> event ID, from the event reads of this run
+        self.outcomes = {}
+
+    def observe(self, name, tool_input, text, is_error=False):
+        """Take one tool call and its result. Only read_resource on an event or a meeting transcript is looked at."""
+        if not str(name).endswith("__read_resource") or not fetch_on():
+            return
+        uri = str((tool_input or {}).get("uri") or "")
+        if uri.startswith("calendar:///events/") and not is_error:
+            facts = event_facts(as_json(text))
+            if facts.get("id") and facts.get("uri"):
+                self.uris[facts["uri"]] = str(facts["id"])
+        elif uri.startswith("meeting-transcript:///"):
+            self.transcript(uri, text, is_error)
+
+    def event_of(self, uri):
+        """The event ID a meeting-transcript URL belongs to: from this run's event reads, or as an earlier sweep kept it."""
+        return self.uris.get(uri) or next((k for k, v in load_state()["checked"].items() if v.get("uri") == uri), None)
+
+    def transcript(self, uri, text, is_error):
+        """A transcript read came back: fetch it if its meeting is to be fetched (a retry after a dropped connection too)."""
+        eid = self.event_of(uri)
+        if not eid or self.outcomes.get(eid) not in (None, "failed"):
+            return
+        at = now()
+        ctx = fetch_context(at)
+        row = next((r for r in calendar_rows() if str(r["id"]) == eid), None)
+        if row is None or fetch_skip(row, at, ctx):
+            return
+        if is_error:
+            outcome = "failed" if error_kind(text) == "other" else "no access"
+        else:
+            found = transcripts_in(as_json(text))
+            outcome = fetch_one(eid, found, uri, at, ctx) if found is not None else "failed"
+        self.outcomes[eid] = outcome
+        tally_fetch({eid: outcome})
+
+
+# ===== end #250 =====
 
 
 # ── tidying and writing ──
@@ -570,7 +885,11 @@ def main(argv):
             return 1
         out = record(spec.get("results") or [])
         kept = {k: v for k, v in out.items() if v}
-        print(json.dumps({"recorded": kept, "not_yet": [k for k, v in out.items() if not v]}, indent=1))
+        res = {"recorded": kept, "not_yet": [k for k, v in out.items() if not v]}
+        fetched = fetch_after_record(spec.get("results") or [], out)     # #250: nothing when sweep.fetch_transcripts is off
+        if fetched:
+            res["fetch"] = fetched
+        print(json.dumps(res, indent=1))
         return 0
     if cmd == "show":
         print(json.dumps(load_state(), indent=1, ensure_ascii=False))

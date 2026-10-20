@@ -12,6 +12,7 @@
       "calendar": true
     },
     "show_possible_matches": true,
+    "fetch_transcripts": false,
     "ignore": [
       {
         "name": "Anything marked private",

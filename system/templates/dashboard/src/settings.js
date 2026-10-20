@@ -136,6 +136,8 @@ export const SETSECTIONS=[
    +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
    +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
  {id:"warnings",cat:"review",title:"Early warnings",elid:"warnSettings",kw:"early warnings signals re-dated repeat risk milestone slip long open key person vip dependency",render:()=>warnSectionHtml()},
+ {id:"transcripts",cat:"capture",title:"Transcripts",kw:"transcripts fetch intake sweep process meetings ready",   /* #250 (#181 C2): off by default */
+  render:()=>row("Fetch transcripts as they appear",sw("fetchTx"),"Off: creaite fetches a transcript when you press Process. On: each sweep fetches the transcripts of meetings that have ended, so they are ready when you open Intake. It only reads: no AI runs and nothing is written to the tracker. Confidential meetings are never fetched.")},
  {id:"sweep",cat:"capture",title:"Sweep",kw:"sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from",
   render:()=>row("First-run look-back (days)",nm("lookback"),"When the sweep runs and what it reads are in Essentials › Your day")
    +row("Show possible matches",sw("possible"))+'<div id="ignMgr"></div>',
