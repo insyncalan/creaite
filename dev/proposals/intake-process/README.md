@@ -76,8 +76,9 @@ given), never the file's text. Stop is `POST /api/ask/stop {"run": "<id>"}`, as 
   system/templates/minutes-template.docx <values in drafts> <.docx in drafts>`, and `search.py enrich set`. Everything else is
   refused, failing closed (anything unknown is refused).
 - A direct Write or Edit in this mode may only create a `.json` directly in `system/staging/drafts/`, or change one this run wrote.
-- "This run's" file, everywhere in the mode: one that didn't exist, or was last written after the run started (`_older_than_run`,
-  from `started` in `run.json`; fails closed). So `fill` writes only a new `.docx` from the run's own values file (which `fill`
+- "This run's" file, everywhere in the mode: one the hook let this run create, as recorded in `run.json` `"made"` (R1, below:
+  by the run's record, never by a file's time; the first version's `_older_than_run` is gone; round 2 also keeps what the file was
+  when first seen, `dev/proposals/intake-process-round2/`). Fails closed. So `fill` writes only a new `.docx` from the run's own values file (which `fill`
   deletes) with no pictures; a spec's Word `"draft"` is one this run filled; `people map` maps only the run's own spec; `tracker.py
   validate` (it writes its findings into the file) runs only on a proposal this run staged; and `search.py enrich set` takes only
   `--path`/`--summary`/`--tags`, each path the `to` of a copy in a proposal this run staged, never one that already has a summary.
@@ -101,7 +102,10 @@ given), never the file's text. Stop is `POST /api/ask/stop {"run": "<id>"}`, as 
   approves it in Review, and the hook refuses `tracker.py apply`, `undo`, `review.py approve`, `reject` and `bulk` in this run.
 - It can't change, move or delete any file outside its own `.json` inputs in drafts (no `filechange.py`, no direct writes elsewhere);
   the Intake files themselves are moved only when Alan approves the minutes, by `tracker.py apply`, as today.
-- It never reaches Microsoft 365 or the web, and never the home folder's files.
+- It never reaches Microsoft 365 or the web. It doesn't write the home folder; **reading** it is refused only once round 2 is
+  applied (`dev/proposals/intake-process-round2/`, review L3: Read, Grep, Glob, LS and a script's path arguments stay in the
+  vault and the projects folder). Before round 2 the allow list's Read, Grep and Glob are unscoped, so a home-folder file outside
+  the never list could be read (nothing can send it out; it could only land in a staged item, pending for Review).
 - The server decides what Process is, from its own route and its own checks of the paths. A message to ask creaite that says
   "process", carries `kind: process` or copies the Process prompt is still an ordinary, unconfirmed chat (tested).
 
@@ -156,7 +160,7 @@ The review's probe (`attack264.py`) and mutants (`mutate264.py`, `mutate264b.py`
 | Surviving mutants L2, L4, L5, L6, L10, M13 (and M10 from `mutate264b.py`) | tests added | L2: the stand-in's Process reply now carries CONFIRM, CHANGE and EDIT lines and `test_1` asserts no card; L4 and L6: `test_1` checks the `--add-dir` folders (never the home folder) and `--disallowedTools`; L5: `test_5_process_waits_for_a_run_already_going` (409 while a slow chat runs); L10: `test_6_its_usage_is_counted_as_its_own_kind`; M13: `stage_two` in the M1/M2 test; M10: `Fence.test_only_a_process_runs_record_names_files`. Re-run: all 24 mutants of `mutate264.py` and 7 of `mutate264b.py` killed |
 
 Residual (not fixed, small, for the record):
-- **"This run's" is by time.** A file is the run's when it is new or was written after the run started. Another writer touching a
+- **(Superseded by R1, below.) "This run's" was by time.** A file is the run's when it is new or was written after the run started. Another writer touching a
   draft during the run (Alan saving a minutes record in the dashboard at the same moment) would make it look like the run's.
   Only one run goes at a time, so the window is that of the dashboard's own saves.
 - **Recommendation, outside this diff: `/api/ask` and Process's start.** The Process route takes `START_LOCK` for its busy check and
@@ -168,11 +172,63 @@ Residual (not fixed, small, for the record):
 - **A file name can still carry words** ("ignore the rules and …" is a valid name). It can only steer the model inside the fence.
 - **`search.py enrich set`** in a plain chat may still attach a summary to any path in the search index (pre-existing). In a
   Process run it is limited as above.
-- **`run.json` holds one run.** The hook reads the Process files from the run record without comparing the run ID; there is only
+- **(Closed by round 2, review L4.) `run.json` holds one run.** The hook reads the Process files from the run record without comparing the run ID; there is only
   ever one run, and a record that isn't a Process run's gives no files (fail closed).
 - Pre-existing, outside this diff: in a plain chat, `minutes.py stage` (a stage command) runs unconfirmed with any spec, including a
   Word `"draft"` from anywhere and a `"transcript"` from a project folder (removed from there on approval). Worth the same two checks
   in mode `"ask"`, as a separate guarded change.
+
+## R1 delta (after the diffs above were applied on `origin/v253-release` ba6fe110)
+
+**Status.** `reach.diff` and `live_server.diff` above are applied on `origin/v253-release` (ba6fe110, with `/api/ask` now under
+`START_LOCK`). The delta re-review (READY WITH NOTES) found one more: **R1** (low to medium). The fix is one new guarded diff,
+`r1-reach.diff`, against `system/scripts/reach.py` as it is on `origin/v253-release` now. `live_server.py` needs no change for R1,
+so there is no `r1-live_server.diff`.
+
+```
+git apply --check dev/proposals/intake-process/r1-reach.diff      # clean on origin/v253-release ba6fe110
+git apply dev/proposals/intake-process/r1-reach.diff
+```
+
+It also applies cleanly before or after #265's `dev/proposals/calendar-refresh/reach.diff` (checked both ways): the change to
+`start_run` only adds keys for mode `"process"`.
+
+**R1.** "This run's own file" was judged by its time, so any `.docx` or `.json` another flow wrote into drafts *during* a Process run
+counted as the run's. Repro: start the run, write `drafts/2026-10-20 ABC Client report.docx` and a spec with that `"draft"`, and
+`minutes.py stage` was allowed (the client report export would be filed as these minutes on approval); a minutes record exported
+to Word could be filled over; the export's temporary `<stamp> values.json` could be edited.
+
+**Fix: by the run's record, never by time.**
+- `start_run` writes, for mode `"process"`, `"before"` (the proposals in staging when the run starts) and `"made"` (empty) into
+  `system/guard/run.json`.
+- The hook records each file it lets the run create in `"made"` (`_may_make`: a file that doesn't exist yet, claimed as it is
+  allowed; or one already in `"made"`). That covers a direct Write of a new `.json` in drafts, a `fill` target and a search summary.
+- "The run's own" (`_runs_own`) is only what `"made"` lists. A `fill` reads only a values file the run made; a spec's Word
+  `"draft"` must be one it made, and never a report (`is_report_file`); `people map` maps only its own spec; a Write changes only a
+  file it made.
+- The run's proposals (`_runs_proposals`, for `validate` and `enrich`) are those not in `"before"` and for one of its files: so a
+  proposal Alan changes in Review during the run, or a new one he makes for another file, is never the run's.
+- Fails closed: a record that isn't a Process run's makes nothing the run's (even if it lists files); a record that can't be
+  written means a new file can't be claimed, so it is refused; a record without `"before"` gives no proposals.
+
+**Tests** (`dev/tests/test_intake_process.py`; `needs_r1`: expected failures until `r1-reach.diff` is applied, and on this branch):
+- `Fence.test_r1_a_file_another_flow_writes_during_the_run_is_never_the_runs`: the review's repro (a client report export named as
+  the draft), a minutes export named as the draft or filled over, a fill into a new report-named file, the export's values file
+  filled from, edited or mapped; and its own report-named file as a draft.
+- `Fence.test_r1_what_the_run_creates_becomes_its_own`: a fill's new target is recorded, so its spec stages; a new `.json` too.
+- `Fence.test_r1_nothing_is_the_runs_without_a_process_record_or_when_it_cant_be_told` (N11, N10, and a record without "before").
+- `Fence.test_a_proposal_alan_makes_during_the_run_isnt_the_runs` (N12; it passes on the applied diffs too, so it is `needs_diff`).
+
+**Mutants.** The review's N10, N11 and N12 targeted the time-based helper (`_older_than_run`), which R1 removes; their equivalents in
+the new code, with the rest of the delta's branches, are in `scratchpad/mutate264r1.py` (15 mutants): 14 killed. The survivor, a
+`fill` into a report-named file without the `is_report_file` check, is equivalent: the hook's report rule (v2.5.1) refuses any
+command naming a report file first, so the extra check is belt and braces. The review's `mutate264d.py` against the same tree: every
+mutant whose code is still there is killed except M4 (a spec's `"draft"` outside drafts), now equivalent: such a draft is never one
+the run made, so the R1 check refuses it; its N1, N2, N4, N6, N9, N10, N11 and N13 target the removed time-based code (pattern not
+found).
+
+**Residual.** A file the run is allowed to create is claimed when the hook allows the call, before the tool runs; a call that then
+fails leaves a claim for a file that doesn't exist, which only lets the run create that same name later.
 
 ## Audit: other dashboard buttons that send an ask message for a routine job
 
@@ -202,3 +258,8 @@ and `undo`, `review.py approve`, `reject` and `bulk`, `propose.py stage`, `filec
 `carry`, `report.py`, a derived command, a spec for another file or a note or with a Word draft outside drafts, a write outside drafts,
 an `.html` write or a change to an older draft are refused, and the real hook in the real run refuses the record (the stand-in
 `claude` asks it, as Claude Code does).
+
+## Round 2 (Team Cap's review of R1, READY WITH NOTES, 20-10-2026)
+
+M2 and L1 to L4 are one more guarded round: `dev/proposals/intake-process-round2/` (its README has the diffs, tests and how to
+apply them). M1 (Refresh as a direct job) was done by #265.
