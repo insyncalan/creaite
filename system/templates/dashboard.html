@@ -691,6 +691,7 @@ h2{font:500 var(--fs-h2)/var(--lh-h2) var(--font);margin:0}   /* BL-325: the one
 #hWeek,#hRes{gap:4px}   /* "Week ahead to 09-10" reads as one phrase, not a count */ .th .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)} .th a{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)}
 ol.bl{list-style:none;margin:0;padding:0} ol.bl>li{position:relative;display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--day-rule)}
 ol.bl>li[hidden],.tsec .sub[hidden]{display:none}
+ol.bl>li[data-msattn] .t u{text-decoration:underline;text-underline-offset:3px;font-weight:700}   /* #251: "Milestone <u>name</u> is due …", the name the link */
 .bl .n{flex:none;width:16px;font-size:var(--fs-md);color:var(--day-muted)} .bl .tb{min-width:0;flex:1}
 .bl .tb p,.tb .none{margin:4px 0 0;font-size:var(--fs-md);color:var(--day-muted)}
 .tbrief a.t{color:var(--day-ink);font-weight:700;text-decoration:none} .tbrief a.t:hover{text-decoration:underline}
@@ -5944,10 +5945,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     moveFigure: () => moveFigure,
     moveSection: () => moveSection,
     moveView: () => moveView,
+    msAttention: () => msAttention,
+    msAttnMenu: () => msAttnMenu,
+    msAttnOpenWork: () => msAttnOpenWork,
+    msAttnRow: () => msAttnRow,
+    msAttnWorkWord: () => msAttnWorkWord,
     msChoices: () => msChoices,
     msCreate: () => msCreate,
     msFind: () => msFind,
     msInfo: () => msInfo,
+    msItemWords: () => msItemWords,
     msLabel: () => msLabel,
     msLinked: () => msLinked,
     msName: () => msName,
@@ -41612,7 +41619,68 @@ ${s5}`;
         out.unshift({ decisions: true, html: (n4) => tl2(n4, tLink('data-decpending="1"', parts.join(", ") + (late ? `, ${late} late` : "")), `${andList(show)}${L3.length > 3 ? ` and ${L3.length - 3} more` : ""}.`) });
       }
     }
+    out.unshift(...msAttention().map((r4) => ({ milestone: r4.ms, html: (n4) => msAttnRow(n4, r4) })));
     return out;
+  }
+  var msLate = (x5) => !!x5.due && days(x5.due) < 0;
+  function msAttention() {
+    const out = [];
+    for (const p6 of P4) for (const m5 of p6.ms || []) {
+      const id2 = m5[3], when2 = m5[8] || m5[4];
+      if (!id2 || !when2 || m5[6] !== "Planned" || days(when2) > S.dueSoon) continue;
+      const its = [...A4.filter((a5) => a5.ms === id2 && open(a5)), ...R3.filter((r4) => r4.ms === id2 && r4.type === "Issue" && r4.st === "Open")];
+      if (!its.length) continue;
+      its.sort((a5, b5) => msLate(b5) - msLate(a5) || (a5.due || "9").localeCompare(b5.due || "9") || a5.id.localeCompare(b5.id));
+      out.push({ ms: id2, p: p6.code, name: m5[0], when: when2, its });
+    }
+    return out.sort((a5, b5) => a5.when.localeCompare(b5.when) || pName(a5.p).localeCompare(pName(b5.p)) || a5.name.localeCompare(b5.name));
+  }
+  function msItemWords(x5) {
+    const n4 = x5.due ? days(x5.due) : null, t47 = `${esc(x5.id)} ${esc(decShort(x5.t || "", 70))}`, own = !x5.o || x5.o === "TBC" ? ", no owner" : "";
+    if (n4 !== null && n4 < 0) return `<span class="late">${t47}, ${-n4} day${n4 === -1 ? "" : "s"} late</span>${own}`;
+    const due = n4 === null ? "no due date" : n4 === 0 ? "due today" : n4 === 1 ? "due tomorrow" : n4 < 7 ? `due ${longDay(x5.due).split(" ")[0]}` : `due ${longDay(x5.due)}`;
+    return `${t47}, ${due}${own}`;
+  }
+  function msAttnOpenWork(id2) {
+    const r4 = msAttention().find((x5) => x5.ms === id2);
+    if (!r4) return;
+    openWork(r4.p, "all", "open", { st: ["Open"], ty: ["Action", "Issue"] });
+    shared.WQ = r4.ms;
+    renderWork();
+    navWrite(false);
+  }
+  var msAttnWorkWord = (r4) => r4.its.length === 1 ? "Open in Work" : `Open all ${r4.its.length} in Work`;
+  function msAttnRow(n4, r4) {
+    const k5 = days(r4.when), c5 = r4.its.length, items2 = `${c5} open item${c5 === 1 ? "" : "s"} must close`;
+    const when2 = k5 < 0 ? `is overdue by ${-k5} day${k5 === -1 ? "" : "s"} (due ${longDay(r4.when)}): ${items2} before it can be achieved` : `is due ${k5 === 0 ? "today" : k5 === 1 ? "tomorrow" : longDay(r4.when)}: ${items2} for it to hold`;
+    const shown2 = r4.its.slice(0, 3).map(msItemWords), more = c5 > 3 ? [`and ${c5 - 3} more`] : [];
+    return tl2(
+      n4,
+      tLink(html`data-ms="${r4.ms}"`, html`Milestone <u>${r4.name}</u> ${raw(when2)}`),
+      [...shown2, ...more, projLink(r4.p), sLink(html`data-msattnwork="${r4.ms}"`, msAttnWorkWord(r4))].join(" · "),
+      `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r4.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
+      html`data-msattn="${r4.ms}"`
+    );
+  }
+  function msAttnMenu(b5, id2) {
+    if (menuOpenFor(b5)) {
+      closeMenu();
+      return;
+    }
+    const r4 = msAttention().find((x5) => x5.ms === id2);
+    if (!r4) return;
+    openMenu(b5, {
+      label: `Options: milestone ${r4.name}`,
+      id: "msAttnMenu",
+      align: "right",
+      onPick: (d5) => {
+        closeMenu();
+        if (d5 === "ms") openMilestone(r4.ms);
+        else if (d5 === "work") msAttnOpenWork(r4.ms);
+        else go2("cockpit", r4.p);
+      },
+      items: [{ id: "ms", name: "Open the milestone", data: { d: "ms" } }, { id: "work", name: msAttnWorkWord(r4).replace(/^Open in Work$/, "Open it in Work"), data: { d: "work" } }, { id: "proj", name: `Open ${pName(r4.p)}`, data: { d: "proj" } }]
+    });
   }
   var dueWords = (d5) => {
     const n4 = days(d5);
@@ -42238,6 +42306,19 @@ ${s5}`;
   function bootToday0028() {
     wireSpark();
     $("#attnList").addEventListener("click", (e4) => {
+      const mb2 = e4.target.closest("li[data-msattn] .dots");
+      if (mb2) {
+        e4.stopPropagation();
+        msAttnMenu(mb2, mb2.closest("li").dataset.msattn);
+        return;
+      }
+      const mw2 = e4.target.closest("[data-msattnwork]");
+      if (mw2) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        msAttnOpenWork(mw2.dataset.msattnwork);
+        return;
+      }
       const n4 = e4.target.closest(".rem");
       if (!n4) return;
       const b5 = e4.target.closest("button");
@@ -76261,6 +76342,7 @@ ${d5.text}`);
         "askWorking",
         "attachRun",
         "attachSlash",
+        "attentionItems",
         "autoGrow",
         "batchMove",
         "bkDate",
@@ -76492,6 +76574,10 @@ ${d5.text}`);
         "mountStatusDots",
         "mounted",
         "moveCol",
+        "msAttention",
+        "msAttnMenu",
+        "msFind",
+        "msItemWords",
         "msOpts",
         "mtgHasTx",
         "mtgTx",
@@ -76569,6 +76655,7 @@ ${d5.text}`);
         "openRecord",
         "openSpace",
         "orderedCols",
+        "ordinal",
         "overdue",
         "ownerFinal",
         "ownerMatches",
