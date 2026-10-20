@@ -1,4 +1,4 @@
-# #268 Minutes view v2: the one server change it would like (optional)
+# #268 Minutes view v2: the one server change it would like (APPLIED on v26-minutes-view-v2, 20-10-2026)
 
 The Minutes view v2 is built without changing any server code. Every Track state maps onto the record's existing changes
 (`minutes_record.change`), applied when Alan presses Approve minutes, then `/api/minutes/approve` as before:
@@ -27,3 +27,8 @@ Apply (from the repository root): `git apply dev/proposals/minutes-view-v2/raid-
 `v26-minutes-view-v2`). After it, test_04's refusal branch is skipped by itself and the staged risk keeps the workstream.
 
 A risk's Priority is worked out from impact and likelihood, so the view shows it and offers no dropdown; no change is proposed for it.
+
+**Applied** (20-10-2026, the PM's go): `git apply` on the branch. `minutes_record._workstream` also checks every workstream set from the
+minutes (an action's too) server-side: one of the item's project's Active workstreams, in its own spelling, or empty; anything else
+(not text, a control character, over 120 characters, an unknown name) is refused before it reaches the proposal
+(`dev/tests/test_minutes_track_ops.py` RaidWorkstream).

@@ -6,9 +6,9 @@
    - Track (track.js): tick = register a work item, cross = remove the line from the minutes, neither = it stays in the
      minutes as a line and no work item is made. Clicking the pressed button clears it. The choice is kept in the page's
      layout; the record follows when the minutes are approved.
-   - A risk's or issue's Workstream is a dropdown too; the record takes it once dev/proposals/minutes-view-v2 is applied
-     (minutes_record.EDITABLE), and until then the server's refusal is said on the toast and the row keeps its value. A
-     risk's Priority is worked out from impact and likelihood, so it is shown, not picked.
+   - A risk's or issue's Workstream is a dropdown too (minutes_record.EDITABLE; the server takes only one of the project's
+     Active workstreams, or none); a refusal is said on the toast and the row keeps its value. A risk's or issue's Priority
+     is worked out from impact and likelihood, so it is shown read only, not picked.
    - The item's words in the one editor (Tiptap, plain, one line, with AI on selected text): Enter or a click away saves,
      Esc puts the words back. Owner, Priority and Workstream are in-row dropdowns; Due opens the deadline popover
      (DeadlinePopover.jsx). Each is one of the record's changes (/api/minutes/save {op}), so the row and its staged item

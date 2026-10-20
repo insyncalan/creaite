@@ -102,5 +102,35 @@ class TrackOps(Base):
         self.assertTrue(any(x.get("ref") == "@4" for x in self.rows(self.doc(), "decisions")), "the decision is an item row again")
 
 
+
+class RaidWorkstream(Base):
+    """dev/proposals/minutes-view-v2/raid-workstream.diff, applied: a risk's or issue's workstream is set from the minutes, and
+    every workstream from the minutes (an action's too) must be one of the project's Active workstreams, or empty."""
+    def setUp(self):
+        super().setUp()
+        self.v.propose("2026-10-14-0800", [{"n": 1, "op": "new", "table": "workstreams", "decision": "approved",
+                                            "values": {"project": "ABC", "name": "Testing", "lead": "Jane Doe", "status": "Active",
+                                                       "source": "t"}}])
+        self.v.run("apply")
+
+    def item(self, n):
+        return next(i for i in self.data()["items"] if i["n"] == n)
+
+    def test_a_risk_takes_one_of_the_projects_workstreams_in_its_own_spelling(self):
+        r = self.change({"op": "edit", "n": 5, "values": {"workstream": "testing"}})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(self.item(5)["values"]["workstream"], "Testing")
+        self.assertTrue(self.change({"op": "edit", "n": 2, "values": {"workstream": "Testing"}})["ok"], "an issue too")
+        self.assertTrue(self.change({"op": "edit", "n": 5, "values": {"workstream": ""}})["ok"])
+        self.assertNotIn("workstream", self.item(5)["values"], "empty clears it")
+
+    def test_anything_else_is_refused_and_nothing_changes(self):
+        for bad in ("Unknown", "<img src=x onerror=alert(1)>", "Testing\n", "Test\x00ing", "   ", 7, ["Testing"], {"a": 1}, "x" * 200):
+            for n in (5, 1):
+                r = self.change({"op": "edit", "n": n, "values": {"workstream": bad}})
+                self.assertFalse(r["ok"], (n, bad))
+                self.assertNotIn("workstream", self.item(n)["values"], (n, bad))
+
+
 if __name__ == "__main__":
     unittest.main()

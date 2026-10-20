@@ -618,8 +618,30 @@ def keep_new(doc, data, p, n):
 
 
 EDITABLE = {"actions": ("description", "owner", "due_date", "workstream", "priority"),
-            "raid": ("description", "owner", "type", "impact", "likelihood", "response_action", "due_date"),
+            "raid": ("description", "owner", "type", "impact", "likelihood", "response_action", "due_date", "workstream"),
             "decisions": ("decision", "made_by", "reasoning", "options", "needed_by")}
+
+
+def _workstream(item, x):
+    """#268: a workstream set from the minutes (an action's, a risk's or an issue's): one of the item's project's Active workstreams,
+    in its own spelling (BL-58, tracker.active_workstream), or empty. Anything else is refused before it reaches the proposal: not
+    text, too long, a control character, or a name that isn't one of the project's workstreams."""
+    if x in (None, ""):
+        return None
+    if not isinstance(x, str) or len(x) > 120 or any(ord(c) < 32 or ord(c) == 127 for c in x) or not x.strip():
+        raise RecordError("That isn't a workstream.")
+    import tracker
+    try:
+        con = tracker.connect_or_raise()
+    except tracker.NoDatabase:
+        raise RecordError("The workstreams can't be read, so it wasn't changed.") from None
+    try:
+        w = tracker.active_workstream(con, str((item.get("values") or {}).get("project") or ""), x)
+    finally:
+        con.close()
+    if not w:
+        raise RecordError(f"“{x.strip()[:60]}” isn't an active workstream of this project.")
+    return w["name"]
 
 
 def edit_item(doc, data, n, values):
@@ -638,6 +660,8 @@ def edit_item(doc, data, n, values):
             if x and str(x).strip().lower() != "not set" and not got:
                 raise RecordError(f"“{x}” isn't a date creaite can read. Try “Friday”, “next week” or 30-10.")
             f, x = "due_date", got
+        elif f == "workstream":
+            x = _workstream(item, x)
         if x in (None, ""):
             v.pop(f, None)
         else:
