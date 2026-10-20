@@ -218,7 +218,10 @@ to Word could be filled over; the export's temporary `<stamp> values.json` could
 **Mutants.** The review's N10, N11 and N12 targeted the time-based helper (`_older_than_run`), which R1 removes; their equivalents in
 the new code, with the rest of the delta's branches, are in `scratchpad/mutate264r1.py` (15 mutants): 14 killed. The survivor, a
 `fill` into a report-named file without the `is_report_file` check, is equivalent: the hook's report rule (v2.5.1) refuses any
-command naming a report file first, so the extra check is belt and braces.
+command naming a report file first, so the extra check is belt and braces. The review's `mutate264d.py` against the same tree: every
+mutant whose code is still there is killed except M4 (a spec's `"draft"` outside drafts), now equivalent: such a draft is never one
+the run made, so the R1 check refuses it; its N1, N2, N4, N6, N9, N10, N11 and N13 target the removed time-based code (pattern not
+found).
 
 **Residual.** A file the run is allowed to create is claimed when the hook allows the call, before the tool runs; a call that then
 fails leaves a claim for a file that doesn't exist, which only lets the run create that same name later.
