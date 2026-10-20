@@ -4121,6 +4121,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+
+/* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
+.tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
+.tdquiet svg.i{width:16px;height:16px;flex:none} .tdquiet .tdq{flex:1} .tdquiet a{color:inherit;text-decoration:underline dotted;text-underline-offset:3px} .tdquiet a:hover{color:var(--accent);text-decoration:underline}
+.tdquiet[hidden]{display:none}
+.tdquiet .ib svg.i{width:14px;height:14px}
 </style>
 </head>
 <body>
@@ -4160,8 +4166,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           <section class="tsec" id="mineSec" aria-labelledby="hMine"><h2 class="th" id="hMine">Your commitments <span class="cnt" id="nMine"></span><a href="#" data-go="mine">All mine</a></h2><ol class="bl" id="mineList"></ol><div class="moreline" id="mineMore"></div>
             <div class="tsub" id="tOwe" hidden><h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe"></span></h3><ol class="bl" id="oweList"></ol><div class="moreline" id="oweMore"></div></div>
             <div class="tsub" id="tWait" hidden><h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait"></span><a href="#" data-nav="all:chase:">Chase view</a></h3><ol class="bl" id="waitList"></ol><div class="moreline" id="waitMore"></div></div>
+            <div id="tdQuietHost"></div><!-- #245: Intake as one quiet, dismissible line (components/today/IntakeLine.jsx) -->
           </section><!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-          <section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd" hidden><details id="tdFold" open><summary><h2 class="th" id="hTd">Intake and Review <span class="cnt" id="nTd"></span><span class="tdnew" id="tdNew" hidden>new</span></h2></summary><div id="tdBody"></div></details></section><!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
+          <section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden><h2 class="th" id="hTd">Messages <span class="cnt" id="nTd"></span></h2><div id="tdBody"></div></section><!-- #245: the cards of messages from people Alan follows (BL-334); the Intake and Review section, its line and its fold are gone: Intake is one quiet line at the foot of Your commitments -->
           <section class="tsec tres" id="weekSec" aria-labelledby="hWeek"><details id="weekFold" open><summary><h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo"></span></h2></summary><div id="weekList"></div></details></section><!-- #105: folds like Resolved; open unless hidden, and remembered in this browser -->
           <section class="tsec tres" id="resSec" aria-labelledby="hRes"><details id="resFold"><summary><h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle"></span></h2></summary><ol class="bl" id="chgList"></ol><div class="moreline" id="chgMore"></div></details></section><!-- BL-319: folded to one line -->
           <section class="tsec" id="pfSec" aria-labelledby="hPort"><h2 class="th" id="hPort">Portfolio</h2><div class="tbl" id="pfTbl"></div></section>
@@ -5768,7 +5775,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     inboxBadge: () => inboxBadge,
     initials: () => initials,
     insertImage: () => insertImage,
+    intakeParts: () => intakeParts,
     intakeSeams: () => intakeSeams,
+    intakeTarget: () => intakeTarget,
     internalIn: () => internalIn,
     isConflict: () => isConflict,
     isDark: () => isDark,
@@ -6554,6 +6563,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderHelp: () => renderHelp,
     renderIgnore: () => renderIgnore,
     renderInbox: () => renderInbox,
+    renderIntakeLine: () => renderIntakeLine,
     renderLayoutBar: () => renderLayoutBar,
     renderMeetings: () => renderMeetings,
     renderMgr: () => renderMgr,
@@ -6905,7 +6915,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     takeNewText: () => takeNewText,
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
-    tdLine: () => tdLine,
     tdToReview: () => tdToReview,
     textMsg: () => textMsg,
     themeFade: () => themeFade,
@@ -33785,7 +33794,7 @@ ${s5}`;
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Messages");
     });
   }
   async function alertHandled(id2) {
@@ -33821,7 +33830,7 @@ ${s5}`;
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Messages");
     });
   }
   function alertChase(id2) {
@@ -34016,7 +34025,7 @@ ${s5}`;
     vipBadge();
     await reloadData();
     renderToday();
-    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Intake and Review` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
+    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Messages` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
   }
   function alertDraftWhy(al2) {
     return /^(private|confidential)$/i.test(al2.marker || "") ? `Not for a ${al2.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs the live server" : "";
@@ -41282,6 +41291,35 @@ ${s5}`;
     R(props ? /* @__PURE__ */ u2(DayTabs, { ...props }) : text, host2);
   }
 
+  // components/today/IntakeLine.jsx
+  function IntakeLine({ parts, onGo }) {
+    return /* @__PURE__ */ u2("p", { class: "tdquiet", id: "tdQuiet", children: [
+      /* @__PURE__ */ u2(Icon, { name: "inbox" }),
+      /* @__PURE__ */ u2("span", { class: "tdq", children: [
+        "Intake: ",
+        parts.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
+          i5 ? i5 === parts.length - 1 ? " and " : ", " : "",
+          /* @__PURE__ */ u2("a", { href: `#${x5.go}`, "data-tdq": x5.key, onClick: (e4) => {
+            e4.preventDefault();
+            onGo(x5.go);
+          }, children: x5.text })
+        ] })),
+        "."
+      ] }),
+      /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Dismiss until something new arrives", id: "tdQx" })
+    ] });
+  }
+  function IntakeLive({ text }) {
+    return /* @__PURE__ */ u2("span", { class: "vh", id: "tdQuietLive", role: "status", "aria-live": "polite", "aria-atomic": "true", children: text });
+  }
+  function drawIntakeLine(host2, parts, onGo) {
+    const n4 = parts.reduce((t47, x5) => t47 + x5.n, 0);
+    R(/* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(IntakeLive, { text: n4 ? `${n4} waiting in Intake` : "" }),
+      parts.length ? /* @__PURE__ */ u2(IntakeLine, { parts, onGo }) : null
+    ] }), host2);
+  }
+
   // components/today/ToDecide.jsx
   function TdLine({ r: r4, hidden, p: p6 }) {
     const open2 = (e4) => {
@@ -41420,26 +41458,10 @@ ${s5}`;
     ] });
   }
   function ToDecide(props) {
-    const { rows: rows2, total, cap, open: open2, onReview } = props, more = rows2.length - cap;
-    const line = props.line || [];
-    const go3 = (page, e4) => {
-      e4.preventDefault();
-      if (props.onGo) props.onGo(page);
-      else onReview();
-    };
+    const { rows: rows2, cap, open: open2 } = props, more = rows2.length - cap;
     return /* @__PURE__ */ u2(S2, { children: [
-      line.length ? /* @__PURE__ */ u2("p", { class: "tdline", id: "tdLine", children: line.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
-        i5 ? i5 === line.length - 1 ? " and " : ", " : "",
-        /* @__PURE__ */ u2("a", { href: `#${x5.go}`, class: "s", "data-tdline": x5.key, onClick: (e4) => go3(x5.go, e4), children: x5.text })
-      ] })) }) : null,
       /* @__PURE__ */ u2("ol", { class: "bl tdlist", id: "tdList", "aria-labelledby": "hTd", children: rows2.map((r4, i5) => /* @__PURE__ */ u2(TdLine, { r: r4, hidden: !open2 && i5 >= cap, p: props }, r4.key)) }),
-      /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: [
-        more > 0 ? /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }),
-          " · "
-        ] }) : null,
-        line.length || !rows2.length ? null : /* @__PURE__ */ u2("span", { class: "none", children: "Nothing waits in Review." })
-      ] })
+      /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: more > 0 ? /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }) : null })
     ] });
   }
   function drawToDecide(host2, props) {
@@ -41701,6 +41723,7 @@ ${s5}`;
     $("#chgTitle").textContent = `${done.length} since ${longDate(LASTVISIT.slice(0, 10))}`;
     putHTML($("#chgList"), rc2.html ? raw(rc2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0, 10))}.</span></div></li>`);
     putHTML($("#chgMore"), html`${raw(rc2.more)}${rc2.more ? " · " : ""}<a class="s" href="#" data-go="activity">See all activity</a>`);
+    renderIntakeLine();
     renderToDecide();
     renderWeek();
     putHTML($("#pfTbl"), raw(portfolioTable("pf", true)));
@@ -42788,37 +42811,84 @@ ${s5}`;
     const tr2 = $(`#reviewBody tr[data-n="${r4.n}"]`);
     if (tr2) tr2.scrollIntoView({ block: "center" });
   }
-  var TDFOLD = "creaite-intake-review-hidden";
-  var tdFoldWired = false;
-  function wireTdFold() {
-    const f5 = (
-      /** @type {HTMLDetailsElement|null} */
-      $("#tdFold")
-    );
-    if (!f5 || tdFoldWired) return;
-    tdFoldWired = true;
-    f5.open = store.get(TDFOLD, false) !== true;
-    f5.addEventListener("toggle", () => store.set(TDFOLD, !f5.open));
-  }
-  function tdLine() {
+  var intakeTarget = (
+    /** @param {string} key */
+    (key2) => key2 === "proposals" ? "review" : "inbox"
+  );
+  function intakeParts() {
     const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(mtgHasTx).length, fl2 = (D.inbox || []).filter((f5) => f5.state === "new").length, L3 = [];
-    if (pr2) L3.push({ key: "review", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} in Review`, go: "review" });
-    if (nTr) L3.push({ key: "transcripts", n: nTr, text: `${nTr} transcript${nTr === 1 ? "" : "s"} ready in Intake`, go: "inbox" });
-    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} in Intake`, go: "inbox" });
+    if (nTr) L3.push({ key: "meetings", n: nTr, text: `${nTr} meeting${nTr === 1 ? "" : "s"} ready to process`, go: intakeTarget("meetings") });
+    if (pr2) L3.push({ key: "proposals", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} to approve`, go: intakeTarget("proposals") });
+    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} to process`, go: intakeTarget("files") });
     return L3;
   }
+  var TQKEY = "creaite-intakeline-dismissed";
+  var TQMEM = (
+    /** @type {{day:string,c:Record<string,number>}|null} */
+    null
+  );
+  var tqCounts = (
+    /** @param {{key:string,n:number}[]} parts */
+    (parts) => Object.fromEntries(["meetings", "proposals", "files"].map((k5) => [k5, (parts.find((x5) => x5.key === k5) || { n: 0 }).n]))
+  );
+  function tqRead() {
+    try {
+      const v5 = localStorage.getItem(TQKEY);
+      return v5 ? JSON.parse(v5) : null;
+    } catch (e4) {
+      return TQMEM;
+    }
+  }
+  function tqWrite(d5) {
+    TQMEM = d5;
+    try {
+      localStorage.setItem(TQKEY, JSON.stringify(d5));
+      return true;
+    } catch (e4) {
+      return false;
+    }
+  }
+  function intakeDismissed(parts) {
+    const d5 = tqRead();
+    if (!d5 || d5.day !== TODAY || !d5.c) return false;
+    const c5 = tqCounts(parts);
+    if (Object.keys(c5).some((k5) => c5[k5] > (d5.c[k5] || 0))) return false;
+    const low = { day: d5.day, c: Object.fromEntries(Object.keys(c5).map((k5) => [k5, Math.min(c5[k5], d5.c[k5] || 0)])) };
+    if (Object.keys(c5).some((k5) => low.c[k5] !== d5.c[k5])) tqWrite(low);
+    return true;
+  }
+  function renderIntakeLine() {
+    const host2 = $("#tdQuietHost");
+    if (!host2) return;
+    const parts = intakeParts(), hid = intakeDismissed(parts);
+    drawIntakeLine(host2, hid ? [] : parts, (pg2) => go2(pg2));
+  }
+  document.addEventListener("click", (e4) => {
+    const x5 = e4.target.closest && e4.target.closest("#tdQx");
+    if (!x5) return;
+    e4.preventDefault();
+    const host2 = $("#tdQuietHost"), had = host2 && host2.contains(document.activeElement);
+    tqWrite({ day: TODAY, c: tqCounts(intakeParts()) });
+    renderIntakeLine();
+    if (had || document.activeElement === document.body) {
+      const v5 = $("#v-today"), nxt = v5 && host2 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(host2.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
+      if (nxt) nxt.focus();
+      else if (v5) {
+        if (!v5.hasAttribute("tabindex")) v5.setAttribute("tabindex", "-1");
+        v5.focus();
+      }
+    }
+  });
+  window.addEventListener("storage", (e4) => {
+    if (e4.key === TQKEY || e4.key === null) renderIntakeLine();
+  });
   function renderToDecide() {
     const sec = $("#tdSec"), body2 = $("#tdBody");
     if (!sec || !body2) return;
-    wireTdFold();
-    const L3 = toDecideRows(), line = tdLine(), total = REV.filter((r4) => !r4.done).length, n4 = L3.filter((r4) => r4.kind !== "quiet").length + line.reduce((a5, x5) => a5 + x5.n, 0);
-    sec.hidden = !L3.length && !line.length;
-    {
-      const nw2 = $("#tdNew");
-      if (nw2) nw2.hidden = !VIPS().length;
-    }
+    const L3 = toDecideRows(), n4 = L3.filter((r4) => r4.kind !== "quiet").length;
+    sec.hidden = !L3.length;
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
+    drawToDecide(body2, { rows: L3, cap: TDCAP, open: EXPAND.has("td"), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
@@ -76347,6 +76417,7 @@ ${d5.text}`);
         "igText",
         "inboxBadge",
         "insertImage",
+        "intakeTarget",
         "invitees",
         "isMe",
         "isMin",
@@ -76678,7 +76749,6 @@ ${d5.text}`);
         "synthDay",
         "tabId",
         "tabTitle",
-        "tdLine",
         "thisWeek",
         "tl",
         "toIso",
