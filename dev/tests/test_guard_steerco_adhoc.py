@@ -283,7 +283,9 @@ class Builders(unittest.TestCase):
         for mode in MODES:
             self.assertFalse(self.got["decide"][mode][cmd][0], f"{mode} lets it through: {cmd!r}")
         for mode in ("ask", "confirmed", "sweep"):          # the modes the report rule (ask_bash_refusal) is in
-            self.assertIn(WHY, self.got["decide"][mode][cmd][1], (mode, cmd))
+            reason = self.got["decide"][mode][cmd][1]
+            # (with reach.diff applied too, an unquoted ~ inside a word is refused earlier, by its pattern rule)
+            self.assertTrue(WHY in reason or ("wildcard or pattern character" in reason and "~" in cmd), (mode, cmd, reason))
 
     def test_a_report_named_adhoc_or_steerco_draft_is_refused_in_every_mode(self):
         for name, cmd in self.refused.items():
