@@ -53,13 +53,15 @@ def can_write(folder):
 
 def check(name, fn):
     """Run one health check and print PASS, WARN or FAIL; `fn` returns (ok, detail), where ok None is a warning."""
+    crashed = False
     try:
         ok, detail = fn()
-    except Exception as e:  # a crashing check is a failed check
-        ok, detail = False, f"{type(e).__name__}: {e}"
+    except Exception as e:  # a crashing check is a failed check (#242: marked, and never dismissable in Health)
+        ok, detail, crashed = False, f"{type(e).__name__}: {e}", True
     results.append(ok is not False)           # None is a warning: shown, never a failure
     status = "pass" if ok else "warn" if ok is None else "fail"
-    found.append({"id": fn.__name__, "name": name, "status": status, "detail": detail or ""})
+    found.append({"id": fn.__name__, "name": name, "status": status, "detail": detail or "",
+                  **({"crashed": True} if crashed else {})})
     if not AS_JSON:
         print(f"{status.upper()}  {name}" + (f" — {detail}" if detail else ""))
 

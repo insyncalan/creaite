@@ -9,8 +9,7 @@ import { exportClash, exportSaved } from "../../../stores/exportSave.js";
 import { hubNote, reloadHub } from "../../../stores/hub.js";
 import { approveWeekly, exportWeekly, weeklyBase, weeklyDoc } from "../../../stores/weekly.js";
 import { WEEKLY_RENDER, saveFirst } from "../weekly/WeeklyView.jsx";
-import { CLIENT_RENDERERS } from "../ClientParts.jsx";
-import { CLIENT_EXPORT, WEEKLY_EXPORT, reportExportPage } from "../exportPage.jsx";
+import { WEEKLY_EXPORT, reportExportPage } from "../exportPage.jsx";
 
 /** Resolves true when the name-clash dialog was answered with a save, false when it was cancelled. */
 function clashAnswered() {
@@ -38,8 +37,7 @@ export async function hubExport(fmt, which) {
      the dialog says what and nothing is exported. Otherwise the export goes straight on (the server checks again). */
   const chk = await runCheck(), lo = chk && chk.ok ? chk.left_out : null;
   if (!lo || !lo.ready || lo.findings.length) { crDialog.value = true; return; }
-  const mk = (/** @type {any} */ d, /** @type {number} */ v) => reportExportPage(d, CLIENT_RENDERERS, CLIENT_EXPORT, v);
-  const c = await exportClientReport(fmt, mk);
+  const c = await exportClientReport(fmt);                 // v2.5.1: the server renders it from the checked snapshot, no page posted
   if (c && !c.ok && !c.clash) { crDialog.value = true; await runCheck(); return; }       // a refusal: the check shows why, and nothing was written
   if (which === "both" && c && c.ok && first && exportSaved.value) exportSaved.value = { ...exportSaved.value, name: `${first} and ${exportSaved.value.name}` };
 }

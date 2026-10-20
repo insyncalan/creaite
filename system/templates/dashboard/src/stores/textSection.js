@@ -43,9 +43,12 @@ export function takeNewText(id) {
 /** What went wrong with the last picture, as a plain sentence ("" when nothing did). */
 export const textMsg = signal("");
 
-/** @type {Map<string, Map<string, string>>} data addresses by project, then reference */
+/** @type {Map<string, Map<string, string>>} data addresses by project and report kind, then reference (v2.5.1, gap C: a client report
+    draws only its own pictures, `_images/client-<name>`, so its map is its own) */
 const PICS = new Map();
-const mapOf = (/** @type {string} */ code) => { let m = PICS.get(code); if (!m) { m = new Map(); PICS.set(code, m); } return m; };
+const mapOf = (/** @type {string} */ code, /** @type {string} */ kind = "") => {
+  const key = `${code}|${kind === "client" ? "client" : ""}`;
+  let m = PICS.get(key); if (!m) { m = new Map(); PICS.set(key, m); } return m; };
 
 /** The `_images/…` pictures a text names, each once. @param {string} text @returns {string[]} */
 export function imageRefsIn(text) {
@@ -54,27 +57,28 @@ export function imageRefsIn(text) {
   return [...out];
 }
 
-/** A picture's data address for the editor, or null while it isn't known. @param {string} code @param {string} ref */
-export const reportImageSrc = (code, ref) => mapOf(code).get(ref) || null;
+/** A picture's data address for the editor, or null while it isn't known. @param {string} code @param {string} ref @param {string} [kind] */
+export const reportImageSrc = (code, ref, kind = "") => mapOf(code, kind).get(ref) || null;
 
-/** Read the pictures `refs` names that aren't known yet (one call). @param {string} code @param {string[]} refs */
-export async function loadReportImages(code, refs) {
-  const m = mapOf(code), want = refs.filter(r => !m.has(r));
+/** Read the pictures `refs` names that aren't known yet (one call). @param {string} code @param {string[]} refs @param {string} [kind] */
+export async function loadReportImages(code, refs, kind = "") {
+  const m = mapOf(code, kind), want = refs.filter(r => !m.has(r));
   if (!want.length || !viaServer()) return;
-  const r = await api("/api/report/images", { code, refs: want });
+  const r = await api("/api/report/images", { code, refs: want, kind: kind === "client" ? "client" : undefined });
   if (r && r.ok && r.images) for (const [k, v] of Object.entries(/** @type {Record<string, string>} */ (r.images))) m.set(k, v);
 }
 
 /** Add a picture to a project's reports: checked (PNG or JPEG, 2 MB at most), filed at once under `_images/` in its Reports folder by the
-    live server. Returns its reference, or null (and says why in `textMsg`). @param {string} code @param {File} file */
-export async function addReportImage(code, file) {
+    live server; a client report's picture is its own (`_images/client-<name>`, v2.5.1 gap C). Returns its reference, or null (and says
+    why in `textMsg`). @param {string} code @param {File} file @param {string} [kind] */
+export async function addReportImage(code, file, kind = "") {
   if (!/^image\/(png|jpeg)$/.test(file.type)) { textMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`; return null; }
   if (file.size > 2 * 1024 * 1024) { textMsg.value = `${file.name} is over 2 MB: pictures can be 2 MB at most.`; return null; }
   if (!viaServer()) { textMsg.value = "Adding a picture needs the live server."; return null; }
   const src = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result || "")); fr.onerror = () => res(""); fr.readAsDataURL(file); });
-  const r = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1) }) : null;
+  const r = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1), kind: kind === "client" ? "client" : undefined }) : null;
   if (!r || !r.ok) { textMsg.value = oneLine((r && r.message) || `${file.name} couldn't be added.`); return null; }
   textMsg.value = "";
-  mapOf(code).set(r.ref, String(src));
+  mapOf(code, kind).set(r.ref, String(src));
   return /** @type {string} */ (r.ref);
 }

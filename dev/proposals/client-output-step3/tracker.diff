@@ -1,0 +1,34 @@
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -2404,6 +2404,7 @@
+         blocked += card_move_problems(p, data)         # #124 F3: here too, so a refusal comes before the backup
+         blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
+         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
++        blocked += client_draft_problems(p, data)      # v2.5.1 (#239 step 3): a client Word draft only as its check passed
+     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
+         blocked += _rejection_problems(con, p, data)
+     return blocked, held
+@@ -2432,6 +2433,23 @@
+     debuglog.warn("tracker", f"minutes approval refused in {p.name}: no draft minutes")
+     return [f"{p.name} minutes: {NO_DRAFT_MSG} ({blk.get('title') or blk.get('key') or 'untitled'})."]
+ # ===== end BL-260 point 4 =====
++
++
++def client_draft_problems(p, data):
++    """v2.5.1 (#239 step 3): validation: an approved client Word draft (an older cx-client-report one, or the client-safe steerco
++    one-pager) is filed only as the file whose client check passed at approval, and only while the check still passes
++    (review.client_apply_problem). Refused: the decision goes back to pending (saved when the apply stops), so it is approved again."""
++    blk = data.get("report")
++    if not blk or blk.get("applied") or blk.get("report_decision") != "approved":
++        return []
++    import review
++    why = review.client_apply_problem(blk, "report_decision")
++    if not why:
++        return []
++    blk["report_decision"] = "pending"
++    blk.pop("decided_in", None)
++    debuglog.warn("tracker", f"client report filing refused in {p.name}")
++    return [f"{p.name} report_decision: {why}"]
+ 
+ 
+ def card_move_problems(p, data):

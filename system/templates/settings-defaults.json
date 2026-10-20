@@ -89,7 +89,8 @@
     "at_risk_overdue_days": 7,
     "at_risk_milestone_slip_weeks_max": 2,
     "off_track_milestone_slip_weeks_over": 2,
-    "off_track_urgent_risks_min": 2
+    "off_track_urgent_risks_min": 2,
+    "dismissed": []
   },
   "dashboard": {
     "default_tab": "Portfolio",

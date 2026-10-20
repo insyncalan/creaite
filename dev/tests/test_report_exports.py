@@ -44,6 +44,9 @@ ITEMS = {"ABC-002": {"table": "raid", "title": "Vendor capacity"}, "ABC-005": {"
          "ABC-D-009": {"table": "decisions", "title": "walrus"}, "ABC-M-001": {"table": "milestones", "title": "Go-live",
                                                                                 "due_date": "2026-11-20"}}
 SHOWN = [s["heading"] for s in SECTIONS if not s["hidden"]]
+# v2.5.1 (#239): creaite_doc.export gates every client report (client_leak.findings on the document it renders), so a client report
+# here names no item this vault's tracker doesn't hold: the same sections without their item rows, tags and milestone list
+CLIENT_SECTIONS = [{k: v for k, v in s.items() if k not in ("rows", "tags", "data")} for s in SECTIONS]
 
 
 def chrome_path():
@@ -67,11 +70,11 @@ class Base(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout.strip().splitlines()[-1])
 
-    def saved(self, kind="weekly", sections=SECTIONS, pre="", date="2026-10-16", **kw):
+    def saved(self, kind="weekly", sections=SECTIONS, pre="", date="2026-10-16", items=ITEMS, **kw):
         """Save a document of `kind` (after running `pre` on it) and return its stored path."""
         args = ", ".join(f"{k}={v!r}" for k, v in kw.items())
         title = "Steering" if kind == "minutes" else "Weekly report" if kind == "weekly" else "Client report"
-        r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, {date!r}, {sections!r}, items={ITEMS!r}"
+        r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, {date!r}, {sections!r}, items={items!r}"
                     f"{', ' + args if args else ''})\n{pre}\n"
                     f"t = creaite_doc.target({kind!r}, 'ABC', {date!r}, name={title!r}, client={kw.get('client')!r})\n"
                     "print(json.dumps(creaite_doc.save(t, doc, 'Saved for a test')))")
@@ -81,7 +84,9 @@ class Base(unittest.TestCase):
     def export(self, path, fmt, env=None, **kw):
         """creaite_doc.export's answer."""
         args = "".join(f", {k}={v!r}" for k, v in kw.items())
-        return self.py(f"print(json.dumps(creaite_doc.export({path!r}, {fmt!r}{args})))", env=env)
+        # v2.5.1 step 2: creaite_doc.export renders a client report only as client_snapshot.client_export calls it (its token)
+        return self.py(f"import client_snapshot\nprint(json.dumps(creaite_doc.export({path!r}, {fmt!r}{args}, "
+                       "token=client_snapshot.TOKEN)))", env=env)
 
     def in_order(self, text, headings):
         """Assert every heading appears in `text`, in this order."""
@@ -119,7 +124,8 @@ class Html(Base):
             base = ("b = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [])\nb['state'] = 'approved'\n"
                     "rb = creaite_doc.save('system/staging/drafts/approved-base.html', b, 'Saved for a test')\n"
                     "doc['based_on'] = {'path': rb['path'], 'version': rb['version']}\n") if kind == "client" else ""
-            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n" + base +
+            secs, items = (CLIENT_SECTIONS, {}) if kind == "client" else (SECTIONS, ITEMS)      # v2.5.1: see CLIENT_SECTIONS
+            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {secs!r}, items={items!r})\n" + base +
                         "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
             self.assertTrue(r["ok"], r)
             out = self.export(r["path"], "html", out_dir=f"{ABC}/reports")
@@ -215,13 +221,13 @@ class Filing(Base):
     def test_a_client_view_waits_for_the_approved_internal_report(self):
         draft = self.saved(date="2026-10-09")
         approved = self.saved(pre="doc.update(state='approved', approved_at='2026-10-16 15:00:00')")
-        waiting = self.saved("client", date="2026-10-09", pre=f"doc['based_on'] = {{'path': {draft!r}, 'version': 1}}",
-                             audience="client", client="Harbour Board")
+        waiting = self.saved("client", CLIENT_SECTIONS, date="2026-10-09", pre=f"doc['based_on'] = {{'path': {draft!r}, 'version': 1}}",
+                             items={}, audience="client", client="Harbour Board")
         r = self.export(waiting, "docx")
         self.assertFalse(r["ok"])
         self.assertEqual(r["message"], "A client report is exported only after the internal report is approved.")
-        ready = self.saved("client", pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}", audience="client",
-                           client="Harbour Board")
+        ready = self.saved("client", CLIENT_SECTIONS, pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}", items={},
+                           audience="client", client="Harbour Board")
         r = self.export(ready, "docx")
         self.assertTrue(r["ok"], r)
         self.assertTrue(r["path"].startswith(f"{ABC}/reports/2026-10-16 Client report - Example Programme (Harbour Board)"), r)
@@ -229,6 +235,11 @@ class Filing(Base):
         # document says
         self.in_order(self.word_text(r["path"]), ["Example Programme", "Client · Draft", "Health", "Executive summary"])
         self.assertNotIn("Harbour Board", self.word_text(r["path"]))
+        # v2.5.1 (#239): the export gates a client report itself: one naming items the tracker doesn't hold is refused, nothing made
+        unknown = self.saved("client", pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}", audience="client")
+        r = self.export(unknown, "docx")
+        self.assertFalse(r["ok"], r)
+        self.assertTrue(r.get("findings"), r)
 
     def test_an_unknown_format_and_a_missing_file_say_why(self):
         self.assertIn("HTML, Word or PDF", self.export(self.saved(), "odt")["message"])
@@ -259,6 +270,78 @@ class Pdf(Base):
         page = (self.v.root / html["path"]).read_text(encoding="utf-8")
         self.assertEqual(re.findall(r"<h2>(.*?)</h2>", page), SHOWN)
         self.in_order(self.word_text(word["path"]), SHOWN)
+
+
+def tiny_png(w, h):
+    """A sound w x h PNG (one colour); its size tells the logos apart in word/media."""
+    import struct
+    import zlib
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body) & 0xFFFFFFFF)
+    rows = b"".join(b"\x00" + b"\x10\x60\xc0\xff" * w for _ in range(h))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
+
+
+class WordLogos(Base):
+    """2.5.1 M1: the Word export draws only the project's own logo files (report_doc.logos), never a path the saved document names."""
+
+    def setUp(self):
+        super().setUp()
+        import tempfile
+        logos = self.v.root / "system" / "branding" / "logos"
+        logos.mkdir(parents=True, exist_ok=True)
+        (logos / "firm.png").write_bytes(tiny_png(30, 12))                       # the firm's own logo
+        (logos / "ABC-partner-acme.png").write_bytes(tiny_png(31, 12))           # the project's own Acme logo
+        memory = self.v.root / ABC / "CLAUDE.md"
+        memory.write_text(memory.read_text(encoding="utf-8") + "\n- **Partners:** Acme\n", encoding="utf-8")
+        (self.v.root / ABC / "documents").mkdir(parents=True, exist_ok=True)
+        (self.v.root / ABC / "documents" / "internal-screenshot.png").write_bytes(tiny_png(66, 14))   # a vault file, not a logo
+        self.outside = Path(tempfile.mkdtemp(prefix="logo-out-"))
+        self.addCleanup(__import__("shutil").rmtree, self.outside, True)
+        (self.outside / "internal-screenshot.png").write_bytes(tiny_png(77, 13))                       # a file outside the vault
+
+    def media_sizes(self, logos):
+        hdr = {"id": "header", "type": "header", "heading": "", "default_heading": "Client report", "hidden": False, "text": "",
+               "data": {"label": "Client report", "week_ending": "2026-10-16", "client": "Northwind", "logos": logos}}
+        r = self.py(f"from pathlib import Path\nimport paths, docx_tools, zipfile\n"
+                    f"doc = creaite_doc.new('client', 'ABC', 'Client report', '2026-10-16', {[hdr] + SECTIONS!r}, items={ITEMS!r},"
+                    " audience='client')\n"
+                    # #239 step 2: a client Word file is made only with client_snapshot's TOKEN; the writer's own logo rule is
+                    # what this tests, so the token is passed as client_export passes it
+                    "import client_snapshot\nout = Path(paths.DRAFTS) / 'logo-test.docx'\n"
+                    "creaite_doc.word_export(doc, out, token=client_snapshot.TOKEN)\n"
+                    "z = zipfile.ZipFile(out)\n"
+                    "print(json.dumps(sorted(list(docx_tools.image_size(z.read(n))) for n in z.namelist() if n.startswith('word/media/'))))")
+        return [tuple(x) for x in r]
+
+    def test_a_stray_absolute_or_vault_path_never_reaches_word_media(self):
+        sizes = self.media_sizes([
+            {"kind": "firm", "path": "system/branding/logos/firm.png"},
+            {"kind": "partner:acme", "path": str(self.outside / "internal-screenshot.png")},
+            {"kind": "client", "path": f"{ABC}/documents/internal-screenshot.png"}])
+        self.assertNotIn((77, 13), sizes, "a file outside the vault reached the client's Word file")
+        self.assertNotIn((66, 14), sizes, "a vault file that isn't the project's logo reached the client's Word file")
+        self.assertIn((30, 12), sizes, "the firm's own logo is drawn")
+        self.assertIn((31, 12), sizes, "the partner's own logo is drawn from its kind, not the stored path")
+
+    def test_a_logo_path_to_an_outside_file_alone_embeds_nothing_of_it(self):
+        sizes = self.media_sizes([{"kind": "partner:nobody", "path": str(self.outside / "internal-screenshot.png")},
+                                  {"kind": "firm", "path": str(self.outside / "internal-screenshot.png")}])
+        self.assertNotIn((77, 13), sizes)
+        self.assertIn((30, 12), sizes, "the firm kind draws the firm's own file whatever path was stored")
+
+    def test_the_save_route_stores_only_the_projects_own_logo_paths(self):
+        hdr = {"id": "header", "type": "header", "heading": "", "hidden": False, "text": "",
+               "data": {"label": "Client report", "logos": [
+                   {"kind": "partner:acme", "path": str(self.outside / "internal-screenshot.png")},
+                   {"kind": "client", "path": f"{ABC}/documents/internal-screenshot.png"},
+                   {"kind": "partner:nobody", "path": "system/branding/logos/firm.png"}, "junk"]}}
+        r = self.py("import report_server\n"
+                    f"doc = {{'project': 'ABC', 'kind': 'client', 'sections': [{hdr!r}]}}\n"
+                    "print(json.dumps(report_server.own_header_logos(doc)['sections'][0]['data']['logos']))")
+        self.assertEqual(r, [{"kind": "partner:acme", "path": "system/branding/logos/ABC-partner-acme.png"}])
 
 
 if __name__ == "__main__":

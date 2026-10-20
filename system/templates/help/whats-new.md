@@ -2,6 +2,45 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.5.2
+
+Client exports are now made from one checked copy of the report, so nothing can slip in between checking and exporting. Activity gets a Usage tab, and Intake becomes a quiet line on Today.
+
+
+- **Client exports come from one checked copy.** When you approve a client report, creaite freezes the checked copy, and every client file (Word, HTML and PDF) is made from that one copy, then checked again after it is made. Nothing can slip in between checking and exporting.
+  - A page posted with a client export is never used, and a client report is always treated as a client report, whatever its file says.
+  - The header, the logos and the audience come from the project at the moment you export. Only the project's own logo files and the report's own pictures can be drawn, and any extra fields are dropped.
+  - The older Word report route goes through the same check. Words hidden in look-alike letters or escapes are caught, and so are another project's words and owners.
+  - The minutes export refuses a client report, and a typed export name can't claim another report's filing name.
+  - This closes the client-export items listed as "still to come" in 2.5.1.
+- **A Usage tab on Activity.** It shows what each Claude run costs and what it loads before it starts, over time: summary cards, a 14-day chart (cost per day, and what each run loads at the start, in two aligned panels), a table by kind of run, what every run loads (the always-loaded files, measured once a day), the skills used, and a "Your reviews" list where you write down what you saw and decided, with a CSV download. It counts only: it never records what anything said.
+- **Intake is a quiet line on Today.** The Intake and Review section on Today is replaced by one small line at the foot of Your commitments saying how many meetings are ready to process and how many proposals wait. Its links go to Intake and Review, and a small x hides it until something new arrives. With nothing waiting there is no line. The quick Approve and Reject on Today's rows are gone: approve in Intake and Review.
+- **Messages from people you follow** sit in their own Messages section on Today, above Week ahead, only when there are any: each is a card with Make a work item and Dismiss.
+
+
+Nothing.
+
+
+- The Settings tabs, Project settings, the People page, the new Work list and Draft email in Outlook are in 2.6, not in this release.
+
+## creaite 2.5.1
+
+A release of fixes: you can clear health items and dismiss the Sweep banner, the filter panel is no longer cut off, weekly report rows left out by mistake are fixed, and ask creaite no longer writes reports. Client exports are safer.
+
+
+- **Clear health items.** In Settings › Health each problem has a Dismiss button (with an optional reason). A dismissed problem stops counting in the number in your menu; it comes back by itself if its detail changes, and "Dismissed" lists them with Restore. Problems that mean creaite itself is not safe to use cannot be dismissed.
+- **Dismiss the Sweep banner.** A small close icon on the "Sweep due" banner on Today hides it for the day without running a sweep. It returns the next day, or when the last-swept time changes.
+- **The Work filter panel is never cut off.** On a short list the filter panel used to be clipped near the bottom; it now stays fully visible.
+- **Weekly report rows left out.** A work item that showed blank with "Click to write" and the left-out eye now keeps its text; a row you leave out and save says it is left out, and its eye refills it from the tracker.
+- **No cog on the Projects list.** The cog beside each project name in the Projects list is gone; project settings open from the project page (the cog beside Reports and Browse files) and from Settings.
+- **Today.** The permanent "How Today works" box under an empty Needs attention is gone.
+- **ask creaite no longer writes reports.** Reports are yours to edit in the Reporting hub; ask creaite can read them and answer questions about them, but cannot create or change a weekly or client report or its draft.
+- **Safer client exports.** A client export is checked on exactly the report it was made from, a client report is always treated as a client report whatever its file says, weekly reports stay internal, the minutes export no longer accepts a client report, a page posted with a client export is used only when its words are the saved report's own, typed export names can no longer claim another report's filing name, and client logos come only from the project's own logo files.
+
+
+- Some client-export hardening is still to come in the next release (a single checked snapshot that every client export reads from).
+- The usage monitor and the Intake and Review pages are not in this release.
+
 ## creaite 2.5.0
 
 Project settings get a page of their own, both reports can be edited side by side, and the report logos can be added by clicking their place in the header.

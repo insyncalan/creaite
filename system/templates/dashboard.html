@@ -2651,9 +2651,18 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .ckchips,.qcchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px} .qcchips:empty{display:none} .ckvague{margin-top:4px}
 .acttabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 14px} .acttabs [role=tab]{border:0;background:none;padding:8px 12px;font:500 var(--fs-md)/20px var(--font);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
 .acttabs [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)} .acttabs [role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
-#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg{display:none!important}
+#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg,#v-activity.u #actTools,#v-activity.u #actBar,#v-activity.u #actTbl,#v-activity.u #achg{display:none!important}
 #actQuality h2{margin:20px 0 6px} .qmoved{font-weight:500;margin:4px 0} .qtab{width:100%;border-collapse:collapse;font-size:var(--fs-sm)} .qtab th,.qtab td{text-align:left;padding:6px 10px;border-top:1px solid var(--line)}
 .qtab thead th{border-top:0;color:var(--muted);font-weight:500} #actQuality .qtab tbody th{font:500 var(--fs-sm)/18px var(--font);text-transform:none;letter-spacing:0;color:var(--ink);background:none} .qnr{display:block;font-weight:400;font-size:var(--fs-xs);color:var(--muted)}
+/* ===== #238 (v2.5.1) Activity › Usage: cards, a cost-and-load chart and the tables (Quality's .qtab); tokens only ===== */
+#actUsage h2{margin:20px 0 6px} .usum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.ucard{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px} .ucard .v{font:700 var(--fs-2xl)/var(--lh-1-25) var(--display,var(--font))}
+.ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)} .ucard .d.up{color:var(--warn)} .ucard .d.dn{color:var(--ok)}
+.uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0} .uchart h2{margin:0 0 6px!important} .uchart .sub{margin:6px 0 0}
+.uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
+.ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
+#actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+/* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
    smaller, padding grows the hit area and an equal negative margin gives the space back, so nothing moves and no row grows. */
@@ -2758,8 +2767,10 @@ a.seeall{margin-top:8px}
 .dcbtn.closed{color:var(--accent);border-color:var(--accent)}
 .dcbtn .dcdot{display:none;position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--warn);border:2px solid var(--surface)}
 .dcbtn.nudge .dcdot{display:block}
+.dhelp{position:absolute;right:64px;bottom:14px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--day-muted);font:500 var(--fs-md)/1 var(--font);display:grid;place-items:center;padding:0;cursor:pointer;opacity:.7}   /* #237 (Alan, 19-10-2026): Today's help, quiet, beside Close the day; no box under Needs attention */
+.dhelp:hover,.dhelp:focus-visible{opacity:1;color:var(--day-ink)} .dhelp:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .calfoot{text-align:right;font-size:var(--fs-xs);color:var(--faint);margin:24px 0 0} .calfoot .calold{color:var(--warn)}
-@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} }
+@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} .dhelp{right:56px} }
 @media (forced-colors: active){ .dcbtn .dcdot,.dcbtn.closed{forced-color-adjust:none} .dcbtn.closed{color:Highlight;border-color:Highlight} }
 /* ===== end BL-270 ===== */
 /* ===== BL-255: Settings › Diagnostics' error rows (was a <style> the page added at run time) ===== */
@@ -2919,6 +2930,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .hhow{margin-top:6px;font-size:var(--fs-xs);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--sunk);border-radius:var(--r-md);padding:6px 8px}
 .hbad{color:var(--bad)}
 .hdoes{margin-top:4px;font-size:var(--fs-xs);color:var(--ink)}
+.hrow .hact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end} .hdismissform .hreason{flex:1;min-width:12em}   /* #242 */
 .hsub{font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:14px 0 2px}
 .hsteps{margin:4px 0 0;padding-left:16px;font-size:var(--fs-sm);color:var(--muted)} .hsteps li{margin:2px 0}
 .hfine{border-top:1px solid var(--line);padding:10px 0 0} .hfine summary{cursor:pointer;color:var(--muted);font-size:var(--fs-sm)}
@@ -3726,6 +3738,7 @@ table.wr-r th{background:none;font-family:inherit;position:static;text-align:lef
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
 table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
 table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-leftwhy{margin-left:8px;font-size:11px;color:var(--rp-grey)}
 .wr-st{font-weight:700;font-size:var(--fs-2xs);letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
 .wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
 .sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */
@@ -4055,13 +4068,14 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
 #peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
-/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band, never dismissible */
+/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
 body:has(#runBadge:not([hidden])) .sweepdue{display:none}
+.sweepdue .sd-x{margin-left:auto} .sweepdue .sd-x:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 /* ===== #192 Files navigation: the pills' line with Work's funnel Filter, its menu and the applied chips ===== */
 .fbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap} .fmwrap{position:relative;display:inline-block}
 .ddmenu.fmenu.on{display:block;width:300px;max-height:none;overflow:visible;padding:12px 14px;top:calc(var(--ctl-h) + 6px)}
@@ -4092,8 +4106,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
 #v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 #v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
-/* the Today table's cog takes no width (the columns, Evidence's resize included, are laid out as before): it shows on row hover or focus */
-#pfTbl td:first-child{position:relative} #pfTbl .pset{position:absolute;right:2px;top:6px;opacity:0} #pfTbl tr:hover .pset,#pfTbl .pset:focus-visible{opacity:1}
 /* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
    data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
    failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
@@ -4109,6 +4121,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+
+/* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
+.tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
+.tdquiet svg.i{width:16px;height:16px;flex:none} .tdquiet .tdq{flex:1} .tdquiet a{color:inherit;text-decoration:underline dotted;text-underline-offset:3px} .tdquiet a:hover{color:var(--accent);text-decoration:underline}
+.tdquiet[hidden]{display:none}
+.tdquiet .ib svg.i{width:14px;height:14px}
+/* v2.5.1 (#239): the client report's Show as exported is the server's render of its checked preview snapshot, in a sandboxed frame */
+.crx{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px}
+.crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
+.crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:#fff}
+.crx-wait,.crx-err{padding:16px}
 </style>
 </head>
 <body>
@@ -4139,7 +4162,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="dayband"><div class="bandin">
           <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
-        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270 -->
+        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button><button type="button" class="dhelp" data-thelp="1" aria-label="Help for Today" data-tip="Help for Today">?</button></div><!-- BL-270 -->
         <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
@@ -4148,8 +4171,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           <section class="tsec" id="mineSec" aria-labelledby="hMine"><h2 class="th" id="hMine">Your commitments <span class="cnt" id="nMine"></span><a href="#" data-go="mine">All mine</a></h2><ol class="bl" id="mineList"></ol><div class="moreline" id="mineMore"></div>
             <div class="tsub" id="tOwe" hidden><h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe"></span></h3><ol class="bl" id="oweList"></ol><div class="moreline" id="oweMore"></div></div>
             <div class="tsub" id="tWait" hidden><h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait"></span><a href="#" data-nav="all:chase:">Chase view</a></h3><ol class="bl" id="waitList"></ol><div class="moreline" id="waitMore"></div></div>
+            <div id="tdQuietHost"></div><!-- #245: Intake as one quiet, dismissible line (components/today/IntakeLine.jsx) -->
           </section><!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-          <section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd" hidden><details id="tdFold" open><summary><h2 class="th" id="hTd">Intake and Review <span class="cnt" id="nTd"></span><span class="tdnew" id="tdNew" hidden>new</span></h2></summary><div id="tdBody"></div></details></section><!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
+          <section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden><h2 class="th" id="hTd">Messages <span class="cnt" id="nTd"></span></h2><div id="tdBody"></div></section><!-- #245: the cards of messages from people Alan follows (BL-334); the Intake and Review section, its line and its fold are gone: Intake is one quiet line at the foot of Your commitments -->
           <section class="tsec tres" id="weekSec" aria-labelledby="hWeek"><details id="weekFold" open><summary><h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo"></span></h2></summary><div id="weekList"></div></details></section><!-- #105: folds like Resolved; open unless hidden, and remembered in this browser -->
           <section class="tsec tres" id="resSec" aria-labelledby="hRes"><details id="resFold"><summary><h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle"></span></h2></summary><ol class="bl" id="chgList"></ol><div class="moreline" id="chgMore"></div></details></section><!-- BL-319: folded to one line -->
           <section class="tsec" id="pfSec" aria-labelledby="hPort"><h2 class="th" id="hPort">Portfolio</h2><div class="tbl" id="pfTbl"></div></section>
@@ -4232,6 +4256,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
 <h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden></div><!-- #238: Usage, drawn by components/activity/UsagePanel.jsx -->
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
@@ -4296,6 +4321,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ACTKINDS: () => ACTKINDS,
     ACTPK: () => ACTPK,
     ACTSHOW: () => ACTSHOW,
+    ACTTABS: () => ACTTABS,
     ACT_ASK_AGAIN: () => ACT_ASK_AGAIN,
     AGD: () => AGD,
     AGSTYLES: () => AGSTYLES,
@@ -4845,6 +4871,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actSel: () => actSel,
     actSetFilters: () => actSetFilters,
     actShowQuality: () => actShowQuality,
+    actShowTab: () => actShowTab,
     actTabsDraw: () => actTabsDraw,
     actTools: () => actTools,
     actTyping: () => actTyping,
@@ -4967,6 +4994,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bkWhat: () => bkWhat,
     bl175Clamp: () => bl175Clamp,
     bl185Row: () => bl185Row,
+    blankCells: () => blankCells,
     boardAsk: () => boardAsk,
     boardCols: () => boardCols,
     boardDragEnd: () => boardDragEnd,
@@ -5302,6 +5330,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     countUp: () => countUp,
     covered: () => covered,
     crDialog: () => crDialog,
+    crDoc: () => crDoc,
+    crInternal: () => crInternal,
     crLogoData: () => crLogoData,
     crLogoFor: () => crLogoFor,
     crLogoNote: () => crLogoNote,
@@ -5693,6 +5723,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     helpMark: () => helpMark,
     helpNorm: () => helpNorm,
     helpOpenHit: () => helpOpenHit,
+    helpOutsidePress: () => helpOutsidePress,
     helpPanelOpen: () => helpPanelOpen,
     helpScreenSync: () => helpScreenSync,
     helpSearchClear: () => helpSearchClear,
@@ -5753,7 +5784,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     inboxBadge: () => inboxBadge,
     initials: () => initials,
     insertImage: () => insertImage,
+    intakeParts: () => intakeParts,
     intakeSeams: () => intakeSeams,
+    intakeTarget: () => intakeTarget,
     internalIn: () => internalIn,
     isConflict: () => isConflict,
     isDark: () => isDark,
@@ -6540,6 +6573,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderHelp: () => renderHelp,
     renderIgnore: () => renderIgnore,
     renderInbox: () => renderInbox,
+    renderIntakeLine: () => renderIntakeLine,
     renderLayoutBar: () => renderLayoutBar,
     renderMeetings: () => renderMeetings,
     renderMgr: () => renderMgr,
@@ -6891,7 +6925,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     takeNewText: () => takeNewText,
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
-    tdLine: () => tdLine,
     tdToReview: () => tdToReview,
     tdToReviewRef: () => tdToReviewRef,
     textMsg: () => textMsg,
@@ -6914,6 +6947,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toIso: () => toIso,
     toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
+    toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
@@ -6938,6 +6972,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     updateView: () => updateView,
     uploadClientLogo: () => uploadClientLogo,
     uploadedFiles: () => uploadedFiles,
+    usageDraw: () => usageDraw,
+    usageOpen: () => usageOpen,
     useCount: () => useCount,
     vagueWhy: () => vagueWhy,
     validate: () => validate,
@@ -6984,6 +7020,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     weekView: () => weekView,
     weekendHtml: () => weekendHtml,
     weekendNote: () => weekendNote,
+    weeklyDoc: () => weeklyDoc,
     weeklyHref: () => weeklyHref,
     wfCount: () => wfCount,
     wflag: () => wflag,
@@ -26640,6 +26677,10 @@ ${s5}`;
     {}
   );
   var wkAsked = 0;
+  function wkIdentity(d5) {
+    const x5 = d5 === void 0 ? weeklyDoc.value : d5;
+    return x5 ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x5.project}|${x5.date}` : "";
+  }
   async function loadWeekly(arg, fresh = false) {
     const mine = ++wkAsked;
     weeklyArg.value = arg;
@@ -26696,8 +26737,11 @@ ${s5}`;
     weeklyDirty = on2;
   };
   function editDoc(d5, _why) {
+    const c5 = weeklyDoc.value;
+    if (c5 && d5 && (c5.project !== d5.project || c5.date !== d5.date || (c5.kind || "weekly") !== (d5.kind || "weekly"))) return false;
     weeklyDoc.value = d5;
     weeklyDirty = true;
+    return true;
   }
 
   // stores/reportingSettings.js
@@ -29449,6 +29493,36 @@ ${s5}`;
   }
   function fbPaint(s5) {
     R(/* @__PURE__ */ u2(FilterBar, { ...s5.props, ui: s5.ui, host: s5.host }), s5.host);
+    fbPlace(s5);
+  }
+  var FB_GAP = 8;
+  function fbPlace(s5) {
+    const m5 = s5.props.more && document.getElementById(s5.props.more.menuId);
+    if (!m5 || !s5.host.contains(m5)) return;
+    const st2 = m5.style;
+    st2.position = st2.top = st2.left = st2.right = st2.bottom = st2.maxHeight = "";
+    if (s5.ui.open !== FB_MORE || !m5.classList.contains("on")) return;
+    const dd2 = (
+      /** @type {HTMLElement} */
+      m5.parentElement
+    ), d5 = dd2.getBoundingClientRect();
+    const vw2 = document.documentElement.clientWidth, vh2 = document.documentElement.clientHeight;
+    const w6 = m5.offsetWidth, cap = parseFloat(getComputedStyle(m5).maxHeight) || vh2;
+    let top = d5.top + m5.offsetTop, room = vh2 - FB_GAP - top;
+    const above = d5.top - FB_GAP - (top - d5.bottom);
+    if (room < Math.min(cap, m5.scrollHeight) && above > room) {
+      room = above;
+      top = Math.max(FB_GAP, d5.top - (top - d5.bottom) - Math.min(cap, room, m5.scrollHeight));
+    }
+    const left = Math.max(FB_GAP, Math.min(d5.left + m5.offsetLeft, vw2 - FB_GAP - w6));
+    Object.assign(st2, {
+      position: "fixed",
+      top: `${Math.round(top)}px`,
+      left: `${Math.round(left)}px`,
+      right: "auto",
+      bottom: "auto",
+      maxHeight: `${Math.max(0, Math.floor(Math.min(cap, room)))}px`
+    });
   }
   function fbDd(s5, id2) {
     const f5 = id2 === FB_MORE ? null : s5.props.fields.find((x5) => x5.id === id2);
@@ -29511,6 +29585,12 @@ ${s5}`;
     document.addEventListener("pointerdown", fbAway, true);
     document.addEventListener("click", fbAway, true);
     document.addEventListener("focusin", fbAway);
+    const replace = (e4) => FB_OPEN.forEach((s5) => {
+      const m5 = s5.props.more && document.getElementById(s5.props.more.menuId);
+      if (s5.ui.open === FB_MORE && !(m5 && e4.target instanceof Node && m5.contains(e4.target))) fbPlace(s5);
+    });
+    window.addEventListener("resize", replace);
+    document.addEventListener("scroll", replace, { capture: true, passive: true });
   }
   function fbFit(s5) {
     const fold = s5.props.fold;
@@ -30498,6 +30578,30 @@ ${s5}`;
     const c5 = store.get(COUNT_KEY, null);
     return c5 && typeof c5.at === "number" ? c5.at : 0;
   };
+  var entryOf = (p6) => ({ id: p6.id, detail_key: p6.key, reason: p6.reason || "", date: p6.date || "" });
+  async function saveDismissed(problems, gone) {
+    const res = healthResult.value;
+    if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
+    healthResult.value = { ...res, problems, dismissed: gone };
+    healthCount.value = problems.length;
+    store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() });
+    return true;
+  }
+  function dismissProblem(p6, reason) {
+    const res = healthResult.value;
+    if (!res || !p6.dismissable) return Promise.resolve(false);
+    const why = String(reason || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    return saveDismissed(res.problems.filter((x5) => x5.key !== p6.key), [...res.dismissed || [], { ...p6, reason: why, date: TODAY }]);
+  }
+  function restoreProblem(p6) {
+    const res = healthResult.value;
+    if (!res) return Promise.resolve(false);
+    const back2 = { ...p6 };
+    delete back2.reason;
+    delete back2.date;
+    const problems = [...res.problems, back2].sort((a5, b5) => Number(a5.severity !== "fail") - Number(b5.severity !== "fail"));
+    return saveDismissed(problems, (res.dismissed || []).filter((x5) => x5.key !== p6.key));
+  }
   function showHealthCount(n4) {
     void n4;
   }
@@ -30974,8 +31078,53 @@ ${s5}`;
       done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
     ] });
   }
+  function DismissForm({ p: p6, onClose }) {
+    const [why, setWhy] = d2(""), [busy2, setBusy] = d2(false);
+    const go3 = async () => {
+      setBusy(true);
+      const ok2 = await dismissProblem(p6, why);
+      setBusy(false);
+      if (ok2) snack(`Dismissed: ${p6.title}. It's under Dismissed until you restore it or it changes.`);
+      else onClose();
+    };
+    return /* @__PURE__ */ u2("div", { class: "hhow hdismissform", role: "group", "aria-label": `Dismiss: ${p6.title}`, children: [
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          class: "hreason",
+          maxLength: 200,
+          size: 28,
+          value: why,
+          placeholder: "Why (optional)",
+          "aria-label": "Why you're dismissing it (optional)",
+          ref: (el2) => {
+            if (el2 && !el2.dataset.focused) {
+              el2.dataset.focused = "1";
+              el2.focus();
+            }
+          },
+          onInput: (e4) => setWhy(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          ),
+          onKeyDown: (e4) => {
+            if (e4.key === "Enter") {
+              e4.preventDefault();
+              go3();
+            } else if (e4.key === "Escape") {
+              e4.stopPropagation();
+              onClose();
+            }
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn hdismissgo", disabled: busy2, onClick: go3, children: busy2 ? "Saving…" : "Dismiss" }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: onClose, children: "Cancel" })
+    ] });
+  }
   function Problem({ p: p6 }) {
-    const [open2, setOpen2] = d2(false);
+    const [open2, setOpen2] = d2(false), [asking, setAsking] = d2(false);
     const bad = p6.severity === "fail", hid = `hhow-${p6.id}`, cmd = commandIn(p6.fix.how);
     const copy = (e4) => {
       const b5 = (
@@ -31004,9 +31153,53 @@ ${s5}`;
         !p6.fix.built && open2 && /* @__PURE__ */ u2("div", { class: "hhow", id: hid, children: [
           p6.fix.how ? /* @__PURE__ */ u2("span", { children: p6.fix.how }) : /* @__PURE__ */ u2("span", { children: "Only you can take this step: the line above says what is wrong." }),
           cmd && /* @__PURE__ */ u2("button", { type: "button", class: "mini", "aria-label": `Copy the command: ${cmd}`, onClick: copy, children: "Copy" })
-        ] })
+        ] }),
+        !p6.dismissable && p6.keep_why && /* @__PURE__ */ u2("div", { class: "d hkeep", children: p6.keep_why }),
+        asking && /* @__PURE__ */ u2(DismissForm, { p: p6, onClose: () => setAsking(false) })
       ] }),
-      /* @__PURE__ */ u2("div", { class: "hact", children: p6.fix.built ? /* @__PURE__ */ u2(FixButton, { f: p6.fix, label: p6.title }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-expanded": open2 ? "true" : "false", "aria-controls": open2 ? hid : void 0, onClick: () => setOpen2(!open2), children: "How to fix" }) })
+      /* @__PURE__ */ u2("div", { class: "hact", children: [
+        p6.fix.built ? /* @__PURE__ */ u2(FixButton, { f: p6.fix, label: p6.title }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-expanded": open2 ? "true" : "false", "aria-controls": open2 ? hid : void 0, onClick: () => setOpen2(!open2), children: "How to fix" }),
+        p6.dismissable && !asking && viaServer() && /* @__PURE__ */ u2("button", { type: "button", class: "btn quiet hdismiss", "aria-label": `Dismiss: ${p6.title}`, onClick: () => setAsking(true), children: "Dismiss" })
+      ] })
+    ] });
+  }
+  function Dismissed({ list }) {
+    const [busy2, setBusy] = d2("");
+    const back2 = async (p6) => {
+      setBusy(p6.key);
+      const ok2 = await restoreProblem(p6);
+      setBusy("");
+      if (ok2) snack(`Restored: ${p6.title}`);
+    };
+    return /* @__PURE__ */ u2("details", { class: "hfine", id: "healthDismissed", children: [
+      /* @__PURE__ */ u2("summary", { children: [
+        "Dismissed (",
+        list.length,
+        ")"
+      ] }),
+      /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Dismissed problems", children: list.map((p6) => /* @__PURE__ */ u2("li", { class: "hrow", "data-check": p6.id, children: [
+        /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("div", { class: "hbody", children: [
+          /* @__PURE__ */ u2("div", { class: "t", children: p6.title }),
+          p6.detail && /* @__PURE__ */ u2("div", { class: "d", children: p6.detail }),
+          /* @__PURE__ */ u2("div", { class: "d", children: [
+            "Dismissed ",
+            fd(p6.date || ""),
+            p6.reason ? `: ${p6.reason}` : ""
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn hrestorebtn",
+            disabled: !!busy2 || !viaServer(),
+            "aria-label": `Restore: ${p6.title}`,
+            onClick: () => back2(p6),
+            children: busy2 === p6.key ? "Restoring…" : "Restore"
+          }
+        ) })
+      ] }, p6.key)) })
     ] });
   }
   function Health() {
@@ -31025,7 +31218,7 @@ ${s5}`;
       err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
       res && /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("p", { class: "sub hsum", children: n4 ? `${n4} thing${n4 === 1 ? "" : "s"} need${n4 === 1 ? "s" : ""} you.` : "Nothing needs you." }),
-        n4 > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "What needs you", children: res.problems.map((p6) => /* @__PURE__ */ u2(Problem, { p: p6 }, p6.id)) }),
+        n4 > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "What needs you", children: res.problems.map((p6) => /* @__PURE__ */ u2(Problem, { p: p6 }, p6.key || p6.id)) }),
         res.stopped.length > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Errors that have stopped", children: res.stopped.map((s5) => /* @__PURE__ */ u2("li", { class: "hrow stopped", children: [
           /* @__PURE__ */ u2("span", { class: "hico ok", "aria-hidden": "true", children: "✓" }),
           /* @__PURE__ */ u2("div", { class: "hbody", children: [
@@ -31047,6 +31240,7 @@ ${s5}`;
           ] }),
           /* @__PURE__ */ u2("div", { class: "hact" })
         ] })) }),
+        (res.dismissed || []).length > 0 && /* @__PURE__ */ u2(Dismissed, { list: res.dismissed || [] }),
         /* @__PURE__ */ u2("details", { class: "hfine", children: [
           /* @__PURE__ */ u2("summary", { children: [
             res.fine,
@@ -33611,7 +33805,7 @@ ${s5}`;
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Messages");
     });
   }
   async function alertHandled(id2) {
@@ -33647,7 +33841,7 @@ ${s5}`;
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Messages");
     });
   }
   function alertChase(id2) {
@@ -33842,7 +34036,7 @@ ${s5}`;
     vipBadge();
     await reloadData();
     renderToday();
-    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Intake and Review` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
+    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Messages` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
   }
   function alertDraftWhy(al2) {
     return /^(private|confidential)$/i.test(al2.marker || "") ? `Not for a ${al2.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs the live server" : "";
@@ -36909,7 +37103,7 @@ ${s5}`;
         ({ mvFlWhy: () => mvAct("flok"), mvFcWhy: () => mvAct("fcok"), mvRbWhy: mvRebaseline, mvAdjWhy: mvAdjust })[t47.id]();
         return;
       }
-      if (e4.key === "Escape" && (shared.MV.peek || shared.MV.add) && !($("#mvCal") && !$("#mvCal").hidden) && !($("#mvPop") && !$("#mvPop").hidden) && !document.querySelector("#personDlg[open]")) {
+      if (e4.key === "Escape" && (shared.MV.peek || shared.MV.add) && !helpPanelOpen() && !($("#mvCal") && !$("#mvCal").hidden) && !($("#mvPop") && !$("#mvPop").hidden) && !document.querySelector("#personDlg[open]")) {
         if (shared.MV.flow || shared.MV.pend) {
           e4.preventDefault();
           shared.MV.flow = null;
@@ -40017,7 +40211,7 @@ ${s5}`;
       controls: "peopleTbl",
       wrap: true
     });
-    const th2 = (c5, l6, num) => `<th class="${num ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
+    const th2 = (c5, l6, num2) => `<th class="${num2 ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
     const nameCell = (x5) => `<td class="title"><a href="#" class="plink2" data-person="${esc(x5.name)}">${esc(isMe(x5.name) ? `You (${x5.name})` : x5.name)}</a>${x5.p || isMe(x5.name) ? "" : ` <span class="tag warn" title="${none ? "Seen on items but isn’t in the people register" : "Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x5.p && x5.p.org ? esc(x5.p.org) : '<span class="sub">—</span>'}</td><td>${x5.p && x5.p.role ? esc(x5.p.role) : '<span class="sub">—</span>'}</td><td>${x5.codes.map(pLink).join(" ") || '<span class="sub">—</span>'}</td>`;
     $("#peopleTbl").setAttribute("role", "tabpanel");
@@ -41108,6 +41302,35 @@ ${s5}`;
     R(props ? /* @__PURE__ */ u2(DayTabs, { ...props }) : text, host2);
   }
 
+  // components/today/IntakeLine.jsx
+  function IntakeLine({ parts, onGo }) {
+    return /* @__PURE__ */ u2("p", { class: "tdquiet", id: "tdQuiet", children: [
+      /* @__PURE__ */ u2(Icon, { name: "inbox" }),
+      /* @__PURE__ */ u2("span", { class: "tdq", children: [
+        "Intake: ",
+        parts.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
+          i5 ? i5 === parts.length - 1 ? " and " : ", " : "",
+          /* @__PURE__ */ u2("a", { href: `#${x5.go}`, "data-tdq": x5.key, onClick: (e4) => {
+            e4.preventDefault();
+            onGo(x5.go);
+          }, children: x5.text })
+        ] })),
+        "."
+      ] }),
+      /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Dismiss until something new arrives", id: "tdQx" })
+    ] });
+  }
+  function IntakeLive({ text }) {
+    return /* @__PURE__ */ u2("span", { class: "vh", id: "tdQuietLive", role: "status", "aria-live": "polite", "aria-atomic": "true", children: text });
+  }
+  function drawIntakeLine(host2, parts, onGo) {
+    const n4 = parts.reduce((t47, x5) => t47 + x5.n, 0);
+    R(/* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(IntakeLive, { text: n4 ? `${n4} waiting in Intake` : "" }),
+      parts.length ? /* @__PURE__ */ u2(IntakeLine, { parts, onGo }) : null
+    ] }), host2);
+  }
+
   // components/today/ToDecide.jsx
   function TdLine({ r: r4, hidden, p: p6 }) {
     const open2 = (e4) => {
@@ -41246,26 +41469,10 @@ ${s5}`;
     ] });
   }
   function ToDecide(props) {
-    const { rows: rows2, total, cap, open: open2, onReview } = props, more = rows2.length - cap;
-    const line = props.line || [];
-    const go3 = (page, e4) => {
-      e4.preventDefault();
-      if (props.onGo) props.onGo(page);
-      else onReview();
-    };
+    const { rows: rows2, cap, open: open2 } = props, more = rows2.length - cap;
     return /* @__PURE__ */ u2(S2, { children: [
-      line.length ? /* @__PURE__ */ u2("p", { class: "tdline", id: "tdLine", children: line.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
-        i5 ? i5 === line.length - 1 ? " and " : ", " : "",
-        /* @__PURE__ */ u2("a", { href: `#${x5.go}`, class: "s", "data-tdline": x5.key, onClick: (e4) => go3(x5.go, e4), children: x5.text })
-      ] })) }) : null,
       /* @__PURE__ */ u2("ol", { class: "bl tdlist", id: "tdList", "aria-labelledby": "hTd", children: rows2.map((r4, i5) => /* @__PURE__ */ u2(TdLine, { r: r4, hidden: !open2 && i5 >= cap, p: props }, r4.key)) }),
-      /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: [
-        more > 0 ? /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }),
-          " · "
-        ] }) : null,
-        line.length || !rows2.length ? null : /* @__PURE__ */ u2("span", { class: "none", children: "Nothing waits in Review." })
-      ] })
+      /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: more > 0 ? /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }) : null })
     ] });
   }
   function drawToDecide(host2, props) {
@@ -41508,7 +41715,7 @@ ${s5}`;
     renderDn();
     const att = attentionItems(), ac2 = capped(att.map((x5, i5) => x5.html(i5 + 1)), 5, "attn");
     $("#nAttn").textContent = att.length ? String(att.length) : "";
-    putHTML($("#attnList"), ac2.html ? raw(ac2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention. ${raw(howLink("today"))}</span></div></li>`);
+    putHTML($("#attnList"), ac2.html ? raw(ac2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`);
     putHTML($("#attnMore"), raw(ac2.more));
     const mine = [...mineOver, ...mineSoon].sort((a5, b5) => a5.due.localeCompare(b5.due)), mc2 = capped(mine.map((x5, i5) => tl2(
       i5 + 1,
@@ -41528,6 +41735,7 @@ ${s5}`;
     $("#chgTitle").textContent = `${done.length} since ${longDate(LASTVISIT.slice(0, 10))}`;
     putHTML($("#chgList"), rc2.html ? raw(rc2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0, 10))}.</span></div></li>`);
     putHTML($("#chgMore"), html`${raw(rc2.more)}${rc2.more ? " · " : ""}<a class="s" href="#" data-go="activity">See all activity</a>`);
+    renderIntakeLine();
     renderToDecide();
     renderWeek();
     putHTML($("#pfTbl"), raw(portfolioTable("pf", true)));
@@ -41865,6 +42073,7 @@ ${s5}`;
     }
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("[data-refcal]")) refreshCalendar();
+      if (e4.target.closest("[data-thelp]")) toggleHelpPanel("today");
     });
   }
   var PEOPLE_MOVE = "setup: move the people still listed in settings.json into the people register";
@@ -42045,7 +42254,7 @@ ${s5}`;
   function portfolioTable(id2 = "pf", dots = false) {
     return `<table><thead><tr>${PFCOLS.map(([k5, l6]) => `<th data-col="${k5}">${l6}${k5 === "trend" ? legBtn() : ""}</th>`).join("")}</tr></thead><tbody>${P4.map((p6) => {
       const nm3 = p6.ms.find((m5) => m5[2] !== "done") || p6.ms[p6.ms.length - 1] || ["No milestones yet", "", ""], ds2 = (p6.client || "").trim(), did = `${id2}d-${p6.code}`;
-      return `<tr class="click" data-cock="${p6.code}"><td><button type="button" class="pfname"${ds2 ? ` data-tip="${esc(ds2)}" aria-describedby="${did}"` : ""}>${esc(p6.name)}</button>${ds2 ? `<span class="vh" id="${did}">${esc(ds2)}</span>` : ""}<button type="button" class="ib bd pset" data-psettings="${p6.code}" aria-label="Project settings: ${esc(p6.name)}" data-tip="Project settings">${ic("gear")}</button></td><td>${dots ? `<span data-statusdot="${esc(p6.health || "")}"></span>` : health(p6.health)}<div class="sub" style="max-width:36ch">${esc(p6.reason)}</div></td><td>${evidence(p6)}</td><td>${spark(p6)}</td><td>${esc(nm3[0])}${nm3[1] ? `<div class="sub ${nm3[2] === "slip" ? "late" : ""}">${longDay(nm3[1])} (${rel(nm3[1]).replace(/^./, (c5) => c5.toLowerCase())})</div>` : ""}</td></tr>`;
+      return `<tr class="click" data-cock="${p6.code}"><td><button type="button" class="pfname"${ds2 ? ` data-tip="${esc(ds2)}" aria-describedby="${did}"` : ""}>${esc(p6.name)}</button>${ds2 ? `<span class="vh" id="${did}">${esc(ds2)}</span>` : ""}</td><td>${dots ? `<span data-statusdot="${esc(p6.health || "")}"></span>` : health(p6.health)}<div class="sub" style="max-width:36ch">${esc(p6.reason)}</div></td><td>${evidence(p6)}</td><td>${spark(p6)}</td><td>${esc(nm3[0])}${nm3[1] ? `<div class="sub ${nm3[2] === "slip" ? "late" : ""}">${longDay(nm3[1])} (${rel(nm3[1]).replace(/^./, (c5) => c5.toLowerCase())})</div>` : ""}</td></tr>`;
     }).join("")}</tbody></table>`;
   }
   function pfResize(box) {
@@ -42104,7 +42313,7 @@ ${s5}`;
       if (b5.dataset.d) remPick(n4.dataset.id, b5.dataset.d);
     });
     document.addEventListener("click", (e4) => {
-      if (e4.target.closest && e4.target.closest(".colrz,[data-psettings]")) return;
+      if (e4.target.closest && e4.target.closest(".colrz")) return;
       const r4 = e4.target.closest("[data-cock]");
       if (r4) go2("cockpit", r4.dataset.cock);
     });
@@ -42154,9 +42363,16 @@ ${s5}`;
       if ($("#setupList") && !$("#suMore")) addHTML($("#setupList"), "beforeend", html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`);
     }
   }
+  var SDKEY = "creaite-sweepdue-dismissed";
+  var SDMEM = null;
+  var sdLast = () => String(D.sweep_due && D.sweep_due.last || "");
+  function sweepDueDismissed() {
+    const d5 = SDMEM || store.get(SDKEY, null);
+    return !!(d5 && d5.day === TODAY && d5.last === sdLast());
+  }
   function sweepDueShown() {
     const sd2 = D.sweep_due;
-    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept());
+    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && !sweepDueDismissed();
   }
   function renderSweepDue() {
     const box = $("#sweepDue");
@@ -42167,8 +42383,24 @@ ${s5}`;
       putHTML(box, html``);
       return;
     }
-    putHTML(box, html`<b>Sweep due since ${D.sweep_due.due_from || "07:00"}.</b> <span class="sd-last">${D.sweep_due.last ? `Last swept ${D.sweep_due.last}.` : "No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span>`);
+    putHTML(box, html`<b>Sweep due since ${D.sweep_due.due_from || "07:00"}.</b> <span class="sd-last">${D.sweep_due.last ? `Last swept ${D.sweep_due.last}.` : "No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next sweep is due" data-tip="Dismiss until the next sweep is due">${raw(ic("x"))}</button>`);
   }
+  document.addEventListener("click", (e4) => {
+    if (!e4.target.closest("#sweepX")) return;
+    e4.preventDefault();
+    const box = $("#sweepDue"), had = box && box.contains(document.activeElement);
+    SDMEM = { day: TODAY, last: sdLast() };
+    store.set(SDKEY, SDMEM);
+    renderSweepDue();
+    if (had || document.activeElement === document.body) {
+      const v5 = $("#v-today"), nxt = v5 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(box.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
+      if (nxt) nxt.focus();
+      else if (v5) {
+        if (!v5.hasAttribute("tabindex")) v5.setAttribute("tabindex", "-1");
+        v5.focus();
+      }
+    }
+  });
   document.addEventListener("click", (e4) => {
     if (!e4.target.closest("#sweepRun")) return;
     e4.preventDefault();
@@ -42649,37 +42881,84 @@ ${s5}`;
     const tr2 = $(`#reviewBody tr[data-n="${r4.n}"]`);
     if (tr2) tr2.scrollIntoView({ block: "center" });
   }
-  var TDFOLD = "creaite-intake-review-hidden";
-  var tdFoldWired = false;
-  function wireTdFold() {
-    const f5 = (
-      /** @type {HTMLDetailsElement|null} */
-      $("#tdFold")
-    );
-    if (!f5 || tdFoldWired) return;
-    tdFoldWired = true;
-    f5.open = store.get(TDFOLD, false) !== true;
-    f5.addEventListener("toggle", () => store.set(TDFOLD, !f5.open));
-  }
-  function tdLine() {
+  var intakeTarget = (
+    /** @param {string} key */
+    (key2) => key2 === "proposals" ? "review" : "inbox"
+  );
+  function intakeParts() {
     const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(mtgHasTx).length, fl2 = (D.inbox || []).filter((f5) => f5.state === "new").length, L3 = [];
-    if (pr2) L3.push({ key: "review", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} in Review`, go: "review" });
-    if (nTr) L3.push({ key: "transcripts", n: nTr, text: `${nTr} transcript${nTr === 1 ? "" : "s"} ready in Intake`, go: "inbox" });
-    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} in Intake`, go: "inbox" });
+    if (nTr) L3.push({ key: "meetings", n: nTr, text: `${nTr} meeting${nTr === 1 ? "" : "s"} ready to process`, go: intakeTarget("meetings") });
+    if (pr2) L3.push({ key: "proposals", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} to approve`, go: intakeTarget("proposals") });
+    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} to process`, go: intakeTarget("files") });
     return L3;
   }
+  var TQKEY = "creaite-intakeline-dismissed";
+  var TQMEM = (
+    /** @type {{day:string,c:Record<string,number>}|null} */
+    null
+  );
+  var tqCounts = (
+    /** @param {{key:string,n:number}[]} parts */
+    (parts) => Object.fromEntries(["meetings", "proposals", "files"].map((k5) => [k5, (parts.find((x5) => x5.key === k5) || { n: 0 }).n]))
+  );
+  function tqRead() {
+    try {
+      const v5 = localStorage.getItem(TQKEY);
+      return v5 ? JSON.parse(v5) : null;
+    } catch (e4) {
+      return TQMEM;
+    }
+  }
+  function tqWrite(d5) {
+    TQMEM = d5;
+    try {
+      localStorage.setItem(TQKEY, JSON.stringify(d5));
+      return true;
+    } catch (e4) {
+      return false;
+    }
+  }
+  function intakeDismissed(parts) {
+    const d5 = tqRead();
+    if (!d5 || d5.day !== TODAY || !d5.c) return false;
+    const c5 = tqCounts(parts);
+    if (Object.keys(c5).some((k5) => c5[k5] > (d5.c[k5] || 0))) return false;
+    const low = { day: d5.day, c: Object.fromEntries(Object.keys(c5).map((k5) => [k5, Math.min(c5[k5], d5.c[k5] || 0)])) };
+    if (Object.keys(c5).some((k5) => low.c[k5] !== d5.c[k5])) tqWrite(low);
+    return true;
+  }
+  function renderIntakeLine() {
+    const host2 = $("#tdQuietHost");
+    if (!host2) return;
+    const parts = intakeParts(), hid = intakeDismissed(parts);
+    drawIntakeLine(host2, hid ? [] : parts, (pg2) => go2(pg2));
+  }
+  document.addEventListener("click", (e4) => {
+    const x5 = e4.target.closest && e4.target.closest("#tdQx");
+    if (!x5) return;
+    e4.preventDefault();
+    const host2 = $("#tdQuietHost"), had = host2 && host2.contains(document.activeElement);
+    tqWrite({ day: TODAY, c: tqCounts(intakeParts()) });
+    renderIntakeLine();
+    if (had || document.activeElement === document.body) {
+      const v5 = $("#v-today"), nxt = v5 && host2 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(host2.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
+      if (nxt) nxt.focus();
+      else if (v5) {
+        if (!v5.hasAttribute("tabindex")) v5.setAttribute("tabindex", "-1");
+        v5.focus();
+      }
+    }
+  });
+  window.addEventListener("storage", (e4) => {
+    if (e4.key === TQKEY || e4.key === null) renderIntakeLine();
+  });
   function renderToDecide() {
     const sec = $("#tdSec"), body2 = $("#tdBody");
     if (!sec || !body2) return;
-    wireTdFold();
-    const L3 = toDecideRows(), line = tdLine(), total = REV.filter((r4) => !r4.done).length, n4 = L3.filter((r4) => r4.kind !== "quiet").length + line.reduce((a5, x5) => a5 + x5.n, 0);
-    sec.hidden = !L3.length && !line.length;
-    {
-      const nw2 = $("#tdNew");
-      if (nw2) nw2.hidden = !VIPCARDS().length;
-    }
+    const L3 = toDecideRows(), n4 = L3.filter((r4) => r4.kind !== "quiet").length;
+    sec.hidden = !L3.length;
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
+    drawToDecide(body2, { rows: L3, cap: TDCAP, open: EXPAND.has("td"), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
@@ -42926,6 +43205,7 @@ ${s5}`;
     });
     $("#alertCmd").textContent = START_CMD;
     document.addEventListener("mousedown", (e4) => {
+      helpOutsidePress(e4);
       if (e4.target.closest(".snack,.cal,dialog")) return;
       if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person") && !e4.target.closest(OPENERS) && !e4.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();
       if ($("#chat").classList.contains("on") && !e4.target.closest("#chat") && !e4.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();
@@ -57743,7 +58023,7 @@ ${d5.text}`);
       else prompt("Copy this link:", u5);
     };
     window.addEventListener("keydown", (e4) => {
-      if (e4.key !== "Escape" || !pkOn() || shared.EDITING) return;
+      if (e4.key !== "Escape" || !pkOn() || shared.EDITING || helpPanelOpen()) return;
       const a5 = document.activeElement;
       if (document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop")) return;
       if (a5 && a5.closest && a5.closest("#chat")) {
@@ -60446,7 +60726,7 @@ ${d5.text}`);
     closeChat();
     const task = (id2) => HD.tasks.find((t47) => t47.id === id2), ref = HD.sections.find((x5) => x5.id === sc2.ref);
     putHTML(p6, raw(`<div class="hpn-h"><h2 id="hpnT">Help · ${esc(sc2.title)}</h2><button type="button" class="iconbtn" id="hpnX" aria-label="Close Help">×</button></div>
-    <p class="sub">Esc closes it and you are back where you were.</p>
+    <p class="sub">Esc or a click outside closes it, and you are back where you were.</p>
     <ul class="hpn-jobs">${sc2.ids.map((id2) => task(id2)).filter(Boolean).map((t47) => `<li><a href="#help-howto-${esc(t47.id)}" data-hpn="howto-${esc(t47.id)}"><b>${esc(t47.title)}</b>${t47.where ? `<span>${esc(t47.where)}</span>` : ""}</a></li>`).join("")}</ul>
     <div class="hpn-f">${ref ? `<a href="#help-reference-${esc(ref.id)}" data-hpn="reference-${esc(ref.id)}">How ${esc(sc2.title)} works</a>` : ""}<button type="button" class="linkbtn" id="hpnFind">Search all of Help</button></div>`));
     p6.setAttribute("aria-labelledby", "hpnT");
@@ -60464,6 +60744,29 @@ ${d5.text}`);
     PANELFROM = null;
     if (p6.contains(document.activeElement)) document.activeElement.blur();
     if (!noReturn && t47 && t47.isConnected) t47.focus();
+  }
+  function toggleHelpPanel(key2) {
+    if (helpPanelOpen()) {
+      closeHelpPanel();
+      return true;
+    }
+    return openHelpPanel(key2);
+  }
+  var HELP_KEEP = "#helpPanel,[data-thelp],dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
+  var CONTROL = "a[href],button,input,select,textarea,[contenteditable=true],[contenteditable=''],[tabindex]:not([tabindex='-1'])";
+  function helpOutsidePress(e4) {
+    const t47 = (
+      /** @type {HTMLElement} */
+      e4.target
+    );
+    if (!helpPanelOpen() || !t47 || !t47.closest || t47.closest(HELP_KEEP)) return;
+    const back2 = PANELFROM;
+    closeHelpPanel(true);
+    if (t47.closest(CONTROL) || !back2) return;
+    setTimeout(() => {
+      const a5 = document.activeElement;
+      if (back2.isConnected && (!a5 || a5 === document.body || !a5.closest(CONTROL))) back2.focus();
+    }, 0);
   }
   var MEM = /* @__PURE__ */ new Set();
   var lkey = (k5) => "creaite-help-line-" + k5;
@@ -65298,6 +65601,183 @@ ${d5.text}`);
     if (box) R(/* @__PURE__ */ u2(RejectsList, { ...props }), box);
   }
 
+  // components/activity/UsagePanel.jsx
+  var KIND = {
+    ask: "ask creaite",
+    sweep: "Sweep",
+    generate: "Generate current state",
+    prep: "Prep page",
+    draft: "Drafts",
+    check: "Transcript check",
+    load: "Transcript load",
+    vip: "Alert check",
+    other: "Other"
+  };
+  var FILE = {
+    rules: "Rules (creaite-rules.md)",
+    claude_md: "Your CLAUDE.md",
+    memory: "Project memory and registers",
+    skills: "Skill names and descriptions"
+  };
+  var num = (n4) => n4 == null ? "–" : Math.round(n4).toLocaleString("en-GB");
+  var usd = (n4) => `$${(n4 || 0).toFixed(2)}`;
+  var signed = (n4, f5 = num) => (n4 > 0 ? "+" : n4 < 0 ? "−" : "") + f5(Math.abs(n4));
+  var usageKb = (b5) => {
+    const k5 = b5 / 1e3;
+    return `${k5 >= 10 ? Math.round(k5) : Number(k5.toFixed(1))} KB`;
+  };
+  function delta(c5, pct) {
+    const ch2 = pct ? c5.change_pct : c5.change;
+    if (c5.before == null || pct && !c5.before) return ["nothing to compare with last week", ""];
+    if (ch2 == null || ch2 === 0) return ["no change on last week", ""];
+    return [`${pct ? signed(ch2, (n4) => `${n4}%`) : signed(ch2)} on last week`, ch2 > 0 ? "up" : "dn"];
+  }
+  function Chart({ days: days2, fd: fd3 }) {
+    const W3 = 760, H4 = 150, L3 = 34, B4 = 22, n4 = days2.length, bw2 = (W3 - L3) / n4;
+    const top = Math.max(1, Math.ceil(Math.max(...days2.map((d5) => d5.cost_usd)))), step2 = top > 6 ? Math.ceil(top / 5) : 1;
+    const max = Math.ceil(top / step2) * step2 + (top === Math.ceil(top / step2) * step2 ? step2 : 0);
+    const starts = days2.map((d5) => d5.start_median).filter((v5) => v5 != null), lo2 = starts.length ? Math.min(...starts) : 0, hi2 = starts.length ? Math.max(...starts) : 0;
+    const half = Math.max(hi2 - lo2, hi2 * 0.15, 1e3) * 1.5, mid = (lo2 + hi2) / 2;
+    const y5 = (v5) => H4 - B4 - (H4 - B4 - 8) * (v5 - (mid - half)) / (half * 2);
+    const pts = days2.map((d5, i5) => d5.start_median == null ? null : `${L3 + i5 * bw2 + bw2 / 2},${y5(d5.start_median)}`).filter(Boolean).join(" ");
+    const grid = [];
+    for (let g5 = 0; g5 <= max; g5 += step2) grid.push(g5);
+    const label = `Cost per day, last ${n4} days, and the median tokens a run loaded before it started`;
+    return /* @__PURE__ */ u2("svg", { viewBox: `0 0 ${W3} ${H4}`, role: "img", "aria-label": label, children: [
+      grid.map((g5) => {
+        const gy2 = H4 - B4 - (H4 - B4 - 8) * g5 / max;
+        return /* @__PURE__ */ u2("g", { children: [
+          /* @__PURE__ */ u2("line", { class: "ugrid", x1: L3, x2: W3, y1: gy2, y2: gy2 }),
+          /* @__PURE__ */ u2("text", { class: "uax", x: "2", y: gy2 + 4, children: `$${g5}` })
+        ] }, g5);
+      }),
+      days2.map((d5, i5) => {
+        const h5 = (H4 - B4 - 8) * d5.cost_usd / max;
+        return /* @__PURE__ */ u2("g", { children: [
+          /* @__PURE__ */ u2("rect", { class: "ubar", x: L3 + i5 * bw2 + 6, y: H4 - B4 - h5, width: bw2 - 12, height: h5, children: /* @__PURE__ */ u2("title", { children: `${fd3(d5.day)}: ${usd(d5.cost_usd)}, ${d5.runs} ${d5.runs === 1 ? "run" : "runs"}` }) }),
+          /* @__PURE__ */ u2("text", { class: "uax", x: L3 + i5 * bw2 + bw2 / 2, y: H4 - 6, "text-anchor": "middle", children: fd3(d5.day).slice(0, 5) })
+        ] }, d5.day);
+      }),
+      pts ? /* @__PURE__ */ u2("polyline", { class: "uline", points: pts, fill: "none" }) : null,
+      starts.length ? /* @__PURE__ */ u2("text", { class: "uax uaxl", x: W3 - 4, y: "12", "text-anchor": "end", children: `start load ${num(starts[0])} → ${num(starts[starts.length - 1])} tokens` }) : null
+    ] });
+  }
+  function Runs({ u: u5, fd: fd3 }) {
+    const c5 = u5.cards || {}, kinds = u5.by_kind || [];
+    const cards = [
+      ["cost", "Cost this week", usd(c5.cost?.now), c5.cost && delta(c5.cost, true)],
+      ["runs", "Runs this week", num(c5.runs?.now), c5.runs && delta(c5.runs, true)],
+      ["start", "Tokens a run loads before it starts", num(c5.start?.now), c5.start && delta(c5.start, false)],
+      ["avg", "Cost of an average run", usd(c5.avg_cost?.now), c5.avg_cost && delta(c5.avg_cost, true)]
+    ];
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "usum", children: cards.map(([k5, label, v5, d5]) => /* @__PURE__ */ u2("div", { class: "ucard", children: [
+        /* @__PURE__ */ u2("div", { class: "v", children: v5 }),
+        /* @__PURE__ */ u2("div", { class: "l", children: label }),
+        /* @__PURE__ */ u2("div", { class: `d ${d5 ? d5[1] : ""}`, children: d5 ? d5[0] : "" })
+      ] }, k5)) }),
+      /* @__PURE__ */ u2("div", { class: "uchart", children: [
+        /* @__PURE__ */ u2("h2", { children: "Cost and what each run loads before it starts, by day" }),
+        /* @__PURE__ */ u2(Chart, { days: u5.by_day || [], fd: fd3 }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "Bars: cost in dollars. Line: the median tokens a run loaded before doing anything (the rules file, CLAUDE.md, memory and skill names)." })
+      ] }),
+      /* @__PURE__ */ u2("h2", { children: "By kind of run" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "By kind of run", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Kind" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Runs" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Average tokens" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Loaded at start (median)" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Cost" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Share of cost" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: kinds.map((k5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: KIND[k5.kind] || KIND.other }),
+          /* @__PURE__ */ u2("td", { children: num(k5.runs) }),
+          /* @__PURE__ */ u2("td", { children: num(k5.avg_tokens) }),
+          /* @__PURE__ */ u2("td", { children: num(k5.start_median) }),
+          /* @__PURE__ */ u2("td", { children: usd(k5.cost_usd) }),
+          /* @__PURE__ */ u2("td", { children: `${k5.share_pct}%` })
+        ] }, k5.kind)) })
+      ] }) })
+    ] });
+  }
+  function Skills({ skills }) {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("h2", { children: "Skills" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "Skills", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Skill" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Runs" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Cost" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Last used" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: skills.map((s5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: s5.skill }),
+          /* @__PURE__ */ u2("td", { children: num(s5.runs) }),
+          /* @__PURE__ */ u2("td", { children: usd(s5.cost_usd) }),
+          /* @__PURE__ */ u2("td", { children: lastUsed(s5) })
+        ] }, s5.skill)) })
+      ] }) })
+    ] });
+  }
+  function lastUsed(s5) {
+    const ago = s5.days_since == null ? "" : s5.days_since === 0 ? "today" : s5.days_since === 1 ? "yesterday" : `${s5.days_since} days ago`;
+    if (s5.runs > 0) return ago;
+    return s5.days_since == null ? "never in this period (never run)" : `never in this period (${s5.days_since} ${s5.days_since === 1 ? "day" : "days"})`;
+  }
+  function Loads({ rows: rows2, start, fd: fd3 }) {
+    const total = rows2.reduce((a5, r4) => a5 + r4.tokens, 0), rules = rows2.find((r4) => r4.file === "rules");
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("h2", { children: "What every run loads" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "The always-loaded files, measured once a day. Tokens are estimates (bytes ÷ 4); the change is over the last 30 days." }),
+      rows2.length ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "What every run loads", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: "File" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Now" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "About tokens" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Change in 30 days" })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { children: rows2.map((r4) => /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("td", { children: FILE[r4.file] || r4.file }),
+            /* @__PURE__ */ u2("td", { children: usageKb(r4.bytes) }),
+            /* @__PURE__ */ u2("td", { children: num(r4.tokens) }),
+            /* @__PURE__ */ u2("td", { children: ctxChange(r4, fd3) })
+          ] }, r4.file)) })
+        ] }) }),
+        /* @__PURE__ */ u2("div", { class: "unote", children: [
+          /* @__PURE__ */ u2("b", { children: "Why this matters:" }),
+          " ",
+          `Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round(rules.tokens / total * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`
+        ] })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Not measured yet. The live server measures these files once a day." })
+    ] });
+  }
+  function ctxChange(r4, fd3) {
+    if (r4.change_bytes == null || !r4.since) return "no earlier measure yet";
+    if (r4.change_bytes === 0) return "no change";
+    const k5 = Math.abs(r4.change_bytes) / 1e3;
+    return `${r4.change_bytes > 0 ? "+" : "−"}${Number((k5 >= 10 ? Math.round(k5) : k5).toFixed(1))} KB since ${fd3(r4.since)}`;
+  }
+  function UsagePanel({ usage, fd: fd3 }) {
+    const u5 = usage || {};
+    const bad = !usage || usage.error;
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Last ",
+        u5.days || 14,
+        " days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4)."
+      ] }),
+      bad || u5.empty ? /* @__PURE__ */ u2("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here." }) : /* @__PURE__ */ u2(Runs, { u: u5, fd: fd3 }),
+      /* @__PURE__ */ u2(Loads, { rows: u5.context || [], start: u5.cards?.start?.now, fd: fd3 }),
+      bad || u5.empty ? null : /* @__PURE__ */ u2(Skills, { skills: u5.skills || [] })
+    ] });
+  }
+  function mountUsage(host2, props) {
+    if (host2) R(/* @__PURE__ */ u2(UsagePanel, { ...props }), host2);
+  }
+
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
   function itemText(id2) {
@@ -65464,6 +65944,7 @@ ${d5.text}`);
   }
   var ACTSHOW = 300;
   function renderActivity() {
+    if (ACTTAB === "u") usageDraw();
     actTools();
     [...HL].forEach(([id2, k5]) => {
       if (k5 !== "act") HL.delete(id2);
@@ -65617,7 +66098,7 @@ ${d5.text}`);
         $("#actQ")?.select();
         return;
       }
-      if (e4.key === "Escape" && actSel().length && !filterBarOpen($("#actFbar")) && !document.querySelector("dialog[open]") && !$("#panel").classList.contains("on") && !actTyping()) {
+      if (e4.key === "Escape" && actSel().length && !helpPanelOpen() && !filterBarOpen($("#actFbar")) && !document.querySelector("dialog[open]") && !$("#panel").classList.contains("on") && !actTyping()) {
         e4.preventDefault();
         e4.stopImmediatePropagation();
         hlClear();
@@ -65709,23 +66190,46 @@ ${d5.text}`);
     dr2.replaceChildren();
     (q5.drafts || []).forEach((r4) => qRow(dr2, r4.label, r4.offered ? [String(r4.offered), r4.used.text, r4.edited.text, r4.rejected.text] : ["0", "—", "—", "—"], qNR(r4.rated, r4.offered, "offered")));
   }
-  function actTabsDraw(q5) {
-    drawTabs($("#actTabsHost"), {
-      items: [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }],
-      selected: q5 ? "q" : "ch",
-      onSelect: (id2) => actShowQuality(id2 === "q"),
-      label: "Activity",
-      className: "acttabs",
-      wrap: true
-    });
+  var ACTTABS = [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }, { id: "u", label: "Usage", tabId: "actTabU", controls: "actUsage" }];
+  var ACTTAB = "ch";
+  function actTabsDraw(tab) {
+    drawTabs($("#actTabsHost"), { items: ACTTABS, selected: tab, onSelect: (id2) => actShowTab(id2), label: "Activity", className: "acttabs", wrap: true });
   }
-  function actShowQuality(q5) {
-    $("#v-activity").classList.toggle("q", q5);
-    $("#actQuality").hidden = !q5;
-    actTabsDraw(q5);
-    if (q5) {
+  function actShowTab(tab) {
+    ACTTAB = tab;
+    const v5 = $("#v-activity");
+    v5.classList.toggle("q", tab === "q");
+    v5.classList.toggle("u", tab === "u");
+    $("#actQuality").hidden = tab !== "q";
+    $("#actUsage").hidden = tab !== "u";
+    actTabsDraw(tab);
+    if (tab === "q") {
       renderQuality();
       rjLoadRecent();
+    }
+    if (tab === "u") usageOpen();
+  }
+  var actShowQuality = (q5) => actShowTab(q5 ? "q" : "ch");
+  var USAGE_ROUTE = true;
+  function usageDraw() {
+    mountUsage($("#actUsage"), { usage: D.usage, fd });
+  }
+  async function usageOpen() {
+    usageDraw();
+    if (!USAGE_ROUTE || !viaServer()) return;
+    try {
+      const r4 = await fetch("/api/usage", { headers: { "X-Creaite-Token": D.token || "" } });
+      if (r4.status === 404 || r4.status === 405) {
+        USAGE_ROUTE = false;
+        return;
+      }
+      const j5 = r4.ok ? await r4.json() : null;
+      if (j5 && j5.cards && Array.isArray(j5.by_day)) {
+        D.usage = j5;
+        if (ACTTAB === "u") usageDraw();
+      }
+    } catch (e4) {
+      USAGE_ROUTE = true;
     }
   }
   function bootActivity0205() {
@@ -65736,7 +66240,7 @@ ${d5.text}`);
       name: pName,
       when: (at2) => `${fd(String(at2).slice(0, 10))}${String(at2).length > 15 ? " " + String(at2).slice(11, 16) : ""}`
     });
-    actTabsDraw(false);
+    actTabsDraw("ch");
   }
 
   // components/prep/PrepEditor.jsx
@@ -66636,6 +67140,447 @@ ${d5.text}`);
     ] });
   }
 
+  // components/report/sheetLib.js
+  var SHEET_ZOOM_MIN = 0.4, SHEET_ZOOM_MAX = 0.8, SHEET_ZOOM_STEP = 0.05, SHEET_ZOOM_DEFAULT = 0.8;
+  var MM = 96 / 25.4;
+  var A4_W = 210, A4_H = 297, PAD_MM = 16, CONTENT_MM = 265;
+  var clampZoom = (z4) => Math.round(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, Number.isFinite(z4) ? z4 : SHEET_ZOOM_DEFAULT)) * 1e3) / 1e3;
+  var stepZoom = (z4, dir) => clampZoom(Math.round((z4 + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP);
+  var pinchZoom = (z4, deltaY) => clampZoom(z4 * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01));
+  var defaultHeading = (s5) => s5.default_heading == null ? s5.heading : s5.default_heading;
+  function syncLayout(doc) {
+    const d5 = (
+      /** @type {any} */
+      doc
+    ), lay = { ...d5.layout || {} }, secs = d5.sections || [];
+    lay.order = secs.map((s5) => s5.id);
+    lay.hidden = secs.filter((s5) => s5.hidden).map((s5) => s5.id);
+    const heads = { ...lay.headings || {} };
+    for (const s5 of secs) {
+      if (s5.heading !== defaultHeading(s5)) heads[s5.id] = s5.heading;
+      else delete heads[s5.id];
+    }
+    lay.headings = heads;
+    const fig = secs.find((s5) => s5.type === "figures" && !s5.hidden);
+    if (fig) lay.glance = (fig.figures || []).filter((f5) => f5.shown !== false).map((f5) => f5.key);
+    return (
+      /** @type {D} */
+      { ...d5, layout: lay }
+    );
+  }
+  function mapSection(doc, id2, fn2) {
+    const sections = doc.sections.map((s5, i5) => s5.id === id2 ? fn2(s5, i5) : s5);
+    return syncLayout({ ...doc, sections });
+  }
+  function moveSection(doc, id2, to2, lo2 = 0) {
+    const from = doc.sections.findIndex((s6) => s6.id === id2);
+    if (from < 0) return doc;
+    const at2 = Math.max(lo2, Math.min(doc.sections.length - 1, to2));
+    if (at2 === from || from < lo2) return doc;
+    const sections = doc.sections.slice(), [s5] = sections.splice(from, 1);
+    sections.splice(at2, 0, s5);
+    return syncLayout({ ...doc, sections });
+  }
+  function moveBy(doc, id2, delta2, lo2 = 0) {
+    const from = doc.sections.findIndex((s5) => s5.id === id2);
+    return from < 0 ? doc : moveSection(doc, id2, from + delta2, lo2);
+  }
+  var hideSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: true }));
+  var showSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: false }));
+  var isStub = (s5) => s5.type === "table" ? !Array.isArray(s5.rows) && !s5.text : s5.type === "figures" ? !Array.isArray(s5.figures) : s5.type === "panes" ? !Array.isArray(s5.panes) : !("text" in s5) || s5.text == null;
+  function renameHeading(doc, id2, text) {
+    const t47 = String(text || "").replace(/\s+/g, " ").trim();
+    return t47 ? mapSection(doc, id2, (s5) => ({ ...s5, heading: t47 })) : doc;
+  }
+  var resetHeading = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, heading: defaultHeading(s5) }));
+  function moveFigure(doc, id2, key2, before) {
+    return mapSection(doc, id2, (s5) => {
+      const figs = (s5.figures || []).slice(), from = figs.findIndex((f6) => f6.key === key2);
+      if (from < 0 || key2 === before) return s5;
+      const [f5] = figs.splice(from, 1), at2 = before == null ? -1 : figs.findIndex((x5) => x5.key === before);
+      figs.splice(at2 < 0 ? figs.length : at2, 0, f5);
+      return { ...s5, figures: figs };
+    });
+  }
+  var setFigureShown = (doc, id2, key2, shown2) => mapSection(doc, id2, (s5) => ({
+    ...s5,
+    figures: (s5.figures || []).map((f5) => f5.key === key2 ? { ...f5, shown: shown2 } : f5)
+  }));
+  var setRowShown = (doc, id2, index, shown2) => mapSection(doc, id2, (s5) => ({
+    ...s5,
+    rows: (s5.rows || []).map((r4, i5) => i5 === index ? { ...r4, shown: shown2 } : r4)
+  }));
+  var rowCounts = (s5) => [(s5.rows || []).filter((r4) => r4.shown !== false).length, (s5.rows || []).length];
+  function shownOf(s5) {
+    if (!s5) return null;
+    if (s5.hidden) return { hidden: true };
+    return {
+      heading: s5.heading,
+      text: s5.text || "",
+      flag: (s5.data || {}).flag || "",
+      rows: (s5.rows || []).filter((r4) => r4.shown !== false).map((r4) => [r4.ref || "", r4.cells || {}]),
+      figures: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => [f5.key, f5.value, f5.label, f5.note || ""]),
+      panes: (s5.panes || []).map((p6) => [p6.title, p6.text])
+    };
+  }
+  var sectionDiffers = (a5, b5) => JSON.stringify(shownOf(a5)) !== JSON.stringify(shownOf(b5));
+  var TEXT_TYPE = "freetext";
+  var isTextSection = (s5) => !!s5 && s5.type === TEXT_TYPE;
+  function newTextId(doc) {
+    const have = new Set((doc.sections || []).map((s5) => s5.id));
+    for (; ; ) {
+      const id2 = `free_${Math.random().toString(36).slice(2, 8)}`;
+      if (!have.has(id2)) return id2;
+    }
+  }
+  function withTextSection(doc, afterId, id2 = newTextId(doc)) {
+    const at2 = afterId == null ? -1 : doc.sections.findIndex((s5) => s5.id === afterId);
+    const sec = { id: id2, type: TEXT_TYPE, heading: "", default_heading: "", hidden: false, text: "", audience: (doc.audience || "internal") === "internal" ? "internal" : "client" };
+    const sections = doc.sections.slice();
+    sections.splice(at2 < 0 ? sections.length : at2 + 1, 0, sec);
+    return syncLayout({ ...doc, sections });
+  }
+  function withoutSection(doc, id2) {
+    const out = syncLayout({ ...doc, sections: doc.sections.filter((s5) => s5.id !== id2) });
+    const heads = { ...(out.layout || {}).headings || {} };
+    delete heads[id2];
+    return { ...out, layout: { ...out.layout, headings: heads } };
+  }
+  function addTextCopy(left, right, src) {
+    const copy = { ...JSON.parse(JSON.stringify(src)), hidden: false, audience: (right.audience || "internal") === "internal" ? "internal" : "client" };
+    delete copy.tags;
+    const order = left.sections.map((s5) => s5.id), k5 = order.indexOf(src.id), have = new Set(right.sections.map((s5) => s5.id));
+    let after = null;
+    for (let j5 = k5 - 1; j5 >= 0; j5--) if (have.has(order[j5])) {
+      after = order[j5];
+      break;
+    }
+    const at2 = after == null ? right.sections.length : right.sections.findIndex((s5) => s5.id === after) + 1;
+    const sections = right.sections.slice();
+    sections.splice(at2, 0, copy);
+    return syncLayout({ ...right, sections });
+  }
+  function matchSection(left, right, id2) {
+    const src = left.sections.find((s5) => s5.id === id2), mine = right.sections.find((s5) => s5.id === id2);
+    if (src && !mine && isTextSection(src)) return addTextCopy(left, right, src);
+    if (!src || !mine) return right;
+    if (isTextSection(src)) return mapSection(right, id2, (s5) => ({ ...s5, heading: src.heading, text: src.text || "" }));
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.hidden = !!mine.hidden;
+    if (Array.isArray(copy.rows)) {
+      const eyes = new Map((mine.rows || []).filter((r4) => r4.ref).map((r4) => [r4.ref, r4.shown !== false]));
+      copy.rows = copy.rows.map((r4) => r4.ref && eyes.has(r4.ref) ? { ...r4, shown: eyes.get(r4.ref) } : r4);
+    }
+    if (Array.isArray(copy.figures)) {
+      const eyes = new Map((mine.figures || []).map((f5) => [f5.key, f5.shown !== false]));
+      copy.figures = copy.figures.map((f5) => eyes.has(f5.key) ? { ...f5, shown: eyes.get(f5.key) } : f5);
+    }
+    return mapSection(right, id2, () => copy);
+  }
+  function matchLabel(left, right, id2, label) {
+    const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
+    return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
+  }
+  function pageBreaks(sections, page, total) {
+    let cum = 0;
+    const pushes = sections.map(([t47, h5]) => {
+      const top = t47 + cum, p6 = Math.floor(top / page);
+      if (h5 <= page && h5 > 0 && top > p6 * page && top + h5 > (p6 + 1) * page) {
+        const push = (p6 + 1) * page - top;
+        cum += push;
+        return push;
+      }
+      return 0;
+    });
+    const end = total + cum, marks = [];
+    for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
+    return { pushes, marks };
+  }
+  var NOTHING = /<[^<>]{0,200}>|&nbsp;|&#160;|\u00a0/g;
+  var blankCells = (cells, ref) => Object.values(cells || {}).every((v5) => v5 == null || v5 === ref || !String(v5).replace(NOTHING, "").trim());
+
+  // components/report/clientDoc.js
+  var CLIENT_FLAGS = (
+    /** @type {const} */
+    [["On track", "g"], ["At risk", "a"], ["Off track", "r"]]
+  );
+  var secOf = (doc, id2) => doc ? doc.sections.find((s5) => s5.id === id2) : void 0;
+  var flagOf = (doc) => String(((secOf(doc, "health") || {}).data || {}).flag || "");
+  var withClientSection = (doc, id2, patch) => ({ ...doc, sections: doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...patch } : s5) });
+  function cellsFor(sectionId, item) {
+    const it2 = item || {};
+    const day = (iso2) => iso2 && /^\d{4}-\d{2}-\d{2}/.test(iso2) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}` : "";
+    if (sectionId === "risks") return { type: it2.type || "", risk: it2.title || "" };
+    if (sectionId === "overdue") return { action: it2.title || "", owner: it2.owner || "", due: day(it2.due_date) };
+    if (sectionId === "asks") return { ask: it2.title || "", from: it2.owner || "", by: day(it2.due_date), why: "" };
+    if (sectionId === "decisions") return { decision: it2.title || "", date: day(it2.date) };
+    return {};
+  }
+  var shownRefs = (s5) => s5 && !s5.hidden ? (s5.rows || []).filter((r4) => r4.shown !== false && r4.ref).map((r4) => String(r4.ref)) : [];
+  function matchState(client, internal, id2) {
+    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return null;
+    if (c5.type === "health") return flagOf(client) === flagOf(internal) && (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
+    if (c5.type === "table") {
+      const want = shownRefs(i5).filter((r4) => (c5.rows || []).some((x5) => x5.ref === r4)).sort().join(), have = shownRefs(c5).sort().join();
+      return want === have ? "matching" : "edited";
+    }
+    if (c5.type === "timeline") return JSON.stringify(((c5.data || {}).milestones || []).slice().sort()) === JSON.stringify(((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => ((c5.data || {}).timeline || []).includes(m5)).sort()) ? "matching" : "edited";
+    if (c5.type === "panes") return JSON.stringify((c5.panes || []).map((p6) => (p6.text || "").trim())) === JSON.stringify((i5.panes || []).map((p6) => (p6.text || "").trim())) ? "matching" : "edited";
+    return (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
+  }
+  function matchClientSection(client, internal, id2) {
+    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (i5 && i5.type === TEXT_TYPE && !i5.hidden) {
+      return c5 ? withClientSection(client, id2, { heading: i5.heading, text: i5.text || "", audience: "client" }) : addTextCopy(internal, client, i5);
+    }
+    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return client;
+    if (c5.type === "health") {
+      const meta = { ...client.meta || {} };
+      delete meta.health_diff;
+      return { ...withClientSection(client, id2, { text: i5.text || "", data: { ...c5.data || {}, flag: flagOf(internal) } }), meta };
+    }
+    if (c5.type === "table") {
+      const on2 = shownRefs(i5);
+      const held = client.items || {}, bare = (r4) => r4.cells ? blankCells(r4.cells, String(r4.ref)) : !held[String(r4.ref)];
+      return withClientSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) && !bare(r4) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, held[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
+    }
+    if (c5.type === "timeline") {
+      const all = (c5.data || {}).timeline || [], listed = ((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => all.includes(m5));
+      return withClientSection(client, id2, { data: { ...c5.data || {}, milestones: listed } });
+    }
+    if (c5.type === "panes") return withClientSection(client, id2, { panes: (i5.panes || []).map((p6) => ({ title: p6.title, text: p6.text })) });
+    return withClientSection(client, id2, { text: i5.text || "", tags: [] });
+  }
+  var matchClientAll = (client, internal) => client.sections.reduce((d5, s5) => matchClientSection(d5, internal, s5.id), client);
+  function healthDiff(client, internalFlag, clientFlag, reason) {
+    const meta = { ...client.meta || {} };
+    if (clientFlag === internalFlag) delete meta.health_diff;
+    else meta.health_diff = { internal: internalFlag, client: clientFlag, reason: reason.trim() };
+    return meta;
+  }
+  function leftLine(list) {
+    const shown2 = list.slice(0, 4).map((x5) => `${x5.ref} (${x5.why})`).join(", ");
+    return `${shown2}${list.length > 4 ? ` and ${list.length - 4} more` : ""}`;
+  }
+  var GROUP_LABEL = (
+    /** @type {Record<string, string>} */
+    { risks: "risks and issues", overdue: "overdue actions", decisions: "decisions", milestones: "milestones" }
+  );
+
+  // stores/clientReport.js
+  var crArg = y3(
+    /** @type {{code: string, week?: string, client?: string}|null} */
+    null
+  );
+  var crOpen = y3(
+    /** @type {{ok: boolean, message?: string}|null} */
+    null
+  );
+  var crDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var crInternal = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var crBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var crInfo = y3(
+    /** @type {{where: string, filed: boolean, ready: boolean, not_ready: string, baseline: {date: string, path: string, version: number}|null, findings: string[]}|null} */
+    null
+  );
+  var crMode = y3(
+    /** @type {"client"|"side"} */
+    "client"
+  );
+  var crCheck = y3(
+    /** @type {Check|null} */
+    null
+  );
+  var crLogos = y3(
+    /** @type {{kind: string, path: string}[]} */
+    []
+  );
+  var crBusy = y3("");
+  var crDialog = y3(false);
+  var crDirty = y3(false);
+  var crHeld = y3(
+    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */
+    null
+  );
+  var crAsked = 0;
+  function crIdentity(d5) {
+    const x5 = d5 === void 0 ? crDoc.value : d5;
+    return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
+  }
+  var sameDoc = (a5, b5) => !!a5 && !!b5 && a5.project === b5.project && a5.date === b5.date && (a5.client || "") === (b5.client || "");
+  var sameReport = (d5) => sameDoc(crDoc.value, d5);
+  async function loadClientReport(arg, fresh) {
+    const mine = ++crAsked;
+    crArg.value = arg;
+    crCheck.value = null;
+    crDirty.value = false;
+    if (!viaServer()) {
+      crOpen.value = { ok: false, message: "The client view needs the live server." };
+      return;
+    }
+    crBusy.value = "Opening the client report…";
+    const base = { code: arg.code, week_ending: arg.week || void 0 };
+    const [i5, c5] = await Promise.all([api("/api/report/draft", { kind: "weekly", ...base }), api("/api/report/draft", { kind: "client", ...base, client: arg.client || void 0, fresh: fresh || void 0 })]);
+    if (mine !== crAsked) return;
+    crBusy.value = "";
+    if (!c5 || !c5.ok || !c5.doc) {
+      crOpen.value = { ok: false, message: oneLine(c5 && c5.message || "") || "Couldn't open the client report" };
+      crDoc.value = null;
+      return;
+    }
+    crInternal.value = i5 && i5.ok ? i5.doc : null;
+    crDoc.value = c5.doc;
+    crLogos.value = c5.logos || [];
+    readLogos(arg.code, c5.logos || []);
+    crBase.value = Number(c5.doc.version) || void 0;
+    crInfo.value = { where: c5.where, filed: !!c5.filed, ready: !!c5.ready, not_ready: c5.not_ready || "", baseline: c5.baseline || null, findings: c5.findings || [] };
+    crOpen.value = { ok: true };
+    runCheck();
+  }
+  async function runCheck() {
+    const d5 = crDoc.value, opened = crIdentity(d5);
+    if (!d5 || !viaServer()) return null;
+    const r4 = (
+      /** @type {Check} */
+      await api("/api/report/check", { doc: d5 })
+    );
+    if (crIdentity() !== opened) return null;
+    crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
+    return crCheck.value;
+  }
+  async function saveClientPage(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      crBase.value = Number(r4.version) || crBase.value;
+      crDirty.value = false;
+      if (crInfo.value && crInfo.value.where === "new") crInfo.value = { ...crInfo.value, where: "draft" };
+    }
+    return r4;
+  }
+  async function approveClientReport(force) {
+    const a5 = crArg.value, d5 = crDoc.value;
+    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
+  }
+  async function exportClientReport(fmt) {
+    const a5 = crArg.value, d5 = crDoc.value;
+    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    const opened = crIdentity(d5);
+    if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
+      const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
+      if (!s5.ok) return s5;
+    }
+    if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
+    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
+  }
+  var matchChain = Promise.resolve();
+  var sameWeek = (i5, c5) => !!i5 && !!c5 && i5.project === c5.project && i5.date === c5.date;
+  function matchInternal(ids) {
+    const asked2 = crIdentity();
+    matchChain = matchChain.then(() => crIdentity() === asked2 ? matchInternalNow(ids) : void 0).catch(() => void 0);
+    return matchChain;
+  }
+  async function matchInternalNow(ids) {
+    const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
+    if (!d02 || !i5 || !sameWeek(i5, d02)) return;
+    const moved = () => crIdentity() !== opened || !sameReport(d02) || !sameWeek(crInternal.value, d02);
+    const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
+    const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
+    const internalText = (id2) => {
+      const x5 = secOf(i5, id2);
+      return !!x5 && x5.type === "freetext" && x5.audience === "internal";
+    };
+    const want = ids ? all : all.filter((id2) => !internalText(id2));
+    const skipped = ids ? [] : all.filter(internalText).map((id2) => ({ id: id2, heading: heading(id2) }));
+    const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
+    if (!cands.length) {
+      crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null;
+      return;
+    }
+    const failed = () => {
+      crHeld.value = { copied: [], skipped, held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
+    };
+    if (!viaServer()) {
+      failed();
+      return;
+    }
+    const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
+    if (moved()) return;
+    if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
+      failed();
+      return;
+    }
+    const codes = (fs2) => fs2.reduce(
+      (m5, f5) => m5.set(f5.code, (m5.get(f5.code) || 0) + 1),
+      /** @type {Map<string, number>} */
+      /* @__PURE__ */ new Map()
+    );
+    const base = codes(r4.findings[0]);
+    const fresh_of = (fs2) => {
+      const seen = (
+        /** @type {Map<string, number>} */
+        /* @__PURE__ */ new Map()
+      );
+      return fs2.filter((f5) => {
+        const n4 = (seen.get(f5.code) || 0) + 1;
+        seen.set(f5.code, n4);
+        return n4 > (base.get(f5.code) || 0);
+      });
+    };
+    const done = (
+      /** @type {string[]} */
+      []
+    ), held = (
+      /** @type {{id: string, heading: string, findings: string[]}[]} */
+      []
+    ), clean = (
+      /** @type {string[]} */
+      []
+    );
+    cands.forEach((c5, n4) => {
+      const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
+      if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
+      else clean.push(c5.id);
+    });
+    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
+    const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
+    if (clean.length) {
+      for (let tries = 0; ; tries++) {
+        const now = crDoc.value;
+        if (!now || moved()) return;
+        const d5 = onto(now);
+        const last = await api("/api/report/match-check", { docs: [d5] });
+        if (moved()) return;
+        const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
+        if (!extra || extra.length) {
+          failed();
+          return;
+        }
+        if (crDoc.value === now) {
+          kept(now).forEach((id2) => done.push(heading(id2)));
+          crDoc.value = d5;
+          crDirty.value = true;
+          break;
+        }
+        if (tries >= 2) {
+          crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." };
+          return;
+        }
+      }
+    }
+    crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
+  }
+
   // stores/textSection.js
   var ADD = null;
   function bindTextSections(fn2) {
@@ -66664,11 +67609,12 @@ ${d5.text}`);
   }
   var textMsg = y3("");
   var PICS = /* @__PURE__ */ new Map();
-  var mapOf = (code) => {
-    let m5 = PICS.get(code);
+  var mapOf = (code, kind = "") => {
+    const key2 = `${code}|${kind === "client" ? "client" : ""}`;
+    let m5 = PICS.get(key2);
     if (!m5) {
       m5 = /* @__PURE__ */ new Map();
-      PICS.set(code, m5);
+      PICS.set(key2, m5);
     }
     return m5;
   };
@@ -66677,17 +67623,17 @@ ${d5.text}`);
     for (const m5 of String(text || "").matchAll(/!\[[^\]\n]*\]\((_images\/[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(?:png|jpe?g))\)/gi)) out.add(m5[1]);
     return [...out];
   }
-  var reportImageSrc = (code, ref) => mapOf(code).get(ref) || null;
-  async function loadReportImages(code, refs) {
-    const m5 = mapOf(code), want = refs.filter((r5) => !m5.has(r5));
+  var reportImageSrc = (code, ref, kind = "") => mapOf(code, kind).get(ref) || null;
+  async function loadReportImages(code, refs, kind = "") {
+    const m5 = mapOf(code, kind), want = refs.filter((r5) => !m5.has(r5));
     if (!want.length || !viaServer()) return;
-    const r4 = await api("/api/report/images", { code, refs: want });
+    const r4 = await api("/api/report/images", { code, refs: want, kind: kind === "client" ? "client" : void 0 });
     if (r4 && r4.ok && r4.images) for (const [k5, v5] of Object.entries(
       /** @type {Record<string, string>} */
       r4.images
     )) m5.set(k5, v5);
   }
-  async function addReportImage(code, file) {
+  async function addReportImage(code, file, kind = "") {
     if (!/^image\/(png|jpeg)$/.test(file.type)) {
       textMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`;
       return null;
@@ -66706,13 +67652,13 @@ ${d5.text}`);
       fr2.onerror = () => res("");
       fr2.readAsDataURL(file);
     });
-    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1) }) : null;
+    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1), kind: kind === "client" ? "client" : void 0 }) : null;
     if (!r4 || !r4.ok) {
       textMsg.value = oneLine(r4 && r4.message || `${file.name} couldn't be added.`);
       return null;
     }
     textMsg.value = "";
-    mapOf(code).set(r4.ref, String(src));
+    mapOf(code, kind).set(r4.ref, String(src));
     return (
       /** @type {string} */
       r4.ref
@@ -66954,12 +67900,12 @@ ${d5.text}`);
     on2.current = onText;
     const marks = A2(checks);
     marks.current = checks;
-    const code = text ? text.code : "";
+    const code = text ? text.code : "", kind = text ? text.kind || "" : "";
     const [ready, setReady] = d2(!text || !imageRefsIn(value).length);
     h2(() => {
       if (!text || ready) return void 0;
       let live = true;
-      loadReportImages(code, imageRefsIn(value)).then(() => {
+      loadReportImages(code, imageRefsIn(value), kind).then(() => {
         if (live) setReady(true);
       });
       return () => {
@@ -66975,7 +67921,7 @@ ${d5.text}`);
     });
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
-        const ref = await addReportImage(code, f5), h5 = ed3.current;
+        const ref = await addReportImage(code, f5, kind), h5 = ed3.current;
         if (!ref || !h5) continue;
         const st2 = h5.editor.state, end = st2.doc.content.size, at2 = st2.doc.resolve(Math.min(st2.selection.from, end)), after = at2.depth ? at2.after(1) : end;
         h5.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
@@ -66993,7 +67939,7 @@ ${d5.text}`);
         box.current
       );
       const editorProps = { handleScrollToSelection: keepCaretInView };
-      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
+      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref, kind), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
       ed3.current = h5;
       h5.editor.setEditable(editable);
       const slashOff = text ? attachSlash(h5, { profile: "textsection", host: hostRows() }) : () => {
@@ -67146,163 +68092,6 @@ ${d5.text}`);
       if (!least) break;
     }
     return best;
-  }
-
-  // components/report/sheetLib.js
-  var SHEET_ZOOM_MIN = 0.4, SHEET_ZOOM_MAX = 0.8, SHEET_ZOOM_STEP = 0.05, SHEET_ZOOM_DEFAULT = 0.8;
-  var MM = 96 / 25.4;
-  var A4_W = 210, A4_H = 297, PAD_MM = 16, CONTENT_MM = 265;
-  var clampZoom = (z4) => Math.round(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, Number.isFinite(z4) ? z4 : SHEET_ZOOM_DEFAULT)) * 1e3) / 1e3;
-  var stepZoom = (z4, dir) => clampZoom(Math.round((z4 + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP);
-  var pinchZoom = (z4, deltaY) => clampZoom(z4 * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01));
-  var defaultHeading = (s5) => s5.default_heading == null ? s5.heading : s5.default_heading;
-  function syncLayout(doc) {
-    const d5 = (
-      /** @type {any} */
-      doc
-    ), lay = { ...d5.layout || {} }, secs = d5.sections || [];
-    lay.order = secs.map((s5) => s5.id);
-    lay.hidden = secs.filter((s5) => s5.hidden).map((s5) => s5.id);
-    const heads = { ...lay.headings || {} };
-    for (const s5 of secs) {
-      if (s5.heading !== defaultHeading(s5)) heads[s5.id] = s5.heading;
-      else delete heads[s5.id];
-    }
-    lay.headings = heads;
-    const fig = secs.find((s5) => s5.type === "figures" && !s5.hidden);
-    if (fig) lay.glance = (fig.figures || []).filter((f5) => f5.shown !== false).map((f5) => f5.key);
-    return (
-      /** @type {D} */
-      { ...d5, layout: lay }
-    );
-  }
-  function mapSection(doc, id2, fn2) {
-    const sections = doc.sections.map((s5, i5) => s5.id === id2 ? fn2(s5, i5) : s5);
-    return syncLayout({ ...doc, sections });
-  }
-  function moveSection(doc, id2, to2, lo2 = 0) {
-    const from = doc.sections.findIndex((s6) => s6.id === id2);
-    if (from < 0) return doc;
-    const at2 = Math.max(lo2, Math.min(doc.sections.length - 1, to2));
-    if (at2 === from || from < lo2) return doc;
-    const sections = doc.sections.slice(), [s5] = sections.splice(from, 1);
-    sections.splice(at2, 0, s5);
-    return syncLayout({ ...doc, sections });
-  }
-  function moveBy(doc, id2, delta, lo2 = 0) {
-    const from = doc.sections.findIndex((s5) => s5.id === id2);
-    return from < 0 ? doc : moveSection(doc, id2, from + delta, lo2);
-  }
-  var hideSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: true }));
-  var showSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: false }));
-  var isStub = (s5) => s5.type === "table" ? !Array.isArray(s5.rows) && !s5.text : s5.type === "figures" ? !Array.isArray(s5.figures) : s5.type === "panes" ? !Array.isArray(s5.panes) : !("text" in s5) || s5.text == null;
-  function renameHeading(doc, id2, text) {
-    const t47 = String(text || "").replace(/\s+/g, " ").trim();
-    return t47 ? mapSection(doc, id2, (s5) => ({ ...s5, heading: t47 })) : doc;
-  }
-  var resetHeading = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, heading: defaultHeading(s5) }));
-  function moveFigure(doc, id2, key2, before) {
-    return mapSection(doc, id2, (s5) => {
-      const figs = (s5.figures || []).slice(), from = figs.findIndex((f6) => f6.key === key2);
-      if (from < 0 || key2 === before) return s5;
-      const [f5] = figs.splice(from, 1), at2 = before == null ? -1 : figs.findIndex((x5) => x5.key === before);
-      figs.splice(at2 < 0 ? figs.length : at2, 0, f5);
-      return { ...s5, figures: figs };
-    });
-  }
-  var setFigureShown = (doc, id2, key2, shown2) => mapSection(doc, id2, (s5) => ({
-    ...s5,
-    figures: (s5.figures || []).map((f5) => f5.key === key2 ? { ...f5, shown: shown2 } : f5)
-  }));
-  var setRowShown = (doc, id2, index, shown2) => mapSection(doc, id2, (s5) => ({
-    ...s5,
-    rows: (s5.rows || []).map((r4, i5) => i5 === index ? { ...r4, shown: shown2 } : r4)
-  }));
-  var rowCounts = (s5) => [(s5.rows || []).filter((r4) => r4.shown !== false).length, (s5.rows || []).length];
-  function shownOf(s5) {
-    if (!s5) return null;
-    if (s5.hidden) return { hidden: true };
-    return {
-      heading: s5.heading,
-      text: s5.text || "",
-      flag: (s5.data || {}).flag || "",
-      rows: (s5.rows || []).filter((r4) => r4.shown !== false).map((r4) => [r4.ref || "", r4.cells || {}]),
-      figures: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => [f5.key, f5.value, f5.label, f5.note || ""]),
-      panes: (s5.panes || []).map((p6) => [p6.title, p6.text])
-    };
-  }
-  var sectionDiffers = (a5, b5) => JSON.stringify(shownOf(a5)) !== JSON.stringify(shownOf(b5));
-  var TEXT_TYPE = "freetext";
-  var isTextSection = (s5) => !!s5 && s5.type === TEXT_TYPE;
-  function newTextId(doc) {
-    const have = new Set((doc.sections || []).map((s5) => s5.id));
-    for (; ; ) {
-      const id2 = `free_${Math.random().toString(36).slice(2, 8)}`;
-      if (!have.has(id2)) return id2;
-    }
-  }
-  function withTextSection(doc, afterId, id2 = newTextId(doc)) {
-    const at2 = afterId == null ? -1 : doc.sections.findIndex((s5) => s5.id === afterId);
-    const sec = { id: id2, type: TEXT_TYPE, heading: "", default_heading: "", hidden: false, text: "", audience: (doc.audience || "internal") === "internal" ? "internal" : "client" };
-    const sections = doc.sections.slice();
-    sections.splice(at2 < 0 ? sections.length : at2 + 1, 0, sec);
-    return syncLayout({ ...doc, sections });
-  }
-  function withoutSection(doc, id2) {
-    const out = syncLayout({ ...doc, sections: doc.sections.filter((s5) => s5.id !== id2) });
-    const heads = { ...(out.layout || {}).headings || {} };
-    delete heads[id2];
-    return { ...out, layout: { ...out.layout, headings: heads } };
-  }
-  function addTextCopy(left, right, src) {
-    const copy = { ...JSON.parse(JSON.stringify(src)), hidden: false, audience: (right.audience || "internal") === "internal" ? "internal" : "client" };
-    delete copy.tags;
-    const order = left.sections.map((s5) => s5.id), k5 = order.indexOf(src.id), have = new Set(right.sections.map((s5) => s5.id));
-    let after = null;
-    for (let j5 = k5 - 1; j5 >= 0; j5--) if (have.has(order[j5])) {
-      after = order[j5];
-      break;
-    }
-    const at2 = after == null ? right.sections.length : right.sections.findIndex((s5) => s5.id === after) + 1;
-    const sections = right.sections.slice();
-    sections.splice(at2, 0, copy);
-    return syncLayout({ ...right, sections });
-  }
-  function matchSection(left, right, id2) {
-    const src = left.sections.find((s5) => s5.id === id2), mine = right.sections.find((s5) => s5.id === id2);
-    if (src && !mine && isTextSection(src)) return addTextCopy(left, right, src);
-    if (!src || !mine) return right;
-    if (isTextSection(src)) return mapSection(right, id2, (s5) => ({ ...s5, heading: src.heading, text: src.text || "" }));
-    const copy = JSON.parse(JSON.stringify(src));
-    copy.hidden = !!mine.hidden;
-    if (Array.isArray(copy.rows)) {
-      const eyes = new Map((mine.rows || []).filter((r4) => r4.ref).map((r4) => [r4.ref, r4.shown !== false]));
-      copy.rows = copy.rows.map((r4) => r4.ref && eyes.has(r4.ref) ? { ...r4, shown: eyes.get(r4.ref) } : r4);
-    }
-    if (Array.isArray(copy.figures)) {
-      const eyes = new Map((mine.figures || []).map((f5) => [f5.key, f5.shown !== false]));
-      copy.figures = copy.figures.map((f5) => eyes.has(f5.key) ? { ...f5, shown: eyes.get(f5.key) } : f5);
-    }
-    return mapSection(right, id2, () => copy);
-  }
-  function matchLabel(left, right, id2, label) {
-    const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
-    return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
-  }
-  function pageBreaks(sections, page, total) {
-    let cum = 0;
-    const pushes = sections.map(([t47, h5]) => {
-      const top = t47 + cum, p6 = Math.floor(top / page);
-      if (h5 <= page && h5 > 0 && top > p6 * page && top + h5 > (p6 + 1) * page) {
-        const push = (p6 + 1) * page - top;
-        cum += push;
-        return push;
-      }
-      return 0;
-    });
-    const end = total + cum, marks = [];
-    for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
-    return { pushes, marks };
   }
 
   // components/report/SheetPage.jsx
@@ -67476,7 +68265,7 @@ ${d5.text}`);
       {
         value: s5.text || "",
         rich: true,
-        text: { code: String(ctx.doc.project || "") },
+        text: { code: String(ctx.doc.project || ""), kind: String(ctx.doc.kind || "") },
         label: s5.heading || "Text section",
         onText: (t47) => h5.update({ text: t47 }, "Text edited"),
         ai: h5.ai,
@@ -68085,10 +68874,10 @@ ${d5.text}`);
   var HEADER_HIDE_OVER = 0;
   var HEADER_SHOW_ON_UP = Infinity;
   var HEADER_SHOW_AT_TOP = 0;
-  function headerPolicy(top, delta, up2) {
+  function headerPolicy(top, delta2, up2) {
     if (top <= HEADER_SHOW_AT_TOP) return "show";
-    if (delta > HEADER_HIDE_OVER) return "hide";
-    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
+    if (delta2 > HEADER_HIDE_OVER) return "hide";
+    if (delta2 < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
     return "keep";
   }
 
@@ -68466,6 +69255,7 @@ ${d5.text}`);
       };
     }, []);
   }
+  var sameSheetDoc = (nd2, cur) => !cur || !nd2 || nd2.kind === cur.kind && nd2.project === cur.project && nd2.date === cur.date && (nd2.client || "") === (cur.client || "");
   function Sheet(props) {
     const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {
     } } = props;
@@ -68538,13 +69328,14 @@ ${d5.text}`);
       if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
     }, [scrollKey]);
     const changeMain = (nd2, why) => {
-      if (leftRO) return;
+      if (leftRO || !sameSheetDoc(nd2, P5.current.doc)) return;
       props.onChange(nd2, why);
       main.change(nd2);
     };
     const changeSide = (nd2, why) => {
-      if (!partner || partner.readOnly) return;
-      partner.onChange(nd2, why);
+      const pt2 = P5.current.partner;
+      if (!pt2 || pt2.readOnly || !sameSheetDoc(nd2, pt2.doc)) return;
+      pt2.onChange(nd2, why);
       side.change(nd2);
     };
     const aiFor = (s5, ro2, right = false) => {
@@ -68799,7 +69590,7 @@ ${d5.text}`);
           onEvent({ type: "reload", partner: true });
         }, children: "Reload" })
       ] }) : null,
-      /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: partner && !together ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: exported && props.exportedView && !partner ? props.exportedView : partner && !together ? /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
         /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
       ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
@@ -68956,13 +69747,52 @@ ${d5.text}`);
     ] });
   }
   var PICKABLE = /* @__PURE__ */ new Set(["risks", "overdue", "decisions"]);
+  var bareRow = (row2, doc) => !!row2.ref && (row2.cells ? blankCells(row2.cells, row2.ref) : !(doc.items || {})[row2.ref]);
+  async function reshowRow(live, ref) {
+    const sid = live.current.section.id, asked2 = live.current.doc;
+    const ident = (d5) => asked2.kind === "client" ? crIdentity(d5) : wkIdentity(d5);
+    const opened = ident();
+    if (!opened || opened !== ident(asked2)) return "";
+    const r4 = await api("/api/report/reshow", { doc: asked2, section: sid, refs: [ref] });
+    if (ident() !== opened) return "";
+    const got = r4 && r4.ok ? (r4.rows || {})[ref] : null;
+    if (!got || !got.row || !got.row.cells) return String((r4 && r4.ok ? (r4.missing || {})[ref] : r4 && r4.message) || "the tracker couldn't be read").split("\n")[0];
+    const ctx = live.current, doc = ctx.doc, sec = doc.sections.find((x5) => x5.id === sid);
+    if (ident(doc) !== opened || !sec || !(sec.rows || []).some((x5) => x5.ref === ref && bareRow(x5, doc))) return "";
+    ctx.setDoc({
+      ...doc,
+      items: { ...doc.items || {}, [ref]: got.item },
+      sections: doc.sections.map((x5) => x5.id !== sid ? x5 : { ...x5, rows: (x5.rows || []).map((y5) => y5.ref === ref && bareRow(y5, doc) ? { ...y5, shown: true, cells: got.row.cells } : y5) })
+    }, "Row shown");
+    return "";
+  }
+  function LeftOutNote({ ctx, row: row2, why }) {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(ctx.ItemRef, { id: String(row2.ref) }),
+      " ",
+      /* @__PURE__ */ u2("span", { class: "crlk wr-leftout", children: "Left out" }),
+      /* @__PURE__ */ u2("span", { class: "wr-leftwhy", children: why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from the tracker." })
+    ] });
+  }
+  function flipRow(live, cellsFor2, i5, setWhy) {
+    const ctx = live.current, s5 = ctx.section, rows2 = s5.rows || [], r4 = rows2[i5], on2 = r4.shown === false;
+    if (bareRow(r4, ctx.doc)) {
+      reshowRow(live, String(r4.ref)).then((why) => setWhy(String(r4.ref), why));
+      return;
+    }
+    ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFor2(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
+  }
   function EyeTable({ ctx, cols, noun, empty, cellsFor: cellsFor2, extra, leftOut: leftOut2 = "the filed report and the exports" }) {
     const s5 = ctx.section, rows2 = s5.rows || [];
-    const flip2 = (i5) => {
-      const r4 = rows2[i5], on2 = r4.shown === false;
-      ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFor2(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
-    };
-    const shown2 = rows2.filter((r4) => r4.shown !== false).length;
+    const live = A2(ctx);
+    live.current = ctx;
+    const [whys, setWhys] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const setWhy = (ref, why) => setWhys((w6) => ({ ...w6, [ref]: why }));
+    const flip2 = (i5) => flipRow(live, cellsFor2, i5, setWhy);
+    const shown2 = rows2.filter((r4) => r4.shown !== false && !bareRow(r4, ctx.doc)).length;
     return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
       rows2.length ? /* @__PURE__ */ u2("table", { class: "wr-r", children: [
         /* @__PURE__ */ u2("colgroup", { children: [
@@ -68974,8 +69804,12 @@ ${d5.text}`);
           cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
         ] }) }),
         /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, i5) => {
-          const off = row2.shown === false;
+          const bare = bareRow(row2, ctx.doc), off = row2.shown === false || bare;
           if (off && !ctx.editing) return null;
+          if (bare) return /* @__PURE__ */ u2("tr", { class: "hidrow wr-bare", "data-ref": row2.ref || void 0, children: [
+            /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(EyeButton, { on: false, subject: String(row2.ref), onClick: () => flip2(i5) }) }),
+            /* @__PURE__ */ u2("td", { colSpan: cols.length, children: /* @__PURE__ */ u2(LeftOutNote, { ctx, row: row2, why: whys[String(row2.ref)] }) })
+          ] }, row2.ref || i5);
           const item = (ctx.doc.items || {})[row2.ref || ""] || null, cells = row2.cells || cellsFor2(s5.id, item, ctx.doc.date);
           const isNew = ctx.editing && row2.source === "added" && PICKABLE.has(s5.id);
           const idLike = (v5) => v5 === row2.ref || /^[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+$/.test(v5);
@@ -69182,14 +70016,21 @@ ${d5.text}`);
   }
   function Decisions({ ctx }) {
     const all = ctx.section.rows || [];
-    const rows2 = all.map((row2, i5) => ({ row: row2, i: i5 })).filter((x5) => x5.row.shown !== false || ctx.editing);
-    const flip2 = (i5) => {
-      const on2 = all[i5].shown === false;
-      ctx.update({ rows: all.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFromItem("decisions", (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
-    };
+    const rows2 = all.map((row2, i5) => ({ row: row2, i: i5 })).filter((x5) => x5.row.shown !== false && !bareRow(x5.row, ctx.doc) || ctx.editing);
+    const live = A2(ctx);
+    live.current = ctx;
+    const [whys, setWhys] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const flip2 = (i5) => flipRow(live, cellsFromItem, i5, (ref, why) => setWhys((w6) => ({ ...w6, [ref]: why })));
     return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
       !rows2.length ? /* @__PURE__ */ u2("p", { class: "sub", children: "No decisions were made this week." }) : null,
       /* @__PURE__ */ u2("ul", { class: "wr-decs", children: rows2.map(({ row: row2, i: i5 }) => {
+        if (bareRow(row2, ctx.doc)) return /* @__PURE__ */ u2("li", { class: "hidrow wr-bare", "data-ref": row2.ref || void 0, children: [
+          /* @__PURE__ */ u2(EyeButton, { on: false, subject: String(row2.ref), onClick: () => flip2(i5) }),
+          /* @__PURE__ */ u2("div", { class: "wr-decbody", children: /* @__PURE__ */ u2(LeftOutNote, { ctx, row: row2, why: whys[String(row2.ref)] }) })
+        ] }, row2.ref || i5);
         const c5 = row2.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row2.ref || ""], ctx.doc.date), off = row2.shown === false;
         const bit = (key2, label) => ctx.editing ? /* @__PURE__ */ u2(Rich, { ctx, text: c5[key2], row: i5, col: key2, label, cls: "wr-inl", empty: label }) : /* @__PURE__ */ u2("span", { children: c5[key2] });
         return /* @__PURE__ */ u2("li", { class: off ? "hidrow" : "", "data-ref": row2.ref || void 0, children: [
@@ -69214,7 +70055,7 @@ ${d5.text}`);
       }) }),
       ctx.editing && all.length ? /* @__PURE__ */ u2("div", { class: "wr-count", children: [
         "Showing ",
-        all.filter((r4) => r4.shown !== false).length,
+        all.filter((r4) => r4.shown !== false && !bareRow(r4, ctx.doc)).length,
         " of ",
         all.length,
         " decisions. Hidden decisions are left out of the filed report and the exports."
@@ -69403,288 +70244,48 @@ ${d5.text}`);
     return m5 ? { code: m5[1], week: m5[2] } : null;
   }
 
-  // components/report/clientDoc.js
-  var CLIENT_FLAGS = (
-    /** @type {const} */
-    [["On track", "g"], ["At risk", "a"], ["Off track", "r"]]
-  );
-  var secOf = (doc, id2) => doc ? doc.sections.find((s5) => s5.id === id2) : void 0;
-  var flagOf = (doc) => String(((secOf(doc, "health") || {}).data || {}).flag || "");
-  var withClientSection = (doc, id2, patch) => ({ ...doc, sections: doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...patch } : s5) });
-  function cellsFor(sectionId, item) {
-    const it2 = item || {};
-    const day = (iso2) => iso2 && /^\d{4}-\d{2}-\d{2}/.test(iso2) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}` : "";
-    if (sectionId === "risks") return { type: it2.type || "", risk: it2.title || "" };
-    if (sectionId === "overdue") return { action: it2.title || "", owner: it2.owner || "", due: day(it2.due_date) };
-    if (sectionId === "asks") return { ask: it2.title || "", from: it2.owner || "", by: day(it2.due_date), why: "" };
-    if (sectionId === "decisions") return { decision: it2.title || "", date: day(it2.date) };
-    return {};
-  }
-  var shownRefs = (s5) => s5 && !s5.hidden ? (s5.rows || []).filter((r4) => r4.shown !== false && r4.ref).map((r4) => String(r4.ref)) : [];
-  function matchState(client, internal, id2) {
-    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
-    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return null;
-    if (c5.type === "health") return flagOf(client) === flagOf(internal) && (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
-    if (c5.type === "table") {
-      const want = shownRefs(i5).filter((r4) => (c5.rows || []).some((x5) => x5.ref === r4)).sort().join(), have = shownRefs(c5).sort().join();
-      return want === have ? "matching" : "edited";
-    }
-    if (c5.type === "timeline") return JSON.stringify(((c5.data || {}).milestones || []).slice().sort()) === JSON.stringify(((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => ((c5.data || {}).timeline || []).includes(m5)).sort()) ? "matching" : "edited";
-    if (c5.type === "panes") return JSON.stringify((c5.panes || []).map((p6) => (p6.text || "").trim())) === JSON.stringify((i5.panes || []).map((p6) => (p6.text || "").trim())) ? "matching" : "edited";
-    return (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
-  }
-  function matchClientSection(client, internal, id2) {
-    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
-    if (i5 && i5.type === TEXT_TYPE && !i5.hidden) {
-      return c5 ? withClientSection(client, id2, { heading: i5.heading, text: i5.text || "", audience: "client" }) : addTextCopy(internal, client, i5);
-    }
-    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return client;
-    if (c5.type === "health") {
-      const meta = { ...client.meta || {} };
-      delete meta.health_diff;
-      return { ...withClientSection(client, id2, { text: i5.text || "", data: { ...c5.data || {}, flag: flagOf(internal) } }), meta };
-    }
-    if (c5.type === "table") {
-      const on2 = shownRefs(i5);
-      return withClientSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, (client.items || {})[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
-    }
-    if (c5.type === "timeline") {
-      const all = (c5.data || {}).timeline || [], listed = ((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => all.includes(m5));
-      return withClientSection(client, id2, { data: { ...c5.data || {}, milestones: listed } });
-    }
-    if (c5.type === "panes") return withClientSection(client, id2, { panes: (i5.panes || []).map((p6) => ({ title: p6.title, text: p6.text })) });
-    return withClientSection(client, id2, { text: i5.text || "", tags: [] });
-  }
-  var matchClientAll = (client, internal) => client.sections.reduce((d5, s5) => matchClientSection(d5, internal, s5.id), client);
-  function healthDiff(client, internalFlag, clientFlag, reason) {
-    const meta = { ...client.meta || {} };
-    if (clientFlag === internalFlag) delete meta.health_diff;
-    else meta.health_diff = { internal: internalFlag, client: clientFlag, reason: reason.trim() };
-    return meta;
-  }
-  function leftLine(list) {
-    const shown2 = list.slice(0, 4).map((x5) => `${x5.ref} (${x5.why})`).join(", ");
-    return `${shown2}${list.length > 4 ? ` and ${list.length - 4} more` : ""}`;
-  }
-  var GROUP_LABEL = (
-    /** @type {Record<string, string>} */
-    { risks: "risks and issues", overdue: "overdue actions", decisions: "decisions", milestones: "milestones" }
-  );
-
-  // stores/clientReport.js
-  var crArg = y3(
-    /** @type {{code: string, week?: string, client?: string}|null} */
-    null
-  );
-  var crOpen = y3(
-    /** @type {{ok: boolean, message?: string}|null} */
-    null
-  );
-  var crDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var crInternal = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var crBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var crInfo = y3(
-    /** @type {{where: string, filed: boolean, ready: boolean, not_ready: string, baseline: {date: string, path: string, version: number}|null, findings: string[]}|null} */
-    null
-  );
-  var crMode = y3(
-    /** @type {"client"|"side"} */
-    "client"
-  );
-  var crCheck = y3(
-    /** @type {Check|null} */
-    null
-  );
-  var crLogos = y3(
-    /** @type {{kind: string, path: string}[]} */
-    []
-  );
-  var crBusy = y3("");
-  var crDialog = y3(false);
-  var crDirty = y3(false);
-  var crHeld = y3(
-    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */
-    null
-  );
-  var crAsked = 0;
-  function crIdentity(d5) {
-    const x5 = d5 === void 0 ? crDoc.value : d5;
-    return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
-  }
-  var sameDoc = (a5, b5) => !!a5 && !!b5 && a5.project === b5.project && a5.date === b5.date && (a5.client || "") === (b5.client || "");
-  var sameReport = (d5) => sameDoc(crDoc.value, d5);
-  async function loadClientReport(arg, fresh) {
-    const mine = ++crAsked;
-    crArg.value = arg;
-    crCheck.value = null;
-    crDirty.value = false;
-    if (!viaServer()) {
-      crOpen.value = { ok: false, message: "The client view needs the live server." };
-      return;
-    }
-    crBusy.value = "Opening the client report…";
-    const base = { code: arg.code, week_ending: arg.week || void 0 };
-    const [i5, c5] = await Promise.all([api("/api/report/draft", { kind: "weekly", ...base }), api("/api/report/draft", { kind: "client", ...base, client: arg.client || void 0, fresh: fresh || void 0 })]);
-    if (mine !== crAsked) return;
-    crBusy.value = "";
-    if (!c5 || !c5.ok || !c5.doc) {
-      crOpen.value = { ok: false, message: oneLine(c5 && c5.message || "") || "Couldn't open the client report" };
-      crDoc.value = null;
-      return;
-    }
-    crInternal.value = i5 && i5.ok ? i5.doc : null;
-    crDoc.value = c5.doc;
-    crLogos.value = c5.logos || [];
-    readLogos(arg.code, c5.logos || []);
-    crBase.value = Number(c5.doc.version) || void 0;
-    crInfo.value = { where: c5.where, filed: !!c5.filed, ready: !!c5.ready, not_ready: c5.not_ready || "", baseline: c5.baseline || null, findings: c5.findings || [] };
-    crOpen.value = { ok: true };
-    runCheck();
-  }
-  async function runCheck() {
-    const d5 = crDoc.value, opened = crIdentity(d5);
-    if (!d5 || !viaServer()) return null;
-    const r4 = (
-      /** @type {Check} */
-      await api("/api/report/check", { doc: d5 })
-    );
-    if (crIdentity() !== opened) return null;
-    crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
-    return crCheck.value;
-  }
-  async function saveClientPage(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    if (r4 && r4.ok) {
-      crBase.value = Number(r4.version) || crBase.value;
-      crDirty.value = false;
-      if (crInfo.value && crInfo.value.where === "new") crInfo.value = { ...crInfo.value, where: "draft" };
-    }
-    return r4;
-  }
-  async function approveClientReport(force) {
-    const a5 = crArg.value, d5 = crDoc.value;
-    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
-    return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
-  }
-  async function exportClientReport(fmt, makePage) {
-    const a5 = crArg.value, d5 = crDoc.value;
-    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
-    const opened = crIdentity(d5);
-    if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
-      const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
-      if (!s5.ok) return s5;
-    }
-    if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
-    const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
-    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
-  }
-  var matchChain = Promise.resolve();
-  function matchInternal(ids) {
-    const asked2 = crIdentity();
-    matchChain = matchChain.then(() => crIdentity() === asked2 ? matchInternalNow(ids) : void 0).catch(() => void 0);
-    return matchChain;
-  }
-  async function matchInternalNow(ids) {
-    const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
-    if (!d02 || !i5) return;
-    const moved = () => crIdentity() !== opened || !sameReport(d02);
-    const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
-    const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
-    const internalText = (id2) => {
-      const x5 = secOf(i5, id2);
-      return !!x5 && x5.type === "freetext" && x5.audience === "internal";
-    };
-    const want = ids ? all : all.filter((id2) => !internalText(id2));
-    const skipped = ids ? [] : all.filter(internalText).map((id2) => ({ id: id2, heading: heading(id2) }));
-    const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
-    if (!cands.length) {
-      crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null;
-      return;
-    }
-    const failed = () => {
-      crHeld.value = { copied: [], skipped, held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
-    };
-    if (!viaServer()) {
-      failed();
-      return;
-    }
-    const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
-    if (moved()) return;
-    if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
-      failed();
-      return;
-    }
-    const codes = (fs2) => fs2.reduce(
-      (m5, f5) => m5.set(f5.code, (m5.get(f5.code) || 0) + 1),
-      /** @type {Map<string, number>} */
-      /* @__PURE__ */ new Map()
-    );
-    const base = codes(r4.findings[0]);
-    const fresh_of = (fs2) => {
-      const seen = (
-        /** @type {Map<string, number>} */
-        /* @__PURE__ */ new Map()
-      );
-      return fs2.filter((f5) => {
-        const n4 = (seen.get(f5.code) || 0) + 1;
-        seen.set(f5.code, n4);
-        return n4 > (base.get(f5.code) || 0);
-      });
-    };
-    const done = (
-      /** @type {string[]} */
-      []
-    ), held = (
-      /** @type {{id: string, heading: string, findings: string[]}[]} */
-      []
-    ), clean = (
-      /** @type {string[]} */
-      []
-    );
-    cands.forEach((c5, n4) => {
-      const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
-      if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
-      else clean.push(c5.id);
-    });
-    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
-    const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
-    if (clean.length) {
-      for (let tries = 0; ; tries++) {
-        const now = crDoc.value;
-        if (!now || moved()) return;
-        const d5 = onto(now);
-        const last = await api("/api/report/match-check", { docs: [d5] });
-        if (moved()) return;
-        const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
-        if (!extra || extra.length) {
-          failed();
-          return;
-        }
-        if (crDoc.value === now) {
-          kept(now).forEach((id2) => done.push(heading(id2)));
-          crDoc.value = d5;
-          crDirty.value = true;
-          break;
-        }
-        if (tries >= 2) {
-          crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." };
-          return;
-        }
-      }
-    }
-    crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
-  }
-
   // components/report/ClientParts.jsx
+  function ServerExported({ doc, version, save: save2 }) {
+    const [got, setGot] = d2(
+      /** @type {any} */
+      null
+    );
+    const asked2 = `${doc.project}|${doc.date}|${version}`;
+    h2(() => {
+      let live = true;
+      setGot(null);
+      if (!viaServer()) {
+        setGot({ ok: false, message: "Show as exported needs the live server." });
+        return void 0;
+      }
+      (async () => {
+        const s5 = save2 ? await save2() : null;
+        if (!live) return;
+        if (s5 && !s5.ok) {
+          setGot({ ok: false, message: s5.message || "The report wasn't saved." });
+          return;
+        }
+        const r4 = await api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date });
+        const id2 = r4 && r4.identity || null;
+        if (live && r4 && (id2 ? id2.code === doc.project && id2.week_ending === doc.date : !r4.ok)) setGot(r4);
+      })();
+      return () => {
+        live = false;
+      };
+    }, [asked2]);
+    if (!got) return /* @__PURE__ */ u2("p", { class: "sub crx-wait", role: "status", children: "Making the page as it is exported…" });
+    if (!got.ok) {
+      const why = (got.findings || []).join("; ") || got.message || "it couldn't be made";
+      return /* @__PURE__ */ u2("p", { class: "mnerr crx-err", role: "alert", children: [
+        "This client report can't be exported as it is: ",
+        why
+      ] });
+    }
+    return /* @__PURE__ */ u2("div", { class: "crx", "data-preview": got.preview ? "1" : void 0, children: [
+      got.preview ? /* @__PURE__ */ u2("span", { class: "crx-badge", children: "Preview" }) : null,
+      /* @__PURE__ */ u2("iframe", { class: "crx-frame", title: "The client report as it is exported", sandbox: "", srcdoc: got.html })
+    ] });
+  }
   var crAskWhy = y3(false);
   function setClientDoc(next) {
     if (!sameReport(next)) return;
@@ -69943,131 +70544,6 @@ ${d5.text}`);
     // #218: a text section, with its Matching internal line when the internal report has it
   };
 
-  // components/report/exportPage.jsx
-  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
-  var CLIENT_EXPORT = { viewId: "v-clientreport", viewClass: "crview", sheetClass: "crsheet" };
-  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
-  var NOOP = () => {
-  };
-  function used(d5, selector) {
-    try {
-      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
-    } catch (e4) {
-      return true;
-    }
-  }
-  function usedRules(win, d5, from) {
-    const out = [];
-    const walk = (rules) => {
-      for (const r4 of Array.from(rules)) {
-        if (r4.constructor.name === "CSSStyleRule") {
-          if (used(
-            d5,
-            /** @type {CSSStyleRule} */
-            r4.selectorText
-          )) out.push(r4.cssText);
-        } else if (r4.constructor.name === "CSSMediaRule") {
-          const m5 = (
-            /** @type {CSSMediaRule} */
-            r4
-          ), cond = m5.conditionText || m5.media.mediaText;
-          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
-        } else if (r4.constructor.name === "CSSSupportsRule") {
-          const sr2 = (
-            /** @type {CSSSupportsRule} */
-            r4
-          );
-          if (
-            /** @type {any} */
-            win.CSS.supports(sr2.conditionText)
-          ) walk(sr2.cssRules);
-        }
-      }
-    };
-    for (const sheet of Array.from(from.styleSheets)) {
-      const rules = (() => {
-        try {
-          return sheet.cssRules;
-        } catch (e4) {
-          return null;
-        }
-      })();
-      if (rules) walk(rules);
-    }
-    return out.join("\n");
-  }
-  async function reportExportPage(doc, renderers, view, version) {
-    const frame = document.createElement("iframe");
-    frame.setAttribute("aria-hidden", "true");
-    frame.tabIndex = -1;
-    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
-    document.body.append(frame);
-    try {
-      const w6 = (
-        /** @type {Window} */
-        frame.contentWindow
-      ), d5 = (
-        /** @type {Document} */
-        frame.contentDocument
-      );
-      const palette = document.documentElement.dataset.palette || "";
-      d5.open();
-      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
-      d5.close();
-      for (const st2 of Array.from(document.querySelectorAll("style"))) {
-        const c5 = d5.createElement("style");
-        c5.textContent = st2.textContent;
-        d5.head.append(c5);
-      }
-      const host2 = d5.createElement("div");
-      host2.id = view.viewId;
-      host2.className = "export-view";
-      d5.body.append(host2);
-      const props = {
-        doc,
-        renderers,
-        extras: [],
-        exported: true,
-        readOnly: true,
-        peerDoc: null,
-        peerLabel: "",
-        side: (
-          /** @type {""} */
-          ""
-        ),
-        onChange: NOOP,
-        onOpenItem: void 0,
-        onEvent: NOOP,
-        onRedraft: void 0,
-        aiFor: () => void 0,
-        checks: [],
-        refocus: { current: null },
-        match: null
-      };
-      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
-      await new Promise((r4) => setTimeout(r4, 250));
-      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
-        i5.onload = i5.onerror = () => r4(null);
-      })));
-      const copy = (
-        /** @type {HTMLElement} */
-        host2.cloneNode(true)
-      );
-      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
-        e4.removeAttribute("data-ref");
-        e4.removeAttribute("data-row");
-      });
-      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
-      R(null, host2);
-      return html2 && css ? { html: html2, css, palette, version } : null;
-    } catch (e4) {
-      console.error("export page:", e4);
-      return null;
-    } finally {
-      frame.remove();
-    }
-  }
-
   // components/report/ClientView.jsx
   async function openCheck() {
     const d5 = crDoc.value;
@@ -70083,7 +70559,7 @@ ${d5.text}`);
     await runCheck();
   }
   async function doExport(fmt) {
-    const r4 = await exportClientReport(fmt, (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5));
+    const r4 = await exportClientReport(fmt);
     if (r4 && (r4.ok || r4.clash)) crDialog.value = false;
     else await runCheck();
   }
@@ -73289,6 +73765,130 @@ ${d5.text}`);
     ] });
   }
 
+  // components/report/exportPage.jsx
+  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
+  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
+  var NOOP = () => {
+  };
+  function used(d5, selector) {
+    try {
+      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
+    } catch (e4) {
+      return true;
+    }
+  }
+  function usedRules(win, d5, from) {
+    const out = [];
+    const walk = (rules) => {
+      for (const r4 of Array.from(rules)) {
+        if (r4.constructor.name === "CSSStyleRule") {
+          if (used(
+            d5,
+            /** @type {CSSStyleRule} */
+            r4.selectorText
+          )) out.push(r4.cssText);
+        } else if (r4.constructor.name === "CSSMediaRule") {
+          const m5 = (
+            /** @type {CSSMediaRule} */
+            r4
+          ), cond = m5.conditionText || m5.media.mediaText;
+          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
+        } else if (r4.constructor.name === "CSSSupportsRule") {
+          const sr2 = (
+            /** @type {CSSSupportsRule} */
+            r4
+          );
+          if (
+            /** @type {any} */
+            win.CSS.supports(sr2.conditionText)
+          ) walk(sr2.cssRules);
+        }
+      }
+    };
+    for (const sheet of Array.from(from.styleSheets)) {
+      const rules = (() => {
+        try {
+          return sheet.cssRules;
+        } catch (e4) {
+          return null;
+        }
+      })();
+      if (rules) walk(rules);
+    }
+    return out.join("\n");
+  }
+  async function reportExportPage(doc, renderers, view, version) {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
+    document.body.append(frame);
+    try {
+      const w6 = (
+        /** @type {Window} */
+        frame.contentWindow
+      ), d5 = (
+        /** @type {Document} */
+        frame.contentDocument
+      );
+      const palette = document.documentElement.dataset.palette || "";
+      d5.open();
+      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
+      d5.close();
+      for (const st2 of Array.from(document.querySelectorAll("style"))) {
+        const c5 = d5.createElement("style");
+        c5.textContent = st2.textContent;
+        d5.head.append(c5);
+      }
+      const host2 = d5.createElement("div");
+      host2.id = view.viewId;
+      host2.className = "export-view";
+      d5.body.append(host2);
+      const props = {
+        doc,
+        renderers,
+        extras: [],
+        exported: true,
+        readOnly: true,
+        peerDoc: null,
+        peerLabel: "",
+        side: (
+          /** @type {""} */
+          ""
+        ),
+        onChange: NOOP,
+        onOpenItem: void 0,
+        onEvent: NOOP,
+        onRedraft: void 0,
+        aiFor: () => void 0,
+        checks: [],
+        refocus: { current: null },
+        match: null
+      };
+      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
+      await new Promise((r4) => setTimeout(r4, 250));
+      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
+        i5.onload = i5.onerror = () => r4(null);
+      })));
+      const copy = (
+        /** @type {HTMLElement} */
+        host2.cloneNode(true)
+      );
+      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
+        e4.removeAttribute("data-ref");
+        e4.removeAttribute("data-row");
+      });
+      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
+      R(null, host2);
+      return html2 && css ? { html: html2, css, palette, version } : null;
+    } catch (e4) {
+      console.error("export page:", e4);
+      return null;
+    } finally {
+      frame.remove();
+    }
+  }
+
   // components/report/hub/hubActions.js
   function clashAnswered() {
     return new Promise((resolve) => {
@@ -73319,8 +73919,7 @@ ${d5.text}`);
       crDialog.value = true;
       return;
     }
-    const mk2 = (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5);
-    const c5 = await exportClientReport(fmt, mk2);
+    const c5 = await exportClientReport(fmt);
     if (c5 && !c5.ok && !c5.clash) {
       crDialog.value = true;
       await runCheck();
@@ -73761,8 +74360,9 @@ ${d5.text}`);
     ] }) });
   }
   var internalChange = (d5) => {
-    editDoc(d5);
-    if (crInternal.value) crInternal.value = d5;
+    if (!editDoc(d5)) return;
+    const ci2 = crInternal.value;
+    if (ci2 && ci2.project === d5.project && ci2.date === d5.date) crInternal.value = d5;
   };
   var internalSave = async (req) => {
     const r4 = await saveWeekly(req);
@@ -73772,6 +74372,11 @@ ${d5.text}`);
   var internalAi = (doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
   var internalRedraft = (doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
   var clientRedraft = (cd2) => redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply);
+  var saveForShow = async () => {
+    const d5 = crDoc.value;
+    if (!d5 || !(crDirty.value || crInfo.value && crInfo.value.where === "new")) return { ok: true };
+    return saveClientPage({ doc: d5, base_version: crBase.value });
+  };
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
     const iLocked = doc.state === "approved" && !weeklyEditing.value;
@@ -73830,6 +74435,7 @@ ${d5.text}`);
           onSave: saveClientPage,
           ai: clientAi,
           onRedraft: clientRedraft(cd2),
+          exportedView: /* @__PURE__ */ u2(ServerExported, { doc: cd2, version: crBase.value, save: saveForShow }),
           onEvent: (ev) => {
             if (ev.type === "reload") reloadClient();
             else countRedraft(ev, "report");
@@ -75687,6 +76293,7 @@ ${d5.text}`);
         "SourceLink",
         "StatusDot",
         "TEMPLATES",
+        "TEXT_TYPE",
         "THEMES",
         "TICK24",
         "TIP_CLOSE",
@@ -75715,6 +76322,7 @@ ${d5.text}`);
         "acItems",
         "actHref",
         "actPaint",
+        "actTools",
         "addEl",
         "addPartner",
         "addTextSection",
@@ -75801,6 +76409,8 @@ ${d5.text}`);
         "countUp",
         "covered",
         "crDialog",
+        "crDoc",
+        "crInternal",
         "crLogoData",
         "crTick",
         "creaiteEditor",
@@ -75923,6 +76533,7 @@ ${d5.text}`);
         "igText",
         "inboxBadge",
         "insertImage",
+        "intakeTarget",
         "invitees",
         "isMe",
         "isMin",
@@ -75943,6 +76554,7 @@ ${d5.text}`);
         "linkWords",
         "linkWrite",
         "loadChat",
+        "loadHub",
         "loadPartners",
         "loadPrep",
         "loadTab",
@@ -76253,7 +76865,6 @@ ${d5.text}`);
         "synthDay",
         "tabId",
         "tabTitle",
-        "tdLine",
         "thisWeek",
         "tl",
         "toIso",

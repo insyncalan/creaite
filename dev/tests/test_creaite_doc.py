@@ -4,9 +4,11 @@ Run: python3 dev/tests/test_creaite_doc.py
 Each test builds a throwaway vault (test_tracker.Vault) and runs the real scripts there: round trip, versions and Undo, search.
 """
 import json
+import sqlite3
 import subprocess
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -267,6 +269,157 @@ class FixPass240(Base):
         out = self.js("import report_doc\nprint(json.dumps([bool(report_doc.CODE.match('ABC')), bool(report_doc.CODE.match('ABC\\n'))]))")
         self.assertEqual(out, [True, False])
 
+
+class LeftOutRowShownAgain(Base):
+    """#234: a row left out and saved keeps only its reference (the leak guard drops its item), so showing it again asks the server
+    for the row as the tracker has it now (/api/report/reshow, read only). A weekly report may read the tracker; a client report only
+    its client-safe facts. A row whose cells are empty never reaches an export as an empty table row."""
+
+    WEEK = "2026-10-09"
+    CM = ("What it is: The client signs off the scope.\nWhat it means for you: You sign off.\n"
+          "What is being done: We sent a draft.")
+
+    def setUp(self):
+        super().setUp()
+        from test_tracker import ABC as FOLDER
+        src = f"{FOLDER}/minutes/2026-10-01 Steering.docx - Actions"
+
+        def act(n, **v):
+            return {"n": n, "op": "new", "table": "actions", "match": "strong", "flags": [], "decision": "approved",
+                    "values": {"project": "ABC", "source": src, "raised": "2026-09-20", **v}}
+        self.v.propose("seed", [
+            act(1, description="Order the harbour cranes", owner="Omar Ali", due_date="2026-10-04"),
+            act(2, description="Retired lighthouse survey", owner="Omar Ali", due_date="2026-10-03"),
+            act(3, description="Private vendor penalty clause", owner="Sara Example", due_date="2026-10-05"),
+            act(4, description="Client scope sign-off internal words", owner="Sara Example (Example Client Ltd)",
+                due_date="2026-10-03", client_visible=1, client_message=self.CM)])
+        self.v.run("apply")
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("UPDATE actions SET archived = 1 WHERE id = 'ABC-A-002'")
+            con.commit()
+
+    def run_py(self, code):
+        """Run code in the vault on a fixed clock with report_doc and report_server imported; returns the JSON it prints last."""
+        import os
+        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import creaite_doc, report_doc, "
+                            "report_server\nclass H:\n    def send(self, code, body):\n        self.body = body\n        return body\n"
+                            "def reshow(doc, sid, refs):\n    h = H(); report_server.guarded(report_server.reshow_route)(h, {'doc': doc, 'section': sid, 'refs': refs})\n"
+                            "    return h.body\n" + code],
+                           cwd=self.v.root, capture_output=True, text=True, env={**os.environ, "CREAITE_NOW": "2026-10-09 10:00"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def saved_weekly(self, hide):
+        """The week's report built from the tracker with `hide` left out, saved as the draft and read back: (before, after, file text)."""
+        return self.run_py(
+            f"doc = report_doc.weekly_doc('ABC', {self.WEEK!r})\n"
+            "before = {r['ref']: r for s in doc['sections'] if s['id'] == 'overdue' for r in s['rows']}\n"
+            f"for s in doc['sections']:\n    for r in s.get('rows') or []:\n        if r.get('ref') in {hide!r}: r['shown'] = False\n"
+            f"p = report_doc.draft_path('weekly', 'ABC', {self.WEEK!r})\n"
+            "assert creaite_doc.save(p, doc, 'Saved for a test')['ok']\n"
+            "back = creaite_doc.read(p)\n"
+            "print(json.dumps({'before': before, 'back': back, 'text': creaite_doc.real(p).read_text(encoding='utf-8')}))")
+
+    def test_a_weekly_row_left_out_and_saved_is_shown_again_with_the_trackers_cells(self):
+        out = self.saved_weekly(["ABC-A-001"])
+        back = out["back"]
+        stub = next(r for s in back["sections"] if s["id"] == "overdue" for r in s["rows"] if r["ref"] == "ABC-A-001")
+        self.assertEqual(stub, {"ref": "ABC-A-001", "shown": False}, "a left-out row keeps only its reference")
+        self.assertNotIn("ABC-A-001", back["items"], "the leak guard still drops the left-out item from the saved document")
+        self.assertNotIn("Order the harbour cranes", out["text"], "the left-out item's words are not in the saved file")
+        ans = self.run_py(f"print(json.dumps(reshow(json.loads({json.dumps(json.dumps(back))}), 'overdue', ['ABC-A-001'])))")
+        self.assertTrue(ans["ok"], ans)
+        got = ans["rows"]["ABC-A-001"]
+        self.assertEqual(got["row"]["cells"], out["before"]["ABC-A-001"]["cells"])
+        self.assertEqual(got["row"]["cells"]["action"], "Order the harbour cranes")
+        self.assertEqual(got["row"]["cells"]["owner"], "Omar Ali")
+        self.assertEqual(got["row"]["cells"]["due"], "04-10-2026")
+        self.assertTrue(got["row"]["shown"])
+        self.assertNotEqual(got["row"].get("source"), "added", "a row shown again is not marked New")
+        self.assertEqual(got["item"]["id"], "ABC-A-001")
+
+    def test_a_row_that_cannot_be_rebuilt_stays_left_out_and_the_route_says_why(self):
+        back = self.saved_weekly(["ABC-A-001"])["back"]
+        for s in back["sections"]:      # an archived item's row, and a reference that was never in this table
+            if s["id"] == "overdue":
+                s["rows"].append({"ref": "ABC-A-002", "shown": False})
+        ans = self.run_py(f"print(json.dumps(reshow(json.loads({json.dumps(json.dumps(back))}), 'overdue', ['ABC-A-002', 'ABC-A-004', 'ABC-R-001'])))")
+        self.assertTrue(ans["ok"], ans)
+        self.assertEqual(ans["rows"], {}, "an archived item, a row not left out and a ref not in the table give no row")
+        self.assertEqual(sorted(ans["missing"]), ["ABC-A-002", "ABC-A-004", "ABC-R-001"])
+        self.assertNotIn("Retired lighthouse survey", json.dumps(ans))
+        bad = self.run_py("print(json.dumps(reshow({'kind': 'weekly', 'project': 'ABC', 'sections': []}, 'overdue', 'ABC-A-001')))")
+        self.assertFalse(bad["ok"])
+
+    def test_a_client_report_shows_a_row_again_only_from_its_client_safe_facts(self):
+        doc = self.run_py(
+            "cols = [{'key': 'action', 'label': 'Action'}, {'key': 'owner', 'label': 'Owner'}, {'key': 'due', 'label': 'Due'}]\n"
+            f"doc = creaite_doc.new('client', 'ABC', 'Client report', {self.WEEK!r}, [{{'id': 'overdue', 'type': 'table', "
+            "'heading': 'Overdue actions', 'default_heading': 'Overdue actions', 'hidden': False, 'columns': cols, "
+            "'rows': [{'ref': 'ABC-A-003', 'shown': False}, {'ref': 'ABC-A-004', 'shown': False}]}], audience='client', "
+            "client='Example Client Ltd')\nprint(json.dumps(doc))")
+        ans = self.run_py(f"print(json.dumps(reshow(json.loads({json.dumps(json.dumps(doc))}), 'overdue', ['ABC-A-003', 'ABC-A-004'])))")
+        self.assertTrue(ans["ok"], ans)
+        self.assertNotIn("ABC-A-003", ans["rows"], "an item that isn't client-visible is never shown again in a client report")
+        self.assertIn("ABC-A-003", ans["missing"])
+        words = json.dumps(ans)
+        for internal in ("Private vendor penalty clause", "Client scope sign-off internal words"):
+            self.assertNotIn(internal, words, "no internal wording reaches a client report")
+        got = ans["rows"]["ABC-A-004"]
+        self.assertEqual(got["row"]["cells"]["action"], "The client signs off the scope.")
+        self.assertEqual(got["row"]["cells"]["due"], "03-10-2026")
+
+    def test_a_shown_row_with_empty_cells_is_never_an_empty_table_row_in_an_export(self):
+        out = self.run_py(
+            f"doc = report_doc.weekly_doc('ABC', {self.WEEK!r})\n"
+            "for s in doc['sections']:\n    if s['id'] == 'overdue':\n"
+            "        s['rows'].append({'ref': 'ABC-A-009', 'shown': True, 'cells': {}})\n"
+            "        s['rows'].append({'ref': 'ABC-A-008', 'shown': True, 'cells': {'id': 'ABC-A-008', 'action': ' ', 'owner': ''}})\n"
+            f"p = report_doc.draft_path('weekly', 'ABC', {self.WEEK!r})\n"
+            "assert creaite_doc.save(p, doc, 'Saved for a test')['ok']\n"
+            "r = creaite_doc.export(p, 'html', file_beside=False, open_after=False)\n"
+            "assert r['ok'], r\n"
+            "html = creaite_doc.real(r['path']).read_text(encoding='utf-8')\n"
+            "import re\nsec = html.split('data-id=\"overdue\"', 1)[1].split('</section>', 1)[0]\n"
+            "w = creaite_doc.export(p, 'docx', file_beside=False, open_after=False)\nassert w['ok'], w\n"
+            "import zipfile\nword = zipfile.ZipFile(creaite_doc.real(w['path'])).read('word/document.xml').decode('utf-8')\n"
+            "print(json.dumps({'html': sec, 'word': word}))")
+        self.assertIn("Order the harbour cranes", out["html"])
+        self.assertNotRegex(out["html"], r"<tr>(<td>\s*(ABC-A-00[89])?\s*</td>)+</tr>", "no empty row in the export")
+        self.assertNotIn("ABC-A-009", out["html"])
+        self.assertNotIn("ABC-A-008", out["html"])
+        self.assertIn("Order the harbour cranes", out["word"])
+        self.assertNotIn("ABC-A-008", out["word"], "the Word export leaves the empty row out too")
+
+
+    def test_a_row_saved_shown_with_empty_cells_is_shown_again_from_the_tracker(self):
+        """Review (b): a row saved as shown with no cells (turned back on before the fix) is re-shown from the tracker too."""
+        back = self.run_py(
+            f"doc = report_doc.weekly_doc('ABC', {self.WEEK!r})\n"
+            "for s in doc['sections']:\n    for r in s.get('rows') or []:\n"
+            "        if r.get('ref') == 'ABC-A-001': r['cells'] = {}\n"
+            f"p = report_doc.draft_path('weekly', 'ABC', {self.WEEK!r})\n"
+            "assert creaite_doc.save(p, doc, 'Saved for a test')['ok']\nprint(json.dumps(creaite_doc.read(p)))")
+        row = next(r for s in back["sections"] if s["id"] == "overdue" for r in s["rows"] if r["ref"] == "ABC-A-001")
+        self.assertEqual((row["shown"], row["cells"]), (True, {}), "the damaged row as Alan has it")
+        ans = self.run_py(f"print(json.dumps(reshow(json.loads({json.dumps(json.dumps(back))}), 'overdue', ['ABC-A-001'])))")
+        self.assertEqual(ans["rows"]["ABC-A-001"]["row"]["cells"]["action"], "Order the harbour cranes", ans)
+
+    def test_the_saved_reports_own_page_never_holds_an_empty_row_even_with_editor_markup(self):
+        """Review (c), (e): the report's own HTML (the saved or filed file, and the plain page) leaves out a row with nothing in it,
+        including cells that hold only an editor's empty paragraph or a space."""
+        out = self.run_py(
+            f"doc = report_doc.weekly_doc('ABC', {self.WEEK!r})\n"
+            "for s in doc['sections']:\n    if s['id'] == 'overdue':\n"
+            "        s['rows'].append({'ref': 'ABC-A-009', 'shown': True, 'cells': {}})\n"
+            "        s['rows'].append({'ref': 'ABC-A-008', 'shown': True, 'cells': {'id': 'ABC-A-008', 'action': '<p></p>', 'owner': '&nbsp;', 'due': ' '}})\n"
+            "def sec(h):\n    return h.split('data-id=\"overdue\"', 1)[1].split('</section>', 1)[0]\n"
+            "print(json.dumps({'file': sec(creaite_doc.dumps(doc, keep_text=True)), 'page': sec(creaite_doc.render(doc, editing=False))}))")
+        for k in ("file", "page"):
+            self.assertIn("Order the harbour cranes", out[k])
+            self.assertNotIn("ABC-A-009", out[k], k)
+            self.assertNotIn("ABC-A-008", out[k], k)
+            self.assertNotRegex(out[k], r"<tr>(<td>[^<]*</td>)*<td></td>(<td>[^<]*</td>)*</tr>", k)
 
 if __name__ == "__main__":
     unittest.main()

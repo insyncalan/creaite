@@ -72,7 +72,8 @@ class WordPictures(Base):
         kind = "weekly" if audience == "internal" else "client"
         r = self.py("from pathlib import Path\nimport paths\n"
                     f"doc = creaite_doc.new({kind!r}, 'ABC', 'Report', '2026-10-16', {secs!r}, items={ITEMS!r}, audience={audience!r})\n"
-                    "o = Path(paths.DRAFTS) / 'pic.docx'\ncreaite_doc.word_export(doc, o)\nprint(json.dumps(str(o)))")
+                    "o = Path(paths.DRAFTS) / 'pic.docx'\nimport client_snapshot\n"   # v2.5.1: the Word writer as client_export calls it
+                    "creaite_doc.word_export(doc, o, token=client_snapshot.TOKEN)\nprint(json.dumps(str(o)))")
         return media_sizes(r)
 
     def test_a_client_word_file_never_carries_an_outside_picture(self):
@@ -99,7 +100,8 @@ class WordPictures(Base):
     def word_kind(self, kind, audience, secs):
         r = self.py("from pathlib import Path\nimport paths\n"
                     f"doc = creaite_doc.new({kind!r}, 'ABC', 'Report', '2026-10-16', {secs!r}, items={ITEMS!r}, audience={audience!r})\n"
-                    "o = Path(paths.DRAFTS) / 'pic.docx'\ncreaite_doc.word_export(doc, o)\nprint(json.dumps(str(o)))")
+                    "o = Path(paths.DRAFTS) / 'pic.docx'\nimport client_snapshot\n"   # v2.5.1: the Word writer as client_export calls it
+                    "creaite_doc.word_export(doc, o, token=client_snapshot.TOKEN)\nprint(json.dumps(str(o)))")
         return media_sizes(r)
 
     def test_a_client_kind_is_client_whatever_its_audience_says(self):
@@ -170,7 +172,7 @@ class SaveDropsPictureLines(unittest.TestCase):
         self.assertTrue(r["ok"], r)
         doc = r["doc"]
         bad = bad_refs(self.out / "outside.png")
-        md = "\n".join(f"![leak]({x})" for x in bad) + "\n![ours](_images/2026-10-09-own.png)"
+        md = "\n".join(f"![leak]({x})" for x in bad) + "\n![ours](_images/client-2026-10-09-own.png)"    # v2.5.1 gap C: the client's own
         for s in doc["sections"]:
             if s.get("type") in ("health", "text", "table", "timeline"):
                 s["text"] = f"Kept words.\n\n{md}"
@@ -182,7 +184,7 @@ class SaveDropsPictureLines(unittest.TestCase):
         back = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": week})
         text = json.dumps(back["doc"])
         self.assertIn("Kept words.", text)
-        self.assertIn("_images/2026-10-09-own.png", text, "the document's own picture reference stays")
+        self.assertIn("_images/client-2026-10-09-own.png", text, "the document's own picture reference stays")
         for x in bad:
             self.assertNotIn(json.dumps(x)[1:-1], text, x)
         self.assertNotIn("outside.png", text)

@@ -104,7 +104,9 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          approve_minutes, through tracker.py apply); unticked items wait in Review
 - POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (read only)
 - POST /api/minutes/export {path, format, file_beside, version}: HTML, Word or PDF through creaite_doc.export (P2), opened once
-                         made; version "distributed" exports the distributed version (approved minutes only; never overwriting)
+                         made; version "distributed" exports the distributed version (approved minutes only; never overwriting);
+                         a file that is a report by any sign is refused (v2.5.1), and creaite_doc.export never renders a client
+                         report but from client_snapshot.client_export
 - POST /api/day/close    {choices, prep}: close the day: the time and BL-295's plan (First thing tomorrow, Review now: references
                          only) in system/staging/day-closed.json, and the prep pages queued; waits for a running catch-up sweep
 - POST /api/day/card, /api/day/catchup {force}, /catchup/status, /catchup/skip, /api/day/prep {op, keys}: Close the day as a
@@ -158,7 +160,9 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/log/error    a page script error, short and redacted, into the debug log; /api/diagnostics {report}: Settings ›
                          Diagnostics' errors, or the plain-text report to paste (BL-102)
 - POST /api/report/draft, /save, /approve, /check, /export, /logo: the weekly and client reports
-                         (report_server.py; /check and /logo are read only)
+                         (report_server.py; /check and /logo are read only); /exported-view: Show as exported for a client
+                         report, the server's render of a preview snapshot (v2.5.1, #239: every client file is made by
+                         client_snapshot.client_export from the report's checked snapshot; read only, writes nothing)
 - POST /api/settings/catalogue  every setting: group, Essentials or Advanced, label, line, reason, default, value, changed,
                          resettable, last changed; the Essentials rows; counts (BL-320, settings_catalogue.py). Read only
 - POST /api/settings/reset {key | keys}: put settings back to their defaults, saved as the page's own settings save is (a backup,
@@ -1190,7 +1194,8 @@ class Handler(BaseHTTPRequestHandler):
         api_get = {"/api/data": lambda: self.send(200, live_data()),
                    "/api/records": lambda: records_route(self),            # BL-304: just the changed items
                    "/api/search": self.search_get,                          # BL-07
-                   "/api/files": self.files_get}.get(route)                 # BL-87
+                   "/api/files": self.files_get,                            # BL-87
+                   "/api/usage": self.usage_get}.get(route)                 # #238: Activity › Usage, read only
         if api_get:
             return api_get() if self.authorised() else None
         # ===== BL-253 (sprint-live-updates) =====
@@ -1207,6 +1212,16 @@ class Handler(BaseHTTPRequestHandler):
             raise
         except Exception as e:                                    # the page keeps its old list and says so
             self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
+
+    def usage_get(self):
+        """GET /api/usage (#238): the Usage tab's figures (usage_report.py --json: counts only, read only), token-checked by do_GET."""
+        try:
+            import usage_report
+            self.send(200, dict(usage_report.json_report(), ok=True))
+        except CLIENT_LEFT:                                       # the page left; not a 500
+            raise
+        except Exception as e:                                    # the tab keeps the figures built into the page
+            self.send(500, {"ok": False, "message": f"{type(e).__name__}"})
 
     def do_POST(self):
         """POST routes: checks the token, reads the body and dispatches to the route's method or a route table; an
@@ -7034,6 +7049,18 @@ BACKUP_ROUTES = ("/api/backup/list", "/api/backup/preview", "/api/backup/restore
 BACKUP_EVERY = 3600
 
 
+def usage_context_job():
+    """#238: measure what every run loads and append it, once a day (usage_log.daily: counts only, one writer, never in the
+    development repository). Returns a log line, or None. Never raises."""
+    try:
+        import usage_log
+        rows = usage_log.daily()
+        return f"context sizes recorded: {len(rows)} files" if rows else None
+    except Exception as e:  # noqa: BLE001  the monitor never stops the daily job
+        swallowed("usage", e)
+        return None
+
+
 def backup_daily_job():
     """One pass of the daily backup steps, then (BL-10) the daily archiving; returns what they said (or why they didn't run)."""
     if (paths.ROOT / ".creaite-dev").exists():
@@ -7048,7 +7075,8 @@ def backup_daily_job():
         said = []
         made = session.backup_today(sweep.now(), said.append)
         archived = archive_after_backup()                # BL-10: after Tidy up (backup.after_daily_backup), once a day
-        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else [])
+        context = usage_context_job()                    # #238: what every run loads, once a day (context-size.jsonl)
+        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else []) + ([context] if context else [])
     finally:
         LOCK.release()
 

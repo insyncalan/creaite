@@ -131,7 +131,7 @@ class Screens(LiveBrowserCase):
           openDraftEmail('Sara Example'); out.email=document.getElementById('deDlg').outerHTML; document.getElementById('deDlg').close();
           out.rem=[...document.querySelectorAll('#attnList li.rem')].map(l=>l.textContent).join(' | ');
           return out; })()""")
-        self.assertEqual(o["head"], "Intake and Review")
+        self.assertEqual(o["head"], "Messages")                  # #245: the section's own name now
         self.assertEqual(o["rows"], 4)                                                   # the four message cards (the sweep's proposal from the same person is a Needs attention row, #236)
         self.assertEqual(len(o["attn"]), 1)
         self.assertTrue(o["attn"][0].startswith("From Sara Example: [ABC] UAT"), o["attn"])

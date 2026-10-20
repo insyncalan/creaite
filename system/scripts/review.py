@@ -658,7 +658,8 @@ def client_findings(block):
         """The client check on the draft, with the connection `con`."""
         if creaite_doc.is_doc(draft):
             return client_leak.findings(creaite_doc.read_report(draft, "client" if block.get("kind") == "client" else None), con)
-        return client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
+        found = client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
+        return found + [f for f in word_output_findings(con, block["project"], draft) if f not in found]
     con = tracker.connect()
     try:
         return check(con)
@@ -675,6 +676,117 @@ def client_findings(block):
             return failure
     finally:
         con.close()
+
+
+WORD_BODY = "word/document.xml"
+CLIENT_WORD_TEMPLATES = ("CLIENT_TEMPLATE", "STEERCO_TEMPLATE")
+
+
+def word_output_findings(con, code, draft):
+    """v2.5.1 (#239 step 3): a client Word file (an older cx-client-report draft, or the client-safe steerco one-pager) checked as a
+    client export's output is (client_output): its body read through the confusables skeleton and with JSON escapes read (the
+    health line still allowed, as plain_findings allows it), every other part (headers, footers, notes, comments, its properties)
+    with no exemption, another project's hidden wording and owners (gap B), and every picture it holds against the firm's own in
+    its Word template. [] when it is safe."""
+    import client_leak
+    import client_output
+    import confusables
+    body = "\n".join(draft_lines(draft))
+    found = []
+    for form in (confusables.skeleton(body), client_output.unescaped(body)):
+        if form != body:
+            found += client_leak.plain_findings(con, code, form)
+    found += client_output.other_project_findings(con, code, client_leak.joined(body, confusables.skeleton(body)))
+    if Path(draft).is_file():                   # (draft_lines has read the file: a test may give its lines alone)
+        rest = word_other_parts(draft)
+        if rest:
+            found += client_output.text_findings({"project": code, "sections": []}, rest, con)
+        found += client_output.picture_findings(client_output.docx_pictures(draft), word_template_pictures())
+    return list(dict.fromkeys(found))
+
+
+def word_other_parts(draft):
+    """The text of every part of a Word file but its body (headers, footers, notes, comments, relationships, its properties)."""
+    import client_output
+    import html
+    import zipfile
+    rest = []
+    with zipfile.ZipFile(draft) as z:
+        for name in z.namelist():
+            if name.endswith((".xml", ".rels")) and name != WORD_BODY:
+                xml = z.read(name).decode("utf-8", "replace")
+                lines = [html.unescape("".join(client_output.WORD_TEXT.findall(p)))
+                         for p in client_output.WORD_PARA.findall(xml)] if name.startswith("word/") else []
+                rest += lines or [html.unescape(client_output.TAGS.sub(" ", xml))]
+    return "\n".join(rest)
+
+
+def word_template_pictures():
+    """The hashes of the firm's own pictures in the client report's and the steerco one-pager's Word templates."""
+    import client_output
+    allowed = set()
+    for attr in CLIENT_WORD_TEMPLATES:
+        tpl = getattr(paths, attr, None)
+        if tpl is not None and tpl.is_file():
+            allowed |= {h for _n, data in client_output.docx_pictures(tpl)
+                        for h in (client_output.raw_hash(data), client_output.pic_hash(data)) if h}
+    return allowed
+
+
+def file_sha(path):
+    """The SHA-256 of a file's bytes."""
+    import hashlib
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def mark_checked(block, decision="approved", ref="report"):
+    """v2.5.1 (#239 step 3): an approved client Word draft (client_block) records the SHA-256 of the file its check passed
+    (`checked_sha256`), so filing it can refuse a file changed since (client_apply_problem). Any other block or decision: nothing."""
+    if decision == "approved" and ref == "report" and client_block(block) and word_draft(block.get("draft")) \
+            and paths.resolve(block["draft"]).is_file():
+        block["checked_sha256"] = file_sha(paths.resolve(block["draft"]))
+
+
+def client_apply_problem(blk, field):
+    """v2.5.1 (#239 step 3): why tracker.py apply must not file an approved client Word draft (an older cx-client-report one, or the
+    client-safe steerco one-pager), else None: the file is not the one whose check passed at approval (`checked_sha256`: none, or
+    the draft changed since), or the client check finds something now. For tracker.py apply's file step (a guarded proposal,
+    dev/proposals/client-output-step3/tracker.diff), before the draft is stamped and copied."""
+    if field != "report_decision" or blk.get(field) != "approved" or not client_block(blk) or not word_draft(blk.get("draft")):
+        return None
+    draft = paths.resolve(blk["draft"])
+    if not draft.is_file():
+        return None                         # check_file_op says the copy's source isn't there
+    if blk.get("checked_sha256") != file_sha(draft):
+        return (f"draft: {blk['draft']} isn't the file whose client check passed at approval (it changed since, or it was approved "
+                "before creaite checked client files this way): approve it again")
+    left = as_staged_findings(client_findings(blk), blk)
+    if left:
+        return f"draft: {blk['draft']} holds possible internal content now, so it isn't filed: " + "; ".join(left)
+    return None
+
+
+def client_refusal(n, block, mode=None):
+    """The answer for approving a client Word draft (or the client-safe one-pager) the client check stops, else None. v2.5.1 (#239
+    step 3): --as-staged no longer files client output the check refuses; only the one-pager's labelled items Alan chose to keep
+    (included_labelled) may stand."""
+    found = client_findings(block)
+    left = as_staged_findings(found, block) if mode == "as-staged" else found
+    if not left:
+        return None
+    labelled_only = block.get("kind") == "steerco" and mode != "as-staged" and not as_staged_findings(found, block)
+    hint = (f"edit the draft, or say \"approve {n} --as-staged\" to file it with the labelled items you chose" if labelled_only
+            else "edit the draft and approve again: client output is never filed with these")
+    listed = "\n    ".join(left)
+    return f"{n}: not approved — possible internal content in the client report:\n    {listed}\n  ({hint})"
+
+
+def as_staged_findings(found, block):
+    """v2.5.1 (#239 step 3): what `--as-staged` still can't file a client report or the client-safe one-pager with: every finding
+    but a label finding on an item Alan chose to keep in the one-pager although labelled (the block's `included_labelled`, BL-94).
+    A client report's own findings are never filed anyway: its file is a client output, checked as every export is."""
+    kept = {str(i) for i in block.get("included_labelled") or []} if block.get("kind") == "steerco" else set()
+    return [f for f in found if not (" is labelled " in f and f.split(" ", 1)[0] in kept)]
 
 
 def labels_readable(con):
@@ -774,12 +886,10 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
             listed = "\n    ".join(d["msg"] for d in diffs)
             return (f"{n}: not approved — the draft differs from the staged items:\n    {listed}\n  (say \"approve {n} "
                     f"--sync\" to update the staged items to match the draft, or \"approve {n} --as-staged\" to keep them)")
-    if decision == "approved" and draft and ref == "report" and mode != "as-staged" and client_block(block):   # BL-92: the client-safe one-pager is checked like a client report
-        found = client_findings(block)
-        if found:
-            listed = "\n    ".join(found)
-            return (f"{n}: not approved — possible internal content in the client report:\n    {listed}\n  (edit the "
-                    f"draft, or say \"approve {n} --as-staged\" to file it anyway)")
+    if decision == "approved" and draft and ref == "report" and client_block(block):   # BL-92: the client-safe one-pager is checked like a client report
+        refused = client_refusal(n, block, mode)
+        if refused:
+            return refused
     if decision == "approved" and word_draft(draft):
         r = subprocess.run([sys.executable, str(DOCX_TOOLS), "clean", str(paths.resolve(draft))],
                            capture_output=True, text=True)
@@ -788,6 +898,7 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
         msg = r.stdout.strip()
     else:
         msg = ""
+    mark_checked(block, decision, ref)
     block[field] = decision
     save(p, data)
     what = {"meeting": "Minutes", "report": "Report"}.get(ref, "File change")

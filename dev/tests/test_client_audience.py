@@ -201,6 +201,144 @@ class Audience(unittest.TestCase):
                     self.assertEqual(list(self.reports.glob("*Client report*")), [])     # nothing filed or exported
                     self.assertEqual(self.reports_hold(needles), {})
 
+    # ── one read between the gate and the output (time of check, time of use) ──────────────────────────────────────────
+    def swap_after_first_read(self):
+        """Python run in the vault: every read of the client draft after the first finds the payload version on disk (a file
+        replaced whole between the gate's read and any later one)."""
+        f = self.draft_file()
+        clean = f.read_text()
+        m = creaite_doc.BLOCK.search(clean)
+        d = self.add_payload(json.loads(m.group(1)))
+        dirty = clean[:m.start(1)] + creaite_doc.data_json(d) + clean[m.end(1):]
+        (self.v.root / "dirty.txt").write_text(dirty, encoding="utf-8")
+        return ("import pathlib\n_orig = creaite_doc.read\n"
+                "def _read(p):\n    d = _orig(p)\n"
+                f"    if pathlib.Path(str(creaite_doc.real(p))).name == {f.name!r}:\n"
+                f"        pathlib.Path({str(f)!r}).write_text(pathlib.Path('dirty.txt').read_text())\n"
+                "    return d\ncreaite_doc.read = _read\n"
+                "class H:\n    def send(self, code, body):\n        self.out = body\n        return body\n")
+
+    def test_export_builds_from_the_document_it_checked(self):
+        for fmt in self.formats():
+            with self.subTest(fmt=fmt):
+                self.fresh()
+                out = self.py(self.swap_after_first_read() + "import report_server\nh = H()\n"
+                              f"report_server.export_route(h, {{'kind': 'client', 'code': 'ABC', 'week_ending': {WEEK!r}, "
+                              f"'fmt': {fmt!r}, 'on_clash': 'number'}})\nprint(json.dumps(h.out))")
+                self.assertTrue(out["ok"], out)
+                self.assertEqual(self.scan(self.v.root / out["path"], self.needles()), [], fmt)
+
+    def test_approve_files_the_document_it_checked(self):
+        self.fresh()
+        out = self.py(self.swap_after_first_read() +
+                      f"p = report_doc.stage_client({str(self.draft_file())!r}, force=True, code='ABC', fri={WEEK!r})\n"
+                      "prop = json.loads(p.read_text())\np.unlink()\n"
+                      "print(json.dumps([o.get('content') or '' for o in prop['report']['file_ops'] if o.get('op') == 'write']))")
+        # #239 step 2: Approve writes the filed report and its checked snapshot beside it; neither holds a needle
+        self.assertEqual(len(out), 2, out)
+        self.assertEqual(sum('"creaite-client-snapshot"' in o for o in out), 1, "one of the two writes is the snapshot")
+        for o in out:
+            low = o.lower()
+            self.assertEqual([n for n in self.needles() if n.lower() in low], [])
+
+    # ── a weekly report is always internal ──────────────────────────────────────────────────────────────────────────────
+    def weekly_file(self):
+        return self.v.root / "system/staging/drafts" / f"{S.WEEKLY_STEM}.html"
+
+    def test_a_weekly_report_saved_with_a_client_audience_is_refused(self):
+        for audience in ("client", "distributed"):
+            with self.subTest(audience=audience):
+                r = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": WEEK})
+                self.assertTrue(r["ok"], r)
+                doc = dict(r["doc"], audience=audience)
+                sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+                self.assertFalse(sv["ok"], sv)
+                self.assertRegex(sv["message"], r"(?i)audience")
+
+    def test_a_weekly_draft_edited_on_disk_to_a_client_audience_is_exported_as_internal(self):
+        for audience in ("client", "distributed"):
+            with self.subTest(audience=audience):
+                for f in self.reports.glob("*Weekly report*"):
+                    f.unlink()
+                self.weekly_file().unlink(missing_ok=True)
+                self.weekly()
+                f = self.weekly_file()
+                text = f.read_text()
+                self.assertIn('"audience": "internal"', text)
+                f.write_text(text.replace('"audience": "internal"', f'"audience": "{audience}"', 1), encoding="utf-8")
+                d = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": WEEK})
+                self.assertEqual(d["doc"]["audience"], "internal")
+                for fmt in ("html", "docx"):
+                    e = self.export(fmt, "weekly", on_clash="number")
+                    self.assertTrue(e["ok"], (fmt, e))
+                    p = self.v.root / e["path"]
+                    if fmt == "html":
+                        page = p.read_text()
+                        self.assertIn('<div class="sub">Internal</div>', page)
+                        self.assertNotIn('<div class="sub">Client</div>', page)
+                        self.assertNotIn('<div class="sub">Distributed</div>', page)
+                    else:
+                        self.assertEqual(self.scan(p, ["Client · Draft", "Distributed · Draft"]), [])
+
+    # ── the minutes routes never open a report ──────────────────────────────────────────────────────────────────────────
+    def as_minutes(self, f):
+        text = f.read_text()
+        m = creaite_doc.BLOCK.search(text)
+        d = self.add_payload(json.loads(m.group(1)))
+        d["kind"], d["audience"] = "minutes", "internal"
+        f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+
+    def test_a_client_report_edited_to_say_minutes_is_never_exported_by_the_minutes_route(self):
+        self.fresh()
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertTrue(a["ok"], a)
+        filed = self.v.root / a["path"]
+        filed_text = filed.read_text()
+        self.fresh()                                     # a client draft again
+        filed.write_text(filed_text, encoding="utf-8")   # and the filed report back
+        for f in (self.draft_file(), filed):
+            with self.subTest(file=f.parent.name):
+                self.as_minutes(f)
+                rel = str(f.relative_to(self.v.root))
+                for fmt in ("html", "docx"):
+                    e = self.post("/api/minutes/export", {"path": rel, "format": fmt, "file_beside": True})
+                    self.assertFalse(e["ok"], (fmt, e))
+                d = self.post("/api/minutes/draft", {"path": rel})
+                self.assertFalse(d.get("ok"), d)
+                others = [x for folder in (self.reports, self.v.root / "system/staging/drafts") for x in folder.glob("*")
+                          if x.is_file() and x not in (self.draft_file(), filed) and x.suffix in (".html", ".docx", ".pdf")]
+                self.assertEqual({x.name: h for x in others for h in [self.scan(x, self.needles())] if h
+                                  and "Weekly report" not in x.name}, {})
+
+    # ── a typed export name never names the other report ────────────────────────────────────────────────────────────────
+    def test_a_weekly_export_cannot_be_renamed_to_a_client_reports_name(self):
+        self.weekly()
+        for new in (S.CLIENT_STEM, S.CLIENT_STEM + ".html", "x client REPORT - y"):
+            with self.subTest(new=new):
+                before = sorted(x.name for x in self.reports.glob("*"))
+                e = self.export("html", "weekly", on_clash="rename", new_name=new)
+                self.assertFalse(e["ok"], e)
+                self.assertEqual(sorted(x.name for x in self.reports.glob("*")), before)
+        e = self.export("html", "weekly", on_clash="rename", new_name="Board pack")      # an ordinary name still works
+        self.assertTrue(e["ok"], e)
+
+    # ── a draft edited on disk to name another week or project ──────────────────────────────────────────────────────────
+    def test_a_draft_whose_week_or_project_was_edited_on_disk_is_refused_at_export(self):
+        for key, value in (("date", "2026-10-02"), ("project", "DEF")):
+            with self.subTest(key=key):
+                self.fresh()
+                f = self.draft_file()
+                text = f.read_text()
+                m = creaite_doc.BLOCK.search(text)
+                d = json.loads(m.group(1))
+                d[key] = value
+                f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+                for fmt in ("html", "docx"):
+                    e = self.export(fmt, "client", on_clash="number")
+                    self.assertFalse(e["ok"], (fmt, e))
+                    self.assertIn("isn't this report", e["message"])
+                self.assertEqual(list(self.reports.glob("*Client report*")), [])
+
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"
@@ -364,26 +502,30 @@ class Audience(unittest.TestCase):
 
     # ── (D) the filed client file's data block ──────────────────────────────────────────────────────────────────────────
     def test_the_filed_client_file_holds_only_creaites_own_meta_sources_and_layout(self):
-        """The filed data block keeps only creaite's own keys. Since the gate reads the header fields (meta, sources, layout) as client
-        text, a foreign key carrying internal words is now refused outright (see the next test); this one puts in foreign keys with
-        harmless values, which the gate passes, and still demands that none of them reach the filed file."""
-        r = self.fresh()
-        doc = r["doc"]
-        p = "foreign-key-marker"
-        doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
-        doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
-        doc["layout"] = {**doc["layout"], "zzz": p}
-        sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
-        self.assertTrue(sv["ok"], sv)
-        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
-        self.assertTrue(a["ok"], a)
-        filed = self.v.root / a["path"]
-        raw = json.loads(creaite_doc.BLOCK.search(filed.read_text()).group(1))
-        self.assertEqual(set(raw["meta"]) - {"period_start", "period_end", "locked", "facts_on", "facts_week"}, set())
-        self.assertEqual([x["ref"] for x in raw["sources"]], ["tracker"])
-        self.assertNotIn("zzz", raw["layout"])
-        self.assertEqual(self.scan(filed, [p]), [])
-        self.assertEqual(self.scan(filed, self.needles()), [])
+        """Words the gate doesn't flag never reach the filed data block; protected words are refused by the gate (rc-a5's
+        client_leak reads meta, sources and layout) and nothing is filed."""
+        for p, gated in (("Quokkameta tidings", False), (self.header_payload(), True)):
+            with self.subTest(gated=gated):
+                r = self.fresh()
+                doc = r["doc"]
+                doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
+                doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
+                doc["layout"] = {**doc["layout"], "zzz": p}
+                sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+                self.assertTrue(sv["ok"], sv)
+                a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+                if gated:
+                    self.assertFalse(a["ok"], a)
+                    self.assertIn("possible internal content", a["message"])
+                    self.assertEqual(list(self.reports.glob("*Client report*")), [])
+                    continue
+                self.assertTrue(a["ok"], a)
+                filed = self.v.root / a["path"]
+                raw = json.loads(creaite_doc.BLOCK.search(filed.read_text()).group(1))
+                self.assertEqual(set(raw["meta"]) - {"period_start", "period_end", "locked", "facts_on", "facts_week"}, set())
+                self.assertEqual([x["ref"] for x in raw["sources"]], ["tracker"])
+                self.assertNotIn("zzz", raw["layout"])
+                self.assertEqual(self.scan(filed, ["quokkameta"] + self.needles()), [])
 
     def test_internal_words_in_the_header_fields_are_refused_and_never_filed(self):
         """What the old test of the filed block put in (internal words in meta, sources and layout): the client gate reads those fields,
@@ -412,7 +554,7 @@ class Audience(unittest.TestCase):
         self.assertEqual(creaite_doc.force_client_audience({"kind": "client"})["audience"], "client")
         self.assertEqual(creaite_doc.force_client_audience({"kind": "minutes", "audience": "distributed"})["audience"], "distributed")
         self.assertEqual(creaite_doc.force_client_audience({"kind": "weekly", "audience": "client"}),
-                         {"kind": "weekly", "audience": "client"})
+                         {"kind": "weekly", "audience": "internal"})          # a weekly report is always internal (M)
 
     # ── control ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_control_a_normal_client_report_saves_approves_and_exports(self):

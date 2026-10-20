@@ -521,7 +521,7 @@ class Page(LiveBrowserCase):
         self.b.wait("document.querySelector('#tdList li') && document.querySelector('#attnList li.alrow')")
 
     def rows(self):
-        """Today's followed-person rows in both places: Needs attention (where: attn; #236) and Intake and Review (where: td)."""
+        """Today's followed-person rows in both places: Needs attention (where: attn; #236) and Messages (where: td)."""
         return self.b.eval(r"""[...document.querySelectorAll('#attnList > li.alrow, #tdList > li')].map(l=>({where:l.closest('#attnList')?'attn':'td',
           key:l.dataset.td||'al'+l.dataset.al, kind:l.className, text:l.textContent.replace(/\s+/g,' ').trim().replace(/^\d+(?=\D)/,''),
           btns:[...l.querySelectorAll('button')].map(x=>x.getAttribute('aria-label')||''),
@@ -538,7 +538,7 @@ class Page(LiveBrowserCase):
         self.assertIn("A note for", note["text"])
         self.assertIn("memory", note["text"])
         for r in (prop, note):
-            self.assertEqual(r["where"], "attn")                                      # Needs attention, not Intake and Review
+            self.assertEqual(r["where"], "attn")                                      # Needs attention, not Messages
             self.assertTrue(any(x.startswith("Open in Review") for x in r["btns"]), r["btns"])
             self.assertTrue(any(x.startswith("Dismiss") for x in r["btns"]), r["btns"])
         b.click(f'#attnList li[data-al="{prop["key"][2:]}"] a.t')                        # the title goes to the proposal, highlighted
@@ -574,16 +574,14 @@ class Page(LiveBrowserCase):
           nAttn:document.getElementById('nAttn').textContent, attn:document.querySelectorAll('#attnList > li:not(:has(.none))').length,
           alrows:document.querySelectorAll('#attnList > li.alrow').length, nTd:document.getElementById('nTd').textContent,
           badge:document.getElementById('vipBadge')?document.getElementById('vipBadge').getAttribute('aria-label'):null,
-          tdNew:!document.getElementById('tdNew').hidden, quiet:document.querySelectorAll('#tdList > li.td-quiet').length,
-          all:document.querySelectorAll('#tdList > li').length, tdMoved:document.querySelectorAll('#tdList > li[data-td^="alfp"]').length,
-          line:tdLine().reduce((a,x)=>a+x.n,0)}; })()""")
+          quiet:document.querySelectorAll('#tdList > li.td-quiet').length,
+          all:document.querySelectorAll('#tdList > li').length, tdMoved:document.querySelectorAll('#tdList > li[data-td^="alfp"]').length}; })()""")
         self.assertEqual(o["moved"], 4)                                          # the proposal row, the note row, the confidential thread's row and the private conversation
         self.assertEqual(o["alrows"], 4)
         self.assertEqual(o["nAttn"], str(o["attn"]))                             # the heading's count includes them
-        self.assertEqual(o["tdMoved"], 0)                                        # and none is also in Intake and Review
-        self.assertEqual(o["nTd"], str(o["all"] - o["quiet"] + o["line"]))      # Intake and Review counts only its cards
+        self.assertEqual(o["tdMoved"], 0)                                        # and none is also in Messages
+        self.assertEqual(o["nTd"], str(o["all"] - o["quiet"]))                   # Messages counts only its cards (#245: the Intake line has its own counts)
         self.assertGreaterEqual(o["all"], o["cards"])
-        self.assertTrue(o["tdNew"])                                              # its "new" mark is for the cards
         self.assertEqual(o["badge"], f"{o['vips']} items to see first")          # the left bar counts everything unseen; a From row is not a message
 
     def test_h_the_from_rows_come_after_the_existing_attention_items(self):

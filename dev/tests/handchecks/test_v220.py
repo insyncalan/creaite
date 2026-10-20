@@ -326,19 +326,31 @@ class TodayChecks(V220Case):
     def test_c13_intake_and_review(self):
         """13. "To decide" is now Intake and Review: new name, new position just above Week ahead, it folds like the others, new
         items are marked, and its buttons take the keyboard. (Since #208 in 2.3.0 it is one quiet line with real links; the old
-        buttons became links, so the keyboard half is the links'.)"""
+        buttons became links, so the keyboard half is the links'. Since #245 in 2.5.2 the section is gone: Intake is one quiet line at
+        the foot of Your commitments, and what is left of the old section is Messages, hidden when empty, just above Week ahead.)"""
         b = self.b
         self.screen("today")
         heads = b.eval("[...document.querySelectorAll('#v-today h2')].map(h=>h.textContent.trim())")
         at = lambda name: next((i for i, h in enumerate(heads) if h.startswith(name)), None)      # a heading carries its count
-        self.assertIsNotNone(at("Intake and Review"), heads)
+        self.assertIsNone(at("Intake and Review"), heads)          # #245: no such section any more
         self.assertIsNone(at("To decide"), heads)
-        if at("Week ahead") is not None:
-            self.assertEqual(at("Intake and Review") + 1, at("Week ahead"), "just above Week ahead")
+        if at("Messages") is not None and at("Week ahead") is not None:       # Messages is hidden when it is empty
+            self.assertEqual(at("Messages") + 1, at("Week ahead"), "Messages just above Week ahead")
+        o = b.eval("""(()=>{ const l=document.getElementById('tdQuiet'), a=l&&l.querySelector('a');
+          return {text:l?l.textContent.replace(/\\s+/g,' ').trim():null, last:!!l&&document.getElementById('mineSec').lastElementChild.contains(l),
+            links:l?[...l.querySelectorAll('a')].map(x=>[x.dataset.tdq,x.getAttribute('href')]):[], focus:!!a&&(a.focus(),document.activeElement===a)}; })()""")
+        self.assertIsNotNone(o["text"], "the vault has proposals waiting, so Intake's line shows")
+        self.assertTrue(o["text"].startswith("Intake: "), o["text"])
+        self.assertTrue(o["last"], "the line is the last thing in Your commitments")
+        self.assertIn(["proposals", "#review"], o["links"])                # its phrases are real links, and the keyboard reaches them
+        self.assertTrue(o["focus"])
         self.named_many(13, ("test_today_home", ("test_every_section_in_order_unboxed_resolved_folded",
-                                                  "test_it_is_one_line_it_folds_like_before_and_goes_at_zero",
-                                                  "test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page",
-                                                  "test_a_new_file_or_proposal_while_today_is_open_updates_the_line")),
+                                                  "test_messages_keep_their_cards_newest_first")),
+                        ("test_today_intake_line", ("test_counts_in_the_locked_wording_with_two_links_and_an_x",
+                                                    "test_proposals_open_review_and_meetings_open_intake",
+                                                    "test_no_line_when_nothing_waits",
+                                                    "test_it_comes_back_when_a_new_proposal_arrives",
+                                                    "test_message_cards_keep_a_section_of_their_own_called_messages")),
                         ("test_today_brief", ("test_needs_attention_lists_no_proposals_they_are_in_to_decide",)))
         self.note(13, "Today's headings in the vault: " + " | ".join(heads) + ". Not run: test_shared_behaviour (known red on the "
                   "2.2.0 line for the Reject buttons; a whole-screens suite, not this check)")

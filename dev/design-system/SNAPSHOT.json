@@ -1,9 +1,9 @@
 {
- "commit": "c237a088",
- "branch": "origin/v220-int-gate",
- "version_file": "2.1.0",
- "subject": "cdp.py and test_current_state_live: the JS probes on short lines and the re-raise chained (check.py ",
- "taken": "2026-10-17",
+ "commit": "8f278df4",
+ "branch": "v252-intake-line",
+ "version_file": "2.5.0",
+ "subject": "#245 LOWs: dashboard-spec describes the Intake line and Messages section; design-system snapshots an",
+ "taken": "2026-10-20",
  "palette": "creaite",
  "mode": "light",
  "viewport": "1400x1000"

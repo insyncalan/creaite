@@ -617,6 +617,7 @@ def decide_block(data, n, decision, fname, notes):
         notes.append(f"Review: {fname}'s client report may hold internal content, so it wasn't approved: approve it in Review, "
                      "which lists what was found")
         return 0
+    review.mark_checked(block, decision, n)          # v2.5.1 (#239 step 3): the file its check passed, for filing
     block[field], block["decided_in"] = decision, "excel"
     return 1
 

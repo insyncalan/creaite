@@ -106,20 +106,22 @@ export async function approveClientReport(force) {
   return api("/api/report/approve", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, doc: d, base_version: crBase.value, force: !!force });
 }
 
-/** Export the client report (the page saved first); the route runs the left-out check again and answers with it. #226: for html and pdf
-    `makePage` draws the saved report as it is exported (components/report/exportPage.jsx), and the server checks it again.
-    @param {"html"|"docx"|"pdf"} fmt @param {(doc: any, version: number) => Promise<any>} [makePage] */
-export async function exportClientReport(fmt, makePage) {
+/** Export the client report (the page saved first); the route runs the left-out check again and answers with it. v2.5.1 (#239): the
+    server makes every client file from the report's checked snapshot (client_snapshot.client_export), so no page is ever posted for
+    one. @param {"html"|"docx"|"pdf"} fmt */
+export async function exportClientReport(fmt) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
   const opened = crIdentity(d);
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
   if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
-  const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
-  return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
+  return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt });
 }
 
 let matchChain = Promise.resolve();
+
+/** Whether an internal report is the client report's own week of its own project (#234). @param {SheetDoc|null} i @param {SheetDoc} c */
+const sameWeek = (i, c) => !!i && !!c && i.project === c.project && i.date === c.date;
 
 /** Match internal, behind the client gate (v2.5.0): each section's matched text is checked by the server (client_leak.findings through
     /api/report/match-check, read only) BEFORE it is copied; a section whose matched text brings a finding the client report did not
@@ -135,10 +137,10 @@ export function matchInternal(ids) {
 /** @param {string[]|null} ids */
 async function matchInternalNow(ids) {
   const d0 = crDoc.value, i = crInternal.value, opened = crIdentity(d0);
-  if (!d0 || !i) return;
+  if (!d0 || !i || !sameWeek(i, d0)) return;                             // #234: never another project's or week's internal report
   // the race fix (v2.5.0): after every await, a different open report (another project, week or client, or a reload) drops the match
   // silently: nothing is copied, nothing is said on the other report's page
-  const moved = () => crIdentity() !== opened || !sameReport(d0);          // the same open, and the same project, week and client
+  const moved = () => crIdentity() !== opened || !sameReport(d0) || !sameWeek(crInternal.value, d0);   // the same open, project, week and client, and its own internal report
   const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
   const all = ids ? ids : d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
   // #218: "every section" never brings an internal-audience text section over; it is named instead, and matched only one at a time

@@ -25,21 +25,31 @@
                            internal wording into the client page, so internal words never sit on the client draft (v2.5.0)
   POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
+  POST /api/report/reshow  {doc, section, refs}: rows left out and saved (kept as their reference only), shown again (read only;
+                           #234): {rows: {ref: {row, item}}, missing: {ref: why}} from the tracker, a client report only from
+                           its client-safe facts; a row it can't give stays left out
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
                            a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
-                           #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
-                           and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
-                           renderer makes the file and the answer says `plain: true`;
+                           #226: a weekly report's HTML and PDF are the report page's own exported view, posted as `page: {html,
+                           css, palette, version}` and re-checked against the saved report by export_page.build; with no page, or
+                           one that fails, the plain renderer makes the file and the answer says `plain: true`. A client report
+                           takes no page (v2.5.1, #239): it is made by client_snapshot.client_export alone, from its checked
+                           snapshot, under the lock, and its output checked; a `page` sent with one is not used and the answer
+                           says so (`page_ignored: true`);
+  POST /api/report/exported-view {kind: client, code, week_ending}: Show as exported for a client report, rendered by the server
+                           from a preview snapshot (marked Preview, never written); the page never posts its own;
   POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
                            A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
+import copy
 import re
 import os
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -116,6 +126,9 @@ def guarded(fn):
             return refuse(handler, str(e))
         except SystemExit as e:              # report.py exits with a sentence when a project isn't there
             return refuse(handler, str(e.code) if e.code not in (None, 0) else "That report can't be made.")
+        except (LookupError, ValueError, TypeError, AttributeError):     # v2.5.1 (#239): a document edited into a shape creaite
+            return refuse(handler, "That report can't be read as it is (it was changed outside creaite), so nothing was done. "
+                                   "Open the report again from creaite.")         # can't read is refused, never a fault
     route.__doc__ = fn.__doc__
     return route
 
@@ -155,10 +168,24 @@ def save_route(handler, req):
     if off:
         return off
     with handler_lock(handler):
-        out = report_doc.save_draft(doc, req.get("base_version"))
+        out = report_doc.save_draft(own_header_logos(doc), req.get("base_version"))
         if out.get("ok"):
             report_doc.remember_layout(code, kind, doc.get("layout"), client)
     return answer(handler, out)
+
+
+def own_header_logos(doc):
+    """2.5.1 M1: `doc` with each header's logos re-derived from the project's own files (creaite_doc.own_logos): a posted path is
+    dropped, never stored, so a saved report names only logo files report_doc.logos knows. Which are ticked is left to the layout."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("sections"), list):
+        return doc                          # left for save_draft's own checks to refuse
+    out, secs = dict(doc), []
+    for s in doc["sections"]:
+        if isinstance(s, dict) and s.get("type") == "header" and isinstance(s.get("data"), dict) and "logos" in s["data"]:
+            s = {**s, "data": {**s["data"], "logos": creaite_doc.own_logos(doc, s, ticked=False)}}
+        secs.append(s)
+    out["sections"] = secs
+    return out
 
 
 def handler_lock(handler):
@@ -227,7 +254,8 @@ def approve_route(handler, req):
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
-            saved = report_doc.save_draft(req["doc"], req.get("base_version"))     # checks it first (v2.5.0 audience bypass)
+            # checks it first (v2.5.0 audience bypass)
+            saved = report_doc.save_draft(own_header_logos(req["doc"]), req.get("base_version"))
             if not saved.get("ok"):
                 return answer(handler, saved)
         if not paths.resolve(draft).is_file():
@@ -272,7 +300,9 @@ def match_check_route(handler, req):
         creaite_doc.check(d)
         if d.get("kind") != "client":
             raise creaite_doc.DocError("Only a client report has this check.")
-        out.append(client_leak.coded_findings(d, con))
+        # v2.5.1 (#239): read as the export reads a client report (its header derived, another project's rows dropped), so Match
+        # internal is held exactly when the export would refuse the same document on its content
+        out.append(client_leak.coded_findings(creaite_doc.force_client_audience(copy.deepcopy(d)), con))
     return answer(handler, {"ok": True, "findings": out})
 
 
@@ -282,6 +312,14 @@ def pick_route(handler, req):
     if not isinstance(doc, dict):
         raise report_doc.ReportError("Say which report to add to.")
     return answer(handler, {"ok": True, "sections": report_doc.pickable(doc)})
+
+
+def reshow_route(handler, req):
+    """POST /api/report/reshow: a row left out and saved, shown again from the tracker (see the module's description). Writes nothing."""
+    doc = req.get("doc")
+    if not isinstance(doc, dict) or not isinstance(req.get("section"), str):
+        raise report_doc.ReportError("Say which report and which table.")
+    return answer(handler, {"ok": True, **report_doc.reshow(doc, req["section"], req.get("refs"))})
 
 
 def export_call():
@@ -313,16 +351,37 @@ def launch(stored):
     return True
 
 
-def _plain_name(name, ext):
+def _plain_name(name, ext, own=None):
     """A typed file name made safe: one name (no folder, no leading dot, 150 characters at most) that ends with `ext`; None when it
-    can't be a file name."""
+    can't be a file name (or _name_problem refuses it). `own`: this report's filing name, which a typed name may start with."""
     name = str(name or "")
     if any(ord(c) < 32 or ord(c) == 127 for c in name):
         return None                                            # a control character (NUL, a newline, a tab...) is never in a file name
     name = " ".join(name.split())
     if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150:
         return None
-    return name if name.lower().endswith(ext) else name + ext
+    name = name if name.lower().endswith(ext) else name + ext
+    return None if _name_problem(name, own) else name
+
+
+RESERVED_STEM = re.compile(r"(?i)^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)(?:\..*)?$")
+REPORT_WORDS = re.compile(r"(?i)(?:weekly|client)\s*report")
+
+
+def _name_problem(name, own=None):
+    """v2.5.1 (#239): why a typed export name can't be used, or None: a name Windows reserves (CON, NUL, COM1...), a character a
+    file name can't hold there (< > : " | ? *), a stem ending in a dot or a space, or a name that reads as a report's filing name
+    (weekly report, client report: in any case or spacing) other than this report's own (`own`, its filing name, which the name
+    may start with: the clash question then says it is reserved), which belongs to a filing and could block an Approve."""
+    stem = name.rsplit(".", 1)[0]
+    if RESERVED_STEM.match(stem) or RESERVED_STEM.match(name) or re.search(r'[<>:"|?*]', name) or stem != stem.rstrip(". "):
+        return "reserved"
+    import unicodedata
+    plain = " ".join(unicodedata.normalize("NFKC", name).split())
+    mine = own and plain.lower().startswith(" ".join(Path(own).stem.split()).lower())
+    if REPORT_WORDS.search(plain) and not mine:
+        return "a report's name"
+    return None
 
 
 def _taken(folder, name, reserved=None):
@@ -377,16 +436,22 @@ def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
             "message": f"{'Replaced' if overwrite else 'Saved'} {Path(stored).name} in {label}."}
 
 
-def _settle_name(folder, name, ext, req, label, reserved=None):
+def _settle_name(folder, name, ext, req, label, reserved=None, kind=None):
     """(name, overwrite, asked): the file name to save as, from the page's choice for a taken name (`on_clash`: number, rename with
     `new_name`, or overwrite), and `asked`: the answer to give instead when the name is taken and no choice was made (or the typed
     name can't be used), else None. `reserved` is the filing name of a report not yet filed: taken, but with nothing there, so
     Overwrite is never offered or accepted for it (`reserved: true` in the answer)."""
     choice = req.get("on_clash")
     if choice == "rename":
-        name = _plain_name(req.get("new_name"), ext)
+        name = _plain_name(req.get("new_name"), ext, reserved)
         if not name:
             return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
+        if kind and other_reports_name(kind, name):          # v2.5.0: never under the other report's name
+            return name, False, {"message": f"That name is the other report's: a {kind} report is never saved under it. "
+                                            "Choose another name.", "clash": True}
+        problem = name_problem(name, reserved)
+        if problem:
+            return name, False, {"message": problem + " Choose another name.", "clash": True}
     if not _taken(folder, name, reserved):
         return name, False, None
     if choice == "number":
@@ -417,12 +482,56 @@ def plain_note(out):
                       + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
 
 
+RESERVED_NAME = re.compile(r"(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)")
+FORBIDDEN_CHARS = re.compile(r'[<>:"|?*]')
+INVISIBLE_CHARS = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
+FILING_WORDS = re.compile(r"(?:weekly|client) ?report")
+EXPORT_EXTS = re.compile(r"(?:\.(?:html?|docx|pdf))+$")
+
+
+def read_as(name):
+    """v2.5.1: a file name as it reads, for matching: NFKC, invisible characters removed, case-folded, and _ - . and runs of spaces
+    read alike (as one space); export extensions left off."""
+    t = INVISIBLE_CHARS.sub("", unicodedata.normalize("NFKC", str(name or ""))).casefold()
+    t = EXPORT_EXTS.sub("", t)
+    return " ".join(re.sub(r"[\s_\-\u2010-\u2015.]+", " ", t).split())
+
+
+def name_problem(name, own=None):
+    """v2.5.1: why a typed export name can't be used, or None. A name Windows reserves (CON, NUL, COM1, CONIN$... before the first
+    dot, trailing dots and spaces ignored), a character Windows forbids (< > : " | ? *), a stem ending in a dot or a space, or a
+    name that reads as a weekly or client report's filing name (any date, case, spacing or separator, with or without an
+    extension): such a name belongs to a filing, and an export under it could pass for a filed report or block an Approve. This
+    report's own filing name (`own`) is let through, as it is or numbered "(2)": the clash question then asks, as before."""
+    base = unicodedata.normalize("NFKC", name.split(".", 1)[0]).rstrip(". ").casefold()
+    if RESERVED_NAME.fullmatch(base) or RESERVED_NAME.fullmatch(INVISIBLE_CHARS.sub("", base)):
+        return "That name is reserved on Windows, so a file can't be saved under it."
+    if FORBIDDEN_CHARS.search(name) or name.rsplit(".", 1)[0] != name.rsplit(".", 1)[0].rstrip(". "):
+        return "A file name can't hold < > : \" | ? * or end in a dot or a space."
+    plain = read_as(name)
+    mine = own and re.fullmatch(re.escape(read_as(own)) + r"(?: \(\d+\))?", plain)
+    if FILING_WORDS.search(plain) and not mine:
+        return "That name reads as a report's filing name, so an export is never saved under it."
+    return None
+
+
+def other_reports_name(kind, typed):
+    """v2.5.0: whether a typed export name names the other report (a weekly export renamed to a client report's name, so internal
+    content would sit under a client report's name in Reports; or the other way round). Case and spacing are ignored."""
+    other = "client report" if kind == "weekly" else "weekly report"
+    return other in " ".join(str(typed or "").lower().split())
+
+
 def export_route(handler, req):
     """POST /api/report/export: the report exported as HTML, Word or PDF, and saved first into the project's Reports folder (#220).
     Opening is a separate choice (/api/open, /api/report/reveal). The answer: {ok, saved, path, name, folder, folder_label,
     replaced, message}; a taken name answers {ok: false, clash: true, name, numbered, folder, folder_label} and writes nothing
     until the page asks again with on_clash "number", "rename" (and new_name) or "overwrite"; a failed save says why and that
-    nothing was written. Nothing is ever sent."""
+    nothing was written. Nothing is ever sent.
+    v2.5.1 (#239, d): the whole export runs under the save route's lock (the live server's one LOCK): the report is read ONCE,
+    checked, and exactly that document is rendered (passed through, never read again) and filed, so a save can't land between the
+    check and the file. A client report's posted page is never used (f, creaite_doc._posted_page): the server renders it from the
+    report, and the answer says plain: true and why."""
     kind, code, fri, client = target(req)
     fmt = req.get("fmt")
     if fmt not in FORMATS:
@@ -430,37 +539,97 @@ def export_route(handler, req):
     off = refuse_client_off(handler, kind, code)
     if off:
         return off
+    if kind == "client":
+        return _client_export(handler, req, (code, fri, client), fmt)
+    fn = export_call()
+    if fn is None:
+        return refuse(handler, "Exports aren't built yet in this version of creaite.")
+    with handler_lock(handler):
+        return _export_locked(handler, req, (kind, code, fri, client), fmt, fn)
+
+
+def _client_export(handler, req, which, fmt):
+    """v2.5.1 (#239, step 2): a client report's export: client_snapshot.client_export, the one way a client file is made (its checked
+    snapshot rendered under the lock, the output checked), then filed in the Reports folder as any export is. A refusal of the
+    snapshot's check answers with its findings and what is left out, as before; a page posted is never what is written."""
+    import client_snapshot
+    code, fri, client = which
+    filed = paths.resolve(report_doc.filed_path("client", code, fri, client))
+    folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
+    label = f"{creaite_doc.project_name(code) or code} › Reports"
+    where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
+    settled = {}
+
+    def settle():
+        """The file name, once the snapshot passed its check (a taken name asks first)."""
+        name, overwrite, asked = _settle_name(folder, filed.stem + ext, ext, req, label, filed.name, kind="client")
+        settled.update(name=name, overwrite=overwrite)
+        return asked
+    with client_snapshot.locked():          # v2.5.1 step 3: a posted `page` is not taken for a client report (PAGE_IGNORED)
+        out = client_snapshot.client_export(code, fri, fmt, client=client, settle=settle)
+        if out.get("asked"):
+            return answer(handler, {"ok": False, **out["asked"], **where})
+        if not out.get("ok") and out.get("stage") == "check":
+            left = out.get("left_out")
+            return refuse(handler, (left or {}).get("not_ready") or out.get("message") or "Not exported.",
+                          findings=out.get("findings") or [], **({"left_out": left} if left is not None else {}))
+        if not out.get("ok"):
+            extra = {"findings": out["findings"]} if out.get("findings") else {}
+            return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where, **extra)
+        saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, settled["name"], settled["overwrite"], fmt, label)
+    if out.get("left_out") is not None:
+        saved["left_out"] = out["left_out"]
+    return answer(handler, page_ignored(saved, req))
+
+
+PAGE_IGNORED = ("The page sent with it wasn't used: a client report's file is always made by creaite from its checked copy.")
+
+
+def page_ignored(out, req):
+    """v2.5.1 (#239 step 3): a client export's answer when the request posted a `page` (an older dashboard): it was not taken, and the
+    answer says so (`page_ignored`, and a sentence in its message)."""
+    if "page" in req and req.get("page") is not None:
+        out["page_ignored"] = True
+        out["message"] = f"{out.get('message') or 'Exported.'} {PAGE_IGNORED}".strip()
+    return out
+
+
+def exported_view_route(handler, req):
+    """POST /api/report/exported-view {kind: client, code, week_ending}: Show as exported for a client report, rendered by the server
+    from a preview snapshot of the saved report (client_snapshot.preview_html: built, checked and rendered as an export is, marked
+    Preview, never written). {ok, html, preview, identity} or {ok: false, message, findings, identity}. The page never posts its
+    own (v2.5.1, #239)."""
+    import client_snapshot
+    kind, code, fri, client = target(req)
+    if kind != "client":
+        raise report_doc.ReportError("Only a client report is shown as exported by the server.")
+    return answer(handler, client_snapshot.preview_html(code, fri, client))
+
+
+def _export_locked(handler, req, which, fmt, fn):
+    """export_route's work for a weekly report, under the lock: read once, render that document, file it (a client report:
+    _client_export)."""
+    kind, code, fri, client = which
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
     doc = creaite_doc.read_report(path, kind)           # v2.5.0 audience bypass: a draft edited on disk too; another kind refused
     report_doc.same_report(doc, kind, code, fri)
-    left = None
-    if kind == "client":
-        import client_check
-        left = client_check.left_out(doc)          # the check runs before every client export, whoever asks
-        if not left["ready"] or left["findings"]:
-            return refuse(handler, left["not_ready"] or "Not exported: possible internal content in the client report.",
-                          findings=left["findings"], left_out=left)
-    fn = export_call()
-    if fn is None:
-        return refuse(handler, "Exports aren't built yet in this version of creaite.")
     filed = paths.resolve(report_doc.filed_path(kind, code, fri, client))
     folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
     name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
     label = f"{creaite_doc.project_name(code) or code} › Reports"
     where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
-    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
+    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name, kind=kind)
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
-    out = fn(path, fmt, file_beside=False, open_after=False,
-             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind)       # made in drafts/, filed below
+    page = req.get("page") if isinstance(req.get("page"), dict) else None          # creaite_doc never uses one for a client report
+    out = fn(path, fmt, file_beside=False, open_after=False, page=page, kind=kind, doc=doc)     # made in drafts/, filed below
     if not out.get("ok"):
-        return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
+        extra = {"findings": out["findings"]} if out.get("findings") else {}
+        return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where, **extra)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
     carry_plain(saved, out)
-    if left is not None:
-        saved["left_out"] = left
     return answer(handler, saved)
 
 
@@ -700,6 +869,8 @@ def image_route(handler, req):
     label = os.path.splitext(str(req.get("name") or ""))[0]
     with handler_lock(handler):
         named = notes.image_name(label, ext)[:-len(ext) - 1]
+        if req.get("kind") == "client":                   # v2.5.1 (#239, gap C): a client report's own picture, never the internal one's
+            named = creaite_doc.CLIENT_PICTURE + named
         target = paths.free_path(folder / "_images", named, f".{ext}")
         done, msg = filechange.perform({"op": "create", "path": paths.rel(target), "data": raw,
                                         "why": "a picture added to a report's text section"}, via="dashboard")
@@ -715,8 +886,9 @@ def images_route(handler, req):
     if not report_doc.CODE.match(code):
         return refuse(handler, "Say which project's pictures.")
     out = {}
+    kind = "client" if req.get("kind") == "client" else None          # a client report's editor draws its own pictures only (gap C)
     for ref in list(req.get("refs") or [])[:200]:
-        f = creaite_doc.text_image({"project": code}, str(ref))
+        f = creaite_doc.text_image({"project": code, "kind": kind}, str(ref))
         if f is not None and f.stat().st_size <= IMAGE_MAX:
             mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
             out[str(ref)] = f"data:{mime};base64,{base64.b64encode(f.read_bytes()).decode('ascii')}"
@@ -732,8 +904,9 @@ def routes(lock, run, latest_apply):
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
             "/api/report/match-check": guarded(match_check_route),
-            "/api/report/pick": guarded(pick_route),
+            "/api/report/pick": guarded(pick_route), "/api/report/reshow": guarded(reshow_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
+            "/api/report/exported-view": guarded(exported_view_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
             "/api/report/logo/remove": guarded(logo_remove_route), "/api/report/image": guarded(image_route),
             "/api/report/images": guarded(images_route)}
