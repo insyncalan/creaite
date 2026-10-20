@@ -48,6 +48,7 @@ sys.modules.setdefault("drafts", sys.modules[__name__])     # run as a script, r
 TEMPLATE_DIR = paths.TEMPLATES / "drafts"
 STATS = paths.STAGING / "draft-stats.json"
 EVENTS = ("offered", "used", "edited", "rejected")
+NOTHING_EVENT = "nothing"       # #272: a Suggest run that came back with nothing to suggest; counted by drafts.py itself, never by the page
 MAX_SOURCES = 12
 
 # id: (label, what it drafts). The order is the order Settings lists them. Later sprints add theirs here.
@@ -177,7 +178,7 @@ def record(feature, event, n=1):
     """Add n to one count. Only known features and events, and whole numbers, are kept: the file never holds text."""
     if feature not in FEATURES and not re.fullmatch(r"[a-z][a-z0-9-]{1,30}", str(feature)):
         raise ValueError("unknown feature")
-    if event not in EVENTS or not isinstance(n, int) or not 0 < n <= 500:
+    if event not in EVENTS + (NOTHING_EVENT,) or not isinstance(n, int) or not 0 < n <= 500:
         raise ValueError("unknown event")
     STATS.parent.mkdir(parents=True, exist_ok=True)
     lock = None
@@ -192,7 +193,7 @@ def record(feature, event, n=1):
         row = data.setdefault(feature, {e: 0 for e in EVENTS})
         for e in EVENTS:
             row[e] = int(row.get(e) or 0)
-        row[event] += n
+        row[event] = int(row.get(event) or 0) + n          # "nothing" only appears once one is counted
         data["_updated"] = datetime.now().isoformat(timespec="seconds")
         tmp = STATS.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="utf-8")
@@ -2314,6 +2315,8 @@ def run_closure(ctx, got):
     lines = ctx.get("run") or {}
     if not got:
         return {"ok": False, "line": RUN_UNREAD}
+    if got.get("nothing"):                                  # #272: plainly that there was nothing to suggest
+        return {"ok": True, "line": got["nothing"]}
     out = {"ok": True, "line": lines.get("done") or RUN_DEFAULT[1]}
     if isinstance(got.get("staged"), int):
         n = got["staged"]
@@ -2720,6 +2723,74 @@ RUN_LINES.update({
 
 
 
+# ===== #272: Suggest says nothing rather than a refusal. The Suggest kinds' prompts ask for exactly NO_SUGGESTION when the sources give
+# nothing to base a suggestion on; that reply, and (the backstop, plain code) a reply whose first sentence reads as the model saying it
+# can't, come back as {nothing}: no text, so nothing reaches the field, and a note naming what the kind would have drawn on.
+NO_SUGGESTION = "NO_SUGGESTION"
+SUGGEST_KINDS = ("thinking", "update", "sneak-update")
+_WRAP = " \t\r\n`'\"“”‘’*_."
+_HEAD = re.compile(r"^(?:RESPONSE|REASONING|OPTIONS|UPDATE|TEXT|ANSWER):\s*")
+_TASK = r"(?:suggest|draft|propose|recommend|write|offer|give|provide|say|determine|judge|tell)"
+_INPUTS = r"(?:passages?|sources?|evidence|context|closed[- ]risks?|information|details?|minutes)"
+REFUSAL_RES = [
+    # the model about itself: "I can't suggest…", "I'm unable to draft…", "I don't have enough information…"
+    re.compile(rf"\bI(?:\s+am|'m|’m)?\s+(?:can(?:'|’)?t|cannot|can not|unable to|not able to)\s+(?:\w+\s+){{0,2}}?{_TASK}\b", re.I),
+    re.compile(rf"\bI\s+(?:don(?:'|’)?t|do not)\s+have\s+(?:\w+\s+){{0,2}}?{_INPUTS}\b", re.I),
+    re.compile(rf"^(?:sorry,?\s+)?unable to\s+{_TASK}\b", re.I),
+    re.compile(r"\bas an AI(?:\s+(?:language\s+)?model|\s+assistant)?\s*,", re.I),
+    # about its inputs: "No passage … was supplied", "The passage doesn't say", "There is no meeting passage…"
+    re.compile(rf"\b(?:no|not enough|insufficient|neither)\b[^.;]{{0,60}}\b{_INPUTS}\b[^.;]{{0,60}}?\b(?:was|were|is|are|has been|have been)\s+"
+               r"(?:supplied|provided|given|available|included)\b", re.I),
+    re.compile(rf"\b(?:the|these|this)\s+(?:meeting\s+)?{_INPUTS}\s+(?:was|were)\s+not\s+(?:supplied|provided|given)\b", re.I),
+    re.compile(rf"\b(?:the|these|this)\s+(?:meeting\s+)?{_INPUTS}\s+(?:do(?:es)?n(?:'|’)?t|do(?:es)? not)\s+"
+               r"(?:say|give|mention|cover|show|contain|include|support|describe)\b", re.I),
+    re.compile(rf"^(?:there\s+(?:is|are)\s+)?(?:not enough|insufficient)\s+(?:information|evidence|detail|details|context)\s+(?:to|for)\s+"
+               rf"(?:\w+\s+){{0,2}}?{_TASK}\b", re.I),
+    re.compile(rf"^there\s+(?:is|are)\s+(?:no|nothing)\b[^.;]{{0,40}}\b(?:to\s+{_TASK}|to base|to go on|(?:meeting\s+)?passages?|"
+               r"sources?|in the (?:sources?|passage|meeting))\b", re.I),
+    re.compile(rf"^nothing to\s+(?:{_TASK}|base|go on)\b", re.I),
+]
+
+
+def is_no_suggestion(text):
+    """True when a reply (or its parsed field) is the sentinel, give or take spaces, quotes, a code fence, bold or a section head."""
+    t = re.sub(r"^```[a-z]*\s*|\s*```$", "", (text or "").strip()).strip(_WRAP)
+    return _HEAD.sub("", t).strip(_WRAP) == NO_SUGGESTION
+
+
+def reads_as_refusal(text):
+    """The backstop: the first sentence (at most 200 characters) reads as the model saying it can't suggest anything. Only the
+    first sentence is read, so a real suggestion that says "can't" later, or about someone else, passes."""
+    first = next(iter(sentences(clean(text))), "")
+    first = re.sub(r"^[-–•*\s]+", "", first)[:200]
+    return any(r.search(first) for r in REFUSAL_RES)
+
+
+def nothing_note(ctx):
+    """What a Suggest kind would have drawn on, as the note under its button."""
+    item = ctx.get("item") or {}
+    if ctx.get("kind") == "thinking":
+        if item.get("field") == "response_action":
+            return "Nothing to suggest from: no meeting passage and no closed risks with a response"
+        return "Nothing to suggest from: no meeting passage gives " + ("the options considered" if item.get("field") == "options" else "the reasoning")
+    if ctx.get("kind") == "update":
+        since = tracker.shown(item["since"]) if item.get("since") else "the last update"
+        return f"Nothing to draft from: nothing since {since} says where the action stands"
+    return ("Nothing to draft from: the update as it stands holds nothing to tidy" if item.get("mode") == "tidy"
+            else "Nothing to draft from: the reason given doesn't say what changed")
+
+
+def said_nothing(ctx, reply, out):
+    """The note when a Suggest kind's reply is the sentinel or reads as a refusal, else None (any other kind: always None)."""
+    if ctx.get("kind") not in SUGGEST_KINDS:
+        return None
+    body = out.get("text") or ""
+    if is_no_suggestion(reply) or is_no_suggestion(body) or reads_as_refusal(body) or (not body.strip() and reads_as_refusal(reply)):
+        return nothing_note(ctx)
+    return None
+# ===== end #272 =====
+
+
 def context(req):
     """{feature, kind, prompt, sources, item, extra} for a request, or {nothing}/{refused} with the words to show."""
     name = req.get("kind")
@@ -2746,6 +2817,9 @@ def context(req):
 def result(req, ctx, reply):
     """The parsed draft: text, sentences with their sources (an unsourced one marked), and the kind's own parts."""
     out = (PARSERS.get(ctx["kind"]) or default_parse)(reply, ctx)
+    note = said_nothing(ctx, reply, out)
+    if note:                                                # #272: nothing to suggest: no text, so nothing reaches the field
+        return {"nothing": note, "text": "", "sentences": [], "sources": ctx["sources"], "unsourced": 0}
     out["sources"] = ctx["sources"]
     out["unsourced"] = sum(1 for s in out.get("sentences") or [] if s["unsourced"])
     return out
@@ -2770,6 +2844,8 @@ def main(argv):
             out.update({"staged": n, "file": name})
             if n:
                 record(got["context"]["feature"], "offered", n)
+        elif out.get("nothing"):                            # #272: counted as nothing, never offered or used
+            record(got["context"]["feature"], NOTHING_EVENT)
         elif out.get("text"):
             record(got["context"]["feature"], "offered")
         print(json.dumps(out, ensure_ascii=False))
