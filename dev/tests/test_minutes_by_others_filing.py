@@ -32,6 +32,7 @@ import sqlite3
 import subprocess
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -47,30 +48,33 @@ MUTATE = os.environ.get("E1_TRACKER_MUTATE", "")
 MUTATIONS = {
     "no-regular-check": ('if not stat.S_ISREG(st.st_mode):\n        return f"{rel} is not a regular file (a link', 'if False:\n        return f"{rel} is not a regular file (a link'),
     "no-hardlink-check": ("if st.st_nlink > 1:", "if False:"),
-    "no-checksum": ("if file_hash(p) != sha:", "if False:"),
+    "no-checksum": ("if got != sha:", "if False:"),
     "no-area-check": ("if os.path.islink(paths.INBOX) or not any(", "if False and not any("),
-    "copy-follows-links": ('os.open(src, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0))', "os.open(src, os.O_RDONLY | os.O_NONBLOCK)"),
     "no-unwritten": ("or by_others_unwritten(data, blk):", "or False:"),
-    "unwritten-this-apply-only": ('i.get("applied") and i.get("decision") == "approved" for i in data.get("items", []))', 'i.get("applied") == apply_id and i.get("decision") == "approved" for i in data.get("items", []))'),
-    "no-nonblock-copy": ("os.open(src, os.O_RDONLY | os.O_NONBLOCK | getattr", "os.open(src, os.O_RDONLY | getattr"),
-    "no-nonblock-remove": ("os.open(name, os.O_RDONLY | os.O_NONBLOCK | getattr", "os.open(name, os.O_RDONLY | getattr"),
-    "no-regular-fstat-copy": ('                raise Invalid(f"copy: {rel} is not a regular file")', "                pass"),
+    "unwritten-this-apply-only": ("or by_others_unwritten(data, blk):", 'or not any(i.get("applied") == apply_id and i.get("decision") == "approved" for i in data.get("items", [])):'),
+    "no-nonblock": ("os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr", "os.open(path, os.O_RDONLY | getattr"),
+    "no-nofollow": ('| getattr(os, "O_NOFOLLOW", 0), dir_fd=dir_fd)', ", dir_fd=dir_fd)"),
+    "no-regular-fstat": ('        if not stat.S_ISREG(st.st_mode):\n            raise NotRegular(0, "not a regular file")', '        if False:\n            raise NotRegular(0, "not a regular file")'),
+    "path-unlink": ("        os.unlink(private, dir_fd=dfd)\n        return", "        os.unlink(paths.resolve(rel))\n        return"),
+    "no-inode-check": ("if (now.st_dev, now.st_ino) == (st.st_dev, st.st_ino) and stat.S_ISREG(now.st_mode):", "if True:"),
+    "put-back-replaces": ("os.link(private, name, src_dir_fd=dfd, dst_dir_fd=dfd, follow_symlinks=False)", "os.rename(private, name, src_dir_fd=dfd, dst_dir_fd=dfd)"),
+    "long-private-name": ('private = f".creaite-removing-{os.getpid()}-{time.monotonic_ns()}"', 'private = f".{name}.removing-{os.getpid()}-{time.monotonic_ns()}"'),
+    "hash-via-file-hash": ("got = hashlib.sha256(_read_regular(p)[1]).hexdigest()", "got = file_hash(p)"),
+    "finished-without-waiting": ('return all(b.get("applied") or by_others_waiting(data, b) for b, _ in blocks(data))', 'return all(b.get("applied") for b, _ in blocks(data))'),
+    "no-decided-exclusion": ("            and not by_others_waiting(data, b)]", "]"),
     "no-hash-copy": ("if hashlib.sha256(data).hexdigest() != sha:", "if False:"),
     "no-hash-remove": (' or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):', ":"),
-    "remove-follows-entry-link": ("os.open(name, os.O_RDONLY | os.O_NONBLOCK | getattr(os, \"O_NOFOLLOW\", 0), dir_fd=dfd)", "os.open(name, os.O_RDONLY | os.O_NONBLOCK, dir_fd=dfd)"),
-    "path-unlink": ("    os.unlink(private, dir_fd=dfd)", "    os.unlink(paths.resolve(rel))"),
-    "no-inode-check": ("if (now.st_dev, now.st_ino) != (st.st_dev, st.st_ino) or not stat.S_ISREG(now.st_mode):", "if False:"),
     "unlink-by-name": ("    os.unlink(private, dir_fd=dfd)", "    os.unlink(name, dir_fd=dfd)"),
     "no-skip": ("        work = _skip_by_others_problems(work)\n", ""),
     "no-claimed": ('                    claimed[to] = fop.get("src_sha256")\n', ""),
-    "no-dest-check": ("if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):", "if False:"),
+    "no-dest-check": ("if dst.exists() and not _dst_is_same(dst, paths.resolve(src), fop, blk):", "if False:"),
     "undo-pending": ('blk[field] = "approved" if blk.get("kind") == BY_OTHERS else "pending"', 'blk[field] = "pending"'),
     "remove-by-path": ("    if by_others_op(fop, blk):\n        return _remove_checked(apply_id, fop, blk, done)\n", ""),
     "chain-follows-links": ("            nxt = os.open(part, flags, dir_fd=fd)", "            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY, dir_fd=fd)"),
     "no-dest-confine": (" or by_others_dest_problem(dst, blk)", ""),
     "kind-only": ('return blk.get("kind") == BY_OTHERS or bool(fop.get("src_sha256"))', 'return blk.get("kind") == BY_OTHERS'),
     "bare-oserror": ('raise Invalid(f"copy: {rel} can\'t be read as a regular file ({type(e).__name__})") from None', "raise"),
-    "no-dir-check": ('    dst = safe_path(fop.get("to"), "copy")\n    if dst.is_dir():\n        raise Invalid(f"copy: {paths.rel(dst)} is a folder")\n    if dst.exists() and file_hash', '    dst = safe_path(fop.get("to"), "copy")\n    if dst.exists() and file_hash'),
+    "no-dir-check": ('    dst = safe_path(fop.get("to"), "copy")\n    if dst.is_dir():\n        raise Invalid(f"copy: {paths.rel(dst)} is a folder")\n    if dst.exists() and not _dst_is_same', '    dst = safe_path(fop.get("to"), "copy")\n    if dst.exists() and not _dst_is_same'),
 }
 
 DAY, TITLE = "2026-10-12", "[ABC] Vendor call"
@@ -221,6 +225,15 @@ class Fixed(Base):
         self.assertEqual(self.v.rows("actions"), [])
         self.assertEqual(len(self.v.rows("rejected")), 2)
         self.assertTrue((self.v.root / "system/staging/applied" / self.name).exists())
+
+    def test_a_staged_proposal_with_no_decided_item_is_not_an_apply_at_all(self):
+        """Its block is approved from staging, but with no approved item it is not decided: an apply says there is nothing to apply."""
+        r = self.v.run("apply")
+        self.assertIn("Nothing to apply", r.stdout)
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM applies").fetchone()[0], 0)
+        self.assertTrue(self.inbox())
+        self.assertTrue((self.v.root / "system/staging" / self.name).exists())
 
     def test_one_approved_item_files_the_copy_and_the_other_stays_pending(self):
         self.decide("approved", "pending")
@@ -453,6 +466,52 @@ print('RC', tracker.main(['apply']))
 """
 
 
+DRIVER_RENAME = r"""
+import sys, os
+sys.path.insert(0, 'system/scripts')
+from pathlib import Path
+import tracker
+NAME = %(name)r
+orig = os.rename
+state = {'n': 0}
+def hook(*a, **k):
+    first = False
+    if 'src_dir_fd' in k:
+        state['n'] += 1
+        first = state['n'] == 1
+        if first:
+            %(before)s
+    r = orig(*a, **k)
+    if first:
+        %(after)s
+    return r
+os.rename = hook
+print('RC', tracker.main(['apply']))
+"""
+
+DRIVER_FIFO = r"""
+import sys, os
+sys.path.insert(0, 'system/scripts')
+from pathlib import Path
+import tracker
+NAME = %(name)r
+state = {'done': False}
+def wrap(fn):
+    orig = getattr(tracker, fn)
+    def w(*a, **k):
+        if not state['done'] and str(a[0]).endswith(NAME):      # the moment the staged file is about to be hashed or read
+            state['done'] = True
+            p = Path('inbox') / NAME
+            p.unlink()
+            os.mkfifo(p)
+        return orig(*a, **k)
+    setattr(tracker, fn, w)
+wrap('file_hash')
+wrap('_read_regular')
+print('RC', tracker.main(['apply']))
+"""
+
+
 class Races(Base):
     """What a local process could do between the check and the operation (the operation is wrapped, as a reviewer would)."""
 
@@ -469,6 +528,44 @@ class Races(Base):
         except subprocess.TimeoutExpired:
             self.fail(f"the apply hung ({target}): a pipe put in place of the file blocked it")
         return r.stdout + r.stderr
+
+    def drive(self, template, timeout=120, **kw):
+        try:
+            r = subprocess.run([sys.executable, "-c", template % kw], cwd=self.v.root, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.fail("the apply hung: a pipe put in place of the file blocked a read")
+        return r.stdout + r.stderr
+
+    def test_a_pipe_swapped_in_as_the_file_is_hashed_does_not_hang_the_check(self):
+        self.decide("approved", "approved")
+        out = self.drive(DRIVER_FIFO, name=Path(FILE).name)
+        self.assertIn("is not a regular file", out)
+        self.assertNotIn("Traceback", out)
+        self.assertFalse(self.filed())
+        self.assertEqual(self.v.rows("actions"), [])
+
+    def test_a_file_put_at_the_name_after_the_move_is_not_overwritten_by_the_put_back(self):
+        """X is swapped in before the move, Y is written at the name after it: the put-back must not replace Y."""
+        self.decide("approved", "approved")
+        name = Path(FILE).name
+        out = self.drive(DRIVER_RENAME, name=name, before="p = Path('inbox') / NAME; p.unlink(); p.write_text('INTRUDER X')",
+                         after="(Path('inbox') / NAME).write_text('NEW FILE Y')")
+        self.assertIn("RC 1", out)
+        self.assertIn("the name is taken again", out)
+        self.assertEqual((self.v.root / FILE).read_text(), "NEW FILE Y")                # Y survives
+        kept = list((self.v.root / "inbox").glob(".creaite-removing-*"))
+        self.assertEqual([k.read_text() for k in kept], ["INTRUDER X"])              # X is not lost either
+        self.assertIn(kept[0].name, out)                                              # and the message says where it is
+
+    def test_a_put_back_that_cannot_happen_says_where_the_file_is(self):
+        self.decide("approved", "approved")
+        name = Path(FILE).name
+        out = self.drive(DRIVER_RENAME, name=name, before="p = Path('inbox') / NAME; p.unlink(); p.write_text('INTRUDER X')",
+                         after="os.mkdir(Path('inbox') / NAME)")
+        self.assertIn("RC 1", out)
+        self.assertIn("is left in inbox/ as .creaite-removing-", out)
+        self.assertNotIn("IsADirectoryError: ", out)
+        self.assertEqual([k.read_text() for k in (self.v.root / "inbox").glob(".creaite-removing-*")], ["INTRUDER X"])
 
     def entry(self, how):
         return "p = Path('inbox') / %r; %s" % (Path(FILE).name, how)
@@ -602,6 +699,29 @@ class Undo(Base):
         self.assertIn(f"{FILED} | 2", self.processed())
         self.assertEqual(len(self.v.rows("actions")), 2)
         self.assertTrue((self.v.root / "system/staging/applied" / self.name).exists())
+
+
+class LongNames(Base):
+    """The private name carries no part of the file's name: a name near the 255-byte limit still files."""
+
+    def check(self, name, title):
+        text = "Minutes with a long file name\n"
+        proposal = self.stage_more(f"inbox/{name}", text, title=f"[ABC] {title}")
+        self.approve(proposal)
+        r = self.v.run("apply", proposal)
+        self.assertIn("filed 1", r.stdout)
+        self.assertFalse((self.v.root / "inbox" / name).exists())
+        self.assertEqual((self.v.root / f"{ABC}/minutes/2026-10-12 {title}.txt").read_text(), text)
+
+    def test_a_240_byte_name_files(self):
+        name = "a" * 236 + ".txt"
+        self.assertEqual(len(name.encode()), 240)
+        self.check(name, "Long ascii")
+
+    def test_a_78_character_cjk_name_files(self):
+        name = "会" * 78 + ".txt"
+        self.assertEqual(len(name.encode()), 238)
+        self.check(name, "Long cjk")
 
 
 class UndoSkipped(Base):

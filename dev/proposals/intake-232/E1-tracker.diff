@@ -1,5 +1,5 @@
 diff --git system/scripts/tracker.py system/scripts/tracker.py
-index fb5a714f..d92a0f7c 100644
+index 2baac5f7..460064e2 100644
 --- system/scripts/tracker.py
 +++ system/scripts/tracker.py
 @@ -28,6 +28,7 @@ import os
@@ -23,7 +23,7 @@ index fb5a714f..d92a0f7c 100644
 +    dst = safe_path(fop.get("to"), "copy")
 +    if dst.is_dir():
 +        raise Invalid(f"copy: {paths.rel(dst)} is a folder")
-+    if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):      # #232 E1: said now, not halfway through an apply
++    if dst.exists() and not _dst_is_same(dst, paths.resolve(src), fop, blk):      # #232 E1: said now, not halfway through an apply
 +        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
 +    if by_others_op(fop, blk):
 +        why = by_others_file_problem(src, blk, fop.get("src_sha256")) or by_others_dest_problem(dst, blk)
@@ -72,14 +72,15 @@ index fb5a714f..d92a0f7c 100644
      return paths.rel(dest)
  
  
-@@ -1598,23 +1620,111 @@ def stamp_draft(draft, text, on):
+@@ -1598,23 +1620,115 @@ def stamp_draft(draft, text, on):
  
  def _op_copy(apply_id, fop, blk, done):
      src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
 +    if dst.is_dir():
 +        raise Invalid(f"copy: {paths.rel(dst)} is a folder")
      if dst.exists():
-         if file_hash(dst) == file_hash(src):
+-        if file_hash(dst) == file_hash(src):
++        if _dst_is_same(dst, src, fop, blk):
              return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
          raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
      dst.parent.mkdir(parents=True, exist_ok=True)
@@ -92,13 +93,12 @@ index fb5a714f..d92a0f7c 100644
  
  
 +def _copy_checked(src, dst, sha, rel):
-+    """#232 E1: someone else's minutes are copied from the bytes read once, never through a link, and only if they are the staged ones.
-+    `rel` is the stored path, the only one a message or the log may carry (an OSError would name the absolute one)."""
++    """#232 E1: someone else's minutes are copied from the bytes read once, never through a link or a pipe, and only if they are the
++    staged ones. `rel` is the stored path, the only one a message or the log may carry (an OSError would name the absolute one)."""
 +    try:
-+        with os.fdopen(os.open(src, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)), "rb") as f:
-+            if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):         # a pipe put there would block the read for ever
-+                raise Invalid(f"copy: {rel} is not a regular file")
-+            data = f.read()
++        data = _read_regular(src)[1]
++    except NotRegular:
++        raise Invalid(f"copy: {rel} is not a regular file") from None
 +    except OSError as e:
 +        raise Invalid(f"copy: {rel} can't be read as a regular file ({type(e).__name__})") from None
 +    if hashlib.sha256(data).hexdigest() != sha:
@@ -148,16 +148,11 @@ index fb5a714f..d92a0f7c 100644
 +    name = rel.rsplit("/", 1)[1]
 +    try:
 +        try:
-+            ffd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0), dir_fd=dfd)
++            st, data = _read_regular(name, dir_fd=dfd)
 +        except FileNotFoundError:
 +            return                                                 # already gone
 +        except OSError as e:
 +            raise Invalid(f"remove: {rel} is not a regular file ({type(e).__name__})") from None
-+        with os.fdopen(ffd, "rb") as f:
-+            st = os.fstat(f.fileno())
-+            if not stat.S_ISREG(st.st_mode):
-+                raise Invalid(f"remove: {rel} is not a regular file")
-+            data = f.read()
 +        if st.st_nlink > 1 or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):
 +            raise Invalid(f"remove: {rel}: the file changed since it was staged")
 +        kept = stash(apply_id, paths.resolve(rel), data)
@@ -169,23 +164,33 @@ index fb5a714f..d92a0f7c 100644
 +
 +def _unlink_same(dfd, name, st, rel):
 +    """Unlink entry `name` of open folder `dfd` only if it is still the file `st` describes: it is first moved to a private name, so
-+    nothing can swap it between the check and the unlink; a different file found there is moved back and refused."""
-+    private = f".{name}.removing-{os.getpid()}-{time.monotonic_ns()}"
++    nothing can swap it between the check and the unlink. A different file found there is put back WITHOUT replacing anything (a
++    hard link, then the private name unlinked), so a file that has appeared at the name in the meantime is never overwritten; if it
++    can't be put back it is left under the private name and the error says where. The private name carries no part of the original
++    name, which could push a long name over the file-name limit."""
++    folder = rel.rsplit("/", 1)[0]
++    private = f".creaite-removing-{os.getpid()}-{time.monotonic_ns()}"
 +    try:
 +        os.rename(name, private, src_dir_fd=dfd, dst_dir_fd=dfd)
 +        now = os.stat(private, dir_fd=dfd, follow_symlinks=False)
 +    except OSError as e:
 +        raise Invalid(f"remove: {rel} changed while it was being removed ({type(e).__name__})") from None
-+    if (now.st_dev, now.st_ino) != (st.st_dev, st.st_ino) or not stat.S_ISREG(now.st_mode):
-+        os.rename(private, name, src_dir_fd=dfd, dst_dir_fd=dfd)
-+        raise Invalid(f"remove: {rel}: a different file was put there; it is left alone")
++    if (now.st_dev, now.st_ino) == (st.st_dev, st.st_ino) and stat.S_ISREG(now.st_mode):
++        os.unlink(private, dir_fd=dfd)
++        return
++    try:
++        os.link(private, name, src_dir_fd=dfd, dst_dir_fd=dfd, follow_symlinks=False)
++    except OSError as e:
++        raise Invalid(f"remove: {rel}: a different file was put there and the name is taken again ({type(e).__name__}); "
++                      f"the different file is left in {folder}/ as {private}") from None
 +    os.unlink(private, dir_fd=dfd)
++    raise Invalid(f"remove: {rel}: a different file was put there; it is left alone")
 +
 +
  def _op_mkdir(apply_id, fop, blk, done):
      p = safe_path(fop["path"], "mkdir")
      created = []
-@@ -2273,19 +2383,96 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
+@@ -2273,19 +2387,133 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
  
  # ── Apply ─────────────────────────────────────────────────────────────────────
  
@@ -242,6 +247,37 @@ index fb5a714f..d92a0f7c 100644
 +    return f"{paths.rel(dst)} is not in the matched project's minutes folder"
 +
 +
++class NotRegular(OSError):
++    """An entry that is not a regular file (a pipe, a device, a folder) where a file of someone else's minutes should be."""
++
++
++def _read_regular(path, dir_fd=None):
++    """(stat, bytes) of a regular file, opened without following a link and without blocking on a pipe, the type checked on the open
++    file before it is read. The one way the checks, the copy and the remove read someone else's minutes (a plain read_bytes or
++    file_hash would block for ever on a pipe put there, or follow a link). Raises NotRegular, or the OSError the open gave."""
++    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0), dir_fd=dir_fd)
++    with os.fdopen(fd, "rb") as f:
++        st = os.fstat(f.fileno())
++        if not stat.S_ISREG(st.st_mode):
++            raise NotRegular(0, "not a regular file")
++        return st, f.read()
++
++
++def _sha_regular(path):
++    """The SHA-256 of a regular file read through _read_regular, or None when it can't be (a pipe, a link, gone)."""
++    try:
++        return hashlib.sha256(_read_regular(path)[1]).hexdigest()
++    except OSError:
++        return None
++
++
++def _dst_is_same(dst, src, fop, blk):
++    """Whether the existing file `dst` is the file being filed: by the staged checksum for someone else's minutes."""
++    if by_others_op(fop, blk):
++        return _sha_regular(dst) == fop.get("src_sha256")
++    return file_hash(dst) == file_hash(src)
++
++
 +def by_others_file_problem(rel, blk, sha):
 +    """Why the file `rel` of a staged block of someone else's minutes can't be copied or removed, or None. It must be a regular
 +    file (lstat: a link is refused, whatever it points at) with no other name, whose real path is in inbox/ (itself not a link)
@@ -260,7 +296,13 @@ index fb5a714f..d92a0f7c 100644
 +        return f"{rel} is not in inbox/ or the project's minutes folder"
 +    if not sha:
 +        return f"{rel} was staged without a checksum"
-+    if file_hash(p) != sha:
++    try:
++        got = hashlib.sha256(_read_regular(p)[1]).hexdigest()
++    except NotRegular:
++        return f"{rel} is not a regular file (a link is never filed or removed)"
++    except OSError as e:
++        return f"{rel} can't be read as a regular file ({type(e).__name__})"
++    if got != sha:
 +        return f"{rel}: the file changed since it was staged"
 +    return None
 +
@@ -285,7 +327,7 @@ index fb5a714f..d92a0f7c 100644
  
  
  # ===== BL-323: the OneDrive copy is the day's closed zip (backup.py); its retention is Tidy up's =====
-@@ -2333,6 +2520,7 @@ def cmd_apply(args):
+@@ -2333,6 +2561,7 @@ def cmd_apply(args):
      work = _load_work(args)
      if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
          work = _skip_card_leftovers(work)
@@ -293,7 +335,39 @@ index fb5a714f..d92a0f7c 100644
      if not work:
          print("Nothing to apply: no decided items.")
          return 0
-@@ -2447,6 +2635,39 @@ def card_move_problems(p, data):
+@@ -2404,7 +2633,6 @@ def _validate_work(con, work):
+         blocked += card_move_problems(p, data)         # #124 F3: here too, so a refusal comes before the backup
+         blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
+         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
+-        blocked += client_draft_problems(p, data)      # v2.5.1 (#239 step 3): a client Word draft only as its check passed
+     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
+         blocked += _rejection_problems(con, p, data)
+     return blocked, held
+@@ -2435,23 +2663,6 @@ def minutes_draft_problems(p, data):
+ # ===== end BL-260 point 4 =====
+ 
+ 
+-def client_draft_problems(p, data):
+-    """v2.5.1 (#239 step 3): validation: an approved client Word draft (an older cx-client-report one, or the client-safe steerco
+-    one-pager) is filed only as the file whose client check passed at approval, and only while the check still passes
+-    (review.client_apply_problem). Refused: the decision goes back to pending (saved when the apply stops), so it is approved again."""
+-    blk = data.get("report")
+-    if not blk or blk.get("applied") or blk.get("report_decision") != "approved":
+-        return []
+-    import review
+-    why = review.client_apply_problem(blk, "report_decision")
+-    if not why:
+-        return []
+-    blk["report_decision"] = "pending"
+-    blk.pop("decided_in", None)
+-    debuglog.warn("tracker", f"client report filing refused in {p.name}")
+-    return [f"{p.name} report_decision: {why}"]
+-
+-
+ def card_move_problems(p, data):
+     """#124 F3: the apply's dry run: each undone move of a card-only kind in proposal `p` that has no marker from the live
+     server's Approve (card_move_problem), and (#128) each remove, write or copy of a note's file without one (card_op_problem).
+@@ -2465,6 +2676,39 @@ def card_move_problems(p, data):
      return out
  
  
@@ -333,7 +407,7 @@ index fb5a714f..d92a0f7c 100644
  def _skip_card_leftovers(work):
      """#124 F3: a full apply (no names) leaves out a proposal with a card-only move and no marker (an Approve that stopped
      before its apply finished left it in staging), so the rest still applies. A proposal named on the command line is refused
-@@ -2465,7 +2686,7 @@ def _skip_card_leftovers(work):
+@@ -2483,7 +2727,7 @@ def _skip_card_leftovers(work):
  def _file_op_problems(p, data, written):
      problems = []
      for blk, field in blocks(data):
@@ -342,7 +416,7 @@ index fb5a714f..d92a0f7c 100644
              for fop in selected_ops(blk, field):
                  try:
                      check_file_op(fop, blk)
-@@ -2665,7 +2886,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
+@@ -2683,7 +2927,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
      proposal file (#124 F3)."""
      processed = []
      for blk, field in blocks(data):
@@ -352,7 +426,7 @@ index fb5a714f..d92a0f7c 100644
              continue
          ops = selected_ops(blk, field)
          run_file_ops(apply_id, blk, field, ops, file_records, data, prop)
-@@ -2918,7 +3140,8 @@ def _return_proposals(proposals, apply_id, later, report):
+@@ -2936,7 +3181,8 @@ def _return_proposals(proposals, apply_id, later, report):
          for blk, field in blocks(data):
              if blk.get("applied") == apply_id:
                  blk.pop("applied", None)

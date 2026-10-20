@@ -1,7 +1,7 @@
 # Proposal E1-tracker: someone else's minutes are filed safely, and only with a written item
 
 `system/scripts/tracker.py` is guarded, so this is a proposal for Jarvis: `dev/proposals/intake-232/E1-tracker.diff` (a patch
-against origin/main's tracker.py, `patch -p0` from the vault root; about 230 lines added, 11 changed). The stage side
+against origin/main's tracker.py, `patch -p0` from the vault root; about 280 lines added, 11 changed). The stage side
 (`minutes.py`, the skill, the docs) needs no tracker.py change and is already on the branch; this is what makes the apply safe.
 
 ## Why
@@ -43,16 +43,27 @@ not refuse it. Apply runs a block's file operations whenever its decision is app
   window between check and copy). It opens with `O_NONBLOCK` and checks `S_ISREG` on the open file before reading, so a pipe
   (FIFO) put in place of the file after the check is refused instead of hanging the apply. A link that appears after the check (an `ELOOP`) is a clean `Invalid` naming the stored
   (relative) path, `from None`, so neither stdout nor the debug log carries the absolute path.
+- **One way to read the file** (`_read_regular`): `O_NOFOLLOW | O_NONBLOCK`, `fstat`, `S_ISREG` on the open file, then read. The
+  validation check (`by_others_file_problem`: it used `file_hash`, whose `read_bytes` blocks on a pipe and follows links), the
+  copy (`_copy_checked`) and the remove (`_remove_checked`) all use it, so a pipe put in place of the file at any moment is
+  refused ("is not a regular file") instead of hanging the apply, and a link is never followed. The comparison with a file already at
+  the destination also hashes through it (`_dst_is_same`, by the staged checksum).
+- `_op_copy` reads the bytes once through it, compares them with `src_sha256`, then writes them (no window between check and copy).
+  A link that appears after the check (an `ELOOP`) is a clean `Invalid` naming the stored (relative) path, `from None`, so neither
+  stdout nor the debug log carries the absolute path.
 - `_op_remove` for the block works through the open folder (`_remove_checked`, `_open_inbox_folder`): the folder is reached from
   the vault root one level at a time, each opened with `O_NOFOLLOW | O_DIRECTORY` (so `inbox/`, or a folder in it, swapped for a
   link is refused, and a rename or link put on the path afterwards changes nothing: the descriptor is the folder that was
-  opened); the entry is opened from that folder with `O_NOFOLLOW | O_NONBLOCK` (a pipe is refused, not waited on), checked
-  (regular file, one name, `src_sha256`), backed up from the bytes just read, **moved to a private name inside the open folder,
-  compared by inode with the file that was read, and only then unlinked** (`_unlink_same`, all through `dir_fd`). A different file
-  put under the same name at any moment is therefore never deleted: if the move caught it, it is moved back and the apply stops
-  ("a different file was put there; it is left alone"). Only a file in `inbox/` can be
-  removed this way (minutes.py stages no other remove). (Inbox transcripts still have the old hole: `copy` from `transcript`
-  then `remove` of the path; not touched here.)
+  opened); the entry is read through `_read_regular` from that folder, checked (regular file, one name, `src_sha256`), backed up
+  from the bytes just read, **moved to a private name inside the open folder, compared by inode with the file that was read, and
+  only then unlinked** (`_unlink_same`, all through `dir_fd`). The private name is `.creaite-removing-<pid>-<ns>`: it carries no
+  part of the file's name, so a name near the 255-byte limit (240 bytes, or 78 CJK characters) still files. A different file
+  put under the same name is never deleted: if the move caught it, it is put back **without replacing anything** (a hard link,
+  then the private name is unlinked), and the apply stops ("a different file was put there; it is left alone"). If something
+  has taken the name again (a file, or a folder), it is not touched: the different file stays in inbox/ under its private name
+  and the error says which ("… is left in inbox/ as .creaite-removing-…"). Only a file in `inbox/` can be removed this way
+  (minutes.py stages no other remove). (Inbox transcripts still have the old hole: `copy` from `transcript` then `remove` of the
+  path; not touched here.)
 - **Undo:** the existing undo resets every applied block to `pending`; for a `minutes by others` block it now sets it back to
   `approved` (it is approved from staging), so undo, approve, apply files the minutes again. Without this the re-apply wrote the
   items, filed nothing, left the file in inbox/ and the proposal in staging for good.
@@ -95,7 +106,7 @@ Scratch vault: stage `"as": "minutes", "file": "inbox/m.txt"` (two items), then
     E1_TRACKER_MUTATE=<name> python3 dev/tests/test_minutes_by_others_filing.py   # one line of the patch broken: a test goes red
 The scratch copy is a throwaway vault whose `tracker.py` is the repo's with the diff applied (`patch -p0`); after Jarvis applies the
 diff to the repo the same file keeps guarding it (the marker `def by_others_waiting` is found, and the "defect" tests reverse the
-patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 30 of the 38 tests go red (the swap, undo, race, hand-written proposal, folder destination,
+patch with `patch -R`). The repo's tracker.py is not touched by this branch. Unpatched, 34 of the 44 tests go red (the swap, undo, race, hand-written proposal, folder destination,
 held-item, collision, unrelated-apply and all-rejected tests, and the validation message); the `DefectToday` tests document today's
 behaviour on the unpatched copy in both modes, and the rest (one approved item files, no double filing, undo, the same file at the
 destination) is today's behaviour and stays green.
