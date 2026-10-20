@@ -66,13 +66,17 @@ function Item({ text, children }) {
 
 /** A button that asks first: Archive, Close. @param {{label: string, ask: string, yes: string, onYes: () => void, id: string, danger?: boolean}} props */
 function AskButton({ label, ask, yes, onYes, id, danger }) {
-  const [on, setOn] = useState(false);
-  if (!on) return <button type="button" class="btn" id={id} onClick={() => setOn(true)}>{label}</button>;
+  const [on, setOn] = useState(false), btn = useRef(/** @type {HTMLButtonElement|null} */ (null)), back = useRef(false);
+  /* the Settings line: answering puts focus back on the button (the answer's own buttons go), so a dialog the answer opens
+     (Archive's open items, #parchDlg) returns focus to it when it closes, as Settings' Archive did */
+  useEffect(() => { if (!on && back.current) { back.current = false; if (btn.current) btn.current.focus(); } }, [on]);
+  const done = () => { back.current = true; setOn(false); };
+  if (!on) return <button type="button" class="btn" id={id} ref={btn} onClick={() => setOn(true)}>{label}</button>;
   return (
     <span class="psask" role="group" aria-label={ask}>
       <span class="sub" role="alert">{ask}</span>
-      <button type="button" class={`btn${danger ? " danger" : ""}`} id={id + "Yes"} onClick={() => { setOn(false); onYes(); }}>{yes}</button>
-      <button type="button" class="btn" id={id + "No"} onClick={() => setOn(false)}>Keep it</button>
+      <button type="button" class={`btn${danger ? " danger" : ""}`} id={id + "Yes"} onClick={() => { done(); onYes(); }}>{yes}</button>
+      <button type="button" class="btn" id={id + "No"} onClick={done}>Keep it</button>
     </span>
   );
 }

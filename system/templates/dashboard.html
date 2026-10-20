@@ -71033,15 +71033,28 @@ ${d5.text}`);
     return /* @__PURE__ */ u2("tr", { "data-psrow": true, hidden: !!f5.q && !f5.all && !psNorm(text).includes(f5.q), children });
   }
   function AskButton({ label, ask: ask2, yes, onYes, id: id2, danger }) {
-    const [on2, setOn2] = d2(false);
-    if (!on2) return /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2, onClick: () => setOn2(true), children: label });
+    const [on2, setOn2] = d2(false), btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    ), back2 = A2(false);
+    h2(() => {
+      if (!on2 && back2.current) {
+        back2.current = false;
+        if (btn.current) btn.current.focus();
+      }
+    }, [on2]);
+    const done = () => {
+      back2.current = true;
+      setOn2(false);
+    };
+    if (!on2) return /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2, ref: btn, onClick: () => setOn2(true), children: label });
     return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": ask2, children: [
       /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: ask2 }),
       /* @__PURE__ */ u2("button", { type: "button", class: `btn${danger ? " danger" : ""}`, id: id2 + "Yes", onClick: () => {
-        setOn2(false);
+        done();
         onYes();
       }, children: yes }),
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2 + "No", onClick: () => setOn2(false), children: "Keep it" })
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2 + "No", onClick: done, children: "Keep it" })
     ] });
   }
   var PsProblem = ({ msg, id: id2 }) => msg ? /* @__PURE__ */ u2("span", { class: "psmsg", role: "alert", id: id2, children: msg }) : null;

@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_wide_tables.py   (needs Google Chrome; skipped otherwise)
 
-A table wider than its frame (Projects at 700px, Settings › People at 900px) shows the edge fade and "more columns →";
+A table wider than its frame (Projects at 700px, the People page at 900px; Settings › People until the Settings line) shows the edge fade and "more columns →";
 BL-176: the peek and ask creaite are over the page, so with them open at 1100px nothing narrows and a table that fits shows no cue; the cue goes once scrolled to the
 end; the button scrolls; the first column (the ID or name) stays put while the rest scrolls, unless it is over half the frame.
 """
@@ -13,8 +13,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
-PAGES = {"projects": "go('projects')", "work": "go('work')", "people": "go('settings','people')"}
-FRAME = {"projects": "#projTbl", "work": "#workWrap", "people": "#v-settings .tbl"}
+PAGES = {"projects": "go('projects')", "work": "go('work')", "people": "go('settings','people')"}   # the Settings line: the old address opens the People page
+FRAME = {"projects": "#projTbl", "work": "#workWrap", "people": "#v-people .tbl"}
 CUE = """(()=>{ const f=document.querySelector(%r), c=f&&f.querySelector(':scope>.xcue'), m=c&&c.querySelector('.xmore');
   const vis=e=>!!e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;
   const fr=f.getBoundingClientRect(), mr=m?m.getBoundingClientRect():null;

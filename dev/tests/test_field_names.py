@@ -54,12 +54,18 @@ class FieldNames(LiveBrowserCase):
         cats = self.b.eval("SETCATS.map(c=>c[0])")
         self.assertEqual(len(cats), 8)                   # v2.6 (#246): eight tabs (BL-320 had four)
         bad = []
-        # every tab, every Advanced sub-tab and the moving People and projects page (its old address)
-        for cat, scat in [(c, c) for c in cats] + [(x, "advanced") for x in self.b.eval("ADVSUBS.map(c=>c[0])")] + [("people", "people")]:
+        # every tab and every Advanced sub-tab (the Settings line: People and projects left Settings; its homes are checked below)
+        for cat, scat in [(c, c) for c in cats] + [(x, "advanced") for x in self.b.eval("ADVSUBS.map(c=>c[0])")]:
             self.b.eval(f"go('settings'); STAB='{cat}'; renderSettings();")
             self.b.wait(f"VIEW==='settings'&&SCAT==='{scat}'")
             self.b.pump(0.2)
             bad += self.unnamed(f"settings/{cat}")
+        for go, ready, where in (("go('people')", "VIEW==='people'&&!!document.getElementById('plRows')", "people"),
+                                 ("go('psettings','ABC')", "VIEW==='psettings'&&!!document.getElementById('psName')", "project-settings")):
+            self.b.eval(go)
+            self.b.wait(ready)
+            self.b.pump(0.2)
+            bad += self.unnamed(where)
         self.assertEqual(bad, [])
 
     def test_a_settings_row_ties_its_label_to_its_field(self):

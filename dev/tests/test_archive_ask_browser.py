@@ -1,6 +1,7 @@
 """BL-09 in the page: archiving a project that still has open items asks first, in #parchDlg (the Dialog block, BL-316).
 
-Settings › Projects and register › Archive on a project with open items: the live server answers with the items, and the page
+The project settings' Archive (Archive and close; Settings › Projects and register's until the Settings line) on a
+project with open items, once its own Archive? is answered: the live server answers with the items, and the page
 opens #parchDlg, "<name> has n open items", with Stop and "Cancel them all and archive". Checked with real keys and clicks:
 - focus goes into the dialog (Stop, its first control) and comes back to the Archive button when it closes;
 - Stop, Esc and a click on the scrim each close it with "Stopped: nothing was archived", and nothing is staged: no approval
@@ -20,7 +21,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
-ARCHIVE = '#projArch [data-parch="archive"][data-pcode="ABC"]'
+ARCHIVE = "#psArchive"            # the project settings' Archive… (#247); it asks first (#psArchiveYes), then the server
+YES = "#psArchiveYes"
 OPEN = "document.getElementById('parchDlg')?.open"
 
 
@@ -46,12 +48,14 @@ class ArchiveAsk(LiveBrowserCase):
         return [p["archived"] for p in self.v.rows("projects") if p["code"] == "ABC"]
 
     def ask(self):
-        """Settings › Projects and register, focus ABC's Archive and press Enter: the dialog opens. Its heading."""
+        """ABC's settings › Archive and close: focus Archive…, press Enter, then Enter on its Archive: the dialog opens. Its heading."""
         b = self.b
-        b.eval("go('settings','people')")
+        b.eval("go('psettings','ABC')")
         b.wait(f"!!document.querySelector({json.dumps(ARCHIVE)})", 15)
-        self.assertTrue(b.eval(f"(()=>{{ const e=document.querySelector({json.dumps(ARCHIVE)}); e.scrollIntoView({{block:'center'}}); e.focus(); return document.activeElement===e; }})()"))
-        b.key("Enter")
+        for sel in (ARCHIVE, YES):
+            b.wait(f"!!document.querySelector({json.dumps(sel)})", 15)
+            self.assertTrue(b.eval(f"(()=>{{ const e=document.querySelector({json.dumps(sel)}); e.scrollIntoView({{block:'center'}}); e.focus(); return document.activeElement===e; }})()"))
+            b.key("Enter")
         b.wait(OPEN, 30)
         b.pump(0.2)
         return b.eval("document.getElementById('parchH').textContent")

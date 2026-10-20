@@ -138,10 +138,12 @@ class Page(LiveBrowserCase):
             self.assertRegex(cmd, r"\b(ABC|DEF)\b")                         # the command Alan can run keeps the code
         self.assertTrue(any("Example Programme" in t for t, _ in texts) or not texts)
 
-    def test_settings_projects_may_show_the_code_as_the_code(self):
-        self.b.eval("go('settings','projects')")
+    def test_the_project_settings_may_show_the_code_as_the_code(self):
+        # the Settings line: Settings › Projects is gone; a project's code is shown on its settings page
+        self.b.eval("go('psettings','ABC')")
+        self.b.wait("VIEW==='psettings'&&!!document.getElementById('psName')")
         self.b.pump(0.3)
-        self.assertRegex(self.b.eval("document.getElementById('settingsBody').innerText"), r"\bABC\b")        # where a code is defined, it is shown
+        self.assertRegex(self.b.eval("document.getElementById('v-psettings').innerText"), r"\bABC\b")        # where a code is defined, it is shown
 
 
 class Prints(unittest.TestCase):

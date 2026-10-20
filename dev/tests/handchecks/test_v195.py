@@ -428,7 +428,7 @@ class Measured2(HandcheckCase):
         # own tables have none. Chrome's accessibility tree gives no sort property over CDP, so the order VoiceOver is given
         # is read from aria-sort on the heading, whose role must be columnheader (where aria-sort is allowed).
         b = self.b
-        self.screen("settings-people")
+        self.screen("settings-essentials")                    # the Settings line: Settings › People is the People page now
         in_settings = b.eval("document.querySelectorAll('#v-settings th[data-psort], #v-settings th button').length")
         self.screen("people")
         heads = b.eval("[...document.querySelectorAll('#v-people th[data-psort]')].map(th=>th.dataset.psort)")
@@ -471,9 +471,9 @@ class Measured2(HandcheckCase):
         # textarea grows with its text and is left out. Settings is all three of its tabs. Section headings are the pages' h2;
         # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note.
         b = self.b
-        pages = ("today", "work", "review", "intake", "settings-essentials", "settings-advanced", "settings-people", "activity", "files")
+        pages = ("today", "work", "review", "intake", "settings-essentials", "settings-advanced", "project-settings", "activity", "files")
         views = {"today": "#v-today", "work": "#v-work", "review": "#v-review", "intake": "#v-inbox", "activity": "#v-activity",
-                 "files": "#v-files", "settings-essentials": "#v-settings", "settings-advanced": "#v-settings", "settings-people": "#v-settings"}
+                 "files": "#v-files", "settings-essentials": "#v-settings", "settings-advanced": "#v-settings", "project-settings": "#v-psettings"}
         fields = ("input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),"
                   " select")
         head_js = """(v)=>[...document.querySelectorAll(v+' h2')].filter(e=>e.offsetParent).map(e=>{ const s=getComputedStyle(e);
