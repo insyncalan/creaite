@@ -2739,8 +2739,8 @@ REFUSAL_RES = [
     re.compile(rf"^(?:sorry,?\s+)?unable to\s+{_TASK}\b", re.I),
     re.compile(r"\bas an AI(?:\s+(?:language\s+)?model|\s+assistant)?\s*,", re.I),
     # about its inputs: "No passage … was supplied", "The passage doesn't say", "There is no meeting passage…"
-    re.compile(rf"\b(?:no|not enough|insufficient|neither)\b[^.;]{{0,60}}\b{_INPUTS}\b[^.;]{{0,60}}?\b(?:was|were|is|are|has been|have been)\s+"
-               r"(?:supplied|provided|given|available|included)\b", re.I),
+    re.compile(rf"\b(?:no|not enough|insufficient|neither)\b[^.;]{{0,60}}\b{_INPUTS}\b[^.;]{{0,60}}?"
+               r"\b(?:was|were|is|are|has been|have been)\s+(?:supplied|provided|given|available|included)\b", re.I),
     re.compile(rf"\b(?:the|these|this)\s+(?:meeting\s+)?{_INPUTS}\s+(?:was|were)\s+not\s+(?:supplied|provided|given)\b", re.I),
     re.compile(rf"\b(?:the|these|this)\s+(?:meeting\s+)?{_INPUTS}\s+(?:do(?:es)?n(?:'|’)?t|do(?:es)? not)\s+"
                r"(?:say|give|mention|cover|show|contain|include|support|describe)\b", re.I),
@@ -2772,7 +2772,8 @@ def nothing_note(ctx):
     if ctx.get("kind") == "thinking":
         if item.get("field") == "response_action":
             return "Nothing to suggest from: no meeting passage and no closed risks with a response"
-        return "Nothing to suggest from: no meeting passage gives " + ("the options considered" if item.get("field") == "options" else "the reasoning")
+        what = "the options considered" if item.get("field") == "options" else "the reasoning"
+        return f"Nothing to suggest from: no meeting passage gives {what}"
     if ctx.get("kind") == "update":
         since = tracker.shown(item["since"]) if item.get("since") else "the last update"
         return f"Nothing to draft from: nothing since {since} says where the action stands"
