@@ -34315,9 +34315,10 @@ ${s5}`;
   var mtgCheckable = (m5) => !!m5.id && m5.teams && !mtgLater(m5) && !m5.processed && m5.transcript !== "none";
   var TXWHY = { none: "No transcript for this meeting", not_transcribed: "Not transcribed yet", no_access: "No access to the transcript" };
   var mtgSkip = (m5) => m5.loaded ? "" : TXWHY[m5.transcript] || (!m5.transcript && !m5.teams ? "Not a Teams meeting, so there is no transcript to load" : "");
+  var runId = (kind) => `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   var jobLive = async function(url, body2) {
     if (!shared.RUNLABEL) shared.RUNLABEL = /load/.test(url) ? "Loading a transcript" : "Checking a transcript";
-    const id2 = `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    const id2 = runId("r"), ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
@@ -34447,7 +34448,7 @@ ${s5}`;
     }
   }
   async function runRoute(url, body2, pre, fold, onEv) {
-    const id2 = `${pre}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    const id2 = runId(pre), ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     const got = {};
@@ -72504,7 +72505,7 @@ ${d5.text}`);
     const work = () => live ? working() : document.createElement("div");
     let next = null;
     const rd2 = res.body.getReader(), dec = new TextDecoder(), t02 = performance.now();
-    let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId = body2.run, replies = [], grp = null, spin = work();
+    let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId2 = body2.run, replies = [], grp = null, spin = work();
     for (; ; ) {
       let chunk;
       try {
@@ -72532,7 +72533,7 @@ ${d5.text}`);
         } catch (e4) {
           continue;
         }
-        if (ev.seq && runId) shared.SHOWN = { run: runId, seq: ev.seq };
+        if (ev.seq && runId2) shared.SHOWN = { run: runId2, seq: ev.seq };
         if (plain && !PLAINEV.includes(ev.type)) {
           if (ev.type === "stopped") outcome = "stopped";
           else if (ev.type === "error") outcome = "failed";
@@ -72588,7 +72589,7 @@ ${d5.text}`);
           conf = null;
           spin = addEl("step stopped", ev.timed_out ? "Stopped: nobody was watching for too long" : ev.after_step ? "Stopped after the current step finished" : "Stopped");
         } else if (ev.type === "done") {
-          runId = ev.run || runId;
+          runId2 = ev.run || runId2;
           next = ev.next || null;
           setChat(ev.chat || shared.ASKCHAT, ev.session || shared.ASKSESSION);
           replies.forEach((b5) => stampMsg(b5, ev.done_at || nowIso()));
@@ -72600,7 +72601,7 @@ ${d5.text}`);
     if (!spin.classList.contains("stopped")) spin.remove();
     askWorking(false);
     setRunning(false);
-    if (runId) api("/api/ask/ack", { run: runId });
+    if (runId2) api("/api/ask/ack", { run: runId2 });
     ATTACHED = null;
     askFinished(outcome);
     retryOffer(outcome, body2);
@@ -73747,7 +73748,6 @@ ${d5.text}`);
   }
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
-  var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
   var irRun = "";
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
@@ -73815,23 +73815,18 @@ ${d5.text}`);
         null
       );
       try {
-        if (minutes) {
-          await askLive(
-            `process ${file} as minutes by someone else`,
-            `Check “${m5.title}” (${whenOf(m5)}) for proposed items: minutes by someone else, no new minutes drafted`
-          );
-        } else {
-          const x5 = m5.src === "calendar" ? calOf(m5) : null;
-          r4 = await processLive([x5 ? mtgProcessFile(x5, file) : { path: file }], (ev) => {
-            if (ev.type === "run") irRun = ev.id;
-            else if (ev.type === "step") irStep.value = ev.label || "";
-          });
-        }
+        const x5 = m5.src === "calendar" ? calOf(m5) : null;
+        const sent = minutes ? { path: file, as: "minutes" } : x5 ? mtgProcessFile(x5, file) : { path: file };
+        r4 = await processLive([sent], (ev) => {
+          if (ev.type === "run") irRun = ev.id;
+          else if (ev.type === "step") irStep.value = ev.label || "";
+        });
       } catch (e4) {
       } finally {
         irRun = "";
         irStep.value = "";
       }
+      if (r4 && r4.stopped) irStopped = true;
       await reloadData();
       const after = rowOf(m5.id);
       const done = !after || after.stage !== "arrived";
@@ -73846,10 +73841,12 @@ ${d5.text}`);
       irSetBusy(m5.id, false);
     }
   }
+  var irStopped = false;
   function irStop() {
+    irStopped = true;
     if (irRun) stopRun(irRun);
   }
-  var irCanStop = (m5) => !!m5 && irBusy.value.includes(m5.id) && !(m5.src === "upload" && irFileKind(m5) === "minutes");
+  var irCanStop = (m5) => !!m5 && irBusy.value.includes(m5.id);
   function irAskAbout(m5) {
     const q5 = irAskQ.value[m5.id];
     if (!q5) return;
@@ -73873,9 +73870,20 @@ ${d5.text}`);
       return;
     }
     const ids = irReady().map((m5) => m5.id), left = irLeftOut().length;
+    irStopped = false;
+    let ran = 0;
     for (const id2 of ids) {
+      if (irStopped) break;
       const m5 = rowOf(id2);
-      if (m5) await irProcess(m5);
+      if (m5) {
+        await irProcess(m5);
+        ran++;
+      }
+    }
+    if (irStopped) {
+      snack(`Stopped: ${ids.length - ran} not started`);
+      irStopped = false;
+      return;
     }
     if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
   }
@@ -74157,7 +74165,7 @@ ${d5.text}`);
       note,
       irAskQ.value[m5.id] ? /* @__PURE__ */ u4(S2, { children: [
         " ",
-        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "askabout", onClick: () => irAskAbout(m5), children: "Ask creaite about this" })
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "askabout", onClick: () => irAskAbout(m5), children: "ask creaite about this" })
       ] }) : null
     ] });
   }
@@ -74309,7 +74317,7 @@ ${d5.text}`);
               /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, n4) })
             ] }),
             state === "running" ? /* @__PURE__ */ u4(S2, { children: [
-              /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite stays free" }),
+              /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite waits until this ends" }),
               /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) })
             ] }) : null,
             /* @__PURE__ */ u4(IrNote, { m: m5 })

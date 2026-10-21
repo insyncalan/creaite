@@ -1,7 +1,7 @@
 """#232 (v2.6) with 2.5.3's routes: the one Intake page's Process runs Process's own run kind (#264, POST /api/intake/process,
 through processLive) and its Refresh the calendar's (#265, POST /api/calendar/refresh, through calendarLive); neither sends an ask
 creaite message (askLive) or opens its panel. Process shows the run's step and a Stop on the running row; a question the run could
-not answer comes back on the row as "Needs you" with "Ask creaite about this", which fills the panel's box and sends nothing. A
+not answer comes back on the row as "Needs you" with "ask creaite about this", which fills the panel's box and sends nothing. A
 project goes with the file only when Alan chose it (#264 S6). Refresh says "Refreshing…" with the run's step, its icon is Stop while
 it runs, and the closure is said once. Someone else's minutes (Find work items) still go through ask creaite until the Process guard
 accepts them (dev/proposals/intake-232/ROUTES.md).

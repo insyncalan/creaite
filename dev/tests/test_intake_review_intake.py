@@ -1,5 +1,5 @@
 """#232-A (v2.5.0): the Intake side of the Intake page, in a real browser against the live server. The meeting row's actions
-(Process with progress on the row while ask creaite stays free, Later, Not needed with a reason and Undo), Process all ready,
+(Process with progress on the row, ask creaite waiting until it ends, Later, Not needed with a reason and Undo), Process all ready,
 Upload files (dropped anywhere on the page), Restore, the Board's Process moving the card, an uploaded file's Not needed keeping
 its reason, and a Later meeting coming back when its transcript arrives. Rewrites the page tests of test_meetings.InboxPageTests,
 test_transcripts_ui (Highlight, Loading, UploadList) and test_clear_day*.ClearDayPage that still apply: Load and Process are one

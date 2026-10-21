@@ -5,9 +5,9 @@
    page keeps its own copies until 232-C retires it. Nothing here writes a file: the server's routes do (/api/transcripts/load,
    /api/inbox/upload, /api/intake/clear), and Process's own run kind (#264, POST /api/intake/process through processLive) makes the
    draft; Refresh is the calendar's own run kind (#265, POST /api/calendar/refresh through calendarLive). Someone else's minutes (Find
-   work items) still go through ask creaite's run (askLive) until the Process guard accepts them (dev/proposals/intake-232/ROUTES.md).
-   Progress is the row's (irBusy); the ask panel is never opened, so ask creaite stays free (one run at a time is the engine's). */
-import { askLive } from "../../ask.js";     /* only for someone else's minutes (Find work items): see the header */
+   work items) take the same Process route with "as": "minutes" (#232 E1; the guard's half is dev/proposals/intake-232-minutes/).
+   Progress and Stop are the row's (irBusy); the ask panel is never opened. One run goes at a time (the engine's), so ask creaite
+   waits while a row is processing. */
 import { openChat } from "../../ask.js";
 import { calendarLive, jobLive, mtgBusy, mtgCheckable, mtgProcessFile, mtgSkip, processLive, stopRun, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
 import { D, fd, fdText, TODAY } from "../../core/page.js";
@@ -50,7 +50,6 @@ export function irChooseKind(m, kind) { if (m && m.src === "upload" && !irFixed(
 /** The calendar import row (D.meetings.rows) a model row came from. @param {any} m */
 const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || []).find((/** @type {any} */ x) => x.key === m.key) || null : null);
 const rowOf = (/** @type {string} */ id) => irModel().meetings.find((/** @type {any} */ x) => x.id === id) || null;
-const whenOf = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}` : fd(m.day));
 
 /** The Process run in progress (its ID, for Stop on the row), or "". */
 let irRun = "";
@@ -87,21 +86,18 @@ export async function irProcess(m) {
     const minutes = irFileKind(m) === "minutes";           /* #232-E1: someone else's minutes are read for work items; no new minutes are drafted */
     irSetAskQ(m.id, null); irStep.value = "";
     let r = /** @type {any} */ (null);
-    try {
-      if (minutes) {                                       /* not yet on Process's route: the guard stages only a transcript (ROUTES.md) */
-        await askLive(`process ${file} as minutes by someone else`,
-          `Check “${m.title}” (${whenOf(m)}) for proposed items: minutes by someone else, no new minutes drafted`);
-      } else {                                             /* #264: the click is the go-ahead; progress and Stop are on the row */
-        const x = m.src === "calendar" ? calOf(m) : null;
-        r = await processLive([x ? mtgProcessFile(x, file) : { path: file }], ev => { if (ev.type === "run") irRun = ev.id; else if (ev.type === "step") irStep.value = ev.label || ""; });
-      }
+    try {                                                  /* #264: the click is the go-ahead; progress and Stop are on the row */
+      const x = m.src === "calendar" ? calOf(m) : null;
+      const sent = minutes ? { path: file, as: "minutes" } : x ? mtgProcessFile(x, file) : { path: file };
+      r = await processLive([sent], ev => { if (ev.type === "run") irRun = ev.id; else if (ev.type === "step") irStep.value = ev.label || ""; });
     } catch (e) { /* checked below */ }
     finally { irRun = ""; irStep.value = ""; }
+    if (r && r.stopped) irStopped = true;
     await reloadData();
     const after = rowOf(m.id);
     const done = !after || after.stage !== "arrived";      /* a file that was filed away has left the inbox: that is done, not failed */
     const o = r && (r.files || []).find((/** @type {any} */ f) => f.path === file);
-    if (!done && o && (o.state === "needs" || o.state === "not_staged")) {     /* the run's own question, with Ask creaite about this */
+    if (!done && o && (o.state === "needs" || o.state === "not_staged")) {     /* the run's own question, with ask creaite about this */
       irSetAskQ(m.id, { state: o.state, question: oneLine(o.question || "") });
       irNote(m.id, o.state === "needs" ? `Needs you: ${oneLine(o.question || "")}` : "Not staged: process it again, or ask creaite");
     } else if (!done) irNote(m.id, r && r.stopped ? "Stopped: nothing was staged" : `Couldn't: ${oneLine((r && r.message) || "no draft came back")}`);
@@ -110,11 +106,14 @@ export async function irProcess(m) {
   } finally { irSetBusy(m.id, false); }
 }
 
-/** Stop on the running row: the server ends the run and says so; the row then says nothing was staged. */
-export function irStop() { if (irRun) stopRun(irRun); }
-/** Whether the running row can offer Stop (someone else's minutes run in ask creaite, whose own Stop is in its panel). @param {any} m */
-export const irCanStop = m => !!m && irBusy.value.includes(m.id) && !(m.src === "upload" && irFileKind(m) === "minutes");
-/** "Ask creaite about this": the panel opens with the run's question filled in; nothing is sent by itself. @param {any} m */
+/** Whether Stop was pressed (or a run came back stopped) since Process all ready began: it then starts no further row. */
+let irStopped = false;
+/** Stop on the running row: the server ends the run and says so; the row then says nothing was staged, and Process all ready
+    starts nothing more. */
+export function irStop() { irStopped = true; if (irRun) stopRun(irRun); }
+/** Whether the running row can offer Stop (every Process run, Find work items too, is Process's own run kind). @param {any} m */
+export const irCanStop = m => !!m && irBusy.value.includes(m.id);
+/** "ask creaite about this": the panel opens with the run's question filled in; nothing is sent by itself. @param {any} m */
 export function irAskAbout(m) {
   const q = irAskQ.value[m.id]; if (!q) return;
   openChat();
@@ -122,12 +121,17 @@ export function irAskAbout(m) {
   if (box) { box.value = `About the Intake file “${m.title}”: ${q.question || "Process didn't stage it. Why not, and what should I do?"}`; box.focus(); }
 }
 
-/** Process every meeting and file whose transcript is ready, one after another. */
+/** Process every meeting and file whose transcript is ready, one after another. Stop on the running row ends the rest too. */
 export async function irProcessAll() {
   if (!viaServer()) { snack("Processing needs the live server"); return; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
   const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length;
-  for (const id of ids) { const m = rowOf(id); if (m) await irProcess(m); }
+  irStopped = false; let ran = 0;
+  for (const id of ids) {
+    if (irStopped) break;
+    const m = rowOf(id); if (m) { await irProcess(m); ran++; }
+  }
+  if (irStopped) { snack(`Stopped: ${ids.length - ran} not started`); irStopped = false; return; }
   if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);   /* counts only: a confidential meeting is never named */
 }
 

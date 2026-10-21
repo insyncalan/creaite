@@ -52,12 +52,12 @@ export function Progress({ words }) {
 }
 
 /** A row's note after a Process that drafted nothing; when the run asked a question (#264: "Needs you", or not staged), the note
-    offers "Ask creaite about this", which opens the panel with the question filled in. The same in List, Board and Two panes.
+    offers "ask creaite about this", which opens the panel with the question filled in. The same in List, Board and Two panes.
     @param {{m: any}} props */
 export function IrNote({ m }) {
   const note = irNotes.value[m.id];
   if (!note) return null;
-  return <div class="why irnote" role="status">{note}{irAskQ.value[m.id] ? <>{" "}<button type="button" class="linkbtn" data-ira="askabout" onClick={() => irAskAbout(m)}>Ask creaite about this</button></> : null}</div>;
+  return <div class="why irnote" role="status">{note}{irAskQ.value[m.id] ? <>{" "}<button type="button" class="linkbtn" data-ira="askabout" onClick={() => irAskAbout(m)}>ask creaite about this</button></> : null}</div>;
 }
 
 /** "Added today" or "Added 14-10-2026". @param {any} m */
@@ -146,7 +146,7 @@ export function MeetingRow({ m, live }) {
           <div class="why">{m.day ? fd(m.day) : ""}{m.start ? ` ${m.start}${m.end ? `–${m.end}` : ""}` : ""}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div>
           <div class="why">{irStateWords(m, n)}</div>
         </>}
-        {state === "running" ? <><div class="why">ask creaite stays free</div><Progress words={irRunningWords(m)} /></> : null}
+        {state === "running" ? <><div class="why">ask creaite waits until this ends</div><Progress words={irRunningWords(m)} /></> : null}
         <IrNote m={m} />
       </td>
       <td class="iracts"><RowActions m={m} /></td>

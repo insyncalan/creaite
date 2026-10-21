@@ -22,6 +22,7 @@ import linktext  # noqa: E402  (#121: links in plain text show as their words in
 import review  # noqa: E402  (classification shared with cx-review: bulk rule, needs a project)
 from docx_tools import md_normalise  # noqa: E402  (Current state is Markdown, BL-22, BL-47)
 import propose  # noqa: E402  (register learning checks, BL-28)
+import invite_clean  # noqa: E402  (#232: a meeting's sensitivity, fail closed)
 
 TEMPLATE = paths.TEMPLATES / "dashboard.html"
 FONTS = [(400, "roboto-400.ttf"), (500, "roboto-500.ttf"), (700, "roboto-700.ttf")]   # system/templates/vendor/ (OFL)
@@ -2713,8 +2714,9 @@ def inbox_meetings(settings, projects, today):
             if ev.get("all_day"):
                 continue
             title = str(ev.get("title") or "Meeting")
-            private = bool(ev.get("private")) or ("private" not in ev and title == "Busy" and not ev.get("where"))
-            conf = str(ev.get("sensitivity") or "").lower() == "confidential"        # #232: title and times only
+            sens = invite_clean.sensitivity(ev)              # fail closed: an older saved row's "personal" or odd value too
+            private = sens == "private" or ("private" not in ev and title == "Busy" and not ev.get("where"))
+            conf = sens == "confidential"                                           # #232: title and times only
             code, how = (None, "private") if private else prep_match(title, projects, remembered)
             eid = str(ev.get("id") or "") or None
             done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid)) if eid else None
@@ -3048,7 +3050,8 @@ def ordinal(n):
 
 def day_meeting(e, iso, look):
     """One meeting of a day: times and title, then what the day line shows for it (follow-up when it has ended, Prep from today)."""
-    private, conf = bool(e.get("private")), str(e.get("sensitivity") or "").lower() == "confidential"
+    sens = invite_clean.sensitivity(e)                   # fail closed, as Intake's rows
+    private, conf = sens == "private", sens == "confidential"
     title, start, end = str(e.get("title") or "Meeting"), str(e.get("start") or ""), str(e.get("end") or "")
     ended = has_ended(iso, end or start, look)
     m = {"start": start, "end": end, "title": "Busy" if private else title, "private": private, "confidential": conf, "ended": ended}
@@ -3173,7 +3176,7 @@ def prep_invite(ev):
            for a in ev.get("attendees") or [] if isinstance(a, dict)]
     out = {"body": ev.get("body") or "", "attendees": att, "attachments": list(ev.get("attachments") or []),
            "organiser": ev.get("organiser"), "recurrence": ev.get("recurrence") or "",
-           "confidential": (ev.get("sensitivity") or "") == "confidential"}
+           "confidential": invite_clean.sensitivity(ev) != "normal"}
     return {k: v for k, v in out.items() if v not in ("", [], None, False)}
 
 
