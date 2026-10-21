@@ -3871,6 +3871,7 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .ddmenu.pop.rsmenu{min-width:0;width:max-content;max-width:min(280px,calc(100vw - 16px));padding:4px;font-size:var(--fs-sm)}
 .rsmenu button{align-items:center;gap:8px;padding:4px 10px;min-height:28px;white-space:nowrap}
 .rsmenu button svg.i{margin-top:0;width:15px;height:15px;color:var(--muted);flex:none} .rsmenu b{font-weight:400}
+.wr-hmenu [data-tone=g] svg.i{color:var(--ok)} .wr-hmenu [data-tone=a] svg.i{color:var(--warn)} .wr-hmenu [data-tone=r] svg.i{color:var(--bad)}   /* #287: the health menu's icons in the flag's tones */
 .rs-pick{margin-top:6px}
 .rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
 .rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
@@ -70590,6 +70591,53 @@ ${d5.text}`);
     return /* @__PURE__ */ u2(ReportHeader, { ctx, logos: v5 && v5.logos || [], data: weeklyLogos.value });
   }
   var HEALTH_FLAGS = ["On track", "At risk", "Off track"];
+  var HEALTH_ICON = (
+    /** @type {Record<string, [string, string]>} */
+    { "On track": ["done", "g"], "At risk": ["alert", "a"], "Off track": ["x", "r"] }
+  );
+  function HealthChange({ flag, onPick }) {
+    const items2 = HEALTH_FLAGS.map((f5) => ({
+      id: f5,
+      name: f5,
+      icon: HEALTH_ICON[f5][0],
+      mark: f5 === flag ? "now" : void 0,
+      data: { tone: HEALTH_ICON[f5][1], ...f5 === flag ? { current: "true" } : {} }
+    }));
+    const open2 = (anchor) => {
+      if (menuOpenFor(anchor)) {
+        closeMenu("away");
+        return;
+      }
+      const rail = document.querySelector(".rail"), keep2 = rail ? rail.getBoundingClientRect().right + 8 : 8;
+      openMenu(anchor, { label: "Health for this week", items: items2, onPick, cls: "rsmenu wr-hmenu", minLeft: keep2 });
+    };
+    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: "btn sm wr-chg",
+        "aria-haspopup": "menu",
+        "aria-expanded": "false",
+        onClick: (e4) => open2(
+          /** @type {HTMLElement} */
+          e4.currentTarget
+        ),
+        onKeyDown: (e4) => {
+          if (e4.key === "ArrowDown") {
+            e4.preventDefault();
+            open2(
+              /** @type {HTMLElement} */
+              e4.currentTarget
+            );
+          }
+        },
+        children: [
+          /* @__PURE__ */ u2("span", { children: "Change" }),
+          /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
+        ]
+      }
+    ) });
+  }
   function WkHealth({ ctx }) {
     const { doc, section: s5 } = ctx, d5 = s5.data || {}, flag = d5.flag || "";
     const past = (d5.trend || []).filter((x5) => x5.date !== doc.date), weeks = [...past.slice(-5), { date: doc.date, flag }];
@@ -70600,7 +70648,7 @@ ${d5.text}`);
         ctx,
         flag,
         trend: weeks,
-        change: /* @__PURE__ */ u2(Menu, { label: "Change", btnCls: "btn sm wr-chg", menuLabel: "Health for this week", items: HEALTH_FLAGS.map((f5) => ({ id: f5, name: f5, checked: f5 === flag })), onPick: set }),
+        change: /* @__PURE__ */ u2(HealthChange, { flag, onPick: set }),
         why: /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2(Rich, { ctx, text: s5.text, label: "Why this health", empty: "Say why health is what it is" }),
           d5.last_week && d5.last_week.flag ? /* @__PURE__ */ u2("div", { class: "wr-last", children: [
