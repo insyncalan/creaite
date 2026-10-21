@@ -2,3 +2,4 @@ email_outside_off	system/scripts/edit_ai.py	k26-a-spoof	v26-186
 scrub_letters_kept	system/scripts/invite_clean.py	k26-b-scrub	v253-release
 sensitivity_off	system/scripts/invite_clean.py	k26-b-save	v253-release
 track_off	system/scripts/minutes_record.py	k26-d-followup	v26-track-from-review-2
+idpass_kept	system/scripts/invite_clean.py	k26-b-idpass	v253-release

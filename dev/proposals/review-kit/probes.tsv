@@ -79,6 +79,7 @@ k26-b-scrub	k26,e2e	script	k26/b232.py	{CK} scrub	-	cases	invite_clean.scrub-let
 k26-b-body	k26,e2e	script	k26/b232.py	{CK} body	-	cases	invite_text-letter-only-passcodes,-attendee-and-attachment-names
 k26-b-bare	k26,e2e	script	k26/b232.py	{CK} bare	-	cases	digitless-'Password-x'/'PIN-x'-labels-in-titles,-bodies-and-the-saved-calendar-(pre-existing-on-2.5.3)
 k26-b-save	k26,e2e	script	k26/b232.py	{CK} save	-	cases	sweep.py-calendar-save:-secrets,-confidential/private/odd-sensitivity,-log-and-output
+k26-b-idpass	k26,e2e	script	k26/b232.py	{CK} idpass	-	cases	numbered-ID-label-then-a-password-word-and-a-letters-only-value-(scrub,-is_secret,-invite_text,-clean_row,-calendar_row,-calendar.json;-listed-and-sampled-cross-product)
 k26-b-outputs	k26,e2e	script	k26/b232.py	{CK} outputs	-	cases	calendar-content-in-client-report,-exports,-client-one-pager,-client-drafts
 k26-c-client	k26,e2e	script	k26/c236.py	{CK} client	-	cases	followed-person-word,-star,-register-kind-and-alert-text-in-client-outputs
 k26-c-reports	k26,e2e	script	k26/c236.py	{CK} reports	-	cases	...-in-weekly-report-and-facts,-internal-steerco,-ad-hoc-document

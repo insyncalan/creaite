@@ -1,6 +1,6 @@
 # Client-output review kit (#239, refreshed for 2.5.x in #259, extended for 2.6 by group `k26`)
 
-Every client-leak repro and probe written during the v2.5.0 to v2.5.3 reviews, with one runner. Not part of creaite's runtime. 95 probes (71 for 2.5.x, 24 for 2.6).
+Every client-leak repro and probe written during the v2.5.0 to v2.5.3 reviews, with one runner. Not part of creaite's runtime. 96 probes (71 for 2.5.x, 25 for 2.6).
 
 ## Run it (one command)
 
@@ -12,7 +12,7 @@ Results: `$KIT_OUT/<tree-name>/SUMMARY.tsv` (script, variant, status, evidence) 
 print `PASS=n LEAK=n ERROR=n`. Whole kit about 25 to 35 minutes on a quiet Mac, one probe at a time. `KIT_ONLY=<id>[,<id>]` runs named
 probes; `KIT_RECLASSIFY=1` reads the logs again after a classifier change; `KIT_MAXLOAD=55` waits while the 1-minute load is above it.
 
-Groups: images audience header race page rename picture logos svg matchgate e2e k259 (the five 2.5.3 probes) k26 (the 24 probes of what 2.6 adds). `run_all.sh <checkout> list`
+Groups: images audience header race page rename picture logos svg matchgate e2e k259 (the five 2.5.3 probes) k26 (the 25 probes of what 2.6 adds). `run_all.sh <checkout> list`
 prints the probes.
 
 ## Status words
@@ -31,8 +31,8 @@ allows (`client_snapshot.TOKEN`, see `src/kitshim.py: client_word_export`), afte
 ## The 2.6 run (group `k26`)
 
     export KIT_OUT=<scratch>                                         # a git archive of the head under review is enough (no .git needed)
-    sh dev/proposals/review-kit/run_all.sh <checkout-of-the-assembled-line> k26      # 24 probes, about 15 to 25 minutes, one at a time
-    KIT_ONLY=k26-b-scrub,k26-b-save sh dev/proposals/review-kit/run_all.sh <checkout> k26     # named probes
+    sh dev/proposals/review-kit/run_all.sh <checkout-of-the-assembled-line> k26      # 25 probes, about 15 to 25 minutes, one at a time
+    KIT_ONLY=k26-b-scrub,k26-b-save,k26-b-idpass sh dev/proposals/review-kit/run_all.sh <checkout> k26     # named probes
     KIT_MUTANTS=k26 KIT_TREES=<dir of archives of origin/v26-186, v253-release, v26-track-from-review-2> sh dev/proposals/review-kit/run_mutants.sh <any-checkout> <scratch>
 
 Four scripts in `src/k26/`, one per area: `a186.py` (Draft email AI bar for an outside recipient, #186/#262/#263), `b232.py` (calendar saves behind
@@ -41,8 +41,8 @@ the Process and Refresh routes, #232/#264/#265), `c236.py` (followed people, #23
 never the branch name) and SKIPs when it has not, so one command works on any tree from 2.5.3 to the assembled line. The three guarded
 proposals the probes cover (`draft-ai-186/live_server.diff`, `track-from-review/tracker-track-problems.diff`, `followed-needs/vip-api.diff`) are applied to the
 **vault's copy** inside the probe (never to the checkout), first judging the tree as it is and then, for the last two, with the diff in. The mutants
-(`mutants-k26.tsv`) each name their own clean base tree: `email_outside_off` (v26-186), `scrub_letters_kept` and `sensitivity_off` (v253-release),
-`track_off` (v26-track-from-review-2); all four must show LEAK. A mutant file may start with `#sub: <old>|||<new>` lines (one exact replacement) for a
+(`mutants-k26.tsv`) each name their own clean base tree: `email_outside_off` (v26-186), `scrub_letters_kept`, `sensitivity_off` and
+`idpass_kept` (v253-release), `track_off` (v26-track-from-review-2); all five must show LEAK. A mutant file may start with `#sub: <old>|||<new>` lines (one exact replacement) for a
 script that ends in `sys.exit(main())`. CHECKLIST section G says which probe needs which branch merged and what is expected on each tree today.
 
 ### Results of the 2.6 run (21-10-2026; trees are `git archive` copies of the heads named)
@@ -79,6 +79,9 @@ No ERROR anywhere. What the LEAKs are:
 - `k26-b-scrub` and `k26-b-save`, on `v26-line-2` and `v26-review-fixes`: **a real product finding (HIGH)**, `invite_clean.scrub` as changed in `4468986f` keeps a value that has no
   digit: `Steering Passcode: kqZxyw` becomes `Steering kqZxyw`, `Meeting ID 123 456 789 Passcode abcdef` becomes `abcdef`, `Weekly sync zoom.us 98765432101`
   becomes `Weekly sync 98765432101` (50 of 94 scrub cases; 16 of 31 saved-calendar cases; title, place and organiser, a confidential meeting's title too). 2.5.3 drops the whole field.
+- `k26-b-idpass` (added 21-10-2026; 844 cases: 21 listed, 823 sampled, every 7th of the 5760 of 8 numbered labels x 10 password words x 9 connectors x 2 values x 4 numbers): a numbered ID label then a
+  password-family word then a letters-only value (`Meeting ID 85212345678 and Password abcdefg`). Name the places that keep the value: `scrub` (title, place, organiser), `clean_row`, `calendar_row` and `calendar.json`.
+  `v253-release` 76fe0d39 PASS (0 of 844), `v26-line-4` 103dad21 LEAK (588), `v26-invite-h1` aca7f5f4 LEAK (323), `v26-invite-h2` 9d8e89d8 PASS (0). Takes about 3 seconds. Mutant `idpass_kept`.
 - `k26-b-bare`, every tree: **pre-existing on 2.5.3** (not part of the 2.6 regression): a label that needs a digit (`Password swordfish`, `PIN abcd`, a table row `PIN` / `kqzxyw`).
 - `k26-c-api`, `v26-236-next` and `v26-line-2`: the page's `/api/vip` poll returns each followed row's `sigs` (page-only, LOW); closed by `followed-needs/vip-api.diff` (the probe shows it HELD with the diff in the vault's copy).
 - `k26-d-apply`, `v26-track-from-review-2` and `v26-line-2`: a crossed item approved by hand is registered by `tracker.py apply` until `tracker-track-problems.diff` (guarded) is applied (HELD with it).

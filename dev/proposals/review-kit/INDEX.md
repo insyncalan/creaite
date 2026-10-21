@@ -22,7 +22,7 @@ comment. What changed for 2.5.3:
   (`LeakFix`), and `atk-id-in-css`, `rcleak-*`, `rv234-reshow-race`, `hostile-sbs`, `hostile-sbsfix` (test modules found through `KIT_CK`).
 - Nothing was retired. A probe whose subject changed says so in CHECKLIST section F ("Retired or replaced").
 
-## 2.6 leak kit run (group `k26`, 24 probes, 21-10-2026)
+## 2.6 leak kit run (group `k26`, 25 probes, 21-10-2026)
 
 Four scripts under `src/k26/` (classifier `cases`, one `### CASE <name> | LEAK|PASS|HELD|CTRL-FAIL|SKIP | evidence` line per case), one per
 area of what 2.6 adds on top of 2.5.3. Fictional data only (a Brightwater-style fixture; `Jane Doe`, `Omar Ali`, `kqZxyw`, `KITKIND...`
@@ -44,6 +44,7 @@ error. `selftest_classify.py` covers it.
 | `k26-b-body` (13) | `b232.py body` | `invite_text` drops the line (and the next line) of a letter-only key; attendee and attachment names with a key are dropped | `invite_clean` | PASS on both |
 | `k26-b-bare` (27) | `b232.py bare` | the labels that need a digit to be read as a key (`Password swordfish`, `PIN abcd`, a table row `PIN` / `kqzxyw`) | `invite_clean` | **LEAK on every tree, 2.5.3 included** (pre-existing, not part of the 2.6 regression) |
 | `k26-b-save` (31) | `b232.py save` | `sweep.py calendar` in a vault: no letter-only secret in `calendar.json`, the command's output or the debug log; a confidential meeting keeps only title and times (no body, attendee, attachment, place, organiser, recurrence, address); a private one is Busy; `Strictly Confidential`, `restricted`, `2`, `Secret`, `personal` fail closed | `sweep.calendar` (#265; #232 wires the routes to it) | PASS on 2.5.3; LEAK where `scrub` leaks |
+| `k26-b-idpass` (844) | `b232.py idpass` | a numbered ID label (`Meeting ID`, `Webinar ID`, `Conference ID`, `Event ID`, `Call ID`, `Session ID`, `PIN`, `Code`) then a password-family word (`Passcode`, `Pass-code`, `PWD`, `PW`, `Password`, `Kennwort`, `Mot de passe`, `Contraseña`...) then a **letters-only** value (`Meeting ID 85212345678 and Password abcdefg`, `Meeting ID 12_Passcode abcdefg`, `abcdefg passcode`): no value survives `scrub` (title, place, organiser), `is_secret`, `invite_text`, `clean_row`, `sweep.calendar_row` or `calendar.json`. 21 listed cases plus every 7th of the cross product with 9 connectors, 2 values and 4 number shapes (823), 3 ordinary-title controls. Each LEAK line names the places | `invite_clean` | PASS on `v253-release` and `v26-invite-h2`; LEAK on `v26-line-4` 103dad21 (588 of 844) and `v26-invite-h1` aca7f5f4 (323) |
 | `k26-b-outputs` (12) | `b232.py outputs` | with a saved calendar holding body, attendee, attachment, organiser, place and a confidential meeting's words: the client report (draft, HTML and Word export, filed copy), `report.py steerco-data` and the client-safe one-pager, and the client contexts of status-form, polish and client wording hold none of it. The follow-up email facts keep the invite's attendees by design (information) | `sweep.calendar` | PASS everywhere |
 | `k26-c-client` (9) | `c236.py client` | with two followed people in the people register (their VIP column holding the canaries `KITKIND...`) and their alerts in `vip.json`: no VIP word, star, kind or alert subject/gist in the client report (draft, exports, filed copy) or the client steerco one-pager | `sweep.vip_record` (BL-99); #236 adds the `From` rows | PASS everywhere |
 | `k26-c-reports` (4) | `c236.py reports` | ... in the weekly report (`weekly-stage`), its staged proposal, the internal steerco facts and an ad hoc document | same | PASS everywhere |
@@ -64,7 +65,7 @@ error. `selftest_classify.py` covers it.
 
 | group | probes | what it covers |
 |---|---|---|
-| `k26` | 24 | the 2.6 additions (#186, #232, #236, #275/#268): `k26-a-*` (5), `k26-b-*` (5), `k26-c-*` (8), `k26-d-*` (6); table above |
+| `k26` | 25 | the 2.6 additions (#186, #232, #236, #275/#268): `k26-a-*` (5), `k26-b-*` (6), `k26-c-*` (8), `k26-d-*` (6); table above |
 | `images` | 11 | CSS / image / metadata forms in the posted page and the Word file (I10, I5): `atk-bg-svg`, `atk-other-paths`, `atk-id-in-css`, `rv2b-imageset`, `rv241-atk-css`, `rv241-v241`, `rc250-css-fuzz`, `rc250-jpeg2`, `rc250-svg-inline`, `rc250-word-where`, `csp-check` |
 | `audience` | 23 | audience, kind and weekly/minutes confusion (I6, I7, I15, I16): `rvmd-aud`, `audbypass-internal`, `audbypass-missing`, `audbypass-Client`, `audbypass-weekly`, `audbypass-distributed`, `audbypass-none`, `audbypass-file`, `rvaud-file-internal`, `rvaud-file-missing`, `rvaud-file-list`, `rvaud-file-dup`, `rvaud-file-kindsp`, `rvaud-file-kindweekly`, `rvaud-file-kindweeklyc`, `rvaud-file-kindmin`, `rvaud-file-kwc`, `ms1-kind`, `ms1-aud`, `ms1-combo`, `ms1-mv`, `ms2-fields`, `minutes-route` |
 | `header` | 5 | stored header fields: project_name, client, title, meta (I8, I14): `sweepclass-header`, `sweepclass-header-disk`, `ms1-header`, `ms2-hot`, `ms2-fields` |
