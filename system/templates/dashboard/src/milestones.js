@@ -263,7 +263,6 @@ export function renderMilestones(){ const code=shared.MSCODE, p=P.find(x=>x.code
   const cli=shared.MVAUD==="cli"; if(cli&&shared.MV.view==="move") shared.MV.view="plan";
   let h=`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${code}">${esc(p.name)}</a><span aria-hidden="true">›</span><span aria-current="page">Milestones</span></nav>
     <div class="mv-pageh"><h1>Milestones: Plan and Movement</h1><span class="sp"></span>
-      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P.length<2?"disabled":""}>‹</button><select id="mvProjSw" aria-label="Switch project">${P.map(x=>`<option value="${x.code}" ${x.code===code?"selected":""}>${esc(x.name)}</option>`).join("")}</select><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P.length<2?"disabled":""}>›</button></div>
       <button type="button" class="mv-btn pri" id="mvAdd" data-mvadd="1">${ic("plus")}Add milestone</button></div>
     <div class="mv-ctl"><div class="mv-seg" role="group" aria-label="Milestone view"><button type="button" id="mvVPlan" data-mvview="plan" aria-pressed="${shared.MV.view==="plan"}">Plan</button><button type="button" id="mvVMove" data-mvview="move" aria-pressed="${shared.MV.view==="move"}"${cli?' aria-disabled="true" data-tip="Movement is internal only and is hidden in Client view"':""}>Movement <span class="mv-tag">Internal</span></button></div>
       <div class="mv-seg" role="group" aria-label="Audience"><button type="button" id="mvAInt" data-mvaud="int" aria-pressed="${!cli}">Internal view</button><button type="button" id="mvACli" data-mvaud="cli" aria-pressed="${cli}">Client view</button></div></div>`;
@@ -584,7 +583,6 @@ document.addEventListener("click",e=>{ const t=e.target; if(!t.closest) return;
   const ed=t.closest("[data-mvedit]"); if(ed){ e.preventDefault(); if((shared.MV.peek&&(shared.MV.flow||shared.MV.pend)&&ed.dataset.mvedit!==shared.MV.peek)||(shared.MV.add&&mvAddDirty())){ mvShake(); return; } mvEdOpen(ed.dataset.mvedit,ed); return; }
   const vw=t.closest("[data-mvview]"); if(vw){ if(vw.dataset.mvview==="move"&&shared.MVAUD==="cli"){ snack("Movement is internal only and is hidden in Client view."); return; } shared.MV.view=vw.dataset.mvview; renderMilestones(); navWrite(true); return; }
   const au=t.closest("[data-mvaud]"); if(au){ shared.MVAUD=au.dataset.mvaud; mvPrefSet(MVVIEWKEY,shared.MVAUD); if(shared.MVAUD==="cli"&&shared.MV.view==="move"){ shared.MV.view="plan"; navWrite(false); } renderMilestones(); $(shared.MVAUD==="cli"?"#mvACli":"#mvAInt")?.focus(); return; }
-  const ps=t.closest("[data-mvpsw]"); if(ps){ const i=P.findIndex(x=>x.code===shared.MSCODE); mvOpenPage(P[(i+(+ps.dataset.mvpsw)+P.length)%P.length].code); return; }
   const se=t.closest("[data-mvsel]"); if(se){ shared.MV.sel=se.dataset.mvsel; shared.MV.rb=null; shared.MV.adj=null; renderMilestones(); $(`[data-mvsel="${shared.MV.sel}"]`)?.focus(); return; }
   const dp=t.closest("[data-mvdp]"); if(dp){ e.preventDefault(); mvCalOpen(dp,v=>mvDatePicked(dp.id,v)); return; }
   const c=$("#mvCal"); if(c&&!c.hidden&&c.contains(t)){ const cm=t.closest("[data-mvcm]"); if(cm){ MVCAL.m+=+cm.dataset.mvcm; if(MVCAL.m<0){ MVCAL.m=11; MVCAL.y--; } if(MVCAL.m>11){ MVCAL.m=0; MVCAL.y++; } MVCAL.focus=Date.UTC(MVCAL.y,MVCAL.m,1); mvCalDraw(false); return; }
@@ -619,7 +617,6 @@ document.addEventListener("keydown",e=>{ const t=e.target; if(!t.matches) return
     if(t.matches("#mvPeek input[type=text],#mvPeek textarea")&&t.value!==t.defaultValue){ t.value=t.defaultValue; }
     e.preventDefault(); mvEdClose(); } });
 document.addEventListener("change",e=>{ const t=e.target, code=mvCode(), m=shared.MV.peek?mvGet(code,shared.MV.peek):null;
-  if(t.id==="mvProjSw"){ mvOpenPage(t.value); return; }
   if(t.id==="mvNote"){ const n=mvGet(shared.MSCODE,t.dataset.mvnote); if(n&&t.value.trim()!==n.note) mvSave(n,{internal_note:t.value.trim()||null},`${n.id} internal note saved`); return; }
   if(!m) return;
   if(t.id==="mvName"){ const v=t.value.trim(); if(!v){ t.value=m.n; snack("A milestone needs a name."); return; } if(v!==m.n) mvSave(m,{name:v},`${m.id} renamed to ${v}`); }

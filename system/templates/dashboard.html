@@ -564,7 +564,6 @@ button.chip{cursor:pointer} button.chip:hover{background:var(--sunk)}
 .wbulk .dwrap input,
 .saveview input,
 .drange input,
-.pswitch select,
 .ddmenu input[type=search],
 .fgrid input[type=text],
 .fgrid select,
@@ -863,7 +862,7 @@ th[data-col]{cursor:pointer} .sarrow{margin-left:4px;font-size:var(--fs-2xs)}
 .plink{cursor:pointer} .plink:hover,.plink:focus-visible{text-decoration:underline} a.hlink{color:inherit;text-decoration:none} a.hlink:hover{text-decoration:underline}
 .seeall{display:inline-block;margin-top:10px;font-size:var(--fs-sm);color:var(--muted);text-decoration:none} .seeall:hover{color:var(--ink);text-decoration:underline}
 .evbox.click{cursor:pointer} .evbox.click:hover,.evbox.click:focus-visible{background:var(--sunk)}
-.pswitch{display:flex;gap:4px;align-items:center} .pswitch select{max-width:240px} .pencil:hover,.pencil:focus-visible{opacity:1;color:var(--ink);background:var(--sunk)}
+.pencil:hover,.pencil:focus-visible{opacity:1;color:var(--ink);background:var(--sunk)}
 .ddmenu.left{left:0;right:auto} .ddmenu.on{display:block} .ddmenu.up{top:auto;bottom:calc(100% + 4px)}
 .ddmenu label{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;font-size:var(--fs-sm)} .ddmenu label:hover{background:var(--sunk)}
 .ddmenu small{margin-left:auto;color:var(--muted)} .ddmenu .acts{display:flex;gap:4px;padding:2px 10px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
@@ -2701,7 +2700,6 @@ a.seeall{margin-top:8px}
 .tree{min-width:0;max-width:100%} .tree button{overflow-wrap:anywhere}
 .flgrid{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))} .flfoot{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
 .hp-steps{grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr))}
-.pswitch{min-width:0;max-width:100%} .pswitch select{min-width:0;max-width:min(240px,100%)}
 .cockfoot{flex-wrap:wrap}
 .actdates{flex-wrap:wrap}
 .dispmenu{max-width:calc(100vw - var(--rail-w,72px) - 16px)}
@@ -6929,7 +6927,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     swapHTML: () => swapHTML,
     sweepDueShown: () => sweepDueShown,
     swept: () => swept,
-    switchProject: () => switchProject,
     syncLayout: () => syncLayout,
     syncView: () => syncView,
     synthDay: () => synthDay,
@@ -36094,7 +36091,6 @@ ${s5}`;
     if (cli && shared.MV.view === "move") shared.MV.view = "plan";
     let h5 = `<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${code}">${esc(p6.name)}</a><span aria-hidden="true">›</span><span aria-current="page">Milestones</span></nav>
     <div class="mv-pageh"><h1>Milestones: Plan and Movement</h1><span class="sp"></span>
-      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="mvProjSw" aria-label="Switch project">${P4.map((x5) => `<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${esc(x5.name)}</option>`).join("")}</select><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P4.length < 2 ? "disabled" : ""}>›</button></div>
       <button type="button" class="mv-btn pri" id="mvAdd" data-mvadd="1">${ic("plus")}Add milestone</button></div>
     <div class="mv-ctl"><div class="mv-seg" role="group" aria-label="Milestone view"><button type="button" id="mvVPlan" data-mvview="plan" aria-pressed="${shared.MV.view === "plan"}">Plan</button><button type="button" id="mvVMove" data-mvview="move" aria-pressed="${shared.MV.view === "move"}"${cli ? ' aria-disabled="true" data-tip="Movement is internal only and is hidden in Client view"' : ""}>Movement <span class="mv-tag">Internal</span></button></div>
       <div class="mv-seg" role="group" aria-label="Audience"><button type="button" id="mvAInt" data-mvaud="int" aria-pressed="${!cli}">Internal view</button><button type="button" id="mvACli" data-mvaud="cli" aria-pressed="${cli}">Client view</button></div></div>`;
@@ -36970,12 +36966,6 @@ ${s5}`;
         $(shared.MVAUD === "cli" ? "#mvACli" : "#mvAInt")?.focus();
         return;
       }
-      const ps2 = t47.closest("[data-mvpsw]");
-      if (ps2) {
-        const i5 = P4.findIndex((x5) => x5.code === shared.MSCODE);
-        mvOpenPage(P4[(i5 + +ps2.dataset.mvpsw + P4.length) % P4.length].code);
-        return;
-      }
       const se2 = t47.closest("[data-mvsel]");
       if (se2) {
         shared.MV.sel = se2.dataset.mvsel;
@@ -37168,10 +37158,6 @@ ${s5}`;
     });
     document.addEventListener("change", (e4) => {
       const t47 = e4.target, code = mvCode(), m5 = shared.MV.peek ? mvGet(code, shared.MV.peek) : null;
-      if (t47.id === "mvProjSw") {
-        mvOpenPage(t47.value);
-        return;
-      }
       if (t47.id === "mvNote") {
         const n4 = mvGet(shared.MSCODE, t47.dataset.mvnote);
         if (n4 && t47.value.trim() !== n4.note) mvSave(n4, { internal_note: t47.value.trim() || null }, `${n4.id} internal note saved`);
@@ -43298,7 +43284,7 @@ ${s5}`;
   }
 
   // core/keys.js
-  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
+  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
   function bootCopyCommand() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-copycmd]");
@@ -43416,11 +43402,6 @@ ${s5}`;
           return;
         }
         if (!openHelpPanel(screenKey())) go2("help");
-        return;
-      }
-      if ((e4.key === "[" || e4.key === "]") && shared.VIEW === "cockpit") {
-        e4.preventDefault();
-        switchProject(e4.key === "]" ? 1 : -1);
         return;
       }
       if (["[", "]", "t", "T"].includes(e4.key) && shared.VIEW === "today" && dayKey(e4)) {
@@ -48319,8 +48300,7 @@ ${s5}`;
       const paras = curReadHtml(p6);
       const pi2 = P4.findIndex((x5) => x5.code === code), nOpenA = A4.filter((x5) => x5.p === code && openOnly(x5)).length, nOpenR = R3.filter((r4) => r4.p === code && r4.st === "Open").length, nDec = DEC.filter((d5) => d5.p === code).length;
       putHTML($("#v-cockpit"), html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p6.name}</span></nav>
-   <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div>
-     <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="projSw" aria-label="Switch project">${P4.map((x5) => html`<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${x5.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P4.length < 2 ? "disabled" : ""}>›</button></div></div>
+   <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div></div>
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
@@ -73775,11 +73755,6 @@ ${d5.text}`);
     return r4;
   }
   var seeAll = (n4, what, nav) => n4 ? `<a href="#" class="seeall" data-nav="${nav}">All ${n4} ${what}${n4 === 1 ? "" : "s"} ›</a>` : "";
-  function switchProject(d5) {
-    if (shared.VIEW !== "cockpit" || P4.length < 2) return;
-    const i5 = P4.findIndex((x5) => x5.code === shared.COCK);
-    go2("cockpit", P4[(i5 + d5 + P4.length) % P4.length].code);
-  }
   var pLink = (code) => code ? `<span class="pcode plink" data-proj="${code}" role="link" tabindex="0" title="Open ${esc(pName(code))}">${esc(pName(code))}</span>` : '<span class="pcode">No project</span>';
   function openWork(code, wt2, view, extra) {
     if (navBlocked(() => openWork(code, wt2, view, extra))) return;
@@ -73847,8 +73822,6 @@ ${d5.text}`);
         go2("cockpit", pj.dataset.proj);
         return;
       }
-      const sw3 = e4.target.closest("[data-psw]");
-      if (sw3) switchProject(+sw3.dataset.psw);
     }, true);
     document.addEventListener("keydown", (e4) => {
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches("[data-proj][role=link]")) {
@@ -73860,12 +73833,6 @@ ${d5.text}`);
         e4.preventDefault();
         const { wt: wt2, view, code, extra } = navParse(e4.target.dataset.nav);
         openWork(code, wt2, view, extra);
-      }
-    });
-    document.addEventListener("change", (e4) => {
-      if (e4.target.id === "projSw") {
-        const c5 = e4.target.value;
-        if (!go2("cockpit", c5)) e4.target.value = shared.COCK;
       }
     });
   }
@@ -77332,7 +77299,6 @@ ${d5.text}`);
         "store",
         "sw",
         "swept",
-        "switchProject",
         "syncView",
         "synthDay",
         "tabId",
