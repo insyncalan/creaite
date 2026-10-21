@@ -123,7 +123,7 @@ export async function approveRoutineTracked(m){ const v=await openMinutesRecord(
   const ks=REV.filter(x=>item(x)&&rvBulkOK(x)), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
   let undo=null, out=[], got=ks.length;
   /* #275 round 3: an apply that stops puts the Track column's changes back too (trackPutBack), so the minutes are as they were */
-  const putBack=async why=>{ const pb=made?await trackPutBack(v.path,tr.done||[]):{ok:true}; await reloadData();
+  const putBack=async why=>{ const pb=made?await trackPutBack(v.path,tr.done||[]):{ok:true,message:""}; await reloadData();
     snack(`Approved 0 items from these minutes · ${why}${made?(pb.ok?" · the minutes are as they were":` · the minutes couldn't be put back (${pb.message||"try again"}): open them to check`):""}`); };
   if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ await putBack(out.join(" · ")); return; } }
   else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(`apply stopped: ${oneLine(res.message)}`); return; } }

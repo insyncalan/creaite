@@ -46868,7 +46868,7 @@ ${s5}`;
     const ks2 = REV.filter((x5) => item(x5) && rvBulkOK(x5)), left = REV.filter((x5) => item(x5) && !rvBulkOK(x5)).length;
     let undo = null, out = [], got = ks2.length;
     const putBack = async (why) => {
-      const pb2 = made ? await trackPutBack(v5.path, tr2.done || []) : { ok: true };
+      const pb2 = made ? await trackPutBack(v5.path, tr2.done || []) : { ok: true, message: "" };
       await reloadData();
       snack(`Approved 0 items from these minutes · ${why}${made ? pb2.ok ? " · the minutes are as they were" : ` · the minutes couldn't be put back (${pb2.message || "try again"}): open them to check` : ""}`);
     };
