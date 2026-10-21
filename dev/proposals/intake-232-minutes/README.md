@@ -52,5 +52,8 @@ Checked on `v26-232-next-2`: `git apply --check` is clean, the result is byte fo
 failures until the diffs are applied, and pass with them (checked: 9 OK). With the diffs applied, `test_intake_process` (29),
 `test_intake_process_round2`'s guard tests and `test_reach` (18) stay green.
 
-The apply itself (copying the file to the minutes folder, removing it from the inbox) is E1's `tracker.py` diff (Team Cap's
-rebased `v26-e1-rebased`), separate from this one.
+The apply itself (copying the file to the minutes folder, removing it from the inbox) is E1's `tracker.py` diff, separate from
+this one: `dev/proposals/intake-232/E1-tracker.rebased-on-guard-small.diff`, on top of `dev/proposals/guard-small/` (taken onto
+this branch from Team Cap's `v26-e1-rebased` 56f16b34, READY WITH NOTES; the original `E1-tracker.diff` is removed: never apply
+it). The two proposals touch different files (`tracker.py` there; `reach.py` and `live_server.py` here, which guard-small's
+`reach-post-claim.diff` and `live-server-*.diff` also change: checked: after guard-small's four diffs these two still pass `git apply --check` and `-R --check`, and E1's diff still applies).

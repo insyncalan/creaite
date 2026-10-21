@@ -139,7 +139,10 @@ class Refusals(Base):
         for extra in ({"draft": "system/staging/drafts/x.docx"}, {"minutes": {"summary": ["x"]}}, {"note": FILE}):
             _, r = self.stage(ok=False, **extra)
             self.assertEqual(r.returncode, 1, extra)
-            self.assertIn("staged on their own", r.stdout)
+            if "note" in extra:                  # #269's spec gate reads "note" first: a quick note must be a .md in a minutes folder
+                self.assertIn('"note" must be a quick note', r.stdout)
+            else:
+                self.assertIn("staged on their own", r.stdout)
         self.assertEqual(self.proposals(), [])
 
     def test_a_missing_file_or_an_unknown_kind_is_refused(self):
@@ -298,7 +301,8 @@ class Names(Base):
 
     def test_a_trailing_dot_or_space_is_refused_not_filed_as_vendor_call_dot_dot(self):
         for name in ("a.txt.", "a.txt ", "a.md..", "a.docx "):
-            self.assertIn("must end in .txt, .md, .docx or .pdf", self.refused(name), name)
+            said = self.refused(name)            # a trailing space is refused first, as a path with spaces around it (#269)
+            self.assertTrue("must end in .txt, .md, .docx or .pdf" in said or "no spaces around it" in said, (name, said))
 
     def test_other_types_are_refused(self):
         for name in ("a.rtf", "a.xlsx", "a", "a.eml", "a.html"):
@@ -323,8 +327,9 @@ class Names(Base):
     def test_the_same_file_staged_twice_is_refused_the_second_time(self):
         self.stage()
         _, r = self.stage(ok=False)
-        self.assertEqual(r.returncode, 3)
-        self.assertIn("Already staged in proposed-", r.stdout)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("is already in proposed-", r.stdout)                 # the first keeps it; the way forward is said
+        self.assertIn("Approve or reject that one first", r.stdout)
         self.assertEqual(len(self.proposals()), 1)
 
 
