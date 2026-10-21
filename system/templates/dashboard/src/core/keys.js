@@ -10,6 +10,7 @@ import { go, switchProject } from "./nav.js";
 import { closeHelpPanel, helpOutsidePress, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
 import { helpFocusSearch } from "../help.js";
 import { copied, MAC, START_CMD } from "./page.js";
+import { railGo } from "../rail.js";
 import { snack } from "./server.js";
 import { shared } from "./state.js";
 import { closePanel } from "../projects.js";
@@ -34,6 +35,14 @@ document.addEventListener("mousedown",e=>{
     closePanel(); } },true);
 }
 /* ======================= keyboard ======================= */
+/** #288: one test for "a dialog or a popup is open", for every single-key shortcut: an open dialog element, the calendar, the ? panel,
+    an item being edited, a peek's pop-up, or any menu, list, picker or dialog box that is showing (Display, the funnel, the
+    sidebar's More, a cell's list, the link form, the note drawer). */
+export const POPUPS='[role=menu],[role=listbox],[role=dialog],.ddmenu,.combo-list,.cal,.pkpop,.linkpop';
+export function popupOpen(){ if(document.querySelector("dialog[open]")||shared.CAL||shared.EDITING||shared.PKPOP||helpPanelOpen()) return true;
+  return [...document.querySelectorAll(POPUPS)].some(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden"); }
+/** #288: one key per page, no modifier: the sidebar's button for each (its data-v), opened the way the sidebar opens it. */
+export const PAGE_KEYS={t:"today",p:"projects",w:"work",i:"review",f:"files",a:"activity",s:"settings",r:"reports",e:"people"};
 export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable||!!a.closest?.('.ddmenu [role="option"]')); };   /* BL-316: an option of a filter list takes keys, as its tick box did */
 
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0123's place) */
@@ -47,11 +56,13 @@ document.addEventListener("keydown",e=>{
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
   if(e.key==="/"){ e.preventDefault(); if(shared.VIEW==="help"){ helpFocusSearch(); return; } openChat(); return; }   /* #158: in Help, / is the search box */
   if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
-  if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
+  if(e.key==="F"&&e.shiftKey&&(shared.VIEW==="work"||shared.VIEW==="mine")&&!popupOpen()){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: Shift+F opens the field picker (#288: F is Files) */
+  if(e.key==="F"&&e.shiftKey&&shared.VIEW==="people"&&!popupOpen()){ const b=$("#plFBtn"); if(b){ e.preventDefault(); b.click(); } return; }   /* #288: and People's filters, as its funnel's tip says */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
   if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
   if((e.key==="["||e.key==="]")&&shared.VIEW==="cockpit"){ e.preventDefault(); switchProject(e.key==="]"?1:-1); return; }
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
+  if(!e.shiftKey&&!e.repeat&&PAGE_KEYS[e.key.toLowerCase()]&&!popupOpen()){ e.preventDefault(); if(shared.VIEW==="today"&&e.key.toLowerCase()==="t") return; go(railGo(PAGE_KEYS[e.key.toLowerCase()])); return; }   /* #288: T P W I F A S R E (T on Today is back to today, above) */
   if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */
   /* #232-C2: the Intake page keeps its own keys (components/intakeReview/IntakeReviewPage.jsx); the old Review block is gone */
 });

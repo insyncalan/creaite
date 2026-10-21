@@ -85,7 +85,7 @@ function drawBar(h, L, F, s, ids, onChange) {
       options: () => f[3].map(([v, l]) => ({ value: v, label: l, count: L.filter(x => personPasses(x, F, s, f[0]) && f[4](x, v)).length })) })),
     onSelect: (k, vals) => { const set = s.f[k]; if (!set) return; set.clear(); vals.forEach(v => set.add(v)); onChange(); },
     more: { id: `${ids}FBtn`, menuId: `${ids}FMenu`, label: n ? `Filter people: ${n} on` : "Filter people", menuLabel: "Filter people", count: n, on: !!n,
-      key: "F", listLabel: "Filters", headId: `${ids}Fph`, field: s.pk, onField: k => { s.pk = k; onChange(); },
+      key: "Shift+F", listLabel: "Filters", headId: `${ids}Fph`, field: s.pk, onField: k => { s.pk = k; onChange(); },
       result: `Showing ${shown} of ${L.length}`, resultId: `${ids}FpResult`, doneId: `${ids}FpDone`,
       clearAll: filterAny(F, s) ? { id: `${ids}FpClear`, run: () => { clearFilter(s); onChange(); } } : null },
   });

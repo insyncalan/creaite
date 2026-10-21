@@ -624,7 +624,15 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 | Cmd/Ctrl + \\ | Notes: hide or show the notes list |
 | Cmd/Ctrl + Shift + F | Notes: focus on the open note, or leave focus (the same way out as Esc: it saves first) |
 | [ / ] | Today: the previous or next day in the day line |
-| T | Today: back to today |
+| T | Today: back to today. On any other page, T opens Today |
+| P | Projects |
+| W | Work |
+| I | Intake |
+| F | Files |
+| A | Activity (on a focused proposal, Intake keeps A for approve) |
+| S | Settings |
+| R | Reports (on a focused proposal, Intake keeps R for reject) |
+| E | People |
 | Back / Forward | The browser's Back and Forward (or ⌘[ and ⌘]) return to the last view, with its filters, open item and scroll position |
 | Alt + / | In any editor, with text selected (Cmd/Ctrl + A for all of it): the **AI** menu for that text. In the suggestion, Esc discards it and Enter on **Accept** puts it in (Cmd/Ctrl + Z undoes it) |
 | Enter | In an open item's title or a one-line field: keep the text (Shift + Enter starts a new line in the longer fields) |
@@ -635,9 +643,11 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 | R (or Shift + R) | Reject the focused proposal with a reason. In the menu 1 to 7 choose a reason, G uses the row's guess, 0 is no reason, Esc closes |
 | Cmd/Ctrl + Z | Work: undo your last change. Not while you are typing in a box (the box keeps its own undo) |
 | D | Work: the Display menu (grouping, order, properties) |
-| F | Work: the filter picker (type to find a field) |
+| Shift + F | Work: the filter picker (type to find a field); on the People page, its filters |
 
 Work's keys and Intake's are all in this table: press **?** from either page to see them.
+
+**Page keys** (T, P, W, I, F, A, S, R, E) open a page the way its sidebar button does. They do nothing while you are typing in a box, or while a dialog, a menu or list, the calendar or the ? panel is open.
 
 ## What the icons mean
 
@@ -647,7 +657,7 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 |---|---|---|
 | Lines / columns | **List** / **Board** | Work toolbar; the filled one is in use |
 | Sliders | **Display**: grouping, order, properties (D in Work) | Work toolbar |
-| Funnel | **Add a filter** (F in Work), with a count when filters are on | Work toolbar |
+| Funnel | **Add a filter** (Shift + F in Work), with a count when filters are on | Work toolbar |
 | + tile | **New action**, **New RAID item**, **New decision** (a menu: Record a decision, Ask for a decision) | Right end of the Work toolbar |
 | × | **Reject with a reason** (R), **Not needed** (a meeting), **Close**, remove a filter | Intake rows, panels |
 | Chevron | Collapse or expand (it turns) | Groups, Board columns |
@@ -689,7 +699,7 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 - **Right-click** a row or card for its common actions (Open, Close or Reopen, Status, Owner, Due, Priority, Workstream, Milestone, Copy ID, Copy link, Draft email). With several highlighted, it acts on all of them. See [Add or change an item](#add-or-change-an-item).
 - **Change several at once:** with two or more highlighted, a bar shows "3 selected", **Close**, **Reopen**, and lists for status, owner, due date, priority, workstream and milestone. A field that doesn't fit every item is greyed out, with the reason on pointing. Each item is checked on its own; the ones that can't take the change are named and left out. It is one change with one **Undo**. More than 25 asks first. Review's bulk approval never covers minutes, reports, health changes, new decisions or new risks.
 - **An open item** slides over the page at half the window (beside ask creaite when its chat is open), already editable. Its key values show as chips (actions: status, priority, owner, due date; RAID: status, priority, owner, due date, impact and likelihood; decisions: status, decision maker, needed by or date made), then the latest update, the response or the reasoning, **Details**, and its history (**All**, **Activity**, **Updates**, **Source**). Click a value to choose another; dates take DD-MM-YYYY or words such as fri or +3d. Each change is staged on its own, marked "staged" until applied. Closing sets the closed date (reopening clears it); a client-visible item needs its client messaging first; a title can't be empty. Clicking another row, clicking away, Esc or the arrow closes it. The corners icon makes it full width.
-- **Filters combine:** Status, Due, Owner (Me first), Project and Priority are on the toolbar. The funnel (**Add a filter**, or **F**) holds the rest: workstream, RAID type, response, source, client-visible, **Stale** (no change for 7 days, or the stale setting), **Last updated**, **Raised**, **Milestone**, and due, raised or closed between two dates. Each field has **is** and **is not**; an excluded filter's chip says "not". Each menu shows how many items each choice would give.
+- **Filters combine:** Status, Due, Owner (Me first), Project and Priority are on the toolbar. The funnel (**Add a filter**, or **Shift + F**) holds the rest: workstream, RAID type, response, source, client-visible, **Stale** (no change for 7 days, or the stale setting), **Last updated**, **Raised**, **Milestone**, and due, raised or closed between two dates. Each field has **is** and **is not**; an excluded filter's chip says "not". Each menu shows how many items each choice would give.
 - Each filter is a chip with an ×, then **Clear all** and "Showing 12 of 87 · 14 closed hidden". With no match, the list names the filters and offers **Remove**, **Include closed items** and **Clear all filters**. Actions, RAID and Decisions each keep their own filters. Workstream has a "No workstream" choice.
 - **Decisions** have a Status (Pending, Made, Withdrawn) and a Needed by date. **Pending** lists what is still to decide, soonest first; **Overdue** lists those past their date. Made decisions keep their date, reasoning, options, revisit and replaces fields.
 - **Views** (All open, Mine, Due soon, **Chase**…) are presets. Changing one shows a dot on its chip: **Update view** saves it, **Save as new view** keeps both. A saved view's **▾** renames, moves or deletes it. Views that don't fit, and Overdue on Actions, are under **More views**. **Chase** is open items owned by someone else that have gone quiet (stale). Settings › Work and reports › Opening views sets the view each tab opens with.
@@ -952,7 +962,7 @@ Where: Reports › a project · address `#reporting=` (the old `#weekly=` and `#
 - **Hand over…** adds a tick column; tick the rows, choose who takes them, and select Hand over. One Undo reverses it.
 - A name is a link wherever an owner appears (Work, the detail panel, Review). Your own name opens My work. ⌘K and a name goes to their page.
 - The pencil (**Edit details**) on their page, or on the **People** page, changes their email, aliases, organisation and role. A "not in register" tag means the name is on items but not in the register; **Add details** adds them.
-- **Finding people on the People page:** it holds the whole register, in four tabs (**Everyone**, **With work**, **Nothing assigned** and **Needs attention**; the address keeps the tab). Search by name, alias, email or role, or the funnel (or F) for **Project**, **How they're involved** and **Organisation**, with **Needs attention**'s **No email**, **No organisation** and **No role**. **Add a person**, **Add details** (when something is missing), **Edit details** and **Remove from the register** (it asks first, with Undo; while anything still names them, it says what (the items and milestones they own, open or closed, the workstreams they lead, the projects that list them as a key stakeholder) and to reassign or remove them first; promises are not counted) are on the page; to rename or merge someone, ask creaite ("rename Sara to Sara Khan"). The old Settings address (`#settings/people`) opens this page.
+- **Finding people on the People page:** it holds the whole register, in four tabs (**Everyone**, **With work**, **Nothing assigned** and **Needs attention**; the address keeps the tab). Search by name, alias, email or role, or the funnel (or Shift + F) for **Project**, **How they're involved** and **Organisation**, with **Needs attention**'s **No email**, **No organisation** and **No role**. **Add a person**, **Add details** (when something is missing), **Edit details** and **Remove from the register** (it asks first, with Undo; while anything still names them, it says what (the items and milestones they own, open or closed, the workstreams they lead, the projects that list them as a key stakeholder) and to reassign or remove them first; promises are not counted) are on the page; to rename or merge someone, ask creaite ("rename Sara to Sara Khan"). The old Settings address (`#settings/people`) opens this page.
 - **Draft email** on a person's page opens a ready-to-send email to copy into Outlook (creaite never sends mail or makes an Outlook draft). It has a greeting by the time of day, their open actions, risks and issues, the decisions we need from them ("Decision needed: …", with the date), by project (overdue in red, due soon in amber, always with the words too), a request for an update, and a Subject starting with the project code. Tick items, add a **Please reply by** date, and edit in place. **Copy email** keeps the table and colours; **Copy as plain text** copies the text only. For someone outside your own domains (or with no address), items that aren't client-visible start unticked and marked internal. Confidential or restricted items, and anything from a project's documents, are never included; the latest update only if ticked. Nothing is saved.
 - **Three kinds of email, one builder:** **Update request** (above), **Chase overdue items** (the tone steps up with how often each was chased; **I sent it** records the items and date in `system/staging/chases.json`, never the text) and the meeting **follow-up** (attendees, the minutes' summary, decisions and actions by owner, the lead person's first). The same safeguards hold in each. **Polish** rewords the opening only. **Draft chase** (the envelope in an item's top bar) drafts one item's email: a chase to its owner, a decision request to its decision maker, or, for your own item, a request for help to someone you choose from the people it names. **I sent it** records the item, date and kind (chase, help or decision), never the text.
 - **Hand over…** gives some or all of their open items to someone in the register in one go (a new name is checked first). One Undo reverses all of it.
