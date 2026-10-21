@@ -8,14 +8,15 @@ place that decides, for sweep.py's calendar save:
   confidential (restricted, secret, "Strictly Confidential", 2, True...), after case, spacing, zero-width characters and
   look-alike forms (NFKC) are removed; anything that says private or personal is private; a private flag stays "Busy".
 - invite_text(body): HTML to plain text, then every line that carries a join link or a key to the meeting is dropped.
-- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser), which loses only the offending
-  words; flagged(text) for names.
+- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser); scrub takes out a complete join
+  link and drops the whole field when any other secret is left in it (a passcode, password or numbered label, a bare join host
+  or scheme, a dial-in number), as 2.5.3 did; flagged(text) for names.
 
 Text is matched after NFKC and with zero-width characters, combining marks and URL or HTML escapes (twice over) removed, so
 full-width "PIN", a zero-width space inside "zoom.us", "%3Fpwd%3D" and "https&#58;//" are caught, and look-alike letters from other
 alphabets are read as the Latin ones (confusables.py). A label alone on a line takes the line after it too (a table's "PIN" and
-its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N"),
-and a link to a provider this module does not know with no word of joining near it.
+its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N")
+are not found as a key, and a link to a provider this module does not know with no word of joining near it.
 """
 import html as htmllib
 import re
@@ -58,11 +59,9 @@ _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*co
                r"(?:host|moderator|presenter|security|entry|access|meeting|participant|attendee|guest)[\s-]*keys?|"
                r"(?:access|participant|conference|attendee|host|meeting|moderator|presenter|guest|security|entry|"
                r"dial[- ]?in|audio|phone|call[- ]?in|room|webinar|panell?ist|leader)[\s-]*(?:code|pin)s?")
-_PASSWORDS = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
-              r"clave\s+de\s+acceso")
-_NUMBERED = (r"pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
-             r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
-_WITH_VALUE = _PASSWORDS + "|" + _NUMBERED
+_WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
+               r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
+               r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
@@ -70,9 +69,6 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-# v2.6 review (Cap, item 5): the one label cut after which the rest of a field may stay: an ID-like label and a value that has a
-# digit in it, the whole match ("Code 2 review" keeps "review"; "Board Meeting ID 123 456 789 sync" keeps "Board sync").
-LABEL_NUMBER = re.compile(rf"(?<![\w-])(?:{_NUMBERED}|{_BARE})(?![\w-])\s+(?:no\.?\s*)?\S*\d", re.I)
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
@@ -143,48 +139,17 @@ def flagged(text):
     return is_secret(text) or any(JOIN_LINE.search(s) for s in _views(text))
 
 
-_VALUE_TAIL = re.compile(r"(?:\s*(?:[:=#\-\u2013]|\bis\b)\s*\S+|\s+\S*\d\S*)?(?:[\s.\-]+\d\S*)*")
-SCRUB_ROUNDS = 8
-
-
-def _secret_span(t):
-    """(start, end, rest_ok) of the first key, join link or dial-in found in t as it stands, widened to whole words and, for a
-    label, the value after it ("PIN 4321", "Passcode: 4321", "Meeting ID 123 456 789"); None when none is found in t itself.
-    rest_ok is True only for an ID-like label whose own match carried a value with a digit (LABEL_NUMBER): after any other cut
-    (a host, a scheme, a dial-in, a passcode or password label) the next word may be the value, so the field fails closed."""
-    for rx in (HOSTS, SCHEME, LABEL, DIAL):
-        m = rx.search(t)
-        if not m:
-            continue
-        a, b = m.start(), m.end()
-        while a > 0 and not t[a - 1].isspace():
-            a -= 1
-        while b < len(t) and not t[b].isspace():
-            b += 1
-        rest_ok = rx is LABEL and bool(LABEL_NUMBER.fullmatch(m.group()))
-        if rx is LABEL:
-            b += len(_VALUE_TAIL.match(t, b).group())
-        return a, b, rest_ok
-    return None
-
-
 def scrub(text, limit):
-    """A title, place or organiser: join links taken out, and (v2.6 review) each key or dial-in taken out with its value, so
-    "Budget (PIN 4321)" keeps "Budget" and "Code 2 review" keeps "review". It fails closed: a secret seen only once the text is
-    decoded or its look-alike letters read as Latin (no span to cut in the text itself) drops the whole text, and so does any
-    text left after a cut other than an ID-like label with a numbered value ("Steering Passcode: kqZxyw", "Weekly sync zoom.us
-    98765432101" are dropped whole: the next word may be the value). Only the first
-    LINE_MAX characters are looked at (and a field is kept far shorter)."""
+    """A title, place or organiser: a complete join link taken out (a known provider, a short link, a keyed or join-shaped URL:
+    "Sync https://zoom.us/j/1?pwd=abc" keeps "Sync"), and then the whole field dropped when anything else is a secret, exactly as
+    2.5.3 did: a passcode or password label with or without its value, a numbered label (a meeting ID, PIN, "Code 2"), a bare
+    join host or scheme ("zoom.us", "msteams:") or a dial-in number, wherever it stands and whatever is beside it ("Sync Passcode:
+    4321", "Weekly sync zoom.us", "Code 2 review" and "Budget (PIN 4321)" all give ""). Nothing is cut out of the text around a
+    key: the words beside it may be its value, and no list of password words can be complete (v2.6 review H3, fail closed). Only
+    the first LINE_MAX characters are looked at (and a field is kept far shorter)."""
     t = normal(str(text if text is not None else "")[:LINE_MAX])
     t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
     t = re.sub(r"\s+", " ", t).strip()
-    for _ in range(SCRUB_ROUNDS):
-        if not is_secret(t):
-            return t[:limit]
-        span = _secret_span(t)
-        if span is None or (not span[2] and t[span[1]:].strip()):
-            return ""
-        t = re.sub(r"\s+", " ", t[:span[0]] + " " + t[span[1]:]).strip()
     return "" if is_secret(t) else t[:limit]
 
 
