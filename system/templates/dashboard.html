@@ -1235,7 +1235,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .derow>input[type=text]{}
 .deinc{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;margin:10px 0;max-height:190px;overflow:auto} .deinc .pph{margin:6px 0 2px} .deinc label.it{display:flex;gap:8px;align-items:baseline;padding:2px 0;font-size:var(--fs-sm);cursor:pointer}
 .deinc .it .sub{margin-left:auto;white-space:nowrap} .deopts{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0;font-size:var(--fs-sm)} .deopts .dwrap{width:150px}
-#dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;max-height:46vh;overflow:auto}
+#dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;overflow:auto}
 .deacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .deacts .sp{flex:1} .denote{background:var(--sunk);border-radius:var(--r-md);padding:8px 12px;margin:8px 0;font-size:var(--fs-sm)}
 .prepbody{padding:10px 16px 16px;overflow:auto;max-height:calc(84vh - 72px)} .prepbody>p.sub{margin:8px 0 0}
 .preppick select{margin-left:6px}
@@ -2170,7 +2170,7 @@ body:has(#panel.pkprop.on) .snack,body:has(#panel.pkprop.on) .pkstage{bottom:76p
 .ch-inc{font-size:var(--fs-xs);color:var(--muted);display:flex;gap:6px;align-items:center}
 .ch-mailwrap{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
 .ch-mailhead{background:var(--sunk);padding:8px 10px;font-size:var(--fs-xs);display:grid;gap:2px;overflow-wrap:anywhere} .ch-mailhead span{color:var(--muted)}
-.ch-mail{padding:14px 16px;overflow-x:auto}
+.ch-mail{padding:14px 16px;overflow:auto}
 #chMail th,#chMail td{position:static;text-transform:none;letter-spacing:normal;white-space:normal;z-index:auto}   /* the page's own table look stays out of the email */
 .ch-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
 .ch-said{margin-right:auto;font-size:var(--fs-xs);color:var(--ok)} .ch-said.fail{color:var(--bad)}
@@ -4131,6 +4131,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
 .crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:#fff}
 .crx-wait,.crx-err{padding:16px}
+
+/* #281: the Draft email preview is resizable, once for every entry point (the dialog's #dePrev and the peek pane's #chMail): drag the
+   grip on the bottom edge; the text and table reflow. Starts at 46vh, tall enough for the table. */
+#dePrev,#chMail{resize:vertical;box-sizing:border-box;height:46vh;min-height:8rem;max-height:90vh}
+#dePrev:focus-visible,#chMail:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 </head>
 <body>
