@@ -46746,12 +46746,13 @@ ${s5}`;
   function inRowState(f5, st2) {
     const o5 = INOUT[f5.path];
     if (st2 === "processing") return html`<span class="spin" aria-hidden="true"></span> ${INSTATE.processing}${INSTEP ? html` <span class="sub">${INSTEP}</span>` : ""} <button type="button" class="linkbtn" data-instop>Stop</button>`;
-    if (st2 === "new" && o5 && o5.state === "needs") return html`<span class="tag warn">Needs you</span> <span class="sub">${o5.question}</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
-    if (st2 === "new" && o5 && o5.state === "not_staged") return html`<span class="tag warn">Not staged</span> <span class="sub">Process it again, or ask creaite</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
+    if (st2 === "new" && o5 && o5.state === "needs") return html`<span class="tag warn">Needs you</span> <span class="sub">${o5.question}</span> <button type="button" class="linkbtn" data-inask>ask creaite about this</button>`;
+    if (st2 === "new" && o5 && o5.state === "not_staged") return html`<span class="tag warn">Not staged</span> <span class="sub">Process it again, or ask creaite</span> <button type="button" class="linkbtn" data-inask>ask creaite about this</button>`;
     return html`<span class="tag ${st2 === "new" ? "" : "sub"}">${INSTATE[st2]}</span>${st2 === "draft" && html` <a href="#" data-go="review" class="sub">Open Review</a>`}`;
   }
+  var runId = (kind) => `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   var processLive = async function(files, onEv) {
-    const id2 = `i-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    const id2 = runId("i"), ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     let got = {};
@@ -47078,7 +47079,7 @@ ${s5}`;
     null
   );
   var calendarLive = async function(onEv) {
-    const id2 = `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    const id2 = runId("c"), ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     let got = {};
@@ -47228,7 +47229,7 @@ ${s5}`;
   }
   var jobLive = async function(url, body2) {
     if (!shared.RUNLABEL) shared.RUNLABEL = /load/.test(url) ? "Loading a transcript" : "Checking a transcript";
-    const id2 = `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    const id2 = runId("r"), ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
@@ -64580,7 +64581,7 @@ ${d5.text}`);
     const work = () => live ? working() : document.createElement("div");
     let next = null;
     const rd2 = res.body.getReader(), dec = new TextDecoder(), t02 = performance.now();
-    let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId = body2.run, replies = [], grp = null, spin = work();
+    let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId2 = body2.run, replies = [], grp = null, spin = work();
     for (; ; ) {
       let chunk;
       try {
@@ -64608,7 +64609,7 @@ ${d5.text}`);
         } catch (e4) {
           continue;
         }
-        if (ev.seq && runId) shared.SHOWN = { run: runId, seq: ev.seq };
+        if (ev.seq && runId2) shared.SHOWN = { run: runId2, seq: ev.seq };
         if (plain && !PLAINEV.includes(ev.type)) {
           if (ev.type === "stopped") outcome = "stopped";
           else if (ev.type === "error") outcome = "failed";
@@ -64664,7 +64665,7 @@ ${d5.text}`);
           conf = null;
           spin = addEl("step stopped", ev.timed_out ? "Stopped: nobody was watching for too long" : ev.after_step ? "Stopped after the current step finished" : "Stopped");
         } else if (ev.type === "done") {
-          runId = ev.run || runId;
+          runId2 = ev.run || runId2;
           next = ev.next || null;
           setChat(ev.chat || shared.ASKCHAT, ev.session || shared.ASKSESSION);
           replies.forEach((b5) => stampMsg(b5, ev.done_at || nowIso()));
@@ -64676,7 +64677,7 @@ ${d5.text}`);
     if (!spin.classList.contains("stopped")) spin.remove();
     askWorking(false);
     setRunning(false);
-    if (runId) api("/api/ask/ack", { run: runId });
+    if (runId2) api("/api/ask/ack", { run: runId2 });
     ATTACHED = null;
     askFinished(outcome);
     retryOffer(outcome, body2);
@@ -76699,6 +76700,7 @@ ${d5.text}`);
         "TextEditor",
         "ToDecide",
         "Toast",
+        "UsagePanel",
         "VIPS",
         "WARNS",
         "WEEKSTART",

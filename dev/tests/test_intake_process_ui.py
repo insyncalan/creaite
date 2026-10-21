@@ -1,5 +1,5 @@
 """#264 in real Chrome: Intake's Process stages the ticked files and they reach Review, with no go-ahead and without opening ask
-creaite; a question the run couldn't answer is on its row ("Needs you"), and "Ask creaite about this" opens the panel with the
+creaite; a question the run couldn't answer is on its row ("Needs you"), and "ask creaite about this" opens the panel with the
 question filled in, not sent.
 
 Run: python3 dev/tests/test_intake_process_ui.py     (needs Google Chrome; skipped otherwise)

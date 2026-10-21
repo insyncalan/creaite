@@ -262,6 +262,7 @@ INTERNAL_HREFS = [
     ("components/today/ToDecide.jsx", "href", 1, "`href` is linkUrl(r.link), declared at the top of TdLine"),
     ("core/fields.js", 'p.split("/").map(encodeURIComponent).join("/")', 1, "openPath without the server: a path inside the vault, each part encoded, opened relative to the page"),
     ("core/server.js", "http://127.0.0.1:${Number(S.port)}/", 1, "the live server's own address on this laptop; the port is made a number"),
+    ("components/activity/UsagePanel.jsx", "url", 1, "saveFile: a blob: address the page made itself (URL.createObjectURL) for the Your reviews CSV it just built"),
     ("meetings.js", "${u}", 1, "a blob: address the page made itself (URL.createObjectURL) for the prep page it just built"),
     ("meetings.js", '""', 2, "an empty window opened at once (the click counts) and filled later from the page's own document"),
 ]

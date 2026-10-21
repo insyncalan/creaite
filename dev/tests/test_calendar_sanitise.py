@@ -16,7 +16,7 @@ import json
 import sys
 import time
 import unittest
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -25,6 +25,7 @@ sys.path.insert(0, str(HERE.parents[1] / "system" / "scripts"))
 import invite_clean  # noqa: E402
 import sweep  # noqa: E402
 from test_tracker import Vault  # noqa: E402
+from test_dashboard import today  # noqa: E402
 
 ZW = "​"
 KEEP = "Agenda: budget"
@@ -294,8 +295,8 @@ class SavedCalendar(unittest.TestCase):
         self.v = Vault()
         self.addCleanup(self.v.cleanup)
         self.v.run("init")
-        self.today = date.today().isoformat()
-        self.tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        self.today = today().isoformat()
+        self.tomorrow = (today() + timedelta(days=1)).isoformat()
         self.cal = self.v.root / "system/staging/calendar.json"
 
     def save(self, days):
@@ -323,7 +324,7 @@ class SavedCalendar(unittest.TestCase):
 
     def test_a_reply_of_only_past_days_never_wipes_a_saved_calendar(self):
         kept = self.seed()
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        yesterday = (today() - timedelta(days=1)).isoformat()
         r = self.save({yesterday: [self.meeting(id="old")]})
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertEqual(self.cal.read_text(), kept)
@@ -341,7 +342,7 @@ class SavedCalendar(unittest.TestCase):
         self.assertEqual([e["id"] for e in self.held()[self.tomorrow]], ["only"])
 
     def test_a_day_after_the_window_is_dropped(self):
-        far = (date.today() + timedelta(days=4000)).isoformat()
+        far = (today() + timedelta(days=4000)).isoformat()
         r = self.save({self.tomorrow: [self.meeting()], far: [self.meeting(id="far")]})
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertEqual(list(self.held()), [self.tomorrow])
@@ -413,7 +414,7 @@ class SavedCalendar(unittest.TestCase):
         cfg = json.loads(settings.read_text())
         cfg.setdefault("inbox", {})["meetings_from"] = 5
         settings.write_text(json.dumps(cfg))
-        past = (date.today() - timedelta(days=2)).isoformat()
+        past = (today() - timedelta(days=2)).isoformat()
         old = [{"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Sync Passcode: 4321", "where":
                 "https://zoom.us/j/1?pwd=abc", "teams": True, "private": False, "organiser": "Jane Doe", "sensitivity": "restricted",
                 "body": "Notes\nPasscode: 4321\nPIN 998877", "attendees": [{"name": "Sam Lee", "email": "sam@example.test"}]},

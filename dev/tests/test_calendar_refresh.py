@@ -298,7 +298,7 @@ class Fence(unittest.TestCase):
 # records its arguments and answers "Plain chat.".
 FAKE = r'''#!/usr/bin/env python3
 import json, subprocess, sys, time
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 args = sys.argv[1:]
 prompt = args[args.index("--") + 1] if "--" in args else ""
@@ -347,8 +347,8 @@ if "--mode calendar" in settings:
              "calendar_search": ("mcp__claude_ai_Microsoft_365__outlook_calendar_search", {"query": "x"}),
              "write_spec": ("Write", {"file_path": str(root / "system/staging/drafts/calendar.json")})}
     verdicts = {k: hook(t, i) for k, (t, i) in calls.items()}
-    today = date.today().isoformat()
-    bash(0, "system/scripts/run sweep.py calendar-window")
+    window = bash(0, "system/scripts/run sweep.py calendar-window")
+    today = (date.fromisoformat(json.loads(window)["to"]) - timedelta(days=7)).isoformat()   # creaite's own clock (CREAITE_NOW)
     if write("system/staging/drafts/calendar.json", {"days": {today: [
             {"id": "ev-r1", "start": "23:00", "end": "23:30", "title": "Pilot readiness review", "where": "Teams", "teams": True,
              "organiser": True, "sensitivity": "normal"},
@@ -512,9 +512,9 @@ class ThroughTheServer(unittest.TestCase):
     @needs_diff
     def test_3b_not_while_a_sweep_holds_its_lock(self):
         """Review L1: a sweep reads the calendar itself, so Refresh is a 409 while one holds the lock, and starts once it's gone."""
-        from datetime import datetime
+        from test_dashboard import now
         lock = self.v.root / "system/staging/sweep.lock"
-        lock.write_text(datetime.now().strftime("%Y-%m-%d %H:%M") + "\n")       # a sweep from Claude Code: no run, fresh
+        lock.write_text(now().strftime("%Y-%m-%d %H:%M") + "\n")       # a sweep from Claude Code: no run, fresh
         try:
             status, got = self.post("/api/calendar/refresh", {})
             self.assertEqual(status, 409, got)
@@ -596,12 +596,13 @@ class SweepCalendarSave(unittest.TestCase):
     """sweep.py calendar and transcripts record (plain code; review L3, L4, L5), in a throwaway vault."""
 
     def setUp(self):
-        from datetime import date, timedelta
+        from datetime import timedelta
+        from test_dashboard import today
         self.v = Vault()
         self.addCleanup(self.v.cleanup)
         self.v.run("init")
-        self.today = date.today().isoformat()
-        self.tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        self.today = today().isoformat()
+        self.tomorrow = (today() + timedelta(days=1)).isoformat()
         self.cal = self.v.root / "system/staging/calendar.json"
 
     def save(self, days):

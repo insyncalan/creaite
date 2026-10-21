@@ -40,18 +40,20 @@ export async function addInboxFiles(files){ if(!viaServer()){ snack("Adding file
 /* ===== #264: Process is its own run kind (POST /api/intake/process), not an ask creaite message =====
    The click is Alan's go-ahead to stage: the server checks the files and runs cx-minutes under a guard that may stage those files'
    meetings for Review and nothing else. Progress and Stop are on the row; a question the run couldn't answer is shown on its row as
-   "Needs you", with "Ask creaite about this", which opens the panel with the question filled in (never sent by itself). */
+   "Needs you", with "ask creaite about this", which opens the panel with the question filled in (never sent by itself). */
 export const INOUT={};     /* path → {state: "needs" | "not_staged", question} from the run's "intake" event */
 export let INSTEP="";      /* the run's latest step, in plain words, on the processing rows */
 export function inRowState(f,st){ const o=INOUT[f.path];
   if(st==="processing") return html`<span class="spin" aria-hidden="true"></span> ${INSTATE.processing}${INSTEP?html` <span class="sub">${INSTEP}</span>`:""} <button type="button" class="linkbtn" data-instop>Stop</button>`;
-  if(st==="new"&&o&&o.state==="needs") return html`<span class="tag warn">Needs you</span> <span class="sub">${o.question}</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
-  if(st==="new"&&o&&o.state==="not_staged") return html`<span class="tag warn">Not staged</span> <span class="sub">Process it again, or ask creaite</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
+  if(st==="new"&&o&&o.state==="needs") return html`<span class="tag warn">Needs you</span> <span class="sub">${o.question}</span> <button type="button" class="linkbtn" data-inask>ask creaite about this</button>`;
+  if(st==="new"&&o&&o.state==="not_staged") return html`<span class="tag warn">Not staged</span> <span class="sub">Process it again, or ask creaite</span> <button type="button" class="linkbtn" data-inask>ask creaite about this</button>`;
   return html`<span class="tag ${st==="new"?"":"sub"}">${INSTATE[st]}</span>${st==="draft"&&html` <a href="#" data-go="review" class="sub">Open Review</a>`}`; }
+/** A run's id: its kind, the time and a random part (one clock read for every run here, #178). @param {string} kind */
+const runId = kind => `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 /** @typedef {{ok: boolean, files?: {path: string, state: string, question?: string}[], staged?: number, needs?: number, closure?: any, stopped?: boolean, message?: string}} ProcessResult */
 /* One Process run: the route's events read here (a seam, so tests can stand in for the server). */
 /** @param {{path: string, project?: string}[]} files @param {(ev: any) => void} [onEv] @returns {Promise<ProcessResult>} */
-export let processLive = async function(files,onEv){ const id=`i-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ let got={};
+export let processLive = async function(files,onEv){ const id=runId("i"), ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ let got={};
   try{ const r=await fetch("/api/intake/process",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify({files,run:id})});
     if(!r.ok||!r.body){ const j=await r.json().catch(()=>({})); return {ok:false,message:j.message||"Process couldn't start: check the live server."}; }
     const rd=r.body.getReader(), dec=new TextDecoder(); let buf="";
@@ -195,7 +197,7 @@ export let MTGREF=/** @type {{step: string, id: string}|null} */(null);     /* t
 /** @typedef {{ok: boolean, saved?: boolean, meetings?: number, days?: number, transcripts?: boolean, closure?: any, stopped?: boolean, message?: string}} CalendarResult */
 /* One calendar refresh: the route's events read here (a seam, so tests can stand in for the server). */
 /** @param {(ev: any) => void} [onEv] @returns {Promise<CalendarResult>} */
-export let calendarLive = async function(onEv){ const id=`c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ let got={};
+export let calendarLive = async function(onEv){ const id=runId("c"), ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ let got={};
   if(onEv) onEv({type:"run",id});     /* the run's ID first, for Stop */
   try{ const r=await fetch("/api/calendar/refresh",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify({run:id})});
     if(!r.ok||!r.body){ const j=await r.json().catch(()=>({})); return {ok:false,message:j.message||"Refresh couldn't start: check the live server."}; }
@@ -234,7 +236,7 @@ $("#mtgRefresh").onclick=()=>{ if(MTGREF) mtgStop(); else refreshCalendar(); }; 
 }
 /* ===== Transcripts (BL-42 phase 3): Select with transcripts, Load into inbox, Load and process, Check again ===== */
 /* a transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files */
-export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
+export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=runId("r"), ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
   try{ await askStream(url,{...body,run:id},true,ctl,undefined,true); } finally{ shared.RUN=null; setRunning(false); } };   /* BL-326: drawn plainly (steps and the closure) */
 export async function checkMeeting(m){ if(!viaServer()){ snack("Checking needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MRUN[m.id]="checking"; renderMeetings(); openChat(); runAsk(addEl("msg u",html`${`Check the transcript of “${m.title}” (${fd(m.day)} at ${m.start})`}`));
