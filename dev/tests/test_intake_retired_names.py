@@ -18,7 +18,7 @@ SRC = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard"
 
 # what the old pages exported and no one needs now (a name that is still imported somewhere is a survivor, not on this list)
 RETIRED = """
-renderReview renderInbox renderMeetings processMeetings processInbox addInboxFiles mtgCanPick mtgState mtgTx mtgProject loadMeetings removeLoaded
+renderReview renderInbox refreshCalendar renderMeetings processMeetings processInbox addInboxFiles mtgCanPick mtgState mtgTx mtgProject loadMeetings removeLoaded
 mtgClear mtgRestore clrConfirm clrList clrOff clrKeys clrUnproc MCLR MSEL INSEL INRUN INSTATE MTGI MTGSHOW TXLABEL mtgHasTx mtgLoadable mtgShown
 uploadedFiles inboxBadge intakeHooks
 bootIntake0053 bootIntake0134 bootIntake0135 bootIntake0136 bootIntake0137
@@ -45,7 +45,7 @@ def sources():
 
 
 WANT = {"MTG", "MRUN", "mtgBusy", "mtgLater", "mtgSkip", "mtgCheckable", "TXWHY", "UPLOAD_TYPES", "UPLOAD_MAX", "uploadInboxFile",
-        "previewInbox", "removeInbox", "refreshCalendar", "checkMeeting", "jobLive", "kb", "nowHM", "intakeSeams"}
+        "previewInbox", "removeInbox", "calendarLive", "processLive", "checkMeeting", "jobLive", "kb", "nowHM", "intakeSeams"}
 
 
 class RetiredNames(unittest.TestCase):
