@@ -127,7 +127,8 @@ class FileRows(IntakeBase):
         b.wait("irBusy.value.length===0", 30)
         self.assertEqual([q for q, _ in b.eval("ASKED")],
                          [f"process inbox/{MIN} as minutes by someone else", f"process inbox/{VTT}"])
-        self.assertIn("minutes by someone else", b.eval("ASKED[0][1]"))
+        self.assertEqual(b.eval("PROC[0]"), [{"path": f"inbox/{MIN}", "as": "minutes"}])   # #232 E1: Process's own route, as minutes
+        self.assertEqual(b.eval("CHAT"), [])                                                  # never an ask creaite run
         self.assertNotIn("as minutes", b.eval("ASKED[1][0]"))
 
     def test_process_all_ready_skips_private_confidential_and_unsure_and_says_how_many(self):
