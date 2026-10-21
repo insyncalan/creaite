@@ -6960,6 +6960,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
+    typeWord: () => typeWord,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
     undCommit: () => undCommit,
@@ -7885,7 +7886,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var KI = { action: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>', Risk: '<path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/>', Issue: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.4"/>', Assumption: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.6v.4M12 17v.4"/>', Dependency: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>', decision: '<path d="m13.5 3.5 7 7-3 3-7-7z"/><path d="m11.5 8.5-8 8 4 4 8-8"/>', milestone: '<path d="M5 21V4h11l-2 4 2 4H5"/>' };
   var KL = { action: "Action", decision: "Decision", milestone: "Milestone" };
   var kindOf = (t47, x5) => t47 === "actions" ? "action" : t47 === "raid" ? x5 && x5.type || "Risk" : t47 === "decisions" ? "decision" : "milestone";
-  var ico = (k5) => KI[k5] ? `<span class="ki" title="${KL[k5] || k5}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k5]}</svg></span>` : "";
+  var typeWord = (t47, x5) => {
+    const k5 = kindOf(t47, x5);
+    return KL[k5] || k5;
+  };
+  var ico = (k5) => KI[k5] ? `<span class="ki" role="img" aria-label="${KL[k5] || k5}" data-tip="${KL[k5] || k5}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KI[k5]}</svg></span>` : "";
   var revIco = (r4) => r4.kind === "actions" ? ico("action") : r4.kind === "raid" ? ico(r4.rec.type || "Risk") : r4.kind === "decisions" ? ico("decision") : "";
   var store = {
     get: (k5, d5) => {
@@ -35959,6 +35964,7 @@ ${s5}`;
   function mvOpen(code, cli, move) {
     return mvVis(code, cli, move).filter((m5) => m5.state !== "achieved").sort((a5, b5) => (a5.agr || a5.fc || "9").localeCompare(b5.agr || b5.fc || "9"));
   }
+  var MSW = typeWord("milestone");
   function mvShape(st2, sz) {
     sz = sz || 16;
     const p6 = {
@@ -36026,10 +36032,10 @@ ${s5}`;
       h5 += `<div class="mv-lead" style="left:${x5}px;top:56px;height:${top - 56}px"></div>`;
       if (it2.g) {
         const ax2 = px2(mvT(m5.agr));
-        h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" title="${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
+        h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" role="img" aria-label="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}" data-tip="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
         h5 += `<button type="button" class="mv-lab gl" data-mvedit="${m5.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m5.n)} now expected ${fd(m5.fc)}"><b>Expected ${fd(m5.fc)}</b><span>${esc(m5.n.length > 20 ? m5.n.slice(0, 19) + "…" : m5.n)}</span></button>`;
       } else {
-        h5 += `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}">${mvShape(st2, 20)}</button>`;
+        h5 += `${((w6) => `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${w6}" data-tip="${w6}">${mvShape(st2, 20)}</button>`)(`${MSW}: ${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}`)}`;
         h5 += `<button type="button" class="mv-lab${st2 === "overdue" ? " late" : ""}${ach ? " ok" : ""}" data-mvedit="${m5.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m5.n)}"><b>${esc(nm3)}</b><span>${fd(mvWhen(m5))}</span></button>`;
       }
     });
@@ -36118,7 +36124,7 @@ ${s5}`;
       const aria = `${m5.n}, ${MVWORD[st2]}${vs2 > 0 ? `, ${vs2} days behind agreed` : ""}, agreed ${fd(m5.agr) || "not set"}, forecast ${fd(m5.fc) || "not set"}`;
       h5 += `<div class="mv-lrow" role="option" tabindex="0" data-mvsel="${m5.id}" aria-selected="${m5.id === shared.MV.sel}" aria-label="${esc(aria)}">
       <div><div class="nm">${esc(m5.n)}</div><div class="sub">${mvTag(st2)}${m5.cvis ? "" : " · internal"}</div><div class="sub">Agreed ${fd(m5.agr) || "not set"}${m5.fc !== m5.agr ? ` · forecast ${fd(m5.fc)}` : ""}</div></div>
-      <div class="mv-track" aria-hidden="true">${months.map((t47) => `<div class="tm" style="left:${pos(t47)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb2 ? `<div class="orig" style="left:${pos(mvT(m5.orig))}"></div>` : ""}${m5.agr ? `<div class="agr" style="left:${pos(mvT(m5.agr))}"></div>` : ""}${m5.fc ? `<div class="fc" style="left:${pos(mvT(m5.fc))}">${mvShape(st2, 20)}</div>` : ""}</div>
+      <div class="mv-track" aria-hidden="true">${months.map((t47) => `<div class="tm" style="left:${pos(t47)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb2 ? `<div class="orig" style="left:${pos(mvT(m5.orig))}" role="img" aria-label="${MSW}: original date ${fd(m5.orig)}" data-tip="${MSW}: original date ${fd(m5.orig)}"></div>` : ""}${m5.agr ? `<div class="agr" style="left:${pos(mvT(m5.agr))}"></div>` : ""}${m5.fc ? `<div class="fc" style="left:${pos(mvT(m5.fc))}" role="img" aria-label="${MSW}: ${MVWORD[st2]}, forecast ${fd(m5.fc)}" data-tip="${MSW}: ${MVWORD[st2]}, forecast ${fd(m5.fc)}">${mvShape(st2, 20)}</div>` : ""}</div>
       <div class="mv-chips"><span class="v ${vs2 > 0 ? "bad" : "ok"}">${vs2 > 0 ? "+" + vs2 + " d" : "0 d"} <small>vs agreed</small></span>${rb2 ? `<span class="v ${vo2 > 0 ? "bad" : "ok"}">${vo2 > 0 ? "+" : ""}${vo2} d <small>vs original</small></span>` : ""}${m5.moves ? `<span class="mv-hint">Moved ${m5.moves}×${rb2 ? " · rebaselined" : ""}</span>` : '<span class="mv-hint">Not moved</span>'}</div></div>`;
     });
     h5 += `</div><div class="mv-legend"><span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="none" stroke="var(--faint)" stroke-width="2"/></svg>Original (if rebaselined)</span><span><svg width="6" height="16" aria-hidden="true"><rect width="3" height="16" x="1.5" fill="var(--ink)"/></svg>Agreed</span><span>Forecast, shaped by state</span><span><svg width="18" height="4" aria-hidden="true"><rect width="18" height="3" fill="var(--bad)" opacity=".55"/></svg>Distance past agreed</span><span><svg width="2" height="14" aria-hidden="true"><rect width="1" height="14" fill="var(--accent)"/></svg>Today</span></div></div>`;
@@ -41536,8 +41542,9 @@ ${s5}`;
     { u: "Urgent", h: "High" }
   );
   var Diamond = () => /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M12 3l9 9-9 9-9-9z" }) });
-  function Kind({ kind }) {
-    return /* @__PURE__ */ u2("span", { class: "wkic", "aria-hidden": "true", children: kind === "milestone" ? /* @__PURE__ */ u2(Diamond, {}) : /* @__PURE__ */ u2(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
+  function Kind({ kind, type }) {
+    const w6 = typeWord(kind, { type });
+    return /* @__PURE__ */ u2("span", { class: "wkic", role: "img", "aria-label": w6, "data-tip": w6, children: kind === "milestone" ? /* @__PURE__ */ u2(Diamond, {}) : /* @__PURE__ */ u2(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
   }
   function PrepChip({ c: c5, openFile }) {
     const pk2 = usePeek(), id2 = `wkpk-${c5.day}-${c5.start}`.replace(/[^\w-]/g, "");
@@ -41585,7 +41592,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("li", { class: `wkrow wk-${r4.kind}`, "data-wk": r4.key, hidden, children: [
       meeting ? /* @__PURE__ */ u2("span", { class: "wktm", children: r4.time }) : /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("span", { class: `wkdot${r4.dot ? " " + r4.dot : ""}`, role: r4.dot ? "img" : void 0, "aria-label": r4.dot ? DOTS[r4.dot] : void 0, "aria-hidden": r4.dot ? void 0 : "true" }),
-        /* @__PURE__ */ u2(Kind, { kind: r4.kind })
+        /* @__PURE__ */ u2(Kind, { kind: r4.kind, type: r4.type })
       ] }),
       /* @__PURE__ */ u2("div", { class: "tb", children: [
         r4.open ? /* @__PURE__ */ u2("a", { class: "t", href: "#", ...dataOf(r4.open), children: r4.t }) : /* @__PURE__ */ u2("span", { class: "t", children: r4.t }),
@@ -43144,6 +43151,7 @@ ${s5}`;
     const item = (i5, key2, further, undated = false) => ({
       key: key2,
       kind: i5.kind,
+      type: i5.type || "",
       dot: dotOf(i5),
       t: i5.t || i5.id,
       open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
@@ -76960,6 +76968,7 @@ ${d5.text}`);
         "hubView",
         "ibtn",
         "ic",
+        "ico",
         "iconShapes",
         "igText",
         "inboxBadge",
@@ -77256,6 +77265,7 @@ ${d5.text}`);
         "say",
         "sayMd",
         "searchFetch",
+        "searchIco",
         "seeAll",
         "send",
         "sensitive",
@@ -77307,6 +77317,7 @@ ${d5.text}`);
         "tl",
         "toIso",
         "tx",
+        "typeWord",
         "typedLinkUrl",
         "typing",
         "undatedCard",

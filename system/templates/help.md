@@ -677,6 +677,8 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 | Up arrow / square | **Send** (Enter) / **Stop** (click it; Esc only closes the panel and the request carries on) | ask creaite |
 | Moon / sun | Switch to the dark / light theme | Top bar |
 | Gear | **Settings** | In More, at the foot of the sidebar |
+| Type icon before a title | The item's type: **Action**, **Decision**, **Risk**, **Issue**, **Assumption**, **Dependency** or **Milestone**; point at it for the word | Today's Week ahead, Work, Review, search, project and person pages |
+| Milestone marker | **Milestone:** then which one, its state and date (point at it); its shape shows the state | The Milestones card on the project page, Milestones › Plan and Movement |
 | Triangle / shield | **Sensitive** / **High-risk** (with the word): how much a change on ask creaite's approval card matters | ask creaite's approval card; Activity › What ask creaite changed |
 
 ## Opening the dashboard

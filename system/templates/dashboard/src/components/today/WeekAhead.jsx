@@ -13,16 +13,17 @@
 import { render } from "preact";
 import { Icon } from "../Icon.jsx";
 import { IconButton } from "../IconButton.jsx";
+import { typeWord } from "../../core/page.js";
 import { PrepPeek, usePeek } from "../prep/PrepPopup.jsx";
 
 /** @typedef {{id: string, icon: string, label: string, name?: string, primary?: boolean, why?: string, data?: Record<string, string>}} WkAct */
 /** @typedef {{made: boolean, label: string, aria: string, key: string, day: string, live: boolean, title: string, start: string,
     where?: string, pname?: string, pageWhen?: string, page?: string | null}} WkChip
     The Prep chip: it opens the Prep peek on pointer rest or focus (#111) and goes to the prep page when pressed. */
-/** @typedef {{key: string, kind: string, dot?: string, t: string, time?: string, open?: Record<string, string>, who?: string,
+/** @typedef {{key: string, kind: string, type?: string, dot?: string, t: string, time?: string, open?: Record<string, string>, who?: string,
     p?: string, pname?: string, why: string, whyTone?: string, acts: WkAct[], chip?: WkChip,
 }} WkRow
-    `dot`: "u" (Urgent) or "h" (High); `time`: a meeting's start; `chip`: a meeting's Prep chip (`made`: the saved page's, which goes to it). */
+    `type`: a RAID item's type (Risk, Issue, Assumption, Dependency); `dot`: "u" (Urgent) or "h" (High); `time`: a meeting's start; `chip`: a meeting's Prep chip (`made`: the saved page's, which goes to it). */
 /** @typedef {{key: string, title: string, note?: string, rows: WkRow[], cap: number, open: boolean}} WkGroup */
 /** @typedef {{groups: WkGroup[], empty: string, others?: {n: number, nav: string}, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
     blocked: (why: string) => void, openFile: (path: string) => void}} WeekAheadProps
@@ -39,9 +40,11 @@ function dataOf(o) {
 /** The priority dot's words. */
 const DOTS = /** @type {Record<string, string>} */ ({ u: "Urgent", h: "High" });
 const Diamond = () => <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z" /></svg>;
-/** The kind icon: action tick, risk triangle, milestone diamond, a decision's speech bubble. @param {{kind: string}} props */
-function Kind({ kind }) {
-  return <span class="wkic" aria-hidden="true">{kind === "milestone" ? <Diamond /> : <Icon name={kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check"} />}</span>;
+/** The kind icon: action tick, risk triangle, milestone diamond, a decision's speech bubble. #286: named on hover (the one
+    tooltip) and to a screen reader with the type's word, "Action", "Risk", "Decision"… @param {{kind: string, type?: string}} props */
+function Kind({ kind, type }) {
+  const w = typeWord(kind, { type });
+  return <span class="wkic" role="img" aria-label={w} data-tip={w}>{kind === "milestone" ? <Diamond /> : <Icon name={kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check"} />}</span>;
 }
 
 /** The Prep chip with its peek. @param {{c: WkChip, openFile: (path: string) => void}} props */
@@ -65,7 +68,7 @@ function WkLine({ r, hidden, p }) {
   return (
     <li class={`wkrow wk-${r.kind}`} data-wk={r.key} hidden={hidden}>
       {meeting ? <span class="wktm">{r.time}</span>
-        : <><span class={`wkdot${r.dot ? " " + r.dot : ""}`} role={r.dot ? "img" : undefined} aria-label={r.dot ? DOTS[r.dot] : undefined} aria-hidden={r.dot ? undefined : "true"} /><Kind kind={r.kind} /></>}
+        : <><span class={`wkdot${r.dot ? " " + r.dot : ""}`} role={r.dot ? "img" : undefined} aria-label={r.dot ? DOTS[r.dot] : undefined} aria-hidden={r.dot ? undefined : "true"} /><Kind kind={r.kind} type={r.type} /></>}
       <div class="tb">
         {r.open ? <a class="t" href="#" {...dataOf(r.open)}>{r.t}</a> : <span class="t">{r.t}</span>}
         {r.who || r.p ? <span class="wkwho">{r.who || ""}{r.who && r.p ? " · " : ""}{r.p ? <a class="s" href="#" data-cock={r.p}>{r.pname || r.p}</a> : null}</span> : null}
