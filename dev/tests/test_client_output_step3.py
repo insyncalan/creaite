@@ -342,7 +342,9 @@ class Step3(T2.Step2):
         self.internal_week()
         self.fresh()
         self.client_text(f"{OTHER_OWNER} will quietly renegotiate the walrus vendor penalty next week.")
+        # v2.5.3 (#259, P16): client_output.loose_findings reads every project's hidden wordings too, so it goes off as well
         off = ("import client_output, client_leak\nclient_output.other_project_findings = lambda con, code, text: []\n"
+               "client_output.loose_findings = lambda con, code, text, skip=(): []\n"
                "_f = client_leak.findings\nclient_leak.findings = lambda d, con=None: [x for x in _f(d, con) if 'another project' "
                "not in x and 'Lindqvist' not in x]\n")
         e = self.export_in_process(off, "html")

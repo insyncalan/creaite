@@ -129,6 +129,8 @@ def guarded(fn):
         except (LookupError, ValueError, TypeError, AttributeError):     # v2.5.1 (#239): a document edited into a shape creaite
             return refuse(handler, "That report can't be read as it is (it was changed outside creaite), so nothing was done. "
                                    "Open the report again from creaite.")         # can't read is refused, never a fault
+        except OSError:                      # v2.5.3 (#259 round 2, LOW 7): a file creaite can't open is a sentence too
+            return refuse(handler, "That report's file can't be read (creaite isn't allowed to open it), so nothing was done.")
     route.__doc__ = fn.__doc__
     return route
 
@@ -170,8 +172,19 @@ def save_route(handler, req):
     with handler_lock(handler):
         out = report_doc.save_draft(own_header_logos(doc), req.get("base_version"))
         if out.get("ok"):
-            report_doc.remember_layout(code, kind, doc.get("layout"), client)
+            report_doc.remember_layout(code, kind, remembered(doc), client)
     return answer(handler, out)
+
+
+def remembered(doc):
+    """The layout Save remembers for the next report. v2.5.3 (#259, K3): a client report's layout keeps only the headings its
+    sections show as well (creaite_doc.derived_headings), never words stored only in its layout, which the next report would show."""
+    lay = doc.get("layout")
+    if doc.get("kind") != "client" or not isinstance(lay, dict):
+        return lay
+    shown = creaite_doc.derived_headings([s for s in doc.get("sections") or [] if isinstance(s, dict)])
+    heads = lay.get("headings") if isinstance(lay.get("headings"), dict) else {}
+    return {**lay, "headings": {k: v for k, v in heads.items() if isinstance(v, str) and shown.get(k) == v.strip()[:120]}}
 
 
 def own_header_logos(doc):
@@ -216,7 +229,8 @@ def _relock_one(f, code, fri):
     if doc.get("kind") != "client" or doc.get("project") != code or doc["date"] < fri or doc.get("state") == "approved":
         return False
     base = report_doc.baseline(code, doc["date"])
-    if not base or doc.get("based_on") == {"path": base["path"], "version": base["version"]}:
+    stored = creaite_doc.read(f).get("based_on")      # v2.5.3 (#259, K3): read_report derives based_on; the file's own says if it's locked
+    if not base or stored == {"path": base["path"], "version": base["version"]}:
         return False
     facts = (creaite_doc.read(base["path"]).get("meta") or {}).get("client_facts") or {}
     allowed = {x["id"]: x for t in ("actions", "decisions", "raid", "milestones") for x in facts.get(t) or []}

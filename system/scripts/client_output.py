@@ -179,6 +179,89 @@ def other_project_findings(con, code, text):
     return found
 
 
+LOOSE_SEP = r"[\W_]{0,8}"           # what may stand between an ID's characters: spaces, dashes, dots, any punctuation (up to eight)
+DIGIT_SEP = r"[\W_]{0,6}"           # and between its digits (round 2, LOW 6: "/", "," and "·" too, up to six)
+INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")    # zero-width and format characters
+
+
+def fold_words(text):
+    """Text as P16 matches a wording: through the confusables skeleton, lower case, every run of anything that isn't a letter or
+    a digit (spaces, hyphens, dots, underscores) one space, so "go-live", "go live" and "go.live" are one form."""
+    import confusables
+    import edit_ai
+    return " ".join(re.split(r"[\W_]+", edit_ai.normal(confusables.skeleton(text)).lower())).strip()
+
+
+def _number(groups):
+    """The number an ID's digits are read as: spaced one by one ("0 0 5") they are one number; otherwise the first run only
+    ("ABC-A-001 2026" is 001), so a list of numbers after a code ("ABC 1 2 3 4") is never read as a short ID."""
+    return "".join(groups) if all(len(g) == 1 for g in groups) else groups[0]
+
+
+DATED = re.compile(r"[1-9]\d?[/.:\-]\d")   # a short number (1 or 2 digits, no leading zero), then one fraction, date or time
+#                                           # mark and a digit: "4/10", "12.5", "4-10", "4:10"
+DATE_MARK = re.compile(r"[/.:\-]")
+
+
+def _dated(digits, runs):
+    """True when an ID's digits are a fraction, a date or a time ("ABC A 4/10 is the review day", "4/10/2026", "12.5"), not an ID:
+    the first number is one or two digits with no leading zero, followed straight away by "/", ".", "-" or ":" and a digit, and
+    the digits aren't three or more spaced one by one ("1/2/3"). A leading zero or a longer first run stays an ID ("0001/1",
+    "001.5", "01/1", "0/0/4"), and so does "ABC A 4." (no digit follows its dot). #259 round 3 (and Cap's HIGH on it)."""
+    spaced = all(len(g) == 1 for g in runs) and len(runs) >= 3
+    return not spaced and bool(DATED.match(digits))
+
+
+def _readings(digits, runs):
+    """The numbers an ID's digits may be read as: _number's, and, when a fraction, date or time mark follows, every digit before
+    the first mark ("0 0 1.5" is 001, as "001.5" is), so a mark can't turn a hidden ID into another number."""
+    out = {_number(runs)}
+    if DATE_MARK.search(digits):
+        out.add(re.sub(r"\D", "", DATE_MARK.split(digits, 1)[0]))
+    return {n.lstrip("0") or "0" for n in out if n}
+
+
+def _loose_refs(con, text):
+    """{item ID} of the IDs `text` holds in the forms edit_ai.loose_ids doesn't read (#259, P16): the code's letters spaced or
+    dotted ("A B C - 0 0 5"), the digits spaced, more zeros ("ABC-0005") or fewer ("ABC-5"), any case. Only IDs the tracker holds."""
+    import edit_ai
+    import tracker
+    t = edit_ai.normal(text).lower()
+    out = set()
+    for (code,) in con.execute("SELECT code FROM projects"):
+        letters = LOOSE_SEP.join(re.escape(c) for c in str(code).lower())
+        pat = rf"(?<![a-z0-9]){letters}{LOOSE_SEP}(?:([a-z]){LOOSE_SEP})?(\d(?:{DIGIT_SEP}\d)*)(?!{DIGIT_SEP}\d)"
+        for m in re.finditer(pat, t):
+            runs = re.split(r"[\W_]+", m.group(2))
+            if _dated(m.group(2), runs):
+                continue
+            for num in _readings(m.group(2), runs):
+                ref = f"{code}-{m.group(1).upper()}-{num.zfill(3)}" if m.group(1) else f"{code}-{num.zfill(3)}"
+                if len(num) <= 3 and tracker.item_table(ref) and edit_ai.in_tracker(con, ref):
+                    out.add(ref)
+    return out
+
+
+def loose_findings(con, code, text, skip=()):
+    """v2.5.3 (#259, P16): what the gate's own reading misses in a client output's text: an item a client report can't show, by
+    its ID however it is written (_loose_refs), or by its wording with hyphens, dots, underscores or spaces for one another
+    (fold_words; the whole wording, 15 characters or more, as the gate matches wordings). `skip`: items a finding already names."""
+    import client_leak
+    found, skip = [], set(skip)
+    blocking = client_leak.blocking_labels(con)
+    for ref in sorted(_loose_refs(con, text) - skip):
+        why = f"{ref} belongs to another project" if ref.split("-")[0] != code else client_leak.item_problem(con, ref, blocking)
+        if why:
+            found.append(f"{why}, but its ID appears")
+    # round 2 (LOW 6): a zero-width or format character may stand for a space as well as inside a word, so both readings are matched
+    words = f" {fold_words(text)} | {fold_words(INVISIBLE.sub(' ', text))} "
+    for table, col in OTHER_TEXT:
+        for i, w in con.execute(f"SELECT id, {col} FROM {table} WHERE client_visible = 0"):
+            if i not in skip and len((w or "").strip()) >= 15 and f" {fold_words(w)} " in words:
+                found.append(f"{i} isn't client-visible but its wording appears: “{w[:80]}”")
+    return found
+
+
 def text_findings(doc, text, con=None):
     """The client gate's checks on an output's text, read as it is and through the confusables skeleton."""
     import client_leak
@@ -192,6 +275,7 @@ def text_findings(doc, text, con=None):
     if client_leak.marked(t) and "it holds an internal-only marker" not in found:
         found.append("it holds an internal-only marker")
     found += other_project_findings(con, code, t)
+    found += loose_findings(con, code, t, {f.split(" ", 1)[0] for f in found})      # v2.5.3 (#259, P16)
     return found + client_leak.name_findings(con, code, t, client_leak.blocking_labels(con))
 
 

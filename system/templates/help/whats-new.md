@@ -2,6 +2,32 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.5.3
+
+A release of fixes and follow-ups: Process and Refresh calendar run as their own jobs, the last client-export gaps are closed, milestones show on Today, and the alert check pauses overnight. Written only from what landed.
+
+
+- **Process in Intake runs as its own job.** Pressing Process no longer ends with "I've drafted the files but haven't staged them". It runs in the background with progress and a Stop button, and the minutes and items arrive in Review. The ask creaite panel is used only if a transcript has to be loaded first. (#264)
+- **Refresh calendar runs as its own job, and keeps no join links.** Refresh has progress and Stop on the button. The saved calendar no longer keeps meeting join links or passcodes, and a confidential meeting keeps only its title and times. (#265)
+- **Milestones on Today.** Needs attention lists a milestone that is due or overdue ("Milestone Pilot go-live is due …"), and "Open all n in Work" opens Work > All items already filtered by that milestone. The Milestone filter is also under More fields. (#251)
+- **The alert check pauses overnight and at weekends.** It skips 19:00 to 07:00 and weekends by default (set under Essentials > People I follow), about two thirds fewer checks. The first check after a quiet spell looks back to the last one, so nothing is missed. (#97)
+- **The last client-export gaps are closed.** A section's stored "client" audience is no longer trusted (it is worked out each time); words hidden in stored fields that are not drawn, odd spellings of item IDs and unknown extra keys can no longer reach a filed client report; and a missing test is added. This closes the items listed as known in 2.5.2. (#259)
+- **The Work page no longer crashes on partly saved columns.** If your saved column choices were missing one of the tabs (Actions, RAID, Decisions), the Work page could fail to open; it now fills in what is missing and keeps what you saved. (#256)
+- **Delete note needs no approval card.** Pressing Delete note on the Notes tab is the approval: the note moves to the archive at once, is backed up and logged, and Undo brings it back. (#255)
+- **The archive folder has one name, "99 Archive".** It replaces `_Archive` and the older `zz Archive`, so it sorts last in OneDrive beside `99 System`. creaite does not rename your existing archive folders: the old names keep working for one release, and you rename them yourself when you like. (#252)
+- **The Review list no longer grows wider when you open a minutes row.** Expanding "n items" used to stretch the list and show a "more columns" button; long source lines now shorten, and the buttons stay in view. Intake rows get the same check. (#271)
+- **Suggest no longer writes "I can't suggest" into a field.** When there is nothing to base a suggestion on, the field stays as it was and a short note says so. This covers the mitigation, decision and update suggestions. (#272)
+- **Your reviews on the Usage tab.** Add your own dated notes (what you saw, what you decided), and download them as a CSV. (#238 follow-up)
+- **Minutes are staged for the right project.** A meeting file in another project's folder is staged only for that project, and ask creaite says plainly that a chat cannot save a retrieved transcript: use Intake's Load into inbox. (#269)
+- **Stricter limits on ask creaite, and quieter logs.** More ways of phrasing a forbidden path are refused, and a failure that used to be logged without its cause now says why (an error kind and where; never any text). Nothing you see changes. (#174, #253)
+
+
+Nothing is required. To use the new archive name on your existing archives, rename those folders to "99 Archive" yourself; until then the old names still work.
+
+
+- The CI changes (#152, #89) are behind the scenes: no change for you.
+- Approving minutes after rejecting every item (#261) is not in this release; it comes with the new Minutes view in 2.6.
+
 ## creaite 2.5.2
 
 Client exports are now made from one checked copy of the report, so nothing can slip in between checking and exporting. Activity gets a Usage tab, and Intake becomes a quiet line on Today.
