@@ -44773,6 +44773,13 @@ ${s5}`;
     else snack(text);
   }
   shared.RVLEFT = [];
+  function rvHlLeft(left) {
+    const keys = new Set(left.map((r4) => r4.file + "|" + r4.ref));
+    RHL.clear();
+    REV.filter((r4) => !r4.done && keys.has(r4.file + "|" + r4.ref)).forEach((r4) => RHL.add(r4.n));
+    rvSyncChk();
+    renderReview();
+  }
   async function rvApproveSelected(confirmed) {
     const L3 = rvSel(), ok2 = L3.filter(rvBulkOK), left = L3.filter((r4) => !rvBulkOK(r4));
     if (!ok2.length) {
@@ -44784,10 +44791,7 @@ ${s5}`;
       return;
     }
     const res = await rvDecideMany(ok2, "approved");
-    RHL.clear();
-    left.forEach((r4) => RHL.add(r4.n));
-    rvSyncChk();
-    renderReview();
+    rvHlLeft(left);
     rvSummary("Approved", res, left);
   }
   async function rvRejectSelected() {
@@ -44795,10 +44799,7 @@ ${s5}`;
     if (!rej.length) return;
     if (rej.length > shared.RV_MAX && !await boardAsk({ title: `Reject ${rej.length} proposals?`, hint: "Rejecting writes nothing to the tracker; Undo brings them back", clear: true, okText: `Reject ${rej.length}` })) return;
     const res = await rvDecideMany(rej, "rejected");
-    RHL.clear();
-    left.forEach((r4) => RHL.add(r4.n));
-    rvSyncChk();
-    renderReview();
+    rvHlLeft(left);
     rvSummary("Rejected", res, left.map((r4) => ({ ...r4, why: "Minutes, a report or a file change, rejected on its own" })));
   }
   function rvRoutine() {
@@ -57270,7 +57271,6 @@ ${d5.text}`);
     PULSE.reloads++;
     let n4 = null;
     try {
-      const hold = o5.hold ? o5.hold() : null;
       try {
         const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o5.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
         if (r4.ok) n4 = await r4.json();
@@ -57278,6 +57278,7 @@ ${d5.text}`);
         n4 = null;
       }
       if (!n4 || !n4.ok) return false;
+      const hold = o5.hold ? o5.hold() : null;
       RECSTAT.records++;
       recMerge(n4);
       refreshAll();
@@ -75467,7 +75468,7 @@ ${d5.text}`);
   async function reloadData() {
     PULSE.reloads++;
     try {
-      const hold = rvHold();
+      let hold = rvHold();
       await (async () => {
         if (!SERVED) return;
         try {
@@ -75475,6 +75476,7 @@ ${d5.text}`);
           if (!r4.ok) return;
           const n4 = await r4.json();
           RECSTAT.full++;
+          hold = rvHold();
           Object.assign(D, n4);
           [[P4, n4.projects], [A4, n4.actions], [R3, n4.raid], [DEC, n4.decisions], [REV, n4.review], [FILES, n4.files], [REMINDERS, n4.reminders]].forEach(([a5, b5]) => a5.splice(0, a5.length, ...b5));
           shared.ACT = n4.activity;

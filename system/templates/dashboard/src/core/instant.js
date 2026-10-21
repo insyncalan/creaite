@@ -76,10 +76,10 @@ export async function recordsRefresh(ids, o = {}) {
   if (list.length > 200) return false;
   PULSE.reloads++; let n = null;
   try {
-    const hold = o.hold ? o.hold() : null;
     try { const r = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
       if (r.ok) n = await r.json(); } catch (e) { n = null; }
     if (!n || !n.ok) return false;
+    const hold = o.hold ? o.hold() : null;   /* gate-fix-2: held once the answer is in, so a selection made while it was in flight is kept */
     RECSTAT.records++; recMerge(n); refreshAll(); if (o.restore) o.restore(hold);
     if (PULSE.v != null && !PULSE.busy) { const r = await pulseGet(); if (r && !PULSE.stale) { PULSE.v = r.v; PULSE.pending = r.pending; } }   /* BL-110: his own change doesn't cause a second reload */
   } finally { PULSE.reloads--; }

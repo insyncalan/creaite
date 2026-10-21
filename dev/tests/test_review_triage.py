@@ -144,6 +144,31 @@ class Triage(LiveBrowserCase):
         b.click("#rvShow")                                                             # Show them highlights what is left
         self.assertEqual(sorted(b.eval("[...RHL].map(n=>rvKey(REV.find(r=>r.n===n)))")), sorted(b.eval("RVLEFT")))
 
+    def slow_next_reload(self):
+        """Start a full reload whose /api/data answer takes 1.5 s, as a live-update reload does on a loaded CI runner."""
+        self.b.eval("(()=>{ const f=window.fetch; window.fetch=(u,o)=>String(u).startsWith('/api/data')?new Promise(res=>setTimeout(()=>res(f(u,o)),1500)):f(u,o); reloadData(); return 1; })()")
+
+    def test_what_is_left_stays_highlighted_across_the_renumbering_and_a_reload(self):
+        # gate-fix-2 (CI run 39531961511): the auto-apply renumbers Review, so the rows left out were re-highlighted by their old
+        # numbers (other proposals, or none), and a click made while a reload was in flight was undone when it landed
+        b = self.open_review()
+        b.click("#reviewBody tr[data-n]:not(.mparent) td:first-child input")
+        b.click("#rvAll")
+        b.pump(0.2)
+        b.click("#bulkApprove")
+        b.wait("/Approved \\d+/.test(document.getElementById('rvresult').textContent)", 20)
+        b.wait("!REV.some(r=>/^Batch /.test(r.rec.t))", 20)
+        keys = "[...RHL].map(n=>{ const r=REV.find(x=>x.n===n); return r?rvKey(r):'missing '+n; })"
+        self.assertEqual(sorted(b.eval(keys)), sorted(b.eval("RVLEFT")))                # the left-out rows themselves
+        self.slow_next_reload()
+        b.eval("RHL.clear(); rvSyncChk(); renderReview()")                              # a change while the reload is in flight
+        b.wait("PULSE.reloads===0", 15)
+        self.assertEqual(b.eval("RHL.size"), 0)                                         # kept, not put back as it was
+        self.slow_next_reload()
+        b.click("#rvShow")
+        b.wait("PULSE.reloads===0", 15)
+        self.assertEqual(sorted(b.eval(keys)), sorted(b.eval("RVLEFT")))
+
     def test_reject_covers_individual_items_but_not_minutes(self):
         b = self.open_review()
         ns = b.eval("REV.filter(r=>!r.done&&(/^Scope creep|^Approve the revised/.test(r.rec.t)||r.kind==='draft')).map(r=>r.n)")

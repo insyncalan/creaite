@@ -314,12 +314,15 @@ export function rvSummary(verb,res,left){ const by={project:0,indiv:0,conflict:0
   putHTML($("#rvresult"),html`<span><b>${verb} ${res.n}</b>${parts.length?html` <span class="tag warn">partial</span>`:""}${parts.length?" · "+parts.join(" · "):""}</span>${left.length?html`<button type="button" class="linkbtn" id="rvShow">Show them</button>`:""}${res.undo?html`<button type="button" class="linkbtn" id="rvUndo">Undo</button>`:""}`);
   if(res.undo) snack(text,async()=>{ await res.undo(); $("#rvresult").textContent=""; }); else snack(text); }
 shared.RVLEFT=[];
+/* gate-fix-2: highlight what was left out by file and item, never by row number: an auto-apply reloads Review in between and
+   renumbers it, so the rows held from before point at other proposals (or none) */
+function rvHlLeft(left){ const keys=new Set(left.map(r=>r.file+"|"+r.ref)); RHL.clear(); REV.filter(r=>!r.done&&keys.has(r.file+"|"+r.ref)).forEach(r=>RHL.add(r.n)); rvSyncChk(); renderReview(); }
 export async function rvApproveSelected(confirmed){ const L=rvSel(), ok=L.filter(rvBulkOK), left=L.filter(r=>!rvBulkOK(r)); if(!ok.length){ snack("None of these can be approved together"); return; }
   if(ok.length>shared.RV_MAX&&!confirmed){ rvPreview(ok,left,"Approve the selected",()=>rvApproveSelected(true)); return; }
-  const res=await rvDecideMany(ok,"approved"); RHL.clear(); left.forEach(r=>RHL.add(r.n)); rvSyncChk(); renderReview(); rvSummary("Approved",res,left); }
+  const res=await rvDecideMany(ok,"approved"); rvHlLeft(left); rvSummary("Approved",res,left); }
 export async function rvRejectSelected(){ const L=rvSel(), rej=L.filter(rvRejectOK), left=L.filter(r=>!rvRejectOK(r)); if(!rej.length) return;
   if(rej.length>shared.RV_MAX&&!await boardAsk({title:`Reject ${rej.length} proposals?`,hint:"Rejecting writes nothing to the tracker; Undo brings them back",clear:true,okText:`Reject ${rej.length}`})) return;
-  const res=await rvDecideMany(rej,"rejected"); RHL.clear(); left.forEach(r=>RHL.add(r.n)); rvSyncChk(); renderReview(); rvSummary("Rejected",res,left.map(r=>({...r,why:"Minutes, a report or a file change, rejected on its own"}))); }
+  const res=await rvDecideMany(rej,"rejected"); rvHlLeft(left); rvSummary("Rejected",res,left.map(r=>({...r,why:"Minutes, a report or a file change, rejected on its own"}))); }
 export function rvRoutine(){ const M=rvMatching(), ok=M.filter(rvBulkOK), left=M.filter(r=>!rvBulkOK(r)&&!isMin(r)&&r.kind!=="draft"); if(!ok.length){ snack("Nothing routine to approve"); return; }
   rvPreview(ok,M.filter(r=>!rvBulkOK(r)),"Approve all routine",async()=>{ const res=await rvDecideMany(ok,"approved"); renderReview(); rvSummary("Approved",res,left); }); }
 /* the preview: counts by project and kind, the items, what is not included and why */

@@ -92,8 +92,9 @@ export function rvRestore(h){ if(!h) return; const {keys,ck}=h;
   RHL.clear(); REV.filter(r=>keys.includes(rvKey(r))&&!r.done).forEach(r=>RHL.add(r.n)); rvSyncChk();
   if(shared.VIEW==="review"){ renderReview(); if(ck){ const r=REV.find(x=>rvKey(x)===ck), i=r?$$("#reviewBody tr[data-n]").findIndex(tr=>+tr.dataset.n===r.n):-1; if(i>=0){ shared.RSEL=i; rvPaint(); } } } }
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
-    const hold=rvHold();
+    let hold=rvHold();
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
+  hold=rvHold();   /* gate-fix-2: Review's selection as it is now, not as it was when the fetch began (a click while it was in flight is kept) */
   Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b));
   shared.ACT=n.activity; R.forEach(x=>x.pr=prio(x.imp,x.lik)); shared.DATA_AT=n.data_at||shared.DATA_AT;
   [...A,...R,...DEC,...P].forEach(o=>["t","upd","resp","cm","cmd","reason","current"].forEach(k=>{ if(typeof o[k]==="string") o[k]=(k==="current"?fdMd:fdText)(o[k]); })); shared.ACT.forEach(a=>a.what=fdText(a.what));
