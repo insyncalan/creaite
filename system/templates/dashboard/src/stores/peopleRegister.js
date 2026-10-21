@@ -42,7 +42,7 @@ const followedIn = x => { const v = String(x.VIP || "").trim(); return !!v && !N
     items: any[]}} PersonRow */
 
 /** @param {Map<string, any>} map @param {string} n */
-function rowOf(map, n) {
+function regRowOf(map, n) {
   if (!map.has(n)) map.set(n, { n, it: {}, oa: [], al: [], or: [], dw: [], items: [] });
   return map.get(n);
 }
@@ -53,16 +53,16 @@ function countsOf(x, c) { if (!x.it[c]) x.it[c] = { a: 0, r: 0, d: 0, st: false 
     @returns {PersonRow[]} */
 export function registerRows() {
   const rs = resolver(), canon = (/** @type {string} */ n) => (rs(n) || {}).name || n, map = new Map();
-  regList().forEach(p => { if (!p.hidden) rowOf(map, p.name); });
+  regList().forEach(p => { if (!p.hidden) regRowOf(map, p.name); });
   const own = (/** @type {any} */ i, /** @type {string} */ owner, /** @type {"a"|"r"|"d"} */ k) => {
     if (!owner || owner === "TBC") return null;
-    const x = rowOf(map, canon(owner)); countsOf(x, i.p)[k]++; x.items.push(i); return x;
+    const x = regRowOf(map, canon(owner)); countsOf(x, i.p)[k]++; x.items.push(i); return x;
   };
   A.forEach(a => { const x = own(a, a.o, "a"); if (x && a.st === "Open") x.oa.push(a); if (x && open(a)) x.al.push(a); });   // Actions counts Open; Overdue keeps Delayed
   R.forEach(r => { const x = own(r, r.o, "r"); if (x && open(r)) x.or.push(r); });
   DEC.forEach(d => { const x = own(d, d.by, "d"); if (x && d.st === "Pending") x.dw.push(d); });
   const st = D.stakeholders || {};
-  Object.keys(st).forEach(c => (st[c] || []).forEach((/** @type {string} */ s) => { if (s && s !== "TBC") countsOf(rowOf(map, canon(s)), c).st = true; }));
+  Object.keys(st).forEach(c => (st[c] || []).forEach((/** @type {string} */ s) => { if (s && s !== "TBC") countsOf(regRowOf(map, canon(s)), c).st = true; }));
   const codes = new Set(P.map(p => p.code));
   return [...map.values()].filter(x => !isHiddenPerson(x.n)).map(x => finish(x, codes)).sort((a, b) => a.n.localeCompare(b.n));
 }

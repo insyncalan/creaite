@@ -139,7 +139,7 @@ class Refusals(Base):
         for extra in ({"draft": "system/staging/drafts/x.docx"}, {"minutes": {"summary": ["x"]}}, {"note": FILE}):
             _, r = self.stage(ok=False, **extra)
             self.assertEqual(r.returncode, 1, extra)
-            self.assertIn("staged on their own", r.stdout)
+            self.assertRegex(r.stdout, "staged on their own|must be a quick note")    # asm26: minutes_spec (release) refuses a bad note first
         self.assertEqual(self.proposals(), [])
 
     def test_a_missing_file_or_an_unknown_kind_is_refused(self):

@@ -303,7 +303,7 @@ class Swapped(Base):
         self.unrelated()
         r = self.v.run("apply")                                     # a full apply: the rest of the queue goes through
         if why:
-            self.assertIn(why, r.stdout)
+            self.assertTrue(why in r.stdout or "the source is a link" in r.stdout, r.stdout)    # asm26: release's #269 L-B link refusal says it first, with its own words
         self.assertFalse(self.filed())
         self.assertEqual(self.processed(), "")
         if victim is not None:

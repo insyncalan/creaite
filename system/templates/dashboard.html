@@ -33585,7 +33585,7 @@ ${s5}`;
     const v5 = String(x5.VIP || "").trim();
     return !!v5 && !NO_FOLLOW.test(v5);
   };
-  function rowOf(map, n4) {
+  function regRowOf(map, n4) {
     if (!map.has(n4)) map.set(n4, { n: n4, it: {}, oa: [], al: [], or: [], dw: [], items: [] });
     return map.get(n4);
   }
@@ -33596,11 +33596,11 @@ ${s5}`;
   function registerRows() {
     const rs2 = resolver(), canon = (n4) => (rs2(n4) || {}).name || n4, map = /* @__PURE__ */ new Map();
     regList().forEach((p6) => {
-      if (!p6.hidden) rowOf(map, p6.name);
+      if (!p6.hidden) regRowOf(map, p6.name);
     });
     const own = (i5, owner, k5) => {
       if (!owner || owner === "TBC") return null;
-      const x5 = rowOf(map, canon(owner));
+      const x5 = regRowOf(map, canon(owner));
       countsOf(x5, i5.p)[k5]++;
       x5.items.push(i5);
       return x5;
@@ -33620,7 +33620,7 @@ ${s5}`;
     });
     const st2 = D.stakeholders || {};
     Object.keys(st2).forEach((c5) => (st2[c5] || []).forEach((s5) => {
-      if (s5 && s5 !== "TBC") countsOf(rowOf(map, canon(s5)), c5).st = true;
+      if (s5 && s5 !== "TBC") countsOf(regRowOf(map, canon(s5)), c5).st = true;
     }));
     const codes = new Set(P4.map((p6) => p6.code));
     return [...map.values()].filter((x5) => !isHiddenPerson(x5.n)).map((x5) => finish(x5, codes)).sort((a5, b5) => a5.n.localeCompare(b5.n));
@@ -74507,7 +74507,7 @@ ${d5.text}`);
     if (m5 && m5.src === "upload" && !irFixed(m5)) irSetFileKind(m5, kind);
   }
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
-  var rowOf2 = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
+  var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
   var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
@@ -74576,7 +74576,7 @@ ${d5.text}`);
       } catch (e4) {
       }
       await reloadData();
-      const after = rowOf2(m5.id);
+      const after = rowOf(m5.id);
       const done = !after || after.stage !== "arrived";
       if (!done) irNote(m5.id, "Couldn't: no draft came back");
       return done;
@@ -74595,7 +74595,7 @@ ${d5.text}`);
     }
     const ids = irReady().map((m5) => m5.id), left = irLeftOut().length;
     for (const id2 of ids) {
-      const m5 = rowOf2(id2);
+      const m5 = rowOf(id2);
       if (m5) await irProcess(m5);
     }
     if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
