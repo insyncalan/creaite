@@ -58,6 +58,19 @@ class RefusedApplyWords(unittest.TestCase):
         m = "Apply failed; nothing was written. Invalid: write: projects/_portfolio/people-register.md changed since this proposal was made"
         self.assertTrue(words(m).startswith("people-register.md changed after this item was staged"))
 
+    def test_track_refusal_drops_the_header_and_the_file_name(self):
+        """#275 round 3 (Cap's 3): the page says "Apply stopped" itself; the proposal's file name is never shown."""
+        m = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 2: crossed in the minutes' Track column; "
+             "it is back in Review\n  proposed-2026-10-01-x.json minutes: the minutes record can't be read (gone), so its Track "
+             "column can't be checked")
+        shown = words(m)
+        self.assertEqual(shown.split("\n")[0], "an item was crossed in the minutes' Track column; it is back in Review")
+        self.assertTrue(shown.split("\n")[1].startswith("the minutes record can't be read"))
+        self.assertNotIn("proposed-", shown)
+        self.assertNotIn("Apply stopped", shown)
+        other = "Apply stopped. Nothing was written.\n  proposed-x.json item 1: invalid owner"
+        self.assertEqual(words(other), other, "other refusals pass through unchanged")
+
 
 if __name__ == "__main__":
     unittest.main()

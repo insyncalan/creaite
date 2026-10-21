@@ -44321,7 +44321,13 @@ ${s5}`;
     const snap = tr2 && shared.VIEW === "review" && !reduced() ? { g: { r: tr2.getBoundingClientRect(), t: (tr2.querySelector("td.title") || tr2).textContent.trim() }, rows: mSnapRows("#reviewBody tr[data-n]", (e4) => e4.dataset.n) } : null;
     const before = was && was.done;
     const res = await (async () => {
-      const r4 = REV.find((x5) => x5.n === n4);
+      let r4 = REV.find((x5) => x5.n === n4);
+      if (v5 === "approved" && r4 && TRKRELOAD) {
+        const k5 = [r4.file, String(r4.ref)];
+        await TRKRELOAD;
+        r4 = REV.find((x5) => x5.file === k5[0] && String(x5.ref) === k5[1]);
+        if (r4) n4 = r4.n;
+      }
       if (!r4 || r4.done) return;
       if (v5 === "approved" && r4.kind === "draft" && r4.nodraft) {
         snack(NODRAFT_MSG);
@@ -45031,13 +45037,16 @@ ${s5}`;
     rvDock();
   }
   async function rvDecideMany(list, v5) {
+    let dropped = [];
     if (v5 === "approved") {
       if (TRKRELOAD) await TRKRELOAD;
-      list = list.map((r4) => r4 && (REV.includes(r4) ? r4 : REV.find((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref)))).filter((r4) => r4 && r4.trk == null);
+      list = list.map((r4) => r4 && (REV.includes(r4) ? r4 : REV.find((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref))));
+      dropped = list.filter((r4) => r4 && !r4.done && r4.trk != null);
+      list = list.filter((r4) => r4 && r4.trk == null);
     }
     list = list.filter((r4) => r4 && !r4.done);
-    if (!list.length) return { n: 0 };
-    if (!await needVault()) return { n: 0 };
+    if (!list.length) return { n: 0, dropped };
+    if (!await needVault()) return { n: 0, dropped };
     const byFile = /* @__PURE__ */ new Map();
     list.forEach((r4) => {
       if (!byFile.has(r4.file)) byFile.set(r4.file, []);
@@ -45070,7 +45079,16 @@ ${s5}`;
       done.forEach((r4) => r4.done = v5);
       refreshAll();
       const res = await applyNow();
-      return { n: done.length, failed, undo: res.ok ? () => undoApply(res.apply_id) : null, res };
+      if (!res.ok) {
+        await undoFiles();
+        done.forEach((r4) => {
+          delete r4.done;
+          RHL.add(r4.n);
+        });
+        await reloadData();
+        return { n: 0, failed, dropped, stopped: oneLine(res.message), res };
+      }
+      return { n: done.length, failed, dropped, undo: () => undoApply(res.apply_id), res };
     }
     let undoRecs = [];
     const what = `${done.length} proposal${done.length === 1 ? "" : "s"} ${v5}`;
@@ -45085,16 +45103,26 @@ ${s5}`;
       undoRecs = [];
       await undoFiles();
     }, "You, in Review");
-    return { n: done.length, failed, undo: shared.UNDO };
+    return { n: done.length, failed, dropped, undo: shared.UNDO };
   }
   function rvSummary(verb, res, left) {
     const by2 = { project: 0, indiv: 0, conflict: 0 };
     left.forEach((r4) => by2[rvWhyNot(r4)[0]]++);
-    const parts = [by2.project ? `${by2.project} need${by2.project === 1 ? "s" : ""} a project` : "", by2.indiv ? `${by2.indiv} need${by2.indiv === 1 ? "s" : ""} individual approval` : "", by2.conflict ? `${by2.conflict} ${by2.conflict === 1 ? "has a conflict" : "have conflicts"}` : "", res.failed && res.failed.length ? `not saved: ${res.failed.join(", ")}` : ""].filter(Boolean);
+    const dr2 = res.dropped || [], dn2 = dr2.filter((r4) => r4.trk === "n").length, dk2 = dr2.length - dn2;
+    const parts = [
+      res.stopped ? `apply stopped, all back in Review: ${res.stopped}` : "",
+      by2.project ? `${by2.project} need${by2.project === 1 ? "s" : ""} a project` : "",
+      by2.indiv ? `${by2.indiv} need${by2.indiv === 1 ? "s" : ""} individual approval` : "",
+      by2.conflict ? `${by2.conflict} ${by2.conflict === 1 ? "has a conflict" : "have conflicts"}` : "",
+      dn2 ? `${dn2} crossed in the minutes' Track column` : "",
+      dk2 ? `${dk2} kept in the minutes only (Track: neither)` : "",
+      res.failed && res.failed.length ? `not saved: ${res.failed.join(", ")}` : ""
+    ].filter(Boolean);
+    left = [...left, ...dr2.filter((r4) => !left.some((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref)))];
     const text = `${verb} ${res.n}${parts.length ? " · " + parts.join(" · ") : ""}`;
     RVLASTUNDO = res.undo || null;
     shared.RVLEFT = left.map((r4) => r4.file + "|" + r4.ref);
-    putHTML($("#rvresult"), html`<span><b>${verb} ${res.n}</b>${parts.length ? html` <span class="tag warn">partial</span>` : ""}${parts.length ? " · " + parts.join(" · ") : ""}</span>${left.length ? html`<button type="button" class="linkbtn" id="rvShow">Show them</button>` : ""}${res.undo ? html`<button type="button" class="linkbtn" id="rvUndo">Undo</button>` : ""}`);
+    putHTML($("#rvresult"), html`<span><b>${verb} ${res.n}</b>${parts.length ? html` <span class="tag warn">${res.stopped ? "stopped" : "partial"}</span>` : ""}${parts.length ? " · " + parts.join(" · ") : ""}</span>${left.length ? html`<button type="button" class="linkbtn" id="rvShow">Show them</button>` : ""}${res.undo ? html`<button type="button" class="linkbtn" id="rvUndo">Undo</button>` : ""}`);
     if (res.undo) snack(text, async () => {
       await res.undo();
       $("#rvresult").textContent = "";
@@ -45114,7 +45142,7 @@ ${s5}`;
     }
     const res = await rvDecideMany(ok2, "approved");
     RHL.clear();
-    left.forEach((r4) => RHL.add(r4.n));
+    [...left, ...res.dropped || []].forEach((r4) => RHL.add(r4.n));
     rvSyncChk();
     renderReview();
     rvSummary("Approved", res, left);
@@ -75879,7 +75907,9 @@ ${d5.text}`);
   var oneLine = (m5) => String(m5 || "").split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
   var applyWords = (m5) => {
     const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
-    return f5 ? `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.` : t47;
+    if (f5) return `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`;
+    if (!/in the minutes' Track column|the minutes record can't be read/.test(t47)) return t47;
+    return t47.split("\n").map((x5) => x5.trim()).filter((x5) => x5 && !/^Apply stopped\. Nothing was written\.$/.test(x5)).map((x5) => x5.replace(/^proposed-\S+\.json (item \d+|minutes): /, (a5, w6) => w6 === "minutes" ? "" : "an item was ")).join("\n");
   };
   function rvHold() {
     const keys = [...RHL].map((n4) => REV.find((x5) => x5.n === n4)).filter(Boolean).map(rvKey), t47 = $$("#reviewBody tr[data-n]")[shared.RSEL], cr2 = t47 && REV.find((x5) => x5.n === +t47.dataset.n);
