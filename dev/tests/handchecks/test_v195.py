@@ -2095,6 +2095,7 @@ class Bl334And316(HandcheckCase):
         from contextlib import closing
         import hcbase
         import test_shared_behaviour as tsb
+        import test_shared_undo as tsu      # #89: the Undo half's helpers moved there
         with closing(sqlite3.connect(self.vault / "system/tracker.db")) as con:
             ms = con.execute("SELECT id FROM milestones WHERE project='FAL' AND status<>'Done' ORDER BY id LIMIT 1").fetchone()[0]
         screens = hcbase.behaviour_screens(ms)
@@ -2130,7 +2131,7 @@ class Bl334And316(HandcheckCase):
             done = set()
 
             def once(i, o, done=done):
-                g = (o["sig"], tsb.undo_group(o["name"]))
+                g = (o["sig"], tsu.undo_group(o["name"]))
                 if g in done:
                     return None
                 done.add(g)
@@ -2141,7 +2142,7 @@ class Bl334And316(HandcheckCase):
                         continue
                     n_undo += 1
                     if bad:
-                        undo.add((tsb.screen_area(name), f"undo: {name} {o['sig']} “{tsb.undo_group(o['name'])}”: {'; '.join(bad)}"))
+                        undo.add((tsb.screen_area(name), f"undo: {name} {o['sig']} “{tsu.undo_group(o['name'])}”: {'; '.join(bad)}"))
             except (TimeoutError, RuntimeError) as e:
                 missing.append(f"{name} for Undo ({str(e).splitlines()[0][:60]})")
         unreached = {(s["area"], "unreached: " + tsb.site_name(s)) for s in tsb.inventory() if not tsb.reached(s, d.seen)}
