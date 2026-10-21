@@ -286,7 +286,7 @@ class TheOtherClientPlaces(_Vault):
         out = edit_ai(self.root, "result", {"request": body, "context": ctx,
                                             "reply": "<<<SUGGESTION\nABC-A-004 is late.\nSUGGESTION>>>"})
         self.assertEqual(out["text"], "")
-        self.assertIn("Distributed version", out["message"])
+        self.assertIn("that the minutes would carry to attendees", out["message"])
 
     def test_an_email_context_cannot_be_reused_for_another_place(self):
         ctx = self.context(ask([INSIDE]))                               # full facts, an internal email

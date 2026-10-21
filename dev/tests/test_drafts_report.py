@@ -335,6 +335,19 @@ def _minutes_vault_case():
                 got = self.js("import drafts\ntry:\n    drafts.minutes_project(" + repr(doc) + ")\n    r = ''\n"
                               "except drafts.Refused as e:\n    r = str(e)\nprint(json.dumps(r))")
                 self.assertIn("no project in the tracker", got, doc)
+
+        def test_html_inside_an_id_or_a_name_is_read_through(self):
+            """#262 review M2 (2.6): the ✦ reply is read through HTML tags, comments and CDATA as the AI bar's is."""
+            self.seed()
+            ctx = self.ctx()
+            for added in ("ABC<!-- -->-A-002 is open.", "<b>ABC</b>-A-002 is open.", "ABC<b-A-002 is open.",
+                          "ABC<![CDATA[-A-002]]> is open.", "Sa<b>ra</b> Example will chase."):
+                got = self.js("import drafts\nprint(json.dumps(drafts.result({}, " + repr(ctx) + ", "
+                              + repr("The committee met. " + added + " [S1]") + ")))")
+                self.assertEqual(got["text"], "", added)
+            got = self.js("import drafts\nprint(json.dumps(drafts.result({}, " + repr(ctx) + ", "
+                          + repr("The committee <b>met</b> and agreed. [S1]") + ")))")      # a harmless tag still passes
+            self.assertIn("agreed", got["text"])
     return MinutesSection
 
 
