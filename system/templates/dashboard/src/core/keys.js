@@ -7,7 +7,7 @@ import { openCapture } from "../components/notes/CaptureDrawer.jsx";
 import { REV } from "./data.js";
 import { $, $$ } from "./dom.js";
 import { closeCal } from "./fields.js";
-import { go, switchProject } from "./nav.js";
+import { go } from "./nav.js";
 import { closeHelpPanel, helpOutsidePress, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
 import { helpFocusSearch } from "../help.js";
 import { copied, MAC, START_CMD } from "./page.js";
@@ -19,7 +19,7 @@ import { CHK, decide, isMin, renderReview, RHL, rjKey315, rvSyncChk, toggleGroup
 import { dayKey } from "../today.js";
 import { HL, hlClear, hlKey, openDisp, rvOnly, rvPaint } from "../work.js";
 /* click outside closes ask creaite and the detail panel — never while editing */
-export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";   /* #121: the link form and the field's corner button sit outside the peek and must not close it */   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
+export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";   /* #121: the link form and the field's corner button sit outside the peek and must not close it */   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0122's place) */
 export function bootCopyCommand(){
 /* copy the start command */
@@ -53,7 +53,6 @@ document.addEventListener("keydown",e=>{
   if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
   if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
-  if((e.key==="["||e.key==="]")&&shared.VIEW==="cockpit"){ e.preventDefault(); switchProject(e.key==="]"?1:-1); return; }
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
   if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */
   /* BL-176 (sprint-peek): no E to edit the open item: the peek is always editable. Review keeps its own E below */

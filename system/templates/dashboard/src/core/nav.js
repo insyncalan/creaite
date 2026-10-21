@@ -161,7 +161,6 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
 /* links from a project page into Work set the project filter; the rail leaves Work's filters as they were */
 export const seeAll=(n,what,nav)=>n?`<a href="#" class="seeall" data-nav="${nav}">All ${n} ${what}${n===1?"":"s"} ›</a>`:"";
    /* capture: before row and panel handlers */
-export function switchProject(d){ if(shared.VIEW!=="cockpit"||P.length<2) return; const i=P.findIndex(x=>x.code===shared.COCK); go("cockpit",P[(i+d+P.length)%P.length].code); }
 export const pLink=code=>code?`<span class="pcode plink" data-proj="${code}" role="link" tabindex="0" title="Open ${esc(pName(code))}">${esc(pName(code))}</span>`:'<span class="pcode">No project</span>';
 export function openWork(code,wt,view,extra){ if(navBlocked(()=>openWork(code,wt,view,extra))) return; clearAllFilters(); if(view==="dueor"){ view="open"; extra={st:["Open","Delayed"],due:["overdue","soon"]}; }   /* BL-48 */ if(view==="undated"){ view="open"; extra={st:wt==="raid"?["Open"]:["Open","Delayed"],due:["none"]}; }   /* BL-95 */
   if(view==="urgentonly"){ view="open"; extra={st:["Open"],pr:["Urgent"]}; }   /* BL-77: the Urgent risks figure counts Urgent only; the "Urgent and high" view also holds High */ shared.WT=wt; applyView(view); if(extra){ applyFilters(Object.assign(snapshot(),extra)); syncView(); }   /* BL-190: extra filters sit on top of the view's ([] clears one) */
@@ -173,11 +172,10 @@ window.addEventListener("popstate",e=>{ if((shared.EDITING&&shared.CUR)||(shared
   const old=!e.state&&/^#meeting=/.test(location.hash);   /* v2.1.0 P10: the retired meeting page's address becomes its Prep's or minutes' */
   restoreNav(e.state||parseHash(location.hash)); if(old){ shared.NAVSTATE=navState(); try{ history.replaceState(shared.NAVSTATE,"",hashOf(shared.NAVSTATE)); }catch(x){} } });
 document.addEventListener("click",e=>{ const n=e.target.closest("[data-nav]"); if(n){ e.preventDefault(); e.stopPropagation(); const {wt,view,code,extra}=navParse(n.dataset.nav); openWork(code,wt,view,extra); return; }   /* BL-190: an optional fourth part adds filters */
-  const pj=e.target.closest("[data-proj]"); if(pj){ e.preventDefault(); e.stopPropagation(); go("cockpit",pj.dataset.proj); return; }
-  const sw=e.target.closest("[data-psw]"); if(sw) switchProject(+sw.dataset.psw); },true);
+  const pj=e.target.closest("[data-proj]"); if(pj){ e.preventDefault(); e.stopPropagation(); go("cockpit",pj.dataset.proj); return; } },true);
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-proj][role=link]")){ e.preventDefault(); go("cockpit",e.target.dataset.proj); return; }
   if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-nav][role=link]")){ e.preventDefault(); const {wt,view,code,extra}=navParse(e.target.dataset.nav); openWork(code,wt,view,extra); } });
-/* #285: the cockpit has no project dropdown; ‹ › ([ ]) and the Projects list move between projects. */
+/* #285: the project page has no project dropdown, ‹ › arrows or [ ] keys; the Projects list, search and links reach a project. */
 }
 /* ===== BL-190 (sprint-links) ===== every figure that counts work items opens Work on its tab, filtered to exactly those items.
    data-nav="<tab>:<view>:<project code>[:<filters>]": the optional fourth part is key=v1,v2&key2=… (values URI-encoded), the same keys
