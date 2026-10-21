@@ -242,7 +242,7 @@ class Fence(unittest.TestCase):
         cls.files = put_samples(cls.v)
         drafts = cls.v.root / "system/staging/drafts"
         drafts.mkdir(parents=True, exist_ok=True)
-        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0]}))
+        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0]}))
         (drafts / "other.json").write_text(json.dumps({"title": "Other", "transcript": "projects/secret.vtt"}))
         (drafts / "note.json").write_text(json.dumps({"title": "Note", "transcript": cls.files[0], "note": "projects/x.md"}))
         (drafts / "values.json").write_text("{}")
@@ -254,7 +254,7 @@ class Fence(unittest.TestCase):
         (drafts / "new minutes.docx").write_bytes(b"PK")
         (drafts / "olddraft.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
                                                           "draft": "system/staging/drafts/steerco one-pager.docx"}))
-        (drafts / "newdraft.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+        (drafts / "newdraft.json").write_text(json.dumps({"title": "P", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0],
                                                           "draft": "system/staging/drafts/new minutes.docx"}))
         (drafts / "list.json").write_text(json.dumps({"title": "P", "transcript": [cls.files[0]]}))
         (drafts / "pics.json").write_text(json.dumps({"BODY": [{"image": os.path.expanduser("~/Pictures/a.png")}]}))
@@ -283,7 +283,7 @@ class Fence(unittest.TestCase):
         (drafts / "2026-10-22 ABC weekly report.docx").write_bytes(b"PK")
         (drafts / "rep.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
                                                      "draft": "system/staging/drafts/2026-10-22 ABC weekly report.docx"}))
-        (drafts / "chain.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+        (drafts / "chain.json").write_text(json.dumps({"title": "P", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0],
                                                        "draft": "system/staging/drafts/chain.docx"}))
         # N12: a proposal made during the run that isn't for the run's files (Alan's own edit in Review)
         cls.alans = "projects/ABC Example/minutes/2026-10-18 Alans edit.docx"

@@ -484,6 +484,8 @@ class DeleteNoteNoCard(Server):
         self.assertEqual((self.folder() / "Lessons.md").read_text(), new)
         self.assertTrue((self.folder() / "Lessons-2.md").is_file())
 
+    @unittest.skipUnless("ARCHIVE99" in (Path(__file__).resolve().parents[2] / "system/scripts/reach.py").read_text(encoding="utf-8"),
+                         "needs the #252 guarded diff (dev/proposals/archive-99/guarded.diff): a move back out of the old _Archive")
     @needs_255("the direct Move back is in the live_server.py diff")
     def test_e_a_note_in_the_old_archive_folder_still_moves_back(self):
         """#252: new archives go into paths.ARCHIVE (99 Archive after it), but a note deleted before then is in the old _Archive

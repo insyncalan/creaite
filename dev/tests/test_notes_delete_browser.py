@@ -4,7 +4,7 @@ Run: python3 dev/tests/test_notes_delete_browser.py   (needs Google Chrome; skip
 
   - "Delete note…" is last in the note's … menu, in red; it opens the confirm box naming the note, Cancel focused;
   - Cancel (and Esc) closes it and nothing is asked for: no card, the note stays;
-  - #255: Delete note moves it into the archive folder (_Archive today, 99 Archive after #252) at once, with no card (Chrome's own call passes the server's page check): the note
+  - #255: Delete note moves it into the archive folder (99 Archive today, 99 Archive after #252) at once, with no card (Chrome's own call passes the server's page check): the note
     closes, the list drops it, a toast says "Moved … to the archive", and the toast's Undo brings it back into the list;
   - nothing scrolls sideways at 900 px with the box open;
   - #255: a note saved in another window after it was opened here is not deleted: a plain message, the note stays;
@@ -28,7 +28,7 @@ SHOTS = Path.home() / "dev.env/team-stark-shots/notes-124"
 WS = "Working session"
 
 
-# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
+# The archive folder's name, as paths.py has it (99 Archive today, 99 Archive after #252), read without importing paths here.
 ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
                     .read_text(encoding="utf-8"), re.M).group(1)
 

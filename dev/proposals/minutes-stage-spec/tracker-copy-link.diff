@@ -1,0 +1,22 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 9bfa37a3..b95b3dfb 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -1413,6 +1413,8 @@ def check_file_op(fop, blk):
+         src = op_source(fop, blk)
+         if not src or not paths.resolve(src).is_file():
+             raise Invalid(f"copy: source not found ({src})")
++        if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
++            raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
+         safe_path(fop.get("to"), "copy")
+     elif op == "remove":
+         safe_path(fop.get("path"), "remove")
+@@ -1598,6 +1600,8 @@ def stamp_draft(draft, text, on):
+ 
+ def _op_copy(apply_id, fop, blk, done):
+     src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
++    if os.path.islink(src) or not src.is_file():   # #269 round 2 (L-B): checked again here, so a swap after the check isn't filed
++        raise Invalid(f"copy: the source is a link or not a plain file ({op_source(fop, blk)}); only a plain file is filed")
+     if dst.exists():
+         if file_hash(dst) == file_hash(src):
+             return      # already filed (an earlier proposal made the same copy): nothing to copy or undo

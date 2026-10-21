@@ -47043,13 +47043,13 @@ ${s5}`;
         renderMeetings();
         continue;
       }
-      if (!chat) {
-        openChat();
-        chat = true;
-      }
       const when2 = `${fd(m5.day)} at ${m5.start}`;
       let now = m5;
       if (!m5.loaded) {
+        if (!chat) {
+          openChat();
+          chat = true;
+        }
         MRUN[m5.id] = "loading";
         renderMeetings();
         runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when2})`}`));
@@ -56306,7 +56306,7 @@ ${pre}**Current state title:** ${title}`);
     for (const [code, L3] of Object.entries(allNotes())) if ((L3 || []).some((n4) => n4.path === path)) return code;
     return null;
   }
-  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/_Archive\//.test(path));
+  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/(99 Archive|_Archive|zz Archive)\//i.test(path));
   var notesCodeOk = (code) => code === "_portfolio" || P4.some((p6) => p6.code === code);
   function renderNotes(code) {
     const el2 = $("#v-notes");
@@ -76661,6 +76661,7 @@ ${d5.text}`);
         "PrepPopup",
         "PrepShape",
         "ProjectSettings",
+        "QUEUE",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -77130,6 +77131,7 @@ ${d5.text}`);
         "previewInbox",
         "prio",
         "processLive",
+        "processMeetings",
         "profileTools",
         "projPeople",
         "projectState",

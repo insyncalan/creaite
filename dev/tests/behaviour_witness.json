@@ -54,6 +54,7 @@
  "menu Menu id:chHistMenu (src/ask.js)": "ask",
  "menu Menu id:hubApprove (src/components/report/hub/HubBar.jsx)": "weekly",
  "menu Menu id:hubExport (src/components/report/hub/HubBar.jsx)": "weekly",
+ "menu Menu id:msAttnMenu (src/today.js)": "today",
  "menu Menu id:newBtn id:newDecMenu (src/components/work/NewTile.jsx)": "work-decisions",
  "menu Menu id:pkMoreMenu (src/panel.js)": "work-panel",
  "menu Menu id:railMoreMenu (src/components/sidebar/RailMore.jsx)": "rail-expanded",
@@ -77,5 +78,6 @@
  "menu Opener label:History (shell.html)": "ask",
  "menu Opener label:Move (src/work.js)": "today",
  "menu Opener label:Options for the (src/work.js)": "work-views",
- "menu Opener label:Options: (src/today.js)": "today"
+ "menu Opener label:Options: (src/today.js)": "today",
+ "menu Opener label:Options: milestone (src/today.js)": "today"
 }

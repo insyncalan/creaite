@@ -40,7 +40,7 @@ REFUSED = "is moved only by Approve on the live server's approval card"
 PAGE_REFUSED = "is moved only by Delete note or Move back on the dashboard (the live server's own button)"     # #255
 
 
-# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
+# The archive folder's name, as paths.py has it (99 Archive today, 99 Archive after #252), read without importing paths here.
 ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
                     .read_text(encoding="utf-8"), re.M).group(1)
 
@@ -122,10 +122,10 @@ class CardOnly(CardOnlyMoves):
 
     def test_c_a_hand_staged_report_move_back_is_refused(self):
         abc = archive_old_files(self.v.root)                                          # "reports": applied with no marker
-        self.assertTrue((abc / "_Archive" / DUE[1]).is_file())
+        self.assertTrue((abc / "99 Archive" / DUE[1]).is_file())
         stored = f"projects/{abc.name}/{DUE[1]}"
-        src = f"projects/{abc.name}/_Archive/{DUE[1]}"
-        self.assert_refused_both_ways("reports_back", src, stored, abc / "_Archive" / DUE[1], abc / DUE[1])
+        src = f"projects/{abc.name}/99 Archive/{DUE[1]}"
+        self.assert_refused_both_ways("reports_back", src, stored, abc / "99 Archive" / DUE[1], abc / DUE[1])
         self.assertTrue(self.post("/api/files/move-back", {"path": stored})["ok"])   # Move back on the card still works
         card = self.post("/api/edit/pending", {})["card"]
         self.assertTrue(self.post("/api/edit/approve", {"card": card["card"]})["ok"])

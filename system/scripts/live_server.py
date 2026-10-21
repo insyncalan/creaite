@@ -492,7 +492,8 @@ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), r
               "Refer to a project by its full name, never its short code: the code belongs only inside a work item's ID "
               "(ABC-A-003) and in a command Alan can type. "
               "You may read every project document (the project folders under projects/, or the projects root when the "
-              "projects are outside the vault); reading is not extracting. Never read _Archive, _Templates or 99 System or an online-only "
+              "projects are outside the vault); reading is not extracting. Never read 99 Archive (or the old _Archive and zz Archive), "
+              "_Templates or 99 System or an online-only "
               "OneDrive file. Project documents are internal: nothing from them goes into a client report unless Alan says so. "
               "Change a file only when Alan asks for it; nothing is written unattended. "
               "An image Alan attached (a line \"The user attached an image: …\") is for discussion: read it and talk about it; "
@@ -539,7 +540,7 @@ TRANSCRIPT_CHAT = (
 
 
 def deny_tools():
-    """DENY_TOOLS plus, for the folders creaite never reads or writes (_Archive, _Templates), a deny on every way in (BL-93)."""
+    """DENY_TOOLS plus, for the folders creaite never reads or writes (99 Archive, _Archive, _Templates), a deny on every way in (BL-93)."""
     extra = [f"{t}({paths.tool_pattern(g)})" for g in paths.never_index_patterns() for t in ("Read", "Edit", "Write")]
     return DENY_TOOLS + extra
 
@@ -688,10 +689,10 @@ def new_project_file_refused(rel):
 
 
 def existing_project_folder(name):
-    """True when `name`, a folder directly under projects/, is an existing project's own folder: not hidden, not _Archive or
-    _portfolio (a leading underscore), not one the register never indexes, and already there."""
-    never = {str(n) for n in (paths.locations().get("never_index") or [])}
-    return not name.startswith((".", "_")) and name not in never and paths.resolve(f"projects/{name}").is_dir()
+    """True when `name`, a folder directly under projects/, is an existing project's own folder: not hidden, not _portfolio or
+    _Archive (a leading underscore), not 99 Archive, zz Archive or another folder creaite never indexes (#252: paths.is_skipped,
+    which also ignores case, as macOS does), and already there."""
+    return not name.startswith((".", "_")) and not paths.is_skipped(name) and paths.resolve(f"projects/{name}").is_dir()
 
 
 def allowed(op, rel):
@@ -776,7 +777,7 @@ def page_folders(code, base, documents=False):
     roots = [base / paths.folder_name(k) for k in kinds]
     if documents and code != "_portfolio":
         roots.append(base if paths.external() else base / "documents")
-    skip, out, seen = set(paths.skipped_names()), [], set()
+    out, seen = [], set()
 
     def walk(d, depth):
         """d and its subfolders, depth levels down, within the cap."""
@@ -789,7 +790,7 @@ def page_folders(code, base, documents=False):
         try:
             with os.scandir(d) as it:
                 subs = sorted(e.path for e in it if e.is_dir(follow_symlinks=False) and not e.name.startswith(".")
-                              and e.name not in skip)
+                              and not paths.is_skipped(e.name))
         except OSError:                                  # not there (yet): its stamp is a dash
             return
         for s in subs:
@@ -3024,24 +3025,32 @@ def chat_session(chat):
 
 
 def queue_start(q, prev=None):
-    """Start the first queued message as a run (QLOCK held); its summary, or None if Claude Code couldn't start (the queue holds)."""
-    item = q["items"].pop(0)
-    q["held"] = False
-    mine = prev is not None and prev.kind == "ask"
-    chat = q["chat"] or (prev.chat or prev.session if mine else None)
-    session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
-    images = [i for i in item.get("images") or [] if ask_image_files(i)]
-    try:
-        nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
-                  sweep=panel_sweep(item["text"], images))                                 # BL-309: a queued sweep too
-    except OSError:
-        q["items"].insert(0, item)
-        q["held"] = True
+    """Start the first queued message as a run (QLOCK held); its summary, or None if Claude Code couldn't start (the queue holds).
+    #264 round 2 (review L2): the busy check and the start are one step under START_LOCK, like every other start, so a queued
+    message never starts beside a run that began meanwhile (Process, a calendar refresh, a prep page): the queue holds instead,
+    and Run now starts it. `prev`, the run that is ending, doesn't count as busy."""
+    with START_LOCK:
+        if any(not r.done and r is not prev for r in list(RUNS.values())):
+            q["held"] = True
+            queue_save(q)
+            return None
+        item = q["items"].pop(0)
+        q["held"] = False
+        mine = prev is not None and prev.kind == "ask"
+        chat = q["chat"] or (prev.chat or prev.session if mine else None)
+        session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
+        images = [i for i in item.get("images") or [] if ask_image_files(i)]
+        try:
+            nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
+                      sweep=panel_sweep(item["text"], images))                             # BL-309: a queued sweep too
+        except OSError:
+            q["items"].insert(0, item)
+            q["held"] = True
+            queue_save(q)
+            return None
+        q["chat"] = chat
         queue_save(q)
-        return None
-    q["chat"] = chat
-    queue_save(q)
-    return nxt.summary()
+        return nxt.summary()
 
 
 def queue_after(run):
@@ -5017,7 +5026,7 @@ def edit_public(c):
 NO_STAGE = ("notes", "notes_back")
 
 
-# ===== BL-09: a change the server itself prepared (Health's rename of zz Archive folders) goes on the same card =====
+# ===== BL-09: a change the server itself prepared (an archive, a restore, a note's delete, a move back) goes on the same card =====
 def server_edit_card(title, data, note=None, done=None):
     """Put a spec this server made itself (never the model's) on a change card, as build_edit_card does for a CHANGE line; the
     card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending). #124: `note`
@@ -5288,7 +5297,7 @@ def move_back_route(handler, req):
     """POST /api/files/move-back {path}: the stored path of a report or minutes file Files shows as archived. archive.back_spec
     builds the move (never the page): only a file an archive moved, back to the place it came from, never onto a file that is
     there. It goes on the approval card (server_edit_card); tracker.py apply moves it on Approve, and undo puts it back in
-    _Archive. #255: a deleted note's Move back is not on the card any more (move_back_now_route)."""
+    its archive folder. #255: a deleted note's Move back is not on the card any more (move_back_now_route)."""
     import archive
     path = req.get("path")
     if not isinstance(path, str) or set(req) - {"path"}:
@@ -7726,7 +7735,7 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
 
 # ===== #255: Delete note and a note's Move back, from the page's own button: the click is the approval (Alan, 20-10-2026) =====
 # POST /api/notes/delete/now     {path, base}   after the confirm box in the Notes tab: the note moves into its own engagement's (or
-#                                               the portfolio's) archive folder at once (a name taken there gets -2, -3…). No card.
+#                                               the portfolio's) 99 Archive at once (a name taken there gets -2, -3…). No card.
 # POST /api/files/move-back/now  {path}         Files › Archived's Move back of a deleted note: back at once. No card. (A report's
 #                                               Move back, and archiving or restoring a project, keep their card.)
 # These replace #124's card (and its route, /api/notes/delete) for these two moves only. What still holds:

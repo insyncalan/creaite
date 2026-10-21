@@ -68,6 +68,7 @@ NEVER = (
     ("vault", "system/staging/*.json", "write", RECORD), ("vault", "system/staging/*.jsonl", "write", RECORD),
     ("vault", "system/staging/*.txt", "write", RECORD), ("vault", "dashboard.html", "write", RECORD),
     ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
+    ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
     ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
     ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
     ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),
@@ -215,7 +216,7 @@ def _never_verdict(p, operation, where):
         return why
     if operation in WRITES and any(x.lower() == ".git" for x in p.parts):
         return "it is inside a .git folder, whose hooks run commands"
-    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # _Archive, _Templates, 99 System (BL-93, BL-112)
+    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))     # 99 Archive and the old two, _Templates, 99 System
     skipped = {n.lower() for n in paths.skipped_names()}
     hit = next((x for x in (below or ()) if x.lower() in skipped), None)
     if hit:
@@ -262,29 +263,31 @@ def _whose_file(p):
     return []
 
 
-# ===== BL-09: the one exception for _Archive (agreed, Alan, 14-10-2026) =====
-# _Archive stays on ask creaite's never list for reading and writing (classify above is unchanged: never). The only thing that may
-# move a folder into or out of it is tracker.py apply running an approved archive, restore or rename of an old zz Archive folder:
+# ===== BL-09: the one exception for the archive folders (agreed, Alan, 14-10-2026; renamed 99 Archive, #252, 20-10-2026) =====
+# 99 Archive, and for one release the old _Archive and zz Archive, stay on ask creaite's never list for reading and writing
+# (classify above is unchanged: never). The only thing that may move a folder into or out of one is tracker.py apply running an
+# approved archive or restore. NEW moves go to 99 Archive only; a restore or a move back may come from any of the three names
+# (for one release, then the old two are dropped), and nothing renames an old folder (no migration, no Health offer: Alan does it):
 # its `move` file operation asks archive_move_problem, and nothing else calls it. A model can't use it (filechange.py and the hook
 # go through classify, which says never), and it covers only these whole-folder shapes, nothing inside a folder:
-#   archive  <projects root>/<project folder>      -> <projects root>/_Archive/<same or numbered name>
-#   restore  <projects root>/_Archive/<folder>     -> <projects root>/<same or numbered name>
-#   rename   <projects root>[/<engagement>]/zz Archive -> the same folder's _Archive (Health's Fix it, BL-09)
+#   archive  <projects root>/<project folder>      -> <projects root>/99 Archive/<same or numbered name>
+#   restore  <projects root>/<99 Archive, _Archive or zz Archive>/<folder> -> <projects root>/<same or numbered name>
 #   reports  <projects root>/<engagement>/<minutes, weekly, client or Steerco folder>/<file>
-#                                                  -> <projects root>/<engagement>/_Archive/<that folder>/<file> (BL-03; one file)
+#                                                  -> <projects root>/<engagement>/99 Archive/<that folder>/<file> (BL-03; one file)
 #            <projects root>/<portfolio folder>/<its minutes folder>/<file>
-#                                                  -> <projects root>/<portfolio folder>/_Archive/<minutes folder>/<file> (BL-03)
-#   reports_back  exactly the reverse of a "reports" move: <…>/_Archive/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
+#                                                  -> <projects root>/<portfolio folder>/99 Archive/<minutes folder>/<file> (BL-03)
+#   reports_back  exactly the reverse of a "reports" move: <…>/<any archive name>/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
 #                 the same folders, the same engagement or portfolio; tracker.check_move also requires that an archive moved it)
 #   notes  <projects root>/<engagement or portfolio folder>/<its notes folder>/<note>.md
-#                                                  -> <same folder>/_Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
+#                                                  -> <same folder>/99 Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
 #                                                     name is taken there (#124 Delete note, Alan 15-10-2026; one .md file, only from
 #                                                     the live server: propose.py stages it only from system/guard/; #255, Alan
 #                                                     20-10-2026: from the page's own button, no card)
 #   notes_back  exactly the reverse of a "notes" move (one file, back to the same notes folder; tracker.check_move also requires
 #               that a Delete note moved it there). With NOTES_BACK_RENAMES on, a note that has taken the old name is never
 #               overwritten: the note comes back as <name>-2.md (-3…, paths.free_path), the only difference allowed from its old name
-ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
+ARCHIVE_MOVES = ("archive", "restore", "reports", "reports_back", "notes", "notes_back")      # #252: no "rename" any more
+ARCHIVE99 = True      # #252: marks this reach.py as the one with the 99 Archive rules (dev/tests/test_archive_99.py looks for it)
 FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
 # #124 F3: the moves only the live server makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal): tracker._op_move
 # refuses one unless the server wrote its marker (card_move_marker), for exactly that move and that proposal file, under
@@ -303,13 +306,21 @@ def card_move_marker(kind, src, dst):
 
 
 def _top_folder(name):
-    """A project or engagement folder's own name: not hidden, not _-prefixed (_Archive, _Templates, _Portfolio), not skipped."""
+    """A project or engagement folder's own name: not hidden, not _-prefixed (_Templates, _Portfolio), not skipped
+    (99 Archive, _Archive, zz Archive, _Templates, 99 System)."""
     return not name.startswith((".", "_")) and name.lower() not in {x.lower() for x in paths.skipped_names()}
 
 
-def _in_archive(parts):
-    """parts are <_Archive>/<a project folder>."""
-    return len(parts) == 2 and parts[0].lower() == paths.ARCHIVE.lower() and _top_folder(parts[1])
+def _archive_part(name, old=False):
+    """#252: `name` is the archive folder's name: exactly 99 Archive (case as macOS has it), or, with `old` (a restore or a move
+    back, for one release), _Archive or zz Archive too. Whole names only: 99 Archivement and "99 Archive " are not the archive."""
+    names = (paths.ARCHIVE, *paths.OLD_ARCHIVES) if old else (paths.ARCHIVE,)
+    return name.lower() in {n.lower() for n in names}
+
+
+def _in_archive(parts, old=False):
+    """parts are <99 Archive>/<a project folder> (a restore, with `old`: or <_Archive>/ or <zz Archive>/)."""
+    return len(parts) == 2 and _archive_part(parts[0], old) and _top_folder(parts[1])
 
 
 def _project_folder(parts):
@@ -317,17 +328,12 @@ def _project_folder(parts):
     return len(parts) == 1 and _top_folder(parts[0])
 
 
-def _old_archive_rename(pa, pb):
-    """pa is a zz Archive folder (in the root or one engagement) and pb the _Archive beside it."""
-    same_place = len(pa) == len(pb) and len(pa) in (1, 2) and pa[:-1] == pb[:-1] and (len(pa) == 1 or _top_folder(pa[0]))
-    return same_place and pa[-1].lower() == paths.OLD_ARCHIVE.lower() and pb[-1] == paths.ARCHIVE
-
-
-def _report_archive(pa, pb):
+def _report_archive(pa, pb, old=False):
     """BL-03: pa is <engagement>/<a minutes, weekly, client or Steerco folder>/<file> and pb the same file in that engagement's own
-    _Archive, keeping its place below it (<engagement>/_Archive/<folder>/<file>). Nothing else: no deeper folder, no other folder."""
+    99 Archive, keeping its place below it (<engagement>/99 Archive/<folder>/<file>). Nothing else: no deeper folder, no other
+    folder. `old` (the reverse, a move back, #252): the archive folder may be _Archive or zz Archive too."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
-    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or not _archive_part(pb[1], old):
         return False
     if pb[2:] != pa[1:] or pa[-1].startswith((".", "~$")):
         return False
@@ -347,25 +353,27 @@ def _portfolio_folder(name):
 NOTES_BACK_RENAMES = True
 
 
-def _note_folders(pa, pb):
-    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own _Archive, keeping its place
-    below it (<…>/_Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement."""
+def _note_folders(pa, pb, old=False):
+    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own 99 Archive, keeping its place
+    below it (<…>/99 Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement. `old` (a move back,
+    #252): the archive folder may be _Archive or zz Archive too."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
-    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or not _archive_part(pb[1], old):
         return False
     return pb[2:-1] == pa[1:-1] and "/".join(pa[1:-1]) == paths.folder_name("notes").strip("/")
 
 
 def _note_archive(pa, pb):
-    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own _Archive, or with -2, -3… when
+    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own 99 Archive, or with -2, -3… when
     that name is taken there. Nothing else: no picture, no other file."""
     return _note_folders(pa, pb) and _note_name(pa[-1], pb[-1])
 
 
 def _note_back(pa, pb):
-    """#124: pa is a deleted note in <…>/_Archive/<notes folder>/ and pb its place back in that notes folder: the reverse of a
-    "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name gets (both names from one first name)."""
-    if not _note_folders(pb, pa):
+    """#124: pa is a deleted note in <…>/99 Archive (or, #252, _Archive or zz Archive)/<notes folder>/ and pb its place back in
+    that notes folder: the reverse of a "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name
+    gets (both names from one first name)."""
+    if not _note_folders(pb, pa, True):
         return False
     if not NOTES_BACK_RENAMES:
         return _note_name(pb[-1], pa[-1])
@@ -398,16 +406,16 @@ def _move_shape(kind, pa, pb):
     if kind == "reports":
         return _report_archive(pa, pb)
     if kind == "reports_back":
-        return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
+        return _report_archive(pb, pa, True)          # BL-331: the reverse of the approved shape, nothing wider (#252: any name)
     if kind == "notes":
-        return _note_archive(pa, pb)                  # #124: one note into its own folder's _Archive
+        return _note_archive(pa, pb)                  # #124: one note into its own folder's 99 Archive
     if kind == "notes_back":
         return _note_back(pa, pb)                     # #124: the reverse, or the same note under a free -2 name
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":
-        return _in_archive(pa) and _project_folder(pb)
-    return _old_archive_rename(pa, pb)
+        return _in_archive(pa, True) and _project_folder(pb)           # #252: from 99 Archive, or an old name for one release
+    return False
 
 
 def _not_the_shape(kind):
@@ -422,15 +430,15 @@ def _not_the_shape(kind):
         return f"that isn't a note (a .md file in a notes folder) moved into its own engagement's {paths.ARCHIVE}"
     if kind == "notes_back":
         return f"that isn't a note moved back from its own engagement's {paths.ARCHIVE} to the same notes folder"
-    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
+    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only; a restore may come from an older archive name)"
 
 
 def archive_move_problem(src, dst, kind):
-    """None when moving the folder `src` to `dst` (stored paths, never mapped into _Archive) is the `kind` of move above; else why
+    """None when moving the folder `src` to `dst` (stored paths, never mapped into an archive folder) is the `kind` of move above; else why
     not. Neither end may be a symlink; the source must be a folder that exists (a file, for BL-03's "reports" kind) and the
     destination must not exist."""
     if kind not in ARCHIVE_MOVES:
-        return f"a folder move is an archive, a restore or a rename of an old archive folder (got {kind!r})"
+        return f"a folder move is an archive or a restore (got {kind!r})"
     if any(".." in Path(str(x)).parts for x in (src, dst)):
         return "a path with .. in it"
     root = Path(os.path.realpath(paths.projects_root()))
@@ -622,6 +630,27 @@ def _write_json(path, data):
     os.replace(tmp, path)
 
 
+class _RunLock:
+    """#264 round 2 (review L1): one writer of system/guard/run.json at a time. Claude Code may run several hooks at once, and
+    each reads the record, changes it and writes it back, so without this one hook's claim or mark could be lost. An exclusive
+    lock on system/guard/.run.lock (POSIX flock; where there is none, as on Windows, the old behaviour). Raises OSError when the
+    lock file can't be made: the caller then fails closed."""
+
+    def __enter__(self):
+        GUARD.mkdir(parents=True, exist_ok=True)
+        self.fd = os.open(GUARD / ".run.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            import fcntl
+            fcntl.flock(self.fd, fcntl.LOCK_EX)
+        except ImportError:  # no flock (Windows, untested): as before
+            pass
+        return self
+
+    def __exit__(self, *exc):
+        os.close(self.fd)                                        # closing the file releases the lock
+        return False
+
+
 def guard_run():
     """The run in progress as the server wrote it, or None (no ask creaite run: a Terminal session)."""
     try:
@@ -644,9 +673,11 @@ def start_run(run, mode, outside, session=None, files=None):
     """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
     Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
-    _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside, "marked": marked,
-                           "session": session, **({"files": [str(f) for f in files]} if files is not None else {}),
-                           **(_process_start() if mode == "process" else {})})
+    with _RunLock():                                             # #264 round 2 (L1): never between a hook's read and its write
+        _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside,
+                               "marked": marked, "session": session,
+                               **({"files": [str(f) for f in files]} if files is not None else {}),
+                               **(_process_start() if mode == "process" else {})})
 
 
 def _process_start():
@@ -657,22 +688,32 @@ def _process_start():
 
 def mark(run, reason):
     """Mark the run as having read outside content. Never cleared by the model; only end_run removes the file."""
-    data = guard_run()
-    if not data or data.get("run") != run:
-        return False
-    if reason not in data["marked"]:
-        data["marked"] = (data.get("marked") or []) + [reason]
-        _write_json(RUN_FILE, data)
-    return True
+    with _RunLock():                                             # #264 round 2 (L1): a mark is never lost to another hook's write
+        data = guard_run()
+        if not data or data.get("run") != run:
+            return False
+        if reason not in data["marked"]:
+            data["marked"] = (data.get("marked") or []) + [reason]
+            _write_json(RUN_FILE, data)
+        return True
 
 
 def end_run(run, session=None):
-    """The server, as the run ends: remember a marked chat, then remove the run."""
-    data = guard_run()
-    if data and data.get("run") == run:
-        if data.get("marked") and (session or data.get("session")):
-            _write_json(SESSIONS_FILE, sorted(marked_sessions() | {session or data.get("session")}))
-        RUN_FILE.unlink(missing_ok=True)
+    """The server, as the run ends: remember a marked chat, then remove the run (under the record's lock, so a hook still
+    finishing can't write the record back after it is gone; without the lock file, as before)."""
+    try:
+        lock = _RunLock().__enter__()
+    except OSError:  # the lock file can't be made: remove the run anyway
+        lock = None
+    try:
+        data = guard_run()
+        if data and data.get("run") == run:
+            if data.get("marked") and (session or data.get("session")):
+                _write_json(SESSIONS_FILE, sorted(marked_sessions() | {session or data.get("session")}))
+            RUN_FILE.unlink(missing_ok=True)
+    finally:
+        if lock is not None:
+            lock.__exit__(None, None, None)
 
 
 def is_marked(data=None):
@@ -923,7 +964,7 @@ SCRIPT_COMMANDS = {
                   "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
     "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
                    "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
-                   "register-columns": RECORD, "old-archives": READ, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
+                   "register-columns": RECORD, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
                    "people": READ, "people list": READ, "people resolve": READ, "people add": RECORD, "people edit": RECORD,
                    "people rename": RECORD, "people merge": RECORD, "people map": RECORD, "people migrate": RECORD,
                    "workstreams": READ, "workstreams list": READ, "workstreams suggest": READ, "workstreams add": RECORD,
@@ -1488,8 +1529,15 @@ def decide(tool, inp, mode, run, held=False):
     other call by hook_decision, unchanged."""
     if mode in HELD_MODES:
         return prep_decision(tool, inp)
-    why = confidential_reason(tool, inp) if held else None
-    return (False, why) if why else hook_decision(tool, inp, mode, run)
+    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set())   # #264 round 2 (L4, M2)
+    try:
+        why = confidential_reason(tool, inp) if held else None
+        ok, why = (False, why) if why else hook_decision(tool, inp, mode, run)
+        if ok and mode == "process" and not _commit_claims():
+            ok, why = False, "the guard couldn't record this run's own files, so it can't let it write one (fail closed)"
+        return ok, why
+    finally:
+        _HOOK.update(run=None, claims=set(), seen={}, writes=set())
 # ===== end #60 option (a) =====
 
 
@@ -1574,11 +1622,11 @@ FILLERS = "\u115f\u1160\u17b4\u17b5\u180e\u2800\u3164\uffa0"      # blank-lookin
 
 
 def _plain(text):
-    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), combining marks (accents)
-    and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
+    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), unassigned code points,
+    combining marks (accents) and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
     import unicodedata
     spread = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
-    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Mn", "Me") and c not in FILLERS)
+    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Cn", "Mn", "Me") and c not in FILLERS)
     return "".join(kept).casefold()
 
 
@@ -1712,6 +1760,10 @@ def hook_decision(tool, inp, mode, run):
         kind, why = classify(p, "read")
         if kind == "never":
             return False, f"{p}: {why}"
+    if mode == "process":                                   # #264 round 2 (L3): the vault and the projects folder only
+        why = process_reach_problem(tool, inp)
+        if why:
+            return False, why
     if tool in ("Grep", "Glob", "LS"):                      # a search would go inside a never folder below it
         inside = never_inside((inp or {}).get("path") or str(paths.ROOT))
         if inside:
@@ -1900,7 +1952,37 @@ def bash_refusal(command, mode):
     (BL-267: the record changes only on a request Alan confirmed). BL-268: a script named by this vault's full path is read as
     the relative form first, so every check applies to it unchanged."""
     command = vault_relative(command)
-    return bash_problem(command) or record_gate(command, mode)
+    return bash_problem(command) or record_gate(command, mode) or stage_spec_gate(command)
+
+
+# ===== #269: minutes.py stage's meeting spec, at the hook too =====
+# `minutes.py stage <spec>` checks its spec itself (minutes_spec.validate_spec: a .json directly in system/staging/drafts/, a
+# transcript from Intake or a project's minutes or transcripts folder, a Word draft only from drafts...), in every mode. The hook
+# makes the same check before the command runs, in every mode that lets the command through (a plain chat, a confirmed run, the
+# catch-up sweep, Intake's Process): defence in depth, so a spec naming a file from anywhere never reaches the script. Fails closed.
+def stage_spec_gate(command):
+    """Why `minutes.py stage` is refused for its spec, or None (any other command: None)."""
+    import re
+    if not re.match(r"(?:python3? system/scripts/|system/scripts/run )minutes\.py(?:\s|$)", (command or "").strip()):
+        return None
+    words = bash_args(command)
+    if command_kind("minutes.py", words)[1] != "minutes.py stage":
+        return None
+    if len(words) != 2 or words[0] != "stage":
+        return "minutes.py stage: give one meeting spec: `minutes.py stage <a .json in system/staging/drafts/>`"
+    spec = Path(words[1]) if Path(words[1]).is_absolute() else paths.ROOT / words[1]
+    if not os.path.lexists(spec):
+        return None                          # nothing to read: the command refuses a missing spec itself (and stages nothing)
+    try:
+        import minutes_spec
+        why = minutes_spec.validate_spec(words[1], paths.ROOT)
+    except Exception as e:  # noqa: BLE001  fail closed: a check that can't run refuses
+        why = f"the guard couldn't check the meeting spec ({type(e).__name__})"
+    if why:
+        _debug("warn", "minutes stage refused: the meeting spec (#269)")
+        return f"minutes.py stage: {why}"
+    return None
+# ===== end #269 =====
 
 
 # ===== BL-295 (sprint-close-day-server): the catch-up sweep from Close the day =====
@@ -1942,13 +2024,42 @@ def sweep_maps_draft(command):
 PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
 
 
+# #264 round 2 (Team Cap's review of R1): the hook's own state for the one call it is deciding (decide() sets and clears it).
+# "run" is the hook's --run, so the record is read only when it is that run's (L4); "claims", "seen" and "writes" are what the
+# call would add to the record, written only once every check has passed (M2: a refused call claims nothing).
+_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set()}
+
+
+def _process_record():
+    """system/guard/run.json when it is this hook's own Process run (mode "process" and the run ID the hook was started with,
+    review L4), else None: a record for another run, or none, names no files and makes nothing the run's (fail closed)."""
+    data = guard_run()
+    if not data or data.get("mode") != "process" or not _HOOK["run"] or data.get("run") != _HOOK["run"]:
+        return None
+    return data
+
+
 def process_files():
     """The Intake paths this Process run may stage, from system/guard/run.json (only the server writes it); none if the run in
-    progress isn't a Process run (fail closed)."""
-    data = guard_run()
-    if not data or data.get("mode") != "process" or not isinstance(data.get("files"), list):
+    progress isn't this hook's Process run (fail closed)."""
+    data = _process_record()
+    if not data or not isinstance(data.get("files"), list):
         return set()
     return {f for f in data["files"] if isinstance(f, str)}
+
+
+def process_reach_problem(tool, inp):
+    """Why a Process run may not read where this call reads, or None (#264 round 2, review L3): Read, Grep, Glob, LS and a
+    script's path arguments stay in the vault and the projects folder, never the home folder's other files. Fails closed."""
+    try:
+        found = ask_arg_paths(str((inp or {}).get("command") or ""), expand=False) if tool == "Bash" else tool_paths(tool, inp)
+        for p in found:
+            if not {"vault", "projects"} & set(in_reach(real(p))):
+                _debug("warn", f"process run refused a path outside the vault: {tool}")
+                return f"{p}: an Intake Process run reads only the vault and the projects folder"
+    except (OSError, ValueError, RuntimeError, TypeError) as e:
+        return f"the guard couldn't check where this call reads ({type(e).__name__})"
+    return None
 
 
 def _in_drafts(arg, suffix):
@@ -1962,41 +2073,88 @@ def _in_drafts(arg, suffix):
 
 def _made():
     """The files this Process run made (run.json "made", as the hook let it create them), or None when the run in progress isn't
-    a Process run (fail closed: nothing is then the run's own)."""
-    data = guard_run()
-    if not data or data.get("mode") != "process":
+    this hook's Process run (fail closed: nothing is then the run's own)."""
+    data = _process_record()
+    if data is None:
         return None
     made = data.get("made")
     return {m for m in made if isinstance(m, str)} if isinstance(made, list) else set()
 
 
+def _print(rp):
+    """What a file is now, to tell it from another one later (#264 round 2, M2): [inode, size, mtime in ns], or None when there
+    is no such file (a link is never followed)."""
+    try:
+        st = os.lstat(rp)
+    except FileNotFoundError:
+        return None
+    return [st.st_ino, st.st_size, st.st_mtime_ns]
+
+
 def _runs_own(rp):
     """True only for a file the hook let this Process run create (#264 R1: by its record, never by its time, so a file another
-    flow writes into drafts during the run is never the run's)."""
+    flow writes into drafts during the run is never the run's). Round 2 (M2): the record also keeps what the file was when the
+    hook first saw it after the run's own last write ("prints"); a file that has changed since (another flow wrote over it, or
+    put another file in its place) isn't the run's any more."""
     made = _made()
-    return made is not None and str(rp) in made
+    if made is None or str(rp) not in made:
+        return False
+    prints = (_process_record() or {}).get("prints")
+    was = prints.get(str(rp)) if isinstance(prints, dict) else None
+    now = _print(rp)
+    if was is None:                                     # not seen since the run's own last write: what it is now is the run's
+        if now is not None:
+            _HOOK["seen"][str(rp)] = now
+        return True
+    return now == was
 
 
 def _may_make(rp):
-    """True when this Process run may write `rp`: a file that doesn't exist yet (claimed for the run in run.json "made", so a
-    second write to it is its own too) or one it made. False whenever that can't be told (fail closed)."""
+    """True when this Process run may write `rp`: a file that doesn't exist yet or one it made. Round 2 (M2): nothing is written
+    here; the claim (and the write, after which the file is seen afresh) waits in _HOOK until every check of the call has passed
+    (_commit_claims), so a refused call claims nothing. False whenever that can't be told (fail closed)."""
     try:
         if _runs_own(rp):
+            _HOOK["writes"].add(str(rp))
             return True
-        data = guard_run()
         if _made() is None or rp.exists() or rp.is_symlink():
             return False
-        data["made"] = sorted(_made() | {str(rp)})
-        _write_json(RUN_FILE, data)
+        _HOOK["claims"].add(str(rp))
+        _HOOK["writes"].add(str(rp))
         return True
     except (OSError, ValueError, TypeError):     # can't tell: another flow's, so refused (fail closed)
+        return False
+
+
+def _commit_claims():
+    """Once every check of an allowed call has passed: add its claims to the run's record and keep what it saw ("prints"); a file
+    the call writes is seen afresh at its next use. True when there was nothing to record or it was recorded; False when the
+    record can't be written, or isn't this run's any more (the call is then refused: fail closed). Under the record's lock (L1)."""
+    if not (_HOOK["claims"] or _HOOK["seen"] or _HOOK["writes"]):
+        return True
+    try:
+        with _RunLock():
+            data = _process_record()
+            if data is None or not isinstance(data.get("made"), list):
+                return False
+            data["made"] = sorted(set(_made() or ()) | _HOOK["claims"])
+            prints = data.get("prints") if isinstance(data.get("prints"), dict) else {}
+            for f, now in _HOOK["seen"].items():
+                if prints.get(f) is None:
+                    prints[f] = now
+            for f in _HOOK["writes"]:
+                prints[f] = None
+            data["prints"] = prints
+            _write_json(RUN_FILE, data)
+        return True
+    except (OSError, ValueError, TypeError):
         return False
 
 
 def _runs_proposals():
     """The proposals this Process run staged: in system/staging/, not there when it started (run.json "before"), for one of its
     files."""
-    files, out, data = process_files(), [], guard_run() or {}
+    files, out, data = process_files(), [], _process_record() or {}
     before = data.get("before")
     if not isinstance(before, list):
         return []                                  # a record without "before" can't tell the run's proposals: none
@@ -2095,8 +2253,10 @@ def process_step_problem(name, words):
     if name == "propose.py people map":
         if len(words) == 3 and _in_drafts(words[2], ".json") is not None and not _runs_own(_in_drafts(words[2], ".json")):
             return "Process maps names only in a spec this run wrote, never another flow's draft"
-        return None if sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])) else \
-            "Process maps names only in its own spec in system/staging/drafts/"
+        if not sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])):
+            return "Process maps names only in its own spec in system/staging/drafts/"
+        _HOOK["writes"].add(str(_in_drafts(words[2], ".json")))     # round 2 (M2): it rewrites the spec, seen afresh next time
+        return None
     if name == "docx_tools.py fill":
         return _process_fill_problem(words)
     if name == "search.py enrich" and [w for w in words if not w.startswith("-")][:2] == ["enrich", "set"]:
@@ -2111,9 +2271,8 @@ def process_write_problem(rp):
     that this run wrote (never another flow's draft: minutes waiting in Review, a note, a sweep's input)."""
     if _in_drafts(str(rp), ".json") is None:
         return "a Process run writes only its own .json input files directly in system/staging/drafts/"
-    data = guard_run() or {}
     old = not _may_make(rp)
-    if old or data.get("mode") != "process":
+    if old or _process_record() is None:
         return "a Process run doesn't change a draft it didn't write: write a new file in system/staging/drafts/"
     return None
 
