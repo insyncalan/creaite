@@ -77,7 +77,7 @@ class TheReviewOf2a77459(Base):
                 "    for f, run in RUNS:\n"
                 "        out[name + ' ' + f] = [took(lambda: run(small, ds)), took(lambda: run(large, dl))]\n"
                 "print(json.dumps(out))")
-        self.assert_linear(self.py(code))
+        self.assert_linear(self.py(code), again=lambda: self.py(code))
 
     def test_the_scheme_in_capitals_is_found_and_dropped(self):
         link = f"[p](CREAITE:item/{INTERNAL_ID})"
@@ -198,7 +198,7 @@ class TheReviewOf199ac40(Base):
                 "        out[name + ' ' + f] = [took(lambda: run(small, ds)), took(lambda: run(large, dl))]\n"
                 "out['_plain 300 KB'] = [took(lambda: creaite_doc._plain('![' * 37500)), took(lambda: creaite_doc._plain('![' * 150000))]\n"
                 "print(json.dumps(out))")
-        self.assert_linear(self.py(code))
+        self.assert_linear(self.py(code), again=lambda: self.py(code))
         got = self.py("import docx_tools\nprint(json.dumps([docx_tools.plain(t) for t in ('**Bold** and _italic_ and *it* and ~~gone~~',"
                       " 'snake_case_word stays', '2 * 3 * 4')]))")
         self.assertEqual(got, ["Bold and italic and it and gone", "snake_case_word stays", "2 * 3 * 4"])     # unchanged
