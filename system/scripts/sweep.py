@@ -68,7 +68,7 @@ import os
 import re
 import sys
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -753,6 +753,18 @@ def saved_meetings_from(day):
 EMPTY_SPEC = "The reply held no meetings; kept the saved calendar."
 
 
+def names_an_empty_window(spec, today_day):
+    """v2.6 review: True when the reply names every day from today to the window's last day, each as an empty list: a diary
+    that has genuinely emptied (its meetings cancelled), which may replace the saved calendar. A reply that leaves out a day,
+    or holds events on it that came to nothing (unreadable times, ignored), is not one (#265 review L4 still holds)."""
+    raw = spec.get("days") if isinstance(spec, dict) else None
+    if not isinstance(raw, dict):
+        return False
+    first, last = date.fromisoformat(today_day), calendar_window()[1]
+    want = [(first + timedelta(days=n)).isoformat() for n in range((last - first).days + 1)]
+    return bool(want) and all(raw.get(d) == [] for d in want)
+
+
 def calendar_row(ev, start, end, all_day):
     """One saved meeting (BL-98, BL-97, #265 review L5, M1, M2): a private one is "Busy" (ID and Teams kept, nothing else); a
     confidential one keeps only its title and times (and ID): no place, organiser, Teams flag, recurrence, body or
@@ -861,7 +873,8 @@ def calendar(spec_file):
     today_day = now().date().isoformat()
     fetch_from = calendar_fetch_from().isoformat()       # before the save: the save moves the "fetched" stamp
     days, skipped = calendar_days(spec, bad, ignored)
-    if not sum(len(v) for d, v in days.items() if d >= today_day) and saved_meetings_from(today_day):
+    if (not sum(len(v) for d, v in days.items() if d >= today_day) and saved_meetings_from(today_day)
+            and not names_an_empty_window(spec, today_day)):
         print(EMPTY_SPEC)
         debuglog.warn("sweep", "calendar: a reply with no meeting to keep from today was refused; the saved calendar still holds "
                       f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")

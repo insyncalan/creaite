@@ -279,6 +279,15 @@ def _text_field(v, most, spaces=False):
     return spaces or not re.search(r"\s", v)
 
 
+STAMP = re.compile(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)?|\d{2}:\d{2}")
+
+
+def _stamp(v):
+    """True when v is None or a date or time as the sweep writes it (v2.6 review): ISO from the transcript URL or the event
+    ("2026-10-15T08:00:00Z", "…T08:00:00.0000000"), "YYYY-MM-DD HH:MM" with a space, or "HH:MM"; never other text."""
+    return v is None or (_text_field(v, STAMP_MAX, spaces=True) and bool(STAMP.fullmatch(v)))
+
+
 def _shape_problem(f):
     """Why a fact's shape is wrong (not an object, another field, no ID), or None."""
     if not isinstance(f, dict):
@@ -310,7 +319,7 @@ def _value_problem(f):
         return "count isn't a whole number"
     if f.get("error") not in FACT_ERRORS:
         return "error isn't one of permission, notfound or other"
-    if not (_text_field(f.get("start"), STAMP_MAX) and _text_field(f.get("end"), STAMP_MAX)):
+    if not (_stamp(f.get("start")) and _stamp(f.get("end"))):
         return "start or end isn't a short time"
     return None
 
@@ -318,7 +327,7 @@ def _value_problem(f):
 def fact_problem(f):
     """Why one fact can't be recorded, or None (#265 review L5): a JSON object of FACT_KEYS only (never a body, a passcode, a
     PIN or any text), an ID, `online` true or false, a uri and a thread as short strings with no spaces and no key in them,
-    `count` a whole number or null, `error` one of FACT_ERRORS, `start` and `end` short strings or null."""
+    `count` a whole number or null, `error` one of FACT_ERRORS, `start` and `end` dates or times (_stamp) or null."""
     return _shape_problem(f) or _link_problem(f) or _value_problem(f)
 
 

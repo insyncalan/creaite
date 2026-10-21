@@ -224,12 +224,18 @@ def resolve(stored, archived=True) -> Path:
     """The inverse of rel: a stored path as a real path. Not checked for safety; tracker.safe_path does that. An archived project's
     path is mapped into 99 Archive (BL-09) unless `archived` is False (the apply's own folder moves). #252: a stored path that
     names an archive folder (an apply's record keeps the name it had) follows a folder renamed by hand: see follow_stored."""
-    p = _resolve_raw(stored, archived)
-    if os.path.lexists(p):
-        return p
     s = str(stored).replace("\\", "/")
+    p = _resolve_raw(s, archived)
+    if not _names_archive(s) or os.path.lexists(p):      # v2.6 review: no look at the disk for an ordinary path (the hot path)
+        return p
     f = follow_stored(s)
     return _resolve_raw(f, archived) if f != s else p
+
+
+def _names_archive(s) -> bool:
+    """Whether a stored path (forward slashes) is one follow_stored could change: under projects/, with an archive folder part."""
+    parts = s.split("/")
+    return parts[0] == LOGICAL and any(i and is_archive_name(x) for i, x in enumerate(parts))
 
 
 def _resolve_raw(stored, archived=True) -> Path:

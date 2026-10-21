@@ -96,6 +96,18 @@ class Resolve(OneDriveCase):
                 (self.root / name / "Digital Enablement").rename(self.eng("DEF"))
                 (self.root / name).rmdir()
 
+    def test_resolve_checks_the_disk_again_only_for_a_path_naming_an_archive(self):
+        """v2.6 review: resolve's own look at the disk (does anything exist at the path, for a hand-renamed archive folder) is
+        made only for a stored path with an archive folder in it, never for an ordinary one (the hot path)."""
+        o = self.py("import os, paths\nn = [0]\nreal = os.path.lexists\n"
+                    "def count(p):\n    n[0] += 1\n    return real(p)\n"
+                    "os.path.lexists = count\n"
+                    f"paths.resolve('projects/_portfolio/PORTFOLIO.md', archived=False)\n"
+                    f"paths.resolve({STORED_MIN!r}, archived=False)\na = n[0]\n"
+                    "paths.resolve('projects/Example Programme/_Archive/08 Notes/x.md', archived=False)\n"
+                    "print(json.dumps([a, n[0] > a]))")
+        self.assertEqual(o, [0, True])
+
     def test_an_engagements_own_archive_resolves_a_moved_report_under_each_name(self):
         stored = "projects/Example Programme/04 Reporting/Weekly/2025-01-10 Weekly.docx"
         for name in ALL:

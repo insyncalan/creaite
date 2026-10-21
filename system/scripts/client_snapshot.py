@@ -254,7 +254,8 @@ def logo_table(code, layout):
 def shaped(doc):
     """The document a snapshot holds: clean (allow-listed, header derived, hidden emptied) with meta.health_diff and every key the
     filed file never holds gone (report_doc.filed_client_data)."""
-    d = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(doc)))
+    with creaite_doc.facts_once():                           # v2.6 review: the facts read once for both derives
+        d = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(doc)))
     d["meta"] = {k: v for k, v in (d.get("meta") or {}).items() if k != "health_diff"} if isinstance(d.get("meta"), dict) else {}
     return report_doc.filed_client_data(d)
 
@@ -277,9 +278,10 @@ def build(doc, *, source=None, state="draft", preview=False):
     creaite_doc.check(doc)
     if doc.get("kind") != "client":
         raise creaite_doc.DocError("Only a client report has a snapshot.")
-    doc = creaite_doc.force_client_audience(copy.deepcopy(doc))
-    left, found = check(doc)
-    snap_doc = shaped(doc)
+    with creaite_doc.facts_once():                           # v2.6 review: the facts read once for the whole snapshot
+        doc = creaite_doc.force_client_audience(copy.deepcopy(doc))
+        left, found = check(doc)
+        snap_doc = shaped(doc)
     found += [f for f in client_leak.findings(snap_doc) if f not in found]
     pictures, gap_c = picture_table(snap_doc)
     found += gap_c
