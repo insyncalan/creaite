@@ -116,6 +116,24 @@ class Base(unittest.TestCase):
 
 
 class Record(Base):
+    def test_the_actions_section_reads_actions_in_a_new_record_and_in_every_export(self):
+        """#282: wording only. A new record says Actions; an older record that stored "Action Items" exports as Actions;
+        the item's source line keeps its stored wording."""
+        self.stage()
+        self.assertEqual(self.section(self.doc(), "actions")["heading"], "Actions")
+        out = self.js(
+            "import creaite_doc, minutes_record, paths\n"
+            f"rel = {DRAFT!r}\n"
+            "d = creaite_doc.read(rel)\n"
+            "for s in d['sections']:\n"
+            "    if s['id'] == 'actions': s['heading'] = s['default_heading'] = 'Action Items'\n"
+            "creaite_doc.write(rel, d) if hasattr(creaite_doc, 'write') else open(str(creaite_doc.real(rel)), 'w').write(creaite_doc.dumps(d))\n"
+            "r = minutes_record.export(rel, 'html', file_beside=False)\n"
+            "html = paths.resolve(r['path']).read_text(encoding='utf-8')\n"
+            "print(json.dumps({'a': '<h2>Actions</h2>' in html, 'b': 'Action Items' in html, 'src': minutes_record.actions_wording(d)['sections'][0]['id']}))")
+        self.assertTrue(out["a"])
+        self.assertFalse(out["b"])
+
     def test_stage_drafts_the_record_with_the_style_sections_and_files_it_as_html(self):
         out = self.stage().stdout
         self.assertIn(f"Draft minutes: {DRAFT}", out)
