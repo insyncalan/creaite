@@ -4949,6 +4949,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     api: () => api,
     appTint: () => appTint,
     apply: () => apply,
+    applyBlockers: () => applyBlockers,
     applyFilters: () => applyFilters,
     applyLink: () => applyLink,
     applyMotion: () => applyMotion,
@@ -4993,6 +4994,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bl175Clamp: () => bl175Clamp,
     bl185Row: () => bl185Row,
     blankCells: () => blankCells,
+    blockerWords: () => blockerWords,
     boardAsk: () => boardAsk,
     boardCols: () => boardCols,
     boardDragEnd: () => boardDragEnd,
@@ -6144,6 +6146,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     onceFor: () => onceFor,
     oneLine: () => oneLine,
     open: () => open,
+    openBlockersInReview: () => openBlockersInReview,
     openCal: () => openCal,
     openCapture: () => openCapture,
     openChat: () => openChat,
@@ -6465,6 +6468,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     promQuiet: () => promQuiet,
     promWaiting: () => promWaiting,
     promWho: () => promWho,
+    proposalLabel: () => proposalLabel,
     psCat: () => psCat,
     psChanged: () => psChanged,
     psCode: () => psCode,
@@ -75444,6 +75448,42 @@ ${d5.text}`);
     const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
     return f5 ? `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.` : t47;
   };
+  function applyBlockers(msg, own) {
+    const t47 = String(msg || "");
+    if (!/Apply stopped/.test(t47)) return [];
+    const by2 = /* @__PURE__ */ new Map();
+    for (const m5 of t47.matchAll(/(proposed-[^\s\/\\:]+\.json)((?: item \d+| [a-z_]+)?: [^\n]*)/g)) {
+      if (m5[1] === own) continue;
+      if (!by2.has(m5[1])) by2.set(m5[1], []);
+      by2.get(m5[1]).push((m5[1] + m5[2]).trim());
+    }
+    return [...by2].map(([file, why]) => ({ file, why }));
+  }
+  async function proposalLabel(file) {
+    let data = null;
+    try {
+      data = JSON.parse(await shared.VW.read("system/staging/" + file));
+    } catch (e4) {
+      data = null;
+    }
+    const b5 = data && (data.meeting || data.report), title = b5 && b5.title ? String(b5.title) : "", made = b5 && b5.date || data && data.created || (file.match(/\d{4}-\d{2}-\d{2}/) || [""])[0];
+    const when2 = fd(String(made).slice(0, 10));
+    return title ? `${title}${when2 ? " (" + when2 + ")" : ""}` : `a proposal staged ${when2 || "earlier"}`;
+  }
+  async function blockerWords(list) {
+    const parts = [];
+    for (const b5 of list) parts.push(`${await proposalLabel(b5.file)}: ${b5.why.join("; ")}`);
+    return `Not saved, and not because of your edit: ${list.length > 1 ? `${list.length} older staged proposals are` : "an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length > 1 ? "those items" : "that item"} in Review, then save again.`;
+  }
+  function openBlockersInReview(files) {
+    if (shared.VIEW !== "review") go2("review");
+    const L3 = REV.filter((x5) => files.includes(x5.file) && !x5.done);
+    RHL.clear();
+    L3.forEach((x5) => RHL.add(x5.n));
+    rvSyncChk();
+    renderReview();
+    if (L3.length) openProposal(L3[0].n);
+  }
   function rvHold() {
     const keys = [...RHL].map((n4) => REV.find((x5) => x5.n === n4)).filter(Boolean).map(rvKey), t47 = $$("#reviewBody tr[data-n]")[shared.RSEL], cr2 = t47 && REV.find((x5) => x5.n === +t47.dataset.n);
     return { keys, ck: cr2 && rvKey(cr2) };
@@ -75734,10 +75774,14 @@ ${d5.text}`);
       return false;
     }
   }
-  async function opFail(op2, msg) {
+  async function opFail(op2, msg, act) {
     op2.state = "failed";
     opRevert(op2);
     if (opTargeted(op2) && viaServer()) await refreshRecords(opIds(op2));
+    if (act) {
+      snack(msg, act.run, act.label);
+      return false;
+    }
     snack(msg, () => {
       save(op2.what, op2.items, op2.extra, op2.doIt, op2.undoIt, op2.by, { ...op2.opt, retry: true });
     }, "Retry");
@@ -75763,8 +75807,14 @@ ${d5.text}`);
         return false;
       }
       op2.state = "applying";
-      const res = await api("/api/apply", { hold_peek: true });
+      const res = await api("/api/apply", { hold_peek: true, only: op2.name });
       if (!res.ok) {
+        const bl2 = applyBlockers(res.message, op2.name);
+        if (bl2.length) {
+          const words = await blockerWords(bl2);
+          await opDropFile(op2.name);
+          return await opFail(op2, words, { label: "Open in Review", run: () => openBlockersInReview(bl2.map((b5) => b5.file)) });
+        }
         await opDropFile(op2.name);
         return await opFail(op2, "Not saved: " + oneLine(applyWords(res.message)));
       }
@@ -76743,6 +76793,7 @@ ${d5.text}`);
         "anim",
         "api",
         "apply",
+        "applyBlockers",
         "applyFilters",
         "applyMotion",
         "applyNow",
@@ -76762,6 +76813,7 @@ ${d5.text}`);
         "autoGrow",
         "batchMove",
         "bkDate",
+        "blockerWords",
         "boardAsk",
         "boardKeyOf",
         "boardMove",
@@ -77045,6 +77097,7 @@ ${d5.text}`);
         "nowIso",
         "oneLine",
         "open",
+        "openBlockersInReview",
         "openCal",
         "openCapture",
         "openChat",
@@ -77136,6 +77189,7 @@ ${d5.text}`);
         "profileTools",
         "projPeople",
         "projectState",
+        "proposalLabel",
         "psCat",
         "psCode",
         "publish",
