@@ -121,11 +121,12 @@ class Scriptable1(HandcheckCase):
         """14. Intake → "Calendar import", "Upload files" and "Quick capture" in sentence case, with no icons beside them.
         Help and Settings › Advanced use the same names."""
         # 2.6.0 (#232 C2): the one Intake page has no Calendar import, Upload files or Quick capture sections any more (its
-        # meetings and files are rows; Upload files is its drop and button; Quick capture became the note drawer, ⌘⇧N). What
-        # the check guards stays: the page's own section headings in sentence case with no icons beside them, and the three
-        # names, as Help and Settings use them, never in their old forms.
+        # meetings and files are rows; Upload files is its Add files button and drop; Quick capture became the note drawer,
+        # ⌘⇧N). What the check guards stays: the page's own section headings in sentence case with no icons beside them, and
+        # the names as Help (its whole text, help.md: the Help screen opens on Start here) and Settings use them, never in
+        # their old forms.
         b = self.b
-        names = ["Calendar import", "Upload files", "Quick capture"]
+        names = ["Calendar import", "Add files", "Quick capture"]
         self.screen("intake-review")
         heads = b.eval("[...document.querySelectorAll('#v-intake-review h2')].filter(e=>e.offsetParent).map(e=>({t:e.innerText.trim(), icons:e.querySelectorAll('svg,img,.i').length, tt:getComputedStyle(e).textTransform}))")
         self.assertTrue(heads, "Intake has section headings")
@@ -133,8 +134,9 @@ class Scriptable1(HandcheckCase):
             self.assertTrue(h["t"][:1].isupper() and h["t"][1:] != h["t"][1:].upper(), f"sentence case: {h['t']}")
         self.assertEqual({h["icons"] for h in heads}, {0}, "no icons beside them")
         self.assertEqual({h["tt"] for h in heads}, {"none"})
+        self.assertTrue(b.eval("!!document.querySelector('#v-intake-review [data-irpick][aria-label^=\"Add files\"]')"), "Intake's Add files")
         self.screen("help")
-        help_text = b.eval("document.getElementById('v-help').innerText")
+        help_text = (self.vault / "system/templates/help.md").read_text(encoding="utf-8")
         self.screen("settings-advanced")
         adv = b.eval("document.getElementById('v-settings').innerText")
         for n in names:
@@ -142,7 +144,7 @@ class Scriptable1(HandcheckCase):
         old = [w for w in ("Upload a file", "Calendar Import", "Quick Capture", "Upload Files") if w in help_text + adv]
         self.assertEqual(old, [], "the old names")
         in_adv = [n for n in names if n in adv]
-        self.note(14, f"Intake's headings {', '.join(h['t'] for h in heads)} (2.6's one page: the three sections are gone), sentence case, no icons; Help names all three; Settings › Advanced names {', '.join(in_adv) or 'none of them'}")
+        self.note(14, f"Intake's headings {', '.join(h['t'] for h in heads)} (2.6's one page: the three sections are gone), sentence case, no icons; Add files on the page; Help names Calendar import, Add files and Quick capture (the note drawer replaced it); Settings › Advanced names {', '.join(in_adv) or 'none of them'}")
 
     def test_c15_primary_actions(self):
         """15. Primary actions keep their look: Today's and Intake's filled button, Review's outlined Approve, Work's tinted "+".
