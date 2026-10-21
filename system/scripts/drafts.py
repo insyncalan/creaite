@@ -2707,7 +2707,7 @@ def section_dropped(text, ex):
     if VIP_RE.search(text) or (edit_ai._private(text) and not edit_ai._private(original)):
         return "The draft named something private, so it was dropped. Try again."
     if ex.get("template") == "minutes-section":
-        bad = edit_ai.minutes_problems(ex.get("code") or "", text, original)
+        bad = edit_ai.minutes_problems(ex.get("code") or "", edit_ai._untagged(text), edit_ai._untagged(original))  # M2: HTML read through
         if bad:
             return (edit_ai.refusal(bad, True) if set(bad) & set(edit_ai.FAIL_CLOSED) else
                     "The draft was dropped: it added something internal (an item that isn't client-visible, a name or internal "
