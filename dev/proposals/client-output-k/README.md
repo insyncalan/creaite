@@ -104,8 +104,18 @@ and checked). That changes `client_snapshot.py` (unguarded) and adds `system/gua
   no gate knows.
 - **Mutation proofs:** K2 and apply's second check are extra guards, so some proofs now switch them off as well: `trust_on` (every
   file read as creaite's own) for P11, P13, P13shared and P23; `apply_check_off` (in tracker.py's own process) for P23; and
-  `allow_off+facts_off` for P7. P8, P9, P10 and P16 stay green with their mutants. That was already so on `origin/v253-release`
-  (checked in a scratch copy), so it isn't caused by this branch.
+  `allow_off+facts_off` for P7. P8, P9, P10 and P16 stayed green with their mutants (already so on `origin/v253-release`), because
+  a second guard gave the same protection; their mutants and P8's cases are now widened, and all 26 go red under their mutants:
+  - P8 (`signs_off`): the minutes route refused a client report by its file name before `report_signs` was reached. P8 now also
+    exports a minutes-named copy of the client report from drafts (source `renamed`), where only the report's data gives it away.
+  - P9 (`names_off`): `name_problem` (in `_settle_name`) repeats `_name_problem`; the mutant switches off both.
+  - P10 (`page_used`): step 3's guard is three deep (the client export route sends no page, `_posted_page` returns none for a
+    client report, `export_page.build` refuses one); the mutant passes the posted page through all three.
+  - P16 (`decoder_off`): the look-alike decoder is in `edit_ai.LOOK_ALIKE` and `confusables.TABLE`; the mutant filters both. Only
+    the look-alike form depends on it, so it fails 1 to 3 of the 30 proof cases (seeds 239 and 1 to 4), never none.
+  - P22 (`match_raw`): on seed 2 the mutant's raw check crashed on a malformed document (a list where the code goes), which
+    stopped the proof run and left P23 green after it. The mutant now reads such a document as sent and finds nothing, as an
+    unchecked route would; P22 and P23 then go red on seed 2 as on 239.
 - **Existing tests that follow K2:** none of their leak assertions changed. A payload written on disk now also goes in the Summary,
   which every output shows (`test_client_audience.tamper_on_disk`; step 2's hand-edited filed file). A client text section is
   added through Save (`test_client_output_step2.client_text`). The gap B mutant (step 3) also switches off the new loose check,
