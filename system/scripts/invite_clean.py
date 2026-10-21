@@ -8,14 +8,16 @@ place that decides, for sweep.py's calendar save:
   confidential (restricted, secret, "Strictly Confidential", 2, True...), after case, spacing, zero-width characters and
   look-alike forms (NFKC) are removed; anything that says private or personal is private; a private flag stays "Busy".
 - invite_text(body): HTML to plain text, then every line that carries a join link or a key to the meeting is dropped.
-- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser), which loses only the offending
-  words; flagged(text) for names.
+- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser); scrub drops the field whole when
+  it has a numbered label (meeting ID, PIN, "Code 2"), a dial-in number or anything after a key, and otherwise loses only a
+  trailing join link or passcode with its value; flagged(text) for names.
 
 Text is matched after NFKC and with zero-width characters, combining marks and URL or HTML escapes (twice over) removed, so
 full-width "PIN", a zero-width space inside "zoom.us", "%3Fpwd%3D" and "https&#58;//" are caught, and look-alike letters from other
 alphabets are read as the Latin ones (confusables.py). A label alone on a line takes the line after it too (a table's "PIN" and
-its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N"),
-and a link to a provider this module does not know with no word of joining near it.
+its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N")
+are not found as a key (scrub's extra check for a password word beside a cut reads them, but finds nothing with no key), and a
+link to a provider this module does not know with no word of joining near it.
 """
 import html as htmllib
 import re
@@ -70,9 +72,11 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-# v2.6 review (Cap, item 5): the one label cut after which the rest of a field may stay: an ID-like label and a value that has a
-# digit in it, the whole match ("Code 2 review" keeps "review"; "Board Meeting ID 123 456 789 sync" keeps "Board sync").
-LABEL_NUMBER = re.compile(rf"(?<![\w-])(?:{_NUMBERED}|{_BARE})(?![\w-])\s+(?:no\.?\s*)?\S*\d", re.I)
+# v2.6 review H3 (fail closed, as 2.5.3): a numbered label (meeting, webinar, event, session, conference or call ID or number,
+# PIN, "ID:"), a bare key word with a value (code, key, token, secret...) or a label in another alphabet anywhere in a field drops
+# the whole field; nothing beside it is judged, as no list of password words can be complete ("Meeting ID 12 Kod dostępu: x")
+NUMBERED_KEY = re.compile(rf"(?<![\w-])(?:{_NUMBERED}|{_BARE})(?![\w-]){_VAL}|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})",
+                          re.I)
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
@@ -143,14 +147,13 @@ def flagged(text):
     return is_secret(text) or any(JOIN_LINE.search(s) for s in _views(text))
 
 
-# H1: a label word straight after a numbered label's cut ("Meeting ID 12: Password swordfish"): its value may follow
-_NEXT_LABEL = re.compile(rf"\s*[^\w\s]*\s*(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE})(?![\w-])", re.I)
 _VALUE_TAIL = re.compile(r"(?:\s*(?:[:=#\-\u2013]|\bis\b)\s*\S+|\s+\S*\d\S*)?(?:[\s.\-]+\d\S*)*")
 SCRUB_ROUNDS = 8
 
-# H2: any word of the password family, no value needed ("Meeting ID 12: Meeting password abcdefg", "and PW: abcdefg",
-# "12_Passcode", "Passcode1"), matched once "_", "-" and digits are read as word breaks; a field cut for a key that has one of
-# these anywhere else in it is dropped whole, as v2.5.3 dropped it
+# H2: any word of the password family, no value needed ("Budget Pass abcdefg Passcode: 4321", "and PW: abcdefg", "Passcode1"),
+# matched once "_", "-" and digits are read as word breaks; a field cut for a passcode or password label (never a numbered one,
+# which drops the field whole, H3) that has one of these anywhere else in it is dropped whole, as v2.5.3 dropped it. A belt over
+# the cut only: the list is not complete and is not what keeps a numbered label's field safe
 _PW_GLUED = r"pass(?:words?|wort|codes?|phrases?|keys?|wd)|kennwort|wachtwoord|contrase[nñ]a"
 _PW_WORDS = (r"pass(?:e|es)?|pw|pwd|passwd|pass(?:words?|wort|codes?|phrases?|keys?)|pins?|pin\s*codes?|keys?|tokens?|"
              r"secrets?|codes?|otps?|access|kennwort|kenncodes?|zugangscodes?|einwahlcodes?|teilnehmercodes?|toegangscodes?|"
@@ -169,13 +172,11 @@ def _pw_word(text):
 
 
 def _secret_span(t):
-    """(start, end, rest_ok, drop) of the first key, join link or dial-in found in t as it stands, widened to whole words and,
-    for a label, the value after it ("PIN 4321", "Passcode: 4321", "Meeting ID 123 456 789"); None when none is found in t
-    itself. rest_ok is True only for an ID-like label whose own match carried a value with a digit (LABEL_NUMBER) and whose
-    widened cut took in nothing but numbers and separators: after any other cut (a host, a scheme, a dial-in, a passcode or
-    password label, or a word such as the next label) the next word may be the value, so the field fails closed. drop (H2) is
-    True when the whole field must go whatever is cut: a word of the password family anywhere outside the key's own match (its
-    value may be next to it), or a label with no value after it (the value may be the word before it: "abcdefg passcode")."""
+    """(start, end, drop) of the first join link, passcode or password label, or dial-in found in t as it stands, widened to whole
+    words and, for a label, the value after it ("Passcode: 4321"); None when none is found in t itself. drop is True when the
+    whole field must go whatever is cut: (H2) a word of the password family anywhere outside the key's own match (its value may
+    be next to it) or a label with no value after it (the value may be the word before it: "abcdefg passcode"), or (H3) a dial-in
+    number. A numbered label never gets here: scrub drops its field whole first (H3)."""
     for rx in (HOSTS, SCHEME, LABEL, DIAL):
         m = rx.search(t)
         if not m:
@@ -185,48 +186,36 @@ def _secret_span(t):
             a -= 1
         while b < len(t) and not t[b].isspace():
             b += 1
-        rest_ok = rx is LABEL and bool(LABEL_NUMBER.fullmatch(m.group()))
-        drop = False
+        drop = rx is DIAL               # H3: a dial-in number is a numbered key too: its field goes whole, as on 2.5.3
         if rx is LABEL:
             b += len(_VALUE_TAIL.match(t, b).group())
-            # v2.6 review (H1): the widening (to the whole word, then a separator and the next word) may take in a word that is
-            # not a number, such as the next label ("Meeting ID 12 - Passcode abcdefg"): the rest may then be its value, so the
-            # field fails closed, and so it does when the next word is a label. Only the label's own words, digits and separators
-            # may be cut with the rest kept.
-            rest_ok = rest_ok and _numbers_only(m.group().split()[-1] + t[m.end():b]) and not _NEXT_LABEL.match(t, b)
             drop = bool(LABEL_ALONE.fullmatch(m.group())) and not re.search(r"[^\W_]", t[m.end():b])
-        # the key's own label is not counted, but a numbered label's value is ("Meeting ID 12_Passcode1": one token)
-        own_value = m.group().split()[-1] if rx is LABEL and LABEL_NUMBER.fullmatch(m.group()) else ""
-        drop = drop or _pw_word(t[:m.start()] + " " + own_value + " " + t[m.end():])
-        return a, b, rest_ok, drop
+        drop = drop or _pw_word(t[:m.start()] + " " + t[m.end():])
+        return a, b, drop
     return None
 
 
-def _numbers_only(cut):
-    """Whether a label's value and what was cut after it are only numbers and separators: every piece with a letter has a digit
-    ("852-1234-5678", "2b", "12 - 34" are; "12 - Passcode", "12-Passcode", "12 is passcode" are not)."""
-    return all(re.search(r"\d", w) or w.lower() == "is" for w in re.split(r"[\s:=#\-\u2013\u2014.,;()\[\]/]+", cut)
-               if re.search(r"[^\W\d_]", w))
-
-
 def scrub(text, limit):
-    """A title, place or organiser: join links taken out, and (v2.6 review) each key or dial-in taken out with its value, so
-    "Budget (PIN 4321)" keeps "Budget" and "Code 2 review" keeps "review". It fails closed: a secret seen only once the text is
-    decoded or its look-alike letters read as Latin (no span to cut in the text itself) drops the whole text, and so does any
-    text left after a cut other than an ID-like label with a numbered value ("Steering Passcode: kqZxyw", "Weekly sync zoom.us
-    98765432101" are dropped whole: the next word may be the value), and (H2) any field with a password-family word outside the
-    key's own label ("Meeting ID 12: Meeting password abcdefg") or a label with no value after it ("abcdefg passcode"). Only the first
-    LINE_MAX characters are looked at (and a field is kept far shorter)."""
+    """A title, place or organiser: join links taken out, and (v2.6 review) a join link, or a passcode or password label with its
+    value, taken out when only text before it is left ("Sync Passcode: 4321" keeps "Sync", "Weekly sync zoom.us" keeps "Weekly
+    sync"). It fails closed: a field with a numbered label anywhere (a meeting ID, PIN, "Code 2": NUMBERED_KEY) or a dial-in
+    number is dropped whole, as 2.5.3 dropped it ("Code 2 review", "Budget (PIN 4321)", "Meeting ID 12 abcdefg": H3); so is a
+    secret seen only once the text is decoded or its look-alike letters read as Latin (no span to cut in the text itself), any
+    text left after a cut ("Steering Passcode: kqZxyw", "Weekly sync zoom.us 98765432101": the next word may be the value), and
+    (H2) any field with a password-family word outside the key's own label or a label with no value after it ("abcdefg
+    passcode"). Only the first LINE_MAX characters are looked at (and a field is kept far shorter)."""
     t = normal(str(text if text is not None else "")[:LINE_MAX])
     t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
     t = re.sub(r"\s+", " ", t).strip()
     for _ in range(SCRUB_ROUNDS):
         if not is_secret(t):
             return t[:limit]
-        span = _secret_span(t)
-        if span is None or (not span[2] and t[span[1]:].strip()):
+        if any(NUMBERED_KEY.search(s) for s in _views(t)):
             return ""
-        if span[3] and (t[:span[0]] + t[span[1]:]).strip():
+        span = _secret_span(t)
+        if span is None or t[span[1]:].strip():
+            return ""
+        if span[2] and t[:span[0]].strip():
             return ""
         t = re.sub(r"\s+", " ", t[:span[0]] + " " + t[span[1]:]).strip()
     return "" if is_secret(t) else t[:limit]
