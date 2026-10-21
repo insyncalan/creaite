@@ -52,7 +52,7 @@ jobs:
       # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
       # The "Tests passed" job below is green only if every shard is.
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]      # not ubuntu-latest: it became 26.04 on 21-10-2026, which has no Python 3.9 (the floor)
         python: ["3.9", "3.14"]
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
         exclude:
