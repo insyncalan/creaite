@@ -134,7 +134,7 @@ class BodyAndFields(unittest.TestCase):
 
     def test_the_place_and_title_carry_no_join_link_or_key(self):
         cases = [("https://us02web.zoom.us/j/8123?pwd=abcdef", ""), ("https://zoom.us/j/8123", ""),
-                 ("Zoom: https://acme.zoom.us/my/room", "Zoom:"), ("Room 2 (PIN 4321)", ""), ("Room 2", "Room 2"),
+                 ("Zoom: https://acme.zoom.us/my/room", "Zoom:"), ("Room 2 (PIN 4321)", "Room 2"), ("Room 2", "Room 2"),
                  ("tel:+15550001111,,123456#", ""), ("Microsoft Teams Meeting", "Microsoft Teams Meeting")]
         for where, want in cases:
             with self.subTest(where):
@@ -143,7 +143,11 @@ class BodyAndFields(unittest.TestCase):
         row = sweep.calendar_row(event(title="Sync https://zoom.us/j/1?pwd=abc"), "09:00", "10:00", False)
         self.assertEqual(row["title"], "Sync")
         row = sweep.calendar_row(event(title="Budget (PIN 4321)"), "09:00", "10:00", False)
-        self.assertEqual(row["title"], "Meeting")
+        self.assertEqual(row["title"], "Budget")                                 # v2.6 review: only the key and its value go
+        for title, want in (("Code 2 review", "review"), ("Board Meeting ID 123 456 789 sync", "Board sync"),
+                            ("Sync Passcode: 4321", "Sync"), ("PIN 4321", "Meeting")):
+            with self.subTest(title):
+                self.assertEqual(sweep.calendar_row(event(title=title), "09:00", "10:00", False)["title"], want)
         row = sweep.calendar_row(event(title="Kickoff", organiser="Jane https://bit.ly/abc123"), "09:00", "10:00", False)
         self.assertEqual(row["organiser"], "Jane")
 
@@ -424,7 +428,7 @@ class SavedCalendar(unittest.TestCase):
         self.cal.write_text(json.dumps({"fetched": past + " 08:00", "days": {past: old}}))
         self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
         rows = {r["id"]: r for r in self.held()[past]}
-        self.assertEqual(rows["o1"], {"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Meeting", "where": "",
+        self.assertEqual(rows["o1"], {"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Sync", "where": "",
                                       "teams": False, "private": False, "organiser": False, "sensitivity": "confidential"})
         self.assertEqual((rows["o2"]["body"], rows["o2"]["attachments"], rows["o2"]["attendees"][0]["name"]),
                          ("Agenda: budget", ["pack.pdf"], "x@example.test"))

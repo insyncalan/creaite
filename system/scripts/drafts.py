@@ -2758,12 +2758,35 @@ def is_no_suggestion(text):
     return _HEAD.sub("", t).strip(_WRAP) == NO_SUGGESTION
 
 
-def reads_as_refusal(text):
-    """The backstop: the first sentence (at most 200 characters) reads as the model saying it can't suggest anything. Only the
-    first sentence is read, so a real suggestion that says "can't" later, or about someone else, passes."""
+_CONTRAST = re.compile(r"\b(?:but|however|though|although|instead|meanwhile)\b[,\s]+(.+)", re.I)
+_FIELD_HEAD = re.compile(r"^[A-Z][A-Z ]*:")
+
+
+def _refuses(text):
+    return any(r.search(text or "") for r in REFUSAL_RES)
+
+
+def usable_body(first, hits, marked_rest=()):
+    """v2.6 review: True when a reply whose first sentence reads as a refusal still carries a suggestion: the first sentence goes
+    on past its refusal with "but", "however"… and three or more words that don't refuse ("I can't give a firm date, but plan UAT
+    for December"), or a later sentence carries a source tag and doesn't refuse (a field head such as IMPACT: aside)."""
+    tail = first[max(m.end() for m in hits):]
+    c = _CONTRAST.search(tail)
+    if c and len(c.group(1).split()) >= 3 and not _refuses(c.group(1)):
+        return True
+    return any(s.get("refs") and not _FIELD_HEAD.match(s.get("text") or "") and not _refuses(s.get("text"))
+               for s in marked_rest if isinstance(s, dict))
+
+
+def reads_as_refusal(text, marked_sentences=None):
+    """The backstop: the first sentence (at most 200 characters) reads as the model saying it can't suggest anything, and the
+    reply has no usable body (usable_body). Only the first sentence is read for the refusal, so a real suggestion that says
+    "can't" later, or about someone else, passes; `marked_sentences` (the parsed sentences, with their source refs) lets a
+    sourced later sentence count as a body."""
     first = next(iter(sentences(clean(text))), "")
     first = re.sub(r"^[-–•*\s]+", "", first)[:200]
-    return any(r.search(first) for r in REFUSAL_RES)
+    hits = [m for m in (r.search(first) for r in REFUSAL_RES) if m]
+    return bool(hits) and not usable_body(first, hits, (marked_sentences or [])[1:])
 
 
 def nothing_note(ctx):
@@ -2786,7 +2809,8 @@ def said_nothing(ctx, reply, out):
     if ctx.get("kind") not in SUGGEST_KINDS:
         return None
     body = out.get("text") or ""
-    if is_no_suggestion(reply) or is_no_suggestion(body) or reads_as_refusal(body) or (not body.strip() and reads_as_refusal(reply)):
+    if (is_no_suggestion(reply) or is_no_suggestion(body) or reads_as_refusal(body, out.get("sentences"))
+            or (not body.strip() and reads_as_refusal(reply))):
         return nothing_note(ctx)
     return None
 # ===== end #272 =====

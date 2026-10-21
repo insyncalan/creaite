@@ -8,7 +8,8 @@ place that decides, for sweep.py's calendar save:
   confidential (restricted, secret, "Strictly Confidential", 2, True...), after case, spacing, zero-width characters and
   look-alike forms (NFKC) are removed; anything that says private or personal is private; a private flag stays "Busy".
 - invite_text(body): HTML to plain text, then every line that carries a join link or a key to the meeting is dropped.
-- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser); flagged(text) for names.
+- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser), which loses only the offending
+  words; flagged(text) for names.
 
 Text is matched after NFKC and with zero-width characters, combining marks and URL or HTML escapes (twice over) removed, so
 full-width "PIN", a zero-width space inside "zoom.us", "%3Fpwd%3D" and "https&#58;//" are caught, and look-alike letters from other
@@ -135,12 +136,43 @@ def flagged(text):
     return is_secret(text) or any(JOIN_LINE.search(s) for s in _views(text))
 
 
+_VALUE_TAIL = re.compile(r"(?:\s*(?:[:=#\-\u2013]|\bis\b)\s*\S+|\s+\S*\d\S*)?(?:[\s.\-]+\d\S*)*")
+SCRUB_ROUNDS = 8
+
+
+def _secret_span(t):
+    """(start, end) of the first key, join link or dial-in found in t as it stands, widened to whole words and, for a label, the
+    value after it ("PIN 4321", "Passcode: kq7", "Meeting ID 123 456 789"); None when none is found in t itself."""
+    for rx in (HOSTS, SCHEME, LABEL, DIAL):
+        m = rx.search(t)
+        if not m:
+            continue
+        a, b = m.start(), m.end()
+        while a > 0 and not t[a - 1].isspace():
+            a -= 1
+        while b < len(t) and not t[b].isspace():
+            b += 1
+        if rx is LABEL:
+            b += len(_VALUE_TAIL.match(t, b).group())
+        return a, b
+    return None
+
+
 def scrub(text, limit):
-    """A title, place or organiser: join links taken out; the whole text dropped when a key or dial-in is left in it. Only the
-    first LINE_MAX characters are looked at (and a field is kept far shorter)."""
+    """A title, place or organiser: join links taken out, and (v2.6 review) each key or dial-in taken out with its value, so
+    "Budget (PIN 4321)" keeps "Budget" and "Code 2 review" keeps "review". It fails closed: a secret seen only once the text is
+    decoded or its look-alike letters read as Latin (no span to cut in the text itself) drops the whole text. Only the first
+    LINE_MAX characters are looked at (and a field is kept far shorter)."""
     t = normal(str(text if text is not None else "")[:LINE_MAX])
     t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
     t = re.sub(r"\s+", " ", t).strip()
+    for _ in range(SCRUB_ROUNDS):
+        if not is_secret(t):
+            return t[:limit]
+        span = _secret_span(t)
+        if span is None:
+            return ""
+        t = re.sub(r"\s+", " ", t[:span[0]] + " " + t[span[1]:]).strip()
     return "" if is_secret(t) else t[:limit]
 
 

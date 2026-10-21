@@ -147,17 +147,40 @@ def derive_facts(doc):
     return doc
 
 
+# v2.6 review: while facts_once() is open, a client report's facts are read once per project and week (one call chain derives
+# them several times: force_client_audience, then clean). Outside one, every derive reads them afresh. Per thread (a ContextVar).
+_FACTS = contextvars.ContextVar("client_facts_once", default=None)
+
+
+@contextlib.contextmanager
+def facts_once():
+    """Read each client report's facts (_facts_of) once inside the block; a block inside another shares the outer one's."""
+    token = _FACTS.set({}) if _FACTS.get() is None else None
+    try:
+        yield
+    finally:
+        if token is not None:
+            _FACTS.reset(token)
+
+
 def _facts_of(doc):
     """({item id: client-safe facts}, the approved week or None) for a client report's project and week; ({}, None) when they
-    can't be read (fails closed)."""
+    can't be read (fails closed). The approved week is looked up once (client_items is given it), and once per facts_once()."""
     import report_doc
     code, fri = str(doc.get("project") or ""), str(doc.get("date") or "")
     if not (report_doc.CODE.match(code) and DATE.match(fri)):
         return {}, None
+    memo = _FACTS.get()
+    if memo is not None and (code, fri) in memo:
+        return memo[(code, fri)]
     try:
-        return report_doc.client_items(code, fri), report_doc.baseline(code, fri)
+        base = report_doc.baseline(code, fri)
+        got = report_doc.client_items(code, fri, base=base), base
     except (Exception, SystemExit):  # noqa: BLE001  no tracker (tracker.connect exits) or a week that can't be read: fails closed
-        return {}, None
+        got = {}, None
+    if memo is not None:
+        memo[(code, fri)] = got
+    return got
 
 
 def _derived_tags(tags, by_id):

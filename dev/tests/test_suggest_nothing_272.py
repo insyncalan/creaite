@@ -63,7 +63,7 @@ REFUSALS = [
 ]
 # Real suggestions, some with refusal-like words later on or about someone else: none may be caught.
 REAL = [
-    "Escalate to the client CIO and test on masked data meanwhile. [S2]",
+    "Escalate to the client CIO and test on masked data meanwhile. [S1]",
     "There is no fallback supplier, so line one up with a short contract. [S1]",
     "The vendor is unable to provide test data until May; agree masked data with the client. [S1]",
     "Test data was not provided by the client, so UAT is delayed by a week. [S1]",
@@ -76,6 +76,10 @@ REAL = [
     "are free in November, so book them now. [S1]",
     "Treat the vendor as an AI partner for the pilot and review in December. [S1]",
     "The contract doesn't say who pays for the extension; agree it with legal. [S1]",
+    # v2.6 review: a real suggestion that opens with "I can't give/say…" and then gives a usable body
+    "I can't give a firm date, but the vendor has committed to the end of November, so plan UAT for December. [S1]",
+    "I can't say for certain, however escalating to the client CIO this week is the safest route. [S2]",
+    "I can't say when the vendor will deliver. Escalate to the client CIO and test on masked data meanwhile. [S1]",
 ]
 SENTINELS = ["NO_SUGGESTION", "  NO_SUGGESTION\n", "`NO_SUGGESTION`", "```\nNO_SUGGESTION\n```", '"NO_SUGGESTION"', "NO_SUGGESTION.",
              "RESPONSE: NO_SUGGESTION", "REASONING:\nNO_SUGGESTION", "**NO_SUGGESTION**"]

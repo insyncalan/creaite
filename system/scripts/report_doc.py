@@ -750,15 +750,19 @@ def client_facts_for(code, fri):
 ITEM_TABLES = ("actions", "decisions", "raid", "milestones")
 
 
-def client_items(code, fri):
+_NO_BASE = object()
+
+
+def client_items(code, fri, base=_NO_BASE):
     """v2.5.3 (#259, K3): {item id: its client-safe facts} a client report for week ending `fri` may hold: the locked week's
     (client_facts_for), and for an item it doesn't hold, the tracker's as it stands (an item that became client-visible since, which
-    the editor's Add offers). Both are client-safe by construction (client_facts)."""
+    the editor's Add offers). Both are client-safe by construction (client_facts). `base`: baseline(code, fri) when the caller has
+    it already (v2.6 review: looked up once)."""
     def index(facts):
         """{id: item} of one set of facts."""
         rows = [x for t in ITEM_TABLES for x in (facts or {}).get(t) or [] if isinstance(x, dict)]
         return {x["id"]: x for x in rows if isinstance(x.get("id"), str)}
-    base = baseline(code, fri)
+    base = baseline(code, fri) if base is _NO_BASE else base
     locked = creaite_doc.read(base["path"]).get("meta", {}).get("client_facts") if base else None
     return {**index(client_facts(code)), **index(locked)}
 
@@ -1071,8 +1075,9 @@ def _file_ops(kind, code, fri, client, draft, checked=None):
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
     # v2.5.0: filed as a client report, header derived; v2.5.1 (#239): `checked`, the document Approve read once and checked, is the
     # one filed (never the file read again)
-    doc = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(checked)) if checked is not None
-                            else creaite_doc.read_report(draft, kind))
+    with creaite_doc.facts_once():                           # v2.6 review: the facts read once for the derives below
+        doc = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(checked)) if checked is not None
+                                else creaite_doc.read_report(draft, kind))
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
