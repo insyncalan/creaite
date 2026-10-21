@@ -25,7 +25,7 @@ import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, openProposal, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
-import { renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
+import { heldLines, renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
 import { ownerFinal, renderPerson, row, savedNow, vipPoll, WSD, wsNewOf } from "../settings.js";
 import { renderToday } from "../today.js";
 import { hit, items, renderPeople, renderWork, rvPaint } from "../work.js";
@@ -135,7 +135,8 @@ export async function refreshRecords(ids){ if(!SERVED) return false; return awai
 /* several quick decisions (bulk approve) become one apply */
 export let APPLYT=null, APPLYN=0;
 export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
-  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  const hl=r.ok?heldLines(r.message).length:0, held=hl?`. ${hl} proposal${hl===1?" is":"s are"} held in Review: a file to be filed has gone`:"";   /* #280 */
+  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
   if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }

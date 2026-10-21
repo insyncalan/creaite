@@ -682,7 +682,8 @@ def queue_block(n, p, key, label, b, aged):
             "src": b.get("draft") or "", "file": p.name, "ref": key,
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
-            **draft_missing(key, b)}   # BL-260
+            **draft_missing(key, b),   # BL-260
+            **({"held": review.held_reason(b)} if key in ("meeting", "report") and review.held_reason(b) else {})}   # #280
 
 
 def queue_item(con, n, p, item, aged, overlap):

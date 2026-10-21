@@ -5715,6 +5715,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     healthCount: () => healthCount,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
+    heldApprove: () => heldApprove,
+    heldBtns: () => heldBtns,
+    heldDiscard: () => heldDiscard,
+    heldLines: () => heldLines,
+    heldMsg: () => heldMsg,
     helpCk: () => helpCk,
     helpFind: () => helpFind,
     helpFocusSearch: () => helpFocusSearch,
@@ -44078,6 +44083,10 @@ ${s5}`;
         snack(NODRAFT_MSG);
         return;
       }
+      if (v5 === "approved" && r4.kind === "draft" && r4.held) {
+        snack(heldMsg(r4), () => heldApprove(r4), "Approve without it");
+        return;
+      }
       if (v5 === "approved" && !r4.p && r4.kind !== "files") {
         snack("Choose a project first — open the item to set it");
         openProposal(n4);
@@ -44168,7 +44177,7 @@ ${s5}`;
       if (!d5) return w6("No due date");
       const n4 = Math.round((new Date(d5) - new Date(TODAY)) / 864e5);
       return n4 < 0 ? w6(`${fd(d5)} · ${-n4} day${n4 === -1 ? "" : "s"} overdue`) : `${fd(d5)} · ${n4 === 0 ? "today" : `in ${n4} day${n4 === 1 ? "" : "s"}`}`;
-    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : [];
+    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : r4.kind === "draft" && r4.held && !r4.done ? [w6("Held: " + esc(r4.held)), "Approve the minutes without the transcript copy, or discard the proposal"] : [];
     let h5 = (r4.dn ? dnHtml(r4) : "") + parts.filter(Boolean).join(" · ") + shRvHtml(r4);
     if (r4.kind === "update" && r4.rec && r4.rec.why) h5 = `${h5} · <span class="sub">“${esc(r4.rec.why)}”</span>`;
     if (!shared.LOADING) {
@@ -44198,6 +44207,7 @@ ${s5}`;
       const i5 = h5.indexOf('<div class="why rvmeta"');
       if (i5 > 0) h5 = h5.slice(0, i5) + conflictHtml(r4) + h5.slice(i5);
     }
+    if (r4.kind === "draft" && r4.held && !r4.done) h5 = h5.replace(/<button class="mini ok" data-act="a">.*?<\/button>/, heldBtns(r4));
     if (!shared.LOADING && rvMovable(r4)) h5 = h5.replace('<span class="rowact">', `<span class="rowact"><button type="button" class="mini rvpj" data-act="pj" aria-haspopup="menu" title="${isMin(r4) ? "Move these minutes and their items to another project" : "Move to another project"}">${ic("projects")}Project</button>`);
     return h5;
   }
@@ -44333,6 +44343,11 @@ ${s5}`;
       if (b5) {
         if (b5.dataset.act === "f") {
           refreshItems(REV.find((x5) => x5.n === n4));
+          return;
+        }
+        if (b5.dataset.act === "hw" || b5.dataset.act === "hd") {
+          const r4 = REV.find((x5) => x5.n === n4);
+          if (r4) (b5.dataset.act === "hw" ? heldApprove : heldDiscard)(r4);
           return;
         }
         if (b5.dataset.act === "a") decide(n4, "approved");
@@ -45720,13 +45735,16 @@ ${s5}`;
     return out;
   }
   function cxReview(r4, tr2) {
-    const out = [
-      { label: "Approve", icon: "check", disabled: !!r4.nodraft, hint: r4.nodraft ? NODRAFT_MSG : "", run: () => decide(r4.n, "approved") },
-      /* BL-260 point 4 */
-      rvRejectOK(r4) ? { label: "Reject with a reason…", icon: "x", run: () => rjMenuFor(rjWith(r4), tr2.querySelector("[data-act=rr]") || tr2) } : { label: "Reject", icon: "x", run: () => isMin(r4) ? rejectMinutes(r4) : decide(r4.n, "rejected") },
-      { sep: true },
-      { label: r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open the draft" : "Open", icon: "cxopen", disabled: r4.kind === "files", run: () => openProposal(r4.n) }
-    ];
+    const out = r4.held && !r4.done ? [{ label: "Approve without the transcript copy", icon: "check", hint: r4.held, run: () => heldApprove(r4) }, { label: "Discard the proposal", icon: "x", run: () => heldDiscard(r4) }] : (
+      /* #280 */
+      [
+        { label: "Approve", icon: "check", disabled: !!r4.nodraft, hint: r4.nodraft ? NODRAFT_MSG : "", run: () => decide(r4.n, "approved") },
+        /* BL-260 point 4 */
+        rvRejectOK(r4) ? { label: "Reject with a reason…", icon: "x", run: () => rjMenuFor(rjWith(r4), tr2.querySelector("[data-act=rr]") || tr2) } : { label: "Reject", icon: "x", run: () => isMin(r4) ? rejectMinutes(r4) : decide(r4.n, "rejected") },
+        { sep: true },
+        { label: r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open the draft" : "Open", icon: "cxopen", disabled: r4.kind === "files", run: () => openProposal(r4.n) }
+      ]
+    );
     if (isMin(r4)) out.push({ label: "Project", icon: "projects", hint: "Move these minutes and their items", run: () => rvMoveMinutes(tr2.querySelector('[data-act="pj"]') || tr2, r4, tr2.dataset.g) });
     if (rtOK(r4)) out.push({ label: "Update an existing item instead…", icon: "refresh", run: () => rtOpen(tr2.querySelector('[data-act="e"]') || tr2, r4) });
     if (cxPk(r4)) out.push({ sep: true }, ...cxReviewFields([r4], (f5, v5) => rvSet(f5, v5)));
@@ -46291,6 +46309,30 @@ ${s5}`;
   var reviewSeams = { decide: (v5) => {
     decide = v5;
   } };
+  var heldMsg = (r4) => `Held: ${r4.held}. Approve the minutes without the transcript copy, or discard the proposal`;
+  function heldBtns(r4) {
+    const live = viaServer(), off = live ? "" : ' disabled title="Needs the live server"';
+    return `<button class="mini ok" data-act="hw"${off}${live ? ` title="${esc(heldMsg(r4))}"` : ""}>${ic("check")}Approve without the transcript</button> <button class="mini" data-act="hd"${off}>Discard</button>`;
+  }
+  async function heldApprove(r4) {
+    if (!viaServer()) {
+      snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r4.n} --without-transcript” in Claude Code`);
+      return;
+    }
+    return reviewViaServer(r4, "approved", ["without-transcript"]);
+  }
+  async function heldDiscard(r4) {
+    if (!viaServer()) {
+      snack(`Discarding a proposal needs the live server; or say “reject ${r4.n} --discard” in Claude Code`);
+      return;
+    }
+    const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "discard" });
+    await reloadData();
+    snack(oneLine(res.message));
+  }
+  function heldLines(msg) {
+    return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => x5.startsWith("Held in Review, not applied:"));
+  }
 
   // core/motion.js
   var MSLIDE = [["#wtabs", "bottom"], ["#wlay", "fill"], ["#setcats", "left"]];
@@ -75576,7 +75618,8 @@ ${d5.text}`);
       const n4 = APPLYN;
       APPLYN = 0;
       const r4 = await applyNow();
-      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}` : "Apply stopped: " + oneLine(r4.message), r4.ok ? () => undoApply(r4.apply_id) : null);
+      const hl2 = r4.ok ? heldLines(r4.message).length : 0, held = hl2 ? `. ${hl2} proposal${hl2 === 1 ? " is" : "s are"} held in Review: a file to be filed has gone` : "";
+      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}${held}` : "Apply stopped: " + oneLine(r4.message), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
@@ -76963,6 +77006,7 @@ ${d5.text}`);
         "healthCount",
         "healthEvidence",
         "healthFacts",
+        "heldLines",
         "helpFind",
         "helpGo",
         "helpLineReset",

@@ -1,0 +1,30 @@
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -32,7 +32,8 @@
+ - POST /api/undo-changes {rowids, dry_run}: tracker.py undo-changes (BL-164): put back chosen past changes as one new apply;
+                          with dry_run, what would happen. Returns the done and skipped lists
+                          if it's still the latest
+-- POST /api/review       a cx-review decision through review.py (drafts, conflicts), with its checks
++- POST /api/review       a cx-review decision through review.py (drafts, conflicts), with its checks; #280: decision
++                         "discard" sets a held proposal aside, mode "without-transcript" approves held minutes without it
+ - POST /api/review/assign {file, ref, code, from, moved, dry_run}: change the project of a pending item or a set of minutes
+                          (review.py assign, BL-200); dry_run previews it
+ - POST /api/refresh      re-extract a meeting's items from its edited draft minutes (minutes.py refresh)
+@@ -1406,8 +1407,15 @@
+             n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
+             if n is None:
+                 return self.send(200, {"ok": False, "message": "That proposal is no longer pending."})
+-            action = {"approved": "approve", "rejected": "reject", "keep": "keep", "override": "override"}[req["decision"]]
+-            args = [action, str(n)] + [f"--{m}" for m in req.get("modes", []) if m in ("sync", "as-staged")]
++            action = {"approved": "approve", "rejected": "reject", "keep": "keep", "override": "override",
++                      "discard": "reject"}.get(req.get("decision"))          # #280: discard = reject --discard (review.py's check)
++            if action is None:
++                return self.send(200, {"ok": False, "message": "That isn't a decision Review knows."})
++            args = [action, str(n)] + [f"--{m}" for m in req.get("modes", [])          # #280: without-transcript, held minutes only
++                                       if m in ("sync", "as-staged") or (m == "without-transcript" and action == "approve")]
++            if req.get("decision") == "discard":
++                code, out = run("review.py", "reject", str(n), "--discard")
++                return self.send(200, {"ok": code == 0, "message": out})
+             if action == "reject":                                        # BL-133 stage B: the reason travels with the decision
+                 reason, dup = str(req.get("reason") or "").strip(), str(req.get("duplicate_of") or "").strip()
+                 if reason and len(reason) <= 200 and "\n" not in reason:
