@@ -40502,7 +40502,7 @@ ${s5}`;
     const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential);
     const series = brief && brief.series ? brief.series.text : [cadence(m5.invite && m5.invite.recurrence), m5.last ? `last ${fd(m5.last)}` : ""].filter(Boolean).join(" · ");
     const inv = conf ? [] : invitees(m5, brief);
-    const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
+    const name = code === "_portfolio" ? "No project (general meeting)" : code ? pName(code) : "";
     const pickProject = (ev) => {
       const btn = (
         /** @type {HTMLElement} */
@@ -40513,12 +40513,12 @@ ${s5}`;
         value: code,
         options: [
           ...P4.filter((p6) => p6.active !== false || p6.code === code).map((p6) => ({ v: p6.code, label: p6.name, icon: "projects" })),
-          { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }
+          { v: "_portfolio", label: "No project (general meeting)", icon: "projects" }
         ],
         onPick: async (v5) => {
           if (v5 === code) return;
           await choosePrep(v5);
-          if (code) snack(`Remembered for this series: ${v5 === "_portfolio" ? "Portfolio (all projects)" : pName(v5)}`, () => {
+          if (code) snack(`Remembered for this series: ${v5 === "_portfolio" ? "No project (general meeting)" : pName(v5)}`, () => {
             choosePrep(code);
           });
         }
@@ -50683,7 +50683,7 @@ ${pre}**Current state title:** ${title}`);
     }
     (() => {
       const m5 = prepOf(shared.PREPEV) || {}, code = m5.p, all = code === "_portfolio";
-      const pick = code ? "" : '<div class="wnote">Not sure which project this meeting is for. Choose one from the project chip above, and creaite remembers it for this series.</div>';
+      const pick = code ? "" : '<div class="wnote">No project chosen for this meeting yet. Choose one from the project chip above, or No project (general meeting), and creaite remembers it for this series.</div>';
       if (!code) {
         putHtml($("#prepBody"), pick);
         return;
@@ -66825,7 +66825,11 @@ ${d5.text}`);
   function ProjectChip({ mt: mt2 }) {
     const NONE = "_portfolio", series = mt2.series || "";
     const pick = async (code) => {
-      if (!code || !series) return;
+      if (!code) return;
+      if (!series) {
+        snack("This meeting has no series to remember a project for");
+        return;
+      }
       if (!viaServer()) {
         snack("Choosing the project needs the live server");
         return;
@@ -66944,6 +66948,7 @@ ${d5.text}`);
         ] }) : null,
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: printIt, children: "Print" })
       ] }),
+      v5.stale ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", "data-ppstale": "1", children: `The research was done for ${v5.stale.project_name}. Press Refresh research for ${mt2.project_name || "this meeting"}; the earlier page is kept in Agendas.` }) : null,
       /* @__PURE__ */ u2(Tabs, { tabs, selected: prepTab.value, onSelect: (id2) => {
         prepTab.value = id2;
       }, label: "Prep page", idBase: "pp", cls: "pptabs" })

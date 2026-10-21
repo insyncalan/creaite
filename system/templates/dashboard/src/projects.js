@@ -925,7 +925,7 @@ export function prepPeekEnd(){ const d=$("#prepDlg"), was=shared.PREPPEEK; if(!w
   const back=was.el&&$$(`${prepPeekRoot()} [data-open]`).find(x=>x.dataset.open===was.el); if(back) back.focus(); }
 export function drawPrep(){ popupRev.value++; { const key=prepKey(shared.PREPEV,shared.PREPDAY); putHtml($("#prepAgenda"),AGD&&AGD.key===key?AGD.html:""); }   /* BL-286: the header, toolbar and facts line redraw too */
   (()=>{ const m=prepOf(shared.PREPEV)||{}, code=m.p, all=code==="_portfolio";
-  const pick=code?"":'<div class="wnote">Not sure which project this meeting is for. Choose one from the project chip above, and creaite remembers it for this series.</div>';
+  const pick=code?"":'<div class="wnote">No project chosen for this meeting yet. Choose one from the project chip above, or No project (general meeting), and creaite remembers it for this series.</div>';
   if(!code){ putHtml($("#prepBody"),pick); return; }
   const inP=x=>all||x.p===code, pc=x=>all?pLink(x.p)+" ":"";
   // @ts-expect-error TS2362: true and false subtract as 1 and 0 (overdue actions sort first)

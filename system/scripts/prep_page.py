@@ -160,6 +160,18 @@ class using:
         return False
 
 
+NO_PROJECT = "No project"          # #279: the saved value "_portfolio" as Alan reads it on a prep page
+
+
+def _project_of(d, m):
+    """(code, chosen) of a meeting's Prep brief record. #279: "No project" is the saved value "_portfolio", distinct from nothing
+    chosen (""). A remembered code that is no project any more (unknown, removed, archived) counts as not chosen: the picker
+    asks again, and the page still builds, in the all-projects view."""
+    code = m.get("p") or ""
+    chosen = code == "_portfolio" or any(p["code"] == code for p in d.get("projects") or []) if code else False
+    return (code, True) if chosen else ("_portfolio", False)
+
+
 def context(key):
     """Everything the page and Claude's research need, or {"error": …}."""
     d = _collect()
@@ -167,15 +179,14 @@ def context(key):
     m, problem = _meeting(d, key)
     if problem:
         return {"error": problem}
-    chosen = bool(m.get("p"))       # #279: "No project" is the saved value "_portfolio", distinct from nothing chosen ("")
-    code = m.get("p") or "_portfolio"
+    code, chosen = _project_of(d, m)
     ev = _event(key, m["day"]) or {}
     allp = code == "_portfolio"
     items, universe = _prep_items(d, m, code, allp)
     codes = [p["code"] for p in d["projects"]] if allp else [code]
     title = ev.get("title") or key.split("|")[-1]
     return {"key": key, "day": m["day"], "project": code, "chosen": chosen, "series": m.get("series") or "",
-            "project_name": "Portfolio" if allp else
+            "project_name": NO_PROJECT if allp else
             next((p["name"] for p in d["projects"] if p["code"] == code), ""),
             "meeting": _prep_meeting(ev, title, m.get("invite") or {}),
             "carried": _carried(title, m["day"]),          # BL-209
@@ -615,7 +626,7 @@ def render(ctx, reply):
 <body><main>
 <span class="internal">Internal</span> <span class="src">Meeting prep for Alan · not for the client · never sent</span>
 <h1>{esc(mt['title'])}</h1>
-<p class="meta">{esc(when)}{' · ' + esc(mt['where']) if mt.get('where') else ''} · {esc(code if code != '_portfolio' else 'Portfolio')} {esc(ctx['project_name'] if code != '_portfolio' else '')}</p>
+<p class="meta">{esc(when)}{' · ' + esc(mt['where']) if mt.get('where') else ''} · {esc(code if code != '_portfolio' else NO_PROJECT)} {esc(ctx['project_name'] if code != '_portfolio' else '')}</p>
 {f'<p class="meta">With {esc(who)}</p>' if who else ''}{warn}{unavailable}
 <details open><summary><h2>What this meeting is about</h2></summary>{f'<p>{esc(about)}</p>' if about else '<p class="empty">Nothing found.</p>'}</details>
 {carried_html(ctx)}<details open><summary><h2>Work items</h2></summary>{items_html}</details>
@@ -782,16 +793,27 @@ def place(ctx):
     """(target, replaces) for the page: its name in the Agendas folder, and whether that is creaite's own unchanged page for
     the same name, which is replaced. A file creaite didn't write, or one changed since, gets a numbered name instead."""
     code = ctx["project"]
-    folder = paths.folder("_portfolio" if code == "_portfolio" else code, "agendas")
+    try:
+        folder = paths.folder("_portfolio" if code == "_portfolio" else code, "agendas")
+    except LookupError as e:                    # #279: a project with no folder (removed or archived) is a reason, never a crash
+        raise ValueError(f"There is no Agendas folder for that project: choose the meeting's project again ({e}).") from None
     stem = f"{ctx['day']} Prep - {safe_name(ctx['meeting']['title'])}"
     reg = _registry()
     target, n = folder / f"{stem}.html", 2
     while target.exists():
         rec = reg.get(paths.rel(target))
-        if rec and rec.get("sha") == hashlib.sha256(target.read_bytes()).hexdigest():
+        if rec and rec.get("sha") == hashlib.sha256(target.read_bytes()).hexdigest() and _same_meeting(rec, ctx):
             return target, True
         target, n = folder / f"{stem} ({n}).html", n + 1
     return target, False
+
+
+def _same_meeting(rec, ctx):
+    """#279: whether creaite's page `rec` (prep-pages.json) is this meeting's own: another meeting with the same title on the
+    same day (two general meetings, say) gets its own numbered page rather than replacing it. An old record with no key is."""
+    if not rec.get("key"):
+        return True
+    return dated_key({"key": rec["key"], "day": rec.get("day")}) == dated_key(ctx)
 
 
 def record(ctx, target, data):
@@ -923,7 +945,8 @@ def closure(ctx, rel):
     from urllib.parse import quote
     parts = str(rel or "").split("/")
     folders = parts[2:-1] if len(parts) > 3 and parts[0] == "projects" else []
-    where = " › ".join([ctx.get("project_name") or "the project"] + folders)
+    first = "the portfolio" if ctx.get("project") == "_portfolio" else ctx.get("project_name") or "the project"   # #279
+    where = " › ".join([first] + folders)
     return {"ok": True, "line": f"Saved the prep page in {where}", "href": "#prep=" + quote(dated_key(ctx), safe=""),
             "link": "Open"}
 # ===== end BL-326 =====

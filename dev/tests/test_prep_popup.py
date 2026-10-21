@@ -63,7 +63,7 @@ class PrepPopup(LiveBrowserCase):
         b.click("#prepProjBtn")
         b.wait("document.querySelector('#prepDlg .pkpop')")
         opts = b.eval("[...document.querySelectorAll('#prepDlg .pkpop .pkopt')].map(o=>o.textContent)")
-        self.assertIn("Portfolio (all projects)", opts)
+        self.assertIn("No project (general meeting)", opts)          # #279: one name for "_portfolio"
         b.key("Escape")
         b.wait("!document.querySelector('.pkpop')")
         self.assertTrue(b.eval(f"{DLG}.open"))                                      # Esc closed the picker, not the popup

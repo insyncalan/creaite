@@ -83,7 +83,8 @@ function ppSrcKind(s) {
 function ProjectChip({ mt }) {
   const NONE = "_portfolio", series = mt.series || "";
   const pick = async (/** @type {string} */ code) => {
-    if (!code || !series) return;
+    if (!code) return;
+    if (!series) { snack("This meeting has no series to remember a project for"); return; }
     if (!viaServer()) { snack("Choosing the project needs the live server"); return; }
     const map = { ...((D.prep || {}).series || {}), [series]: code };
     if (!await writeSettings({ "prep.series": map })) return;
@@ -148,6 +149,7 @@ function Header({ v, researching }) {
         {v.saved ? <button type="button" class="btn" onClick={() => prepOpen(v.saved.path)} data-tip={v.saved.path}><Icon name="external" />Open the file</button> : null}
         <button type="button" class="btn" onClick={printIt}>Print</button>
       </div>
+      {v.stale ? <p class="wnote" role="status" data-ppstale="1">{`The research was done for ${v.stale.project_name}. Press Refresh research for ${mt.project_name || "this meeting"}; the earlier page is kept in Agendas.`}</p> : null}
       <Tabs tabs={tabs} selected={prepTab.value} onSelect={id => { prepTab.value = id; }} label="Prep page" idBase="pp" cls="pptabs" />
     </header>
   );

@@ -294,7 +294,7 @@ class MeetingPrepTests(unittest.TestCase):
         self.assertEqual(out["opened"]["dlg"], True)                                          # a line opens its item in the peek, over the popup (BL-286 E)
         self.assertTrue(out["opened"]["panel"])
         self.assertTrue(out["opened"]["back"])                                                # closing the peek brings the popup back, modal
-        self.assertIn("Not sure which project", out["unsure"]["text"])
+        self.assertIn("No project chosen for this meeting yet", out["unsure"]["text"])   # #279
         self.assertEqual(out["unsure"]["proj"], "")
         self.assertIn("Across every project", out["portfolio"])
         self.assertIn("Agree pilot success criteria", out["portfolio"])                       # DEF, due soon
