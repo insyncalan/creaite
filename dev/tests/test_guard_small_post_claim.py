@@ -32,6 +32,7 @@ MUTATIONS = {
                          '        return isinstance(use_id, str) and entry["id"] == use_id', "        return True"),
     "post-any-run": ("a PostToolUse for another run records", R, "    _HOOK.update(run=run)\n    try:\n        key = _call_key",
                      "    _HOOK.update(run=(guard_run() or {}).get('run'))\n    try:\n        key = _call_key"),
+    "pending-unbounded": ("pending grows without limit", R, "[-PENDING_MAX:]", ""),
     "no-post-hook": ("the Process run's --settings has no PostToolUse", L,
                      '    if mode == "process":       # #264 round 3', '    if False:       # #264 round 3'),
 }
@@ -192,6 +193,29 @@ class ClaimOnlyWhenTheToolReturns(unittest.TestCase):
                               write(D + "p spec.json", self.spec("p", "p minutes.docx")),
                               bash(f"minutes.py stage '{D}p spec.json'")])
         self.assertEqual(got["out"][6][0], False, got)
+
+    def test_pending_calls_are_capped(self):
+        """300 allowed Writes whose tool never returns keep only the 64 newest pending calls (run.json stays small); the newest
+        call's PostToolUse still records its file, and a dropped call's name is never the run's."""
+        code = ("import os, reach\n"
+                "reach.start_run('p-cap', 'process', {}, None, files=[])\n"
+                "d = 'system/staging/drafts/'\n"
+                "for i in range(300):\n"
+                "    inp = {'file_path': os.path.realpath(d) + '/cap-%d.json' % i}\n"
+                "    assert reach.decide('Write', inp, 'process', 'p-cap', False, 'cap-%d' % i)[0]\n"
+                "open(d + 'cap-299.json', 'w').write('{}')\n"
+                "reach.post_tool('Write', inp, 'p-cap', 'cap-299')\n"
+                "open(d + 'cap-0.json', 'w').write('{}')\n"
+                "reach.post_tool('Write', {'file_path': os.path.realpath(d) + '/cap-0.json'}, 'p-cap', 'cap-0')\n"
+                "reach._HOOK.update(run='p-cap')\n"
+                "from pathlib import Path\n"
+                "own = [reach._runs_own(Path(os.path.realpath(d + n))) for n in ('cap-299.json', 'cap-0.json')]\n"
+                "print(json.dumps({'pending': len(json.loads(reach.RUN_FILE.read_text())['pending']), "
+                "'size': len(json.dumps(json.loads(reach.RUN_FILE.read_text())['pending'])), 'own': own}))")
+        got = in_vault(self.v, code, timeout=600)
+        self.assertLessEqual(got["pending"], 64, got)
+        self.assertLess(got["size"], 20_000, got)            # the pending list itself (names claimed stay in "made")
+        self.assertEqual(got["own"], [True, False], got)
 
 
 @unittest.skipIf(os.environ.get("GUARD_SMALL_MUTATE") or os.environ.get("GUARD_SMALL_UNPATCHED"), "the mutation run itself")

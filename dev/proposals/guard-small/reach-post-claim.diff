@@ -63,9 +63,13 @@
  
  
  def _may_make(rp):
-@@ -2143,14 +2141,68 @@ def _commit_claims():
-                 if prints.get(f) is None:
-                     prints[f] = now
+@@ -2139,18 +2137,72 @@ def _commit_claims():
+                 return False
+             data["made"] = sorted(set(_made() or ()) | _HOOK["claims"])
+             prints = data.get("prints") if isinstance(data.get("prints"), dict) else {}
+-            for f, now in _HOOK["seen"].items():
+-                if prints.get(f) is None:
+-                    prints[f] = now
              for f in _HOOK["writes"]:
 -                prints[f] = None
 +                prints[f] = None                        # until the tool returns (post_tool), not the run's (round 3)
@@ -77,14 +81,17 @@
          return False
  
  
++PENDING_MAX = 64          # pending calls kept in run.json; one that drops out was never answered: its files stay not the run's
++
++
 +def _add_pending(data):
 +    """#264 round 3: the files this call may write, kept in the record ("pending") for its PostToolUse (post_tool), by the call's
 +    tool_use_id and its fingerprint (_call_key)."""
 +    if _HOOK["writes"] and _HOOK.get("call"):
 +        pending = data.get("pending") if isinstance(data.get("pending"), list) else []
 +        use_id, key = _HOOK["call"]
-+        data["pending"] = pending + [{"id": use_id if isinstance(use_id, str) and use_id else None, "call": key,
-+                                      "files": sorted(_HOOK["writes"])}]
++        data["pending"] = (pending + [{"id": use_id if isinstance(use_id, str) and use_id else None, "call": key,
++                                       "files": sorted(_HOOK["writes"])}])[-PENDING_MAX:]    # the newest; an older call never returned
 +
 +
 +def _pending_of(entry, use_id, key):

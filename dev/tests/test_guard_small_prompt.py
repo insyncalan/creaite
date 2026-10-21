@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from guard_small_support import in_vault, mutants_caught, scratch  # noqa: E402
 
-DIFFS = ("live-server-prompt.diff",)
+DIFFS = ("live-server-prompt.diff",)       # it also changes permissions.py (check: reach.py hook and wrap)
 L = "system/scripts/live_server.py"
 EXAMPLE = '"Bash(python3 system/scripts/<name>.py <subcommand> *) | <why> for a script'
 MUTATIONS = {
@@ -26,6 +26,10 @@ MUTATIONS = {
                           '"Write(system/search/**) | to save summaries, or PERMISSION: Bash(python3 system/scripts/<name>.py <subcommand> *) | <why> for a script'),
     "ssh-read": ("an example reading a never-list folder", L, EXAMPLE,
                  '"Read(~/.ssh/**) | to check keys, or PERMISSION: Bash(python3 system/scripts/<name>.py <subcommand> *) | <why> for a script'),
+    "path-rules-accepted": ("the prompt says a path rule is accepted again", L, '"for a creaite script is accepted. Never edit',
+                            '"for a creaite script or a path inside one project\'s folder is accepted. Never edit'),
+    "reach-addable": ("a reach.py hook rule is addable again", "system/scripts/permissions.py",
+                      '    if tool == "Bash" and re.search(r"reach\\.py(?!', '    if False and re.search(r"reach\\.py(?!'),
     "project-edit": ("an Edit rule the panel always refuses", L, EXAMPLE,
                      '"Edit(projects/ABC Example Programme/documents/**) | to save it, or PERMISSION: Bash(python3 system/scripts/<name>.py <subcommand> *) | <why> for a script'),
 }
@@ -49,7 +53,11 @@ for rule in re.findall(r"PERMISSION:\s*(.+?)\s*\|", p):
         op = "read" if tool in ("Bash", "Read", "Grep", "Glob", "LS") else "create"
         verdicts.append([w, op, reach.classify(os.path.expanduser(w), op)[0]])
     out.append({"rule": rule, "tool": tool, "verdicts": verdicts})
-print(json.dumps(out))
+import permissions
+rules = ["Bash(python3 system/scripts/reach.py hook *)", "Bash(system/scripts/run reach.py hook *)",
+         "Bash(python3 system/scripts/reach.py wrap *)", "Bash(python3 system/scripts/reach.py *)",
+         "Bash(python3 system/scripts/reach.py classify *)"]
+print(json.dumps({"examples": out, "prompt": p, "states": {r: permissions.check_full(r)["state"] for r in rules}}))
 '''
 
 
@@ -57,7 +65,8 @@ class PromptExamplesAreUsable(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.v = scratch(DIFFS, MUTATIONS)
-        cls.got = in_vault(cls.v, CODE, timeout=120)
+        got = in_vault(cls.v, CODE, timeout=120)
+        cls.got, cls.prompt, cls.states = got["examples"], got["prompt"], got["states"]
 
     @classmethod
     def tearDownClass(cls):
@@ -78,6 +87,18 @@ class PromptExamplesAreUsable(unittest.TestCase):
             with self.subTest(rule=e["rule"]):
                 self.assertNotIn(e["tool"], ("Edit", "Write", "MultiEdit", "NotebookEdit"),
                                  f"{e['rule']}: the panel refuses every Edit or Write rule")
+
+
+    def test_the_prompt_never_says_a_path_rule_is_accepted(self):
+        self.assertNotIn("path inside one project", self.prompt)
+        self.assertIn("only a rule for a creaite script is accepted", self.prompt)
+
+    def test_a_reach_hook_or_wrap_rule_is_never_addable(self):
+        """The guard's own hand-over commands are never offered as a rule on the card (the hook refuses them anyway)."""
+        for rule, state in self.states.items():
+            if "classify" not in rule:
+                with self.subTest(rule):
+                    self.assertNotEqual(state, "addable", rule)
 
 
 @unittest.skipIf(os.environ.get("GUARD_SMALL_MUTATE") or os.environ.get("GUARD_SMALL_UNPATCHED"), "the mutation run itself")

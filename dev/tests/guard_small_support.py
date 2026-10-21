@@ -25,7 +25,7 @@ MUTATE = os.environ.get("GUARD_SMALL_MUTATE", "")
 
 # diff -> (the file it changes, a line only the patched file has)
 DIFFS = {
-    "tracker-copy-source.diff": ("system/scripts/tracker.py", "def open_copy_source"),
+    "tracker-copy-source.diff": ("system/scripts/tracker.py", "class CopySource:"),
     "live-server-prompt.diff": ("system/scripts/live_server.py", "never an Edit or Write rule: files change through filechange.py"),
     "live-server-post-hook.diff": ("system/scripts/live_server.py", 'hooks["PostToolUse"]'),
     "reach-post-claim.diff": ("system/scripts/reach.py", "def post_tool"),
