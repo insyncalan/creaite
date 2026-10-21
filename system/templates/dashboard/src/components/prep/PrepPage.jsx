@@ -87,7 +87,8 @@ function ProjectChip({ mt }) {
     if (!viaServer()) { snack("Choosing the project needs the live server"); return; }
     const map = { ...((D.prep || {}).series || {}), [series]: code };
     if (!await writeSettings({ "prep.series": map })) return;
-    /** @type {any} */ (D.prep = D.prep || {}).series = map;
+    if (!D.prep) D.prep = {};
+    D.prep.series = map;
     Object.values((D.prep || {}).meetings || {}).forEach((/** @type {any} */ x) => { if (x.series === series) { x.p = code; x.how = "remembered"; } });
     snack("Remembered for this series");
     loadPrep(prepViewKey.value, { keepTab: true });

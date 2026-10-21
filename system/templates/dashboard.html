@@ -66769,7 +66769,8 @@ ${d5.text}`);
       }
       const map = { ...(D.prep || {}).series || {}, [series]: code };
       if (!await writeSettings({ "prep.series": map })) return;
-      (D.prep = D.prep || {}).series = map;
+      if (!D.prep) D.prep = {};
+      D.prep.series = map;
       Object.values((D.prep || {}).meetings || {}).forEach((x5) => {
         if (x5.series === series) {
           x5.p = code;
