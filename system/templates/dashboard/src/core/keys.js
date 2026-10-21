@@ -36,10 +36,10 @@ document.addEventListener("mousedown",e=>{
 }
 /* ======================= keyboard ======================= */
 /** #288: one test for "a dialog or a popup is open", for every single-key shortcut: an open dialog element, the calendar, the ? panel,
-    an item being edited, a peek's pop-up, or any menu, list, picker or dialog box that is showing (Display, the funnel, the
+    an open peek (editing or not) or ask creaite, a peek's pop-up, or any menu, list, picker or dialog box that is showing (Display, the funnel, the
     sidebar's More, a cell's list, the link form, the note drawer). */
 export const POPUPS='[role=menu],[role=listbox],[role=dialog],.ddmenu,.combo-list,.cal,.pkpop,.linkpop';
-export function popupOpen(){ if(document.querySelector("dialog[open]")||shared.CAL||shared.EDITING||shared.PKPOP||helpPanelOpen()) return true;
+export function popupOpen(){ if(document.querySelector("dialog[open]")||shared.CAL||shared.EDITING||shared.PKPOP||helpPanelOpen()||$("#panel")?.classList.contains("on")||$("#chat")?.classList.contains("on")) return true;   /* an open peek or ask creaite counts too (Esc closes them first) */
   return [...document.querySelectorAll(POPUPS)].some(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden"); }
 /** #288: one key per page, no modifier: the sidebar's button for each (its data-v), opened the way the sidebar opens it. */
 export const PAGE_KEYS={t:"today",p:"projects",w:"work",i:"review",f:"files",a:"activity",s:"settings",r:"reports",e:"people"};
@@ -62,8 +62,8 @@ document.addEventListener("keydown",e=>{
   if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
   if((e.key==="["||e.key==="]")&&shared.VIEW==="cockpit"){ e.preventDefault(); switchProject(e.key==="]"?1:-1); return; }
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
-  if(!e.shiftKey&&!e.repeat&&PAGE_KEYS[e.key.toLowerCase()]&&!popupOpen()){ e.preventDefault(); if(shared.VIEW==="today"&&e.key.toLowerCase()==="t") return; go(railGo(PAGE_KEYS[e.key.toLowerCase()])); return; }   /* #288: T P W I F A S R E (T on Today is back to today, above) */
-  if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */
+  if(!e.shiftKey&&!e.repeat&&PAGE_KEYS[e.key.toLowerCase()]&&!(shared.VIEW==="intake-review"&&/^[ar]$/i.test(e.key))&&!popupOpen()){ e.preventDefault(); if(shared.VIEW==="today"&&e.key.toLowerCase()==="t") return; go(railGo(PAGE_KEYS[e.key.toLowerCase()])); return; }   /* #288: T P W I F A S R E (T on Today is back to today, above; on Intake A and R stay its approve and reject) */
+  if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter opens (E is People since #288) */
   /* #232-C2: the Intake page keeps its own keys (components/intakeReview/IntakeReviewPage.jsx); the old Review block is gone */
 });
 if(!MAC) $("#kK").textContent="Ctrl K";

@@ -629,9 +629,9 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 | W | Work |
 | I | Intake |
 | F | Files |
-| A | Activity (on a focused proposal, Intake keeps A for approve) |
+| A | Activity (on the Intake page, A stays Intake's own approve) |
 | S | Settings |
-| R | Reports (on a focused proposal, Intake keeps R for reject) |
+| R | Reports (on the Intake page, R stays Intake's own reject) |
 | E | People |
 | Back / Forward | The browser's Back and Forward (or ⌘[ and ⌘]) return to the last view, with its filters, open item and scroll position |
 | Alt + / | In any editor, with text selected (Cmd/Ctrl + A for all of it): the **AI** menu for that text. In the suggestion, Esc discards it and Enter on **Accept** puts it in (Cmd/Ctrl + Z undoes it) |
@@ -647,7 +647,7 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 
 Work's keys and Intake's are all in this table: press **?** from either page to see them.
 
-**Page keys** (T, P, W, I, F, A, S, R, E) open a page the way its sidebar button does. They do nothing while you are typing in a box, or while a dialog, a menu or list, the calendar or the ? panel is open.
+**Page keys** (T, P, W, I, F, A, S, R, E) open a page the way its sidebar button does. They do nothing while you are typing in a box, or while a dialog, a menu or list, the calendar, the ? panel, an open item or ask creaite is open (Esc closes it first). On the Intake page, A and R stay Intake's own approve and reject.
 
 ## What the icons mean
 

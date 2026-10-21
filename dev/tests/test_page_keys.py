@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import intake_review_support as IR  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -93,6 +94,29 @@ class PageKeys(LiveBrowserCase):
         b.pump(0.3)
         self.assertEqual(b.eval("VIEW"), "work", "the ? panel is open")
 
+    def test_ignored_while_a_peek_or_ask_creaite_is_open(self):
+        b = self.b
+        b.eval("go('work')")
+        b.wait("VIEW==='work' && !!document.querySelector('#workTbl tbody tr[data-row]')")
+        b.eval("document.activeElement&&document.activeElement.blur()")
+        b.key("j")
+        b.key("Enter")                                                         # a peek, not editing
+        b.wait("document.getElementById('panel').classList.contains('on')", 5)
+        self.assertFalse(b.eval("EDITING"))
+        b.eval("document.activeElement&&document.activeElement.blur()")
+        b.key("p")
+        b.pump(0.3)
+        self.assertEqual(b.eval("VIEW"), "work", "a peek is open")
+        b.key("Escape")
+        b.wait("!document.getElementById('panel').classList.contains('on')", 5)
+        b.eval("openChat()")
+        b.wait("document.getElementById('chat').classList.contains('on')", 5)
+        b.eval("document.activeElement&&document.activeElement.blur()")
+        b.key("p")
+        b.pump(0.3)
+        self.assertEqual(b.eval("VIEW"), "work", "ask creaite is open")
+        b.eval("closeChat()")
+
     def test_the_field_picker_is_shift_f_and_f_is_files(self):
         b = self.b
         b.eval("go('work')")
@@ -117,6 +141,35 @@ class PageKeys(LiveBrowserCase):
                      "| R | Reports", "| E | People"):
             self.assertIn(line, md)
 
+
+class IntakeKeepsAR(LiveBrowserCase):
+    """On Intake, A and R stay its approve and reject: pressed again after an approve (when the focus has left the row) they
+    never leave the page. Approves change data, so this class has its own vault."""
+    width, height = 1400, 1000
+
+    @classmethod
+    def load(cls, v):
+        IR.load(v)
+
+    def test_a_a_a_and_r_stay_on_intake(self):
+        b = self.b
+        IR.open_meeting(b)
+        row = "#v-intake-review tr.irprop"
+        ok = f"[...document.querySelectorAll('{row}')].find(t=>!!t.querySelector('[data-ira=approve]:not([disabled])'))"
+        start = b.eval("REV.length")
+        for i in range(3):                                                     # an approve applies at once: the row leaves REV
+            b.wait(f"!!{ok}", 25)
+            b.eval(f"{ok}.focus()")
+            b.key("a")
+            b.wait(f"REV.length==={start - i - 1}", 25)
+            self.assertEqual(b.eval("VIEW"), "intake-review", "A left Intake")
+            b.eval("document.activeElement&&document.activeElement.blur()")   # what Cap saw: the focus drops to the page
+            b.key("a")
+            b.pump(0.3)
+            self.assertEqual(b.eval("VIEW"), "intake-review", "A with the focus on the page left Intake")
+        b.key("r")
+        b.pump(0.3)
+        self.assertEqual(b.eval("VIEW"), "intake-review", "R left Intake")
 
 if __name__ == "__main__":
     unittest.main()

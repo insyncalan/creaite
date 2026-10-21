@@ -53620,7 +53620,7 @@ ${pre}**Current state title:** ${title}`);
   }
   var POPUPS = "[role=menu],[role=listbox],[role=dialog],.ddmenu,.combo-list,.cal,.pkpop,.linkpop";
   function popupOpen() {
-    if (document.querySelector("dialog[open]") || shared.CAL || shared.EDITING || shared.PKPOP || helpPanelOpen()) return true;
+    if (document.querySelector("dialog[open]") || shared.CAL || shared.EDITING || shared.PKPOP || helpPanelOpen() || $("#panel")?.classList.contains("on") || $("#chat")?.classList.contains("on")) return true;
     return [...document.querySelectorAll(POPUPS)].some((el2) => el2.getClientRects().length > 0 && getComputedStyle(el2).visibility !== "hidden");
   }
   var PAGE_KEYS = { t: "today", p: "projects", w: "work", i: "review", f: "files", a: "activity", s: "settings", r: "reports", e: "people" };
@@ -53725,7 +53725,7 @@ ${pre}**Current state title:** ${title}`);
         e4.preventDefault();
         return;
       }
-      if (!e4.shiftKey && !e4.repeat && PAGE_KEYS[e4.key.toLowerCase()] && !popupOpen()) {
+      if (!e4.shiftKey && !e4.repeat && PAGE_KEYS[e4.key.toLowerCase()] && !(shared.VIEW === "intake-review" && /^[ar]$/i.test(e4.key)) && !popupOpen()) {
         e4.preventDefault();
         if (shared.VIEW === "today" && e4.key.toLowerCase() === "t") return;
         go2(railGo(PAGE_KEYS[e4.key.toLowerCase()]));
