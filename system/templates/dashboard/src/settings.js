@@ -808,7 +808,7 @@ PKDRAW.push(alertPeekDraw);
 setInterval(vipPoll,60*1000);
 vipBadge();
 /* Review: proposals from a VIP (flag "vip", set by sweep.py stage) first, labelled VIP */
-/* the VIP chip on a person's page; the VIP field in the person dialog (when editing) */
+/* no VIP chip on a person's page and no followed field in the person dialog (BL-288, #247): followed is set on the project settings page only */
 FX.vip=new Set();
 ["actions","raid","decisions"].forEach(t=>FDEFS[t].push(["vip","People I follow",()=>[["yes",t==="decisions"?"Made by someone I follow":"Owned by someone I follow"],["no","Not followed"]],x=>vipKind(x.o||x.by)?"yes":"no",1]));
 WSIG.push(["vip_overdue","Overdue item owned by someone you follow closely","days","Overdue by at least (days)"]);
