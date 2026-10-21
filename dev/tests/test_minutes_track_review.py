@@ -2,15 +2,16 @@
 
 In the fictional steering committee of test_minutes_editor (three actions, a decision and a risk) the first action is ticked
 (its default), the second crossed and the third cleared to neither, in the minutes view; then the minutes are approved from
-Review, by the minutes' own Approve and by Approve n routine ("Approve all from these minutes"). Either way the ticked action is
+Review, by the minutes' own Approve and by Approve n routine ("Approve all from these minutes"). Since #232 C2 Review is the
+Intake page: the minutes' Approve is their row under the meeting, and Approve n routine is the meeting's Approve routine (n). Either way the ticked action is
 registered, the crossed one is gone from the minutes (rejected) and the one left with neither stays in the minutes untracked;
 the decision and the risk (neither, their default) stay in the minutes only. Undo of the single Approve puts the apply back and
 the minutes exactly as they were before (as the view's Undo does). Both paths call stores/minutes.trackApprove, the view's code.
 A promise has no row in the minutes, so no Track control: approved from Review it is never registered and waits in Review (Cap's
 #268 review H1, track.approveArgs).
 
-Cap's #275 review: the bulk paths (Approve routine, the bar's Approve, the group tick) never register a crossed or neither row
-(Review's rows carry `trk`); `review.py approve` on the minutes and on an item, and `review.py bulk`, honour the Track column on the
+Cap's #275 review: the bulk paths (Approve routine, and rvDecideMany, which every bulk approval calls) never register a crossed
+or neither row (Review's rows carry `trk`); `review.py approve` on the minutes and on an item, and `review.py bulk`, honour the Track column on the
 server (ServerTrack, quick); under one project of minutes covering several, Approve registers only that project's ticked items; Undo
 of Approve n routine puts the crosses back too.
 
@@ -31,7 +32,24 @@ import test_minutes_approve as ma  # noqa: E402
 ROW = mv.ROW
 DIFF_APPLIED = "def track_problems" in (Path(__file__).resolve().parents[2] / "system/scripts/tracker.py").read_text(encoding="utf-8")
 SOW, UAT, CUT = "Send the revised SOW to the client", "Book the UAT test environment", "Share the cut-over plan with the client"
-MIN = "document.querySelector('#reviewBody tr.mparent')"
+# #232 C2: the old Review page is retired; the minutes' Approve and the meeting's Approve routine are on the Intake page, under the
+# meeting (go('intake-review', <the minutes' proposal number>) opens it).
+MIN = "document.querySelector('#v-intake-review tr.irprop[data-kind=draft]')"
+ROUTINE = "document.querySelector('#v-intake-review tr.icsubhead.routine.child [data-ira=routine]')"
+
+
+def to_intake(b, proposal):
+    """The Intake page with the minutes' meeting open (the one staged as `proposal`), its Approve drawn."""
+    find = "(REV.find(r=>r.kind==='draft'&&r.ref==='meeting'&&r.file===" + json.dumps(proposal) + ")||{}).n"
+    for _ in range(3):
+        b.eval("irOpen.value=null; go('intake-review', " + find + ")")
+        try:
+            b.wait(MIN + " && " + MIN + ".querySelector('[data-ira=approve]')", 10)
+            break
+        except TimeoutError:
+            b.pump(0.5)
+    b.wait(MIN + " && " + MIN + ".querySelector('[data-ira=approve]')", 10)
+    b.pump(0.3)
 
 
 class TrackFromReview(LiveBrowserCase):
@@ -55,9 +73,7 @@ class TrackFromReview(LiveBrowserCase):
             b.pump(0.25)
         self.assertEqual(self.record()["layout"]["track"], {"2": "n", "3": ""}, "the Track choices saved with the minutes")
         self.before = self.record()
-        b.eval("go('review')")
-        b.wait(MIN + " && " + MIN + ".querySelector('[data-act=a]')", 15)
-        b.pump(0.3)
+        to_intake(b, self.proposal)
 
     def descs(self):
         return [a["description"] for a in self.rows_of("actions")]
@@ -77,7 +93,7 @@ class TrackFromReview(LiveBrowserCase):
 
     def test_01_approve_from_review_applies_the_track_column_and_undo_puts_the_minutes_back(self):
         b = self.b
-        b.eval(MIN + ".querySelector('[data-act=a]').click()")
+        b.eval(MIN + ".querySelector('[data-ira=approve]').click()")
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 1 work item registered", self.snack())
         self.assertNotIn("wait in Review", self.snack())
@@ -102,9 +118,9 @@ class TrackFromReview(LiveBrowserCase):
         self.assertEqual((after.get("meta") or {}).get("removed") or {}, (self.before.get("meta") or {}).get("removed") or {})
         self.assertEqual(after["layout"]["track"], {"2": "n", "3": ""}, "the Track choices kept")
 
-    def test_02_approve_all_from_these_minutes_applies_the_track_column_too(self):
+    def test_02_approve_routine_under_the_minutes_applies_the_track_column_too(self):
         b = self.b
-        b.eval(MIN + ".querySelector('[data-act=ga]').click()")
+        b.eval(ROUTINE + ".click()")                             # the meeting's Approve routine (n): Review's Approve n routine
         for _ in range(120):
             if SOW in self.descs():
                 break
@@ -126,9 +142,8 @@ class TrackFromReview(LiveBrowserCase):
             if (self.record().get("layout") or {}).get("track", {}).get("3") == "y":
                 break
             b.pump(0.25)
-        b.eval("go('review')")
-        b.wait(MIN + " && " + MIN + ".querySelector('[data-act=a]')", 15)
-        b.eval(MIN + ".querySelector('[data-act=a]').click()")
+        to_intake(b, self.proposal)
+        b.eval(MIN + ".querySelector('[data-ira=approve]').click()")
         b.wait("location.hash.startsWith('#minutes') && document.getElementById('mnApprove') && document.getElementById('mnApprove').open", 20)
         lis = self.ev("[...document.querySelectorAll('#mnApprove li')].map(l=>l.textContent)")
         self.assertIn("Pat Unknown needs details" + CUT, lis, "the view's box, with the ticked item worth a look")
@@ -146,24 +161,29 @@ class TrackFromReview(LiveBrowserCase):
         trk = self.ev("Object.fromEntries(REV.filter(r=>r.trk!=null).map(r=>[r.ref,r.trk]))")
         self.assertEqual(trk, {"2": "n", "3": ""}, "Review's rows carry the Track choices")
         self.assertEqual(self.ev("REV.filter(r=>r.trk!=null).map(rvBulkOK)"), [False, False], "never approved in bulk")
-        self.ev("[...document.querySelectorAll('#reviewBody tr[data-n]')].forEach(tr=>{ const r=REV.find(x=>x.n===+tr.dataset.n); if(r&&!isMin(r)) RHL.add(r.n); }); rvSyncChk(); renderReview();")
-        self.ev("rvApproveSelected(true)")                      # the bar's Approve on every row, the crossed and neither ones included
+        # every bulk approval on the Intake page goes through rvDecideMany (Approve routine in a meeting, in mail and in other):
+        # handed every action drawn under the meeting, the crossed and neither ones included, it registers only the ticked one
+        self.ev("(()=>{ window.__t4=null; const ns=[...document.querySelectorAll('#v-intake-review tr.irprop')].map(tr=>+tr.dataset.irn);"
+                " rvDecideMany(REV.filter(r=>ns.includes(r.n)&&r.kind==='actions'),'approved').then(()=>{ window.__t4='done'; }); })()")
         for _ in range(120):
             if SOW in self.descs():
                 break
             b.pump(0.25)
         self.assertIn(SOW, self.descs())
-        self.assertNotIn(UAT, self.descs(), "crossed: never registered by the bar's Approve")
-        self.assertNotIn(CUT, self.descs(), "neither: never registered by the bar's Approve")
+        self.assertNotIn(UAT, self.descs(), "crossed: never registered by a bulk approval")
+        self.assertNotIn(CUT, self.descs(), "neither: never registered by a bulk approval")
         self.assertEqual((self.staged(2)["decision"], self.staged(3)["decision"]), ("pending", "pending"))
-        self.ev("rvRoutine()")                                   # Approve routine: nothing of theirs is offered
-        b.pump(0.4)
-        self.assertNotIn(UAT, self.ev("document.getElementById('rvDlg').open ? document.getElementById('rvDlgBody').textContent : ''"))
+        to_intake(b, self.proposal)                              # the meeting's Approve routine: neither is registered by it
+        b.wait(ROUTINE, 15)
+        b.eval(ROUTINE + ".click()")
+        b.wait("document.getElementById('snack').classList.contains('on') && /from these minutes/.test(document.getElementById('snack').textContent)", 30)
+        b.pump(1)
         self.assertNotIn(UAT, self.descs())
+        self.assertNotIn(CUT, self.descs())
 
-    def test_05_undo_of_approve_n_routine_puts_the_crosses_back_too(self):
+    def test_05_undo_of_approve_routine_puts_the_crosses_back_too(self):
         b = self.b
-        b.eval(MIN + ".querySelector('[data-act=ga]').click()")
+        b.eval(ROUTINE + ".click()")
         b.wait("document.getElementById('snack').classList.contains('on') && /from these minutes/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("4 lines taken out of the minutes or kept as lines only", self.snack())   # the cross, the neither, and the decision and risk at their default
         for _ in range(60):
@@ -182,8 +202,9 @@ class TrackFromReview(LiveBrowserCase):
         self.assertEqual(self.rows_text(self.record()), self.rows_text(self.before), "the minutes' rows exactly as before")
 
     def test_06_a_bulk_approval_straight_after_leaving_the_minutes_waits_for_the_track_choices(self):
-        """Cap's re-review (2): leaving the Minutes view reloads the data without waiting, so Review first draws the old rows; the
-        bar's Approve made at once (on a row crossed a moment ago, still shown as routine) waits for the reload and leaves it out."""
+        """Cap's re-review (2): leaving the Minutes view reloads the data without waiting, so the Intake page first draws the old
+        rows; a bulk approval made at once (rvDecideMany, which every bulk path calls), on a row crossed a moment ago and still shown
+        as routine, waits for the reload and leaves it out."""
         b = self.b
         self.open()
         b.click(ROW % 1 + " .mntrk button.n")                   # SOW crossed now
@@ -192,10 +213,10 @@ class TrackFromReview(LiveBrowserCase):
                 break
             b.pump(0.25)
         self.assertEqual(self.record()["layout"]["track"].get("1"), "n")
-        stale = self.ev("(()=>{ go('review'); const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); window.__t6=null;"
-                        " RHL.clear(); RHL.add(r.n); rvSyncChk(); const t=r.trk; rvApproveSelected(true).then(()=>{ window.__t6='done'; });"
+        stale = self.ev("(()=>{ go('intake-review'); const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); window.__t6=null;"
+                        " const t=r.trk; rvDecideMany([r],'approved').then(()=>{ window.__t6='done'; });"
                         " return t===undefined?null:t; })()")
-        self.assertIsNone(stale, "the row as Review first drew it: not yet marked crossed (the race)")
+        self.assertIsNone(stale, "the row as the page first drew it: not yet marked crossed (the race)")
         for _ in range(120):
             if self.ev("window.__t6") == "done":
                 break
@@ -207,7 +228,7 @@ class TrackFromReview(LiveBrowserCase):
 
 
 class TwoProjects(LiveBrowserCase):
-    """Cap's #275 M-b: minutes covering ABC and DEF; Approve under ABC registers ABC's ticked items only, DEF's wait in Review."""
+    """Cap's #275 M-b: minutes covering ABC and DEF; Approve under ABC registers ABC's ticked items only, DEF's wait for approval."""
     @classmethod
     def load(cls, v):
         mv.MinutesViewV2.load.__func__(cls, v)
@@ -228,12 +249,11 @@ class TwoProjects(LiveBrowserCase):
             if (self.record().get("layout") or {}).get("track") == {"3": ""}:
                 break
             b.pump(0.25)
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr.mparent[data-g=\"ABC\"] [data-act=a]')", 15)
-        b.pump(0.3)
-        tip = self.ev("document.querySelector('#reviewBody tr.mparent[data-g=\"ABC\"] [data-act=a]').dataset.tip")
-        self.assertIn("registers the items ticked in their Track column (this project's)", tip)
-        b.eval("document.querySelector('#reviewBody tr.mparent[data-g=\"ABC\"] [data-act=a]').click()")
+        to_intake(b, self.proposal)
+        # #232 C2: the Intake page draws the minutes once under their meeting, so no button there names a project; the minutes'
+        # Approve under one project is decide's project argument (review.js approveTracked's `g`), driven here as Review drove it
+        b.eval("(()=>{ const r=REV.find(x=>x.kind==='draft'&&x.ref==='meeting'&&x.file===" + json.dumps(self.proposal) + ");"
+               " decide(r.n,'approved',false,'ABC'); })()")
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         descs = [a["description"] for a in self.rows_of("actions")]
         self.assertIn(SOW, descs, "ABC's ticked action")
@@ -380,10 +400,8 @@ class RowlessPromiseFromReview(LiveBrowserCase):
 
     def test_the_ticked_row_registers_and_the_promise_waits_in_review(self):
         b = self.b
-        b.eval("go('review')")
-        b.wait(MIN + " && " + MIN + ".querySelector('[data-act=a]')", 15)
-        b.pump(0.3)
-        b.eval(MIN + ".querySelector('[data-act=a]').click()")
+        to_intake(b, self.proposal)
+        b.eval(MIN + ".querySelector('[data-ira=approve]').click()")
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 1 work item registered · 1 wait in Review", self.snack())
         self.assertIn("Draft the cutover runbook", [a["description"] for a in self.rows_of("actions")])

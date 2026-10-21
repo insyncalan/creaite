@@ -16,7 +16,7 @@ import { closePanel, PK, pkOn } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
-import { decide, draftOn, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
+import { approveRoutineTracked, decide, draftOn, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
 import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
@@ -123,6 +123,8 @@ export function irReject(n, anchor) {
 /** Approve routine: the routine group only, in one apply with one Undo (rvDecideMany); never the first group.
     @param {{needs: number[], routine: number[]}} groups */
 export async function irApproveRoutine(groups) {
+  const min = [...groups.needs, ...groups.routine].map(irRow).find(r => !!r && !r.done && isRecordMin(r));
+  if (min && viaServer()) { await approveRoutineTracked(min); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
   const list = irBulk(groups, irDone, irHeld).map(irRow).filter(r => rvBulkOK(r));
   if (!list.length) { snack("Nothing routine to approve"); return; }
   const res = await rvDecideMany(list, "approved");
