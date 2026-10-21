@@ -43263,7 +43263,7 @@ ${s5}`;
   }
 
   // core/keys.js
-  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
+  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
   function bootCopyCommand() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-copycmd]");
@@ -48285,7 +48285,7 @@ ${s5}`;
       const pi2 = P4.findIndex((x5) => x5.code === code), nOpenA = A4.filter((x5) => x5.p === code && openOnly(x5)).length, nOpenR = R3.filter((r4) => r4.p === code && r4.st === "Open").length, nDec = DEC.filter((d5) => d5.p === code).length;
       putHTML($("#v-cockpit"), html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p6.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div>
-     <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="projSw" aria-label="Switch project">${P4.map((x5) => html`<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${x5.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P4.length < 2 ? "disabled" : ""}>›</button></div></div>
+     <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P4.length < 2 ? "disabled" : ""}>‹</button><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P4.length < 2 ? "disabled" : ""}>›</button></div></div>
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
@@ -73802,12 +73802,6 @@ ${d5.text}`);
         e4.preventDefault();
         const { wt: wt2, view, code, extra } = navParse(e4.target.dataset.nav);
         openWork(code, wt2, view, extra);
-      }
-    });
-    document.addEventListener("change", (e4) => {
-      if (e4.target.id === "projSw") {
-        const c5 = e4.target.value;
-        if (!go2("cockpit", c5)) e4.target.value = shared.COCK;
       }
     });
   }

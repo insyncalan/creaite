@@ -177,7 +177,7 @@ document.addEventListener("click",e=>{ const n=e.target.closest("[data-nav]"); i
   const sw=e.target.closest("[data-psw]"); if(sw) switchProject(+sw.dataset.psw); },true);
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-proj][role=link]")){ e.preventDefault(); go("cockpit",e.target.dataset.proj); return; }
   if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-nav][role=link]")){ e.preventDefault(); const {wt,view,code,extra}=navParse(e.target.dataset.nav); openWork(code,wt,view,extra); } });
-document.addEventListener("change",e=>{ if(e.target.id==="projSw"){ const c=e.target.value; if(!go("cockpit",c)) e.target.value=shared.COCK; } });
+/* #285: the cockpit has no project dropdown; ‹ › ([ ]) and the Projects list move between projects. */
 }
 /* ===== BL-190 (sprint-links) ===== every figure that counts work items opens Work on its tab, filtered to exactly those items.
    data-nav="<tab>:<view>:<project code>[:<filters>]": the optional fourth part is key=v1,v2&key2=… (values URI-encoded), the same keys
