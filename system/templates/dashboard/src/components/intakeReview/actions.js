@@ -3,17 +3,20 @@
    file to cx-minutes through the run engine), Process all ready, Later, Not needed with a reason, Restore, and Upload files.
    Replaces intake.js's Calendar import and Upload files sections and the Intake parts of meetings.js for the new page; the old
    page keeps its own copies until 232-C retires it. Nothing here writes a file: the server's routes do (/api/transcripts/load,
-   /api/inbox/upload, /api/intake/clear), and ask creaite's own run (askLive) makes the draft.
+   /api/inbox/upload, /api/intake/clear), and Process's own run kind (#264, POST /api/intake/process through processLive) makes the
+   draft; Refresh is the calendar's own run kind (#265, POST /api/calendar/refresh through calendarLive). Someone else's minutes (Find
+   work items) still go through ask creaite's run (askLive) until the Process guard accepts them (dev/proposals/intake-232/ROUTES.md).
    Progress is the row's (irBusy); the ask panel is never opened, so ask creaite stays free (one run at a time is the engine's). */
-import { askLive } from "../../ask.js";
-import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
+import { askLive } from "../../ask.js";     /* only for someone else's minutes (Find work items): see the header */
+import { openChat } from "../../ask.js";
+import { calendarLive, jobLive, mtgBusy, mtgCheckable, mtgProcessFile, mtgSkip, processLive, stopRun, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
 import { D, fd, fdText, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { pName } from "../../core/data.js";
 import { srcShort } from "../../core/fields.js";
 import { irFixed, irKindOf, irMatches, irNameOk, irUnsure } from "../../core/irFold.js";
-import { irAside, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRow, irRefreshing, irSetBusy, irSetChecking, irSetFileKind, irTick } from "../../stores/intakeReview.js";
+import { irAside, irAskQ, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefRun, irRow, irRefreshing, irSetAskQ, irSetBusy, irSetChecking, irSetFileKind, irStep, irTick } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
@@ -49,6 +52,9 @@ const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || [
 const rowOf = (/** @type {string} */ id) => irModel().meetings.find((/** @type {any} */ x) => x.id === id) || null;
 const whenOf = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}` : fd(m.day));
 
+/** The Process run in progress (its ID, for Stop on the row), or "". */
+let irRun = "";
+
 /** Process one meeting or file. The row shows progress; a reason it could not be done is its note.
     @param {any} m @returns {Promise<boolean>} whether a draft came back */
 export async function irProcess(m) {
@@ -79,16 +85,41 @@ export async function irProcess(m) {
     shared.RUNLABEL = label;
     if (!irNameOk(file)) { irNote(m.id, "Rename this file to process it"); return false; }      /* the name becomes part of the command */
     const minutes = irFileKind(m) === "minutes";           /* #232-E1: someone else's minutes are read for work items; no new minutes are drafted */
+    irSetAskQ(m.id, null); irStep.value = "";
+    let r = /** @type {any} */ (null);
     try {
-      await askLive(minutes ? `process ${file} as minutes by someone else` : `process ${file}`,
-        minutes ? `Check “${m.title}” (${whenOf(m)}) for proposed items: minutes by someone else, no new minutes drafted` : `Process “${m.title}” (${whenOf(m)}) into draft minutes and proposed items`);
+      if (minutes) {                                       /* not yet on Process's route: the guard stages only a transcript (ROUTES.md) */
+        await askLive(`process ${file} as minutes by someone else`,
+          `Check “${m.title}” (${whenOf(m)}) for proposed items: minutes by someone else, no new minutes drafted`);
+      } else {                                             /* #264: the click is the go-ahead; progress and Stop are on the row */
+        const x = m.src === "calendar" ? calOf(m) : null;
+        r = await processLive([x ? mtgProcessFile(x, file) : { path: file }], ev => { if (ev.type === "run") irRun = ev.id; else if (ev.type === "step") irStep.value = ev.label || ""; });
+      }
     } catch (e) { /* checked below */ }
+    finally { irRun = ""; irStep.value = ""; }
     await reloadData();
     const after = rowOf(m.id);
     const done = !after || after.stage !== "arrived";      /* a file that was filed away has left the inbox: that is done, not failed */
-    if (!done) irNote(m.id, "Couldn't: no draft came back");
+    const o = r && (r.files || []).find((/** @type {any} */ f) => f.path === file);
+    if (!done && o && (o.state === "needs" || o.state === "not_staged")) {     /* the run's own question, with Ask creaite about this */
+      irSetAskQ(m.id, { state: o.state, question: oneLine(o.question || "") });
+      irNote(m.id, o.state === "needs" ? `Needs you: ${oneLine(o.question || "")}` : "Not staged: process it again, or ask creaite");
+    } else if (!done) irNote(m.id, r && r.stopped ? "Stopped: nothing was staged" : `Couldn't: ${oneLine((r && r.message) || "no draft came back")}`);
+    if (r && r.closure && r.closure.line) snack(oneLine(r.closure.line));
     return done;
   } finally { irSetBusy(m.id, false); }
+}
+
+/** Stop on the running row: the server ends the run and says so; the row then says nothing was staged. */
+export function irStop() { if (irRun) stopRun(irRun); }
+/** Whether the running row can offer Stop (someone else's minutes run in ask creaite, whose own Stop is in its panel). @param {any} m */
+export const irCanStop = m => !!m && irBusy.value.includes(m.id) && !(m.src === "upload" && irFileKind(m) === "minutes");
+/** "Ask creaite about this": the panel opens with the run's question filled in; nothing is sent by itself. @param {any} m */
+export function irAskAbout(m) {
+  const q = irAskQ.value[m.id]; if (!q) return;
+  openChat();
+  const box = /** @type {HTMLTextAreaElement | null} */ (document.getElementById("chIn"));
+  if (box) { box.value = `About the Intake file “${m.title}”: ${q.question || "Process didn't stage it. Why not, and what should I do?"}`; box.focus(); }
 }
 
 /** Process every meeting and file whose transcript is ready, one after another. */
@@ -176,18 +207,26 @@ export async function irAddFiles(files) {
   if (added) { await reloadData(); snack(`${added} file${added === 1 ? "" : "s"} added`); }
 }
 
-/** Refresh the calendar (the icon beside "Calendar read" under the heading): read it again through the run engine. ask creaite's
-    panel stays closed; the sub-line says Refreshing… and then shows the new time. @returns {Promise<boolean>} whether it ran */
+/** Refresh the calendar (the icon beside "Calendar read" under the heading): the calendar's own run kind (#265). ask creaite's
+    panel stays closed; the sub-line says Refreshing… with the run's step, the icon becomes Stop, and the closure is said once.
+    @returns {Promise<boolean>} whether it ran */
 export async function irRefreshCalendar() {
+  if (irRefRun.value) { stopRun(irRefRun.value.id); return false; }       /* the icon is Stop while it runs */
   if (!viaServer()) { snack("Refreshing needs the live server"); return false; }
   if (mtgBusy() || irBlocked() || irRefreshing.value) { snack(BUSY); return false; }
-  irRefreshing.value = true;
+  irRefreshing.value = true; irRefRun.value = { id: "", step: "" };
+  let r = /** @type {any} */ (null);
   try {
     shared.RUNLABEL = "Refreshing the calendar";
-    try { await askLive("refresh calendar", "Refresh the calendar for Intake and Today"); } catch (e) { /* the sub-line shows the time it has */ }
+    try {
+      r = await calendarLive(ev => { const c = irRefRun.value; if (!c) return;
+        if (ev.type === "run") irRefRun.value = { ...c, id: ev.id }; else if (ev.type === "step") irRefRun.value = { ...c, step: ev.label || "" }; });
+    } catch (e) { /* the sub-line shows the time it has */ }
+    irRefRun.value = null;
     await reloadData();
+    snack(r && r.closure ? oneLine(r.closure.line) : r && r.stopped ? "Stopped" : oneLine((r && r.message) || "The calendar was not saved"));
     return true;
-  } finally { irRefreshing.value = false; irTick.value++; }
+  } finally { irRefRun.value = null; irRefreshing.value = false; irTick.value++; }
 }
 
 /** The words after "Calendar read": the time the calendar was last read (hh:mm), with the date when it was not today, or "No calendar

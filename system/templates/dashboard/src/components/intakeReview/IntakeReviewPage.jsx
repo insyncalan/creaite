@@ -15,7 +15,7 @@ import { $ } from "../../core/dom.js";
 import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
@@ -89,16 +89,17 @@ function DropOverlay() {
   return <div class={`icdrop${irDropOn.value ? " on" : ""}`} data-irdrop="1" aria-hidden="true"><div><b>Drop to add files</b><br /><span class="sub">Transcripts or minutes: {types}, up to 25 MB each</span></div></div>;
 }
 
-/** "Calendar read hh:mm" and the icon that reads it again (the run engine; ask creaite's panel stays closed). `text` is passed in
-    (not read here) so the line redraws when the time changes: a component whose props are the same is left as it was.
+/** "Calendar read hh:mm" and the icon that reads it again (#265: the calendar's own run kind; ask creaite's panel stays closed).
+    While it runs the line says Refreshing… with the run's step and the icon is Stop. `text` is passed in (not read here) so the
+    line redraws when the time changes: a component whose props are the same is left as it was.
     @param {{text: string}} props */
 function CalendarRead({ text }) {
-  const busy = irBlocked() || irRefreshing.value;
-  const why = irRefreshing.value ? "Reading the calendar" : busy ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
+  const run = irRefRun.value, busy = !run && (irBlocked() || irRefreshing.value);
+  const why = run ? "Stop the refresh" : busy ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
   return <>
-    <span class="sub" data-ircalread="1">{irRefreshing.value ? "Refreshing…" : text}</span>{" "}
-    <button type="button" class="ib sm" id="icRef" data-ira="refreshcal" aria-label="Refresh the calendar" data-tip={why} disabled={busy}
-      onClick={() => irRefreshCalendar()}><IrIcon name="refresh" /></button>
+    <span class="sub" data-ircalread="1">{run || irRefreshing.value ? `Refreshing…${run && run.step ? ` ${run.step}` : ""}` : text}</span>{" "}
+    <button type="button" class="ib sm" id="icRef" data-ira="refreshcal" aria-label={why} data-tip={why} disabled={busy}
+      onClick={() => irRefreshCalendar()}><IrIcon name={run ? "stop" : "refresh"} /></button>
   </>;
 }
 

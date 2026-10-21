@@ -2835,6 +2835,15 @@ Plan: `dev/sprints/v210-reporting.md`; contract: `dev/sprints/v210-contract.md` 
 - **Hand checks for 2.6.0** are `dev/handchecks/v2.6.0.md` and `dev/tests/handchecks/test_v260.py` on `handchecks-v260` (not touched here). The screenshot sheet comes from `just handchecks v2.6.0`; Board, Two panes, dark and both palettes are judgement on it, and the palette contrast is `test_intake_review_themes`.
 - **Not on the Intake page (to confirm):** see the list in `dashboard-spec.md`.
 
+### 2.6 on 2.5.3 (`v26-232-next`): the routes and the 900px fit
+
+- **Merged** `v253-release` into the 2.6 Intake line (`p260-r-fix`): #264 and #265's old-page wiring ported to the one page, not kept.
+- **Process** and **Refresh** run their own run kinds (`processLive`, `calendarLive` in `core/intakeApi.js`): step and Stop on the
+  row or the Refresh icon, "Needs you" with "Ask creaite about this", no ask creaite message. Someone else's minutes still go
+  through ask creaite: the guarded step is `dev/proposals/intake-232/ROUTES.md`. Tests: `test_intake_review_routes`.
+- **No sideways scroll** at 900 or 1440 in List, Board and Two panes (`test_intake_review_no_sideways`, replacing the retired
+  page's `test_review_no_sideways`).
+
 ## #264: Intake's Process as its own run kind (v2.5.3)
 
 Pressing Process (Upload files, and Calendar import's Process selected after its load) starts the run kind `process`

@@ -14,6 +14,7 @@ export const IR_ICONS = {
   all: [["path", { d: "M12 3l9 5-9 5-9-5z" }], ["path", { d: "M3 13l9 5 9-5" }]],
   /* the page's controls */
   upload: [["path", { d: "M12 16V4M7 9l5-5 5 5M4 20h16" }]],
+  stop: [["rect", { x: "6", y: "6", width: "12", height: "12", rx: "2" }]],     /* the refresh's Stop while it runs (core/dom.js's stop) */
   refresh: [["path", { d: "M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" }]],
   /* a row's kind: a calendar meeting or a file */
   meeting: [["rect", { x: "4", y: "5", width: "16", height: "15", rx: "2" }], ["path", { d: "M4 10h16M9 3v4M15 3v4" }]],

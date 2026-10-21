@@ -128,6 +128,15 @@ export const irQuery = signal("");
 export const irDropOn = signal(false);
 /** Whether the calendar is being read again (the refresh icon under the heading): the sub-line says "Refreshing…" meanwhile. */
 export const irRefreshing = signal(false);
+/** #264 on this page: the Process run's latest step in plain words (the route's "step" events), shown on the running row. */
+export const irStep = signal("");
+/** #264: a question the Process run could not answer without Alan (or "not staged"), by row id: the row offers "Ask creaite about
+    this", which opens the panel with the question filled in (never sent by itself). */
+export const irAskQ = signal(/** @type {Record<string, {state: string, question: string}>} */ ({}));
+/** @param {string} id @param {{state: string, question: string} | null} q */
+export function irSetAskQ(id, q) { const n = { ...irAskQ.value }; if (q) n[id] = q; else delete n[id]; irAskQ.value = n; }
+/** #265 on this page: the calendar refresh in progress, its run ID (for Stop) and its latest step, or null. */
+export const irRefRun = signal(/** @type {{id: string, step: string} | null} */ (null));
 /** Mark a meeting as being processed (or not). @param {string} id @param {boolean} on */
 export function irSetBusy(id, on) { irBusy.value = on ? [...irBusy.value.filter(x => x !== id), id] : irBusy.value.filter(x => x !== id); }
 

@@ -51,7 +51,8 @@ class IntakeSide(IntakeBase):
         b.wait(f"{self.row('ABC Steering')}.dataset.stage==='drafted'", 30)
         self.assertEqual(b.eval("irBusy.value.length"), 0)
         self.assertEqual([q for q, _ in b.eval("ASKED")], [f"process inbox/{DAY} ABC Steering.vtt"])
-        self.assertIn("draft minutes and proposed items", b.eval("ASKED[0][1]"))        # confirmed: cx-minutes may write
+        self.assertEqual(b.eval("PROC"), [[{"path": f"inbox/{DAY} ABC Steering.vtt"}]])      # #264: Process's own route, the click is the go-ahead
+        self.assertEqual(b.eval("CHAT"), [])                                              # no ask creaite message
 
     def test_process_loads_the_transcript_first_and_skips_with_the_reason_on_the_row(self):
         b = self.b

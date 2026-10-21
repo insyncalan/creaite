@@ -5,9 +5,9 @@
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
 import { IR_STAGES, irLive } from "../../core/irFold.js";
-import { irBusy, irClickMeeting, irDone, irHeld, irLiveCounts, irNotes, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
+import { irBusy, irClickMeeting, irDone, irHeld, irLiveCounts, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
-import { FileFacts, MeetingRow, Progress, RowActions, StageTrack, irRunningWords, irStateWords, irWhen } from "./rows.jsx";
+import { FileFacts, IrNote, MeetingRow, Progress, RowActions, StageTrack, irRunningWords, irStateWords, irWhen } from "./rows.jsx";
 
 export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
 const IR_EMPTY = "Nothing here. Meetings appear when they end.";
@@ -61,7 +61,7 @@ export function BoardView({ model }) {
               <div class="why">{irStateWords(m, m.groups.needs.length + m.groups.routine.length)}</div>
             </>}
             {irBusy.value.includes(m.id) ? <Progress words={irRunningWords(m)} /> : null}
-            {irNotes.value[m.id] ? <div class="why irnote" role="status">{irNotes.value[m.id]}</div> : null}
+            <IrNote m={m} />
             <div class="iccardacts"><RowActions m={m} /></div>
           </div>
         )) : <div class="empty">Nothing here.</div>}
@@ -95,7 +95,7 @@ export function TwoPanes({ model, list }) {
           {sel.src === "upload" ? <FileFacts m={sel} n={sel.groups.needs.length + sel.groups.routine.length} /> : <div class="why">{irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length)}</div>}
           {sel.stage === "arrived" && sel.state === "waiting" ? <div class="empty">Waiting for the transcript. It appears here when the meeting’s transcript arrives.</div> : null}
           {irBusy.value.includes(sel.id) ? <Progress words={irRunningWords(sel)} /> : null}
-          {irNotes.value[sel.id] ? <div class="why irnote" role="status">{irNotes.value[sel.id]}</div> : null}
+          <IrNote m={sel} />
           <div class="iccardacts"><RowActions m={sel} mini /></div>
           <div class="tbl"><table><tbody><ProposalGroups groups={sel.groups} meet={sel.title} /></tbody></table></div>
         </> : <div class="empty">Select a meeting.</div>}

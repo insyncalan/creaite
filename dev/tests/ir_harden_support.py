@@ -1,6 +1,6 @@
 """Shared fixture for the hardening tests against Team Cap's p250-a (test_intake_review_harden.py). A real live server in a throwaway vault, a fictional calendar
 for the pinned week, and the run engine stubbed in the page (what the old tests did for Process selected): jobLive records a
-transcript load and saves the file, askLive records the process request and leaves a draft waiting in Review, as cx-minutes would.
+transcript load and saves the file, processLive (Process's own route, #264) records the process request and leaves a draft waiting in Review, as cx-minutes would.
 
 The meetings (Monday 05-10-2026, the pinned day, 18:00 so all have ended):
   ev-1 ABC Steering 09:00        transcript available, already loaded in the inbox   -> ready
@@ -29,7 +29,10 @@ const item=(t)=>({n:1,op:"new",table:"actions",values:{project:"ABC",description
 jobLive=async(url,body)=>{ LOADED.push([url,body.id]);
   if(url==="/api/transcripts/load"){ const t="WEBVTT\n\nEvent ID: "+body.id+"\n\n00:00:01.000 --> 00:00:05.000\nHello\n";
     await api("/api/inbox/upload",{name:"2026-10-05 "+body.id+".vtt",data:btoa(t)}); } };
-askLive=async(q,c)=>{ ASKED.push([q,c]); if(window.GATE) await window.GATE;
+window.PROC=[]; window.CHAT=[];
+/* #264: Process's own route, recorded as "process <path>" in ASKED (the words the run is given) and its payload in PROC */
+processLive=async(files,onEv)=>{ PROC.push(files); for(const f of files) await askLive("process "+f.path,"route",true); return {ok:true,files:files.map(f=>({path:f.path,state:"staged"})),staged:files.length,needs:0}; };
+askLive=async(q,c,route)=>{ ASKED.push([q,c]); if(!route) CHAT.push(q); if(window.GATE) await window.GATE;
   const id=(q.match(/ev-\d+/)||[])[0]||(/Steering/.test(q)?"ev-1":"");
   if(id) await api("/api/fs",{op:"write",path:"system/staging/proposed-test-"+id+".json",text:JSON.stringify({created:"2026-10-05T09:00:00",source_run:"cx-minutes",files:[],items:[item("Send the revised plan")],
     meeting:{key:"calendar:"+id,title:"Stub",date:"2026-10-05",projects:["ABC"],draft:null,transcript:null,minutes_decision:"pending",file_ops:[]}})}); };

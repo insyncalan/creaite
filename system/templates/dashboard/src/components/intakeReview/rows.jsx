@@ -4,11 +4,11 @@
    (style.css, "#232 Intake and Review"). */
 import { pName } from "../../core/data.js";
 import { fd, TODAY } from "../../core/page.js";
-import { irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen } from "../../stores/intakeReview.js";
+import { irAskQ, irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen, irStep } from "../../stores/intakeReview.js";
 import { IconButton } from "../IconButton.jsx";
 import { IrIcon } from "./icons.js";
 import { irFixed } from "../../core/irFold.js";
-import { irAskReason, irBadName, irCanCheck, irCanProcess, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
+import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
 export const IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
@@ -44,7 +44,21 @@ export function irStateWords(m, n) {
 }
 
 /** The progress bar a meeting shows while it is drafted in the background. */
-export function Progress({ words }) { return <div class="icprog" role="progressbar" aria-label={words || "Drafting in the background"}><i></i></div>; }
+export function Progress({ words }) {
+  return <>
+    <div class="icprog" role="progressbar" aria-label={words || "Drafting in the background"}><i></i></div>
+    {irStep.value ? <div class="why" data-irstep="1">{irStep.value}</div> : null}
+  </>;
+}
+
+/** A row's note after a Process that drafted nothing; when the run asked a question (#264: "Needs you", or not staged), the note
+    offers "Ask creaite about this", which opens the panel with the question filled in. The same in List, Board and Two panes.
+    @param {{m: any}} props */
+export function IrNote({ m }) {
+  const note = irNotes.value[m.id];
+  if (!note) return null;
+  return <div class="why irnote" role="status">{note}{irAskQ.value[m.id] ? <>{" "}<button type="button" class="linkbtn" data-ira="askabout" onClick={() => irAskAbout(m)}>Ask creaite about this</button></> : null}</div>;
+}
 
 /** "Added today" or "Added 14-10-2026". @param {any} m */
 export const irAdded = m => (!m.day || m.day === TODAY ? "Added today" : `Added ${fd(m.day)}`);
@@ -97,7 +111,7 @@ export const laterWords = m => (m.state === "waiting" ? "Hide it until its trans
 export function RowActions({ m, mini }) {
   const running = irBusy.value.includes(m.id), blocked = irBlocked(), checking = irChecking.value.includes(m.id);
   const open = irOpen.value === m.id;
-  if (running) return <button type="button" class="mini" disabled data-ira="processing">Processing</button>;
+  if (running) return <><button type="button" class="mini" disabled data-ira="processing">Processing</button>{irCanStop(m) ? <>{" "}<button type="button" class="mini" data-ira="stop" title="Stop processing" onClick={() => irStop()}>Stop</button></> : null}</>;
   if (m.stage === "drafted") return mini ? null : <button type="button" class="mini" data-ira="open" onClick={() => irClickMeeting(m.id)}>{open ? "Close" : "Check them"}</button>;
   if (!irCanSetAside(m)) return m.stage === "approved" ? <><span class="icsub">Done</span>{m.already ? <>{" "}<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)" onClick={() => irRemoveFile(m)}>Remove</button></> : null}</> : null;
   const unsure = m.src === "upload" && !irFileKind(m), badName = irBadName(m);
@@ -120,7 +134,6 @@ export function MeetingRow({ m, live }) {
   const open = irOpen.value === m.id, n = live.needs.length + live.routine.length;
   const state = irBusy.value.includes(m.id) ? "running" : m.state;
   const can = m.stage === "drafted";
-  const note = irNotes.value[m.id];
   return (
     <tr class={`click irmeet${open ? " icopen" : ""}`} data-irm={m.id} data-stage={m.stage} data-state={state} tabindex={0}
       aria-expanded={can ? open : undefined}
@@ -134,7 +147,7 @@ export function MeetingRow({ m, live }) {
           <div class="why">{irStateWords(m, n)}</div>
         </>}
         {state === "running" ? <><div class="why">ask creaite stays free</div><Progress words={irRunningWords(m)} /></> : null}
-        {note ? <div class="why irnote" role="status">{note}</div> : null}
+        <IrNote m={m} />
       </td>
       <td class="iracts"><RowActions m={m} /></td>
     </tr>

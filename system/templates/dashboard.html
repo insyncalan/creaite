@@ -5171,6 +5171,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bwPut: () => bwPut,
     bwReset: () => bwReset,
     calFoot: () => calFoot,
+    calendarLive: () => calendarLive,
     canHover: () => canHover,
     cancelCurEdit: () => cancelCurEdit,
     cantCard: () => cantCard,
@@ -5781,6 +5782,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irAfterData: () => irAfterData,
     irAside: () => irAside,
     irAsk: () => irAsk,
+    irAskAbout: () => irAskAbout,
+    irAskQ: () => irAskQ,
     irAskReason: () => irAskReason,
     irBadName: () => irBadName,
     irBlocked: () => irBlocked,
@@ -5790,6 +5793,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irCanCheck: () => irCanCheck,
     irCanProcess: () => irCanProcess,
     irCanSetAside: () => irCanSetAside,
+    irCanStop: () => irCanStop,
     irCheck: () => irCheck,
     irChecking: () => irChecking,
     irChooseKind: () => irChooseKind,
@@ -5842,6 +5846,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irQuery: () => irQuery,
     irQueryWords: () => irQueryWords,
     irReady: () => irReady,
+    irRefRun: () => irRefRun,
     irRefreshCalendar: () => irRefreshCalendar,
     irRefreshing: () => irRefreshing,
     irRemoveFile: () => irRemoveFile,
@@ -5851,12 +5856,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irRow: () => irRow,
     irRowFields: () => irRowFields,
     irSel: () => irSel,
+    irSetAskQ: () => irSetAskQ,
     irSetBusy: () => irSetBusy,
     irSetChecking: () => irSetChecking,
     irSetFileKind: () => irSetFileKind,
     irSetView: () => irSetView,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
+    irStep: () => irStep,
+    irStop: () => irStop,
     irTarget: () => irTarget,
     irTick: () => irTick,
     irToggle: () => irToggle,
@@ -6051,6 +6059,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mtgBusy: () => mtgBusy,
     mtgCheckable: () => mtgCheckable,
     mtgLater: () => mtgLater,
+    mtgProcessFile: () => mtgProcessFile,
     mtgSkip: () => mtgSkip,
     mvAct: () => mvAct,
     mvAddCommit: () => mvAddCommit,
@@ -6505,6 +6514,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     prepViewKey: () => prepViewKey,
     previewInbox: () => previewInbox,
     prio: () => prio,
+    processLive: () => processLive,
     profileTools: () => profileTools,
     projArchive: () => projArchive,
     projArchiveBind: () => projArchiveBind,
@@ -6596,7 +6606,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     refineUnmount: () => refineUnmount,
     refinedMd: () => refinedMd,
     refreshAll: () => refreshAll,
-    refreshCalendar: () => refreshCalendar,
     refreshFiles: () => refreshFiles,
     refreshItems: () => refreshItems,
     refreshRecords: () => refreshRecords,
@@ -6891,6 +6900,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     stepGroup: () => stepGroup,
     stepZoom: () => stepZoom,
     stopAsk: () => stopAsk,
+    stopRun: () => stopRun,
     store: () => store,
     stripMarks: () => stripMarks,
     suCardHtml: () => suCardHtml,
@@ -9493,6 +9503,21 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var irQuery = y3("");
   var irDropOn = y3(false);
   var irRefreshing = y3(false);
+  var irStep = y3("");
+  var irAskQ = y3(
+    /** @type {Record<string, {state: string, question: string}>} */
+    {}
+  );
+  function irSetAskQ(id2, q5) {
+    const n4 = { ...irAskQ.value };
+    if (q5) n4[id2] = q5;
+    else delete n4[id2];
+    irAskQ.value = n4;
+  }
+  var irRefRun = y3(
+    /** @type {{id: string, step: string} | null} */
+    null
+  );
   function irSetBusy(id2, on2) {
     irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
   }
@@ -34396,40 +34421,107 @@ ${s5}`;
       } else snack(oneLine(b5.message));
     });
   }
-  async function refreshCalendar(opts) {
-    const chat = !opts || opts.chat !== false;
-    let ran = false;
-    if (!viaServer()) {
-      snack("Refreshing needs the live server");
-      return false;
+  async function readEvents(r4, fold, onEv) {
+    const rd2 = (
+      /** @type {ReadableStream<Uint8Array>} */
+      r4.body.getReader()
+    ), dec = new TextDecoder();
+    let buf = "";
+    for (; ; ) {
+      const { value, done } = await rd2.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      for (let i5 = buf.indexOf("\n\n"); i5 >= 0; i5 = buf.indexOf("\n\n")) {
+        const c5 = buf.slice(0, i5);
+        buf = buf.slice(i5 + 2);
+        if (!c5.startsWith("data: ")) continue;
+        let ev;
+        try {
+          ev = JSON.parse(c5.slice(6));
+        } catch (e4) {
+          continue;
+        }
+        fold(ev);
+        if (onEv) onEv(ev);
+      }
     }
-    if (mtgBusy()) {
-      snack("ask creaite is busy; try again when it's finished");
-      return false;
-    }
-    if (chat) {
-      openChat();
-      addEl("msg u", "Refresh calendar");
-    }
-    try {
-      await askLive("refresh calendar", "Refresh the calendar for Intake and Today");
-      ran = true;
-    } catch (e4) {
-    }
-    await reloadData();
-    return ran;
   }
-  var intakeSeams = { jobLive: (
-    /** @param {typeof jobLive} v */
-    (v5) => {
-      jobLive = v5;
+  async function runRoute(url, body2, pre, fold, onEv) {
+    const id2 = `${pre}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    shared.RUN = { id: id2, ctl };
+    setRunning(true);
+    const got = {};
+    if (onEv) onEv({ type: "run", id: id2 });
+    try {
+      const r4 = await fetch(url, { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token || "" }, body: JSON.stringify({ ...body2, run: id2 }) });
+      if (!r4.ok || !r4.body) {
+        const j5 = await r4.json().catch(() => ({}));
+        return { ok: false, message: j5.message || "It couldn't start: check the live server." };
+      }
+      await readEvents(r4, (ev) => {
+        if (ev.type === "closure") got.closure = ev;
+        else if (ev.type === "stopped") got.stopped = true;
+        else if (ev.type === "error") got.message = ev.message;
+        else fold(got, ev);
+      }, onEv);
+      return { ok: true, ...got };
+    } catch (e4) {
+      return { ok: false, stopped: e4 && e4.name === "AbortError", message: e4 && e4.name === "AbortError" ? "Stopped" : "The live server stopped." };
+    } finally {
+      shared.RUN = null;
+      setRunning(false);
+      api("/api/ask/ack", { run: id2 });
     }
-  ), nowHM: (
-    /** @param {typeof nowHM} v */
-    (v5) => {
-      nowHM = v5;
-    }
-  ) };
+  }
+  var processLive = function(files, onEv) {
+    return runRoute("/api/intake/process", { files }, "i", (got, ev) => {
+      if (ev.type === "intake") {
+        got.files = ev.files;
+        got.staged = ev.staged;
+        got.needs = ev.needs;
+      }
+    }, onEv);
+  };
+  var mtgProcessFile = (m5, path) => m5 && m5.p && m5.how === "remembered" ? { path, project: m5.p } : { path };
+  function stopRun(id2) {
+    if (id2) api("/api/ask/stop", { run: id2 });
+  }
+  var calendarLive = function(onEv) {
+    return runRoute("/api/calendar/refresh", {}, "c", (got, ev) => {
+      if (ev.type === "calendar") {
+        got.saved = ev.saved;
+        got.meetings = ev.meetings;
+        got.days = ev.days;
+        got.transcripts = ev.transcripts;
+      }
+    }, onEv);
+  };
+  var intakeSeams = {
+    jobLive: (
+      /** @param {typeof jobLive} v */
+      (v5) => {
+        jobLive = v5;
+      }
+    ),
+    nowHM: (
+      /** @param {typeof nowHM} v */
+      (v5) => {
+        nowHM = v5;
+      }
+    ),
+    processLive: (
+      /** @param {typeof processLive} v */
+      (v5) => {
+        processLive = v5;
+      }
+    ),
+    calendarLive: (
+      /** @param {typeof calendarLive} v */
+      (v5) => {
+        calendarLive = v5;
+      }
+    )
+  };
 
   // components/Peek.jsx
   function Peek({ id: id2, label, cls, open: open2 = true, children }) {
@@ -73649,6 +73741,7 @@ ${d5.text}`);
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
   var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
+  var irRun = "";
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
     if (irBadName(m5)) {
@@ -73708,20 +73801,59 @@ ${d5.text}`);
         return false;
       }
       const minutes = irFileKind(m5) === "minutes";
+      irSetAskQ(m5.id, null);
+      irStep.value = "";
+      let r4 = (
+        /** @type {any} */
+        null
+      );
       try {
-        await askLive(
-          minutes ? `process ${file} as minutes by someone else` : `process ${file}`,
-          minutes ? `Check “${m5.title}” (${whenOf(m5)}) for proposed items: minutes by someone else, no new minutes drafted` : `Process “${m5.title}” (${whenOf(m5)}) into draft minutes and proposed items`
-        );
+        if (minutes) {
+          await askLive(
+            `process ${file} as minutes by someone else`,
+            `Check “${m5.title}” (${whenOf(m5)}) for proposed items: minutes by someone else, no new minutes drafted`
+          );
+        } else {
+          const x5 = m5.src === "calendar" ? calOf(m5) : null;
+          r4 = await processLive([x5 ? mtgProcessFile(x5, file) : { path: file }], (ev) => {
+            if (ev.type === "run") irRun = ev.id;
+            else if (ev.type === "step") irStep.value = ev.label || "";
+          });
+        }
       } catch (e4) {
+      } finally {
+        irRun = "";
+        irStep.value = "";
       }
       await reloadData();
       const after = rowOf(m5.id);
       const done = !after || after.stage !== "arrived";
-      if (!done) irNote(m5.id, "Couldn't: no draft came back");
+      const o5 = r4 && (r4.files || []).find((f5) => f5.path === file);
+      if (!done && o5 && (o5.state === "needs" || o5.state === "not_staged")) {
+        irSetAskQ(m5.id, { state: o5.state, question: oneLine(o5.question || "") });
+        irNote(m5.id, o5.state === "needs" ? `Needs you: ${oneLine(o5.question || "")}` : "Not staged: process it again, or ask creaite");
+      } else if (!done) irNote(m5.id, r4 && r4.stopped ? "Stopped: nothing was staged" : `Couldn't: ${oneLine(r4 && r4.message || "no draft came back")}`);
+      if (r4 && r4.closure && r4.closure.line) snack(oneLine(r4.closure.line));
       return done;
     } finally {
       irSetBusy(m5.id, false);
+    }
+  }
+  function irStop() {
+    if (irRun) stopRun(irRun);
+  }
+  var irCanStop = (m5) => !!m5 && irBusy.value.includes(m5.id) && !(m5.src === "upload" && irFileKind(m5) === "minutes");
+  function irAskAbout(m5) {
+    const q5 = irAskQ.value[m5.id];
+    if (!q5) return;
+    openChat();
+    const box = (
+      /** @type {HTMLTextAreaElement | null} */
+      document.getElementById("chIn")
+    );
+    if (box) {
+      box.value = `About the Intake file “${m5.title}”: ${q5.question || "Process didn't stage it. Why not, and what should I do?"}`;
+      box.focus();
     }
   }
   async function irProcessAll() {
@@ -73828,6 +73960,10 @@ ${d5.text}`);
     }
   }
   async function irRefreshCalendar() {
+    if (irRefRun.value) {
+      stopRun(irRefRun.value.id);
+      return false;
+    }
     if (!viaServer()) {
       snack("Refreshing needs the live server");
       return false;
@@ -73837,15 +73973,28 @@ ${d5.text}`);
       return false;
     }
     irRefreshing.value = true;
+    irRefRun.value = { id: "", step: "" };
+    let r4 = (
+      /** @type {any} */
+      null
+    );
     try {
       shared.RUNLABEL = "Refreshing the calendar";
       try {
-        await askLive("refresh calendar", "Refresh the calendar for Intake and Today");
+        r4 = await calendarLive((ev) => {
+          const c5 = irRefRun.value;
+          if (!c5) return;
+          if (ev.type === "run") irRefRun.value = { ...c5, id: ev.id };
+          else if (ev.type === "step") irRefRun.value = { ...c5, step: ev.label || "" };
+        });
       } catch (e4) {
       }
+      irRefRun.value = null;
       await reloadData();
+      snack(r4 && r4.closure ? oneLine(r4.closure.line) : r4 && r4.stopped ? "Stopped" : oneLine(r4 && r4.message || "The calendar was not saved"));
       return true;
     } finally {
+      irRefRun.value = null;
       irRefreshing.value = false;
       irTick.value++;
     }
@@ -73919,6 +74068,8 @@ ${d5.text}`);
     all: [["path", { d: "M12 3l9 5-9 5-9-5z" }], ["path", { d: "M3 13l9 5 9-5" }]],
     /* the page's controls */
     upload: [["path", { d: "M12 16V4M7 9l5-5 5 5M4 20h16" }]],
+    stop: [["rect", { x: "6", y: "6", width: "12", height: "12", rx: "2" }]],
+    /* the refresh's Stop while it runs (core/dom.js's stop) */
     refresh: [["path", { d: "M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" }]],
     /* a row's kind: a calendar meeting or a file */
     meeting: [["rect", { x: "4", y: "5", width: "16", height: "15", rx: "2" }], ["path", { d: "M4 10h16M9 3v4M15 3v4" }]],
@@ -73987,7 +74138,21 @@ ${d5.text}`);
     return `${base}${age}${m5.later_back ? " · back from Later" : ""}`;
   }
   function Progress({ words }) {
-    return /* @__PURE__ */ u4("div", { class: "icprog", role: "progressbar", "aria-label": words || "Drafting in the background", children: /* @__PURE__ */ u4("i", {}) });
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4("div", { class: "icprog", role: "progressbar", "aria-label": words || "Drafting in the background", children: /* @__PURE__ */ u4("i", {}) }),
+      irStep.value ? /* @__PURE__ */ u4("div", { class: "why", "data-irstep": "1", children: irStep.value }) : null
+    ] });
+  }
+  function IrNote({ m: m5 }) {
+    const note = irNotes.value[m5.id];
+    if (!note) return null;
+    return /* @__PURE__ */ u4("div", { class: "why irnote", role: "status", children: [
+      note,
+      irAskQ.value[m5.id] ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "askabout", onClick: () => irAskAbout(m5), children: "Ask creaite about this" })
+      ] }) : null
+    ] });
   }
   var irAdded = (m5) => !m5.day || m5.day === TODAY ? "Added today" : `Added ${fd(m5.day)}`;
   var irWhen = (m5) => m5.src === "upload" ? irAdded(m5) : `${m5.day ? fd(m5.day) : ""}${m5.start ? ` ${m5.start}` : ""}`.trim();
@@ -74032,7 +74197,13 @@ ${d5.text}`);
   function RowActions({ m: m5, mini }) {
     const running = irBusy.value.includes(m5.id), blocked2 = irBlocked(), checking = irChecking.value.includes(m5.id);
     const open2 = irOpen.value === m5.id;
-    if (running) return /* @__PURE__ */ u4("button", { type: "button", class: "mini", disabled: true, "data-ira": "processing", children: "Processing" });
+    if (running) return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", disabled: true, "data-ira": "processing", children: "Processing" }),
+      irCanStop(m5) ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "stop", title: "Stop processing", onClick: () => irStop(), children: "Stop" })
+      ] }) : null
+    ] });
     if (m5.stage === "drafted") return mini ? null : /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" });
     if (!irCanSetAside(m5)) return m5.stage === "approved" ? /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("span", { class: "icsub", children: "Done" }),
@@ -74098,7 +74269,6 @@ ${d5.text}`);
     const open2 = irOpen.value === m5.id, n4 = live.needs.length + live.routine.length;
     const state = irBusy.value.includes(m5.id) ? "running" : m5.state;
     const can = m5.stage === "drafted";
-    const note = irNotes.value[m5.id];
     return /* @__PURE__ */ u4(
       "tr",
       {
@@ -74135,7 +74305,7 @@ ${d5.text}`);
               /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite stays free" }),
               /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) })
             ] }) : null,
-            note ? /* @__PURE__ */ u4("div", { class: "why irnote", role: "status", children: note }) : null
+            /* @__PURE__ */ u4(IrNote, { m: m5 })
           ] }),
           /* @__PURE__ */ u4("td", { class: "iracts", children: /* @__PURE__ */ u4(RowActions, { m: m5 }) })
         ]
@@ -74530,7 +74700,7 @@ ${d5.text}`);
                   /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, m5.groups.needs.length + m5.groups.routine.length) })
                 ] }),
                 irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
-                irNotes.value[m5.id] ? /* @__PURE__ */ u4("div", { class: "why irnote", role: "status", children: irNotes.value[m5.id] }) : null,
+                /* @__PURE__ */ u4(IrNote, { m: m5 }),
                 /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: m5 }) })
               ]
             },
@@ -74587,7 +74757,7 @@ ${d5.text}`);
           sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: sel.groups.needs.length + sel.groups.routine.length }) : /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length) }),
           sel.stage === "arrived" && sel.state === "waiting" ? /* @__PURE__ */ u4("div", { class: "empty", children: "Waiting for the transcript. It appears here when the meeting’s transcript arrives." }) : null,
           irBusy.value.includes(sel.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(sel) }) : null,
-          irNotes.value[sel.id] ? /* @__PURE__ */ u4("div", { class: "why irnote", role: "status", children: irNotes.value[sel.id] }) : null,
+          /* @__PURE__ */ u4(IrNote, { m: sel }),
           /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: sel, mini: true }) }),
           /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: sel.groups, meet: sel.title }) }) }) })
         ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Select a meeting." }) })
@@ -74724,10 +74894,10 @@ ${d5.text}`);
     ] }) });
   }
   function CalendarRead({ text }) {
-    const busy2 = irBlocked() || irRefreshing.value;
-    const why = irRefreshing.value ? "Reading the calendar" : busy2 ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
+    const run = irRefRun.value, busy2 = !run && (irBlocked() || irRefreshing.value);
+    const why = run ? "Stop the refresh" : busy2 ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
     return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("span", { class: "sub", "data-ircalread": "1", children: irRefreshing.value ? "Refreshing…" : text }),
+      /* @__PURE__ */ u4("span", { class: "sub", "data-ircalread": "1", children: run || irRefreshing.value ? `Refreshing…${run && run.step ? ` ${run.step}` : ""}` : text }),
       " ",
       /* @__PURE__ */ u4(
         "button",
@@ -74736,11 +74906,11 @@ ${d5.text}`);
           class: "ib sm",
           id: "icRef",
           "data-ira": "refreshcal",
-          "aria-label": "Refresh the calendar",
+          "aria-label": why,
           "data-tip": why,
           disabled: busy2,
           onClick: () => irRefreshCalendar(),
-          children: /* @__PURE__ */ u4(IrIcon, { name: "refresh" })
+          children: /* @__PURE__ */ u4(IrIcon, { name: run ? "stop" : "refresh" })
         }
       )
     ] });
@@ -76649,6 +76819,7 @@ ${d5.text}`);
         "boardMoveMenu",
         "bprop",
         "calFoot",
+        "calendarLive",
         "canHover",
         "cantGo",
         "capped",
@@ -76826,6 +76997,7 @@ ${d5.text}`);
         "irAsk",
         "irBulk",
         "irBusy",
+        "irCanStop",
         "irChanged",
         "irChecking",
         "irChooseKind",
@@ -76868,10 +77040,12 @@ ${d5.text}`);
         "irProcessById",
         "irQuery",
         "irReady",
+        "irRefreshCalendar",
         "irRefreshing",
         "irSaveChanges",
         "irSel",
         "irSetChecking",
+        "irSetFileKind",
         "irSetView",
         "irStage",
         "irStageClick",
@@ -76883,7 +77057,6 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
-        "isMin",
         "isNotePath",
         "itemDatePicker",
         "items",
@@ -76940,6 +77113,7 @@ ${d5.text}`);
         "mtgBusy",
         "mtgCheckable",
         "mtgLater",
+        "mtgProcessFile",
         "mtgSkip",
         "mvAct",
         "mvAddCommit",
@@ -77075,6 +77249,7 @@ ${d5.text}`);
         "prepTimed",
         "previewInbox",
         "prio",
+        "processLive",
         "profileTools",
         "projPeople",
         "projectState",
@@ -77107,7 +77282,6 @@ ${d5.text}`);
         "redraftAnswer",
         "reduced",
         "refreshAll",
-        "refreshCalendar",
         "refreshFiles",
         "refreshRecords",
         "regAddAlias",

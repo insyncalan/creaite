@@ -39,24 +39,24 @@ class Head(IntakeBase):
             b.eval("(f=>{ D.meetings={...D.meetings, fetched:f}; irTick.value++; })(%s)" % json.dumps(fetched))
             b.wait(f"document.querySelector('#irSub').textContent.includes({json.dumps(words)})")
 
-    def test_refresh_runs_once_through_the_engine_with_the_panel_closed_and_the_time_advances(self):
+    def test_refresh_runs_once_through_its_route_with_the_panel_closed_and_the_time_advances(self):
         b = self.b
         self.stage_stub()
         path = self.v.root / "system/staging/calendar.json"
         cal = json.loads(path.read_text())
         self.addCleanup(path.write_text, json.dumps(cal))                  # the server is shared: the next test reads the same calendar
-        b.eval("GATE=new Promise(r=>{ window.RELEASE=r; }); 0")
-        b.eval("""askLive=async(q,c)=>{ window.ASKED.push([q,c]); await window.GATE; }""")      # the sweep's calendar write happens in the test, before the release
+        b.eval("GATE=new Promise(r=>{ window.RELEASE=r; }); 0")              # the sweep's calendar write happens in the test, before the release
         b.click("#icRef")
         b.wait("irRefreshing.value===true")
         self.assertIn("Refreshing…", self.sub())
-        self.assertTrue(b.eval("document.querySelector('#icRef').disabled"))                       # one run at a time
-        b.eval("document.querySelector('#icRef').click(); document.querySelector('#icRef').click()")   # a second click does nothing
+        self.assertEqual(b.eval("document.querySelector('#icRef').getAttribute('aria-label')"), "Stop the refresh")   # #265: Stop while it runs
+        self.assertEqual(b.eval("CAL.length"), 1)                                                  # one run at a time
         self.assertFalse(b.eval("document.getElementById('chat') ? document.getElementById('chat').classList.contains('on') || !document.getElementById('chat').hidden && document.getElementById('chat').offsetParent!==null : false"))
         path.write_text(json.dumps({**cal, "fetched": f"{DAY} 10:42"}))
         b.eval("RELEASE()")
         b.wait("irRefreshing.value===false && document.querySelector('#irSub').textContent.includes('Calendar read 10:42')", 30)
         self.assertEqual([q for q, _ in b.eval("ASKED")], ["refresh calendar"])
+        self.assertEqual(b.eval("CHAT"), [])
         self.assertFalse(b.eval("document.querySelector('#icRef').disabled"))
 
     def test_the_refresh_icon_waits_while_ask_creaite_works(self):
