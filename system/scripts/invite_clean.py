@@ -69,7 +69,10 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
-                   rf"|(?<![\w-])id\s*[:#=]\s*\d|(?<![\w-])id\s+(?:no\.?\s*)?\d|(?:{_OTHER_ALPHABETS})", re.I)
+                   rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
+# v2.6 review (Cap, item 5): the one label cut after which the rest of a field may stay: an ID-like label and a value that has a
+# digit in it, the whole match ("Code 2 review" keeps "review"; "Board Meeting ID 123 456 789 sync" keeps "Board sync").
+LABEL_NUMBER = re.compile(rf"(?<![\w-])(?:{_NUMBERED}|{_BARE})(?![\w-])\s+(?:no\.?\s*)?\S*\d", re.I)
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
@@ -145,8 +148,10 @@ SCRUB_ROUNDS = 8
 
 
 def _secret_span(t):
-    """(start, end) of the first key, join link or dial-in found in t as it stands, widened to whole words and, for a label, the
-    value after it ("PIN 4321", "Passcode: 4321", "Meeting ID 123 456 789"); None when none is found in t itself."""
+    """(start, end, rest_ok) of the first key, join link or dial-in found in t as it stands, widened to whole words and, for a
+    label, the value after it ("PIN 4321", "Passcode: 4321", "Meeting ID 123 456 789"); None when none is found in t itself.
+    rest_ok is True only for an ID-like label whose own match carried a value with a digit (LABEL_NUMBER): after any other cut
+    (a host, a scheme, a dial-in, a passcode or password label) the next word may be the value, so the field fails closed."""
     for rx in (HOSTS, SCHEME, LABEL, DIAL):
         m = rx.search(t)
         if not m:
@@ -156,18 +161,19 @@ def _secret_span(t):
             a -= 1
         while b < len(t) and not t[b].isspace():
             b += 1
+        rest_ok = rx is LABEL and bool(LABEL_NUMBER.fullmatch(m.group()))
         if rx is LABEL:
             b += len(_VALUE_TAIL.match(t, b).group())
-        return a, b
+        return a, b, rest_ok
     return None
 
 
 def scrub(text, limit):
     """A title, place or organiser: join links taken out, and (v2.6 review) each key or dial-in taken out with its value, so
-    "Budget (PIN 4321)" keeps "Budget". It fails closed: a secret seen only once the text is decoded or its look-alike letters
-    read as Latin (no span to cut in the text itself) drops the whole text, and so does any text left after a cut, whatever the
-    label ("Steering Passcode: kqZxyw", "Weekly sync zoom.us 98765432101" and, as in v2.5.3, "Meeting ID 12 abcdefg" are
-    dropped whole: the next word may be the value). Only the first
+    "Budget (PIN 4321)" keeps "Budget" and "Code 2 review" keeps "review". It fails closed: a secret seen only once the text is
+    decoded or its look-alike letters read as Latin (no span to cut in the text itself) drops the whole text, and so does any
+    text left after a cut other than an ID-like label with a numbered value ("Steering Passcode: kqZxyw", "Weekly sync zoom.us
+    98765432101" are dropped whole: the next word may be the value). Only the first
     LINE_MAX characters are looked at (and a field is kept far shorter)."""
     t = normal(str(text if text is not None else "")[:LINE_MAX])
     t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
@@ -176,7 +182,7 @@ def scrub(text, limit):
         if not is_secret(t):
             return t[:limit]
         span = _secret_span(t)
-        if span is None or t[span[1]:].strip():
+        if span is None or (not span[2] and t[span[1]:].strip()):
             return ""
         t = re.sub(r"\s+", " ", t[:span[0]] + " " + t[span[1]:]).strip()
     return "" if is_secret(t) else t[:limit]
