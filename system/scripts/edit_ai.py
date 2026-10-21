@@ -681,18 +681,21 @@ def result(body):
             "format": ctx.get("format")}
 
 
-# #262: the Internal minutes sheet feeds the Distributed version, which goes to attendees who may be outside. Its AI keeps the full facts
-# (it edits the internal minutes, which hold internal items and owners), but a suggestion that ADDS something a client mustn't see is
-# dropped: an item that isn't client-visible, a name the text and the client-visible items don't give, the internal health reason, an
-# internal-only marker or VIP. What the selected text already held is the minutes' own and passes.
+# #262: the minutes go to attendees who may be outside. The minutes sheet's AI keeps the full facts (the minutes hold internal items
+# and owners), but a suggestion that ADDS something a client mustn't see is dropped: an item that isn't client-visible, a name the
+# text and the client-visible items don't give, the internal health reason, an internal-only marker or VIP. What the selected text
+# already held is the minutes' own and passes.
 MINUTES_PLACES = {"minutes"}
 FAIL_CLOSED = (NO_PROJECT, UNCHECKED, REGISTER)
 MINUTES_DROPPED = ("The suggestion was dropped: it added something internal (an item that isn't client-visible, a name or internal "
-                   "wording) that the Distributed version would carry. Try again, or edit the minutes yourself.")
-NO_MINUTES_PROJECT = ("These minutes have no project in the tracker, so a suggestion couldn't be checked before it reaches the "
-                      "Distributed version; nothing was sent to Claude.")
-# an HTML tag or comment inside an ID or a name ("ABC<!-- -->-A-004", "Om<b>ar</b> Ali") is read with it taken out too
-TAGS = re.compile(r"<!--.{0,2000}?-->|</?[A-Za-z][^<>]{0,200}>", re.S)
+                   "wording) that the minutes would carry to attendees. Try again, or edit the minutes yourself.")
+NO_MINUTES_PROJECT = ("These minutes have no project in the tracker, so a suggestion couldn't be checked before it reaches "
+                      "attendees; nothing was sent to Claude.")
+# an HTML tag or comment inside an ID or a name ("ABC<!-- -->-A-004", "Om<b>ar</b> Ali") is read with it taken out too. 2.6 (#262
+# L1): a comment of any length (or one never closed), a CDATA wrapper, a quoted attribute holding ">" and a tag never closed
+# ("ABC<b-A-004") are read through as well: TAGS takes whole tags out, LOOSE_TAGS only their opening names and closing marks.
+TAGS = re.compile(r"<!--.*?(?:-->|\Z)|<!\[CDATA\[|\]\]>|</?[A-Za-z](?:[^<>\"']|\"[^\"]*\"|'[^']*')*>", re.S)
+LOOSE_TAGS = re.compile(r"<!--|-->|<!\[CDATA\[|\]\]>|</?[A-Za-z][A-Za-z0-9]*|/?>")
 
 
 def _minutes_ready(code, place):
@@ -731,23 +734,46 @@ def _unprivate(text):
 
 
 def _untagged(text):
-    """The text, plus (when it holds an HTML tag or comment) the same text with them taken out, read as well."""
-    bare = TAGS.sub("", text or "")
-    return text if bare == text else f"{text}\n{bare}"
+    """The text, plus (when it holds an HTML tag, comment or CDATA wrapper) the same text with them taken out, read as well: once
+    with whole tags out and once with only their names and marks out (a tag never closed, #262 L1)."""
+    t = text or ""
+    reads = [t] + [b for b in (TAGS.sub("", t), LOOSE_TAGS.sub("", t)) if b != t]
+    return "\n".join(dict.fromkeys(reads))
 
 
 def minutes_problems(code, text, original):
     """What a minutes suggestion adds that a client mustn't see (#262): client_problems on the suggestion, less what the selected text
     already gave the same finding for. The word VIP is checked on its own (a reply adding it is dropped) and taken out of both before
-    the rest, so a selection that holds it can't hide what the reply adds. A check that couldn't run (no project, an unreadable tracker
-    or register) is kept: fails closed."""
+    the rest, so a selection that holds it can't hide what the reply adds; the item IDs are also read before it is taken out (#262
+    L2: a project whose code is VIP keeps its IDs). A check that couldn't run (no project, an unreadable tracker or register) is
+    kept: fails closed."""
     added_private = _private(text) and not _private(original)
+    raw = sorted(_id_problems(text) - _id_problems(original)) if added_private or _private(original) else []
     text, original = _unprivate(text), _unprivate(original)
     found = client_problems(code, text, original)
     if any(f in FAIL_CLOSED for f in found):
         return found
     had = set(client_problems(code, original, original))
-    return [f for f in found if f not in had] + (["something private"] if added_private else [])
+    out = [f for f in found if f not in had]
+    return out + [f for f in raw if f not in out] + (["something private"] if added_private else [])
+
+
+def _id_problems(text):
+    """{why} for every item the text names (however written) that a client may not see, read as it stands (VIP not taken out);
+    {UNCHECKED} when the tracker can't be read (fails closed)."""
+    import client_leak
+    import tracker
+    try:
+        con = tracker.connect()
+    except (Exception, SystemExit):  # noqa: BLE001
+        return {UNCHECKED}
+    try:
+        blocking = client_leak.blocking_labels(con)
+        return {why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(loose_ids(con, text))) if why}
+    except (Exception, SystemExit):  # noqa: BLE001  fails closed
+        return {UNCHECKED}
+    finally:
+        con.close()
 
 
 def _reply_problems(ctx, body, text):
