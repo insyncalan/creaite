@@ -1,0 +1,4 @@
+apply_recheck_off	system/scripts/review.py	k259-apply
+trust_on	system/scripts/creaite_doc.py	k259-launder
+loose_off	system/scripts/client_output.py	k259-p16
+picture_gate_off	system/scripts/paths.py	rvmd-fuzz
