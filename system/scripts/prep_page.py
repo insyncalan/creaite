@@ -167,13 +167,15 @@ def context(key):
     m, problem = _meeting(d, key)
     if problem:
         return {"error": problem}
-    code = m["p"]
+    chosen = bool(m.get("p"))       # #279: "No project" is the saved value "_portfolio", distinct from nothing chosen ("")
+    code = m.get("p") or "_portfolio"
     ev = _event(key, m["day"]) or {}
     allp = code == "_portfolio"
     items, universe = _prep_items(d, m, code, allp)
     codes = [p["code"] for p in d["projects"]] if allp else [code]
     title = ev.get("title") or key.split("|")[-1]
-    return {"key": key, "day": m["day"], "project": code, "project_name": "Portfolio" if allp else
+    return {"key": key, "day": m["day"], "project": code, "chosen": chosen, "series": m.get("series") or "",
+            "project_name": "Portfolio" if allp else
             next((p["name"] for p in d["projects"] if p["code"] == code), ""),
             "meeting": _prep_meeting(ev, title, m.get("invite") or {}),
             "carried": _carried(title, m["day"]),          # BL-209
@@ -267,9 +269,7 @@ def _meeting(d, key):
     m = meeting_entry(d, key)
     if not m:
         return None, f"That meeting isn't in the saved calendar for {shown(day)} any more; refresh the calendar."
-    if not m.get("p"):
-        return None, "Choose the meeting's project in the Prep brief first."
-    return m, None
+    return m, None          # #279: no project chosen yet still opens (the all-projects view, with a picker for the project)
 # ===== end BL-293 =====
 
 

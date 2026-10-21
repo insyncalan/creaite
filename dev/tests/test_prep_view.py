@@ -297,6 +297,29 @@ class PrepView(LiveBrowserCase):
         rec = next(iter(json.loads((self.v.root / "system/staging/prep-focus.json").read_text())["meetings"].values()))
         self.assertNotIn("questions", rec)
 
+    def test_11_the_project_chip_is_a_picker_remembered_for_the_series(self):
+        """#279: the projects and "No project (general meeting)"; the choice is saved in settings prep.series."""
+        b = self.b
+        self.open_view()
+        sel = "#v-prep .ppmeta select[data-ppproject]"
+        self.assertEqual(b.eval(f"document.querySelector({json.dumps(sel)}).value"), "ABC")
+        self.assertIn("No project (general meeting)", b.eval(f"[...document.querySelector({json.dumps(sel)}).options].map(o => o.text)"))
+
+        def choose(code):
+            b.eval(f"(() => {{ const s = document.querySelector({json.dumps(sel)}); s.value = {json.dumps(code)}; "
+                   f"s.dispatchEvent(new Event('change', {{bubbles: true}})); }})()")
+            b.wait(f"document.querySelector({json.dumps(sel)}) && document.querySelector({json.dumps(sel)}).value==={json.dumps(code)}"
+                   " && !document.querySelector('#v-prep .pploading')", timeout=20)
+
+        choose("_portfolio")
+        time.sleep(2)
+        saved = json.loads((self.v.root / "system/config/settings.json").read_text())["prep"]["series"]
+        self.assertEqual(saved.get("abc weekly"), "_portfolio", saved)
+        choose("ABC")
+        time.sleep(2)
+        saved = json.loads((self.v.root / "system/config/settings.json").read_text())["prep"]["series"]
+        self.assertEqual(saved.get("abc weekly"), "ABC")
+
     def test_9_a_bad_address_is_ignored_and_the_tracker_never_changes(self):
         b = self.b
         before = (self.v.root / "system/tracker.db").read_bytes()
