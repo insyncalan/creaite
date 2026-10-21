@@ -4827,6 +4827,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TOAST_LAYERS: () => TOAST_LAYERS,
     TOAST_MS: () => TOAST_MS,
     TODAY: () => TODAY,
+    TRKRELOAD: () => TRKRELOAD,
     TURN_NAMES: () => TURN_NAMES,
     TVIPSEEN: () => TVIPSEEN,
     TXLABEL: () => TXLABEL,
@@ -6580,6 +6581,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rel: () => rel,
     relaxHtml: () => relaxHtml,
     reloadData: () => reloadData,
+    reloadForTrack: () => reloadForTrack,
     reloadHub: () => reloadHub,
     remBody: () => remBody,
     remBtn: () => remBtn,
@@ -45029,6 +45031,10 @@ ${s5}`;
     rvDock();
   }
   async function rvDecideMany(list, v5) {
+    if (v5 === "approved") {
+      if (TRKRELOAD) await TRKRELOAD;
+      list = list.map((r4) => r4 && (REV.includes(r4) ? r4 : REV.find((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref)))).filter((r4) => r4 && r4.trk == null);
+    }
     list = list.filter((r4) => r4 && !r4.done);
     if (!list.length) return { n: 0 };
     if (!await needVault()) return { n: 0 };
@@ -74065,7 +74071,7 @@ ${d5.text}`);
     }
     if (shared.MVREADY && (shared.MV.peek || shared.MV.add)) mvEdClose(true);
     const from = shared.VIEW, fromPage = mPageOf(shared.VIEW);
-    if (!shared.LOADING && from === "minutes" && v5 !== "minutes") reloadData();
+    if (!shared.LOADING && from === "minutes" && v5 !== "minutes") reloadForTrack();
     if (from === "notes" && v5 !== "notes") notesLeave();
     if (!shared.LOADING && from === "review" && v5 !== "review") {
       shared.MREVLEFT = true;
@@ -75937,6 +75943,14 @@ ${d5.text}`);
       await diagLoad();
       errBanner();
     }
+  }
+  var TRKRELOAD = null;
+  function reloadForTrack() {
+    const p6 = reloadData().finally(() => {
+      if (TRKRELOAD === p6) TRKRELOAD = null;
+    });
+    TRKRELOAD = p6;
+    return p6;
   }
   function bootPageRefresh() {
     if (SERVED && D.page_refresh) reloadData();

@@ -16,7 +16,7 @@ import { typing } from "./core/keys.js";
 import { mDots, mRowGone, mSnapRows } from "./core/motion.js";
 import { go } from "./core/nav.js";
 import { D, DDATE, fd, fdText, isMe, MAC, nowStamp, OPENST, prio, reduced, revIco, S, store, TODAY, toIso, who } from "./core/page.js";
-import { api, apply, applyNow, applySoon, conflictChoice, editProposal, hideSnack, needVault, oneLine, refreshAll, refreshItems, reloadData, renderBadge, reviewViaServer, snack, toDb, undoApply, viaServer } from "./core/server.js";
+import { api, apply, applyNow, applySoon, conflictChoice, editProposal, hideSnack, needVault, oneLine, refreshAll, refreshItems, reloadData, renderBadge, reviewViaServer, snack, toDb, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { deBarred, deItems, deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./intake.js";
@@ -340,7 +340,10 @@ export function rvBar(){ const bar=$("#rvbar"); if(!bar) return; const L=rvSel()
   putHTML($("#rvSet"),html`${rvSetFields(L).map(([f,label,opts,why])=>f==="due"?html`<span class="bkf"><label class="bklab" for="rvDate">${label}</label><span class="dwrap"><input type="text" id="rvDate" data-pick="1" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off" ${raw(why?"disabled":"")} aria-label="Set the due date of ${L.length} proposals" title="${why}"><button type="button" class="dbtn" data-cal="rvDate" ${raw(why?"disabled":"")} aria-label="Choose date">${raw(CALI)}</button></span></span>`
     :html`<span class="bkf"><label class="bklab">${label}<select data-rvset="${f}" ${why?html`disabled aria-disabled="true"`:""} title="${why}"><option value="">Set…</option>${ceOpts(opts).map(o=>html`<option value="${o[0]}">${o[1]}</option>`)}</select></label></span>`)}`);  rvDock(); }
 /* ── deciding several: one write per proposal file, one apply, one Undo ── */
-export async function rvDecideMany(list,v){ list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0}; if(!await needVault()) return {n:0};
+/* #275 (Cap's re-review): an approval waits for a reload still bringing the Track choices (TRKRELOAD), then takes each row as the
+   data now has it (REV's rows are replaced on a reload) and never one crossed or left with neither in the minutes (r.trk) */
+export async function rvDecideMany(list,v){ if(v==="approved"){ if(TRKRELOAD) await TRKRELOAD; list=list.map(r=>r&&(REV.includes(r)?r:REV.find(x=>x.file===r.file&&String(x.ref)===String(r.ref)))).filter(r=>r&&r.trk==null); }
+  list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0}; if(!await needVault()) return {n:0};
   const byFile=new Map(); list.forEach(r=>{ if(!byFile.has(r.file)) byFile.set(r.file,[]); byFile.get(r.file).push(r); }); const done=[], failed=[];
   for(const [file,rs] of byFile){ try{ await editProposal(file,data=>rs.forEach(r=>setDecision(data,r,v))); done.push(...rs); }catch(e){ failed.push(...rs.map(r=>`#${r.n} (${e.message})`)); } }
   done.forEach(r=>{ CHK.delete(r.n); RHL.delete(r.n); }); shared.RVSTATS[v]=(shared.RVSTATS[v]||0)+done.length;

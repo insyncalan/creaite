@@ -18,6 +18,7 @@ Run: python3 dev/tests/test_minutes_track_review.py      (Chrome tier; skipped w
 """
 import json
 import os
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -29,6 +30,7 @@ import test_minutes_view_v2 as mv  # noqa: E402
 import test_minutes_approve as ma  # noqa: E402
 
 ROW = mv.ROW
+DIFF_APPLIED = "def track_problems" in (Path(__file__).resolve().parents[2] / "system/scripts/tracker.py").read_text(encoding="utf-8")
 SOW, UAT, CUT = "Send the revised SOW to the client", "Book the UAT test environment", "Share the cut-over plan with the client"
 MIN = "document.querySelector('#reviewBody tr.mparent')"
 
@@ -180,6 +182,30 @@ class TrackFromReview(LiveBrowserCase):
         self.assertEqual([self.staged(n)["decision"] for n in (1, 2, 3, 4, 5)], ["pending"] * 5, "the approval and the crosses undone")
         self.assertEqual(self.rows_text(self.record()), self.rows_text(self.before), "the minutes' rows exactly as before")
 
+    def test_06_a_bulk_approval_straight_after_leaving_the_minutes_waits_for_the_track_choices(self):
+        """Cap's re-review (2): leaving the Minutes view reloads the data without waiting, so Review first draws the old rows; the
+        bar's Approve made at once (on a row crossed a moment ago, still shown as routine) waits for the reload and leaves it out."""
+        b = self.b
+        self.open()
+        b.click(ROW % 1 + " .mntrk button.n")                   # SOW crossed now
+        for _ in range(60):
+            if (self.record().get("layout") or {}).get("track", {}).get("1") == "n":
+                break
+            b.pump(0.25)
+        self.assertEqual(self.record()["layout"]["track"].get("1"), "n")
+        stale = self.ev("(()=>{ go('review'); const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); window.__t6=null;"
+                        " RHL.clear(); RHL.add(r.n); rvSyncChk(); const t=r.trk; rvApproveSelected(true).then(()=>{ window.__t6='done'; });"
+                        " return t===undefined?null:t; })()")
+        self.assertIsNone(stale, "the row as Review first drew it: not yet marked crossed (the race)")
+        for _ in range(120):
+            if self.ev("window.__t6") == "done":
+                break
+            b.pump(0.25)
+        self.assertEqual(self.ev("window.__t6"), "done")
+        b.pump(1.5)
+        self.assertNotIn(SOW, self.descs(), "crossed a moment ago: never registered")
+        self.assertEqual(self.staged(1)["decision"], "pending")
+
 
 class TwoProjects(LiveBrowserCase):
     """Cap's #275 M-b: minutes covering ABC and DEF; Approve under ABC registers ABC's ticked items only, DEF's wait in Review."""
@@ -263,18 +289,73 @@ class ServerTrack(ma.Base):
         self.assertNotIn("Book the UAT environment", text, "crossed: the line goes")
         self.assertIn("Go-live stays on 20 November", text, "neither: the line stays")
 
-    @unittest.skipUnless("def track_problems" in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
-                                                                     "system", "scripts", "tracker.py"), encoding="utf-8").read(),
-                         "dev/proposals/track-from-review/tracker-track-problems.diff not applied yet")
-    def test_apply_refuses_a_crossed_item_approved_by_hand(self):
-        self.track({"1": "n"})
+    def test_review_py_approve_on_the_minutes_says_what_it_did_to_the_lines(self):
+        self.track({"2": "n", "3": ""})
+        out = self.v.run("approve", str(self.number("meeting")), script="review.py").stdout
+        self.assertIn("1 crossed line taken out of the minutes, 1 line kept in the minutes untracked", out)
+
+    def test_review_py_approve_with_no_track_choices_says_the_default_rows_are_registered(self):
+        out = self.v.run("approve", str(self.number("meeting")), script="review.py").stdout
+        self.assertIn("no Track choices made in the minutes, so the rows ticked by default are registered", out)
+
+    def check(self):
+        """minutes_record.track_apply_problems on the staged proposal: (problems, the items' decisions after)."""
+        return self.js("import minutes_record\n"
+                       f"p = 'system/staging/{self.name}'\ndata = json.load(open(p, encoding='utf-8'))\n"
+                       f"out = minutes_record.track_apply_problems({self.name!r}, data)\n"
+                       "print(json.dumps([out, {str(i['n']): i['decision'] for i in data['items']}]))")
+
+    def set_decision(self, n, decision):
         p = self.v.root / "system/staging" / self.name
         data = json.loads(p.read_text(encoding="utf-8"))
-        data["items"][0]["decision"] = "approved"
+        next(i for i in data["items"] if i["n"] == n)["decision"] = decision
         p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    def test_the_apply_check_stops_only_an_approved_crossed_item_and_puts_it_back_in_review(self):
+        self.track({"1": "n", "2": ""})
+        self.set_decision(3, "approved")
+        out, dec = self.check()
+        self.assertEqual(out, [], "a pending crossed or neither item never stops the apply")
+        self.set_decision(1, "approved")
+        out, dec = self.check()
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("item 1: crossed in the minutes' Track column", out[0])
+        self.assertIn("approve the minutes in the Minutes view (it clears crossed lines)", out[0])
+        self.assertEqual((dec["1"], dec["3"]), ("pending", "approved"), "back in Review's queue; the other item untouched")
+
+    def test_the_apply_check_fails_closed_when_the_record_cant_be_read(self):
+        f = self.v.root / ma.DRAFT
+        f.write_text(re.sub(r'(<script type="application/json" id="creaite-data">).*?(</script>)', r"\1{broken\2",
+                            f.read_text(encoding="utf-8"), flags=re.S), encoding="utf-8")
+        self.assertEqual(self.check()[0], [], "nothing approved: nothing to stop")
+        self.set_decision(3, "approved")
+        out = self.check()[0]
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("the minutes record can't be read", out[0])
+
+    @unittest.skipUnless(DIFF_APPLIED, "dev/proposals/track-from-review/tracker-track-problems.diff not applied yet")
+    def test_apply_refuses_a_crossed_item_approved_by_hand(self):
+        self.track({"1": "n"})
+        self.set_decision(1, "approved")
         r = self.v.run("apply", ok=False)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("crossed in the minutes' Track column", r.stdout + r.stderr)
+        self.assertIn("approve the minutes in the Minutes view (it clears crossed lines)", r.stdout + r.stderr)
+        self.assertNotIn("Book the UAT environment", [a["description"] for a in self.v.rows("actions")])
+        self.assertEqual(self.item(1)["decision"], "pending", "not stuck: back in Review's queue")
+        out = self.v.run("reject", str(self.number(1)), script="review.py").stdout
+        self.assertIn("rejected", out.lower())
+        self.assertEqual(self.item(1)["decision"], "rejected", "and Review can reject it")
+
+    @unittest.skipUnless(DIFF_APPLIED, "dev/proposals/track-from-review/tracker-track-problems.diff not applied yet")
+    def test_a_pending_crossed_item_never_stops_the_apply_of_another(self):
+        self.track({"1": "n"})                                 # crossed, still pending: the normal state before Approve minutes
+        self.set_decision(3, "approved")                       # the update of ABC-A-001's due date
+        r = self.v.run("apply", ok=False)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("Apply stopped", r.stdout)
+        self.assertEqual(self.by_id("actions")["ABC-A-001"]["due_date"], "2026-10-30", "the approved item is written")
+        self.assertEqual(self.item(1)["decision"], "pending")
         self.assertNotIn("Book the UAT environment", [a["description"] for a in self.v.rows("actions")])
 
 

@@ -106,6 +106,10 @@ export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads i
   if(SERVED){ await diagLoad(); errBanner(); } }
 /* BL-327: the server sent the last built data at once (its first load no longer waits for the file lists and the hub); when
    that data is over a minute old the page fetches the rest straight after its first paint, through the usual reload */
+/* #275 (Cap's re-review): leaving the Minutes view reloads the data so Review's rows carry the Track choices just made (r.trk); a
+   bulk approval made before that reload has finished waits for it (rvDecideMany), so it never approves a row crossed a moment ago */
+export let TRKRELOAD=null;
+export function reloadForTrack(){ const p=reloadData().finally(()=>{ if(TRKRELOAD===p) TRKRELOAD=null; }); TRKRELOAD=p; return p; }
 export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 /* BL-189 (sprint-milestones): every apply but the peek's own leaves the peek's staged changes in staging (hold_peek); pkApply passes peek */
 export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=applyWords(r.message); return r; }

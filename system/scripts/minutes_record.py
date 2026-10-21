@@ -1029,7 +1029,7 @@ def _choices(doc):
 # Review's Approve and Approve n routine, the minutes view, `review.py approve` (Claude Code and ask creaite) and Review's bulk
 # approvals all go through these. What Alan chose in the Track column (layout.track) is applied on the server: a cross takes the
 # line out, neither keeps it as a line only, a tick on a kept line brings it back (track_reconcile, the view's own changes), and an
-# item he crossed or left with neither is never approved (track_blocked). Approving the minutes registers the ticked rows, defaults
+# item he crossed or left with neither is never approved (track_blocked), nor applied (track_apply_problems). Approving the minutes registers the ticked rows, defaults
 # included (track_ticked), and never an item the minutes show no row for (a promise: track_rowed). A default he never changed is
 # not a choice: the view applies it when he presses Approve minutes there, and anywhere else a decision or a risk left at its
 # default stays in Review for him to decide, as before.
@@ -1065,22 +1065,53 @@ def track_rowed(doc, data):
     return {n for n, t in track_state(doc, data).items() if choices.get(str(n)) not in ("n", "")}
 
 
-def track_blocked(data, decided=False):
-    """{item number: "n" | ""} for the pending items (with `decided`, the approved ones not yet applied too: tracker.py apply's
-    check) of a proposal whose draft minutes record Alan crossed or left with neither in the Track column (an update approved one
-    by one with neither excepted: it stays in Review, H2). {} for anything else."""
+def track_blocked(data):
+    """{item number: "n" | ""} for the pending items of a proposal whose draft minutes record Alan crossed or left with neither in
+    the Track column (an update approved one by one with neither excepted: it stays in Review, H2). {} for anything else, and when
+    the record can't be read (Review then holds nothing back; tracker.py apply's check, track_apply_problems, fails closed)."""
+    try:
+        return _track_blocked(data, ("pending",))
+    except creaite_doc.DocError:
+        return {}
+
+
+def _track_blocked(data, decisions):
+    """track_blocked for the items whose decision is in `decisions`; raises creaite_doc.DocError when the record can't be read."""
     import review
     draft = (data.get("meeting") or {}).get("draft")
     if not (data.get("meeting") and not data["meeting"].get("applied") and is_record(draft)):
         return {}
-    try:
-        doc = creaite_doc.read(draft)
-    except creaite_doc.DocError:
-        return {}
+    doc = creaite_doc.read(draft)
     choices, items = _choices(doc), {i.get("n"): i for i in data.get("items") or []}
     return {n: t for n, t in track_state(doc, data).items()
-            if choices.get(str(n)) in ("n", "") and items[n].get("decision") in (("pending", "approved") if decided else ("pending",))
+            if choices.get(str(n)) in ("n", "") and items[n].get("decision") in decisions
             and not (t == "" and _waits(items[n], review.minutes_group(items[n])))}
+
+
+TRACK_STUCK = "it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it"
+
+
+def track_apply_problems(name, data):
+    """#275 (Cap's re-review): tracker.py apply's check (the guarded diff's track_problems). An APPROVED item that Alan crossed or
+    left with neither in the minutes' Track column is never written, whatever path approved it (a stale page, a proposal edited by
+    hand): the apply stops, all or nothing, and the item goes back to pending (saved when the apply stops), so it is in Review's
+    queue again, where approving the minutes clears it or it can be rejected. A pending item, the normal state between crossing a
+    row and approving the minutes, never stops it. Fails closed: a draft record that can't be read, with an approved item not yet
+    applied, stops the apply. Returns the problems, one line each, with `name` (the proposal's file name)."""
+    try:
+        blocked = _track_blocked(data, ("approved",))
+    except creaite_doc.DocError as e:
+        if any(i.get("decision") == "approved" and not i.get("applied") for i in data.get("items") or []):
+            return [f"{name} minutes: the minutes record can't be read ({e}), so its Track column can't be checked; "
+                    "open the minutes in the Minutes view, then apply again"]
+        return []
+    out, items = [], {i.get("n"): i for i in data.get("items") or []}
+    for n, t in blocked.items():
+        items[n]["decision"] = "pending"
+        items[n].pop("decided_in", None)
+        what = "crossed" if t == "n" else "kept in the minutes only (neither)"
+        out.append(f"{name} item {n}: {what} in the minutes' Track column; {TRACK_STUCK}")
+    return out
 
 
 def _track_reconcile(doc, data, project=None):

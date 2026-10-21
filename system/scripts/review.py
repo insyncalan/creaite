@@ -843,14 +843,14 @@ def decide_record(n, p, data, block, decision):
     ticked row is approved with the minutes; an item with no row (a promise) waits in Review."""
     if decision == "approved":
         try:
-            data, ticked = track_minutes(p, data)
+            data, ticked, lines = track_minutes(p, data)
         except Exception as e:                                  # minutes_record.RecordError: nothing approved
             return f"{n}: not approved — {e}"
         block = data["meeting"]
         block["minutes_decision"] = decision
         save(p, data)
         return f"{n}: Minutes {decision} — {block.get('title', '')}" + \
-            (f", with {len(ticked)} ticked item{'s' if len(ticked) != 1 else ''}" if ticked else "")
+            (f", with {len(ticked)} ticked item{'s' if len(ticked) != 1 else ''}" if ticked else "") + track_words(lines)
     block["minutes_decision"] = decision
     save(p, data)
     return f"{n}: Minutes {decision} — {block.get('title', '')}"
@@ -859,17 +859,33 @@ def decide_record(n, p, data, block, decision):
 def track_minutes(p, data, project=None):
     """#275: a minutes record's proposal brought in line with its Track column (minutes_record.track_reconcile: the record settled,
     crossed rows removed, neither kept as lines only), then each ticked row's item (of `project` when given) approved with the
-    minutes. Returns (the proposal as saved, the numbers approved)."""
+    minutes. Returns (the proposal as saved, the numbers approved, {"removed": n, "kept": n, "chosen": bool}: the lines this approval
+    took out of the minutes or kept as lines only, and whether Alan made any Track choice at all)."""
     import minutes_record
     draft = (data.get("meeting") or {}).get("draft")
-    minutes_record.track_reconcile(draft)
+    made = minutes_record.track_reconcile(draft)
     data = json.loads(p.read_text(encoding="utf-8"))
-    ticked = minutes_record.track_ticked(minutes_record.creaite_doc.read(draft), data, project)
+    doc = minutes_record.creaite_doc.read(draft)
+    ticked = minutes_record.track_ticked(doc, data, project)
     for it in data.get("items") or []:
         if it.get("n") in ticked and it.get("decision") == "pending":
             it.update(decision="approved", decided_in="minutes")
     save(p, data)
-    return data, ticked
+    gone = (doc.get("meta") or {}).get("removed") or {}
+    out = [gone[str(m)] for m in made if isinstance(gone.get(str(m)), dict)]
+    return data, ticked, {"removed": sum(not g.get("kept_line") for g in out), "kept": sum(bool(g.get("kept_line")) for g in out),
+                          "chosen": bool(minutes_record._choices(doc))}
+
+
+def track_words(lines):
+    """Cap's #275 note 4: what `review.py approve <minutes>` did to the minutes' lines, for its output. With no Track choice made it
+    says the rows ticked by default are registered, as the Minutes view's Approve minutes does."""
+    if not lines.get("chosen"):
+        return ("; no Track choices made in the minutes, so the rows ticked by default are registered (as Approve minutes in the "
+                "Minutes view); the rest wait in Review")
+    r, k = lines.get("removed", 0), lines.get("kept", 0)
+    return (f"; {r} crossed line{'s' if r != 1 else ''} taken out of the minutes, {k} line{'s' if k != 1 else ''} kept in the "
+            "minutes untracked (Track: neither)")
 
 
 def track_refusal(n, p, data, target):
