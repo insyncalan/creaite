@@ -24,6 +24,10 @@ Everything lives in this folder: data, memory, skills, scripts and history. To m
 
 Say "review", approve, then say "apply". The rest is in `CLAUDE.md`.
 
+## Words on screen
+
+`dev/PLAIN-WORDS.md` is the glossary for anything a user reads: the plain words creaite uses, and the words, paths and script names it never shows outside Settings › Diagnostics.
+
 ## Development tools (BL-240)
 
 `dev/Brewfile` lists the tools used to build and test creaite: `gh`, `git` and the Python the tests run on (3.14). Install them with `brew bundle --file=dev/Brewfile` (Homebrew in `~/homebrew` needs no admin rights). They are for development only: creaite itself runs with Python 3.9 or later and nothing else, and the Brewfile is never in a release zip.
