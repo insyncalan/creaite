@@ -360,6 +360,7 @@
    "healthEvidence",
    "healthFacts",
    "heldLines",
+   "heldWords",
    "helpFind",
    "helpGo",
    "helpLineReset",

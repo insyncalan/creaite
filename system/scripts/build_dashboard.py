@@ -699,13 +699,24 @@ def queue_item(con, n, p, item, aged, overlap):
             "dup": dup, "signals": signals,
             "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
-            "mf": item.get("moved_from"), "op": item.get("op")}   # BL-200 (sprint-review-work): moved on its own; new or update
+            "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
+            **({"bad": invalid_words(item.get("invalid_reason"))} if "invalid" in flags else {})}   # #291: why it can't be saved
+
+
+def invalid_words(reason):
+    """#291: why an item can't be saved as it is, in plain words for its Review row (the tracker's reason, without its field list)."""
+    m = re.match(r"unknown field\(s\) for \w+: ([^.]+)", reason or "")
+    if m:
+        return f"it has a field the tracker doesn't keep ({m.group(1).strip()})"
+    return (reason or "it doesn't pass the tracker's checks").split(". Valid:")[0].strip().rstrip(".")
 
 
 def item_why(item, project, flags):
     """Why the item is in Review, as its row says."""
     if project is None:
         return "Possible match" if item.get("match") == "possible" else "Needs a project"
+    if "invalid" in flags:
+        return "Can't be saved as it is"                                  # #291: before the bulk rule's words
     return (review.individual_only(item) or "").capitalize() or \
         ("Conflict with a newer change" if "conflict" in flags else
          "No owner yet" if "no-owner" in flags else
