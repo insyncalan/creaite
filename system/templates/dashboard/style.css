@@ -4115,6 +4115,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
+/* #232 (v2.6): Intake never scrolls sideways, at 900 as at 1440 (the old Upload files table needed 809px in a 731px frame). As #271 did
+   for the old Review: the title cell takes the room the buttons leave (max-width:0 stops a long line setting the column's width, so
+   the global td.title min-width does not apply here) and a long unbroken title or source wraps. Two panes' right side is narrow
+   below 1200: its row buttons may wrap under each other there, never past the frame */
+@media (min-width:641px){ #v-intake-review td.title{min-width:0;width:100%;max-width:0;overflow-wrap:anywhere} }
+@media (max-width:1199px){ #v-intake-review .icdet .iracts{white-space:normal;min-width:0} #v-intake-review .icdet .iracts .mini{margin:2px 0} }
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* ===== #232-A Intake side: the meeting row's actions, progress, notes, the drop target (scoped to #v-intake-review) ===== */
 #v-intake-review .icprog{height:6px;border-radius:var(--r-sm);background:linear-gradient(90deg,transparent,var(--accent),transparent) no-repeat var(--sunk);background-size:35% 100%;border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px;animation:mhair calc(1600ms*var(--k)) var(--inout) infinite}   /* the run hairline's loop (mhair), on the track itself */
