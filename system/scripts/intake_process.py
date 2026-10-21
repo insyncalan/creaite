@@ -200,6 +200,15 @@ def _project_problem(f, codes):
     return (None if project in codes else _why(f.get("path"), f"there is no project {project}")), codes
 
 
+def _as_problem(f):
+    """Why a file's "as" is refused, or None: only "minutes" (someone else's minutes, #232 E1), and never for a .vtt."""
+    if f.get("as") not in (None, AS_MINUTES):
+        return _why(f.get("path"), "\"as\" is only \"minutes\" (someone else's minutes)")
+    if f.get("as") == AS_MINUTES and isinstance(f.get("path"), str) and f["path"].lower().endswith(".vtt"):
+        return _why(f["path"], "a .vtt is a transcript: Make minutes, not Find work items")
+    return None
+
+
 def validate_request(req, codes=None):
     """(files, None) or (None, why) for a POST /api/intake/process body: files is [{path, project, as?}] (project may be
     None; "as" is there only for someone else's minutes, "minutes", never for a .vtt)."""
@@ -215,10 +224,9 @@ def validate_request(req, codes=None):
         f = {"path": f} if isinstance(f, str) else f
         if not isinstance(f, dict) or set(f) - {"path", "project", "as"}:
             return None, "Each file is {path, project, as}."
-        if f.get("as") not in (None, AS_MINUTES):
-            return None, _why(f.get("path"), "\"as\" is only \"minutes\" (someone else's minutes)")
-        if f.get("as") == AS_MINUTES and isinstance(f.get("path"), str) and f["path"].lower().endswith(".vtt"):
-            return None, _why(f["path"], "a .vtt is a transcript: Make minutes, not Find work items")
+        why = _as_problem(f)
+        if why:
+            return None, why
         why, codes = _project_problem(f, codes)
         if why:
             return None, why

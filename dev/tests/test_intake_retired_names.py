@@ -27,7 +27,7 @@ bootToday0027
 revRow rvRender rvBar rvDock rvSel rvPaint rvOnly rvPick rvTick rvOrder rvSyncChk rvBarProps drawReviewFilters rvApplied rvRoutineBtn rvChanged
 rvApproveSelected rvRejectSelected rvRoutine rvPreview rvSet rvCheck rvLearnCard rvAdvance rvMatching rvPasses rvQOK rvShown rvDef rvDate
 rvEmptyHtml rvHintHtml rvAgeBanner rvOutlier rvAllOld rvAgeText rvStaleDays rvDrawDisp rvDispClose rvMoveTo rvMoveItem rvMoveMinutes rvMovePreview rvItemState
-rfOpen rfClose rfAct rfDraw rfQueue rfRoutine rfKey rfSave rfFields RFF
+refreshCalendar rfOpen rfClose rfAct rfDraw rfQueue rfRoutine rfKey rfSave rfFields RFF
 toggleGroup approveGroup kidsOf routineKid COLLAPSED rvMovable rvLeftOut rvActive rvBlocks rvBlocks0 rvSrcLink rvSrcKind rvNeeds rvOwner
 CHK RHL RVF RVNEG RVQ RVG RVO RVPK RVFIELDS RVKINDS RVORD RVSETF RVLASTUNDO RVLASTN RVLASTV RVSHOWN RVINBATCH RVWHY
 cxReview cxReviewMany cxReviewFields cxGone cxPk rjGoneRow rjPlace rjKey315 rjGuessHtml rjWith
@@ -45,7 +45,10 @@ def sources():
 
 
 WANT = {"MTG", "MRUN", "mtgBusy", "mtgLater", "mtgSkip", "mtgCheckable", "TXWHY", "UPLOAD_TYPES", "UPLOAD_MAX", "uploadInboxFile",
-        "previewInbox", "removeInbox", "refreshCalendar", "checkMeeting", "jobLive", "kb", "nowHM", "intakeSeams"}
+        "previewInbox", "removeInbox", "checkMeeting", "jobLive", "kb", "nowHM", "intakeSeams",
+        "processLive", "calendarLive", "stopRun", "mtgProcessFile"}
+# refreshCalendar went with 2.5.3's #265: Refresh is the calendar's own run kind (calendarLive, called by the page's
+# irRefreshCalendar), so the old chat-run refreshCalendar is retired, not a survivor
 
 
 class RetiredNames(unittest.TestCase):

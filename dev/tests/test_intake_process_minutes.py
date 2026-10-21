@@ -12,9 +12,7 @@ Run: python3 dev/tests/test_intake_process_minutes.py      (quick tier: no Chrom
   Those tests are expected failures until the diff is applied (APPLIED below).
 """
 import json
-import os
 import sys
-import time
 import unittest
 from pathlib import Path
 
@@ -23,7 +21,7 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(REPO / "system" / "scripts"))
 from test_tracker import Vault  # noqa: E402
-from test_intake_process import BUDGET, DAY, PILOT, in_vault, put_samples  # noqa: E402
+from test_intake_process import DAY, in_vault, put_samples  # noqa: E402
 
 APPLIED = "def process_minutes_files" in (REPO / "system/scripts/reach.py").read_text(encoding="utf-8") and \
     "as_minutes=" in (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")

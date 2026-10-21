@@ -18,7 +18,7 @@ jobLive=async(url,body)=>{ window.LOADED.push([url,body.id]);
   await api('/api/inbox/upload',{name:f.day+' '+f.title+'.vtt',data:btoa('WEBVTT\n\nNOTE\nEvent ID: '+body.id+'\n\n00:00:01.000 --> 00:00:05.000\nHello\n')}); };
 const stageFor=async q=>{ const m=D.meetings.rows.find(x=>q.includes(x.title));
   if(m) await api('/api/fs',{op:'write',path:'system/staging/proposed-test-'+m.id+'.json',text:JSON.stringify({created:'2026-10-05T18:00:00',source_run:'cx-minutes',files:[],items:[{n:1,op:'new',table:'actions',values:{project:'ABC',description:'Send the revised plan',owner:'Alan Carter',priority:'Medium',raised:'2026-10-05',source:'x'},match:'strong',flags:[],decision:'pending'}],meeting:{key:'calendar:'+m.id,title:m.title,date:m.day,projects:['ABC'],draft:null,transcript:null,minutes_decision:'pending',file_ops:[]}})}); };
-/* ask creaite's run: only someone else's minutes still go this way (CHAT); anything else here is a regression */
+/* ask creaite's run: nothing on the Intake page goes this way any more (#232 E1 moved Find work items to Process's route); CHAT is a regression */
 askLive=async(q,c)=>{ window.ASKED.push([q,c]); window.CHAT.push(q); if(window.GATE) await window.GATE; await stageFor(q); };
 /* #264: Process's own route. Each file is recorded as "process <path>" (the words the run is given), its payload in PROC */
 processLive=async(files,onEv)=>{ window.PROC.push(files); files.forEach(f=>window.ASKED.push(['process '+f.path,'route'+(f.project?' '+f.project:'')]));

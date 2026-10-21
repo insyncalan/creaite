@@ -239,13 +239,17 @@ class Queue(unittest.TestCase):
 
 class ProcessSelectedMeetings(unittest.TestCase):
 
-    def test_m1_ask_creaite_opens_only_when_a_transcript_has_to_be_loaded(self):
-        """Process selected on a loaded meeting goes straight to /api/intake/process: openChat() sits inside the not-loaded branch."""
-        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/intake.js").read_text(encoding="utf-8")
-        body = src[src.index("export async function processMeetings"):src.index("/* ===== #265")]
-        self.assertEqual(body.count("openChat()"), 1)
-        self.assertLess(body.index("if(!m.loaded){"), body.index("openChat()"))
-        self.assertLess(body.index("openChat()"), body.index("processLive("))
+    def test_m1_ask_creaite_never_opens_when_intake_processes(self):
+        """2.6's one Intake page (#232; the old page's processMeetings was retired in C2): Process, Make minutes and Find work
+        items go straight to /api/intake/process through processLive; ask creaite's panel opens only for "ask creaite about
+        this", and nothing on the page sends an ask creaite message."""
+        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/intakeReview/actions.js").read_text(
+            encoding="utf-8")
+        self.assertEqual(src.count("openChat()"), 1)
+        self.assertLess(src.index("export function irAskAbout"), src.index("openChat()"))
+        self.assertNotIn("askLive", src)
+        body = src[src.index("export async function irProcess("):src.index("export function irStop")]
+        self.assertEqual(body.count("processLive("), 1)
 
 
 if __name__ == "__main__":
