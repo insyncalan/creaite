@@ -55,6 +55,8 @@ class IntakeProcessPage(LiveBrowserCase):
 
     @needs_diff
     def test_process_on_the_three_sample_files_ends_in_review_with_no_go_ahead(self):
+        """The two sample transcripts, one after the other (since #232 someone else's minutes are read in ask creaite, E1, so the
+        minutes sample is not one of them): each ends drafted, with no go-ahead and the panel shut."""
         self.open_intake()
         for p in SAMPLES:
             self.press(p)
