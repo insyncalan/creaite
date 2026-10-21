@@ -1901,6 +1901,7 @@ class Bl334And316(HandcheckCase):
         return b.eval("""(()=>{ const L=[...document.querySelectorAll('#tdList>li.td-message')];
           return L.map(li=>({title:li.querySelector('.t').textContent, hidden:li.hidden||!li.offsetParent,
             text:li.textContent.replace(/\\s+/g,' ').trim(), rowButtons:li.querySelectorAll(':scope>.tacts button').length,
+            rowActs:[...li.querySelectorAll(':scope>.tacts button')].map(x=>x.dataset.alertdo||''),
             cands:[...li.querySelectorAll('.tdcand')].map(c=>({tag:c.querySelector('.tdctag').textContent, t:c.querySelector('.ct').textContent,
               buttons:[...c.querySelectorAll('button')].map(x=>[x.dataset.alertdo, x.dataset.cand, x.getAttribute('aria-label')||x.dataset.tip||''])}))})); })()""")
 
@@ -1927,7 +1928,8 @@ class Bl334And316(HandcheckCase):
         self.assertEqual([x["tag"] for x in c["cands"]], ["Action", "Decision"])
         for x in c["cands"]:
             self.assertEqual(self.labels(x), ["make", "dismiss"], x)
-        self.assertEqual(c["rowButtons"], 0, "the buttons are per item")
+        self.assertEqual(c["rowButtons"], 1, "the work-item buttons are per item")
+        self.assertEqual(c["rowActs"], ["handled"], "BL-342: only Handled on the card itself")
         a = self.alert()
         self.assertEqual(a["p"], "FAL", "matched from the title")
         names = [x[2] for x in c["cands"][0]["buttons"]]
@@ -1935,16 +1937,18 @@ class Bl334And316(HandcheckCase):
                       f"Action + Decision, each {' / '.join(n.split(':')[0] for n in names)}")
 
     def test_c43_quiet_line(self):
-        """43. A second conversation titled "Group chat" with nothing in it → one quiet line ("… : nothing for you"), with no
-        buttons and no count. Its title is the people in it, never "Group chat"."""
+        """43. A second conversation titled "Group chat" with nothing in it → one quiet line ("… : nothing for you"), with only
+        Seen (#276) and no count. Its title is the people in it, never "Group chat"."""
         self.ensure("quiet")
         b = self.b
         quiet = b.eval("""[...document.querySelectorAll('#tdList>li.td-quiet')].map(li=>({text:li.textContent.replace(/\\s+/g,' ').trim(),
-          buttons:li.querySelectorAll('button').length, tag:!!li.querySelector('.tdtag')}))""")
+          buttons:li.querySelectorAll('button').length, acts:[...li.querySelectorAll('button')].map(x=>x.dataset.alertdo||''),
+          tag:!!li.querySelector('.tdtag')}))""")
         self.assertEqual(len(quiet), 1, quiet)
         q = quiet[0]
         self.assertIn("Rashid Al Suwaidi with Lena Fischer: nothing for you", q["text"])
-        self.assertEqual(q["buttons"], 0, "no buttons")
+        self.assertEqual(q["buttons"], 1, "only Seen")                                       # #276
+        self.assertEqual(q["acts"], ["seen"], "the one button is Seen")
         self.assertFalse(q["tag"], "no tag")
         page = b.eval("document.getElementById('tdList').textContent")
         self.assertNotIn("Group chat", page)
@@ -1955,7 +1959,7 @@ class Bl334And316(HandcheckCase):
         rail = b.eval("(()=>{ const e=document.querySelector('.rail button[data-v=\"today\"] .badge'); return e&&e.offsetParent?e.textContent.trim():''; })()")
         self.assertEqual(rail, str(len(open_)) if open_ else "", "the rail counts the card, not the quiet line")
         self.assertEqual(len(self.falcon_cards()), 1, "the first card is still one card")
-        self.note(43, f"\"{q['text']}\", 0 buttons; title in vip.json \"{a['title']}\"; Today's count {rail or '0'} (the card only)")
+        self.note(43, f"\"{q['text']}\", only Seen; title in vip.json \"{a['title']}\"; Today's count {rail or '0'} (the card only)")
 
     def test_c44_same_card_updated(self):
         """44. Record the first conversation again, its last message at 09:05, with a third item → the same card is updated
