@@ -2,7 +2,6 @@
 /* today.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0025-today.js, 0026-today-brief-bl-72.js, 0027-bl-149-sprint-ux.js, 0028-after-bl-149.js, 0159-bl-156-sprint-ux.js, 0164-bl-166-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { toggleHelpPanel } from "./helpscreen.js";
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { linkWords as lw } from "./core/linkText.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
@@ -294,7 +293,7 @@ window.addEventListener("resize",()=>{ if(shared.VIEW==="today") renderDay(); })
   band.addEventListener("pointerup",e=>{ if(sx==null) return; const dx=e.clientX-sx, dy=e.clientY-sy; sx=null;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) stepDay(dx<0?1:-1); });
   band.addEventListener("pointercancel",()=>{ sx=null; }); }
-document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) refreshCalendar(); if(e.target.closest("[data-thelp]")) toggleHelpPanel("today"); });   /* #237: the header's ? opens the same panel as the ? key; #249: and closes it again */
+document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) refreshCalendar(); });   /* #284: the header's ? is gone (the ? key opens Help) */
 }
 /* ===== BL-149 (sprint-ux) ===== no dead ends into Claude Code. If the dashboard can do it, it does; the command is a footnote,
    shown only when the live server is down. A reminder gets one primary button on its row (Draft weekly report, Draft client
