@@ -2126,6 +2126,17 @@ class Bl334And316(HandcheckCase):
                     continue
                 if bad:
                     keys.add((area, f"keys: {sig} “{label}”: {'; '.join(bad)}"))
+        # #111 (by design, v2.6.0 c49 triage): a meeting title and its Prep chip open the non-modal Prep peek on keyboard focus,
+        # focus staying on them, and the chip's Enter goes to the prep page; the Enter script leaves them alone
+        # (behaviour_probe.js), so the peek's own keys are checked here (the demo has meetings; the sample doesn't)
+        if "today" in shown:
+            try:
+                bad = d.prep_peek()
+            except (TimeoutError, RuntimeError) as e:
+                missing.append(f"prep_peek ({str(e).splitlines()[0][:60]})")
+                bad = []
+            if bad:
+                keys.add(("Today", f"keys: today Prep peek “meeting title, Prep chip”: {'; '.join(bad)}"))
         n_undo = 0
         for name in shown:
             done = set()

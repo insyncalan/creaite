@@ -291,7 +291,11 @@ def behaviour_driver(case, screens):
                    "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
                    "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
                    "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
-                   "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
+                   "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; "
+                   # v2.6.0 c49 triage: any dialog a screen left open (the minutes-approve screen IS #mnApprove, modal) is closed
+                   # too; left open, it made every later screen inert, so later openers "can't take focus" and Enter "opens nothing"
+                   "document.querySelectorAll('dialog[open]').forEach(d=>{ try{ typeof closeDialog==='function'?closeDialog(d):d.close(); }catch(e){ d.close(); } }); "
+                   "go('today')")
             go(b) if callable(go) else b.eval(go)
             b.wait(ready, 15)
             last = None
@@ -304,7 +308,7 @@ def behaviour_driver(case, screens):
             b.eval(us.PROBE + ";true")
             return region
 
-        def settle(self, name):
+        def settle_screen(self, name):          # test_shared_behaviour's name for it since 2.6.0 (was settle): the demo's ready check
             b = self.b
             for _ in range(2):
                 if not b.eval("SB.popups().length"):
@@ -342,6 +346,38 @@ def behaviour_driver(case, screens):
                 bad.append("Esc leaves it open")
             elif not b.eval(f"document.activeElement===document.querySelector({sel})"):
                 bad.append("Esc doesn't return focus to the control")
+            return bad
+
+        def prep_peek(self):
+            """#111 (by design): a meeting's title (.dmti) and its Week ahead Prep chip (.wkchip) carry the Prep peek, a
+            non-modal peek with no focus trap. Keyboard focus opens it (aria-expanded true) and focus stays on the trigger; Esc
+            closes it with focus still on the trigger. The chip's Enter goes to the prep page, so the Enter script leaves both
+            alone (behaviour_probe.js) and this drives them instead. The sample vault has no meetings; the demo's Today does."""
+            b = self.b
+            self.goto("today")
+            b.eval(tsb.PROBE + ";true")
+            bad = []
+            for sel in (".dmti", ".wkchip"):
+                q = json.dumps(f"#v-today {sel}")
+                if not b.eval(f"[...document.querySelectorAll({q})].some(e=>e.checkVisibility())"):
+                    continue                            # a demo day with no meeting of that kind: nothing to drive
+                b.eval(f"(()=>{{ const e=[...document.querySelectorAll({q})].find(e=>e.checkVisibility()); window.__pk=e; "
+                       "e.scrollIntoView({block:'center'}); })()")
+                b.eval("window.__pk.focus()")           # the script's keys so far keep keyboard modality: :focus-visible
+                try:
+                    b.wait("window.__pk.getAttribute('aria-expanded')==='true'", 5)
+                except TimeoutError:
+                    bad.append(f"{sel}: keyboard focus opens no peek")
+                    continue
+                self.seen.append({"ids": [], "labels": [], "classes": ["prpeek"]})
+                if not b.eval("document.activeElement===window.__pk"):
+                    bad.append(f"{sel}: the peek took focus from its trigger")
+                self.press("Escape", 0.5)
+                if b.eval("window.__pk.isConnected && window.__pk.getAttribute('aria-expanded')==='true'"):
+                    bad.append(f"{sel}: Esc leaves the peek open")
+                elif not b.eval("document.activeElement===window.__pk"):
+                    bad.append(f"{sel}: Esc doesn't leave focus on the trigger")
+                b.eval("window.__pk && window.__pk.blur(); window.__pk=null; true")
             return bad
 
     return Drv()
