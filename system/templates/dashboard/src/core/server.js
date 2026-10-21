@@ -22,10 +22,10 @@ import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh
 import { refreshFiles } from "../files.js";
 import { inboxBadge, renderInbox } from "../intake.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
-import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw, REC } from "../panel.js";
+import { drawPanel, errBanner, MD_IMG, markStagedRows, openProposal, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
-import { renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
+import { heldLines, renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
 import { ownerFinal, renderPerson, row, savedNow, vipPoll, WSD, wsNewOf } from "../settings.js";
 import { renderToday } from "../today.js";
 import { hit, items, renderPeople, renderWork, rvPaint } from "../work.js";
@@ -85,6 +85,25 @@ export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolea
    made"); said in plain words, with what to do. Only the page's wording: tracker.py's refusal is unchanged. */
 export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
   return f?`${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`:t; };
+/* #280: an apply that stopped because of other, older staged proposals (an older server applied everything staged with a save).
+   Every proposal the refusal names other than the save's own, in order, each with its problems: [{file, why:[…]}]. */
+export function applyBlockers(msg,own){ const t=String(msg||""); if(!/Apply stopped/.test(t)) return [];
+  const by=new Map();
+  for(const m of t.matchAll(/(proposed-[^\s\/\\:]+\.json)((?: item \d+| [a-z_]+)?: [^\n]*)/g)){ if(m[1]===own) continue;
+    if(!by.has(m[1])) by.set(m[1],[]); by.get(m[1]).push((m[1]+m[2]).trim()); }
+  return [...by].map(([file,why])=>({file,why})); }
+/* the meeting (or report) a staged proposal came from, and its date, for the message; the file's own date when it has neither */
+export async function proposalLabel(file){ let data=null; try{ data=JSON.parse(await shared.VW.read("system/staging/"+file)); }catch(e){ data=null; }
+  const b=data&&(data.meeting||data.report), title=b&&b.title?String(b.title):"", made=(b&&b.date)||(data&&data.created)||(file.match(/\d{4}-\d{2}-\d{2}/)||[""])[0];
+  const when=fd(String(made).slice(0,10));
+  return title?`${title}${when?" ("+when+")":""}`:`a proposal staged ${when||"earlier"}`; }
+/* #280: the words: an older proposal is stopping it, not his edit; every blocking file named; Review offered */
+export async function blockerWords(list){ const parts=[];
+  for(const b of list) parts.push(`${await proposalLabel(b.file)}: ${b.why.join("; ")}`);
+  return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older staged proposals are`:"an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Review, then save again.`; }
+/* Review, with the blocking proposals' rows picked and the first one open */
+export function openBlockersInReview(files){ if(shared.VIEW!=="review") go("review");
+  const L=REV.filter(x=>files.includes(x.file)&&!x.done); RHL.clear(); L.forEach(x=>RHL.add(x.n)); rvSyncChk(); renderReview(); if(L.length) openProposal(L[0].n); }
 /* fresh data after an apply or undo */
 /* BL-216: Review keeps its selection and highlight across a reload (rvHold before, rvRestore after) */
 export function rvHold(){ const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n); return {keys,ck:cr&&rvKey(cr)}; }
@@ -116,7 +135,8 @@ export async function refreshRecords(ids){ if(!SERVED) return false; return awai
 /* several quick decisions (bulk approve) become one apply */
 export let APPLYT=null, APPLYN=0;
 export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
-  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  const hl=r.ok?heldLines(r.message).length:0, held=hl?`. ${hl} proposal${hl===1?" is":"s are"} held in Review: a file to be filed has gone`:"";   /* #280 */
+  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
   if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }
@@ -199,16 +219,19 @@ const opTargeted=op=>op.recs.length>0&&!op.opt.wsNew&&op.items.every(it=>RECORD_
 /* back on screen as it was: the change's own undo, then what is still saving on top again */
 function opRevert(op){ ovDrop(op.recs); op.undoIt(); ovReapply(); refreshAll(); }
 async function opDropFile(name){ try{ await vq(async()=>{ const pth="system/staging/"+name; if(await shared.VW.exists(pth)) await shared.VW.remove(pth); }); return true; }catch(e){ return false; } }
-async function opFail(op,msg){ op.state="failed"; opRevert(op);
+async function opFail(op,msg,act){ op.state="failed"; opRevert(op);
   if(opTargeted(op)&&viaServer()) await refreshRecords(opIds(op));   /* "reloaded it": the item as it is now */
+  if(act){ snack(msg,act.run,act.label); return false; }   /* #280: blocked by an older proposal: Retry would stop again, so Review is offered */
   snack(msg,()=>{ save(op.what,op.items,op.extra,op.doIt,op.undoIt,op.by,{...op.opt,retry:true}); },"Retry"); return false; }
 async function saveApply(op){ PULSE.reloads++;   /* its own change event waits for it */
   try{ if(op.cancel){ op.state="cancelled"; return false; }
     if(op.rebase) opRebase(op);
     op.state="writing"; try{ op.name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
     if(op.cancel){ await opDropFile(op.name); op.state="cancelled"; return false; }
-    op.state="applying"; const res=await api("/api/apply",{hold_peek:true});
-    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(applyWords(res.message))); }
+    op.state="applying"; const res=await api("/api/apply",{hold_peek:true,only:op.name});   /* #280: only what this save wrote */
+    if(!res.ok){ const bl=applyBlockers(res.message,op.name);
+      if(bl.length){ const words=await blockerWords(bl); await opDropFile(op.name); return await opFail(op,words,{label:"Open in Review",run:()=>openBlockersInReview(bl.map(b=>b.file))}); }
+      await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(applyWords(res.message))); }
     let held=false; try{ held=await shared.VW.exists("system/staging/"+op.name); }catch(e){ held=false; }
     if(held){ await opDropFile(op.name); const ids=opIds(op); return await opFail(op,`Not saved: ${ids.join(", ")||"it"} changed elsewhere; reloaded ${ids.length>1?"them":"it"}`); }   /* held as a conflict: not applied */
     op.state="done"; op.apply_id=res.apply_id; ovDrop(op.recs);

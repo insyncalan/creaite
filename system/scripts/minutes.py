@@ -661,6 +661,10 @@ class Staging:
     def new_values(self, raw, table):
         """The new item's values with the meeting's defaults and its source."""
         values = dict(raw.get("values") or {})
+        if table not in RAISED_TABLES:                # #280: decisions are dated by `date`; `raised` is not a decision field
+            raised = values.pop("raised", None)
+            if table == "decisions" and raised and not values.get("date") and values.get("status") != "Pending":
+                values["date"] = raised
         if table == "decisions":                      # BL-53: a decision needed is Pending and has no date until it is made
             values["status"] = values.get("status") or "Made"
             if values["status"] == "Pending":

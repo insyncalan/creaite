@@ -50,6 +50,7 @@ export let decide = async function(n,v,written){ const tr=$(`#reviewBody tr[data
     const snap=tr&&shared.VIEW==="review"&&!reduced()?{g:{r:tr.getBoundingClientRect(),t:(tr.querySelector("td.title")||tr).textContent.trim()},rows:mSnapRows("#reviewBody tr[data-n]",e=>e.dataset.n)}:null;
     const before=was&&was.done;
   const res=await (async()=>{ const r=REV.find(x=>x.n===n); if(!r||r.done) return; if(v==="approved"&&r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 point 4 (fix-minutes-approve): never approved; Reject still works */
+  if(v==="approved"&&r.kind==="draft"&&r.held){ snack(heldMsg(r),()=>heldApprove(r),"Approve without it"); return; }   /* #280: never filed as staged */
   if(v==="approved"&&!r.p&&r.kind!=="files"){ snack("Choose a project first — open the item to set it"); openProposal(n); return; }
   if(viaServer()&&v==="approved"&&r.kind==="draft") return reviewViaServer(r,"approved",[]);
   if(viaServer()&&v==="approved"&&(r.flags||[]).includes("conflict")) return conflictChoice(r);
@@ -85,7 +86,8 @@ export function revDetail(r){ const x=r.rec, w=t=>`<span class="h-warn">${t}</sp
     r.kind==="raid"?[esc(x.type),who(x.o),x.imp&&x.lik?`${x.imp} × ${x.lik} → ${pc(prio(x.imp,x.lik))}`:w("Impact and likelihood not set"),x.resp?`Response: ${linkHtml(x.resp)}`:w("No response yet"),x.due?dueTxt(x.due):"",ms]:
     r.kind==="decisions"?[x.by?`Made by ${personLink(x.by,x.by)}`:w("Made by not recorded"),x.date?fd(x.date):""]:
     r.kind==="update"?(x.changes||[]).map(c=>`${esc(c.field)}: ${esc(fd(c.from==null||c.from===""?"—":linkWords(String(c.from))))} → ${esc(fd(c.to==null||c.to===""?"—":linkWords(String(c.to))))}`):
-    r.kind==="draft"&&r.nodraft&&!r.done?[w("No Word draft was made for these minutes"),"Reject them and process the meeting again"]:[];   /* BL-260 */
+    r.kind==="draft"&&r.nodraft&&!r.done?[w("No Word draft was made for these minutes"),"Reject them and process the meeting again"]:
+    r.kind==="draft"&&r.held&&!r.done?[w("Held: "+esc(r.held)),"Approve the minutes without the transcript copy, or discard the proposal"]:[];   /* BL-260; #280 */
   let h=(r.dn?dnHtml(r):"")+parts.filter(Boolean).join(" · ")+shRvHtml(r);
   if(r.kind==="update"&&r.rec&&r.rec.why) h=`${h} · <span class="sub">“${esc(r.rec.why)}”</span>`;   /* BL-65 */
   if(!shared.LOADING){ { const fdef=r&&WKRVF[r.kind], v=fdef&&r.rec?r.rec[fdef[0]]:null, n=weekendNote(v); if(n&&!r.done) h+=`<div class="wkrv"><span class="h-warn">${r.kind==="decisions"?"Needed":"Due"} on a ${esc(n.day)}</span> <button type="button" class="mini" data-wkrv="${r.n}" data-to="${n.prev}">${esc(wkLong(n.prev))}</button> <button type="button" class="mini" data-wkrv="${r.n}" data-to="${n.next}">${esc(wkLong(n.next))}</button></div>`; }   /* BL-180 */
@@ -110,6 +112,7 @@ export function revRow(r,idx,g,cls,head){ const minKids=isMin(r)&&head.kids.some
     const live=viaServer(), btns=`<button class="mini" data-act="ck" ${live?"":'disabled title="Needs the live server"'}>Keep current</button> <button class="mini ok" data-act="co" ${live?"":'disabled title="Needs the live server"'}>Use this one</button>`;
     h=h.replace(/<button class="mini ok" data-act="a">.*?<\/button>/,btns);   /* BL-160: the Approve button carries its icon */
     const i=h.indexOf('<div class="why rvmeta"'); if(i>0) h=h.slice(0,i)+conflictHtml(r)+h.slice(i); }
+  if(r.kind==="draft"&&r.held&&!r.done) h=h.replace(/<button class="mini ok" data-act="a">.*?<\/button>/,heldBtns(r));   /* #280 */
   if(!shared.LOADING&&rvMovable(r)) h=h.replace('<span class="rowact">',`<span class="rowact"><button type="button" class="mini rvpj" data-act="pj" aria-haspopup="menu" title="${isMin(r)?"Move these minutes and their items to another project":"Move to another project"}">${ic("projects")}Project</button>`);
   return h; }
 export let RVLASTN=null, RVLASTV=null, RVSHOWN=false;   /* BL-263: the cleared tick's memory of the last draw */
@@ -156,7 +159,7 @@ $("#reviewBody").addEventListener("click",e=>{ const tr=e.target.closest("tr[dat
     if(a&&a.dataset.act==="ga"){ approveGroup(rr,g); return; } if(a&&a.dataset.act==="r"){ rejectMinutes(rr); return; } }
   if(e.target.type==="checkbox"){ e.target.checked?RHL.add(n):RHL.delete(n); shared.RVA=n; rvSyncChk(); renderReview(); return; }   /* BL-133: any proposed item can be selected (Reject may cover it); Approve still takes only what the bulk rule allows */
   if(e.target.closest("a")) return;                                                                   /* Open source and other links do their own job */
-  const b=e.target.closest("[data-act]"); if(b){ if(b.dataset.act==="f"){ refreshItems(REV.find(x=>x.n===n)); return; } if(b.dataset.act==="a") decide(n,"approved"); else if(b.dataset.act==="r"){ const r=REV.find(x=>x.n===n); if(rvRejectOK(r)) rjMenuFor(rjWith(r),b); else decide(n,"rejected"); } else openProposal(n); return; }   /* BL-315: ✕ opens the reasons menu */ rvPick(e,n); rvPaint(); pkFollowRev(e,n); });
+  const b=e.target.closest("[data-act]"); if(b){ if(b.dataset.act==="f"){ refreshItems(REV.find(x=>x.n===n)); return; } if(b.dataset.act==="hw"||b.dataset.act==="hd"){ const r=REV.find(x=>x.n===n); if(r) (b.dataset.act==="hw"?heldApprove:heldDiscard)(r); return; }   /* #280 */ if(b.dataset.act==="a") decide(n,"approved"); else if(b.dataset.act==="r"){ const r=REV.find(x=>x.n===n); if(rvRejectOK(r)) rjMenuFor(rjWith(r),b); else decide(n,"rejected"); } else openProposal(n); return; }   /* BL-315: ✕ opens the reasons menu */ rvPick(e,n); rvPaint(); pkFollowRev(e,n); });
 $("#reviewBody").addEventListener("dblclick",e=>{ const tr=e.target.closest("tr[data-n]"); if(!tr||e.target.closest("button,input,a,select")) return; const n=+tr.dataset.n; shared.RSEL=+tr.dataset.ri; rvOnly(n); openProposal(n); rvPaint(); });
 $("#reviewBody").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.closest("tr[data-n]")) e.preventDefault(); });
 }
@@ -676,7 +679,8 @@ export function cxReviewFields(L,set){ const ar=L.every(r=>["actions","raid"].in
       {label:"Milestone",icon:"flag",disabled:!p,hint:why,sub:()=>cxList(msChoices(p,""),one?x.ms||"":null,v=>set("ms",v),"flag")}); }
   if(same&&k!=="decisions") out.push({label:"Status",icon:"flag",sub:()=>pkStatuses(k).map(s=>({label:s,checked:one&&x.st===s,run:()=>set("st",s)}))});
   return out; }
-export function cxReview(r,tr){ const /** @type {any[]} */ out=[{label:"Approve",icon:"check",disabled:!!r.nodraft,hint:r.nodraft?NODRAFT_MSG:"",run:()=>decide(r.n,"approved")},   /* BL-260 point 4 */
+export function cxReview(r,tr){ const /** @type {any[]} */ out=r.held&&!r.done?[{label:"Approve without the transcript copy",icon:"check",hint:r.held,run:()=>heldApprove(r)},{label:"Discard the proposal",icon:"x",run:()=>heldDiscard(r)}]:   /* #280 */
+    [{label:"Approve",icon:"check",disabled:!!r.nodraft,hint:r.nodraft?NODRAFT_MSG:"",run:()=>decide(r.n,"approved")},   /* BL-260 point 4 */
     rvRejectOK(r)?{label:"Reject with a reason…",icon:"x",run:()=>rjMenuFor(rjWith(r),tr.querySelector("[data-act=rr]")||tr)}:{label:"Reject",icon:"x",run:()=>isMin(r)?rejectMinutes(r):decide(r.n,"rejected")},{sep:true},
     {label:r.kind==="draft"?(r.nodraft?"No Word draft":"Open the draft"):"Open",icon:"cxopen",disabled:r.kind==="files",run:()=>openProposal(r.n)}];
   if(isMin(r)) out.push({label:"Project",icon:"projects",hint:"Move these minutes and their items",run:()=>rvMoveMinutes(tr.querySelector('[data-act="pj"]')||tr,r,tr.dataset.g)});
@@ -890,3 +894,18 @@ document.addEventListener("click",e=>{ const t=e.target; if(!t.closest) return; 
 }
 /* BL-231: decide is a seam (a test replaces it); the setter lets the page's own calls see the replacement */
 export const reviewSeams = { decide: v => { decide = v; } };
+
+/* ===== #280 (round 3) ===== minutes Apply held because a file they file has gone (their transcript is no longer in the inbox;
+   build_dashboard sets held with the reason). They are never approved as staged: Review offers Approve without the transcript copy
+   (review.py approve --without-transcript: the draft is filed, the transcript is not) or Discard (review.py reject --discard: the
+   proposal is set aside in system/staging/discarded/, nothing written). Both go through the live server, so review.py's checks run. */
+export const heldMsg=r=>`Held: ${r.held}. Approve the minutes without the transcript copy, or discard the proposal`;
+export function heldBtns(r){ const live=viaServer(), off=live?"":' disabled title="Needs the live server"';
+  return `<button class="mini ok" data-act="hw"${off}${live?` title="${esc(heldMsg(r))}"`:""}>${ic("check")}Approve without the transcript</button> <button class="mini" data-act="hd"${off}>Discard</button>`; }
+export async function heldApprove(r){ if(!viaServer()){ snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r.n} --without-transcript” in Claude Code`); return; }
+  return reviewViaServer(r,"approved",["without-transcript"]); }
+export async function heldDiscard(r){ if(!viaServer()){ snack(`Discarding a proposal needs the live server; or say “reject ${r.n} --discard” in Claude Code`); return; }
+  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard"}); await reloadData(); snack(oneLine(res.message)); }
+/* the apply's "Held in Review, not applied: …" lines, for its snack */
+export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>x.startsWith("Held in Review, not applied:")); }
+/* ===== end #280 (round 3) ===== */
