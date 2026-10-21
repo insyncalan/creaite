@@ -6,6 +6,7 @@ pictures drawn by a stub (so no Chrome is needed), and read the .docx's XML. Two
 they are missing: Chrome (the real pictures) and LibreOffice (`soffice`: the file converted to a PDF, the text in order across pages).
 A skipped test is not a pass.
 """
+import json
 import re
 import shutil
 import struct
@@ -141,6 +142,11 @@ class Base(unittest.TestCase):
         report_doc.logos = lambda code, wanted=None, _t=self.tmp: [{"kind": "firm", "path": str(_t / "firm.png")},
                                                                     {"kind": "client", "path": str(_t / "ABC-client.svg")}]
         self.addCleanup(setattr, report_doc, "logos", real_logos)
+        # v2.5.3 (#259, K3): a client report's items are derived from the week's client-safe facts (report_doc.client_items); this
+        # test has no tracker, so the facts are the fixture's, all of them, and the writer's own guards (client_safe_ids) are tested
+        for name, fake_fn in (("client_items", lambda code, fri: json.loads(json.dumps(ITEMS))), ("baseline", lambda code, on: None)):
+            self.addCleanup(setattr, report_doc, name, getattr(report_doc, name))
+            setattr(report_doc, name, fake_fn)
         (self.tmp / "images").mkdir()
         (self.tmp / "images" / "site.png").write_bytes(png(40, 20, (0, 150, 0, 255)))
         (self.tmp / "firm.png").write_bytes(png(60, 20))

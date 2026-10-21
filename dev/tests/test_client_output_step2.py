@@ -77,13 +77,16 @@ class Step2(A.Audience):
         return any(m in (data, strip_image_metadata(data)) for m in self.media(docx))
 
     def client_text(self, extra):
-        """The draft on disk with one more shown client text section."""
-        d = creaite_doc.read(self.draft_file())
+        """The draft with one more shown client text section, saved as Alan's Save saves it (v2.5.3, #259 K2: a text section is
+        the client's only in a file creaite itself wrote; one written on disk is the internal report's and never shown)."""
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": WEEK})
+        d = r["doc"]
         d["sections"] = [s for s in d["sections"] if s["id"] != "free_c"] + [
             {"id": "free_c", "type": "freetext", "heading": "Pictures", "default_heading": "", "hidden": False, "text": extra,
              "audience": "client"}]
         d["layout"]["order"] = [s["id"] for s in d["sections"]]
-        self.draft_file().write_text(creaite_doc.dumps(d, keep_text=True), encoding="utf-8")
+        s = self.post("/api/report/save", {"doc": d, "base_version": r["version"]})
+        self.assertTrue(s["ok"], s)
 
     def images(self):
         f = self.v.root / "projects/ABC Example Programme/reports/_images"
@@ -150,6 +153,7 @@ class Step2(A.Audience):
         text = f.read_text()
         m = creaite_doc.BLOCK.search(text)
         d = self.add_payload(json.loads(m.group(1)))
+        next(s for s in d["sections"] if s["id"] == "summary")["text"] = self.payload()   # #259 K2: a shown section of creaite's own
         f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
         e = self.export("docx", "client")
         self.assertFalse(e.get("ok"), e)

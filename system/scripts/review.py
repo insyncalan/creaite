@@ -673,7 +673,8 @@ def client_findings(block):
         if creaite_doc.is_doc(draft):
             return client_leak.findings(creaite_doc.read_report(draft, "client" if block.get("kind") == "client" else None), con)
         found = client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
-        return found + [f for f in word_output_findings(con, block["project"], draft) if f not in found]
+        named = {f.split(" ", 1)[0] for f in found}             # (#259 round 2: an item the gate names isn't listed twice)
+        return found + [f for f in word_output_findings(con, block["project"], draft, named) if f not in found]
     con = tracker.connect()
     try:
         return check(con)
@@ -696,7 +697,7 @@ WORD_BODY = "word/document.xml"
 CLIENT_WORD_TEMPLATES = ("CLIENT_TEMPLATE", "STEERCO_TEMPLATE")
 
 
-def word_output_findings(con, code, draft):
+def word_output_findings(con, code, draft, named=()):
     """v2.5.1 (#239 step 3): a client Word file (an older cx-client-report draft, or the client-safe steerco one-pager) checked as a
     client export's output is (client_output): its body read through the confusables skeleton and with JSON escapes read (the
     health line still allowed, as plain_findings allows it), every other part (headers, footers, notes, comments, its properties)
@@ -711,6 +712,10 @@ def word_output_findings(con, code, draft):
         if form != body:
             found += client_leak.plain_findings(con, code, form)
     found += client_output.other_project_findings(con, code, client_leak.joined(body, confusables.skeleton(body)))
+    # v2.5.3 (#259 round 2, MEDIUM 3): P16's loose forms in the body too ("A B C - A - 0 0 1", "ABC-A-0001", a hidden wording with
+    # hyphens for its spaces), as every creaite client output's check reads them (client_output.text_findings)
+    loose = client_leak.joined(body, confusables.skeleton(body), client_output.unescaped(body))
+    found += client_output.loose_findings(con, code, loose, set(named) | {f.split(" ", 1)[0] for f in found})
     if Path(draft).is_file():                   # (draft_lines has read the file: a test may give its lines alone)
         rest = word_other_parts(draft)
         if rest:
@@ -756,7 +761,7 @@ def file_sha(path):
 def mark_checked(block, decision="approved", ref="report"):
     """v2.5.1 (#239 step 3): an approved client Word draft (client_block) records the SHA-256 of the file its check passed
     (`checked_sha256`), so filing it can refuse a file changed since (client_apply_problem). Any other block or decision: nothing."""
-    if decision == "approved" and ref == "report" and client_block(block) and word_draft(block.get("draft")) \
+    if decision == "approved" and ref == "report" and files_client(block) and word_draft(block.get("draft")) \
             and paths.resolve(block["draft"]).is_file():
         block["checked_sha256"] = file_sha(paths.resolve(block["draft"]))
 
@@ -765,12 +770,22 @@ def client_apply_problem(blk, field):
     """v2.5.1 (#239 step 3): why tracker.py apply must not file an approved client Word draft (an older cx-client-report one, or the
     client-safe steerco one-pager), else None: the file is not the one whose check passed at approval (`checked_sha256`: none, or
     the draft changed since), or the client check finds something now. For tracker.py apply's file step (a guarded proposal,
-    dev/proposals/client-output-step3/tracker.diff), before the draft is stamped and copied."""
-    if field != "report_decision" or blk.get(field) != "approved" or not client_block(blk) or not word_draft(blk.get("draft")):
+    dev/proposals/client-output-step3/tracker.diff), before the draft is stamped and copied. v2.5.3 (#259): a creaite-format client
+    report's staged write is checked too (creaite_client_problem).
+    v2.5.3 (#259 round 2, HIGH 2): whether the block files client output, and in which format, is DERIVED from the files it names
+    and what they hold (files_client, creaite_files), never taken from its own `kind`, `version` or `format`: a staged proposal
+    edited to say weekly or internal, or with its format removed, is checked as the client output it files. And only the ops a
+    client filing has may run (creaite_client_problem, word_ops_problem): any other write, copy or move is refused."""
+    if field != "report_decision" or blk.get(field) != "approved" or not files_client(blk):
         return None
+    if creaite_files(blk):
+        return creaite_client_problem(blk)
+    why = word_ops_problem(blk)
+    if why:
+        return why
     draft = paths.resolve(blk["draft"])
     if not draft.is_file():
-        return None                         # check_file_op says the copy's source isn't there
+        return f"draft: {blk['draft']} isn't there, so nothing is filed: approve it again"
     if blk.get("checked_sha256") != file_sha(draft):
         return (f"draft: {blk['draft']} isn't the file whose client check passed at approval (it changed since, or it was approved "
                 "before creaite checked client files this way): approve it again")
@@ -778,6 +793,175 @@ def client_apply_problem(blk, field):
     if left:
         return f"draft: {blk['draft']} holds possible internal content now, so it isn't filed: " + "; ".join(left)
     return None
+
+
+CLIENT_NAME = re.compile(r"\bclient report\b|\(client\)", re.I)       # a client file's name: "… Client report - …", "… (client).docx"
+CLIENT_BODY = ("Client-safe version",)                                   # the client-safe one-pager's own line (report.steerco_values)
+
+
+def _client_doc(text):
+    """Whether a text is a creaite client document by its data: its kind client, or a creaite data block that can't be read (errs
+    towards client; a weekly report creaite wrote always reads)."""
+    import creaite_doc
+    if not creaite_doc.BLOCK.search(text or ""):
+        return False
+    try:
+        return creaite_doc.loads(text).get("kind") == "client"
+    except creaite_doc.DocError:
+        return True
+
+
+def _ops(blk):
+    """A block's file operations (dicts only)."""
+    return [o for o in blk.get("file_ops") or [] if isinstance(o, dict)]
+
+
+def _named(blk):
+    """Every path a report block names: its draft and each op's path, source and destination."""
+    return [str(x) for x in [blk.get("draft")] + [o.get(k) for o in _ops(blk) for k in ("path", "to", "from")] if isinstance(x, str)]
+
+
+def _client_folder(blk):
+    """The stored client reports folder of the block's projects, when it isn't also their weekly reports folder (one folder for both
+    says nothing about which report a file is)."""
+    out = set()
+    for code in {str(c) for c in [blk.get("project")] + list(blk.get("projects") or []) if c}:
+        try:
+            client, weekly = (paths.rel(paths.folder(code, k)) for k in ("client_reports", "weekly_reports"))
+        except Exception:  # noqa: BLE001  a project with no folder: nothing to compare
+            continue
+        if client != weekly:
+            out.add(client.rstrip("/") + "/")
+    return out
+
+
+def _draft_says_client(blk):
+    """Whether the block's draft on disk is client output by what it holds: a creaite document of kind client, or a Word file whose
+    body has the client-safe one-pager's own line. A draft that can't be read says nothing here (its own checks refuse it)."""
+    draft = paths.resolve(str(blk.get("draft") or "")) if blk.get("draft") else None
+    if draft is None or not draft.is_file():
+        return False
+    try:
+        if str(draft).lower().endswith(".html"):
+            return _client_doc(draft.read_text(encoding="utf-8", errors="replace"))
+        return any(m in ln for ln in draft_lines(draft) for m in CLIENT_BODY)
+    except Exception:  # noqa: BLE001  not a Word file or a page it can read: its own checks refuse it
+        return False
+
+
+def files_client(blk):
+    """v2.5.3 (#259 round 2, HIGH 2): whether a report block files client output, derived from the block's files, never from its
+    claims alone: it says so (client_block), or any path it names is a client file's (a client report's or a client one-pager's
+    name, a client snapshot, the client reports folder), or a write it holds is a creaite client document, or its draft is one
+    (by its data, or the client-safe one-pager's own line). Errs towards client: a weekly report never names or holds these."""
+    import client_snapshot
+    if client_block(blk):
+        return True
+    folders = _client_folder(blk)
+    for n in _named(blk):
+        if CLIENT_NAME.search(Path(n).name) or client_snapshot.is_snapshot_name(n) or any(n.startswith(f) for f in folders):
+            return True
+    if any(_client_doc(o["content"]) for o in _ops(blk) if isinstance(o.get("content"), str)):
+        return True
+    return _draft_says_client(blk)
+
+
+def creaite_files(blk):
+    """Whether a client block files a creaite document (an .html page), by its files: its draft, any op's path, or any write's
+    content holding a creaite data block; never by its `format` alone."""
+    import creaite_doc
+    if blk.get("format") == "creaite" or any(n.lower().endswith(".html") for n in _named(blk)):
+        return True
+    return any(creaite_doc.BLOCK.search(o["content"]) for o in _ops(blk) if isinstance(o.get("content"), str))
+
+
+def word_ops_problem(blk):
+    """v2.5.3 (#259 round 2, HIGH 2): why a client Word filing's ops can't run, else None: only a folder made for it, one copy of the
+    draft (a .docx) and the draft's removal; a write, a move, another copy or a removal of anything else is refused."""
+    draft = str(blk.get("draft") or "")
+    if not draft.lower().endswith(".docx"):
+        return "the client file to be filed isn't a Word draft creaite made: approve it again"
+    copies = [o for o in _ops(blk) if o.get("op") == "copy"]
+    other = [o for o in _ops(blk) if o.get("op") not in ("copy", "remove", "mkdir")
+             or (o.get("op") == "remove" and str(o.get("path")) != draft)]
+    if other or len(copies) != 1 or copies[0].get("from") != "draft" or not str(copies[0].get("to") or "").lower().endswith(".docx") \
+            or len(_ops(blk)) != len(blk.get("file_ops") or []):
+        return ("the client file's filing was changed since it was approved (only the one Word file, a folder for it and the draft's "
+                "removal may run): approve it again")
+    return None
+
+
+CREAITE_CHANGED = ("the client report to be filed isn't the one whose client check passed at approval (the proposal was changed "
+                   "since): approve it again")
+
+
+def creaite_client_problem(blk):
+    """v2.5.3 (#259): why tracker.py apply must not file an approved creaite-format client report, else None. Its file is written
+    from the proposal's own `write` (report_doc._file_ops), so that write is checked again here, as a filed report is
+    (client_output.filed_findings: its page, its data block and its pictures), and it must be exactly the file Approve checked: the
+    snapshot written beside it is one the registry recorded at approval (client_snapshot.record) and names that file's SHA-256 as its
+    source. A client report is never filed by a copy (the draft as it is on disk) nor without its snapshot.
+    Round 2 (HIGH 2): the ops must be exactly Approve's: one write of the filed .html at the report's own filed path, its snapshot
+    beside it, and the removal of the report's own draft; any other op (a .md or .pdf written beside it, a copy, a move, a mkdir)
+    is refused. Whatever the block says of its kind or format, the write is read and checked as a client report."""
+    import client_output
+    import creaite_doc
+    import report_doc
+    filed, snap = _creaite_client_writes(blk)
+    if filed is None:
+        return CREAITE_CHANGED
+    try:
+        doc = creaite_doc.force_client_audience(creaite_doc.loads(filed["content"]))
+        want = report_doc.filed_path("client", doc.get("project"), doc.get("date"), doc.get("client"))
+        draft = report_doc.draft_path("client", doc.get("project"), doc.get("date"), doc.get("client"))
+    except (creaite_doc.DocError, ValueError, TypeError, KeyError, AttributeError):
+        return CREAITE_CHANGED
+    import client_snapshot
+    removes = [o for o in _ops(blk) if o.get("op") == "remove"]
+    if not _same(filed.get("path"), want) or not _same(snap.get("path"), client_snapshot.beside(want)) \
+            or len(removes) != 1 or not _same(removes[0].get("path"), draft) or not _same(blk.get("draft"), draft) \
+            or len(_ops(blk)) != 3 or len(blk.get("file_ops") or []) != 3:
+        return CREAITE_CHANGED
+    found = client_output.filed_findings(doc, filed["content"])
+    if found:
+        return "the client report to be filed holds possible internal content now, so it isn't filed: " + "; ".join(found)
+    return None if _snapshot_vouches(snap, filed["content"], want) else CREAITE_CHANGED
+
+
+def _same(a, b):
+    """Whether two stored paths name one file (False when either can't be read as one)."""
+    try:
+        return paths.rel(paths.resolve(str(a))) == paths.rel(paths.resolve(str(b)))
+    except (ValueError, TypeError, OSError):
+        return False
+
+
+def _creaite_client_writes(blk):
+    """(the filed report's write, its snapshot's write) of a creaite-format client block, or (None, None) unless it has exactly one
+    of each and no copy."""
+    import client_snapshot
+    ops = _ops(blk)
+    writes = [o for o in ops if o.get("op") == "write" and isinstance(o.get("content"), str)]
+    snaps = [o for o in writes if client_snapshot.is_snapshot_name(str(o.get("path") or ""))]
+    filed = [o for o in writes if o not in snaps and str(o.get("path") or "").lower().endswith(".html")]
+    if any(o.get("op") not in ("write", "remove") for o in ops) or len(filed) != 1 or len(snaps) != 1 \
+            or len(writes) != 2 or len([o for o in ops if o.get("op") == "write"]) != 2:
+        return None, None
+    return filed[0], snaps[0]
+
+
+def _snapshot_vouches(snap, content, filed_path):
+    """Whether a snapshot write is one the registry recorded when Approve made it (`made` approve, at the filed report's own
+    snapshot path) and names `content`, the filed write at `filed_path`, as its source."""
+    import client_snapshot
+    try:
+        data = json.loads(snap["content"])
+        source = data.get("source") or {}
+    except (ValueError, AttributeError):
+        return False
+    e = client_snapshot.entry(snap["path"]) or {}
+    return client_snapshot.sha(snap["content"]) in (e.get("hashes") or []) and e.get("made", "approve") == "approve" \
+        and source.get("sha256") == client_snapshot.sha(content) and _same(source.get("path"), filed_path)
 
 
 def client_refusal(n, block, mode=None):

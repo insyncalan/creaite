@@ -167,6 +167,9 @@ class ReviewReadsTheData(Base):
                       "d = report_doc.client_doc('ABC')\n"
                       "d['sections'][3]['text'] = 'Restricted: absorb the phase one overrun internally.'\n"
                       "d['items']['ABC-005'] = {'table': 'raid', 'id': 'ABC-005', 'title': 'x'}\n"
+                      # v2.5.3 (#259, K3): items are derived from the rows that name them, so the hidden item is in a shown row too
+                      "next(s for s in d['sections'] if s['id'] == 'risks')['rows'].append({'ref': 'ABC-005', 'shown': True, "
+                      "'cells': {'type': 'Risk', 'risk': 'x'}})\n"
                       "p = 'system/staging/drafts/check.html'\n"
                       "open(p, 'w').write(creaite_doc.dumps(d))\n"
                       "print(json.dumps(review.client_findings({'draft': p, 'project': 'ABC'})))")

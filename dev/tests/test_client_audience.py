@@ -114,9 +114,12 @@ class Audience(unittest.TestCase):
         return r
 
     def tamper_on_disk(self, audience):
-        """ask creaite's way: the saved draft file edited directly, the payload in and the audience changed."""
+        """ask creaite's way: the saved draft file edited directly, the payload in and the audience changed. v2.5.3 (#259, K2): a
+        text section written on disk is never the client's (its audience is derived), so the payload is also in the Summary, one
+        of creaite's own sections, which every output shows: the file must still be read and refused as a client report."""
         f = self.draft_file()
         d = self.add_payload(creaite_doc.read(f))
+        next(s for s in d["sections"] if s["id"] == "summary")["text"] = self.payload()
         d["audience"] = "client"
         text = creaite_doc.dumps(d, keep_text=True)
         old = '"audience": "client",\n "project"'
