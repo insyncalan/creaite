@@ -68,7 +68,7 @@ export let runSearch = async function(){ const q=$("#vsInput").value.trim(); SRC
   try{ const res=await searchFetch(q,SRCH.skip); if(seq!==SRCH.seq) return; SRCH.res=res; vsRender(); }catch(e){ if(seq===SRCH.seq){ $("#vsNote").textContent=oneLine(e.message); } } };
 export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.res.groups[g]&&SRCH.res.groups[g][+i]; if(r) openFound(r); }
 /* where a result belongs: an item in its panel, a meeting in the preview, a report or document in the system viewer */
-const SHOWARCH="Show archived projects (Settings › People and projects › Projects and register)";
+const SHOWARCH="Show archived projects (on the Projects page, or in Settings › Work and reports › Opening views)";
 export async function openFound(r){ const o=r.opens;
   if(o.type==="item"&&o.archived&&!S.showArchived){
     if(o.project_archived||!["actions","raid"].includes(o.table)){ snack(`Its project is archived: ${SHOWARCH} brings it back`); return; }   /* BL-09 */

@@ -7,7 +7,11 @@
 <div class="tabhost" id="setcatsHost">
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="people" data-scat="people">People and projects</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="ai" data-scat="ai">AI drafts</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
 <button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="advanced" data-scat="advanced">Advanced</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="health" data-scat="health">Health</button>
 </div>
@@ -15,438 +19,106 @@
 <!-- BL-316: the categories (#setcats), the Tabs building block -->
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
-<option value="people">People and projects</option>
+<option value="work">Work and reports</option>
+<option value="sweep">Sweep and Intake</option>
+<option value="reports">Reports and minutes</option>
+<option value="ai">AI drafts</option>
+<option value="look">Look and help</option>
 <option value="advanced" selected="">Advanced</option>
 <option value="health">Health</option>
 </select>
+<p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p>
 </div>
 <div id="settingsBody">
+<p class="sub advnote">For tuning and rarely changed settings. Everything has a sensible default, so most people never open this.</p>
+<div class="tabhost" id="setsubHost">
+<div class="tabs" id="subtabs" role="tablist" aria-label="Advanced">
+<button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="review" data-ssub="review">Review and warnings</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="state" data-ssub="state">Current state</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="arch" data-ssub="arch">Archiving and backups</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="folders" data-ssub="folders">Folders and OneDrive</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="server" data-ssub="server">Server, search and logs</button>
+</div>
+</div>
 <div class="setstack">
-<h2 class="setgroup">You and the look</h2>
-<div class="card" id="set-you" data-sec="you">
-<h2>You</h2>
-<div class="srow chg">
-<div>
-<span id="sr#1">Short forms</span>
-<span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
-</span>
-<small id="sr#1h">Comma-separated; also matched as you (your name is in Essentials)</small>
-</div>
-<div>
-<input aria-labelledby="sr#1" aria-describedby="sr#1h" type="text" data-k="short" value="Alan, AC" placeholder="Alan, AC">
-<button type="button" class="mini setreset" data-reset="identity.short_forms" aria-label="Reset Short forms to its default" title="Back to the default">Reset</button>
-</div>
-</div>
-<div class="srow chg">
-<div>
-<span id="sr#2">Own email domains</span>
-<span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
-</span>
-<small id="sr#2h">Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside</small>
-</div>
-<div>
-<input aria-labelledby="sr#2" aria-describedby="sr#2h" type="text" data-k="ownDomains" value="brightwater.example" placeholder="example.com">
-<button type="button" class="mini setreset" data-reset="identity.own_domains" aria-label="Reset Own email domains to its default" title="Back to the default">Reset</button>
-</div>
-</div>
-</div>
-<div class="card" id="set-appearance" data-sec="appearance">
-<h2>Appearance</h2>
-<div class="srow">
-<div>
-<span id="sr#3">Column widths and order</span>
-<small id="sr#3h">Drag a column edge in Work to resize, or a heading to move it</small>
-</div>
-<div>
-<button type="button" class="ib bd" aria-label="Reset column widths and order" data-tip="Reset column widths and order" id="rzReset">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
-<path d="M3 7v6h6">
-</path>
-<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
-</path>
-</svg>
-</button>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#4">Sidebar</span>
-<small id="sr#4h">Choose what is in the sidebar and what is in More, put them in your own order, or show icons only</small>
-</div>
-<div>
-<button type="button" class="btn" id="railCustSet" data-railcust="" aria-haspopup="dialog">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="sliders">
-<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4">
-</path>
-</svg>Customise…</button>
-</div>
-</div>
-</div>
-<div class="card" id="set-drafts" data-sec="drafts">
-<h2>AI drafts</h2>
-<p class="sub" style="margin:0 0 #px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>
-<div class="srow">
-<div>
-<span id="sr#5">Draft the latest update</span>
-<small id="sr#5h">An action's latest update from what happened since the last one, and Draft updates for actions with no recent update</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="update" checked="" aria-label="Draft the latest update">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#6">Draft client wording</span>
-<small id="sr#6h">Plain client messaging from the item's own text, with what was taken out</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="client" checked="" aria-label="Draft client wording">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#7">Suggest the thinking fields</span>
-<small id="sr#7h">A decision's options and reasoning; a risk's response, impact and likelihood</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="thinking" checked="" aria-label="Suggest the thinking fields">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#8">Draft the reason for a health or forecast change</span>
-<small id="sr#8h">One sentence from the evidence creaite already holds</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="reason" checked="" aria-label="Draft the reason for a health or forecast change">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#9">Spot repeats of existing items</span>
-<small id="sr#9h">Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="repeat" checked="" aria-label="Spot repeats of existing items">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#10">Spot items that are probably done</span>
-<small id="sr#10h">The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="done" checked="" aria-label="Spot items that are probably done">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#11">Sharpen a vague action</span>
-<small id="sr#11h">A clear, verb-first title for a vague action, beside the original; you pick one</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="sharpen" checked="" aria-label="Sharpen a vague action">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#12">Draft the agenda and invite text</span>
-<small id="sr#12h">From the Prep page: the invite text (POAD or a lighter write-up) and a timed agenda, to copy</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="agenda" checked="" aria-label="Draft the agenda and invite text">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#13">Shape the meeting</span>
-<small id="sr#13h">Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's carried over, each line cited</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="shape" checked="" aria-label="Shape the meeting">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#14">Write the status in other forms</span>
-<small id="sr#14h">Generate's Form: a steering note, a three-line update, an email paragraph or a Teams message</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="forms" checked="" aria-label="Write the status in other forms">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#15">Redraft a report section</span>
-<small id="sr#15h">The weekly or client report's ✦, and Polish, Shorter, Executive or your own words on one section, from the week's facts (a client report: client-visible facts only)</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="report-section" checked="" aria-label="Redraft a report section">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#16">Redraft a minutes section</span>
-<small id="sr#16h">The minutes' ✦, and Polish, Shorter, Executive or your own words on one section (the distributed version: nothing marked Internal only or withheld)</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="minutes-section" checked="" aria-label="Redraft a minutes section">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#17">Polish the email wording</span>
-<small id="sr#17h">Draft email's opening paragraph reworded in a warm, neutral or firm tone; the table, subject and addresses are untouched</small>
-</div>
-<div>
-<input type="checkbox" class="switch" data-drsw="email" checked="" aria-label="Polish the email wording">
-</div>
-</div>
-<div class="drstats" id="drStats">No drafts offered yet.</div>
-</div>
-<div class="card" id="set-closeday" data-sec="closeday">
-<h2>Close the day</h2>
-<div class="srow">
-<div>
-<span id="sr#18">Catch up when the last sweep is older than (minutes)</span>
-<small id="sr#18h">A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day</small>
-</div>
-<div>
-<input aria-labelledby="sr#18" aria-describedby="sr#18h" type="number" data-k="catchupAfter" value="30" min="0" style="width:#px">
-</div>
-</div>
-</div>
-<h2 class="setgroup">Work and views</h2>
-<div class="card" id="set-views" data-sec="views">
-<h2>Opening views</h2>
-<div class="srow">
-<div>
-<span id="sr#19">New action priority</span>
-</div>
-<div>
-<select aria-labelledby="sr#19" data-k="defPriority">
-<option>Urgent</option>
-<option>High</option>
-<option selected="">Medium</option>
-<option>Low</option>
-</select>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#20">Actions open with</span>
-</div>
-<div>
-<select aria-labelledby="sr#20" data-k="defActionView">
-<option value="open" selected="">All open</option>
-<option value="mine">Mine</option>
-<option value="soon">Due soon</option>
-<option value="chase">Chase</option>
-<option value="delayed">Delayed</option>
-<option value="overdue">Overdue</option>
-<option value="closed">Closed</option>
-</select>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#21">RAID opens with</span>
-</div>
-<div>
-<select aria-labelledby="sr#21" data-k="defRaidView">
-<option value="open" selected="">All open</option>
-<option value="urgent">Urgent and high</option>
-<option value="unatt">Unattached dependencies</option>
-<option value="nomit">No response yet</option>
-<option value="chase">Chase</option>
-<option value="soon">Due soon</option>
-<option value="mine">Mine</option>
-<option value="closed">Closed</option>
-</select>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#22">Decisions open with</span>
-</div>
-<div>
-<select aria-labelledby="sr#22" data-k="defDecisionView">
-<option value="all" selected="">All</option>
-<option value="pending">Pending</option>
-<option value="chase">Chase</option>
-<option value="overdue">Overdue</option>
-<option value="recent">Last 14 days</option>
-<option value="client">Client-visible</option>
-</select>
-</div>
-</div>
-</div>
-<div class="card" id="set-board" data-sec="board">
-<h2>Work board</h2>
-<div class="srow">
-<div>
-<span id="sr#23">Actions board groups by</span>
-</div>
-<div>
-<select aria-labelledby="sr#23" data-k="bgActions">
-<option value="due" selected="">Due</option>
-<option value="status">Status</option>
-<option value="owner">Owner</option>
-<option value="milestone">Milestone</option>
-<option value="project">Project</option>
-<option value="priority">Priority</option>
-<option value="workstream">Workstream</option>
-</select>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#24">RAID board groups by</span>
-</div>
-<div>
-<select aria-labelledby="sr#24" data-k="bgRaid">
-<option value="due">Due</option>
-<option value="status">Status</option>
-<option value="owner" selected="">Owner</option>
-<option value="milestone">Milestone</option>
-<option value="project">Project</option>
-<option value="priority">Priority</option>
-<option value="type">Type</option>
-</select>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#25">Decisions board groups by</span>
-</div>
-<div>
-<select aria-labelledby="sr#25" data-k="bgDecisions">
-<option value="status" selected="">Status</option>
-<option value="owner">Decision maker</option>
-<option value="due">Needed by</option>
-<option value="project">Project</option>
-</select>
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#26">Board shows closed items from the last (days)</span>
-<small id="sr#26h">The Closed column on a Work board; Show all brings the rest</small>
-</div>
-<div>
-<input aria-labelledby="sr#26" aria-describedby="sr#26h" type="number" data-k="boardClosedDays" value="14" min="0" style="width:#px">
-</div>
-</div>
-</div>
-<div class="card" id="set-projpage" data-sec="projpage">
-<h2>Project page</h2>
-<div class="srow">
-<div>
-<span id="sr#27">Flow looks back (weeks)</span>
-<small id="sr#27h">The project page's Flow card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)</small>
-</div>
-<div>
-<input aria-labelledby="sr#27" aria-describedby="sr#27h" type="number" data-k="flowWeeks" value="8" min="0" style="width:#px">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#28">A new undated item counts as new for (days)</span>
-<small id="sr#28h">The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made</small>
-</div>
-<div>
-<input aria-labelledby="sr#28" aria-describedby="sr#28h" type="number" data-k="undatedGrace" value="3" min="0" style="width:#px">
-</div>
-</div>
-<div class="srow">
-<div>
-<span id="sr#29">Project page lists show at most</span>
-<small id="sr#29h">Actions due or overdue; the rest are a link away</small>
-</div>
-<div>
-<input aria-labelledby="sr#29" aria-describedby="sr#29h" type="number" data-k="listCap" value="10" min="0" style="width:#px">
-</div>
-</div>
-</div>
-<div class="card" id="set-files" data-sec="files">
-<h2>Files</h2>
-<div class="srow">
-<div>
-<span id="sr#30">Show project documents</span>
-<small id="sr#30h">Off by default: the Files page lists minutes, transcripts and reports (Weekly, Adhoc and Steerco), and skips the rest of a large engagement folder. Search still reads documents. Steerco is only read; creaite files nothing there.</small>
-</div>
-<div>
-<input aria-labelledby="sr#30" aria-describedby="sr#30h" type="checkbox" class="switch" data-k="filesDocs">
-</div>
-</div>
-</div>
-<h2 class="setgroup">Review and warnings</h2>
 <div class="card" id="set-thresholds" data-sec="thresholds">
 <h2>Review and health</h2>
 <div class="srow">
 <div>
-<span id="sr#31">Stale after (days)</span>
+<span id="sr#1">Stale after (days)</span>
 </div>
 <div>
-<input aria-labelledby="sr#31" type="number" data-k="staleDays" value="7" min="0" style="width:#px">
+<input aria-labelledby="sr#1" type="number" data-k="staleDays" value="7" min="0" style="width:#px">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#32">Review: move to the next proposal after a decision</span>
-<small id="sr#32h">After Approve or Reject, the next undecided row is ready for the keyboard</small>
+<span id="sr#2">Review: move to the next proposal after a decision</span>
+<small id="sr#2h">After Approve or Reject, the next undecided row is ready for the keyboard</small>
 </div>
 <div>
-<input aria-labelledby="sr#32" aria-describedby="sr#32h" type="checkbox" class="switch" data-k="rvAdvance" checked="">
+<input aria-labelledby="sr#2" aria-describedby="sr#2h" type="checkbox" class="switch" data-k="rvAdvance" checked="">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#33">Review: possible duplicate when words overlap at least</span>
-<small id="sr#33h">0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project</small>
+<span id="sr#3">Review: possible duplicate when words overlap at least</span>
+<small id="sr#3h">0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project</small>
 </div>
 <div>
-<input aria-labelledby="sr#33" aria-describedby="sr#33h" type="number" data-k="dupOverlap" value="0.6" min="0.1" max="1" step="0.05" style="width:#px">
+<input aria-labelledby="sr#3" aria-describedby="sr#3h" type="number" data-k="dupOverlap" value="0.6" min="0.1" max="1" step="0.05" style="width:#px">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#34">Due soon means within (days)</span>
+<span id="sr#4">Due soon means within (days)</span>
 </div>
 <div>
-<input aria-labelledby="sr#34" type="number" data-k="dueSoon" value="7" min="0" style="width:#px">
+<input aria-labelledby="sr#4" type="number" data-k="dueSoon" value="7" min="0" style="width:#px">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#35">At risk: action overdue more than (days)</span>
+<span id="sr#5">At risk: action overdue more than (days)</span>
 </div>
 <div>
-<input aria-labelledby="sr#35" type="number" data-k="overdueDays" value="7" min="0" style="width:#px">
+<input aria-labelledby="sr#5" type="number" data-k="overdueDays" value="7" min="0" style="width:#px">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#36">At risk: milestone slip up to (weeks)</span>
+<span id="sr#6">At risk: milestone slip up to (weeks)</span>
 </div>
 <div>
-<input aria-labelledby="sr#36" type="number" data-k="slipAtRisk" value="2" min="0" style="width:#px">
+<input aria-labelledby="sr#6" type="number" data-k="slipAtRisk" value="2" min="0" style="width:#px">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#37">Off track: slip more than (weeks)</span>
+<span id="sr#7">Off track: slip more than (weeks)</span>
 </div>
 <div>
-<input aria-labelledby="sr#37" type="number" data-k="slipOff" value="2" min="0" style="width:#px">
+<input aria-labelledby="sr#7" type="number" data-k="slipOff" value="2" min="0" style="width:#px">
 </div>
 </div>
 <div class="srow">
 <div>
-<span id="sr#38">Off track: Urgent risks at least</span>
+<span id="sr#8">Off track: Urgent risks at least</span>
 </div>
 <div>
-<input aria-labelledby="sr#38" type="number" data-k="urgentOff" value="2" min="0" style="width:#px">
+<input aria-labelledby="sr#8" type="number" data-k="urgentOff" value="2" min="0" style="width:#px">
+</div>
+</div>
+<div class="setembed" data-embed="thresholds" data-mount="">
+<div class="srow" data-keys="review.spot_check_every">
+<div>
+<span id="ss#1">Spot-check one in</span>
+<small id="ss#1h">When approving routine items together, one in this many is shown to check.<span class="setnote"> Default: 10. One in ten keeps bulk approval honest without slowing it down; 0 shows none.</span>
+</small>
+</div>
+<div class="setctl">
+<input type="number" aria-labelledby="ss#1" aria-describedby="ss#1h" min="0" max="100" step="1" style="width: #px;">
+</div>
 </div>
 </div>
 </div>
@@ -454,7 +126,7 @@
 <h2>Early warnings</h2>
 <div class="srow">
 <div>
-<span id="sr#39">Action re-dated again and again</span>
+<span id="sr#9">Action re-dated again and again</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="redated.on" checked="" aria-label="Action re-dated again and again">
@@ -462,7 +134,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#40">Re-dated at least (times)</span>
+<span id="sr#10">Re-dated at least (times)</span>
 </div>
 <div>
 <input type="number" data-wk="redated.times" value="3" min="1" step="1" style="width:#px" aria-label="Re-dated at least (times)">
@@ -470,7 +142,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#41">Risk raised repeatedly, no response</span>
+<span id="sr#11">Risk raised repeatedly, no response</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="repeat_risk.on" checked="" aria-label="Risk raised repeatedly, no response">
@@ -478,7 +150,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#42">Raised in at least (meetings or sweeps)</span>
+<span id="sr#12">Raised in at least (meetings or sweeps)</span>
 </div>
 <div>
 <input type="number" data-wk="repeat_risk.mentions" value="3" min="1" step="1" style="width:#px" aria-label="Raised in at least (meetings or sweeps)">
@@ -486,7 +158,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#43">Milestone slipping week after week</span>
+<span id="sr#13">Milestone slipping week after week</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="milestone_slip.on" checked="" aria-label="Milestone slipping week after week">
@@ -494,7 +166,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#44">Forecast later this many weeks running</span>
+<span id="sr#14">Forecast later this many weeks running</span>
 </div>
 <div>
 <input type="number" data-wk="milestone_slip.weeks" value="2" min="1" step="1" style="width:#px" aria-label="Forecast later this many weeks running">
@@ -502,7 +174,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#45">Action open far longer than usual</span>
+<span id="sr#15">Action open far longer than usual</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="long_open.on" checked="" aria-label="Action open far longer than usual">
@@ -510,7 +182,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#46">Longer than the project's usual by (times)</span>
+<span id="sr#16">Longer than the project's usual by (times)</span>
 </div>
 <div>
 <input type="number" data-wk="long_open.factor" value="2" min="1" step="0.5" style="width:#px" aria-label="Longer than the project's usual by (times)">
@@ -518,7 +190,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#47">…and open at least (days)</span>
+<span id="sr#17">…and open at least (days)</span>
 </div>
 <div>
 <input type="number" data-wk="long_open.min_days" value="14" min="1" style="width:#px" aria-label="…and open at least (days)">
@@ -526,7 +198,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#48">One person owns most of a project's open items</span>
+<span id="sr#18">One person owns most of a project's open items</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="key_person.on" checked="" aria-label="One person owns most of a project's open items">
@@ -534,7 +206,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#49">More than (% of the project's open items)</span>
+<span id="sr#19">More than (% of the project's open items)</span>
 </div>
 <div>
 <input type="number" data-wk="key_person.share" value="50" min="1" step="1" style="width:#px" aria-label="More than (% of the project's open items)">
@@ -542,7 +214,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#50">…with at least (open items)</span>
+<span id="sr#20">…with at least (open items)</span>
 </div>
 <div>
 <input type="number" data-wk="key_person.min_items" value="6" min="1" style="width:#px" aria-label="…with at least (open items)">
@@ -550,7 +222,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#51">Dependency due after what it blocks, or overdue near it</span>
+<span id="sr#21">Dependency due after what it blocks, or overdue near it</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="dependency.on" checked="" aria-label="Dependency due after what it blocks, or overdue near it">
@@ -558,7 +230,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#52">Overdue counts when the milestone is within (days)</span>
+<span id="sr#22">Overdue counts when the milestone is within (days)</span>
 </div>
 <div>
 <input type="number" data-wk="dependency.near_days" value="14" min="1" step="1" style="width:#px" aria-label="Overdue counts when the milestone is within (days)">
@@ -566,7 +238,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#53">Overdue item owned by someone you follow closely</span>
+<span id="sr#23">Overdue item owned by someone you follow closely</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="vip_overdue.on" checked="" aria-label="Overdue item owned by someone you follow closely">
@@ -574,7 +246,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#54">Overdue by at least (days)</span>
+<span id="sr#24">Overdue by at least (days)</span>
 </div>
 <div>
 <input type="number" data-wk="vip_overdue.days" value="1" min="1" step="1" style="width:#px" aria-label="Overdue by at least (days)">
@@ -582,7 +254,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#55">Pending decision past its needed-by date</span>
+<span id="sr#25">Pending decision past its needed-by date</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="decision_overdue.on" checked="" aria-label="Pending decision past its needed-by date">
@@ -590,7 +262,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#56">Late by at least (days)</span>
+<span id="sr#26">Late by at least (days)</span>
 </div>
 <div>
 <input type="number" data-wk="decision_overdue.days" value="1" min="1" step="1" style="width:#px" aria-label="Late by at least (days)">
@@ -598,13 +270,14 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#57">Open item due on a weekend</span>
+<span id="sr#27">Open item due on a weekend</span>
 </div>
 <div>
 <input type="checkbox" class="switch" data-wk="weekend.on" checked="" aria-label="Open item due on a weekend">
 </div>
 </div>
 <small class="sub">Flags are worked out when the dashboard is built; they're never stored.</small>
+<<<<<<< HEAD
 </div>
 <h2 class="setgroup">Capture and alerts</h2>
 <div class="card" id="set-sweep" data-sec="sweep">
@@ -1487,8 +1160,12 @@
 <code class="setval">none</code>
 </div>
 </div>
+=======
+<div class="setembed" data-embed="warnings" data-mount="">
+>>>>>>> origin/v26-people-m2-m3-2
 </div>
 </div>
+<div class="setmount" id="set-more-review" data-sec="more-review" data-mount="">
 </div>
 </div>
 </div>

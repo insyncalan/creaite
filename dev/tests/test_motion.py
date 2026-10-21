@@ -359,7 +359,7 @@ class Motion(LiveBrowserCase):
     # ---- 6. switch and save ----
     def test_the_switch_slides_by_transform(self):
         b = self.b
-        b.eval("STAB='general'; go('settings')")
+        b.eval("STAB='work'; go('settings')")                 # v2.6 (#246): Look and help (the old 'general') has no switch
         b.wait("!!document.querySelector('#settingsBody .switch')")
         c = b.eval("(()=>{ const s=document.querySelector('#settingsBody .switch'); const c=getComputedStyle(s,'::after'); return [c.transitionProperty, c.transitionTimingFunction]; })()")
         self.assertEqual(c[0], "transform")

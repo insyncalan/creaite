@@ -25,6 +25,7 @@ import { EDITABLE, irChanged, irIfApproved, irLabel, irLineParts, irMergeEdits, 
 import { drawLast, drawLatestWas, drawUpdateBody, updateChipNodes, updateChips } from "./components/intakeReview/UpdatePeek.jsx";
 import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
+import { openProjectWs } from "./stores/projectSettings.js";   /* v2.6: a workstream is added in its project's settings */
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
 import { api, applyNow, applySoon, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -484,7 +485,9 @@ export const PKFL={t:null,upd:"Latest update",resp:null,why:"Reasoning",st:"Stat
 export const pkLabel=(k,f,x)=>f==="t"?pkTitleL(k):f==="resp"?RESPL(x.type):f==="due"?(k==="decisions"?"Needed by":"Due date"):PKFL[f]||f;
 /* the marks (a status ring, priority bars, initials) are PeekProps.jsx's (peekMark) */
 export const PKDRAW=[];                                   /* later blocks add what they draw (staging, details, activity) */
-export function pkNote(msg){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||""; }
+/** The peek's note line; `ws`, a project code, adds a link to that project's Workstreams (v2.6). @param {string} msg @param {string} [ws] */
+export function pkNote(msg,ws){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||"";
+  if(msg&&ws){ const b=document.createElement("button"); b.type="button"; b.className="linkbtn"; b.id="pkWsLink"; b.textContent="Open its workstreams"; b.onclick=()=>openProjectWs(ws); n.append(" ",b); } }
 export function pkDrawId(x,k){ putHTML($("#pkId"),html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type}" data-tip="Type">${x.type}${raw(ic("chevdown"))}</button>`:""}`);
   const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`));
   drawPeekNotes(shared.CUR.mode==="record"?pkCid():"");   /* BL-301 B: "2 notes mention this" */ }
@@ -811,7 +814,7 @@ PKPROP.p=(a,x,k,id)=>openPicker(a,{label:"Project",value:x.p,onClose:pkPopDone(a
   if(x.ws&&!wsFor(v).some(w=>w.toLowerCase()===String(x.ws).toLowerCase())){ patch.ws=""; notes.push("workstream cleared: "+pName(v)+" has none called "+x.ws); }
   pkCommit(k,id,patch,"Project",pName(x.p),pName(v),{note:notes.join("; ")}); }});
 PKPROP.ws=(a,x,k,id)=>openPicker(a,{label:"Workstream",search:true,allowNew:true,value:x.ws||"",onClose:pkPopDone(a),options:[...wsFor(x.p).map(w=>({v:w,label:w,icon:"layers"})),{v:"",label:"None"}],onPick:(v,typed)=>{
-  if(typed){ const m=wsFor(x.p).find(w=>w.toLowerCase()===v.toLowerCase()); if(!m){ pkNote(`“${v}” isn't one of ${pName(x.p)}'s workstreams yet. Add it in Settings › People and projects › Workstreams, then choose it here.`); return; } v=m; }
+  if(typed){ const m=wsFor(x.p).find(w=>w.toLowerCase()===v.toLowerCase()); if(!m){ pkNote(`“${v}” isn't one of ${pName(x.p)}'s workstreams yet. Add it in ${pName(x.p)}'s settings › Workstreams, then choose it here.`,x.p); return; } v=m; }
   pkCommit(k,id,{ws:v},"Workstream",x.ws||"none",v||"none"); }});
 PKPROP.ms=(a,x,k,id)=>openPicker(a,{label:"Milestone",value:x.ms||"",onClose:pkPopDone(a),options:msChoices(x.p,x.ms).map(([v,l])=>({v,label:l,icon:"flag"})),onPick:v=>pkCommit(k,id,{ms:v},"Milestone",x.ms?msName(x.ms):"none",v?msName(v):"none")});
 PKPROP.replaces=(a,x,k,id)=>openPicker(a,{label:"Replaces",search:true,value:x.replaces||"",onClose:pkPopDone(a),options:[{v:"",label:"None"},...DEC.filter(d=>d.p===x.p&&d.id!==x.id).map(d=>({v:d.id,label:`${d.id} · ${decShort(d.t,60)}`,icon:"decision"}))],onPick:v=>pkCommit(k,id,{replaces:v},"Replaces",x.replaces||"none",v||"none")});
@@ -1166,7 +1169,7 @@ export function pkWsForm(anchor,x,k,id,name){ const p=x.p, s=name?wsSuggest(p,na
   return openNewWorkstream(anchor,{title:`New workstream for ${pName(p)}`,name,fields:/** @type {[string, string][]} */(WS_FIELDS),suggest:nm=>wsSuggest(p,nm),onClose:pkPopDone(anchor),
     note:`${name?`Suggested from ${s.items} item${s.items===1?"":"s"}; change anything.`:"A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
     onAdd:async v=>{ const w=wsRow(p,v.name);
-      if(w&&w.st==="Closed") return `“${w.name}” is closed in ${pName(p)}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+      if(w&&w.st==="Closed") return `“${w.name}” is retired in ${pName(p)}: choose another (${pName(p)}'s settings › Workstreams lists the ones in use).`;
       const known=w?w.name:wsFor(p).find(n=>n.toLowerCase()===v.name.toLowerCase());
       closePicker("pick");
       if(known) return void pkCommit(k,id,{ws:known},"Workstream",x.ws||"none",known);   /* it is already there: just use it */

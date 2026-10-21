@@ -56,14 +56,14 @@
         </div>
         <p class="calfoot" id="calFoot" hidden></p><!-- BL-270: "Calendar as read on …", at the page's foot -->
       </section>
-      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
+      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div><div id="projArchHost"></div></div></section>
       <section class="view" id="v-cockpit" hidden></section>
       <section class="view" id="v-reports" hidden aria-label="Reports"></section><!-- BL-337: Reports, every project's week (components/reporting/ReportsPage.jsx) -->
       <section class="view" id="v-reporting" hidden aria-label="Reporting"></section><!-- BL-337: one project's reporting space (components/reporting/ReportingSpace.jsx) -->
       <section class="view" id="v-psettings" hidden aria-labelledby="psTitle"></section><!-- #228: the full-page project settings (components/project/ProjectSettings.jsx) -->
       <section class="view" id="v-notes" hidden></section><!-- BL-301 B: a project's Notes tab, and the portfolio's notes -->
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
-            <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
+            <section class="view" id="v-people" hidden><div class="wrapmax"><div class="plhead"><h1>People</h1><button type="button" class="btn primary" id="plAdd" aria-haspopup="dialog">Add a person</button></div><div id="peopleRoot"></div></div></section><!-- #248: the People page v2 (components/people/PeoplePage.jsx draws #peopleRoot) -->
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
       <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
@@ -115,7 +115,7 @@
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
-        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
+        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select><p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>

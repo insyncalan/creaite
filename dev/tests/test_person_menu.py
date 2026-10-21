@@ -88,12 +88,13 @@ class PersonMenu(SentCase):
         b.wait("document.getElementById('deDlg').open")
         b.eval("document.getElementById('deDlg').close()")
 
-    def test_a_person_without_an_email_has_draft_email_greyed_and_add_details(self):
+    def test_a_person_without_an_email_still_has_draft_email_and_add_details(self):
+        """#247 (Alan, 19-10-2026): a person with no email still gets a drafted email, with nothing in To (was: greyed)."""
         b = self.b
         b.eval("""openContextMenu(cxPerson('Nobody Known',''),200,200,{label:'Nobody Known'})""")
         b.wait(f'!!document.querySelector("{MENU}")')
-        self.assertEqual(self.labels(), ["-Draft email", "Open Nobody's page", "Add details"])
-        self.assertIn("No email on record: add details first", b.eval(f'document.querySelector("{MENU}").textContent'))
+        self.assertEqual(self.labels(), ["Draft email", "Open Nobody's page", "Add details"])
+        self.assertIn("No email on record: the draft is still made, with nothing in To", b.eval(f'document.querySelector("{MENU}").textContent'))
         b.key("Escape")
 
     def test_add_details_opens_the_details_dialog_on_the_persons_page(self):
@@ -126,7 +127,7 @@ class PersonMenu(SentCase):
         b = self.b
         b.eval("""REG.push({name:'Quiet Person',email:'',aliases:[],org:'',role:'',extra:{}}); openContextMenu(cxPerson('Quiet Person',''),200,200,{label:'Quiet Person'})""")
         b.wait(f'!!document.querySelector("{MENU}")')
-        self.assertEqual(self.labels(), ["-Draft email", "Open Quiet's page", "Add details"])   # the hint's "add details" is on the menu
+        self.assertEqual(self.labels(), ["Draft email", "Open Quiet's page", "Add details"])   # #247: a draft is still made with no email; Add details is on the menu
         b.key("Escape")
         b.eval("REG.pop()")
 

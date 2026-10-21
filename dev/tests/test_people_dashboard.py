@@ -46,7 +46,7 @@ SCRIPT = r"""
       resolve:Object.fromEntries(window.__inputs.map(t=>[t,(r=>[r.status,r.name,r.candidates])(resolvePerson(t))]))};
     needVault=async()=>true;      // the page's own vault check finishes late and would reset the fake's state
     // 0b. BL-56: the People view and a page per person (before anything above changes the data)
-    go("people"); out.peopleHash=location.hash; out.rail=document.querySelector(".rail button[data-v=people]").getAttribute("aria-current"); out.heading=document.querySelector("#v-people h1").textContent;
+    go("people","work"); /* #248: With work is a tab of four now (Everyone is the default) */ out.peopleHash=location.hash; out.rail=document.querySelector(".rail button[data-v=people]").getAttribute("aria-current"); out.heading=document.querySelector("#v-people h1").textContent;
     const prow=()=>[...document.querySelectorAll("#peopleTbl tbody tr")].map(tr=>[...tr.cells].map(c=>c.textContent.replace(/\s+/g," ").trim()));
     out.peopleRows=prow();
     { const cs=e=>e&&getComputedStyle(e); const a=document.querySelector("#peopleTbl td.num a.cntl");   // #190: right-aligned counts, not drawn as links
@@ -73,16 +73,16 @@ SCRIPT = r"""
     out.reviewLink=revDetail({kind:"actions",rec:{o:"Omar Ali",due:null,pr:"Medium"}}).includes('data-person="Omar Ali"');
     out.palette=[ckItems("omar").filter(i=>i.g==="People").map(i=>[i.l,i.h]),ckItems("people").some(i=>i.g==="Go to"&&i.l==="People")];
     go("today");
-    // 1. Settings › People shows the register and everyone on items, with what's missing
-    go("settings","people");
-    out.mgr=[...document.querySelectorAll("#peopleMgr tbody tr")].map(tr=>[tr.dataset.pn,tr.cells[0].textContent.replace(/\s+/g," ").trim(),tr.cells[1].textContent.trim(),tr.cells[3].textContent.trim()]);
-    // 2. add a person with the dialog; the name is required
-    el("pmAdd").click(); await wait(20); out.dlgOpen=el("personDlg").open; el("pdSave").click(); out.needName=el("pdErr").textContent;
+    // 1. the People page (#248; Settings › People's old address opens it) shows the register and everyone on items, with what's missing
+    go("settings","people"); out.mgrView=[VIEW,location.hash];
+    out.mgr=[...document.querySelectorAll("#plRows tr[data-pn]")].map(tr=>[tr.dataset.pn,tr.cells[0].textContent.replace(/\s+/g," ").trim(),tr.cells[1].textContent.trim(),((REG.find(p=>p.name===tr.dataset.pn)||{}).aliases||[]).join(", ")]);
+    // 2. add a person with the new-person dialog (the owner prompt's, ownerFinal; Settings › People's Add went with it); the name is required
+    let added=askPerson({}).then(res=>res&&res.person?regAddPerson(res.person):null); await wait(20); out.dlgOpen=el("personDlg").open; el("pdSave").click(); out.needName=el("pdErr").textContent;
     set("pd_name","Sara"); el("pdSave").click(); out.dupName=el("pdErr").textContent;
-    await fillDlg({name:"Priya Nair",email:"priya@northgate.example",aliases:"Priya, PN",org:"Northgate",role:"Architect"}); await settle();
+    await fillDlg({name:"Priya Nair",email:"priya@northgate.example",aliases:"Priya, PN",org:"Northgate",role:"Architect"}); await added; await settle();
     out.afterAdd=REG.map(p=>p.name); out.dlgClosed=!el("personDlg").open;
     // 3. edit them (the name is read-only here; renaming is its own action)
-    document.querySelector('[data-pm=edit][data-n="Priya Nair"]').click(); await wait(20); out.editName=[el("pd_name").value,el("pd_name").readOnly,el("pdTitle").textContent];
+    go("person","Priya Nair"); el("ppEdit").click(); await wait(20);   /* her page's Edit details (Settings › People's Edit has gone) */ out.editName=[el("pd_name").value,el("pd_name").readOnly,el("pdTitle").textContent];
     await fillDlg({role:"Lead architect"}); await settle(); out.afterEdit=REG.find(p=>p.name==="Priya Nair").role;
     // 4. the owner picker (BL-179: a new item is the peek, so it is the owner chip's list): typing filters, a stranger is offered
     //    as typed, and using it asks for the person's details (ownerFinal)
@@ -172,13 +172,16 @@ class PeopleDashboardTests(unittest.TestCase):
     def test_no_script_errors(self):
         self.assertEqual(self.r["errors"], [])
 
-    def test_settings_lists_the_register_and_flags_gaps(self):
+    def test_the_people_page_lists_the_register_and_flags_gaps(self):
+        # the Settings line: Settings › People is gone; its address opens the People page (#248), whose Everyone tab is the register
+        # and everyone on items. "needs details" replaced "not in register" there (#248); aliases are on the record, not a column.
+        self.assertEqual(self.r["mgrView"], ["people", "#people"])
         rows = {n: (label, email, aliases) for n, label, email, aliases in self.r["mgr"]}
         self.assertIn("Sara Example", rows)
         self.assertEqual(rows["Sara Example"][1], "sara.example@client.com")
         self.assertIn("Sara, Sara E", rows["Sara Example"][2])
-        self.assertIn("not in register", rows["S. Example"][0])                     # on items, not registered
-        self.assertIn("(you)", rows["Alan Carter"][0])
+        self.assertIn("needs details", rows["S. Example"][0])                       # on items, with no email, organisation or role
+        self.assertIn("You (Alan Carter)", rows["Alan Carter"][0])
 
     def test_add_and_edit_through_the_dialog(self):
         r = self.r
@@ -203,7 +206,7 @@ class PeopleDashboardTests(unittest.TestCase):
         r = self.r
         self.assertEqual(r["numStyle"], ["right", "right", "none"])                          # #190
         for row in r["peopleRows"] + r["noneRows"]:
-            self.assertNotIn("—", row[4:])                                                    # a zero is 0, never a dash
+            self.assertNotIn("—", row[5:9])                                                   # a zero is 0, never a dash (#248: the counts follow Email and Projects)
 
     def test_saving_a_typed_owner(self):
         r = self.r
@@ -218,22 +221,26 @@ class PeopleDashboardTests(unittest.TestCase):
 
     def test_people_view(self):
         r = self.r
-        self.assertEqual((r["peopleHash"], r["rail"], r["heading"]), ("#people", "page", "People"))
-        rows = {x[0].replace(" not in register", ""): x[1:] for x in r["peopleRows"]}
-        self.assertEqual(r["peopleRows"][0][0], "You (Alan Carter)")                           # Alan first, no "not in register"
-        self.assertEqual(rows["Omar Ali"], ["Enable", "Project manager", "Digital Enablement", "2", "0", "0", "0"])
-        self.assertEqual(rows["Sara Example"], ["Example Client Ltd", "Delivery lead", "Example Programme", "1", "0", "0", "0"])
+        # #248 (People page v2) deliberately changed the view: four tabs, the register's columns (Name, Email, Organisation, Role,
+        # Projects, Actions, RAID, Decisions, Overdue, then the row's buttons) on every tab, and "needs details" for a record
+        # missing an email, organisation or role (there is no "not in register": a name on an item is in the register).
+        self.assertEqual((r["peopleHash"], r["rail"], r["heading"]), ("#people/work", "page", "People"))
+        rows = {x[0].replace(" needs details", ""): x[1:] for x in r["peopleRows"]}
+        self.assertEqual(r["peopleRows"][0][0], "You (Alan Carter)")                           # Alan first on With work
+        self.assertEqual(rows["Omar Ali"][:8], ["omar@def.example", "Enable", "Project manager", "Example Programme Digital Enablement", "2", "0", "0", "0"])   # Projects: every project he is on (ABC names him a stakeholder)
+        self.assertEqual(rows["Sara Example"][1:8], ["Example Client Ltd", "Delivery lead", "Example Programme", "1", "0", "0", "0"])
         self.assertNotIn("Jane Doe", rows)                                                     # BL-138: a made decision alone is history
-        none = {x[0]: x[1:] for x in r["noneRows"]}
-        self.assertEqual(none["Jane Doe"][2:], ["Example Programme", "1"])                      # on Nothing assigned: projects, closed items
+        none = {x[0].replace(" needs details", ""): x[1:] for x in r["noneRows"]}
+        self.assertEqual(none["Jane Doe"][3:8], ["Example Programme", "0", "0", "0", "0"])      # on Nothing assigned: projects, nothing open
         self.assertEqual(r["noneHash"], "#people/none")
-        self.assertEqual([t[1] for t in r["ptabs"]], ["true", "false"])
-        self.assertEqual(r["ptabs"][0][0], f"With work {len(r['peopleRows'])}")
-        self.assertEqual(r["ptabs"][1][0], f"Nothing assigned {len(r['noneRows'])}")
-        self.assertEqual(rows["You (Alan Carter)"][-1], "1")                                    # one overdue action
-        self.assertIn("not in register", [x[0] for x in r["peopleRows"] if x[0].startswith("S. Example")][0])
+        self.assertEqual([t[1] for t in r["ptabs"]], ["false", "true", "false", "false"])
+        self.assertEqual(r["ptabs"][1][0], f"With work {len(r['peopleRows'])}")
+        self.assertEqual(r["ptabs"][2][0], f"Nothing assigned {len(r['noneRows'])}")
+        self.assertEqual(rows["You (Alan Carter)"][7], "1")                                     # one overdue action
+        self.assertIn("needs details", [x[0] for x in r["peopleRows"] if x[0].startswith("S. Example")][0])
+        self.assertNotIn("not in register", " ".join(x[0] for x in r["peopleRows"] + r["noneRows"]))
         self.assertEqual(r["byActions"][1], "Omar Ali")                                        # sorted by open actions, most first
-        self.assertEqual([n.replace(" not in register", "") for n in r["byName"]][1:],
+        self.assertEqual([n.replace(" needs details", "") for n in r["byName"]][1:],
                          ["Omar Ali", "S. Example", "Sara Example"])
         self.assertEqual(r["myWork"], ["work", "#work=actions&v=mine"])                   # Alan's own page is Work on the Mine view (BL-77)
 
@@ -248,7 +255,7 @@ class PeopleDashboardTests(unittest.TestCase):
         self.assertEqual((crumb, rail), ("People›Omar Ali", "page"))
         self.assertTrue(r["noScores"])                                                          # counts only
         self.assertEqual(r["openedItem"], [True, "DEF-A-001"])
-        self.assertEqual((r["back"], r["forward"]), (["people", "#people"], ["person", "Omar Ali", "#person=Omar%20Ali"]))
+        self.assertEqual((r["back"], r["forward"]), (["people", "#people/work"], ["person", "Omar Ali", "#person=Omar%20Ali"]))   # #248: the tab is in the address
         self.assertEqual(r["parse"], ["Omar Ali", None, "people"])
         self.assertEqual(r["jane"], [True, True, ["Open work", "Closed in the last 14 days", "Decisions made · last 90 days"]])   # BL-56 phase 2
         self.assertEqual(r["leads"], ["Open work · 1", "Closed in the last 14 days", "Decisions made", "Workstreams led"])
@@ -707,11 +714,11 @@ class PeopleTabsTests(LiveBrowserCase):
         return self.b.eval("[...document.querySelectorAll('#peopleTbl tbody tr')].map(tr=>[...tr.cells].map(c=>c.textContent.replace(/\\s+/g,' ').trim()))")
 
     def names(self):
-        return [r[0].replace(" not in register", "").replace("You (Alan Carter)", "Alan Carter") for r in self.rows()]
+        return [r[0].replace(" needs details", "").replace("You (Alan Carter)", "Alan Carter") for r in self.rows()]
 
     def open_people(self):
         b = self.b
-        b.eval("go('people')")
+        b.eval("go('people','work')")          # #248: With work is one of four tabs (Everyone is the default)
         b.wait("document.querySelector('#ptabs [data-ptab]')")
         return b
 
@@ -720,23 +727,22 @@ class PeopleTabsTests(LiveBrowserCase):
         self.assertEqual(b.eval("PTAB"), "work")
         work = {r[0]: r[1:] for r in self.rows()}
         self.assertEqual(self.rows()[0][0], "You (Alan Carter)")                                   # You first
-        self.assertEqual(work["Sara Example"][3:], ["1", "0", "1", "0"])                           # open action, a decision waiting (Overdue stays actions and RAID)
-        self.assertEqual(work["Omar Ali"][3:6], ["1", "0", "1"])
-        self.assertIn("Priya Waits not in register", work)                                       # an open action alone counts
+        self.assertEqual(work["Sara Example"][4:8], ["1", "0", "1", "0"])                          # open action, a decision waiting (Overdue stays actions and RAID)
+        self.assertEqual(work["Omar Ali"][4:7], ["1", "0", "1"])
+        self.assertIn("Priya Waits needs details", work)                                         # an open action alone counts (#248: needs details, not "not in register")
         self.assertNotIn("Jane Doe", self.names())                                                # a made decision alone does not
         self.assertNotIn("Lee Closed", self.names())
         heads = b.eval("[...document.querySelectorAll('#peopleTbl thead th')].map(t=>t.textContent.replace(/[▲▼]/g,'').trim())")
-        self.assertEqual(heads, ["Name", "Organisation", "Role", "Projects", "Open actions", "Open RAID", "Decisions waiting", "Overdue"])
+        self.assertEqual(heads, ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "RAID", "Decisions", "Overdue", "Actions on the person"])   # #248: the register's columns
         n_work = len(self.rows())
         self.tab("none")
-        none = {r[0]: r[1:] for r in self.rows()}
-        self.assertEqual(none["Jane Doe"][3], "2")                                                # closed items: her two made decisions
-        self.assertEqual(none["Lee Closed not in register"][2:], ["Example Programme", "1"])
+        none = {r[0].replace(" needs details", ""): r[1:] for r in self.rows()}
+        self.assertEqual(none["Jane Doe"][4:8], ["0", "0", "0", "0"])                             # nothing open (#248: one set of columns; no Closed items)
+        self.assertEqual(none["Lee Closed"][3], "Example Programme")
         self.assertTrue(set(self.names()).isdisjoint(set(work) | {"Alan Carter"}))               # nobody on both
-        heads = b.eval("[...document.querySelectorAll('#peopleTbl thead th')].map(t=>t.textContent.replace(/[▲▼]/g,'').trim())")
-        self.assertEqual(heads, ["Name", "Organisation", "Role", "Projects", "Closed items"])
-        self.assertEqual(b.eval("[...document.querySelectorAll('#ptabs [data-ptab]')].map(x=>x.textContent.replace(/\\s+/g,' ').trim())"),
-                         [f"With work {n_work}", f"Nothing assigned {len(self.rows())}"])
+        tabs = b.eval("[...document.querySelectorAll('#ptabs [data-ptab]')].map(x=>x.textContent.replace(/\\s+/g,' ').trim())")
+        self.assertEqual(tabs[1:3], [f"With work {n_work}", f"Nothing assigned {len(self.rows())}"])
+        self.assertTrue(tabs[0].startswith("Everyone ") and tabs[3].startswith("Needs attention "), tabs)
         self.assertFalse(b.eval("/%|score|rating|on.?time/i.test(document.getElementById('v-people').textContent)"))
 
     def test_hidden_people_are_on_neither(self):
@@ -786,9 +792,9 @@ class PeopleTabsTests(LiveBrowserCase):
         b.click('.rail button[data-v="people"]')                                                   # the rail returns to the tab last used
         b.wait("VIEW==='people'")
         self.assertEqual(b.eval("[PTAB,location.hash]"), ["none", "#people/none"])
-        b.goto(self.base + "/#people")                                                             # a plain link: With work
+        b.goto(self.base + "/#people")                                                             # a plain link: Everyone (#248; was With work)
         b.wait("typeof go==='function' && LIVE && VIEW==='people'")
-        self.assertEqual(b.eval("PTAB"), "work")
+        self.assertEqual(b.eval("PTAB"), "all")
         b.eval("history.back()")
         b.wait("PTAB==='none'")
         b.key("Tab")

@@ -163,7 +163,7 @@ class AgeArchiveMarks(unittest.TestCase):
         import settings_catalogue as sc
         group, label, line, reason = sc.CATALOGUE["dashboard.show_archived"]
         self.assertEqual(label, "Show archived projects")
-        self.assertIn("People and projects › Projects and register", line)
+        self.assertIn("in Work, Today and the Excel export", line)              # v2.6 (#246): it names what it shows, not a tab
         self.assertIn("archived for their age", line)
         src = (REPO / "system/templates/dashboard/src/settings.js").read_text(encoding="utf-8")
         help_ = src[src.index('row("Show archived projects"'):][:300]

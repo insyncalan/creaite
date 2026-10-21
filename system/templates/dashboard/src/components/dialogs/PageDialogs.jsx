@@ -100,7 +100,7 @@ export function PageDialogs() {
             <button class="btn primary" id="genGo" value="go" data-cmdenter=""><span id="genGoT">Generate</span><span class="kbd" id="genKbd" aria-hidden="true"></span></button></div>
         </form>
       </Dialog>
-      {/* People (BL-55, BL-56); the VIP field shows when editing (BL-99) */}
+      {/* People (BL-55, BL-56); no followed field (#248 M2: that is the project settings page's) */}
       <Dialog id="personDlg" labelledBy="pdTitle">
         <form method="dialog" id="personForm">
           <h2 id="pdTitle" style="margin:0 0 10px">New person</h2>
@@ -109,9 +109,7 @@ export function PageDialogs() {
             <label for="pd_email">Email</label><input id="pd_email" type="text" autocomplete="off" />
             <label for="pd_aliases">Aliases</label><input id="pd_aliases" type="text" autocomplete="off" placeholder="Sara, Sara K, SK" />
             <label for="pd_org">Organisation</label><input id="pd_org" type="text" autocomplete="off" />
-            <label for="pd_role">Role</label><input id="pd_role" type="text" autocomplete="off" />
-            <label for="pd_vip" class="pdvip">VIP</label><select id="pd_vip" class="pdvip"><option value="">No</option>
-              <option value="management">Management</option><option value="client">Client</option><option value="yes">Yes</option></select></div>
+            <label for="pd_role">Role</label><input id="pd_role" type="text" autocomplete="off" /></div>
           <div class="sub" id="pdErr" role="alert" style="color:var(--bad)"></div>
           <div class="curacts"><span class="sp"></span><button class="btn" value="cancel" formnovalidate>Cancel</button>
             <button type="button" class="btn primary" id="pdSave">Save</button></div>

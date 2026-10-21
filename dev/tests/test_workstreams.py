@@ -285,7 +285,8 @@ FAKE_VAULT = """const FILES={}; VW={read:async p=>{ if(!(p in FILES)) throw new 
 
 
 class DashboardTests(unittest.TestCase):
-    """The picker, Settings › Workstreams, the project page card and Review in headless Chrome; the proposals the
+    """The picker, the project's settings › Workstreams (Settings › Workstreams until the Settings line), the project page
+    card and Review in headless Chrome; the proposals the
     page writes are then applied by the real tracker."""
 
     @classmethod
@@ -314,6 +315,7 @@ class DashboardTests(unittest.TestCase):
           const form=[document.querySelector(".pkws .pkws-h").textContent,document.querySelector('.pkws [data-wsn="name"]').value];
           document.querySelector('.pkws [data-wsn="keywords"]').value="pack"; document.querySelector('.pkws [data-wsf="add"]').click(); await wait(30); await pkQuiet(); await VQ;
           const ask=document.getElementById("pkNote").textContent, box=CUR.draft.ws, offered=wsFor("ABC"); closePanel();
+<<<<<<< HEAD
           // Settings › Workstreams: add (with suggestions), rename, close
           go("settings","workstreams"); await wait(30);
           document.getElementById("wsmName").value="Integration"; document.querySelector('#wsMgr [data-wsm="add"]').click(); await wait(20);
@@ -325,6 +327,20 @@ class DashboardTests(unittest.TestCase):
           // Intake: the flagged item offers to add its workstream
           go("intake-review"); await wait(150); const q=document.querySelector("#v-intake-review .wsq")?.innerText||"";
           window.OUT={card, cockpit, form, ask, box, offered, mgr, renamedItem, q,
+=======
+          // the project's settings › Workstreams (#247; the old Settings › Workstreams address opens it from a project): add, rename, retire
+          go("cockpit","ABC"); go("settings","workstreams"); await wait(60); const wsAt=[VIEW,psCode.value,psCat.value];
+          const row=()=>document.querySelector('#psWs tr.wsedit'), fill=(f,v)=>{ row().querySelector(`[data-wsf="${f}"]`).value=v; };
+          document.getElementById("psAddWs").click(); await wait(30); fill("name","Integration"); fill("keywords","api, interfaces");
+          row().querySelector("[data-ws-save]").click(); await wait(80); await VQ; await wait(30);
+          document.querySelector('#psWs [data-ws-edit="Data"]').click(); await wait(30); fill("name","Data and analytics");
+          row().querySelector("[data-ws-save]").click(); await wait(80); await VQ; await wait(30);
+          document.querySelector('#psWs [data-ws-edit="Testing"]').click(); await wait(30); row().querySelector("[data-ws-retire]").click(); await wait(80); await VQ; await wait(30);
+          const mgr=document.getElementById("psWs").innerText, renamedItem=A.find(a=>a.t==="Profile the data extract").ws;
+          // Review: the flagged item offers to add its workstream
+          go("review"); await wait(30); const q=document.querySelector(".wsq")?.innerText||"";
+          window.OUT={card, cockpit, form, ask, box, offered, wsAt, mgr, renamedItem, q,
+>>>>>>> origin/v26-people-m2-m3-2
             files:Object.fromEntries(Object.entries(FILES).filter(([k])=>k.startsWith("system/staging/proposed-")))};""")
 
     @classmethod
@@ -341,7 +357,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("New workstream “Reporting” for Example Programme", o["ask"])
         self.assertEqual(o["box"], "Reporting")
         self.assertIn("Reporting", o["offered"])
+        self.assertEqual(o["wsAt"], ["psettings", "ABC", "ws"])                         # the old address opens the project's Workstreams
         self.assertIn("Data and analytics", o["mgr"])
+        self.assertNotIn("Testing", o["mgr"])                                              # retired: no longer listed
         self.assertEqual(o["renamedItem"], "Data and analytics")                          # the item follows the rename
         self.assertIn("New workstream “Integration” for ABC?", o["q"])
 
@@ -357,7 +375,9 @@ class DashboardTests(unittest.TestCase):
         v.run("apply")
         got = {w["name"]: (w["status"], w["channel"]) for w in v.rows("workstreams")}
         self.assertEqual(got, {"Data and analytics": ("Active", None), "Testing": ("Closed", None),
-                               "Integration": ("Active", "ABC – Integration"), "Reporting": ("Active", None)})
+                               "Integration": ("Active", None), "Reporting": ("Active", None)})
+        # the project settings page has no Teams channel field (#247): a channel is set in the Excel sheet or with cx-edit
+        self.assertEqual({w["name"]: w["keywords"] for w in v.rows("workstreams")}["Integration"], "api, interfaces")
         acts = {a["description"]: a["workstream"] for a in v.rows("actions")}
         self.assertEqual((acts["Draft the reporting pack"], acts["Profile the data extract"]), ("Reporting", "Data and analytics"))
 

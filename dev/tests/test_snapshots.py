@@ -44,7 +44,10 @@ META = 4
 MAC_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 "
           "Safari/537.36")                                  # the platform the goldens were recorded on, on any machine
 
-SETTINGS_TABS = ("essentials", "people", "advanced", "health")         # BL-320 (v1.9.2): four places, not six
+# BL-320 (v1.9.2): four places; v2.6 (#246): tabs. Essentials, Advanced (its first sub-tab), AI drafts (the counts card,
+# which Advanced held before) and Health. The Settings line retired the People and projects sections (their old address opens
+# the People page, whose golden is "people")
+SETTINGS_TABS = ("essentials", "advanced", "ai", "health")
 # Health's check runs doctor, whose answer depends on the machine (a launcher, Rosetta, OneDrive): the golden shows a fixed one.
 HEALTH_ANSWER = {"ok": True, "checked": "2026-10-09 09:00", "fine": 22, "fine_names": ["Database", "Backups"], "read_only": True,
                  "problems": [{"id": "offsite_backup", "title": "No copy of the backup in OneDrive yet", "check": "OneDrive copy",
@@ -65,9 +68,9 @@ def open_health(b):
 
 
 SETTINGS_READY = {"essentials": "!!document.querySelector('#set-essentials .srow')",
-                  "advanced": "!!document.querySelector('#set-more .srow') && !!document.querySelector('#drStats') && document.querySelector('#drStats').textContent.trim() !== ''",   # AI drafts' counts arrive from /api/drafts after the page draws; a slow reply must not be captured empty
-                  "health": "!!document.querySelector('#healthCard .hsum')",
-                  "people": "!!document.querySelector('#settingsBody [data-sec=people]')"}
+                  "advanced": "!!document.querySelector('#subtabs') && !!document.querySelector('#set-thresholds .setembed .srow')",
+                  "ai": "!!document.querySelector('#set-drafts .setembed .srow') && !!document.querySelector('#drStats') && document.querySelector('#drStats').textContent.trim() !== ''",   # AI drafts' counts arrive from /api/drafts after the page draws; a slow reply must not be captured empty
+                  "health": "!!document.querySelector('#healthCard .hsum')"}
 
 
 def open_first_item(b):
