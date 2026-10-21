@@ -358,7 +358,8 @@ class Measured2(HandcheckCase):
         # them, every ancestor's opacity multiplied in): the past dot and the sun are marks that must be seen, 3:1 (WCAG
         # 1.4.11, the audit's bar for --day-past and --day-sun); the past meeting's dimmed words are held to the same 3:1
         # (dimmed on purpose, but still to be read); all other text on Today (dates, hints, the hour labels) is AA, 4.5:1 (3
-        # when large). The "·" separators are decorative (aria-hidden punctuation) and left out.
+        # when large). The "·" separators are decorative (aria-hidden punctuation) and left out, and so is visually hidden text
+        # (.vh: a screen reader's label, 1 px and clipped, such as Earlier days' name): it is never drawn.
         from live_browser import pin_page_clock
         b = self.b
         pin_page_clock(b, self.now[:10] + " 11:30")
@@ -390,7 +391,7 @@ class Measured2(HandcheckCase):
                     # the other text: elements with words of their own (not only their children's), outside the past meeting
                     own = b.eval("""[...document.querySelectorAll('#v-today *:not(svg):not(svg *)')].filter(e=>{ const r=e.getBoundingClientRect();
                       return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden'&&!e.closest('[hidden],[inert]'); })
-                      .map(e=>!e.closest('.dm.past')&&!e.matches('.daysep')&&[...e.childNodes].some(c=>c.nodeType===3&&c.textContent.trim()))""")
+                      .map(e=>!e.closest('.dm.past')&&!e.matches('.daysep')&&!e.closest('.vh')&&[...e.childNodes].some(c=>c.nodeType===3&&c.textContent.trim()))""")
                     allrows = measure.paint_contrast(b, "#v-today *:not(svg):not(svg *)")
                     text = [r for r, mine in zip(allrows, own) if mine]
                     self.assertEqual(len(allrows), len(own), "one visibility rule for both lists")
@@ -489,7 +490,8 @@ class Measured2(HandcheckCase):
         (32 px), bar Files' large centred search bar (40 px, by design). Section headings look the same on each page."""
         # Buttons are .btn (the small .mini and the icon .ib are check 12's). Fields are one-line inputs and selects; a
         # textarea grows with its text and is left out. Settings is all three of its tabs. Section headings are the pages' h2;
-        # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note.
+        # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note, as is the
+        # project settings' Archive and close heading, red on purpose (.psdanger, #228).
         b = self.b
         pages = ("today", "work", "intake-review", "settings-essentials", "settings-advanced", "project-settings", "activity", "files")
         views = {"today": "#v-today", "work": "#v-work", "intake-review": "#v-intake-review", "activity": "#v-activity",
@@ -497,7 +499,7 @@ class Measured2(HandcheckCase):
         fields = ("input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),"
                   " select")
         head_js = """(v)=>[...document.querySelectorAll(v+' h2')].filter(e=>e.offsetParent).map(e=>{ const s=getComputedStyle(e);
-          return {group:e.classList.contains('setgroup'), sig:[s.fontSize,s.fontWeight,s.lineHeight,s.fontFamily.split(',')[0],s.textTransform,s.color].join(' ')}; })"""
+          return {group:e.classList.contains('setgroup')||!!e.closest('.psdanger'), sig:[s.fontSize,s.fontWeight,s.lineHeight,s.fontFamily.split(',')[0],s.textTransform,s.color].join(' ')}; })"""
         off_b, off_f, heads, groups, nb, nf = [], [], {}, set(), 0, 0
         for page in pages:
             self.screen(page)
@@ -523,7 +525,7 @@ class Measured2(HandcheckCase):
                      + (f"; fields off size ({len(off_f)}): {'; '.join(sorted(set(off_f))[:6])}" if off_f
                         else "; every field 32 px, Files' search 40 px")
                      + (f"; section headings one look ({next(iter(heads))})" if len(heads) == 1 else f"; {len(heads)} heading looks: {heads}")
-                     + (f"; plus Settings › Advanced's group labels ({', '.join(groups)})" if groups else ""))
+                     + (f"; plus the second kinds, Settings › Advanced's group labels and the danger zone's heading ({', '.join(groups)})" if groups else ""))
         bad = ([f"{len(off_b)} buttons not 32 px"] if off_b else []) + ([f"{len(off_f)} fields not 32 px"] if off_f else []) \
             + ([f"{len(heads)} section-heading looks"] if len(heads) != 1 else [])
         if bad:
