@@ -1,6 +1,6 @@
 """creaite 2.6.0's hand checks (dev/handchecks/v2.6.0.md: the Product Manager's draft of 19-10-2026 numbers 1 to 27; Team Stark's
-scaffolding adds 28 to 63), automated against a vault made from this checkout's release zip. Every check names the 2.6 item it
-needs (@needs); while that item is not in the vault (or, for a check that only calls tests, the checkout) the check SKIPS with the
+scaffolding adds 28 to 82; 83 to 99, 21-10-2026, add #268, #275, #264/#265, #255 and Help), automated against a vault made from
+this checkout's release zip. Every check names the 2.6 item it needs (@needs); while that item is not in the vault (or, for a check that only calls tests, the checkout) the check SKIPS with the
 reason, so the file runs on any head and nothing fails for code that has not landed. A class with nothing to run in a browser
 starts no vault, server or Chrome.
 
@@ -28,7 +28,15 @@ Run a check with its item absent, to see it red:                      CREAITE_HC
   Markup183    69         #183's Outlook-safe markup on a chase built from the hand-check vault
   SettingsLine 70         the Settings line (v26-settings-line): the old People, Projects and Workstreams addresses
   Quiet97      71 to 74   #97 step 1 quiet hours (v26-quiet-hours; skip until vip.quiet_overnight exists); 74 needs its live_server.diff
-  Archive252   75 to 82   #252 99 Archive (v26-archive-name-proposal; skip until present); 80 needs its guarded diffs; 82 live only
+  Archive252   75 to 82   #252 99 Archive (landed in 2.5.3 as no rename and no migration: test_archive_99, called); 80 needs its
+                          guarded diffs; 82 live only
+  Minutes268   83 to 89   #268 Minutes view v2 (v26-minutes-view-v2): the Track column, aligned tables, editing in place, the
+                          transcript and the sheet, Export, one-click Approve; the builder's Chrome tests, called (the hand-check
+                          vault stages no minutes); 89 judgement, by hand
+  TrackReview275 90 to 92 #275 Track from Review (v26-track-from-review): Review's Approve follows the Track column; called
+  IntakeJobs   93, 94     #264 Process and #265 Refresh as their own jobs (in 2.5.3; test_v253 drives them): called; 95 live only
+  DeleteNote255 96, 97    #255 Delete note with no card: 96 in a vault of its own (moves a note, Undo), 97 the builder's tests
+  Help26       98, 99     Help's 2.6 lines (v26-help-text): the words for each item in the vault, old places gone; 99 judgement
 
 Adding a check is one small function in its item's class:
   @needs("<item>")                       the item it waits for (FEATURES; a new item is one entry there)
@@ -67,9 +75,10 @@ NOCALL = os.environ.get("CREAITE_HC_260_NOCALL") == "1"     # a quick run: the d
 READY = "typeof go==='function' && LIVE"
 
 KIND = {**{n: "scriptable" for n in (*range(1, 10), 12, *range(13, 23), 26, *range(28, 38), *range(40, 45), *range(46, 52),
-                                     *range(53, 57), *range(58, 63), *range(64, 82))},
-        **{n: "measurable" for n in (23, 24, 25)},
-        **{n: "judgement" for n in (10, 11, 38, 45, 52, 57)}}
+                                     *range(53, 57), *range(58, 63), *range(64, 82), *range(83, 88), *range(90, 95),
+                                     *range(96, 99))},
+        **{n: "measurable" for n in (23, 24, 25, 88)},
+        **{n: "judgement" for n in (10, 11, 38, 45, 52, 57, 89, 99)}}
 LIVE_ONLY = {
     27: "with Alan, after release: turn on Create drafts in Outlook, draft a chase with an overdue date, a table and a project heading, "
         "open the draft in Outlook: colours, table and heading survive, subject and body match the Copy version; a person with no email "
@@ -78,6 +87,8 @@ LIVE_ONLY = {
     63: "a real sweep with the setting on fetches a real ended meeting's transcript once, and Intake shows it Transcript ready",
     82: "with Alan: the real company OneDrive archive folder renamed to 99 Archive once (Health's Rename on the card); other people's "
         "files inside are untouched and still there, and the Files page and search find them",
+    95: "a real Process on a real Teams transcript (a real Claude run: progress and Stop on the row, the draft in Review) and a real "
+        "Refresh of Alan's calendar (Microsoft 365): the meetings appear and the saved calendar holds no join link or passcode",
 }
 
 NOTES.clear()          # test_v230 (imported for its helpers) put its own notes here
@@ -107,6 +118,13 @@ FEATURES = {
     "97w": ("#97's alert-check wiring (its live_server.diff)", [("system/scripts/live_server.py", r"vip_schedule")]),
     "252": ("#252 the 99 Archive name (v26-archive-name-proposal)", [("system/scripts/paths.py", r'ARCHIVE = "99 Archive"')]),
     "252g": ("#252's guarded moves (its reach.py and live_server.py diffs)", [("system/scripts/reach.py", r"99 Archive")]),
+    "268": ("#268 Minutes view v2 (v26-minutes-view-v2)", [("dashboard.html", r"kept in the minutes only")]),
+    "275": ("#275 Track from Review (v26-track-from-review)", [("system/scripts/review.py", r"def track_minutes")]),
+    "264": ("#264 Intake Process as its own job", [("system/scripts/intake_process.py", None)]),
+    "265": ("#265 Calendar refresh as its own job", [("system/scripts/calendar_refresh.py", None)]),
+    "255": ("#255 Delete note with no card (its guarded diffs)", [("system/scripts/reach.py", r"PAGE_MOVES"),
+                                                                ("system/scripts/live_server.py", r"/api/notes/delete/now")]),
+    "help": ("Help's 2.6 lines (v26-help-text)", [("system/templates/help.md", r"Pause alert checks on weekend days")]),
 }
 
 SCREENS.update({
@@ -1213,7 +1231,10 @@ class Quiet97(V260Case):
         """73. A time that isn't 24-hour HH:MM is refused with a message and the box goes back; nothing is saved."""
 
     @needs("97", "97w")
-    @calls(("test_vip_quiet_hours", ["Wiring"], QH + " and its live_server.diff"))
+    @calls(("test_vip_quiet_hours", [f"Wiring.{n}" for n in ("test_first_start_after_the_laptop_slept_through_the_weekend",
+                                   "test_no_check_in_quiet_time", "test_nothing_the_skip_prints_or_logs_says_vip",
+                                   "test_the_first_check_after_quiet_time_looks_back_to_the_last_check",
+                                   "test_the_settings_off_restore_todays_behaviour")], QH + " and its live_server.diff"))
     def test_c74_the_alert_check_skips_quiet_time(self):
         """74. With the server's wiring in: no Claude run in quiet time, the first check after it looks back to the last check, the
         switches off restore today's behaviour, and nothing printed or logged says VIP."""
@@ -1221,12 +1242,13 @@ class Quiet97(V260Case):
 
 # ══ #252 the archive folder is 99 Archive ═══════════════════════════════════════════════════════════════════════════════════════
 
-AR = "v26-archive-name-proposal"
-A99 = "test_archive_folder_99"
+AR = "v253-release (#252, merged as no rename and no migration)"
+A99 = "test_archive_99"
 
 
 class Archive252(V260Case):
-    """Checks 75 to 81 (82 is live only). Reads only."""
+    """Checks 75 to 81 (82 is live only). Reads only. #252 landed in 2.5.3 as "no rename, no migration" (the old names are read and
+    left alone; Health offers nothing), so 78 and 79 check that rather than the draft's Rename offer."""
 
     @needs("252")
     def test_c75_the_name_is_99_archive(self):
@@ -1239,38 +1261,37 @@ class Archive252(V260Case):
         saved = dig(self.vault_json("system/config/settings.json"), "locations.never_index")
         if saved is not None:
             self.assertIn("99 Archive", saved)
-        self.called(75, (A99, ["Names"], AR))
+        self.called(75, (A99, ["Names", "OldNamesAreStillSkipped"], AR))
 
     @needs("252")
-    @calls((A99, ["StoredPaths"], AR))
+    @calls((A99, ["Resolve", "AfterAHandRename", "FollowRules"], AR))
     def test_c76_stored_paths_resolve_under_each_name(self):
         """76. Stored paths never change: an archived project, report or deleted note resolves under 99 Archive, _Archive or zz Archive,
-        and after the rename a path recorded under _Archive resolves into 99 Archive."""
+        and a folder renamed by hand is followed (99 Archive wins when two hold the same path)."""
 
     @needs("252")
-    @calls((A99, ["Moves"], AR))
-    def test_c77_moves_go_to_the_folder_in_use(self):
-        """77. A project archive, the 12-month reports move and Delete note go into 99 Archive in a new engagement, and into the old
-        _Archive where that is the folder in use (one archive folder per place)."""
+    @calls((A99, ["AlwaysTheNewName", "NewMovesGoToTheNewName"], AR))
+    def test_c77_moves_go_to_99_archive(self):
+        """77. A project archive, the 12-month reports move and Delete note go into 99 Archive only, beside an old folder too; a name
+        taken in any of the three is numbered, never shared."""
 
     @needs("252")
-    @calls((A99, ["Health"], AR))
-    def test_c78_health_offers_the_rename(self):
-        """78. Health names the folders still called _Archive or zz Archive and offers Rename to 99 Archive on the approval card (the
-        portfolio's too); two old folders in one place are never merged; none, nothing to rename."""
+    @calls((A99, ["NoMigrationNoOffer"], AR))
+    def test_c78_no_migration_and_no_offer(self):
+        """78. Nothing is renamed or migrated: old _Archive and zz Archive folders stay as they are, and Health says nothing about
+        them."""
 
     @needs("252")
-    @calls((A99, ["Update", "VaultLayout.test_99_archive_is_never_a_project"], AR))
-    def test_c79_the_update_renames_the_setting_only(self):
-        """79. The update renames the saved never_index value to 99 Archive and moves no folder; 99 Archive is never taken for a
-        project."""
+    @calls((A99, ["HandRenamed", "HandRenamedProject", "RestoreFromAnOldArchive.test_the_live_server_does_not_treat_the_archive_as_a_project_folder"], AR))
+    def test_c79_a_hand_rename_is_followed_and_99_archive_is_never_a_project(self):
+        """79. A folder Alan renames by hand is followed (Files lists and opens it, Move back and Undo work, a project restores from
+        it); 99 Archive is never taken for a project."""
 
     @needs("252", "252g")
-    @calls((A99, ["GuardedMoves", "VaultLayout.test_live_server_never_takes_99_archive_for_a_project"], AR + " and its guarded diffs"))
+    @calls((A99, ["MoveRules", "RestoreFromAnOldArchive.test_archive_goes_to_99_archive_then_an_old_name_restore_works_with_undo"], AR))
     def test_c80_the_guarded_moves(self):
-        """80. With the guarded diffs in: the card's moves accept only 99 Archive (or the old folder in use), the rename applies and
-        undoes with links still working, a project archives and restores through 99 Archive, and the live server never takes
-        99 Archive for a project."""
+        """80. The guarded move rules: a new move goes only into 99 Archive, a restore or move back comes from any of the three names,
+        look-alikes are not the archive, the rename kind is gone, and a project archived in _Archive restores with Undo."""
 
     @needs("252")
     def test_c81_the_page_says_99_archive(self):
@@ -1281,6 +1302,237 @@ class Archive252(V260Case):
         self.assertTrue("99 Archive" in help_md, "Help never names 99 Archive")
         old = [ln.strip()[:120] for ln in help_md.splitlines() if "_Archive" in ln and "99 Archive" not in ln]
         self.assertEqual(old, [], "a Help line names only the old folder")
+
+
+# ══ #268 Minutes view v2 ═════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+MV = "v26-minutes-view-v2"
+MV2 = "test_minutes_view_v2"
+MOPS = "test_minutes_track_ops"
+
+
+class Minutes268(V260Case):
+    """Checks 83 to 89 (89 judgement, by hand). The hand-check vault stages no minutes, so these call the builder's tests: a
+    fictional steering committee staged in their own throwaway vault, in real Chrome on a real live server (no Claude runs)."""
+
+    @needs("268")
+    @calls((MV2, ["test_01_three_states_their_defaults_clearing_and_the_summary"], MV),
+           (MOPS, ["TrackJs.test_the_defaults_follow_the_plan"], MV))
+    def test_c83_the_track_column(self):
+        """83. Every table's first column is Track: tick registers a work item, cross removes the line, neither keeps it in the minutes
+        untracked; actions and issues start ticked, decisions and risks neither; a pressed button clears; the bar says "n work items
+        to register · n kept in the minutes only · n removed"; the choice survives a reload."""
+
+    @needs("268")
+    @calls((MV2, ["test_02_aligned_tables_one_heading_per_column", "test_03_inline_edit_saves_on_enter_and_esc_puts_it_back",
+                  "test_04_owner_priority_and_workstream_dropdowns_in_the_row",
+                  "test_05_due_opens_the_deadline_popover_with_words_quick_picks_and_a_calendar"], MV),
+           (MOPS, ["RaidWorkstream"], MV))
+    def test_c84_aligned_tables_and_editing_in_place(self):
+        """84. One heading per column (Track, the item, Owner, and Due, Priority, Workstream where they apply); the words and the
+        summary are edited where they stand (Enter or a click away saves, Esc puts them back); Owner, Priority and Workstream are
+        drop-downs in the row (a risk takes only the project's own workstreams); Due opens the deadline box."""
+
+    @needs("268")
+    @calls((MV2, ["test_06_hover_lights_both_ways",
+                  "test_07_the_transcript_choice_rescales_survives_a_reload_and_applies_to_another_meeting",
+                  "test_08_the_header_slims_on_scroll_and_shows_the_title", "test_09_ctrl_wheel_zooms_from_50_to_250_and_the_buttons_stay",
+                  "test_09b_fit_to_width_stops_at_100_and_centres_the_page_and_zoom_still_goes_past",
+                  "test_16_the_full_template_on_one_continuous_sheet_with_a_thin_page_marker",
+                  "test_16b_the_page_marker_never_crosses_a_row_or_a_line", "test_17_section_headings_with_their_counts_beside_them"], MV))
+    def test_c85_the_transcript_and_the_sheet(self):
+        """85. Hovering a row lights its transcript turn and a turn its rows; hiding the transcript widens the page and is remembered
+        (after a reload and for another meeting); the header slims on scroll with the title; zoom 50% to 250%, fitted to the width
+        but never past 100%; one continuous sheet with a thin page marker that never crosses a row; headings carry their counts."""
+
+    @needs("268")
+    @calls((MV2, ["test_10_one_version_icon_tools_and_the_export_menu"], MV), (MOPS, ["TrackChoicesReachOutputs"], MV))
+    def test_c86_one_version_and_export(self):
+        """86. One version only (no Internal + distributed switch); the bar's tools are icon buttons; Export has Word, PDF, HTML and
+        Draft the follow-up email; a crossed line is left out of the follow-up and the exports, and a kept line is marked."""
+
+    @needs("268")
+    @calls((MV2, ["test_11_approve_with_a_problem_asks_first_then_registers_the_ticked_items",
+                  "test_12_approve_with_no_problem_is_one_click_and_a_cross_removes_the_line",
+                  "test_13_approve_with_nothing_ticked_files_the_minutes_with_no_items"], MV),
+           (MOPS, ["TrackOps", "RowlessPromise", "TrackJs.test_neither_on_an_update_decided_one_by_one_leaves_it_in_review",
+                   "TrackJs.test_a_ticked_closure_is_approved_with_the_minutes",
+                   "TrackJs.test_a_kept_line_ticked_is_restored_and_crossed_is_restored_then_removed"], MV))
+    def test_c87_approve_minutes_is_one_click(self):
+        """87. Approve minutes is one click: "Before approving" only when a ticked item has a real problem (needs details, a possible
+        duplicate); "Minutes approved · n work items registered" with Undo; nothing ticked files the minutes with no items (#261);
+        Approve, Undo, Approve again gives the same result and nothing leaks to Review."""
+
+    @needs("268")
+    @calls((MV2, ["test_14_at_1400_one_row_at_900_two_and_the_transcript_beside_the_sheet",
+                  "test_18_dark_theme_the_white_paper_keeps_light_state_colours", "test_19_a_sensitive_item_shows_a_read_only_tag",
+                  "test_15_esc_on_ai_keeps_the_words_and_re_extract_keeps_unsent_ask_text"], MV))
+    def test_c88_widths_dark_and_the_small_things(self):
+        """88. At 1400 px the bar is one row and at 900 px two, with the transcript beside the sheet; in dark the paper stays white with
+        light state colours; a sensitive item shows a read-only tag; Esc on AI keeps the words and Re-extract keeps unsent ask text."""
+
+    @phase2("judgement, by hand: the hand-check vault stages no minutes; open any drafted minutes (test_minutes_view_v2's fixture or "
+            "a demo transcript processed in Intake) at 1400 and 900 px, light and dark")
+    def test_c89_the_minutes_view_look(self):
+        """89. The minutes view reads as one page: the Track column, the aligned tables, the icon bar and the transcript beside the
+        sheet, light and dark, 1400 and 900 px (judgement)."""
+
+
+# ══ #275 Track from Review ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+TR = "v26-track-from-review"
+MTR = "test_minutes_track_review"
+
+
+class TrackReview275(V260Case):
+    """Checks 90 to 92: approving minutes from Review follows the Track column (the builder's tests, called)."""
+
+    @needs("268", "275")
+    @calls((MTR, ["test_01_approve_from_review_applies_the_track_column_and_undo_puts_the_minutes_back",
+                  "test_02_approve_all_from_these_minutes_applies_the_track_column_too"], TR))
+    def test_c90_approve_from_review_follows_the_track_column(self):
+        """90. Approve on the minutes in Review, and Approve all from these minutes, do what Approve minutes does: the ticked item is
+        registered, the crossed one leaves the minutes, neither stays in the minutes untracked; Undo puts the apply and the minutes
+        back exactly."""
+
+    @needs("268", "275")
+    @calls((MTR, ["test_03_a_ticked_item_worth_a_look_opens_the_minutes_with_the_before_approving_box",
+                  "test_04_the_bulk_paths_never_register_a_crossed_or_neither_row",
+                  "test_05_undo_of_approve_n_routine_puts_the_crosses_back_too", "TwoProjects", "RowlessPromiseFromReview"], TR))
+    def test_c91_the_bulk_paths_and_the_edges(self):
+        """91. A ticked item worth a look opens the minutes with the Before approving box; Approve routine, the bar's Approve and the
+        group tick never register a crossed or neither row; Undo of Approve n routine puts the crosses back; under one project of
+        minutes covering several only its ticked items are registered; a promise (no row) waits in Review."""
+
+    @needs("275")
+    @calls((MTR, ["ServerTrack"], TR))
+    def test_c92_the_server_honours_the_track_column(self):
+        """92. review.py approve (the minutes or an item) and review.py bulk honour the Track column on the server; approve_minutes never
+        registers a crossed item whatever it is sent; tracker.py apply refuses a crossed item approved by hand."""
+
+
+# ══ #264 and #265: Intake's Process and Refresh as their own jobs ══════════════════════════════════════════════════════════════════
+
+IJ = "v253-release (#264, #265)"
+
+
+class IntakeJobs(V260Case):
+    """Checks 93 and 94 (95 is live only). Both landed in 2.5.3 (dev/tests/handchecks/test_v253.py drives them on a stand-in Claude); here
+    the builders' tests are called so the 2.6 line is proved to keep them."""
+
+    @needs("264")
+    @calls(("test_intake_process", ["Helpers", "Fence", "ThroughTheServer"], IJ), ("test_intake_process_round2", ["Round2", "Queue",
+           "ProcessSelectedMeetings"], IJ), ("test_intake_process_ui", ["IntakeProcessPage"], IJ))
+    def test_c93_process_is_its_own_job(self):
+        """93. Intake's Process runs as its own job (progress and Stop on the row, one run at a time): the ticked files end in Review
+        with no go-ahead, a question goes on its row and ask creaite opens only when asked (or when a transcript has to be loaded);
+        the route takes only Intake files; the run stages only its own files and never touches the record."""
+
+    @needs("265")
+    @calls(("test_calendar_refresh", ["Helpers", "Fence", "ThroughTheServer", "SweepCalendarSave"], IJ),
+           ("test_calendar_refresh_ui", ["CalendarRefreshPage"], IJ), ("test_calendar_sanitise", ["BodyAndFields", "Timing", "Sensitivity",
+                                                                                                "SavedCalendar"], IJ))
+    def test_c94_refresh_is_its_own_job(self):
+        """94. Calendar import's Refresh reads the calendar as its own job (Stop while it works, "Calendar read…" after) and saves the
+        calendar and nothing else; only the page's own request, one at a time and never during a sweep; the saved calendar keeps no
+        join link, meeting key or PIN, and a confidential meeting keeps only its title and times; a bad reply never wipes it."""
+
+
+# ══ #255 Delete note with no card ════════════════════════════════════════════════════════════════════════════════════════════════
+
+DN = "v253-release (#255)"
+DNC = "test_delete_note_no_card"
+
+
+class DeleteNote255(V260Case):
+    """Check 96, in a vault of its own (it moves a note and puts it back); 97 calls the builder's tests."""
+    own_vault = True
+
+    @needs("255")
+    def test_c96_delete_note_moves_it_at_once_and_undo_brings_it_back(self):
+        """96. Notes › a note's ⋯ › Delete note…, then Delete note in the box: the note moves into the project's archive folder at once,
+        with no approval card and ask creaite shut; one files-log line; Undo brings back the same bytes and file date."""
+        b, title = self.b, "Hand check delete"
+        b.eval("go('notes','FAL')")
+        b.wait("!!document.getElementById('notesNew')", 15)
+        b.click("#notesNew")
+        b.wait("document.getElementById('newNoteDlg').open")
+        b.eval(f"(()=>{{ const i=document.getElementById('nnTitle'); i.value={json.dumps(title)}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+        b.eval("document.querySelector('#newNoteDlg input[value=\"blank\"]').click()")
+        b.click("#nnMake")
+        b.wait(f"noteCur.value&&noteCur.value.note.title==={json.dumps(title)}&&!!document.querySelector('.nbody.ProseMirror')", 15)
+        b.eval("noteFlush()")
+        b.wait("noteSave.value.state==='saved'", 15)
+        notes = next(p for p in (self.vault / "projects").iterdir() if p.name.startswith("FAL "))
+        f = notes / "notes" / f"{title}.md"
+        self.assertTrue(f.is_file(), "premise: the note is on disk")
+        before, mtime = f.read_bytes(), f.stat().st_mtime_ns
+        b.click(".nmorewrap .nmore")
+        b.wait("!!document.querySelector('.nmorewrap [role=menu] .bad')")
+        b.click(".nmorewrap [role=menu] .bad")
+        b.wait("document.getElementById('noteDelDlg').open")
+        b.click("#ndelGo")
+        b.wait("document.querySelector('.snack') && document.querySelector('.snack').textContent.includes('archive')", 20)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#chLog .edcard')].length"), 0, "no approval card")
+        self.assertFalse(b.eval("document.getElementById('chat').classList.contains('on')"), "ask creaite stays shut")
+        self.assertFalse(f.exists(), "the note left its folder")
+        moved = [x for x in (notes / "99 Archive").rglob(f"{title}*.md")] if (notes / "99 Archive").exists() else []
+        self.assertEqual(len(moved), 1, "the note is in the project's 99 Archive")
+        log = self.vault / "system/config/files-log.jsonl"
+        lines = [ln for ln in log.read_text(encoding="utf-8").splitlines() if title in ln and "note-archive" in ln] if log.exists() else []
+        self.assertEqual(len(lines), 1, "one files-log line for the delete")
+        b.eval("[...document.querySelectorAll('.snack button')].find(x=>/Undo/.test(x.textContent)).click()")
+        for _ in range(150):
+            if f.exists():
+                break
+            b.pump(0.1)
+        self.assertTrue(f.exists(), "Undo puts the note back")
+        self.assertEqual((f.read_bytes(), f.stat().st_mtime_ns), (before, mtime), "the same bytes and file date")
+        self.note(96, "moved at once into 99 Archive, no card; Undo gave back the same bytes and date")
+
+    @needs("255")
+    @calls((DNC, ["DeleteNoteNoCard", "Mutations"], DN))
+    def test_c97_only_the_page_can_and_only_one_note(self):
+        """97. Only the page's own call moves a note (not without the token, another Host, or a hand-staged proposal); ask creaite can't
+        move, delete, stage or card one; a note changed since it was shown is refused; a taken name gets -2; Move back is direct; a
+        report's Move back and a project's archive keep their card; any other shape (a folder, two files, a symlink, .., another case
+        or Unicode form, a line break, a linked archive) is refused; every safeguard's mutant goes red."""
+
+
+# ══ Help: the 2.6 items in plain words ═══════════════════════════════════════════════════════════════════════════════════════════
+
+HT = "v26-help-text"
+HELP_WORDS = {                     # the item: words Help must have once it is in the vault (the ** of bold taken out)
+    "246": ["Tabs: Essentials"], "247": ["one scrolling page", "Archive and close"], "248": ["Everyone", "needs details"],
+    "241": ["S / O / P / T", "Compact"], "183": ["Create drafts in Outlook", "Create draft in Outlook"],
+    "250": ["Fetch transcripts as they appear"], "97": ["Pause alert checks overnight", "Pause alert checks on weekend days"],
+    "268": ["keeps it in the minutes without tracking it", "Approve minutes"], "275": ["Approving from Review does the same"],
+    "255": ["with no approval card"], "252": ["99 Archive"],
+}
+HELP_STALE = ["Settings › Health and warnings", "Settings › Health › Advanced", "Settings › Review's number", "makes an Outlook draft"]
+
+
+class Help26(V260Case):
+    """Checks 98 and 99. Reads only."""
+
+    @needs("help")
+    def test_c98_help_explains_each_26_item(self):
+        """98. Help explains each 2.6 item that is in the release in plain words, where a person would look, and the old places are
+        gone (Settings paths, "makes an Outlook draft")."""
+        text = (self.vault / "system/templates/help.md").read_text(encoding="utf-8").replace("**", "")
+        present = [i for i in HELP_WORDS if i in FEATURES and has(i, self.vault, False)]
+        missing = [(i, w) for i in present for w in HELP_WORDS[i] if w not in text]
+        self.assertEqual(missing, [], "Help lacks the words for an item in this release")
+        stale = [w for w in HELP_STALE if w in text]
+        self.assertEqual(stale, [], "Help still names an old place")
+        self.note(98, f"words for {len(present)} items ({', '.join('#' + i for i in present)}) found")
+        self.called(98, ("test_help", ["test_the_26_items_are_explained"], HT))
+
+    @needs("help")
+    def test_c99_help_look(self):
+        """99. Help's 2.6 lines read plainly, in British English, light and dark, 1400 and 900 px (judgement)."""
+        k = self.sheet(99, "help", widths=(1400, 900))
+        self.note(99, f"{k} screenshots")
 
 
 if __name__ == "__main__":
