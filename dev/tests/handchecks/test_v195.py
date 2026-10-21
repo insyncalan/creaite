@@ -2118,7 +2118,11 @@ class Bl334And316(HandcheckCase):
                 missing.append(f"{name} for its openers ({str(e).splitlines()[0][:60]})")
         for screen, script, sig, area, _how, label in tsb.SharedBehaviour.KEYED:
             if screen in shown:
-                bad = getattr(d, script)()
+                try:
+                    bad = getattr(d, script)()
+                except (TimeoutError, RuntimeError) as e:     # a state the demo vault doesn't have: noted, as a screen is
+                    missing.append(f"{script} ({str(e).splitlines()[0][:60]})")
+                    continue
                 if bad:
                     keys.add((area, f"keys: {sig} “{label}”: {'; '.join(bad)}"))
         n_undo = 0

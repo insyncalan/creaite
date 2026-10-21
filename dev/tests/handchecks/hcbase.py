@@ -275,6 +275,11 @@ def behaviour_driver(case, screens):
                                                           tsb.SharedBehaviour.escape, tsb.SharedBehaviour.tab_closes,
                                                           tsb.SharedBehaviour.drive, tsb.SharedBehaviour.cmdk)
         pick = tsu.SharedUndo.pick
+        # the dialog scripts no control opens (KEYED) and their helpers, as that test has them; parch is this vault's own, below
+        ndel, mnapp, crleft, rail, boardask, llcompare, searchprev, railcust = (
+            tsb.SharedBehaviour.ndel, tsb.SharedBehaviour.mnapp, tsb.SharedBehaviour.crleft, tsb.SharedBehaviour.rail,
+            tsb.SharedBehaviour.boardask, tsb.SharedBehaviour.llcompare, tsb.SharedBehaviour.searchprev, tsb.SharedBehaviour.railcust)
+        enter_on, dialog_keys, tidy = tsb.SharedBehaviour.enter_on, tsb.SharedBehaviour.dialog_keys, tsb.SharedBehaviour.tidy
 
         def __init__(self):
             self.b, self.seen = case.b, []
