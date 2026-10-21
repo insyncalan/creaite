@@ -115,19 +115,45 @@ import minutes_spec  # noqa: E402  (#269: what stage accepts as a meeting spec)
 
 RAID_HEADING = "Risks, Issues, Assumptions & Dependencies"
 RAID_TYPES = ("Risk", "Issue", "Assumption", "Dependency")
-SECTIONS = {"actions": "Action Items", "decisions": "Decisions", "raid": RAID_HEADING, "promises": "Promises"}
+SECTIONS = {"actions": "Actions", "decisions": "Decisions", "raid": RAID_HEADING, "promises": "Promises"}
+# #296: an item's source note names its section as "— Actions" (it said "— Action Items" before 2.6.0). Notes already in the
+# tracker and in staging keep the old words (no migration), so every read accepts both, and a spec's old words are written new.
+LEGACY_SECTIONS = {"Action Items": "Actions"}
+ACTION_HEADINGS = ("Action Items", "Actions")       # the minutes' own actions heading: the template's, and the shorter one
+
+
+def section_name(section):
+    """The section as a source note writes it: an older name ("Action Items") becomes today's ("Actions")."""
+    section = str(section or "").strip()
+    return LEGACY_SECTIONS.get(section, section)
+
+
+def source_words(source):
+    """A whole source note with its section in today's words ("… .html — Action Items" → "… .html — Actions")."""
+    head, sep, tail = str(source or "").partition(" — ")
+    return f"{head}{sep}{section_name(tail)}" if sep else str(source or "")
+
+
+def source_section(source):
+    """Which section a file source note names ("actions", "decisions", "raid", "promises"), from the old words or the new;
+    None when it names none of them."""
+    if " — " not in str(source or ""):
+        return None
+    name = section_name(str(source).split(" — ", 1)[1])
+    return next((sid for sid, heading in SECTIONS.items() if heading == name), None)
 RAISED_TABLES = ("actions", "raid", "promises")         # dated by `raised` (the meeting's date); decisions by `date`
 ATTRIBUTION = r" — (?:proposed|raised|agreed|owner)\b"
 
 
 def _section(lines, start, end):
-    try:
-        i = lines.index(start)
-    except ValueError:
+    """The non-empty lines between a heading and the next; either may be given as several names (#296: old or new words)."""
+    starts, ends = (start,) if isinstance(start, str) else tuple(start), (end,) if isinstance(end, str) else tuple(end)
+    i = next((n for n, line in enumerate(lines) if line in starts), None)
+    if i is None:
         return []
     out = []
     for line in lines[i + 1:]:
-        if line == end:
+        if line in ends:
             break
         if line.strip() and line.strip() != docx_tools.NONE:
             out.append(line.strip())
@@ -140,7 +166,7 @@ def parse_draft(path):
     xml = next(raw.decode("utf-8") for info, raw in parts if info.filename == "word/document.xml")
     lines = docx_tools.story_text(docx_tools.accept_xml(xml)[0]).splitlines()
     actions = []
-    for line in _section(lines, "Action Items", "Open Questions / Escalations"):
+    for line in _section(lines, ACTION_HEADINGS, "Open Questions / Escalations"):
         cells = [c.strip() for c in line.split("|")]
         if len(cells) >= 3 and cells[0] != "Owner" and docx_tools.NONE not in cells[:2]:
             due = cells[2]
@@ -152,7 +178,7 @@ def parse_draft(path):
     decisions = [re.split(ATTRIBUTION, d, maxsplit=1)[0].strip()
                  for d in _section(lines, "Decisions", RAID_HEADING)]
     raid = []
-    for line in _section(lines, RAID_HEADING, "Action Items"):
+    for line in _section(lines, RAID_HEADING, ACTION_HEADINGS):
         text = re.split(ATTRIBUTION, line, maxsplit=1)[0].strip()
         m = re.match(r"(Risk|Issue|Assumption|Dependency)\s*[:—-]\s*(.+)$", text, re.I)
         raid.append({"type": m.group(1).capitalize() if m else None, "text": m.group(2).strip() if m else text})
@@ -903,11 +929,11 @@ class Staging:
         """Where an item came from: the note, the filed minutes, or the filed transcript, and the section. A promise cites the
         transcript when there is one: it was said in passing, so it isn't in the minutes (BL-125 A)."""
         if self.by_others:                              # #232 E1: the filed copy of their minutes
-            return f"{self.copies[project]} — {section or SECTIONS.get(table, RAID_HEADING)}"
+            return f"{self.copies[project]} — {section_name(section) or SECTIONS.get(table, RAID_HEADING)}"
         cite_minutes = self.spec.get("draft") and not (table == "promises" and self.ext)
         where = self.note or ((self.copies.get(project) or f"{self.folders[project][0]}/{self.name}.docx") if cite_minutes else
                               self.tcopies.get(project) or f"{self.folders[project][1]}/{self.name}{self.ext}")
-        return f"{where} — {section or SECTIONS.get(table, RAID_HEADING)}"
+        return f"{where} — {section_name(section) or SECTIONS.get(table, RAID_HEADING)}"
 
     def stage_update(self, table, row, changes, why, source):
         """One update item for an open item; two for the same item in one meeting are merged."""
@@ -946,7 +972,7 @@ class Staging:
             self.notes.append(f"no change to {item_id} (already as the meeting left it); logged as discussed")
             return
         self.stage_update(table, row, changes, raw.get("why"),
-                          raw.get("source") or self.source_for(row["project"], raw.get("section") or "Updates", table))
+                          source_words(raw.get("source")) or self.source_for(row["project"], raw.get("section") or "Updates", table))
 
     def new_values(self, raw, table):
         """The new item's values with the meeting's defaults and its source."""

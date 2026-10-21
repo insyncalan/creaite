@@ -74,7 +74,7 @@ class StageTests(Base):
         self.stage()
         items = self.staged()["items"]
         self.assertEqual([i["values"]["source"] for i in items],
-                         [f"{FILED} — Action Items", f"{FILED} — Decisions"])
+                         [f"{FILED} — Actions", f"{FILED} — Decisions"])
         self.assertTrue(all(i["decision"] == "pending" for i in items))             # nothing is approved by staging
 
     def test_the_file_ops_copy_the_file_and_remove_the_inbox_copy(self):
@@ -420,7 +420,7 @@ class ApplyTests(Base):
         self.assertFalse((self.v.root / FILE).exists())
         self.assertEqual([a["description"] for a in self.v.rows("actions")], ["Send the SOW to the client"])
         self.assertEqual([d["decision"] for d in self.v.rows("decisions")], ["The pilot starts on 2 November"])
-        self.assertEqual(self.v.rows("actions")[0]["source"], f"{FILED} — Action Items")
+        self.assertEqual(self.v.rows("actions")[0]["source"], f"{FILED} — Actions")
         self.assertIn(FILED, self.processed())
 
     def test_a_rerun_says_already_processed(self):

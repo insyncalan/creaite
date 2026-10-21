@@ -221,7 +221,7 @@ class MeetingFlowTests(unittest.TestCase):
                       m["file_ops"])
         self.assertIn({"op": "remove", "path": self.transcript}, m["file_ops"])
         self.assertEqual(data["items"][0]["values"]["source"],
-                         f"{ABC}/minutes/2026-10-01 Steering committee.docx — Action Items")
+                         f"{ABC}/minutes/2026-10-01 Steering committee.docx — Actions")
         self.assertEqual(data["items"][0]["values"]["raised"], DAY)
         self.assertTrue(all(i["decision"] == "pending" for i in data["items"]))
 
@@ -275,7 +275,7 @@ class MeetingFlowTests(unittest.TestCase):
         self.v.run("apply")
         self.assertFalse((self.v.root / ABC / "minutes/2026-10-01 Steering committee.docx").exists())
         self.assertEqual(self.v.rows("actions")[0]["source"],
-                         f"{ABC}/transcripts/2026-10-01 Steering committee.vtt — Action Items")
+                         f"{ABC}/transcripts/2026-10-01 Steering committee.vtt — Actions")
 
     def test_rejected_and_duplicate_items_not_proposed_again(self):
         self.review("list")
@@ -336,7 +336,7 @@ class RecordFlowTests(unittest.TestCase):
         self.assertIn("Approved by Alan on", text)
         self.assertIn('"state": "approved"', text)
         self.assertIn("ABC-A-001", text)
-        self.assertEqual(self.v.rows("actions")[0]["source"], f"{ABC}/minutes/2026-10-01 Steering committee.html — Action Items")
+        self.assertEqual(self.v.rows("actions")[0]["source"], f"{ABC}/minutes/2026-10-01 Steering committee.html — Actions")
         self.assertTrue((self.v.root / ABC / "transcripts/2026-10-01 Steering committee.vtt").exists())
         self.assertFalse((self.v.root / ABC / "minutes/2026-10-01 Steering committee.docx").exists())
 
@@ -347,7 +347,7 @@ class RecordFlowTests(unittest.TestCase):
         self.v.run("apply")
         self.assertFalse((self.v.root / ABC / "minutes/2026-10-01 Steering committee.html").exists())
         self.assertEqual(self.v.rows("actions")[0]["source"],
-                         f"{ABC}/transcripts/2026-10-01 Steering committee.vtt — Action Items")
+                         f"{ABC}/transcripts/2026-10-01 Steering committee.vtt — Actions")
 
     def test_re_extract_is_retired_for_a_record(self):
         prop = next((self.v.root / "system/staging").glob("proposed-*.json")).name

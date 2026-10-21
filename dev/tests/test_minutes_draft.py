@@ -193,7 +193,7 @@ LIVE_OPS = {**LIVE, "file_ops": [{"op": "copy", "from": "transcript", "to": TCOP
                                  {"op": "remove", "path": "inbox/catch-up.vtt"}]}
 ACTION = {"n": 1, "op": "new", "table": "actions", "decision": "approved", "match": "strong",
           "values": {"project": "ABC", "description": "Send the SOW", "owner": "Omar Ali",
-                     "source": f"{ABC}/minutes/2026-10-12 Catch up.docx — Action Items"}}
+                     "source": f"{ABC}/minutes/2026-10-12 Catch up.docx — Actions"}}
 
 
 class ApproveRefusedTests(Base):

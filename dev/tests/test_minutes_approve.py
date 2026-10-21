@@ -151,7 +151,7 @@ class Approve(Base):
         self.assertEqual(acts["ABC-A-002"]["status"], "Closed")
         self.assertEqual(acts["ABC-A-004"]["description"], "Book the UAT environment")
         self.assertEqual(acts["ABC-A-004"]["due_date"], "2026-10-16")
-        self.assertEqual(acts["ABC-A-004"]["source"], f"{FILED} — Action Items")
+        self.assertEqual(acts["ABC-A-004"]["source"], f"{FILED} — Actions")
         self.assertEqual(raid["ABC-005"]["type"], "Issue")
         self.assertEqual(decs["ABC-D-006"]["decision"], "Go-live stays on 20 November")
         self.assertEqual(decs["ABC-D-003"]["status"], "Pending")                # not ticked: waits
