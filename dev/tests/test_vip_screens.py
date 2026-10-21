@@ -791,5 +791,72 @@ class ThreadCardPromise(LiveBrowserCase):
                           for p in a.get("promises") or []], ["dismissed"])
 
 
+CHATTER = {"kind": "teams", "conversation": "19:chatter@thread.v2", "title": "Morning chat", "from": SARA, "people": [SARA, OMAR],
+           "last": f"{TODAY} 07:10", "link": "https://teams.microsoft.com/l/chat/19:chatter", "sensitivity": "normal",
+           "summary": "Greetings.", "items": []}
+
+
+def quiet_vault(v):
+    """The thread vault with one more conversation of chatter (a "nothing for you" line) beside the answered one."""
+    thread_vault(v)
+    f = v.root / "system/staging/drafts/chatter.json"
+    f.write_text(json.dumps([CHATTER]))
+    run(v, "sweep.py", "vip", "record", str(f), "--found", "check", now=f"{TODAY} 12:01")
+    run(v, "build_dashboard.py")
+
+
+class QuietLineSeen(LiveBrowserCase):
+    """#276: the quiet lines (you replied, nothing for you) each have Seen, named on hover and to screen readers; Seen clears
+    the line at once, is kept in vip.json (so a reload and the next check keep it gone) and Undo brings it back."""
+
+    @classmethod
+    def load(cls, v):
+        quiet_vault(v)
+
+    def quiet(self):
+        return self.b.eval("""(()=>{ go('today'); EXPAND.add('td'); renderToday();
+          return [...document.querySelectorAll('#tdList>li.td-quiet')].map(l=>({id:l.dataset.td.slice(2), t:l.querySelector('.t').textContent,
+            btn:(b=>b&&[b.dataset.alertdo,b.getAttribute('aria-label'),b.dataset.tip])(l.querySelector('.tacts button'))})); })()""")
+
+    def seen_in_file(self, aid):
+        st = json.loads((self.v.root / "system/staging/vip.json").read_text())
+        return next(a for a in st["alerts"] if a["id"] == aid).get("seen")
+
+    def test_both_quiet_lines_have_seen(self):
+        rows = self.quiet()
+        self.assertTrue(any("you replied" in r["t"] for r in rows), rows)
+        self.assertTrue(any("nothing for you" in r["t"] for r in rows), rows)
+        for r in rows:
+            with self.subTest(r["t"]):
+                self.assertIsNotNone(r["btn"], "no Seen button")
+                self.assertEqual(r["btn"][0], "seen")
+                self.assertTrue(r["btn"][1].startswith("Seen: Sara Example"), r["btn"])
+                self.assertEqual(r["btn"][2], "Seen")
+        self.assertIsNone(says_vip(self.b.eval("document.getElementById('tdList').outerHTML")))
+
+    def test_seen_clears_the_replied_line_and_undo_brings_it_back(self):
+        b = self.b
+        aid = next(r["id"] for r in self.quiet() if "you replied" in r["t"])
+        b.click(f'#tdList [data-alertdo="seen"][data-id="{aid}"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"]')", timeout=5)
+        self.assertEqual(b.eval("document.getElementById('snackT').textContent"), "Marked seen")
+        self.assertTrue(self.seen_in_file(aid))                                   # kept: a reload and the next check keep it gone
+        b.eval("window.__polled=false; vipPoll().then(()=>{ window.__polled=true; })")
+        b.wait("window.__polled", timeout=5)
+        self.assertNotIn(aid, [r["id"] for r in self.quiet()])
+        b.click("#snackU")
+        b.wait(f"document.querySelector('#tdList li[data-td=\"al{aid}\"]')", timeout=5)
+        self.assertFalse(self.seen_in_file(aid))
+        st = json.loads((self.v.root / "system/staging/vip.json").read_text())
+        self.assertEqual(next(a for a in st["alerts"] if a["id"] == aid)["state"], "replied")   # still a quiet line, not a card
+
+    def test_seen_clears_the_nothing_for_you_line(self):
+        b = self.b
+        aid = next(r["id"] for r in self.quiet() if "nothing for you" in r["t"])
+        b.click(f'#tdList [data-alertdo="seen"][data-id="{aid}"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"]')", timeout=5)
+        self.assertTrue(self.seen_in_file(aid))
+
+
 if __name__ == "__main__":
     unittest.main()

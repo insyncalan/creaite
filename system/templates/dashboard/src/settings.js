@@ -662,6 +662,14 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   await vipPoll(); vipBadge(); renderToday(); back();   /* BL-342 N1: the server's counts for the other cards on the same item */
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
     if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Messages"); }); }
+/* #276: Seen on a quiet line (nothing for you, or you replied): marked seen (/api/vip/seen), so it stays gone after a reload and
+   the next check; a later message that asks something brings the card back. Undo puts the line back. */
+export async function alertSeen(id){ if(!viaServer()){ snack("Seen needs the live server"); return; }
+  const r=await api("/api/vip/seen",{ids:[id]}); if(!r.ok){ snack(r.message||"Not marked seen"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"seen");
+  if(a) a.seen=r.at||nowStamp(); await vipPoll(); vipBadge(); renderToday(); back();
+  snack("Marked seen",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
+    if(a) delete a.seen; VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Messages"); }); }
 /* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
 export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
   const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
@@ -799,7 +807,7 @@ export function vipSectionHtml(){ const v=VIPD();
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
-  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
+  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="seen") alertSeen(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
   else if(b.dataset.alertdo==="close") alertClose(b.dataset.id,false); else if(b.dataset.alertdo==="closeundo") alertClose(b.dataset.id,true);
   else if(PROMISEDO[b.dataset.alertdo||""]){ const [w,u]=PROMISEDO[b.dataset.alertdo||""]; alertPromise(b.dataset.id,w,b.dataset.pkey||"",u); }   /* BL-342 Part 5 */
   else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
