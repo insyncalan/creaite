@@ -19,7 +19,7 @@ Reply per check with **pass**, or **fail + what you saw** (a screenshot helps). 
 - **27** (Outlook, 10 min, after release). Turn on Create drafts in Outlook. Draft a chase that has an overdue date, a table and a project heading, then open it in Outlook. Good: overdue in red, table and heading survive, subject and body match the Copy version; a person with no email still gets a draft with nothing in To. Fail: lost colours or table, or body differs from Copy.
 - **39** (Settings › Essentials, 5 min). Press Check on the Outlook access row with a mailbox that can write drafts, then one that cannot. Good: "You can create drafts in Outlook" for the first; "drafts stay copy and paste" and the setting turns off for the second. Fail: a wrong answer for either.
 - **63** (Intake after a sweep, 5 min plus the wait). With Fetch transcripts as they appear on (Settings › Sweep and Intake), run a real sweep. Good: a real ended meeting's transcript is fetched once and Intake shows Transcript ready. Fail: none fetched, fetched twice, or a confidential meeting fetched.
-- **82** (Health › Rename, files in OneDrive, 5 min, with you). Rename the real company OneDrive archive folder to 99 Archive once, from the card in Health. Good: other people's files inside are untouched and still there; Files and search find them. Fail: anything missing, or a second rename offered.
+- **82** (your real OneDrive, then Files and Health, 5 min, with you). Health has no rename card (dropped on 20-10, #252): rename the real company OneDrive archive folder (`_Archive` or `zz Archive`) to `99 Archive` yourself, in Finder or OneDrive, once. Good: other people's files inside are untouched and still there; Files lists and opens them, search finds them, Move back works on an archived item, and Health offers no rename. Fail: anything missing, a Move back that cannot find its folder, or a rename offered anywhere.
 - **95** (Intake, 8 min). Process a real Teams transcript, then Refresh your real calendar. Good: progress and Stop show on the row, the draft lands in Review, the meetings appear, and the saved calendar holds no join link or passcode. Fail: no progress or Stop, or a link or passcode saved.
 
 ## Results
@@ -37,5 +37,5 @@ Reply per check with **pass**, or **fail + what you saw** (a screenshot helps). 
 | 27 | Live Outlook draft | [ ] pass  [ ] fail | |
 | 39 | Outlook access Check, real mailbox | [ ] pass  [ ] fail | |
 | 63 | Real sweep fetches a transcript | [ ] pass  [ ] fail | |
-| 82 | OneDrive folder renamed to 99 Archive | [ ] pass  [ ] fail | |
+| 82 | OneDrive folder renamed by hand to 99 Archive | [ ] pass  [ ] fail | |
 | 95 | Real Process and calendar Refresh | [ ] pass  [ ] fail | |
