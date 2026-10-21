@@ -1,5 +1,5 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index e8777877..1c8e5f85 100644
+index e8777877..a923e885 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
 @@ -669,14 +669,17 @@ def marked_sessions():
@@ -38,7 +38,7 @@ index e8777877..1c8e5f85 100644
  def process_reach_problem(tool, inp):
      """Why a Process run may not read where this call reads, or None (#264 round 2, review L3): Read, Grep, Glob, LS and a
      script's path arguments stay in the vault and the projects folder, never the home folder's other files. Fails closed."""
-@@ -2167,6 +2179,9 @@ def _runs_proposals():
+@@ -2167,32 +2179,77 @@ def _runs_proposals():
              continue
          if isinstance(m, dict) and isinstance(m.get("transcript"), str) and m["transcript"] in files:
              out.append((Path(os.path.realpath(p)), m))
@@ -48,19 +48,60 @@ index e8777877..1c8e5f85 100644
      return out
  
  
-@@ -2180,6 +2195,11 @@ def _process_stage_problem(words):
-         data = json.loads(spec.read_text(encoding="utf-8"))
-     except (OSError, ValueError):
-         return "the meeting spec can't be read"
+ def _process_stage_problem(words):
+     """Why `minutes.py stage` is refused in a Process run, or None: a spec in drafts for one of the run's files, no note, and a
+-    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes)."""
++    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes). #232
++    E1: a spec with "as" is someone else's minutes (_process_minutes_stage_problem)."""
++    data, why = _process_stage_spec(words)
++    if why:
++        return why
 +    if isinstance(data, dict) and "as" in data:          # #232 E1: someone else's minutes (Find work items)
 +        return _process_minutes_stage_problem(data)
++    return _process_transcript_stage_problem(data)
++
++
++def _process_stage_spec(words):
++    """(the meeting spec `minutes.py stage` names, None) when it is a .json directly in drafts and can be read, else (None,
++    why)."""
+     spec = _in_drafts(words[1], ".json") if len(words) == 2 else None
+     if spec is None:
+-        return "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
++        return None, "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
+     try:
+-        data = json.loads(spec.read_text(encoding="utf-8"))
++        return json.loads(spec.read_text(encoding="utf-8")), None
+     except (OSError, ValueError):
+-        return "the meeting spec can't be read"
++        return None, "the meeting spec can't be read"
++
++
++def _process_transcript_stage_problem(data):
++    """Why a Process run's spec for a transcript is refused, or None: its "transcript" one of the run's files (never one Alan
++    pressed Find work items on, #232 E1), no note, and a Word draft only one this run filled (_process_draft_problem)."""
 +    if isinstance(data, dict) and isinstance(data.get("transcript"), str) and data["transcript"] in process_minutes_files():
 +        return ("Alan pressed Find work items on that file: it is someone else's minutes, staged with \"as\": \"minutes\" "
 +                "and \"file\", never as a transcript")
      if isinstance(data, dict) and not isinstance(data.get("transcript"), str):
          return "the meeting spec's \"transcript\" must be one of the Intake files Alan pressed Process on, as a path"
      if not isinstance(data, dict) or data.get("note") or data.get("transcript") not in process_files():
-@@ -2193,6 +2213,21 @@ def _process_stage_problem(words):
+         return ("Process stages only the Intake files Alan pressed Process on: the spec's \"transcript\" must be one of "
+                 "them, exactly as listed, and it can't stage a note")
+-    draft = data.get("draft")
+-    if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
++    return _process_draft_problem(data.get("draft"))
++
++
++def _process_draft_problem(draft):
++    """Why a spec's Word draft is refused in a Process run, or None: none, or a .docx directly in drafts that this run filled
++    (never another draft waiting in drafts, or a report)."""
++    if draft is None:
++        return None
++    if not isinstance(draft, str) or _in_drafts(draft, ".docx") is None:
+         return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
+-    if draft is not None and (not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx"))):
++    if not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx")):
+         return "a Word draft named in the spec must be one this run filled, never another draft waiting in drafts"
      return None
  
  
