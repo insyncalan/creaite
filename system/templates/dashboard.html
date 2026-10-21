@@ -2775,10 +2775,8 @@ a.seeall{margin-top:8px}
 .dcbtn.closed{color:var(--accent);border-color:var(--accent)}
 .dcbtn .dcdot{display:none;position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--warn);border:2px solid var(--surface)}
 .dcbtn.nudge .dcdot{display:block}
-.dhelp{position:absolute;right:64px;bottom:14px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--day-muted);font:500 var(--fs-md)/1 var(--font);display:grid;place-items:center;padding:0;cursor:pointer;opacity:.7}   /* #237 (Alan, 19-10-2026): Today's help, quiet, beside Close the day; no box under Needs attention */
-.dhelp:hover,.dhelp:focus-visible{opacity:1;color:var(--day-ink)} .dhelp:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .calfoot{text-align:right;font-size:var(--fs-xs);color:var(--faint);margin:24px 0 0} .calfoot .calold{color:var(--warn)}
-@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} .dhelp{right:56px} }
+@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} }
 @media (forced-colors: active){ .dcbtn .dcdot,.dcbtn.closed{forced-color-adjust:none} .dcbtn.closed{color:Highlight;border-color:Highlight} }
 /* ===== end BL-270 ===== */
 /* ===== BL-255: Settings › Diagnostics' error rows (was a <style> the page added at run time) ===== */
@@ -4166,7 +4164,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="dayband"><div class="bandin">
           <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
-        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button><button type="button" class="dhelp" data-thelp="1" aria-label="Help for Today" data-tip="Help for Today">?</button></div><!-- BL-270 -->
+        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270; #284: no ? button here, the ? key opens Help -->
         <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
@@ -6971,7 +6969,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toIso: () => toIso,
     toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
-    toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
@@ -42202,7 +42199,6 @@ ${s5}`;
     }
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("[data-refcal]")) refreshCalendar();
-      if (e4.target.closest("[data-thelp]")) toggleHelpPanel("today");
     });
   }
   var PEOPLE_MOVE = "setup: move the people still listed in settings.json into the people register";
@@ -61085,14 +61081,7 @@ ${d5.text}`);
     if (p6.contains(document.activeElement)) document.activeElement.blur();
     if (!noReturn && t47 && t47.isConnected) t47.focus();
   }
-  function toggleHelpPanel(key2) {
-    if (helpPanelOpen()) {
-      closeHelpPanel();
-      return true;
-    }
-    return openHelpPanel(key2);
-  }
-  var HELP_KEEP = "#helpPanel,[data-thelp],dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
+  var HELP_KEEP = "#helpPanel,dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
   var CONTROL = "a[href],button,input,select,textarea,[contenteditable=true],[contenteditable=''],[tabindex]:not([tabindex='-1'])";
   function helpOutsidePress(e4) {
     const t47 = (
