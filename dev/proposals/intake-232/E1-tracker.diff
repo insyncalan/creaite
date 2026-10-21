@@ -10,10 +10,12 @@ index fb5a714f..39b71db6 100644
  import subprocess
  import sys
  import threading
-@@ -1413,8 +1414,18 @@ def check_file_op(fop, blk):
+@@ -1413,10 +1414,20 @@ def check_file_op(fop, blk):
          src = op_source(fop, blk)
          if not src or not paths.resolve(src).is_file():
              raise Invalid(f"copy: source not found ({src})")
+         if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
+             raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
 -        safe_path(fop.get("to"), "copy")
 +        dst = safe_path(fop.get("to"), "copy")
 +        if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):      # #232 E1: said now, not halfway through an apply
