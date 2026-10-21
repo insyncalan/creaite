@@ -84,7 +84,7 @@ MUTATIONS = {
     "no-fold-staged": ("minutes.py", 'out[_fold(op["to"])] = ', 'out[op["to"]] = '),
     "no-where-check": ("minutes.py", "    why = _where_problem(file, p, real, in_inbox, projects)\n", "    why = None\n"),
     "no-odd-text": ("minutes.py", " or _odd_text(file)):", "):"),
-    "no-fifo-check": ("minutes.py", "        if stat.S_ISFIFO(os.lstat(p).st_mode) or stat.S_ISSOCK(os.lstat(p).st_mode):", "        if False:"),
+    "no-fifo-check": ("minutes.py", "    if _special_file(p):", "    if False:"),
     "no-pending-check": ("minutes.py", "    return why or _pending_problem(file)", "    return why"),
     "no-holding-check": ("minutes.py", "    taken = None if by_others(spec) else _by_others_holding(spec.get(\"transcript\"))", "    taken = None"),
 }

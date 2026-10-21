@@ -683,15 +683,21 @@ def _where_problem(file, p, real, in_inbox, projects):
     return f"Minutes file not acceptable: {why}." if why else None
 
 
+def _special_file(p):
+    """True when `p` is a pipe or a socket (looked at, never opened)."""
+    import stat
+    try:
+        mode = os.lstat(p).st_mode
+    except OSError:              # not there: the caller says "not found"
+        return False
+    return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
+
+
 def _file_problem(file, parts, projects):
     """file_problem's second half: the path is plain; where it points, and what it is."""
-    import stat
     p = paths.resolve(file)
-    try:
-        if stat.S_ISFIFO(os.lstat(p).st_mode) or stat.S_ISSOCK(os.lstat(p).st_mode):     # never opened: a pipe would wait
-            return f"Minutes file not acceptable: {file} is not a regular file."
-    except OSError:
-        pass
+    if _special_file(p):                                  # never opened: a pipe would wait
+        return f"Minutes file not acceptable: {file} is not a regular file."
     if not p.is_file():
         return f"Minutes file not found: {file}."
     real = os.path.realpath(p)
