@@ -1,6 +1,6 @@
 """#285: the project page (cockpit) has no project switcher: no dropdown, no ‹ › arrows and no [ ] keys. Every project
-stays reachable: the Projects list, search (Cmd/Ctrl + K) and the project links on Today. The Milestones page keeps its
-own ‹ › arrows but loses its dropdown. A real browser against the real live server.
+stays reachable: the Projects list, search (Cmd/Ctrl + K) and the project links on Today. The Milestones page has no
+dropdown or arrows either. A real browser against the real live server.
 
 Run: python3 dev/tests/test_cockpit_no_dropdown_285.py   (needs Google Chrome; skipped otherwise)
 """
@@ -66,25 +66,22 @@ class CockpitNoSwitcher(LiveBrowserCase):
         b.eval("document.querySelector('#v-today [data-cock]').click()")
         b.wait(f"VIEW==='cockpit'&&COCK==={code!r}")
 
-    # Milestones page (#285 follow-up): its dropdown goes; its ‹ › arrows stay (it never had [ ] keys). A project's
-    # milestones stay reachable from the project page's Milestones card, the Projects list (via the project page), the
-    # address #milestones=CODE and the arrows.
+    # Milestones page (#285 follow-ups): no dropdown and no ‹ › arrows (it never had [ ] keys). A project's milestones
+    # stay reachable from the project page's Milestones card (via the Projects list), the address #milestones=CODE and
+    # the breadcrumb back.
     def mv_wait(self, code):
         self.b.wait(f"VIEW==='milestones'&&MSCODE==={code!r}&&!!document.querySelector('#v-milestones .mv-pageh h1')")
 
-    def test_milestones_has_no_dropdown_but_keeps_its_arrows(self):
+    def test_milestones_has_no_dropdown_and_no_arrows(self):
         b = self.b
         b.eval("go('milestones','ABC')")
         self.mv_wait("ABC")
         self.assertFalse(b.eval("!!document.getElementById('mvProjSw')"))
-        self.assertEqual(b.eval("document.querySelectorAll('#v-milestones .mv-pageh select').length"), 0)
-        self.assertEqual(b.eval("[...document.querySelectorAll('#v-milestones [data-mvpsw]')].map(e=>e.dataset.mvpsw)"), ["-1", "1"])
-        codes = b.eval("P.map(p=>p.code)")
-        nxt = codes[(codes.index("ABC") + 1) % len(codes)]
-        b.eval("document.querySelector('#v-milestones [data-mvpsw=\"1\"]').click()")
-        self.mv_wait(nxt)
-        b.eval("document.querySelector('#v-milestones [data-mvpsw=\"-1\"]').click()")
-        self.mv_wait("ABC")
+        self.assertEqual(b.eval("document.querySelectorAll('#v-milestones .mv-pageh select,#v-milestones .pswitch,#v-milestones [data-mvpsw]').length"), 0)
+        for k in ("]", "["):                                               # and no [ ] keys there either
+            b.eval(f"document.body.focus(); document.dispatchEvent(new KeyboardEvent('keydown',{{key:{k!r},bubbles:true}}))")
+            b.eval("new Promise(r=>setTimeout(r,300))")
+            self.assertEqual(b.eval("[VIEW,MSCODE]"), ["milestones", "ABC"], k)
 
     def test_milestones_reached_from_the_project_page(self):
         b = self.b
