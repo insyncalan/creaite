@@ -144,7 +144,7 @@ class BodyAndFields(unittest.TestCase):
         self.assertEqual(row["title"], "Sync")
         row = sweep.calendar_row(event(title="Budget (PIN 4321)"), "09:00", "10:00", False)
         self.assertEqual(row["title"], "Budget")                                 # v2.6 review: only the key and its value go
-        for title, want in (("Code 2 review", "review"), ("Board Meeting ID 123 456 789 sync", "Board sync"),
+        for title, want in (("Code 2 review", "Meeting"), ("Board Meeting ID 123 456 789 sync", "Meeting"),
                             ("Sync Passcode: 4321", "Sync"), ("PIN 4321", "Meeting")):
             with self.subTest(title):
                 self.assertEqual(sweep.calendar_row(event(title=title), "09:00", "10:00", False)["title"], want)
@@ -181,7 +181,7 @@ class BodyAndFields(unittest.TestCase):
 class LetterOnlyValues(unittest.TestCase):
     """v2.6 review (Cap 08:23, item 5): a key whose value has no digit is never kept beside the rest of the field. After a passcode
     or password label, a host or a dial-in, any text left over may be the value, so the field is dropped whole (fail closed);
-    only an ID-like label with a numbered value keeps the rest ("Code 2 review" keeps "review")."""
+    the same holds after an ID-like label with a numbered value ("Meeting ID 12 abcdefg"; HOPD: fail closed)."""
 
     VALUES = ("kqZxyw", "alpha-bravo", "BLUEFOX", "abcdef")
     LABELS = ("Passcode", "PASSCODE", "passcode", "Pass code", "Pwd", "Access code", "Meeting key", "Host key")
@@ -247,8 +247,24 @@ class LetterOnlyValues(unittest.TestCase):
             with self.subTest(text):
                 self.assertEqual(invite_clean.scrub(text, 140), text)
 
+    def test_a_word_after_a_numbered_id_is_dropped(self):
+        """v2.6 review (Cap, MEDIUM; HOPD: fail closed): the word after a numbered meeting ID may be its passcode, as v2.5.3 read
+        it, so the field is dropped whole; the text before the label stays."""
+        for text, want in (("Meeting ID 12 abcdefg", ""), ("Meeting ID: 123 456 789 xyz", ""), ("ID 12 abcdefg steering", ""),
+                           ("Webinar number 5 kqzxyw", ""), ("Code 2 abcdefg", ""), ("Board Meeting ID 123 456 789 sync", ""),
+                           ("Steering Meeting ID 12", "Steering"), ("Budget (PIN 4321)", "Budget")):
+            with self.subTest(text):
+                out = invite_clean.scrub(text, 140)
+                self.assertEqual(out, want)
+                for word in ("abcdefg", "xyz", "kqzxyw"):
+                    self.assertNotIn(word, out)
+        self.assertEqual(sweep.calendar_row(event(title="Meeting ID 12 abcdefg"), "09:00", "10:00", False)["title"], "Meeting")
+        for text in ("Password reset", "Key dates", "Key Dates review", "Room 101"):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), text)
+
     def test_legitimate_titles_keep_their_words(self):
-        for text, want in (("Code 2 review", "review"), ("Board Meeting ID 123 456 789 sync", "Board sync"),
+        for text, want in (("Code 2 review", ""), ("Board Meeting ID 123 456 789 sync", ""),     # fail closed: see above
                            ("Budget (PIN 4321)", "Budget"), ("Sync Passcode: 4321", "Sync"), ("Weekly sync zoom.us", "Weekly sync"),
                            ("Code review of the supplier SOW", "Code review of the supplier SOW"),
                            ("Passwords policy review", "Passwords policy review"), ("Key takeaways", "Key takeaways")):
