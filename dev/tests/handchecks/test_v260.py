@@ -120,6 +120,7 @@ FEATURES = {
     "252g": ("#252's guarded moves (its reach.py and live_server.py diffs)", [("system/scripts/reach.py", r"99 Archive")]),
     "268": ("#268 Minutes view v2 (v26-minutes-view-v2)", [("dashboard.html", r"kept in the minutes only")]),
     "275": ("#275 Track from Review (v26-track-from-review)", [("system/scripts/review.py", r"def track_minutes")]),
+    "275g": ("#275's guarded tracker.py refusal (tracker-track-problems.diff)", [("system/scripts/tracker.py", r"def track_problems")]),
     "264": ("#264 Intake Process as its own job", [("system/scripts/intake_process.py", None)]),
     "265": ("#265 Calendar refresh as its own job", [("system/scripts/calendar_refresh.py", None)]),
     "255": ("#255 Delete note with no card (its guarded diffs)", [("system/scripts/reach.py", r"PAGE_MOVES"),
@@ -1405,10 +1406,19 @@ class TrackReview275(V260Case):
         minutes covering several only its ticked items are registered; a promise (no row) waits in Review."""
 
     @needs("275")
-    @calls((MTR, ["ServerTrack"], TR))
+    @offline
     def test_c92_the_server_honours_the_track_column(self):
         """92. review.py approve (the minutes or an item) and review.py bulk honour the Track column on the server; approve_minutes never
-        registers a crossed item whatever it is sent; tracker.py apply refuses a crossed item approved by hand."""
+        registers a crossed item whatever it is sent; tracker.py apply refuses a crossed item approved by hand (that last part once
+        the guarded tracker diff, dev/proposals/track-from-review/tracker-track-problems.diff, is in)."""
+        server = [f"ServerTrack.{n}" for n in ("test_review_py_approve_on_the_minutes_honours_the_crosses",
+                                               "test_review_py_approve_and_bulk_refuse_an_item_crossed_or_left_with_neither",
+                                               "test_approve_minutes_never_registers_a_crossed_item_whatever_it_is_sent")]
+        if has("275g", REPO, True) or FORCE:
+            server.append("ServerTrack.test_apply_refuses_a_crossed_item_approved_by_hand")
+        else:
+            self.note(92, "PARTIAL: tracker.py's refusal waits for the guarded tracker-track-problems.diff")
+        self.called(92, (MTR, server, TR))
 
 
 # ══ #264 and #265: Intake's Process and Refresh as their own jobs ══════════════════════════════════════════════════════════════════
