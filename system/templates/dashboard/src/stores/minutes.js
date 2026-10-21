@@ -125,7 +125,7 @@ export async function saveMinutesPage(req) {
   return { ok: !!(r && r.ok), version: r && r.version, conflict: !!(r && r.conflict), message: oneLine((r && r.message) || "") };
 }
 
-/** @typedef {{ok: boolean, message?: string, made: number, apply_id?: number|null, approved?: number, waiting?: number[]}} TrackApproved */
+/** @typedef {{ok: boolean, message?: string, made: number, done?: Record<string, any>[], apply_id?: number|null, approved?: number, waiting?: number[]}} TrackApproved */
 
 /** #275: Approve minutes by the Track column, the one implementation (the minutes view's Approve minutes, Review's Approve and
     Approve n routine). The record is first brought in line with the Track column (track.reconcileOps: a cross is `remove`,
@@ -143,7 +143,7 @@ export async function trackApprove(v, how = {}) {
   const doc = v && v.ok ? v.doc : null, plan = v && v.plan ? v.plan.items : null;
   if (!doc || !plan || !v.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
   const args = approveArgs(doc, plan);                     // review H1: only the ticked rows, never an item with no row
-  let base = Number(doc.version) || undefined, made = 0;
+  let base = Number(doc.version) || undefined, made = 0; /** @type {Record<string, any>[]} */ const done = [];
   const change = how.change || (async (/** @type {Record<string, any>} */ op) => {
     const r = await api("/api/minutes/save", { path: v.path, op, base_version: base });
     if (r && r.ok) base = Number(r.version) || base;
@@ -152,13 +152,31 @@ export async function trackApprove(v, how = {}) {
   for (const op of reconcileOps(doc, plan)) {
     if (how.only && !how.only(op.n)) continue;
     const r = await change(op);
-    if (!r.ok) return { ok: false, message: r.message, made };
-    made++;
+    if (!r.ok) return { ok: false, message: r.message, made, done };
+    made++; done.push(op);
   }
-  if (how.approve === false) return { ok: true, made };
+  if (how.approve === false) return { ok: true, made, done };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
   const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
   return { ...(r || { ok: false, message: "The apply didn't run; nothing was changed." }), made };
+}
+
+/** #275 round 3: the Track column's changes a trackApprove made (`done`, in order) taken back, newest first: a `remove` by
+    `restore` (the item pending and its row back where it was), a `restore` by `remove` keeping the line (as the row was before).
+    Used when the apply that was to carry them stops, so the minutes are exactly as they were. Each change on the version the
+    last one made. @param {string} path the record's stored path @param {Record<string, any>[]} done
+    @returns {Promise<{ok: boolean, message: string}>} */
+export async function trackPutBack(path, done) {
+  const cur = await api("/api/minutes/draft", { path });
+  if (!cur || !cur.ok || !cur.doc) return { ok: false, message: oneLine((cur && cur.message) || "The minutes couldn't be read.") };
+  let base = Number(cur.doc.version) || undefined;
+  for (const op of [...done].reverse()) {
+    const back = op.op === "remove" ? { op: "restore", n: op.n } : { op: "remove", n: op.n, keep_line: true };
+    const r = await api("/api/minutes/save", { path, op: back, base_version: base });
+    if (!r || !r.ok) return { ok: false, message: oneLine((r && r.message) || "") };
+    base = Number(r.version) || base;
+  }
+  return { ok: true, message: "" };
 }
 
 /** What a failed trackApprove says (review M1: and that some of the Track column's changes were made). @param {TrackApproved} r

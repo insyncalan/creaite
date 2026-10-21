@@ -46319,6 +46319,7 @@ ${s5}`;
     if (!doc || !plan || !v5.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
     const args = approveArgs(doc, plan);
     let base = Number(doc.version) || void 0, made = 0;
+    const done = [];
     const change2 = how.change || (async (op2) => {
       const r5 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: base });
       if (r5 && r5.ok) base = Number(r5.version) || base;
@@ -46327,13 +46328,26 @@ ${s5}`;
     for (const op2 of reconcileOps(doc, plan)) {
       if (how.only && !how.only(op2.n)) continue;
       const r5 = await change2(op2);
-      if (!r5.ok) return { ok: false, message: r5.message, made };
+      if (!r5.ok) return { ok: false, message: r5.message, made, done };
       made++;
+      done.push(op2);
     }
-    if (how.approve === false) return { ok: true, made };
+    if (how.approve === false) return { ok: true, made, done };
     if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
     return { ...r4 || { ok: false, message: "The apply didn't run; nothing was changed." }, made };
+  }
+  async function trackPutBack(path, done) {
+    const cur = await api("/api/minutes/draft", { path });
+    if (!cur || !cur.ok || !cur.doc) return { ok: false, message: oneLine(cur && cur.message || "The minutes couldn't be read.") };
+    let base = Number(cur.doc.version) || void 0;
+    for (const op2 of [...done].reverse()) {
+      const back2 = op2.op === "remove" ? { op: "restore", n: op2.n } : { op: "remove", n: op2.n, keep_line: true };
+      const r4 = await api("/api/minutes/save", { path, op: back2, base_version: base });
+      if (!r4 || !r4.ok) return { ok: false, message: oneLine(r4 && r4.message || "") };
+      base = Number(r4.version) || base;
+    }
+    return { ok: true, message: "" };
   }
   var trackFailWords = (r4, button) => r4.made ? `${r4.message ? `${oneLine(r4.message)} ` : ""}Some changes were made to the minutes; press ${button} again.` : String(r4.message || "The minutes weren't approved; nothing was applied.").split("\n")[0];
   function trackApprovedWords(r4) {
@@ -46847,18 +46861,27 @@ ${s5}`;
     }
     const ks2 = REV.filter((x5) => item(x5) && rvBulkOK(x5)), left = REV.filter((x5) => item(x5) && !rvBulkOK(x5)).length;
     let undo = null, out = [], got = ks2.length;
+    const putBack = async (why) => {
+      const pb2 = made ? await trackPutBack(v5.path, tr2.done || []) : { ok: true };
+      await reloadData();
+      snack(`Approved 0 items from these minutes · ${why}${made ? pb2.ok ? " · the minutes are as they were" : ` · the minutes couldn't be put back (${pb2.message || "try again"}): open them to check` : ""}`);
+    };
     if (ks2.length) {
       const res = await rvDecideMany(ks2, "approved");
       undo = res.undo || null;
       out = trkLeftOut(res);
       got = res.n;
       if (res.stopped) {
-        snack(`Approved 0 items from these minutes · ${out.join(" · ")}`);
+        await putBack(out.join(" · "));
         return;
       }
     } else if (made && S.autoApply) {
       const res = await applyNow();
       if (res.ok) undo = () => undoApply(res.apply_id);
+      else {
+        await putBack(`apply stopped: ${oneLine(res.message)}`);
+        return;
+      }
     }
     const tail = made ? ` · ${made} line${made === 1 ? "" : "s"} taken out of the minutes or kept as lines only` : "";
     snack(
