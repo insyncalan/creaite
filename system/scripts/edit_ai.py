@@ -316,6 +316,17 @@ def in_tracker(con, ref):
         return True
 
 
+def _loose_problems(con, code, text, found):
+    """v2.5.3 (#259 round 2, MEDIUM 3): P16's loose forms in a client place's text ("A B C - A - 0 0 1", "ABC-A-0001", a hidden
+    wording with hyphens for its spaces), as every client output's check reads them (client_output.text_findings); `found`: what
+    is found already, not listed twice."""
+    import client_leak
+    import client_output
+    import confusables
+    loose = client_leak.joined(text, confusables.skeleton(text), client_output.unescaped(text))
+    return client_output.loose_findings(con, code, loose, {f.split(" ", 1)[0] for f in found})
+
+
 def client_problems(code, text, original=""):
     """What a client place's text holds that a client mustn't see, as short reasons ([] when it is client-safe): an item a client
     report may not show (however its ID is written), internal wording (client_leak.text_findings), the tracker's internal health
@@ -338,6 +349,7 @@ def client_problems(code, text, original=""):
         blocking = client_leak.blocking_labels(con)
         found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(loose_ids(con, text))) if why]
         found += client_leak.text_findings(con, code, text or "")
+        found += _loose_problems(con, code, text or "", found)
         found += drafts.internal_findings(con, code, client_leak.as_shown(text), client_leak.as_shown(original))   # #127 r6
         known = _register_names() + client_leak.project_owners(con, code)
         allowed = client_leak.named(original, known, every=True) | client_leak.people(con, code, blocking)[0]   # every name
