@@ -10,10 +10,20 @@ Run: python3 dev/tests/test_intake_process_minutes.py      (quick tier: no Chrom
   record names the files Alan pressed Find work items on; a spec with "as": "minutes" is staged only for one of those, with no
   draft, minutes, transcript or note; such a file is never staged as a transcript; a transcript file is never staged as minutes.
   Those tests are expected failures until the diff is applied (APPLIED below).
+- Through the live server (Cap's review, MEDIUM 2): POST /api/intake/process with a file sent "as": "minutes" writes it into
+  system/guard/run.json's files_as_minutes, and a stand-in Claude's real `minutes.py stage` of an "as": "minutes" spec passes the
+  real hook and reaches Review as someone else's minutes; the same file sent without "as" is refused as minutes (not staged).
+  Expected failures until the diff is applied.
 """
 import json
+import os
+import re
+import subprocess
 import sys
+import time
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -192,6 +202,124 @@ class Fence(unittest.TestCase):
                        "d = json.loads(reach.RUN_FILE.read_text()); d['before'] = []; reach.RUN_FILE.write_text(json.dumps(d)); "
                        "print(json.dumps([os.path.basename(str(p)) for p, _ in reach._runs_proposals()]))", [self.files])
         self.assertNotIn("proposed-e1.json", got)                                 # not pressed Find work items on: not the run's
+
+
+# The stand-in Claude for the route test: it keeps a copy of the run record as the server wrote it, then for each file the prompt
+# lists stages an "as": "minutes" spec through the real hook and the real minutes.py stage (run as Claude Code would).
+FAKE = r'''#!/usr/bin/env python3
+import json, re, shutil, subprocess, sys
+from pathlib import Path
+args = sys.argv[1:]
+prompt = args[args.index("--") + 1] if "--" in args else ""
+root = Path.cwd()
+settings = args[args.index("--settings") + 1] if "--settings" in args else ""
+out = lambda o: print(json.dumps(o), flush=True)
+out({"type": "system", "subtype": "init", "session_id": "sess-m"})
+def hook(tool, inp):
+    cmd = json.loads(settings)["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    return subprocess.run(cmd, shell=True, cwd=root, input=json.dumps({"tool_name": tool, "tool_input": inp}),
+                          capture_output=True, text=True, timeout=60).returncode
+said = []
+if "--mode process" in settings:
+    shutil.copy(root / "system/guard/run.json", root / "seen-run.json")
+    files = [json.loads(x) for x in re.findall(r'^\d+\. path: ("[^"]*")', prompt, re.M)]
+    for n, path in enumerate(files):
+        spec = {"title": "Budget review", "date": "2026-10-19", "projects": ["ABC"], "as": "minutes", "file": path,
+                "items": [{"table": "actions", "values": {"project": "ABC", "description": "Share the revised SOW",
+                                                          "owner": "Omar Ali", "raised": "2026-10-19"}}]}
+        f = root / f"system/staging/drafts/spec-m{n}.json"
+        if hook("Write", {"file_path": str(f)}) == 0:
+            f.write_text(json.dumps(spec))
+            command = f"system/scripts/run minutes.py stage system/staging/drafts/spec-m{n}.json"
+            rc = hook("Bash", {"command": command})
+            said.append(f"hook {rc}")
+            if rc == 0:
+                r = subprocess.run([sys.executable, "system/scripts/minutes.py", "stage", str(f)], cwd=root, capture_output=True, text=True)
+                said.append(f"stage {r.returncode}")
+text = "\n".join(said) or "nothing"
+out({"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}})
+out({"type": "result", "result": text, "session_id": "sess-m"})
+'''
+
+
+class ThroughTheServer(unittest.TestCase):
+    """POST /api/intake/process with "as": "minutes", the real live server, the real hook, a stand-in Claude."""
+
+    @classmethod
+    def setUpClass(cls):
+        from test_dashboard import populate
+        from test_live_server import free_port
+        cls.v = v = Vault()
+        populate(v)
+        cls.files = put_samples(v)
+        cls.mins = cls.files[2]
+        fake = v.root / "fake_claude.py"
+        fake.write_text(FAKE)
+        fake.chmod(0o755)
+        cfg = v.root / "system/config/settings.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data.setdefault("backups", {})["daily"] = False
+        cfg.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        cls.port = free_port()
+        cls.base = f"http://127.0.0.1:{cls.port}"
+        cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], cwd=v.root,
+                                    env={**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_CLAUDE": str(fake)},
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(300):
+            try:
+                urllib.request.urlopen(cls.base + "/health", timeout=1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        html = urllib.request.urlopen(cls.base + "/").read().decode()
+        cls.token = json.loads(re.search(r'id="data">(.*?)</script>', html, re.S).group(1).replace("<\\/", "</"))["token"]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.terminate()
+        cls.proc.wait(timeout=10)
+        cls.v.cleanup()
+
+    def setUp(self):
+        for p in self.v.root.glob("system/staging/proposed-*.json"):
+            if (json.loads(p.read_text()).get("meeting") or {}).get("kind") == "minutes by others":
+                p.unlink()
+        (self.v.root / "seen-run.json").unlink(missing_ok=True)
+
+    def process(self, files, run):
+        req = urllib.request.Request(self.base + "/api/intake/process", data=json.dumps({"files": files, "run": run}).encode(),
+                                     method="POST", headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+        with urllib.request.urlopen(req, timeout=180) as r:
+            text = r.read().decode()
+        return [json.loads(x[6:]) for x in text.split("\n\n") if x.startswith("data: ")]
+
+    def by_others(self):
+        out = []
+        for p in self.v.root.glob("system/staging/proposed-*.json"):
+            m = json.loads(p.read_text()).get("meeting") or {}
+            if m.get("kind") == "minutes by others":
+                out.append(m.get("source_file"))
+        return out
+
+    @needs_diff
+    def test_find_work_items_writes_files_as_minutes_and_its_stage_passes_the_hook(self):
+        evs = self.process([{"path": self.mins, "as": "minutes"}], "i-mins-1")
+        seen = json.loads((self.v.root / "seen-run.json").read_text())
+        self.assertEqual(seen.get("mode"), "process")
+        self.assertEqual(seen.get("files"), [self.mins])
+        self.assertEqual(seen.get("files_as_minutes"), [self.mins])           # written by the server, never the model
+        intake = next(e for e in evs if e["type"] == "intake")
+        self.assertEqual([f["state"] for f in intake["files"]], ["staged"], evs)
+        self.assertEqual(self.by_others(), [self.mins])                       # in Review as someone else's minutes
+
+    @needs_diff
+    def test_the_same_file_sent_without_as_is_never_staged_as_minutes(self):
+        evs = self.process([{"path": self.mins}], "i-mins-2")
+        seen = json.loads((self.v.root / "seen-run.json").read_text())
+        self.assertEqual(seen.get("files_as_minutes"), [])                    # pressed Make minutes / Process, not Find work items
+        intake = next(e for e in evs if e["type"] == "intake")
+        self.assertEqual([f["state"] for f in intake["files"]], ["not_staged"], evs)
+        self.assertEqual(self.by_others(), [])
 
 
 if __name__ == "__main__":
