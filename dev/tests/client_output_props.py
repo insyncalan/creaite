@@ -18,6 +18,7 @@ import json
 import os
 import random
 import re
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -1773,9 +1774,15 @@ def _metadata_kept():
 
 def _match_raw():
     """Match internal's check reads the document as sent (not as the export reads it): v2.5.0's match-check."""
+    def one(d, con):
+        try:
+            return client_leak.coded_findings(d, con)
+        except (TypeError, ValueError, AttributeError, sqlite3.Error):      # a malformed document: read as sent, nothing found
+            return []
+
     def raw(handler, req):
         con = client_leak.connect()
-        return report_server.answer(handler, {"ok": True, "findings": [client_leak.coded_findings(d, con) for d in req.get("docs") or []]})
+        return report_server.answer(handler, {"ok": True, "findings": [one(d, con) for d in req.get("docs") or []]})
     report_server.match_check_route = raw
 
 

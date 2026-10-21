@@ -113,6 +113,9 @@ and checked). That changes `client_snapshot.py` (unguarded) and adds `system/gua
     client report, `export_page.build` refuses one); the mutant passes the posted page through all three.
   - P16 (`decoder_off`): the look-alike decoder is in `edit_ai.LOOK_ALIKE` and `confusables.TABLE`; the mutant filters both. Only
     the look-alike form depends on it, so it fails 1 to 3 of the 30 proof cases (seeds 239 and 1 to 4), never none.
+  - P22 (`match_raw`): on seed 2 the mutant's raw check crashed on a malformed document (a list where the code goes), which
+    stopped the proof run and left P23 green after it. The mutant now reads such a document as sent and finds nothing, as an
+    unchecked route would; P22 and P23 then go red on seed 2 as on 239.
 - **Existing tests that follow K2:** none of their leak assertions changed. A payload written on disk now also goes in the Summary,
   which every output shows (`test_client_audience.tamper_on_disk`; step 2's hand-edited filed file). A client text section is
   added through Save (`test_client_output_step2.client_text`). The gap B mutant (step 3) also switches off the new loose check,
