@@ -36058,7 +36058,7 @@ ${s5}`;
     if (cli && shared.MV.view === "move") shared.MV.view = "plan";
     let h5 = `<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${code}">${esc(p6.name)}</a><span aria-hidden="true">›</span><span aria-current="page">Milestones</span></nav>
     <div class="mv-pageh"><h1>Milestones: Plan and Movement</h1><span class="sp"></span>
-      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="mvProjSw" aria-label="Switch project">${P4.map((x5) => `<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${esc(x5.name)}</option>`).join("")}</select><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P4.length < 2 ? "disabled" : ""}>›</button></div>
+      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P4.length < 2 ? "disabled" : ""}>‹</button><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P4.length < 2 ? "disabled" : ""}>›</button></div>
       <button type="button" class="mv-btn pri" id="mvAdd" data-mvadd="1">${ic("plus")}Add milestone</button></div>
     <div class="mv-ctl"><div class="mv-seg" role="group" aria-label="Milestone view"><button type="button" id="mvVPlan" data-mvview="plan" aria-pressed="${shared.MV.view === "plan"}">Plan</button><button type="button" id="mvVMove" data-mvview="move" aria-pressed="${shared.MV.view === "move"}"${cli ? ' aria-disabled="true" data-tip="Movement is internal only and is hidden in Client view"' : ""}>Movement <span class="mv-tag">Internal</span></button></div>
       <div class="mv-seg" role="group" aria-label="Audience"><button type="button" id="mvAInt" data-mvaud="int" aria-pressed="${!cli}">Internal view</button><button type="button" id="mvACli" data-mvaud="cli" aria-pressed="${cli}">Client view</button></div></div>`;
@@ -37132,10 +37132,6 @@ ${s5}`;
     });
     document.addEventListener("change", (e4) => {
       const t47 = e4.target, code = mvCode(), m5 = shared.MV.peek ? mvGet(code, shared.MV.peek) : null;
-      if (t47.id === "mvProjSw") {
-        mvOpenPage(t47.value);
-        return;
-      }
       if (t47.id === "mvNote") {
         const n4 = mvGet(shared.MSCODE, t47.dataset.mvnote);
         if (n4 && t47.value.trim() !== n4.note) mvSave(n4, { internal_note: t47.value.trim() || null }, `${n4.id} internal note saved`);

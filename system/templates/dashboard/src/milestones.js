@@ -263,7 +263,7 @@ export function renderMilestones(){ const code=shared.MSCODE, p=P.find(x=>x.code
   const cli=shared.MVAUD==="cli"; if(cli&&shared.MV.view==="move") shared.MV.view="plan";
   let h=`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${code}">${esc(p.name)}</a><span aria-hidden="true">›</span><span aria-current="page">Milestones</span></nav>
     <div class="mv-pageh"><h1>Milestones: Plan and Movement</h1><span class="sp"></span>
-      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P.length<2?"disabled":""}>‹</button><select id="mvProjSw" aria-label="Switch project">${P.map(x=>`<option value="${x.code}" ${x.code===code?"selected":""}>${esc(x.name)}</option>`).join("")}</select><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P.length<2?"disabled":""}>›</button></div>
+      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P.length<2?"disabled":""}>‹</button><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P.length<2?"disabled":""}>›</button></div>
       <button type="button" class="mv-btn pri" id="mvAdd" data-mvadd="1">${ic("plus")}Add milestone</button></div>
     <div class="mv-ctl"><div class="mv-seg" role="group" aria-label="Milestone view"><button type="button" id="mvVPlan" data-mvview="plan" aria-pressed="${shared.MV.view==="plan"}">Plan</button><button type="button" id="mvVMove" data-mvview="move" aria-pressed="${shared.MV.view==="move"}"${cli?' aria-disabled="true" data-tip="Movement is internal only and is hidden in Client view"':""}>Movement <span class="mv-tag">Internal</span></button></div>
       <div class="mv-seg" role="group" aria-label="Audience"><button type="button" id="mvAInt" data-mvaud="int" aria-pressed="${!cli}">Internal view</button><button type="button" id="mvACli" data-mvaud="cli" aria-pressed="${cli}">Client view</button></div></div>`;
@@ -619,7 +619,6 @@ document.addEventListener("keydown",e=>{ const t=e.target; if(!t.matches) return
     if(t.matches("#mvPeek input[type=text],#mvPeek textarea")&&t.value!==t.defaultValue){ t.value=t.defaultValue; }
     e.preventDefault(); mvEdClose(); } });
 document.addEventListener("change",e=>{ const t=e.target, code=mvCode(), m=shared.MV.peek?mvGet(code,shared.MV.peek):null;
-  if(t.id==="mvProjSw"){ mvOpenPage(t.value); return; }
   if(t.id==="mvNote"){ const n=mvGet(shared.MSCODE,t.dataset.mvnote); if(n&&t.value.trim()!==n.note) mvSave(n,{internal_note:t.value.trim()||null},`${n.id} internal note saved`); return; }
   if(!m) return;
   if(t.id==="mvName"){ const v=t.value.trim(); if(!v){ t.value=m.n; snack("A milestone needs a name."); return; } if(v!==m.n) mvSave(m,{name:v},`${m.id} renamed to ${v}`); }

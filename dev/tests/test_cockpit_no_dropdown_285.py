@@ -1,6 +1,6 @@
 """#285: the project page (cockpit) has no project switcher: no dropdown, no ‹ › arrows and no [ ] keys. Every project
 stays reachable: the Projects list, search (Cmd/Ctrl + K) and the project links on Today. The Milestones page keeps its
-own switcher. A real browser against the real live server.
+own ‹ › arrows but loses its dropdown. A real browser against the real live server.
 
 Run: python3 dev/tests/test_cockpit_no_dropdown_285.py   (needs Google Chrome; skipped otherwise)
 """
@@ -66,11 +66,47 @@ class CockpitNoSwitcher(LiveBrowserCase):
         b.eval("document.querySelector('#v-today [data-cock]').click()")
         b.wait(f"VIEW==='cockpit'&&COCK==={code!r}")
 
-    def test_milestones_keeps_its_switcher(self):
+    # Milestones page (#285 follow-up): its dropdown goes; its ‹ › arrows stay (it never had [ ] keys). A project's
+    # milestones stay reachable from the project page's Milestones card, the Projects list (via the project page), the
+    # address #milestones=CODE and the arrows.
+    def mv_wait(self, code):
+        self.b.wait(f"VIEW==='milestones'&&MSCODE==={code!r}&&!!document.querySelector('#v-milestones .mv-pageh h1')")
+
+    def test_milestones_has_no_dropdown_but_keeps_its_arrows(self):
         b = self.b
         b.eval("go('milestones','ABC')")
-        b.wait("VIEW==='milestones'&&!!document.getElementById('mvProjSw')&&!!document.querySelector('#v-milestones [data-mvpsw]')")
+        self.mv_wait("ABC")
+        self.assertFalse(b.eval("!!document.getElementById('mvProjSw')"))
+        self.assertEqual(b.eval("document.querySelectorAll('#v-milestones .mv-pageh select').length"), 0)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#v-milestones [data-mvpsw]')].map(e=>e.dataset.mvpsw)"), ["-1", "1"])
+        codes = b.eval("P.map(p=>p.code)")
+        nxt = codes[(codes.index("ABC") + 1) % len(codes)]
+        b.eval("document.querySelector('#v-milestones [data-mvpsw=\"1\"]').click()")
+        self.mv_wait(nxt)
+        b.eval("document.querySelector('#v-milestones [data-mvpsw=\"-1\"]').click()")
+        self.mv_wait("ABC")
 
+    def test_milestones_reached_from_the_project_page(self):
+        b = self.b
+        b.eval("go('projects')")
+        b.wait("VIEW==='projects'&&!!document.querySelector('#projTbl [data-cock]')")
+        for code in b.eval("P.map(p=>p.code)"):
+            b.eval("go('projects')")
+            b.wait("VIEW==='projects'&&!!document.querySelector('#projTbl [data-cock]')")
+            b.eval(f"document.querySelector('#projTbl [data-cock=\"{code}\"]').click()")
+            b.wait(f"VIEW==='cockpit'&&COCK==={code!r}&&!!document.querySelector('#v-cockpit [data-mvpage]')")
+            b.eval(f"document.querySelector('#v-cockpit [data-mvpage=\"{code}\"]').click()")
+            self.mv_wait(code)
+            b.eval(f"document.querySelector('#v-milestones .crumb [data-proj=\"{code}\"]').click()")   # and back by the breadcrumb
+            b.wait(f"VIEW==='cockpit'&&COCK==={code!r}")
+
+    def test_milestones_reached_by_address(self):
+        b = self.b
+        for code in b.eval("P.map(p=>p.code)"):
+            b.eval(f"history.replaceState(null,'',location.pathname+'#milestones={code}&v=plan')")
+            b.reload("typeof go==='function' && LIVE")
+            self.mv_wait(code)
+            self.assertIn(f"#milestones={code}", b.eval("location.hash"))
 
 if __name__ == "__main__":
     unittest.main()
