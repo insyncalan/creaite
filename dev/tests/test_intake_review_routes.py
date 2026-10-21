@@ -131,14 +131,14 @@ class Routes(IntakeBase):
         b.eval("window.GATE=new Promise(r=>{ window.RELEASE=r; }); window.STOPS=[]; window.REALAPI=api; api=(u,o)=>{ if(u==='/api/ask/stop') STOPS.push(o.run); return REALAPI(u,o); }; 0")
         said0 = b.eval("document.querySelectorAll('#chLog .msg.u').length")
         b.click("#icRef")
-        b.wait("CAL.length===1 && document.querySelector('[data-ircalread]').textContent.includes('Reading the calendar')")
+        b.wait("CALRUNS.length===1 && document.querySelector('[data-ircalread]').textContent.includes('Reading the calendar')")
         self.assertIn("Refreshing…", b.eval("document.querySelector('[data-ircalread]').textContent"))
         ref = b.eval("(e=>({label:e.getAttribute('aria-label'),disabled:e.disabled,icon:e.querySelector('svg').dataset.iric}))(document.querySelector('#icRef'))")
         self.assertEqual(ref, {"label": "Stop the refresh", "disabled": False, "icon": "stop"})
         b.click("#icRef")
         b.wait("STOPS.length===1")
         self.assertEqual(b.eval("STOPS"), ["c-test-1"])
-        self.assertEqual(b.eval("CAL.length"), 1, "Stop started another refresh")
+        self.assertEqual(b.eval("CALRUNS.length"), 1, "Stop started another refresh")
         path.write_text(json.dumps({**cal, "fetched": f"{DAY} 10:42"}))
         b.eval("RELEASE(); 0")
         b.wait("irRefreshing.value===false && document.querySelector('#irSub').textContent.includes('Calendar read 10:42')", 30)
@@ -153,7 +153,7 @@ class Routes(IntakeBase):
         b = self.b
         self.stub()
         b.eval("irRefreshCalendar(); 0")
-        b.wait("CAL.length===1 && irRefreshing.value===false", 30)
+        b.wait("CALRUNS.length===1 && irRefreshing.value===false", 30)
         self.assertEqual(b.eval("CHAT"), [])
 
 
