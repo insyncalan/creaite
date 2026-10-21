@@ -3857,6 +3857,7 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .ddmenu.pop.rsmenu{min-width:0;width:max-content;max-width:min(280px,calc(100vw - 16px));padding:4px;font-size:var(--fs-sm)}
 .rsmenu button{align-items:center;gap:8px;padding:4px 10px;min-height:28px;white-space:nowrap}
 .rsmenu button svg.i{margin-top:0;width:15px;height:15px;color:var(--muted);flex:none} .rsmenu b{font-weight:400}
+.wr-hmenu [data-tone=g] svg.i{color:var(--ok)} .wr-hmenu [data-tone=a] svg.i{color:var(--warn)} .wr-hmenu [data-tone=r] svg.i{color:var(--bad)}   /* #287: the health menu's icons in the flag's tones */
 .rs-pick{margin-top:6px}
 .rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
 .rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
