@@ -14,7 +14,7 @@ import os
 import re
 import sys
 
-PASS, LEAK, ERROR = "PASS", "LEAK", "ERROR"
+PASS, LEAK, ERROR, SKIP = "PASS", "LEAK", "ERROR", "SKIP"
 
 # ---- known-benign accepted values (judged on v2.5.0; each is a style value with no outside address, no picture and no words) ----
 BENIGN_ATK_CSS = {  # rv241/atk_css.py: the 13 values the gate keeps on v2.5.0
@@ -57,6 +57,8 @@ class R:
             return LEAK
         if self.errors or not self.cases:
             return ERROR
+        if all(c[1] == SKIP for c in self.cases):      # k26: the tree has not got the feature the probe is about (not an error, not a pass)
+            return SKIP
         return PASS
 
     def evidence(self):
@@ -72,6 +74,8 @@ class R:
             return short(e, 400)
         if st == ERROR:
             return short("; ".join(self.errors) if self.errors else "no result lines found in the log", 400)
+        if st == SKIP:
+            return short(f"{n} case(s) skipped: " + "; ".join(sorted({c[2] for c in self.cases})), 400)
         refused = sum(1 for c in self.cases if c[2].startswith("refused"))
         return short(f"{n} case(s) clean" + (f" ({refused} refused)" if refused else "") + (" | " + "; ".join(self.notes) if self.notes else ""), 400)
 
@@ -882,17 +886,20 @@ def c_minutes(text, args):
 
 
 def c_cases(text, args):
-    """'### CASE <name> | LEAK|PASS|HELD|CTRL-FAIL | evidence' lines (src/k259/probe.py). HELD = creaite refused (a clean PASS);
-    CTRL-FAIL = a control that should be allowed was blocked: a functional fault, counted PASS and named in the evidence."""
+    """'### CASE <name> | LEAK|PASS|HELD|CTRL-FAIL|SKIP | evidence' lines (src/k259/probe.py, src/k26/*.py). HELD = creaite refused (a
+    clean PASS); CTRL-FAIL = a control that should be allowed was blocked: a functional fault, counted PASS and named in the evidence;
+    SKIP = this tree has not got the feature the case is about (a probe whose every case is SKIP is SKIP, not PASS and not ERROR)."""
     r = R(text, args)
     harness(text, r)
     nctrl = 0
-    for m in re.finditer(r"^### CASE (.+?) \| (LEAK|PASS|HELD|CTRL-FAIL) \| (.*)$", text, re.M):
+    for m in re.finditer(r"^### CASE (.+?) \| (LEAK|PASS|HELD|CTRL-FAIL|SKIP) \| (.*)$", text, re.M):
         name, st, ev = m.group(1), m.group(2), m.group(3).strip()
         if st == "LEAK":
             r.case(name, LEAK, ev)
         elif st == "HELD":
             r.case(name, PASS, "refused: " + ev)
+        elif st == "SKIP":
+            r.case(name, SKIP, ev)
         elif st == "CTRL-FAIL":
             nctrl += 1
             r.case(name, PASS, "FUNCTIONAL (not a leak): " + ev)

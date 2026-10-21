@@ -22,10 +22,49 @@ comment. What changed for 2.5.3:
   (`LeakFix`), and `atk-id-in-css`, `rcleak-*`, `rv234-reshow-race`, `hostile-sbs`, `hostile-sbsfix` (test modules found through `KIT_CK`).
 - Nothing was retired. A probe whose subject changed says so in CHECKLIST section F ("Retired or replaced").
 
+## 2.6 leak kit run (group `k26`, 24 probes, 21-10-2026)
+
+Four scripts under `src/k26/` (classifier `cases`, one `### CASE <name> | LEAK|PASS|HELD|CTRL-FAIL|SKIP | evidence` line per case), one per
+area of what 2.6 adds on top of 2.5.3. Fictional data only (a Brightwater-style fixture; `Jane Doe`, `Omar Ali`, `kqZxyw`, `KITKIND...`
+canaries). Each probe builds its own throwaway vault (the tree's own `dev/tests` fixtures) and never edits the checkout. The two guarded
+proposals the probes cover are applied to the **vault's copy only** (`patch` on a scratch file), never to the tree: `draft-ai-186/live_server.diff`
+(a-keys), `track-from-review/tracker-track-problems.diff` (d-apply, after the as-is run) and `followed-needs/vip-api.diff` (c-api).
+A creaite refusal is HELD (PASS); only a PRODUCED file, a returned suggestion, a registered item or a saved calendar holding planted material
+is LEAK. **SKIP** (new status word) is a probe whose every case is about a feature the tree has not got (before #186, #275...): not a pass, not an
+error. `selftest_classify.py` covers it.
+
+| probe | script and variant | what it proves | needs (merged on the tree) | known result |
+|---|---|---|---|---|
+| `k26-a-ids` (36 cases) | `a186.py ids` | a hidden item's ID written 32 ways (en dash, non-breaking hyphen, `abc-a-4`, `ABC-A-0004`, `ABC-A-0004/1`, spaced, HTML split, zero-width, Cyrillic, full-width digits, link target...) in an OUTSIDE email's reply or selected text is dropped or refused; a client-visible ID still passes | `edit_ai.email_outside` (#186, `origin/v26-186`) | SKIP before; PASS from #186 |
+| `k26-a-names` (48) | `a186.py names` | the tracker's health reason (6 spellings), internal-only markers (9), the hidden owner (8 spellings), a hidden title, and the word VIP in 12 spellings, in the reply or the selection of an outside email, are dropped; `Client-safe: no` (memory-file syntax) is information | #186 | SKIP before; PASS from #186 |
+| `k26-a-spoof` (60) | `a186.py spoof` | 45 recipient shapes (trailing dot, subdomain, inside address in the display name, punycode, Cyrillic, full-width @, 51 entries, non-strings, groups, CRLF, `%0a`...) and 4 own-domain settings (missing, string, `[1]`, `[]`) and 7 page-sent keys decide "outside": the prompt holds no hidden ID/owner/reason and the hostile reply is dropped; 4 plain inside addresses keep the full facts | #186 | SKIP before; PASS from #186 |
+| `k26-a-keys` (20) | `a186.py keys` | `/api/edit/ai`: `outside`, `field`, `audience`, `own_domains`, `internal`, case and space variants, a document with an extra key, addresses with another place, 51 entries, a non-string, 321 characters are all 400s; a plain request is taken | #186 **and** the route: `draft-ai-186/live_server.diff` (guarded; applied to the vault's copy) | SKIP on a tree with neither; PASS with the diff |
+| `k26-a-place` (26) | `a186.py place` | the place `client_message` (#263) gives client facts and drops hidden ID/reason/owner/marker/VIP replies; addresses with it are refused; a context for one place reused for another is decided again from the request; 10 place spellings never reach the full facts with an outside address; the minutes sheet (#262) drops a reply that adds a hidden item | #186 | SKIP before; PASS from #186 |
+| `k26-b-scrub` (94) | `b232.py scrub` | `invite_clean.scrub` (title, place, organiser) and `clean_row` take a passcode, PIN, meeting ID, dial-in or join link out with its value even when the value is **letters only** (`Steering Passcode: kqZxyw`, `Meeting ID 123 456 789 Passcode abcdef`, `Weekly sync zoom.us 98765432101`, 26 more); ordinary titles survive | `invite_clean` | PASS on 2.5.3 (the whole field is dropped); **LEAK on every tree with `v26-review-fixes` 4468986f** (HIGH, see below) |
+| `k26-b-body` (13) | `b232.py body` | `invite_text` drops the line (and the next line) of a letter-only key; attendee and attachment names with a key are dropped | `invite_clean` | PASS on both |
+| `k26-b-bare` (27) | `b232.py bare` | the labels that need a digit to be read as a key (`Password swordfish`, `PIN abcd`, a table row `PIN` / `kqzxyw`) | `invite_clean` | **LEAK on every tree, 2.5.3 included** (pre-existing, not part of the 2.6 regression) |
+| `k26-b-save` (31) | `b232.py save` | `sweep.py calendar` in a vault: no letter-only secret in `calendar.json`, the command's output or the debug log; a confidential meeting keeps only title and times (no body, attendee, attachment, place, organiser, recurrence, address); a private one is Busy; `Strictly Confidential`, `restricted`, `2`, `Secret`, `personal` fail closed | `sweep.calendar` (#265; #232 wires the routes to it) | PASS on 2.5.3; LEAK where `scrub` leaks |
+| `k26-b-outputs` (12) | `b232.py outputs` | with a saved calendar holding body, attendee, attachment, organiser, place and a confidential meeting's words: the client report (draft, HTML and Word export, filed copy), `report.py steerco-data` and the client-safe one-pager, and the client contexts of status-form, polish and client wording hold none of it. The follow-up email facts keep the invite's attendees by design (information) | `sweep.calendar` | PASS everywhere |
+| `k26-c-client` (9) | `c236.py client` | with two followed people in the people register (their VIP column holding the canaries `KITKIND...`) and their alerts in `vip.json`: no VIP word, star, kind or alert subject/gist in the client report (draft, exports, filed copy) or the client steerco one-pager | `sweep.vip_record` (BL-99); #236 adds the `From` rows | PASS everywhere |
+| `k26-c-reports` (4) | `c236.py reports` | ... in the weekly report (`weekly-stage`), its staged proposal, the internal steerco facts and an ad hoc document | same | PASS everywhere |
+| `k26-c-exports` (5) | `c236.py exports` | ... in `tracker-view.xlsx` and the report draft routes' answers and weekly exports | same | PASS everywhere |
+| `k26-c-api` (2) | `c236.py api` | the page's `/api/vip` poll returns no `sigs`, `seen_sig`, `keys` or `ids` of a followed row (Stark's #236 LOW); with `followed-needs/vip-api.diff` applied to the vault's copy it does not | #236 (`origin/v26-236-next`) | SKIP before #236; LEAK on #236 as it is (page-only data, LOW); HELD with the diff |
+| `k26-c-drafts` (12) | `c236.py drafts` | ... in the AI draft contexts (status-form client and internal, client wording, polish, update, health reason), the chase pane and a client reply that says VIP | same | PASS everywhere |
+| `k26-c-prep` (1) | `c236.py prep` | ... in a prep page for a meeting whose attendees are followed people | same | PASS everywhere |
+| `k26-c-search` (8) | `c236.py search` | ... in search results (the query's own echo excluded) and in ask creaite's search context | same | PASS everywhere |
+| `k26-c-log` (1) | `c236.py log` | ... in the debug log (the sweep's own `vip` command word is not a label) | same | PASS everywhere |
+| `k26-d-followup` (5) | `d275.py followup` | a CROSSED line is not in `minutes_record.followup_facts` (internal and distributed) and a default row still is | `minutes_record.track_apply_problems` (#275, `origin/v26-track-from-review-2`) and #268 | SKIP before; PASS from #275 |
+| `k26-d-export` (4) | `d275.py export` | a crossed line is not in a draft's HTML, Word or PDF export; the distributed version of a draft is refused | same | SKIP before; PASS from #275 |
+| `k26-d-server` (2) | `d275.py server` | `review.py approve <minutes>` with Track choices registers no crossed action and the filed minutes hold no crossed line | same | SKIP before; PASS from #275 |
+| `k26-d-items` (4) | `d275.py items` | `review.py approve <crossed item>`, `<neither item>`, `review.py bulk` and `approve_minutes` with a crossed item as its own tick all leave them pending | same | SKIP before; PASS from #275 |
+| `k26-d-apply` (3) | `d275.py apply` | a crossed item approved BY HAND (a stale page's save, an edited proposal) is stopped by `tracker.py apply`; an unreadable record with an approved item fails closed | same **and** `track-from-review/tracker-track-problems.diff` (guarded) | **LEAK as the tree is** (the documented gap); HELD with the diff applied to the vault's copy |
+| `k26-d-promise` (3) | `d275.py promise` | Approve minutes registers the ticked action and never a promise the minutes show no row for | same | SKIP before; PASS from #275 |
+
 ## Groups
 
 | group | probes | what it covers |
 |---|---|---|
+| `k26` | 24 | the 2.6 additions (#186, #232, #236, #275/#268): `k26-a-*` (5), `k26-b-*` (5), `k26-c-*` (8), `k26-d-*` (6); table above |
 | `images` | 11 | CSS / image / metadata forms in the posted page and the Word file (I10, I5): `atk-bg-svg`, `atk-other-paths`, `atk-id-in-css`, `rv2b-imageset`, `rv241-atk-css`, `rv241-v241`, `rc250-css-fuzz`, `rc250-jpeg2`, `rc250-svg-inline`, `rc250-word-where`, `csp-check` |
 | `audience` | 23 | audience, kind and weekly/minutes confusion (I6, I7, I15, I16): `rvmd-aud`, `audbypass-internal`, `audbypass-missing`, `audbypass-Client`, `audbypass-weekly`, `audbypass-distributed`, `audbypass-none`, `audbypass-file`, `rvaud-file-internal`, `rvaud-file-missing`, `rvaud-file-list`, `rvaud-file-dup`, `rvaud-file-kindsp`, `rvaud-file-kindweekly`, `rvaud-file-kindweeklyc`, `rvaud-file-kindmin`, `rvaud-file-kwc`, `ms1-kind`, `ms1-aud`, `ms1-combo`, `ms1-mv`, `ms2-fields`, `minutes-route` |
 | `header` | 5 | stored header fields: project_name, client, title, meta (I8, I14): `sweepclass-header`, `sweepclass-header-disk`, `ms1-header`, `ms2-hot`, `ms2-fields` |
