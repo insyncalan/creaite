@@ -4857,6 +4857,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     VAULT_PATH: () => VAULT_PATH,
     VDB: () => VDB,
     VH: () => VH,
+    VIPCARDS: () => VIPCARDS,
     VIPD: () => VIPD,
     VIPKIND: () => VIPKIND,
     VIPNOTED: () => VIPNOTED,
@@ -5024,6 +5025,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     attachLink: () => attachLink,
     attachRun: () => attachRun,
     attentionItems: () => attentionItems,
+    attnAlert: () => attnAlert,
+    attnAlertHtml: () => attnAlertHtml,
+    attnAlertItems: () => attnAlertItems,
     autoGrow: () => autoGrow,
     batchMove: () => batchMove,
     bcKey: () => bcKey,
@@ -6632,6 +6636,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     redraftRequest: () => redraftRequest,
     redrafter: () => redrafter,
     reduced: () => reduced,
+    refReview: () => refReview,
     refineAsk: () => refineAsk,
     refineHtml: () => refineHtml,
     refineMount: () => refineMount,
@@ -6962,6 +6967,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
     tdToReview: () => tdToReview,
+    tdToReviewRef: () => tdToReviewRef,
     textMsg: () => textMsg,
     themeFade: () => themeFade,
     themeIcon: () => themeIcon,
@@ -43833,6 +43839,7 @@ ${s5}`;
       }
     }
     out.unshift(...msAttention().map((r4) => ({ milestone: r4.ms, html: (n4) => msAttnRow(n4, r4) })));
+    out.push(...attnAlertItems());
     return out;
   }
   var msLate = (x5) => !!x5.due && days(x5.due) < 0;
@@ -44631,6 +44638,16 @@ ${s5}`;
   });
   function bootToday0159() {
     document.addEventListener("click", (e4) => {
+      const b5 = e4.target.closest("[data-tdrev]");
+      if (!b5) return;
+      e4.preventDefault();
+      const [f5, r4] = (
+        /** @type {HTMLElement} */
+        b5.dataset.tdrev.split("|")
+      );
+      tdToReviewRef(f5, r4);
+    });
+    document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-setup]");
       if (!b5) return;
       e4.preventDefault();
@@ -44824,8 +44841,8 @@ ${s5}`;
       []
     );
     void live;
-    VIPS().forEach((a5) => {
-      if ("summary" in a5 && a5.marker !== "private") {
+    VIPCARDS().forEach((a5) => {
+      if ("summary" in a5) {
         tdl.push(convRow(a5));
         return;
       }
@@ -44868,6 +44885,54 @@ ${s5}`;
     a5.found === "start-up" ? "found on start-up" : "",
     a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
+  var attnAlert = (a5) => a5.kind === "proposal" || a5.kind === "note" || a5.marker === "private";
+  var VIPCARDS = () => VIPS().filter((a5) => !attnAlert(a5));
+  var refReview = (file, ref) => REV.find((x5) => x5.file === file && String(x5.ref) === String(ref) && !x5.done);
+  var rvAttr = (
+    /** @param {any} r */
+    (r4) => `data-tdrev="${esc(String(r4.file || ""))}|${esc(String(r4.ref))}"`
+  );
+  var alWhen = (
+    /** @param {any} a */
+    (a5) => String(a5.returned || a5.sent || a5.updated || "").replace("T", " ").slice(0, 16)
+  );
+  function attnAlertItems() {
+    return VIPS().filter(attnAlert).sort((a5, b5) => alWhen(b5).localeCompare(alWhen(a5))).map((a5) => ({ alert: a5.id, html: (
+      /** @param {number} n */
+      (n4) => attnAlertHtml(n4, a5)
+    ) }));
+  }
+  function attnAlertHtml(n4, a5) {
+    const refs = (
+      /** @type {any[]} */
+      a5.refs || []
+    ), first = refs[0] || {}, t47 = String(a5.title || a5.subject || "Conversation"), when2 = alWhen(a5);
+    const attrs = `class="alrow" data-al="${esc(a5.id)}"`, dis = (name2) => tib("dismiss", "Dismiss", name2, `data-alertdo="dismiss" data-id="${esc(a5.id)}"`);
+    if (a5.marker === "private") {
+      const ext = a5.link ? linkAnchor(a5.link, esc(t47), "t") : null;
+      return tl2(n4, ext || (first.file ? tLink(rvAttr(first), esc(t47)) : `<span class="t">${esc(t47)}</span>`), when2 ? `updated ${esc(whenWords(when2))}` : "", `<span class="tacts">${dis(`Dismiss: ${t47}`)}</span>`, attrs);
+    }
+    const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), cnt = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
+    const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, staged: written at the next apply` : `${cnt} proposal${cnt === 1 ? "" : "s"} in Review`;
+    const lines2 = a5.marker === "confidential" ? [] : refs.map((r4) => {
+      const x5 = refReview(r4.file, r4.ref);
+      return x5 ? `${esc(r4.tag ? r4.tag[0].toUpperCase() + r4.tag.slice(1) : "Item")}: ${sLink(rvAttr(r4), esc(String(x5.rec && x5.rec.t || "")))}` : "";
+    }).filter(Boolean);
+    const meta = [what, note ? "" : proj, a5.sent ? `sent ${whenWords(String(a5.sent).replace("T", " ").slice(0, 16))}` : "", confMark(a5), a5.returned ? "new since you dismissed it" : ""].filter(Boolean).map(esc).join(" · ");
+    const name = `From ${a5.who ?? ""}, ${t47}`;
+    return tl2(
+      n4,
+      tLink(rvAttr(first), esc(`From ${a5.who ?? ""}: ${t47}`)),
+      meta + (lines2.length ? `. ${lines2.join("; ")}` : ""),
+      `<span class="tacts">${tib("external", "Open in Review", `Open in Review: ${name}`, rvAttr(first))}${dis(`Dismiss: ${name}`)}</span>`,
+      attrs
+    );
+  }
+  function tdToReviewRef(file, ref) {
+    const r4 = refReview(file, ref) || REV.find((x5) => x5.file === file && !x5.done);
+    if (r4) tdToReview(r4.n);
+    else go2("review");
+  }
   var RELCHIP = (
     /** @type {Record<string,string>} */
     { new: "New", update: "Update", chase: "Chase" }
@@ -57226,7 +57291,7 @@ ${pre}**Current state title:** ${title}`);
   }
   var ALERTWORD = { mail: "email", teams: "Teams message", calendar: "invite" };
   function alertFocus(id2, what) {
-    const vis = () => $$("#tdList > li").filter((l6) => !l6.hidden), i5 = vis().findIndex((r4) => r4.dataset.td === "al" + id2);
+    const vis = () => $$("#attnList > li.alrow, #tdList > li").filter((l6) => !l6.hidden), i5 = vis().findIndex((r4) => r4.dataset.td === "al" + id2 || r4.dataset.al === id2);
     return () => {
       const L3 = vis(), next = L3[Math.min(Math.max(0, i5), L3.length - 1)];
       const b5 = next && (next.querySelector(`[data-alertdo="${what}"]`) || next.querySelector("[data-tdact]"));
@@ -57578,8 +57643,8 @@ ${pre}**Current state title:** ${title}`);
     snack("Drafted from the message: check it, then save");
   }
   function vipBadge() {
-    const n4 = VIPS().length;
-    setRailCount("today", n4, `${n4} message${n4 === 1 ? "" : "s"} to see first`);
+    const n4 = VIPS().length, rows2 = VIPS().filter((a5) => a5.kind === "proposal" || a5.kind === "note").length;
+    setRailCount("today", n4, rows2 ? `${n4} item${n4 === 1 ? "" : "s"} to see first` : `${n4} message${n4 === 1 ? "" : "s"} to see first`);
     document.title = (shared.RBMARKED ? RBMARK : "") + (n4 ? `(${n4}) ` : "") + BASETITLE;
     tabTitle();
   }

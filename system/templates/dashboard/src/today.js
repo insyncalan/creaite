@@ -22,6 +22,7 @@ import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, jumpLink, navBlocked, navOf, openWork } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
+import { linkAnchor } from "./core/linkUrl.js";
 import { api, oneLine, onceFor, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
@@ -58,7 +59,9 @@ export function revGroupTitle(file,items){ const w=file.match(/^proposed-(\d{4}-
   if(/-(dashboard|edit)(-\d+)?\.json$/.test(file)) return "Review your pending edits";
   if(/-excel(-\d+)?\.json$/.test(file)) return "Review the Excel import";
   return `Review the proposals from ${when}`; }
-export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-319 (Alan, 14-10-2026): proposals are To decide's alone, so Needs attention has no per-meeting groups (nor their Approve n routine); a followed person's messages lead To decide too (BL-288) */
+export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-319 (Alan, 14-10-2026): proposals are To decide's alone, so Needs attention has no per-meeting groups (nor their Approve n routine).
+  #236 (Alan, 19-10-2026): the proposals and memory notes the sweep takes from a followed person's messages, and a private conversation, are Needs attention rows
+  (From <name>, never labelled: BL-288; Review still holds the proposals). The conversation cards (BL-334, BL-342) stay in To decide. */
   if(S.remindersOn){ const hide=[...dismissedF(),...dismissedS()];
     REMINDERS.filter(r=>!hide.includes(r.id)).forEach(r=>out.push({reminder:r.id,html:n=>tl(n,
       tLink(r.id.startsWith("client:")?`data-rphub="${r.id.split(":")[1]}||client"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:r.id.startsWith("weekly:")?(r.id.split(":")[2]?`data-rphub="${r.id.split(":")[2]}|${r.id.split(":")[1]}"`:'data-go="reports"'):'data-go="projects"',esc(longText(r.text))),
@@ -80,6 +83,7 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
     const show=L.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
     out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),`${andList(show)}${L.length>3?` and ${L.length-3} more`:""}.`)}); } }
   out.unshift(...msAttention().map(r=>({milestone:r.ms,html:n=>msAttnRow(n,r)})));   /* #251: time-critical, so first, soonest first */
+  out.push(...attnAlertItems());   /* #236: after the decisions, the reminders and the gaps line, as the help says (Stark's review: they led the list) */
   return out; }
 /* #251 (Alan, 19-10 and 20-10-2026): one Needs attention row per milestone not yet achieved (or dropped) that is due within the
    Due soon window (review.due_soon_days), or already past due, by its forecast date when it has one, else its agreed date, and
@@ -443,6 +447,7 @@ document.addEventListener("click",e=>{ if(!e.target.closest("#sweepRun")) return
   if(!viaServer()){ snack("Needs the live server"); return; }
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); });
 export function bootToday0159(){
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-tdrev]"); if(!b) return; e.preventDefault(); const [f,r]=/** @type {HTMLElement} */(b).dataset.tdrev.split("|"); tdToReviewRef(f,r); });   /* #236 */
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-setup]"); if(!b) return; e.preventDefault(); const a=b.dataset.setup;
   if(a==="dismiss"){ const l=dismissedF(); l.push(SETUPID); store.set("creaite-dismiss",l); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...l])]}); renderSetup();
     snack("Checklist dismissed. Settings › Reminders › Restore brings it back",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==SETUPID)); renderSetup(); }); return; }
@@ -525,7 +530,7 @@ const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel
 /** the Messages section's rows (BL-319 called it To decide, #168 Intake and Review), newest first: messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]); void live;
   /* #208 (Alan, 17-10-2026): proposals in Review and transcripts in Intake are not listed here; #245: intakeParts() counts them, in a line under Your commitments */
-  VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
+  VIPCARDS().forEach(a=>{ if("summary" in a){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
     const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
     tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
       meta:[`${VIPKIND[a.kind]||"Message"}${vipWhen(a)?" "+vipWhen(a):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",confMark(a)?"":a.marker||"",a.found==="start-up"?`found on start-up, received ${vipWhen(a)}`:""].filter(Boolean).join(" · ")+(a.gist?`. ${a.gist}`:""),
@@ -550,6 +555,33 @@ const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
 const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
 const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
   a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
+/** #236 (Alan, 19-10-2026): the followed-person alerts that are Needs attention rows, not To decide cards: what the sweep pulled out of a
+    message (a proposal row, a memory-note row) and a private conversation @param {any} a */
+export const attnAlert=a=>a.kind==="proposal"||a.kind==="note"||a.marker==="private";
+/** the cards that stay in To decide (BL-334, BL-342) */
+export const VIPCARDS=()=>VIPS().filter(a=>!attnAlert(a));
+/** the review row of a staged item or block (a note's is the file-change row), by file and item number @param {string} file @param {any} ref */
+export const refReview=(file,ref)=>REV.find(x=>x.file===file&&String(x.ref)===String(ref)&&!x.done);
+const rvAttr=/** @param {any} r */r=>`data-tdrev="${esc(String(r.file||""))}|${esc(String(r.ref))}"`;
+const alWhen=/** @param {any} a */a=>String(a.returned||a.sent||a.updated||"").replace("T"," ").slice(0,16);
+/** the rows, newest first @returns {any[]} */
+export function attnAlertItems(){ return VIPS().filter(attnAlert).sort((a,b)=>alWhen(b).localeCompare(alWhen(a))).map(a=>({alert:a.id,html:/** @param {number} n */n=>attnAlertHtml(n,a)})); }
+/** #236: "From <person>": the proposals the sweep staged from a followed person's mail or chat, or a note about it written into a project's memory.
+    Its title, each line and the Open in Review icon go to the proposal or note; Dismiss keeps it gone until the thread adds a new item or changes
+    an active one. Never labelled (BL-288). A private conversation, or a private thread, is its title and times only. @param {number} n @param {any} a */
+export function attnAlertHtml(n,a){ const refs=/** @type {any[]} */(a.refs||[]), first=refs[0]||{}, t=String(a.title||a.subject||"Conversation"), when=alWhen(a);
+  const attrs=`class="alrow" data-al="${esc(a.id)}"`, dis=(name)=>tib("dismiss","Dismiss",name,`data-alertdo="dismiss" data-id="${esc(a.id)}"`);
+  if(a.marker==="private"){ const ext=a.link?linkAnchor(a.link,esc(t),"t"):null;
+    return tl(n,ext||(first.file?tLink(rvAttr(first),esc(t)):`<span class="t">${esc(t)}</span>`),when?`updated ${esc(whenWords(when))}`:"",`<span class="tacts">${dis(`Dismiss: ${t}`)}</span>`,attrs); }
+  const note=a.kind==="note", inRev=refs.filter(r=>refReview(r.file,r.ref)), cnt=refs.length, proj=a.p&&a.p!=="_portfolio"?pName(a.p):"no project";
+  const what=note?(inRev.length?`A note for ${proj}'s memory, in Review`:`A note for ${proj}'s memory, staged: written at the next apply`):`${cnt} proposal${cnt===1?"":"s"} in Review`;
+  const lines=a.marker==="confidential"?[]:refs.map(r=>{ const x=refReview(r.file,r.ref);   /* a confidential thread: the title, the mark and the times, no item words */ return x?`${esc(r.tag?r.tag[0].toUpperCase()+r.tag.slice(1):"Item")}: ${sLink(rvAttr(r),esc(String(x.rec&&x.rec.t||"")))}`:""; }).filter(Boolean);
+  const meta=[what,note?"":proj,a.sent?`sent ${whenWords(String(a.sent).replace("T"," ").slice(0,16))}`:"",confMark(a),a.returned?"new since you dismissed it":""].filter(Boolean).map(esc).join(" · ");
+  const name=`From ${a.who??""}, ${t}`;
+  return tl(n,tLink(rvAttr(first),esc(`From ${a.who??""}: ${t}`)),meta+(lines.length?`. ${lines.join("; ")}`:""),
+    `<span class="tacts">${tib("external","Open in Review",`Open in Review: ${name}`,rvAttr(first))}${dis(`Dismiss: ${name}`)}</span>`,attrs); }
+/** the proposal or note a followed person's row points at, in Review (highlighted); Review itself when it is not pending there @param {string} file @param {any} ref */
+export function tdToReviewRef(file,ref){ const r=refReview(file,ref)||REV.find(x=>x.file===file&&!x.done); if(r) tdToReview(r.n); else go("review"); }
 /** BL-342 Part 2: how a thread relates to open work */
 const RELCHIP=/** @type {Record<string,string>} */({new:"New",update:"Update",chase:"Chase"});
 /** BL-342: a card's due date as the row shows it, and whether it is past @param {any} a */

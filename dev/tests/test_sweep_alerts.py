@@ -394,8 +394,8 @@ class VipPageTests(unittest.TestCase):
         self.assertTrue(o["order"] & 4)                                                        # Your commitments (and the Intake line at its foot) come before the message card
         self.assertRegex(o["second"], r"^Intake: .*\d+ proposals? to approve")                  # #245: (the proposals' own order is Review's)
         self.assertIn("to approve", o["second"])                                               # #245: the proposals are counted in the quiet Intake line under Your commitments
-        self.assertEqual(o["badge"], "1")
-        self.assertTrue(o["title"].startswith("(1) "), o["title"])                          # BL-288: a plain count
+        self.assertEqual(o["badge"], "2")                                                      # #236: the message and the proposal row from the same person
+        self.assertTrue(o["title"].startswith("(2) "), o["title"])                          # BL-288: a plain count
         self.assertFalse(o["review"][0].startswith("VIP"), o["review"])                        # first, unlabelled
         self.assertIn("Confirm the go-live date", o["review"][0])
         self.assertNotIn("VIP", o["person"])

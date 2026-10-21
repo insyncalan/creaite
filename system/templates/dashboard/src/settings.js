@@ -840,7 +840,7 @@ export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`
    Dismiss (Undo in the message). BL-319: the messages are rows of Today's Messages section (today.js toDecideRows), newest first; their two icons keep the data-alertdo buttons this file's handler runs. */
 export const ALERTWORD={mail:"email",teams:"Teams message",calendar:"invite"};
 /* after a row goes: focus to the same button on the row now in its place in Messages (or its first action), else its heading */
-export function alertFocus(id,what){ const vis=()=>$$("#tdList > li").filter(l=>!l.hidden), i=vis().findIndex(r=>r.dataset.td==="al"+id); return ()=>{
+export function alertFocus(id,what){ const vis=()=>$$("#attnList > li.alrow, #tdList > li").filter(l=>!l.hidden), i=vis().findIndex(r=>r.dataset.td==="al"+id||r.dataset.al===id); return ()=>{   /* #236: a Needs attention row too */
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
   const h=$("#hTd"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); return; } const h2=$("#hAttn"); if(h2){ h2.tabIndex=-1; h2.focus(); } }; }
@@ -952,7 +952,7 @@ export async function alertDraft(){ const al=shared.CUR&&shared.CUR.mode==="new"
   const v=d.prefill.values||{}, x=shared.CUR.draft, t=String(v.description??v.decision??"").trim(), due=v.due_date||v.needed_by||"", f=k==="actions"?"upd":k==="raid"?"resp":"why";
   if(t) x.t=t; if(due) x.due=due; if(d.prefill.detail&&!String(x[f]||"").trim()) x[f]=String(d.prefill.detail);
   pkDraw(); const tt=$("#pkTitle"); if(tt){ tt.textContent=x.t; tt.focus(); } snack("Drafted from the message: check it, then save"); }
-export function vipBadge(){ const n=VIPS().length; setRailCount("today",n,`${n} message${n===1?"":"s"} to see first`);   /* BL-319: through the sidebar's store; BL-288: never labelled */
+export function vipBadge(){ const n=VIPS().length, rows=VIPS().filter(a=>a.kind==="proposal"||a.kind==="note").length; setRailCount("today",n,rows?`${n} item${n===1?"":"s"} to see first`:`${n} message${n===1?"":"s"} to see first`);   /* #236: a From row is a proposal or note, not a message */   /* BL-319: through the sidebar's store; BL-288: never labelled */
   document.title=(shared.RBMARKED?RBMARK:"")+(n?`(${n}) `:"")+BASETITLE; tabTitle(); }
 export let VIPNOTED=new Set(VIPS().map(a=>a.id));                 /* alerts already there when the page opened aren't notified again */
 /* BL-231: what this block did at load, run in today's order by src/main.js */

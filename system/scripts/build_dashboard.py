@@ -3118,19 +3118,23 @@ def prep_state(iso, start, title, look):
 
 # ===== Sweep and alerts (BL-97, BL-99, BL-98) =====
 
+ALERT_HIDDEN = ("keys", "ids", "sigs", "seen_sig")          # kept in vip.json, not given to the page
+
+
 def sweep_alerts(settings):
     """The sweep's ignore rules (BL-97) for Settings › Sweep, and the VIPs (BL-99): who they are, the alerts not yet
     seen (Today's VIP block) and the VIP settings."""
     import sweep                                    # read only: the rules and the alerts as sweep.py keeps them
     st, vs = sweep.vip_state(), sweep.vip_settings()
     sweep.promises_refresh(st["alerts"])           # BL-342 Part 5: a kept promise no longer open is hidden (not saved here)
+    sweep.followed_sync(st)                        # #236: proposals and notes of people followed, as rows (the poll saves them)
     import prep_page
     return {"ignore": sweep.ignore_rules(),
             "prep_pages": prep_page.latest(),                  # BL-98: Open last prep page
             "agendas_shared": paths.external(),                # projects in OneDrive: warn before the first page there
             "vip": {"enabled": vs.get("enabled", True), "notify": vs.get("notify", True),
                     "check_minutes": vs.get("check_minutes", 30), "last_check": st["last_check"],
-                    "alerts": [{k: v for k, v in a.items() if k not in ("keys", "ids")}     # BL-342: the card's keys stay in vip.json
+                    "alerts": [{k: v for k, v in a.items() if k not in ALERT_HIDDEN}     # BL-342: the card's keys stay in vip.json
                                for a in sweep.vip_sort([a for a in st["alerts"] if not a.get("seen")])],
                     "people": {v["name"]: v["kind"] for v in propose.vip_people()}}}
 

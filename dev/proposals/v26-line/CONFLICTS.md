@@ -43,3 +43,11 @@ Clean. Rebuilt; nothing changed.
 |------|-----------|-----|
 | `system/templates/help.md` | ours (#268 minutes v2 lines) + theirs' new "AI on the minutes" line | judgment call: the #262 line still speaks of the Internal and Distributed versions, which minutes v2 replaced with one version; kept verbatim for the #186/#262 owner to reword |
 | `dashboard.html` | theirs, rebuilt | generated |
+
+## 5. origin/v26-236-next (4fdf0065)
+
+| File | Resolution | Why |
+|------|-----------|-----|
+| `system/templates/dashboard/src/today.js` | ours' server.js import (no `reviewViaServer`, unused since #232) + theirs' `linkAnchor` import | both sides' imports |
+| `system/templates/help.md` | ours' Intake line (#232 wording) + theirs' Messages line (#236 "From <name>" rows) | each side changed a different line |
+| `dashboard.html` | theirs, rebuilt | generated |
