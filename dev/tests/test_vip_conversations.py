@@ -329,7 +329,7 @@ class ConversationPageTests(unittest.TestCase):
         self.assertEqual(o["cardButtons"], 1)                                                # BL-342: Handled on the card; the work-item buttons are per item
         self.assertIn("Mia Hale with Omar Ali: nothing for you", o["quiet"])
         self.assertIn("updated 08:20", o["quiet"])                                           # its own last message
-        self.assertEqual(o["quietButtons"], 0)
+        self.assertEqual(o["quietButtons"], 1)                                               # #276: only Seen
         self.assertEqual(o["count"], "1")                                                    # the quiet line isn't counted
         self.assertNotIn("VIP", o["page"])                                                   # BL-288
 
