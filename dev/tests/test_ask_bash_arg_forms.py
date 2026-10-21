@@ -17,6 +17,7 @@ from ask_bash_arg_forms_support import (  # noqa: E402
     forms,
     handovers,
     lookalikes,
+    WORDS,
 )
 
 
@@ -25,8 +26,12 @@ class AskArgForms(HookCase):
         self.refused_by(forms(self.root, self.home))
 
     def test_the_two_reported_forms(self):
-        """The two forms reported against ask mode, with the secret named in the reason."""
-        for cmd in (f"{P} ~/.ss?/id_rsa", f"{P} --file=~/.ssh/id_rsa"):
+        """The two forms reported against ask mode: the wildcard one is refused as a pattern outside quotes (#174 F5, before the
+        never list looks), the other with the secret named in the reason."""
+        for mode in MODES:
+            code, why = self.hook(mode, f"{P} ~/.ss?/id_rsa")
+            self.assertEqual((code, by(why)), (2, WORDS), why)
+        for cmd in (f"{P} --file=~/.ssh/id_rsa",):
             for mode in MODES:
                 with self.subTest(cmd=cmd, mode=mode):
                     code, why = self.hook(mode, cmd)
