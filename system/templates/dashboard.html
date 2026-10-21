@@ -35932,6 +35932,7 @@ ${s5}`;
   function mvOpen(code, cli, move) {
     return mvVis(code, cli, move).filter((m5) => m5.state !== "achieved").sort((a5, b5) => (a5.agr || a5.fc || "9").localeCompare(b5.agr || b5.fc || "9"));
   }
+  var MSW = typeWord("milestone");
   function mvShape(st2, sz) {
     sz = sz || 16;
     const p6 = {
@@ -35999,10 +36000,10 @@ ${s5}`;
       h5 += `<div class="mv-lead" style="left:${x5}px;top:56px;height:${top - 56}px"></div>`;
       if (it2.g) {
         const ax2 = px2(mvT(m5.agr));
-        h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" title="${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
+        h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" role="img" aria-label="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}" data-tip="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
         h5 += `<button type="button" class="mv-lab gl" data-mvedit="${m5.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m5.n)} now expected ${fd(m5.fc)}"><b>Expected ${fd(m5.fc)}</b><span>${esc(m5.n.length > 20 ? m5.n.slice(0, 19) + "…" : m5.n)}</span></button>`;
       } else {
-        h5 += `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}">${mvShape(st2, 20)}</button>`;
+        h5 += `${((w6) => `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${w6}" data-tip="${w6}">${mvShape(st2, 20)}</button>`)(`${MSW}: ${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}`)}`;
         h5 += `<button type="button" class="mv-lab${st2 === "overdue" ? " late" : ""}${ach ? " ok" : ""}" data-mvedit="${m5.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m5.n)}"><b>${esc(nm3)}</b><span>${fd(mvWhen(m5))}</span></button>`;
       }
     });
@@ -36092,7 +36093,7 @@ ${s5}`;
       const aria = `${m5.n}, ${MVWORD[st2]}${vs2 > 0 ? `, ${vs2} days behind agreed` : ""}, agreed ${fd(m5.agr) || "not set"}, forecast ${fd(m5.fc) || "not set"}`;
       h5 += `<div class="mv-lrow" role="option" tabindex="0" data-mvsel="${m5.id}" aria-selected="${m5.id === shared.MV.sel}" aria-label="${esc(aria)}">
       <div><div class="nm">${esc(m5.n)}</div><div class="sub">${mvTag(st2)}${m5.cvis ? "" : " · internal"}</div><div class="sub">Agreed ${fd(m5.agr) || "not set"}${m5.fc !== m5.agr ? ` · forecast ${fd(m5.fc)}` : ""}</div></div>
-      <div class="mv-track" aria-hidden="true">${months.map((t47) => `<div class="tm" style="left:${pos(t47)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb2 ? `<div class="orig" style="left:${pos(mvT(m5.orig))}"></div>` : ""}${m5.agr ? `<div class="agr" style="left:${pos(mvT(m5.agr))}"></div>` : ""}${m5.fc ? `<div class="fc" style="left:${pos(mvT(m5.fc))}">${mvShape(st2, 20)}</div>` : ""}</div>
+      <div class="mv-track" aria-hidden="true">${months.map((t47) => `<div class="tm" style="left:${pos(t47)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb2 ? `<div class="orig" style="left:${pos(mvT(m5.orig))}" role="img" aria-label="${MSW}: original date ${fd(m5.orig)}" data-tip="${MSW}: original date ${fd(m5.orig)}"></div>` : ""}${m5.agr ? `<div class="agr" style="left:${pos(mvT(m5.agr))}"></div>` : ""}${m5.fc ? `<div class="fc" style="left:${pos(mvT(m5.fc))}" role="img" aria-label="${MSW}: ${MVWORD[st2]}, forecast ${fd(m5.fc)}" data-tip="${MSW}: ${MVWORD[st2]}, forecast ${fd(m5.fc)}">${mvShape(st2, 20)}</div>` : ""}</div>
       <div class="mv-chips"><span class="v ${vs2 > 0 ? "bad" : "ok"}">${vs2 > 0 ? "+" + vs2 + " d" : "0 d"} <small>vs agreed</small></span>${rb2 ? `<span class="v ${vo2 > 0 ? "bad" : "ok"}">${vo2 > 0 ? "+" : ""}${vo2} d <small>vs original</small></span>` : ""}${m5.moves ? `<span class="mv-hint">Moved ${m5.moves}×${rb2 ? " · rebaselined" : ""}</span>` : '<span class="mv-hint">Not moved</span>'}</div></div>`;
     });
     h5 += `</div><div class="mv-legend"><span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="none" stroke="var(--faint)" stroke-width="2"/></svg>Original (if rebaselined)</span><span><svg width="6" height="16" aria-hidden="true"><rect width="3" height="16" x="1.5" fill="var(--ink)"/></svg>Agreed</span><span>Forecast, shaped by state</span><span><svg width="18" height="4" aria-hidden="true"><rect width="18" height="3" fill="var(--bad)" opacity=".55"/></svg>Distance past agreed</span><span><svg width="2" height="14" aria-hidden="true"><rect width="1" height="14" fill="var(--accent)"/></svg>Today</span></div></div>`;

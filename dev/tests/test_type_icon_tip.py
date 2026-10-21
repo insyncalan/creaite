@@ -4,6 +4,9 @@ Wherever a work item's type icon is drawn (the shared ico() helper: Work, Review
 Week ahead's kind icon on Today), it carries the app's one tooltip (data-tip) naming the type, "Action", "Decision", "Risk",
 "Issue", "Assumption", "Dependency" (and "Milestone"), with the accessible name in step (role="img", aria-label the same words)
 and no native title beside it (two tooltips would show). The peek shows the type in words, not as an icon.
+Milestones everywhere (Alan, 21-10-2026): search, the Dependencies card's milestone headers, the Week ahead (through the helper) and
+the Milestones page's own markers (Plan strip, also on the project page's card; Movement's forecast and original-date marks),
+whose tooltip and name start "Milestone: " and then say which one, its state and date.
 
 Run: python3 dev/tests/test_type_icon_tip.py   (needs Google Chrome; skipped otherwise)
 """
@@ -42,6 +45,7 @@ class TypeIconTip(LiveBrowserCase):
             self.assertNotIn("title=", h)
         for k, w in (("risk", "Risk"), ("issue", "Issue"), ("assumption", "Assumption"), ("dependency", "Dependency"), ("action", "Action"), ("decision", "Decision")):
             self.assertIn(f'data-tip="{w}"', b.eval(f"searchIco({k!r})"))     # search results
+        self.assertIn('data-tip="Milestone"', b.eval("searchIco('milestone')"))  # search: a milestone result
         self.assertEqual(b.eval("[typeWord('actions'),typeWord('decisions'),typeWord('raid',{type:'Issue'}),typeWord('raid',{}),typeWord('milestone')]"),
                          ["Action", "Decision", "Issue", "Risk", "Milestone"])
 
@@ -91,6 +95,31 @@ class TypeIconTip(LiveBrowserCase):
         self.assertEqual(b.eval(f"{ICONS}('#weekList .wkic').map(x=>x[0])"),
                          ["Action", "Decision", "Risk", "Issue", "Assumption", "Dependency", "Milestone"])
         self.named("#weekList .wkic")
+
+    def milestone_marks(self, sel):
+        got = self.b.eval(f"[...document.querySelectorAll({sel!r})].map(e=>[e.dataset.tip||'',e.getAttribute('aria-label')||'',e.getAttribute('title')])")
+        self.assertTrue(got, sel)
+        for tip, name, title in got:
+            self.assertTrue(tip.startswith("Milestone: ") and len(tip) > 11, (sel, tip))
+            self.assertEqual((name, title), (tip, None), sel)
+
+    def test_milestones_on_the_project_page_and_the_milestones_page(self):
+        b = self.b
+        b.eval("MVAUD='int'; try{ localStorage.setItem('creaite.cockpit.milestones.view','int'); }catch(e){}")   # the internal view: every milestone
+        b.eval("go('cockpit','ABC')")
+        b.wait("document.querySelector('#mvCard .mv-mk')")
+        self.milestone_marks("#mvCard .mv-mk")                                          # the project page's milestones card (Plan strip)
+        b.eval("mvOpenPage('ABC','plan')")
+        b.wait("VIEW==='milestones'&&document.querySelector('#v-milestones .mv-mk')")
+        self.milestone_marks("#v-milestones .mv-mk")                                    # the Milestones page: Plan
+        if b.eval("!!document.querySelector('#v-milestones .mv-ghost')"):
+            self.milestone_marks("#v-milestones .mv-ghost")                             # a slipped milestone's expected date
+        b.eval("mvOpenPage('ABC','move')")
+        b.wait("document.querySelector('#v-milestones .mv-track .fc')")
+        self.milestone_marks("#v-milestones .mv-track .fc")                             # Movement: the forecast mark
+        if b.eval("!!document.querySelector('#v-milestones .mv-track .orig')"):
+            self.milestone_marks("#v-milestones .mv-track .orig")                       # Movement: the original date
+        b.eval("try{ localStorage.removeItem('creaite.cockpit.milestones.view'); }catch(e){} go('today')")
 
 
 if __name__ == "__main__":
