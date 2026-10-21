@@ -177,6 +177,84 @@ class BodyAndFields(unittest.TestCase):
         self.assertEqual(invite_clean.clean_row({"id": "e", **row}), {"id": "e", **row})
 
 
+class LetterOnlyValues(unittest.TestCase):
+    """v2.6 review (Cap 08:23, item 5): a key whose value has no digit is never kept beside the rest of the field. After a passcode
+    or password label, a host or a dial-in, any text left over may be the value, so the field is dropped whole (fail closed);
+    only an ID-like label with a numbered value keeps the rest ("Code 2 review" keeps "review")."""
+
+    VALUES = ("kqZxyw", "alpha-bravo", "BLUEFOX", "abcdef")
+    LABELS = ("Passcode", "PASSCODE", "passcode", "Pass code", "Pwd", "Access code", "Meeting key", "Host key")
+    NEED_A_SEPARATOR = ("Password", "PASSWORD", "Meeting password", "Key", "Code", "Token", "Secret")   # "Key takeaways" is a title
+    SEPARATORS = (": ", " - ", "=", " ", " : ", "= ", "\u2013 ")
+
+    def test_cap_cases(self):
+        for text in ("Steering Passcode: kqZxyw", "Board meeting key: alpha-bravo", "Meeting ID 123 456 789 Passcode abcdef",
+                     "Weekly sync zoom.us 98765432101", "Room 4 Passcode BLUEFOX", "Jane Roe Passcode kqZxyw",
+                     "Sync webex.com kqZxyw", "Review Pwd kqZxyw", "Plan Password: kqZxyw end"):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), "")
+
+    def test_label_separator_and_case_variants(self):
+        for label in self.LABELS + self.NEED_A_SEPARATOR:
+            for sep in (s for s in self.SEPARATORS if label in self.LABELS or s != " "):
+                for value in self.VALUES:
+                    for text in (f"Steering {label}{sep}{value}", f"{label}{sep}{value} steering"):
+                        with self.subTest(text=text):
+                            out = invite_clean.scrub(text, 140)
+                            self.assertNotIn(value.lower(), out.lower(), (text, out))
+
+    def test_title_place_and_organiser_through_calendar_row(self):
+        row = sweep.calendar_row(event(title="Steering Passcode: kqZxyw", where="Room 4 Passcode BLUEFOX",
+                                       organiser="Jane Roe Passcode kqZxyw"), "09:00", "10:00", False)
+        self.assertEqual((row["title"], row["where"], row["organiser"]), ("Meeting", "", False))
+        for title in ("Board meeting key: alpha-bravo", "Meeting ID 123 456 789 Passcode abcdef", "Weekly sync zoom.us 98765432101"):
+            with self.subTest(title):
+                self.assertEqual(sweep.calendar_row(event(title=title), "09:00", "10:00", False)["title"], "Meeting")
+
+    def test_confidential_title(self):
+        row = sweep.calendar_row(event(title="Steering Passcode: kqZxyw", sensitivity="confidential"), "09:00", "10:00", False)
+        self.assertEqual(row["title"], "Meeting")
+        self.assertNotIn("kqZxyw", json.dumps(row))
+
+    def test_bad_label_in_sweep_messages(self):
+        for title in ("Steering Passcode: kqZxyw", "Weekly sync zoom.us 98765432101", "Board meeting key: alpha-bravo"):
+            with self.subTest(title):
+                bad = []
+                sweep.localise({"2026-10-21": [{"title": title, "start": "garbled", "end": "x", "sensitivity": "normal"}]}, bad)
+                self.assertEqual(len(bad), 1)
+                for word in ("kqZxyw", "98765432101", "alpha-bravo"):
+                    self.assertNotIn(word, bad[0])
+
+    def test_space_only_label_with_a_mixed_case_value(self):
+        """v2.6 review: "Password kqZxyw" and "Key kqZxyw" (label, one space, no separator) carried the value through. A word
+        that switches from a small letter to a capital (kqZxyw) after a password or bare key label is read as the value."""
+        for label in self.NEED_A_SEPARATOR + ("Passwort", "OTP"):
+            for value in ("kqZxyw", "aB3", "xYz-Qw"):
+                for text in (f"{label} {value}", f"Steering {label} {value}", f"{label} {value} steering"):
+                    with self.subTest(text=text):
+                        out = invite_clean.scrub(text, 140)
+                        self.assertNotIn(value.lower(), out.lower(), (text, out))
+        for text, want in (("Password kqZxyw", ""), ("Key kqZxyw", ""), ("Steering Password kqZxyw", "Steering"),
+                           ("Key kqZxyw steering", "")):     # text after a letter-only value may be more of it: dropped whole
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), want)
+                self.assertTrue(invite_clean.is_secret(text))
+
+    def test_space_only_label_keeps_ordinary_words(self):
+        for text in ("Password reset", "Key dates", "Key Dates review", "Token Ring retrospective", "Code Review", "Secret Santa",
+                     "Password Policy update"):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), text)
+
+    def test_legitimate_titles_keep_their_words(self):
+        for text, want in (("Code 2 review", "review"), ("Board Meeting ID 123 456 789 sync", "Board sync"),
+                           ("Budget (PIN 4321)", "Budget"), ("Sync Passcode: 4321", "Sync"), ("Weekly sync zoom.us", "Weekly sync"),
+                           ("Code review of the supplier SOW", "Code review of the supplier SOW"),
+                           ("Passwords policy review", "Passwords policy review"), ("Key takeaways", "Key takeaways")):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), want)
+
+
 class Timing(unittest.TestCase):
     """Round 2: a crafted invite cannot stall the calendar save. Every case is 60,000 characters (the body's look-at limit; a title
     or name 20,000 and 60,000) and must finish well inside two seconds; the times are printed."""
