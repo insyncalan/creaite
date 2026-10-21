@@ -6959,6 +6959,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
+    typeWord: () => typeWord,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
     undCommit: () => undCommit,
@@ -7884,7 +7885,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var KI = { action: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>', Risk: '<path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/>', Issue: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.4"/>', Assumption: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.6v.4M12 17v.4"/>', Dependency: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>', decision: '<path d="m13.5 3.5 7 7-3 3-7-7z"/><path d="m11.5 8.5-8 8 4 4 8-8"/>', milestone: '<path d="M5 21V4h11l-2 4 2 4H5"/>' };
   var KL = { action: "Action", decision: "Decision", milestone: "Milestone" };
   var kindOf = (t47, x5) => t47 === "actions" ? "action" : t47 === "raid" ? x5 && x5.type || "Risk" : t47 === "decisions" ? "decision" : "milestone";
-  var ico = (k5) => KI[k5] ? `<span class="ki" title="${KL[k5] || k5}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k5]}</svg></span>` : "";
+  var typeWord = (t47, x5) => {
+    const k5 = kindOf(t47, x5);
+    return KL[k5] || k5;
+  };
+  var ico = (k5) => KI[k5] ? `<span class="ki" role="img" aria-label="${KL[k5] || k5}" data-tip="${KL[k5] || k5}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KI[k5]}</svg></span>` : "";
   var revIco = (r4) => r4.kind === "actions" ? ico("action") : r4.kind === "raid" ? ico(r4.rec.type || "Risk") : r4.kind === "decisions" ? ico("decision") : "";
   var store = {
     get: (k5, d5) => {
@@ -41515,8 +41520,9 @@ ${s5}`;
     { u: "Urgent", h: "High" }
   );
   var Diamond = () => /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M12 3l9 9-9 9-9-9z" }) });
-  function Kind({ kind }) {
-    return /* @__PURE__ */ u2("span", { class: "wkic", "aria-hidden": "true", children: kind === "milestone" ? /* @__PURE__ */ u2(Diamond, {}) : /* @__PURE__ */ u2(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
+  function Kind({ kind, type }) {
+    const w6 = typeWord(kind, { type });
+    return /* @__PURE__ */ u2("span", { class: "wkic", role: "img", "aria-label": w6, "data-tip": w6, children: kind === "milestone" ? /* @__PURE__ */ u2(Diamond, {}) : /* @__PURE__ */ u2(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
   }
   function PrepChip({ c: c5, openFile }) {
     const pk2 = usePeek(), id2 = `wkpk-${c5.day}-${c5.start}`.replace(/[^\w-]/g, "");
@@ -41564,7 +41570,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("li", { class: `wkrow wk-${r4.kind}`, "data-wk": r4.key, hidden, children: [
       meeting ? /* @__PURE__ */ u2("span", { class: "wktm", children: r4.time }) : /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("span", { class: `wkdot${r4.dot ? " " + r4.dot : ""}`, role: r4.dot ? "img" : void 0, "aria-label": r4.dot ? DOTS[r4.dot] : void 0, "aria-hidden": r4.dot ? void 0 : "true" }),
-        /* @__PURE__ */ u2(Kind, { kind: r4.kind })
+        /* @__PURE__ */ u2(Kind, { kind: r4.kind, type: r4.type })
       ] }),
       /* @__PURE__ */ u2("div", { class: "tb", children: [
         r4.open ? /* @__PURE__ */ u2("a", { class: "t", href: "#", ...dataOf(r4.open), children: r4.t }) : /* @__PURE__ */ u2("span", { class: "t", children: r4.t }),
@@ -43123,6 +43129,7 @@ ${s5}`;
     const item = (i5, key2, further, undated = false) => ({
       key: key2,
       kind: i5.kind,
+      type: i5.type || "",
       dot: dotOf(i5),
       t: i5.t || i5.id,
       open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
@@ -76935,6 +76942,7 @@ ${d5.text}`);
         "hubView",
         "ibtn",
         "ic",
+        "ico",
         "iconShapes",
         "igText",
         "inboxBadge",
@@ -77231,6 +77239,7 @@ ${d5.text}`);
         "say",
         "sayMd",
         "searchFetch",
+        "searchIco",
         "seeAll",
         "send",
         "sensitive",
@@ -77283,6 +77292,7 @@ ${d5.text}`);
         "tl",
         "toIso",
         "tx",
+        "typeWord",
         "typedLinkUrl",
         "typing",
         "undatedCard",
