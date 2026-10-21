@@ -106,7 +106,7 @@ class ReadModel(AllItemsCase):
         self.assertTrue({"Open", "Delayed", "Pending"} <= natives)
         self.assertIn("Withdrawn", {e[5] for e in exp.values() if e[4] == "Cancelled"})
         self.assertIn("Made", {e[5] for e in exp.values() if e[4] == "Closed"})
-        self.assertEqual(sorted(b.eval("FDEFS.all.map(d=>d[0])")), sorted(["st", "due", "o", "p", "pr", "ty", "sl", "lu", "rd"]))
+        self.assertEqual(sorted(b.eval("FDEFS.all.map(d=>d[0])")), sorted(["st", "due", "o", "p", "pr", "ty", "sl", "lu", "rd", "mi"]))   # #251: Milestone
         b.eval("WT='actions'")
 
     def test_the_default_order(self):

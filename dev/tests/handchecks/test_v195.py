@@ -852,7 +852,7 @@ class Judgement2(HandcheckCase):
         b.eval("go('help','reference')")
         para = b.wait(archiving_li + ".innerText", 10)
         self.assertIn("Move back", para, "Help says what Move back is")
-        self.assertIn("_Archive", para, "Help says what archiving does")
+        self.assertIn("99 Archive", para, "Help says what archiving does")
         self.note(51, f"{shots} shots (Files › Archived, Health › Archiving, Today's alert card and quiet line, Help; dark at 1400 "
                       f"and 320 px, forced colours at 320 px); "
                       + (f"sideways scroll: {'; '.join(sideways)}" if sideways else "no sideways scroll in any")
@@ -1316,7 +1316,7 @@ class Bl333And10(HandcheckCase):
 
     def test_c30_health_line_card(self):
         """30. Settings › Health → "Archive 4 reports and minutes older than 12 months", with **Archive them**. Press it → the
-        change card lists "Move file … → …/_Archive/…" for the FAL weekly report, client report and steering minutes, and the
+        change card lists "Move file … → …/99 Archive/…" for the FAL weekly report, client report and steering minutes, and the
         portfolio's minutes. Not the transcript, the ad hoc notes or ORX's recent report."""
         b = self.b
         self.screen("settings-health", settle=1)
@@ -1328,19 +1328,19 @@ class Bl333And10(HandcheckCase):
         b.wait("document.querySelector('#chat .confirm.edcard .edlines li')", 20)
         lines = b.eval("[...document.querySelectorAll('#chat .confirm.edcard .edlines li')].map(l=>l.innerText.trim())")
         fal, port = "projects/FAL Falcon Data Platform/", "projects/_portfolio/"
-        want = [f"Move file {fal}minutes/2025-09-02 FAL steering minutes.docx → {fal}_Archive/minutes/2025-09-02 FAL steering minutes.docx",
-                f"Move file {fal}reports/2025-08-29 Falcon Data Platform weekly report.docx → {fal}_Archive/reports/2025-08-29 Falcon Data Platform weekly report.docx",
-                f"Move file {fal}reports/2025-09-05 Falcon Data Platform client report.docx → {fal}_Archive/reports/2025-09-05 Falcon Data Platform client report.docx",
-                f"Move file {port}minutes/2025-09-10 Portfolio review minutes.docx → {port}_Archive/minutes/2025-09-10 Portfolio review minutes.docx"]
+        want = [f"Move file {fal}minutes/2025-09-02 FAL steering minutes.docx → {fal}99 Archive/minutes/2025-09-02 FAL steering minutes.docx",
+                f"Move file {fal}reports/2025-08-29 Falcon Data Platform weekly report.docx → {fal}99 Archive/reports/2025-08-29 Falcon Data Platform weekly report.docx",
+                f"Move file {fal}reports/2025-09-05 Falcon Data Platform client report.docx → {fal}99 Archive/reports/2025-09-05 Falcon Data Platform client report.docx",
+                f"Move file {port}minutes/2025-09-10 Portfolio review minutes.docx → {port}99 Archive/minutes/2025-09-10 Portfolio review minutes.docx"]
         self.assertEqual(sorted(lines), sorted(want))
         text = " ".join(lines)
         for never in ("transcript", "data notes", "Orbit Customer App weekly report"):
             self.assertNotIn(never, text)
         b.click("#chat .confirm.edcard [data-ed=reject]")     # check 31 approves it in its own vault; this one leaves it as it was
         b.pump(1)
-        self.assertFalse(list((self.vault / fal / "_Archive").glob("*/*")), "nothing moved")
+        self.assertFalse(list((self.vault / fal / "99 Archive").glob("*/*")), "nothing moved")
         self.note(30, "Health: \"Archive 4 reports and minutes older than 12 months\" with Archive them; the card: the FAL weekly "
-                      "report, client report and steering minutes and the portfolio's minutes, each Move file … → …/_Archive/…; "
+                      "report, client report and steering minutes and the portfolio's minutes, each Move file … → …/99 Archive/…; "
                       "not the transcript, the notes or ORX's report; Rejected afterwards (31 approves in its own vault)")
 
 
@@ -1407,10 +1407,10 @@ def call(name, inp, do=None):
 
 low = p.lower()
 if "archived" in low and "read" in low:
-    ok, why = call("Read", {"file_path": os.path.join(os.getcwd(), FAL, "_Archive/reports/2025-08-29 Falcon Data Platform weekly report.docx")})
+    ok, why = call("Read", {"file_path": os.path.join(os.getcwd(), FAL, "99 Archive/reports/2025-08-29 Falcon Data Platform weekly report.docx")})
     text = "Here it is." if ok else f"I can't read it: {why}"
 elif "archived" in low and "move" in low:
-    a, o = f"{FAL}/_Archive/minutes/2025-09-02 FAL steering minutes.docx", f"{FAL}/minutes/2025-09-02 FAL steering minutes.docx"
+    a, o = f"{FAL}/99 Archive/minutes/2025-09-02 FAL steering minutes.docx", f"{FAL}/minutes/2025-09-02 FAL steering minutes.docx"
     call("Bash", {"command": f'system/scripts/run filechange.py move "{a}" "{o}"'})
     spec = {"source_run": "cx-edit", "items": [], "file_changes": {"title": "Move back 2025-09-02 FAL steering minutes.docx",
             "project": "FAL", "archive": "reports_back", "file_ops": [{"op": "move", "from": a, "to": o}]}}
@@ -1479,9 +1479,9 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
 
     @staticmethod
     def archived(stored):
-        """The stored path's place below its engagement's (or the portfolio's) own _Archive."""
+        """The stored path's place below its engagement's (or the portfolio's) own 99 Archive."""
         parts = stored.split("/")
-        return "/".join(parts[:2] + ["_Archive"] + parts[2:])
+        return "/".join(parts[:2] + ["99 Archive"] + parts[2:])
 
     def at(self, stored):
         return self.vault / stored
@@ -1529,11 +1529,11 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.assertTrue(row, "Health offers to archive the old reports and minutes")
         self.b.eval("document.querySelector('#healthCard .hrow[data-check=archive_reports] .hact button').click()")
         title, lines = self.approve_card()
-        self.wait_for(lambda: all(self.at(self.archived(f)).is_file() for f in self.DUE), what="the files in _Archive")
+        self.wait_for(lambda: all(self.at(self.archived(f)).is_file() for f in self.DUE), what="the files in 99 Archive")
         return row, title, lines
 
     def ensure_archived(self, *stored):
-        """The four (or those named) in _Archive: archived through Health and the card if they aren't."""
+        """The four (or those named) in 99 Archive: archived through Health and the card if they aren't."""
         if not all(self.at(self.archived(f)).is_file() for f in stored or self.DUE):
             self.archive_via_health()
 
@@ -1616,8 +1616,8 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
     # ── the checks ──
 
     def test_c31_moved_incl_portfolio(self):
-        """31. Approve → the files are in `projects/FAL Falcon Data Platform/_Archive/reports/` and `/_Archive/minutes/`, and
-        the portfolio's in `projects/_portfolio/_Archive/minutes/`. Nothing is deleted."""
+        """31. Approve → the files are in `projects/FAL Falcon Data Platform/99 Archive/reports/` and `/99 Archive/minutes/`, and
+        the portfolio's in `projects/_portfolio/99 Archive/minutes/`. Nothing is deleted."""
         before = sorted(str(p.relative_to(self.vault)) for p in (self.vault / "projects").rglob("*") if p.is_file())
         self.assertIn(self.WEEKLY, self.search(self.WORD), "before: search finds the weekly report by its word")
         row, title, lines = self.archive_via_health()
@@ -1626,15 +1626,15 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
             self.assertFalse(self.at(f).exists(), f)
             self.assertTrue(self.at(self.archived(f)).is_file(), self.archived(f))
             self.assertIn(f"Move file {f} → {self.archived(f)}", lines)
-        self.assertTrue((self.vault / self.FAL / "_Archive/reports").is_dir() and (self.vault / self.FAL / "_Archive/minutes").is_dir())
-        self.assertTrue((self.vault / "projects/_portfolio/_Archive/minutes").is_dir())
+        self.assertTrue((self.vault / self.FAL / "99 Archive/reports").is_dir() and (self.vault / self.FAL / "99 Archive/minutes").is_dir())
+        self.assertTrue((self.vault / "projects/_portfolio/99 Archive/minutes").is_dir())
         for f in self.KEPT:
             self.assertTrue(self.at(f).is_file(), f"kept in place: {f}")
         after = sorted(str(p.relative_to(self.vault)) for p in (self.vault / "projects").rglob("*") if p.is_file())
         moved = {f: self.archived(f) for f in self.DUE}
         self.assertEqual(sorted(moved.get(f, f) for f in before), after, "nothing deleted: every file is where it was or moved")
         self.note(31, f"before: search \"{self.WORD}\" finds the weekly report; "
-                      f"Health › Archive them → card \"{title}\" ({len(lines)} moves) → Approve: 4 files in their _Archive "
+                      f"Health › Archive them → card \"{title}\" ({len(lines)} moves) → Approve: 4 files in their 99 Archive "
                       f"(FAL reports ×2, FAL minutes, portfolio minutes); {len(after)} files before and after, none deleted")
 
     def test_c32_links_not_indexed_guard(self):
@@ -1643,11 +1643,11 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.ensure_archived()
         link = self.opened(self.WEEKLY)
         self.assertTrue(link.get("ok"), link)
-        self.assertEqual(link.get("path"), str((self.vault / self.archived(self.WEEKLY)).resolve()), "it opens the file in _Archive")
+        self.assertEqual(link.get("path"), str((self.vault / self.archived(self.WEEKLY)).resolve()), "it opens the file in 99 Archive")
         found = self.search(self.WORD)
-        self.assertEqual([f for f in found if "weekly report" in str(f) or "_Archive" in str(f)], [], f"not found: {found}")
+        self.assertEqual([f for f in found if "weekly report" in str(f) or "99 Archive" in str(f)], [], f"not found: {found}")
         chat = self.ask("read FAL's archived weekly report")
-        calls = [c for c in self.guard_calls() if c["tool"] == "Read" and "_Archive" in json.dumps(c["input"])]
+        calls = [c for c in self.guard_calls() if c["tool"] == "Read" and "99 Archive" in json.dumps(c["input"])]
         self.assertTrue(calls, "the stand-in asked to Read the archived file")
         self.assertEqual(calls[-1]["exit"], 2, f"the guard hook refuses it: {calls[-1]}")
         self.assertIn("refused", chat.lower())
@@ -1678,15 +1678,15 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
                       f"offer false, same line")
 
     def test_c34_undo(self):
-        """34. Undo → the files are back where they were, and the `_Archive` folders the move made are gone."""
+        """34. Undo → the files are back where they were, and the `99 Archive` folders the move made are gone."""
         self.ensure_archived()
         how = self.undo_latest()
         self.wait_for(lambda: all(self.at(f).is_file() for f in self.DUE), what="the files back")
         for f in self.DUE:
             self.assertFalse(self.at(self.archived(f)).exists(), f)
-        self.assertFalse((self.vault / self.FAL / "_Archive").exists(), "FAL's _Archive is gone")
-        self.assertFalse((self.vault / "projects/_portfolio/_Archive").exists(), "the portfolio's _Archive is gone")
-        self.note(34, f"Undo through {how} → 4 files back; both _Archive folders gone")
+        self.assertFalse((self.vault / self.FAL / "99 Archive").exists(), "FAL's 99 Archive is gone")
+        self.assertFalse((self.vault / "projects/_portfolio/99 Archive").exists(), "the portfolio's 99 Archive is gone")
+        self.note(34, f"Undo through {how} → 4 files back; both 99 Archive folders gone")
 
     def test_c35_archived_chip(self):
         """35. Archive them again (check 30). Files → an **Archived** chip; it lists the four moved files, each tagged Archived
@@ -1723,7 +1723,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.assertEqual(o.get("path"), str((self.vault / self.archived(self.STEER)).resolve()))
         self.note(35, f"{'archived again through Health and the card' if again else 'already archived (check 34 not run)'}; Archived chip lists 4, each tagged Archived with Move back (the portfolio's at Portfolio › minutes); no Move back under "
                       f"{len(others)} other chips and folders ({sum(v[0] for v in others.values())} rows); clicking the steering "
-                      f"minutes' name → /api/open opens it in _Archive")
+                      f"minutes' name → /api/open opens it in 99 Archive")
 
     def test_c36_move_back(self):
         """36. Move back the FAL weekly report → the change card. Approve → it is back in `reports/`, gone from the Archived
@@ -1738,7 +1738,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.assertNotIn(self.WEEKLY, [x[0] for x in self.files_archived()], "gone from the Archived list")
         found = self.search(self.WORD)
         self.assertIn(self.WEEKLY, found, "search finds it again")
-        self.note(36, f"Move back → card \"{title}\", one line \"Move file …/_Archive/reports/… → …/reports/…\" → Approve: "
+        self.note(36, f"Move back → card \"{title}\", one line \"Move file …/99 Archive/reports/… → …/reports/…\" → Approve: "
                       f"back in reports/, 3 left under Archived, search \"{self.WORD}\" finds it")
 
     def test_c37_not_offered_again(self):
@@ -1763,15 +1763,15 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
                       f"reports exits 1 (\"{out.strip()[:60]}\")")
 
     def test_c38_undo(self):
-        """38. Undo → the report is back in `_Archive`, unindexed."""
+        """38. Undo → the report is back in `99 Archive`, unindexed."""
         self.assertTrue(self.at(self.WEEKLY).is_file(), "needs check 36's move back")
         how = self.undo_latest()
-        self.wait_for(lambda: self.at(self.archived(self.WEEKLY)).is_file(), what="the report in _Archive again")
+        self.wait_for(lambda: self.at(self.archived(self.WEEKLY)).is_file(), what="the report in 99 Archive again")
         self.assertFalse(self.at(self.WEEKLY).exists())
         found = self.search(self.WORD)
         self.assertEqual([f for f in found if "weekly report" in str(f)], [], f"unindexed: {found}")
         self.assertIn(self.WEEKLY, [x[0] for x in self.files_archived()], "listed under Archived again")
-        self.note(38, f"Undo through {how} → in _Archive again, under Archived; search "
+        self.note(38, f"Undo through {how} → in 99 Archive again, under Archived; search "
                       f"\"{self.WORD}\" doesn't find it")
 
     def test_c39_taken_place_refused(self):
@@ -1805,7 +1805,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.wait_for(lambda: self.at(self.PORTF).is_file(), what="the minutes back")
         self.assertFalse(self.at(self.archived(self.PORTF)).exists())
         found = self.search(self.PWORD)
-        self.note(40, "card \"Move file projects/_portfolio/_Archive/minutes/… → projects/_portfolio/minutes/…\" → Approve: back in projects/_portfolio/minutes/"
+        self.note(40, "card \"Move file projects/_portfolio/99 Archive/minutes/… → projects/_portfolio/minutes/…\" → Approve: back in projects/_portfolio/minutes/"
                       + ("; search finds it again" if self.PORTF in found else f"; search \"{self.PWORD}\": {found}"))
 
     def test_c41_ask_creaite_refused(self):
@@ -1815,15 +1815,15 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         seen = len(self.guard_calls())
         chat = self.ask("move the archived FAL steering minutes back")
         self.assertIn("an archived file is moved back from Files (Move back), never from ask creaite", chat)
-        self.assertTrue(self.at(self.archived(self.STEER)).is_file(), "still in _Archive")
+        self.assertTrue(self.at(self.archived(self.STEER)).is_file(), "still in 99 Archive")
         self.assertFalse(self.at(self.STEER).exists())
         calls = self.guard_calls()[seen:]
         bash = [c for c in calls if c["tool"] == "Bash"]
         write = [c for c in calls if c["tool"] == "Write"]
-        self.assertTrue(bash and bash[-1]["exit"] == 2, f"filechange.py move on _Archive refused by the hook: {bash}")
+        self.assertTrue(bash and bash[-1]["exit"] == 2, f"filechange.py move on 99 Archive refused by the hook: {bash}")
         self.note(41, "ask creaite: filechange.py move refused by the guard hook (exit 2); the move-back spec written in drafts "
                       f"({'allowed' if write and write[-1]['exit'] == 0 else 'refused'}) and named on a CHANGE line → the server's "
-                      "card refuses it: \"…never from ask creaite\"; the minutes stay in _Archive (stand-in Claude)")
+                      "card refuses it: \"…never from ask creaite\"; the minutes stay in 99 Archive (stand-in Claude)")
 
 
 class Bl334And316(HandcheckCase):

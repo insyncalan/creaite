@@ -69,8 +69,10 @@ export const rvDraftBtn=r=>{ const m=/ · <button type="button" class="linkbtn" 
 const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
 export const rvDrTag=r=>{ const m=RV_DR.exec(revDetail(r)||""); return m?raw(m[0]):""; };
 export const rvNotes=r=>{ const d=revDetail(r)||"", a=RV_WK.exec(d), n=RV_ND.exec(d); return raw((n?`<div class="rvnote">${n[0]}</div>`:"")+(a?a[0]:"")); };
-export const rvTip=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); if(!d) return ""; const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
-  return t?raw(` data-tip="${esc(t)}"`):""; };
+export const rvTip=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
+  /* #271: the line truncates with an ellipsis, so the tip ends with its reason and full source */
+  const tail=[r.why,fdText(srcShort(r.src))].map(x=>String(x??"").trim()).filter(x=>x&&x!=="—").join(" · "), all=[t,tail].filter(Boolean).join(" · ");
+  return all?raw(` data-tip="${esc(all)}"`):""; };
 export const WKRVF={actions:["due","due_date"],raid:["due","due_date"],decisions:["due","needed_by"]};   /* BL-180: declared before revDetail, which runs at load (Review) */
 export const draftOn=f=>!(S.drafting&&S.drafting[f]===false);   /* AI drafts: declared before revDetail, which runs at load (Review) */
 /* BL-290: the row's "Looks like" mark, only while Settings › General › AI drafts › Spot repeats is on (BL-133's reject reason keeps r.dup) */
@@ -112,7 +114,7 @@ export function revRow(r,idx,g,cls,head){ const minKids=isMin(r)&&head.kids.some
   return h; }
 export let RVLASTN=null, RVLASTV=null, RVSHOWN=false;   /* BL-263: the cleared tick's memory of the last draw */
 shared.MREVLEFT=false;   /* declared before renderReview, which runs at load */
-export const MLV=store.get("creaite-lastviewed",{}), MLVAT={}, MNEWGONE=new Set();   /* declared before renderReview, which runs at load */
+export const MLV=store.obj("creaite-lastviewed"), MLVAT={}, MNEWGONE=new Set();   /* declared before renderReview, which runs at load */
 shared.RF=null;      /* {q:[n…], i, key} while the mode is on */
 export const mFileAt=f=>{ const m=/(\d{4}-\d{2}-\d{2})[-T_ ]?(\d{2})(\d{2})/.exec(f||""); return m?`${m[1]} ${m[2]}:${m[3]}`:null; };   /* declared before renderReview, which runs at load */
 shared.MNEWIO=null;   /* declared before renderReview, which runs at load */

@@ -29,7 +29,7 @@ on a listed one that now passes, so the list only shrinks. BL-316 is done when i
 SB_REPORT=1 prints every opener's result as a table (the audit's raw data) and the inventory; SB_ONLY=today,work runs only
 those screens (the "unreached" lines are then not judged).
 
-The Undo half is in test_shared_undo.py (#89: a file of its own, so the two run side by side).
+The keys test runs in three files and the Undo half in two (#89; KEYS_PARTS and UNDO_PARTS): this one holds the helpers, part a, and the Chrome-less tests.
 
 Run: python3 dev/tests/test_shared_behaviour.py   (needs Google Chrome; the inventory test runs without it)
 """
@@ -48,6 +48,7 @@ import test_ui_sweep as us  # noqa: E402
 
 PROBE = (HERE / "behaviour_probe.js").read_text(encoding="utf-8")
 EXPECTED_FILE = HERE / "behaviour_expected_failures.json"
+WITNESS_FILE = HERE / "behaviour_witness.json"
 
 # v2.0.0 (#88): Notes. "notes" is the project's Notes tab (its New note button opens #newNoteDlg); "notes-ai" is a note with its
 # text selected (⌘A), which shows the AI bar and its AI menu (AiSelect). The note is made once through the real controls
@@ -123,6 +124,11 @@ SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
+# #251: Today's milestone rows (Needs attention) have an Options menu. The sample's UAT start (ABC-M-001) has open actions but is
+# forecast outside the Due soon window, so for the keys test alone (Keys.goto; in memory only, again on every visit) it is forecast
+# three days ahead. The Undo check keeps the plain Today: its menu's "Open it in Work" would leave Work filtered for later screens.
+KEYS_GO = {"today": ("(()=>{ const m=P.flatMap(p=>p.ms||[]).find(m=>m[3]==='ABC-M-001'); if(m) m[8]=pkAdd(TODAY,3); go('today'); renderToday(); })()",
+                     "!!document.querySelector('#attnList li[data-msattn] .dots')", "#v-today")}
 SCREENS["today-days"] = ("D.calendar={fetched:TODAY+' 07:00',days:{}}; D.days={first:pkAdd(TODAY,-1),last:TODAY,today:TODAY,fetched:null,days:[{date:pkAdd(TODAY,-1),dow:'Monday',short:'Mon 1',long:'Monday',today:false,past:true,weekend:false,week:0,meetings:[],all_day:[]},"
                          "{date:TODAY,dow:'Tuesday',short:'Tue 2',long:'Tuesday',today:true,past:false,weekend:false,week:0,meetings:[],all_day:[]}]}; go('today'); renderToday()",
                          "!!document.querySelector('#todayDate .dypastbtn')", "#v-today")   # #147: the day line's earlier-days menu needs a calendar with a past day
@@ -145,6 +151,16 @@ ON_SCREEN = {"work-display": "VIEW==='work'"}
 # Controls whose choices are what the list shows, never a saved change: the filter bars and Work's views. The Undo check
 # leaves them alone (a choice there would also change what every later screen shows).
 VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
+
+# #89: the screens in three parts for the keys test and two for the Undo check, each part a browser file of its own (a sample
+# vault each), about 220 s and 200 s where the whole was about 650 s and 400 s. In SCREENS' order within a part; the three Notes
+# screens stay together (they share the one note they make) and a dialog script (KEYED) runs with its screen. A new screen goes into
+# a part (test_every_screen_is_in_exactly_one_part says so), then behaviour_witness.py refreshes behaviour_witness.json.
+KEYS_PARTS = {"a": ("review", "activity", "person", "help", "settings-health", "rail-expanded", "rail-icons", "work-board", "work-panel-decision", "review-peek", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "archive-ask", "notes", "notes-ai", "notes-session"),
+              "b": ("work-panel", "cockpit", "people", "settings-essentials", "settings-advanced", "rail-collapsed", "activity-selected", "work-panel-details", "work-panel-raid", "work-panel-new", "work-display", "work-views", "shell", "clientreport"),
+              "c": ("today", "work", "intake", "files", "projects", "milestones", "settings-people", "ask", "work-decisions", "milestone-editor", "minutes-approve", "weekly", "reports", "reporting", "today-days")}
+UNDO_PARTS = {"a": ("review", "activity", "cockpit", "people", "help", "settings-essentials", "settings-advanced", "settings-health", "rail-expanded", "rail-collapsed", "activity-selected", "work-panel-raid", "work-panel-decision", "work-panel-new", "work-decisions", "work-views", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "weekly", "shell"),
+              "b": ("today", "work", "work-panel", "intake", "files", "projects", "milestones", "person", "settings-people", "ask", "rail-icons", "work-board", "work-panel-details", "review-peek", "work-display", "milestone-editor", "minutes-approve", "reports", "reporting", "archive-ask", "today-days", "notes", "notes-ai", "notes-session", "clientreport")}
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
 SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
@@ -346,12 +362,24 @@ def expected(check_kind):
             if x.startswith(check_kind + ": ")}
 
 
-def judge(check_kind, found, screens=None):
+def witnesses():
+    """{site name: the screen (or dialog script) whose run must reach that site}, from behaviour_witness.json. #89: the keys test
+    runs in three files (KEYS_PARTS), and "every popup in the code is reached by some screen" cannot be asked of a part that
+    sees only its own screens, so each site is judged in the part that holds its witness. A site no screen reaches has none (it is
+    listed in the expected failures as "unreached"). behaviour_witness.py writes the file from a run; test_the_witnesses_cover_
+    every_site_in_the_code keeps it honest."""
+    return json.loads(WITNESS_FILE.read_text(encoding="utf-8"))
+
+
+def judge(check_kind, found, screens=None, names=None):
     """The test's verdict on one check: `found` is {(area, line)} of today's failures. Fails on a failure not listed, and
-    on a listed one that now passes (remove its line): the messages, empty when it passes. With `screens`, only the lines of those screens are judged."""
+    on a listed one that now passes (remove its line): the messages, empty when it passes. With `screens`, only the lines of those screens are judged;
+    with `names` (the unreached check), only the lines of those sites."""
     exp = expected(check_kind)
     if screens is not None:
         exp = {(a, x) for a, x in exp if x.split()[1] in screens}
+    if names is not None:
+        exp = {(a, x) for a, x in exp if x.split(": ", 1)[1] in names}
     new, gone = sorted(found - exp), sorted(exp - found)
     msg = []
     if new:
@@ -378,6 +406,41 @@ class Inventory(unittest.TestCase):
             for s in sorted(sites, key=lambda s: (s["area"], s["file"], s["line"])):
                 print(f"{s['area']:12} {s['file']}:{s['line']:<5} {site_name(s)}")
             print(f"{len(sites)} sites")
+
+    def test_every_screen_is_in_exactly_one_part(self):
+        """#89: the keys test and the Undo check each run in parts (KEYS_PARTS, UNDO_PARTS); every screen is in one part of each,
+        in SCREENS' order, and the Notes screens (they share the note they make) are together."""
+        order = list(SCREENS)
+        for label, parts in (("keys", KEYS_PARTS), ("undo", UNDO_PARTS)):
+            flat = [s for p in parts.values() for s in p]
+            self.assertEqual(len(flat), len(set(flat)), f"{label}: a screen in two parts")
+            self.assertEqual(set(flat), set(order), f"{label}: a screen in no part, or a part names a screen that is gone")
+            for name, p in parts.items():
+                self.assertEqual(list(p), [s for s in order if s in p], f"{label} part {name}: not in SCREENS' order")
+            notes = {n for n, p in parts.items() if any(s.startswith("notes") for s in p)}
+            self.assertEqual(len(notes), 1, f"{label}: the Notes screens are in more than one part")
+
+    def test_every_part_is_run_by_exactly_one_test_file(self):
+        """#89: a part nobody calls would silently skip its screens. Each key of KEYS_PARTS is run (a call of run_part with its key) by exactly
+        one test file of test_shared_behaviour*.py, each key of UNDO_PARTS by exactly one of test_shared_undo*.py, and no file
+        runs a part that has no screens listed."""
+        for label, parts, pattern in (("keys", KEYS_PARTS, "test_shared_behaviour*.py"), ("undo", UNDO_PARTS, "test_shared_undo*.py")):
+            calls = []
+            for f in sorted(HERE.glob(pattern)):
+                calls += [(f.name, k) for k in re.findall(r'self\.run_part\("(\w+)"\)', f.read_text(encoding="utf-8"))]
+            self.assertEqual(sorted(k for _, k in calls), sorted(parts), f"{label}: each part run by one test file: {calls}")
+
+    def test_the_witnesses_cover_every_site_in_the_code(self):
+        """#89: each popup site in the code has the screen (or dialog script) whose run must reach it, or is listed as unreached.
+        A new site: add it to a screen, then run the parts with SB_WITNESS=<file> and dev/tests/behaviour_witness.py."""
+        wit, sites = witnesses(), {site_name(s) for s in inventory()}
+        units = set(SCREENS) | {k[1] for k in SharedBehaviour.KEYED}
+        listed = {x.split(": ", 1)[1] for _, x in expected("unreached")}
+        self.assertEqual(sorted(set(wit) - sites), [], "a witness for a site that is not in the code any more")
+        self.assertEqual(sorted(u for u in wit.values() if u not in units), [], "a witness that is not a screen or dialog script")
+        self.assertEqual(sorted(sites - set(wit) - listed), [], "a site with no witness that is not listed as unreached: run behaviour_witness.py")
+        self.assertEqual(sorted(listed - sites), [], "listed as unreached but not in the code any more")
+        self.assertEqual(sorted(listed & set(wit)), [], "listed as unreached and has a witness: remove one")
 
     def test_the_expected_failures_are_well_formed(self):
         data = json.loads(EXPECTED_FILE.read_text(encoding="utf-8"))
@@ -439,8 +502,21 @@ class Driver:
         return out
 
 
-class SharedBehaviour(Driver, us.UiSweepCase):
-    """BL-316's shared behaviour test: keys, focus and Esc, and every popup in the code reached."""
+class Keys(Driver):
+    """BL-316's shared behaviour test: keys, focus and Esc, and every popup in the code reached. The helpers and the script
+    for one part of the screens (KEYS_PARTS; #89: three browser files of about 220 s each instead of one of about 650 s). The
+    test classes that run them are SharedBehaviour here and test_shared_behaviour_b.py / _c.py."""
+
+    def goto(self, name):
+        """The screen, by its keys-test way where it has one (KEYS_GO)."""
+        if name not in KEYS_GO:
+            return super().goto(name)
+        plain = us.SCREENS[name]
+        us.SCREENS[name] = KEYS_GO[name]
+        try:
+            super().goto(name)
+        finally:
+            us.SCREENS[name] = plain
 
     def opened(self, i):
         """Enter on opener i: (its state, what it got wrong), or (None, why) when nothing opened."""
@@ -490,6 +566,10 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         """Opened again, Tab closes a menu or a list."""
         self.b.eval(f"SB.focus({i})")
         self.press("Enter", 0.4)
+        for _ in range(16):          # #89: a list that asks the live server first (aria-busy) opens when it answers; leaving before then
+            if not self.state(i)["busy"]:   # let it open under the next opener (Review's "Update an existing item instead" did, and
+                break                       # the next chip then saw it open: "aria-expanded is false when open")
+            self.b.pump(0.25)
         if not self.state(i)["open"]:
             return []
         self.press("Tab", 0.3)
@@ -773,35 +853,63 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         for screen, script, sig, area, how, label in self.KEYED:
             if screen not in only:
                 continue
+            before = len(self.seen)
             bad = getattr(self, script)()
+            self.by_unit[script] = self.seen[before:]
             if report:
                 print(f"{script:16} {'dialog':8} {how:48} {label:40} {'; '.join(bad) or 'ok'}")
             if bad:
                 found.add((area, f"keys: {sig} “{label}”: {'; '.join(bad)}"))
 
-    def test_every_menu_picker_and_dialog_answers_the_same_keys(self):
+    def run_part(self, part):
+        """The keys script on the screens of one part (KEYS_PARTS), then the dialogs no control opens that sit on them, and
+        the unreached verdict for the sites this part is answerable for (witnesses(): a site is judged where its witness is,
+        so the parts need share nothing)."""
         report = os.environ.get("SB_REPORT")
-        only = os.environ.get("SB_ONLY", "").split(",") if os.environ.get("SB_ONLY") else list(SCREENS)
+        want = set(os.environ["SB_ONLY"].split(",")) if os.environ.get("SB_ONLY") else None
+        only = [s for s in KEYS_PARTS[part] if want is None or s in want]
         self.seen, found = [], set()
+        self.by_unit = {}
         for name in only:
+            before = len(self.seen)
             for o, bad in self.each_opener(name, lambda i, o: self.drive(i, o["kind"])):
                 if report:
                     print(f"{name:16} {o['kind']:8} {o['sig'][:48]:48} {o['name'][:40]:40} {'; '.join(bad) or 'ok'}")
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
+            self.by_unit[name] = self.seen[before:]
         self.keyed_dialogs(only, report, found)
-        msg = judge("keys", found, set(only) | {k[1] for k in self.KEYED})
-        if os.environ.get("SB_ONLY"):
+        if os.environ.get("SB_WITNESS"):             # behaviour_witness.py's input: what each screen and dialog script reached
+            Path(os.environ["SB_WITNESS"]).write_text(json.dumps(self.by_unit), encoding="utf-8")
+        units = set(only) | {k[1] for k in self.KEYED if k[0] in only}
+        msg = judge("keys", found, units)
+        if want is not None or not only:
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding
-        sites = inventory()
-        missed = {(s["area"], "unreached: " + site_name(s)) for s in sites if not reached(s, self.seen)}
+        msg += self.unreached(part, units, report)
+        self.assertFalse(msg, "\n".join(msg))
+
+    def unreached(self, part, units, report):
+        """The messages of the unreached check for the sites this part answers for: those whose witness is one of its `units`
+        (screens and dialog scripts), and those with none (listed as unreached; a part that reaches one says to remove its line)."""
+        wit = witnesses()
+        sites = {}
+        for s in inventory():
+            sites.setdefault(site_name(s), []).append(s)
+        answerable = {n for n in sites if wit.get(n) in units or n not in wit}
+        missed = {(s["area"], "unreached: " + n) for n in answerable for s in sites[n] if not reached(s, self.seen)}
         if report:
-            print(f"Inventory: {len(sites)} sites in the code; {len(sites) - len(missed)} reached, {len(missed)} not")
+            print(f"Inventory: part {part}: {len(answerable)} sites it answers for, {len(missed)} not reached")
             for a, x in sorted(missed):
                 print(f"  {a:12} {x}")
-        msg += judge("unreached", missed)
-        self.assertFalse(msg, "\n".join(msg))
+        return judge("unreached", missed, names=answerable)
+
+
+class SharedBehaviour(Keys, us.UiSweepCase):
+    """Part a of the keys test (the other two are test_shared_behaviour_b.py and _c.py)."""
+
+    def test_every_menu_picker_and_dialog_answers_the_same_keys(self):
+        self.run_part("a")
 
 
 if __name__ == "__main__":

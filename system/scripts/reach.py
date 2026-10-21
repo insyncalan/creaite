@@ -68,6 +68,7 @@ NEVER = (
     ("vault", "system/staging/*.json", "write", RECORD), ("vault", "system/staging/*.jsonl", "write", RECORD),
     ("vault", "system/staging/*.txt", "write", RECORD), ("vault", "dashboard.html", "write", RECORD),
     ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
+    ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
     ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
     ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
     ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),
@@ -215,7 +216,7 @@ def _never_verdict(p, operation, where):
         return why
     if operation in WRITES and any(x.lower() == ".git" for x in p.parts):
         return "it is inside a .git folder, whose hooks run commands"
-    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # _Archive, _Templates, 99 System (BL-93, BL-112)
+    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))     # 99 Archive and the old two, _Templates, 99 System
     skipped = {n.lower() for n in paths.skipped_names()}
     hit = next((x for x in (below or ()) if x.lower() in skipped), None)
     if hit:
@@ -262,33 +263,39 @@ def _whose_file(p):
     return []
 
 
-# ===== BL-09: the one exception for _Archive (agreed, Alan, 14-10-2026) =====
-# _Archive stays on ask creaite's never list for reading and writing (classify above is unchanged: never). The only thing that may
-# move a folder into or out of it is tracker.py apply running an approved archive, restore or rename of an old zz Archive folder:
+# ===== BL-09: the one exception for the archive folders (agreed, Alan, 14-10-2026; renamed 99 Archive, #252, 20-10-2026) =====
+# 99 Archive, and for one release the old _Archive and zz Archive, stay on ask creaite's never list for reading and writing
+# (classify above is unchanged: never). The only thing that may move a folder into or out of one is tracker.py apply running an
+# approved archive or restore. NEW moves go to 99 Archive only; a restore or a move back may come from any of the three names
+# (for one release, then the old two are dropped), and nothing renames an old folder (no migration, no Health offer: Alan does it):
 # its `move` file operation asks archive_move_problem, and nothing else calls it. A model can't use it (filechange.py and the hook
 # go through classify, which says never), and it covers only these whole-folder shapes, nothing inside a folder:
-#   archive  <projects root>/<project folder>      -> <projects root>/_Archive/<same or numbered name>
-#   restore  <projects root>/_Archive/<folder>     -> <projects root>/<same or numbered name>
-#   rename   <projects root>[/<engagement>]/zz Archive -> the same folder's _Archive (Health's Fix it, BL-09)
+#   archive  <projects root>/<project folder>      -> <projects root>/99 Archive/<same or numbered name>
+#   restore  <projects root>/<99 Archive, _Archive or zz Archive>/<folder> -> <projects root>/<same or numbered name>
 #   reports  <projects root>/<engagement>/<minutes, weekly, client or Steerco folder>/<file>
-#                                                  -> <projects root>/<engagement>/_Archive/<that folder>/<file> (BL-03; one file)
+#                                                  -> <projects root>/<engagement>/99 Archive/<that folder>/<file> (BL-03; one file)
 #            <projects root>/<portfolio folder>/<its minutes folder>/<file>
-#                                                  -> <projects root>/<portfolio folder>/_Archive/<minutes folder>/<file> (BL-03)
-#   reports_back  exactly the reverse of a "reports" move: <…>/_Archive/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
+#                                                  -> <projects root>/<portfolio folder>/99 Archive/<minutes folder>/<file> (BL-03)
+#   reports_back  exactly the reverse of a "reports" move: <…>/<any archive name>/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
 #                 the same folders, the same engagement or portfolio; tracker.check_move also requires that an archive moved it)
 #   notes  <projects root>/<engagement or portfolio folder>/<its notes folder>/<note>.md
-#                                                  -> <same folder>/_Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
+#                                                  -> <same folder>/99 Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
 #                                                     name is taken there (#124 Delete note, Alan 15-10-2026; one .md file, only from
-#                                                     the live server's own card: propose.py stages it only from system/guard/)
+#                                                     the live server: propose.py stages it only from system/guard/; #255, Alan
+#                                                     20-10-2026: from the page's own button, no card)
 #   notes_back  exactly the reverse of a "notes" move (one file, back to the same notes folder; tracker.check_move also requires
 #               that a Delete note moved it there). With NOTES_BACK_RENAMES on, a note that has taken the old name is never
 #               overwritten: the note comes back as <name>-2.md (-3…, paths.free_path), the only difference allowed from its old name
-ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
+ARCHIVE_MOVES = ("archive", "restore", "reports", "reports_back", "notes", "notes_back")      # #252: no "rename" any more
+ARCHIVE99 = True      # #252: marks this reach.py as the one with the 99 Archive rules (dev/tests/test_archive_99.py looks for it)
 FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
-# #124 F3: the moves only Approve on the live server's own card makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal).
-# tracker._op_move refuses one unless the server wrote its marker on Approve (card_move_marker), for exactly that move and that
-# proposal file, under CARD_MOVE_SECONDS old: a proposal written into staging by hand is never applied as one of these moves.
+# #124 F3: the moves only the live server makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal): tracker._op_move
+# refuses one unless the server wrote its marker (card_move_marker), for exactly that move and that proposal file, under
+# CARD_MOVE_SECONDS old: a proposal written into staging by hand is never applied as one of these moves. The server writes the
+# marker on Approve on its own card, and (#255, Alan 20-10-2026: the click is the approval) for PAGE_MOVES on the page's own
+# button (live_server.page_move: the page's token, a loopback same-origin call, never ask creaite). The name stays for the tests.
 CARD_ONLY_MOVES = ("reports_back", "notes", "notes_back")
+PAGE_MOVES = ("notes", "notes_back")       # #255: Delete note and a deleted note's Move back: no card (archive.PAGE_MOVES too)
 CARD_MOVE_SECONDS = 300
 
 
@@ -299,13 +306,21 @@ def card_move_marker(kind, src, dst):
 
 
 def _top_folder(name):
-    """A project or engagement folder's own name: not hidden, not _-prefixed (_Archive, _Templates, _Portfolio), not skipped."""
+    """A project or engagement folder's own name: not hidden, not _-prefixed (_Templates, _Portfolio), not skipped
+    (99 Archive, _Archive, zz Archive, _Templates, 99 System)."""
     return not name.startswith((".", "_")) and name.lower() not in {x.lower() for x in paths.skipped_names()}
 
 
-def _in_archive(parts):
-    """parts are <_Archive>/<a project folder>."""
-    return len(parts) == 2 and parts[0].lower() == paths.ARCHIVE.lower() and _top_folder(parts[1])
+def _archive_part(name, old=False):
+    """#252: `name` is the archive folder's name: exactly 99 Archive (case as macOS has it), or, with `old` (a restore or a move
+    back, for one release), _Archive or zz Archive too. Whole names only: 99 Archivement and "99 Archive " are not the archive."""
+    names = (paths.ARCHIVE, *paths.OLD_ARCHIVES) if old else (paths.ARCHIVE,)
+    return name.lower() in {n.lower() for n in names}
+
+
+def _in_archive(parts, old=False):
+    """parts are <99 Archive>/<a project folder> (a restore, with `old`: or <_Archive>/ or <zz Archive>/)."""
+    return len(parts) == 2 and _archive_part(parts[0], old) and _top_folder(parts[1])
 
 
 def _project_folder(parts):
@@ -313,17 +328,12 @@ def _project_folder(parts):
     return len(parts) == 1 and _top_folder(parts[0])
 
 
-def _old_archive_rename(pa, pb):
-    """pa is a zz Archive folder (in the root or one engagement) and pb the _Archive beside it."""
-    same_place = len(pa) == len(pb) and len(pa) in (1, 2) and pa[:-1] == pb[:-1] and (len(pa) == 1 or _top_folder(pa[0]))
-    return same_place and pa[-1].lower() == paths.OLD_ARCHIVE.lower() and pb[-1] == paths.ARCHIVE
-
-
-def _report_archive(pa, pb):
+def _report_archive(pa, pb, old=False):
     """BL-03: pa is <engagement>/<a minutes, weekly, client or Steerco folder>/<file> and pb the same file in that engagement's own
-    _Archive, keeping its place below it (<engagement>/_Archive/<folder>/<file>). Nothing else: no deeper folder, no other folder."""
+    99 Archive, keeping its place below it (<engagement>/99 Archive/<folder>/<file>). Nothing else: no deeper folder, no other
+    folder. `old` (the reverse, a move back, #252): the archive folder may be _Archive or zz Archive too."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
-    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or not _archive_part(pb[1], old):
         return False
     if pb[2:] != pa[1:] or pa[-1].startswith((".", "~$")):
         return False
@@ -343,25 +353,27 @@ def _portfolio_folder(name):
 NOTES_BACK_RENAMES = True
 
 
-def _note_folders(pa, pb):
-    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own _Archive, keeping its place
-    below it (<…>/_Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement."""
+def _note_folders(pa, pb, old=False):
+    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own 99 Archive, keeping its place
+    below it (<…>/99 Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement. `old` (a move back,
+    #252): the archive folder may be _Archive or zz Archive too."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
-    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or not _archive_part(pb[1], old):
         return False
     return pb[2:-1] == pa[1:-1] and "/".join(pa[1:-1]) == paths.folder_name("notes").strip("/")
 
 
 def _note_archive(pa, pb):
-    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own _Archive, or with -2, -3… when
+    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own 99 Archive, or with -2, -3… when
     that name is taken there. Nothing else: no picture, no other file."""
     return _note_folders(pa, pb) and _note_name(pa[-1], pb[-1])
 
 
 def _note_back(pa, pb):
-    """#124: pa is a deleted note in <…>/_Archive/<notes folder>/ and pb its place back in that notes folder: the reverse of a
-    "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name gets (both names from one first name)."""
-    if not _note_folders(pb, pa):
+    """#124: pa is a deleted note in <…>/99 Archive (or, #252, _Archive or zz Archive)/<notes folder>/ and pb its place back in
+    that notes folder: the reverse of a "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name
+    gets (both names from one first name)."""
+    if not _note_folders(pb, pa, True):
         return False
     if not NOTES_BACK_RENAMES:
         return _note_name(pb[-1], pa[-1])
@@ -394,16 +406,16 @@ def _move_shape(kind, pa, pb):
     if kind == "reports":
         return _report_archive(pa, pb)
     if kind == "reports_back":
-        return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
+        return _report_archive(pb, pa, True)          # BL-331: the reverse of the approved shape, nothing wider (#252: any name)
     if kind == "notes":
-        return _note_archive(pa, pb)                  # #124: one note into its own folder's _Archive
+        return _note_archive(pa, pb)                  # #124: one note into its own folder's 99 Archive
     if kind == "notes_back":
         return _note_back(pa, pb)                     # #124: the reverse, or the same note under a free -2 name
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":
-        return _in_archive(pa) and _project_folder(pb)
-    return _old_archive_rename(pa, pb)
+        return _in_archive(pa, True) and _project_folder(pb)           # #252: from 99 Archive, or an old name for one release
+    return False
 
 
 def _not_the_shape(kind):
@@ -418,15 +430,15 @@ def _not_the_shape(kind):
         return f"that isn't a note (a .md file in a notes folder) moved into its own engagement's {paths.ARCHIVE}"
     if kind == "notes_back":
         return f"that isn't a note moved back from its own engagement's {paths.ARCHIVE} to the same notes folder"
-    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
+    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only; a restore may come from an older archive name)"
 
 
 def archive_move_problem(src, dst, kind):
-    """None when moving the folder `src` to `dst` (stored paths, never mapped into _Archive) is the `kind` of move above; else why
+    """None when moving the folder `src` to `dst` (stored paths, never mapped into an archive folder) is the `kind` of move above; else why
     not. Neither end may be a symlink; the source must be a folder that exists (a file, for BL-03's "reports" kind) and the
     destination must not exist."""
     if kind not in ARCHIVE_MOVES:
-        return f"a folder move is an archive, a restore or a rename of an old archive folder (got {kind!r})"
+        return f"a folder move is an archive or a restore (got {kind!r})"
     if any(".." in Path(str(x)).parts for x in (src, dst)):
         return "a path with .. in it"
     root = Path(os.path.realpath(paths.projects_root()))
@@ -618,6 +630,27 @@ def _write_json(path, data):
     os.replace(tmp, path)
 
 
+class _RunLock:
+    """#264 round 2 (review L1): one writer of system/guard/run.json at a time. Claude Code may run several hooks at once, and
+    each reads the record, changes it and writes it back, so without this one hook's claim or mark could be lost. An exclusive
+    lock on system/guard/.run.lock (POSIX flock; where there is none, as on Windows, the old behaviour). Raises OSError when the
+    lock file can't be made: the caller then fails closed."""
+
+    def __enter__(self):
+        GUARD.mkdir(parents=True, exist_ok=True)
+        self.fd = os.open(GUARD / ".run.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            import fcntl
+            fcntl.flock(self.fd, fcntl.LOCK_EX)
+        except ImportError:  # no flock (Windows, untested): as before
+            pass
+        return self
+
+    def __exit__(self, *exc):
+        os.close(self.fd)                                        # closing the file releases the lock
+        return False
+
+
 def guard_run():
     """The run in progress as the server wrote it, or None (no ask creaite run: a Terminal session)."""
     try:
@@ -636,31 +669,51 @@ def marked_sessions():
         return set()
 
 
-def start_run(run, mode, outside, session=None):
-    """The server, as an ask creaite run starts: write the run (marked already if its chat was)."""
+def start_run(run, mode, outside, session=None, files=None):
+    """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
+    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
-    _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside, "marked": marked,
-                           "session": session})
+    with _RunLock():                                             # #264 round 2 (L1): never between a hook's read and its write
+        _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside,
+                               "marked": marked, "session": session,
+                               **({"files": [str(f) for f in files]} if files is not None else {}),
+                               **(_process_start() if mode == "process" else {})})
+
+
+def _process_start():
+    """#264 R1: a Process run's record starts with the proposals already in staging ("before": never the run's, whatever is
+    written to them later) and no file of its own yet ("made": what the hook lets it create, added as it goes)."""
+    return {"before": sorted(p.name for p in paths.STAGING.glob("proposed-*.json")), "made": []}
 
 
 def mark(run, reason):
     """Mark the run as having read outside content. Never cleared by the model; only end_run removes the file."""
-    data = guard_run()
-    if not data or data.get("run") != run:
-        return False
-    if reason not in data["marked"]:
-        data["marked"] = (data.get("marked") or []) + [reason]
-        _write_json(RUN_FILE, data)
-    return True
+    with _RunLock():                                             # #264 round 2 (L1): a mark is never lost to another hook's write
+        data = guard_run()
+        if not data or data.get("run") != run:
+            return False
+        if reason not in data["marked"]:
+            data["marked"] = (data.get("marked") or []) + [reason]
+            _write_json(RUN_FILE, data)
+        return True
 
 
 def end_run(run, session=None):
-    """The server, as the run ends: remember a marked chat, then remove the run."""
-    data = guard_run()
-    if data and data.get("run") == run:
-        if data.get("marked") and (session or data.get("session")):
-            _write_json(SESSIONS_FILE, sorted(marked_sessions() | {session or data.get("session")}))
-        RUN_FILE.unlink(missing_ok=True)
+    """The server, as the run ends: remember a marked chat, then remove the run (under the record's lock, so a hook still
+    finishing can't write the record back after it is gone; without the lock file, as before)."""
+    try:
+        lock = _RunLock().__enter__()
+    except OSError:  # the lock file can't be made: remove the run anyway
+        lock = None
+    try:
+        data = guard_run()
+        if data and data.get("run") == run:
+            if data.get("marked") and (session or data.get("session")):
+                _write_json(SESSIONS_FILE, sorted(marked_sessions() | {session or data.get("session")}))
+            RUN_FILE.unlink(missing_ok=True)
+    finally:
+        if lock is not None:
+            lock.__exit__(None, None, None)
 
 
 def is_marked(data=None):
@@ -799,7 +852,10 @@ def bash_problem(command):
     if not m:
         return ("ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; "
                 "file changes go through filechange.py")
-    return _script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), cmd.split())
+    # #174 F5: the settings rule reads the command twice, as the shell hands it over (quotes removed) and as str.split cuts it
+    # (the old reading, which also cuts at a non-breaking space or a form feed the shell doesn't), so it only ever refuses more
+    return (_script_refused(m.group(1)) or _shell_refused(cmd) or _glob_refused(cmd)
+            or _settings_refused(m.group(1), _unquoted_words(cmd)) or _settings_refused(m.group(1), cmd.split()))
 
 
 def _script_refused(script):
@@ -836,9 +892,48 @@ def _shell_refused(cmd):
     return "the command has an unclosed quote" if quote else None
 
 
+def _glob_refused(cmd):
+    """Why the command has a character outside quotes that the shell could turn into another word, or None (#174 F5, review of
+    5b20e38c and 3f186de5). The guard reads a script call as the words it sees, but the shell expands a pattern against the folder
+    the run starts in (the vault), where `filechange.py create setting` can make a file of any name: `propose.py setti?g`,
+    `people migrat?`, `tracker.py validat?` and `reach.py wra?` then become the commands a fixed-word rule refuses. So an unquoted
+    `*`, `?`, `[` is refused in every word, and so are `^`, `#` and a `~` that doesn't start a word (zsh's extended patterns
+    `x#`, `^x` and `x~y`, when that option is on). In quotes the shell leaves them as text: `'SOW [signed].docx'`, `'inbox/x [1].vtt'`
+    and a name with a `?` still run (the bounded expansion check, held_arg_paths, still looks at what a script might do with them)."""
+    quote, prev = None, " "
+    for ch in cmd:
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch in "*?[^#" or (ch == "~" and prev not in " \t=:,"):
+            return ("the command has a wildcard or pattern character (* ? [ ^ # ~) outside quotes, which the shell would expand into "
+                    "another word: name the file or word itself, and put a name that has one of them in quotes")
+        prev = ch
+    return None
+
+
+def _unquoted_words(cmd):
+    """The command's words as the shell hands them to the program, quotes removed (#174 F5: `'setting'`, `se""tting` and
+    `"retire-settings"` are the words setting and retire-settings). Called after _shell_refused, so a quote always opens and closes
+    as the shell reads it and shlex agrees with the shell; None if it still can't be split (defence in depth: the strings that pass
+    _shell_refused always split, so the settings rule's refusal of None is not reached today)."""
+    import shlex
+    try:
+        return shlex.split(cmd)
+    except ValueError:
+        return None
+
+
 def _settings_refused(script, words):
-    if script == "propose.py" and len(words) > 2 and words[2] == "setting" or \
-            script == "propose.py" and "retire-settings" in words:
+    """Why a propose.py call is refused as a settings change, or None. `words` are the command's words, the script's own arguments
+    from the third on. propose.py's main() takes argv[0] as the command, so `setting` is refused as that first argument;
+    `retire-settings` (workstreams' subcommand) and `people migrate` clear settings.json lists through cmd_setting: refused in any
+    place (`migrate` after `people`)."""
+    args = (words or [])[2:]
+    if script == "propose.py" and (words is None or args[:1] == ["setting"] or "retire-settings" in args
+                                   or (args[:1] == ["people"] and "migrate" in args[1:])):
         return ("settings are changed on the approval card: put the new settings.json in system/staging/drafts/ and run "
                 "python3 system/scripts/filechange.py edit system/config/settings.json --from <that file> --why \"…\"")
     return None
@@ -869,7 +964,7 @@ SCRIPT_COMMANDS = {
                   "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
     "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
                    "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
-                   "register-columns": RECORD, "old-archives": READ, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
+                   "register-columns": RECORD, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
                    "people": READ, "people list": READ, "people resolve": READ, "people add": RECORD, "people edit": RECORD,
                    "people rename": RECORD, "people merge": RECORD, "people map": RECORD, "people migrate": RECORD,
                    "workstreams": READ, "workstreams list": READ, "workstreams suggest": READ, "workstreams add": RECORD,
@@ -927,6 +1022,9 @@ def command_kind(script, words):
     pos = [w for w in words if not w.startswith("-")]
     if not pos:
         return READ, script
+    if len(pos) > 1 and f"{pos[0]} {pos[1]}" not in table and any(k.startswith(pos[0] + " ") for k in table):
+        # #174: `people migrat?` is not `people`: a first word with commands of its own fails closed
+        return "unknown", f"{script} {pos[0]}"
     name = f"{pos[0]} {pos[1]}" if len(pos) > 1 and f"{pos[0]} {pos[1]}" in table else pos[0]
     kind = table.get(name, "unknown")
     if isinstance(kind, tuple):
@@ -1431,8 +1529,15 @@ def decide(tool, inp, mode, run, held=False):
     other call by hook_decision, unchanged."""
     if mode in HELD_MODES:
         return prep_decision(tool, inp)
-    why = confidential_reason(tool, inp) if held else None
-    return (False, why) if why else hook_decision(tool, inp, mode, run)
+    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set())   # #264 round 2 (L4, M2)
+    try:
+        why = confidential_reason(tool, inp) if held else None
+        ok, why = (False, why) if why else hook_decision(tool, inp, mode, run)
+        if ok and mode == "process" and not _commit_claims():
+            ok, why = False, "the guard couldn't record this run's own files, so it can't let it write one (fail closed)"
+        return ok, why
+    finally:
+        _HOOK.update(run=None, claims=set(), seen={}, writes=set())
 # ===== end #60 option (a) =====
 
 
@@ -1461,11 +1566,32 @@ def is_report_file(path):
     return bool(area and area[1] in ("weekly_reports", "client_reports")) and bool(REPORT_NAME.search(p.name))
 
 
+def _stages_a_report(cmd):
+    """True when the command's words run report.py's weekly-stage or client-stage: the first word after `report.py` that isn't an
+    option. #174 (a hole in 2.5.1): the raw-text match above is spliced apart by quotes (`'weekly-stage'`, `weekly''-stage`,
+    `"client-stage"`), so the words are read as the shell hands them over (shlex) and as str.split cuts them (the old reading);
+    a command that can't be split is refused if it names report.py at all."""
+    import shlex
+    readings = []
+    try:
+        readings.append(shlex.split(cmd))
+    except ValueError:
+        return "report.py" in cmd
+    readings.append(cmd.split())
+    for words in readings:
+        for i, w in enumerate(words):
+            if w.rsplit("/", 1)[-1] == "report.py":
+                first = next((x for x in words[i + 1:] if not x.startswith("-")), "")
+                if re.match(r"(?:weekly|client)-stage\b", first):
+                    return True
+    return False
+
+
 def report_command_refusal(command):
     """Why an ask creaite Bash call is refused for reports, or None: report.py weekly-stage or client-stage, or a path argument
     that is a report file."""
     cmd = vault_relative(command or "")
-    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd):
+    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd) or _stages_a_report(cmd):
         return REPORTS_ARE_THE_USERS
     try:
         for p in ask_arg_paths(command, expand=False):
@@ -1477,11 +1603,136 @@ def report_command_refusal(command):
 # ===== end reports =====
 
 
+# ===== #174 (Alan, via Jarvis): a report-named draft can't be written through the other builders either =====
+# v2.5.1's rule covers report.py weekly-stage and client-stage. report.py steerco-stage and adhoc, and docx_tools.py fill, build-adhoc
+# and clean, also write a Word draft into system/staging/drafts/, and `adhoc` names it from the spec's title (a title such as
+# 'Example Programme Weekly report' writes a report-named draft that the file rule never sees as a command). Narrow scope: they are
+# refused only when the draft is named like a report: the output file's name (fill, build-adhoc, clean), the spec's title (adhoc,
+# build-adhoc, steerco-stage), or a client-safe one-pager (steerco-stage, version client, whose file is "... (client).docx"), contains
+# report, weekly or client. Ordinary one-off documents and internal Steerco one-pagers stay allowed; so does reading.
+# The arguments are taken from the exact positions the scripts parse (report.py: argv[0] the verb, argv[1] the one spec, nothing
+# else; docx_tools.py: the verb and exactly three arguments, clean one or two), a dash does not make a word an option, and anything
+# the scripts would not run, a spec that can't be read (or is over 1 MB), a path word with a ~ in it or starting with = (the shell may
+# expand them, bash after an =, zsh any =name; the guard can't tell) or an odd shape is treated as report-named: refused.
+REPORT_WORDS = re.compile(REPORT_NAME.pattern + r"|report|weekly|client", re.I)
+
+
+BIDI_CONTROLS = "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+FILLERS = "\u115f\u1160\u17b4\u17b5\u180e\u2800\u3164\uffa0"      # blank-looking letters (Lo, So, Mn); the Cf ones go with the category
+
+
+def _plain(text):
+    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), unassigned code points,
+    combining marks (accents) and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
+    import unicodedata
+    spread = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
+    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Cn", "Mn", "Me") and c not in FILLERS)
+    return "".join(kept).casefold()
+
+
+def _report_word(text):
+    """True when the text has report, weekly or client in it (as _plain reads it, forwards or backwards: a right-to-left override
+    shows the reversed letters as the word), or has a bidirectional control character at all."""
+    plain = _plain(text)
+    return any(c in BIDI_CONTROLS for c in text) or bool(REPORT_WORDS.search(plain) or REPORT_WORDS.search(plain[::-1]))
+
+
+def _odd_word(word):
+    """True for a path word the shell may expand in a way the guard doesn't model: a ~ anywhere (bash expands one after an =, zsh also
+    after a :, and a leading one) or a leading = (zsh's =cmd)."""
+    return "~" in word or word.startswith("=")
+
+
+def _command_words(cmd):
+    """The command's words as the shell hands them over (shlex: quotes removed, a quoted space is not a break); None if it can't be
+    split. str.split's cut (at a non-breaking space, say) is not read: the shell doesn't cut there, so no script sees such a word."""
+    import shlex
+    try:
+        return shlex.split(cmd)
+    except ValueError:
+        return None
+
+
+def _spec_fields(path):
+    """([every title value], [every version value]) of the top-level object of a staged spec file (JSON, a duplicate key counts every
+    time), or None when it can't be read the way the scripts read it: relative to the vault, no ~ expansion, at most 1 MB, an object."""
+    if _odd_word(path):
+        return None
+    try:
+        p = Path(path)
+        p = p if p.is_absolute() else Path(paths.ROOT) / p
+        if p.stat().st_size > 1_000_000:
+            return None
+        objects = []
+
+        def hook(pairs):
+            """json's object_pairs_hook: keep every pair (a duplicate key too) of each object, innermost first."""
+            objects.append(pairs)
+            return dict(pairs)
+        if not isinstance(json.loads(p.read_text(encoding="utf-8"), object_pairs_hook=hook), dict):
+            return None
+        top = objects[-1]               # the last object finished is the top-level one
+        return ([str(v) for k, v in top if str(k).lower() == "title"], [str(v) for k, v in top if str(k).lower() == "version"])
+    except Exception:  # noqa: BLE001  unreadable: refused by the caller
+        return None
+
+
+def _spec_is_report_named(verb, spec):
+    """True when `report.py adhoc|steerco-stage <spec>`, or build-adhoc's spec, would write a report-named draft: a title with a report
+    word, or (steerco-stage) a client version; a spec that can't be read counts as report-named."""
+    fields = _spec_fields(spec)
+    if fields is None:
+        return True
+    titles, versions = fields
+    return any(_report_word(t) for t in titles) or (verb == "steerco-stage" and any("client" in _plain(v) for v in versions))
+
+
+def _docx_named_like_a_report(verb, rest):
+    """True when `docx_tools.py <verb> <rest>` would write a report-named file (or fill/build-adhoc has an odd shape)."""
+    if any(_odd_word(w) for w in rest):
+        return True
+    if verb == "clean":
+        return len(rest) not in (1, 2) or _report_word(rest[-1].rsplit("/", 1)[-1])
+    if len(rest) != 3 or _report_word(rest[2].rsplit("/", 1)[-1]):
+        return True
+    return verb == "build-adhoc" and _spec_is_report_named(verb, rest[1])
+
+
+def _named_like_a_report(words):
+    """True when these words run a builder that would write a report-named draft, or one shape we can't tell."""
+    for i, w in enumerate(words):
+        script, argv = w.rsplit("/", 1)[-1], list(words[i + 1:])
+        verb, rest = (argv[0], argv[1:]) if argv else ("", [])
+        if script == "report.py" and verb in ("adhoc", "steerco-stage") and (len(rest) != 1 or _spec_is_report_named(verb, rest[0])):
+            return True
+        if script == "docx_tools.py" and verb in ("fill", "build-adhoc", "clean") and _docx_named_like_a_report(verb, rest):
+            return True
+    return False
+
+
+def report_named_draft_refusal(command):
+    """Why an ask creaite Bash call is refused as writing a report-named draft (see above), or None."""
+    cmd = vault_relative(command or "")
+    words = _command_words(cmd)
+    if words is None:       # can't be split: refuse if it names one of these builders and a report word
+        rest = re.sub(r"report\.py|docx_tools\.py", "", cmd)         # (the script's own name has the word report in it)
+        return REPORTS_ARE_THE_USERS if rest != cmd and _report_word(rest) else None
+    if _named_like_a_report(words):
+        return (REPORTS_ARE_THE_USERS + " (the draft would be named like a report: report, weekly or client in its title or "
+                "file name, or its spec can't be checked; give an ordinary document a name without them)")
+    return None
+# ===== end #174 report-named drafts =====
+
+
 def _direct_write_refusal(inp, mode):
     """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
-    outside the run's direct-write folder."""
+    outside the run's direct-write folder. #264: a Process run writes only its own .json input files in drafts."""
     p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
     rp = real(p)
+    if mode == "process":
+        why = process_write_problem(rp)
+        if why:
+            return f"{p}: {why}"
     kind, why = classify(p, "change" if rp.exists() else "create")
     if kind == "never":
         return f"{p}: {why}"
@@ -1501,10 +1752,18 @@ def hook_decision(tool, inp, mode, run):
         why = outside_reason(tool, inp, data.get("outside"))
         if why:
             mark(run, why)
+    if mode == "calendar":                                  # #265: Calendar import's Refresh has its own short list of tools
+        why = calendar_tool_problem(tool, inp)
+        if why:
+            return False, why
     for p in tool_paths(tool, inp):
         kind, why = classify(p, "read")
         if kind == "never":
             return False, f"{p}: {why}"
+    if mode == "process":                                   # #264 round 2 (L3): the vault and the projects folder only
+        why = process_reach_problem(tool, inp)
+        if why:
+            return False, why
     if tool in ("Grep", "Glob", "LS"):                      # a search would go inside a never folder below it
         inside = never_inside((inp or {}).get("path") or str(paths.ROOT))
         if inside:
@@ -1526,7 +1785,8 @@ def ask_bash_refusal(command, mode):
     form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
     # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
     return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)
-            or report_command_refusal(command) or handover_refusal(command) or read_write_refusal(command)
+            or report_command_refusal(command) or report_named_draft_refusal(command) or handover_refusal(command)
+            or read_write_refusal(command)
             or ask_glob_reason(command))
 
 
@@ -1692,7 +1952,37 @@ def bash_refusal(command, mode):
     (BL-267: the record changes only on a request Alan confirmed). BL-268: a script named by this vault's full path is read as
     the relative form first, so every check applies to it unchanged."""
     command = vault_relative(command)
-    return bash_problem(command) or record_gate(command, mode)
+    return bash_problem(command) or record_gate(command, mode) or stage_spec_gate(command)
+
+
+# ===== #269: minutes.py stage's meeting spec, at the hook too =====
+# `minutes.py stage <spec>` checks its spec itself (minutes_spec.validate_spec: a .json directly in system/staging/drafts/, a
+# transcript from Intake or a project's minutes or transcripts folder, a Word draft only from drafts...), in every mode. The hook
+# makes the same check before the command runs, in every mode that lets the command through (a plain chat, a confirmed run, the
+# catch-up sweep, Intake's Process): defence in depth, so a spec naming a file from anywhere never reaches the script. Fails closed.
+def stage_spec_gate(command):
+    """Why `minutes.py stage` is refused for its spec, or None (any other command: None)."""
+    import re
+    if not re.match(r"(?:python3? system/scripts/|system/scripts/run )minutes\.py(?:\s|$)", (command or "").strip()):
+        return None
+    words = bash_args(command)
+    if command_kind("minutes.py", words)[1] != "minutes.py stage":
+        return None
+    if len(words) != 2 or words[0] != "stage":
+        return "minutes.py stage: give one meeting spec: `minutes.py stage <a .json in system/staging/drafts/>`"
+    spec = Path(words[1]) if Path(words[1]).is_absolute() else paths.ROOT / words[1]
+    if not os.path.lexists(spec):
+        return None                          # nothing to read: the command refuses a missing spec itself (and stages nothing)
+    try:
+        import minutes_spec
+        why = minutes_spec.validate_spec(words[1], paths.ROOT)
+    except Exception as e:  # noqa: BLE001  fail closed: a check that can't run refuses
+        why = f"the guard couldn't check the meeting spec ({type(e).__name__})"
+    if why:
+        _debug("warn", "minutes stage refused: the meeting spec (#269)")
+        return f"minutes.py stage: {why}"
+    return None
+# ===== end #269 =====
 
 
 # ===== BL-295 (sprint-close-day-server): the catch-up sweep from Close the day =====
@@ -1700,7 +1990,13 @@ def bash_refusal(command, mode):
 # direct writes only in system/staging/drafts/), with the one step cx-sweep needs that a plain chat lacks: mapping the names in its
 # own draft (`propose.py people map <a file in system/staging/drafts/>`), which changes nothing but that draft. Nothing else.
 def record_gate(command, mode):
-    """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft."""
+    """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
+    an Intake Process run (#264) runs only its read and minutes steps (process_gate); a calendar refresh (#265) only the sweep's
+    calendar steps (calendar_gate)."""
+    if mode == "process":
+        return process_gate(command)
+    if mode == "calendar":
+        return calendar_gate(command)
     if mode == "confirmed" or (mode == "sweep" and sweep_maps_draft(command)):
         return None
     return record_problem(command)
@@ -1717,6 +2013,362 @@ def sweep_maps_draft(command):
 # ===== end BL-295 =====
 
 
+# ===== #264: Intake's Process (mode "process") =====
+# Pressing Process in Intake starts the run kind "process" (live_server, POST /api/intake/process) under this mode. The click is
+# Alan's go-ahead to stage proposals for the Intake files the server checked and wrote into system/guard/run.json ("files"), and
+# nothing more. A creaite script command runs only when it is a read command (SCRIPT_COMMANDS; not one of HELD_NOT_READ, which
+# delete or write their input) or one of the minutes steps in process_step_problem. Everything else is refused: every record,
+# guarded (filechange.py) and unknown command, and every other stage or derived command (propose.py stage, sweep.py stage,
+# minutes.py refresh and carry, report.py, tracker.py apply and undo, review.py approve and reject...). Direct Edit and Write stay
+# in system/staging/drafts/ (direct_write_area), and every check a plain chat has still runs first (bash_refusal and the rest).
+PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
+
+
+# #264 round 2 (Team Cap's review of R1): the hook's own state for the one call it is deciding (decide() sets and clears it).
+# "run" is the hook's --run, so the record is read only when it is that run's (L4); "claims", "seen" and "writes" are what the
+# call would add to the record, written only once every check has passed (M2: a refused call claims nothing).
+_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set()}
+
+
+def _process_record():
+    """system/guard/run.json when it is this hook's own Process run (mode "process" and the run ID the hook was started with,
+    review L4), else None: a record for another run, or none, names no files and makes nothing the run's (fail closed)."""
+    data = guard_run()
+    if not data or data.get("mode") != "process" or not _HOOK["run"] or data.get("run") != _HOOK["run"]:
+        return None
+    return data
+
+
+def process_files():
+    """The Intake paths this Process run may stage, from system/guard/run.json (only the server writes it); none if the run in
+    progress isn't this hook's Process run (fail closed)."""
+    data = _process_record()
+    if not data or not isinstance(data.get("files"), list):
+        return set()
+    return {f for f in data["files"] if isinstance(f, str)}
+
+
+def process_reach_problem(tool, inp):
+    """Why a Process run may not read where this call reads, or None (#264 round 2, review L3): Read, Grep, Glob, LS and a
+    script's path arguments stay in the vault and the projects folder, never the home folder's other files. Fails closed."""
+    try:
+        found = ask_arg_paths(str((inp or {}).get("command") or ""), expand=False) if tool == "Bash" else tool_paths(tool, inp)
+        for p in found:
+            if not {"vault", "projects"} & set(in_reach(real(p))):
+                _debug("warn", f"process run refused a path outside the vault: {tool}")
+                return f"{p}: an Intake Process run reads only the vault and the projects folder"
+    except (OSError, ValueError, RuntimeError, TypeError) as e:
+        return f"the guard couldn't check where this call reads ({type(e).__name__})"
+    return None
+
+
+def _in_drafts(arg, suffix):
+    """The real path when `arg` is a file name with this suffix directly in system/staging/drafts/, else None."""
+    try:
+        target = real(arg)
+    except (OSError, ValueError, RuntimeError):
+        return None
+    return target if target.suffix == suffix and target.parent == Path(os.path.realpath(paths.DRAFTS)) else None
+
+
+def _made():
+    """The files this Process run made (run.json "made", as the hook let it create them), or None when the run in progress isn't
+    this hook's Process run (fail closed: nothing is then the run's own)."""
+    data = _process_record()
+    if data is None:
+        return None
+    made = data.get("made")
+    return {m for m in made if isinstance(m, str)} if isinstance(made, list) else set()
+
+
+def _print(rp):
+    """What a file is now, to tell it from another one later (#264 round 2, M2): [inode, size, mtime in ns], or None when there
+    is no such file (a link is never followed)."""
+    try:
+        st = os.lstat(rp)
+    except FileNotFoundError:
+        return None
+    return [st.st_ino, st.st_size, st.st_mtime_ns]
+
+
+def _runs_own(rp):
+    """True only for a file the hook let this Process run create (#264 R1: by its record, never by its time, so a file another
+    flow writes into drafts during the run is never the run's). Round 2 (M2): the record also keeps what the file was when the
+    hook first saw it after the run's own last write ("prints"); a file that has changed since (another flow wrote over it, or
+    put another file in its place) isn't the run's any more."""
+    made = _made()
+    if made is None or str(rp) not in made:
+        return False
+    prints = (_process_record() or {}).get("prints")
+    was = prints.get(str(rp)) if isinstance(prints, dict) else None
+    now = _print(rp)
+    if was is None:                                     # not seen since the run's own last write: what it is now is the run's
+        if now is not None:
+            _HOOK["seen"][str(rp)] = now
+        return True
+    return now == was
+
+
+def _may_make(rp):
+    """True when this Process run may write `rp`: a file that doesn't exist yet or one it made. Round 2 (M2): nothing is written
+    here; the claim (and the write, after which the file is seen afresh) waits in _HOOK until every check of the call has passed
+    (_commit_claims), so a refused call claims nothing. False whenever that can't be told (fail closed)."""
+    try:
+        if _runs_own(rp):
+            _HOOK["writes"].add(str(rp))
+            return True
+        if _made() is None or rp.exists() or rp.is_symlink():
+            return False
+        _HOOK["claims"].add(str(rp))
+        _HOOK["writes"].add(str(rp))
+        return True
+    except (OSError, ValueError, TypeError):     # can't tell: another flow's, so refused (fail closed)
+        return False
+
+
+def _commit_claims():
+    """Once every check of an allowed call has passed: add its claims to the run's record and keep what it saw ("prints"); a file
+    the call writes is seen afresh at its next use. True when there was nothing to record or it was recorded; False when the
+    record can't be written, or isn't this run's any more (the call is then refused: fail closed). Under the record's lock (L1)."""
+    if not (_HOOK["claims"] or _HOOK["seen"] or _HOOK["writes"]):
+        return True
+    try:
+        with _RunLock():
+            data = _process_record()
+            if data is None or not isinstance(data.get("made"), list):
+                return False
+            data["made"] = sorted(set(_made() or ()) | _HOOK["claims"])
+            prints = data.get("prints") if isinstance(data.get("prints"), dict) else {}
+            for f, now in _HOOK["seen"].items():
+                if prints.get(f) is None:
+                    prints[f] = now
+            for f in _HOOK["writes"]:
+                prints[f] = None
+            data["prints"] = prints
+            _write_json(RUN_FILE, data)
+        return True
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def _runs_proposals():
+    """The proposals this Process run staged: in system/staging/, not there when it started (run.json "before"), for one of its
+    files."""
+    files, out, data = process_files(), [], _process_record() or {}
+    before = data.get("before")
+    if not isinstance(before, list):
+        return []                                  # a record without "before" can't tell the run's proposals: none
+    for p in sorted(paths.STAGING.glob("proposed-*.json")):
+        if p.name in before:
+            continue
+        try:
+            m = json.loads(p.read_text(encoding="utf-8")).get("meeting")
+        except (OSError, ValueError):     # an unreadable proposal isn't this run's: nothing may be enriched or validated for it
+            continue
+        if isinstance(m, dict) and isinstance(m.get("transcript"), str) and m["transcript"] in files:
+            out.append((Path(os.path.realpath(p)), m))
+    return out
+
+
+def _process_stage_problem(words):
+    """Why `minutes.py stage` is refused in a Process run, or None: a spec in drafts for one of the run's files, no note, and a
+    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes)."""
+    spec = _in_drafts(words[1], ".json") if len(words) == 2 else None
+    if spec is None:
+        return "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
+    try:
+        data = json.loads(spec.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "the meeting spec can't be read"
+    if isinstance(data, dict) and not isinstance(data.get("transcript"), str):
+        return "the meeting spec's \"transcript\" must be one of the Intake files Alan pressed Process on, as a path"
+    if not isinstance(data, dict) or data.get("note") or data.get("transcript") not in process_files():
+        return ("Process stages only the Intake files Alan pressed Process on: the spec's \"transcript\" must be one of "
+                "them, exactly as listed, and it can't stage a note")
+    draft = data.get("draft")
+    if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
+        return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
+    if draft is not None and (not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx"))):
+        return "a Word draft named in the spec must be one this run filled, never another draft waiting in drafts"
+    return None
+
+
+def _has_image(value):
+    """True when a values file asks for a picture anywhere ("image" or "images" in any entry)."""
+    if isinstance(value, dict):
+        return "image" in value or "images" in value or any(_has_image(v) for v in value.values())
+    return isinstance(value, list) and any(_has_image(v) for v in value)
+
+
+def _process_fill_problem(words):
+    """Why `docx_tools.py fill` is refused in a Process run, or None: the minutes template, from a values file this run wrote
+    (fill deletes it) with no pictures, into a new .docx in drafts (never over another flow's Word draft)."""
+    ok = (len(words) == 4 and words[1] == PROCESS_TEMPLATE and _in_drafts(words[2], ".json") is not None
+          and _in_drafts(words[3], ".docx") is not None)
+    if not ok:
+        return f"Process fills only {PROCESS_TEMPLATE} from a values file in system/staging/drafts/ into a draft there"
+    values, target = _in_drafts(words[2], ".json"), _in_drafts(words[3], ".docx")
+    if not _runs_own(values) or is_report_file(target) or not _may_make(target):
+        return "Process fills only from its own values file into a new Word draft: never another draft waiting in drafts"
+    try:
+        pictures = _has_image(json.loads(values.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return "the values file can't be read"
+    return "Process's Word minutes have no pictures: take the \"image\" entries out of the values file" if pictures else None
+
+
+def _process_enrich_problem(words):
+    """Why `search.py enrich set` is refused in a Process run, or None: only `--path`, `--summary` and `--tags` pairs, and each
+    path the `to` of a copy in a proposal this run staged, whose summary (if any) this run wrote: never another file's summary."""
+    if words[:2] != ["enrich", "set"] or len(words) % 2:
+        return "Process enriches only as `search.py enrich set --path <a copy this run staged> --summary '…' --tags '…'`"
+    pairs = list(zip(words[2::2], words[3::2]))
+    if any(k not in ("--path", "--summary", "--tags") for k, _ in pairs):
+        return "Process enriches only with --path, --summary and --tags"
+    mine = {op.get("to") for _, m in _runs_proposals() for op in (m.get("file_ops") or [])
+            if isinstance(op, dict) and op.get("op") == "copy" and isinstance(op.get("to"), str)}
+    given = [v for k, v in pairs if k == "--path"]
+    for v in given:
+        rel = Path(v).as_posix()
+        if rel not in mine:
+            return f"{v}: Process enriches only the minutes and transcript copies of a meeting this run staged"
+        if not _may_make(Path(os.path.realpath(paths.SEARCH_DIR / (hashlib.sha256(rel.encode("utf-8")).hexdigest() + ".json")))):
+            return f"{v}: that file already has a summary; Process never replaces one"
+    return None if given else "Process enriches only with --path"
+
+
+def _process_validate_problem(words):
+    """Why `tracker.py validate` is refused in a Process run, or None: it writes its findings into the file, so only on a
+    proposal this run staged (never another proposal waiting in Review)."""
+    pos = [w for w in words if not w.startswith("-")]
+    target = real(pos[1]) if len(pos) == 2 and pos[0] == "validate" else None
+    return None if target is not None and target in {p for p, _ in _runs_proposals()} else \
+        "Process validates only a proposal it staged itself"
+
+
+def process_step_problem(name, words):
+    """Why one of Process's own minutes steps is refused, or None; "" when the command isn't one of them."""
+    if name == "minutes.py stage":
+        return _process_stage_problem(words)
+    if name == "propose.py people map":
+        if len(words) == 3 and _in_drafts(words[2], ".json") is not None and not _runs_own(_in_drafts(words[2], ".json")):
+            return "Process maps names only in a spec this run wrote, never another flow's draft"
+        if not sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])):
+            return "Process maps names only in its own spec in system/staging/drafts/"
+        _HOOK["writes"].add(str(_in_drafts(words[2], ".json")))     # round 2 (M2): it rewrites the spec, seen afresh next time
+        return None
+    if name == "docx_tools.py fill":
+        return _process_fill_problem(words)
+    if name == "search.py enrich" and [w for w in words if not w.startswith("-")][:2] == ["enrich", "set"]:
+        return _process_enrich_problem(words)
+    if name == "tracker.py validate":
+        return _process_validate_problem(words)
+    return ""
+
+
+def process_write_problem(rp):
+    """Why a Process run may not write this file directly, or None: only a .json directly in system/staging/drafts/ that is new or
+    that this run wrote (never another flow's draft: minutes waiting in Review, a note, a sweep's input)."""
+    if _in_drafts(str(rp), ".json") is None:
+        return "a Process run writes only its own .json input files directly in system/staging/drafts/"
+    old = not _may_make(rp)
+    if old or _process_record() is None:
+        return "a Process run doesn't change a draft it didn't write: write a new file in system/staging/drafts/"
+    return None
+
+
+def process_gate(command):
+    """Why a Process run may not run this creaite script command, or None (#264)."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", (command or "").strip())
+    if not m:
+        return None                          # bash_problem has already refused anything that isn't one creaite script
+    words = bash_args(command)
+    kind, name = command_kind(m.group(1), words)
+    step = process_step_problem(name, words)
+    if step is None:
+        return None
+    if step:
+        _debug("warn", f"process run refused: {name}")
+        return step
+    if kind == READ and name not in HELD_NOT_READ:
+        return None
+    _debug("warn", f"process run refused: {name}")
+    return (f"{name} isn't one of Process's steps: an Intake Process run reads, drafts the minutes and stages them for "
+            f"Review, nothing else")
+# ===== end #264 =====
+
+
+# ===== #265: Calendar import's Refresh (mode "calendar") =====
+# Pressing Refresh in Calendar import starts the run kind "calendar" (live_server, POST /api/calendar/refresh) under this mode. The
+# click is Alan's go-ahead to read his Outlook calendar and save it for Intake and Today (the sweep's calendar steps, cx-sweep 8
+# and 8b), and nothing more. Tighter than the sweep mode: the run may call only CALENDAR_TOOLS (the two Microsoft 365 calls the
+# calendar steps make, and no other connector tool); Read only the cx-sweep skill and its own two input files; Write or Edit only
+# those two files (system/staging/drafts/calendar.json and transcripts.json, never a link); and Bash only the five sweep.py
+# commands in CALENDAR_COMMANDS, exactly as written. Every other command is refused, read commands included: no tracker.py,
+# review.py, propose.py, minutes.py, filechange.py or sweep.py stage, lock, done or vip. Every check a plain chat has still runs
+# too (the never list, one creaite script on its own, no shell characters, reports).
+CALENDAR_SPEC = "system/staging/drafts/calendar.json"
+CALENDAR_FACTS = "system/staging/drafts/transcripts.json"
+CALENDAR_COMMANDS = ("calendar-window", f"calendar {CALENDAR_SPEC}", "transcripts todo", "transcripts show",
+                     f"transcripts record {CALENDAR_FACTS}")
+from permissions import M365 as _M365  # noqa: E402  review L6: one home for the connector's prefix (permissions imports only paths)
+CALENDAR_M365 = tuple(_M365 + t for t in ("outlook_calendar_search", "read_resource"))
+CALENDAR_TOOLS = ("Read", "Bash", "Write", "Edit", "ToolSearch", *CALENDAR_M365)
+CALENDAR_SKILL = ".claude/skills/cx-sweep"
+
+
+def _calendar_file(arg):
+    """The input file `arg` names (calendar.json or transcripts.json directly in drafts), or None: never a link (nor a drafts
+    folder that is one), never a file with a second hard link, and the real path must be one of the two exactly."""
+    try:
+        given = Path(os.path.expanduser(str(arg)))
+        given = given if given.is_absolute() else paths.ROOT / given
+        if given.is_symlink() or Path(paths.DRAFTS).is_symlink() or (given.exists() and os.lstat(given).st_nlink > 1):
+            return None
+        target = real(arg)
+    except (OSError, ValueError, RuntimeError):
+        return None
+    ok = {Path(os.path.realpath(paths.ROOT / CALENDAR_SPEC)), Path(os.path.realpath(paths.ROOT / CALENDAR_FACTS))}
+    return target if target in ok else None
+
+
+def calendar_tool_problem(tool, inp):
+    """Why a calendar refresh may not make this tool call, or None (#265): only CALENDAR_TOOLS; Read only the cx-sweep skill and
+    its two input files; Write and Edit only those two files."""
+    if tool not in CALENDAR_TOOLS:
+        _debug("warn", f"calendar run refused: {tool}")
+        return (f"{tool} isn't one of the calendar refresh's tools: it reads the calendar and saves it with the sweep's "
+                f"calendar commands, nothing else")
+    p = (inp or {}).get("file_path") or ""
+    if tool == "Read":
+        try:
+            rp, skill = real(p), Path(os.path.realpath(paths.ROOT / CALENDAR_SKILL))
+        except (OSError, ValueError, RuntimeError):
+            return f"{p}: the calendar refresh can't read this"
+        if parts_under(rp, skill) is None and _calendar_file(p) is None:
+            return f"{p}: the calendar refresh reads only the cx-sweep skill and its own input files"
+    if tool in ("Write", "Edit") and _calendar_file(p) is None:
+        _debug("warn", "calendar run refused a write")
+        return f"{p}: the calendar refresh writes only {CALENDAR_SPEC} and {CALENDAR_FACTS}"
+    return None
+
+
+def calendar_gate(command):
+    """Why a calendar refresh may not run this command, or None (#265): exactly one of CALENDAR_COMMANDS, its input file
+    directly in drafts and never a link. Fails closed."""
+    import re
+    m = re.fullmatch(r"(?:python3? system/scripts/|system/scripts/run )sweep\.py ([a-z -]+(?: system/staging/drafts/[a-z]+\.json)?)",
+                     (command or "").strip())
+    rest = m.group(1) if m else ""
+    if rest not in CALENDAR_COMMANDS or (" system/" in rest and _calendar_file(rest.rsplit(" ", 1)[1]) is None):
+        _debug("warn", "calendar run refused a command")
+        return ("the calendar refresh runs only the sweep's calendar commands, exactly: "
+                + "; ".join(f"system/scripts/run sweep.py {c}" for c in CALENDAR_COMMANDS))
+    return None
+# ===== end #265 =====
+
+
 def vault_relative(command):
     """`python3 <this vault>/system/scripts/x.py …` or `<this vault>/system/scripts/run x.py …` as the relative form the checks
     know (BL-268: a run that wrote a file by its full path then named the script the same way, and was refused). Only when the
@@ -1730,8 +2382,8 @@ def vault_relative(command):
 
 
 def hook_main(argv):
-    """`reach.py hook --run <id> --mode ask|confirmed|sweep|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
-    run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
+    """`reach.py hook --run <id> --mode ask|confirmed|sweep|process|calendar|prep|held [--held 1]`: Claude Code's PreToolUse hook
+    for an ask creaite run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
     error refuses: the guard fails closed."""
     try:

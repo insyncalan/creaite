@@ -398,6 +398,7 @@ export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
         else if(ev.type==="draft"){ const {type,...d}=ev; Object.assign(out,d,{got:true}); } } }
     api("/api/ask/ack",{run:id}).catch(()=>{});
     if(out.stopped){ shared.RBOUT="stopped"; return {ok:false,stopped:true,message:"Stopped; nothing changed"}; }
+    if(out.got&&out.nothing){ shared.RBOUT="done"; return {ok:true,nothing:String(out.nothing)}; }   /* #272: the reply had nothing to suggest: no text, so no field is filled */
     if(!out.got||(!out.text&&!out.items&&!out.prefill&&!(out.health&&out.reason))){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back",length_notes:out.length_notes||[]}; }
     out.ok=true; return out;
   } finally{ DRRUN=null; status(""); if(started) rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }

@@ -107,8 +107,15 @@ class P25(M.Base):
         self.assertEqual(fails, [], json.dumps(fails, indent=1)[:4000])
 
     def test_P25_the_client_slash_menu_offers_no_item_row(self):
+        """The `/` menu belongs to a text section (type "freetext": the Notes editor with the textsection profile); the built-in sections
+        (summary and the rest) have none. So the client report gets a client text section of its own first."""
+        c = self.api("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": WEEK})
+        doc = c["doc"]
+        doc["sections"] = doc["sections"] + [{"id": "free_p25", "type": "freetext", "heading": "Notes", "default_heading": "",
+                                              "hidden": False, "text": "Ready.", "audience": "client"}]
+        self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": c["version"]})["ok"])
         self.open_side()
-        self.focus_in(CLI, "summary")
+        self.focus_in(CLI, "free_p25")
         self.b.type(" /")
         self.b.wait("!!document.querySelector('.slashroot [role=option]')", 8)
         rows = self.q("[...document.querySelectorAll('.slashroot [role=option]')].map(x=>x.textContent)")
