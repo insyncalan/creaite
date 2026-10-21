@@ -1,0 +1,26 @@
+--- system/scripts/live_server.py
++++ system/scripts/live_server.py
+@@ -476,9 +476,9 @@ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), r
+               "Read .claude/settings.json first: if the script is already allowed there, the refusal was about the command's "
+               "shape, so say which command was refused and why instead of asking for a rule. If one narrow rule would let you "
+               "do the request, end with exactly one line: PERMISSION: <the rule> | <why it is needed>, for example PERMISSION: "
+-              "Write(system/search/**) | to save summaries, or PERMISSION: Bash(python3 system/scripts/<name>.py <subcommand> *) "
+-              "| <why> for a script (always that form, never with `:*`). Alan approves it in the panel; only a rule "
+-              "for a creaite script or a path inside one project's folder is accepted. Never edit .claude/settings.json yourself. "
++              "Bash(python3 system/scripts/<name>.py <subcommand> *) | <why> for a script (always that form, never with `:*`; "
++              "never an Edit or Write rule: files change through filechange.py). Alan approves it in the panel; only a rule "
++              "for a creaite script is accepted. Never edit .claude/settings.json yourself. "
+               "You may read all of Microsoft 365 (calendar, mail, Teams chats and channels, SharePoint and OneDrive search, "
+               "people, and read_resource for events, chats and meeting transcripts) and every vault file, whenever it helps. "
+               "Never send, delete or change anything in Microsoft 365: those tools are not available to you. "
+--- system/scripts/permissions.py
++++ system/scripts/permissions.py
+@@ -169,6 +169,8 @@ def check(rule, settings=None):
+     tool, spec = m.groups()
+     if tool == "Bash" and "permissions.py" in spec:
+         return False, "permissions.py is never allowed to the panel", None
++    if tool == "Bash" and re.search(r"reach\.py(?!\s+(?:classify|never)\b)", spec):     # guard-small: hook and wrap hand over
++        return False, "reach.py is the guard: only its classify and never commands are allowed to the panel", None
+     if SHELL_CHARS.search(spec):
+         return False, "the rule has shell characters (; & | < > ` $ ( ) { } or a backslash)", None
+     why = _bash_rule_refused(spec) if tool == "Bash" else _path_rule_refused(tool, spec)

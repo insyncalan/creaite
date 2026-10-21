@@ -12,22 +12,22 @@ from test_meetings import week_calendar  # noqa: E402
 
 NOW = "2026-10-05 18:00"            # a Monday evening: every meeting of the week so far has ended
 DAY = "2026-10-05"
-GATE = r"""window.ASKED=[]; window.LOADED=[]; window.GATE=null; window.OPENED=[]; window.PROC=[]; window.CHAT=[]; window.CAL=[];
+GATE = r"""window.ASKED=[]; window.LOADED=[]; window.GATE=null; window.OPENED=[]; window.PROC=[]; window.CHAT=[]; window.CALRUNS=[];
 jobLive=async(url,body)=>{ window.LOADED.push([url,body.id]);
   const f=D.meetings.rows.find(m=>m.id===body.id);
   await api('/api/inbox/upload',{name:f.day+' '+f.title+'.vtt',data:btoa('WEBVTT\n\nNOTE\nEvent ID: '+body.id+'\n\n00:00:01.000 --> 00:00:05.000\nHello\n')}); };
 const stageFor=async q=>{ const m=D.meetings.rows.find(x=>q.includes(x.title));
   if(m) await api('/api/fs',{op:'write',path:'system/staging/proposed-test-'+m.id+'.json',text:JSON.stringify({created:'2026-10-05T18:00:00',source_run:'cx-minutes',files:[],items:[{n:1,op:'new',table:'actions',values:{project:'ABC',description:'Send the revised plan',owner:'Alan Carter',priority:'Medium',raised:'2026-10-05',source:'x'},match:'strong',flags:[],decision:'pending'}],meeting:{key:'calendar:'+m.id,title:m.title,date:m.day,projects:['ABC'],draft:null,transcript:null,minutes_decision:'pending',file_ops:[]}})}); };
-/* ask creaite's run: only someone else's minutes still go this way (CHAT); anything else here is a regression */
+/* ask creaite's run: nothing on the Intake page goes this way any more (#232 E1 moved Find work items to Process's route); CHAT is a regression */
 askLive=async(q,c)=>{ window.ASKED.push([q,c]); window.CHAT.push(q); if(window.GATE) await window.GATE; await stageFor(q); };
-/* #264: Process's own route. Each file is recorded as "process <path>" (the words the run is given), its payload in PROC */
-processLive=async(files,onEv)=>{ window.PROC.push(files); files.forEach(f=>window.ASKED.push(['process '+f.path,'route'+(f.project?' '+f.project:'')]));
+/* #264: Process's own route. Each file is recorded as "process <path>" ("… as minutes by someone else" for Find work items' "as": "minutes", #232 E1), its payload in PROC. CALRUNS counts calendar runs (CAL is the page's own calendar popup) */
+processLive=async(files,onEv)=>{ window.PROC.push(files); files.forEach(f=>window.ASKED.push(['process '+f.path+(f.as==='minutes'?' as minutes by someone else':''),'route'+(f.project?' '+f.project:'')]));
   if(onEv){ onEv({type:'run',id:'i-test-1'}); onEv({type:'step',label:'Reading the transcript'}); }
   if(window.GATE) await window.GATE; if(window.PROCESS_RESULT) return window.PROCESS_RESULT(files);
   for(const f of files) await stageFor(f.path);
   return {ok:true,files:files.map(f=>({path:f.path,state:'staged'})),staged:files.length,needs:0,closure:{type:'closure',ok:true,line:'Staged for Review.'}}; };
 /* #265: the calendar's own route */
-calendarLive=async(onEv)=>{ window.CAL.push(1); window.ASKED.push(['refresh calendar','route']);
+calendarLive=async(onEv)=>{ window.CALRUNS.push(1); window.ASKED.push(['refresh calendar','route']);
   if(onEv){ onEv({type:'run',id:'c-test-1'}); onEv({type:'step',label:'Reading the calendar'}); }
   if(window.GATE) await window.GATE;
   return {ok:true,saved:true,meetings:3,days:2,closure:{type:'closure',ok:true,line:'Calendar saved: 3 meetings over 2 days.'}}; };"""

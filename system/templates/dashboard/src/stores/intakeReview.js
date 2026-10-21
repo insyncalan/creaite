@@ -130,7 +130,7 @@ export const irDropOn = signal(false);
 export const irRefreshing = signal(false);
 /** #264 on this page: the Process run's latest step in plain words (the route's "step" events), shown on the running row. */
 export const irStep = signal("");
-/** #264: a question the Process run could not answer without Alan (or "not staged"), by row id: the row offers "Ask creaite about
+/** #264: a question the Process run could not answer without Alan (or "not staged"), by row id: the row offers "ask creaite about
     this", which opens the panel with the question filled in (never sent by itself). */
 export const irAskQ = signal(/** @type {Record<string, {state: string, question: string}>} */ ({}));
 /** @param {string} id @param {{state: string, question: string} | null} q */

@@ -640,14 +640,64 @@ def file_problem(file, projects):
     if not isinstance(file, str) or not file.strip():
         return "Minutes file not found: (no file given)."
     parts = file.split("/")
-    if "\x00" in file or "\\" in file or file.startswith(("/", "~")) or any(x in ("", ".", "..") for x in parts):
-        return f"Minutes file not acceptable: {file!r} is not a plain path inside the vault."
-    return _file_problem(file, parts, projects)
+    if ("\x00" in file or "\\" in file or file.startswith(("/", "~")) or any(x in ("", ".", "..") for x in parts)
+            or minutes_spec.stored_problem("file", file) or _odd_text(file)):          # #269's rules for a stored path, and more
+        return (f"Minutes file not acceptable: {file!r} is not a plain path inside the vault (no control, bidirectional or "
+                "invisible characters, no spaces around it).")
+    why = _file_problem(file, parts, projects)
+    return why or _pending_problem(file)
+
+
+def _odd_text(s):
+    """True when `s` has a character no file name of creaite's should: a control character (a newline, a tab), a format
+    character (bidirectional marks and overrides, zero-width ones) or an unassigned one."""
+    import unicodedata
+    return any(unicodedata.category(c) in ("Cc", "Cf", "Cn", "Zl", "Zp") for c in s)
+
+
+def _pending_problem(file):
+    """#232 E1 review: why `file` can't be staged as someone else's minutes because another staged proposal already names it
+    (as a transcript, a draft, or someone else's minutes), or None. The first one staged keeps it; the way forward is said."""
+    other = minutes_spec._pending_refs(file)
+    if not other:
+        return None
+    return (f"Minutes file not acceptable: {file} is already in {other[0][0]} (staged for Review). Approve or reject that one "
+            "first; once it is applied or rejected, stage this file again if it is still in inbox/.")
+
+
+def _where_problem(file, p, real, in_inbox, projects):
+    """#269's rules for a staged file, applied to someone else's minutes: never in a folder creaite skips (99 Archive, _Archive,
+    _Templates, a hidden folder), never a hidden or temporary name, a link, a second hard link or anything but a regular file."""
+    import stat
+    folder = Path(os.path.realpath(paths.INBOX)) if in_inbox else next(
+        (Path(os.path.realpath(paths.folder(c, "minutes"))) for c in projects
+         if _in_minutes_folder(file, real, c)), None)
+    if folder is not None and minutes_spec._skipped(Path(real), folder):
+        return f"Minutes file not acceptable: {file} is in a folder creaite doesn't read (an archive, a template or a hidden folder)."
+    try:
+        if not stat.S_ISREG(os.lstat(p).st_mode) and not p.is_symlink():
+            return f"Minutes file not acceptable: {file} is not a regular file."
+    except OSError:
+        return f"Minutes file not found: {file}."
+    why = minutes_spec._plain_file_problem("file", p, Path(real))
+    return f"Minutes file not acceptable: {why}." if why else None
+
+
+def _special_file(p):
+    """True when `p` is a pipe or a socket (looked at, never opened)."""
+    import stat
+    try:
+        mode = os.lstat(p).st_mode
+    except OSError:              # not there: the caller says "not found"
+        return False
+    return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
 
 
 def _file_problem(file, parts, projects):
     """file_problem's second half: the path is plain; where it points, and what it is."""
     p = paths.resolve(file)
+    if _special_file(p):                                  # never opened: a pipe would wait
+        return f"Minutes file not acceptable: {file} is not a regular file."
     if not p.is_file():
         return f"Minutes file not found: {file}."
     real = os.path.realpath(p)
@@ -656,6 +706,9 @@ def _file_problem(file, parts, projects):
     in_place = any(_in_minutes_folder(file, real, c) for c in projects)
     if not (in_inbox or in_place):
         return f"Minutes file not acceptable: {file} is neither in inbox/ nor in the matched project's minutes folder."
+    why = _where_problem(file, p, real, in_inbox, projects)
+    if why:
+        return why
     if p.suffix.lower() in (".vtt", ".srt") or file_event_id(file):
         return (f"{file} is a transcript, not minutes: a transcript needs draft minutes (use Make minutes). "
                 "Nothing is read as minutes from it.")
@@ -689,7 +742,8 @@ def staged_with_key(key):
 
 
 def staged_targets():
-    """{filed path: sha256 of the file it comes from} for the copies other staged proposals will make (None: the source is gone)."""
+    """{filed path, folded (_fold): sha256 of the file it comes from} for the copies other staged proposals will make (None: the
+    source is gone)."""
     out = {}
     for f in sorted(paths.STAGING.glob("proposed-*.json")):
         try:
@@ -699,8 +753,15 @@ def staged_targets():
         for op in meeting.get("file_ops") or []:
             if op.get("op") == "copy" and op.get("to"):
                 src = meeting.get(op.get("from")) if op.get("from") in ("draft", "transcript") else op.get("from")
-                out[op["to"]] = op.get("src_sha256") or _sha(src)
+                out[_fold(op["to"])] = op.get("src_sha256") or _sha(src)
     return out
+
+
+def _fold(rel):
+    """A stored path as macOS compares names (APFS: case- and normalisation-insensitive): "Vendor call" and "Vendor Call" are
+    one file there, so two staged copies to them would collide only at apply."""
+    import unicodedata
+    return unicodedata.normalize("NFC", str(rel)).casefold()
 
 
 def _sha(rel):
@@ -721,7 +782,7 @@ def filed_name(code, name, ext, src):
         to = f"{mdir}/{name}{ext}" if n == 1 else f"{mdir}/{name} ({n}){ext}"
         there = paths.resolve(to)
         free_on_disk = not there.exists() or _same_bytes(there, paths.resolve(src))
-        free_in_queue = to not in staged or staged[to] == mine
+        free_in_queue = _fold(to) not in staged or staged[_fold(to)] == mine
         if free_on_disk and free_in_queue:
             return to
     return f"{mdir}/{name}{ext}"
@@ -748,6 +809,16 @@ def by_others_ops(spec, projects, name):
 # ===== end #232 E1 =====
 
 
+def _by_others_holding(rel):
+    """The staged proposal that files `rel` as someone else's minutes (#232 E1), or None."""
+    if not rel:
+        return None
+    for name, data in minutes_spec._pending_refs(rel):
+        if (data.get("meeting") or {}).get("kind") == BY_OTHERS:
+            return name
+    return None
+
+
 def stage_gate(spec):
     """The refusals, in order (BL-229: out of cmd_stage): (exit code, or None to go on; the meeting key)."""
     day, title = spec["date"], spec["title"]
@@ -755,6 +826,11 @@ def stage_gate(spec):
         return 1, None
     key = (minutes_key(day, title, spec["file"]) if by_others(spec)
            else meeting_key(day, title, spec.get("note") or spec.get("transcript"), spec.get("event_id")))
+    taken = None if by_others(spec) else _by_others_holding(spec.get("transcript"))
+    if taken:                                             # #232 E1 review: the file is already someone else's minutes in Review
+        print(f"{spec['transcript']} is already staged in {taken} as someone else's minutes: approve or reject that one first. "
+              "Nothing staged.")
+        return 1, key
     if by_others(spec) and staged_with_key(key):          # a second proposal for the same file would fail once the first has moved it
         print(f"Already staged in {staged_with_key(key)}: review that one. Nothing staged.")
         return 3, key

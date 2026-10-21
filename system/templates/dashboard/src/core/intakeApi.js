@@ -23,9 +23,10 @@ export const mtgCheckable=m=>!!m.id&&m.teams&&!mtgLater(m)&&!m.processed&&m.tran
 export const TXWHY={none:"No transcript for this meeting",not_transcribed:"Not transcribed yet",no_access:"No access to the transcript"};
 export const mtgSkip=m=>m.loaded?"":TXWHY[m.transcript]||(!m.transcript&&!m.teams?"Not a Teams meeting, so there is no transcript to load":"");
 
-/* ===== A transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files ===== */
-/** A run's id: its kind, the time and a random part (one clock read for every run here, #178). @param {string} kind */
+/** A run's id: its kind, the time and a random part (one clock read for every run here, #178; ported from 2.5.3's intake.js). @param {string} kind */
 const runId = kind => `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+
+/* ===== A transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files ===== */
 export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=runId("r"), ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
   try{ await askStream(url,{...body,run:id},true,ctl,undefined,true); } finally{ shared.RUN=null; setRunning(false); } };   /* BL-326: drawn plainly (steps and the closure) */
 export async function checkMeeting(m){ if(!viaServer()){ snack("Checking needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }

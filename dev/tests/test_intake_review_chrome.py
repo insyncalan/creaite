@@ -50,7 +50,7 @@ class Head(IntakeBase):
         b.wait("irRefreshing.value===true")
         self.assertIn("Refreshing…", self.sub())
         self.assertEqual(b.eval("document.querySelector('#icRef').getAttribute('aria-label')"), "Stop the refresh")   # #265: Stop while it runs
-        self.assertEqual(b.eval("CAL.length"), 1)                                                  # one run at a time
+        self.assertEqual(b.eval("CALRUNS.length"), 1)                                                  # one run at a time
         self.assertFalse(b.eval("document.getElementById('chat') ? document.getElementById('chat').classList.contains('on') || !document.getElementById('chat').hidden && document.getElementById('chat').offsetParent!==null : false"))
         path.write_text(json.dumps({**cal, "fetched": f"{DAY} 10:42"}))
         b.eval("RELEASE()")

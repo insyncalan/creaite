@@ -146,7 +146,7 @@ export function MeetingRow({ m, live }) {
           <div class="why">{m.day ? fd(m.day) : ""}{m.start ? ` ${m.start}${m.end ? `–${m.end}` : ""}` : ""}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div>
           <div class="why">{irStateWords(m, n)}</div>
         </>}
-        {state === "running" ? <><div class="why">ask creaite stays free</div><Progress words={irRunningWords(m)} /></> : null}
+        {state === "running" ? <><div class="why">ask creaite waits until this ends</div><Progress words={irRunningWords(m)} /></> : null}
         <IrNote m={m} />
       </td>
       <td class="iracts"><RowActions m={m} /></td>

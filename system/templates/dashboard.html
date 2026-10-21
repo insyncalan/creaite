@@ -74844,7 +74844,6 @@ ${d5.text}`);
   }
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
-  var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
   var irRun = "";
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
@@ -74912,23 +74911,18 @@ ${d5.text}`);
         null
       );
       try {
-        if (minutes) {
-          await askLive(
-            `process ${file} as minutes by someone else`,
-            `Check “${m5.title}” (${whenOf(m5)}) for proposed items: minutes by someone else, no new minutes drafted`
-          );
-        } else {
-          const x5 = m5.src === "calendar" ? calOf(m5) : null;
-          r4 = await processLive([x5 ? mtgProcessFile(x5, file) : { path: file }], (ev) => {
-            if (ev.type === "run") irRun = ev.id;
-            else if (ev.type === "step") irStep.value = ev.label || "";
-          });
-        }
+        const x5 = m5.src === "calendar" ? calOf(m5) : null;
+        const sent = minutes ? { path: file, as: "minutes" } : x5 ? mtgProcessFile(x5, file) : { path: file };
+        r4 = await processLive([sent], (ev) => {
+          if (ev.type === "run") irRun = ev.id;
+          else if (ev.type === "step") irStep.value = ev.label || "";
+        });
       } catch (e4) {
       } finally {
         irRun = "";
         irStep.value = "";
       }
+      if (r4 && r4.stopped) irStopped = true;
       await reloadData();
       const after = rowOf(m5.id);
       const done = !after || after.stage !== "arrived";
@@ -74943,10 +74937,12 @@ ${d5.text}`);
       irSetBusy(m5.id, false);
     }
   }
+  var irStopped = false;
   function irStop() {
+    irStopped = true;
     if (irRun) stopRun(irRun);
   }
-  var irCanStop = (m5) => !!m5 && irBusy.value.includes(m5.id) && !(m5.src === "upload" && irFileKind(m5) === "minutes");
+  var irCanStop = (m5) => !!m5 && irBusy.value.includes(m5.id);
   function irAskAbout(m5) {
     const q5 = irAskQ.value[m5.id];
     if (!q5) return;
@@ -74970,9 +74966,20 @@ ${d5.text}`);
       return;
     }
     const ids = irReady().map((m5) => m5.id), left = irLeftOut().length;
+    irStopped = false;
+    let ran = 0;
     for (const id2 of ids) {
+      if (irStopped) break;
       const m5 = rowOf(id2);
-      if (m5) await irProcess(m5);
+      if (m5) {
+        await irProcess(m5);
+        ran++;
+      }
+    }
+    if (irStopped) {
+      snack(`Stopped: ${ids.length - ran} not started`);
+      irStopped = false;
+      return;
     }
     if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
   }
@@ -75406,7 +75413,7 @@ ${d5.text}`);
               /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, n4) })
             ] }),
             state === "running" ? /* @__PURE__ */ u4(S2, { children: [
-              /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite stays free" }),
+              /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite waits until this ends" }),
               /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) })
             ] }) : null,
             /* @__PURE__ */ u4(IrNote, { m: m5 })
@@ -78125,9 +78132,9 @@ ${d5.text}`);
         "irApproveRoutine",
         "irAside",
         "irAsk",
+        "irAskAbout",
         "irBulk",
         "irBusy",
-        "irCanStop",
         "irChanged",
         "irChecking",
         "irChooseKind",
@@ -78179,6 +78186,7 @@ ${d5.text}`);
         "irSetView",
         "irStage",
         "irStageClick",
+        "irStop",
         "irTick",
         "irToggle",
         "irUpdateList",
@@ -78509,6 +78517,7 @@ ${d5.text}`);
         "step",
         "stepGroup",
         "stopAsk",
+        "stopRun",
         "store",
         "sw",
         "swept",
