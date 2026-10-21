@@ -74,8 +74,9 @@ SCREENS = {
     "person": ("go('person','Sara Khan')", "!document.getElementById('v-person').hidden"),
     "help": ("go('help')", "!document.getElementById('v-help').hidden"),
     "settings-essentials": ("go('settings','essentials')", "!!document.querySelector('#set-essentials .srow')"),
-    "settings-people": ("go('settings','people')", "!!document.querySelector('#settingsBody [data-sec=people]')"),
-    "settings-advanced": ("go('settings','advanced')", "!!document.querySelector('#set-more .srow')"),
+    "project-settings": ("go('psettings','FAL')", "!!document.getElementById('psArchive')"),   # the Settings line: Archive's home
+    "settings-advanced": ("go('settings','advanced')", "!!document.querySelector('#settingsBody [data-sec=thresholds] .srow')"),   # v2.6 (#246)
+    "settings-work": ("go('settings','work')", "!!document.querySelector('#settingsBody [data-sec=views] .srow')"),
     "settings-health": ("go('settings','health')", "!!document.querySelector('#healthCard')"),
 }
 
@@ -312,10 +313,13 @@ def behaviour_driver(case, screens):
         def parch(self):
             """test_shared_behaviour's parch, on FAL's Archive (the demo has no ABC)."""
             b = self.b
-            self.goto("settings-people")
+            self.goto("project-settings")
             b.eval(tsb.PROBE + ";true")
-            sel = json.dumps('#projArch [data-parch="archive"][data-pcode="FAL"]')
+            sel = json.dumps("#psArchive")
             b.eval(f"(()=>{{ const e=document.querySelector({sel}); e.scrollIntoView({{block:'center'}}); e.focus(); }})()")
+            self.press("Enter", 0.5)
+            b.wait("!!document.getElementById('psArchiveYes')", 10)
+            b.eval("document.getElementById('psArchiveYes').focus()")
             self.press("Enter", 0.5)
             try:
                 b.wait("document.getElementById('parchDlg')?.open", 20)

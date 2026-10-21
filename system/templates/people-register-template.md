@@ -1,6 +1,6 @@
 # People register
 
-Keep this file at `projects/_portfolio/people-register.md`, beside `project-register.md`. Claude reads it every run and maps aliases and email addresses to the one full name, so owners come out the same everywhere. Edit it in the dashboard's Settings › People, or with cx-edit ("add Sara Khan to the people register").
+Keep this file at `projects/_portfolio/people-register.md`, beside `project-register.md`. Claude reads it every run and maps aliases and email addresses to the one full name, so owners come out the same everywhere. Edit it on the dashboard's People page, or with cx-edit ("add Sara Khan to the people register").
 
 ## People
 

@@ -22,6 +22,10 @@ export const settingWords = q => q.toLowerCase().split(/\s+/).filter(Boolean);
 /** True when every word is in the text. @param {string} text @param {string[]} w */
 export const settingHasAll = (text, w) => { const t = text.toLowerCase(); return w.every(x => t.includes(x)); };
 
+/** What a search reads in an Essentials row: its words, its keys and (v2.6, #246) each key's own catalogue label, so a
+    setting is found by the same words on every tab. @param {import("../../stores/settings.js").EssentialRow} r */
+export const essText = r => `${r.section} ${r.label} ${r.line} ${r.keys.join(" ")} ${r.keys.map(k => (settingOf(k) || {}).label || "").join(" ")}`;
+
 /** @param {string} k */
 const val = k => { const s = settingOf(k); return s ? s.value : undefined; };
 
@@ -76,6 +80,16 @@ function Essential({ row }) {
   switch (k) {
     case "identity.name": control = text(v => v || undefined, "Your name can't be empty", "Full name"); break;
     case "work.weekend_days": control = ticks(WEEKDAYS, v => v.slice(0, 3)); break;
+    case "identity.short_forms": case "identity.own_domains": {   /* v2.6 (#246): the old You card's two rows, comma-separated */
+      const list = () => (Array.isArray(val(k)) ? val(k) : []).join(", ");
+      control = (
+        <input type="text" {...named} value={list()} size={18} placeholder={k === "identity.own_domains" ? "example.com" : "Alan, AC"}
+          onChange={async e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget);
+            const v = el.value.split(",").map(x => x.trim()).filter(Boolean).map(x => k === "identity.own_domains" ? x.toLowerCase() : x);
+            if (!await save({ [k]: v })) el.value = list(); }} />
+      );
+      break;
+    }
     case "sweep.due_from": control = text(v => HHMM.test(v) ? v : undefined, "Use 24-hour HH:MM, such as 07:00", "HH:MM"); break;
     case "sweep.sources.inbox":
       control = (
@@ -158,7 +172,7 @@ export function Essentials() {
   const c = catalogue.value;
   if (!c) return <div class="card wide"><h2>Essentials</h2><p class="sub" role="status">{catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.")}</p></div>;
   const w = settingWords(query.value);
-  const rows = c.essentials.filter(r => (!w.length || settingHasAll(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`, w)));
+  const rows = c.essentials.filter(r => (!w.length || settingHasAll(essText(r), w)));
   if (!rows.length) return null;
   const sections = [...new Set(rows.map(r => r.section))];
   return (

@@ -115,8 +115,10 @@ SCRIPT = r"""
       out.wsList=[...document.querySelectorAll(".pkpop .pkopt span")].map(o=>o.textContent).filter(t=>t!=="None"&&!t.startsWith("Add ")).every(v=>wsFor("ABC").includes(v));
       const wq=document.querySelector(".pkpop .pkq"); wq.value="Brand new stream"; wq.dispatchEvent(new Event("input")); [...document.querySelectorAll(".pkpop .pkopt")].find(o=>o.textContent.startsWith("Add “")).click();
       out.wsAsk=[(document.querySelector(".pkws .pkws-h")||{}).textContent,(document.querySelector('.pkws [data-wsn="name"]')||{}).value]; closePicker("owner",false); closePanel();   /* BL-187: the new workstream's form */
-      go("settings","people");
-      out.wsMgr=[...document.querySelectorAll("#wsMgr tbody tr td:first-child")].map(td=>td.textContent.trim()).filter(t=>t.endsWith("Cut-over"));
+      /* the Settings line: Settings › Workstreams is gone; each project's settings lists its own (#247), by the old address */
+      const wsT=D.ws_table||(D.ws_table=[]), tmp=[{id:"T-W-1",p:"ABC",name:"Cut-over",st:"Active",nA:1,nR:0},{id:"T-W-2",p:"DEF",name:"Cut-over",st:"Active",nA:1,nR:0}]; wsT.push(...tmp);
+      const wsOn=async c=>{ go("cockpit",c); go("settings","workstreams"); await wait(40); return [...document.querySelectorAll("#psWs tbody tr[data-ws]")].map(tr=>`${psCode.value} ${tr.dataset.ws}`).filter(t=>t.endsWith("Cut-over")); };
+      out.wsMgr=[...await wsOn("ABC"),...await wsOn("DEF")]; tmp.forEach(t=>wsT.splice(wsT.indexOf(t),1)); go("today");
       a1.ws=keep[0]; d1.ws=keep[1]; }
     // 5c. owner picker lists the project's own people first (BL-18 A; BL-179: the new item's owner chip); nothing saved
     openNew("actions"); await pkCommit("actions",CUR.nid,{p:"DEF"},"Project","",""); document.querySelector('#panel [data-pkp="o"]').click();
@@ -359,7 +361,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertEqual(r["wsFor"], [True, True, False])                       # BL-57: each project its own list
         self.assertTrue(r["wsList"])                                            # picker: this project's only
         self.assertEqual(r["wsAsk"], ["New workstream for Example Programme", "Brand new stream"])   # BL-187: added from the peek, with its details
-        self.assertEqual(sorted(r["wsMgr"]), ["ABC Cut-over", "DEF Cut-over"])   # Settings: per project
+        self.assertEqual(sorted(r["wsMgr"]), ["ABC Cut-over", "DEF Cut-over"])   # each project's settings: its own (Settings › Workstreams until the Settings line)
 
     def test_learn_option_in_review(self):
         self.assertTrue(self.result["learnTxt"].startswith("Remember sam@client.com (sender) for Digital Enablement"))

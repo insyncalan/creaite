@@ -1,0 +1,182 @@
+<section class="view" id="v-settings">
+<div class="wrapmax">
+<h1>Settings</h1>
+<div class="setlayout">
+<div class="setside">
+<input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
+<div class="tabhost" id="setcatsHost">
+<div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
+<button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="ai" data-scat="ai">AI drafts</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="advanced" data-scat="advanced">Advanced</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="health" data-scat="health">Health</button>
+</div>
+</div>
+<!-- BL-316: the categories (#setcats), the Tabs building block -->
+<select id="setcatsel" class="setcatsel" aria-label="Settings category">
+<option value="essentials">Essentials</option>
+<option value="work">Work and reports</option>
+<option value="sweep">Sweep and Intake</option>
+<option value="reports">Reports and minutes</option>
+<option value="ai" selected="">AI drafts</option>
+<option value="look">Look and help</option>
+<option value="advanced">Advanced</option>
+<option value="health">Health</option>
+</select>
+<p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p>
+</div>
+<div id="settingsBody">
+<div class="setstack">
+<div class="card" id="set-drafts" data-sec="drafts">
+<h2>AI drafts</h2>
+<p class="sub" style="margin:0 0 #px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>
+<div class="srow">
+<div>
+<span id="sr#1">Draft the latest update</span>
+<small id="sr#1h">An action's latest update from what happened since the last one, and Draft updates for actions with no recent update</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="update" checked="" aria-label="Draft the latest update">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#2">Draft client wording</span>
+<small id="sr#2h">Plain client messaging from the item's own text, with what was taken out</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="client" checked="" aria-label="Draft client wording">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#3">Suggest the thinking fields</span>
+<small id="sr#3h">A decision's options and reasoning; a risk's response, impact and likelihood</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="thinking" checked="" aria-label="Suggest the thinking fields">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#4">Draft the reason for a health or forecast change</span>
+<small id="sr#4h">One sentence from the evidence creaite already holds</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="reason" checked="" aria-label="Draft the reason for a health or forecast change">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#5">Spot repeats of existing items</span>
+<small id="sr#5h">Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="repeat" checked="" aria-label="Spot repeats of existing items">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#6">Spot items that are probably done</span>
+<small id="sr#6h">The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="done" checked="" aria-label="Spot items that are probably done">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#7">Sharpen a vague action</span>
+<small id="sr#7h">A clear, verb-first title for a vague action, beside the original; you pick one</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="sharpen" checked="" aria-label="Sharpen a vague action">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#8">Draft the agenda and invite text</span>
+<small id="sr#8h">From the Prep page: the invite text (POAD or a lighter write-up) and a timed agenda, to copy</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="agenda" checked="" aria-label="Draft the agenda and invite text">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#9">Shape the meeting</span>
+<small id="sr#9h">Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's carried over, each line cited</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="shape" checked="" aria-label="Shape the meeting">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#10">Write the status in other forms</span>
+<small id="sr#10h">Generate's Form: a steering note, a three-line update, an email paragraph or a Teams message</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="forms" checked="" aria-label="Write the status in other forms">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#11">Redraft a report section</span>
+<small id="sr#11h">The weekly or client report's ✦, and Polish, Shorter, Executive or your own words on one section, from the week's facts (a client report: client-visible facts only)</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="report-section" checked="" aria-label="Redraft a report section">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#12">Redraft a minutes section</span>
+<small id="sr#12h">The minutes' ✦, and Polish, Shorter, Executive or your own words on one section (the distributed version: nothing marked Internal only or withheld)</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="minutes-section" checked="" aria-label="Redraft a minutes section">
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#13">Polish the email wording</span>
+<small id="sr#13h">Draft email's opening paragraph reworded in a warm, neutral or firm tone; the table, subject and addresses are untouched</small>
+</div>
+<div>
+<input type="checkbox" class="switch" data-drsw="email" checked="" aria-label="Polish the email wording">
+</div>
+</div>
+<div class="drstats" id="drStats">No drafts offered yet.</div>
+<div class="setembed" data-embed="drafts" data-mount="">
+<div class="srow" data-keys="drafting.agenda_style">
+<div>
+<span id="ss#1">Agenda style</span>
+<small id="ss#1h">The shape of a drafted agenda.<span class="setnote"> Default: poad. POAD: purpose, objectives, approach, deliverables, your house format.</span>
+</small>
+</div>
+<div class="setctl">
+<input type="text" aria-labelledby="ss#1" aria-describedby="ss#1h" size="14">
+</div>
+</div>
+</div>
+</div>
+<div class="setmount" id="set-more-ai" data-sec="more-ai" data-mount="">
+</div>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:#px;display:flex;align-items:center;gap:#px">
+<div style="flex:1">
+<h2>Help and documentation</h2>
+<div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div>
+</div>
+<button class="btn" data-go="help">Open help</button>
+</div>
+<p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+</div>
+</section>

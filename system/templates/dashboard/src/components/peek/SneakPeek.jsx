@@ -61,7 +61,7 @@ export function SneakIcon({ shapes, size }) {
 
 /** Where a refusal points, as the button's words (null: said in words only). @type {Record<string, string|null>} */
 const POINT = { draft_chase: "Open Draft email", ask: "Open ask creaite", project_page: "Open the project page", settings: "Open Settings",
-  people: "Open Settings › People", milestone_form: null, cx_edit: null };
+  people: "Open People", milestone_form: null, cx_edit: null };
 /** A refusal's second sentence, where it points. @type {Record<string, string>} */
 const POINT_SAY = { cx_edit: "Say it in Claude Code (cx-edit) instead.", milestone_form: "Use Rebaseline… in the milestone's Dates: a rebaseline also records a decision." };
 /** The confirm button's verb for an ending status. @type {Record<string, string>} */

@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_wide_tables.py   (needs Google Chrome; skipped otherwise)
 
-A table wider than its frame (Projects at 700px, Settings › People at 900px) shows the edge fade and "more columns →";
+A table wider than its frame (Projects at 700px, the People page at 900px; Settings › People until the Settings line) shows the edge fade and "more columns →";
 BL-176: the peek and ask creaite are over the page, so with them open at 1100px nothing narrows and a table that fits shows no cue; the cue goes once scrolled to the
 end; the button scrolls; the first column (the ID or name) stays put while the rest scrolls, unless it is over half the frame.
 """
@@ -13,8 +13,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
-PAGES = {"projects": "go('projects')", "work": "go('work')", "people": "go('settings','people')"}
-FRAME = {"projects": "#projTbl", "work": "#workWrap", "people": "#v-settings .tbl"}
+PAGES = {"projects": "go('projects')", "work": "go('work')", "people": "go('settings','people')"}   # the Settings line: the old address opens the People page
+FRAME = {"projects": "#projTbl", "work": "#workWrap", "people": "#v-people .tbl"}
 CUE = """(()=>{ const f=document.querySelector(%r), c=f&&f.querySelector(':scope>.xcue'), m=c&&c.querySelector('.xmore');
   const vis=e=>!!e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;
   const fr=f.getBoundingClientRect(), mr=m?m.getBoundingClientRect():null;
@@ -67,14 +67,14 @@ class WideTables(LiveBrowserCase):
     def test_the_cue_goes_at_the_end_and_the_button_scrolls(self):
         b = self.b
         self.setup_page("people", 900)
-        b.click("#v-settings .tbl .xmore")
-        b.wait("document.querySelector('#v-settings .tbl').scrollLeft>0", 5)
-        b.eval("(()=>{ const f=document.querySelector('#v-settings .tbl'); f.scrollLeft=f.scrollWidth; })()")
+        b.click("#v-people .tbl .xmore")
+        b.wait("document.querySelector('#v-people .tbl').scrollLeft>0", 5)
+        b.eval("(()=>{ const f=document.querySelector('#v-people .tbl'); f.scrollLeft=f.scrollWidth; })()")
         b.pump(0.3)
         s = self.state("people")
         self.assertFalse(s["cue"])
         self.assertFalse(s["fade"])
-        b.eval("document.querySelector('#v-settings .tbl').scrollLeft=0")
+        b.eval("document.querySelector('#v-people .tbl').scrollLeft=0")
         b.pump(0.3)
         self.assertTrue(self.state("people")["cue"])                                      # back at the start: it shows again
 
@@ -82,14 +82,14 @@ class WideTables(LiveBrowserCase):
         b = self.b
         self.setup_page("people", 900)
         self.assertTrue(self.state("people")["stick"])
-        first = "document.querySelector('#v-settings .tbl tbody tr td:first-child').getBoundingClientRect().left"
-        second = "document.querySelector('#v-settings .tbl tbody tr td:nth-child(2)').getBoundingClientRect().left"
+        first = "document.querySelector('#v-people .tbl tbody tr td:first-child').getBoundingClientRect().left"
+        second = "document.querySelector('#v-people .tbl tbody tr td:nth-child(2)').getBoundingClientRect().left"
         x1, x2 = b.eval(first), b.eval(second)
-        b.eval("document.querySelector('#v-settings .tbl').scrollLeft=120")
+        b.eval("document.querySelector('#v-people .tbl').scrollLeft=120")
         b.pump(0.3)
         self.assertAlmostEqual(b.eval(first), x1, delta=1)                                # the name stays
         self.assertLess(b.eval(second), x2 - 60)                                          # the rest moves
-        hit = b.eval("""(()=>{ const td=document.querySelector('#v-settings .tbl tbody tr td:first-child'), r=td.getBoundingClientRect();
+        hit = b.eval("""(()=>{ const td=document.querySelector('#v-people .tbl tbody tr td:first-child'), r=td.getBoundingClientRect();
           return td.contains(document.elementFromPoint(r.left+8, r.top+r.height/2)); })()""")
         self.assertTrue(hit)                                                              # drawn over the scrolled columns
 

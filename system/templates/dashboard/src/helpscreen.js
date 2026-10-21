@@ -15,7 +15,7 @@ import { HD, helpFocusSearch } from "./help.js";
 export const SCREEN_OF={today:"today",work:"work",mine:"work",review:"intake","intake-review":"intake",inbox:"intake",projects:"projects",cockpit:"projects",people:"people",person:"people",notes:"notes",files:"files"};
 /** The eight pages that carry the foot line and the first-visit line (the page itself, not a project's or a person's page). */
 const LINE_OF={today:"today",work:"work",mine:"work","intake-review":"intake",projects:"projects",people:"people",notes:"notes",files:"files"};
-const TITLE={today:"#v-today .dayband",work:"#v-work h1","intake":"#v-intake-review h1",projects:"#v-projects .hhead",people:"#v-people h1",notes:"#v-notes h1",files:"#v-files h1"};
+const TITLE={today:"#v-today .dayband",work:"#v-work h1","intake":"#v-intake-review h1",projects:"#v-projects .hhead",people:"#v-people .plhead",notes:"#v-notes h1",files:"#v-files h1"};
 const FOOT={today:"#v-today",work:"#v-work .wrapmax","intake":"#v-intake-review .wrapmax",projects:"#v-projects .wrapmax",people:"#v-people .wrapmax",notes:"#v-notes",files:"#v-files .wrapmax"};
 
 export const screenKey=()=>SCREEN_OF[shared.VIEW]||"";
@@ -68,7 +68,7 @@ export function helpScreenSync(){ const line=node("hFirst","hfirst"), foot=node(
   if(!sc){ line.hidden=true; foot.hidden=true; return; }
   const host=$(FOOT[key]); if(host){ if(host.lastElementChild!==foot) host.append(foot); }
   if(foot.dataset.k!==key){ foot.dataset.k=key; putHTML(foot,raw(`Press ${kbd} for help with ${esc(sc.title)}`)); }
-  foot.hidden=!host;
+  foot.hidden=!host||key==="people";   /* #248: no permanent foot line on People (the first-visit line stays, and ? still opens its help) */
   const title=$(TITLE[key]);
   const due=S.helpLine!==false&&!lineSeen(key)&&!!title&&!blocked();
   if(!due){ line.classList.toggle("ghost",!!title&&line.dataset.k===key&&!line.hidden); if(!line.classList.contains("ghost")) line.hidden=true; return; }   /* #158 layout: on the same screen the slot stays (only invisible), so nothing moves; it collapses when you go elsewhere */

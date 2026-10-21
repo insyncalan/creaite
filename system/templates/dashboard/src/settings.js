@@ -4,26 +4,23 @@
    boot…() functions that src/main.js calls in today's order. */
 import { closeDialog, openDialog } from "./components/Dialog.jsx";
 import { makeArchiveAskDialog } from "./components/dialogs/PageDialogs.jsx";
-import { closeFilterBar, drawFilterBar, filterBarOpen, openFilterBar } from "./components/FilterBar.jsx";
 
 import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
-import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, saveWs, SWEPT, wsFor, wsHidden, wsKey, WSL, wsParts, wsUsed } from "./core/data.js";
+import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, SWEPT, wsKey } from "./core/data.js";
 import { effect } from "@preact/signals";
 import { h, render } from "preact";
-import { Essentials } from "./components/settings/Essentials.jsx";
+import { essText, Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
-import { MoreSettings } from "./components/settings/MoreSettings.jsx";
+import { MoreSettings, moreRows, tabOfSetting } from "./components/settings/MoreSettings.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { openPath } from "./core/fields.js";
 import { linkAnchor, linkUrl } from "./core/linkUrl.js";
-import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
-import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, TODAY, who } from "./core/page.js";
-import { clientReportOn, setClientReport } from "./stores/reportingSettings.js";
-import { openProjectSettings } from "./stores/projectSettings.js";   /* #228 */
-import { api, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
+import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
+import { openProjectWs, psCat, psQ } from "./stores/projectSettings.js";   /* #228; v2.6: an old #settings/workstreams opens the project's Workstreams */
+import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, refreshAll, reloadData, save, SERVED, setLive, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { catalogue, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
@@ -34,8 +31,8 @@ import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG }
 import { draftOn } from "./review.js";
 import { irTick } from "./stores/intakeReview.js";
 import { railIconSize, railLabelsOn, railSizeNorm, setRailCount } from "./stores/rail.js";
-import { PEOPLE_MOVE, personPromises, plur, renderToday } from "./today.js";
-import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, relaxHtml, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
+import { personPromises, plur, projLink, renderToday, tl } from "./today.js";
+import { cell, FDEFS, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
 /* One page: the categories on the left, the settings on the right. SETSECTIONS is the one list the page is built from.
    An entry has an id, a category, a title, search keywords (`kw`) and `render()`, which returns what goes inside the card.
@@ -43,29 +40,46 @@ import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, l
    where something else looks it up; `after()` wires what needs the DOM. A later feature adds a section by adding an entry.
    How a setting saves is unchanged: the handlers below and in the sections' own code write settings.json through
    writeSettings (a backup, a log line, the live server's checks). */
-/* BL-320 (v1.9.2): four categories. Essentials (the ~16 settings that change the day, opened first), People and projects,
-   Advanced (everything else: the older categories' cards, each under its old name, then every remaining setting from the
-   catalogue) and Health (what needs you, then the live server, set-up, Diagnostics, the version and Stop). The sections keep
-   their old category as `cat`; CATOF maps it to where it now shows, so a section another module adds (Set-up, AI drafts) moves
-   with no change to that module. */
-export const SETCATS=[["essentials","Essentials"],["people","People and projects"],["advanced","Advanced"],["health","Health"]];
-export const CATOF={general:"advanced",work:"advanced",review:"advanced",capture:"advanced",system:"health"};
+/* v2.6 (#246, Alan 19-10-2026): Settings is tabs. Essentials (the settings that change the day, opened first), Work and
+   reports, Sweep and Intake, Reports and minutes, AI drafts, Look and help, Advanced (five sub-tabs, for tuning: most people
+   never open it) and Health. Each section's `cat` names its tab (and `sub` its Advanced sub-tab); a section another module
+   adds names its own (drafts.js: ai, today.js: health). An older module's category still lands somewhere (CATOF).
+   Each catalogue group is drawn once: inside the hand-made card that holds it (`groups`), or as its own card on its tab
+   (settings_catalogue.py GROUP_TAB, the `more-*` sections). "People and projects" is no longer a tab, and its three sections have
+   left Settings (v2.6, the Settings line): People is the People page (#248), Workstreams and Archive are on each project's
+   settings page (#247), and Show archived is on the Projects page (and in Work and reports › Opening views). Their old
+   addresses (#settings/people, admin, projects, workstreams) open the new places (SETMOVED, settingsMoved). */
+export const SETCATS=[["essentials","Essentials"],["work","Work and reports"],["sweep","Sweep and Intake"],["reports","Reports and minutes"],
+  ["ai","AI drafts"],["look","Look and help"],["advanced","Advanced"],["health","Health"]];
+export const ADVSUBS=[["review","Review and warnings"],["state","Current state"],["arch","Archiving and backups"],["folders","Folders and OneDrive"],["server","Server, search and logs"]];
+/** The old Settings addresses whose sections moved out (v2.6): where each one opens now. "ws" is a project's settings page at
+    its Workstreams section (the Projects page when no project is known). */
+export const SETMOVED={people:"people",admin:"projects",projects:"projects",workstreams:"ws"};
+/** The page an old Settings address opens now, as [view, argument], or null when it is still a Settings address.
+    @param {any} t @param {string} [code] the project in hand, for workstreams */
+export function settingsMoved(t,code){ const to=SETMOVED[String(t||"").toLowerCase()]; if(!to) return null;
+  if(to==="people") return ["people","all"];
+  if(to==="ws"){ const c=code&&P.some(p=>p.code===code)?code:""; if(c){ psCat.value="ws"; psQ.value=""; return ["psettings",c]; } }
+  return ["projects",null]; }
+export const CATOF={general:"look",capture:"sweep",review:"advanced",system:"health"};
 export const OLDCATS={general:"You and the look",work:"Work and views",review:"Review and warnings",capture:"Capture and alerts",advanced:"Everything else"};
 export const catOf=s=>CATOF[s.cat]||s.cat;
-/* Addresses: #settings/<category> opens that category; #settings/<section> (sweep, diagnostics…) opens the category the
-   section is in and scrolls to it. The old STAB values (prefs, admin, people, projects) and a bare #settings still work:
-   setting STAB picks a category the same way. */
-export const SETOLD={prefs:"essentials",admin:"people",general:"advanced",work:"advanced",capture:"advanced",system:"health"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"vip"};
-export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
-  const sec=SETSECTIONS.find(x=>x.id===(SETALIAS[t]||t)); return sec?{cat:catOf(sec),sec:sec.id}:null; }
-export let SECT=null; shared.SCAT="essentials"; shared.SQ="";                 /* the category, the section to scroll to, the search text */
+/* Addresses: #settings/<tab> opens that tab; #settings/<sub> an Advanced sub-tab; #settings/<section> (sweep, diagnostics…)
+   opens the tab the section is in and scrolls to it. The old ones (prefs, admin, general, capture, system, the old "more")
+   still work. */
+export const SETOLD={prefs:"essentials",general:"look",capture:"sweep",system:"health",more:"advanced"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"essentials",vip:"essentials",you:"essentials"};
+export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t};
+  if(ADVSUBS.some(c=>c[0]===t)) return {cat:"advanced",sub:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
+  const a=SETALIAS[t]||t; if(SETCATS.some(c=>c[0]===a)) return {cat:a};
+  const sec=SETSECTIONS.find(x=>x.id===a); return sec?{cat:catOf(sec),sub:sec.sub||null,sec:sec.id}:null; }
+export let SECT=null; shared.SCAT="essentials"; shared.SSUB="review"; shared.SQ="";   /* the tab, Advanced's sub-tab, the section to scroll to, the search text */
 export const sw=(k)=>`<input type="checkbox" class="switch" data-k="${k}" ${S[k]?"checked":""}>`;   /* BL-279: named by its row's label (row, srName), never its key */
 export const tx=(k,ph)=>`<input type="text" data-k="${k}" value="${esc(S[k])}" placeholder="${ph||""}">`;
 export const nm=(k)=>`<input type="number" data-k="${k}" value="${S[k]}" min="0" style="width:80px">`;
 export const sl=(k,opts)=>`<select data-k="${k}">${opts.map(o=>Array.isArray(o)?`<option value="${o[0]}" ${S[k]===o[0]?"selected":""}>${o[1]}</option>`:`<option ${S[k]===o?"selected":""}>${o}</option>`).join("")}</select>`;
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0073(){
-Object.defineProperty(window,"STAB",{configurable:true,get:()=>shared.SCAT,set:v=>{ const r=setResolve(v); shared.SCAT=r?r.cat:"essentials"; SECT=r&&r.sec||null; shared.SQ=""; const q=document.getElementById("setq"); if(q) q.value=""; }});
+Object.defineProperty(window,"STAB",{configurable:true,get:()=>shared.SCAT,set:v=>{ const r=setResolve(v); shared.SCAT=r?r.cat:"essentials"; if(r&&r.sub) shared.SSUB=r.sub; SECT=r&&r.sec||null; shared.SQ=""; const q=document.getElementById("setq"); if(q) q.value=""; }});
 }
 /* ===== BL-214 (sprint-ui-audit) ===== a Settings row ties its words to its field: the label (in a span with an id) names the field
    and the hint describes it (aria-labelledby, aria-describedby). A row with several fields names each "Label: its example". A field
@@ -80,16 +94,11 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
     if(one) return `<${tag} aria-labelledby="${id}"${h?` aria-describedby="${id}h"`:""}${rest}>`;
     const ex=(rest.match(/placeholder="([^"]*)"/)||rest.match(/title="([^"]*)"/)||[])[1]||"";
     return `<${tag} aria-label="${esc(srText(l)+(ex?": "+ex:""))}"${rest}>`; }); }
-/* ===== BL-09: Archive and Restore in Settings › Projects =====
-   Each project has Archive (Restore for an archived one, listed with Show archived). The live server builds the change with
-   propose.py (the folder to 99 Archive, the register row to Retired codes, the project and its items marked archived) and puts it on
-   the approval card in ask creaite; Approve applies it through tracker.py apply, and Undo reverses it. A project with open items
-   lists them first: Cancel them all and archive, or Stop. */
-const PSTATE={active:"Active",closed:"Closed",archived:"Archived"};
-export function projArchiveHtml(){ const L=(D.project_states||[]).filter(p=>p.state!=="archived"||S.showArchived);
-  return row("Show archived projects",sw("showArchived"),"Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived")
-    +`<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L.map(p=>{ const back=p.state==="archived";
-      return `<tr><td>${esc(p.name)}</td><td>${PSTATE[p.state]||esc(p.state)}</td><td class="mgract"><button class="mini" data-parch="${back?"restore":"archive"}" data-pcode="${esc(p.code)}" aria-label="${back?"Restore":"Archive"} ${esc(p.name)}">${back?"Restore":"Archive"}</button></td></tr>`; }).join("")||'<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`; }
+/* ===== BL-09: Archive and Restore =====
+   Archive is on each project's settings page (#247), Restore on the Projects page (Show archived). The live server builds the
+   change with propose.py (the folder to _Archive, the register row to Retired codes, the project and its items marked archived)
+   and puts it on the approval card in ask creaite; Approve applies it through tracker.py apply, and Undo reverses it. A project
+   with open items lists them first: Cancel them all and archive, or Stop. */
 /* BL-316: the Dialog block (made the first time it opens, components/dialogs/PageDialogs.jsx); Esc or the scrim is Stop */
 export function openItemsAsk(name,open){ return new Promise(res=>{ const dlg=$("#parchDlg")||makeArchiveAskDialog();
   putHTML($("#parchBody"),html`<h2 id="parchH">${name} has ${open.length} open item${open.length===1?"":"s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open.slice(0,30).map(o=>html`<li><b>${o.id}</b> ${o.text}</li>`)}</ul>${open.length>30?html`<p class="sub">and ${open.length-30} more</p>`:""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
@@ -99,71 +108,70 @@ export async function projArchive(code,action,cancel){ if(!viaServer()){ snack("
   if(!r.ok&&(r.open||[]).length&&!cancel){ if(await openItemsAsk(pName(code),r.open)) return projArchive(code,action,true); snack("Stopped: nothing was archived"); return; }
   if(!r.ok){ snack(oneLine(r.message||"It couldn't be prepared")); return; }
   snack(r.message); await pendingEdit(); }
-export function projArchiveBind(){ $$("#projArch [data-parch]").forEach(b=>b.onclick=()=>projArchive(b.dataset.pcode,b.dataset.parch,false)); }
 /* ===== end BL-09 ===== */
 export const row=(l,c,h)=>{ const id="sr"+(++SRN); return `<div class="srow"><div><span id="${id}">${l}</span>${h?`<small id="${id}h">${h}</small>`:""}</div><div>${srName(c,id,h,l)}</div></div>`; };
 
-/** #228: Settings › People and projects keeps a thin list: each project opens its own full-page settings (Workstreams stay on this page). */
-export const projSettingsListHtml=()=>`<div class="srows" id="projSetList"><h3 style="margin:12px 0 0">Project settings</h3><p class="sub" style="margin:4px 0 0">Each project's name, client, people and partners, milestones, reporting and archive are on its own page.</p>`
-  +P.map(p=>row(esc(p.name),`<button type="button" class="mini" data-psopen="${esc(p.code)}" aria-label="Open the settings of ${esc(p.name)}">Open settings</button>`)).join("")+`</div>`;
-/** H3 (#221): "This project needs a separate client report", one switch per project; the hub's Client report settings panel sets the same line. */
-export const clientReportsHtml=()=>`<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>`
-  +P.map(p=>row(`${esc(p.name)}: this project needs a separate client report`,`<input type="checkbox" class="switch" data-crsw="${p.code}" ${clientReportOn(p.code)?"checked":""}>`)).join("")+`</div>`;/* ===== end BL-214 ===== */
+/* ===== end BL-214 ===== */
+export const SHOWARCH_ROW=()=>row("Show archived projects",sw("showArchived"),"Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived");
+/** v2.6 (#246): a tab's (or sub-tab's) catalogue groups that have no hand-made card, drawn as cards. @param {string} cat @param {string} [sub] */
+const moreSection=(cat,sub)=>{ const tab=sub?`advanced/${sub}`:cat;
+  return {id:"more-"+(sub||cat),cat,sub,more:true,title:"More",kw:`more settings ${tab}`,mount:el=>render(h(MoreSettings,{covered,tab,skip:EMBEDDED()}),el),
+    match:w=>{ const c=catalogue.value; return !!c&&moreRows(c,covered,w).some(x=>tabOfSetting(c,x)===tab&&!EMBEDDED().includes(x.tier==="developer"?"Developer":x.group)); }}; };
 export const SETSECTIONS=[
  /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
-    whether a search finds anything in it. */
- {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day",
-  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
- {id:"you",cat:"general",title:"You",kw:"short forms email domains identity owner mine company",
-  render:()=>row("Short forms",tx("short","Alan, AC"),"Comma-separated; also matched as you (your name is in Essentials)")
-   +row("Own email domains",`<input type="text" data-k="ownDomains" value="${esc((S.ownDomains||[]).join(", "))}" placeholder="example.com">`,"Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside")},
- {id:"appearance",cat:"general",title:"Appearance",kw:"theme mode light dark colour palette column widths order reset motion animation reduced",
-  render:()=>row("Column widths and order",ibtn("undo","Reset column widths and order",'id="rzReset"',"bd"),"Drag a column edge in Work to resize, or a heading to move it")},
- {id:"closeday",cat:"general",title:"Close the day",kw:"close the day evening catch up catch-up sweep before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
-  render:()=>row("Catch up when the last sweep is older than (minutes)",nm("catchupAfter"),"A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")},
- {id:"views",cat:"work",title:"Opening views",kw:"default priority new action actions raid open status filter view",
-  render:()=>row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))+row("Actions open with",sl("defActionView",viewsList("actions")))+row("RAID opens with",sl("defRaidView",viewsList("raid")))+row("Decisions open with",sl("defDecisionView",viewsList("decisions")))},   /* BL-131 */
- {id:"board",cat:"work",title:"Work board",kw:"board group by actions raid decisions closed days column",
+    whether a search finds anything in it. v2.6 (#246): `groups` are the catalogue groups drawn inside this card, after its
+    own rows (one card per group). */
+ {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day you short forms email domains follow browser notification",
+  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(essText(r),w)); }},
+ {id:"views",cat:"work",title:"Opening views",groups:["Opening views"],kw:"default priority new action actions raid open status filter view opening page sort archived projects show",
+  render:()=>row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))+row("Actions open with",sl("defActionView",viewsList("actions")))+row("RAID opens with",sl("defRaidView",viewsList("raid")))+row("Decisions open with",sl("defDecisionView",viewsList("decisions")))+SHOWARCH_ROW()},   /* BL-131; BL-09's switch (also on the Projects page, #247) */
+ {id:"board",cat:"work",title:"Work board",groups:["Work board"],kw:"board group by actions raid decisions closed days column",
   render:()=>row("Actions board groups by",sl("bgActions",groupsOf("actions")))+row("RAID board groups by",sl("bgRaid",groupsOf("raid")))+row("Decisions board groups by",sl("bgDecisions",groupsOf("decisions")))
    +row("Board shows closed items from the last (days)",nm("boardClosedDays"),"The Closed column on a Work board; Show all brings the rest")},
- {id:"projpage",cat:"work",title:"Project page",kw:"flow weeks undated grace no due date list cap overdue ageing",
+ {id:"projpage",cat:"work",title:"Project page",groups:["Project page"],kw:"flow weeks undated grace no due date list cap overdue ageing",
   render:()=>row("Flow looks back (weeks)",nm("flowWeeks"),"The project page's Flow card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)")
    +row("A new undated item counts as new for (days)",nm("undatedGrace"),"The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made")
    +row("Project page lists show at most",nm("listCap"),"Actions due or overdue; the rest are a link away")},
- {id:"files",cat:"work",title:"Files",kw:"files page documents project minutes transcripts reports search",
+ {id:"files",cat:"work",title:"Files",groups:["Files"],kw:"files page documents project minutes transcripts reports search intake portfolio excel export",
   render:()=>row("Show project documents",sw("filesDocs"),"Off by default: the Files page lists minutes, transcripts and reports (Weekly, Adhoc and Steerco), and skips the rest of a large engagement folder. Search still reads documents. Steerco is only read; creaite files nothing there.")},
- {id:"thresholds",cat:"review",title:"Review and health",kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap",
-  render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next proposal after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
-   +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
-   +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
- {id:"warnings",cat:"review",title:"Early warnings",elid:"warnSettings",kw:"early warnings signals re-dated repeat risk milestone slip long open key person vip dependency",render:()=>warnSectionHtml()},
- {id:"sweep",cat:"capture",title:"Sweep",kw:"sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from",
+ moreSection("work"),
+ {id:"sweep",cat:"sweep",title:"Sweep",groups:["Sweep"],kw:"sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from promises",
   render:()=>row("First-run look-back (days)",nm("lookback"),"When the sweep runs and what it reads are in Essentials › Your day")
    +row("Show possible matches",sw("possible"))+'<div id="ignMgr"></div>',
   after:()=>renderIgnore()},
- {id:"vip",cat:"capture",title:"People I follow",elid:"vipSet",kw:"follow alerts important people notification browser",render:()=>vipSectionHtml()},
- {id:"reminders",cat:"capture",title:"Reminders",kw:"reminders weekly report day client report rhythm fortnightly monthly dismissed restore",
-  render:()=>row("Reminders on",sw("remindersOn"),"The weekly report's day and time are in Essentials › Your day")
-   +P.map(p=>row(`${p.name} client report`,`<select data-rhythm="${p.code}">${["Weekly","Fortnightly","Monthly","Off"].map(o=>`<option ${p.rhythm===o?"selected":""}>${o}</option>`).join("")}</select>`)).join("")
+ moreSection("sweep"),
+ {id:"closeday",cat:"sweep",title:"Close the day",groups:["Close the day"],kw:"close the day evening catch up catch-up sweep before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
+  render:()=>row("Catch up when the last sweep is older than (minutes)",nm("catchupAfter"),"A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")},
+ moreSection("reports"),
+ {id:"reminders",cat:"reports",title:"Reminders",groups:["Reminders"],kw:"reminders weekly report day dismissed restore",   /* v2.6 (#246): each project's client report rhythm is in that project's settings */
+  render:()=>row("Reminders on",sw("remindersOn"),"The weekly report's day and time are in Essentials › Your day; each project's client report rhythm is in that project's settings")
    +row("Dismissed reminders",`<button class="btn" id="remRestore">Restore</button>`,"Brings back reminders dismissed forever")},
- {id:"people",cat:"people",title:"People",raw:true,kw:"people owners register email aliases organisation role rename merge vip",render:()=>'<div class="card wide" id="peopleMgr" data-sec="people"></div>',after:()=>renderPeopleMgr()},
- {id:"workstreams",cat:"people",title:"Workstreams",raw:true,kw:"workstreams lead keywords rename merge retire project",render:()=>'<div class="card wide" id="wsMgr" data-sec="workstreams"></div>',after:()=>renderMgr("ws")},
- {id:"projects",cat:"people",title:"Projects and register",wide:true,kw:"projects register add close archive restore archived code signals domains matching",
-  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'+projSettingsListHtml()+clientReportsHtml()+projArchiveHtml(),
-  after:()=>{ projArchiveBind(); $$("#projSetList [data-psopen]").forEach(b=>b.onclick=()=>openProjectSettings(b.dataset.psopen)); }},   /* BL-09; #228: each project opens its own settings page */
+ moreSection("ai"),
+ {id:"appearance",cat:"look",title:"Appearance",groups:["Look and help","Look and layout"],kw:"theme mode light dark colour palette column widths order reset motion animation reduced icon size",
+  render:()=>row("Column widths and order",ibtn("undo","Reset column widths and order",'id="rzReset"',"bd"),"Drag a column edge in Work to resize, or a heading to move it")},
+ {id:"help",cat:"look",title:"Help",groups:["Help"],kw:"help start here first run first-run show again welcome",   /* v2.6 (#246): help.start_seen as a quiet button */
+  render:()=>row("Show the first-run help again",'<button type="button" class="btn" id="helpAgain" data-setkey="help.start_seen">Show it again</button>',"Help › Start here opens by itself the next time creaite starts, as it did the first time")},
+ moreSection("look"),
+ {id:"thresholds",cat:"advanced",sub:"review",title:"Review and health",groups:["Review","Health thresholds"],kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
+  render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next proposal after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
+   +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
+   +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
+ {id:"warnings",cat:"advanced",sub:"review",title:"Early warnings",groups:["Early warnings"],elid:"warnSettings",kw:"early warnings signals re-dated repeat risk milestone slip long open key person vip dependency",render:()=>warnSectionHtml()},
+ moreSection("advanced","review"),moreSection("advanced","state"),moreSection("advanced","arch"),moreSection("advanced","folders"),moreSection("advanced","server"),
  {id:"health",cat:"health",title:"Health",kw:"health check problems fix",
   mount:el=>render(h(Health,null),el),match:()=>false},
- {id:"live",cat:"system",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
+ moreSection("health"),                                         /* Health check: the dismissed problems' Reset; Stop stays last */
+ {id:"live",cat:"health",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
   render:()=>row("Status",shared.LIVE?'<span class="h-ok">Running</span>':'<span class="h-bad">Stopped</span>',"127.0.0.1, required")
    +row("Mail, Teams and data",esc(`${SWEPT==="never"?"Mail and Teams never swept":`Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0,16)}`))
    +row("Port",nm("port"),"The creaite app belongs to this port: if you change it, install the app again and reconnect the vault")
    +`<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
- {id:"diag",cat:"system",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
- {id:"version",cat:"system",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
- {id:"danger",cat:"system",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
-  render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")},
- {id:"more",cat:"advanced",title:"Everything else",kw:"everything else advanced",mount:el=>render(h(MoreSettings,{covered}),el),
-  match:w=>{ const c=catalogue.value; return !!c&&c.settings.some(s=>s.tier!=="essentials"&&!covered(s.key)&&sqHas(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`,w)); }}];
+ {id:"diag",cat:"health",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
+ {id:"version",cat:"health",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
+ {id:"danger",cat:"health",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
+  render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")}];
+/** The catalogue groups a hand-made card holds (drawn inside it, never as their own card). */
+export const EMBEDDED=()=>SETSECTIONS.flatMap(s=>s.groups||[]);
 /* ===== BL-320 (v1.9.2): Settings, calmer, with Health inside =====
    The catalogue (/api/settings/catalogue, stores/settings.js) says, for every setting, whether it differs from its default.
    - Essentials, Health and Advanced's "Everything else" are components (`mount`); they read the catalogue and the page's
@@ -174,8 +182,10 @@ export const SETSECTIONS=[
    - A save on an older card rereads the catalogue (a moment later, once it is written); a save or a Reset anywhere brings
      the page's own copies up to date (setSynced). */
 export const ROWKEY={k:v=>SKEY[v],vipk:v=>"vip."+v,drsw:v=>"drafting."+v,wk:v=>"warnings."+v};
-export const COVERED_PREFIX=["warnings.","dashboard.rail."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities"];
-export const covered=k=>Object.values(SKEY).includes(k)||COVERED_KEYS.includes(k)||COVERED_PREFIX.some(p=>k.startsWith(p));
+/* v2.6 (#246): drafting.* are the AI drafts card's own switches (data-drsw), all but the agenda style; help.start_seen is Look and
+   help › Help's button */
+export const COVERED_PREFIX=["warnings.","dashboard.rail.","drafting."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities","help.start_seen"], UNCOVERED=["drafting.agenda_style"];
+export const covered=k=>!UNCOVERED.includes(k)&&(Object.values(SKEY).includes(k)||COVERED_KEYS.includes(k)||COVERED_PREFIX.some(p=>k.startsWith(p)));
 /** The settings a row of an older card holds, from its controls' data attributes. @param {Element} r */
 export function rowKeys(r){ const out=[]; r.querySelectorAll("input,select,textarea").forEach(el=>{ const d=/** @type {HTMLElement} */(el).dataset;
   for(const [a,f] of Object.entries(ROWKEY)) if(d[a]!=null){ const k=f(d[a]); if(k&&!out.includes(k)) out.push(k); } }); return out; }
@@ -223,43 +233,59 @@ effect(()=>{ const c=catalogue.value; if(!c||shared.VIEW!=="settings") return;
 /* the rail's count needs a recent check: one a minute after start-up when this browser hasn't checked for a day */
 if(SERVED&&Date.now()-lastCheckAt()>24*3600*1000) window.setTimeout(()=>{ if(viaServer()) checkHealth(); },60*1000);
 }
-export const setCard=s=>s.mount?`<div class="setmount" id="set-${s.id}" data-sec="${s.id}" data-mount></div>`:s.raw?s.render():`<div class="card${s.wide?" wide":""}" id="${s.elid||"set-"+s.id}" data-sec="${s.id}"><h2>${s.title}</h2>${s.render()}</div>`;
+export const setCard=s=>s.mount?`<div class="setmount" id="set-${s.id}" data-sec="${s.id}" data-mount></div>`:s.raw?s.render():`<div class="card${s.wide?" wide":""}" id="${s.elid||"set-"+s.id}" data-sec="${s.id}"><h2>${s.title}</h2>${s.render()}${s.groups?`<div class="setembed" data-embed="${s.id}" data-mount></div>`:""}</div>`;
 export const catName=id=>(SETCATS.find(c=>c[0]===id)||[])[1]||"";
+export const subName=id=>(ADVSUBS.find(c=>c[0]===id)||[])[1]||"";
+/** Where a section is: "Advanced › Archiving and backups › Archiving and backups"; a `more` section names its tab only. */
+export const crumbOf=s=>[catName(catOf(s)),catOf(s)==="advanced"?subName(s.sub||"review"):"",s.more?"":s.title].filter(Boolean).join(" › ");
+/** True when a search finds a row in one of the catalogue groups a hand-made card holds. @param {any} s @param {string[]} w */
+const embedHit=(s,w)=>{ const c=catalogue.value; return !!(c&&s.groups)&&moreRows(c,covered,w).some(x=>s.groups.includes(x.group)); };
 /* Search: sections and rows whose label, help text or keywords hold every word typed, across all categories. A section
    whose title or category matches shows all its rows; otherwise it shows just the rows that match, or all of them when
    only its keywords matched (for example "ignore rules" or "diagnostics"). A mounted section answers for itself (`match`). */
 export const sqWords=()=>shared.SQ.toLowerCase().split(/\s+/).filter(Boolean), sqHas=(txt,w)=>w.every(x=>txt.toLowerCase().includes(x));
 export const rowText=r=>(r.classList.contains("srow")&&r.firstElementChild&&r.firstElementChild!==r.lastElementChild?r.firstElementChild:r).textContent;
 export let SMATCH=new Set();
-export const rowOK=(r,w)=>sqHas(rowText(r),w);
+/* v2.6 (#246): an older card's row is also found by its settings' catalogue words (the label, line and key the catalogue gives
+   them), so Settings search finds every setting by the same words wherever it is drawn (not by its key: a keyword match
+   still shows the whole card) */
+const rowCat=r=>rowKeys(r).map(k=>settingOf(k)).filter(Boolean).map(x=>`${x.label} ${x.line}`).join(" ");
+export const rowOK=(r,w)=>sqHas(`${rowText(r)} ${rowCat(r)}`,w);
 export function setSearchSections(){ const w=sqWords(); SMATCH=new Set(); const t=document.createElement("div");
   return SETSECTIONS.filter(s=>{ if(s.mount) return s.match(w);
-    if(sqHas(`${s.title} ${catName(catOf(s))} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
+    if(sqHas(`${s.title} ${crumbOf(s)} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
     putHTML(t,raw(setCard(s))); setMark(t); const rows=[...t.querySelectorAll(".srow,.igrow")];
-    return sqHas(s.kw,w)||rows.some(r=>rowOK(r,w)); }); }
+    return sqHas(s.kw,w)||rows.some(r=>rowOK(r,w))||embedHit(s,w); }); }
 export function setApplySearch(){ if(!shared.SQ.trim()) return; const w=sqWords();
-  $$("#settingsBody [data-sec]").forEach(c=>{ if(c.hasAttribute("data-mount")||SMATCH.has(c.dataset.sec)) return; const rows=[...c.querySelectorAll(".srow,.igrow")], hit=rows.filter(r=>rowOK(r,w));
+  $$("#settingsBody [data-sec]").forEach(c=>{ if(c.hasAttribute("data-mount")||SMATCH.has(c.dataset.sec)) return; const rows=[...c.querySelectorAll(".srow,.igrow")].filter(r=>!mounted(r)), hit=rows.filter(r=>rowOK(r,w));
     rows.forEach(r=>{ r.hidden=hit.length?!hit.some(h=>h===r||h.contains(r)):false; }); }); }      /* a row inside a matching row (the ignore rules) stays */
 export let MOUNTS=[];
 export function setUnmount(){ MOUNTS.forEach(el=>render(null,el)); MOUNTS=[]; }
 export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) shared.SCAT="essentials";
+  if(!ADVSUBS.some(c=>c[0]===shared.SSUB)) shared.SSUB="review";
   const searching=!!shared.SQ.trim();
   query.value=shared.SQ.trim();
   if(SERVED&&!catalogue.value) loadCatalogue();
   drawTabs($("#setcatsHost"),{id:"setcats",className:"setcats",label:"Settings categories",vertical:true,controls:"settingsBody",
     items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
   putHTML($("#setcatsel"),raw((searching?`<option value="">Search results</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
-  const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT);
-  const head=s=>searching?(s.mount&&s.id!=="more"?"":`<div class="setcrumb">${esc(catName(catOf(s)))} › ${esc(s.id==="more"?OLDCATS.advanced:s.title)}</div>`)
-    :shared.SCAT==="advanced"&&OLDCATS[s.cat==="advanced"?"advanced":s.cat]&&(s===secs.find(x=>x.cat===s.cat))?`<h2 class="setgroup">${esc(OLDCATS[s.cat])}</h2>`:"";
+  const adv=!searching&&shared.SCAT==="advanced";
+  const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT&&(!adv||(s.sub||"review")===shared.SSUB));
+  const head=s=>!searching||(s.mount&&!s.more)?"":`<div class="setcrumb">${esc(crumbOf(s))}</div>`;
   setUnmount();
   const none=`No settings match “${shared.SQ.trim()}”.`;
-  putHTML($("#settingsBody"),!secs.length?html`<p class="sub setnone" role="status">${none}</p>`:html`<div class="setstack">${raw(secs.map(s=>head(s)+setCard(s)).join(""))}</div>`);
-  secs.forEach(s=>{ if(s.mount){ const el=document.getElementById("set-"+s.id); if(el){ MOUNTS.push(el); s.mount(el); } } else if(s.after) s.after(); });
+  const top=adv?`<p class="sub advnote">For tuning and rarely changed settings. Everything has a sensible default, so most people never open this.</p><div class="tabhost" id="setsubHost"></div>`:"";
+  putHTML($("#settingsBody"),!secs.length?html`<p class="sub setnone" role="status">${none}</p>`:html`${raw(top)}<div class="setstack">${raw(secs.map(s=>head(s)+setCard(s)).join(""))}</div>`);
+  if(adv) drawTabs($("#setsubHost"),{id:"subtabs",className:"tabs",label:"Advanced",controls:"settingsBody",
+    items:ADVSUBS.map(([id,t])=>({id,label:t,data:{ssub:id}})),selected:shared.SSUB,onSelect:k=>setOpen(k)});   /* v2.6 (#246): Advanced's sub-tabs */
+  secs.forEach(s=>{ if(s.mount){ const el=document.getElementById("set-"+s.id); if(el){ MOUNTS.push(el); s.mount(el); } }
+    else{ if(s.after) s.after(); const em=s.groups&&document.querySelector(`#settingsBody [data-embed="${s.id}"]`);
+      if(em){ MOUNTS.push(em); render(h(MoreSettings,{covered,groups:s.groups,bare:true,all:SMATCH.has(s.id)}),em); } } });
   setMark($("#settingsBody"));
   setApplySearch();
   const b=id=>document.getElementById(id);
   if(b("rzReset")) b("rzReset").onclick=()=>{ shared.RZ={}; store.set("creaite-colwidths",shared.RZ); shared.COLORD={}; store.set("creaite-colorder",shared.COLORD); snack("Column widths and order reset"); };
+  if(b("helpAgain")) b("helpAgain").onclick=async()=>{ if(!await writeSettings({"help.start_seen":false})) return; S.helpSeen=false; snack("Help › Start here opens by itself next time creaite starts"); };   /* v2.6 (#246) */
   if(b("remRestore")) b("remRestore").onclick=async()=>{ if(!await writeSettings({"reminders.dismissed_forever":[]})) return; store.set("creaite-dismiss",[]); if(D.dismissed) D.dismissed.length=0;   /* BL-157: the set-up checklist comes back at once */ sessionStorage.removeItem("creaite-dismiss-s"); snack("Dismissed reminders restored"); };
   if(b("liveCheck")) b("liveCheck").onclick=()=>{ setLive(true); renderSettings(); };
   if(b("liveStop")) b("liveStop").onclick=async()=>{ if(!viaServer()){ snack("The live server isn't running"); return; } const r=await api("/api/stop",{}); if(r.ok){ snack("Live server stopped"); setTimeout(()=>setLive(false),600); } else snack(oneLine(r.message)); };
@@ -325,35 +351,6 @@ export async function updUndo(btn,keep){ if(!btn.dataset.armed){ btn.dataset.arm
   if(!r.ok&&/--keep-database/.test(r.message||"")){ updOut(updMsg("The database has changed since the update; undoing it would lose those changes.",true)+'<div style="margin-top:8px"><button class="btn" id="updKeep">Undo engine and settings only</button></div>');
     document.getElementById("updKeep").onclick=e=>{ e.currentTarget.dataset.armed="1"; updUndo(e.currentTarget,true); }; btn.disabled=false; return; }
   await drawUpdates(true); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart the live server"); }
-export function renderMgr(kind){ if(kind==="ws"&&D.ws_table&&(wsTable()||![...A,...R].some(x=>x.ws))){ drawWsMgr(); return; }   /* not yet migrated: BL-57's lists */
-  const isP=kind==="people", L=isP?PEOPLE:WSL; const names=isP?[...new Set([...A.map(a=>a.o),...R.map(r=>r.o),...L.added,...L.hidden])].filter(n=>n&&n!=="TBC"):[...new Set([...wsUsed(),...L.added.filter(k=>k.includes("|")),...L.hidden.filter(k=>k.includes("|"))])];
-  const on=(x,k)=>{ const [pc,nm]=wsParts(k); return x.p===pc&&x.ws===nm; };
-  const active=isP?peopleAll():null; const cA=n=>isP?A.filter(a=>a.o===n).length:A.filter(a=>on(a,n)).length, cR=n=>isP?R.filter(r=>r.o===n).length:R.filter(r=>on(r,n)).length;
-  const label=n=>isP?esc(n):(([pc,nm])=>`<span class="pcode">${esc(pc)}</span> ${esc(nm)}`)(wsParts(n)), off=n=>isP?L.hidden.includes(n):wsHidden(...wsParts(n));
-  // @ts-expect-error TS2556: wsParts(n) is always [code, name]
-  const mergeTo=n=>isP?active.filter(x=>x!==n):((pc,nm)=>wsFor(pc).filter(x=>x!==nm).map(x=>wsKey(pc,x)))(...wsParts(n));
-  putHTML($(isP?"#peopleMgr":"#wsMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">${isP?"People (owners)":"Workstreams"}</h2>${isP?"":html`<select id="wsAddP" aria-label="Project">${P.map(p=>html`<option value="${p.code}">${p.name}</option>`)}</select>`}<input id="${raw(kind)}Add" type="text" placeholder="${isP?"Add a person":"Add a workstream"}" style="height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px"><button class="btn" data-mg="add" data-kind="${raw(kind)}">Add</button></div>
-   <p class="sub" style="margin:4px 0 8px">${isP?"Rename or merge to fix spellings across every item (applied with Undo). Removing hides a name from the owner picker; items keep it.":html`Each project has its own workstreams. Rename or merge changes that project's items only (you'll be offered the same change in other projects using the name). Retiring hides it from that project's picker; items keep it.`}</p>
-   <div class="tbl"><table class="mgr"><thead><tr><th>${isP?"Name":"Workstream"}</th><th class="num">Actions</th><th class="num">RAID</th><th></th></tr></thead><tbody>${raw(names.sort().map(n=>{ const isOff=off(n), me=isP&&isMe(n);
-    return `<tr class="${isOff?"off":""}"><td>${label(n)}${me?' <span class="tag">(you)</span>':""}${isOff?` <span class="tag warn">${isP?"removed from list":"retired"}</span>`:""}</td><td class="num">${mgrLink(isP,n,"actions",cA(n))}</td><td class="num">${mgrLink(isP,n,"raid",cR(n))}</td><td class="mgract">${me?'<span class="x">Change in Settings › Essentials › You</span>':`${ibtn("type","Rename",`data-mg="ren" data-kind="${kind}" data-n="${esc(n)}"`,"sm")}<select class="mgsel" data-kind="${kind}" data-n="${esc(n)}"><option value="">Merge into…</option>${mergeTo(n).map(x=>`<option value="${esc(x)}">${esc(isP?x:wsParts(x)[1])}</option>`).join("")}</select>${isOff?ibtn("undo","Restore",`data-mg="restore" data-kind="${kind}" data-n="${esc(n)}"`,"sm"):ibtn("trash",isP?"Remove from list":"Retire",`data-mg="hide" data-kind="${kind}" data-n="${esc(n)}"`,"sm no")}`}</td></tr>`; }).join(""))}</tbody></table></div>`); }
-/* BL-190 (sprint-links): Settings › People (and the older Workstreams list, before BL-57's table) count every item, any status, with that
-   owner or workstream; each figure opens Work so. The Workstreams table's Open column mixes actions and RAID items and stays plain. */
-export function mgrLink(isP,k,t,c){ const w=t==="actions"?"action":"RAID item";
-  if(isP) return countLink(`${plur(c,w)} owned by ${k}, any status`,c,`${t}:open:`,{st:[],o:[k]});
-  const [pc,nm]=wsParts(k); return countLink(`${plur(c,w)} in the ${nm} workstream of ${pName(pc)}, any status`,c,`${t}:open:${pc}`,{st:[],ws:[nm]}); }
-export async function renameAll(kind,from,to,also){ to=(to||"").trim(); const isP=kind==="people";
-  if(!isP){ if(to.includes("|")) to=wsParts(to)[1]; return renameWs(from,to,also); }
-  await renamePerson(from,to); renderSettings(); }   /* BL-55: people are in the register */
-/* BL-57: a workstream rename or merge changes one project's items; other projects using the name are offered after */
-export async function renameWs(key,to,also){ const [pc,nm]=wsParts(key); if(!to||to===nm) return; const touched=[], merge=wsFor(pc).includes(to);
-  const items=[...A.map(x=>["actions",x]),...R.map(x=>["raid",x])].filter(([,x])=>x.p===pc&&x.ws===nm).map(([t,x])=>({op:"update",table:t,id:x.id,changes:{workstream:to},based_on:x.updated_at}));
-  const keep=()=>{ if(!WSL.added.includes(wsKey(pc,to))) WSL.added.push(wsKey(pc,to)); WSL.added=WSL.added.filter(k=>k!==key); };
-  if(!items.length){ keep(); WSL.hidden=[...new Set([...WSL.hidden,key])]; saveWs(); renderSettings(); }
-  else await save(`${merge?"Merged":"Renamed"} ${pc} workstream “${nm}” ${merge?"into":"to"} “${to}”`,items,null,()=>{ [...A,...R].forEach(x=>{ if(x.p===pc&&x.ws===nm){ x.ws=to; touched.push(x); } }); keep(); saveWs(); },
-    ()=>{ touched.forEach(x=>{ x.ws=nm; }); });
-  renderSettings();
-  const others=also===false?[]:[...new Set([...A,...R].filter(x=>x.p!==pc&&x.ws===nm).map(x=>x.p))];
-  if(others.length) snack(`${pc} done. ${others.join(", ")} also ${others.length===1?"has":"have"} “${nm}”.`,async()=>{ for(const o of others) await renameWs(wsKey(o,nm),to,false); },`Also rename in ${others.join(", ")}`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0078(){
 $("#setcatsel").onchange=e=>{ if(e.target.value) setOpen(e.target.value); };
@@ -361,20 +358,10 @@ $("#setq").oninput=e=>setSearch(e.target.value);
 $("#setq").onkeydown=e=>{ if(e.key==="Escape"&&shared.SQ){ e.stopPropagation(); e.target.value=""; setSearch(""); } };
 $("#settingsBody").addEventListener("change",e=>{ const r=mounted(e.target)?null:e.target.closest(".srow,.igrow"), c=r&&r.closest("[data-sec]");
   shared.SETROW=c?{sec:c.dataset.sec,i:[...c.querySelectorAll(".srow,.igrow")].indexOf(r),at:Date.now()}:null; },true);
-$("#settingsBody").addEventListener("change",async e=>{ const el=e.target; if(el.dataset.crsw){ const p=P.find(x=>x.code===el.dataset.crsw), on=el.checked; if(await setClientReport(p.code,on)){ snack(`${p.name}: client report ${on?"on":"off"}`); savedNow(); } else el.checked=!on; return; }  /* H3 (#221): one setting, here and in the hub's panel */
-  if(el.dataset.rhythm){ const p=P.find(x=>x.code===el.dataset.rhythm), was=p.rhythm; if(await setRhythm(p.code,el.value)){ p.rhythm=el.value; snack(`Saved to ${p.name}'s CLAUDE.md`); savedNow(); } else el.value=was; return; } const k=el.dataset.k; if(!k||!SKEY[k]) return;
+$("#settingsBody").addEventListener("change",async e=>{ const el=e.target; const k=el.dataset.k; if(!k||!SKEY[k]) return;
   let v=el.type==="checkbox"?el.checked:el.type==="number"?Number(el.value):el.value; if((k==="sweepDue"||k==="weeklyTime")&&!/^\d{2}:\d{2}$/.test(v)){ snack("Use 24-hour HH:MM"); el.value=S[k]; return; }
   const was=S[k]; if(!await writeSettings({[SKEY[k]]:k==="short"?String(v).split(",").map(x=>x.trim()).filter(Boolean):k==="ownDomains"?(v=String(v).split(",").map(x=>x.trim().toLowerCase()).filter(Boolean)):v})){ if(el.type==="checkbox") el.checked=!!was; else el.value=was; return; }
   S[k]=v; if(k==="theme"||k==="palette"){ themeFade(); applyTheme(); } if(k==="motion") applyMotion(); if(k==="palette") renderSettings(); if(k==="autoApply") renderSettings(); if(k==="filesDocs") refreshFiles(true); if(k==="flowWeeks") reloadData(); if(k==="showArchived") reloadData().then(()=>renderSettings());   /* BL-09 */ status(); snack("Saved to settings.json"); });
-/* BL-302: the Workstreams list only. Settings › People has its own buttons (data-pm, below), saved to the register since BL-55,
-   which removed savePeople; a data-mg button for people is no longer drawn, so one is ignored rather than throwing. */
-$("#settingsBody").addEventListener("click",e=>{ const b=e.target.closest("[data-mg]"); if(!b) return; const kind=b.dataset.kind; if(kind!=="ws") return; const isP=false, L=WSL, save=saveWs, n=b.dataset.n;
-  if(b.dataset.mg==="add"){ let v=$("#"+kind+"Add").value.trim(); if(!v) return; if(!isP) v=wsKey($("#wsAddP").value,v); L.added.push(v); L.hidden=L.hidden.filter(x=>x!==v); save(); renderSettings(); snack(`Added “${isP?v:wsParts(v).join(" · ")}”`); }
-  if(b.dataset.mg==="hide"){ L.hidden.push(n); save(); renderSettings(); snack(isP?`Removed “${n}” from the owner list`:`Retired ${wsParts(n).join(" · ")}`,()=>{ L.hidden=L.hidden.filter(x=>x!==n); save(); renderSettings(); }); }
-  if(b.dataset.mg==="restore"){ L.hidden=L.hidden.filter(x=>x!==n&&(isP||x!==wsParts(n)[1])); save(); renderSettings(); }
-  if(b.dataset.mg==="ren"){ const td=b.closest("tr").cells[0]; putHTML(td,html`<span style="display:flex;gap:6px"><input type="text" value="${(isP?n:wsParts(n)[1])}" style="height:30px;border:1px solid var(--faint);border-radius:6px;padding:0 8px"><button class="mini ok">Save</button><button class="mini">Cancel</button></span>`); const inp=td.querySelector("input"); inp.focus(); inp.select(); const [ok,cn]=td.querySelectorAll("button");
-    ok.onclick=()=>renameAll(kind,n,inp.value); cn.onclick=()=>renderSettings(); inp.onkeydown=ev=>{ if(ev.key==="Enter") renameAll(kind,n,inp.value); if(ev.key==="Escape"){ ev.stopPropagation(); renderSettings(); } }; } });
-$("#settingsBody").addEventListener("change",e=>{ const s=e.target.closest("select.mgsel"); if(s&&s.value){ e.stopPropagation(); renameAll(s.dataset.kind,s.dataset.n,s.value); } },true);
 }
 /* ===== People (BL-55, BL-56) ===== */
 /* BL-55: the people register, projects/_portfolio/people-register.md. It is edited only through proposals (file changes), so
@@ -479,9 +466,9 @@ export function askPerson(o){ const pr=new Promise(res=>{ const dlg=$("#personDl
       fin({person:{name,email:f("email"),aliases,org:f("org"),role:f("role")}}); };
     $("#personForm").onsubmit=e=>{ if(e.submitter&&e.submitter.value==="cancel") return; e.preventDefault(); if(!$("#pdSave").hidden) $("#pdSave").click(); };
     dlg.addEventListener("close",onClose); $("#personForm [value=cancel]").onclick=e=>{ e.preventDefault(); fin(null); }; openDialog(dlg); });
-  const keep=!!(o&&(o.edit||o.details)), cur=((o&&o.person&&o.person.extra)||{}).VIP||"";
-    $$(".pdvip").forEach(el=>el.hidden=!keep); const sel=$("#pd_vip"); sel.value=[...sel.options].some(x=>x.value===cur.toLowerCase())?cur.toLowerCase():cur?"yes":"";
-    return pr.then(res=>{ if(res&&res.person&&keep) res.person.extra={...((o.person&&o.person.extra)||{}),VIP:sel.value}; return res; }); }
+  /* #248 M2 (Alan, 20-10-2026): no followed field here; people you follow are set on the project settings page, and a save
+     leaves the register's extra columns (VIP among them) as they are (regEdit assigns only the fields above) */
+  return pr; }
 /* an owner typed or picked: mapped to the full name if known, otherwise ask (matches first). null = cancelled */
 export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); if(!typed||typed==="TBC") return typed||"TBC"; const r=resolvePerson(typed);
   if(r.status==="known"||r.status==="alias"||r.status==="email") return r.name;
@@ -489,142 +476,6 @@ export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); 
   if(res.use){ if(res.alias&&pKey(res.alias)!==pKey(res.use)&&!await regAddAlias(res.use,res.alias)) return null; return res.use; }
   return await regAddPerson(res.person)?res.person.name:null; }
 
-/* Settings › People: the register, with each person's open work. Edit, rename, merge, remove from the owner list. */
-export function renderPeopleMgr(){ pfLoad();
-  putHTML($("#peopleMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd" aria-haspopup="dialog">Add a person</button></div>
-   <p class="sub" style="margin:4px 0 8px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
-   ${PEOPLE.added.length||PEOPLE.hidden.length?html`<p class="sub" id="pmLegacy"><span class="tag warn">${PEOPLE.added.length+PEOPLE.hidden.length} name${PEOPLE.added.length+PEOPLE.hidden.length===1?"":"s"} still in settings.json</span> ${viaServer()?html`<button class="mini" data-ask="${PEOPLE_MOVE}">Move them into the register</button> <span class="sub">(ask creaite does it, asking first)</span>`:"Say “setup” in Claude Code to move them into the register."}</p>`:""}
-   <div class="toolbar pmtools" role="search"><input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="${PF.q}"><span class="dd" id="pmFdd"></span></div>
-   <div class="wapplied" id="pmApplied"></div><div class="vh" id="pmLive" role="status" aria-live="polite"></div>
-   <div class="tbl"><table class="mgr"><thead><tr><th>Name</th><th>Email</th><th>Organisation · role</th><th>Aliases</th><th class="num" id="pmHA">Actions</th><th class="num" id="pmHR">RAID</th><th></th></tr></thead><tbody id="pmRows"></tbody></table></div>`);
-  pfDraw(); }
-
-/* ===== BL-264 (v19-people-filters) ===== Settings › People's filter, as Work's (BL-130, BL-132, BL-159): a search box, one funnel
-   (F) with a picker (fields on the left in two groups, each field's choices with live counts on the right), chips for what is on,
-   the count line with its hints, and Work's empty state. Fields: Project (from items and the register's stakeholders, D.stakeholders),
-   How they're involved, Organisation, People I follow (the register's VIP column; never labelled "VIP", BL-288), In the register,
-   Needs attention and Removed people. Ticks within a field are "any of", fields combine with "and"; Project and Organisation have
-   "is not". Only fields and choices that exist in the data are offered. Removed people are hidden by default ("Removed: hidden").
-   The filters are remembered until cleared (Alan, 12-10-2026), in this browser's storage as Work's remembered display choices are
-   (store, "creaite-people-filters"); the search box is not. */
-export const PF_KEY="creaite-people-filters", PF_MULTI=["proj","inv","org","vip","reg","att"], PF_REM=["hide","show","only"];
-/** @type {{q:string, rem:string, neg:Set<string>, f:Object<string,Set<string>>, open?:boolean, pk:string, loaded:boolean}} */
-export const PF={q:"",rem:"hide",neg:new Set(),f:Object.fromEntries(PF_MULTI.map(k=>[k,new Set()])),pk:"proj",loaded:false};
-Object.defineProperty(PF,"open",{get:()=>filterBarOpen($("#pmFdd"))==="more"});   /* BL-316: whether the picker is open is the FilterBar's own state */
-
-export function pfReset(){ PF_MULTI.forEach(k=>PF.f[k]=new Set()); PF.rem="hide"; PF.neg=new Set(); PF.q=""; }
-export function pfLoad(){ if(PF.loaded) return; PF.loaded=true; const s=store.get(PF_KEY,null); if(!s||typeof s!=="object") return;
-  PF_MULTI.forEach(k=>{ if(Array.isArray(s[k])) PF.f[k]=new Set(s[k].map(String)); });
-  if(PF_REM.includes(s.rem)) PF.rem=s.rem; if(Array.isArray(s.neg)) PF.neg=new Set(s.neg.filter(k=>k==="proj"||k==="org")); }
-export function pfSave(){ const o={rem:PF.rem,neg:[...PF.neg]}; PF_MULTI.forEach(k=>o[k]=[...PF.f[k]]); store.set(PF_KEY,o); }
-/* everyone the table lists (the register, every owner and decision maker, the names still in settings.json), with what the filters read */
-export function pfPeople(){ const rs=resolver(), canon=n=>rs(n).name||n, st=D.stakeholders||{};
-  const names=[...new Set([...shared.REG.map(p=>p.name),...A.map(a=>a.o),...R.map(r=>r.o),...DEC.map(d=>d.by),...PEOPLE.added,...PEOPLE.hidden])].filter(n=>n&&n!=="TBC");
-  return names.sort((a,b)=>a.localeCompare(b)).map(n=>{ const p=shared.REG.find(x=>x.name===n)||null, me=isMe(n), it={}, add=(c,i)=>{ if(!it[c]) it[c]=[0,0,0]; it[c][i]++; };
-    A.forEach(a=>{ if(a.o===n) add(a.p,0); }); R.forEach(r=>{ if(r.o===n) add(r.p,1); }); DEC.forEach(d=>{ if(d.by===n) add(d.p,2); });
-    const vk=p?String((p.extra||{}).VIP||"").trim():"";
-    return {n,p,me,off:isHiddenPerson(n),reg:!!p||me,email:p&&p.email||"",org:p&&p.org||"",role:p&&p.role||"",aliases:p&&p.aliases||[],
-      vip:!!vk&&!/^(no|n|false|0|-)$/i.test(vk),it,st:Object.keys(st).filter(c=>(st[c]||[]).some(s=>s===n||canon(s)===n))}; }); }
-export const pfNoEmail=x=>!x.email&&!x.me, pfNoOrg=x=>!x.me&&(!x.org||!x.role);
-export const pfProjOf=x=>[...new Set([...Object.keys(x.it),...x.st])];
-export const pfScope=()=>PF.f.proj.size&&!PF.neg.has("proj")?[...PF.f.proj]:null;   /* the projects chosen (not "is not"), or null */
-/* the fields offered: [key, label, group, choices [[value, label]], hit(person, value), hint]; a field with no choice is left out */
-export function pfFields(L){ const has=f=>L.some(f), scope=()=>pfScope()||P.map(p=>p.code);
-  return [
-   ["proj","Project","Who",P.filter(p=>has(x=>pfProjOf(x).includes(p.code))).map(p=>[p.code,p.name]),(x,v)=>pfProjOf(x).includes(v),"Owns an action, RAID item or decision in it, or is one of its stakeholders in the project register."],
-   ["inv","How they're involved","Who",[...(has(x=>Object.keys(x.it).length)?[["own","Owns items"]]:[]),...(has(x=>x.st.length)?[["stake","Named as a stakeholder"]]:[])],(x,v)=>v==="own"?scope().some(c=>x.it[c]):scope().some(c=>x.st.includes(c)),"In the projects chosen under Project, or in any project."],
-   ["org","Organisation","Who",[...[...new Set(L.map(x=>x.org).filter(Boolean))].sort().map(o=>[o,o]),...(has(x=>!x.org)?[["—","No organisation"]]:[])],(x,v)=>v==="—"?!x.org:x.org===v,""],
-   ["vip","People I follow","Who",has(x=>x.vip)?[["yes","Followed"],["no","Not followed"]]:[],(x,v)=>v==="yes"?x.vip:!x.vip,"Set in each person’s details."],
-   ["reg","In the register","Tidy up",has(x=>!x.reg)?[["in","In the register"],["out","Not in the register (on items only)"]]:[],(x,v)=>v==="in"?x.reg:!x.reg,""],
-   ["att","Needs attention","Tidy up",[...(has(pfNoEmail)?[["email","No email"]]:[]),...(has(pfNoOrg)?[["orgrole","No organisation or role"]]:[])],(x,v)=>v==="email"?pfNoEmail(x):pfNoOrg(x),"Details worth filling in, so mail and minutes map to the right person."],
-   ["rem","Removed people","Tidy up",has(x=>x.off)?[["hide","Hidden"],["show","Shown with everyone"],["only","Removed only"]]:[],null,"Removed from the owner list; their items keep the name."]].filter(f=>f[3].length); }
-export const pfRemOK=(x,r)=>r==="show"||(r==="only"?x.off:!x.off);
-export const pfQOK=x=>{ const t=PF.q.trim().toLowerCase(); return !t||[x.n,x.email,x.role,...x.aliases].some(s=>s&&s.toLowerCase().includes(t)); };
-/* does x show, skipping one field (or "q", the search)? Removed only narrows when the field is offered (someone is removed) */
-export function pfPass(x,F,skip){ for(const f of F){ const k=f[0], set=PF.f[k]; if(k==="rem"||k===skip||!set||!set.size) continue; const h=[...set].some(v=>f[4](x,v)); if(PF.neg.has(k)?h:!h) return false; }
-  if(skip!=="rem"&&F.some(f=>f[0]==="rem")&&!pfRemOK(x,PF.rem)) return false; return skip==="q"||pfQOK(x); }
-export const pfOn=k=>k==="rem"?PF.rem!=="hide":!!(PF.f[k]&&PF.f[k].size);
-export const pfDot=F=>F.filter(f=>f[0]==="rem"?PF.rem==="only":pfOn(f[0])).length;   /* the funnel counts what narrows the list beyond the default */
-export const pfAny=F=>!!PF.q.trim()||F.some(f=>pfOn(f[0]));
-export function pfChip(f){ const k=f[0], lab=v=>(f[3].find(o=>o[0]===v)||[v,v])[1];
-  if(k==="rem") return PF.rem==="hide"?"Removed: hidden":PF.rem==="only"?"Removed only":"";
-  const v=[...PF.f[k]]; return `${f[1]}: ${PF.neg.has(k)?"not ":""}${v.length<=2?v.map(lab).join(", "):v.length+" chosen"}`; }
-export const pfWord=n=>`${n} ${n===1?"person":"people"}`;
-/* the search's match marked in a cell's text */
-export function pfHl(s){ s=String(s||""); const t=PF.q.trim(), i=t?s.toLowerCase().indexOf(t.toLowerCase()):-1;
-  return i<0?html`${s}`:html`${s.slice(0,i)}<mark>${s.slice(i,i+t.length)}</mark>${s.slice(i+t.length)}`; }
-/* a count: every item that person owns, any status (BL-190); with projects chosen, in those projects, and the link opens Work so */
-export function pfLink(n,t,c,sc){ if(!sc) return mgrLink(true,n,t,c); const w=t==="actions"?"action":"RAID item";
-  return countLink(`${plur(c,w)} owned by ${n} in ${sc.map(pName).join(", ")}, any status`,c,`${t}:open:${sc.length===1?sc[0]:""}`,sc.length===1?{st:[],o:[n]}:{st:[],o:[n],p:sc}); }
-export function pfRow(x,sc,active){ const {n,p,me,off}=x, a=sc?sc.reduce((s,c)=>s+((x.it[c]||[])[0]||0),0):A.filter(i=>i.o===n).length, r=sc?sc.reduce((s,c)=>s+((x.it[c]||[])[1]||0),0):R.filter(i=>i.o===n).length;
-  const via=sc&&!sc.some(c=>x.it[c])&&sc.some(c=>x.st.includes(c)), mergeTo=active.filter(y=>y!==n);
-  return html`<tr class="${off?"off":""}" data-pn="${n}"><td>${pfHl(n)}${me?raw(' <span class="tag">(you)</span>'):""}${p||me?"":raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p&&!p.email?raw(' <span class="tag warn" title="Add email">no email</span>'):""}${off?raw(' <span class="tag warn">removed from list</span>'):""}${via?html`<span class="sub pmvia">named in the project’s stakeholders</span>`:""}</td>
-     <td>${p&&p.email?pfHl(p.email):raw('<span class="sub">—</span>')}</td><td>${p&&(p.org||p.role)?html`${p.org||""}${p.org&&p.role?" · ":""}${pfHl(p.role)}`:raw('<span class="sub">—</span>')}</td><td class="sub">${p&&p.aliases.length?p.aliases.map((s,i)=>html`${i?", ":""}${pfHl(s)}`):"—"}</td>
-     <td class="num">${raw(pfLink(n,"actions",a,sc))}</td><td class="num">${raw(pfLink(n,"raid",r,sc))}</td>
-     <td class="mgract">${me?raw('<span class="x">Change in Settings › Essentials › You</span>'):html`${raw(ibtn("pencil",p?"Edit details":"Add details",`data-pm="edit" data-n="${esc(n)}" aria-haspopup="dialog"`,"sm"))}${raw(ibtn("type","Rename",`data-pm="ren" data-n="${esc(n)}"`,"sm"))}<select class="mgsel pmsel" data-n="${n}" aria-label="Merge ${n} into"><option value="">Merge into…</option>${mergeTo.map(y=>html`<option value="${y}">${y}</option>`)}</select>${raw(off?ibtn("undo","Restore",`data-pm="restore" data-n="${esc(n)}"`,"sm"):ibtn("trash","Remove from list",`data-pm="hide" data-n="${esc(n)}"`,"sm no"))}`}</td></tr>`; }
-export function pfEmpty(L,F){ const act=F.filter(f=>f[0]==="rem"?PF.rem==="only":pfOn(f[0])).map(f=>({k:f[0],label:pfChip(f)}));
-  if(PF.q.trim()) act.push({k:"q",label:`Search “${PF.q.trim()}”`});
-  const ways=act.map(r=>({...r,n:L.filter(x=>pfPass(x,F,r.k)&&(r.k!=="rem"||!x.off)).length}));
-  const head=act.length===1&&act[0].k==="q"?`Nobody matches “${esc(PF.q.trim())}”`:`Nobody matches ${act.length===1?"this filter":`these ${act.length} filters`}`;
-  return relaxHtml(head,ways,pfWord,"","people"); }
-/* BL-316: the funnel and its field picker are the FilterBar building block, drawn bare into #pmFdd (the funnel's own .dd) */
-export let PFASK=null;   /* the field pfOpen asked for, read once as the picker opens */
-export function pfBar(L,F,n){ const h=$("#pmFdd"); if(!h) return; if(F.length&&!F.some(f=>f[0]===PF.pk)) PF.pk=F[0][0]; const shown=L.filter(x=>pfPass(x,F)).length;
-  drawFilterBar(h,{bare:true,fields:F.map(f=>{ const k=f[0], rem=k==="rem";
-      return {id:k,label:f[1],section:f[2],note:f[5]||undefined,on:pfOn(k),single:rem,selected:rem?[PF.rem]:PF.f[k],not:k==="proj"||k==="org"?PF.neg.has(k):undefined,
-        mark:rem?(PF.rem==="hide"?"default":PF.rem==="only"?"only":"shown"):pfOn(k)?(PF.neg.has(k)?"not · ":"")+PF.f[k].size:"",
-        options:()=>f[3].map(([v,l])=>({value:v,label:l,extra:rem&&v==="hide"?"default":undefined,
-          count:rem?L.filter(x=>pfPass(x,F,"rem")&&pfRemOK(x,v)).length:L.filter(x=>pfPass(x,F,k)&&f[4](x,v)).length}))}; }),
-    onSelect:(k,vals)=>{ if(k==="rem") PF.rem=vals[0]||"hide"; else { const set=PF.f[k]; if(!set) return; set.clear(); vals.forEach(v=>set.add(v)); if(!set.size) PF.neg.delete(k); } pfDraw(); },
-    onNot:(k,neg)=>{ neg?PF.neg.add(k):PF.neg.delete(k); pfDraw(); },
-    more:{id:"pmFBtn",menuId:"pmFMenu",label:funnelTip(n,"Filter people"),menuLabel:"Filter people",count:n,on:!!n,key:"F",listLabel:"Filters",headId:"pmFph",
-      field:PF.pk,onField:k=>{ PF.pk=k; pfDraw(); },result:`Showing ${shown} of ${L.length}`,resultId:"pmFpResult",doneId:"pmFpDone",
-      clearAll:pfAny(F)?{id:"pmFpClear",run:()=>{ pfClearAll(); pfDraw(); }}:null,
-      onOpen:()=>{ const k=PFASK; PFASK=null; if(k) PF.pk=k; else if(!pfOn(PF.pk)){ const L2=pfPeople(), F2=pfFields(L2); PF.pk=(F2.find(f=>f[0]!=="rem"&&pfOn(f[0]))||F2[0]||["proj"])[0]; } pfDraw(); }}}); }
-export function pfApplied(L,F){ const el=$("#pmApplied"); if(!el) return; const chips=[];
-  F.forEach(f=>{ const k=f[0];
-    if(k==="rem"){ if(PF.rem!=="show") chips.push(fchipHtml(pfChip(f),k,PF.rem==="hide"?"Show removed people":"Stop showing only removed people",{def:PF.rem==="hide",edit:"pfedit",attr:"data-pfclr"})); return; }
-    if(pfOn(k)) chips.push(fchipHtml(pfChip(f),k,`Remove the ${f[1].toLowerCase()} filter`,{neg:PF.neg.has(k),edit:"pfedit",attr:"data-pfclr"})); });
-  if(PF.q.trim()) chips.push(fchipHtml(`Search: “${PF.q.trim()}”`,"q","Clear the search",{edit:"pfedit",attr:"data-pfclr"}));
-  const shown=L.filter(x=>pfPass(x,F)).length, remF=F.some(f=>f[0]==="rem"), hid=remF&&PF.rem==="hide"?L.filter(x=>pfPass(x,F,"rem")&&x.off).length:0;
-  const att=F.find(f=>f[0]==="att"), need=att&&!PF.f.att.size?L.filter(x=>pfPass(x,F)&&att[3].some(([v])=>att[4](x,v))).length:0;
-  const bits=[html`Showing ${shown} of ${pfWord(L.length)}`];
-  if(hid) bits.push(html`${hid} removed hidden <button type="button" class="linkbtn" data-pfquick="showrem">Show</button>`);
-  if(remF&&PF.rem==="show") bits.push(html`removed shown <button type="button" class="linkbtn" data-pfquick="hiderem">Hide</button>`);
-  if(need) bits.push(html`${need} need${need===1?"s":""} attention <button type="button" class="linkbtn" data-pfquick="att">Show</button>`);
-  const extra=!!PF.q.trim()||F.some(f=>f[0]!=="rem"&&pfOn(f[0]))||remF&&PF.rem!=="hide";
-  putHTML(el,html`${raw(chips.join(""))}${extra?html`<button type="button" class="linkbtn" id="pmClearF">Clear all</button>`:""}<span class="sp"></span><span class="sub" id="pmCount">${bits.map((b,i)=>html`${i?" · ":""}${b}`)}</span>`);
-  const live=$("#pmLive"); if(live&&live.textContent!==`Showing ${shown} of ${pfWord(L.length)}`) live.textContent=`Showing ${shown} of ${pfWord(L.length)}`; }
-/* draws everything below the search box from PF, then puts focus on `focus` (a selector) if given */
-export function pfDraw(focus){ if(!$("#peopleMgr")||!$("#pmRows")) return; const L=pfPeople(), F=pfFields(L), n=pfDot(F);
-  pfBar(L,F,n); pfApplied(L,F);
-  const sc=pfScope(), tail=sc?` · ${sc.length===1?"this project":sc.length+" projects"}`:"", active=peopleAll(), list=L.filter(x=>pfPass(x,F));
-  $("#pmHA").textContent="Actions"+tail; $("#pmHR").textContent="RAID"+tail; [$("#pmHA"),$("#pmHR")].forEach(h=>{ if(sc) h.title=`Counted in ${sc.map(pName).join(", ")}`; else h.removeAttribute("title"); });
-  putHTML($("#pmRows"),list.length?list.map(x=>pfRow(x,sc,active)):html`<tr><td colspan="7">${raw(pfEmpty(L,F))}</td></tr>`);
-  pfSave(); if(focus){ const el=$(focus); if(el) el.focus(); } }
-export function pfOpen(k){ if(!pfFields(pfPeople()).length) return; PFASK=k||null; openFilterBar($("#pmFdd"),"more"); }
-export function pfClose(back){ closeFilterBar($("#pmFdd"),back); }
-export function pfClear(k){ if(k==="q"){ PF.q=""; const q=$("#pmQ"); if(q) q.value=""; } else if(k==="rem") PF.rem=PF.rem==="hide"?"show":"hide"; else if(PF.f[k]){ PF.f[k].clear(); PF.neg.delete(k); } }
-export function pfClearAll(){ pfReset(); const q=$("#pmQ"); if(q) q.value=""; }
-/* BL-231: the listeners, bound once from bootSettings0079 (the card is redrawn inside #settingsBody, which stays) */
-export function pfBind(){ const body=$("#settingsBody"), inMgr=e=>e.target.closest&&e.target.closest("#peopleMgr");
-  body.addEventListener("click",e=>{ if(!inMgr(e)) return; const t=e.target;
-    if(t.closest("#pmFdd")) return;   /* the funnel and its picker: the FilterBar block's own */
-    const c=t.closest("[data-pfclr]"); if(c){ pfClear(c.dataset.pfclr); pfDraw("#pmFBtn"); return; }
-    const ed=t.closest("[data-pfedit]"); if(ed){ e.stopPropagation(); if(ed.dataset.pfedit==="q"){ $("#pmQ").focus(); $("#pmQ").select(); } else pfOpen(ed.dataset.pfedit); return; }
-    const qk=t.closest("[data-pfquick]"); if(qk){ const w=qk.dataset.pfquick; if(w==="showrem") PF.rem="show"; else if(w==="hiderem") PF.rem="hide";
-      else { const L=pfPeople(), a=pfFields(L).find(f=>f[0]==="att"); if(a) a[3].forEach(([v])=>PF.f.att.add(v)); } pfDraw("#pmFBtn"); return; }
-    const rl=t.closest("[data-relax]"); if(rl){ const k=rl.dataset.relax; if(k==="all"){ pfClearAll(); snack("All filters cleared"); } else if(k==="rem") PF.rem="hide"; else pfClear(k); pfDraw("#pmQ"); return; }
-    if(t.id==="pmClearF"){ pfClearAll(); pfDraw("#pmQ"); snack("Filters cleared"); } });
-  body.addEventListener("input",e=>{ if(e.target.id!=="pmQ") return; PF.q=e.target.value; pfDraw(); });
-  body.addEventListener("keydown",e=>{ const t=e.target; if(!inMgr(e)) return;
-    if(t.id==="pmQ"&&e.key==="Escape"&&PF.q){ e.preventDefault(); e.stopPropagation(); pfClear("q"); pfDraw("#pmQ"); } });   /* the picker's keys are the FilterBar block's */
-  /* F opens the picker and / goes to the search, on Settings › People only (elsewhere / is still ask creaite), as Activity's / does */
-  document.addEventListener("keydown",e=>{ if(shared.VIEW!=="settings"||e.metaKey||e.ctrlKey||e.altKey||typing()) return; const b=$("#pmFBtn");
-    if(!b||!b.offsetParent||document.querySelector("dialog[open]")||$("#chat").classList.contains("on")) return;
-    if(e.key==="f"||e.key==="F"){ e.preventDefault(); e.stopImmediatePropagation(); PF.open?pfClose(true):pfOpen(); }
-    else if(e.key==="/"){ e.preventDefault(); e.stopImmediatePropagation(); $("#pmQ").focus(); $("#pmQ").select(); } },true); }
-/* ===== end BL-264 ===== */
 
 
 /* links both ways: an owner name opens that person's page; Alan's own page is My work */
@@ -684,15 +535,6 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
 export function peopleCk(add){ PERS().forEach(x=>add("People",x.name,[x.p&&x.p.org,x.p&&x.p.role].filter(Boolean).join(" · "),()=>{ if(isMe(x.name)) go("mine"); else go("person",x.name); })); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0079(){
-pfBind();
-$("#settingsBody").addEventListener("click",async e=>{ const b=e.target.closest("[data-pm],#pmAdd"); if(!b) return; const n=b.dataset.n, k=b.id==="pmAdd"?"add":b.dataset.pm, p=pFind(shared.REG,n||"");
-  if(k==="add"){ const res=await askPerson({}); if(res&&res.person) await regAddPerson(res.person); }
-  else if(k==="edit"){ const res=await askPerson(p?{edit:true,person:p}:{details:true,person:pBlank(n)}); if(res&&res.person){ const {name,...f}=res.person; await regEdit(n,f); } }
-  else if(k==="hide") await regSetHidden(n,true);
-  else if(k==="restore"){ PEOPLE.hidden=PEOPLE.hidden.filter(x=>x!==n); await regSetHidden(n,false); }
-  else if(k==="ren"){ const td=b.closest("tr").cells[0]; putHTML(td,html`<span style="display:flex;gap:6px"><input type="text" value="${n}" style="height:30px;border:1px solid var(--faint);border-radius:6px;padding:0 8px"><button class="mini ok">Save</button><button class="mini">Cancel</button></span>`); const inp=td.querySelector("input"); inp.focus(); inp.select(); const [ok,cn]=td.querySelectorAll("button");
-    ok.onclick=()=>renamePerson(n,inp.value); cn.onclick=()=>renderSettings(); inp.onkeydown=ev=>{ if(ev.key==="Enter") renamePerson(n,inp.value); if(ev.key==="Escape"){ ev.stopPropagation(); renderSettings(); } }; } });
-$("#settingsBody").addEventListener("change",e=>{ const s=e.target.closest("select.pmsel"); if(s&&s.value){ e.stopPropagation(); renamePerson(s.dataset.n,s.value); } },true);
 document.addEventListener("click",e=>{ const a=e.target.closest("[data-person]"); if(!a) return; e.preventDefault(); e.stopPropagation(); const n=a.dataset.person; if(isMe(n)) go("mine"); else go("person",n); },true);
 /* renderPeople: BL-138 (sprint-all-items) draws the People view in two tabs, in its own section near the end */
 document.addEventListener("click",e=>{ const h=e.target.closest("[data-psort]"); if(h&&shared.VIEW==="people"){ const c=h.dataset.psort; shared.PSORT=shared.PSORT.col===c?{col:c,dir:shared.PSORT.dir==="asc"?"desc":"asc"}:{col:c,dir:c==="name"||c==="org"||c==="role"?"asc":"desc"}; const kept=h.contains(document.activeElement); renderPeople(); if(kept){ const b=document.querySelector(`#peopleTbl th[data-psort="${c}"] button.thsort`); if(b) b.focus({preventScroll:true}); } return; }   /* v1.9.5 check 8: the redraw keeps focus on the same heading, so its new aria-sort is read and Enter again reverses */
@@ -701,7 +543,7 @@ document.addEventListener("click",e=>{ const h=e.target.closest("[data-psort]");
 /* ===== Workstreams (BL-58, BL-56) ===== */
 /* Workstreams belong to each project, like milestones (tracker.db workstreams): a lead, keywords and aliases help
    creaite match items. The picker offers the project's Active ones; a new name is added on purpose, with suggested
-   details, in the same proposal as the item. Settings › Workstreams edits the table; the project page lists them. */
+   details, in the same proposal as the item. Each project's settings page edits its own (ProjectWorkstreams.jsx); the project page lists them. */
 export const WSD=()=>D.ws_table||[], wsTable=()=>WSD().length>0;
 export const wsRow=(p,n)=>WSD().find(w=>w.p===p&&w.name.toLowerCase()===String(n||"").trim().toLowerCase());
 export const WS_STOP=new Set("a an and the of to for in on at by with from is are be was were this that it its as or not no we our their they them will would should can could has have had do does did into about after before over under next new more any all per via vs".split(" "));
@@ -715,7 +557,7 @@ export function wsSuggest(code,name){ const low=String(name).trim().toLowerCase(
   const lead=top(owners,1)[0], r=lead?resolvePerson(lead):null;
   return {lead:r&&["known","alias","email"].includes(r.status)?r.name:"",keywords:top(words,4).join(", "),aliases:top(acr,3).join(", "),channel:top(chans,1)[0]||"",items:items.length}; }
 export const WS_FIELDS=[["lead","Lead"],["keywords","Keywords"],["aliases","Aliases"],["channel","Teams channel"]];
-export function wsConfirm(p,name){ const w=wsRow(p,name); if(w&&w.st==="Closed") return `“${w.name}” is closed in ${p}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+export function wsConfirm(p,name){ const w=wsRow(p,name); if(w&&w.st==="Closed") return `“${w.name}” is retired in ${pName(p)}: choose another (${pName(p)}'s settings › Workstreams lists the ones in use).`;
   if(w) return null; const k=wsKey(p,name.trim());
   if(shared.CUR.wsNew!==k||!$("#wsNewBox")){ shared.CUR.wsNew=k; shared.WSNEW=null; const s=wsSuggest(p,name); $("#wsNewBox")?.remove();
     addHTML($("#f_ws").closest("dd"),"beforeend",html`<div class="wsnew" id="wsNewBox"><div class="sub">New workstream for ${p}, suggested from ${s.items} item${s.items===1?"":"s"}; change anything, then Save again.</div>${raw(WS_FIELDS.map(([f,l])=>`<label>${l}<input type="text" data-wsn="${f}" value="${esc(s[f])}" ${f==="lead"?'placeholder="A person from the people register"':""}></label>`).join(""))}</div>`);
@@ -723,33 +565,10 @@ export function wsConfirm(p,name){ const w=wsRow(p,name); if(w&&w.st==="Closed")
   shared.WSNEW={project:p,name:name.trim(),...Object.fromEntries($$("#wsNewBox [data-wsn]").map(i=>[i.dataset.wsn,i.value.trim()]))}; return null; }
 shared.WSNEW=null;   /* the new workstream Alan confirmed; kept here because saving a new item closes the panel first */
 /* BL-187 (fix-peek-140): the one route for a new workstream: its proposal item (op new, table workstreams) and the row the page
-   shows until the apply. Used by the panel's save (below), Settings › Workstreams and the peek's "Add workstream…". */
+   shows until the apply. Used by the panel's save (below), the project settings' Workstreams and the peek's "Add workstream…". */
 export function wsNewOf(nv,src){ const values=Object.fromEntries(Object.entries({project:nv.project,name:nv.name,lead:nv.lead,keywords:nv.keywords,aliases:nv.aliases,channel:nv.channel,source:src||`${S.me} (dashboard), ${TODAY}`}).filter(([,v])=>v));
   return {item:{op:"new",table:"workstreams",values},row:{id:"",p:nv.project,name:nv.name,lead:nv.lead||"",keywords:nv.keywords||"",aliases:nv.aliases||"",channel:nv.channel||"",st:"Active",nA:0,nR:0}}; }
 /* the new workstream travels in the same proposal as the item, ahead of it (undo removes both) */
-/* Settings › Workstreams: the table, edited through proposals */
-export let WSM={edit:null,closed:false,proj:""};
-export function wsCells(w){ return WS_FIELDS.map(([f])=>`<td>${f==="lead"&&w.lead?esc(who(w.lead)):esc(w[f]||"")||'<span class="sub">—</span>'}</td>`).join(""); }
-export function drawWsMgr(){ const L=WSD().filter(w=>(WSM.closed||w.st==="Active"||WSM.edit===w.id)&&(!WSM.proj||w.p===WSM.proj)), nClosed=WSD().filter(w=>w.st==="Closed").length;
-  const ed=(w,isNew)=>`<tr class="wsedit" data-wsid="${esc(w.id||"")}"><td>${isNew?`<select data-wf="project">${P.map(p=>`<option value="${p.code}" ${p.code===w.p?"selected":""}>${esc(p.name)}</option>`).join("")}</select>`:`<span class="pcode">${esc(pName(w.p))}</span>`}</td><td><input type="text" data-wf="name" value="${esc(w.name||"")}" aria-label="Workstream"></td>${WS_FIELDS.map(([f,l])=>`<td><input type="text" data-wf="${f}" value="${esc(w[f]||"")}" aria-label="${l}"></td>`).join("")}<td colspan="2"></td><td class="mgract"><button class="mini" data-wsm="save">Save</button><button class="mini" data-wsm="cancel">Cancel</button></td></tr>`;
-  putHTML($("#wsMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">Workstreams</h2><select id="wsmP" aria-label="Project"><option value="">All projects</option>${P.map(p=>html`<option value="${p.code}" ${WSM.proj===p.code?"selected":""}>${p.name}</option>`)}</select><input id="wsmName" type="text" placeholder="New workstream" aria-label="New workstream"><button class="btn" data-wsm="add">Add…</button>${nClosed?html`<label class="sub"><input type="checkbox" id="wsmClosed" ${WSM.closed?"checked":""}> Show closed (${raw(nClosed)})</label>`:""}</div>
-    <p class="sub" style="margin:6px 0 10px">Each project's own workstreams. A lead, keywords and aliases (e.g. UAT for Testing) help creaite match items from minutes and mail. Renaming one renames its items too; closing one stops it being chosen for new items. Every change is a proposal, with Undo.</p>
-    <div class="tbl"><table class="mgr"><thead><tr><th>Project</th><th>Workstream</th>${raw(WS_FIELDS.map(([,l])=>`<th>${l}</th>`).join(""))}<th class="num">Open</th><th>Status</th><th></th></tr></thead><tbody>
-    ${WSM.edit==="new"?raw(ed(WSM.draft,true)):""}${raw(L.map(w=>WSM.edit===w.id?ed(w,false):`<tr class="${w.st==="Closed"?"off":""}"><td><span class="pcode">${esc(pName(w.p))}</span></td><td>${esc(w.name)}</td>${wsCells(w)}<td class="num">${w.nA+w.nR}</td><td>${w.st}</td><td class="mgract"><button class="mini" data-wsm="edit" data-wsid="${w.id}">Edit</button><button class="mini" data-wsm="${w.st==="Active"?"close":"reopen"}" data-wsid="${w.id}">${w.st==="Active"?"Close":"Reopen"}</button></td></tr>`).join("")||`<tr><td colspan="9" class="sub">No workstreams yet${WSM.proj?` for ${WSM.proj}`:""}. Add one, or say “setup” to bring them in from the items.</td></tr>`)}</tbody></table></div>`); }
-export async function wsmSave(tr){ const v=Object.fromEntries([...tr.querySelectorAll("[data-wf]")].map(i=>[i.dataset.wf,i.value.trim()])), id=tr.dataset.wsid;
-  if(!v.name){ snack("Give the workstream a name"); return; } if(v.lead){ const o=await ownerFinal(v.lead); if(o===null) return; v.lead=o; }
-  if(!id){ const p=v.project; if(wsRow(p,v.name)){ snack(`${p} already has “${v.name}”`); return; }
-    const {item,row}=wsNewOf({...v,project:p});
-    WSM.edit=null; await save(`${p} workstream ${v.name} added`,[item],null,()=>{ (D.ws_table=D.ws_table||[]).push(row); },()=>{ const i=WSD().indexOf(row); if(i>=0) D.ws_table.splice(i,1); }); drawWsMgr(); return; }
-  const w=WSD().find(x=>x.id===id), changes={}; ["name",...WS_FIELDS.map(f=>f[0])].forEach(f=>{ if((v[f]||"")!==(w[f]||"")) changes[f]=v[f]||null; });
-  WSM.edit=null; if(!Object.keys(changes).length){ drawWsMgr(); return; }
-  if(changes.name&&WSD().some(x=>x!==w&&x.p===w.p&&x.name.toLowerCase()===changes.name.toLowerCase())){ snack(`${pName(w.p)} already has “${changes.name}”`); drawWsMgr(); return; }
-  const before={...w}, old=w.name, moved=[...A,...R].filter(x=>x.p===w.p&&(x.ws||"").toLowerCase()===old.toLowerCase());
-  await save(`${pName(w.p)} workstream ${old} ${changes.name?`renamed ${changes.name}`:"updated"}`,[{op:"update",table:"workstreams",id,changes,based_on:w.updated_at}],null,
-    ()=>{ Object.assign(w,Object.fromEntries(Object.entries(changes).map(([k,x])=>[k,x||""]))); if(changes.name) moved.forEach(x=>x.ws=changes.name); },
-    ()=>{ Object.assign(w,before); moved.forEach(x=>x.ws=old); }); drawWsMgr(); }
-export async function wsmStatus(id,st){ const w=WSD().find(x=>x.id===id); if(!w) return;
-  await save(`${pName(w.p)} workstream ${w.name} ${st==="Closed"?"closed":"reopened"}`,[st==="Closed"?{op:"cancel",table:"workstreams",id,based_on:w.updated_at}:{op:"update",table:"workstreams",id,changes:{status:"Active"},based_on:w.updated_at}],null,()=>{ w.st=st; },()=>{ w.st=st==="Closed"?"Active":"Closed"; }); drawWsMgr(); }
 
 /* BL-56 phase 2: a person's page gets Hand over (their open items to someone in the register, one proposal, one undo),
    early-warning flags on their items and what they closed in the last 14 days. (Draft email, BL-83, replaced the Prep 1:1
@@ -764,15 +583,6 @@ export async function handOver(name){ const to0=$("#handTo").value.trim(); if(!t
   shared.HAND=null; if(await save(`${items.length} item${items.length===1?"":"s"} handed over from ${name} to ${to}`,items,null,()=>was.forEach(([x])=>x.o=to),()=>was.forEach(([x,o])=>x.o=o))) renderPerson(name); else renderPerson(name); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0127(){
-document.addEventListener("click",e=>{ const b=e.target.closest("#wsMgr [data-wsm]"); if(!b) return; e.preventDefault(); const a=b.dataset.wsm, tr=b.closest("tr");
-  if(a==="add"){ const name=$("#wsmName").value.trim(), p=WSM.proj||P[0].code; WSM.draft={id:"",p,name,...(name?wsSuggest(p,name):{})}; WSM.edit="new"; drawWsMgr(); $('#wsMgr .wsedit [data-wf="name"]').focus(); }
-  else if(a==="edit"){ WSM.edit=b.dataset.wsid; drawWsMgr(); }
-  else if(a==="cancel"){ WSM.edit=null; drawWsMgr(); }
-  else if(a==="save") wsmSave(tr);
-  else if(a==="close") wsmStatus(b.dataset.wsid,"Closed"); else if(a==="reopen") wsmStatus(b.dataset.wsid,"Active"); });
-document.addEventListener("change",e=>{ if(e.target.id==="wsmP"){ WSM.proj=e.target.value; drawWsMgr(); } if(e.target.id==="wsmClosed"){ WSM.closed=e.target.checked; drawWsMgr(); }
-  if(e.target.closest&&e.target.closest("#wsMgr .wsedit [data-wf=project]")){ const tr=e.target.closest("tr"), name=tr.querySelector('[data-wf="name"]').value.trim(); if(name){ const s=wsSuggest(e.target.value,name); WS_FIELDS.forEach(([f])=>{ const i=tr.querySelector(`[data-wf="${f}"]`); if(i&&!i.value) i.value=s[f]||""; }); } } });
-document.addEventListener("keydown",e=>{ const tr=e.target.closest&&e.target.closest("#wsMgr .wsedit"); if(!tr) return; if(e.key==="Enter"){ e.preventDefault(); wsmSave(tr); } if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); WSM.edit=null; drawWsMgr(); } });
 /* Review: an item whose workstream isn't one of its project's offers to add it, or to leave it blank */
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wsq]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=REV.find(x=>x.n===+b.dataset.n); if(!r||!await needVault()) return;
   const name=r.ws_suggest, add=b.dataset.wsq==="add", s=add?wsSuggest(r.p,name):null;
@@ -782,7 +592,7 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wsq
       if(!known) items.splice(items.indexOf(it),0,{n:Math.max(0,...items.map(i=>+i.n||0))+1,op:"new",table:"workstreams",values:Object.fromEntries(Object.entries({project:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,source:`${S.me} in review, ${TODAY}`}).filter(([,x])=>x)),match:"strong",flags:[],decision:"approved"}); }); }
   catch(err){ snack("Not saved: "+err.message); return; }
   r.flags=(r.flags||[]).filter(f=>f!=="new-workstream"); r.ws_suggest=null; if(add&&!wsRow(r.p,name)) (D.ws_table=D.ws_table||[]).push({id:"",p:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,st:"Active",nA:0,nR:0});
-  if(add&&r.rec) r.rec.ws=name; irTick.value++; snack(add?`Workstream ${name} will be added to ${pName(r.p)} with this item — check its details in Settings › People and projects › Workstreams`:"Left without a workstream"); },true);
+  if(add&&r.rec) r.rec.ws=name; irTick.value++; snack(add?`Workstream ${name} will be added to ${pName(r.p)} with this item — check its details in ${pName(r.p)}'s settings › Workstreams`:"Left without a workstream",add?()=>openProjectWs(r.p):undefined,add?"Open its workstreams":undefined); },true);
 document.addEventListener("click",e=>{ const t=e.target;
   if(t.closest("#ppEmail")){ if(!t.closest("#ppEmail").disabled) openDraftEmail(shared.PERSON); return; }
   if(t.closest("#ppHand")){ shared.HAND={name:shared.PERSON,picked:new Set()}; renderPerson(shared.PERSON); return; }
@@ -982,7 +792,7 @@ export async function vipPoll(){ if(!viaServer()) return; const r=await api("/ap
   if(vipSig()!==before){ vipNotify(VIPS()); vipBadge(); if(shared.VIEW==="today") renderToday(); } }
 /* Settings › VIP alerts: the switches, and what "always" can honestly mean */
 export function vipSectionHtml(){ const v=VIPD();
-  return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow in People and projects › People.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v.notify!==false?"checked":""} aria-label="Browser notification"></div></div>`; }
+  return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow on each project's settings page, under People and partners.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v.notify!==false?"checked":""} aria-label="Browser notification"></div></div>`; }
 /* BL-99 in Work, Draft email and early warnings: a VIP chip on owners and makers, a VIP filter ("+ Filter"), a note
    in the Draft email when it goes to a VIP, and the "overdue item owned by a VIP" signal in Settings › Early warnings */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -999,7 +809,7 @@ PKDRAW.push(alertPeekDraw);
 setInterval(vipPoll,60*1000);
 vipBadge();
 /* Review: proposals from a VIP (flag "vip", set by sweep.py stage) first, labelled VIP */
-/* the VIP chip on a person's page and in Settings › People; the VIP field in the person dialog (when editing) */
+/* no VIP chip on a person's page and no followed field in the person dialog (BL-288, #247): followed is set on the project settings page only */
 FX.vip=new Set();
 ["actions","raid","decisions"].forEach(t=>FDEFS[t].push(["vip","People I follow",()=>[["yes",t==="decisions"?"Made by someone I follow":"Owned by someone I follow"],["no","Not followed"]],x=>vipKind(x.o||x.by)?"yes":"no",1]));
 WSIG.push(["vip_overdue","Overdue item owned by someone you follow closely","days","Overdue by at least (days)"]);

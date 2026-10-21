@@ -12,7 +12,7 @@ creaite's replies) used to keep their own https/mailto checks. Done when, in bot
 - an address that came through the HTML-escaped text ("&" as "&amp;") is judged as the address it is, not as an entity.
 
 Every other place that draws an address from mail, Teams or the register (the source line of an item, the VIP alert's "Open the
-message", the To decide rows, the prep page's sources, Settings › People's mailto, and the copy from the page back to Markdown) asks
+message", the To decide rows, the prep page's sources, a person's page's mailto, and the copy from the page back to Markdown) asks
 the same `linkUrl` (class CallSites), and a source-level guard (class NoBypass, no browser) fails when a new `href=` is built without
 `linkUrl`, `linkAnchor` or `sourceHref` unless it is one of the fixed internal addresses listed in INTERNAL_HREFS.
 """
@@ -193,7 +193,7 @@ class CallSites(LiveBrowserCase):
         self.good(f)
         self.none(f)
 
-    # Settings › People: the register's mailbox
+    # a person's page: the register's mailbox (Settings › People's too, until the Settings line)
     def test_a_registers_mailbox_is_linked_only_when_it_is_one_mailbox(self):
         r = self.anchors('mailLink("sam@example.com")')
         self.assertEqual([(a["href"], a["rel"]) for a in r["a"]], [("mailto:sam@example.com", None)])     # a mailto opens the mail app: no rel

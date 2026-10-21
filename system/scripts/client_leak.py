@@ -449,7 +449,7 @@ def named_beyond(text, people, allowed):
     return out
 
 
-REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it in Settings › People "
+REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it on the People page "
                    "(or say \"setup\"), then try again")
 
 

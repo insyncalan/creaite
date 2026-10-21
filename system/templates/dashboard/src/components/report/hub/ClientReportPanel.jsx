@@ -1,6 +1,6 @@
 // @ts-check
 /* ClientReportPanel (H3 of the Reporting hub, #221): the hub's "Client report settings", opened from the cog. As the locked mockup draws it:
-   - the switch "This project needs a separate client report" (stored on the project; the same setting as Settings › Projects),
+   - the switch "This project needs a separate client report" (stored on the project; the same setting as the project's settings page, Client report and logos),
      with the one line that it is persistent and that turning it off deletes nothing;
    - when it is on: how often (weekly, fortnightly, monthly), the client's name on the report, a reminder on the due day, and the
      three logo tiles (the firm's always on and greyed, the client's, a partner's), each with a mark, a name, a line, Add or
@@ -54,7 +54,7 @@ export function ClientReportPanel({ code, onClose }) {
               {tilesOf(code).map(t => <LogoTile key={t.kind} code={code} t={t} ticked={ticked.includes(t.kind)} />)}
               {crLogoNote.value ? <p class="sub cfgnote" role="status" id="cfgLogoNote">{crLogoNote.value}</p> : null}
             </div></div>
-          <p class="sub">The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects.</p>
+          <p class="sub">The client report takes its facts from the internal report once that is approved. This is the same setting as the project's settings page, under Client report and logos.</p>
         </div>
       ) : <p class="sub cfgoff" id="cfgOff">This project has no client report.</p>}
       <div class="cfgfoot"><button type="button" class="btn sm primary" id="cfgDone" onClick={onClose}>Done</button></div>
