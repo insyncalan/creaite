@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_reports as R  # noqa: E402  (its fixture: populate, ReportVault)
 
 REASON = "the vendor contract dispute is still unresolved with procurement"   # the tracker's internal health reason (fictional)
-DROPPED = "that the Distributed version would carry"
+DROPPED = "that the minutes would carry to attendees"
 ORIGINAL = "ABC-A-004 is late; Omar Ali is confirming the testers. The statement of work is with the client."
 SAFE = "The statement of work is with the client."
 
@@ -116,6 +116,36 @@ class TheMinutesSheet(unittest.TestCase):
                       " Om<b>ar</b> Ali chases."):
             out = self.reply(ask(text=SAFE), SAFE + added)
             self.assertEqual(out["text"], "", added)
+
+    def test_other_html_forms_are_read_through(self):
+        """2.6 (#262 L1): a long comment, a quoted attribute holding ">", a CDATA wrapper and a tag never closed."""
+        for added in (" ABC<!--" + "x" * 2100 + "-->-A-004 is open.", ' ABC<span title="a>b">-A-004</span> is open.',
+                      " ABC<![CDATA[-A-004]]> is open.", " ABC<b-A-004 is open."):
+            out = self.reply(ask(text=SAFE), SAFE + added)
+            self.assertEqual(out["text"], "", added[:40])
+
+    def test_a_project_coded_vip_keeps_its_ids(self):
+        """2.6 (#262 L2): with VIP in the selection, the VIP mask can't take a VIP-coded project's ID out of the reply."""
+        root = self.root
+        with closing(sqlite3.connect(root / "system" / "tracker.db")) as con:         # a test vault: set directly
+            cols = [r[1] for r in con.execute("PRAGMA table_info(projects)")]
+            row = dict(zip(cols, con.execute("SELECT * FROM projects WHERE code = 'ABC'").fetchone()))
+            row.update(code="VIP", name="Vendor intake programme")
+            con.execute(f"INSERT INTO projects ({','.join(row)}) VALUES ({','.join('?' * len(row))})", list(row.values()))
+            acols = [r[1] for r in con.execute("PRAGMA table_info(actions)")]
+            a = dict(zip(acols, con.execute("SELECT * FROM actions WHERE id = 'ABC-A-004'").fetchone()))
+            a.update(id="VIP-A-001", project="VIP", client_visible=0)
+            con.execute(f"INSERT INTO actions ({','.join(a)}) VALUES ({','.join('?' * len(a))})", list(a.values()))
+            con.commit()
+        try:
+            sel = "Our VIP sponsor is happy."
+            out = self.reply(ask(text=sel), sel + " VIP-A-001 is open.")
+            self.assertEqual(out["text"], "")
+        finally:
+            with closing(sqlite3.connect(root / "system" / "tracker.db")) as con:
+                con.execute("DELETE FROM actions WHERE id = 'VIP-A-001'")
+                con.execute("DELETE FROM projects WHERE code = 'VIP'")
+                con.commit()
 
     def test_the_weekly_sheet_is_unchanged(self):
         out = self.reply(ask(place="report"), ORIGINAL + " ABC-005 is also open.")
