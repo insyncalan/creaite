@@ -93,8 +93,8 @@ class DecisionRaised(unittest.TestCase):
         _, data = self.stage_bad()
         bad = next(i for i in data["items"] if "invalid" in i.get("flags", []))
         why = build_dashboard.item_why(bad, "ABC", bad["flags"])
-        self.assertIn("colour", why)
-        self.assertTrue(why.startswith("Can't be approved"), why)
+        self.assertEqual(why, "Can't be saved as it is")          # #291 wording; the reason follows it on the row
+        self.assertIn("colour", build_dashboard.invalid_words(bad.get("invalid_reason")))
 
     def test_one_invalid_item_does_not_block_the_rest_and_apply_names_it(self):
         if "#280" not in (Path(__file__).resolve().parents[2] / "system/scripts/tracker.py").read_text(encoding="utf-8"):
