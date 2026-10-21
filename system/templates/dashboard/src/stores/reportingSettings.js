@@ -89,8 +89,14 @@ export async function setClientLogos(code, kinds) {
   const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter(k => k.startsWith("partner"));
   const everyPartner = parts.every(k => list.includes(k));
   const line = everyPartner ? [...list.filter(k => !k.startsWith("partner")), "partner"] : list;      // every partner ticked: one `partner`, so one added later is ticked too
-  if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
-  p.crlogos = list; changed(); return true;
+  // v2.5.3 gate: the ticks are taken at once, before the save (which vq keeps in order), so a second tick made while the first is
+  // still saving builds on it instead of on the line as it was; a save that fails puts the ticks back
+  const before = p.crlogos; p.crlogos = list; changed();
+  if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) {
+    if (p.crlogos === list) { p.crlogos = before; changed(); }
+    return false;
+  }
+  return true;
 }
 
 export const CLIENT_NAME_MAX = 80;
