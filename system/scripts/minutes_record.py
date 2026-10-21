@@ -1029,10 +1029,10 @@ def _choices(doc):
 # Review's Approve and Approve n routine, the minutes view, `review.py approve` (Claude Code and ask creaite) and Review's bulk
 # approvals all go through these. What Alan chose in the Track column (layout.track) is applied on the server: a cross takes the
 # line out, neither keeps it as a line only, a tick on a kept line brings it back (track_reconcile, the view's own changes), and an
-# item he crossed or left with neither is never approved (track_blocked), nor applied (track_apply_problems). Approving the minutes registers the ticked rows, defaults
-# included (track_ticked), and never an item the minutes show no row for (a promise: track_rowed). A default he never changed is
-# not a choice: the view applies it when he presses Approve minutes there, and anywhere else a decision or a risk left at its
-# default stays in Review for him to decide, as before.
+# item he crossed or left with neither is never approved (track_blocked), nor applied (track_apply_problems). Approving the
+# minutes registers the ticked rows, defaults included (track_ticked), and never an item the minutes show no row for (a
+# promise: track_rowed). A default he never changed is not a choice: the view applies it when he presses Approve minutes
+# there, and anywhere else a decision or a risk left at its default stays in Review for him to decide, as before.
 
 def track_state(doc, data):
     """{item number: "y" | "n" | ""} for each trackable row of a draft record whose item is still in the proposal (pending, or
@@ -1088,7 +1088,8 @@ def _track_blocked(data, decisions):
             and not (t == "" and _waits(items[n], review.minutes_group(items[n])))}
 
 
-TRACK_STUCK = "it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it"
+TRACK_STUCK = ("it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), "
+               "or tick it there to register it")
 
 
 def track_apply_problems(name, data):
