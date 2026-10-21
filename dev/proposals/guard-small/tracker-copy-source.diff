@@ -1,6 +1,6 @@
 --- system/scripts/tracker.py
 +++ system/scripts/tracker.py
-@@ -1404,6 +1404,116 @@ def op_source(fop, blk):
+@@ -1404,6 +1404,131 @@ def op_source(fop, blk):
      return src
  
  
@@ -14,6 +14,12 @@
 +    if paths.external():
 +        bases.append((paths.projects_root(), Path(os.path.realpath(paths.projects_root()))))
 +    return sorted(bases, key=lambda b: -len(b[0].parts))
++
++
++def _apfs_folded(parts):
++    """Path parts as the file system compares them on macOS (APFS: case-insensitive, normalisation-insensitive)."""
++    import unicodedata
++    return tuple(unicodedata.normalize("NFC", x).casefold() for x in parts)
 +
 +
 +class CopySource:
@@ -34,8 +40,8 @@
 +        if Path(s).is_absolute() or re.match(r"^[A-Za-z]:", s) or ".." in s.split("/"):
 +            raise Invalid(f"copy: the source must be a path in the vault or the projects folder, with no '..' ({stored!r})")
 +        top = Path(s).parts
-+        if top[:4] == ("system", "staging", "uploads", "ask") or not any(top[:len(a)] == a and len(top) > len(a)
-+                                                                         for a in COPY_SOURCE_AREAS):
++        ask = _apfs_folded(top[:4]) == ("system", "staging", "uploads", "ask")
++        if ask or not any(top[:len(a)] == a and len(top) > len(a) for a in COPY_SOURCE_AREAS):
 +            raise Invalid(f"copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({stored!r})")
 +        p = paths.resolve(s)
 +        base = next(((b, real) for b, real in _copy_bases() if b in p.parents), None)
@@ -44,13 +50,22 @@
 +        self._open(p.relative_to(base[0]).parts, base[1])
 +
 +    def _open(self, parts, base):
-+        """Walk to the file from `base` (no link on the way), open it and check it; Invalid otherwise."""
++        """Walk to the file from `base` (no link on the way), open it and check it; Invalid otherwise. A folder on the way that
++        is ask creaite's uploads/ask/ (by device and inode: any spelling of its name) is refused."""
++        try:
++            ask = os.stat(paths.ASK_UPLOADS, follow_symlinks=False)
++            ask = (ask.st_dev, ask.st_ino)
++        except OSError:
++            ask = None
 +        try:
 +            self.dirfd = os.open(str(base), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
 +            for part in parts[:-1]:
 +                nxt = os.open(part, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW, dir_fd=self.dirfd)
 +                os.close(self.dirfd)
 +                self.dirfd = nxt
++                st = os.fstat(nxt)
++                if ask and (st.st_dev, st.st_ino) == ask:
++                    self.refuse("ask creaite's chat images are never filed")
 +            self.name = parts[-1]
 +            self.fd = os.open(self.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0), dir_fd=self.dirfd)
 +            self.st = os.fstat(self.fd)
@@ -117,7 +132,7 @@
  def check_file_op(fop, blk):
      """Check one file operation of a proposal can be done safely (source exists, every path relative and in a
      writable area); raises Invalid.
-@@ -1411,10 +1521,7 @@ def check_file_op(fop, blk):
+@@ -1411,10 +1536,7 @@ def check_file_op(fop, blk):
      op = fop.get("op")
      if op == "copy":
          src = op_source(fop, blk)
@@ -129,7 +144,7 @@
          safe_path(fop.get("to"), "copy")
      elif op == "remove":
          safe_path(fop.get("path"), "remove")
-@@ -1599,16 +1706,52 @@ def stamp_draft(draft, text, on):
+@@ -1599,16 +1721,68 @@ def stamp_draft(draft, text, on):
  
  
  def _op_copy(apply_id, fop, blk, done):
@@ -158,6 +173,25 @@
 +    done.append({"op": "copy", "to": paths.rel(dst), "hash": digest})
 +
 +
++def _copy_exclusive(tmp, dst, st):
++    """#269 delta round 3: put the temporary copy's bytes into a new dst created with O_CREAT|O_EXCL (a file that appeared in the
++    meantime is never overwritten: Invalid), mode and times by descriptor; a failure removes the dst it made."""
++    import stat
++    try:
++        out = os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
++    except FileExistsError:
++        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
++    try:
++        with open(tmp, "rb") as f, os.fdopen(out, "wb") as o:
++            shutil.copyfileobj(f, o, CopySource.CHUNK)
++            o.flush()
++            os.fchmod(o.fileno(), stat.S_IMODE(st.st_mode))
++            os.utime(o.fileno(), ns=(st.st_atime_ns, st.st_mtime_ns))
++    except BaseException:
++        os.unlink(dst)
++        raise
++
++
 +def _copy_into(src, dst):
 +    """#269 delta: the source's bytes into a new temporary file beside dst (mode and times set on its descriptor), then put in
 +    place without ever replacing a file (a hard link, or a rename after one more look); a failure leaves nothing behind."""
@@ -178,11 +212,8 @@
 +            os.link(tmp, dst)                    # EEXIST if a file appeared meanwhile: never overwritten
 +        except FileExistsError:
 +            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
-+        except OSError:                          # no hard links here: a rename, after one more look
-+            if os.path.lexists(dst):
-+                raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
-+            os.rename(tmp, dst)
-+            return h.hexdigest()
++        except OSError:                          # no hard links here (FAT and the like): a new file, made only if none is there
++            _copy_exclusive(tmp, dst, src.st)
 +        os.unlink(tmp)
 +        return h.hexdigest()
 +    except BaseException:
@@ -192,7 +223,7 @@
  
  
  def _op_remove(apply_id, fop, blk, done):
-@@ -2003,7 +2146,7 @@ def in_notes_folder(rel, links=False, archived=False):
+@@ -2003,7 +2177,7 @@ def in_notes_folder(rel, links=False, archived=False):
      (an engagement not in the register too; never the skeleton or _Templates). links: also a file whose other hard link is in a
      notes folder (a write changes both; a copy reads it). archived: also an engagement's _Archive/<notes folder> (deleted notes)
      and an archived engagement's notes folder (_Archive/<engagement>/<notes folder>), for a copy's source."""

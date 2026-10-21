@@ -35,7 +35,8 @@ link check looked only at the last part of the path). New `CopySource` (`open_co
 - refuses an empty path or one with a NUL ("source not found", as for a missing file), an absolute path, a drive letter and any
   `..` part;
 - **allowed places:** a source must be under `inbox/`, `system/staging/drafts/`, `system/staging/uploads/` (a Current state
-  image, BL-63; never `uploads/ask/`, ask creaite's chat images) or `projects/` (the projects folder: in the vault, or the
+  image, BL-63; never `uploads/ask/`, ask creaite's chat images, refused by any spelling, compared case- and
+  normalisation-insensitively as APFS does, and also when a folder on the way is that folder by device and inode) or `projects/` (the projects folder: in the vault, or the
   projects root outside it, BL-85, including `_portfolio` and the template skeleton). Everything else in the vault
   (`system/tracker.db`, `system/config/`, `.claude/`, `system/staging/applied/`...) is refused;
 - opens the source one folder at a time from the real vault folder, or from the projects root when the path is under it (the
@@ -50,12 +51,14 @@ link check looked only at the last part of the path). New `CopySource` (`open_co
 - `_op_copy` reads in 1 MB chunks from the checked descriptor (never the whole file in memory, never the path again) into a
   temporary file beside the destination (`mkstemp`, `O_EXCL`), sets mode and times on that file's descriptor (`fchmod`,
   `os.utime(fd)`), checks the source's name again, and then puts it in place with a hard link (`EEXIST`: never over a file that
-  appeared meanwhile; a rename after one more look where links aren't possible) and removes the temporary name. Any failure
+  appeared meanwhile) and removes the temporary name. Where hard links aren't possible (FAT and the like) the destination is
+  created with `O_CREAT|O_EXCL|O_NOFOLLOW` and the bytes copied into it, mode and times by descriptor: a file that appeared in
+  the meantime is never overwritten (round 3: the earlier "look, then rename" could). Any failure
   (a full disk, a refusal) removes the temporary file, so nothing partial is left and a retry works.
 - `in_notes_folder` returns False for a path with a NUL (one line): before, a NUL source crashed `tracker.py apply` in
   `card_op_problem` (ValueError), and every later apply with it, until that proposal was removed.
 
-Unchanged: a plain `inbox/`, `system/staging/drafts/` or project file is filed; identical content onto an existing file is a
+Unchanged: a plain `inbox/`, `system/staging/drafts/`, `system/staging/uploads/` or project file is filed; identical content onto an existing file is a
 no-op; differing content is refused and the file kept; the `#269 round 2 (L-B)` marker stays, so `test_copy_source_link` runs.
 `import stat` is no longer added at the top of tracker.py (local imports), so E1's own `import stat` hunk applies.
 
@@ -97,7 +100,7 @@ tests keep guarding the real files.
 
 | Test | Diffs | Tests | Red without the diff |
 |------|-------|-------|----------------------|
-| `test_guard_small_copy_source.py` | (1) | 12 + mutants | 20 failures and 1 error (every refusal above, the swaps, the NUL crash, the partial write, mode by path; the race hangs on the FIFO) |
+| `test_guard_small_copy_source.py` | (1) | 14 + mutants | 20 failures and 1 error (every refusal above, the swaps, the NUL crash, the partial write, mode by path; the race hangs on the FIFO) |
 | `test_guard_small_prompt.py` | (2) | 5 + mutants | 7 failures (never-list path, Write rule, the path-rule sentence, reach.py rules addable x4) |
 | `test_guard_small_post_claim.py` | (3) both | 7 + mutants | 5 failures (failed fill, swapped values, stray Post, settings, pending cap) |
 
@@ -117,10 +120,12 @@ tests keep guarding the real files.
   exact by wrapping `os.open`): refused; the file growing while it is read: refused; a full disk after the first chunk: refused,
   no destination and no temporary file left, and a retry files it; mode (0640) and mtime kept, set with no `chmod` or `utime` on
   a path. The race: 3,000 rounds, a thread cycling the name between a plain file, a hard link to the outside file, a FIFO and a
-  link (atomic renames), and a folder above a second source between a folder and a link: 0 leaks in 2,247 copies; with the first guard-small diff (e7435aaa) the same race leaked 27 times in 2,452 copies. Mutants (10): `..` let
+  link (atomic renames), and a folder above a second source between a folder and a link: 0 leaks in 2,247 copies; with the first guard-small diff (e7435aaa) the same race leaked 27 times in 2,452 copies. Mutants (13): `..` let
   through, folders followed, the link count ignored, the same-inode check dropped, no check after the read, the copy read by
-  path, any vault file a source, a NUL let through, the temporary file left on failure, the mode set by path after placing: all
-  caught.
+  path, any vault file a source, a NUL let through, the temporary file left on failure, the mode set by path after placing, `uploads/ask` matched case-sensitively, the folder inode check dropped,
+  the no-link fallback writing over a file that appeared: all caught. Round 3: `system/staging/uploads/ASK/…`, `Ask`, `aSk`, a
+  symlinked and a hard-linked chat image are refused; the inode check alone refuses (shown by pointing it at drafts); with
+  `os.link` failing the copy is filed exclusively, and a file appearing in that window is kept.
 - (2): every PERMISSION example in `ASK_PROMPT` (from the scratch copy) has its paths put through `reach.classify` (none
   "never") and none is an Edit or Write rule; at least one Bash example remains; the prompt never says a path rule is accepted;
   `permissions.check_full` never calls `reach.py hook`, `wrap` or `reach.py *` addable (python3 and the `run` wrapper). Mutants
@@ -141,7 +146,7 @@ tests keep guarding the real files.
 prints (as their PostToolUse would have), and a step where the run's own tool makes a file now also runs `reach.post_tool`
 when the copy has it (`test_r1_what_the_run_creates_becomes_its_own` gains that step between the fill and the stage).
 
-**Run on a copy of the release with all four diffs applied, one at a time, all OK (round 2):** guard_small_copy_source 13, guard_small_prompt 6, guard_small_post_claim 8 (each with its Mutants test), intake_process 29, intake_process_round2 8, minutes_stage_spec 38, minutes_stage_spec_hook 6, enrich_guard 10, copy_source_link 3, reach 18, guard_pinned 2, ask_reports_refused 6, held_bash_arg_forms 7, record_commands 10, permission_panel 14, script_policy 11, tracker 23, guard_174 25, guard_steerco_adhoc 14, archive_99 44, and the other tests with copy operations: onedrive_projects 44, notes_card_only_ops 18, minutes_draft 18, minutes_record 15, minutes_review 19, propose 20, review_project 11, dashboard_data_pinned 1, writer_pinned 19; `check.py --no-js` OK there and on the repo tree; no_real_names 2 on the repo tree (it needs git). On the repo tree without the diffs the two changed intake tests stay 29 and 8.
+**Run on a copy of the release with all four diffs applied, one at a time, all OK (round 3):** guard_small_copy_source 15, guard_small_prompt 6, guard_small_post_claim 8 (each with its Mutants test), intake_process 29, intake_process_round2 8, minutes_stage_spec 38, minutes_stage_spec_hook 6, enrich_guard 10, copy_source_link 3, reach 18, guard_pinned 2, ask_reports_refused 6, held_bash_arg_forms 7, record_commands 10, permission_panel 14, script_policy 11, tracker 23, guard_174 25, guard_steerco_adhoc 14, archive_99 44, and the other tests with copy operations: onedrive_projects 44, notes_card_only_ops 18, minutes_draft 18, minutes_record 15, minutes_review 19, propose 20, review_project 11, dashboard_data_pinned 1, writer_pinned 19; `check.py --no-js` OK there and on the repo tree; no_real_names 2 on the repo tree (it needs git). On the repo tree without the diffs the two changed intake tests stay 29 and 8.
 
 ## Known limits
 
@@ -151,7 +156,8 @@ when the copy has it (`test_r1_what_the_run_creates_becomes_its_own` gains that 
   is a vault file by then. A source the user put under a symlinked *vault* or projects root is fine (the walk starts at the real
   folder); a symlinked folder *inside* them is refused. A same-size rewrite in place during the read with the mtime put back is
   not seen (a hostile local writer of a vault file, which is copied as it reads). The destination's folder is still taken by
-  path (`safe_path`, as before). `open_copy_source` is now the `CopySource` class (a context manager), and a source from anywhere but `inbox/`, `system/staging/drafts/` or `projects/` is refused at apply.
+  path (`safe_path`, as before). `open_copy_source` is now the `CopySource` class (a context manager), and a source from anywhere but `inbox/`, `system/staging/drafts/`, `system/staging/uploads/` (not `uploads/ask/`) or
+  `projects/` is refused at apply.
 - (2) The test reads the prompt's examples by the `PERMISSION: <rule> |` shape; a future example written another way is not
   checked.
 - (3) The print is taken when the PostToolUse runs, just after the tool returns; another flow that writes that exact drafts name
@@ -172,7 +178,7 @@ E1 is not changed here. It does not apply to `origin/v253-release` as it is (it 
 - **hunk 2 (`_check_copy`):** keep E1's `dst.is_dir()` refusal, its "already exists and differs" check and the by_others checks,
   but take the source from guard-small: `with open_copy_source(src) as s:` in place of `paths.resolve(src).is_file()` and the
   `#269 L-B` link check (the source checks are guard-small's), and compare an existing destination with the bytes of
-  `s.chunks()`;
+  `s.chunks()` (also E1's `_dst_is_same(dst, src, …)`: compare with `s.chunks()`, never by hashing the source path);
 - **hunk 4 (`_op_copy`):** keep `dst.is_dir()`; E1's by_others copy should read from guard-small's descriptor and check
   `src_sha256` on those bytes: hash `src.chunks()` as `_copy_into` writes them and refuse before placing the file if the hash
   is not `src_sha256` (a `sha` argument to `_copy_into`, checked after `src.check_name()` and before the link). `_copy_checked`'s

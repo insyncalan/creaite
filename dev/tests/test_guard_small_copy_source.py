@@ -41,8 +41,13 @@ MUTATIONS = {
     "copy-by-path": ("the copy reads the source again by its path", T,
                      "            for c in src.chunks():\n                h.update(c)\n                out.write(c)",
                      "            for c in [paths.resolve(src.stored).read_bytes()]:\n                h.update(c)\n                out.write(c)"),
-    "any-vault-file": ("any vault file is a source", T, '        if top[:4] == ("system", "staging", "uploads", "ask") or not any(',
-                       "        if False and not any("),
+    "any-vault-file": ("any vault file is a source", T, "        if ask or not any(", "        if ask or False and not any("),
+    "ask-case-sensitive": ("uploads/ask is matched by its exact spelling only", T, '        ask = _apfs_folded(top[:4]) == ("system",',
+                           '        ask = top[:4] == ("system",'),
+    "ask-inode-dropped": ("the folder on the way isn't compared with uploads/ask", T,
+                          "                if ask and (st.st_dev, st.st_ino) == ask:", "                if False:"),
+    "fallback-overwrites": ("the no-link fallback writes over a file that appeared", T,
+                            "os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW", "os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW"),
     "nul-crash": ("a NUL reaches the os calls", T, '        if not s or "\\x00" in s:', "        if not s:"),
     "temp-left": ("a failed write leaves its temporary file", T,
                   "        if os.path.lexists(tmp):\n            os.unlink(tmp)\n        raise", "        raise"),
@@ -96,6 +101,12 @@ elif a["when"] == "in_open":
             swap()
         return fd
     os.open = os_open
+elif a["when"] == "link_fails":                        # a file system without hard links (FAT): the fallback
+    def no_link(*x, **k):
+        if a.get("appear"):
+            open(a["to"], "w").write("already here\n")      # a file appears in the window before the fallback writes
+        raise OSError(errno.EPERM, "Operation not permitted")
+    os.link = no_link
 elif a["when"] in ("in_read", "fail_write"):
     real_chunks = tracker.CopySource.chunks
     def chunks(self):
@@ -207,6 +218,8 @@ class CopySourceStaysInTheVault(unittest.TestCase):
         (cls.root / "system/staging/uploads/ask").mkdir(parents=True, exist_ok=True)
         (cls.root / "system/staging/uploads/plan.png").write_bytes(b"\x89PNG")              # a Current state image (BL-63)
         (cls.root / "system/staging/uploads/ask/0123456789abcdef.png").write_bytes(b"\x89PNG")
+        (cls.root / "system/staging/uploads/asklink").symlink_to(cls.root / "system/staging/uploads/ask", target_is_directory=True)
+        os.link(cls.root / "system/staging/uploads/ask/0123456789abcdef.png", cls.root / "system/staging/uploads/hard-ask.png")
 
     @classmethod
     def tearDownClass(cls):
@@ -242,7 +255,12 @@ class CopySourceStaysInTheVault(unittest.TestCase):
             "claude_settings": ".claude/settings.json",
             "inbox_itself": "inbox",
             "staging_proposal": "system/staging/applied/x.json",
-            "ask_upload": "system/staging/uploads/ask/0123456789abcdef.png"})
+            "ask_upload": "system/staging/uploads/ask/0123456789abcdef.png",
+            "ask_upper": "system/staging/uploads/ASK/0123456789abcdef.png",
+            "ask_title": "system/staging/uploads/Ask/0123456789abcdef.png",
+            "ask_mixed": "system/staging/uploads/aSk/0123456789abcdef.png",
+            "ask_linked": "system/staging/uploads/asklink/0123456789abcdef.png",
+            "ask_hard": "system/staging/uploads/hard-ask.png"})
         for name, verdict in got.items():
             with self.subTest(name):
                 self.assertTrue(verdict.startswith("refused"), f"{name}: {verdict}")
@@ -251,6 +269,20 @@ class CopySourceStaysInTheVault(unittest.TestCase):
         self.assertIn("not a regular file", got["socket"])
         self.assertIn("not a regular file", got["fifo"])
         self.assertIn("too long", got["long"])
+        for k in ("ask_upload", "ask_upper", "ask_title", "ask_mixed"):      # APFS: any spelling is the same folder
+            self.assertIn("filed only from", got[k], k)
+
+    def test_the_ask_folder_is_refused_by_what_it_is(self):
+        """Whatever the name says, a folder on the way that is uploads/ask/ (same device and inode) is refused: shown by pointing
+        the check at the drafts folder."""
+        code = ("import paths, tracker\n"
+                "paths.ASK_UPLOADS = paths.DRAFTS\n"
+                "try:\n"
+                "    tracker.open_copy_source('system/staging/drafts/%s').close(); print(json.dumps('ok'))\n"
+                "except tracker.Invalid as e:\n"
+                "    print(json.dumps('refused: ' + str(e)))" % f"{DAY} Steering committee.docx")
+        got = in_vault(self.v, code, timeout=60)
+        self.assertIn("chat images are never filed", got)
 
     def test_plain_sources_in_the_allowed_places_pass(self):
         got = self.check({"inbox": "inbox/plain.vtt", "drafts": f"system/staging/drafts/{DAY} Steering committee.docx",
@@ -376,6 +408,20 @@ class CopySourceStaysInTheVault(unittest.TestCase):
         again = self.one(when="", src=str(self.root / "inbox/full.vtt"), src_rel="inbox/full.vtt", to=f"{TR}/full.vtt")
         self.assertEqual(again["got"], VTT * 10)
 
+    def test_without_hard_links_the_copy_is_made_exclusively(self):
+        """os.link failing (no hard links): the copy is still filed, mode kept, no temporary file left; a file that appears in
+        the window before the fallback writes is kept and the copy refused."""
+        src = self.root / "inbox/nolink.vtt"
+        src.write_text(VTT)
+        os.chmod(src, 0o640)
+        ok = self.one(when="link_fails", src=str(src), src_rel="inbox/nolink.vtt", to=f"{TR}/nolink-1.vtt")
+        self.assertEqual((ok["got"], ok["mode"]), (VTT, "0o640"), ok)
+        self.assertEqual([n for n in ok["left"] if n.startswith(".creaite-copy-")], [], ok)
+        raced = self.one(when="link_fails", appear=True, src=str(src), src_rel="inbox/nolink.vtt", to=f"{TR}/nolink-2.vtt")
+        self.assertTrue(raced["got"].startswith("refused"), raced)
+        self.assertEqual((self.root / TR / "nolink-2.vtt").read_text(), "already here\n")
+        self.assertEqual([n for n in raced["left"] if n.startswith(".creaite-copy-")], [], raced)
+
     def test_mode_and_times_are_set_on_the_file_never_by_path(self):
         src = self.root / "inbox/mode.vtt"
         src.write_text(VTT)
@@ -407,7 +453,8 @@ class Mutants(unittest.TestCase):
     def test_every_mutation_is_caught(self):
         missed = mutants_caught(Path(__file__), MUTATIONS, ["test_sources_outside", "test_a_swap_after", "test_a_linked_drafts",
                                                            "test_a_hard_link_whose", "test_a_source_that_changes", "test_a_nul",
-                                                           "test_a_failed_write", "test_mode_and_times"])
+                                                           "test_a_failed_write", "test_mode_and_times", "test_the_ask_folder",
+                                                           "test_without_hard_links"])
         self.assertEqual(missed, [], "mutations the tests didn't notice")
 
 
