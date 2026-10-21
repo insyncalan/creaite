@@ -1,0 +1,15 @@
+--- system/scripts/live_server.py
++++ system/scripts/live_server.py
+@@ -396,8 +396,10 @@
+     import shlex
+     cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode,     # BL-237
+                                             *(("--held", "1") if held else ())))
+-    return json.dumps({"disableAllHooks": False,
+-                       "hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}})
++    hooks = {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}
++    if mode == "process":       # #264 round 3: what the run's own tool made is recorded when it returns (reach.post_tool)
++        hooks["PostToolUse"] = [{"matcher": "*", "hooks": [{"type": "command", "command": cmd + " --event post", "timeout": 30}]}]
++    return json.dumps({"disableAllHooks": False, "hooks": hooks})
+ 
+ 
+ def reach_dirs():

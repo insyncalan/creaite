@@ -305,6 +305,16 @@ class Fence(unittest.TestCase):
            "far.json", "olddraft.json", "chain.json", "2026-10-22 ABC weekly report.docx", "rep.json"]
     STAGED = ["proposed-own.json", "proposed-alan.json"]
 
+    MAKE = ("import os\n"
+            "def one(t, i, a):\n"
+            "    if t != 'MAKE':\n"
+            "        return reach.decide(t, i, a['mode'], 'i-1', True)[slice(None) if a['why'] else 0]\n"
+            "    open('system/staging/drafts/' + i['file'], 'wb').write(b'PK the run made this')\n"
+            "    if hasattr(reach, 'post_tool'):\n"
+            "        reach.post_tool(*a['calls'][i['after']], 'i-1')\n"
+            "    return True\n"
+            "import reach\n")
+
     def decide(self, calls, mode="process", files=None, why=False, own=None):
         """{name: allowed} (or [allowed, why]) for each (tool, input), in order, with the run record the server writes for a
         Process run, started 10 minutes ago, naming OWN and STAGED as the run's (R1); the files dated an hour back are another
@@ -314,15 +324,21 @@ class Fence(unittest.TestCase):
                 "reach.start_run('i-1', a['mode'], {}, None, **({'files': a['files']} if a['mode'] == 'process' and has else {})); "
                 "d = json.loads(reach.RUN_FILE.read_text()); d['started'] -= 600; "
                 "d.update({'made': [os.path.realpath('system/staging/drafts/' + n) for n in a['own']]} if 'made' in d else {}); "
+                "d.update({'prints': {m: reach._print(m) for m in d['made'] if os.path.exists(m)}} if 'made' in d else {}); "
                 "d.update({'before': [n for n in d['before'] if n not in a['staged']]} if 'before' in d else {}); "
                 "reach.RUN_FILE.write_text(json.dumps(d)); "
-                "print(json.dumps({k: reach.decide(t, i, a['mode'], 'i-1', True)[slice(None) if a['why'] else 0] "
-                "for k, (t, i) in a['calls'].items()}))")
+                "print(json.dumps({k: one(t, i, a) for k, (t, i) in a['calls'].items()}))")
+        code = self.MAKE + code      # ("MAKE", {"file": ..., "after": <an earlier call's name>}): the run's tool makes the file
         return in_vault(self.v, code, {"mode": mode, "files": self.files if files is None else files, "calls": calls, "why": why,
                                        "own": self.OWN if own is None else own, "staged": self.STAGED})
 
     def run_(self, words):
         return ("Bash", {"command": "system/scripts/run " + words})
+
+    @staticmethod
+    def make(name, after):
+        """A step: the run's own tool (the call `after`, allowed earlier) makes drafts/<name>, then its PostToolUse runs."""
+        return ("MAKE", {"file": name, "after": after})
 
     def test_still_refused_the_record_and_writes_outside_drafts(self):
         """These are refused today too (a plain chat's rules); the mode keeps them refused."""
@@ -411,10 +427,11 @@ class Fence(unittest.TestCase):
         tpl, d = "system/templates/minutes-template.docx", self.v.root / "system/staging/drafts"
         got = self.decide({"fill_chain": self.run_(f"docx_tools.py fill {tpl} system/staging/drafts/values.json "
                                                    "system/staging/drafts/chain.docx"),
+                           "made_chain": self.make("chain.docx", "fill_chain"),
                            "stage_chain": self.run_("minutes.py stage system/staging/drafts/chain.json"),
                            "write_new": ("Write", {"file_path": str(d / "brand new.json")})},
                           own=[n for n in self.OWN if n != "chain.docx"])
-        self.assertEqual(got, {"fill_chain": True, "stage_chain": True, "write_new": True})
+        self.assertEqual(got, {"fill_chain": True, "made_chain": True, "stage_chain": True, "write_new": True})
         got = in_vault(self.v, "import reach, os; print(json.dumps(sorted(os.path.basename(m) for m in "
                                "json.loads(reach.RUN_FILE.read_text())['made'] if m.endswith(('chain.docx', 'brand new.json')))))")
         self.assertEqual(got, ["brand new.json", "chain.docx"])

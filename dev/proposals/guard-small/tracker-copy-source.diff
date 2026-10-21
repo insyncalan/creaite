@@ -1,0 +1,97 @@
+--- system/scripts/tracker.py
++++ system/scripts/tracker.py
+@@ -28,6 +28,7 @@ import os
+ import re
+ import shutil
+ import sqlite3
++import stat
+ import subprocess
+ import sys
+ import threading
+@@ -1404,6 +1405,48 @@ def op_source(fop, blk):
+     return src
+ 
+ 
++def _copy_bases():
++    """(the folder a stored path is built on, its real path) for the vault and, if set, the projects root; the longest first."""
++    bases = [(paths.ROOT, Path(os.path.realpath(paths.ROOT)))]
++    if paths.external():
++        bases.append((paths.projects_root(), Path(os.path.realpath(paths.projects_root()))))
++    return sorted(bases, key=lambda b: -len(b[0].parts))
++
++
++def open_copy_source(stored):
++    """#269 round 2 delta (LOW 1): open a copy's source for reading; (fd, stat), or raises Invalid. The stored path is relative
++    with no `..` part; it is opened one folder at a time from the vault or the projects root (the real folder), never following a
++    link on the way (O_NOFOLLOW at every step, so a parent folder that is or becomes a link fails, whenever it is swapped), and
++    the file must be a regular file with one link (a second hard link may be a file outside the vault). The caller closes fd."""
++    s = str(stored or "").replace("\\", "/")
++    if not s or Path(s).is_absolute() or re.match(r"^[A-Za-z]:", s) or ".." in s.split("/"):
++        raise Invalid(f"copy: the source must be a path in the vault or the projects folder, with no '..' ({stored!r})")
++    p = paths.resolve(s)
++    base = next(((b, real) for b, real in _copy_bases() if b in p.parents), None)
++    if base is None:
++        raise Invalid(f"copy: the source is outside the vault and the projects folder ({stored!r})")
++    parts, fd = p.relative_to(base[0]).parts, None
++    try:
++        fd = os.open(str(base[1]), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
++        for part in parts[:-1]:
++            nxt = os.open(part, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW, dir_fd=fd)
++            os.close(fd)
++            fd = nxt
++        f = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0), dir_fd=fd)
++    except FileNotFoundError:
++        raise Invalid(f"copy: source not found ({stored})") from None
++    except OSError:
++        raise Invalid(f"copy: the source is a link, or is under one ({stored}); only a plain file in the vault is filed") from None
++    finally:
++        if fd is not None:
++            os.close(fd)
++    st = os.fstat(f)
++    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
++        os.close(f)
++        raise Invalid(f"copy: the source is not a plain file, or has another hard link ({stored}); only a plain file is filed")
++    return f, st
++
++
+ def check_file_op(fop, blk):
+     """Check one file operation of a proposal can be done safely (source exists, every path relative and in a
+     writable area); raises Invalid.
+@@ -1411,10 +1454,8 @@ def check_file_op(fop, blk):
+     op = fop.get("op")
+     if op == "copy":
+         src = op_source(fop, blk)
+-        if not src or not paths.resolve(src).is_file():
+-            raise Invalid(f"copy: source not found ({src})")
+-        if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
+-            raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
++        fd, _st = open_copy_source(src)            # #269 delta (LOW 1): in the vault or the projects folder, no link on the way
++        os.close(fd)
+         safe_path(fop.get("to"), "copy")
+     elif op == "remove":
+         safe_path(fop.get("path"), "remove")
+@@ -1599,15 +1640,19 @@ def stamp_draft(draft, text, on):
+ 
+ 
+ def _op_copy(apply_id, fop, blk, done):
+-    src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
+-    if os.path.islink(src) or not src.is_file():   # #269 round 2 (L-B): checked again here, so a swap after the check isn't filed
+-        raise Invalid(f"copy: the source is a link or not a plain file ({op_source(fop, blk)}); only a plain file is filed")
++    dst = safe_path(fop["to"], "copy")
++    fd, st = open_copy_source(op_source(fop, blk))   # #269 round 2 (L-B), delta LOW 1: checked again, read from what was checked
++    with os.fdopen(fd, "rb") as f:
++        data = f.read()
+     if dst.exists():
+-        if file_hash(dst) == file_hash(src):
++        if file_hash(dst) == hashlib.sha256(data).hexdigest():
+             return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
+         raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
+     dst.parent.mkdir(parents=True, exist_ok=True)
+-    shutil.copy2(src, dst)
++    with open(dst, "xb") as out:                     # never over a file that appeared meanwhile
++        out.write(data)
++    os.chmod(dst, stat.S_IMODE(st.st_mode))
++    os.utime(dst, ns=(st.st_atime_ns, st.st_mtime_ns))
+     done.append({"op": "copy", "to": paths.rel(dst), "hash": file_hash(dst)})
+ 
+ 
