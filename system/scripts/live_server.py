@@ -150,10 +150,12 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          a reject instead (review.py; BL-315)
 - POST /api/draft {kind, …}: an AI draft (drafts.py context, then Claude, streamed; nothing reaches the tracker); /api/draft/stat
                          {feature, event, n} counts what was done with one; /api/drafts each feature and its counts (BL-219 on)
-- POST /api/edit/ai {option, text, code, place, instruction, document?}: AI on selected text (BL-301 D): edit_ai.py's prompt
+- POST /api/edit/ai {option, text, code, place, instruction, document?, recipients?}: AI on selected text (BL-301 D): edit_ai.py's prompt
                          (the text, the option, the project's name, people and open item IDs only), Claude with no tools at all
                          (kind "edit-ai"), streamed; the "draft" event is the suggestion and its check. Nothing is written. The
-                         place is edit_ai.py's: a client report `document` binds the client place (#123); other keys are a 400
+                         place is edit_ai.py's: a client report `document` binds the client place (#123); other keys are a 400.
+                         The Draft email's `recipients` (#186) decide in edit_ai.py whether it goes outside (client facts and
+                         checks); /api/edit/ai/caps says the server decides that, so the page shows the bar for an outside email
 - POST /api/agenda/save {key, parts, agenda, attendees}: write a drafted agenda into the Agendas folder, never overwriting (BL-223)
 - POST /api/email/followup {key, eid, day, start, title, files}: a follow-up email's attendees and summary, nothing sent;
                          /api/chases {ids, mode} records a chase Alan says he sent (system/staging/chases.json, IDs only;
@@ -1751,6 +1753,8 @@ class Handler(BaseHTTPRequestHandler):
         else). Pressing Process is Alan's go-ahead to stage; the server, never the model, decides which files (intake_process:
         each directly in inbox/, a plain file, at most 20). Streamed like a transcript run; one run at a time; Stop as usual."""
         import intake_process
+        if foreign_origin(self.headers):                 # review-fixes (4): only this page's own requests, as Calendar refresh
+            return self.send(403, {"ok": False, "message": "Not allowed"})
         files, why = intake_process.validate_request(req)
         if why:
             return self.send(400, {"ok": False, "message": why})
@@ -1777,9 +1781,7 @@ class Handler(BaseHTTPRequestHandler):
         fixed (calendar_refresh.build_prompt). Only this page's own requests (token, Host, no other site's Origin); one run at a
         time, and not while a sweep holds its lock; streamed like Process; Stop as usual."""
         import calendar_refresh
-        origin = self.headers.get("Origin")
-        if (self.headers.get("Sec-Fetch-Site") or "").lower() == "cross-site" or (
-                origin and not (origin.startswith("http://") and host_name(origin[7:].split("/", 1)[0]) in CSP_LOOPBACK)):
+        if foreign_origin(self.headers):
             return self.send(403, {"ok": False, "message": "Not allowed"})
         why = calendar_refresh.precheck()
         if why:
@@ -4032,7 +4034,9 @@ def vip_alerts_route(handler, req):
     import sweep
     with VIP_WRITE:
         st = sweep.vip_made_refresh()                                 # BL-296: a made item's ID once an apply wrote it
-    return handler.send(200, {"ok": True, "alerts": [a for a in st["alerts"] if not a.get("seen")],
+    hidden = ("keys", "ids", "sigs", "seen_sig")      # #236: kept in vip.json, server side only (build_dashboard.ALERT_HIDDEN)
+    return handler.send(200, {"ok": True, "alerts": [{k: v for k, v in a.items() if k not in hidden}
+                                                     for a in st["alerts"] if not a.get("seen")],
                               "last_check": st["last_check"], "running": VIP_STATUS["running"],
                               "error": VIP_STATUS["last_error"]})
 
@@ -6192,7 +6196,7 @@ class EditJob(DraftJob):
     quiet = True                                            # the page shows the suggestion, not the reply as it streams
 
 
-EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document"}
+EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document", "recipients"}
 EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
 
 
@@ -6209,14 +6213,57 @@ def edit_ai_request(req):
         if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
             return None
         body["document"] = {k: x[:120] for k, x in d.items()}
+    rc = req.get("recipients")                     # #186: the Draft email's addresses, passed whole (edit_ai.email_outside decides)
+    if rc is not None:
+        if edit_ai_recipients_problem(req):
+            return None
+        body["recipients"] = list(rc)
     return body
+
+
+def edit_ai_recipients_problem(req):
+    """Why a request's `recipients` can't be taken (#186), as the message the page shows, or "" when they can (or there are none):
+    only the Draft email sends addresses, at most 50, each text of at most 320 characters. Never cut: a list is taken whole or not."""
+    rc = req.get("recipients") if isinstance(req, dict) else None
+    if rc is None:
+        return ""
+    if str(req.get("place") or "") != "email":
+        return "Addresses go only with the Draft email, so nothing was sent to Claude."
+    if not isinstance(rc, list) or any(not isinstance(x, str) or len(x) > 320 for x in rc):
+        return "The email's addresses couldn't be read, so nothing was sent to Claude."
+    if len(rc) > 50:
+        return "That email has too many recipients for a suggestion (50 at most), so nothing was sent to Claude."
+    return ""
+
+
+def own_domains_state():
+    """Whether the own-domains setting can decide who is inside (#186 review): "ok", "none" (empty: everyone is outside), "not a list",
+    "no usable domain" (a list with no domain in it, such as [1] or [""]: everyone is outside) or "unreadable". Never the domains."""
+    try:
+        given = (paths.load_settings().get("identity") or {}).get("own_domains")
+    except Exception:  # noqa: BLE001
+        return "unreadable"
+    if given is None or given == []:
+        return "none"
+    if not isinstance(given, list):
+        return "not a list"
+    usable = [d for d in given if isinstance(d, str) and d.strip().lstrip("@")]      # as edit_ai.own_domains reads them
+    return "ok" if usable else "no usable domain"
+
+
+def edit_ai_caps_route(handler, req):
+    """POST /api/edit/ai/caps (#186): what this server's edit_ai.py decides for itself, so the page can show the Draft email's AI bar
+    for an outside recipient (an older server answers 404 and the page keeps the bar off), and whether the own-domains setting is
+    usable (a setting that isn't a list makes every recipient outside)."""
+    return handler.send(200, {"ok": True, "email_audience": "recipients", "own_domains": own_domains_state()})
 
 
 def edit_ai_route(handler, req):
     """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
     body = edit_ai_request(req)
     if body is None:
-        return handler.send(400, {"ok": False, "message": "That request isn't one creaite knows."})
+        why = isinstance(req, dict) and not set(req) - EDIT_AI_KEYS and edit_ai_recipients_problem(req)   # #186: a plain message
+        return handler.send(400, {"ok": False, "message": why or "That request isn't one creaite knows."})
     busy = current_run()
     if busy and not busy.done:
         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
@@ -6242,6 +6289,7 @@ def edit_ai_route(handler, req):
 
 
 DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
+DRAFT_ROUTES["/api/edit/ai/caps"] = edit_ai_caps_route        # #186
 # ===== end BL-301 D =====
 
 # ===== BL-223 (sprint-drafts-writing) ===== Draft agenda: the kind "agenda" on /api/draft (the meeting's key and the style), and
@@ -8170,11 +8218,21 @@ def log_stale(handler, line):
 # ===== end BL-269 =====
 
 
+def foreign_origin(headers):
+    """review-fixes (4): whether a request that starts a run came from another site: a cross-site fetch, or an Origin that isn't
+    this machine's page (http on a loopback host). A request with no Origin (an older browser's same-origin POST) passes; the
+    token and Host checks still apply to every route."""
+    origin = headers.get("Origin")
+    return (headers.get("Sec-Fetch-Site") or "").lower() == "cross-site" or bool(
+        origin and not (origin.startswith("http://") and host_name(origin[7:].split("/", 1)[0]) in CSP_LOOPBACK))
+
+
 # ===== #253 (log hygiene) ===== an unhandled route error's cause: the route, the exception's class and its innermost
 # frames (file name, line, function), at ERROR, once per route per minute so a loop cannot flood the log. Never str(e):
 # an exception's message can carry the request's own text. A page that left mid-reply (CLIENT_LEFT) stays at info.
 FAULT_EVERY = 60
-FAULT_SEEN = {}                     # "METHOD route" → when its cause was last logged (monotonic seconds)
+FAULT_SEEN = {}                     # "METHOD route" or "thread <name> <cause>" → when its cause was last logged (monotonic seconds)
+FAULT_KEEP = 500                    # review-fixes (9): at most this many keys are remembered (the oldest go first)
 FAULT_LOCK = threading.Lock()
 
 
@@ -8184,15 +8242,20 @@ def fault_frames(e, depth=3):
     return " < ".join(f"{Path(f.filename).name}:{f.lineno} in {f.name}" for f in reversed(frames))
 
 
-def log_cause(key, e):
+def log_cause(key, e, seen=None):
     """One ERROR line for an error's cause under `key` (a route, or a background thread): its class and innermost frames,
-    never its message; at most once per key per minute. A failure here is swallowed."""
+    never its message; at most once per key per minute (`seen`, when given, is the key counted instead: review-fixes (9)). A
+    failure here is swallowed."""
     try:
         at = time.monotonic()
+        seen = seen or key
         with FAULT_LOCK:
-            if at - FAULT_SEEN.get(key, at - FAULT_EVERY) < FAULT_EVERY:
+            if at - FAULT_SEEN.get(seen, at - FAULT_EVERY) < FAULT_EVERY:
                 return
-            FAULT_SEEN[key] = at
+            FAULT_SEEN[seen] = at
+            if len(FAULT_SEEN) > FAULT_KEEP:                     # review-fixes (9): a key per thread never grows without end
+                for old in sorted(FAULT_SEEN, key=FAULT_SEEN.get)[:len(FAULT_SEEN) - FAULT_KEEP]:
+                    del FAULT_SEEN[old]
         where = fault_frames(e)
         debuglog.error("server", f"{key} raised {type(e).__name__}" + (f" at {where}" if where else ""))
     except Exception:  # noqa: BLE001  a log line never stops the answer
@@ -8215,6 +8278,13 @@ def thread_name(t):
     return debuglog.clean(re.sub(r"[^A-Za-z0-9_ ().-]+", "_", str(getattr(t, "name", "") or "?")), 60)
 
 
+def thread_fault_key(t, e):
+    """review-fixes (9): the once-a-minute key of a background thread's fault: the thread's name and the fault's cause (its class
+    and innermost frame), so one thread's fault never keeps another's out of the log, even when both threads have one name (a
+    name given twice, or cut at 60 characters)."""
+    return f"thread {thread_name(t)} {type(e).__name__} {fault_frames(e, 1) or '-'}"
+
+
 def install_thread_faults():
     """#253: a background thread's uncaught error is logged by thread, class and frame (never str(e)), once a minute, then
     handed to Python's own hook (which prints it to the server's console, system/staging/live-server.log, as before)."""
@@ -8223,7 +8293,7 @@ def install_thread_faults():
     def hook(args):
         """Log the thread's fault, then Python's own hook."""
         if args.exc_value is not None and not isinstance(args.exc_value, SystemExit):
-            log_cause(f"thread {thread_name(args.thread)}", args.exc_value)
+            log_cause(f"thread {thread_name(args.thread)}", args.exc_value, seen=thread_fault_key(args.thread, args.exc_value))
         return orig(args)
     threading.excepthook = hook
 # ===== end #253 =====

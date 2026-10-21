@@ -644,10 +644,16 @@ class _RunLock:
             fcntl.flock(self.fd, fcntl.LOCK_EX)
         except ImportError:  # no flock (Windows, untested): as before
             pass
+        except BaseException:  # review-fixes (6): a lock that fails (OSError, an interrupt) closes its file, never leaks it
+            os.close(self.fd)
+            self.fd = None
+            raise
         return self
 
     def __exit__(self, *exc):
-        os.close(self.fd)                                        # closing the file releases the lock
+        if self.fd is not None:                                  # closing the file releases the lock
+            fd, self.fd = self.fd, None
+            os.close(fd)
         return False
 
 
