@@ -113,7 +113,7 @@ export * from "./components/reporting/ReportsPage.jsx";
 export * from "./core/irFold.js";   /* #232: Intake and Review, one page */
 export * from "./stores/intakeReview.js";
 export * from "./components/intakeReview/IntakeReviewPage.jsx";
-export { irApprove, irApproveRoutine } from "./components/intakeReview/proposals.jsx";   /* #275 round 3: Intake's row Approve and Approve routine are tested by name (test_minutes_track_review) */
+export * from "./components/intakeReview/proposals.jsx";   /* #275 round 3: Intake's row Approve and Approve routine are tested by name (test_minutes_track_review); no name it exports is exported by another module */
 export * from "./components/project/ProjectSettings.jsx";   /* #228: the full-page project settings */
 export * from "./stores/projectSettings.js";
 export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */
