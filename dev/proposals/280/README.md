@@ -15,8 +15,8 @@ Approve routine, minutes popup) and Review lists the reason.
 Tests: `dev/tests/test_minutes_decision_raised.py` (the "one invalid item does not block" test skips until this lands);
 `dev/tests/test_tracker.py::test_invalid_proposal_rejected_with_reason` accepts both messages.
 With the diff applied all of test_tracker, test_minutes_decision_raised, test_minutes_stage_spec, test_minutes_approve,
-test_propose, test_cell_edit, test_minutes_draft and test_card_only_moves pass. test_workstreams (2), test_schema_sprint5 (13),
-test_debug_log_stage_b (1) and test_archive_items (1) fail the same way without it (not caused by this change).
+test_propose, test_cell_edit, test_minutes_draft and test_card_only_moves pass. (Corrected in round 4: test_schema_sprint5 did fail because of this change;
+it now accepts both outcomes, see below.)
 
 ## Second round: a save is never stopped by an older staged proposal
 
@@ -74,3 +74,25 @@ Approve without the transcript (the minutes are filed from the draft) or Discard
 item 1 (the decision with `raised`) edited or rejected; with `tracker.py.diff` that item is held on its own and no longer blocks.
 
 Not changed (guarded): `system/creaite-rules.md`'s folder map does not yet list `system/staging/discarded/`.
+
+## Fourth round: Team Cap's review of v254-280-4
+
+The four diffs are regenerated and still apply in the same order (checked on this branch's base and on origin/main cfe9b56c),
+and `-R` in reverse order restores `tracker.py` and `live_server.py` byte for byte. `tracker.py.diff` and `tracker-held.py.diff`
+are unchanged.
+
+1. **Vault-root shadowing (security).** `live_server.py.diff` now hands `tracker.py apply` the staging path,
+   `"system/staging/" + name`, in both the `{only}` call and the hold_peek call (`rest`), so `tracker.resolve_proposal` never
+   picks a vault-root file of the same name. Tests: `test_save_not_blocked` `test_only_applies_the_staging_file_never_a_root_namesake`
+   and `test_hold_peek_applies_staging_files_never_root_namesakes` (both failed before: the root file was applied).
+2. **`test_schema_sprint5` (agreed decision: update the tests).** With `tracker.py.diff` a schema refusal is held in Review and
+   Apply exits 0; without it Apply stops (exit 1). `refused()` accepts either, and in both checks the rule still holds: nothing of
+   the refused item reaches the tracker (change_log, decisions, links, labels, promises unchanged), and a held item is back to
+   pending, flagged invalid. 39/39 with and without the diffs.
+3. **`check.py` complexity.** `live_server-held.py.diff` moves the decision-to-arguments mapping (discard, without-transcript,
+   the reject reason) out of `Handler.review` into `Handler.review_args`; behaviour unchanged. `check.py`: OK with the diffs.
+4. **A page save of its own invalid item.** `saveApply` (`core/server.js`, not guarded) reads the apply's
+   `Held in Review, not applied: <its own proposal> item n: <reason>` lines (`ownHeld`): it says "Not saved: <reason>" (never
+   "changed elsewhere"), puts the record back, drops its own proposal (nothing of it is left in Review), and, as a save is all or
+   nothing, undoes the apply when another item of the same save was written. No Retry: it would be refused again. Tests:
+   `test_save_not_blocked` `OwnItemHeld` (2, browser; failed before with "changed elsewhere").
