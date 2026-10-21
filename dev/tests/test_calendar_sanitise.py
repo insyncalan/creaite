@@ -256,6 +256,77 @@ class LetterOnlyValues(unittest.TestCase):
                 self.assertEqual(invite_clean.scrub(text, 140), want)
 
 
+class NumberedLabelThenPasscode(unittest.TestCase):
+    """v2.6 review H1: an ID-like label with a numbered value ("Meeting ID 85212345678") may keep the rest of a field, but the cut
+    after it was widened through a separator and the next word, which was the passcode label itself, and the letter-only passcode
+    value was left behind ("Meeting ID 85212345678 - Passcode abcdefg" gave "abcdefg"; 2.5.3 gave ""). The rest is kept only when
+    the cut took in nothing but numbers and separators and the next word is not a label; otherwise the field is dropped whole."""
+
+    REVIEW = ("Meeting ID 85212345678 - Passcode abcdefg", "Steering Meeting ID 85212345678 – Passcode: Abcdefg",
+              "Meeting ID 852-1234-5678 - passcode abcdefg", "Webinar ID 12 is passcode abcdefg", "PIN 4321 - passcode abcdefg",
+              "Code 2 = passcode abcdefg", "Budget Meeting ID 12 - pwd abcdefg", "Conference ID 55 - Passcode abcdefg review")
+    LABELS = ("Passcode", "Pass code", "Passphrase", "PWD", "Password", "PIN", "Secret", "Key", "Token", "Access code")
+    ALWAYS = ("Passcode", "Pass code", "Passphrase", "PWD", "Access code")      # caught with a letter-only value and no separator
+    NUMBERED = ("Meeting ID 85212345678", "PIN 4321", "Code 2", "Webinar ID 12", "Conference ID 55", "Meeting ID 852-1234-5678",
+                "Call ID 77")
+    SEPARATORS = (" - ", " : ", ": ", " = ", "=", " # ", "#", " – ", " — ", " is ", "  -  ", " - ", " ", "  ",
+                  " ", " -", "- ")
+    AFTER_LABEL = (" ", ": ", " ", "  ")
+
+    def test_review_rows(self):
+        for text in self.REVIEW:
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), "")
+                self.assertTrue(invite_clean.is_secret(text))
+
+    def test_numbered_label_then_any_passcode_label(self):
+        for num in self.NUMBERED:
+            for label in self.LABELS:
+                for sep in self.SEPARATORS:
+                    for after in self.AFTER_LABEL:
+                        for text in (f"{num}{sep}{label}{after}abcdefg", f"Steering {num}{sep}{label}{after}abcdefg review"):
+                            with self.subTest(text=text):
+                                self.assertNotIn("abcdefg", invite_clean.scrub(text, 140).lower(), text)
+
+    def test_passcode_then_numbered_label(self):
+        for num in self.NUMBERED:
+            for label in self.LABELS:
+                for sep in self.SEPARATORS:
+                    for after in self.AFTER_LABEL if label in self.ALWAYS else (": ",):
+                        for text in (f"{label}{after}abcdefg{sep}{num}", f"Steering {label}{after}abcdefg{sep}{num} review"):
+                            with self.subTest(text=text):
+                                self.assertNotIn("abcdefg", invite_clean.scrub(text, 140).lower(), text)
+
+    def test_still_dropped_whole(self):
+        for text in ("Passcode: abcdefg", "Steering Passcode: abcdefg", "Passcode abcdefg", "Pass code abcdefg", "PWD abcdefg",
+                     "Password kqZxyw", "Key kqZxyw", "Meeting ID 123 456 789 passcode abcdefg", "Password: swordfish then lunch",
+                     "Weekly sync zoom.us 98765432101", "Meeting ID 12-Passcode abcdefg", "Meeting ID 12: Password abcdefg",
+                     "PIN 4321 Token abcdefg"):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), "")
+
+    def test_ordinary_titles_unchanged(self):
+        for text, want in (("Budget review", "Budget review"), ("Steering committee", "Steering committee"),
+                           ("Code review sync", "Code review sync"), ("Project ID 12 kickoff", "Project ID 12 kickoff"),
+                           ("Code 2 review", "review"), ("Budget (PIN 4321)", "Budget"),
+                           ("Board Meeting ID 123 456 789 sync", "Board sync"), ("PIN 4321 review", "review"),
+                           ("Meeting ID 12 - 34 sync", "sync"), ("Meeting ID 852-1234-5678 sync", "sync"),
+                           ("Code 2b review", "review"), ("Sprint 12 - planning", "Sprint 12 - planning"),
+                           ("Release 2.1 - go/no-go", "Release 2.1 - go/no-go"), ("Key dates - Q4", "Key dates - Q4")):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), want)
+
+    def test_calendar_row_and_invite_text_carry_no_value(self):
+        for text in self.REVIEW:
+            with self.subTest(text):
+                row = sweep.calendar_row(event(title=text, where=text, organiser=text, body="Agenda\n" + text + "\nEnd"),
+                                         "09:00", "10:00", False)
+                self.assertEqual((row["title"], row["where"], row["organiser"]), ("Meeting", "", False))
+                self.assertNotIn("abcdefg", json.dumps(row).lower())
+                self.assertEqual(" ".join(invite_clean.invite_text("Agenda\n" + text + "\nEnd").split()), "Agenda End")
+                self.assertEqual(invite_clean.clean_row(row), row)
+
+
 class Timing(unittest.TestCase):
     """Round 2: a crafted invite cannot stall the calendar save. Every case is 60,000 characters (the body's look-at limit; a title
     or name 20,000 and 60,000) and must finish well inside two seconds; the times are printed."""

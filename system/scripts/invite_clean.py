@@ -143,6 +143,8 @@ def flagged(text):
     return is_secret(text) or any(JOIN_LINE.search(s) for s in _views(text))
 
 
+# H1: a label word straight after a numbered label's cut ("Meeting ID 12: Password swordfish"): its value may follow
+_NEXT_LABEL = re.compile(rf"\s*[^\w\s]*\s*(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE})(?![\w-])", re.I)
 _VALUE_TAIL = re.compile(r"(?:\s*(?:[:=#\-\u2013]|\bis\b)\s*\S+|\s+\S*\d\S*)?(?:[\s.\-]+\d\S*)*")
 SCRUB_ROUNDS = 8
 
@@ -150,8 +152,9 @@ SCRUB_ROUNDS = 8
 def _secret_span(t):
     """(start, end, rest_ok) of the first key, join link or dial-in found in t as it stands, widened to whole words and, for a
     label, the value after it ("PIN 4321", "Passcode: 4321", "Meeting ID 123 456 789"); None when none is found in t itself.
-    rest_ok is True only for an ID-like label whose own match carried a value with a digit (LABEL_NUMBER): after any other cut
-    (a host, a scheme, a dial-in, a passcode or password label) the next word may be the value, so the field fails closed."""
+    rest_ok is True only for an ID-like label whose own match carried a value with a digit (LABEL_NUMBER) and whose widened cut
+    took in nothing but numbers and separators: after any other cut (a host, a scheme, a dial-in, a passcode or password label,
+    or a word such as the next label) the next word may be the value, so the field fails closed."""
     for rx in (HOSTS, SCHEME, LABEL, DIAL):
         m = rx.search(t)
         if not m:
@@ -164,8 +167,20 @@ def _secret_span(t):
         rest_ok = rx is LABEL and bool(LABEL_NUMBER.fullmatch(m.group()))
         if rx is LABEL:
             b += len(_VALUE_TAIL.match(t, b).group())
+            # v2.6 review (H1): the widening (to the whole word, then a separator and the next word) may take in a word that is
+            # not a number, such as the next label ("Meeting ID 12 - Passcode abcdefg"): the rest may then be its value, so the
+            # field fails closed, and so it does when the next word is a label. Only the label's own words, digits and separators
+            # may be cut with the rest kept.
+            rest_ok = rest_ok and _numbers_only(m.group().split()[-1] + t[m.end():b]) and not _NEXT_LABEL.match(t, b)
         return a, b, rest_ok
     return None
+
+
+def _numbers_only(cut):
+    """Whether a label's value and what was cut after it are only numbers and separators: every piece with a letter has a digit
+    ("852-1234-5678", "2b", "12 - 34" are; "12 - Passcode", "12-Passcode", "12 is passcode" are not)."""
+    return all(re.search(r"\d", w) or w.lower() == "is" for w in re.split(r"[\s:=#\-\u2013\u2014.,;()\[\]/]+", cut)
+               if re.search(r"[^\W\d_]", w))
 
 
 def scrub(text, limit):
