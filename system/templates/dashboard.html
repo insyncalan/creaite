@@ -4929,6 +4929,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     alertMake: () => alertMake,
     alertPeekDraw: () => alertPeekDraw,
     alertPromise: () => alertPromise,
+    alertSeen: () => alertSeen,
     alertStage: () => alertStage,
     alertStaged: () => alertStaged,
     alertTypeOf: () => alertTypeOf,
@@ -6801,6 +6802,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     sectionDiffers: () => sectionDiffers,
     seeAll: () => seeAll,
     seeAllInWork: () => seeAllInWork,
+    seenActs: () => seenActs,
     selDay: () => selDay,
     send: () => send,
     sendQueued: () => sendQueued,
@@ -33821,6 +33823,36 @@ ${s5}`;
       snack("Back in Messages");
     });
   }
+  async function alertSeen(id2) {
+    if (!viaServer()) {
+      snack("Seen needs the live server");
+      return;
+    }
+    const r4 = await api("/api/vip/seen", { ids: [id2] });
+    if (!r4.ok) {
+      snack(r4.message || "Not marked seen");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2), back2 = alertFocus(id2, "seen");
+    if (a5) a5.seen = r4.at || nowStamp();
+    await vipPoll();
+    vipBadge();
+    renderToday();
+    back2();
+    snack("Marked seen", async () => {
+      const u5 = await api("/api/alerts/undo", { ids: [id2] });
+      if (!u5.ok) {
+        snack(u5.message || "Not undone");
+        return;
+      }
+      if (a5) delete a5.seen;
+      VIPNOTED.add(id2);
+      await vipPoll();
+      vipBadge();
+      renderToday();
+      snack("Back in Messages");
+    });
+  }
   async function alertHandled(id2) {
     if (!viaServer()) {
       snack("Handled needs the live server");
@@ -34219,6 +34251,7 @@ ${s5}`;
       e4.stopPropagation();
       const cand = Number(b5.dataset.cand || 0) || void 0;
       if (b5.dataset.alertdo === "handled") alertHandled(b5.dataset.id);
+      else if (b5.dataset.alertdo === "seen") alertSeen(b5.dataset.id);
       else if (b5.dataset.alertdo === "log") alertLog(b5.dataset.id);
       else if (b5.dataset.alertdo === "chase") alertChase(b5.dataset.id);
       else if (b5.dataset.alertdo === "close") alertClose(b5.dataset.id, false);
@@ -42859,9 +42892,10 @@ ${s5}`;
       t: `${a5.who || ""}${others.length ? " with " + others.slice(0, 3).join(", ") : ""}: you replied ${whenWords(String(a5.replied_at || ""))}`,
       link: a5.link || "",
       meta: convMeta(a5),
-      acts: []
+      acts: seenActs(a5)
     };
   }
+  var seenActs = (a5) => [{ id: "seen", icon: "eye", label: "Seen", name: `Seen: ${a5.who || ""}${a5.title ? ", " + a5.title : ""}`, data: { alertdo: "seen", id: a5.id } }];
   function quietRow(a5) {
     const others = (a5.people || []).filter(
       /** @param {string} p */
@@ -42877,7 +42911,7 @@ ${s5}`;
       t: `${a5.who || ""}${others.length ? " with " + others.slice(0, 3).join(", ") : ""}: nothing for you`,
       link: a5.link || "",
       meta: convMeta(a5),
-      acts: []
+      acts: seenActs(a5)
     };
   }
   var TDFOCUS = (

@@ -7,7 +7,7 @@
    today.js builds the cards (toDecideRows); this only draws them.
    BL-334: a message row is a conversation's card: its summary, then each candidate item (a quiet tag for its type, the item,
    its owner and due date) with Create work item and Dismiss (data-alertdo buttons, run by the page-wide handler in settings.js,
-   with their Undo). A conversation with nothing for Alan is a quiet row (td-quiet): one line, no buttons. A confidential
+   with their Undo). A conversation with nothing for Alan is a quiet row (td-quiet): one line, with only Seen (#276). A confidential
    conversation's card carries a quiet "Confidential" mark beside its title; its summary shows like any other (Alan, 15-10-2026).
    BL-342 Part 3 B: a card whose matched action looks done says why in one quiet line; once its close is staged, "Staged for
    Review" with Undo. BL-342 Part 5: Alan's own promises in the thread, one line each with Add a promise and Dismiss, then

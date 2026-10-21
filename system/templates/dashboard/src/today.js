@@ -539,7 +539,7 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
   return tdl.map((x,i)=>({x,i})).sort((a,b)=>(a.x.overdue?0:1)-(b.x.overdue?0:1)||(a.x.overdue&&b.x.overdue?a.x.due.localeCompare(b.x.due):0)||b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
 /* ----- BL-334: a conversation, not a message. One card per conversation: its own title (or the people in it), where it is,
    "updated HH:MM", Claude's summary, then each candidate item with Create work item and Dismiss (Dismiss stages nothing). A
-   conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
+   conversation with nothing for Alan is one quiet line with only Seen (#276). Never labelled (BL-288). ----- */
 const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
 /** BL-342: the one thing a thread asks of Alan, as its chip says it */
 export const CARDTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",fyi:"FYI / file",risk:"Risk"});
@@ -600,11 +600,13 @@ export function cardClose(a,mt){ const c=a.closes;
 /** "Mia Hale with Omar Ali: you replied 14:02" @param {any} a */
 export function repliedRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:String(a.replied_at||convAt(a)),tag:"Replied",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: you replied ${whenWords(String(a.replied_at||""))}`,
-    link:a.link||"",meta:convMeta(a),acts:[]}; }
+    link:a.link||"",meta:convMeta(a),acts:seenActs(a)}; }
+/** #276: a quiet line's one action, Seen (the eye): it clears the line for good (/api/vip/seen), with Undo @param {any} a */
+export const seenActs=a=>[{id:"seen",icon:"eye",label:"Seen",name:`Seen: ${a.who||""}${a.title?", "+a.title:""}`,data:{alertdo:"seen",id:a.id}}];
 /** "Mia Hale with Omar Ali: nothing for you" @param {any} a */
 export function quietRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:convAt(a),tag:"",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: nothing for you`,
-    link:a.link||"",meta:convMeta(a),acts:[]}; }
+    link:a.link||"",meta:convMeta(a),acts:seenActs(a)}; }
 /** where focus goes after a row's action takes the row away: the same action on the row now in its place, else the heading */
 let TDFOCUS=/** @type {{i:number,what:string,at:number}|null} */(null);
 export function tdFocusAfter(){ const f=TDFOCUS; if(!f||Date.now()-f.at>8000){ TDFOCUS=null; return; }
