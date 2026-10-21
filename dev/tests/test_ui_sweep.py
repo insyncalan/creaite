@@ -80,13 +80,14 @@ SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='AB
                               "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
                               "document.getElementById('mvRbAdd')", "#v-milestones")
 # v2.1.0 P7: the minutes view, its approve popup and the deadline popover, answered by test_minutes_editor's sample record (the
-# snapshot vault itself stays as it is).
-SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes .mnrow')", "#v-minutes")
+# snapshot vault itself stays as it is). #268: the rows are the Track tables' (tr.mi) and the popup is the Before approving box
+# (the sample's ticked items have a real problem, so Approve minutes opens it).
+SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes tr.mi')", "#v-minutes")
 SCREENS["minutes-approve"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#mnApproveBtn:not([disabled])')", 15),
                                          b.eval("document.getElementById('mnApproveBtn').click()")),
                               "document.getElementById('mnApprove') && document.getElementById('mnApprove').open", "#v-minutes")
-SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes .mnrow .mndue')", 15),
-                                          b.eval("document.querySelector('#v-minutes .mnrow .mndue').click()")),
+SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes tr.mi .mndue')", 15),
+                                          b.eval("document.querySelector('#v-minutes tr.mi .mndue').click()")),
                                "document.querySelector('#v-minutes .mnpop')", "#v-minutes")
 
 # v2.1.0 P6: the weekly report view (the snapshot vault's ABC project; the report is built by /api/report/draft, nothing is written).

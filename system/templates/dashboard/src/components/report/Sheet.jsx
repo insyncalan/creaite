@@ -3,8 +3,11 @@
    block (§1) and nothing about weekly, client or minutes: a view mounts it, supplies the renderers for its own sections and rows,
    and does its own server calls. It is a drop-in for SheetStub.jsx's props (the stub's types are exported from here now).
 
-   - True A4 (210 × 297 mm, 16 mm padded, so 265 mm of content a page), drawn at 40% to 80% of the sheet area's width: − and + in
-     the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
+   - True A4 (210 × 297 mm, 16 mm padded, so 265 mm of content a page), drawn at 40% to 80% of the sheet area's width (a view may
+     give its own limits and starting zoom: zoomMin, zoomMax, zoomDefault; #268's minutes 50% to 250%, opening fitted to the width,
+     and their bar is told the scale drawn, so it can say the real size; `fitMax` caps what fitted means, so the minutes' fit never
+     draws the page past its real size (100%), centred on the grey, while − + and a pinch still go past it; `continuous` lays the
+     minutes out as one sheet, a section never pushed to the next page, with only a thin marker where a page breaks): − and + in the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
    - THE SCROLL POSITION IS NEVER RESET BY A REDRAW (P5's first rule): per scrollKey it remembers the top-most visible section and the
      offset into it, and puts that back after a zoom, a move, Show as exported, a doc replaced by a save or reload, and on switching
      views. Nothing else sets scrollTop.
@@ -56,14 +59,14 @@ export { openSheetRef as openRef };
     match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
-    exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
+    zoomMin?: number, zoomMax?: number, zoomDefault?: number, fitMax?: number, continuous?: boolean, headings?: (s: SheetSection) => ({name?: string, note?: any}|null), exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
     checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
       document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
     toolbar?: any, banner?: {title: string, sub?: string},
-    renderBar?: (c: {zoom: number, setZoom: (z: number) => void, exported: boolean, setExported: (on: boolean) => void, status: string, bad: boolean}) => any,
+    renderBar?: (c: {zoom: number, setZoom: (z: number) => void, exported: boolean, setExported: (on: boolean) => void, status: string, bad: boolean, scale: number}) => any,
     belowBar?: any, paneHead?: (slot: "one"|"left"|"right"|"both") => any,
     report?: {audience: string, addText?: (sectionId: string) => void}}} SheetProps */   // report: set by ReportSheet (the weekly and client reports); the minutes leave it out and keep their title block
 
@@ -136,13 +139,15 @@ function removedLine(r) {
 
 /** The scroller of one page (or of both, scrolling together): it measures its width, draws what it is given at the scale that width
     and the zoom make, and remembers and restores the section at the top of the view. Nothing else sets scrollTop.
+    `fitMax` (#268) caps the fitted scale (zoom 1): the minutes' fit stops at the page's real size on a wide screen.
     @param {{pk: string, zoom: number, pages: number, regRestore: (fn: () => void) => () => void, onPinch: (dy: number, y: number, pk: string) => void,
-    head?: any, children: (scale: number) => any}} props */
-function Pane({ pk, zoom, pages, regRestore, onPinch, head, children }) {
+    head?: any, onScale?: (scale: number) => void, fitMax?: number, children: (scale: number) => any}} props */
+function Pane({ pk, zoom, pages, regRestore, onPinch, head, onScale, fitMax, children }) {
   const sc = useRef(/** @type {HTMLDivElement|null} */ (null));
   const [w, setW] = useState(0);
   const avail = Math.max(0, w - 32 - (pages > 1 ? 16 * (pages - 1) : 0)) / pages;
-  const scale = avail > 0 ? (zoom * avail) / (A4_W * MM) : 0;
+  const fit = avail / (A4_W * MM);
+  const scale = avail > 0 ? zoom * (fitMax ? Math.min(fitMax, fit) : fit) : 0;
   const sref = useRef(scale); sref.current = scale;
   const pinch = useRef(onPinch); pinch.current = onPinch;
   const capture = () => {
@@ -165,6 +170,7 @@ function Pane({ pk, zoom, pages, regRestore, onPinch, head, children }) {
   };
   useLayoutEffect(() => { const el = sc.current; if (el) setW(el.clientWidth); }, []);
   useLayoutEffect(() => regRestore(restore), [pk, scale]);
+  useEffect(() => { if (onScale) onScale(scale); }, [scale]);            // #268: the scale drawn, for a bar that says the real size
   useLayoutEffect(restore);
   useEffect(() => {
     const el = /** @type {HTMLDivElement} */ (sc.current);
@@ -199,9 +205,26 @@ function SheetFrame({ scale, breaks, children }) {
   </div>;
 }
 
+/** The blocks a page marker never crosses on a continuous sheet (#268): a table row stays whole, and so does a line of text. */
+const WHOLE = "tr, p, li, h2, h3, h4, .sheet-hn";
+/** On a continuous sheet, move each break mark down to the next gap between rows or blocks (never inside a row or a line).
+    @param {HTMLElement} pg @param {number[]} marks content y, changed in place @param {number} y0 the page's top padding */
+function snapMarks(pg, marks, y0) {
+  const a4 = /** @type {HTMLElement} */ (pg.parentElement), box = a4.getBoundingClientRect(), sc = a4.offsetWidth ? box.width / a4.offsetWidth : 1;
+  if (!sc) return;
+  const spans = [...pg.querySelectorAll(WHOLE)].map(e => { const r = e.getBoundingClientRect(); return [(r.top - box.top) / sc - y0, (r.bottom - box.top) / sc - y0]; })
+    .filter(([t, b]) => b - t > 0.5);
+  for (let k = 0; k < marks.length; k++) {
+    let y = Math.max(marks[k], k ? marks[k - 1] + 1 : 0), moved = true;
+    while (moved) { moved = false; for (const [t, b] of spans) if (y > t + 0.5 && y < b - 0.5) { y = b; moved = true; } }
+    marks[k] = Math.round(y * 100) / 100;
+  }
+}
+
 /** Give matching blocks and sections the same height on both pages (the shorter padded at its foot), set the extra top margin a
-    section needs to start on the next page, and size each page's box. @param {HTMLElement} root @returns {number[][]} the break marks per page */
-function relayout(root) {
+    section needs to start on the next page, and size each page's box. `continuous` (#268, the minutes): one continuous sheet, no
+    section pushed to the next page, the breaks only marked. @param {HTMLElement} root @param {boolean} [continuous] @returns {number[][]} the break marks per page */
+function relayout(root, continuous = false) {
   const pages = /** @type {HTMLElement[]} */ ([...root.querySelectorAll(".sheet-a4 > .page")]);
   for (const pg of pages) for (const el of /** @type {NodeListOf<HTMLElement>} */ (pg.querySelectorAll("section[data-id], [data-level]"))) { el.style.minHeight = ""; el.style.marginTop = ""; }
   if (pages.length === 2) {
@@ -232,8 +255,9 @@ function relayout(root) {
     const secs = /** @type {HTMLElement[]} */ ([...pg.querySelectorAll(":scope > section[data-id]")]);
     const kids = /** @type {HTMLElement[]} */ ([...pg.children]);
     const last = kids[kids.length - 1], total = last ? last.offsetTop + last.offsetHeight - y0 : 0;
-    const { pushes, marks } = pageBreaks(secs.map(s => [s.offsetTop - y0, s.offsetHeight]), per, total);
-    secs.forEach((s, i) => { if (pushes[i]) s.style.marginTop = `${pushes[i] + 16}px`; });   // the 16px above it collapses into the margin
+    const { pushes, marks } = pageBreaks(continuous ? [] : secs.map(s => [s.offsetTop - y0, s.offsetHeight]), per, total);
+    if (!continuous) secs.forEach((s, i) => { if (pushes[i]) s.style.marginTop = `${pushes[i] + 16}px`; });
+    else if (marks.length) snapMarks(pg, marks, y0);   // the 16px above it collapses into the margin
     const fit = /** @type {HTMLElement|null} */ (pg.closest(".sheet-fit")), sc = Number(fit && fit.dataset.scale) || 0;
     if (fit && sc) fit.style.height = `${pg.parentElement ? pg.parentElement.offsetHeight * sc : 0}px`;
     return marks;
@@ -304,13 +328,16 @@ export function Sheet(props) {
   const refocus = useRef(/** @type {string|null} */ (null));
   const refocusR = useRef(/** @type {string|null} */ (null));   // p241: the right pane's own (the same section id is on both pages)
   const activeRight = useRef(false);                            // p241: which pane was used last (the global "add a text section" entry follows it)
-  const [zl, setZl] = useState(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
+  const zlo = props.zoomMin, zhi = props.zoomMax;                // #268: the minutes zoom from 50% to 250%; the reports keep 40% to 80%
+  const zdef = props.zoomDefault ?? SHEET_ZOOM_DEFAULT;          // #268: the minutes open fitted to the width (1)
+  const [zl, setZl] = useState(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? zdef, zlo, zhi));
+  const [drawn, setDrawn] = useState(0);
   const [xl, setXl] = useState(false);
   const [together, setTogether] = useState(true);
   const [breaks, setBreaks] = useState(/** @type {number[][]} */ ([]));
   const [pop, setPop] = useState(/** @type {null | {check: SheetCheck, x: number, y: number}} */ (null));
   const [found, setFound] = useState(/** @type {null | {items?: any[], message?: string, x: number, y: number}} */ (null));
-  const zoom = props.zoom == null ? zl : clampZoom(props.zoom);
+  const zoom = props.zoom == null ? zl : clampZoom(props.zoom, zlo, zhi);
   const exported = props.exported == null ? xl : !!props.exported;
   const leftRO = !!props.readOnly || (!!partner && !!props.leftReadOnly);      // Side by side with the left page read only (P8)
   const readOnly = !!props.readOnly || exported;
@@ -323,7 +350,7 @@ export function Sheet(props) {
     readOnly: !partner || !!partner.readOnly, onEvent });
 
   const setZoom = (/** @type {number} */ z) => {
-    const n = clampZoom(z);
+    const n = clampZoom(z, zlo, zhi);
     if (n === zref.current) return;
     zref.current = n; ZOOMS.set(scrollKey, n);
     if (props.zoom == null) setZl(n);
@@ -333,7 +360,7 @@ export function Sheet(props) {
     if (props.exported == null) setXl(on);
     props.onExported?.(on); onEvent({ type: "exported", on });
   };
-  useEffect(() => { if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT)); }, [scrollKey]);
+  useEffect(() => { if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? zdef, zlo, zhi)); }, [scrollKey]);
 
   const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO || !sameSheetDoc(nd, P.current.doc)) return; props.onChange(nd, why); main.change(nd); };
   const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { const pt = P.current.partner; if (!pt || pt.readOnly || !sameSheetDoc(nd, pt.doc)) return; pt.onChange(nd, why); side.change(nd); };
@@ -372,7 +399,7 @@ export function Sheet(props) {
   useLayoutEffect(() => {                                     // levelled, page-broken and scroll-kept after every redraw
     const el = root.current;
     if (!el) return;
-    const marks = relayout(el);
+    const marks = relayout(el, !!P.current.continuous);
     if (JSON.stringify(marks) !== JSON.stringify(breaks)) setBreaks(marks);
     restorers.current.forEach(fn => fn());
   });
@@ -382,7 +409,7 @@ export function Sheet(props) {
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const marks = relayout(el);
+        const marks = relayout(el, !!P.current.continuous);
         setBreaks(prev => (JSON.stringify(prev) === JSON.stringify(marks) ? prev : marks));
         restorers.current.forEach(fn => fn());
       });
@@ -400,9 +427,9 @@ export function Sheet(props) {
       if (!pg || !partner) { main.flush(); side.flush(); } else if (pg.dataset.pane === "right") side.flush(); else main.flush();
       return;
     }
-    if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(stepZoom(zref.current, 1)); }
-    else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(stepZoom(zref.current, -1)); }
-    else if (e.key === "0") { e.preventDefault(); setZoom(SHEET_ZOOM_DEFAULT); }
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(stepZoom(zref.current, 1, zlo, zhi)); }
+    else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(stepZoom(zref.current, -1, zlo, zhi)); }
+    else if (e.key === "0") { e.preventDefault(); setZoom(zdef); }
   };
   const onClick = (/** @type {MouseEvent} */ e) => {
     const t = /** @type {HTMLElement} */ (e.target), c = t.closest && t.closest(".claim[data-c]");
@@ -413,7 +440,7 @@ export function Sheet(props) {
     if (!t.closest || (!t.closest(".sheet-pop") && pop)) setPop(null);
     if (!t.closest || (!t.closest(".sheet-found") && found)) setFound(null);
   };
-  const pinch = (/** @type {number} */ dy) => setZoom(pinchZoom(zref.current, dy));
+  const pinch = (/** @type {number} */ dy) => setZoom(pinchZoom(zref.current, dy, zlo, zhi));
 
   /* #218: stores/textSection.js addTextSection(afterId): what the sheet does when asked (any menu may ask); returns the new section's id */
   /* p241: each pane adds to its own report: the section menus say which pane they are in; the global entry follows the pane used last */
@@ -435,6 +462,7 @@ export function Sheet(props) {
     side: sd, onChange: p ? changeSide : changeMain, onOpenItem: props.onOpenItem, onEvent, onRedraft: p ? p.onRedraft : props.onRedraft,
     aiFor: (/** @type {SheetSection} */ s, /** @type {boolean} */ ro) => aiFor(s, ro, !!p), checks: p ? [] : checks, refocus: p ? refocusR : refocus, match: p ? match : null,
     report: props.report && partner ? { ...props.report, addText: (/** @type {string} */ id) => { const nid = addText.current(id, !!p); if (nid) markNewText(nid); } } : props.report,
+    headings: p ? undefined : props.headings,
     addTo: !p && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (/** @type {string} */ id) => { if (partner.match) partner.match(id); else changeSide(matchSection(doc, partnerDoc, id), "Matched internal"); } } : null });
   const frame = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p, /** @type {number} */ scale, /** @type {number} */ k) =>
     <SheetFrame key={p ? "r" : "l"} scale={scale} breaks={breaks[k] || []}><SheetPage {...pageProps(d, p, partner ? (p ? "right" : "left") : "")} /></SheetFrame>;
@@ -446,7 +474,7 @@ export function Sheet(props) {
   return (
     <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick} onFocusIn={usePane} onPointerDownCapture={usePane} data-report-sheet={props.report ? props.report.audience : undefined}>
       <div class={`sheet-bar${props.renderBar ? " hubline" : ""}`} role="toolbar" aria-label="Report">
-        {props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some(l => !!l && !/^Saved/.test(l)) }) : <>
+        {props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some(l => !!l && !/^Saved/.test(l)), scale: drawn }) : <>
         <span class="sheet-mini">{props.banner ? <><b>{props.banner.title}</b>{props.banner.sub ? <span class="sub">{props.banner.sub}</span> : null}</> : <b>{doc.title}</b>}</span>
         <span class="sheet-zoom" role="group" aria-label="Zoom">
           <button type="button" class="btn sm" aria-label="Zoom out" onClick={() => setZoom(stepZoom(zoom, -1))} disabled={zoom <= 0.4}>−</button>
@@ -466,10 +494,10 @@ export function Sheet(props) {
       <div class={`sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`}>
         {exported && props.exportedView && !partner ? props.exportedView : partner && !together
           ? <>
-            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
-            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
+            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} fitMax={props.fitMax} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
+            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} fitMax={props.fitMax} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
           </>
-          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead(partner ? "both" : "one") : null}>{scale => <>
+          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch} fitMax={props.fitMax} onScale={setDrawn} head={props.paneHead ? props.paneHead(partner ? "both" : "one") : null}>{scale => <>
             {frame(doc, null, scale, 0)}
             {partner ? frame(partner.doc, partner, scale, 1) : null}
           </>}</Pane>}

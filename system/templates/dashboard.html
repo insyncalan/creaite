@@ -3432,7 +3432,10 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 /* ===== v2.1.0 P5 (BL-335, BL-338): the A4 sheet (components/report/Sheet.jsx). The chrome (bar, handles, pop-ups) uses the page's
    tokens; the page itself is a document, the same in every theme as it exports (creaite_doc.CSS: paper, ink, rules), so it has
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
-:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
+:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F
+  /* #268 (Cap's review M2): the state colours on the paper, light in every theme, as the paper is */
+  --paper-ok:#2E6B3A; --paper-ok-soft:#E3F2E5; --paper-bad:#B3261E; --paper-bad-soft:#FBE7E5; --paper-warn:#8A5A00; --paper-warn-soft:#FBF0DA;
+  --paper-accent-soft:#D3EAEE; --paper-focus:#0B6E7F}
 .sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
 /* #202 (mockup report-banner, A): the header is in the layout. On a down scroll the search bar and the title block collapse to nothing
    (still focusable: a Tab into one brings the header back) and the toolbar is the one slim bar. Nothing slides, so reduced motion needs no rule. */
@@ -3554,7 +3557,9 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnwrap{display:flex;flex:1;min-height:0}
 .mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
 /* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
-#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
+#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--faint:var(--paper-mute);--line:var(--paper-rule);--line-strong:var(--paper-rule);--accent:var(--paper-link);--accent-ink:var(--paper);
+  --ok:var(--paper-ok);--ok-soft:var(--paper-ok-soft);--bad:var(--paper-bad);--bad-soft:var(--paper-bad-soft);--warn:var(--paper-warn);--warn-soft:var(--paper-warn-soft);--accent-soft:var(--paper-accent-soft);--focus:var(--paper-focus)}   /* #268 M2: the paper stays white in a dark theme, so its state colours stay light ones */
+#v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
 .mnlines p,.mnlines li{margin:0 0 4px}
 .mnlines ul{margin:0 0 6px;padding-left:20px}
@@ -3570,11 +3575,6 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
 .mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
 .btn.mncheck{text-decoration:underline wavy var(--warn)}
-.mnbar .mncheck,.mndoes .mnid{min-height:24px}
-.mnio{border:1px dashed var(--line);background:none;color:var(--muted);border-radius:var(--r-pill);font-size:11px;padding:2px 8px;min-height:24px;margin-left:6px;cursor:pointer}
-.mnio.on{border-style:solid;border-color:var(--ink);color:var(--ink)}
-.mnheld{margin-left:6px;font-size:11px}
-.mnline.internal,.mnrow.internal td{background:var(--sunk)}
 .mnpopw{position:relative;display:inline-block}
 .pkpop.mnpop{position:absolute;top:calc(100% + 4px);left:0;min-width:240px}
 .pkpop.mnpop.flip{left:auto;right:0}
@@ -3587,15 +3587,41 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnck-note{margin:0 0 4px;font-weight:500} .mnck-last{margin:0 0 8px;font-size:12.5px}
 .mnck-acts{display:flex;flex-wrap:wrap;gap:6px}
 .mnchanges{margin:4px 0 0;padding-left:18px;font-size:var(--fs-sm)}
-.mnremember{display:flex;gap:6px;align-items:center;font-size:var(--fs-xs);margin-top:6px}
-.mncell{width:100%;font:inherit;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:var(--r-sm);padding:2px 4px;resize:vertical;field-sizing:content;min-height:24px}
-.mncell:hover,.mncell:focus{border-color:var(--line);background:var(--bg)}
-.mnbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;font-size:var(--fs-xs)}
-.mndoes{display:inline-flex;gap:6px;align-items:center;color:var(--muted)} .mndoes.new .mndoes-t{color:var(--accent)}
-.mnlooks{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--warn)}
-.mnrow.kept td{color:var(--muted)}
-.mntype{font:inherit;font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);min-height:24px}
 .mndue{white-space:nowrap}
+/* #268 Minutes view v2: aligned tables with a Track column, inline editing, the hover highlight both ways, the icon bar */
+.mnsum{font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.sheet-root.rpt-slim>.sheet-bar .mnsum{display:none}
+#v-minutes .sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-bar .sheet-barr{margin-left:auto;flex:none} #v-minutes .sheet-bar .mnbarr{flex-wrap:nowrap}
+#v-minutes .sheet-status{white-space:nowrap}
+.mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;min-height:24px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
+.sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
+.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:var(--fs-xs);position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
+.sheet-a4 .page table.mnt td{padding:7px 8px}
+.mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
+.mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:var(--fs-xs)}
+.mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
+.mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
+.mntrk button.y[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok)} .mntrk button.n[aria-pressed="true"]{background:var(--bad-soft);color:var(--bad)}
+.page tr.mi[data-trk="y"] td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+.page tr.mi[data-trk="n"]{opacity:.55} .page tr.mi[data-trk="n"] .mnit{text-decoration:line-through;color:var(--muted)}
+.page tr.mi.hl td{background:var(--accent-soft)}
+.mnit{min-width:0;border-radius:var(--r-sm)} .mnit .sheet-ed{min-height:26px;padding:2px 4px;margin:0 -4px;border-radius:var(--r-sm);cursor:text}
+.mnit .sheet-ed:hover{background:var(--sunk)} .mnit .sheet-ed:focus-within,.mnit .sheet-ed.ProseMirror-focused{background:var(--surface);box-shadow:0 0 0 2px var(--focus)}
+.mnit-ro{padding:1px 0}
+.mnrow2{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mck{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:0 8px;border-radius:var(--r-pill);background:var(--warn-soft);color:var(--warn);font-size:var(--fs-xs);font-weight:500}
+.mck{max-width:100%;flex-wrap:wrap;column-gap:6px;row-gap:0} .mck>*{white-space:nowrap}
+.mck.info{background:var(--sunk);color:var(--muted)} .mck .linkbtn{font-size:var(--fs-xs);min-height:26px}
+.mnrow2 .mncheck{font-size:var(--fs-xs);min-height:26px}
+.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:var(--fs-xs);padding:0 8px;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;appearance:none;-webkit-appearance:none;background-image:none}
+.mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:var(--lh-24)}
+.msel.mnro{cursor:default} .msel.mnro:hover{border-color:transparent;background:var(--sunk)} .msel.mnro.empty:hover{background:none;border-color:var(--line)}
+.msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
+.msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
+.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
+.mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
+.mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
 .mncov-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline} .mncov-h h2{border:0!important;margin:0!important}
 .mncov-l,.mncov-ms{list-style:none;margin:6px 0 0;padding:0}
@@ -3617,14 +3643,15 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px);border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
 .mnap{padding:18px 22px;max-height:calc(100vh - 64px);overflow:auto}
 .mnap h2{margin:0 0 6px;font-size:var(--fs-xl)}
-.mnap fieldset{border:1px solid var(--line);border-radius:var(--r-md);margin:12px 0;padding:8px 12px} .mnap legend{font-weight:600;padding:0 4px}
 .mnap ul{margin:6px 0 0;padding-left:20px;font-size:var(--fs-sm)}
-.mnap-all,.mnap-one{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}
-.mnap-ck{background:var(--warn-soft);border-radius:var(--r-md);padding:8px 12px;margin:10px 0;font-size:var(--fs-sm)}
 .mnap-err{color:var(--bad)}
+.mnap-l{list-style:none;margin:10px 0 0;padding:0} .mnap-l li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .mnap-l li b{color:var(--warn);font-weight:600;flex:none;min-width:140px}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto;overflow-anchor:none} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
-  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
+.mnap-filed{margin:0 0 4px} .mnap-ck{margin:12px 0 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);font-size:var(--fs-sm)} .mnap-ck ul{margin:4px 0 0}
+@media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
+  #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
+  #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}
+  #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-mini{flex:0 1 auto;display:block} }     /* scrolled, the slim bar stays one row: the title shortens */
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
 /* ===== end v2.1.0 P7 ===== */
 /* ===== v2.1.0 P6 (BL-335): the weekly report view (#weekly=<code>&week=<Friday>, components/report/weekly/), on P5's sheet
@@ -4800,6 +4827,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TOAST_LAYERS: () => TOAST_LAYERS,
     TOAST_MS: () => TOAST_MS,
     TODAY: () => TODAY,
+    TRKRELOAD: () => TRKRELOAD,
     TURN_NAMES: () => TURN_NAMES,
     TVIPSEEN: () => TVIPSEEN,
     TXLABEL: () => TXLABEL,
@@ -4960,6 +4988,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     applyView: () => applyView,
     applyWords: () => applyWords,
     approveGroup: () => approveGroup,
+    approveTracked: () => approveTracked,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
     askDeleteNote: () => askDeleteNote,
@@ -5799,6 +5828,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isMin: () => isMin,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
+    isRecordMin: () => isRecordMin,
     isStale: () => isStale,
     isSteering: () => isSteering,
     isStub: () => isStub,
@@ -6551,6 +6581,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rel: () => rel,
     relaxHtml: () => relaxHtml,
     reloadData: () => reloadData,
+    reloadForTrack: () => reloadForTrack,
     reloadHub: () => reloadHub,
     remBody: () => remBody,
     remBtn: () => remBtn,
@@ -6957,6 +6988,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toggleGroup: () => toggleGroup,
     toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
+    trackGroup: () => trackGroup,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
     typedLinkUrl: () => typedLinkUrl,
@@ -7521,6 +7553,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     chat: '<path d="M4 5h16v11H9l-5 4z"/>',
     history: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+    /* #268: a download arrow (the minutes' Export, as the signed-off mockup) */
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
     video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
     /* the legend (dev/mockups/icons-mockup.html §6) */
@@ -43425,7 +43459,7 @@ ${s5}`;
             return;
           }
           if (r4.done) return;
-          if (e4.key === "a") decide(n4, "approved");
+          if (e4.key === "a") decide(n4, "approved", void 0, trs[shared.RSEL].dataset.g);
           if (e4.key === "r") {
             e4.preventDefault();
             rjKey315();
@@ -44001,6 +44035,232 @@ ${s5}`;
     return /* @__PURE__ */ u2(S2, { children: LV.map((lv, i5) => /* @__PURE__ */ u2(Level, { lv, i: i5 }, lv.key)) });
   }
 
+  // components/minutes/track.js
+  var TRACK_SECTIONS = ["decisions", "raid", "actions"];
+  var rowN = (rw2) => {
+    if (rw2 && typeof rw2.n === "number") return rw2.n;
+    const m5 = /^@(\d+)$/.exec(String(rw2 && rw2.was || ""));
+    return m5 ? Number(m5[1]) : null;
+  };
+  function trackRows(doc) {
+    const out = [];
+    for (const s5 of doc && doc.sections || []) {
+      if (!TRACK_SECTIONS.includes(s5.id) || s5.type !== "table") continue;
+      const srows = (
+        /** @type {any[]} */
+        s5.rows || []
+      );
+      for (const rw2 of srows) {
+        const n4 = rowN(rw2);
+        if (n4 == null || !rw2.ref && !rw2.kept_line) continue;
+        out.push({ n: n4, section: s5.id, "row": rw2, item: rw2.ref ? (doc.items || {})[rw2.ref] || null : null, kept: !!rw2.kept_line });
+      }
+    }
+    return out;
+  }
+  var planGroupOf = (plan, n4) => ((plan || []).find((i5) => i5.n === n4) || { group: "" }).group;
+  var defaultTrack = (section, item, group) => (
+    /** @type {Track} */
+    group === "own" || section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
+  );
+  var waitsWhenNeither = (r4, plan) => !r4.kept && !!r4.item && r4.item.op === "update" && planGroupOf(plan, r4.n) === "own";
+  var trackChoices = (doc) => {
+    const t47 = (doc && doc.layout || {}).track;
+    return t47 && typeof t47 === "object" && !Array.isArray(t47) ? t47 : {};
+  };
+  function trackOf(doc, r4, plan) {
+    const c5 = trackChoices(doc)[String(r4.n)];
+    if (c5 === "y" || c5 === "n" || c5 === "") return c5;
+    return r4.kept ? "" : defaultTrack(r4.section, r4.item, planGroupOf(plan, r4.n));
+  }
+  var nextTrack = (now, pressed) => now === pressed ? "" : pressed;
+  function setTrack(doc, n4, t47) {
+    const lay = { ...doc.layout || {} };
+    lay.track = { ...trackChoices(doc), [String(n4)]: t47 };
+    return { ...doc, layout: lay };
+  }
+  function rowlessPending(doc, plan) {
+    const shown2 = new Set(trackRows(doc).map((r4) => r4.n));
+    return (plan || []).filter((i5) => ["group", "own", "waits", "milestone"].includes(i5.group) && !shown2.has(i5.n)).map((i5) => i5.n);
+  }
+  function trackCounts(doc, plan) {
+    const c5 = { y: 0, k: 0, n: 0, w: 0 };
+    for (const r4 of trackRows(doc)) {
+      const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
+      if (t47 === "n") c5.n++;
+      else if (t47 === "y") {
+        if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
+        else c5.w++;
+      } else if (waitsWhenNeither(r4, plan)) c5.w++;
+      else c5.k++;
+    }
+    c5.w += rowlessPending(doc, plan).length;
+    return c5;
+  }
+  var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
+  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
+  function reconcileOps(doc, plan) {
+    const ops = [];
+    for (const r4 of trackRows(doc)) {
+      const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
+      if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
+      if (r4.kept) {
+        ops.push({ op: "restore", n: r4.n });
+        if (want === "n") ops.push({ op: "remove", n: r4.n, keep_line: false });
+      } else ops.push({ op: "remove", n: r4.n, keep_line: want === "" });
+    }
+    return ops;
+  }
+  var approveArgs = (doc, plan) => ({ group: false, own: trackRows(doc).filter((r4) => ["group", "own"].includes(planGroupOf(plan, r4.n)) && trackOf(doc, r4, plan) === "y").map((r4) => r4.n) });
+  function approveProblems(doc, plan, needsDetails) {
+    const out = [];
+    for (const r4 of trackRows(doc)) {
+      if (trackOf(doc, r4, plan) !== "y" || !r4.item || r4.item.op !== "new") continue;
+      const v5 = r4.item.values || {}, text = String(v5.description || v5.decision || "");
+      const owner = String((r4.section === "decisions" ? v5.made_by : v5.owner) || "").trim();
+      if (owner && owner !== "TBC" && needsDetails(owner)) out.push({ n: r4.n, what: `${owner} needs details`, text });
+      const ll2 = r4.item.looks_like || {};
+      if (ll2.id && !ll2.kept && !ll2.merged) out.push({ n: r4.n, what: `Possible duplicate of ${ll2.id}`, text });
+    }
+    return out;
+  }
+
+  // stores/minutes.js
+  var minutesArg = y3(
+    /** @type {{file?: string, path?: string}|null} */
+    null
+  );
+  var minutesView = y3(
+    /** @type {MinutesView|null} */
+    null
+  );
+  var minutesDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var minutesBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var minutesBusy = y3("");
+  var PANE_KEY = "creaite-minutes-transcript";
+  var paneOpen = y3(true);
+  function setPane(on2) {
+    paneOpen.value = !!on2;
+    store.set(PANE_KEY, !!on2);
+  }
+  function paneRemembered() {
+    paneOpen.value = store.get(PANE_KEY, true) !== false;
+  }
+  var hoverTurn = y3(
+    /** @type {{turn: number, from: "row"|"pane"}|null} */
+    null
+  );
+  var paneTurn = y3(
+    /** @type {number|null} */
+    null
+  );
+  var paneQuery = y3("");
+  var keptChecks = y3(
+    /** @type {string[]} */
+    []
+  );
+  var approveOpen = y3(false);
+  var mnAsked = 0;
+  async function openMinutesRecord(arg, stale = () => false) {
+    let r4 = await api("/api/minutes/draft", arg);
+    if (stale()) return null;
+    if (r4 && r4.ok && r4.doc && r4.doc.state === "draft" && Array.isArray(r4.settle) && r4.settle.length) {
+      const s5 = await api("/api/minutes/save", { path: r4.path, op: { op: "settle" }, base_version: Number(r4.doc.version) || void 0 });
+      if (stale()) return null;
+      if (s5 && s5.ok) r4 = await api("/api/minutes/draft", { path: r4.path });
+      if (stale()) return null;
+    }
+    return r4;
+  }
+  async function loadMinutes(arg) {
+    const mine = ++mnAsked;
+    minutesArg.value = arg;
+    if (!viaServer()) {
+      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
+      return;
+    }
+    minutesBusy.value = "Opening the minutes…";
+    const r4 = await openMinutesRecord(arg, () => mine !== mnAsked);
+    if (r4 === null) return;
+    minutesBusy.value = "";
+    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
+  }
+  function take(r4) {
+    minutesView.value = r4;
+    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function reloadMinutes() {
+    const v5 = minutesView.value;
+    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
+    if (minutesArg.value) return loadMinutes(minutesArg.value);
+  }
+  async function changeMinutes(op2) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
+    if (r4 && r4.ok && r4.doc) {
+      minutesDoc.value = r4.doc;
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      minutesView.value = { ...v5, doc: r4.doc };
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
+  }
+  async function refreshPlan() {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return;
+    const r4 = await api("/api/minutes/draft", { path: v5.path });
+    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
+  }
+  async function saveMinutesPage(req) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
+  }
+  async function trackApprove(v5, how = {}) {
+    const doc = v5 && v5.ok ? v5.doc : null, plan = v5 && v5.plan ? v5.plan.items : null;
+    if (!doc || !plan || !v5.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
+    const args = approveArgs(doc, plan);
+    let base = Number(doc.version) || void 0, made = 0;
+    const change2 = how.change || (async (op2) => {
+      const r5 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: base });
+      if (r5 && r5.ok) base = Number(r5.version) || base;
+      return { ok: !!(r5 && r5.ok), message: oneLine(r5 && r5.message || "") };
+    });
+    for (const op2 of reconcileOps(doc, plan)) {
+      if (how.only && !how.only(op2.n)) continue;
+      const r5 = await change2(op2);
+      if (!r5.ok) return { ok: false, message: r5.message, made };
+      made++;
+    }
+    if (how.approve === false) return { ok: true, made };
+    if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
+    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+    return { ...r4 || { ok: false, message: "The apply didn't run; nothing was changed." }, made };
+  }
+  var trackFailWords = (r4, button) => r4.made ? `${r4.message ? `${oneLine(r4.message)} ` : ""}Some changes were made to the minutes; press ${button} again.` : String(r4.message || "The minutes weren't approved; nothing was applied.").split("\n")[0];
+  function trackApprovedWords(r4) {
+    const n4 = r4.approved || 0, left = (r4.waiting || []).length;
+    return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
+  }
+  async function exportMinutes(format) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+  }
+
   // review.js
   shared.RSEL = 0;
   var CHK = /* @__PURE__ */ new Set(), RHL = /* @__PURE__ */ new Set();
@@ -44063,7 +44323,7 @@ ${s5}`;
     if (it2 && it2.suggested && it2.suggested.feature === "promise" && (v5 === "approved" || v5 === "rejected")) draftStat("promise", v5 === "rejected" ? "rejected" : it2.as_proposed ? "edited" : "used");
     if (it2 && it2.looks_like && v5 === "rejected" && it2.duplicate_of === it2.looks_like.id) draftStat("repeat", "used");
   }
-  var decide = async function(n4, v5, written) {
+  var decide = async function(n4, v5, written, g5) {
     const tr2 = $(`#reviewBody tr[data-n="${n4}"]`), was = REV.find((x5) => x5.n === n4);
     const snap = tr2 && shared.VIEW === "review" && !reduced() ? { g: { r: tr2.getBoundingClientRect(), t: (tr2.querySelector("td.title") || tr2).textContent.trim() }, rows: mSnapRows("#reviewBody tr[data-n]", (e4) => e4.dataset.n) } : null;
     const before = was && was.done;
@@ -44077,6 +44337,11 @@ ${s5}`;
       if (v5 === "approved" && !r4.p && r4.kind !== "files") {
         snack("Choose a project first — open the item to set it");
         openProposal(n4);
+        return;
+      }
+      if (viaServer() && v5 === "approved" && isRecordMin(r4)) return approveTracked(r4, g5);
+      if (v5 === "approved" && r4.trk != null) {
+        snack(`${r4.trk === "n" ? "Crossed" : "Kept in the minutes only"} in the minutes' Track column: tick it there to register it`);
         return;
       }
       if (viaServer() && v5 === "approved" && r4.kind === "draft") return reviewViaServer(r4, "approved", []);
@@ -44182,12 +44447,12 @@ ${s5}`;
   var IMGI = '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>';
   var isMin = (r4) => r4 && r4.kind === "draft" && r4.ref === "meeting";
   var kidsOf = (m5, g5) => REV.filter((x5) => x5.file === m5.file && !["draft", "files"].includes(x5.kind) && (g5 === "*" || (x5.p || "?") === g5));
-  var routineKid = (x5) => !x5.done && !x5.indiv && x5.p && !(x5.flags || []).includes("conflict");
+  var routineKid = (x5) => !x5.done && !x5.indiv && x5.p && !(x5.flags || []).includes("conflict") && x5.trk == null;
   var COLLAPSED = /* @__PURE__ */ new Set();
   var rvMovable = (r4) => !!r4 && !r4.done && (isMin(r4) || ["actions", "raid", "decisions"].includes(r4.kind));
   function revRow(r4, idx, g5, cls, head) {
     const minKids = isMin(r4) && head.kids.some(routineKid);
-    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}<div class="why rvmeta"${rvTip(r4)}>${rvDrTag(r4)}${kindLabel(r4) ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${rvDraftBtn(r4)}${raw(rjGuessHtml(r4))} · ${r4.why ?? ""} · ${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div>${rvNotes(r4)}</td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini" data-act="ga" title="Approves the routine items from these minutes; the minutes, new decisions and new risks stay for one-by-one approval">Approve ${head.kids.filter(routineKid).length} routine</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
+    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}<div class="why rvmeta"${rvTip(r4)}>${rvDrTag(r4)}${kindLabel(r4) ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${rvDraftBtn(r4)}${raw(rjGuessHtml(r4))} · ${r4.why ?? ""} · ${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div>${rvNotes(r4)}</td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini" data-act="ga" title="Approves the routine items from these minutes; the minutes, new decisions and new risks stay for one-by-one approval">Approve ${head.kids.filter(routineKid).length} routine</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : isRecordMin(r4) ? html` data-tip="Approves the minutes and registers the items ticked in their Track column${(r4.projects || []).length > 1 ? ` (this project's)` : ""}; crossed lines leave the minutes, the rest stay untracked"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
     if (isConflict(r4)) {
       const live = viaServer(), btns = `<button class="mini" data-act="ck" ${live ? "" : 'disabled title="Needs the live server"'}>Keep current</button> <button class="mini ok" data-act="co" ${live ? "" : 'disabled title="Needs the live server"'}>Use this one</button>`;
       h5 = h5.replace(/<button class="mini ok" data-act="a">.*?<\/button>/, btns);
@@ -44263,6 +44528,10 @@ ${s5}`;
   async function approveGroup(m5, g5) {
     RVINBATCH = true;
     try {
+      if (viaServer() && isRecordMin(m5)) {
+        await approveGroupTracked(m5, g5);
+        return;
+      }
       const kids = kidsOf(m5, g5), ks2 = kids.filter(routineKid), left = kids.filter((x5) => !x5.done && !routineKid(x5)).length;
       for (const k5 of ks2) {
         CHK.delete(k5.n);
@@ -44273,6 +44542,68 @@ ${s5}`;
     } finally {
       RVINBATCH = false;
     }
+  }
+  var isRecordMin = (r4) => isMin(r4) && /\.html$/i.test(r4.src || "");
+  async function approveTracked(r4, g5) {
+    const v5 = await openMinutesRecord({ file: r4.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return;
+    }
+    const mine = g5 && g5 !== "*" && (r4.projects || []).length > 1 ? new Set(REV.filter((x5) => x5.file === r4.file && !["draft", "files"].includes(x5.kind) && (x5.p || "?") === g5).map((x5) => x5.ref)) : null;
+    if (v5.doc && v5.plan && approveProblems(v5.doc, v5.plan.items, unknownOwner).some((p6) => !mine || mine.has(p6.n))) {
+      go2("minutes", { file: r4.file, approve: true });
+      return;
+    }
+    const res = await trackApprove(v5, mine ? { mine: (n4) => mine.has(n4) } : {});
+    if (!res.ok) {
+      snack(trackFailWords(res, "Approve"));
+      await reloadData();
+      return;
+    }
+    snack(trackApprovedWords(res), res.apply_id ? async () => {
+      await undoApply(res.apply_id);
+      await openMinutesRecord({ file: r4.file });
+      await reloadData();
+    } : null);
+    await reloadData();
+  }
+  async function trackGroup(m5, g5) {
+    const v5 = await openMinutesRecord({ file: m5.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return false;
+    }
+    const mine = new Set(kidsOf(m5, g5).filter((k5) => !k5.done).map((k5) => k5.ref)), res = await trackApprove(v5, { only: (n4) => mine.has(n4), approve: false });
+    if (res.made) await reloadData();
+    if (!res.ok) {
+      snack(trackFailWords(res, `Approve routine`));
+      return false;
+    }
+    return res.made;
+  }
+  async function approveGroupTracked(m5, g5) {
+    const made = await trackGroup(m5, g5);
+    if (made === false) return;
+    const kids = kidsOf(m5, g5), ks2 = kids.filter(routineKid), left = kids.filter((x5) => !x5.done && !routineKid(x5)).length;
+    let undo = null;
+    if (ks2.length) {
+      const res = await rvDecideMany(ks2, "approved");
+      undo = res.undo || null;
+    } else if (made && S.autoApply) {
+      const res = await applyNow();
+      if (res.ok) undo = () => undoApply(res.apply_id);
+    }
+    const tail = made ? ` · ${made} line${made === 1 ? "" : "s"} taken out of the minutes or kept as lines only` : "";
+    snack(
+      `Approved ${ks2.length} item${ks2.length === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}`,
+      undo ? async () => {
+        await undo();
+        await openMinutesRecord({ file: m5.file });
+        await reloadData();
+      } : null
+    );
+    renderReview();
   }
   async function rejectMinutes(m5) {
     await decide(m5.n, "rejected");
@@ -44331,7 +44662,7 @@ ${s5}`;
           refreshItems(REV.find((x5) => x5.n === n4));
           return;
         }
-        if (b5.dataset.act === "a") decide(n4, "approved");
+        if (b5.dataset.act === "a") decide(n4, "approved", void 0, g5);
         else if (b5.dataset.act === "r") {
           const r4 = REV.find((x5) => x5.n === n4);
           if (rvRejectOK(r4)) rjMenuFor(rjWith(r4), b5);
@@ -44360,7 +44691,7 @@ ${s5}`;
   var RVQ = "", RVG = "project", RVO = "", RVPK = "k", RVLASTUNDO = null;
   shared.RVSTATS = { approved: 0, rejected: 0, edited: 0 };
   shared.RV_MAX = 25;
-  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict");
+  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict") && r4.trk == null;
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvSyncChk() {
     CHK.clear();
@@ -44372,6 +44703,7 @@ ${s5}`;
   function rvWhyNot(r4) {
     if (!r4.p && r4.kind !== "files") return ["project", "needs a project"];
     if ((r4.flags || []).includes("conflict")) return ["conflict", "has a conflict to settle"];
+    if (r4.trk != null) return ["indiv", r4.trk === "n" ? "is crossed in the minutes' Track column" : "is kept in the minutes only (Track: neither)"];
     if (r4.kind === "draft") return ["indiv", `${r4.ref === "meeting" ? "minutes are" : "a report is"} approved on its own`];
     if (r4.kind === "files") return ["indiv", "a file change is approved on its own"];
     return ["indiv", `${String(r4.why || "this").toLowerCase()} is never approved in bulk`];
@@ -44706,6 +45038,10 @@ ${s5}`;
     rvDock();
   }
   async function rvDecideMany(list, v5) {
+    if (v5 === "approved") {
+      if (TRKRELOAD) await TRKRELOAD;
+      list = list.map((r4) => r4 && (REV.includes(r4) ? r4 : REV.find((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref)))).filter((r4) => r4 && r4.trk == null);
+    }
     list = list.filter((r4) => r4 && !r4.done);
     if (!list.length) return { n: 0 };
     if (!await needVault()) return { n: 0 };
@@ -51017,7 +51353,7 @@ ${pre}**Current state title:** ${title}`);
       dePrevDrop();
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
-        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
+        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}${i5.kept ? '<span class="tag" data-tip="A line in the minutes only: no work item is made">minutes only</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
       };
       const outsideNote = shared.DE.mode === "followup" ? shared.DE.attendees.length ? "An attendee's address is outside your own domains" : "There are no attendee addresses on record" : shared.DE.email ? "This address is outside your own domains" : "There's no email address on record";
       putHtml($("#deBody"), `${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
@@ -56559,7 +56895,7 @@ ${pre}**Current state title:** ${title}`);
     }
   }
   function ChasePane({ id: id2, onBack, start }) {
-    const [pane, setPane] = d2(
+    const [pane, setPane2] = d2(
       /** @type {ChaseReply | null} */
       null
     );
@@ -56616,7 +56952,7 @@ ${pre}**Current state title:** ${title}`);
           return;
         }
         setErr("");
-        setPane(
+        setPane2(
           /** @type {ChaseReply} */
           r4
         );
@@ -67545,9 +67881,9 @@ ${d5.text}`);
   var SHEET_ZOOM_MIN = 0.4, SHEET_ZOOM_MAX = 0.8, SHEET_ZOOM_STEP = 0.05, SHEET_ZOOM_DEFAULT = 0.8;
   var MM = 96 / 25.4;
   var A4_W = 210, A4_H = 297, PAD_MM = 16, CONTENT_MM = 265;
-  var clampZoom = (z4) => Math.round(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, Number.isFinite(z4) ? z4 : SHEET_ZOOM_DEFAULT)) * 1e3) / 1e3;
-  var stepZoom = (z4, dir) => clampZoom(Math.round((z4 + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP);
-  var pinchZoom = (z4, deltaY) => clampZoom(z4 * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01));
+  var clampZoom = (z4, lo2 = SHEET_ZOOM_MIN, hi2 = SHEET_ZOOM_MAX) => Math.round(Math.min(hi2, Math.max(lo2, Number.isFinite(z4) ? z4 : SHEET_ZOOM_DEFAULT)) * 1e3) / 1e3;
+  var stepZoom = (z4, dir, lo2, hi2) => clampZoom(Math.round((z4 + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP, lo2, hi2);
+  var pinchZoom = (z4, deltaY, lo2, hi2) => clampZoom(z4 * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01), lo2, hi2);
   var defaultHeading = (s5) => s5.default_heading == null ? s5.heading : s5.default_heading;
   function syncLayout(doc) {
     const d5 = (
@@ -68817,7 +69153,9 @@ ${d5.text}`);
       }
     }, [wordsNow, docNow]);
     const staleWhy = (r4) => r4 && r4.from && (r4.from !== liveKey.current ? "doc" : r4.words !== liveWords.current ? "words" : "");
-    const [name, setName] = d2(s5.heading);
+    const hd2 = p6.headings ? p6.headings(s5) : null;
+    const shown2 = hd2 && hd2.name || s5.heading;
+    const [name, setName] = d2(shown2);
     const [over, setOver] = d2(
       /** @type {""|"above"|"below"} */
       ""
@@ -68827,8 +69165,8 @@ ${d5.text}`);
       null
     );
     h2(() => {
-      setName(s5.heading);
-    }, [s5.heading]);
+      setName(shown2);
+    }, [shown2]);
     const sec = (
       /** @type {any} */
       s5
@@ -68908,8 +69246,8 @@ ${d5.text}`);
     const differs = p6.side === "left" && peer ? sectionDiffers(s5, peer) : false;
     const tags = tagsOf(s5);
     const nowName = (v5) => {
-      if (v5.trim() && v5.trim() !== s5.heading) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
-      else setName(s5.heading);
+      if (v5.trim() && v5.trim() !== shown2) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
+      else setName(shown2);
     };
     const isText = isTextSection(s5);
     const [confirmDel, setConfirmDel] = d2(false);
@@ -69047,10 +69385,11 @@ ${d5.text}`);
                     e4.preventDefault();
                     e4.currentTarget.blur();
                   }
-                  if (e4.key === "Escape") setName(s5.heading);
+                  if (e4.key === "Escape") setName(shown2);
                 }
               }
-            ) : s5.heading,
+            ) : shown2,
+            hd2 && hd2.note != null && !exported ? /* @__PURE__ */ u2("span", { class: "n sheet-hn", children: hd2.note }) : null,
             editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
             sparkOn && !ownSpark && spark2 ? /* @__PURE__ */ u2(SparkButton, { on: spark2, heading: s5.heading, health: s5.type === "health" }) : null,
             editing && tags.length ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-untag", onClick: () => {
@@ -69406,14 +69745,15 @@ ${d5.text}`);
     const list = Array.isArray(r4) ? r4 : [r4];
     return `Left out of this version: ${list.map((x5) => (typeof x5 === "string" ? x5 : x5 && (x5.label || x5.ref || x5.id || x5.heading)) || "an item").join(", ")}`;
   }
-  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, children }) {
+  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, onScale, fitMax, children }) {
     const sc2 = A2(
       /** @type {HTMLDivElement|null} */
       null
     );
     const [w6, setW] = d2(0);
     const avail = Math.max(0, w6 - 32 - (pages > 1 ? 16 * (pages - 1) : 0)) / pages;
-    const scale = avail > 0 ? zoom * avail / (A4_W * MM) : 0;
+    const fit = avail / (A4_W * MM);
+    const scale = avail > 0 ? zoom * (fitMax ? Math.min(fitMax, fit) : fit) : 0;
     const sref = A2(scale);
     sref.current = scale;
     const pinch = A2(onPinch);
@@ -69454,6 +69794,9 @@ ${d5.text}`);
       if (el2) setW(el2.clientWidth);
     }, []);
     _2(() => regRestore(restore), [pk2, scale]);
+    h2(() => {
+      if (onScale) onScale(scale);
+    }, [scale]);
     _2(restore);
     h2(() => {
       const el2 = (
@@ -69502,7 +69845,30 @@ ${d5.text}`);
       ] }) }, y5))
     ] }) });
   }
-  function relayout(root2) {
+  var WHOLE = "tr, p, li, h2, h3, h4, .sheet-hn";
+  function snapMarks(pg2, marks, y02) {
+    const a42 = (
+      /** @type {HTMLElement} */
+      pg2.parentElement
+    ), box = a42.getBoundingClientRect(), sc2 = a42.offsetWidth ? box.width / a42.offsetWidth : 1;
+    if (!sc2) return;
+    const spans = [...pg2.querySelectorAll(WHOLE)].map((e4) => {
+      const r4 = e4.getBoundingClientRect();
+      return [(r4.top - box.top) / sc2 - y02, (r4.bottom - box.top) / sc2 - y02];
+    }).filter(([t47, b5]) => b5 - t47 > 0.5);
+    for (let k5 = 0; k5 < marks.length; k5++) {
+      let y5 = Math.max(marks[k5], k5 ? marks[k5 - 1] + 1 : 0), moved2 = true;
+      while (moved2) {
+        moved2 = false;
+        for (const [t47, b5] of spans) if (y5 > t47 + 0.5 && y5 < b5 - 0.5) {
+          y5 = b5;
+          moved2 = true;
+        }
+      }
+      marks[k5] = Math.round(y5 * 100) / 100;
+    }
+  }
+  function relayout(root2, continuous = false) {
     const pages = (
       /** @type {HTMLElement[]} */
       [...root2.querySelectorAll(".sheet-a4 > .page")]
@@ -69579,10 +69945,11 @@ ${d5.text}`);
         [...pg2.children]
       );
       const last = kids[kids.length - 1], total = last ? last.offsetTop + last.offsetHeight - y02 : 0;
-      const { pushes, marks } = pageBreaks(secs.map((s5) => [s5.offsetTop - y02, s5.offsetHeight]), per, total);
-      secs.forEach((s5, i5) => {
+      const { pushes, marks } = pageBreaks(continuous ? [] : secs.map((s5) => [s5.offsetTop - y02, s5.offsetHeight]), per, total);
+      if (!continuous) secs.forEach((s5, i5) => {
         if (pushes[i5]) s5.style.marginTop = `${pushes[i5] + 16}px`;
       });
+      else if (marks.length) snapMarks(pg2, marks, y02);
       const fit = (
         /** @type {HTMLElement|null} */
         pg2.closest(".sheet-fit")
@@ -69680,7 +70047,10 @@ ${d5.text}`);
       null
     );
     const activeRight = A2(false);
-    const [zl2, setZl] = d2(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
+    const zlo = props.zoomMin, zhi = props.zoomMax;
+    const zdef = props.zoomDefault ?? SHEET_ZOOM_DEFAULT;
+    const [zl2, setZl] = d2(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? zdef, zlo, zhi));
+    const [drawn, setDrawn] = d2(0);
     const [xl2, setXl] = d2(false);
     const [together, setTogether] = d2(true);
     const [breaks, setBreaks] = d2(
@@ -69695,7 +70065,7 @@ ${d5.text}`);
       /** @type {null | {items?: any[], message?: string, x: number, y: number}} */
       null
     );
-    const zoom = props.zoom == null ? zl2 : clampZoom(props.zoom);
+    const zoom = props.zoom == null ? zl2 : clampZoom(props.zoom, zlo, zhi);
     const exported = props.exported == null ? xl2 : !!props.exported;
     const leftRO = !!props.readOnly || !!partner && !!props.leftReadOnly;
     const readOnly = !!props.readOnly || exported;
@@ -69712,7 +70082,7 @@ ${d5.text}`);
       onEvent
     });
     const setZoom = (z4) => {
-      const n4 = clampZoom(z4);
+      const n4 = clampZoom(z4, zlo, zhi);
       if (n4 === zref.current) return;
       zref.current = n4;
       ZOOMS.set(scrollKey, n4);
@@ -69726,7 +70096,7 @@ ${d5.text}`);
       onEvent({ type: "exported", on: on2 });
     };
     h2(() => {
-      if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
+      if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? zdef, zlo, zhi));
     }, [scrollKey]);
     const changeMain = (nd2, why) => {
       if (leftRO || !sameSheetDoc(nd2, P5.current.doc)) return;
@@ -69801,7 +70171,7 @@ ${d5.text}`);
     _2(() => {
       const el2 = root2.current;
       if (!el2) return;
-      const marks = relayout(el2);
+      const marks = relayout(el2, !!P5.current.continuous);
       if (JSON.stringify(marks) !== JSON.stringify(breaks)) setBreaks(marks);
       restorers.current.forEach((fn2) => fn2());
     });
@@ -69814,7 +70184,7 @@ ${d5.text}`);
       const ro2 = new ResizeObserver(() => {
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(() => {
-          const marks = relayout(el2);
+          const marks = relayout(el2, !!P5.current.continuous);
           setBreaks((prev) => JSON.stringify(prev) === JSON.stringify(marks) ? prev : marks);
           restorers.current.forEach((fn2) => fn2());
         });
@@ -69847,13 +70217,13 @@ ${d5.text}`);
       }
       if (e4.key === "+" || e4.key === "=") {
         e4.preventDefault();
-        setZoom(stepZoom(zref.current, 1));
+        setZoom(stepZoom(zref.current, 1, zlo, zhi));
       } else if (e4.key === "-" || e4.key === "_") {
         e4.preventDefault();
-        setZoom(stepZoom(zref.current, -1));
+        setZoom(stepZoom(zref.current, -1, zlo, zhi));
       } else if (e4.key === "0") {
         e4.preventDefault();
-        setZoom(SHEET_ZOOM_DEFAULT);
+        setZoom(zdef);
       }
     };
     const onClick = (e4) => {
@@ -69875,7 +70245,7 @@ ${d5.text}`);
       if (!t47.closest || !t47.closest(".sheet-pop") && pop2) setPop(null);
       if (!t47.closest || !t47.closest(".sheet-found") && found) setFound(null);
     };
-    const pinch = (dy2) => setZoom(pinchZoom(zref.current, dy2));
+    const pinch = (dy2) => setZoom(pinchZoom(zref.current, dy2, zlo, zhi));
     const addText = A2(
       /** @type {(afterId: string|null, right?: boolean) => (string|null)} */
       (() => null)
@@ -69922,6 +70292,7 @@ ${d5.text}`);
         const nid = addText.current(id2, !!p6);
         if (nid) markNewText(nid);
       } } : props.report,
+      headings: p6 ? void 0 : props.headings,
       addTo: !p6 && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (id2) => {
         if (partner.match) partner.match(id2);
         else changeSide(matchSection(doc, partnerDoc, id2), "Matched internal");
@@ -69938,7 +70309,7 @@ ${d5.text}`);
     const openChecks = checks.length;
     const note = main.conflict;
     return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, onFocusIn: usePane, onPointerDownCapture: usePane, "data-report-sheet": props.report ? props.report.audience : void 0, children: [
-      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some((l6) => !!l6 && !/^Saved/.test(l6)) }) : /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some((l6) => !!l6 && !/^Saved/.test(l6)), scale: drawn }) : /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("span", { class: "sheet-mini", children: props.banner ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("b", { children: props.banner.title }),
           props.banner.sub ? /* @__PURE__ */ u2("span", { class: "sub", children: props.banner.sub }) : null
@@ -69992,9 +70363,9 @@ ${d5.text}`);
         }, children: "Reload" })
       ] }) : null,
       /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: exported && props.exportedView && !partner ? props.exportedView : partner && !together ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
-        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
-      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, fitMax: props.fitMax, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
+        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, fitMax: props.fitMax, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
+      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, fitMax: props.fitMax, onScale: setDrawn, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
@@ -71877,151 +72248,35 @@ ${d5.text}`);
     draftStat(ev.section === "health" ? HS_FEATURE : REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
   }
 
-  // stores/minutes.js
-  var minutesArg = y3(
-    /** @type {{file?: string, path?: string}|null} */
-    null
-  );
-  var minutesView = y3(
-    /** @type {MinutesView|null} */
-    null
-  );
-  var minutesDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var minutesBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var minutesBusy = y3("");
-  var paneOpen = y3(true);
-  var paneTurn = y3(
-    /** @type {number|null} */
-    null
-  );
-  var paneQuery = y3("");
-  var keptChecks = y3(
-    /** @type {string[]} */
-    []
-  );
-  var minutesMode = y3(
-    /** @type {"internal"|"distributed"|"side"} */
-    "internal"
-  );
-  var approveOpen = y3(false);
-  var mnAsked = 0;
-  async function loadMinutes(arg) {
-    const mine = ++mnAsked;
-    minutesArg.value = arg;
-    if (!viaServer()) {
-      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
-      return;
-    }
-    minutesBusy.value = "Opening the minutes…";
-    const r4 = await api("/api/minutes/draft", arg);
-    if (mine !== mnAsked) return;
-    minutesBusy.value = "";
-    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
-  }
-  function take(r4) {
-    minutesView.value = r4;
-    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function reloadMinutes() {
-    const v5 = minutesView.value;
-    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
-    if (minutesArg.value) return loadMinutes(minutesArg.value);
-  }
-  async function changeMinutes(op2) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
-    if (r4 && r4.ok && r4.doc) {
-      minutesDoc.value = r4.doc;
-      minutesBase.value = Number(r4.version) || minutesBase.value;
-      minutesView.value = { ...v5, doc: r4.doc };
-      refreshPlan();
-    }
-    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
-  }
-  async function refreshPlan() {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return;
-    const r4 = await api("/api/minutes/draft", { path: v5.path });
-    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
-  }
-  async function saveMinutesPage(req) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
-    if (r4 && r4.ok) {
-      minutesBase.value = Number(r4.version) || minutesBase.value;
-      refreshPlan();
-    }
-    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
-  }
-  async function approveMinutes(group, own) {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.proposal) return { ok: false, message: "These minutes have nothing pending." };
-    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group, own });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportMinutes(format, version = "internal") {
-    const v5 = minutesView.value;
-    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true, version }) || { ok: false, message: "Not exported." };
-  }
-
   // components/minutes/ApprovePopup.jsx
   var filedAt = (p6) => {
     const parts = p6.split("/");
     return { name: parts.pop() || p6, folder: parts.slice(-2).join(" › ") };
   };
-  function ApprovePopup({ checks }) {
-    const v5 = minutesView.value, plan = v5 && v5.plan;
-    const [group, setGroup] = d2(true), [own, setOwn] = d2(
-      /** @type {number[]} */
-      []
-    ), [err, setErr] = d2(""), [busy2, setBusy] = d2(false);
+  function ApprovePopup({ problems, checks = [], files = [], transcripts = 0, busy: busy2, onApprove }) {
     const close = () => {
       approveOpen.value = false;
-      setErr("");
     };
-    if (!plan) return /* @__PURE__ */ u2(Dialog, { open: false, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", children: /* @__PURE__ */ u2("span", {}) });
-    const items2 = plan.items, grp = items2.filter((i5) => i5.group === "group"), ones = items2.filter((i5) => i5.group === "own");
-    const waits = items2.filter((i5) => i5.group === "waits" || i5.group === "milestone"), removed = items2.filter((i5) => i5.group === "removed");
-    const tick = (n4, on2) => setOwn(on2 ? [...own, n4] : own.filter((x5) => x5 !== n4));
-    const go3 = async () => {
-      setBusy(true);
-      setErr("");
-      const r4 = await approveMinutes(group, own);
-      setBusy(false);
-      if (!r4.ok) {
-        setErr(String(r4.message || "The apply didn't run; nothing was changed.").split("\n")[0]);
-        return;
-      }
-      approveOpen.value = false;
-      const n4 = r4.approved || 0, left = (r4.waiting || []).length;
-      snack(`Minutes approved with ${n4} item${n4 === 1 ? "" : "s"}${left ? `; ${left} wait in Review` : ""}`, r4.apply_id ? () => undoApply(r4.apply_id) : null);
-      await reloadData();
-      if (plan.files[0]) loadMinutes({ path: plan.files[0] });
-    };
-    const filed2 = plan.files.map(filedAt);
-    return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
+    const one = problems.length === 1, filed2 = files.map(filedAt)[0];
+    return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value && problems.length !== 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
       /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Approve the minutes" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: [
-        filed2.length ? /* @__PURE__ */ u2("span", { children: [
-          "Files the minutes as ",
-          /* @__PURE__ */ u2("b", { children: filed2[0].name }),
-          " in ",
-          filed2[0].folder,
-          plan.transcripts.length ? ", with the transcript in Transcripts" : "",
-          ". "
-        ] }) : null,
-        "The minutes and what you tick are applied together, in one apply you can undo. Nothing is sent."
+        "Before these minutes are approved, ",
+        one ? "one ticked item has" : `${problems.length} ticked items have`,
+        " something worth a look. Nothing else needs checking."
       ] }),
+      filed2 ? /* @__PURE__ */ u2("p", { class: "sub mnap-filed", children: [
+        "Files the minutes as ",
+        /* @__PURE__ */ u2("b", { children: filed2.name }),
+        " in ",
+        filed2.folder,
+        transcripts ? ", with the transcript in Transcripts" : "",
+        "."
+      ] }) : null,
+      /* @__PURE__ */ u2("ul", { class: "mnap-l", children: problems.map((p6, i5) => /* @__PURE__ */ u2("li", { "data-n": p6.n, children: [
+        /* @__PURE__ */ u2("b", { children: p6.what }),
+        /* @__PURE__ */ u2("span", { children: p6.text })
+      ] }, `${p6.n}:${i5}`)) }),
       checks.length ? /* @__PURE__ */ u2("div", { class: "mnap-ck", role: "note", children: [
         /* @__PURE__ */ u2("b", { children: [
           checks.length,
@@ -72031,63 +72286,12 @@ ${d5.text}`);
         ] }),
         /* @__PURE__ */ u2("ul", { children: checks.map((c5) => /* @__PURE__ */ u2("li", { children: c5.note }, c5.id)) })
       ] }) : null,
-      grp.length ? /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
-        /* @__PURE__ */ u2("legend", { children: "Actions and updates" }),
-        /* @__PURE__ */ u2("label", { class: "mnap-all", children: [
-          /* @__PURE__ */ u2("input", { type: "checkbox", id: "mnApAll", checked: group, onChange: (e4) => setGroup(
-            /** @type {HTMLInputElement} */
-            e4.currentTarget.checked
-          ) }),
-          "Approve all ",
-          grp.length,
-          " as reviewed in the minutes"
-        ] }),
-        /* @__PURE__ */ u2("ul", { children: grp.map((i5) => /* @__PURE__ */ u2("li", { children: i5.label }, i5.n)) })
-      ] }) : null,
-      ones.length ? /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
-        /* @__PURE__ */ u2("legend", { children: "One tick each" }),
-        /* @__PURE__ */ u2("p", { class: "sub", children: "A new decision, a decision recorded or withdrawn, a new risk and a closure are each approved on their own." }),
-        ones.map((i5) => /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
-          /* @__PURE__ */ u2(
-            "input",
-            {
-              type: "checkbox",
-              "data-own": i5.n,
-              checked: own.includes(i5.n),
-              onChange: (e4) => tick(
-                i5.n,
-                /** @type {HTMLInputElement} */
-                e4.currentTarget.checked
-              )
-            }
-          ),
-          " ",
-          /* @__PURE__ */ u2("span", { children: [
-            i5.label,
-            /* @__PURE__ */ u2("span", { class: "sub", children: [
-              " · ",
-              i5.why
-            ] })
-          ] })
-        ] }, i5.n))
-      ] }) : null,
-      waits.length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
-        "Waiting in Review whatever you tick: ",
-        waits.map((i5) => i5.label).join("; "),
-        "."
-      ] }) : null,
-      removed.length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
-        "Removed in the minutes: ",
-        removed.length,
-        " item",
-        removed.length === 1 ? "" : "s",
-        ", recorded as rejected."
-      ] }) : null,
-      /* @__PURE__ */ u2("p", { class: "sub", children: "Anything you leave unticked waits in Review." }),
-      err ? /* @__PURE__ */ u2("p", { class: "mnap-err", role: "alert", children: err }) : null,
       /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: close, children: "Cancel" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: go3, children: busy2 ? "Approving…" : "Approve the minutes" })
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "mnApproveBack", onClick: close, children: "Go back" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: () => {
+          close();
+          onApprove();
+        }, children: "Approve anyway" })
       ] })
     ] }) });
   }
@@ -72303,12 +72507,12 @@ ${d5.text}`);
         {
           type: "button",
           ref: btn,
-          class: "mndue btn sm",
+          class: `mndue msel dueb${due ? "" : " empty"}`,
           "aria-haspopup": "dialog",
           "aria-expanded": open2 ? "true" : "false",
           "aria-label": `Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`,
           onClick: () => setOpen2(!open2),
-          children: due ? fd(due) : "Not set"
+          children: due ? fd(due) : "No date"
         }
       ),
       /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Deadline for ${label}`, anchor: btn, focus: "input", cls: "pkcal mndl", children: open2 ? /* @__PURE__ */ u2(DeadlineBody, { due, day, onPick: async (w6) => {
@@ -72326,7 +72530,7 @@ ${d5.text}`);
     };
     return /* @__PURE__ */ u2("div", { children: [
       /* @__PURE__ */ u2("label", { class: "mndl-l", for: "mnDlWords", children: [
-        "Type a deadline, worked out from the meeting on ",
+        "Type a due date, worked out from the meeting on ",
         fd(day)
       ] }),
       /* @__PURE__ */ u2(
@@ -72409,6 +72613,359 @@ ${d5.text}`);
         cells
       ] })
     ] });
+  }
+
+  // components/minutes/ItemTable.jsx
+  var MAIN = { actions: "action", decisions: "decision", raid: "description" };
+  var ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
+  var KINDS = [["Risk", "Risks"], ["Issue", "Issues"], ["Assumption", "Assumptions"], ["Dependency", "Dependencies"], ["", "Updates"]];
+  var MN_PRIOS = ["Urgent", "High", "Medium", "Low"];
+  var ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+  var PRIO_TIP = "Worked out from impact and likelihood";
+  var raidPriority = (v5) => {
+    const i5 = String(v5 && v5.impact || ""), l6 = String(v5 && v5.likelihood || "");
+    if (!i5 || !l6) return "";
+    return i5 === "High" && l6 === "High" ? "Urgent" : i5 === "High" || l6 === "High" ? "High" : i5 === "Low" && l6 === "Low" ? "Low" : "Medium";
+  };
+  var TRACK_TIP = "Tick to register a work item; cross to remove the line from the minutes; neither keeps it in the minutes only";
+  var recOf = (id2) => A4.find((x5) => x5.id === id2) || R3.find((x5) => x5.id === id2) || DEC.find((x5) => x5.id === id2) || null;
+  function Linked({ text }) {
+    const parts = [], s5 = String(text || "");
+    let i5 = 0;
+    for (const m5 of s5.matchAll(ITEM_ID)) {
+      parts.push(s5.slice(i5, m5.index));
+      parts.push(/* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openSheetRef(m5[0], () => false), children: m5[0] }, m5.index));
+      i5 = (m5.index || 0) + m5[0].length;
+    }
+    parts.push(s5.slice(i5));
+    return /* @__PURE__ */ u2("span", { children: parts });
+  }
+  function TrackButtons({ t: t47, label, onPick }) {
+    return /* @__PURE__ */ u2("span", { class: "mntrk", role: "group", "aria-label": `Track: ${label}`, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "y",
+          "data-trk": "y",
+          "aria-pressed": t47 === "y" ? "true" : "false",
+          "aria-label": "Register a work item",
+          "data-tip": "Register a work item",
+          onClick: () => onPick("y"),
+          children: /* @__PURE__ */ u2(Icon, { name: "check" })
+        }
+      ),
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "n",
+          "data-trk": "n",
+          "aria-pressed": t47 === "n" ? "true" : "false",
+          "aria-label": "Remove from the minutes",
+          "data-tip": "Remove from the minutes",
+          onClick: () => onPick("n"),
+          children: /* @__PURE__ */ u2(Icon, { name: "x" })
+        }
+      )
+    ] });
+  }
+  function ItemText({ value, label, n: n4, onSave }) {
+    const m5 = x2(MinutesCtx);
+    const [ver, setVer] = d2(0);
+    const draft = A2(
+      /** @type {string|null} */
+      null
+    );
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const back2 = () => {
+      draft.current = null;
+      setVer((x5) => x5 + 1);
+    };
+    const commit = async () => {
+      const t47 = draft.current;
+      draft.current = null;
+      if (t47 == null || !t47.trim() || t47.trim() === value) {
+        if (t47 != null) setVer((x5) => x5 + 1);
+        return;
+      }
+      if (!await onSave(t47.trim())) setVer((x5) => x5 + 1);
+    };
+    const ai2 = m5 ? { place: "minutes", project: () => m5.project, confidential: () => false, key: () => `minutes:item:${n4}` } : void 0;
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: "mnit",
+        ref: box,
+        onKeyDownCapture: (e4) => {
+          if (e4.key === "Escape" && aiBar.value) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            aiBar.value = null;
+            return;
+          }
+          if (e4.key === "Escape") {
+            e4.preventDefault();
+            e4.stopPropagation();
+            back2();
+            const a5 = (
+              /** @type {HTMLElement|null} */
+              document.activeElement
+            );
+            if (a5 && box.current && box.current.contains(a5)) a5.blur();
+          } else if (e4.key === "Enter" && !e4.shiftKey) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            const a5 = (
+              /** @type {HTMLElement|null} */
+              document.activeElement
+            );
+            if (a5) a5.blur();
+          }
+        },
+        onFocusOut: (e4) => {
+          const to2 = (
+            /** @type {Node|null} */
+            e4.relatedTarget
+          );
+          if (!to2 || !box.current || !box.current.contains(to2)) commit();
+        },
+        children: /* @__PURE__ */ u2(SheetEditor, { value, rich: false, label, multiline: false, ai: ai2, onText: (t47) => {
+          draft.current = t47;
+        } }, ver)
+      }
+    );
+  }
+  function RowSelect({ value, label, options, none, cls, onPick }) {
+    const opts = value && !options.includes(value) ? [value, ...options] : options;
+    return /* @__PURE__ */ u2(
+      "select",
+      {
+        class: `msel${value ? "" : " empty"}${cls ? " " + cls : ""}`,
+        "aria-label": label,
+        value: value || "",
+        onChange: async (e4) => {
+          const el2 = (
+            /** @type {HTMLSelectElement} */
+            e4.currentTarget
+          ), x5 = el2.value;
+          if (x5 !== (value || "") && await onPick(x5) === false) el2.value = value || "";
+        },
+        children: [
+          /* @__PURE__ */ u2("option", { value: "", children: none }),
+          opts.map((o5) => /* @__PURE__ */ u2("option", { value: o5, children: o5 }, o5))
+        ]
+      }
+    );
+  }
+  function RaidPriority({ v: v5, label }) {
+    const pr2 = String(v5.priority || raidPriority(v5));
+    return /* @__PURE__ */ u2("span", { class: `msel mnro${pr2 ? ` pr-${pr2[0]}` : " empty"}`, tabIndex: 0, "data-tip": PRIO_TIP, "aria-label": `Priority of ${label}: ${pr2 || "not worked out yet"}. ${PRIO_TIP}`, children: pr2 || "Priority" });
+  }
+  function addDetails(name) {
+    go2("person", name);
+    let k5 = 0;
+    const tick = () => {
+      const b5 = (
+        /** @type {HTMLElement|null} */
+        document.getElementById("ppEdit")
+      );
+      if (b5) {
+        b5.click();
+        return;
+      }
+      if (++k5 < 30) requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  function LooksLike({ item, n: n4 }) {
+    const m5 = x2(MinutesCtx);
+    const ll2 = item.looks_like || {}, rec = recOf(ll2.id);
+    if (!ll2.id || ll2.kept || ll2.merged || !m5) return null;
+    return /* @__PURE__ */ u2("span", { class: "mck mnlooks", "data-tip": rec ? `${ll2.id}: ${rec.t}` : void 0, children: [
+      /* @__PURE__ */ u2("span", { children: [
+        "Looks like ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openSheetRef(ll2.id, () => false), children: ll2.id })
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-mnact": "update", onClick: () => m5.change({ op: "update", n: n4, id: ll2.id }, { op: "keep_new", n: n4 }), children: "Update that one" }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-mnact": "keepnew", onClick: () => m5.change({ op: "keep_new", n: n4 }), children: "Keep as new" })
+    ] });
+  }
+  function MnRow({ r: r4, ctx, full }) {
+    const m5 = (
+      /** @type {import("./context.js").MinutesCtxValue} */
+      x2(MinutesCtx)
+    );
+    const sid = (
+      /** @type {keyof typeof MAIN} */
+      ctx.section.id
+    ), row2 = r4.row, cells = row2.cells || {}, n4 = r4.n;
+    const item = r4.item || {}, v5 = item.values || {}, isNew = !r4.kept && item.op === "new";
+    const t47 = trackOf(ctx.doc, r4, m5.plan), label = String(cells[MAIN[sid]] || "").slice(0, 80);
+    const turn = row2.at && row2.at.turn ? Number(row2.at.turn) : null, hv = hoverTurn.value;
+    const lit = !!turn && !!hv && hv.from === "pane" && hv.turn === turn;
+    const checks = r4.kept ? [] : m5.checks.filter((c5) => c5.section === sid && c5.n === n4);
+    const own = checks.find((c5) => c5.kind === "owner" && c5.note.endsWith("needs details.")) || null;
+    const edit = (values) => m5.change({ op: "edit", n: n4, values });
+    const ownerField = sid === "decisions" ? "made_by" : "owner";
+    const owner = isNew ? String(v5[ownerField] || "") : String(cells.owner || cells.by || "");
+    const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => String(p6.name)).sort();
+    const dash = /* @__PURE__ */ u2("span", { class: "sub", children: "—" });
+    const held = row2.ref ? ((minutesView.value || {}).withheld || {})[String(row2.ref)] || "" : "";
+    return /* @__PURE__ */ u2(
+      "tr",
+      {
+        class: `mi${lit ? " hl" : ""}`,
+        "data-n": n4,
+        "data-trk": t47,
+        "data-ref": row2.ref || void 0,
+        "data-turn": turn || void 0,
+        onMouseEnter: () => {
+          if (turn) hoverTurn.value = { turn, from: "row" };
+        },
+        onMouseLeave: () => {
+          if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null;
+        },
+        children: [
+          /* @__PURE__ */ u2("td", { class: "mntc", children: /* @__PURE__ */ u2(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, nextTrack(t47, w6)), "Track") }) }),
+          /* @__PURE__ */ u2("td", { class: "mnic", children: [
+            isNew ? /* @__PURE__ */ u2(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u2("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u2(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
+            held || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("div", { class: "mnrow2", children: [
+              held ? /* @__PURE__ */ u2("span", { class: "mck info mnsens", "data-tip": `Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`, children: held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}` }) : null,
+              !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("span", { class: "mck info", children: [
+                /* @__PURE__ */ u2(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }),
+                row2.ref ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnstaged", "data-tip": "Open the staged update in Review", onClick: () => m5.openItem(String(row2.ref)), children: "Open" }) : null
+              ] }) : null,
+              own ? /* @__PURE__ */ u2("span", { class: "mck", "data-check": own.id, children: [
+                /* @__PURE__ */ u2("span", { children: [
+                  own.quote,
+                  " needs details"
+                ] }),
+                /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-ckact": "details", onClick: () => addDetails(own.quote), children: "Add details" })
+              ] }) : null,
+              isNew ? /* @__PURE__ */ u2(LooksLike, { item, n: n4 }) : null,
+              checks.filter((c5) => c5 !== own).map((c5) => /* @__PURE__ */ u2(CheckMark, { check: c5, children: c5.kind === "due" ? "Deadline?" : c5.kind === "figure" ? `${c5.quote}?` : c5.kind === "owner" ? c5.note.replace(/\.$/, "") : "Check" }, c5.id))
+            ] }) : null
+          ] }),
+          /* @__PURE__ */ u2("td", { class: "mnoc", children: isNew ? /* @__PURE__ */ u2(
+            RowSelect,
+            {
+              value: owner,
+              label: `Owner of ${label}`,
+              options: people,
+              none: "No owner",
+              onPick: (x5) => edit({ [ownerField]: x5 || null })
+            }
+          ) : owner ? /* @__PURE__ */ u2("span", { children: owner }) : dash }),
+          full ? /* @__PURE__ */ u2(S2, { children: [
+            /* @__PURE__ */ u2("td", { class: "mndc", children: isNew ? /* @__PURE__ */ u2(DeadlinePopover, { due: v5.due_date || null, day: m5.day, label, onSet: (w6) => m5.change({ op: "deadline", n: n4, words: w6 }) }) : cells.due && cells.due !== "Not set" ? /* @__PURE__ */ u2("span", { children: cells.due }) : dash }),
+            /* @__PURE__ */ u2("td", { class: "mnpc", children: isNew && sid === "actions" ? /* @__PURE__ */ u2(
+              RowSelect,
+              {
+                value: String(v5.priority || ""),
+                label: `Priority of ${label}`,
+                options: MN_PRIOS,
+                none: "Priority",
+                cls: v5.priority ? `pr-${String(v5.priority)[0]}` : "",
+                onPick: (x5) => edit({ priority: x5 || null })
+              }
+            ) : sid === "raid" && isNew ? /* @__PURE__ */ u2(RaidPriority, { v: v5, label }) : v5.priority ? /* @__PURE__ */ u2("span", { children: v5.priority }) : dash }),
+            /* @__PURE__ */ u2("td", { class: "mnwc", children: isNew && sid !== "decisions" ? /* @__PURE__ */ u2(
+              RowSelect,
+              {
+                value: String(v5.workstream || ""),
+                label: `Workstream of ${label}`,
+                options: wsFor(String(v5.project || m5.project || "")),
+                none: "Workstream",
+                onPick: (x5) => edit({ workstream: x5 || null })
+              }
+            ) : v5.workstream ? /* @__PURE__ */ u2("span", { children: v5.workstream }) : dash })
+          ] }) : null
+        ]
+      }
+    );
+  }
+  function MnTable({ ctx, rows: rows2, kind, full }) {
+    return /* @__PURE__ */ u2("table", { class: "mnt", children: [
+      /* @__PURE__ */ u2("colgroup", { children: [
+        /* @__PURE__ */ u2("col", { class: "c-trk" }),
+        /* @__PURE__ */ u2("col", {}),
+        full ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("col", { class: "c-own" }),
+          /* @__PURE__ */ u2("col", { class: "c-due" }),
+          /* @__PURE__ */ u2("col", { class: "c-pri" }),
+          /* @__PURE__ */ u2("col", { class: "c-ws" })
+        ] }) : /* @__PURE__ */ u2("col", { class: "c-by" })
+      ] }),
+      /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+        /* @__PURE__ */ u2("th", { scope: "col", "data-tip": TRACK_TIP, "aria-description": TRACK_TIP, tabIndex: 0, children: "Track" }),
+        /* @__PURE__ */ u2("th", { scope: "col", children: kind }),
+        /* @__PURE__ */ u2("th", { scope: "col", children: "Owner" }),
+        full ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Due" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Priority" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Workstream" })
+        ] }) : null
+      ] }) }),
+      /* @__PURE__ */ u2("tbody", { children: rows2.map((r4) => /* @__PURE__ */ u2(MnRow, { r: r4, ctx, full }, r4.n)) })
+    ] });
+  }
+  function Plain({ ctx }) {
+    const m5 = x2(MinutesCtx);
+    const s5 = (
+      /** @type {any} */
+      ctx.section
+    ), cols = s5.columns || [], draft = ctx.doc.state === "draft";
+    const rows2 = (s5.rows || []).filter((row2) => {
+      if (row2.shown === false) return false;
+      const n4 = rowN(row2);
+      if (!draft || n4 == null || !m5) return true;
+      return trackOf(ctx.doc, { n: n4, section: s5.id, row: row2, item: row2.ref ? (ctx.doc.items || {})[row2.ref] || null : null, kept: !!row2.kept_line }, m5.plan) !== "n";
+    });
+    if (!rows2.length) return /* @__PURE__ */ u2("p", { children: s5.text || "None recorded." });
+    return /* @__PURE__ */ u2("table", { children: [
+      /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key)) }) }),
+      /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, i5) => /* @__PURE__ */ u2("tr", { class: "mnrow", "data-n": rowN(row2) ?? void 0, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: (row2.cells || {})[c5.key] || "" }, c5.key)) }, row2.ref || i5)) })
+    ] });
+  }
+  function ItemTable({ ctx }) {
+    const m5 = x2(MinutesCtx);
+    const s5 = (
+      /** @type {any} */
+      ctx.section
+    ), sid = s5.id;
+    const live = ctx.editing && !ctx.exported && !!m5 && ctx.doc.state === "draft";
+    if (!live || !m5) return /* @__PURE__ */ u2(Plain, { ctx });
+    const rows2 = [];
+    for (const row2 of s5.rows || []) {
+      const n4 = rowN(row2);
+      if (n4 == null || !row2.ref && !row2.kept_line || row2.shown === false) continue;
+      rows2.push({ n: n4, section: sid, row: row2, item: row2.ref ? (ctx.doc.items || {})[row2.ref] || null : null, kept: !!row2.kept_line });
+    }
+    if (!rows2.length) return /* @__PURE__ */ u2("p", { class: "sub", children: s5.text || "None recorded." });
+    if (sid === "decisions") return /* @__PURE__ */ u2(MnTable, { ctx, rows: rows2, kind: "Decision", full: false });
+    if (sid === "actions") return /* @__PURE__ */ u2(MnTable, { ctx, rows: rows2, kind: "Action", full: true });
+    const typeOf = (r4) => {
+      const it2 = r4.item || {};
+      if (it2.op === "update") return "";
+      const ty2 = String((it2.values || {}).type || (r4.row.cells || {}).type || "");
+      return KINDS.some((k5) => k5[0] === ty2) ? ty2 : "Risk";
+    };
+    return /* @__PURE__ */ u2("div", { class: "mnraid", children: KINDS.map(([ty2, many]) => {
+      const these = rows2.filter((r4) => typeOf(r4) === ty2);
+      if (!these.length) return null;
+      return /* @__PURE__ */ u2("div", { class: "mnkind", "data-kind": ty2 || "update", children: [
+        /* @__PURE__ */ u2("h3", { class: "mnh3", children: [
+          many,
+          " ",
+          /* @__PURE__ */ u2("span", { class: "n", children: these.length })
+        ] }),
+        /* @__PURE__ */ u2(MnTable, { ctx, rows: these, kind: ty2 || "Update", full: true })
+      ] }, many);
+    }) });
   }
 
   // components/minutes/minutesDoc.js
@@ -72507,8 +73064,8 @@ ${d5.text}`);
         quote: owner,
         kind: "owner",
         n: n4,
-        note: `${owner} isn't in the people register.`,
-        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
+        note: `${owner} needs details.`,
+        actions: [{ id: "details", label: "Add details" }, { id: "keep", label: "Keep mine" }]
       });
     else if (s5.id === "actions" && (!owner || owner === "TBC"))
       out.push({
@@ -72633,7 +73190,7 @@ ${d5.text}`);
       null
     );
     const v5 = minutesView.value, tr2 = v5 && v5.turns || { timed: false, turns: [] };
-    const q5 = paneQuery.value.trim(), on2 = paneTurn.value;
+    const q5 = paneQuery.value.trim(), on2 = paneTurn.value, hv = hoverTurn.value;
     const hits = q5 ? tr2.turns.filter((t47) => t47.text.toLowerCase().includes(q5.toLowerCase()) || String(t47.who || "").toLowerCase().includes(q5.toLowerCase())) : [];
     h2(() => {
       const ol2 = list.current, li2 = ol2 && on2 != null ? (
@@ -72642,6 +73199,16 @@ ${d5.text}`);
       ) : null;
       if (ol2 && li2) ol2.scrollTop = li2.offsetTop - ol2.offsetTop - ol2.clientHeight / 3;
     }, [on2, paneOpen.value]);
+    h2(() => {
+      const ol2 = list.current, li2 = ol2 && hv && hv.from === "row" ? (
+        /** @type {HTMLElement|null} */
+        ol2.querySelector(`[data-turn="${hv.turn}"]`)
+      ) : null;
+      if (!ol2 || !li2) return;
+      const top = li2.offsetTop - ol2.offsetTop, bottom = top + li2.offsetHeight;
+      if (top < ol2.scrollTop) ol2.scrollTop = top - 8;
+      else if (bottom > ol2.scrollTop + ol2.clientHeight) ol2.scrollTop = bottom - ol2.clientHeight + 8;
+    }, [hv]);
     if (!paneOpen.value) return null;
     const next = () => {
       if (!hits.length) return;
@@ -72652,7 +73219,11 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "mnpane-h", children: [
         /* @__PURE__ */ u2("h2", { id: "mnPaneH", children: "Transcript" }),
         /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close the transcript", onClick: () => {
-          paneOpen.value = false;
+          setPane(false);
+          requestAnimationFrame(() => {
+            const b5 = document.getElementById("mnTrBtn");
+            if (b5) b5.focus();
+          });
         }, data: { mnpane: "close" } })
       ] }),
       /* @__PURE__ */ u2("div", { class: "mnpane-q", children: [
@@ -72679,16 +73250,31 @@ ${d5.text}`);
         ),
         /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: q5 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr2.turns.length ? `${tr2.turns.length} turns` : "" })
       ] }),
-      tr2.turns.length ? /* @__PURE__ */ u2("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr2.turns.map((t47) => /* @__PURE__ */ u2("li", { "data-turn": t47.n, class: `${t47.n === on2 ? "on" : ""}${q5 && !hits.includes(t47) ? " dim" : ""}`, "aria-current": t47.n === on2 ? "true" : void 0, children: [
-        /* @__PURE__ */ u2("span", { class: "mnwho", children: [
-          t47.who || "Someone",
-          t47.start ? /* @__PURE__ */ u2("span", { class: "mntime", children: [
-            " · ",
-            t47.start
-          ] }) : null
-        ] }),
-        /* @__PURE__ */ u2(Marked, { text: t47.text, q: q5 })
-      ] }, t47.n)) }) : /* @__PURE__ */ u2("p", { class: "sub mnpane-none", children: "No transcript was kept with these minutes." })
+      tr2.turns.length ? /* @__PURE__ */ u2("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr2.turns.map((t47) => /* @__PURE__ */ u2(
+        "li",
+        {
+          "data-turn": t47.n,
+          class: `${t47.n === on2 ? "on" : ""}${q5 && !hits.includes(t47) ? " dim" : ""}${hv && hv.turn === t47.n ? " hl" : ""}`,
+          "aria-current": t47.n === on2 ? "true" : void 0,
+          onMouseEnter: () => {
+            hoverTurn.value = { turn: t47.n, from: "pane" };
+          },
+          onMouseLeave: () => {
+            hoverTurn.value = null;
+          },
+          children: [
+            /* @__PURE__ */ u2("span", { class: "mnwho", children: [
+              t47.who || "Someone",
+              t47.start ? /* @__PURE__ */ u2("span", { class: "mntime", children: [
+                " · ",
+                t47.start
+              ] }) : null
+            ] }),
+            /* @__PURE__ */ u2(Marked, { text: t47.text, q: q5 })
+          ]
+        },
+        t47.n
+      )) }) : /* @__PURE__ */ u2("p", { class: "sub mnpane-none", children: "No transcript was kept with these minutes." })
     ] });
   }
 
@@ -72719,27 +73305,15 @@ ${d5.text}`);
       s5.tags || []
     ), tag = live ? lineTag(line, tags) : null;
     const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
-    const internal = m5 ? isInternal(m5.doc, s5.id, { text: line.text }) : false;
     const Tag2 = li2 ? "li" : "p";
-    return /* @__PURE__ */ u2(Tag2, { class: `mnline${internal ? " internal" : ""}`, "data-line": i5, children: [
+    return /* @__PURE__ */ u2(Tag2, { class: "mnline", "data-line": i5, children: [
       line.flag ? /* @__PURE__ */ u2("b", { class: "mnflag", children: line.flag }) : null,
       line.flag ? " " : null,
       live ? /* @__PURE__ */ u2("span", { class: "mntext", onClick: (e4) => {
         if (!/** @type {HTMLElement} */
         e4.target.closest("button")) onEdit();
       }, children: /* @__PURE__ */ u2(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u2("span", { children: line.text }),
-      tag ? /* @__PURE__ */ u2(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null,
-      live && m5 && m5.distributed && s5.type !== "header" ? /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: `mnio${internal ? " on" : ""}`,
-          "aria-pressed": internal ? "true" : "false",
-          "aria-label": `Internal only: ${line.text.slice(0, 60)}`,
-          onClick: () => m5.setDoc(toggleInternal(m5.doc, s5.id, { text: line.text }), internal ? "Shown to attendees" : "Internal only"),
-          children: "Internal only"
-        }
-      ) : null
+      tag ? /* @__PURE__ */ u2(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null
     ] });
   }
   function blocks(ls2) {
@@ -72772,282 +73346,67 @@ ${d5.text}`);
       ctx.editing ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnedbtn", "aria-label": `Edit ${s5.heading}`, onClick: () => setEd(true), children: "Edit" }) : null
     ] });
   }
-
-  // components/minutes/ItemRow.jsx
-  var MAIN = { actions: "action", decisions: "decision", raid: "description" };
-  var ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
-  var TYPES = ["Risk", "Issue", "Assumption", "Dependency"];
-  var ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
-  var recOf = (id2) => A4.find((x5) => x5.id === id2) || R3.find((x5) => x5.id === id2) || DEC.find((x5) => x5.id === id2) || null;
-  function Does({ does, row: row2, onOpen }) {
-    const parts = [], s5 = String(does || "");
-    let i5 = 0;
-    for (const m5 of s5.matchAll(ITEM_ID)) {
-      parts.push(s5.slice(i5, m5.index));
-      parts.push(/* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openSheetRef(m5[0], () => false), children: m5[0] }, m5.index));
-      i5 = (m5.index || 0) + m5[0].length;
-    }
-    parts.push(s5.slice(i5));
-    const done = /^Closes /.test(s5);
-    return /* @__PURE__ */ u2("span", { class: `mndoes${/^New /.test(s5) ? " new" : ""}`, children: [
-      /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnopen", "aria-label": `Open the staged item: ${s5}`, onClick: () => onOpen(row2.ref), children: "Open" }),
-      /* @__PURE__ */ u2("span", { class: "mndoes-t", children: [
-        parts,
-        done ? " · Looks done" : ""
-      ] })
-    ] });
-  }
-  function OwnerPicker({ owner, label, n: n4, field, check, onPick }) {
-    const [open2, setOpen2] = d2(false), [q5, setQ] = d2(""), [remember2, setRemember] = d2(true);
-    const btn = A2(
-      /** @type {HTMLButtonElement|null} */
-      null
-    );
-    const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => p6.name).sort();
-    const shown2 = people.filter((p6) => !q5 || p6.toLowerCase().includes(q5.toLowerCase())).slice(0, 30);
-    const unknown = !!owner && owner !== "TBC" && unknownOwner(owner);
-    const pick = async (name) => {
-      if (!await onPick(name)) return;
-      setOpen2(false);
-      if (unknown && remember2 && name !== owner) regAddAlias(name, owner);
-    };
-    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          ref: btn,
-          class: `btn sm mnowner${check ? " mncheck" : ""}`,
-          "data-owner": n4,
-          "aria-haspopup": "dialog",
-          "aria-expanded": open2 ? "true" : "false",
-          "aria-label": `${field === "made_by" ? "Made by" : "Owner"}: ${owner || "not set"}. Change it for ${label}`,
-          "data-tip": check ? check.note : void 0,
-          onClick: () => setOpen2(!open2),
-          children: owner || "TBC"
-        }
-      ),
-      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Owner for ${label}`, anchor: btn, focus: "input", children: [
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            class: "pkq",
-            type: "search",
-            "aria-label": "Find a person in the register",
-            placeholder: "Find a person",
-            value: q5,
-            onInput: (e4) => setQ(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value
-            ),
-            onKeyDown: (e4) => {
-              if (e4.key === "Enter" && shown2.length) {
-                e4.preventDefault();
-                pick(shown2[0]);
-              }
-            }
-          }
-        ),
-        /* @__PURE__ */ u2("div", { role: "listbox", "aria-label": "People in the register", children: shown2.length ? shown2.map((p6) => /* @__PURE__ */ u2("button", { type: "button", role: "option", class: "pkopt", "aria-selected": p6 === owner ? "true" : "false", onClick: () => pick(p6), children: p6 }, p6)) : /* @__PURE__ */ u2("p", { class: "sub", children: "No match in the people register." }) }),
-        unknown ? /* @__PURE__ */ u2("label", { class: "mnremember", children: [
-          /* @__PURE__ */ u2("input", { type: "checkbox", checked: remember2, onChange: (e4) => setRemember(
-            /** @type {HTMLInputElement} */
-            e4.currentTarget.checked
-          ) }),
-          "Remember “",
-          owner,
-          "” as their alias"
-        ] }) : null
-      ] })
-    ] });
-  }
-  function LooksLike({ item, n: n4 }) {
+  function SummaryText({ ctx }) {
     const m5 = x2(MinutesCtx);
-    const [open2, setOpen2] = d2(false);
-    const btn = A2(
-      /** @type {HTMLButtonElement|null} */
-      null
-    );
-    const ll2 = item.looks_like || {}, rec = recOf(ll2.id), v5 = item.values || {};
-    if (!ll2.id || ll2.kept || ll2.merged || !m5) return null;
-    const changes = [
-      `Latest update: “${(v5.description || v5.decision || "").slice(0, 120)}”`,
-      ...v5.due_date && rec && rec.due !== v5.due_date ? [`Due date: ${rec.due ? fd(rec.due) : "not set"} → ${fd(v5.due_date)}`] : [],
-      "Title, owner, priority and response stay as they are",
-      "The earlier update is kept in the history",
-      "These minutes are added as a source"
-    ];
-    return /* @__PURE__ */ u2("span", { class: "mnlooks", children: [
-      /* @__PURE__ */ u2("span", { children: [
-        "Looks like ",
-        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openSheetRef(ll2.id, () => false), children: ll2.id }),
-        ll2.why ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-          " · ",
-          ll2.why
-        ] }) : null
-      ] }),
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-mnact": "update", onClick: () => m5.change({ op: "update", n: n4, id: ll2.id }, { op: "keep_new", n: n4 }), children: "Update that one" }),
-      /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
-        /* @__PURE__ */ u2("button", { type: "button", ref: btn, class: "linkbtn", "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", onClick: () => setOpen2(!open2), children: "What changes" }),
-        /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `What changes on ${ll2.id}`, anchor: btn, wide: true, children: [
-          /* @__PURE__ */ u2("p", { class: "mnck-note", children: [
-            "Updating ",
-            ll2.id,
-            rec ? ` (${rec.t})` : "",
-            ":"
-          ] }),
-          /* @__PURE__ */ u2("ul", { class: "mnchanges", children: changes.map((c5) => /* @__PURE__ */ u2("li", { children: c5 }, c5)) })
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-mnact": "keepnew", onClick: () => m5.change({ op: "keep_new", n: n4 }), children: "Keep as new" })
-    ] });
-  }
-  function CellText({ value, label, onSave }) {
-    const [t47, setT] = d2(
+    const s5 = ctx.section, [ver, setVer] = d2(0);
+    const start = A2(
       /** @type {string|null} */
       null
     );
-    const shown2 = t47 == null ? value : t47;
-    const commit = async () => {
-      if (t47 != null && t47.trim() && t47 !== value) {
-        if (!await onSave(t47.trim())) return;
-      }
-      setT(null);
-    };
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    if (!ctx.editing || ctx.exported || !m5) return /* @__PURE__ */ u2(TextLines, { ctx });
+    const text = String(s5.text || "");
+    const checks = m5.checks.map((c5, n4) => ({ ...c5, n: n4 })).filter((c5) => c5.section === s5.id && c5.line == null);
+    const ai2 = { place: "minutes", project: () => m5.project, confidential: () => false, key: () => `minutes:${s5.id}` };
     return /* @__PURE__ */ u2(
-      "textarea",
+      "div",
       {
-        class: "mncell",
-        rows: 1,
-        "aria-label": label,
-        value: shown2,
-        onInput: (e4) => setT(
-          /** @type {HTMLTextAreaElement} */
-          e4.currentTarget.value
-        ),
-        onBlur: commit,
-        onKeyDown: (e4) => {
-          if (e4.key === "Enter" && !e4.shiftKey) {
-            e4.preventDefault();
-            e4.currentTarget.blur();
-          }
-          if (e4.key === "Escape" && t47 != null) {
-            e4.preventDefault();
-            e4.stopPropagation();
-            setT(null);
-          }
-        }
+        class: "mnsum-ed",
+        ref: box,
+        "data-mnsum": "",
+        onFocusIn: () => {
+          if (start.current == null) start.current = text;
+        },
+        onFocusOut: (e4) => {
+          const to2 = (
+            /** @type {Node|null} */
+            e4.relatedTarget
+          );
+          if (!to2 || !box.current || !box.current.contains(to2)) start.current = null;
+        },
+        onKeyDownCapture: (e4) => {
+          if (e4.key !== "Escape" || start.current == null) return;
+          e4.preventDefault();
+          e4.stopPropagation();
+          const was = start.current;
+          start.current = null;
+          if (was !== text) ctx.update({ text: was }, "Summary put back");
+          setVer((x5) => x5 + 1);
+          const a5 = (
+            /** @type {HTMLElement|null} */
+            document.activeElement
+          );
+          if (a5 && box.current && box.current.contains(a5)) a5.blur();
+        },
+        children: /* @__PURE__ */ u2(SheetEditor, { value: text, rich: true, label: s5.heading || "Summary", ai: ai2, checks, onText: (t47) => ctx.update({ text: t47 }, "Summary edited") }, ver)
       }
     );
-  }
-  function KeptLine({ rc: rc2 }) {
-    const m5 = x2(MinutesCtx), cols = rc2.section.columns || [], main = MAIN[
-      /** @type {keyof MAIN} */
-      rc2.section.id
-    ];
-    const n4 = Number(String(
-      /** @type {any} */
-      rc2.row.was || ""
-    ).replace("@", ""));
-    return /* @__PURE__ */ u2("tr", { class: "mnrow kept", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: [
-      (rc2.row.cells || {})[c5.key] || "",
-      c5.key === main && rc2.editing && m5 ? /* @__PURE__ */ u2("div", { class: "mnbar", children: [
-        /* @__PURE__ */ u2("span", { class: "sub", children: "The line only: no item is made." }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => m5.change({ op: "restore", n: n4 }), children: "Make it an item again" })
-      ] }) : null
-    ] }, c5.key)) });
-  }
-  function ItemRow({ rc: rc2 }) {
-    const m5 = x2(MinutesCtx);
-    const row2 = (
-      /** @type {any} */
-      rc2.row
-    ), s5 = rc2.section, cols = s5.columns || [], sid = (
-      /** @type {keyof MAIN} */
-      s5.id
-    );
-    if (row2.kept_line) return /* @__PURE__ */ u2(KeptLine, { rc: rc2 });
-    if (row2.shown === false && !rc2.editing) return null;
-    const item = rc2.item || {}, n4 = row2.n, cells = row2.cells || {}, isNew = item.op === "new";
-    const live = rc2.editing && !rc2.exported && !!m5 && !!item.op;
-    if (!live || !m5) return /* @__PURE__ */ u2("tr", { class: "mnrow", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: cells[c5.key] || "" }, c5.key)) });
-    const label = (cells[MAIN[sid]] || "").slice(0, 80), checks = m5.checks.filter((c5) => c5.section === s5.id && c5.n === n4);
-    const own = checks.find((c5) => c5.field === "owner") || null, internal = isInternal(m5.doc, s5.id, { ref: row2.ref, n: row2.n });
-    const edit = (values) => m5.change({ op: "edit", n: n4, values });
-    const remove = (how) => m5.change({ op: "remove", n: n4, keep_line: how === "keep" }, { op: "restore", n: n4 });
-    const cell2 = (c5) => {
-      if (!isNew) return cells[c5.key] || "";
-      if (c5.key === "owner" || c5.key === "by") return /* @__PURE__ */ u2(
-        OwnerPicker,
-        {
-          owner: (item.values || {})[c5.key === "by" ? "made_by" : "owner"] || "",
-          label,
-          n: n4,
-          field: c5.key === "by" ? "made_by" : "owner",
-          check: own,
-          onPick: (name) => edit({ [c5.key === "by" ? "made_by" : "owner"]: name })
-        }
-      );
-      if (c5.key === "due") return /* @__PURE__ */ u2(DeadlinePopover, { due: (item.values || {}).due_date || null, day: m5.day, label, onSet: (words) => m5.change({ op: "deadline", n: n4, words }) });
-      if (c5.key === "type") return /* @__PURE__ */ u2(
-        "select",
-        {
-          class: "mntype",
-          "aria-label": `Type of ${label}`,
-          value: (item.values || {}).type || "Risk",
-          onChange: (e4) => edit({ type: (
-            /** @type {HTMLSelectElement} */
-            e4.currentTarget.value
-          ) }),
-          children: TYPES.map((t47) => /* @__PURE__ */ u2("option", { children: t47 }, t47))
-        }
-      );
-      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[ROW_FIELD[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t47) => edit({ [ROW_FIELD[sid]]: t47 }) });
-      return cells[c5.key] || "";
-    };
-    return /* @__PURE__ */ u2("tr", { class: `mnrow${internal ? " internal" : ""}`, "data-n": n4, "data-ref": row2.ref, children: cols.map((c5) => /* @__PURE__ */ u2("td", { class: `mncol-${c5.key}`, children: [
-      cell2(c5),
-      c5.key === MAIN[sid] ? /* @__PURE__ */ u2("div", { class: "mnbar", children: [
-        /* @__PURE__ */ u2(Does, { does: row2.does || "", row: row2, onOpen: m5.openItem }),
-        row2.at && row2.at.time ? /* @__PURE__ */ u2(TimeTag, { tag: { ref: "transcript", turn: row2.at.turn, time: row2.at.time, text: "" } }) : null,
-        isNew ? /* @__PURE__ */ u2(LooksLike, { item, n: n4 }) : null,
-        checks.filter((c6) => c6.field !== "owner" || !own).map((c6) => /* @__PURE__ */ u2(CheckMark, { check: c6, children: c6.kind === "due" ? "Deadline?" : c6.kind === "figure" ? `${c6.quote}?` : "Check" }, c6.id)),
-        own ? /* @__PURE__ */ u2(CheckMark, { check: own, children: own.note }) : null,
-        m5.distributed && heldBack(m5.doc, row2.ref, m5.held) ? /* @__PURE__ */ u2("span", { class: "tag mnheld", "data-tip": "Never in the distributed version", children: [
-          "Internal only · ",
-          heldBack(m5.doc, row2.ref, m5.held)
-        ] }) : m5.distributed ? /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: `mnio${internal ? " on" : ""}`,
-            "aria-pressed": internal ? "true" : "false",
-            "aria-label": `Internal only: ${label}`,
-            onClick: () => m5.setDoc(toggleInternal(m5.doc, s5.id, { ref: row2.ref }), internal ? "Shown to attendees" : "Internal only"),
-            children: "Internal only"
-          }
-        ) : null,
-        /* @__PURE__ */ u2(
-          Menu,
-          {
-            label: "Remove",
-            icon: "x",
-            btnCls: "btn sm mnrm",
-            menuLabel: `Remove ${label}`,
-            data: { mnremove: String(n4) },
-            items: [
-              { id: "remove", name: "Remove the item and its line", line: "Nothing is made; the line leaves the minutes", icon: "x" },
-              { id: "keep", name: "Keep the line only", line: "The words stay in the minutes; no item is made", icon: "list" }
-            ],
-            onPick: remove
-          }
-        )
-      ] }) : null
-    ] }, c5.key)) });
   }
 
   // components/minutes/MinutesView.jsx
+  var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
+  var MN_EXPORTS = [
+    { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
+    { id: "pdf", name: "PDF", line: "Printed from the page" },
+    { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
+    { id: "sep", sep: true },
+    { id: "followup", name: "Draft the follow-up email", line: "From these minutes; copied, never sent" }
+  ];
   var dirty = false;
+  var approving = y3(false);
   function openStaged(ref) {
     const v5 = minutesView.value, n4 = Number(String(ref).replace(/^@/, ""));
     const r4 = v5 && REV.find((x5) => x5.file === v5.proposal && x5.ref === n4);
@@ -73055,113 +73414,178 @@ ${d5.text}`);
     else snack("That item is no longer pending in Review.");
     return true;
   }
-  function Bar({ doc, checks }) {
-    const v5 = minutesView.value, versions = v5 && v5.versions || [], draft = doc.state === "draft";
-    const dist = !!(doc.layout || {}).distributed, mode = minutesMode.value;
-    const setDist = (on2) => {
-      onDoc({ ...doc, layout: { ...doc.layout || {}, distributed: on2 } }, on2 ? "Distributed version on" : "One version");
-      if (!on2) minutesMode.value = "internal";
-    };
-    const exp = async (id2) => {
-      if (id2.startsWith("followup")) {
-        const d5 = minutesDoc.value;
-        if (dirty && d5) {
-          const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
-          if (!s5.ok) {
-            snack(s5.message || "The minutes weren't saved");
-            return;
-          }
-          dirty = false;
-        }
-        openMinutesFollowup(v5 && v5.path, id2.endsWith(":distributed") ? "distributed" : "internal");
+  async function mnSaveFirst() {
+    const d5 = minutesDoc.value;
+    if (!dirty || !d5) return true;
+    const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
+    if (!s5.ok) {
+      snack(s5.message || "The minutes weren't saved");
+      return false;
+    }
+    dirty = false;
+    return true;
+  }
+  async function exportAs(id2) {
+    if (!await mnSaveFirst()) return;
+    const v5 = minutesView.value;
+    if (id2 === "followup") {
+      openMinutesFollowup(v5 && v5.path, "internal");
+      return;
+    }
+    const r4 = await exportMinutes(id2);
+    snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+  }
+  function reExtract(doc) {
+    const box = (
+      /** @type {HTMLTextAreaElement|null} */
+      document.getElementById("chIn")
+    );
+    if (box && box.value.trim()) {
+      openChat();
+      snack("ask creaite has words you haven't sent: send or clear them, then press Re-extract again");
+      return;
+    }
+    ckAsk(`re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`);
+  }
+  async function approveNow(anyway) {
+    const v5 = minutesView.value, doc = minutesDoc.value;
+    if (!v5 || !v5.plan || !doc || approving.value) return;
+    const plan = v5.plan.items;
+    if (!anyway && approveProblems(doc, plan, unknownOwner).length) {
+      approveOpen.value = true;
+      return;
+    }
+    approving.value = true;
+    try {
+      if (!await mnSaveFirst()) return;
+      const r4 = await trackApprove({ ...v5, doc }, { change: changeMinutes });
+      if (!r4.ok) {
+        snack(trackFailWords(r4, "Approve minutes"));
         return;
       }
-      const [fmt, which] = id2.split(":"), version = which === "distributed" ? "distributed" : "internal";
-      const out = version === "distributed" ? leftOut(doc, v5 && v5.withheld) : [];
-      const r4 = await exportMinutes(fmt, version);
-      const left = out.length ? ` · leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}` : "";
-      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}${left}` : String(r4.message || "Not exported").split("\n")[0]);
-    };
-    const formats = [
-      { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
-      { id: "docx", name: "Word", line: "The minutes template" },
-      { id: "pdf", name: "PDF", line: "Printed from the page" }
-    ];
-    const exports = dist ? [
-      ...formats.map((f5) => ({ ...f5, id: `${f5.id}:internal`, name: `Internal: ${f5.name}` })),
-      ...formats.map((f5) => ({
-        ...f5,
-        id: `${f5.id}:distributed`,
-        name: `Distributed: ${f5.name}`,
-        line: draft ? "Once the internal minutes are approved" : `${f5.line}, under a new name`
-      }))
-    ] : formats;
-    const follow = { id: "followup", name: "Draft the follow-up email", line: "From this version; copied, never sent" };
-    const shown2 = mode === "distributed" ? ["distributed"] : mode === "side" ? ["internal", "distributed"] : ["internal"];
-    const mails = !dist ? [follow] : shown2.map((w6) => ({
-      ...follow,
-      id: `followup:${w6}`,
-      name: `${w6 === "distributed" ? "Distributed" : "Internal"}: Draft the follow-up email`,
-      line: w6 === "distributed" ? "Without Internal only lines or withheld items" : "Marked Internal"
-    }));
-    return /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
-      /* @__PURE__ */ u2(
-        Menu,
-        {
-          label: `Version ${doc.version || 1}`,
-          icon: "history",
-          btnCls: "btn sm",
-          cls: "rb-x",
-          menuLabel: "Versions of these minutes",
-          data: { mnversions: "" },
-          items: versions.map((x5) => ({
-            id: String(x5.version),
-            name: `Version ${x5.version}${x5.current ? " · on screen" : ""}`,
-            line: `${x5.at ? fd(x5.at) : ""}${x5.why ? ` · ${x5.why}` : ""}${!x5.current && x5.backup ? " · opens the kept copy" : ""}`
-          })),
-          onPick: (id2) => {
-            const x5 = versions.find((y5) => String(y5.version) === id2);
-            if (x5 && !x5.current && x5.backup) openPath(x5.backup);
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "Versions to keep", children: [
-        /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "false" : "true", disabled: !draft, onClick: () => setDist(false), children: "One version" }),
-        /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "true" : "false", disabled: !draft, onClick: () => setDist(true), children: "Internal + distributed" })
+      snack(
+        trackApprovedWords(r4),
+        r4.apply_id ? async () => {
+          await undoApply(r4.apply_id);
+          if (v5.proposal) loadMinutes({ file: v5.proposal });
+        } : null
+      );
+      await reloadData();
+      if (v5.plan.files[0]) loadMinutes({ path: v5.plan.files[0] });
+    } finally {
+      approving.value = false;
+    }
+  }
+  function TrackSum({ c: c5 }) {
+    const parts = trackSummary(c5).split(/(\d+)/);
+    return /* @__PURE__ */ u2(S2, { children: parts.map((p6, i5) => i5 % 2 ? /* @__PURE__ */ u2("b", { children: p6 }, i5) : p6) });
+  }
+  function Bar({ doc, zoom, setZoom, exported, setExported, status: status2, bad, scale }) {
+    const v5 = minutesView.value, draft = doc.state === "draft", plan = v5 && v5.plan ? v5.plan.items : null;
+    const c5 = draft && plan ? trackCounts(doc, plan) : null;
+    const z4 = (d5) => setZoom(Math.round((zoom + d5 * 0.1) * 10) / 10);
+    const pc2 = Math.round((scale || zoom) * 100);
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("span", { class: "sheet-mini", children: [
+        /* @__PURE__ */ u2("b", { children: doc.title }),
+        /* @__PURE__ */ u2("span", { class: "sub", children: [
+          doc.project_name || "",
+          " · ",
+          fd(doc.date)
+        ] })
       ] }),
-      dist ? /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
-        minutesMode.value = /** @type {any} */
-        k5;
-      }, children: l6 }, k5)) }) : null,
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm rb-x", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
-        paneOpen.value = !paneOpen.value;
-      }, children: "Transcript" }),
+      /* @__PURE__ */ u2("span", { class: "sheet-zoom", role: "group", "aria-label": "Zoom", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom out", "data-tip": "Zoom out", onClick: () => z4(-1), disabled: zoom <= MN_ZOOM.min, children: "−" }),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "sheet-zv mnzv",
+            "aria-live": "polite",
+            "data-zoom": zoom,
+            "data-tip": "Fit to width",
+            "aria-label": `Zoom ${pc2}%. Fit to width`,
+            onClick: () => setZoom(MN_ZOOM.fit),
+            children: [
+              pc2,
+              "%"
+            ]
+          }
+        ),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom in", "data-tip": "Zoom in", onClick: () => z4(1), disabled: zoom >= MN_ZOOM.max, children: "+" })
+      ] }),
       /* @__PURE__ */ u2(
-        Menu,
-        {
-          label: "Export",
-          icon: "filetext",
-          btnCls: "btn sm",
-          menuLabel: "Export the minutes",
-          data: { mnexport: "" },
-          items: [...exports, ...mails],
-          onPick: exp
-        }
-      ),
-      draft ? /* @__PURE__ */ u2(
         "button",
         {
           type: "button",
-          class: "btn sm primary",
-          id: "mnApproveBtn",
-          disabled: !(v5 && v5.plan),
-          "data-tip": v5 && v5.plan ? void 0 : "Nothing pending to approve",
-          onClick: () => {
-            approveOpen.value = true;
-          },
-          children: "Approve minutes"
+          class: "ib sm sheet-exp",
+          "aria-pressed": exported ? "true" : "false",
+          "aria-label": "Show as exported",
+          "data-tip": "Show as exported",
+          onClick: () => setExported(!exported),
+          children: /* @__PURE__ */ u2(Icon, { name: "filetext" })
         }
-      ) : null
+      ),
+      /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": bad ? "1" : void 0, children: status2 || (doc.version ? `Saved · version ${doc.version}` : "") }),
+      c5 ? /* @__PURE__ */ u2("span", { class: "mnsum", id: "mnSum", role: "status", "data-y": c5.y, "data-k": c5.k, "data-n": c5.n, "data-w": c5.w, children: /* @__PURE__ */ u2(TrackSum, { c: c5 }) }) : null,
+      /* @__PURE__ */ u2("span", { class: "sheet-barr", children: /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "ib sm",
+            id: "mnTrBtn",
+            "aria-pressed": paneOpen.value ? "true" : "false",
+            "aria-label": "Transcript",
+            "data-tip": paneOpen.value ? "Hide the transcript" : "Show the transcript",
+            onClick: () => setPane(!paneOpen.value),
+            children: /* @__PURE__ */ u2(Icon, { name: "chat" })
+          }
+        ),
+        /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "",
+            id: "mnExport",
+            icon: "download",
+            btnCls: "ib sm",
+            ariaLabel: "Export",
+            tip: "Export",
+            chevron: false,
+            menuLabel: "Export the minutes",
+            data: { mnexport: "" },
+            items: (
+              /** @type {any} */
+              MN_EXPORTS
+            ),
+            onPick: exportAs
+          }
+        ),
+        draft ? /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "ib sm",
+            id: "mnReBtn",
+            "aria-label": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself",
+            "data-tip": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself",
+            onClick: () => reExtract(doc),
+            children: /* @__PURE__ */ u2(Icon, { name: "refresh" })
+          }
+        ) : null,
+        draft ? /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn sm primary",
+            id: "mnApproveBtn",
+            disabled: !(v5 && v5.plan) || approving.value,
+            "data-tip": v5 && v5.plan ? void 0 : "Nothing pending to approve",
+            onClick: () => approveNow(false),
+            children: approving.value ? "Approving…" : "Approve minutes"
+          }
+        ) : null
+      ] }) })
     ] });
   }
   function onDoc(d5, _why) {
@@ -73169,15 +73593,7 @@ ${d5.text}`);
     dirty = true;
   }
   async function change(op2, undo) {
-    const d5 = minutesDoc.value;
-    if (dirty && d5) {
-      const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
-      if (!s5.ok) {
-        snack(s5.message || "The minutes weren't saved");
-        return false;
-      }
-      dirty = false;
-    }
+    if (!await mnSaveFirst()) return false;
     const r4 = await changeMinutes(op2);
     if (!r4.ok) {
       snack(r4.message || "That didn't change");
@@ -73192,25 +73608,38 @@ ${d5.text}`);
     if (action === "keep") keptChecks.value = [...keptChecks.value, c5.id];
     else if (action === "show" && c5.turn) jumpTo(c5.turn);
     else if (action === "use" && c5.kind === "due" && c5.n && c5.words) change({ op: "deadline", n: c5.n, words: c5.words });
-    else if (action === "pick") document.querySelector(`[data-owner="${c5.n}"]`)?.click();
   }
   var RENDER = {
-    byType: { text: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }), header: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }) },
-    row: { actions: (rc2) => /* @__PURE__ */ u2(ItemRow, { rc: rc2 }), decisions: (rc2) => /* @__PURE__ */ u2(ItemRow, { rc: rc2 }), raid: (rc2) => /* @__PURE__ */ u2(ItemRow, { rc: rc2 }) }
+    byId: {
+      summary: (ctx) => /* @__PURE__ */ u2(SummaryText, { ctx }),
+      decisions: (ctx) => /* @__PURE__ */ u2(ItemTable, { ctx }),
+      raid: (ctx) => /* @__PURE__ */ u2(ItemTable, { ctx }),
+      actions: (ctx) => /* @__PURE__ */ u2(ItemTable, { ctx })
+    },
+    byType: { text: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }), header: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }) }
   };
+  function mnHeading(s5) {
+    if (s5.id !== "decisions" && s5.id !== "actions") return null;
+    const rows2 = (
+      /** @type {any[]} */
+      /** @type {any} */
+      (s5.rows || []).filter((r4) => r4.shown !== false && (r4.ref || r4.kept_line))
+    );
+    return { name: s5.id === "actions" && s5.heading === "Action Items" ? "Actions" : void 0, note: rows2.length };
+  }
   var EXTRAS = [{ key: "coverage", after: "open_questions", render: (c5) => /* @__PURE__ */ u2(Coverage, { c: c5 }) }];
   function MinutesView() {
-    const v5 = minutesView.value, doc = minutesDoc.value, mode = minutesMode.value;
-    const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
+    const v5 = minutesView.value, doc = minutesDoc.value;
     if (!v5) return /* @__PURE__ */ u2("div", { class: "mnview", children: /* @__PURE__ */ u2("p", { class: "sub", children: minutesBusy.value || "Opening the minutes…" }) });
     if (!v5.ok || !doc) return /* @__PURE__ */ u2("div", { class: "mnview", children: [
       /* @__PURE__ */ u2("h1", { id: "mnTitle", children: "Minutes" }),
       /* @__PURE__ */ u2("p", { class: "mnerr", role: "alert", children: v5.message || "Couldn't open the minutes" })
     ] });
-    const draft = doc.state === "draft", turns = (v5.turns || { turns: [] }).turns;
+    const draft = doc.state === "draft", turns = (v5.turns || { turns: [] }).turns, plan = v5.plan ? v5.plan.items : null;
     const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
-    const held = v5.withheld || {}, shown2 = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
-    const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
+    const project2 = String(((doc.meta || {}).projects || [])[0] || doc.project || "");
+    const ctx = { checks, onCheck, change, doc, day: doc.date, plan, project: project2, openItem: openStaged };
+    const problems = draft && plan ? approveProblems(doc, plan, unknownOwner) : [];
     return /* @__PURE__ */ u2("div", { class: "mnview", children: [
       /* @__PURE__ */ u2("header", { class: "mnhead", children: [
         /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
@@ -73232,36 +73661,50 @@ ${d5.text}`);
         /* @__PURE__ */ u2("div", { class: "mnsheet", children: /* @__PURE__ */ u2(MinutesCtx.Provider, { value: ctx, children: /* @__PURE__ */ u2(
           Sheet,
           {
-            doc: shown2,
+            doc,
             baseVersion: minutesBase.value,
-            scrollKey: `minutes:${v5.path}:${mode}`,
-            readOnly: !draft || dist && mode === "distributed",
+            scrollKey: `minutes:${v5.path}`,
+            readOnly: !draft,
+            zoomMin: MN_ZOOM.min,
+            zoomMax: MN_ZOOM.max,
+            zoomDefault: MN_ZOOM.fit,
+            fitMax: MN_ZOOM.fitMax,
+            continuous: true,
+            headings: mnHeading,
             renderers: RENDER,
             extras: EXTRAS,
             checks,
             onOpenItem: (ref) => ref.startsWith("@") ? openStaged(ref) : false,
-            partner: side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {
-            } } : null,
-            leftReadOnly: false,
             onChange: onDoc,
             onSave: async (req) => {
+              const now = minutesView.value;
+              if (!now || !now.doc || now.doc.state !== "draft" || req.doc.state !== "draft") return { ok: true, version: minutesBase.value };
               const r4 = await saveMinutesPage(req);
               if (r4.ok) dirty = false;
               return r4;
             },
-            ai: { place: "minutes", project: () => String((doc.meta || {}).projects ? doc.meta.projects[0] : doc.project || ""), confidential: () => false },
-            onRedraft: side ? void 0 : redrafter(() => ({ path: v5.path, version: dist && mode === "distributed" ? "distributed" : "internal" }), "minutes"),
+            ai: { place: "minutes", project: () => project2, confidential: () => false },
+            onRedraft: redrafter(() => ({ path: v5.path, version: "internal" }), "minutes"),
             onEvent: (ev) => {
               if (ev.type === "reload") loadMinutes({ path: v5.path });
               else countRedraft(ev, "minutes");
             },
-            banner: { title: doc.title, sub: `${doc.project_name || ""} · ${fd(doc.date)}` },
-            toolbar: /* @__PURE__ */ u2(Bar, { doc, checks })
+            renderBar: (b5) => /* @__PURE__ */ u2(Bar, { doc, ...b5 })
           }
         ) }) }),
         /* @__PURE__ */ u2(TranscriptPane, {})
       ] }),
-      /* @__PURE__ */ u2(ApprovePopup, { checks })
+      /* @__PURE__ */ u2(
+        ApprovePopup,
+        {
+          problems,
+          checks: checks.filter((c5) => !(c5.kind === "owner" && problems.some((p6) => p6.n === c5.n))),
+          files: v5.plan ? v5.plan.files : [],
+          transcripts: v5.plan ? v5.plan.transcripts.length : 0,
+          busy: approving.value,
+          onApprove: () => approveNow(true)
+        }
+      )
     ] });
   }
   var mnMounted = false;
@@ -73276,10 +73719,12 @@ ${d5.text}`);
     if (a5 && (a5.file || a5.path)) {
       dirty = false;
       keptChecks.value = [];
-      minutesMode.value = "internal";
+      approveOpen.value = false;
+      paneRemembered();
       loadMinutes(a5).then(() => {
         navWrite(false);
         tabTitle();
+        if (a5.approve) approveNow(false);
       });
     }
   }
@@ -73635,6 +74080,7 @@ ${d5.text}`);
     }
     if (shared.MVREADY && (shared.MV.peek || shared.MV.add)) mvEdClose(true);
     const from = shared.VIEW, fromPage = mPageOf(shared.VIEW);
+    if (!shared.LOADING && from === "minutes" && v5 !== "minutes") reloadForTrack();
     if (from === "notes" && v5 !== "notes") notesLeave();
     if (!shared.LOADING && from === "review" && v5 !== "review") {
       shared.MREVLEFT = true;
@@ -75508,6 +75954,14 @@ ${d5.text}`);
       errBanner();
     }
   }
+  var TRKRELOAD = null;
+  function reloadForTrack() {
+    const p6 = reloadData().finally(() => {
+      if (TRKRELOAD === p6) TRKRELOAD = null;
+    });
+    TRKRELOAD = p6;
+    return p6;
+  }
   function bootPageRefresh() {
     if (SERVED && D.page_refresh) reloadData();
   }
@@ -76749,6 +77203,7 @@ ${d5.text}`);
         "applyTheme",
         "applyView",
         "applyWords",
+        "approveArgs",
         "askChangesHtml",
         "askDeleteNote",
         "askLive",
@@ -76845,6 +77300,7 @@ ${d5.text}`);
         "deTextRows",
         "decPending",
         "decide",
+        "defaultTrack",
         "defs",
         "designation",
         "diagHook",
@@ -77162,6 +77618,7 @@ ${d5.text}`);
         "readDate",
         "readForm",
         "reattach",
+        "reconcileOps",
         "redraftAnswer",
         "reduced",
         "refreshAll",
@@ -77209,6 +77666,7 @@ ${d5.text}`);
         "runSearch",
         "rvAdvance",
         "rvAgeBanner",
+        "rvApproveSelected",
         "rvBulkOK",
         "rvChanged",
         "rvDate",
@@ -77216,6 +77674,7 @@ ${d5.text}`);
         "rvMatching",
         "rvMoveTo",
         "rvPick",
+        "rvRoutine",
         "rvSet",
         "rvShown",
         "rvSrcKind",
@@ -77250,6 +77709,7 @@ ${d5.text}`);
         "setRhythm",
         "setRunning",
         "setSearch",
+        "setTrack",
         "shared",
         "sl",
         "slashRows",
@@ -77282,6 +77742,11 @@ ${d5.text}`);
         "thisWeek",
         "tl",
         "toIso",
+        "trackApprove",
+        "trackCounts",
+        "trackOf",
+        "trackRows",
+        "trackSummary",
         "tx",
         "typedLinkUrl",
         "typing",
