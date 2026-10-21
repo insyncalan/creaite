@@ -14,7 +14,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_project_settings_v2 import Base
+from test_dashboard import new
+from test_project_settings_v2 import Base, seed
 
 TABS = ["Everyone", "With work", "Nothing assigned", "Needs attention"]
 COLS = ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "RAID", "Decisions", "Overdue"]
@@ -137,7 +138,7 @@ class PeoplePage(Base):
         b.wait("!!document.querySelector('[data-pl-remove-refused=\"Sara Example\"]')")
         msg = b.eval("document.querySelector('[data-pl-remove-refused=\"Sara Example\"]').textContent")
         self.assertIn(f"{owned} item", msg)
-        self.assertIn("reassign them first", msg.lower())
+        self.assertIn("reassign or remove them first", msg.lower())
         self.assertFalse(b.eval("!!document.querySelector('[data-pl-remove-yes=\"Sara Example\"]')"), "no Remove button")
         self.tap("[data-pl-remove-no='Sara Example']")
         b.wait("!document.querySelector('[data-pl-remove-refused=\"Sara Example\"]')")
@@ -256,6 +257,75 @@ class PeoplePage(Base):
         b.wait("typeof go==='function' && LIVE && VIEW==='people' && !!document.querySelector('#ptabs [aria-selected=true]')")
         self.assertTrue(b.eval("document.querySelector('#ptabs [aria-selected=true]').textContent.startsWith('Needs attention')"))
         time.sleep(0.2)
+
+
+class RemoveWhileNamed(Base):
+    """#248 (Cap's finding on B): Remove from the register is refused while anything still names the person, not only their
+    actions, RAID and decisions: a project's Key stakeholders, a milestone's owner and a workstream's lead count too, so their
+    aliases and the followed column are never lost to a "needs details" row. Someone named nowhere can still be removed."""
+
+    @classmethod
+    def load(cls, v):
+        seed(v)
+        v.propose("named", [new("milestones", 50, project="DEF", name="Pilot live", baseline_date="2026-12-15", owner="Noah Reed",
+                                source="Alan (cx-edit)"),
+                            new("workstreams", 51, project="DEF", name="Training", lead="Lena Park", created="2026-10-01",
+                                source="Alan (cx-edit)")])
+        v.run("apply")
+        reg = v.root / "projects/_portfolio/project-register.md"
+        reg.write_text(reg.read_text().replace("| Sam (sponsor) |", "| Sam (sponsor), Mia Hale (analyst) |"))
+        people = v.root / "projects/_portfolio/people-register.md"
+        people.write_text(people.read_text()
+                          .replace("| Mia Hale | mia@example.com | |", "| Mia Hale | mia@example.com | MH |")
+                          .replace("| Analyst | | |", "| Analyst | | yes |")
+                          + "| Noah Reed | noah@example.com | Noah | Example Client Ltd | Test manager | | |\n"
+                          + "| Lena Park | lena@example.com | Lena | Example Client Ltd | Trainer | | |\n"
+                          + "| Ivy Moss | ivy@example.com | Ivy | Example Client Ltd | Adviser | | yes |\n")
+        v.run(script="build_dashboard.py")
+
+    def open(self):
+        self.b.eval("go('people')")
+        self.b.wait("VIEW==='people' && !!document.querySelector('#plRows')")
+
+    def refused(self, name):
+        b = self.b
+        before = self.register
+        self.tap(f"[data-pl-remove='{name}']")
+        sel = f'[data-pl-remove-refused="{name}"]'
+        b.wait(f"!!document.querySelector({sel!r})")
+        msg = b.eval(f"document.querySelector({sel!r}).textContent")
+        self.assertIn("reassign or remove them first", msg.lower())
+        self.assertFalse(b.eval(f"!!document.querySelector('[data-pl-remove-yes=\"{name}\"]')"), "no Remove button")
+        self.tap(f"[data-pl-remove-no='{name}']")
+        time.sleep(0.5)
+        self.assertEqual(self.register, before, "nothing written")
+        return msg
+
+    def test_a_key_stakeholder_with_an_alias_and_followed_is_refused(self):
+        self.open()
+        msg = self.refused("Mia Hale")
+        self.assertIn("a key stakeholder on 1 project", msg)
+        self.assertIn("| Mia Hale | mia@example.com | MH | Example Client Ltd | Analyst | | yes |", self.register)
+
+    def test_a_milestone_owner_is_refused(self):
+        self.open()
+        self.assertIn("owns 1 milestone", self.refused("Noah Reed"))
+
+    def test_a_workstream_lead_is_refused(self):
+        self.open()
+        self.assertIn("leads 1 workstream", self.refused("Lena Park"))
+
+    def test_someone_named_nowhere_can_still_be_removed_with_undo(self):
+        b = self.b
+        self.open()
+        self.tap("[data-pl-remove='Ivy Moss']")
+        b.wait("!!document.querySelector('[data-pl-remove-yes=\"Ivy Moss\"]')")
+        self.tap("[data-pl-remove-yes='Ivy Moss']")
+        self.applied()
+        self.assertNotIn("Ivy Moss", self.register)
+        self.tap("#snackU")
+        self.wait_for(lambda: "| Ivy Moss | ivy@example.com | Ivy | Example Client Ltd | Adviser | | yes |" in self.register,
+                      "Undo puts her record back, alias and followed column included", timeout=15)
 
 
 if __name__ == "__main__":

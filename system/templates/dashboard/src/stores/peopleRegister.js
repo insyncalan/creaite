@@ -14,7 +14,7 @@
    Every change is one proposal holding the register file (settings.js regSave: logged, applied, with Undo). */
 import { A, DEC, open, P, R } from "../core/data.js";
 import { D, isMe, S, TODAY } from "../core/page.js";
-import { REGPEND, REGTEXT, isHiddenPerson, pBlank, pFind, pKey, peopleParse, regSave, resolver } from "../settings.js";
+import { REGPEND, REGTEXT, WSD, isHiddenPerson, pBlank, pFind, pKey, peopleParse, regSave, resolver } from "../settings.js";
 
 export const COL_ON = "Projects", COL_OFF = "Left projects";
 /** @param {any} v @returns {string[]} */
@@ -202,14 +202,24 @@ export function removeFromProject(name, code) {
   const derived = derivedOf(name), want = onOf(name).filter(c => c !== code);
   return regSave(`Removed ${name} from ${projName(code)}`, L => { setOn(rowIn(L, name), derived, want); return L; });
 }
-/** How many items (actions, RAID and decisions, open or closed) name them, by their name or an alias: while any do, Remove from
-    the register is refused (#248 M3, Alan, 20-10-2026: reassign them first; nothing is reassigned for him, and the row would
-    only come back as "needs details" without its aliases). @param {string} name */
-export const ownedItems = name => (registerRows().find(x => pKey(x.n) === pKey(name)) || { items: [] }).items.length;
-/** The People page's delete: the person's row leaves the register. Refused (false, nothing written) while they own items.
-    Never called from a project page. @param {string} name */
+/** @typedef {{items: number, milestones: number, workstreams: number, stakeholder: number, total: number}} NamedIn */
+/** What still names them, by their name or an alias: the items they own (actions, RAID and decisions, open or closed), the
+    milestones they own and the workstreams they lead (retired ones too), and the projects whose Key stakeholders list them.
+    While any do, Remove from the register is refused (#248 M3, Alan, 20-10-2026: reassign or remove them first; nothing is
+    reassigned for him, and the row would only come back as "needs details" without its aliases or the followed column).
+    Promises are not counted: the dashboard has no promise owners to count. @param {string} name @returns {NamedIn} */
+export function namedIn(name) {
+  const rs = resolver(), is = (/** @type {any} */ n) => !!n && n !== "TBC" && pKey((rs(n) || {}).name || n) === pKey(name);
+  const pr = registerRows().find(x => pKey(x.n) === pKey(name));
+  const owned = pr ? pr.items.length : 0, stakeholder = pr ? Object.values(pr.it).filter(c => c.st).length : 0;
+  const milestones = P.reduce((n, p) => n + (p.ms || []).filter((/** @type {any[]} */ m) => m[3] && is((m[14] || {}).owner)).length, 0);
+  const workstreams = WSD().filter(w => is(w.lead)).length;
+  return { items: owned, milestones, workstreams, stakeholder, total: owned + milestones + workstreams + stakeholder };
+}
+/** The People page's delete: the person's row leaves the register. Refused (false, nothing written) while anything names them
+    (namedIn). Never called from a project page. @param {string} name */
 export function removeFromRegister(name) {
-  if (ownedItems(name) > 0) return Promise.resolve(false);
+  if (namedIn(name).total > 0) return Promise.resolve(false);
   return regSave(`Removed ${name} from the people register`, L => L.filter(p => pKey(p.name) !== pKey(name)));
 }
 /** @param {string} code */

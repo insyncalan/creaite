@@ -16,7 +16,7 @@ import { pName } from "../../core/data.js";
 import { store } from "../../core/page.js";
 import { navWrite } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
-import { addPerson, inRegister, newFilter, ownedItems, personPasses, registerRows, removeFromRegister, savePerson } from "../../stores/peopleRegister.js";
+import { addPerson, inRegister, namedIn, newFilter, personPasses, registerRows, removeFromRegister, savePerson } from "../../stores/peopleRegister.js";
 import { Count, Dash, NameCell, PeopleApplied, PeopleTools, openPersonForm, peopleWord, peoplePlural, useFields } from "./PeopleParts.jsx";
 
 /** @typedef {import("../../stores/peopleRegister.js").PersonRow} PersonRow */
@@ -50,15 +50,23 @@ const plHandlers = {
   onSave: (/** @type {string} */ name, /** @type {any} */ v, /** @type {boolean} */ isNew) => isNew ? addPerson(name, v) : savePerson(name, v),
 };
 
+/** "owns 3 items and 1 milestone, leads 1 workstream and is a key stakeholder on 2 projects". @param {import("../../stores/peopleRegister.js").NamedIn} n */
+function namedWords(n) {
+  const owns = [n.items && peoplePlural(n.items, "item"), n.milestones && peoplePlural(n.milestones, "milestone")].filter(Boolean);
+  const parts = [owns.length && `owns ${owns.join(" and ")}`, n.workstreams && `leads ${peoplePlural(n.workstreams, "workstream")}`,
+    n.stakeholder && `is a key stakeholder on ${peoplePlural(n.stakeholder, "project")}`].filter(Boolean);
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : String(parts[0] || "");
+}
+
 /** Remove from the register: it asks first (the delete pattern), then one proposal with Undo. @param {{x: PersonRow}} props */
 function RemoveButton({ x }) {
   const [ask, setAsk] = useState(false);
   if (!inRegister(x.n)) return <IconButton icon="trash" label="Remove from the register" name={`Remove from the register: ${x.n}`} why="Only their items name them: there is no record to remove" />;
   if (!ask) return <IconButton icon="trash" label="Remove from the register" name={`Remove from the register: ${x.n}`} cls="no" data={{ "pl-remove": x.n }} onClick={() => setAsk(true)} />;
-  const owned = ownedItems(x.n);   // #248 M3: refused while they own items; nothing is reassigned for Alan
-  if (owned) return (
+  const named = namedIn(x.n);   // #248 M3: refused while anything names them; nothing is reassigned for Alan
+  if (named.total) return (
     <span class="psask" role="group" aria-label={`${x.n} can't be removed yet`}>
-      <span class="sub" role="alert" data-pl-remove-refused={x.n}>{x.n} owns {peoplePlural(owned, "item")}. Reassign them first, then remove {x.n} from the register.</span>
+      <span class="sub" role="alert" data-pl-remove-refused={x.n}>{x.n} {namedWords(named)}. Reassign or remove them first, then remove {x.n} from the register.</span>
       <button type="button" class="btn sm" data-pl-remove-no={x.n} onClick={() => setAsk(false)}>OK</button>
     </span>
   );

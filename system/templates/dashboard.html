@@ -33486,9 +33486,16 @@ ${s5}`;
       return L3;
     });
   }
-  var ownedItems = (name) => (registerRows().find((x5) => pKey(x5.n) === pKey(name)) || { items: [] }).items.length;
+  function namedIn(name) {
+    const rs2 = resolver(), is2 = (n4) => !!n4 && n4 !== "TBC" && pKey((rs2(n4) || {}).name || n4) === pKey(name);
+    const pr2 = registerRows().find((x5) => pKey(x5.n) === pKey(name));
+    const owned = pr2 ? pr2.items.length : 0, stakeholder = pr2 ? Object.values(pr2.it).filter((c5) => c5.st).length : 0;
+    const milestones2 = P4.reduce((n4, p6) => n4 + (p6.ms || []).filter((m5) => m5[3] && is2((m5[14] || {}).owner)).length, 0);
+    const workstreams = WSD().filter((w6) => is2(w6.lead)).length;
+    return { items: owned, milestones: milestones2, workstreams, stakeholder, total: owned + milestones2 + workstreams + stakeholder };
+  }
   function removeFromRegister(name) {
-    if (ownedItems(name) > 0) return Promise.resolve(false);
+    if (namedIn(name).total > 0) return Promise.resolve(false);
     return regSave(`Removed ${name} from the people register`, (L3) => L3.filter((p6) => pKey(p6.name) !== pKey(name)));
   }
   var projName = (code) => (P4.find((p6) => p6.code === code) || { name: code }).name;
@@ -33814,17 +33821,26 @@ ${s5}`;
   var plHandlers = {
     onSave: (name, v5, isNew) => isNew ? addPerson(name, v5) : savePerson(name, v5)
   };
+  function namedWords(n4) {
+    const owns = [n4.items && peoplePlural(n4.items, "item"), n4.milestones && peoplePlural(n4.milestones, "milestone")].filter(Boolean);
+    const parts = [
+      owns.length && `owns ${owns.join(" and ")}`,
+      n4.workstreams && `leads ${peoplePlural(n4.workstreams, "workstream")}`,
+      n4.stakeholder && `is a key stakeholder on ${peoplePlural(n4.stakeholder, "project")}`
+    ].filter(Boolean);
+    return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : String(parts[0] || "");
+  }
   function RemoveButton({ x: x5 }) {
     const [ask2, setAsk] = d2(false);
     if (!inRegister(x5.n)) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove from the register: ${x5.n}`, why: "Only their items name them: there is no record to remove" });
     if (!ask2) return /* @__PURE__ */ u2(IconButton, { icon: "trash", label: "Remove from the register", name: `Remove from the register: ${x5.n}`, cls: "no", data: { "pl-remove": x5.n }, onClick: () => setAsk(true) });
-    const owned = ownedItems(x5.n);
-    if (owned) return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": `${x5.n} can't be removed yet`, children: [
+    const named = namedIn(x5.n);
+    if (named.total) return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": `${x5.n} can't be removed yet`, children: [
       /* @__PURE__ */ u2("span", { class: "sub", role: "alert", "data-pl-remove-refused": x5.n, children: [
         x5.n,
-        " owns ",
-        peoplePlural(owned, "item"),
-        ". Reassign them first, then remove ",
+        " ",
+        namedWords(named),
+        ". Reassign or remove them first, then remove ",
         x5.n,
         " from the register."
       ] }),
