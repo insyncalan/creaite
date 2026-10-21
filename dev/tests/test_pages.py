@@ -196,7 +196,8 @@ class FilesLiveTests(FilesLiveBase):
         self.assertNotIn("2026-10-16 Weekly report.docx", self.rows())
         touch(self.v.root / DEFAULT_REPORTS / "2026-10-16 Weekly report.docx")
         self.b.eval("go('today'); go('files')")                             # looking again
-        self.b.wait("[...document.querySelectorAll('#filesTbl a')].some(a=>a.textContent.startsWith('2026-10-16'))")
+        # the sample's own meetings follow the real clock (a 2026-10-16 Steering is there before the look), so wait for this file
+        self.b.wait("[...document.querySelectorAll('#filesTbl a')].some(a=>a.textContent==='2026-10-16 Weekly report.docx')")
         self.assertIn("2026-10-16 Weekly report.docx", self.rows())
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].filter(r=>r.querySelector('.tag.new')).map(r=>r.querySelector('a').textContent)"),
                          ["2026-10-16 Weekly report.docx"])                 # tagged New

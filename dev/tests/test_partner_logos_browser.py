@@ -95,6 +95,17 @@ class PartnerTiles(H.Hub):
         self.b.click("[data-logo-tick='partner:beta-works']")
         self.wait_line("firm, client, partner")
 
+    def test_two_ticks_before_the_first_save_lands_keep_both(self):
+        # v2.5.3 gate (CI run 39526296175): the second tick read the ticks as they were before the first save came back, and lost it
+        self.open_panel()
+        self.b.click("[data-logo-tick='partner:beta-works']")
+        self.wait_line("firm, client, partner:acme-labs")
+        self.b.click("[data-logo-tick='partner:acme-labs']")
+        self.wait_line("firm, client")
+        self.b.eval("document.querySelector(\"[data-logo-tick='partner:acme-labs']\").click(); "
+                    "document.querySelector(\"[data-logo-tick='partner:beta-works']\").click(); 1")
+        self.wait_line("firm, client, partner")
+
     def test_a_bare_partner_line_ticks_every_partner(self):
         self.mem.write_text(self.mem.read_text() + "- **Client report logos:** firm, partner\n")
         self.open_panel()
