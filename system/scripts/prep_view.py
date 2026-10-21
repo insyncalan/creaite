@@ -362,7 +362,8 @@ def _meeting(ctx):
     allp = ctx["project"] == "_portfolio"
     return {"title": mt["title"], "day": ctx["day"], "day_shown": shown(ctx["day"]), "start": mt.get("start", ""),
             "end": mt.get("end", ""), "where": mt.get("where", ""), "confidential": bool(mt.get("confidential")),
-            "project": ctx["project"], "project_name": "Portfolio" if allp else ctx.get("project_name") or "",
+            "project": ctx["project"], "chosen": ctx.get("chosen", True), "series": ctx.get("series", ""),
+            "project_name": "Portfolio" if allp else ctx.get("project_name") or "",
             "body": "" if mt.get("confidential") else mt.get("body", "")}
 
 
