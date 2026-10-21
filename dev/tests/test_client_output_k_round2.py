@@ -418,6 +418,22 @@ print(json.dumps(out))
             with self.subTest(form=f):
                 self.assertTrue(self.findings_of(f"See {f} for the detail."), f)
 
+    def test_l6_a_padded_id_with_a_fraction_or_date_mark_after_it_is_still_found(self):
+        # Cap's HIGH on round 3: the fraction/date exemption must not cover a leading zero or a long first run
+        code, letter, num = self.hidden_action()["id"].split("-")
+        n = int(num)
+        forms = [f"{code}-{letter}-0{num}/1", " ".join(code) + f" - {letter} - {num}.5", f"{code}-{letter}-{num}-5",
+                 f"{code}-{letter}-{num}/2026", f"{code} {letter} " + " ".join(num) + ".5", f"{code}-{letter}-0{n}/1",
+                 f"{code}-{letter}-{num}:10", f"{code}-{letter}-00{num}.1"]
+        for f in forms:
+            with self.subTest(form=f):
+                self.assertTrue(self.findings_of(f"See {f} for the detail."), f)
+
+    def test_l6_control_a_short_fraction_date_or_time_after_the_code_is_no_id(self):
+        for f in ("ABC A 4/10", "ABC A 4/10/2026", "ABC A 4.10", "ABC A 12.5", "ABC A 4:10"):
+            with self.subTest(form=f):
+                self.assertEqual(self.findings_of(f"Plain words: {f} is the day."), [], f)
+
     def test_l6_control_a_date_or_a_list_of_numbers_is_no_id(self):
         for f in ("ABC 2026/10/20", "ABC 500, 600 and 700 users", "A B C 1 2 3 4"):
             with self.subTest(form=f):

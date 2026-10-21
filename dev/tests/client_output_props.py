@@ -1254,7 +1254,10 @@ def f_loose_id(s, r):
         code, letter, num = m.group(1), m.group(2), m.group(3)
         mid = f"{letter}-" if letter else ""
         return r.choice([" ".join(code) + " - " + (f"{letter} - " if letter else "") + " ".join(num), f"{code}-{mid}0{num}",
-                         f"{code}-{mid}{int(num)}", f"{code.lower()}.{mid.replace('-', '.')}{num}"])
+                         f"{code}-{mid}{int(num)}", f"{code.lower()}.{mid.replace('-', '.')}{num}",
+                         # #259 round 3 (Cap's HIGH): a padded ID with a fraction, date or time mark after it is still the ID
+                         f"{code}-{mid}0{num}/1", " ".join(code) + " - " + (f"{letter} - " if letter else "") + f"{num}.5",
+                         f"{code}-{mid}{num}/2026", f"{code}-{mid}{num}:10"])
     return ID_IN.sub(one, s)
 
 

@@ -198,14 +198,27 @@ def _number(groups):
     return "".join(groups) if all(len(g) == 1 for g in groups) else groups[0]
 
 
-DATED = re.compile(r"\d+[/.:\-]\d")   # a number, then one fraction, date or time mark and a digit: "4/10", "4.10", "4-10", "4:10"
+DATED = re.compile(r"[1-9]\d?[/.:\-]\d")   # a short number (1 or 2 digits, no leading zero), then one fraction, date or time
+#                                           # mark and a digit: "4/10", "12.5", "4-10", "4:10"
+DATE_MARK = re.compile(r"[/.:\-]")
 
 
 def _dated(digits, runs):
-    """True when an ID's digits are a fraction, a date or a time ("ABC A 4/10 is the review day", "4/10/2026", "4.10"), not an ID:
-    the first number is followed straight away by "/", ".", "-" or ":" and a digit, and the digits aren't spaced one by one
-    ("0/0/4" and "0 - 0 - 4" stay an ID; "ABC A 4." stays one, as no digit follows its dot). #259 round 3."""
-    return not all(len(g) == 1 for g in runs) and bool(DATED.match(digits))
+    """True when an ID's digits are a fraction, a date or a time ("ABC A 4/10 is the review day", "4/10/2026", "12.5"), not an ID:
+    the first number is one or two digits with no leading zero, followed straight away by "/", ".", "-" or ":" and a digit, and
+    the digits aren't three or more spaced one by one ("1/2/3"). A leading zero or a longer first run stays an ID ("0001/1",
+    "001.5", "01/1", "0/0/4"), and so does "ABC A 4." (no digit follows its dot). #259 round 3 (and Cap's HIGH on it)."""
+    spaced = all(len(g) == 1 for g in runs) and len(runs) >= 3
+    return not spaced and bool(DATED.match(digits))
+
+
+def _readings(digits, runs):
+    """The numbers an ID's digits may be read as: _number's, and, when a fraction, date or time mark follows, every digit before
+    the first mark ("0 0 1.5" is 001, as "001.5" is), so a mark can't turn a hidden ID into another number."""
+    out = {_number(runs)}
+    if DATE_MARK.search(digits):
+        out.add(re.sub(r"\D", "", DATE_MARK.split(digits, 1)[0]))
+    return {n.lstrip("0") or "0" for n in out if n}
 
 
 def _loose_refs(con, text):
@@ -222,12 +235,10 @@ def _loose_refs(con, text):
             runs = re.split(r"[\W_]+", m.group(2))
             if _dated(m.group(2), runs):
                 continue
-            num = _number(runs).lstrip("0") or "0"
-            if len(num) > 3:
-                continue
-            ref = f"{code}-{m.group(1).upper()}-{num.zfill(3)}" if m.group(1) else f"{code}-{num.zfill(3)}"
-            if tracker.item_table(ref) and edit_ai.in_tracker(con, ref):
-                out.add(ref)
+            for num in _readings(m.group(2), runs):
+                ref = f"{code}-{m.group(1).upper()}-{num.zfill(3)}" if m.group(1) else f"{code}-{num.zfill(3)}"
+                if len(num) <= 3 and tracker.item_table(ref) and edit_ai.in_tracker(con, ref):
+                    out.add(ref)
     return out
 
 

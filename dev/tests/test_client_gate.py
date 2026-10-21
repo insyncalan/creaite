@@ -107,7 +107,7 @@ class TextFindingsMatchesEveryId(Base):
     def test_a_fraction_date_or_time_after_the_code_is_no_id_with_the_loose_forms_read(self):
         # v2.5.3 (#259 round 3): the loose (P16) reading, which client_leak.diff puts in the gate, read "ABC A 4/10" as ABC-A-004
         for text in ("ABC A 4/10 is the review day.", "ABC A 4/10/2026 is the review day.", "ABC A 4.10 is the release.",
-                     "ABC A 4:10 is the stand-up.", "ABC-A-4/10 is the review day.", "ABC A 04/10/2026 is the review day."):
+                     "ABC A 4:10 is the stand-up.", "ABC-A-4/10 is the review day.", "ABC A 12.5 is the release."):
             self.assertEqual(self.loose(text), [], text)
             self.assertEqual(self.text(text), [], text)
         # a hyphen: the loose reading takes "4-10" as a date; the gate's own reading (edit_ai.loose_ids) still reads ABC-A-004
@@ -116,7 +116,11 @@ class TextFindingsMatchesEveryId(Base):
     def test_the_loose_forms_still_find_the_id(self):
         why = f"{INTERNAL_ID} isn't client-visible, but its ID appears"
         for text in ("See A B C - A - 0 0 4 for the detail.", "See ABC-A-0004 for the detail.", "ABC A 4. Then lunch.",
-                     "See ABC-A-0/0/4 for the detail.", "See ABC-A-004 2026 for the detail."):
+                     "See ABC-A-0/0/4 for the detail.", "See ABC-A-004 2026 for the detail.",
+                     # Cap's HIGH on round 3: a leading zero, or a first run longer than two digits, keeps an ID an ID
+                     "See ABC-A-0004/1 for the detail.", "See A B C - A - 004.5 for the detail.", "See ABC-A-004-5 here.",
+                     "See ABC-A-004/2026 for the detail.", "See ABC A 0 0 4.5 for the detail.", "See ABC-A-04/1 here.",
+                     "See ABC-A-004:10 here.", "See ABC A 04/10/2026 here.", "See ABC-A-00004.1 here."):
             self.assertIn(why, self.loose(text), text)
 
     def loose(self, text):

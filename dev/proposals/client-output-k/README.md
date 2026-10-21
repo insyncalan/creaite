@@ -29,10 +29,13 @@ sees the finding while he edits rather than only when he exports.
   scratch copy, `test_client_output_k.py` (18, no expected failure left) and `test_client_output_k_round2.py` (24) are green.
 - Round 3 (Jarvis, 21-10-2026): with the diff in, `test_client_gate`'s "ABC A 4/10 is the review day." was read as ABC-A-004 (a
   false positive). `client_output._loose_refs` (unguarded) now skips digits that are a fraction, date or time (a number then `/`,
-  `.`, `-` or `:` and a digit: "4/10", "4/10/2026", "4.10", "4-10", "4:10"), unless they are spaced one by one ("0/0/4" stays an
-  ID). "A B C - A - 0 0 1", "ABC-A-0001" and "ABC A 4." still block. Tests:
-  `test_client_gate.TextFindingsMatchesEveryId.test_a_fraction_date_or_time_after_the_code_is_no_id_with_the_loose_forms_read`
-  and `test_the_loose_forms_still_find_the_id`. The diff also moves the memory, chase-log and label checks into
+  `.`, `-` or `:` and a digit: "4/10", "4/10/2026", "12.5", "4-10", "4:10"), but only when that first number is one or two
+  digits with no leading zero, and not three or more digits spaced one by one ("1/2/3"). Cap's HIGH on this: "ABC-A-0001/1" and
+  "A B C - A - 001.5" let ABC-A-001 through, so a leading zero or a longer first run stays an ID ("0001/1", "001.5", "001-5",
+  "001/2026", "01/1", "0/0/4"), and the digits before the first mark are read as a number too ("0 0 1.5" is 001). "A B C - A -
+  0 0 1", "ABC-A-0001" and "ABC A 4." still block. Tests: `test_client_gate.TextFindingsMatchesEveryId` (the false positive
+  and its variants; the loose and padded forms still found), `test_client_output_k_round2.test_l6_a_padded_id_*` and its
+  control, and four more `f_loose_id` forms in the P16out property. The diff also moves the memory, chase-log and label checks into
   `client_leak._context_findings`, so `text_findings` stays within check.py's complexity limit (`check: OK` with it applied).
 - It errs towards over-blocking: `client_leak.make_safe`, which strips the parts the gate finds, then also strips a part holding a
   loose form. That is the wanted direction.
