@@ -239,7 +239,7 @@ class Fence(unittest.TestCase):
         cls.files = put_samples(cls.v)
         drafts = cls.v.root / "system/staging/drafts"
         drafts.mkdir(parents=True, exist_ok=True)
-        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0]}))
+        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0]}))
         (drafts / "other.json").write_text(json.dumps({"title": "Other", "transcript": "projects/secret.vtt"}))
         (drafts / "note.json").write_text(json.dumps({"title": "Note", "transcript": cls.files[0], "note": "projects/x.md"}))
         (drafts / "values.json").write_text("{}")
@@ -251,7 +251,7 @@ class Fence(unittest.TestCase):
         (drafts / "new minutes.docx").write_bytes(b"PK")
         (drafts / "olddraft.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
                                                           "draft": "system/staging/drafts/steerco one-pager.docx"}))
-        (drafts / "newdraft.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+        (drafts / "newdraft.json").write_text(json.dumps({"title": "P", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0],
                                                           "draft": "system/staging/drafts/new minutes.docx"}))
         (drafts / "list.json").write_text(json.dumps({"title": "P", "transcript": [cls.files[0]]}))
         (drafts / "pics.json").write_text(json.dumps({"BODY": [{"image": os.path.expanduser("~/Pictures/a.png")}]}))

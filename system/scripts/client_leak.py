@@ -235,7 +235,15 @@ def text_findings(con, code, text, skip=()):
     for word in INTERNAL_WORDS:
         if word in low:
             found.append(f"contains “{word}”")
-    return found + unreadable_findings(raw)
+    return found + loose_ids(con, code, text, seen, found) + unreadable_findings(raw)
+
+
+def loose_ids(con, code, text, seen, found):
+    """v2.5.3 (#259, P16): an ID with its letters or digits spaced, more zeros or fewer ("A B C - A - 0 0 1", "ABC-0005",
+    "ABC-5"), and a hidden wording with hyphens, dots or underscores for its spaces (the output check, client_output, reads
+    them already). Returns the extra findings."""
+    import client_output
+    return client_output.loose_findings(con, code, text, seen | {f.split(" ", 1)[0] for f in found})
 
 
 OWNER_TABLES = ("actions", "raid", "decisions", "milestones")

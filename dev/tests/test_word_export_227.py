@@ -398,8 +398,9 @@ class Checks(Base):
 
     def test_check_09_no_guarded_file_changed(self):
         # live_server.py is left out: Jarvis applied the approved per-route body caps to it in the v2.4.0 guarded commit (Alan, 18-10-2026);
-        # the Word writer itself never touches a guarded file
-        guarded = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py")
+        # the Word writer itself never touches a guarded file. reach.py and tracker.py are left out too: Jarvis applied the approved guarded
+        # passes of v2.5.1 to v2.5.3 to them (Alan, 19-20-10-2026: the report guard, #174, #239 step 3, #255, #264, #269)
+        guarded = ("filechange.py", "permissions.py", "backup.py", "update.py")
         r = subprocess.run(["git", "diff", "--name-only", "origin/v234-final", "HEAD"], cwd=REPO, capture_output=True, text=True)
         if r.returncode != 0:
             self.skipTest("git history for origin/v234-final isn't available here: check 9 NOT run")
