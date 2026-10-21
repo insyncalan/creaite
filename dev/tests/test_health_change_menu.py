@@ -5,7 +5,7 @@ the left of the sheet (clipped under the side bar) and was scaled up with the pa
 shared openMenu and the section menu's class ("rsmenu"), so it is a popup above the page, kept clear of the side bar, with
 compact icon-and-word rows, and it takes whichever palette is on exactly as the section menu does.
 
-Real Chrome on the real live server, desktop only (900 and 1440 px), in the Retro Arcade, Cursor and creaite palettes.
+Real Chrome on the real live server, desktop only (900 and 1440 px), in the Claude, Retro Arcade, Cursor and creaite palettes.
 Run: python3 dev/tests/test_health_change_menu.py      (Chrome tier; skipped without Chrome)
 """
 import sys
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_report_sheet as RS  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 
-PALETTES = ("Retro Arcade", "Cursor", "creaite")
+PALETTES = ("Claude", "Retro Arcade", "Cursor", "creaite")
 WIDTHS = (900, 1440)
 MENU = '.pophost [role=menu][aria-label="Health for this week"]'
 
