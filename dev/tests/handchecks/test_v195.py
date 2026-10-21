@@ -406,7 +406,8 @@ class Measured2(HandcheckCase):
             by = {}
             for kind, _ in low:
                 by[kind] = by.get(kind, 0) + 1
-            self.fail("under the contrast bar (palette × mode × element): " + ", ".join(f"{k} {v}" for k, v in by.items()))
+            self.fail("under the contrast bar (palette × mode × element): " + ", ".join(f"{k} {v}" for k, v in by.items())
+                      + "\n" + "\n".join(x for _, x in low))
 
     def test_c07_resize_handle_value(self):
         """7. VoiceOver (⌘F5) on a Work column-resize handle → it reads a value (its width) and changes as you resize with ←
