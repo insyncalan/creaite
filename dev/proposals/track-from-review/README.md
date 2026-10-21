@@ -9,10 +9,14 @@ Everything else in #275 is in unguarded code. The Track column is enforced on th
 | `review.py approve <item>`, `review.py bulk` | refused or held ("not ticked in the minutes", `track_blocked`) |
 | Review's bulk approvals in the browser (Approve routine, the bar's Approve, the group tick, Approve n routine) | `rvBulkOK` and `routineKid` leave out a row with `trk` (build_dashboard, from `track_blocked`) |
 
-Review's bulk approvals (`rvDecideMany`, the funnel for Approve routine, the bar's Approve and Approve n routine) wait for a
-reload still bringing the Track choices (`TRKRELOAD`: leaving the Minutes view reloads the data, `reloadForTrack`), then take
-each row as the data now has it and leave out any row with `trk`. That closes the same-tab race Cap found (Review first drawing
-the old rows straight after the Minutes view; `test_06`).
+Review's bulk approvals (`rvDecideMany`, the funnel for Approve routine, the bar's Approve and Approve n routine) and, since
+round 3, the single row's Approve and the A key (`decide`) wait for a reload still bringing the Track choices (`TRKRELOAD`: leaving
+the Minutes view reloads the data, `reloadForTrack`), then take each row as the data now has it: bulk leaves out any row with
+`trk` and says how many it left out and why ("1 crossed in the minutes' Track column", `test_06`); the row path refuses it with
+"Crossed in the minutes' Track column" (`test_07`). That closes the same-tab race Cap found on both paths (Review first drawing the
+old rows straight after the Minutes view). A bulk approval whose apply stops is never "Approved n": the summary says the apply
+stopped, in plain words (`applyWords`: no tracker.py header, no proposal file name), and the batch goes back to pending, in
+Review's queue again (`test_08`).
 
 **Without the diff, two paths stay open.** Review's bulk approvals write decisions straight into the proposal (`editProposal`)
 before `/api/apply`, and `tracker.py apply` never reads the Track column, so:
@@ -29,10 +33,16 @@ before `/api/apply`, and `tracker.py apply` never reads the Track column, so:
 - the stopped item goes back to **pending** (saved when the apply stops), so it is in Review's queue again, never stuck, and the
   message says how to clear it: "approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register
   it" (Review can also reject it);
-- it **fails closed**: a draft record that can't be read, with an approved item not yet applied, stops the apply.
+- it **fails closed**: with an approved item not yet applied, a draft record that can't be read stops the apply, and so does one
+  that is gone, has lost its data block, or whose `state` was changed by hand from draft (round 3);
+- it holds after an **Undo outside the Minutes view** (`tracker.py undo`, Activity's undo): the items are pending again but the
+  record's rows they had are in `meta.removed`; the check settles a copy of the record first, so the crossed item is still seen
+  (as are `review.py bulk` and `review.py approve <item>`, round 3).
 
 Apply (from the repository root): `git apply dev/proposals/track-from-review/tracker-track-problems.diff` (`git apply --check`
-passes on `v26-track-from-review-2`, and `git apply -R --check` once applied). In `dev/tests/test_minutes_track_review.py`,
+passes on `v26-track-from-review-3`, and `git apply -R --check` once applied). The diff is unchanged in round 3: the fixes are in
+`minutes_record.track_apply_problems`, which it calls. Its docstring's "by any path" means the paths above; the one that stays open
+is a write to the database that doesn't go through `tracker.py apply`, which the rules already forbid. In `dev/tests/test_minutes_track_review.py`,
 `ServerTrack.test_apply_refuses_a_crossed_item_approved_by_hand` and `test_a_pending_crossed_item_never_stops_the_apply_of_another`
 are skipped until it is applied, then run by themselves; the whole file passes with it applied.
 

@@ -204,6 +204,53 @@ class TrackFromReview(LiveBrowserCase):
         b.pump(1.5)
         self.assertNotIn(SOW, self.descs(), "crossed a moment ago: never registered")
         self.assertEqual(self.staged(1)["decision"], "pending")
+        self.assertIn("1 crossed in the minutes' Track column", self.ev("document.getElementById('rvresult').textContent"),
+                      "Cap's round 2 (5): the row left out after the reload is reported, with why")
+
+    def test_07_the_row_approve_straight_after_leaving_the_minutes_waits_for_the_track_choices(self):
+        """Cap's round 2 (2): the row's Approve and the A key (decide) wait for the Track reload as the bulk paths do."""
+        b = self.b
+        self.open()
+        b.click(ROW % 1 + " .mntrk button.n")                   # SOW crossed now
+        for _ in range(60):
+            if (self.record().get("layout") or {}).get("track", {}).get("1") == "n":
+                break
+            b.pump(0.25)
+        stale = self.ev("(()=>{ go('review'); const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); window.__t7=null;"
+                        " const t=r.trk; decide(r.n,'approved').then(()=>{ window.__t7='done'; }); return t===undefined?null:t; })()")
+        self.assertIsNone(stale, "the row as Review first drew it: not yet marked crossed (the race)")
+        for _ in range(120):
+            if self.ev("window.__t7") == "done":
+                break
+            b.pump(0.25)
+        self.assertEqual(self.ev("window.__t7"), "done")
+        self.assertIn("Crossed in the minutes' Track column", self.snack())
+        b.pump(1.5)
+        self.assertNotIn(SOW, self.descs(), "crossed a moment ago: never registered")
+        self.assertEqual(self.staged(1)["decision"], "pending")
+
+    def test_08_a_bulk_approval_whose_apply_stops_says_so_and_puts_the_batch_back(self):
+        """Cap's round 2 (3): an apply that stops (here forced, as the guarded diff's Track check stops one) is never "Approved n":
+        the summary says it stopped, in plain words (no tracker.py header, no file name), and the batch is pending in Review again."""
+        b = self.b
+        msg = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 2: crossed in the minutes' Track column; "
+               "it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
+        b.eval("window.__api0=api; window.api=async(p,body)=>p==='/api/apply'?{ok:false,message:" + json.dumps(msg) + "}:__api0(p,body)")
+        self.ev("(()=>{ const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); RHL.clear(); RHL.add(r.n); rvSyncChk();"
+                " window.__t8=null; rvApproveSelected(true).then(()=>{ window.__t8='done'; }); })()")
+        for _ in range(120):
+            if self.ev("window.__t8") == "done":
+                break
+            b.pump(0.25)
+        self.assertEqual(self.ev("window.__t8"), "done")
+        text = self.ev("document.getElementById('rvresult').textContent")
+        self.assertIn("Approved 0", text)
+        self.assertIn("apply stopped, all back in Review: an item was crossed in the minutes' Track column", text)
+        self.assertNotIn("proposed-", text)
+        self.assertNotIn("Nothing was written", text)
+        self.assertEqual(self.staged(1)["decision"], "pending", "the batch put back: in Review's queue again")
+        self.assertFalse(self.ev("!!(REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + ")||{}).done"), "undecided on the page")
+        self.assertNotIn(SOW, self.descs())
 
 
 class TwoProjects(LiveBrowserCase):

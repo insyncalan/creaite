@@ -84,7 +84,11 @@ export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolea
 /* #92: tracker.py refuses an apply when a file changed after the item was staged ("write: <path> changed since this proposal was
    made"); said in plain words, with what to do. Only the page's wording: tracker.py's refusal is unchanged. */
 export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
-  return f?`${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`:t; };
+  if(f) return `${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`;
+  /* #275 round 3: the Track check's refusal, without tracker.py's header (the page says "Apply stopped" itself) or the proposal's file */
+  if(!/in the minutes' Track column|the minutes record can't be read/.test(t)) return t;
+  return t.split("\n").map(x=>x.trim()).filter(x=>x&&!/^Apply stopped\. Nothing was written\.$/.test(x))
+    .map(x=>x.replace(/^proposed-\S+\.json (item \d+|minutes): /,(a,w)=>w==="minutes"?"":"an item was ")).join("\n"); };
 /* fresh data after an apply or undo */
 /* BL-216: Review keeps its selection and highlight across a reload (rvHold before, rvRestore after) */
 export function rvHold(){ const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n); return {keys,ck:cr&&rvKey(cr)}; }
