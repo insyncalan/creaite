@@ -66793,6 +66793,36 @@ ${d5.text}`);
     if (s5.type === "invite") return ["calendar", "The calendar invite"];
     return ["list", ""];
   }
+  function ProjectChip({ mt: mt2 }) {
+    const NONE = "_portfolio", series = mt2.series || "";
+    const pick = async (code) => {
+      if (!code || !series) return;
+      if (!viaServer()) {
+        snack("Choosing the project needs the live server");
+        return;
+      }
+      const map = { ...(D.prep || {}).series || {}, [series]: code };
+      if (!await writeSettings({ "prep.series": map })) return;
+      if (!D.prep) D.prep = {};
+      D.prep.series = map;
+      Object.values((D.prep || {}).meetings || {}).forEach((x5) => {
+        if (x5.series === series) {
+          x5.p = code;
+          x5.how = "remembered";
+        }
+      });
+      snack("Remembered for this series");
+      loadPrep(prepViewKey.value, { keepTab: true });
+    };
+    return /* @__PURE__ */ u2(Chip, { name: "Project", cls: "ppproj", children: /* @__PURE__ */ u2("select", { class: "fsel", "aria-label": "Project", "data-ppproject": "1", value: mt2.chosen ? mt2.project : "", onChange: (e4) => pick(
+      /** @type {HTMLSelectElement} */
+      e4.currentTarget.value
+    ), children: [
+      !mt2.chosen ? /* @__PURE__ */ u2("option", { value: "", children: "Choose a project…" }) : null,
+      (D.projects || []).map((p6) => /* @__PURE__ */ u2("option", { value: p6.code, children: p6.name }, p6.code)),
+      /* @__PURE__ */ u2("option", { value: NONE, children: "No project (general meeting)" })
+    ] }) });
+  }
   function Header({ v: v5, researching }) {
     const mo2 = v5.model, mt2 = mo2.meeting, people = (mo2.brief || {}).people || {}, series = (mo2.brief || {}).series || {};
     const ev = eventOf(mt2), past = mt2.day < TODAY;
@@ -66847,7 +66877,7 @@ ${d5.text}`);
           mt2.day_shown,
           mt2.start ? ` · ${mt2.start}${mt2.end ? ` – ${mt2.end}` : ""}` : ""
         ] }),
-        mt2.project_name ? /* @__PURE__ */ u2(Chip, { name: "Project", children: mt2.project_name }) : null,
+        /* @__PURE__ */ u2(ProjectChip, { mt: mt2 }),
         (mo2.reporting || []).length === 1 && mo2.reporting[0].health ? /* @__PURE__ */ u2(Chip, { name: "Health", children: /* @__PURE__ */ u2(StatusDot, { health: mo2.reporting[0].health }) }) : null,
         !mt2.confidential && series.text ? /* @__PURE__ */ u2(Chip, { icon: "history", name: "Series", children: series.text }) : null,
         !mt2.confidential && inv.length ? /* @__PURE__ */ u2(Chip, { name: "Invited", cls: "ppwho", children: [
