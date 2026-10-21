@@ -1,0 +1,17 @@
+--- system/scripts/reach.py
++++ system/scripts/reach.py
+@@ -1574,11 +1574,11 @@ FILLERS = "\u115f\u1160\u17b4\u17b5\u180e\u2800\u3164\uffa0"      # blank-lookin
+ 
+ 
+ def _plain(text):
+-    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), combining marks (accents)
+-    and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
++    """The text after NFKC (fullwidth and the like), removing format and control characters (zero-width), unassigned code points,
++    combining marks (accents) and the blank-looking filler letters (Hangul filler, braille blank), and case folding."""
+     import unicodedata
+     spread = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
+-    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Mn", "Me") and c not in FILLERS)
++    kept = (c for c in spread if unicodedata.category(c) not in ("Cf", "Cc", "Cn", "Mn", "Me") and c not in FILLERS)
+     return "".join(kept).casefold()
+ 
+ 

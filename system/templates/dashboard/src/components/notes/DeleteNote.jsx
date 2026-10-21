@@ -1,17 +1,18 @@
 // @ts-check
-/* DeleteNote (#124, Alan 15-10-2026): "Delete note…", last in the note's … menu. Two steps, and both always show:
-   1. this confirm box, naming the note (Cancel is the default; Esc and a click outside cancel);
-   2. on Delete note, the live server puts the note's move into its own engagement's (or the portfolio's) _Archive on the one
-      approval card in ask creaite (/api/notes/delete). Only Approve there moves it (tracker.py apply, the BL-09 guard exception);
-      Reject leaves it where it is. The confirm box never replaces the card.
-   On Approve the note closes, the list drops it and a toast says "Moved … to the archive" with Undo (tracker.py undo of that
-   apply). Files › Archived lists it with Move back. Links to it in other notes show as missing until it is back. A confidential
-   note is deleted the same way: nothing of its text is sent anywhere. Text only through JSX.
-   While the card waits the note is read only here (noteHeld); on Approve the server checks again that the note is the version
-   confirmed, with no typing waiting (another window's included), and moves nothing if not: "Delete it again". */
+/* DeleteNote (#124, Alan 15-10-2026; #255, Alan 20-10-2026: no approval card): "Delete note…", last in the note's … menu.
+   1. This confirm box, naming the note (Cancel is the default; Esc and a click outside cancel), is the only question.
+   2. On Delete note the live server moves the note into its own engagement's (or the portfolio's) 99 Archive at once
+      (/api/notes/delete/now: the click is the approval; inside the server it is still tracker.py apply with the one-time
+      approval, the BL-09 guard exception, never ask creaite). It moves only the version the box was opened on: a note changed
+      since is refused with a plain message and left where it is.
+   Then the note closes, the list drops it and a toast says "Moved … to the archive" with Undo (tracker.py undo of that apply).
+   Files › Archived lists it with Move back. Links to it in other notes show as missing until it is back. A confidential note is
+   deleted the same way: nothing of its text is sent anywhere. Text only through JSX.
+   A server from before #255 doesn't know /api/notes/delete/now: the page then asks for the card (/api/notes/delete) as #124 did,
+   holds the note read only while the card waits, and closes it on Approve. */
 import { signal } from "@preact/signals";
 import { navWrite } from "../../core/nav.js";
-import { api, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
+import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { serverCardFlow } from "../../ask.js";
 import { loadNotes, noteCur, noteFlush, noteGone, noteHeld, notesCode, notesMsg } from "../../stores/notes.js";
 import { Dialog } from "../Dialog.jsx";
@@ -58,7 +59,7 @@ export async function askDeleteNote(row) {
   noteDeleting.value = { path: c.path, title: c.note.title, code: c.code };
 }
 
-/** After Delete note in the confirm box: save the note, ask for the card, and answer it in ask creaite.
+/** After Delete note in the confirm box: save the note and move it (#255: at once, no card; an older server: on the card).
     @param {Deleting} n */
 export async function deleteNote(n) {
   busy.value = true;
@@ -68,9 +69,11 @@ export async function deleteNote(n) {
     const cur = noteCur.value;
     let base = cur && cur.path === n.path ? cur.base : "";
     if (!open) base = n.base || "";                      // not the open note: the version from when the box opened (the server refuses a note changed since)
-    const r = await api("/api/notes/delete", { path: n.path, base });
+    let r = await api("/api/notes/delete/now", { path: n.path, base });
+    if (r && !r.ok && r.message === OLDSERVER) r = await api("/api/notes/delete", { path: n.path, base });   /* before #255: the card */
     noteDeleting.value = null;
     if (n.row) focusRow(n.path, n.next);
+    if (r && r.ok && r.moved) { await moved(n, r.apply_id); if (n.row) focusRow(n.path, n.next); return true; }
     if (!r || !r.ok || !r.card) { snack(oneLine((r && r.message) || "Not deleted.")); return false; }
     snack(oneLine(r.message));
     const done = await watchCard(n, r.card);
@@ -95,15 +98,20 @@ async function watchCard(n, card) {
   let done;
   try { done = await serverCardFlow(card, { onStale: unhold }); } finally { clearTimeout(t); unhold(); remember(null); }   /* only Approve moves it */
   if (!done) return false;
+  await moved(n, done.apply);
+  return true;
+}
+
+/** Once the note has moved: close it, drop it from the list, and say so with Undo (tracker.py undo of apply `id`).
+    @param {{path: string, title: string, code: string}} n @param {number | null | undefined} id */
+async function moved(n, id) {
   if (noteCur.value && noteCur.value.path === n.path) { noteGone(n.path); navWrite(false); }   /* its file has gone: nothing to save */
   await loadNotes(notesCode.value || n.code);
-  const id = done.apply;
   snack(`Moved “${n.title}” to the archive`, id ? async () => {
     const u = await api("/api/undo", { apply_id: id });
     snack(undoWords(u, n.title));
     if (u && u.ok) { await reloadData(); await loadNotes(notesCode.value || n.code); }
   } : null);
-  return true;
 }
 
 /* After a reload the card is still waiting on the server: pendingEdit asks this first. True when the card is a note's delete
@@ -155,7 +163,7 @@ export function DeleteNoteDialog() {
       {n ? <div class="ndelbox">
         <h2 id="ndelH">Delete “{n.title}”?</h2>
         <p id="ndelP">It moves to {where}, not away for good. Restore it any time from Files › Archived. Anything that links to it shows the link as missing until it is restored.</p>
-        <p class="sub">The move then waits on the approval card in ask creaite: nothing moves until you approve it there.</p>
+        <p class="sub">It moves as soon as you press Delete note, and the message that follows has Undo.</p>
         <div class="nnfoot">
           <button type="button" class="btn" id="ndelCancel" onClick={() => closeBox()} disabled={busy.value}>Cancel</button>
           <button type="button" class="btn danger" id="ndelGo" disabled={busy.value} onClick={() => deleteNote(n)}>{busy.value ? "Working…" : "Delete note"}</button>

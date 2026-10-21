@@ -165,7 +165,11 @@ class DismissInTheDashboard(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         super().load(v)
-        (v.root / "projects/zz Archive").mkdir(parents=True, exist_ok=True)     # one warning to dismiss (BL-09's old name)
+        # one warning to dismiss: #252 retired the zz Archive warning this test used; an unknown logging.level is a plain warning
+        f = v.root / "system/config/settings.json"
+        cfg = json.loads(f.read_text(encoding="utf-8"))
+        cfg.setdefault("logging", {})["level"] = "loud"
+        f.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
     def open_health(self):
         self.b.eval("go('settings','health')")

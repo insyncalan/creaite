@@ -1,0 +1,18 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 30bdeb1f..128b3786 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -8038,8 +8038,12 @@ def install_debug_log():
+         elif kind == "permission":
+             debuglog.warn("run", f"{self.id} asked for a permission rule: {debuglog.clean(data.get('rule', ''), 200)} ({data.get('state', '')})")
+         elif kind == "changes":                                       # BL-141: the one card (paths only)
++            ops = {}                                                   # #253: each op and its count, never a title (it names a path)
++            for i in data.get("items") or []:
++                op = re.sub(r"[^a-z_]", "", str(i.get("op") or "rule"))[:20] or "rule"
++                ops[op] = ops.get(op, 0) + 1
+             debuglog.warn("run", f"{self.id} card {data.get('card') or '-'}: {len(data.get('items') or [])} changes for approval, "
+-                                 f"{len(data.get('refused') or [])} refused: " + debuglog.clean("; ".join(i.get('title', '') for i in data.get('items') or []), 300))
++                                 f"{len(data.get('refused') or [])} refused: " + debuglog.clean(", ".join(f"{k} {v}" for k, v in sorted(ops.items())), 120))
+         elif kind == "stopped":
+             debuglog.warn("run", f"{self.id} stopped{' (timed out)' if data.get('timed_out') else ''}")
+         return orig_emit(self, kind, **data)

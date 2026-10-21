@@ -25,6 +25,7 @@ import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S,
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
+import { openMilestone } from "./milestones.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
@@ -34,7 +35,7 @@ import { draftOn, RHL } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
-export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
+export const dismissedF=()=>store.list("creaite-dismiss"), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
 /* ===== Today brief (BL-72) ===== */
 /* Today reads as a brief: numbered sentences with a bold linked title and links inside the sentence, worded from
    templates here (no model call). The data for the Week ahead comes from build_dashboard.py (D.week). */
@@ -76,7 +77,44 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
     if(others) parts.push(`${plur(others,"decision")} waiting on others`); if(mine) parts.push(others?`${mine} for you`:`${plur(mine,"decision")} for you`);
     const show=L.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
     out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),`${andList(show)}${L.length>3?` and ${L.length-3} more`:""}.`)}); } }
+  out.unshift(...msAttention().map(r=>({milestone:r.ms,html:n=>msAttnRow(n,r)})));   /* #251: time-critical, so first, soonest first */
   return out; }
+/* #251 (Alan, 19-10 and 20-10-2026): one Needs attention row per milestone not yet achieved (or dropped) that is due within the
+   Due soon window (review.due_soon_days), or already past due, by its forecast date when it has one, else its agreed date, and
+   has open work attached that must close for it to hold: open (or delayed) actions and open issues. Risks are left out (a
+   risk can stay open and the milestone still lands); decisions have no milestone. No date, no row; nothing attached, no row.
+   No dismiss: it goes by itself when the work closes or the milestone is achieved. Built from the page's own data. */
+const msLate=x=>!!x.due&&days(x.due)<0;
+export function msAttention(){ const out=[];
+  for(const p of P) for(const m of p.ms||[]){ const id=m[3], when=m[8]||m[4]; if(!id||!when||m[6]!=="Planned"||days(when)>S.dueSoon) continue;
+    const its=[...A.filter(a=>a.ms===id&&open(a)),...R.filter(r=>r.ms===id&&r.type==="Issue"&&r.st==="Open")];
+    if(!its.length) continue;
+    // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items first)
+    its.sort((a,b)=>(msLate(b)-msLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id));
+    out.push({ms:id,p:p.code,name:m[0],when,its}); }
+  return out.sort((a,b)=>a.when.localeCompare(b.when)||pName(a.p).localeCompare(pName(b.p))||a.name.localeCompare(b.name)); }
+/* one attached item: "DEF-A-003 Confirm licence count, 1 day late" (red), "…, due Thursday", "…, no due date, no owner" */
+export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} ${esc(decShort(x.t||"",70))}`, own=!x.o||x.o==="TBC"?", no owner":"";
+  if(n!==null&&n<0) return `<span class="late">${t}, ${-n} day${n===-1?"":"s"} late</span>${own}`;
+  const due=n===null?"no due date":n===0?"due today":n===1?"due tomorrow":n<7?`due ${longDay(x.due).split(" ")[0]}`:`due ${longDay(x.due)}`;
+  return `${t}, ${due}${own}`; }
+/* "Open all n in Work": All items, the project, open actions and issues, on the milestone (the Milestone filter), so Work
+   lists exactly the items counted */
+export function msAttnOpenWork(id){ const r=msAttention().find(x=>x.ms===id); if(!r) return;
+  openWork(r.p,"all","open",{st:["Open"],ty:["Action","Issue"],mi:[r.ms]}); }
+export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its.length} in Work`;
+export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
+  const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`
+    :`is due ${k===0?"today":k===1?"tomorrow":longDay(r.when)}: ${items} for it to hold`;
+  const shown=r.its.slice(0,3).map(msItemWords), more=c>3?[`and ${c-3} more`]:[];
+  return tl(n,tLink(html`data-ms="${r.ms}"`,html`Milestone <u>${r.name}</u> ${raw(when)}`),
+    [...shown,...more,projLink(r.p),sLink(html`data-msattnwork="${r.ms}"`,msAttnWorkWord(r))].join(" · "),
+    `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
+    html`data-msattn="${r.ms}"`); }
+export function msAttnMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=msAttention().find(x=>x.ms===id); if(!r) return;
+  openMenu(b,{label:`Options: milestone ${r.name}`,id:"msAttnMenu",align:"right",onPick:d=>{ closeMenu();
+      if(d==="ms") openMilestone(r.ms); else if(d==="work") msAttnOpenWork(r.ms); else go("cockpit",r.p); },
+    items:[{id:"ms",name:"Open the milestone",data:{d:"ms"}},{id:"work",name:msAttnWorkWord(r).replace(/^Open in Work$/,"Open it in Work"),data:{d:"work"}},{id:"proj",name:`Open ${pName(r.p)}`,data:{d:"proj"}}]}); }
 export const dueWords=d=>{ const n=days(d); return n<0?`<span class="late">${-n} day${n===-1?"":"s"} late</span>`:n===0?"due today":n===1?"due tomorrow":`due in ${n} days`; };
 /* "Friday 9th October": the Week ahead heading spells its end day out (Alan, 2026-10-09) */
 export const ordinal=n=>n+((n%100>=11&&n%100<=13)?"th":["th","st","nd","rd"][n%10]||"th");
@@ -353,7 +391,9 @@ export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
 wireSpark();
-$("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
+$("#attnList").addEventListener("click",e=>{ const mb=e.target.closest("li[data-msattn] .dots"); if(mb){ e.stopPropagation(); msAttnMenu(mb,mb.closest("li").dataset.msattn); return; }   /* #251 */
+  const mw=e.target.closest("[data-msattnwork]"); if(mw){ e.preventDefault(); e.stopPropagation(); msAttnOpenWork(mw.dataset.msattnwork); return; }
+  const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
@@ -588,19 +628,22 @@ export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG()
   return L; }
 /* The x hides the line until something new arrives or the next morning. This browser keeps the day and, per kind, which items were
    waiting when it was pressed (localStorage creaite-intakeline-dismissed): never text, only a short hash of each item's id (a
-   proposal's file and item, a meeting's calendar key, an Intake file's path), at most TQCAP a kind. An item waiting now that is not
-   in its kind's set is new and shows the line again; what has gone since needs nothing (a set, not a count, so approving older
-   ones never hides a newer one, and a swap is new). Kept in memory too, so a store that can't be read or written still hides it
+   proposal's file, item and created time, as minutes.py may reuse a file name a minute later; a meeting's calendar key; an Intake
+   file's path), at most TQCAP a kind. An item waiting now that is not in its kind's set is new and shows the line again; what has
+   gone since needs nothing (a set, not a count, so approving older ones never hides a newer one, and a swap is new). A kind longer
+   than TQCAP also keeps one digest of its whole set (order-independent, with its size): the line stays hidden when everything
+   waiting is in the kept list or the set is the very one dismissed, and shows otherwise. So a swap is never hidden; the cost of
+   the cap is only that, past it, approving one of the items left out of the list can show the line again. Kept in memory too, so a store that can't be read or written still hides it
    for this page load, as the Sweep due banner's x does. */
 const TQKEY="creaite-intakeline-dismissed", TQCAP=200, TQKINDS=["meetings","proposals","files"];
-/** @typedef {{day:string,ids:Record<string,string[]>,over?:Record<string,number>}} TqKept */
+/** @typedef {{day:string,ids:Record<string,string[]>,all?:Record<string,string>}} TqKept */
 let TQMEM=/** @type {TqKept|null} */(null), TQSTUCK=false;   /* TQSTUCK: the last write failed, so the memory is newer than the store */
 /** a short, stable hash of an id (FNV-1a, 32 bits, 8 hex digits): the store holds no title, file name or other text */
 const tqHash=/** @param {string} s */s=>{ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(16).padStart(8,"0"); };
 /** each kind's waiting ids, hashed: what intakeParts() counts, item by item */
 function intakeIds(){ return {
   meetings:MTG().filter(mtgHasTx).map(m=>tqHash("m|"+(m.key||m.id||`${m.day}|${m.start}|${m.title}`))),
-  proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}`:`n${r.n}`))),
+  proposals:REV.filter(r=>!r.done).map(r=>tqHash("p|"+(r.file!=null?`${r.file}#${r.ref}|${r.made||""}`:`n${r.n}`))),
   files:(D.inbox||[]).filter(f=>f.state==="new").map(f=>tqHash("f|"+(f.path||f.name))) }; }
 /* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
    storage event); the memory is read instead when the store can't be read, or when this page's last write to it failed (a store
@@ -608,14 +651,18 @@ function intakeIds(){ return {
 function tqRead(){ if(TQSTUCK) return TQMEM; try{ const v=localStorage.getItem(TQKEY); return v?JSON.parse(v):null; }catch(e){ return TQMEM; } }
 /** @returns {boolean} whether the store took it (the memory has it either way) */
 function tqWrite(d){ TQMEM=d; try{ localStorage.setItem(TQKEY,JSON.stringify(d)); TQSTUCK=false; return true; }catch(e){ TQSTUCK=true; return false; } }
-/** what the x keeps: today and each kind's ids, the last TQCAP of a longer list (and how many were left out, so that many unknown
-    still read as dismissed: a queue longer than the cap can still be hidden; one more than that shows it) */
-function tqKeep(){ const all=intakeIds(), ids=/** @type {Record<string,string[]>} */({}), over=/** @type {Record<string,number>} */({});
-  TQKINDS.forEach(k=>{ const l=[...new Set(all[k])]; ids[k]=l.slice(-TQCAP); if(l.length>TQCAP) over[k]=l.length-TQCAP; });
-  return Object.keys(over).length?{day:TODAY,ids,over}:{day:TODAY,ids}; }
+/** one hash of a whole set of hashed ids, whatever their order, with its size: "1a2b3c4d:250" */
+const tqDigest=/** @param {string[]} l */l=>`${tqHash([...l].sort().join(","))}:${l.length}`;
+/** what the x keeps: today and each kind's ids, the last TQCAP of a longer list (and then the digest of the whole set) */
+function tqKeep(){ const now=intakeIds(), ids=/** @type {Record<string,string[]>} */({}), all=/** @type {Record<string,string>} */({});
+  TQKINDS.forEach(k=>{ const l=[...new Set(now[k])]; ids[k]=l.slice(-TQCAP); if(l.length>TQCAP) all[k]=tqDigest(l); });
+  return Object.keys(all).length?{day:TODAY,ids,all}:{day:TODAY,ids}; }
+/* hidden only when, for every kind, each id waiting now is in the kept list, or the set waiting now is the whole set dismissed
+   (an older entry's "over" count is not read: such an entry can only show the line, never hide a new item) */
 function intakeDismissed(){ const d=tqRead(); if(!d||d.day!==TODAY||!d.ids||typeof d.ids!=="object") return false;
   const now=intakeIds();
-  return TQKINDS.every(k=>{ const kept=new Set(Array.isArray(d.ids[k])?d.ids[k]:[]); return now[k].filter(h=>!kept.has(h)).length<=((d.over&&+d.over[k])||0); }); }
+  return TQKINDS.every(k=>{ const l=[...new Set(now[k])], kept=new Set(Array.isArray(d.ids[k])?d.ids[k]:[]);
+    return l.every(h=>kept.has(h))||(!!d.all&&typeof d.all[k]==="string"&&d.all[k]===tqDigest(l)); }); }
 export function renderIntakeLine(){ const host=$("#tdQuietHost"); if(!host) return;
   const parts=intakeParts(), hid=parts.length>0&&intakeDismissed();
   drawIntakeLine(host,hid?[]:parts,pg=>go(pg)); }

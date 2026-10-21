@@ -1,6 +1,6 @@
 Draft the latest update for one action in creaite, Alan's portfolio tracker. It is a suggestion: Alan reads it, edits it and saves it himself. Change nothing; just reply.
 
-Write one or two short lines saying where the action stands now, from the sources below only. They are what happened since the last update ($since). Do not add a fact, a date, a name or a number that is not in a source. If the sources only show that it was discussed, say that, plainly. Today is $today.
+Write one or two short lines saying where the action stands now, from the sources below only. They are what happened since the last update ($since). Do not add a fact, a date, a name or a number that is not in a source. If the sources only show that it was discussed, say that, plainly. If they give nothing to say where the action stands, reply with exactly NO_SUGGESTION and nothing else: no explanation. Today is $today.
 
 Rules:
 - British English; dates as DD-MM-YYYY; no item numbers in the text.

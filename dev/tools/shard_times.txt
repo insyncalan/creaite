@@ -1,3 +1,5 @@
+# Lines starting with # are ignored. test_shared_undo.py and test_shared_undo_b.py are an ESTIMATE (measured 218 s and 266 s locally, scaled to the old CI 400 s plus set-up); refresh from a real CI run.
+# The four test_client_output_properties*.py are an ESTIMATE (v2.5.3 gate split: measured 143, 158, 102 and 130 s locally, doubled for CI); refresh from a real CI run.
 test_activity_item_links.py 44
 test_activity_search.py 27
 test_activity_undo.py 198
@@ -78,6 +80,10 @@ test_client_item_links.py 0
 test_client_leak.py 137
 test_client_leak_gate.py 149
 test_client_leak_place.py 334
+test_client_output_properties.py 290
+test_client_output_properties_pictures.py 320
+test_client_output_properties_routes.py 210
+test_client_output_properties_sections.py 260
 test_client_view.py 163
 test_close_day.py 40
 test_close_day_card.py 43
@@ -305,8 +311,11 @@ test_settings_catalogue.py 28
 test_settings_page.py 130
 test_settings_poll.py 42
 test_setup_dashboard.py 55
-test_shared_behaviour.py 650
-test_shared_undo.py 400
+test_shared_behaviour.py 220
+test_shared_behaviour_b.py 231
+test_shared_behaviour_c.py 229
+test_shared_undo.py 187
+test_shared_undo_b.py 228
 test_sharpen.py 24
 test_side_panel_live.py 155
 test_slash_menu.py 354

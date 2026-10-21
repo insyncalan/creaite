@@ -1,6 +1,6 @@
 """#233 L7 (Team Cap, review of p240-h3, low): /api/fs may create a CLAUDE.md only in an existing project's own folder.
 
-Today a write to projects/<anything>/CLAUDE.md creates the file under _Archive, _portfolio, a name that is no project, or a hidden
+Today a write to projects/<anything>/CLAUDE.md creates the file under 99 Archive, _portfolio, a name that is no project, or a hidden
 folder. This test FAILS against the current live_server.py and passes once the diff in dev/proposals/233b-fs-newfile.md is applied.
 Until then it is skipped, so the suite stays green; FS_NEWFILE_FORCE=1 runs it anyway.
 
@@ -38,7 +38,7 @@ class FsNewFile(unittest.TestCase):
 
     def test_no_claude_md_is_created_under_an_odd_folder(self):
         root = self.v.root
-        for name in ("_Archive", "_portfolio", "nope", ".hidden", "Zzz Not A Project"):
+        for name in ("99 Archive", "_portfolio", "nope", ".hidden", "Zzz Not A Project"):
             status, out = raw(self, {"op": "write", "path": f"projects/{name}/CLAUDE.md", "text": "# x\n"})
             self.assertFalse(out.get("ok"), (name, out))
             self.assertFalse((root / "projects" / name / "CLAUDE.md").exists(), name)

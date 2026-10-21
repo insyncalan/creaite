@@ -1,0 +1,39 @@
+diff --git a/system/scripts/client_leak.py b/system/scripts/client_leak.py
+index 0fc91f3..2d804f4 100644
+--- a/system/scripts/client_leak.py
++++ b/system/scripts/client_leak.py
+@@ -223,7 +223,21 @@ def text_findings(con, code, text, skip=()):
+         why = f"{ref} belongs to another project" if ref.split("-")[0] != code else item_problem(con, ref, blocking)
+         if why:
+             found.append(f"{why}, but its ID appears")
+-    found += _memory_findings(code, low)
++    found += _context_findings(con, code, text, low, ids)
++    for word in INTERNAL_WORDS:
++        if word in low:
++            found.append(f"contains “{word}”")
++    # v2.5.3 (#259, P16): an ID with its letters or digits spaced, more zeros or fewer ("A B C - A - 0 0 1", "ABC-0005", "ABC-5"),
++    # and a hidden wording with hyphens, dots or underscores for its spaces (the output check, client_output, reads them already)
++    import client_output
++    found += client_output.loose_findings(con, code, text, seen | {f.split(" ", 1)[0] for f in found})
++    return found + unreadable_findings(raw)
++
++
++def _context_findings(con, code, text, low, ids):
++    """text_findings' checks beyond the items themselves: a memory line marked Client-safe: no, a chase log line, and an item a
++    label excludes (BL-94's floor). Split out of text_findings (v2.5.3, #259), its messages unchanged."""
++    found = _memory_findings(code, low)
+     import linktext                                            # #153: an "I sent it" line is internal
+     if linktext.sent_has(as_shown(text)):
+         found.append("a chase log line (a dated 'Chased/Emailed/Asked … by email') is internal")
+@@ -232,10 +246,7 @@ def text_findings(con, code, text, skip=()):
+     except Exception as e:  # noqa: BLE001  BL-228: fails closed; skipped only when the tables aren't there
+         import review
+         found.extend(review.label_check_failure(con, e, code))
+-    for word in INTERNAL_WORDS:
+-        if word in low:
+-            found.append(f"contains “{word}”")
+-    return found + unreadable_findings(raw)
++    return found
+ 
+ 
+ OWNER_TABLES = ("actions", "raid", "decisions", "milestones")

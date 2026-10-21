@@ -2807,3 +2807,20 @@ Plan: `dev/sprints/v210-reporting.md`; contract: `dev/sprints/v210-contract.md` 
   - Client wording check on text only (`text_findings`), moved here from `review.client_findings`, which still reads the Word flow's drafts through it.
 - **Tests:** `test_client_leak` (10 for P3; 14 with P8's, with `test_a_partner_only_item_never_appears`, a Sensitive item never shown even when client-visible, a leak refused at Approve, facts locked to the approved week), `test_reports` (`ReportRoutes`: draft, save, approve, a new version, export after the internal week and never a leak, a client report before its internal week refused; `RelockRoutes`: a draft saved before the approval is locked, withheld and exportable, and re-locked to a new approved version), `test_report_builders_pinned` (`DocPinned`: `weekly_doc` and `client_doc` on a fixed fixture), plus `test_live_server`, `test_tracker` and `test_writer_pinned`. `check.py` shows only the 12 `board_*` problems already there.
 - **FR text for `dev/BRD.md`:** **FR (BL-335, BL-336, the report data):** *A weekly report is drafted from the tracker with the layout Alan last chose for the project, and a client report with the layout he chose for that client. Approving the weekly report records the week, its health and its Current state, and files the report; Undo puts the filed report back exactly as it was. A filed report is never saved over: editing it starts a new draft, and the filed one stays as it was until the new one is approved. A client report is approved or exported only after that week's internal report is approved, and it holds only the client-safe facts of that approved week; if the internal week is approved again, the client drafts are brought into line with it and only ever lose items. Only client-visible items appear in a client report, and nothing marked Sensitive or partner-only does; a "Partner only" label can only keep an item out. A report is never sent.*
+
+## #264: Intake's Process as its own run kind (v2.5.3)
+
+Pressing Process (Upload files, and Calendar import's Process selected after its load) starts the run kind `process`
+(`POST /api/intake/process`, token-checked, under `START_LOCK`), not an ask creaite chat. The server checks the files
+(`intake_process.validate_request`: directly in `inbox/`, plain files, at most 20, none already in Review); the guard hook's mode
+`process` (`reach.py`) lets the run read, run creaite's read commands and the minutes steps, and stage proposals for those files
+only; it refuses the record, `propose.py stage`, `filechange.py` and any write but its own `.json` in `system/staging/drafts/`.
+Questions go on the row ("Needs you"); ask creaite opens only when Alan asks. Usage kind `process`.
+
+- Design, contract and the first review: `dev/proposals/intake-process/README.md` (`reach.diff`, `live_server.diff`, applied).
+- R1 (a run's own files by its record, never by time): `r1-reach.diff` there, applied.
+- Round 2 (Team Cap's review of R1: M2 claims only after every check and a file's print as first seen; L1 a lock on
+  `run.json`; L2 the queue starts under `START_LOCK`; L3 reading only the vault and the projects; L4 the record only for the
+  hook's own run; the rules paragraph): `dev/proposals/intake-process-round2/`, for Jarvis to apply.
+- Tests: `dev/tests/test_intake_process.py`, `test_intake_process_round2.py`, `test_intake_process_ui.py`, `test_transcripts_ui.py`.
+- Follow-ups: Refresh as a direct job (#265, done); Re-extract in the Minutes view still opens ask creaite (#268, for 2.6).

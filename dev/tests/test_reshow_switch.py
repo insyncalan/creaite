@@ -3,7 +3,7 @@ comes back, the answer must land nowhere. Real Chrome on the real live server (n
 
   - the eye in the internal pane of Side by side, the answer held 6 s, ABC switched to DEF: DEF's internal pane, weeklyDoc, crInternal,
     DEF's client draft and DEF's saved files hold nothing from ABC ........ test_internal_eye_then_switch_lands_nowhere
-  - the same with the eye in the client pane ............................... test_client_eye_then_switch_lands_nowhere
+  - the same with the eye in the client pane (since #259 K3 the row is greyed, its item held, so no reshow) test_client_eye_then_switch_lands_nowhere
   - control, no switch: the row comes back with the tracker's words ........ test_no_switch_the_row_comes_back
   - the same eye, then another week of ABC opened ........................... test_internal_eye_then_week_switch_lands_nowhere
   - review (b), (d): a row saved shown with empty cells says Left out, comes back from the tracker, and the HTML export is still
@@ -63,7 +63,10 @@ class Base(LiveBrowserCase):
             return row["ref"]
         back = self.api("/api/report/draft", {"kind": kind, "code": "ABC"})["doc"]
         rows = next(s for s in back["sections"] if s["id"] == "overdue")["rows"]
-        return next(r["ref"] for r in rows if r.get("ref") and r["ref"] not in (back.get("items") or {}))
+        # v2.5.3 (#259, K3): a client report's items are derived from every row that names one, a left-out row too, so for a client
+        # report the left-out row is the one saved as its reference only (no cells); a weekly report still drops its item
+        held = {} if kind == "client" else (back.get("items") or {})
+        return next(r["ref"] for r in rows if r.get("ref") and not r.get("shown") and not r.get("cells") and r["ref"] not in held)
 
     def open_side(self, code="ABC"):
         self.b.reload("typeof go==='function' && LIVE")
@@ -77,7 +80,8 @@ class Base(LiveBrowserCase):
         self.b.pump(0.5)
 
     def bare(self, page, ref):
-        return f"{page} [data-id=overdue] tr.wr-bare[data-ref='{ref}']"
+        # v2.5.3 (#259, K3): a client report holds the item of each left-out row (derived), so its row is drawn greyed, never bare
+        return f"{page} [data-id=overdue] tr.{'hidrow' if page == CLI else 'wr-bare'}[data-ref='{ref}']"
 
     def switch_and_check(self, page, ref):
         self.b.wait(f"document.querySelector(\"{self.bare(page, ref)}\")", 10)

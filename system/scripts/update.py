@@ -172,26 +172,22 @@ def migrate_backup_folder(settings):
     return changed
 
 
-# ===== zz Archive becomes _Archive (BL-09) =====
-# The one time an update changes a saved value (Alan, 14-10-2026): `zz Archive` in a saved locations.never_index becomes `_Archive`,
-# in its place, every other value kept. paths.skipped_names() still skips the old name for one release.
-OLD_ARCHIVE_NAME, NEW_ARCHIVE_NAME = "zz Archive", "_Archive"
+# ===== 99 Archive joins the folders never read (#252) =====
+# Alan, 20-10-2026: the archive folder is now called 99 Archive. `99 Archive` is added to a saved locations.never_index (nothing is
+# removed or renamed: a saved _Archive or zz Archive stays, and both old names are still skipped for one release; paths.never_index()
+# adds 99 Archive whatever the saved list says, so this is for the Settings list to show it). No folder is renamed: Alan renames his own.
+NEW_ARCHIVE_NAME = "99 Archive"
 
 
-def rename_archive_folder(settings):
-    """Apply the rename to the parsed settings.json, in place. Returns the changed key (none the second time round)."""
+def add_archive_folder(settings):
+    """Add 99 Archive to the parsed settings.json's never_index, in place. Returns the changed key (none the second time round)."""
     loc = settings.get("locations")
     skipped = loc.get("never_index") if isinstance(loc, dict) else None
-    if not isinstance(skipped, list) or OLD_ARCHIVE_NAME not in skipped:
+    if not isinstance(skipped, list) or NEW_ARCHIVE_NAME in skipped:
         return []
     MIGRATED.setdefault("locations.never_index", list(skipped))
-    MIGRATED["archive.renamed"] = True
-    renamed = []
-    for name in skipped:
-        name = NEW_ARCHIVE_NAME if name == OLD_ARCHIVE_NAME else name
-        if name not in renamed:
-            renamed.append(name)
-    skipped[:] = renamed
+    MIGRATED["archive.added"] = True
+    skipped.insert(0, NEW_ARCHIVE_NAME)
     return ["locations.never_index"]
 
 
@@ -260,10 +256,10 @@ def migration_note():
                      "The old folder and its copies stay where they are.")
     if "locations.never_index" in MIGRATED and "99 System" not in MIGRATED["locations.never_index"]:
         lines.append("99 System is added to the folders creaite never lists, indexes or reads (locations.never_index).")
-    if "archive.renamed" in MIGRATED:                     # BL-09
-        lines.append("zz Archive is renamed _Archive in the folders creaite never lists, indexes or reads "
-                     "(locations.never_index); every other value is kept. Folders still called zz Archive stay skipped, "
-                     "and Settings › Health offers to rename them.")
+    if "archive.added" in MIGRATED:                       # #252
+        lines.append("99 Archive is added to the folders creaite never lists, indexes or reads (locations.never_index); nothing "
+                     "is removed, and folders still called _Archive or zz Archive stay skipped for one release. No folder is "
+                     "renamed: rename your own archive folders to 99 Archive when you like.")
     return ("\n\n" + "\n".join(lines)) if lines else ""
 
 
@@ -276,7 +272,7 @@ def merged_changes(rel, current_text, incoming_text):
         added += migrate_backup_folder(current)          # BL-112 (clears MIGRATED first)
         added += retire_label_setting(current)           # BL-121
         added += retire_old_palette(current)             # BL-142
-        added += [k for k in rename_archive_folder(current) if k not in added]    # BL-09
+        added += [k for k in add_archive_folder(current) if k not in added]    # #252
     return json.dumps(current, indent=2, ensure_ascii=False) + "\n", added
 
 
@@ -488,7 +484,7 @@ def tidy():
         adds = migrate_backup_folder(data)                  # clears MIGRATED first
         adds += retire_label_setting(data)
         adds += retire_old_palette(data)                    # BL-142
-        adds += [k for k in rename_archive_folder(data) if k not in adds]       # BL-09
+        adds += [k for k in add_archive_folder(data) if k not in adds]       # #252
         if adds:
             paths.SETTINGS.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             log_settings("system/config/settings.json", adds, installed_version())
@@ -946,7 +942,7 @@ def main(argv):
         if cmd == "tidy" and not args:
             changes = tidy()
             print("Tidied after the update: " + "; ".join(changes) if changes else "Nothing to tidy.")
-            if {"documents.require_sensitivity_label", "locations.offsite_backup", "archive.renamed"} & set(MIGRATED):
+            if {"documents.require_sensitivity_label", "locations.offsite_backup", "archive.added"} & set(MIGRATED):
                 print(migration_note().strip())
             return 0
         if cmd == "undo" and len(args) <= 1:

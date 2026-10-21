@@ -407,10 +407,10 @@ def safe_path(rel_path, purpose):
         raise Invalid(f"{purpose}: {r} is not in projects/, inbox/, system/staging/ or system/search/")
     proot = paths.projects_root().resolve()
     below = [x.lower() for x in p.parts[len(proot.parts):]] if proot in p.parents else []
-    if purpose == "mkdir" and below:            # a new project's own empty _Archive folder (from the skeleton) may be made
+    if purpose == "mkdir" and below:            # a new project's own empty 99 Archive folder (from the skeleton) may be made
         below = below[:-1]
     hit = next((n for n in paths.skipped_names() if n.lower() in below), None)
-    if hit:                                     # BL-09: never into _Archive (an archived project's folder), _Templates, 99 System
+    if hit:                                     # BL-09, #252: never into 99 Archive or the old two, _Templates, 99 System
         raise Invalid(f"{purpose}: {hit} is never written by creaite ({rel_path})")
     return p
 
@@ -1413,6 +1413,8 @@ def check_file_op(fop, blk):
         src = op_source(fop, blk)
         if not src or not paths.resolve(src).is_file():
             raise Invalid(f"copy: source not found ({src})")
+        if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
+            raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
         safe_path(fop.get("to"), "copy")
     elif op == "remove":
         safe_path(fop.get("path"), "remove")
@@ -1598,6 +1600,8 @@ def stamp_draft(draft, text, on):
 
 def _op_copy(apply_id, fop, blk, done):
     src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
+    if os.path.islink(src) or not src.is_file():   # #269 round 2 (L-B): checked again here, so a swap after the check isn't filed
+        raise Invalid(f"copy: the source is a link or not a plain file ({op_source(fop, blk)}); only a plain file is filed")
     if dst.exists():
         if file_hash(dst) == file_hash(src):
             return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
@@ -1899,20 +1903,20 @@ def hide_archived(con, settings=None):
 # ===== end BL-09 =====
 
 
-# ===== BL-09: the `move` file operation (archive, restore, and renaming an old zz Archive folder) =====
-# {"op": "move", "from": "projects/<folder>", "to": "projects/_Archive/<folder>"} in a file block whose "archive" says which kind
-# of move it is ("archive", "restore" or "rename"; one file: "reports", BL-03, and its reverse "reports_back", BL-331; one note:
+# ===== BL-09: the `move` file operation (archive and restore; #252: no rename of an old archive folder any more) =====
+# {"op": "move", "from": "projects/<folder>", "to": "projects/99 Archive/<folder>"} in a file block whose "archive" says which kind
+# of move it is ("archive" or "restore"; one file: "reports", BL-03, and its reverse "reports_back", BL-331; one note:
 # "notes", #124's Delete note, and its reverse "notes_back").
-# reach.archive_move_problem is the one exception to _Archive's never rule: only this apply calls it. The paths are stored paths,
-# never mapped into _Archive (paths.resolve(…, archived=False)). Undo moves the
-# folder back, and removes the _Archive folder this move made if it is empty again.
+# reach.archive_move_problem is the one exception to the archive folders' never rule: only this apply calls it. The paths are stored
+# paths, never mapped into an archive folder (paths.resolve(…, archived=False)). Undo moves the folder back, and removes the
+# archive folder this move made if it is empty again. A restore or a move back may come from _Archive or zz Archive for one release.
 
 def check_move(fop, blk):
     """Check one move: the block says which kind of move it is, and reach.py agrees it is that whole-folder move; raises Invalid."""
     import reach
     kind = blk.get("archive")
     if kind not in reach.ARCHIVE_MOVES:
-        raise Invalid("move: a folder is moved only by an archive, a restore or a rename of an old archive folder")
+        raise Invalid("move: a folder is moved only by an archive or a restore")
     src, dst = fop.get("from"), fop.get("to")
     for p in (src, dst):
         if not p or Path(str(p)).is_absolute() or not str(p).startswith("projects/"):
@@ -1922,7 +1926,8 @@ def check_move(fop, blk):
         raise Invalid(f"move: {problem}")
     if kind in ("reports_back", "notes_back"):   # BL-331, #124: only a file an archive (or Delete note) moved there, back
         import archive                            # to where it came from
-        was = archive.archived_moves(kind=kind[:-len("_back")]).get(src)
+        # #252: the apply record keeps the archive folder's name as it was; src may name it either way (paths.follow_stored)
+        was = archive.archived_moves(kind=kind[:-len("_back")]).get(paths.follow_stored(src))
         if was != dst and not (kind == "notes_back" and was and reach.NOTES_BACK_RENAMES and _renamed_back(was, dst)):
             raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
 
@@ -1935,10 +1940,11 @@ def _renamed_back(was, dst):
 
 
 def card_move_problem(fop, blk, prop):
-    """#124 F3: why this move can't be applied here, or None. A move only the live server's card makes (reach.CARD_ONLY_MOVES)
-    needs the marker the server writes on Approve (reach.card_move_marker): a regular file (never a symlink), under
-    reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256 of the bytes load() read from it (so
-    of what is applied). Checked only by the apply, never by check_move (propose.py check runs that for the card's preview)."""
+    """#124 F3: why this move can't be applied here, or None. A move only the live server makes (reach.CARD_ONLY_MOVES) needs the
+    marker the server writes on Approve, or (#255, reach.PAGE_MOVES) on the page's own button (reach.card_move_marker): a
+    regular file (never a symlink), under reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256
+    of the bytes load() read from it (so of what is applied). Checked only by the apply, never by check_move (propose.py check
+    runs that for the card's preview)."""
     import reach
     kind = blk.get("archive")
     if kind not in ("notes", "notes_back") and any(in_notes_folder(fop.get(k)) for k in ("from", "to")):
@@ -1947,6 +1953,9 @@ def card_move_problem(fop, blk, prop):
         return None
     if card_marker_ok(reach.card_move_marker(kind, fop.get("from"), fop.get("to")), prop):
         return None
+    if kind in reach.PAGE_MOVES:                  # #255: no card for a note's own move, still only the live server's
+        return (f"move: {fop.get('from')} is moved only by Delete note or Move back on the dashboard (the live server's own "
+                "button)")
     return f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
 
 
@@ -2108,7 +2117,7 @@ def _op_move(apply_id, fop, blk, done, prop=None):
         raise Invalid(why)
     a, b = paths.resolve(fop["from"], archived=False), paths.resolve(fop["to"], archived=False)
     made = b.parent
-    while not made.parent.exists():               # BL-03: the highest folder this move makes (_Archive/04 Reporting/Weekly)
+    while not made.parent.exists():               # BL-03: the highest folder this move makes (99 Archive/04 Reporting/Weekly)
         made = made.parent
     made = made if not made.exists() else None
     b.parent.mkdir(parents=True, exist_ok=True)

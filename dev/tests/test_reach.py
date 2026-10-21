@@ -202,7 +202,7 @@ class ReachOneDrive(OneDriveCase):
         self.assertEqual(self.kind("projects/Example Programme/03 Delivery/Design/new.md", "create"), ["ordinary", ""])   # a stored path
         said = touch(eng / "02 Meetings/Transcripts/2026-10-01 Steering.vtt", "WEBVTT\n")
         self.assertEqual(self.kind(said, "change")[0], "sensitive")
-        self.assertEqual(self.kind(eng / "_Archive/old.md", "read"), ["never", "_Archive is never read or written by creaite"])
+        self.assertEqual(self.kind(eng / "99 Archive/old.md", "read"), ["never", "99 Archive is never read or written by creaite"])
         self.assertEqual(self.kind(eng / "CLAUDE.md", "change")[0], "sensitive")
 
     def test_a_note_is_what_notes_note_of_accepts(self):

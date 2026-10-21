@@ -702,6 +702,7 @@ class Bar117(LiveBrowserCase):
         b.key("Escape")
         b.key("Escape")                                                                           # closes the bar; focus back in the text
         b.wait(f"!document.querySelector('{LAYER} .aibar')")
+        b.wait("AIE.el.contains(document.activeElement)", 5)                                      # #152f: the editor's focus lands a frame after the bar goes
         self.assertTrue(b.eval("AIE.el.contains(document.activeElement)"))
         self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} .aispark')"))
 

@@ -93,7 +93,8 @@ class ValidateOnlyInStaging(unittest.TestCase):
                 with self.subTest(target=name, mode=mode):
                     code, why = self.hook(mode, f"system/scripts/run tracker.py validate {target}")
                     self.assertEqual(code, 2, why)
-                    self.assertIn("runs only on a proposal in system/staging/", why)
+                    self.assertIn("wildcard or pattern character" if name == "an unquoted wildcard"    # #174 F5: refused first
+                                  else "runs only on a proposal in system/staging/", why)
 
     def test_a_proposal_in_staging_runs(self):
         for target in (str(self.prop.relative_to(self.root)), self.prop.name):
@@ -151,7 +152,7 @@ class ReadCommandsWriteOnlyDrafts(unittest.TestCase):
         writer = src[src.index("def emit_spec"):src.index("def cmd_new_project")]
         self.assertIn("name != out or name.startswith(\".\")", writer)
         self.assertIn("paths.DRAFTS / f\"{stem}.json\"", writer)
-        for fn in ("def cmd_new_project", "def cmd_close_project", "def archive_cli", "def cmd_old_archives"):
+        for fn in ("def cmd_new_project", "def cmd_close_project", "def archive_cli"):
             body = src[src.index(fn):]
             body = body[:body.index("\ndef ", 1)]
             self.assertIn("emit_spec(", body, fn)

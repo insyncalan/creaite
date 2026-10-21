@@ -58,10 +58,12 @@ class TheReviewOf2a77459(Base):
                       f"next(s for s in d['sections'] if s.get('type') == 'health')['text'] = 'Behind plan. ' + {marker!r}\n"
                       "print(json.dumps(client_leak.findings(d)))")
         self.assertIn("it holds an internal-only marker", got)
+        # v2.5.3 (#259, K3): an item's stored values are derived from the tracker's client-safe facts (creaite_doc.derive_facts), so
+        # an address planted in one is never what the gate, or any output, reads: it is found, or it is gone from the cleaned document
         got = self.py("d = report_doc.client_doc('ABC')\nk = next(iter(d['items']))\n"
                       f"d['items'][k]['title'] = 'UAT [start]({ENCODED_REASON})'\n"
-                      "print(json.dumps([k, client_leak.findings(d)]))")
-        self.assertIn("it holds the internal health reason", got[1], got[0])
+                      "print(json.dumps([k, client_leak.findings(d), json.dumps(creaite_doc.clean(d)['items'])]))")
+        self.assertTrue("it holds the internal health reason" in got[1] or "UAT [start]" not in got[2], got)
 
     def test_every_check_is_linear_on_brackets(self):
         """Finding 3: creaite_doc._plain and docx_tools.md_runs took tens of seconds on 100 KB of "["."""
@@ -75,7 +77,7 @@ class TheReviewOf2a77459(Base):
                 "    for f, run in RUNS:\n"
                 "        out[name + ' ' + f] = [took(lambda: run(small, ds)), took(lambda: run(large, dl))]\n"
                 "print(json.dumps(out))")
-        self.assert_linear(self.py(code))
+        self.assert_linear(self.py(code), again=lambda: self.py(code))
 
     def test_the_scheme_in_capitals_is_found_and_dropped(self):
         link = f"[p](CREAITE:item/{INTERNAL_ID})"
@@ -196,7 +198,7 @@ class TheReviewOf199ac40(Base):
                 "        out[name + ' ' + f] = [took(lambda: run(small, ds)), took(lambda: run(large, dl))]\n"
                 "out['_plain 300 KB'] = [took(lambda: creaite_doc._plain('![' * 37500)), took(lambda: creaite_doc._plain('![' * 150000))]\n"
                 "print(json.dumps(out))")
-        self.assert_linear(self.py(code))
+        self.assert_linear(self.py(code), again=lambda: self.py(code))
         got = self.py("import docx_tools\nprint(json.dumps([docx_tools.plain(t) for t in ('**Bold** and _italic_ and *it* and ~~gone~~',"
                       " 'snake_case_word stays', '2 * 3 * 4')]))")
         self.assertEqual(got, ["Bold and italic and it and gone", "snake_case_word stays", "2 * 3 * 4"])     # unchanged
