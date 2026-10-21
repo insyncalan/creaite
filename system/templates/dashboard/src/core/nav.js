@@ -59,6 +59,7 @@ export function hashOf(st){ if(st&&st.v==="weekly") return `#weekly=${st.arg||""
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
   if(st&&st.v==="minutes") return `#minutes=${encodeURIComponent(typeof st.arg==="string"?st.arg:"")}`;   /* v2.1.0 P7 */
   if(st&&st.v==="clientreport") return `#client-report=${typeof st.arg==="string"?st.arg:""}`;   /* v2.1.0 P8 */
+  if(st&&st.v==="milestones"&&!st.arg) return "#milestones";   /* #204: none chosen */
   if(st&&st.v==="milestones") return `#milestones=${st.arg}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
   if(st&&st.v==="people") return "#people"+(st.arg==="none"?"/none":"");   /* BL-190 */
   let h=st.v==="help"?`help-${st.arg||"start"}`:st.v==="settings"?`settings/${st.arg||"general"}`:st.v==="cockpit"?`cockpit=${st.arg}`:st.v==="person"?`person=${encodeURIComponent(st.arg)}`:st.v==="work"?`work=${st.wt}${st.wv?`&v=${encodeURIComponent(st.wv)}`:""}${st.p&&st.p.length?`&p=${st.p.join(",")}`:""}${!st.wv&&st.fx?(Object.keys(st.fx).length?Object.entries(st.fx).map(([k,v])=>`&${k}=${v.map(encodeURIComponent).join(",")}`).join(""):"&f=none"):""}${st.lay==="board"?`&lay=board&g=${st.g}`:st.lg&&st.lg!=="none"?`&lg=${st.lg}`:""}${st.sg&&st.sg!=="none"?`&sg=${st.sg}`:""}${st.sort?`&s=${st.sort.col}.${st.sort.dir}`:""}${st.q&&st.q.trim()?`&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g," "))}`:""}${st.from?`&from=${st.from}`:""}${!st.wv&&st.vb?`&vb=${encodeURIComponent(st.vb)}`:""}`:st.v==="inbox"?"intake":st.v;
@@ -74,6 +75,7 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")); 
   { const mm=/^#?notes=([^&]+)(?:&n=([^&]*))?/.exec(String(h||"")); if(mm){ let code="", n=null; try{ code=decodeURIComponent(mm[1]); n=mm[2]?decodeURIComponent(mm[2]):null; }catch(e){ return null; }
     if(!notesCodeOk(code)) return null; return {v:"notes",arg:code,note:n,find:/[&]find=1(&|$)/.test(String(h||"")),wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-301 B */
   { const mm=/^#?minutes=(.+)$/.exec(String(h||"")); if(mm){ let a=""; try{ a=decodeURIComponent(mm[1]); }catch(e){ return null; } return /\.html$/i.test(a)?{v:"minutes",arg:a,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P7: #minutes=<stored path> */
+  if(/^#?milestones$/.test(String(h||""))) return {v:"milestones",arg:"",mv:"plan",ms:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0};   /* #204 */
   { const q=String(h||"").replace(/^#/,""), mm=/^milestones=([^&]+)(.*)$/.exec(q);
     if(mm){ const code=decodeURIComponent(mm[1]); if(!P.some(p=>p.code===code)) return null;
     const kv=Object.fromEntries(mm[2].split("&").filter(Boolean).map(x=>x.split("=")));
@@ -120,7 +122,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
   const sc=st.scroll||0; requestAnimationFrame(()=>{ const el=viewEl(); if(el) el.scrollTop=sc; }); shared.NAVSTATE=navState(); shared.NAVSTATE.scroll=sc; }
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
 export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
-  if(v==="milestones"){ if(!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg; }
+  if(v==="milestones"){ if(arg&&!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg||""; }   /* #204: none chosen shows the project list */
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
   if(from==="notes"&&v!=="notes") notesLeave();   /* BL-301 B: leaving the note ends its editing session (its file is written) */

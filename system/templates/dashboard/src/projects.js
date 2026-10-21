@@ -50,7 +50,12 @@ export function rkClamp(v){ if(!v) return;
     row.classList.toggle("clamped",cut);
     if(cut){ el.title=el.textContent; if(!more) addHTML(el,"afterend",html`<span class="rk-more" aria-hidden="true">More</span>`); }
     else { el.removeAttribute("title"); if(more) more.remove(); } }); }
-export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if(!p) return; queueMicrotask(mountCurEdit);   /* an open editor survives re-renders */
+/* #204: a page that needs a project, opened with none chosen, says so and lists the active projects by name; `attr` is the link's
+   data attribute (data-proj opens the cockpit, data-mvpage the project's milestones) */
+export function chooseProjectHtml(attr,what){ const L=P.filter(p=>p.active!==false&&!p.archived);
+  return html`<div class="wrapmax"><div class="empty"><div class="wempty chooseproj"><h2>Choose a project</h2><div class="sub">${what} needs a project.</div>
+    <div class="relax">${L.length?L.map(p=>html`<div><a href="#" ${raw(attr)}="${p.code}">${p.name}</a><span class="sub">${p.client||""}</span></div>`):html`<div><span class="sub">No active projects yet.</span></div>`}</div></div></div></div>`; }
+export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if(!p){ if(!shared.LOADING) putHTML($("#v-cockpit"),chooseProjectHtml("data-proj","The project page")); return; } queueMicrotask(mountCurEdit);   /* an open editor survives re-renders */
   const acts=A.filter(x=>x.p===code&&open(x)&&(overdue(x)||soon(x))).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
   const order=["Urgent","High","Medium","Low"];
   /* BL-15: top risks and issues, by priority */

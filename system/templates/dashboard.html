@@ -4816,6 +4816,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     chgRollbackNumbers: () => chgRollbackNumbers,
     chgTierTag: () => chgTierTag,
     choosePrep: () => choosePrep,
+    chooseProjectHtml: () => chooseProjectHtml,
     citeFind: () => citeFind,
     ckAsk: () => ckAsk,
     ckChipsHtml: () => ckChipsHtml,
@@ -32233,7 +32234,8 @@ ${s5}`;
     const code = shared.MSCODE, p6 = P3.find((x5) => x5.code === code), el2 = $("#v-milestones");
     if (!el2) return;
     if (!p6) {
-      el2.textContent = "";
+      if (!shared.LOADING) putHTML(el2, chooseProjectHtml("data-mvpage", "Milestones"));
+      else el2.textContent = "";
       return;
     }
     const cli = shared.MVAUD === "cli";
@@ -43866,10 +43868,18 @@ ${s5}`;
       }
     });
   }
+  function chooseProjectHtml(attr2, what) {
+    const L3 = P3.filter((p6) => p6.active !== false && !p6.archived);
+    return html`<div class="wrapmax"><div class="empty"><div class="wempty chooseproj"><h2>Choose a project</h2><div class="sub">${what} needs a project.</div>
+    <div class="relax">${L3.length ? L3.map((p6) => html`<div><a href="#" ${raw(attr2)}="${p6.code}">${p6.name}</a><span class="sub">${p6.client || ""}</span></div>`) : html`<div><span class="sub">No active projects yet.</span></div>`}</div></div></div></div>`;
+  }
   function renderCockpit(code) {
     (() => {
       const p6 = P3.find((x5) => x5.code === code);
-      if (!p6) return;
+      if (!p6) {
+        if (!shared.LOADING) putHTML($("#v-cockpit"), chooseProjectHtml("data-proj", "The project page"));
+        return;
+      }
       queueMicrotask(mountCurEdit);
       const acts2 = A4.filter((x5) => x5.p === code && open(x5) && (overdue(x5) || soon(x5))).sort((a5, b5) => (a5.due || "9").localeCompare(b5.due || "9"));
       const order = ["Urgent", "High", "Medium", "Low"];
@@ -68070,6 +68080,7 @@ ${d5.text}`);
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
     if (st2 && st2.v === "minutes") return `#minutes=${encodeURIComponent(typeof st2.arg === "string" ? st2.arg : "")}`;
     if (st2 && st2.v === "clientreport") return `#client-report=${typeof st2.arg === "string" ? st2.arg : ""}`;
+    if (st2 && st2.v === "milestones" && !st2.arg) return "#milestones";
     if (st2 && st2.v === "milestones") return `#milestones=${st2.arg}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
     if (st2 && st2.v === "people") return "#people" + (st2.arg === "none" ? "/none" : "");
     let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? `cockpit=${st2.arg}` : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : st2.v === "inbox" ? "intake" : st2.v;
@@ -68141,6 +68152,7 @@ ${d5.text}`);
         return /\.html$/i.test(a5) ? { v: "minutes", arg: a5, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 } : null;
       }
     }
+    if (/^#?milestones$/.test(String(h5 || ""))) return { v: "milestones", arg: "", mv: "plan", ms: null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
     {
       const q5 = String(h5 || "").replace(/^#/, ""), mm2 = /^milestones=([^&]+)(.*)$/.exec(q5);
       if (mm2) {
@@ -68323,8 +68335,8 @@ ${d5.text}`);
       shared.RF = null;
     }
     if (v5 === "milestones") {
-      if (!P3.some((p6) => p6.code === arg)) return false;
-      shared.MSNEXT = arg;
+      if (arg && !P3.some((p6) => p6.code === arg)) return false;
+      shared.MSNEXT = arg || "";
     }
     if (shared.MVREADY && (shared.MV.peek || shared.MV.add)) mvEdClose(true);
     const from = shared.VIEW, fromPage = mPageOf(shared.VIEW);

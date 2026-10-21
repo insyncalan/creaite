@@ -15,7 +15,7 @@ import { needVault, reloadData, renderBadge, save, snack, viaServer, vq, writePr
 import { shared } from "./core/state.js";
 import { draftStat } from "./drafts.js";
 import { drFcDraw, drSame, pkHistory, PKMON, pkShort, PKTABS, readForm } from "./panel.js";
-import { closePanel, depWarn, renderCockpit } from "./projects.js";
+import { chooseProjectHtml, closePanel, depWarn, renderCockpit } from "./projects.js";
 import { nm, ownerFinal, PKAPPLIED, sw } from "./settings.js";
 import { sneakMvAttach } from "./sneak.js";
 import { ceClose, ceCommit, ceRead, items } from "./work.js";
@@ -258,7 +258,7 @@ export function mvAnswer(code,list,cli){ const done=mvVis(code,cli,false).length
   if(late.length) a+=`<b>${esc(late[0].n)}</b> is late: agreed ${fd(late[0].agr)}${late[0].fc>late[0].agr?`, now expected ${fd(late[0].fc)}`:""}. `;
   if(end&&end.agr&&(!late.length||end.id!==late[0].id)) a+=`<b>${esc(end.n)}</b> is agreed for ${fd(end.agr)}${end.fc>end.agr?` and now expected ${fd(end.fc)}`:""}. `;
   return a+`${done} achieved, ${list.length} to come.`; }
-export function renderMilestones(){ const code=shared.MSCODE, p=P.find(x=>x.code===code), el=$("#v-milestones"); if(!el) return; if(!p){ el.textContent=""; return; }
+export function renderMilestones(){ const code=shared.MSCODE, p=P.find(x=>x.code===code), el=$("#v-milestones"); if(!el) return; if(!p){ if(!shared.LOADING) putHTML(el,chooseProjectHtml("data-mvpage","Milestones")); else el.textContent=""; return; }
   const cli=shared.MVAUD==="cli"; if(cli&&shared.MV.view==="move") shared.MV.view="plan";
   let h=`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${code}">${esc(p.name)}</a><span aria-hidden="true">›</span><span aria-current="page">Milestones</span></nav>
     <div class="mv-pageh"><h1>Milestones: Plan and Movement</h1><span class="sp"></span>
