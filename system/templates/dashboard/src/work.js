@@ -10,8 +10,8 @@ import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { drawNewTile } from "./components/work/NewTile.jsx";
-import { A, DEC, open, overdue, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
-import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
+import { A, DEC, open, overdue, P, peopleAll, pName, R, wsFor } from "./core/data.js";
+import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { CALI, closeCal, DATE_HELP, srcShort, WK, wkAsk, wkClear } from "./core/fields.js";
 import { typing } from "./core/keys.js";
 import { mDots, mFlipRows, mNoFade, mSnapRows, mTick } from "./core/motion.js";
@@ -20,12 +20,11 @@ import { anim, cmdOK, cmOK, D, days, DDATE, fd, fdText, ico, isMe, kindOf, nowSt
 import { oneLine, save, SKEY, snack, toDb, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { draftBtn } from "./drafts.js";
-import { kb } from "./intake.js";
+import { kb } from "./core/intakeApi.js";
 import { decLate, decLateWords, withdrawDecision } from "./meetings.js";
 import { ceListPlace } from "./milestones.js";
 import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
 import { closePanel, wflag } from "./projects.js";
-import { CHK, isMin, RHL, rvBar, rvBulkOK, RVF, RVFIELDS, rvSyncChk } from "./review.js";
 import { dueSort, isHiddenPerson, nm, ownerFinal, PERS, personLink, PSORTS, renderPerson, row, xcueAll } from "./settings.js";
 import { plur } from "./today.js";
 /* ======================= Work ======================= */
@@ -147,11 +146,6 @@ export function newTile(){ const h=$("#newHost"); if(!h) return; const w=shared.
   drawNewTile(h,{word:w,decisions:shared.WT==="decisions",hidden:shared.WT==="all",onNew:()=>openNew(shared.WT),onDecision:how=>openNew("decisions",how==="needed"?"needed":undefined)}); }
 export function newMenuOpen(){ return !!$("#newDecMenu"); }
 /* ===== end BL-159 (JS) ===== */
-/* ===== BL-160 (sprint-icons) ===== Review in icons: the funnel counts its filters (Review's own: Kind, Needs, Source, Project, Age);
-   Approve and Reject keep their words in the bulk bar; on a row, Approve keeps its word, Reject is the x, and Edit and Refresh
-   items show on hover, on focus and on the cursor row (.rowact), so the keyboard still reaches them. */
-export function rvfCount(){ return RVFIELDS.filter(f=>RVF[f[0]]&&RVF[f[0]].size).length; }
-/* ===== end BL-160 (JS) ===== */
 /* BL-264: one applied-filter chip, shared by Work and Settings › People: its words (escaped here), an x that clears it (`attr`
    names the key), tinted when it is an exclusion (`neg`), quiet when it is a default (`def`); with `edit`, the words are a button
    (data-<edit>) that opens the picker at that field. */
@@ -903,21 +897,6 @@ export function hlKey(e){ if(e.shiftKey&&!/^[JK]$/.test(e.key)||e.altKey) return
   if(e.key===" "&&i>=0&&!onBoard){ e.preventDefault(); hlToggle(order[i].k,order[i].id); return true; }
   if(e.key==="Enter"&&i>=0&&!(shared.CUR&&$("#panel").classList.contains("on"))){ e.preventDefault(); const o=order[i]; hlOnly(o.k,o.id); openRecord(o.k,o.id); return true; }   /* BL-176: E retired with the Edit button */
   return false; }
-/* Review (BL-122): the same rules over the rows of #reviewBody. A highlighted row that may be ticked (not individual-approval) is ticked too. */
-export const RVTICK=new Set();   /* BL-263: the rows whose tick was drawn */
-export function rvPaint(){ const paint=()=>{ $$("#reviewBody tr[data-n]").forEach(tr=>{ const n=+tr.dataset.n, on=RHL.has(n), r=REV.find(x=>x.n===n); tr.classList.toggle("hl",on); tr.setAttribute("aria-selected",String(on));
-    tr.classList.toggle("sel",+tr.dataset.ri===shared.RSEL); const cb=tr.querySelector("input[type=checkbox]"); if(cb&&!cb.disabled&&r&&!isMin(r)) cb.checked=RHL.has(n); });
-  rvSyncChk(); rvBar(); };
-  if(shared.LOADING){ paint(); return; }   /* BL-231: as when the address was restored at load */
-  const changed=$$("#reviewBody tr[data-n]").filter(e=>e.classList.contains("hl")!==RHL.has(+e.dataset.n)||e.classList.contains("sel")!==(+e.dataset.ri===shared.RSEL)).length; mNoFade(()=>mTick("#reviewBody tr[data-n]",e=>e.dataset.n,RVTICK,paint),changed); }   /* BL-133: the bar replaces the two buttons */
-export const rvOrder=()=>$$("#reviewBody tr[data-n]").map(t=>+t.dataset.n);
-export function rvTick(n){ const r=REV.find(x=>x.n===n); if(r&&rvBulkOK(r)) CHK.add(n); }
-export function rvOnly(n){ RHL.clear(); CHK.clear(); RHL.add(n); rvTick(n); shared.RVA=n; }
-shared.RVA=null;                                        /* the anchor of a Shift range */
-export function rvPick(e,n){ const mod=e.metaKey||e.ctrlKey, order=rvOrder(), ai=shared.RVA==null?-1:order.indexOf(shared.RVA);
-  if(e.shiftKey&&ai>=0){ const bi=order.indexOf(n); if(!mod){ RHL.clear(); CHK.clear(); } order.slice(Math.min(ai,bi),Math.max(ai,bi)+1).forEach(x=>{ RHL.add(x); rvTick(x); }); }
-  else if(mod){ if(RHL.has(n)){ RHL.delete(n); CHK.delete(n); } else { RHL.add(n); rvTick(n); } shared.RVA=n; }
-  else rvOnly(n); }
 /* ===== end BL-122 ===== */
 /* ===== BL-123 (sprint-polish) =====
    Edit any field in the Work table in place. A click on an editable value (or its ▾ button, or Enter on the button) opens that field's

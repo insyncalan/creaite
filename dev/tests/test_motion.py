@@ -19,14 +19,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 import work_data as W  # noqa: E402
 from test_dashboard import populate  # noqa: E402
-from test_review_triage import load_queue  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from split_dashboard import readable_page  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "system" / "templates" / "dashboard.html"
 PALETTES = TEST_PALETTES   # creaite and Cursor only (live_browser.TEST_PALETTES)
-PAGES = ("today", "work", "review", "projects", "people", "inbox", "files", "activity", "settings", "help")
+PAGES = ("today", "work", "intake-review", "projects", "people", "files", "activity", "settings", "help")   # #232 C2: Review and Intake are one page
 
 # every element's longest transition and animation, ::before and ::after included, and any animation still running
 SWEEP = """(()=>{ const ms=v=>Math.max(0,...String(v).split(",").map(x=>{ x=x.trim(); return x.endsWith("ms")?parseFloat(x):parseFloat(x)*1000; }).filter(n=>!isNaN(n)));
@@ -744,54 +743,6 @@ class MotionPages(LiveBrowserCase):
         delays = b.eval("[...__c.querySelectorAll('.chglist>li')].map(li=>getComputedStyle(li).animationDelay)")
         self.assertEqual((delays[0], delays[1], delays[9]), ("0.12s", "0.16s", "0.4s"))       # 40ms steps, at most 8
         b.eval("__c.remove()")
-
-
-class MotionReview(LiveBrowserCase):
-    """Approve or reject a row, the cleared queue, and a bulk approval with no motion."""
-    pin_clock = False           # #178: the animations run on the browser's real timing; a pinned Date() adds nothing here and CI timing is tight
-    reduced_motion = False
-    width, height = 1500, 1100
-
-    @classmethod
-    def load(cls, v):
-        populate(v)
-        load_queue(v)
-
-    def open(self):
-        self.b.eval("go('review')")
-        self.b.wait("document.querySelector('#reviewBody tr[data-n]')")
-
-    def test_one_row_tints_three_fast_are_all_right_and_bulk_has_no_motion(self):
-        b = self.b
-        self.open()
-        b.eval("document.documentElement.style.setProperty('--k',20)")
-        ns = b.eval("REV.filter(r=>/^Batch /.test(r.rec.t)).map(r=>r.n)")
-        b.eval("window.__g=0; new MutationObserver(()=>{ if(document.querySelector('.mrowghost')) __g++; }).observe(document.body,{childList:true})")
-        b.eval(f"decide({ns[0]},'approved')")
-        b.wait(f"REV.find(r=>r.n==={ns[0]})?.done==='approved'")
-        b.wait(f"(t=>t&&$$('td',t).some(td=>td.getAnimations().length))(document.querySelector('#reviewBody tr[data-n=\"{ns[0]}\"]'))")   # it tints where it is
-        b.eval(f"[{ns[1]},{ns[2]},{ns[3]}].forEach(n=>decide(n,'rejected'))")                    # three within a frame
-        b.wait(f"[{ns[1]},{ns[2]},{ns[3]}].every(n=>REV.find(r=>r.n===n)?.done==='rejected')", 60)   # --k 20 slows the tints 20 times
-        b.eval("document.documentElement.style.setProperty('--k',1)")
-        rows = b.eval("$$('#reviewBody tr[data-n]').map(t=>t.dataset.n)")
-        self.assertEqual(len(rows), len(set(rows)))                                                # nothing doubled
-        self.assertEqual(b.eval("$$('#reviewBody tr[data-n]').filter(t=>t.getBoundingClientRect().height===0).length"), 0)   # nothing left hidden
-        rest = b.eval("REV.filter(r=>/^Batch /.test(r.rec.t)&&!r.done).map(r=>r.n)")
-        b.eval(f"RHL.clear(); CHK.clear(); {json.dumps(rest)}.forEach(n=>{{ RHL.add(n); CHK.add(n); }}); renderReview()")
-        b.click("#bulkApprove")
-        b.wait(f"{json.dumps(rest)}.every(n=>!REV.find(r=>r.n===n&&!r.done))", 20)
-        self.assertEqual(b.eval("__g"), 0)                                                         # a bulk approval swaps at once
-        self.assertEqual(b.eval("$$('#reviewBody tr[data-n] td').filter(td=>td.getAnimations().some(a=>!a.transitionProperty&&a.playState==='running')).length"), 0)
-
-    def test_clearing_the_queue_draws_the_tick_once_and_an_empty_open_does_not(self):
-        b = self.b
-        self.open()
-        b.eval("RHL.clear(); CHK.clear(); REV.filter(r=>!r.done).forEach(r=>{ r.done='approved'; }); renderReview()")
-        self.assertTrue(b.eval("!!document.querySelector('.rvdone.mcleared .mclear')"))
-        b.eval("renderReview()")                                                                   # a re-render keeps it, drawn, without drawing again
-        self.assertEqual(b.eval("[$$('.mclear').length, document.querySelector('.rvdone').classList.contains('mstill')]"), [1, True])
-        b.eval("go('today'); go('review')")
-        self.assertFalse(b.eval("!!document.querySelector('.rvdone.mcleared')"))                 # opened already empty: no tick
 
 
 if __name__ == "__main__":

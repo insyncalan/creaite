@@ -142,6 +142,10 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
+# #232-A: Intake with a meeting row whose Not needed button (aria-haspopup=menu, opens #irAside) shows. The sample's calendar has
+# no ended meeting, so the page is given one in the page only (the model's own shape; nothing is saved).
+SCREENS["intake-review"] = ("go('intake-review')", "VIEW==='intake-review' && !!document.querySelector('#v-intake-review [data-ira=notneeded]')", "#v-intake-review")
+us.SCREENS["intake-review"] = SCREENS["intake-review"]      # #232 C2: test_snapshots' own "intake-review" waits for less; this one needs a row with Not needed
 EXTRA = ("clientreport", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
@@ -150,7 +154,7 @@ ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-d
 ON_SCREEN = {"work-display": "VIEW==='work'"}
 # Controls whose choices are what the list shows, never a saved change: the filter bars and Work's views. The Undo check
 # leaves them alone (a choice there would also change what every later screen shows).
-VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
+VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#pmFBtn")
 
 # #89: the screens in three parts for the keys test and two for the Undo check, each part a browser file of its own (a sample
 # vault each), about 220 s and 200 s where the whole was about 650 s and 400 s. In SCREENS' order within a part; the three Notes
@@ -165,7 +169,7 @@ UNDO_PARTS = {"a": ("review", "activity", "cockpit", "people", "help", "settings
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
 SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
                 "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
-                "review": "Review", "review-peek": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
+                "review-peek": "Review", "intake-review": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
                 "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
@@ -400,7 +404,7 @@ class Inventory(unittest.TestCase):
         for b in ("Dialog", "Menu", "FilterBar", "Picker", "Opener"):
             self.assertIn(b, blocks)
         ids = {v for s in sites for k, v in s["keys"] if k == "id"}
-        for x in ("cmdk", "rvDlg", "railCust", "closeDlg", "pkMoreMenu", "chHistMenu", "wfilters", "dispMenu"):
+        for x in ("cmdk", "llDlg", "railCust", "closeDlg", "pkMoreMenu", "chHistMenu", "wfilters", "dispMenu"):
             self.assertIn(x, ids, "a popup the code makes is missing from the inventory")
         if os.environ.get("SB_REPORT"):
             for s in sorted(sites, key=lambda s: (s["area"], s["file"], s["line"])):
@@ -473,7 +477,7 @@ class Driver:
             if name in EXTRA:
                 us.SCREENS.pop(name, None)
 
-    def settle(self, name):
+    def settle_screen(self, name):
         """Close whatever the last control left open; go back to the screen when something is still open."""
         b = self.b
         for _ in range(2):
@@ -498,7 +502,7 @@ class Driver:
             if not match:
                 continue
             out.append((o, drive(match[0]["i"], o)))
-            self.settle(name)
+            self.settle_screen(name)
         return out
 
 
@@ -807,16 +811,16 @@ class Keys(Driver):
         b = self.b
         n = None
         try:
-            self.goto("review")
+            self.goto("intake-review")
             n = b.eval("REV.find(r=>r.kind==='actions')?.n")
             if n is None:
                 return ["the sample vault has no actions proposal to mark as a repeat"]
-            b.eval("(()=>{ const r=REV.find(r=>r.n===%s); r.dup={id:'ABC-A-001',t:'Chase the SOW',strength:'Likely',staged:true,same:true,state:'open',project:'ABC'}; renderReview(); openProposal(%s); })()" % (n, n))
+            b.eval("(()=>{ const r=REV.find(r=>r.n===%s); r.dup={id:'ABC-A-001',t:'Chase the SOW',strength:'Likely',staged:true,same:true,state:'open',project:'ABC'}; irTick.value++; openProposal(%s); })()" % (n, n))
             b.wait("document.querySelector('[data-rvll=\"cmp:%s\"]')" % n, 10)
             bad, opened = self.enter_on("document.querySelector('[data-rvll=\"cmp:%s\"]')" % n, "document.getElementById('llDlg').open")
             return self.dialog_keys("llDlg") if opened else bad
         finally:
-            self.tidy("" if n is None else "const r=REV.find(r=>r.n===%s); if(r){ delete r.dup; renderReview(); }" % n)
+            self.tidy("" if n is None else "const r=REV.find(r=>r.n===%s); if(r){ delete r.dup; irTick.value++; }" % n)
 
     def searchprev(self):
         """The search preview (#searchPrev): a vault search on Files finds a meeting's minutes; Enter on that result previews it.
@@ -846,7 +850,7 @@ class Keys(Driver):
              ("clientreport", "crleft", "crleft dialog#crLeftDlg", "clientreport", "Check and export", "Left out of the client's report"),
              ("today", "rail", "rail menu#railFly", "Shell", "→ on Projects, Work", "Rail flyouts"),
              ("work-board", "boardask", "boardask dialog#boardDlg", "Shell", "Move ▸ a due column", "Due date for"),
-             ("review", "llcompare", "llcompare dialog#llDlg", "Shell", "Compare", "Looks like"),
+             ("intake-review", "llcompare", "llcompare dialog#llDlg", "Shell", "Compare", "Looks like"),
              ("files", "searchprev", "searchprev dialog#searchPrev", "Shell", "a search result", "Preview"))
 
     def keyed_dialogs(self, only, report, found):

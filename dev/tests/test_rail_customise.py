@@ -22,7 +22,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 
 ALT, META, SHIFT = 1, 4, 8
 TOP = ["today", "work", "review", "projects", "reports", "people"]
-MORE = ["inbox", "files", "activity", "settings"]
+MORE = ["files", "activity", "settings"]   # #232: Intake is the one entry for both pages
 RECT = "(s=>{ const r=document.querySelector(s).getBoundingClientRect(); return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width)}; })"
 
 
@@ -119,15 +119,15 @@ class Sidebar(LiveBrowserCase):
 
     def test_collapsed_icons_are_named_with_tooltips_badges_and_the_accent_bar(self):
         b = self.b
-        pending = b.eval("REV.filter(r=>!r.done).length")
+        pending = b.eval("irLiveCounts().badge")   # #232-C: ready to process plus proposals to approve
         self.assertGreater(pending, 0)
         b.eval("railSave({...RAILCFG,display:'icons'})")                                       # a saved "icons": icons only, collapsed
         self.wait_saved("r.display==='icons'")
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='56px'")
         names = b.eval("[...document.querySelectorAll('#railMain button[data-v]')].map(x=>[x.getAttribute('aria-label'),x.dataset.tip||null,x.querySelector('.rl').offsetParent===null])")
-        self.assertEqual([n[1] for n in names], ["Today", None, "Review", None, "Reports", "People"])    # Work and Projects have flyouts instead
-        self.assertTrue(all(n[0].split(",")[0] in ("Today", "Work", "Review", "Projects", "Reports", "People") and n[2] for n in names), names)   # named, words not shown
-        self.assertEqual(names[2][0], f"Review, {pending} waiting")                            # the count in the name too
+        self.assertEqual([n[1] for n in names], ["Today", None, "Intake", None, "Reports", "People"])    # Work and Projects have flyouts instead
+        self.assertTrue(all(n[0].split(",")[0] in ("Today", "Work", "Intake", "Projects", "Reports", "People") and n[2] for n in names), names)   # named, words not shown
+        self.assertEqual(names[2][0], f"Intake, {pending} waiting")                            # the count in the name too
         r = b.eval("""(()=>{ const rail=document.querySelector('.rail').getBoundingClientRect(), bd=document.getElementById('revBadge'), x=bd.getBoundingClientRect();
           return {inside:x.left>=rail.left&&x.right<=rail.right+1, shown:getComputedStyle(bd).display!=='none', text:bd.textContent}; })()""")
         self.assertEqual(r, {"inside": True, "shown": True, "text": str(pending)})
@@ -166,7 +166,7 @@ class Sidebar(LiveBrowserCase):
         b = self.b
         b.eval("railSave({...RAILCFG,order:['today','work','projects','people'],more:['review','inbox','files','activity','settings']})")
         self.wait_saved("r.more[0]==='review'")
-        pending = b.eval("REV.filter(r=>!r.done).length")
+        pending = b.eval("irLiveCounts().badge")   # #232-C: ready to process plus proposals to approve
         b.eval("healthCount.value=1")                                                          # one problem from Settings > Health
         b.wait("document.getElementById('railMoreBadge').textContent==='1'")
         m = b.eval("(()=>{ const m=document.getElementById('railMore'); return {label:m.getAttribute('aria-label'), shown:getComputedStyle(document.getElementById('railMoreBadge')).display}; })()")
@@ -180,10 +180,10 @@ class Sidebar(LiveBrowserCase):
         self.assertEqual(b.eval("document.activeElement.dataset.v"), "review")               # focus on the first page
         self.assertIn(str(pending), b.eval("document.querySelector('#railMoreMenu [data-v=review]').textContent"))
         self.assertEqual(b.eval("[...document.querySelectorAll('#railMoreMenu [role^=menuitem]')].map(x=>x.id||x.dataset.v)"),
-                         ["review", "inbox", "files", "activity", "railHealth", "settings", "railHelp", "railCustBtn"])
+                         ["review", "files", "activity", "railHealth", "settings", "railHelp", "railCustBtn"])
         self.assertIn("1", b.eval("document.getElementById('railHealth').textContent"))
         b.key("ArrowDown")
-        self.assertEqual(b.eval("document.activeElement.dataset.v"), "inbox")
+        self.assertEqual(b.eval("document.activeElement.dataset.v"), "files")
         b.key("End")
         self.assertEqual(b.eval("document.activeElement.id"), "railCustBtn")
         b.key("Home")
@@ -217,7 +217,7 @@ class Sidebar(LiveBrowserCase):
         b.eval("railSave({...RAILCFG,order:[...RAILCFG.order,...RAILCFG.more],more:[]})")
         self.wait_saved("!r.more.length")
         b.wait("!document.getElementById('railMore')")
-        self.assertEqual(len(self.top()), 10)
+        self.assertEqual(len(self.top()), 9)   # #232: Intake is the one entry for both pages
 
     # ── Customise ──
     def test_customise_moves_pages_by_button_and_keyboard_and_saves_on_done(self):
@@ -246,13 +246,13 @@ class Sidebar(LiveBrowserCase):
         b.key("ArrowDown", ALT)                                                                # it was last: nothing happens
         b.key("ArrowUp", ALT)
         lists = b.eval("[...document.querySelectorAll('#railCust ul')].map(u=>[...u.children].map(li=>li.dataset.rid))")
-        self.assertEqual(lists, [["today", "review", "projects", "people", "reports", "settings"], ["inbox", "files", "work", "activity"]])
+        self.assertEqual(lists, [["today", "review", "projects", "people", "reports", "settings"], ["files", "work", "activity"]])
         self.assertEqual(b.eval("document.activeElement.closest('li').dataset.rid"), "work")
         self.assertEqual(self.top(), TOP)                                                       # nothing changes until Done
         b.click("#railCustDone")
         b.wait("!document.getElementById('railCust').open")
         r = self.wait_saved("r.more.includes('work')")
-        self.assertEqual((r["order"], r["more"]), (["today", "review", "projects", "people", "reports", "settings"], ["inbox", "files", "work", "activity"]))
+        self.assertEqual((r["order"], r["more"]), (["today", "review", "projects", "people", "reports", "settings"], ["files", "work", "activity"]))
         self.assertEqual(self.top(), r["order"])
         self.assertEqual(self.more(), r["more"])
         self.assertEqual(b.eval("document.activeElement.id"), "railMore")                     # focus back where it was opened from
@@ -268,11 +268,11 @@ class Sidebar(LiveBrowserCase):
         self.open_customise()
         b.drag('#railCust li[data-rid="files"] [data-rgrip]', '#railCust li[data-rid="review"]', offset=(0, -8))
         lists = b.eval("[...document.querySelectorAll('#railCust ul')].map(u=>[...u.children].map(li=>li.dataset.rid))")
-        self.assertEqual(lists, [["today", "work", "files", "review", "projects", "reports", "people"], ["inbox", "activity", "settings"]])
+        self.assertEqual(lists, [["today", "work", "files", "review", "projects", "reports", "people"], ["activity", "settings"]])
         b.drag('#railCust li[data-rid="work"] [data-rgrip]', '#railCust li[data-rid="today"]', offset=(0, -8))   # never above Today
         self.assertEqual(b.eval("document.querySelector('#railCust ul[data-zone=top]').firstElementChild.dataset.rid"), "today")
         b.click("#railCustDone")
-        self.wait_saved("r.order.join()==='today,work,files,review,projects,reports,people'&&r.more.join()==='inbox,activity,settings'")
+        self.wait_saved("r.order.join()==='today,work,files,review,projects,reports,people'&&r.more.join()==='activity,settings'")
 
     def test_cancel_and_esc_keep_the_sidebar_and_reset_restores_the_default(self):
         b = self.b
@@ -350,18 +350,18 @@ class Sidebar(LiveBrowserCase):
         b = self.b
         n = b.eval("railNorm({order:['bogus','review','today','settings'],more:['today','files','nosuch'],hidden:['bogus'],display:'sideways'})")
         self.assertEqual(n["order"], ["today", "review", "settings", "work", "projects", "reports", "people"])
-        self.assertEqual(n["more"], ["files", "inbox", "activity"])
+        self.assertEqual(n["more"], ["files", "activity"])
         self.assertEqual((n["hidden"], n["display"]), ([], "titles"))
         # a choice saved before More existed: the default More, plus what it had hidden
         n = b.eval("railNorm({order:['today','inbox','projects','work','people','review','files','activity','settings'],hidden:['people'],display:'icons'})")
-        self.assertEqual(n, {"order": ["today", "projects", "work", "review", "reports"], "more": ["inbox", "files", "activity", "settings", "people"], "hidden": [], "display": "icons"})
+        self.assertEqual(n, {"order": ["today", "projects", "work", "review", "reports"], "more": ["files", "activity", "settings", "people"], "hidden": [], "display": "icons"})
         # a settings.json written before a page existed: the page is appended to its group, never lost
         s = self.settings()
         s.setdefault("dashboard", {})["rail"] = {"order": ["today", "people", "nosuch"], "more": ["settings"], "hidden": [], "display": "titles"}
         (self.v.root / "system/config/settings.json").write_text(json.dumps(s, indent=2))
         self.reload()
         self.assertEqual(self.top(), ["today", "people", "work", "review", "projects", "reports"])
-        self.assertEqual(self.more(), ["settings", "inbox", "files", "activity"])
+        self.assertEqual(self.more(), ["settings", "files", "activity"])
 
     def test_a_failed_write_puts_the_sidebar_back(self):
         b = self.b

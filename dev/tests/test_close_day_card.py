@@ -155,8 +155,8 @@ class CloseDayCard(LiveBrowserCase):
             b.pump(0.5)
         self.assertEqual([i["state"] for i in q["items"]], ["made"], q)
         b.wait("/Day closed at/.test(document.getElementById('dayClose').getAttribute('aria-label'))", 45)
-        b.click("#closeDlg [data-cdfinish]")                                     # Review now: Review, the find highlighted
-        b.wait("VIEW==='review' && document.querySelectorAll('#reviewBody tr.hl').length===1")
+        b.click("#closeDlg [data-cdfinish]")                                     # Review now: Intake, with the find
+        b.wait("VIEW==='intake-review' && document.querySelectorAll('#v-intake-review tr.irprop').length>=1")      # #232 C2: Intake draws the find's row (the old page highlighted it)
         self.assertFalse(b.eval(f"{CARD}.open"))
         self.assertEqual(b.errors, [])
 
@@ -262,7 +262,7 @@ class CloseDayCard(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelectorAll('#ftList li').length"), 2)
         self.assertEqual(b.eval("document.querySelector('#ftList a[data-open]').dataset.open"), f"actions:{due}")
         b.click("#ftList li:nth-child(2) a")
-        b.wait("VIEW==='review' && document.querySelectorAll('#reviewBody tr.hl').length===1")
+        b.wait("VIEW==='intake-review' && document.querySelectorAll('#v-intake-review tr.irprop').length>=1")      # #232 C2: Intake draws the find's row (the old page highlighted it)
         self.assertEqual(b.errors, [])
 
 

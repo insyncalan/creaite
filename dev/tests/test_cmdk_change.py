@@ -121,11 +121,11 @@ class CmdKChange(LiveBrowserCase):
             b.pump(0.1)
         self.assertEqual(self.staged(), before)
 
-    def test_cmd_enter_stages_and_opens_review(self):
+    def test_cmd_enter_stages_and_opens_intake(self):
         b = self.b
         self.palette("add action for ABC: send the SOW, Sara Example")
         b.key("Enter", 4)
-        b.wait("VIEW==='review'", 15)
+        b.wait("VIEW==='intake-review'", 15)
         self.assertEqual(len(self.staged()), 1)
 
     def test_text_that_is_not_a_change_still_jumps_and_searches_and_nothing_deletes(self):

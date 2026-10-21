@@ -151,6 +151,20 @@ def individual_only(item):
     return update_rule(item)                     # BL-297: a work item's update is routine only for its date and latest update
 
 
+def hold_reason(item):
+    """#232: why "Approve routine" leaves a pending item for Alan, or None when it is routine. The one rule for cmd_bulk and
+    for Intake and Review's two groups (build_dashboard.intake_review): no project (or a possible match), a conflict, an
+    invalid item (Alan, 18-10-2026: held back in the list too), or anything individual_only names. Owner, date and
+    evidence are never tested."""
+    if needs_project(item):
+        return "need a project"
+    if "conflict" in item.get("flags", []):
+        return "conflict"
+    if "invalid" in item.get("flags", []):
+        return "invalid"
+    return individual_only(item) or None
+
+
 # ===== AI drafts (sprint-drafts-fields) ===== a drafted proposal decided here is counted in draft-stats.json (counts only): approved
 # as drafted is "used", approved after an edit "edited", rejected "rejected". The dashboard's Review counts its own decisions.
 def count_draft(item, decision):
@@ -1264,18 +1278,14 @@ def no_draft_minutes(drafts):
 
 
 def bulk_reason(item, strong, blocked):
-    """Why a pending item is held back from bulk approval, or None (#275: `blocked`, minutes_record.track_blocked)."""
-    if needs_project(item):
-        return "need a project"
-    if "conflict" in item.get("flags", []):
-        return "conflict"
-    if "invalid" in item.get("flags", []):
-        return "invalid"
-    if strong and item.get("match") != "strong":
-        return "not a strong match"
-    if item.get("n") in blocked:
-        return "not ticked in the minutes"
-    return individual_only(item) or None
+    """Why a pending item is held back from bulk approval, or None: #232's hold_reason, then a weak match with `strong`,
+    then #275's `blocked` (minutes_record.track_blocked: crossed or neither in the minutes)."""
+    reason = hold_reason(item)
+    if not reason and strong and item.get("match") != "strong":
+        reason = "not a strong match"
+    if not reason and item.get("n") in blocked:
+        reason = "not ticked in the minutes"
+    return reason
 
 
 def cmd_bulk(scope=None, strong=False):

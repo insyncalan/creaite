@@ -201,7 +201,7 @@ export function MinutesView() {
   return (
     <div class="mnview">
       <header class="mnhead">
-        <nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="review">Review</a> › <span aria-current="page">Minutes</span></nav>
+        <nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="intake-review">Intake</a> › <span aria-current="page">Minutes</span></nav>
         <h1 id="mnTitle">{doc.title}</h1>
         <p class="sub mnmeta">{doc.project_name || ""} · {fd(doc.date)} · {draft ? "Draft, not yet approved" : "Approved and filed"}
           {!draft ? " · Filed minutes are never saved over" : ""}</p>

@@ -6,8 +6,7 @@
 import { render } from "preact";
 import { REV, pName } from "../../core/data.js";
 import { go } from "../../core/nav.js";
-import { RHL } from "../../review.js";
-import { rvPaint } from "../../work.js";
+import { irReveal } from "../../stores/intakeReview.js";
 
 /** @typedef {{ref: string, kind: string, type: string, t: string, p?: string|null, open: boolean}} FirstItem */
 /** @typedef {{day: string, day_shown: string, items: FirstItem[]}} First */
@@ -17,19 +16,16 @@ const TABLE = { Action: "actions", "RAID item": "raid", Decision: "decisions" };
 /** Open a proposal's row in Review, highlighted. @param {string} ref p:<file>#<n | block> */
 function ftOpenProposal(ref) {
   const [file, part] = ref.slice(2).split("#"), want = /^\d+$/.test(part) ? +part : part;
-  go("review");
+  go("intake-review");
   const r = REV.find(x => x.file === file && x.ref === want && !x.done);
-  if (!r) return;
-  RHL.clear(); RHL.add(r.n); rvPaint();
-  const row = document.querySelector(`#reviewBody tr[data-n="${r.n}"]`);
-  if (row) row.scrollIntoView({ block: "center" });
+  if (r) irReveal([r.n]);   /* #232-C: the meeting it came from opens */
 }
 
 /** One line of the list. @param {{x: FirstItem, n: number}} props */
 function Line({ x, n }) {
   const id = x.ref.startsWith("i:") ? x.ref.slice(2) : "", k = id ? TABLE[x.type] || "actions" : "";
   /** @param {MouseEvent} e */
-  const click = e => { e.preventDefault(); if (x.ref.startsWith("p:")) ftOpenProposal(x.ref); else go("inbox"); };
+  const click = e => { e.preventDefault(); if (x.ref.startsWith("p:")) ftOpenProposal(x.ref); else go("intake-review", { stage: "arrived" }); };
   return (
     <li><span class="n">{n}</span><div class="tb">
       {id ? <a class="t" href="#" data-open={`${k}:${id}`}>{x.t || id}</a> : <a class="t" href="#" onClick={click}>{x.t || x.type}</a>}

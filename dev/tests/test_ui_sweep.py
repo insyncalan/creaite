@@ -57,7 +57,7 @@ SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
                              "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#pkId [data-pkp=\"p\"]')", "#panel")
 # BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached; plan
 # #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
-SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
+SCREENS["review-peek"] = ("go('intake-review'); openProposal(REV.find(r=>rtOK(r)).n)",
                           "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')"
                           " && Object.keys(rjGuesses.value).length > 0", "#panel")     # the guesses (/api/review/guesses) land late under load and redraw the peek's list: wait for them, as the review screen does
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
@@ -172,16 +172,17 @@ class TargetSizes(UiSweepCase):
         self.goto("work-display")
         for w, h in b.eval("[...document.querySelectorAll('#dispMenu .colmv button')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})"):
             self.assertGreaterEqual(min(w, h), 24, "a move-column button")
-        self.goto("review")
-        sizes = b.eval("[...document.querySelectorAll('#reviewBody .ib.rvrr')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})")
+        self.goto("intake-review")
+        sizes = b.eval("[...document.querySelectorAll('#v-intake-review [data-ira=notneeded], #v-intake-review tr.irprop [data-ira=reject]')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})")
         self.assertTrue(sizes)
         for w, h in sizes:
-            self.assertGreaterEqual(min(w, h), 24, "Reject with a reason")
+            self.assertGreaterEqual(min(w, h), 24, "Not needed, with a reason (and a proposal's Reject, where the sample has one)")
 
     def test_a_tick_box_answers_a_click_beside_it(self):
+        """BL-217's tick-box check, on Activity's list (the Review page's tick boxes went with the old page, #232 C2)."""
         b = self.b
-        self.goto("review")
-        js = "document.querySelector('#reviewBody tr[data-n] td>input[type=checkbox]:not(:disabled)')"
+        self.goto("activity")
+        js = "document.querySelector('#actTbl tr[data-row] input[type=checkbox]:not(:disabled)')"
         x, y, was = b.eval(f"(()=>{{const i={js}, r=i.getBoundingClientRect(); return [r.left+r.width/2-10, r.top+r.height/2+9, i.checked]}})()")
         for kind in ("mousePressed", "mouseReleased"):
             b.call("Input.dispatchMouseEvent", type=kind, x=x, y=y, button="left", clickCount=1)
@@ -222,7 +223,7 @@ class Reflow(UiSweepCase):
                         self.assertEqual(r["scopeX"], 0, f"the view scrolls sideways: {r['culprits'][:3]}")
                         cut = [u for u in r["unreachable"] if not any(x in u["sig"] for x in REFLOW_SKIP)]
                         self.assertEqual(cut, [], "controls that can't be reached")
-                        if name in ("today", "review", "cockpit", "work", "people", "person", "activity"):
+                        if name in ("today", "intake-review", "cockpit", "work", "people", "person", "activity"):
                             cov = [c for c in r["covered"] if not any(x in c["sig"] for x in REFLOW_SKIP)
                                    and "a.cntl" not in c["sig"]]       # a count link in a sentence, under the sticky first column
                             self.assertEqual(cov, [], "controls under another")
@@ -278,14 +279,14 @@ class Reflow(UiSweepCase):
         finally:
             b.resize(self.width, self.height)
 
-    def test_review_stacks_its_rows_on_a_narrow_window(self):
+    def test_intake_stacks_its_rows_on_a_narrow_window(self):
         b = self.b
         try:
             b.resize(600, 800)
-            self.goto("review")
-            ok = b.eval("""(()=>{ const tr=document.querySelector('#reviewBody tr[data-n]'), t=tr.querySelector('td.title').getBoundingClientRect(),
-              a=tr.querySelector('button[data-act="a"]').getBoundingClientRect(); return a.top>=t.bottom-1 && !document.querySelector('#reviewBody .xcue'); })()""")
-            self.assertTrue(ok, "Approve sits under the item, and no table scrolls")
+            self.goto("intake-review")
+            ok = b.eval("""(()=>{ const trs=[...document.querySelectorAll('#v-intake-review tr[data-irm]')]; if(!trs.length) return false;
+              return document.documentElement.scrollWidth<=innerWidth && trs.every(tr=>[...tr.querySelectorAll('button')].every(x=>{ const r=x.getBoundingClientRect(); return !r.width||(r.left>=0&&r.right<=innerWidth+1); })); })()""")
+            self.assertTrue(ok, "the row's buttons stay in the window, and no table scrolls sideways")
         finally:
             b.resize(self.width, self.height)
 
@@ -299,7 +300,7 @@ class ForcedColours(UiSweepCase):
 
     def test_selected_states_and_edges_survive(self):
         b = self.b
-        for name in ("work", "work-board", "work-panel", "intake", "files", "activity", "milestones", "people", "help",
+        for name in ("work", "work-board", "work-panel", "intake-review", "files", "activity", "milestones", "people", "help",
                      "settings-advanced", "cmdk"):
             with self.subTest(name):
                 region = self.goto(name)

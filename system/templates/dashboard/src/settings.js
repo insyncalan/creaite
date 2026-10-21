@@ -20,10 +20,10 @@ import { linkAnchor, linkUrl } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
-import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
+import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, TODAY, who } from "./core/page.js";
 import { clientReportOn, setClientReport } from "./stores/reportingSettings.js";
 import { openProjectSettings } from "./stores/projectSettings.js";   /* #228 */
-import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
+import { api, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { catalogue, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
@@ -31,9 +31,10 @@ import { refreshFiles } from "./files.js";
 import { decLate, decLateWords, decRank } from "./meetings.js";
 import { drawPanel, ebMarkSeen, errBanner, openNew, markStagedRows, pkDraw, PKDRAW, pkNewOffer, pkNote, pkSaveAndClose, pkSaving, REC } from "./panel.js";
 import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG } from "./projects.js";
-import { draftOn, renderReview } from "./review.js";
+import { draftOn } from "./review.js";
+import { irTick } from "./stores/intakeReview.js";
 import { railIconSize, railLabelsOn, railSizeNorm, setRailCount } from "./stores/rail.js";
-import { PEOPLE_MOVE, personPromises, plur, projLink, renderToday, tl } from "./today.js";
+import { PEOPLE_MOVE, personPromises, plur, renderToday } from "./today.js";
 import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, relaxHtml, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
 /* One page: the categories on the left, the settings on the right. SETSECTIONS is the one list the page is built from.
@@ -781,7 +782,7 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wsq
       if(!known) items.splice(items.indexOf(it),0,{n:Math.max(0,...items.map(i=>+i.n||0))+1,op:"new",table:"workstreams",values:Object.fromEntries(Object.entries({project:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,source:`${S.me} in review, ${TODAY}`}).filter(([,x])=>x)),match:"strong",flags:[],decision:"approved"}); }); }
   catch(err){ snack("Not saved: "+err.message); return; }
   r.flags=(r.flags||[]).filter(f=>f!=="new-workstream"); r.ws_suggest=null; if(add&&!wsRow(r.p,name)) (D.ws_table=D.ws_table||[]).push({id:"",p:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,st:"Active",nA:0,nR:0});
-  if(add&&r.rec) r.rec.ws=name; renderReview(); snack(add?`Workstream ${name} will be added to ${pName(r.p)} with this item — check its details in Settings › People and projects › Workstreams`:"Left without a workstream"); },true);
+  if(add&&r.rec) r.rec.ws=name; irTick.value++; snack(add?`Workstream ${name} will be added to ${pName(r.p)} with this item — check its details in Settings › People and projects › Workstreams`:"Left without a workstream"); },true);
 document.addEventListener("click",e=>{ const t=e.target;
   if(t.closest("#ppEmail")){ if(!t.closest("#ppEmail").disabled) openDraftEmail(shared.PERSON); return; }
   if(t.closest("#ppHand")){ shared.HAND={name:shared.PERSON,picked:new Set()}; renderPerson(shared.PERSON); return; }

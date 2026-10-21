@@ -89,28 +89,7 @@
         <div class="kbdhint" id="whintList"></div>
         <div class="kbdhint" id="whintBoard" hidden></div>
       </div></section>
-      <section class="view" id="v-review" hidden><div class="wrapmax">
-        <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
-        <!-- BL-133 (sprint-work-views): search, filters, Display and Approve all routine; the bar when anything is selected; the result line -->
-        <div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off"><span class="wfilters" id="rvfilters"></span><span class="sp"></span><span class="dd rvdisp"><button class="ib bd" id="rvDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="rvDispMenu" aria-label="Display: grouping and order" data-tip="Display: grouping and order"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="rvDispMenu" role="dialog" aria-label="Review display" hidden></div></span><button class="btn" id="routineBtn" aria-haspopup="dialog"><svg data-ic="checks" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve routine</button><!-- BL-160 (sprint-icons) --></div>
-        <div class="wapplied" id="rvapplied"></div>
-        <div class="wbulk rvbar" id="rvbar" role="region" aria-label="Decide the selected proposals" hidden><span class="bkn" id="rvCount" aria-live="polite"></span><span class="rvsplit" id="rvSplit"></span><button type="button" class="linkbtn" id="rvAll"></button><span class="sp"></span><button type="button" class="btn primary" id="bulkApprove" disabled><svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve</button><button type="button" class="btn" id="bulkReject" aria-haspopup="menu" aria-expanded="false" disabled><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Reject with a reason <span class="kbd" aria-hidden="true">R</span></button><span class="rvset" id="rvSet"></span><button type="button" class="ib sm" id="rvClear" aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
-        <div class="rvresult" id="rvresult" role="status" aria-live="polite"></div>
-        <div id="reviewBody"></div>
-        <div class="kbdhint" id="rvHint"></div>
-      </div></section>
-      <section class="view" id="v-inbox" hidden><div class="wrapmax">
-        <h1>Intake</h1><p class="sub" style="margin:4px 0 14px">Transcripts and minutes waiting to be processed. Files you add are saved to the inbox folder. Processing drafts the minutes and proposed items for Review; nothing is filed until you approve.</p>
-        <!-- ===== Intake sections (BL-73) ===== -->
-        <section class="card isec" id="isecCal" aria-labelledby="isecCalH"><header class="ish"><h2 id="isecCalH">Calendar import</h2></header>
-          <p class="sub ipurpose">Pick meetings from your calendar and load their transcripts.</p><div id="isecCalBody"></div></section>
-        <section class="card isec" id="isecUp" aria-labelledby="isecUpH"><header class="ish"><h2 id="isecUpH">Upload files</h2></header>
-          <p class="sub ipurpose">Drop transcripts or minutes you already have.</p>
-        <div class="dropzone" id="inboxDrop" tabindex="0" role="button" aria-label="Add files to Intake">Drop transcripts or minutes here, or <button class="linkbtn" id="inboxPick" type="button">choose files</button><span class="sub"> · .vtt, .docx, .txt, .md or .pdf, up to 25 MB each</span><input type="file" id="inboxFile" multiple accept=".vtt,.docx,.txt,.md,.pdf" hidden></div>
-        <div class="toolbar" style="margin-top:12px"><button class="btn" id="inboxNew">Select new</button><span class="sp"></span><button class="btn primary" id="inboxGo" disabled>Process selected</button></div>
-        <div class="tbl"><table id="inboxTbl"></table></div>
-        </section>
-      </div></section>
+      <section class="view" id="v-intake-review" hidden aria-labelledby="irTitle"></section><!-- #232: Intake, one page (components/intakeReview/IntakeReviewPage.jsx) -->
       <section class="view" id="v-files" hidden><div class="wrapmax">
         <h1>Files</h1>
         <!-- ===== Search (BL-07) ===== -->

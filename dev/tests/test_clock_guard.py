@@ -36,8 +36,6 @@ ALLOWED = (
      "tracker.py dates the processed.txt line with the real day (a guarded file); the test rewrites it to its fixed day"),
     ("test_debug_log_wiring.py", "datetime.now()",
      "the debug log's stamps are to the second and its server runs on the real clock (pin_clock = False): a frozen clock gives no new error"),
-    ("test_meetings.py", "week_calendar(v, today=date.today())",
-     "the Inbox page runs against a server and a page on the real clock (the injected script loads after the page's own TODAY)"),
     ("test_run_chat.py", "TODAY = date.today().isoformat()",
      "live_server.py names the runs chat runs-<real day> (its run id ignores CREAITE_NOW; a guarded file)"),
     ("test_run_chat.py", "start_catchup(datetime.now())", "the stand-in harness is a subprocess on the real clock, like the server it drives"),
@@ -50,7 +48,7 @@ LEGACY_TESTS = {
     "test_decisions_dashboard.py": 1, "test_forecast.py": 1, "live_updates_support.py": 2,
     "test_milestone_states.py": 1, "test_new_item_peek.py": 1, "test_notes_175.py": 1, "test_notes_autosave_backups.py": 2, "test_notes_header.py": 2,
     "test_onedrive_projects.py": 1, "test_peek_fixes.py": 1, "test_plain_dates.py": 1, "test_review_triage.py": 1,
-    "test_steerco_dashboard.py": 1, "test_transcripts.py": 1, "test_transcripts_ui.py": 1,
+    "test_steerco_dashboard.py": 1, "test_transcripts.py": 1,
     "test_vip_confidential.py": 1, "test_vip_conversations.py": 1, "test_vip_screens.py": 3, "test_weekend_dates.py": 3,
     "test_work_all_items.py": 1, "test_work_filter_picker.py": 1, "test_work_grouping.py": 1, "test_work_item_peek.py": 1,
     "test_work_saved_views.py": 1, "test_workstreams.py": 2, "test_writer_pinned.py": 2, "work_board_case.py": 2,
@@ -65,7 +63,7 @@ SCRIPTS = {
 DASHBOARD_JS = {
     "ask.js": 15, "components/notes/CaptureDrawer.jsx": 1, "components/notes/DeleteNote.jsx": 1,
     "components/peek/ChasePane.jsx": 2, "components/Menu.jsx": 2, "components/notes/NotesPage.jsx": 2, "components/report/weekly/weeklyDoc.js": 1, "core/data.js": 1, "core/dayroll.js": 1,
-    "core/motion.js": 1, "core/page.js": 2, "core/server.js": 7, "drafts.js": 4, "files.js": 1, "help.js": 2, "intake.js": 2,
+    "core/motion.js": 1, "core/page.js": 2, "core/server.js": 7, "drafts.js": 4, "files.js": 1, "help.js": 2, "core/intakeApi.js": 2,
     "meetings.js": 2, "milestones.js": 2, "panel.js": 6, "projects.js": 3, "review.js": 1, "settings.js": 5, "sneak.js": 3,
     "stores/aiEdit.js": 3, "stores/notes.js": 3, "stores/prepPopup.js": 3, "stores/settings.js": 1, "today.js": 3,
 }

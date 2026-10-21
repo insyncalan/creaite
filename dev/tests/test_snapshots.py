@@ -109,11 +109,10 @@ SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden", "#v-today"),
     "work": ("go('work')", "document.querySelector('#workTbl tbody tr')", "#v-work"),
     "work-panel": (open_first_item, "document.getElementById('panel').classList.contains('on')", "#panel"),
-    # BL-315's guesses come from /api/review/guesses, fetched when Review opens (two scripts under the server's lock): under load
-    # they landed after the reads below agreed, and the "Possible match" row lost its guess. Wait for them (the sample has one).
-    "review": ("go('review')", "!document.getElementById('v-review').hidden && Object.keys(rjGuesses.value).length > 0",
-               "#v-review"),
-    "intake": ("go('inbox')", "!document.getElementById('v-inbox').hidden", "#v-inbox"),
+    # #232 C2: Intake and Review are one page, one golden (intake-review.html replaces intake.html and review.html). The page asks for
+    # BL-315's guesses (/api/review/guesses) while it is open; they show in the reject menu, not on a row, so the page is ready without them.
+    "intake-review": ("go('intake-review')", "!document.getElementById('v-intake-review').hidden && !!document.querySelector('#v-intake-review h1') "
+                      "&& !!document.querySelector('#v-intake-review tr')", "#v-intake-review"),
     "files": ("go('files')", "!document.getElementById('v-files').hidden", "#v-files"),
     "activity": ("go('activity')", "!document.getElementById('v-activity').hidden", "#v-activity"),
     "projects": ("go('projects')", "!document.getElementById('v-projects').hidden", "#v-projects"),
@@ -196,7 +195,7 @@ class Snapshots(LiveBrowserCase):
                 if "updated_at" in [c[1] for c in con.execute(f"PRAGMA table_info({t})")]:
                     con.execute(f"UPDATE {t} SET updated_at = '{FIXED} 08:00:00.000'")
             con.commit()
-        # The files' own times (Intake's Added column, the order of Latest reports) are when the vault was built: the
+        # The files' own times (Intake's "Added" words, the order of Latest reports) are when the vault was built: the
         # fixed day instead, so Intake doesn't show the date the test ran.
         stamp = datetime(FIXED.year, FIXED.month, FIXED.day, 8, 0, tzinfo=timezone.utc).timestamp()
         for top in ("inbox", "projects"):

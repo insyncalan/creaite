@@ -24,21 +24,21 @@ class TabTitle(LiveBrowserCase):
         self.assertEqual(self.title(), f"{base} · Today")
         b.eval("go('work')")
         self.assertEqual(self.title(), f"{base} · Work")
-        n = b.eval("REV.filter(r=>!r.done).length")
+        n = b.eval("irLiveCounts().badge")                                  # #232-C: ready to process plus proposals to approve
         self.assertGreater(n, 0)
-        b.eval("go('review')")
-        self.assertEqual(self.title(), f"{base} · Review ({n})")            # what waits in Review
-        b.eval("go('inbox')")
-        self.assertEqual(self.title(), f"{base} · Intake")                  # Intake's own count is not in the title
+        for old in ("review", "inbox"):                                     # the old names open the one page
+            b.eval(f"go({old!r})")
+            self.assertEqual(self.title(), f"{base} · Intake ({n})")
         b.eval("go('cockpit','ABC')")
         self.assertEqual(self.title(), f"{base} · Example Programme")       # a project by its name
-        b.eval("go('review'); REV[0].done=true; renderBadge()")
-        self.assertEqual(self.title(), f"{base} · Review ({n - 1})")        # the count follows
-        b.eval("REV[0].done=false; renderBadge()")
+        k = b.eval("irModel().mail.routine.concat(irModel().mail.needs, irModel().other.needs, irModel().other.routine, irModel().meetings.flatMap(m=>[...m.groups.needs,...m.groups.routine]))[0]")
+        b.eval(f"go('review'); REV.find(r=>r.n=={k}).done=true; renderBadge()")
+        self.assertEqual(self.title(), f"{base} · Intake ({n - 1})")   # the count follows
+        b.eval(f"REV.find(r=>r.n=={k}).done=false; renderBadge()")
         b.eval("RBMARKED=true; tabTitle()")
         self.assertTrue(self.title().startswith(b.eval("RBMARK")))         # the finished-run mark still goes first
         b.eval("rbUnmark()")
-        self.assertEqual(self.title(), f"{base} · Review ({n})")
+        self.assertEqual(self.title(), f"{base} · Intake ({n})")
 
 
 if __name__ == "__main__":
