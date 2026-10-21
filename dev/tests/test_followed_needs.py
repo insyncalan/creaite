@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from live_browser import LiveBrowserCase  # noqa: E402
-from test_dashboard import populate  # noqa: E402
+from test_dashboard import new, populate  # noqa: E402
 from test_sweep_alerts import REGISTER, record, run, vip_file, vip_vault  # noqa: E402
 from test_vip_threads import py  # noqa: E402
 from test_vip_screens import says_vip  # noqa: E402
@@ -125,6 +125,15 @@ class Proposals(unittest.TestCase):
         self.assertEqual([x["ref"] for x in r["refs"]], ["file_changes"])
         self.assertTrue(r["refs"][0]["file"].endswith("-edit.json"))
         self.assertNotIn("A fact about the SOW", json.dumps(r))
+
+    def test_an_applied_note_is_written_with_its_source_and_its_row_goes(self):
+        """End to end: the note's `file_changes.source` passes the apply untouched, the memory gets the line, the row goes."""
+        stage_note(self.v, src("[ABC] SOW", "https://x/9"), text="Mia confirmed the SOW scope.\n")
+        self.assertEqual(len(rows(self.v, "note")), 1)
+        self.assertIn("Apply 1:", self.v.run("apply").stdout)
+        self.assertIn("Mia confirmed the SOW scope.", (self.v.root / ABC_MEMORY).read_text())
+        self.assertEqual(rows(self.v, "note"), [])
+        self.assertEqual([a for a in sync(self.v, "st['alerts']") if a["kind"] == "note"], [])
 
     def test_the_rows_are_pointers_to_review_not_messages_for_the_check_or_the_reports(self):
         stage(self.v, [item("Send the SOW", src("[ABC] SOW", "https://x/1"))])
@@ -491,6 +500,14 @@ def rec_at(v, found, when=STAMP):
 def fixture(v):
     """Mia is followed. Every kind of thing the sweep records, plus two proposals and a memory note from her mail."""
     populate(v)
+    in3 = date.fromordinal(date.today().toordinal() + 3).isoformat()     # 2.5.3 (#251): a milestone due soon with open work, so
+    v.propose("ms", [new("milestones", 1, project="ABC", name="Pilot go-live", baseline_date=in3,   # its row shares Needs attention
+                         forecast_date=in3, status="Planned", source="Alan (cx-edit)")])
+    v.run("apply")
+    ms = next(m["id"] for m in v.rows("milestones") if m["name"] == "Pilot go-live")
+    v.propose("ms-work", [new("actions", 1, project="ABC", description="Book the pilot room", owner="Alan Carter", due_date=in3,
+                              raised=TODAY, milestone=ms, source="Alan (cx-edit)")])
+    v.run("apply")
     (v.root / "projects/_portfolio/people-register.md").write_text(REGISTER, encoding="utf-8")
     (v.root / "system/staging/drafts").mkdir(parents=True, exist_ok=True)
     rec_at(v, [LIVE, HELLO, PRIVATE, CONF, ANSWERED, DISMISSED, MESSAGE])
@@ -590,6 +607,18 @@ class Page(LiveBrowserCase):
         self.assertIn(True, order)
         self.assertIn(False, order, "the fixture has other attention items")
         self.assertEqual(order, sorted(order), order)                                # every other row, then every From row
+
+    def test_j_with_milestone_rows_too_they_lead_and_the_from_rows_still_close_the_list(self):
+        """2.5.3's milestone rows (#251) and #236's From rows in one Needs attention: milestones first, From rows last, all counted."""
+        o = self.b.eval("""(()=>{ EXPAND.add('attn'); renderToday(); const li=[...document.querySelectorAll('#attnList > li')];
+          return {ms:msAttention().length, kinds:li.map(l=>l.dataset.msattn?'ms':l.classList.contains('alrow')?'from':'other'),
+                  n:document.getElementById('nAttn').textContent, items:attentionItems().length}; })()""")
+        self.assertGreaterEqual(o["ms"], 1, "the fixture has a milestone due soon with open work")
+        k = o["kinds"]
+        self.assertEqual(k[:o["ms"]], ["ms"] * o["ms"], k)
+        self.assertEqual(k.count("from"), 4, k)
+        self.assertEqual(k[-4:], ["from"] * 4, k)
+        self.assertEqual(o["n"], str(o["items"]))
 
     def test_i_a_confidential_threads_row_is_marked_and_shows_no_item_words(self):
         r = next(x for x in self.rows() if x["where"] == "attn" and "Pay review" in x["text"])
