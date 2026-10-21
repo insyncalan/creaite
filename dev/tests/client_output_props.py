@@ -858,13 +858,24 @@ def p8_weekly(kind, aud):
     return "accepted", (None if label and label.group(1) == "Internal" else f"a weekly report labelled {label and label.group(1)!r}")
 
 
-def p8_minutes(ctx, kind, aud):
-    """P8's minutes route on a client report (any kind and audience): always refused."""
+MINUTES_NAMED = f"system/staging/drafts/{WEEK} Steering minutes - Example Programme.html"
+
+
+def p8_minutes(ctx, kind, aud, src="file"):
+    """P8's minutes route on a client report (any kind and audience): always refused. Source "file": the client report's own draft
+    (its file name is a report's); "renamed": the same file copied to a minutes name in drafts (no report name, no Reports folder),
+    so only the report's other signs (its data says client, its period or logos: creaite_doc.report_signs) can refuse it."""
     write_block(set_ka(copy.deepcopy(ctx.base), kind, aud))
+    path = DRAFT
+    if src == "renamed":
+        (ROOT / MINUTES_NAMED).write_text((ROOT / DRAFT).read_text(encoding="utf-8"), encoding="utf-8")
+        path = MINUTES_NAMED
     try:
-        r = minutes_record.export(DRAFT, "html", file_beside=False)
+        r = minutes_record.export(path, "html", file_beside=False)
     except minutes_record.RecordError:
         return "refused", None
+    finally:
+        (ROOT / MINUTES_NAMED).unlink(missing_ok=True)
     if r.get("ok"):
         paths.resolve(r["path"]).unlink(missing_ok=True)
         return "accepted", "the minutes route exported a client report"
@@ -876,16 +887,17 @@ def p8_cell(ctx, kind, aud, rt, src):
     ctx.reset()
     if rt == "client":
         return p8_client(ctx, kind, aud, src)
-    return p8_weekly(kind, aud) if rt == "weekly" else p8_minutes(ctx, kind, aud)
+    return p8_weekly(kind, aud) if rt == "weekly" else p8_minutes(ctx, kind, aud, src)
 
 
 def p8(ctx, seed, n):
     """P8 kind x audience x route x source: a stored kind other than the route's is refused; weekly is always Internal (never
     labelled Client); a client report is forced to audience client and gated; the minutes route refuses a client report by any
-    sign. Smoke: the whole table once (it is fast); full: the table, then n random cells. (The minutes route's request source is the
-    live server's minutes save route, guarded: only the file source is run for it.)"""
+    sign, also under a minutes file name outside Reports (source "renamed"), where only the report's data gives it away. Smoke: the
+    whole table once (it is fast); full: the table, then n random cells. (The minutes route's request source is the live server's
+    minutes save route, guarded: only the file sources are run for it.)"""
     table = [(k, a, rt, src) for k in P8_KINDS for a in P8_AUD for rt in ("client", "weekly", "minutes")
-             for src in (("file", "request") if rt == "client" else ("file",))]
+             for src in {"client": ("file", "request"), "minutes": ("file", "renamed")}.get(rt, ("file",))]
     r = random.Random(seed)
     picked = table + ([r.choice(table) for _ in range(n)] if ctx.full else [])
     fails, stats = [], {}
@@ -1689,9 +1701,30 @@ def _reread():
     creaite_doc._export_doc = lambda path, kind, doc=None: real(path, kind, None)
 
 
+POSTED = {}          # page_used only: the page the client export route was posted, for the export it makes
+
+
 def _page_used():
-    real = creaite_doc._posted_page
-    creaite_doc._posted_page = lambda doc, page, fmt: real(dict(doc, kind="weekly"), page, fmt)
+    """A client report's posted page used, as before v2.5.1 step 3. That guard is three deep, so all three go: the client export
+    route passes the posted page on to the export (step 3 sends none: client_snapshot.client_export has no page), _posted_page
+    looks at it (it returns none for a client report) and export_page.build takes it (it refuses a client report, and the forced
+    audience says client: the page is checked as an internal report's is, as the weekly route checks one)."""
+    real_route, real_export, real_posted = report_server._client_export, creaite_doc.export, creaite_doc._posted_page
+
+    def route_with_page(handler, req, which, fmt):
+        POSTED["page"] = req.get("page") if isinstance(req.get("page"), dict) else None
+        try:
+            return real_route(handler, req, which, fmt)
+        finally:
+            POSTED.pop("page", None)
+
+    def export_with_page(path, fmt, **k):
+        if k.get("page") is None and POSTED.get("page") is not None:
+            k["page"] = POSTED["page"]
+        return real_export(path, fmt, **k)
+    report_server._client_export = route_with_page
+    creaite_doc.export = export_with_page
+    creaite_doc._posted_page = lambda doc, page, fmt: real_posted(dict(doc, kind="weekly", audience="internal"), page, fmt)
 
 
 def _decoder_off():
