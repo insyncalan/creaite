@@ -31,9 +31,9 @@ before `/api/apply`, and `tracker.py apply` never reads the Track column, so:
 
 - only an item **approved** and crossed or left with neither stops the apply (all or nothing); a pending one, the normal state
   between crossing a row and approving the minutes, never does;
-- the stopped item goes back to **pending** (saved when the apply stops), so it is in Review's queue again, never stuck, and the
-  message says how to clear it: "approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register
-  it" (Review can also reject it);
+- the stopped item goes back to **pending** (saved when the apply stops), so it is on Intake again, never stuck, and the
+  message ("it is back on Intake: …") says how to clear it: "approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register
+  it" (Intake can also reject it);
 - it **fails closed**: with an approved item not yet applied, a draft record that can't be read stops the apply, and so does one
   that is gone, has lost its data block, or whose `state` was changed by hand from draft (round 3);
 - it holds after an **Undo outside the Minutes view** (`tracker.py undo`, Activity's undo): the items are pending again but the

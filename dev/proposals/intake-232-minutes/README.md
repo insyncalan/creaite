@@ -31,6 +31,10 @@ branch the page sends it through Process's own run kind instead: `processLive([{
     of the Find work items files exactly as listed, and none of `draft`, `minutes`, `transcript`, `note`. A spec whose
     `"transcript"` is a Find work items file is refused (it is staged only as minutes); a transcript file (pressed with Make
     minutes or Process) is never staged as minutes (BL-260 holds: it still needs its draft).
+  - Team Cap's review, MEDIUM 1: `_process_stage_problem` is split so no function passes check.py's complexity limit (15):
+    `_process_stage_spec` (read the spec in drafts), `_process_minutes_stage_problem` (an `"as"` spec),
+    `_process_transcript_stage_problem` (a transcript spec) and `_process_draft_problem` (its Word draft). The refusals and
+    their words are unchanged.
   - `_runs_proposals`: a `"minutes by others"` proposal is the run's by its `source_file`, only for a Find work items file (so
     `tracker.py validate` and `search.py enrich` work on it as on a transcript's).
 
@@ -48,9 +52,16 @@ Checked on `v26-232-next-2`: `git apply --check` is clean, the result is byte fo
 
 ## Tests
 
-`dev/tests/test_intake_process_minutes.py` (quick tier, no Chrome): 4 plain-code tests pass now; the 5 guard tests are expected
-failures until the diffs are applied, and pass with them (checked: 9 OK). With the diffs applied, `test_intake_process` (29),
-`test_intake_process_round2`'s guard tests and `test_reach` (18) stay green.
+`dev/tests/test_intake_process_minutes.py` (quick tier, no Chrome): 4 plain-code tests pass now; 7 are expected failures until
+the diffs are applied, and pass with them (checked: 11 OK):
+- 5 guard tests on `reach.decide` (the spec rules above, the run record, `_runs_proposals`);
+- 2 route tests (Team Cap's review, MEDIUM 2) through the real live server, the real hook and a stand-in Claude: `POST
+  /api/intake/process` with `{path, as: "minutes"}` writes `files_as_minutes` into `system/guard/run.json` (the stand-in copies
+  the record as the server wrote it) and the stand-in's real `minutes.py stage` of an `"as": "minutes"` spec passes the hook and
+  reaches Review as someone else's minutes; the same file sent without `"as"` leaves `files_as_minutes` empty and is not staged.
+
+With the diffs applied, `check.py` prints `check: OK` (complexity included), and `test_intake_process` (29),
+`test_intake_process_round2` (8) and `test_reach` (18) stay green.
 
 The apply itself (copying the file to the minutes folder, removing it from the inbox) is E1's `tracker.py` diff, separate from
 this one: `dev/proposals/intake-232/E1-tracker.rebased-on-guard-small.diff`, on top of `dev/proposals/guard-small/` (taken onto

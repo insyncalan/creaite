@@ -61,10 +61,10 @@ class RefusedApplyWords(unittest.TestCase):
     def test_track_refusal_drops_the_header_and_the_file_name(self):
         """#275 round 3 (Cap's 3): the page says "Apply stopped" itself; the proposal's file name is never shown."""
         m = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 2: crossed in the minutes' Track column; "
-             "it is back in Review\n  proposed-2026-10-01-x.json minutes: the minutes record can't be read (gone), so its Track "
+             "it is back on Intake\n  proposed-2026-10-01-x.json minutes: the minutes record can't be read (gone), so its Track "
              "column can't be checked")
         shown = words(m)
-        self.assertEqual(shown.split("\n")[0], "an item was crossed in the minutes' Track column; it is back in Review")
+        self.assertEqual(shown.split("\n")[0], "an item was crossed in the minutes' Track column; it is back on Intake")
         self.assertTrue(shown.split("\n")[1].startswith("the minutes record can't be read"))
         self.assertNotIn("proposed-", shown)
         self.assertNotIn("Apply stopped", shown)

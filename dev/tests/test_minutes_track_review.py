@@ -258,7 +258,7 @@ class TrackFromReview(LiveBrowserCase):
         Driven through Intake's Approve routine (irApproveRoutine, which calls rvDecideMany)."""
         b = self.b
         msg = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 2: crossed in the minutes' Track column; "
-               "it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
+               "it is back on Intake: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
         b.eval("window.__api0=api; window.api=async(p,body)=>p==='/api/apply'?{ok:false,message:" + json.dumps(msg) + "}:__api0(p,body)")
         self.ev("(()=>{ const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + ");"
                 " window.__t8=null; irApproveRoutine({needs:[],routine:[r.n]}).then(()=>{ window.__t8=document.getElementById('snack').textContent; }); })()")
@@ -275,6 +275,31 @@ class TrackFromReview(LiveBrowserCase):
         self.assertEqual(self.staged(1)["decision"], "pending", "the batch put back: on Intake again")
         self.assertFalse(self.ev("!!(REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + ")||{}).done"), "undecided on the page")
         self.assertNotIn(SOW, self.descs())
+
+
+    def test_09_approve_routine_whose_apply_stops_puts_the_minutes_back_too(self):
+        """Cap's round 2 (3), on the meeting's Approve routine: its Track column changes (the cross and the neither taken out of
+        the minutes, their items rejected) were made before the apply; when the apply stops they are put back too, so the minutes
+        are exactly as they were before and every item is pending, and the message says so (never "Approved n")."""
+        b = self.b
+        msg = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 1: crossed in the minutes' Track column; "
+               "it is back on Intake: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
+        b.eval("window.__api0=api; window.api=async(p,body)=>p==='/api/apply'?{ok:false,message:" + json.dumps(msg) + "}:__api0(p,body)")
+        b.eval(ROUTINE + ".click()")
+        b.wait("document.getElementById('snack').classList.contains('on') && /from these minutes/.test(document.getElementById('snack').textContent)", 60)
+        text = self.snack()
+        self.assertIn("Approved 0 items from these minutes", text)
+        self.assertIn("apply stopped, all back on Intake: an item was crossed in the minutes' Track column", text)
+        self.assertIn("the minutes are as they were", text)
+        self.assertNotIn("proposed-", text)
+        self.assertEqual([self.staged(n)["decision"] for n in (1, 2, 3, 4, 5)], ["pending"] * 5, "nothing rejected or approved")
+        self.assertFalse([self.staged(n).get("reject_reason") for n in (2, 3) if self.staged(n).get("reject_reason")],
+                         "the crossed and neither items are no longer rejected as removed in the minutes")
+        after = self.record()
+        self.assertEqual(self.rows_text(after), self.rows_text(self.before), "the minutes' rows exactly as before")
+        self.assertEqual((after.get("meta") or {}).get("removed") or {}, (self.before.get("meta") or {}).get("removed") or {})
+        self.assertEqual(after["layout"]["track"], {"2": "n", "3": ""}, "the Track choices kept")
+        self.assertNotIn(SOW, self.descs(), "nothing registered")
 
 
 class TwoProjects(LiveBrowserCase):

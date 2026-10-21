@@ -63,8 +63,11 @@ def phase2(reason="phase 2: not automated yet"):
 SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden && document.querySelector('#v-today h2')"),
     "work": ("go('work')", "document.querySelector('#workTbl tbody tr')"),
-    "review": ("go('review')", "!document.getElementById('v-review').hidden"),
-    "intake": ("go('inbox')", "!document.getElementById('v-inbox').hidden"),
+    # 2.6.0 (#232 C2): the old Review and Intake pages are retired; their names open the one Intake page (nav.go), so the
+    # older checks' "review" and "intake" land there too
+    "intake-review": ("irOpen.value=null; go('intake-review')", "VIEW==='intake-review' && !document.getElementById('v-intake-review').hidden"),
+    "review": ("irOpen.value=null; go('review')", "VIEW==='intake-review' && !document.getElementById('v-intake-review').hidden"),
+    "intake": ("irOpen.value=null; go('inbox')", "VIEW==='intake-review' && !document.getElementById('v-intake-review').hidden"),
     "files": ("go('files')", "!document.getElementById('v-files').hidden"),
     "activity": ("go('activity')", "!document.getElementById('v-activity').hidden"),
     "projects": ("go('projects')", "!document.getElementById('v-projects').hidden"),
@@ -272,6 +275,11 @@ def behaviour_driver(case, screens):
                                                           tsb.SharedBehaviour.escape, tsb.SharedBehaviour.tab_closes,
                                                           tsb.SharedBehaviour.drive, tsb.SharedBehaviour.cmdk)
         pick = tsu.SharedUndo.pick
+        # the dialog scripts no control opens (KEYED) and their helpers, as that test has them; parch is this vault's own, below
+        ndel, mnapp, crleft, rail, boardask, llcompare, searchprev, railcust = (
+            tsb.SharedBehaviour.ndel, tsb.SharedBehaviour.mnapp, tsb.SharedBehaviour.crleft, tsb.SharedBehaviour.rail,
+            tsb.SharedBehaviour.boardask, tsb.SharedBehaviour.llcompare, tsb.SharedBehaviour.searchprev, tsb.SharedBehaviour.railcust)
+        enter_on, dialog_keys, tidy = tsb.SharedBehaviour.enter_on, tsb.SharedBehaviour.dialog_keys, tsb.SharedBehaviour.tidy
 
         def __init__(self):
             self.b, self.seen = case.b, []

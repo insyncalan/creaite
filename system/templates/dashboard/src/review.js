@@ -27,7 +27,7 @@ import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
 import { pkAdd } from "./today.js";
 import { irTick } from "./stores/intakeReview.js";
 import { mountRejectMenu } from "./components/review/RejectMenu.jsx";
-import { openMinutesRecord, trackApprove, trackApprovedWords, trackFailWords } from "./stores/minutes.js";
+import { openMinutesRecord, trackApprove, trackApprovedWords, trackFailWords, trackPutBack } from "./stores/minutes.js";
 import { approveProblems } from "./components/minutes/track.js";
 
 import { contextMenuOpen, openContextMenu } from "./components/review/ContextMenu.jsx";
@@ -122,8 +122,11 @@ export async function approveRoutineTracked(m){ const v=await openMinutesRecord(
   if(!tr.ok){ snack(trackFailWords(tr,"Approve routine")); return; }
   const ks=REV.filter(x=>item(x)&&rvBulkOK(x)), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
   let undo=null, out=[], got=ks.length;
-  if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ snack(`Approved 0 items from these minutes · ${out.join(" · ")}`); return; } }   /* #275 round 3 */
-  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); }
+  /* #275 round 3: an apply that stops puts the Track column's changes back too (trackPutBack), so the minutes are as they were */
+  const putBack=async why=>{ const pb=made?await trackPutBack(v.path,tr.done||[]):{ok:true}; await reloadData();
+    snack(`Approved 0 items from these minutes · ${why}${made?(pb.ok?" · the minutes are as they were":` · the minutes couldn't be put back (${pb.message||"try again"}): open them to check`):""}`); };
+  if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ await putBack(out.join(" · ")); return; } }
+  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(`apply stopped: ${oneLine(res.message)}`); return; } }
   const tail=made?` · ${made} line${made===1?"":"s"} taken out of the minutes or kept as lines only`:"";
   snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}`,
     undo?async()=>{ await undo(); await openMinutesRecord({file:m.file}); await reloadData(); }:null); }

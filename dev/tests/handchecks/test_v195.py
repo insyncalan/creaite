@@ -42,7 +42,8 @@ VOICEOVER = "plus a VoiceOver spot check by hand (live only: the automated check
 NOTES.update({7: VOICEOVER, 8: VOICEOVER})
 
 # The pages checks 9 and 12 name
-PAGES_9 = ("today", "work", "review", "intake", "settings-essentials", "activity", "files")
+# 2.6.0 (#232 C2): Review and Intake are one page ("intake-review"); it stands for both
+PAGES_9 = ("today", "work", "intake-review", "settings-essentials", "activity", "files")
 
 
 class Scriptable1(HandcheckCase):
@@ -119,15 +120,23 @@ class Scriptable1(HandcheckCase):
     def test_c14_intake_names(self):
         """14. Intake → "Calendar import", "Upload files" and "Quick capture" in sentence case, with no icons beside them.
         Help and Settings › Advanced use the same names."""
+        # 2.6.0 (#232 C2): the one Intake page has no Calendar import, Upload files or Quick capture sections any more (its
+        # meetings and files are rows; Upload files is its Add files button and drop; Quick capture became the note drawer,
+        # ⌘⇧N). What the check guards stays: the page's own section headings in sentence case with no icons beside them, and
+        # the names as Help (its whole text, help.md: the Help screen opens on Start here) and Settings use them, never in
+        # their old forms.
         b = self.b
-        names = ["Calendar import", "Upload files", "Quick capture"]
-        self.screen("intake")
-        heads = b.eval("[...document.querySelectorAll('#v-inbox .isec .ish h2')].map(e=>({t:e.innerText.trim(), icons:e.parentElement.querySelectorAll('svg,img,.i').length, tt:getComputedStyle(e).textTransform}))")
-        self.assertEqual([h["t"] for h in heads], names)
-        self.assertEqual([h["icons"] for h in heads], [0, 0, 0], "no icons beside them")
+        names = ["Calendar import", "Add files", "Quick capture"]
+        self.screen("intake-review")
+        heads = b.eval("[...document.querySelectorAll('#v-intake-review h2')].filter(e=>e.offsetParent).map(e=>({t:e.innerText.trim(), icons:e.querySelectorAll('svg,img,.i').length, tt:getComputedStyle(e).textTransform}))")
+        self.assertTrue(heads, "Intake has section headings")
+        for h in heads:
+            self.assertTrue(h["t"][:1].isupper() and h["t"][1:] != h["t"][1:].upper(), f"sentence case: {h['t']}")
+        self.assertEqual({h["icons"] for h in heads}, {0}, "no icons beside them")
         self.assertEqual({h["tt"] for h in heads}, {"none"})
+        self.assertTrue(b.eval("!!document.querySelector('#v-intake-review [data-irpick][aria-label^=\"Add files\"]')"), "Intake's Add files")
         self.screen("help")
-        help_text = b.eval("document.getElementById('v-help').innerText")
+        help_text = (self.vault / "system/templates/help.md").read_text(encoding="utf-8")
         self.screen("settings-advanced")
         adv = b.eval("document.getElementById('v-settings').innerText")
         for n in names:
@@ -135,10 +144,12 @@ class Scriptable1(HandcheckCase):
         old = [w for w in ("Upload a file", "Calendar Import", "Quick Capture", "Upload Files") if w in help_text + adv]
         self.assertEqual(old, [], "the old names")
         in_adv = [n for n in names if n in adv]
-        self.note(14, f"headings {', '.join(names)}, no icons; Help names all three; Settings › Advanced names {', '.join(in_adv) or 'none of them'}")
+        self.note(14, f"Intake's headings {', '.join(h['t'] for h in heads)} (2.6's one page: the three sections are gone), sentence case, no icons; Add files on the page; Help names Calendar import, Add files and Quick capture (the note drawer replaced it); Settings › Advanced names {', '.join(in_adv) or 'none of them'}")
 
     def test_c15_primary_actions(self):
-        """15. Primary actions keep their look: Today's and Intake's filled button, Review's outlined Approve, Work's tinted "+"."""
+        """15. Primary actions keep their look: Today's and Intake's filled button, Review's outlined Approve, Work's tinted "+".
+        (2.6.0, #232 C2: Review and Intake are one page; its Approve is the one checked outlined, and any filled button it
+        draws is checked filled.)"""
         b = self.b
         look = "e=>{const s=getComputedStyle(e); return {bg:s.backgroundColor, border:s.borderTopColor, bw:s.borderTopWidth, color:s.color, text:e.innerText.trim().slice(0,30)}}"
         transparent = ("rgba(0, 0, 0, 0)", "transparent")
@@ -153,15 +164,14 @@ class Scriptable1(HandcheckCase):
         b.reload("typeof go==='function' && LIVE")
         self.screen("today")
         today = b.eval(f"[...document.querySelectorAll('#v-today .btn.primary')].filter(e=>e.offsetParent).map({look})")
-        self.screen("intake")
-        intake = b.eval(f"[...document.querySelectorAll('#v-inbox .btn.primary')].filter(e=>e.offsetParent).map({look})")
+        self.screen("intake-review")
+        intake = b.eval(f"[...document.querySelectorAll('#v-intake-review .btn.primary')].filter(e=>e.offsetParent).map({look})")
+        self.assertTrue(today, "Today has a primary button")
         for where, bs in (("Today", today), ("Intake", intake)):
-            self.assertTrue(bs, f"{where} has a primary button")
             for x in bs:
                 self.assertNotIn(x["bg"], transparent, f"{where}'s {x['text']} is filled")
-        self.screen("review")
-        approve = b.eval(f"[...document.querySelectorAll('#v-review button[data-act=a]')].filter(e=>e.offsetParent).map({look})")
-        self.assertTrue(approve, "Review shows Approve")
+        approve = b.eval(f"[...document.querySelectorAll('#v-intake-review button[data-ira=approve]')].filter(e=>e.offsetParent).map({look})")
+        self.assertTrue(approve, "Intake shows Approve")
         surface = b.eval("getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()")
         for x in approve[:3]:
             self.assertNotEqual(x["bw"], "0px", "Approve is outlined")
@@ -169,7 +179,7 @@ class Scriptable1(HandcheckCase):
         plus = b.eval(f"(()=>{{const e=document.getElementById('newBtn'); return e&&({look})(e)}})()")
         self.assertTrue(plus, "Work's + button")
         self.assertNotIn(plus["bg"], transparent, "Work's + is tinted")
-        self.note(15, f"Today's {today[0]['text']} {today[0]['bg']} (after a sweep; before it, Getting started had {before or 'no'} filled button: its next step, Connect Microsoft 365, has none), Intake {intake[0]['bg']}, Approve outlined ({approve[0]['bw']} {approve[0]['border']}; surface {surface}), Work + {plus['bg']}")
+        self.note(15, f"Today's {today[0]['text']} {today[0]['bg']} (after a sweep; before it, Getting started had {before or 'no'} filled button: its next step, Connect Microsoft 365, has none), Intake {intake[0]['bg'] if intake else 'no filled button (2.6)'}, Approve outlined ({approve[0]['bw']} {approve[0]['border']}; surface {surface}), Work + {plus['bg']}")
 
     def test_c17_in_24_days(self):
         """17. Projects → a next milestone reads "(in 24 days)", lower case; its written-out date is unchanged."""
@@ -183,9 +193,21 @@ class Scriptable1(HandcheckCase):
         self.note(17, f"\"{mer[0]}\"")
 
 
+def open_prep_peek(b, title="Steering committee"):
+    """#111 B (2.2): Today's meeting title opens the Prep peek on focus (the old Prepare button and Prep popup are gone).
+    Focus the title of today's meeting named `title` (else the first with a peek) and wait for the peek's Open the prep page."""
+    b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+    b.eval("document.activeElement&&document.activeElement.blur()")
+    b.wait("document.querySelector('#dayMeets .dmti')", 15)
+    b.eval(f"""(()=>{{ const ts=[...document.querySelectorAll('#dayMeets .dmti')];
+      (ts.find(t=>t.textContent.includes({json.dumps(title)}))||ts[0]).focus(); return true; }})()""")
+    b.wait("document.querySelector('#dayMeets .dmpop [data-prepgo]')", 15)
+
+
 def measure_screens():
+    """Every screen once: "review" and "intake" are hcbase's aliases of the one Intake page (2.6.0, #232 C2), so left out."""
     from hcbase import SCREENS
-    return list(SCREENS)
+    return [n for n in SCREENS if n not in ("review", "intake")]
 
 
 class Measured1(HandcheckCase):
@@ -338,7 +360,8 @@ class Measured2(HandcheckCase):
         # them, every ancestor's opacity multiplied in): the past dot and the sun are marks that must be seen, 3:1 (WCAG
         # 1.4.11, the audit's bar for --day-past and --day-sun); the past meeting's dimmed words are held to the same 3:1
         # (dimmed on purpose, but still to be read); all other text on Today (dates, hints, the hour labels) is AA, 4.5:1 (3
-        # when large). The "·" separators are decorative (aria-hidden punctuation) and left out.
+        # when large). The "·" separators are decorative (aria-hidden punctuation) and left out, and so is visually hidden text
+        # (.vh: a screen reader's label, 1 px and clipped, such as Earlier days' name): it is never drawn.
         from live_browser import pin_page_clock
         b = self.b
         pin_page_clock(b, self.now[:10] + " 11:30")
@@ -370,7 +393,7 @@ class Measured2(HandcheckCase):
                     # the other text: elements with words of their own (not only their children's), outside the past meeting
                     own = b.eval("""[...document.querySelectorAll('#v-today *:not(svg):not(svg *)')].filter(e=>{ const r=e.getBoundingClientRect();
                       return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden'&&!e.closest('[hidden],[inert]'); })
-                      .map(e=>!e.closest('.dm.past')&&!e.matches('.daysep')&&[...e.childNodes].some(c=>c.nodeType===3&&c.textContent.trim()))""")
+                      .map(e=>!e.closest('.dm.past')&&!e.matches('.daysep')&&!e.closest('.vh')&&[...e.childNodes].some(c=>c.nodeType===3&&c.textContent.trim()))""")
                     allrows = measure.paint_contrast(b, "#v-today *:not(svg):not(svg *)")
                     text = [r for r, mine in zip(allrows, own) if mine]
                     self.assertEqual(len(allrows), len(own), "one visibility rule for both lists")
@@ -385,7 +408,8 @@ class Measured2(HandcheckCase):
             by = {}
             for kind, _ in low:
                 by[kind] = by.get(kind, 0) + 1
-            self.fail("under the contrast bar (palette × mode × element): " + ", ".join(f"{k} {v}" for k, v in by.items()))
+            self.fail("under the contrast bar (palette × mode × element): " + ", ".join(f"{k} {v}" for k, v in by.items())
+                      + "\n" + "\n".join(x for _, x in low))
 
     def test_c07_resize_handle_value(self):
         """7. VoiceOver (⌘F5) on a Work column-resize handle → it reads a value (its width) and changes as you resize with ←
@@ -469,15 +493,16 @@ class Measured2(HandcheckCase):
         (32 px), bar Files' large centred search bar (40 px, by design). Section headings look the same on each page."""
         # Buttons are .btn (the small .mini and the icon .ib are check 12's). Fields are one-line inputs and selects; a
         # textarea grows with its text and is left out. Settings is all three of its tabs. Section headings are the pages' h2;
-        # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note.
+        # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note, as is the
+        # project settings' Archive and close heading, red on purpose (.psdanger, #228).
         b = self.b
-        pages = ("today", "work", "review", "intake", "settings-essentials", "settings-advanced", "project-settings", "activity", "files")
-        views = {"today": "#v-today", "work": "#v-work", "review": "#v-review", "intake": "#v-inbox", "activity": "#v-activity",
+        pages = ("today", "work", "intake-review", "settings-essentials", "settings-advanced", "project-settings", "activity", "files")
+        views = {"today": "#v-today", "work": "#v-work", "intake-review": "#v-intake-review", "activity": "#v-activity",
                  "files": "#v-files", "settings-essentials": "#v-settings", "settings-advanced": "#v-settings", "project-settings": "#v-psettings"}
         fields = ("input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),"
                   " select")
         head_js = """(v)=>[...document.querySelectorAll(v+' h2')].filter(e=>e.offsetParent).map(e=>{ const s=getComputedStyle(e);
-          return {group:e.classList.contains('setgroup'), sig:[s.fontSize,s.fontWeight,s.lineHeight,s.fontFamily.split(',')[0],s.textTransform,s.color].join(' ')}; })"""
+          return {group:e.classList.contains('setgroup')||!!e.closest('.psdanger'), sig:[s.fontSize,s.fontWeight,s.lineHeight,s.fontFamily.split(',')[0],s.textTransform,s.color].join(' ')}; })"""
         off_b, off_f, heads, groups, nb, nf = [], [], {}, set(), 0, 0
         for page in pages:
             self.screen(page)
@@ -503,14 +528,14 @@ class Measured2(HandcheckCase):
                      + (f"; fields off size ({len(off_f)}): {'; '.join(sorted(set(off_f))[:6])}" if off_f
                         else "; every field 32 px, Files' search 40 px")
                      + (f"; section headings one look ({next(iter(heads))})" if len(heads) == 1 else f"; {len(heads)} heading looks: {heads}")
-                     + (f"; plus Settings › Advanced's group labels ({', '.join(groups)})" if groups else ""))
+                     + (f"; plus the second kinds, Settings › Advanced's group labels and the danger zone's heading ({', '.join(groups)})" if groups else ""))
         bad = ([f"{len(off_b)} buttons not 32 px"] if off_b else []) + ([f"{len(off_f)} fields not 32 px"] if off_f else []) \
             + ([f"{len(heads)} section-heading looks"] if len(heads) != 1 else [])
         if bad:
             self.fail(", ".join(bad))
 
     def test_c16_touch_targets(self):
-        """16. Checkboxes on Review, Intake and Activity, the Settings switches and the column-resize handles → each easy to
+        """16. Checkboxes on Review, Intake (2.6: one page with none) and Activity, the Settings switches and the column-resize handles → each easy to
         hit (at least 24 px; DevTools › Inspect shows the box)."""
         # Each target's own box (DevTools › Inspect), both sides at least 24 px, and its centre hit-tests to it (nothing on top).
         b = self.b
@@ -518,9 +543,12 @@ class Measured2(HandcheckCase):
           return r.width>0&&r.height>0&&!e.closest('[hidden],[inert]'); }).map(e=>{ e.scrollIntoView({block:'center',inline:'center'});
           const r=e.getBoundingClientRect(), h=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
           return !!h&&(h===e||e.contains(h)||(h.closest('label')&&h.closest('label').contains(e))); })"""
-        groups = [("Review checkboxes", "review", "#v-review", "input[type=checkbox]:not(.switch)"),
-                  ("Intake checkboxes", "intake", "#v-inbox", "input[type=checkbox]:not(.switch)"),
-                  ("Activity checkboxes", "activity", "#v-activity", "input[type=checkbox]:not(.switch)"),
+        # 2.6.0 (#232 C2): the one Intake page has no checkboxes (Review's and Intake's went with their pages; bulk approval
+        # is Approve routine), so it has none to measure; asserted, so a checkbox that comes back is measured here again
+        self.screen("intake-review")
+        self.assertEqual(b.eval("document.querySelectorAll('#v-intake-review input[type=checkbox]').length"), 0,
+                         "Intake has checkboxes again: measure them here as Review's and Intake's were")
+        groups = [("Activity checkboxes", "activity", "#v-activity", "input[type=checkbox]:not(.switch)"),
                   ("Settings switches", "settings-essentials", "#v-settings", "input.switch"),
                   ("Settings switches", "settings-advanced", "#v-settings", "input.switch"),
                   ("resize handles", "work", "#v-work", ".colrz"),
@@ -551,11 +579,10 @@ class Measured2(HandcheckCase):
         # their stacking order decides (measure.on_top). The order: menu and popover over the peek, ask creaite over the peek,
         # a toast over all of them.
         b = self.b
-        from hcbase import SCREENS
         wide, layers, wrong = [], [], []
         try:
             measure.width(b, 320, 800)
-            for name in SCREENS:
+            for name in measure_screens():
                 self.screen(name)
                 o = measure.overflow_x(b)
                 if not o["ok"]:
@@ -598,7 +625,7 @@ class Measured2(HandcheckCase):
             need(".snack.on", "#chat", "toast over ask creaite")
         finally:
             measure.width(b, self.width, self.height)
-        self.note(19, f"{len(SCREENS)} screens at 320 px: " + (f"sideways scroll on {wide}" if wide else "no sideways scroll")
+        self.note(19, f"{len(measure_screens())} screens at 320 px: " + (f"sideways scroll on {wide}" if wide else "no sideways scroll")
                       + "; " + "; ".join(layers))
         if wide or wrong:
             self.fail("; ".join(([f"sideways scroll at 320 px on {', '.join(w.split()[0] for w in wide)}"] if wide else []) + wrong))
@@ -659,17 +686,18 @@ class Judgement2(HandcheckCase):
     # ── the checks ──
 
     def test_c11_prep_page_fonts(self):
-        """11. Build a prep page (Today › the FAL Steering committee › Prep page), then open it from the Agendas folder → the
+        """11. Build a prep page (Today › the FAL Steering committee › Prep page; since 2.2 its title's Prep peek › Open the prep
+        page), then open it from the Agendas folder → the
         dashboard's fonts (where installed) and status colours, light and dark; still one file."""
         b = self.b
         dash = self._dashboard_vars(self.STATUS)
-        # Today › the meeting › Prepare › Open prep page › Refresh research: the stand-in Claude researches, the server writes it
+        # Today › the meeting's Prep peek (#111 B: its title; the Prepare button is gone) › Open the prep page › Refresh research:
+        # the stand-in Claude researches, the server writes it
         self.screen("today")
-        b.click("#dayMeets [data-prep]")
-        b.wait("document.querySelector('#prepDlg [data-prepview]')", 10)
-        b.eval("document.querySelector('#prepDlg [data-prepview]').click()")
-        b.wait("[...document.querySelectorAll('.pph button')].some(e=>e.innerText.includes('Refresh research'))", 15)
-        b.eval("[...document.querySelectorAll('.pph button')].find(e=>e.innerText.includes('Refresh research')).click()")
+        open_prep_peek(b)
+        b.click("#dayMeets .dmpop [data-prepgo]")
+        b.wait("[...document.querySelectorAll('#v-prep button')].some(e=>e.innerText.includes('Refresh research'))", 15)
+        b.eval("[...document.querySelectorAll('#v-prep button')].find(e=>e.innerText.includes('Refresh research')).click()")
         b.wait("/Prep page saved: /.test(document.body.innerText)", 60)
         rel = b.eval("document.body.innerText.match(/Prep page saved: (projects\\/[^\\n]*?\\.html)/)[1]")
         f = self.vault / rel
@@ -1033,23 +1061,20 @@ class Bl333And10(HandcheckCase):
         try:
             for w in (1400, 320):
                 measure.width(b, w, 1000 if w > 600 else 800)
-                self.screen("intake", settle=1)
-                problems += self.bottom(f"Intake {w}", "#v-inbox")
+                self.screen("intake-review", settle=1)
+                problems += self.bottom(f"Intake {w}", "#v-intake-review")
             measure.width(b, 1400, 1000)
+            # The Prep popup over Today is the Prep peek since 2.2 (#111 B); Meetings › Prep is the prep page (#prep=, BL-286 D),
+            # the meeting hub's page having gone with BL-339
             self.screen("today", settle=1)
-            b.click("[data-prep]")
-            b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open&&document.getElementById('prepBody').children.length", 15)
+            open_prep_peek(b)
             b.pump(1)
-            problems += self.bottom("Prep popup", "#prepBody")
-            for box in ("#prepDlg", "#v-today"):
-                problems += self.bottom(f"Prep popup ({box})", box, wheel=False)
-            b.eval("document.getElementById('prepDlg').close()")
-            title = b.eval("Object.entries(D.hub||{}).find(([t,m])=>m.key==='calendar:hc-1')?.[0]||''")
-            self.assertTrue(title, "the FAL Steering committee has a meeting page")
-            b.eval(f"go('meeting',{json.dumps(title)})")
-            b.wait("/FAL Steering committee/.test((document.querySelector('#v-meeting h1')||{}).textContent||'')", 15)
+            for box in ("#dayMeets .dmpop", "#v-today"):
+                problems += self.bottom(f"Prep peek ({box})", box, wheel=box != "#v-today")
+            b.click("#dayMeets .dmpop [data-prepgo]")
+            b.wait("location.hash.startsWith('#prep=') && !document.getElementById('v-prep').hidden && /Steering committee/.test(document.getElementById('v-prep').textContent)", 15)
             b.pump(1)
-            problems += self.bottom("Meetings › Prep", "#v-meeting")
+            problems += self.bottom("Meetings › Prep", "#v-prep")
         finally:
             measure.width(b, self.width, self.height)
         self.note(22, "; ".join(self.seen))
@@ -1288,7 +1313,12 @@ class Bl333And10(HandcheckCase):
         labels = ["Archive closed actions after (months)", "Archive closed RAID items after (months)",
                   "Archive done promises after (months)", "Offer to archive reports and minutes after (months)"]
         find = "[...document.querySelectorAll('#v-settings .srow')].find(r=>r.innerText.startsWith(%s))"
-        self.screen("settings-advanced", settle=1)
+
+        def archiving():                       # v2.6 (#246): Settings › Advanced › Archiving and backups, its own sub-tab
+            b.eval("go('settings','arch')")
+            b.wait("SSUB==='arch' && !!document.querySelector('#settingsBody .srow')", 15)
+            b.pump(0.5)
+        archiving()
         heading = b.eval(f"""(()=>{{ const r={find % json.dumps(labels[0])}; if(!r) return '';
           const hs=[...document.querySelectorAll('#v-settings h2,#v-settings h3')].filter(h=>h.compareDocumentPosition(r)&Node.DOCUMENT_POSITION_FOLLOWING);
           return hs.length?hs[hs.length-1].innerText.trim():''; }})()""")
@@ -1308,7 +1338,7 @@ class Bl333And10(HandcheckCase):
             self.assertNotIn(self.RAID, {i for i, _ in again}, out)
             self.assertFalse([i for i, t in again if t == "raid"], out)
         finally:
-            self.screen("settings-advanced", settle=0.5)
+            archiving()
             set_raid(6)
         self.note(29, f"Settings › Advanced{(' › ' + heading) if heading else ''}: actions, RAID, promises 6, reports 12; "
                       f"RAID set to 0 in the page (saved to settings.json): the cancelled ORX-005 not listed "
@@ -1538,13 +1568,15 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
             self.archive_via_health()
 
     def files_archived(self):
-        """Files › the Archived chip: [(stored path, tagged Archived, has Move back, name)]."""
+        """Files › the Archived chip: [(stored path, tagged Archived, has Move back, name)]. Since #124 a row's data-fp (and its
+        Move back and open link) is the file's own place in 99 Archive, unique where two came from one stored path, and data-hp
+        the stored path it came from."""
         b = self.b
         self.screen("files")
         b.wait("!!document.querySelector('#fquick [data-q=\"archived\"]')", 20)
         b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
         b.pump(0.4)
-        return b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(tr=>[tr.dataset.fp, "
+        return b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(tr=>[tr.dataset.hp||tr.dataset.fp, "
                       "[...tr.querySelectorAll('.tag')].some(t=>t.textContent.trim()==='Archived'), "
                       "!!tr.querySelector('[data-moveback]'), tr.querySelector('a[data-openfile]').textContent])")
 
@@ -1553,7 +1585,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         rows = self.files_archived()
         self.assertIn(stored, [r[0] for r in rows], "listed under Archived")
         n = len(self.got("/api/files/move-back"))
-        self.b.eval(f"document.querySelector('#filesTbl [data-moveback={json.dumps(stored)}]').click()")
+        self.b.eval(f"document.querySelector('#filesTbl [data-moveback={json.dumps(self.archived(stored))}]').click()")   # #124: its place in 99 Archive
         self.wait_for(lambda: len(self.got("/api/files/move-back")) > n, what="Move back's answer")
         return self.got("/api/files/move-back")[-1]
 
@@ -1699,7 +1731,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.assertEqual(sorted(r[0] for r in rows), sorted(self.DUE))
         self.assertTrue(all(r[1] and r[2] for r in rows), rows)
         # BL-101: the portfolio is "Portfolio" in Files, never its folder name
-        where = b.eval(f"(document.querySelector('#filesTbl tr[data-fp={json.dumps(self.PORTF)}] td.x')||{{}}).textContent||''")
+        where = b.eval(f"(document.querySelector('#filesTbl tr[data-hp={json.dumps(self.PORTF)}] td.x')||{{}}).textContent||''")
         self.assertEqual(where, "Portfolio › minutes", "the portfolio's minutes are under Portfolio")
         self.assertNotIn("_portfolio", b.eval("document.getElementById('v-files').innerText"), "Files never shows the folder name")
         others = {}
@@ -1716,7 +1748,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         self.assertEqual({k: v[1] for k, v in others.items() if v[1]}, {}, "Move back only under Archived")
         self.files_archived()
         n = len(self.got("/api/open"))
-        b.eval(f"document.querySelector('#filesTbl tr[data-fp={json.dumps(self.STEER)}] a[data-openfile]').click()")
+        b.eval(f"document.querySelector('#filesTbl tr[data-hp={json.dumps(self.STEER)}] a[data-openfile]').click()")
         self.wait_for(lambda: len(self.got("/api/open")) > n, what="/api/open")
         o = self.got("/api/open")[-1]
         self.assertTrue(o.get("ok"), o)
@@ -2010,7 +2042,7 @@ class Bl334And316(HandcheckCase):
         self.assertEqual(item["values"]["project"], "FAL")
         self.assertEqual(item["values"]["description"], "Take the platform from production to live")
         self.screen("review")
-        rev = b.eval("document.getElementById('v-review').innerText")
+        rev = b.eval("document.getElementById('v-intake-review').innerText")
         self.assertIn("Take the platform from production to live", rev)
         self.assertIn("Falcon Data Platform", rev)
         self.assertEqual(b.errors, [], "page errors")
@@ -2063,6 +2095,7 @@ class Bl334And316(HandcheckCase):
         from contextlib import closing
         import hcbase
         import test_shared_behaviour as tsb
+        import test_shared_undo as tsu      # #89: the Undo half's helpers moved there
         with closing(sqlite3.connect(self.vault / "system/tracker.db")) as con:
             ms = con.execute("SELECT id FROM milestones WHERE project='FAL' AND status<>'Done' ORDER BY id LIMIT 1").fetchone()[0]
         screens = hcbase.behaviour_screens(ms)
@@ -2077,13 +2110,20 @@ class Bl334And316(HandcheckCase):
                 missing.append(f"{name} ({str(e).splitlines()[0][:60]})")
                 continue
             shown.append(name)
-            for o, bad in d.each_opener(name, lambda i, o: d.drive(i, o["kind"])):
-                n_open += 1
-                if bad:
-                    keys.add((tsb.screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
+            try:                                   # each opener goes to the screen again: one the demo can't reopen is noted, as above
+                for o, bad in d.each_opener(name, lambda i, o: d.drive(i, o["kind"])):
+                    n_open += 1
+                    if bad:
+                        keys.add((tsb.screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
+            except (TimeoutError, RuntimeError) as e:
+                missing.append(f"{name} for its openers ({str(e).splitlines()[0][:60]})")
         for screen, script, sig, area, _how, label in tsb.SharedBehaviour.KEYED:
             if screen in shown:
-                bad = getattr(d, script)()
+                try:
+                    bad = getattr(d, script)()
+                except (TimeoutError, RuntimeError) as e:     # a state the demo vault doesn't have: noted, as a screen is
+                    missing.append(f"{script} ({str(e).splitlines()[0][:60]})")
+                    continue
                 if bad:
                     keys.add((area, f"keys: {sig} “{label}”: {'; '.join(bad)}"))
         n_undo = 0
@@ -2091,7 +2131,7 @@ class Bl334And316(HandcheckCase):
             done = set()
 
             def once(i, o, done=done):
-                g = (o["sig"], tsb.undo_group(o["name"]))
+                g = (o["sig"], tsu.undo_group(o["name"]))
                 if g in done:
                     return None
                 done.add(g)
@@ -2102,7 +2142,7 @@ class Bl334And316(HandcheckCase):
                         continue
                     n_undo += 1
                     if bad:
-                        undo.add((tsb.screen_area(name), f"undo: {name} {o['sig']} “{tsb.undo_group(o['name'])}”: {'; '.join(bad)}"))
+                        undo.add((tsb.screen_area(name), f"undo: {name} {o['sig']} “{tsu.undo_group(o['name'])}”: {'; '.join(bad)}"))
             except (TimeoutError, RuntimeError) as e:
                 missing.append(f"{name} for Undo ({str(e).splitlines()[0][:60]})")
         unreached = {(s["area"], "unreached: " + tsb.site_name(s)) for s in tsb.inventory() if not tsb.reached(s, d.seen)}
