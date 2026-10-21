@@ -139,6 +139,16 @@ class Server(unittest.TestCase):
 
     # ── calls ──
     def call(self, path, body, headers=None, method="POST"):
+        """One call; a "busy" answer (LOCK held by the server's own background job, e.g. the daily backup a minute after start-up)
+        is asked again for up to a minute, as the page's "Try again in a moment" says: nothing moved on a busy answer."""
+        for _ in range(120):
+            got = self.call_once(path, body, headers, method)
+            if not (isinstance(got, dict) and got.get("busy") is True):
+                return got
+            time.sleep(0.5)
+        return got
+
+    def call_once(self, path, body, headers=None, method="POST"):
         req = urllib.request.Request(self.base + path, data=json.dumps(body).encode() if method == "POST" else None,
                                      method=method, headers={"Content-Type": "application/json", **(headers or {})})
         try:
