@@ -196,7 +196,7 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
     const outsideNote=shared.DE.mode==="followup"?(shared.DE.attendees.length?"An attendee's address is outside your own domains":"There are no attendee addresses on record"):shared.DE.email?"This address is outside your own domains":"There's no email address on record";
     putHtml($("#deBody"),`${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>
-      ${shared.DE.outside?`<div class="denote">${outsideNote}, so items that aren't client-visible are unticked and marked internal. Tick any you want to include.</div>`:""}
+      ${shared.DE.outside?`<div class="denote">${outsideNote}, so items that aren't client-visible are unticked and marked internal. Tick any you want to include.${deAiSafe()?" AI suggestions on this email use client-visible items only, and one that brings in anything internal is dropped.":""}</div>`:""}
       ${shared.DE.left?`<div class="denote">${shared.DE.left} item${shared.DE.left===1?"":"s"} left out: marked confidential or restricted, or from a project's documents.</div>`:""}${deExtraHtml()}
       <div class="deinc" id="deInc">${codes.map(c=>`<div class="pph">${esc(pName(c))}</div>${shared.DE.items.filter(i=>i.p===c).sort((a,b)=>deSort(a,b,TODAY)).map(row).join("")}`).join("")}</div>
       <div class="deopts">${shared.DE.mode==="followup"?"":'<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
@@ -209,15 +209,32 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
    (Improve: Rewrite, Shorter, Longer; Tone: More formal, Warmer; Ask…), on text inside one paragraph or cell, so the table and the colours
    are never reshaped. The builder (draftEmail) stays the source (BL-83): the preview shows what it built, `shared.DE.built` is that HTML,
    and what is copied is that HTML until the email is edited, then the editor's document in the same wrapper (deHtml). */
+/* #186: the AI bar for an outside recipient. The server decides who the email goes to from its addresses (edit_ai.email_outside: the own
+   domains, every address, failing closed), then gives Claude the client-visible items only and drops a suggestion that brings in anything
+   internal. The page only asks whether this server does that (/api/edit/ai/caps, until it says yes); until then the bar stays off for an
+   outside recipient (#133's interim) and no addresses are sent, so an older server is never asked for something it can't check. The page's
+   own `outside` only shows or hides the bar: it is never sent. */
+let DE_AI_SAFE=false, deAiAsking=null, deAiNoUntil=0;
+const DE_AI_NO_MS=60000;   /* a no (an older server's 404, or an error) is kept a minute, so a redraw doesn't ask again each time */
+/** Whether this server decides the email's audience itself (kept once it says yes; a no is asked again after a minute). */
+export const deAiSafe=()=>DE_AI_SAFE;
+/** Ask the server, once at a time. @returns {Promise<boolean>|null} */
+export function deAiCheck(){ if(DE_AI_SAFE||deAiAsking||!viaServer()||Date.now()<deAiNoUntil) return deAiAsking;
+  const q=Promise.resolve().then(()=>api("/api/edit/ai/caps",{})).then(r=>(DE_AI_SAFE=!!(r&&r.ok&&r.email_audience==="recipients")),()=>false)
+    .then(ok=>{ if(!ok) deAiNoUntil=Date.now()+DE_AI_NO_MS; return ok; });
+  deAiAsking=q; q.then(()=>{ if(deAiAsking===q) deAiAsking=null; }); return q; }
+/** The addresses the email goes to, as the server judges them: the person's, or every attendee's ("" for anyone with none on record). */
+export const deRecipients=()=>{ const d=shared.DE; if(!d) return [""]; return d.mode==="followup"?(d.attendees||[]).map(a=>String(a.email||"")):[String(d.email||"")]; };
 /** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
 export function dePrevPut(html){ const el=$("#dePrev"); if(!el) return; shared.DE.built=html;
-  /* INTERIM (#133, until the edit_ai client-facts fix): the AI bar is off whenever the recipient is outside, because a suggestion for an
-     outside email could be written without the client-safe facts. It is mounted again when the recipient is internal; an editor that
-     was mounted the other way is rebuilt (the recipient changes with the follow-up's attendees, which redraw the popup). */
-  const ai=!shared.DE.outside;
-  if(el.cxed&&!el.cxed.editor.isDestroyed&&el.cxed.aiOn===ai){ el.cxed.setValue(html); return; }
-  creaiteEditor(el,{ features:"email", html, ...(ai?{ ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; } } }:{}) });
-  if(el.cxed) el.cxed.aiOn=ai; }
+  /* The bar is on for an internal recipient, and for an outside one once the server has said it decides the audience (#186): `enabled`
+     is read each time a selection would show the sparkle, so the editor is never rebuilt when the answer comes (a rebuild would take
+     the focus and the caret away while you type). With that yes the request carries the addresses (read when you ask, so a follow-up's
+     attendees loaded later count); without it none are sent. */
+  if(!deAiSafe()) deAiCheck();
+  if(el.cxed&&!el.cxed.editor.isDestroyed){ el.cxed.setValue(html); return; }
+  creaiteEditor(el,{ features:"email", html, ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; },
+    enabled:()=>!!shared.DE&&(!shared.DE.outside||deAiSafe()), recipients:()=>deAiSafe()?deRecipients():null } }); }
 /** End the preview's editor (the popup is redrawn or closed), and with it the selection bar over it. */
 export function dePrevDrop(){ const el=$("#dePrev"); if(el&&el.cxed) el.cxed.destroy(); }
 /** The HTML Copy email puts on the clipboard. An unedited email is the builder's HTML as the browser holds it (what the preview's own

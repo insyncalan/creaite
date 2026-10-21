@@ -5,7 +5,7 @@ from those and from the project's name, people and open item IDs only (nothing e
 Claude headless with no tools at all (`/api/edit/ai`, run kind "edit-ai"); the reply is parsed and checked here, and the page
 shows it as a suggestion that changes nothing until Alan accepts it.
 
-  python3 system/scripts/edit_ai.py context    JSON {option, text, code, place, instruction, document?} on stdin → {prompt,
+  python3 system/scripts/edit_ai.py context    JSON {option, text, code, place, instruction, document?, recipients?} on stdin → {prompt,
                                                option, label, format} or {refused}
   python3 system/scripts/edit_ai.py result     JSON {request, context, reply} on stdin → {text, notes, option}
   python3 system/scripts/edit_ai.py options    each place's options, as JSON
@@ -16,6 +16,13 @@ all; selected text that already holds something a client mustn't see is refused 
 that brings in an item a client may not see, internal wording (client_leak.text_findings), the tracker's internal health reason or
 an internal-only marker (drafts.internal_findings), a person the text and the client-visible items don't name, or the word VIP comes
 back with no text and a plain reason.
+
+The Draft email (#186): the email place's audience is decided here from the recipients the request names (`recipients`, a list of
+addresses) and the own domains in settings (identity.own_domains), never from anything the page says about them (email_outside). An
+email to anyone outside, or to recipients creaite can't read as plain addresses on an own domain, gets the client place's protection:
+the client facts only (no people, only client-visible items), the selected text refused before Claude when it already holds something
+a client mustn't see, and the suggestion dropped when it brings one in (client_problems, as the client sheet). An email whose every
+recipient is a plain address on an own domain keeps the full facts, as before.
 
 The place is the server's to decide, never the page's (#123, Jarvis): the client sheet sends the report it is editing as
 `document` {kind, code, week_ending, client}; a request that names a document gets the client place whatever place it claims,
@@ -125,6 +132,13 @@ CLIENT_PLACES = {"client"}
 # (actions, RAID and decisions) goes into client reports and client-safe one-pagers. Unlike the client sheet it names no report.
 CLIENT_FIELDS = {"client_message"}
 CLIENT_RULED = CLIENT_PLACES | CLIENT_FIELDS
+# #186: the Draft email to anyone outside the own domains gets the client place's facts and checks (email_outside decides it)
+EMAIL_PLACES = {"email"}
+OUTSIDE_RULE = ("This email goes to someone outside Alan's company. Use only what the text holds and the item IDs listed below; never "
+                "add an internal health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
+MAX_RECIPIENTS = 50
+# One plain address: an ASCII local part and a dotted ASCII domain (a label never starts or ends with a dash; no trailing dot).
+ADDRESS = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63})")
 CLIENT_RULE = ("This text is for the client. Use only what the text holds and the item IDs listed below; never add an internal "
                "health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
 FORMAT_RULES = {
@@ -143,6 +157,70 @@ FORMAT_RULES = {
 # how far a place's stored heading levels are shifted from the editor's 1 to 3 (Current state's are written `###` to `#####`)
 HEAD_SHIFT = {"current": 2}
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def own_domains():
+    """The own mail domains (settings identity.own_domains), lower case, without a leading @; none when settings can't be read."""
+    try:
+        given = (paths.load_settings().get("identity") or {}).get("own_domains") or []
+    except Exception:  # noqa: BLE001  unreadable settings: no own domains, so every recipient is outside (fails closed)
+        return set()
+    if not isinstance(given, list):
+        _log_warn("identity.own_domains is not a list, so every Draft email recipient counts as outside")   # #186 r2: counts only
+        return set()
+    return {d.strip().lower().lstrip("@") for d in given if isinstance(d, str) and d.strip().lstrip("@")}
+
+
+def _log_warn(message):
+    """A warning in the debug log (BL-102), never raising: no addresses or text, only what is wrong."""
+    try:
+        import log
+    except ImportError:                       # an engine without log.py: the warning is skipped (the email still counts as outside)
+        return
+    log.warn("edit", message)                 # log.warn never raises (BL-102)
+
+
+# #186 review: a display name is plain words only: no @ (a second address), no control character (a line break or tab could hide
+# another recipient), no brackets, quotes' contents are words too, no colon or semicolon (group syntax: "undisclosed-recipients:;").
+DISPLAY_NAME = re.compile(r"[A-Za-z0-9 .,'\"\-_&]*")
+
+
+def address_inside(entry, own):
+    """Whether one recipient is a plain address on an own domain: `addr` or `Name <addr>` (the address in brackets is where mail
+    goes, whatever the name says), ASCII only (a look-alike or punycode domain is another domain), the domain matched exactly, in any
+    case (a subdomain of an own domain is not it). A display name holding anything but plain words (an @, a line break, a tab or
+    another control character, brackets, a colon) is not read: the entry is outside (#186 review)."""
+    s = entry.strip(" ")
+    m = re.fullmatch(r"([^<>]*)<([^<>]*)>", s)
+    if m:
+        if not DISPLAY_NAME.fullmatch(m.group(1)):
+            return False
+        s = m.group(2)
+    if not s.isascii():
+        return False
+    m = ADDRESS.fullmatch(s)
+    return bool(m) and m.group(1).lower() in own
+
+
+def email_outside(req):
+    """Whether a Draft email request goes to anyone outside (#186): True unless `recipients` is a list of 1 to MAX_RECIPIENTS strings
+    and every address in it (an entry may hold several, split at a comma or semicolon) is a plain address on an own domain. Fails
+    closed: no recipients, an empty entry (someone with no address), anything that isn't a plain address, or no own domains is
+    outside. Nothing else in the request (an `outside` the page sends, the place, the document) is read."""
+    given = req.get("recipients") if isinstance(req, dict) else None
+    if not isinstance(given, list) or not 1 <= len(given) <= MAX_RECIPIENTS:
+        return True
+    own, parts = own_domains(), []
+    if not own:
+        return True
+    for r in given:
+        if not isinstance(r, str):
+            return True
+        bits = re.split(r"[,;]", r)
+        if any(not b.strip() for b in bits):
+            return True
+        parts += bits
+    return not all(address_inside(b, own) for b in parts)
 
 
 def relevel(text, place):
@@ -359,8 +437,9 @@ def client_problems(code, text, original=""):
     return found
 
 
-def refusal(found, suggestion=False):
-    """The plain message for a client place's problems: no project, a check that couldn't run, or something not client-safe."""
+def refusal(found, suggestion=False, outside=False):
+    """The plain message for a client place's problems: no project, a check that couldn't run, or something not client-safe (for
+    the Draft email to someone outside, #186, said as that)."""
     if found == [NO_PROJECT]:
         return ("The suggestion was dropped: there's no project to check it against." if suggestion else
                 "There's no project to check this text against, so nothing was sent to Claude.")
@@ -372,6 +451,11 @@ def refusal(found, suggestion=False):
     if UNCHECKED in found:
         return ("The suggestion was dropped: creaite couldn't check it against the tracker. Try again." if suggestion else
                 "creaite couldn't check this text against the tracker, so nothing was sent to Claude. Try again.")
+    if outside:
+        return ("The suggestion was dropped: it held something that shouldn't go outside your company (an internal item, a name or "
+                "internal wording). Try again, or edit the email yourself." if suggestion else
+                "This email goes outside your company, and the text you selected already holds something internal (an item that "
+                "isn't client-visible, or internal wording). Nothing was sent to Claude.")
     return ("The suggestion was dropped: it held something that isn't client-safe. Try again." if suggestion else
             "This text already holds something that isn't client-safe. Fix it first; nothing was sent to Claude.")
 
@@ -381,6 +465,7 @@ REPORT_AUDIENCE = {"client": "client", "weekly": "internal"}     # a report's ki
 
 
 NOT_CLIENT = "That isn't a client report creaite can check, so nothing was sent to Claude."
+NOT_EMAIL = "Addresses go only with the Draft email, so nothing was sent to Claude."     # #186 review
 
 
 def bound_place(req, code, claimed):
@@ -441,10 +526,14 @@ def _needs_blocks(option, text):
 
 
 def request(req):
-    """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's."""
+    """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's. Addresses come only
+    with the Draft email: `recipients` with any other place is refused (#186 review: never full facts for a request that names an
+    outside address)."""
     code = str(req.get("code") or "")
     code = code if CODE_RE.fullmatch(code) else ""
     place = bound_place(req, code, str(req.get("place") or ""))
+    if "recipients" in req and place not in EMAIL_PLACES:
+        raise Refused(NOT_EMAIL)
     option = str(req.get("option") or "")
     if place not in PLACES:
         raise Refused("Not a place creaite knows.")
@@ -456,12 +545,17 @@ def request(req):
     if len(text) > MAX_TEXT:
         raise Refused(f"That's too much text for one suggestion; select under {MAX_TEXT // 1000}k characters.")
     _needs_blocks(option, text)
+    return option, text, code, place, _instruction(req, option)
+
+
+def _instruction(req, option):
+    """The request's own instruction ("Or say what you want…"), spaces squeezed, or Refused: needed for Ask…, and capped."""
     instruction = " ".join(str(req.get("instruction") or "").split())
     if option == "custom" and not instruction:
         raise Refused("Say what you want done with the text.")
     if len(instruction) > MAX_INSTRUCTION:
         raise Refused(f"Keep the instruction under {MAX_INSTRUCTION} characters.")
-    return option, text, code, place, instruction
+    return instruction
 
 
 def context(req):
@@ -469,19 +563,12 @@ def context(req):
     option, text, code, place, instruction = request(req)
     fmt = FORMATS[place]
     client = place in CLIENT_RULED                         # the client sheet (#123) and the Client messaging field (#263)
-    bad = client_problems(code, text, text) if client else _minutes_ready(code, place)   # #262: a project to check against
+    outside = place in EMAIL_PLACES and email_outside(req)        # #186: from the recipients, never from the page
+    bad = client_problems(code, text, text) if client or outside else _minutes_ready(code, place)   # #262: a project to check against
     if bad:
-        raise Refused(refusal(bad))
-    facts = project_facts(code, client)
-    task = OPTIONS[option][2] if option != "custom" else (
-        "Do what Alan asks with the text, and only that. His instruction: " + instruction)
-    if client:
-        task += "\n\n" + CLIENT_RULE
-    if option != "custom" and place not in SHEET_PLACES and place not in CLIENT_PLACES:    # every reshape also fixes spelling and grammar
-        task += SPELLING                                    # (the page says so); the sheets' and the client sheet's prompts stay as shipped
-    if option == "executive":
-        import report
-        task += "\n\nThe executive voice:\n" + report.style_guide()
+        raise Refused(refusal(bad, outside=outside))
+    facts = project_facts(code, client or outside)
+    task = _task(option, instruction, place, client, outside)
     template = string.Template((paths.TEMPLATES / "drafts" / "edit-ai.md").read_text(encoding="utf-8"))
     prompt = template.substitute(
         task=task, format_rule=FORMAT_RULES[place],
@@ -490,7 +577,24 @@ def context(req):
         ids=", ".join(facts["ids"]) or "none",
         text=text)
     return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
-            "people": facts["people"], "original": text, "code": code}
+            "people": facts["people"], "original": text, "code": code, "outside": outside}
+
+
+def _task(option, instruction, place, client, outside):
+    """What Claude is asked to do: the option's instruction (or Alan's own), the client rule, the spelling sentence where the place
+    has it, the outside-email rule (#186) and, for Make it executive, the style guide."""
+    task = OPTIONS[option][2] if option != "custom" else (
+        "Do what Alan asks with the text, and only that. His instruction: " + instruction)
+    if client:
+        task += "\n\n" + CLIENT_RULE
+    if option != "custom" and place not in SHEET_PLACES and place not in CLIENT_PLACES:    # every reshape also fixes spelling and grammar
+        task += SPELLING                                    # (the page says so); the sheets' and the client sheet's prompts stay as shipped
+    if outside:
+        task += "\n\n" + OUTSIDE_RULE
+    if option == "executive":
+        import report
+        task += "\n\nThe executive voice:\n" + report.style_guide()
+    return task
 
 
 def parse(reply):
@@ -636,14 +740,16 @@ def minutes_problems(code, text, original):
 
 def _reply_problems(ctx, body, text):
     """(problems, the message shown) for a suggestion: the minutes sheet's (#262), and the client place's and client fields' (#123,
-    #263); ([], "") when it may be shown. The place is the context's or the request's (#263: decided again from the request, never
-    only the context's word). HTML tags or comments inside an ID or a name are read through."""
+    #263), and the Draft email's to anyone outside (#186: its audience decided again from the request's recipients, never only the
+    context's flag); ([], "") when it may be shown. The place is the context's or the request's (#263: decided again from the request,
+    never only the context's word). HTML tags or comments inside an ID or a name are read through."""
     req = body.get("request") if isinstance(body.get("request"), dict) else {}
     places = {ctx.get("place"), str(req.get("place") or "")}
     code, original, text = ctx.get("code") or "", _untagged(ctx.get("original") or ""), _untagged(text)
-    if places & CLIENT_RULED:
+    outside = bool(ctx.get("outside")) or bool(places & EMAIL_PLACES and email_outside(req))   # #186: decided again from the request
+    if places & CLIENT_RULED or outside:
         bad = client_problems(code, text, original)
-        return bad, refusal(bad, True)
+        return bad, refusal(bad, True, outside)
     if places & MINUTES_PLACES:
         bad = minutes_problems(code, text, original)
         return bad, (refusal(bad, True) if set(bad) & set(FAIL_CLOSED) else MINUTES_DROPPED)

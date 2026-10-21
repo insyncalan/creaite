@@ -373,7 +373,9 @@ class DraftEmail(_Base):
         self.assertNotIn("href", html)
 
     def test_the_ai_bar_is_off_for_an_outside_recipient_and_on_for_an_internal_one(self):
-        # interim (#133) until the edit_ai client-facts fix: no Ask... sparkle for an outside recipient, back when the recipient is internal
+        # #133's interim, kept by #186 until the server decides the audience itself: no Ask... sparkle for an outside recipient while
+        # the server doesn't answer /api/edit/ai/caps (the #186 proposal not applied); with it applied the bar is on there too
+        # (test_email_client_facts_186 tests that side), back when the recipient is internal
         b = self.b
         self.open_email()
         self.assertFalse(b.eval("DE.outside"))
@@ -384,7 +386,7 @@ class DraftEmail(_Base):
         b.wait("!!document.querySelector('#dePrev.ProseMirror')")
         self.select_in("#dePrev", "I hope you're well")
         self.assertTrue(b.eval("DE.outside"))
-        self.assertFalse(self.sparked(), "outside recipient: no bar")
+        self.assertEqual(self.sparked(), b.eval("deAiSafe()"), "outside recipient: the bar only once the server decides the audience")
         b.eval(CLEAN)
         b.eval('REG[0].email="sara@brightwater.example"; openDraftEmail("Sara Example"); true')   # and internal again
         b.wait("!!document.querySelector('#dePrev.ProseMirror')")
