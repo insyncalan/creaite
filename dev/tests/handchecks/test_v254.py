@@ -24,7 +24,7 @@ the guarded tracker.py diff (dev/proposals/280/tracker.py.diff, applied by Jarvi
 which is missing; with both it runs. (Checked: with v254-280-4 merged and no diff, it skips naming only tracker.py.diff.)
 
 Check 5 also repeats Cap's HIGH on v254-281 (the grip dragged and let go below the Draft email dialog closes it): on 4b45fbe9 the
-resize itself passes and that last step fails, as it should until the scrim click ignores a drag that began inside the dialog.
+resize itself passes and that last step fails; on v254-release 9d90cefa (the fix in) the whole check passes.
 
 Judgement only (for Natasha's sheet; the checks take the screenshots where noted):
   1 the Seen eye's look on a quiet line, and whether "a later message reopens it" matches Alan's wish (a new ask reopens; chatter doesn't)
