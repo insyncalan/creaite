@@ -45,9 +45,16 @@ DRAFTS = ROOT / "system/staging/drafts"
 LOCK = threading.Lock()
 
 
+APPLY_PREAMBLE = []          # mutants only: lines run in the tracker.py process before it starts (apply_check_off)
+
+
 def run_script(script, *args):
     """The live server's run(): one creaite script from the vault root."""
-    r = subprocess.run([sys.executable, str(SCRIPTS / script), *args], cwd=ROOT, capture_output=True, text=True)
+    cmd = [sys.executable, str(SCRIPTS / script), *args]
+    if APPLY_PREAMBLE and script == "tracker.py":
+        cmd = [sys.executable, "-c", "import runpy, sys\n" + "\n".join(APPLY_PREAMBLE)
+               + f"\nsys.argv = [{str(SCRIPTS / script)!r}] + sys.argv[1:]\nrunpy.run_path(sys.argv[0], run_name='__main__')", *args]
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
@@ -251,11 +258,35 @@ def m_pic(d, r):
     return True
 
 
+def _inner_places(d, row):
+    """v2.5.3 (#259, P7): the inner dicts a stored key can hide in: a row's cells, a column, a tag, a figure, a pane, the header's
+    data, the layout's headings and row rules, based_on."""
+    s, _row = vis_row(d)
+    tw = next((x for x in d["sections"] if x["id"] == "this_week"), None) or {}
+    if row and not tw.get("tags"):
+        tw["tags"] = [{"ref": row["ref"], "text": "x"}]
+    lay = d.setdefault("layout", {})
+    out = [row.setdefault("cells", {})] if row else []
+    out += ((s or {}).get("columns") or [])[:1] + (tw.get("tags") or [])[:1] + _figure_and_pane(d)
+    out += [next(x for x in d["sections"] if x.get("type") == "header").setdefault("data", {})]
+    out += [lay.setdefault("headings", {}), lay.setdefault("rows", {}).setdefault("risks", {"top": 5})]
+    return out + ([d["based_on"]] if isinstance(d.get("based_on"), dict) else [])
+
+
+def _figure_and_pane(d):
+    """The first figure and the first pane of the document (where there are any)."""
+    figures = [f for s in d["sections"] for f in s.get("figures") or []]
+    panes = [p for s in d["sections"] for p in s.get("panes") or []]
+    return figures[:1] + panes[:1]
+
+
 def m_unknown(d, r):
     _s, row = vis_row(d)
     tgt = r.choice([d, d.setdefault("layout", {}), d.setdefault("meta", {}), r.choice(d["sections"]),
-                    d.setdefault("items", {}).setdefault((row or {}).get("ref") or "ABC-A-002", {})] + ([row] if row else []))
-    tgt[r.choice(UNKNOWN_KEYS) + str(r.randint(0, 9))] = payload(r, extra=True)
+                    d.setdefault("items", {}).setdefault((row or {}).get("ref") or "ABC-A-002", {})] + ([row] if row else [])
+                   + _inner_places(d, row))
+    # v2.5.3 (#259, P7): half the time only words no gate knows, which nothing but the allow-list keeps out
+    tgt[r.choice(UNKNOWN_KEYS) + str(r.randint(0, 9))] = payload(r, extra=True) if r.random() < .5 else r.choice(EXTRA)
     return True
 
 
@@ -1214,6 +1245,104 @@ def p16(ctx, seed, n, forms=None):
     return {}, fails
 
 
+ID_IN = re.compile(r"\b([A-Z][A-Z0-9]{2,6})-(?:([A-Z])-)?(\d{3})\b")
+
+
+def f_loose_id(s, r):
+    """v2.5.3 (#259, P16): every item ID written loosely: letters and digits spaced ("A B C - A - 0 0 1"), more zeros or none."""
+    def one(m):
+        code, letter, num = m.group(1), m.group(2), m.group(3)
+        mid = f"{letter}-" if letter else ""
+        return r.choice([" ".join(code) + " - " + (f"{letter} - " if letter else "") + " ".join(num), f"{code}-{mid}0{num}",
+                         f"{code}-{mid}{int(num)}", f"{code.lower()}.{mid.replace('-', '.')}{num}",
+                         # #259 round 3 (Cap's HIGH): a padded ID with a fraction, date or time mark after it is still the ID
+                         f"{code}-{mid}0{num}/1", " ".join(code) + " - " + (f"{letter} - " if letter else "") + f"{num}.5",
+                         f"{code}-{mid}{num}/2026", f"{code}-{mid}{num}:10"])
+    return ID_IN.sub(one, s)
+
+
+def f_hyphen(s, r):
+    """v2.5.3 (#259, P16): a wording with hyphens, dots or underscores for its spaces, or spaces for its hyphens."""
+    return r.choice([s.replace(" ", "-"), s.replace(" ", "."), s.replace(" ", "_"), s.replace("-", " ").replace(" ", ". ")])
+
+
+def p16_out(ctx, seed, n):
+    """P16 at the output check (v2.5.3, #259): for each encoder, the loose ID forms and a wording's separators changed, the check
+    every client output passes (client_output.text_findings) refuses the encoded hidden words exactly when it refuses the plain.
+    The forms are those that stand in an output's text as a reader sees it; %- and entity-encoding, Markdown and JSON escapes are
+    the gate's to read in the document (P16, P16json), and an export draws them decoded."""
+    forms = [f_plain, f_zw, f_full, f_cyr, f_case, f_space, f_loose_id, f_hyphen]
+    fails, r = [], random.Random(seed)
+    con = client_leak.connect()
+    doc = {"project": CODE, "sections": []}
+    for i in range(n):
+        form = forms[i % len(forms)]
+        if form is f_loose_id:                   # one ID alone: no other piece may give the refusal away
+            s = r.choice([H["id"], X["id"]])
+        elif form is f_hyphen:                   # one wording alone, likewise
+            s = r.choice([H["title"], X["title"]])
+        else:
+            s = " ".join(r.sample(PIECES, r.randint(1, 3)))
+        enc = form(s, r)
+        a = bool(client_output.text_findings(doc, f"Plain words: {s}.", con))
+        b = bool(client_output.text_findings(doc, f"Plain words: {enc}.", con))
+        if a != b:
+            fails.append({"case": i, "form": form.__name__, "plain": s[:80], "encoded": enc[:80], "plain_refused": a,
+                          "encoded_refused": b})
+    return {}, fails
+
+
+STORED = ("item_title", "item_owner", "item_key", "tag_text", "row_source", "cell_key", "column", "heading", "based_on")
+
+
+def p18_stored(d, r, what):
+    """v2.5.3 (#259, K3): words no gate knows (SECRETFIELD) in one stored field no output draws, of a VISIBLE item."""
+    t, row = vis_row(d)
+    ref = row["ref"]
+    it = d.setdefault("items", {}).setdefault(ref, {"id": ref})
+    w = "SECRETFIELD " + r.choice(["ZEBRAPAY", "words", "plain"])
+    if what in ("item_title", "item_owner"):
+        it[what.split("_")[1]] = w
+    elif what == "item_key":
+        it["note"] = w
+    elif what == "tag_text":
+        next(s for s in d["sections"] if s["id"] == "this_week")["tags"] = [{"ref": ref, "text": w}]
+    elif what == "row_source":
+        row["source"] = w
+    elif what == "cell_key":
+        row.setdefault("cells", {})["zz"] = w
+    elif what == "column":
+        t["columns"] = list(t.get("columns") or []) + [{"key": "zz", "label": w}]
+        row.setdefault("cells", {})["zz"] = "x"
+    elif what == "heading":
+        d.setdefault("layout", {}).setdefault("headings", {})["summary"] = w
+    else:
+        d["based_on"] = {"path": f"{w}/x.html", "version": 1}
+    return ref
+
+
+def p18_facts(ctx, seed, n):
+    """P18's kept items (v2.5.3, #259, K3 / I19): plain words in a stored field no output draws (an item's values or unknown keys,
+    a tag's text, a row's source or an unknown cell, a column, the layout's headings, based_on), on disk or sent to Save, reach
+    no output; and a kept item in the filed data block equals the tracker's client-safe facts for it."""
+    fails, r = [], random.Random(seed)
+    by_id = report_doc.client_items(CODE, WEEK)
+    for i in range(n):
+        d = copy.deepcopy(ctx.base)
+        what = STORED[i % len(STORED)]
+        ref = p18_stored(d, r, what)
+        ctx.reset()
+        (save(copy.deepcopy(d)) if i % 3 == 0 else write_block(d))
+        blobs, _m, _r, _l = surfaces(["html"] + (["docx"] if i % 4 == 0 else []))
+        hit = leaks(blobs, ["SECRETFIELD", "ZEBRAPAY"])
+        filed = blobs.get("filed")
+        items = json.loads(creaite_doc.BLOCK.search(filed).group(1)).get("items") or {} if filed else {}
+        same = all(v == by_id.get(k) for k, v in items.items())
+        if hit or not same:
+            fails.append({"case": i, "what": what, "ref": ref, "leaks": hit, "items_are_facts": same})
+    return {}, fails
+
+
 SECTION_TYPES = ("freetext", "text", "table", "panes", "health", "figures", "timeline", "header", "weird")
 
 
@@ -1401,7 +1530,10 @@ def p22(ctx, seed, n):
         before = tree()
         route(report_server.draft_route, {"kind": "client", "code": CODE, "week_ending": WEEK})
         route(report_server.check_route, {"doc": d})
-        m = route(report_server.match_check_route, {"docs": [d]})
+        # v2.5.3 (#259, K2): the draft is written on disk here (not by creaite's Save), so the export reads its text sections as
+        # the internal report's; Match internal is sent the same document as that file reads (derive_sections, untrusted)
+        sent = creaite_doc.derive_sections(copy.deepcopy(d), False) if isinstance(d, dict) else d
+        m = route(report_server.match_check_route, {"docs": [sent]})
         route(report_server.pick_route, {"doc": d})
         same = tree() == before
         e = export("html")
@@ -1488,9 +1620,47 @@ def p24(ctx, seed, n):
     return {}, fails
 
 
+def p26(ctx, seed, n):
+    """P26 exports twice (v2.5.3, #259 round 2, HIGH 1): an approved, filed client report edited on disk to hold a text section
+    marked "client" (words no gate knows) is held on EVERY export, html and docx, in any order and however many: never only on the
+    first, as an export's own rebuilt snapshot never vouches for the file it was built from. Each case's filing is then undone."""
+    fails, r = [], random.Random(seed)
+    for i in range(n):
+        ctx.reset()
+        a = route(report_server.approve_route, {"kind": "client", "code": CODE, "week_ending": WEEK, "force": True})
+        if not a.get("ok"):
+            fails.append({"case": i, "approve": a.get("message")})
+            continue
+        f = ROOT / a["path"]
+        text = f.read_text(encoding="utf-8")
+        d = creaite_doc.loads(text)
+        sid = r.choice(["free_sneak", "free_a", "notes_x", "zz"])
+        d["sections"] = [s for s in d["sections"] if s.get("id") != sid]
+        d["sections"].insert(r.randint(0, len(d["sections"])), {
+            "id": sid, "type": r.choice(["freetext", "freetext", "text"]), "heading": r.choice(["Notes", "Update", ""]),
+            "default_heading": "", "hidden": False, "text": "ZEBRAPAY " + r.choice(["quiet words", "plain", "for the group"]),
+            "audience": "client"})
+        d.setdefault("layout", {})["order"] = [s["id"] for s in d["sections"]]
+        m = creaite_doc.BLOCK.search(text)
+        f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+        order = [r.choice(["html", "docx"]) for _ in range(r.randint(2, 4))]
+        for k, fmt in enumerate(order):
+            e = export(fmt)
+            if not e.get("ok"):
+                continue
+            p = paths.resolve(e["path"])
+            hit = leaks(blobs_of(p), ["ZEBRAPAY"])
+            p.unlink()
+            if hit:
+                fails.append({"case": i, "order": order, "export": k, "fmt": fmt, "leaks": hit})
+        run_script("tracker.py", "undo")
+        ctx.reset()
+    return {}, fails
+
+
 PROPERTIES = {"P1": p1, "P2": p2, "P3": p3, "P4": p4, "P5": p5, "P6": p6, "P7": p7, "P8": p8, "P9": p9, "P10": p10, "P11": p11,
-              "P13": p13, "P13shared": p13_shared, "P14": p14, "P15": p15, "P16": p16, "P16json": lambda ctx, seed, n: p16(ctx, seed, n, [f_json]), "P17": p17, "P18": p18, "P19": p19, "P20": p20, "P21": p21, "P22": p22,
-              "P23": p23, "P24": p24}
+              "P13": p13, "P13shared": p13_shared, "P14": p14, "P15": p15, "P16": p16, "P16json": lambda ctx, seed, n: p16(ctx, seed, n, [f_json]), "P17": p17, "P18": p18, "P18facts": p18_facts, "P16out": p16_out, "P19": p19, "P20": p20, "P21": p21, "P22": p22,
+              "P23": p23, "P24": p24, "P26twice": p26}
 
 
 # ── mutants: one guard switched off in this process, for the mutation proofs ─
@@ -1571,6 +1741,17 @@ def _audience_flip():
                                                  and (s.get("audience") or "internal") == "internal")
 
 
+def _launder_on():
+    real = creaite_doc.creaite_wrote
+
+    def old(path, raw):
+        import client_snapshot
+        d = hashlib.sha256(raw).hexdigest()
+        return real(path, raw) or any(e.get("state") == "filed" and e.get("source_sha256") == d
+                                      for e in client_snapshot.registry().values())
+    creaite_doc.creaite_wrote = old
+
+
 MUTANTS = {
     "gate_off": _gate_off, "output_off": _output_off, "reread": _reread, "page_used": _page_used, "decoder_off": _decoder_off,
     "audience_flip": _audience_flip, "other_parser": _other_parser, "pictures_off": _pictures_off,
@@ -1582,6 +1763,16 @@ MUTANTS = {
     "names_off": lambda: setattr(report_server, "_name_problem", lambda name, own=None: None),
     "logos_off": lambda: setattr(creaite_doc._Word, "logo_files", _logo_files_stored),
     "stub_off": lambda: setattr(creaite_doc, "_stub_row", lambda row: dict(row)),
+    "facts_off": lambda: setattr(creaite_doc, "derive_facts", lambda doc: doc),                  # v2.5.3 (#259, K3)
+    "loose_off": lambda: setattr(client_output, "loose_findings", lambda *a, **k: []),           # v2.5.3 (#259, P16)
+    # v2.5.3 (#259, K2): every file read as creaite's own, so a text section written on disk as the client's shows again (the
+    # properties that plant words there need it with their own guard off, as K2 is a second guard for them)
+    "trust_on": lambda: setattr(creaite_doc, "creaite_wrote", lambda path, raw: True),
+    # v2.5.3 (#259 round 2, HIGH 1): c25a28fe's trust put back: any registry entry of a filed state whose source hash matches
+    "launder_on": lambda: _launder_on(),
+    # v2.5.3 (#259): tracker.py apply's second check of a creaite-format client report switched off in its own process
+    "apply_check_off": lambda: APPLY_PREAMBLE.append(f"sys.path.insert(0, {str(SCRIPTS)!r})\nimport review\n"
+                                                     "review.creaite_client_problem = lambda blk: None"),
 }
 
 
