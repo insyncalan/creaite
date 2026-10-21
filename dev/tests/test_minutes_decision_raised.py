@@ -86,6 +86,16 @@ class DecisionRaised(unittest.TestCase):
         after = json.loads(prop.read_text(encoding="utf-8"))
         self.assertEqual(next(i for i in after["items"] if i["n"] == bad["n"])["decision"], "pending")
 
+    def test_the_dashboard_review_row_says_why_an_invalid_item_is_held(self):
+        """The Review page's row names the reason, as review.py list does (the 2.5.4 hand check reads it)."""
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        import build_dashboard
+        _, data = self.stage_bad()
+        bad = next(i for i in data["items"] if "invalid" in i.get("flags", []))
+        why = build_dashboard.item_why(bad, "ABC", bad["flags"])
+        self.assertIn("colour", why)
+        self.assertTrue(why.startswith("Can't be approved"), why)
+
     def test_one_invalid_item_does_not_block_the_rest_and_apply_names_it(self):
         if "#280" not in (Path(__file__).resolve().parents[2] / "system/scripts/tracker.py").read_text(encoding="utf-8"):
             self.skipTest("tracker.py has not taken dev/proposals/280 yet")

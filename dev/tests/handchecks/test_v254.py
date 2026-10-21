@@ -632,8 +632,9 @@ class Minutes254(Case254):
     """Checks 4 and 6: minutes staged with minutes.py stage (as cx-minutes does) in the demo vault, for Falcon Data Platform."""
     own_vault = True
 
-    def stage(self, title, items, minutes=None):
-        """A transcript in the inbox and its spec staged; (the new proposal's path, its JSON, the stage output)."""
+    def stage(self, title, items, minutes=None, code_wanted=0):
+        """A transcript in the inbox and its spec staged; (the new proposal's path, its JSON, the stage output).
+        `minutes.py stage` exits 1 when its checks flag an item (an invalid one included): the proposal is still written."""
         day = self.day()
         (self.vault / f"inbox/{day} {title}.vtt").write_text(VTT, encoding="utf-8")
         spec = {"title": title, "date": day, "projects": ["FAL"], "transcript": f"inbox/{day} {title}.vtt", "items": items}
@@ -648,7 +649,7 @@ class Minutes254(Case254):
         f.write_text(json.dumps(spec), encoding="utf-8")
         before = set(hcbase.pending_proposals(self.vault))
         code, out = self.run_in_vault("minutes.py", "stage", "system/staging/drafts/hc254-meeting.json")
-        self.assertEqual(code, 0, out[-600:])
+        self.assertEqual(code, code_wanted, out[-600:])
         new = sorted(set(hcbase.pending_proposals(self.vault)) - before)
         self.assertEqual(len(new), 1, out[-400:])
         p = self.vault / "system/staging" / new[0]
@@ -685,7 +686,7 @@ class Minutes254(Case254):
                                                                       "owner": "Sara Khan", "due_date": day}}
         bad = {"table": "actions", "section": "Actions", "values": {"project": "FAL", "description": "Chase the vendor",
                                                                      "owner": "Sara Khan", "colour": "red"}}
-        q, data, _ = self.stage("Supplier checkpoint", [good, bad])
+        q, data, _ = self.stage("Supplier checkpoint", [good, bad], code_wanted=1)   # flagged invalid: exit 1, still staged
         badn = next(i["n"] for i in data["items"] if "invalid" in i.get("flags", []))
         code, rows = self.run_in_vault("review.py", "list")
         self.assertIn("colour", rows, "Review shows the reason")

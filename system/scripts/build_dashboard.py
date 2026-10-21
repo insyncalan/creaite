@@ -706,6 +706,8 @@ def item_why(item, project, flags):
     """Why the item is in Review, as its row says."""
     if project is None:
         return "Possible match" if item.get("match") == "possible" else "Needs a project"
+    if "invalid" in flags:                                   # #280: held in Review; the row says why, as review.py list does
+        return f"Can't be approved: {item.get('invalid_reason') or 'invalid'}"
     return (review.individual_only(item) or "").capitalize() or \
         ("Conflict with a newer change" if "conflict" in flags else
          "No owner yet" if "no-owner" in flags else
