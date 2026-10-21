@@ -60,7 +60,10 @@ export let decide = async function(n,v,written){
   return res; };   /* BL-225: stays on the row */
 /* #229 gate: what a user acts on or must notice stays visible beside the one meta line (never part of it): the weekend note with its buttons (BL-180), the "Drafted" tag (BL-218), the no-Word-draft notice (BL-260) */
 const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
-export const rvTipText=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); if(!d) return ""; return d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim(); };
+export const rvTipText=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
+  /* #271: the line truncates with an ellipsis, so the tip ends with its reason and full source */
+  const tail=[r.why,fdText(srcShort(r.src))].map(x=>String(x??"").trim()).filter(x=>x&&x!=="—").join(" · ");
+  return t?[t,tail].filter(Boolean).join(" · "):""; };     /* no detail: the row's own fallback tip */
 export const WKRVF={actions:["due","due_date"],raid:["due","due_date"],decisions:["due","needed_by"]};   /* BL-180: declared before revDetail, which runs at load (Review) */
 export const draftOn=f=>!(S.drafting&&S.drafting[f]===false);   /* AI drafts: declared before revDetail, which runs at load (Review) */
 /* BL-290: the row's "Looks like" mark, only while Settings › General › AI drafts › Spot repeats is on (BL-133's reject reason keeps r.dup) */

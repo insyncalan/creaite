@@ -31,7 +31,7 @@ import { plur } from "./today.js";
 shared.WT="actions"; shared.WVIEW=null; shared.SEL=null; shared.WQ=""; export const OWN=new Set(), PROJF=new Set(), PRIF=new Set();
 /* BL-45: Work's filters combine. Status, Due, Owner, Project and Priority sit on the toolbar; "+ Filter" holds the
    rest; every menu shows counts. Views are presets that set filters on screen, and Alan can save his own. */
-export const FX={st:new Set(),due:new Set(),ws:new Set(),ty:new Set(),rs:new Set(),src:new Set(),cv:new Set(),dt:new Set(),ms:new Set()};
+export const FX={st:new Set(),due:new Set(),ws:new Set(),ty:new Set(),rs:new Set(),src:new Set(),cv:new Set(),dt:new Set(),ms:new Set(),mi:new Set()};
 export let RR={from:"",to:""}; shared.DR={from:"",to:""}; shared.CR={from:"",to:""};   /* CR: closed between (BL-190) */ export const SORT={}, WINIT={}, NEG=new Set();   /* RR: raised between; NEG: the fields set to "is not" (BL-130) */
 export const PRIOS=["Urgent","High","Medium","Low"];
 /* free-text search: every word must appear somewhere in the item (ID, text, owner, workstream, response, update, source, project…) */
@@ -160,7 +160,11 @@ export function renderApplied(total,shown){ const chips=[];
   if(shared.WQ.trim()) chips.push(fchipHtml(`Search: “${shared.WQ.trim()}”`,"q","Clear the search"));
   putHTML($("#wapplied"),html`${raw(chips.join(""))}${chips.length?html`<button class="linkbtn" id="clearF">Clear all</button>`:""}${!shared.WVIEW&&chips.length||!shared.WVIEW&&WB[shared.WT]?raw(viewSaveBtns()):""}<span class="sp"></span><span class="sub"><span id="wcount">Showing ${raw(shown)} of ${raw(total)}</span><span id="whidden"></span></span>`); }   /* BL-132: #whidden says what is hidden */
 export const COLS={actions:[["id","ID"],["t","Action"],["o","Owner"],["due","Due"],["pr","Priority"],["st","Status"],["ws","Workstream"],["ms","Milestone"],["src","Source"],["upd","Last updated"]],raid:[["id","ID"],["t","Risk or issue"],["type","Type"],["o","Owner"],["due","Due"],["pr","Priority"],["resp","Response"],["st","Status"],["ws","Workstream"],["ms","Milestone"],["src","Source"],["upd","Last updated"]],   /* BL-128: Milestone and Last updated can be shown */decisions:[["id","ID"],["t","Decision"],["st","Status"],["by","Made by"],["due","Needed by"],["date","Date"],["src","Source"]]};
-shared.COLVIS=store.get("creaite-cols",{actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","st","by","due","date","src"]});
+shared.COLVIS=store.get("creaite-cols",null);   /* nothing usable saved: every tab's default, in memory only */
+/* #256: the saved columns may lack a tab, or hold null, the wrong type, unknown or no known columns for one: that tab shows its
+   default, read here and never written back (an update never resets saved layout). Only a change Alan makes saves that tab. */
+if(!shared.COLVIS||typeof shared.COLVIS!=="object"||Array.isArray(shared.COLVIS)) shared.COLVIS={actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","st","by","due","date","src"]};
+export const visOf=t=>{ const v=shared.COLVIS[t], known=Array.isArray(v)&&COLS[t]?v.filter(k=>COLS[t].some(c=>c[0]===k)):[]; return known.length?known:[...(DEFCOLS[t]||[])]; };
 export const cmTag=x=>x.client&&!("cmd" in x?cmdOK(x.cmd):cmOK(x.cm))?' <span class="tag warn">· client messaging to complete</span>':"";
 export function cell(k,x,t=shared.WT){ if(t==="all") return allCell(k,x);
   if(t==="decisions"&&k==="due") return `<td data-f="due" class="${decLate(x)?"late":""}" style="white-space:nowrap">${x.due?fd(x.due):"—"}<div class="x">${x.st==="Pending"&&x.due?rel(x.due):""}</div></td>`;
@@ -183,7 +187,7 @@ export const msLabel=id=>{ for(const p of P){ const m=(p.ms||[]).find(m=>m[3]===
 /* BL-68: the heading row and a row of any list of one item type; Work and a person's page both draw theirs here.
    o.fixed: no drag to reorder; o.rz: remembered widths; o.pick: a Set of "type:id" adds a tick column (hand over);
    o.tr: extra attributes on the row */
-export const rowHead=(t,C,s,o={})=>`<thead><tr>${o.pick?'<th class="pickcol" aria-label="Select"></th>':""}${C.map(c=>`<th data-col="${c[0]}"${o.fixed?"":' draggable="true"'} aria-sort="${s&&s.col===c[0]?(s.dir==="asc"?"ascending":"descending"):"none"}" title="Sort by ${c[1].toLowerCase()}"${o.rz&&shared.RZ[t+"|"+c[0]]?` style="width:${shared.RZ[t+"|"+c[0]]}px;min-width:${shared.RZ[t+"|"+c[0]]}px"`:""}>${c[1]}${s&&s.col===c[0]?`<span class="sarrow">${s.dir==="asc"?"▲":"▼"}</span>`:""}</th>`).join("")}</tr></thead>`;
+export const rowHead=(t,C,s,o={})=>`<thead><tr>${o.pick?'<th class="pickcol" aria-label="Select"></th>':""}${C.map(c=>`<th data-col="${c[0]}"${o.fixed?"":' draggable="true"'} aria-sort="${s&&s.col===c[0]?(s.dir==="asc"?"ascending":"descending"):"none"}" title="Sort by ${c[1].toLowerCase()}"${o.rz&&rzOf(t+"|"+c[0])?` style="width:${rzOf(t+"|"+c[0])}px;min-width:${rzOf(t+"|"+c[0])}px"`:""}>${c[1]}${s&&s.col===c[0]?`<span class="sarrow">${s.dir==="asc"?"▲":"▼"}</span>`:""}</th>`).join("")}</tr></thead>`;
 export const rowHtml=(t,x,C,o={})=>`<tr class="click ${o.sel===x.id?"sel":""}${o.pick?" handpick":""}" data-row="${x.id}"${o.tr||""}>${o.pick?`<td class="pickcol"><input type="checkbox" class="handbox" data-hk="${t}:${x.id}" aria-label="Hand over ${esc(x.id)}" ${o.pick.has(t+":"+x.id)?"checked":""}></td>`:""}${C.map(c=>cell(c[0],x,t)).join("")}</tr>`;
 export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultView(shared.WT):null;   /* BL-136 */
   ALLC=null; if(shared.WT==="all") delete WLAY.all;   /* BL-113 */
@@ -214,8 +218,8 @@ export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultVie
   if(!shared.LOADING){ mDots("work");
     if(fresh&&dv&&dv!==allViews(shared.WT)[0].id) OPENEDON[shared.WT]=shared.WVIEW; openedNote();
   markStagedRows(); } }
-shared.COLORD=store.get("creaite-colorder",{});
-export function orderedCols(t=shared.WT){ const vis=COLS[t].filter(c=>shared.COLVIS[t].includes(c[0])||c[0]==="t"), ord=shared.COLORD[t]||[];
+shared.COLORD=store.obj("creaite-colorder");
+export function orderedCols(t=shared.WT){ const shown=visOf(t), vis=COLS[t].filter(c=>shown.includes(c[0])||c[0]==="t"), ord=Array.isArray(shared.COLORD[t])?shared.COLORD[t]:[];   /* #256 */
   return vis.sort((a,b)=>{ const i=ord.indexOf(a[0]), j=ord.indexOf(b[0]); return (i<0?99+COLS[t].indexOf(a):i)-(j<0?99+COLS[t].indexOf(b):j); }); }
 export function moveCol(col,before){ const keys=orderedCols().map(c=>c[0]).filter(k=>k!==col); const i=before?keys.indexOf(before):keys.length; keys.splice(i<0?keys.length:i,0,col);
   shared.COLORD[shared.WT]=keys; store.set("creaite-colorder",shared.COLORD); renderWork(); }
@@ -247,14 +251,15 @@ export function dispProps(){ const ord=orderedCols().map(c=>c[0]), rest=COLS[sha
   return [...orderedCols(),...rest].map(c=>{ const shown=ord.includes(c[0]), i=ord.indexOf(c[0]); return `<label><input type="checkbox" data-prop id="dprop-${c[0]}" value="${c[0]}" ${shown?"checked":""} ${c[0]==="t"?"disabled":""}>${c[1]}${shown?`<span class="colmv"><button type="button" data-mv="${c[0]}" data-d="-1" aria-label="Move ${c[1]} earlier" ${i===0?"disabled":""}>↑</button><button type="button" data-mv="${c[0]}" data-d="1" aria-label="Move ${c[1]} later" ${i===ord.length-1?"disabled":""}>↓</button></span>`:""}</label>`; }).join(""); }
 /* BL-128 (sprint-work-views): the column chooser is the Display menu's Properties (dispProps); its moves and ticks are handled there */
 /* resize columns (remembered) */
-shared.RZ=store.get("creaite-colwidths",{});
+shared.RZ=store.obj("creaite-colwidths");   /* #256: a width is used only as a number (rzOf) */
+export const rzOf=k=>{ const w=shared.RZ[k]; return typeof w==="number"&&Number.isFinite(w)&&w>0?w:0; };
 /* BL-285: one column resizer for every remembered table (Work's, Today's Portfolio): a pointer drag, a keyboard separator
    (←/→, 16 px), 60 to 900 px, double-click puts the column back; widths in creaite-colwidths under the key given */
-export function colResizer(th,k,after){ if(shared.RZ[k]){ th.style.width=shared.RZ[k]+"px"; th.style.minWidth=shared.RZ[k]+"px"; }
+export function colResizer(th,k,after){ if(rzOf(k)){ th.style.width=rzOf(k)+"px"; th.style.minWidth=rzOf(k)+"px"; }
   const h=document.createElement("span"); h.className="colrz"; h.tabIndex=0; h.setAttribute("role","separator"); h.setAttribute("aria-label","Resize "+th.textContent+" column");
   /* v1.9.5 (UI audit P1-6): a focusable separator needs its value: the width in px, 60 to 900 */
   const val=w=>h.setAttribute("aria-valuenow",String(Math.round(Math.max(60,Math.min(900,w||0)))));
-  h.setAttribute("aria-orientation","vertical"); h.setAttribute("aria-valuemin","60"); h.setAttribute("aria-valuemax","900"); val(shared.RZ[k]||th.getBoundingClientRect().width);
+  h.setAttribute("aria-orientation","vertical"); h.setAttribute("aria-valuemin","60"); h.setAttribute("aria-valuemax","900"); val(rzOf(k)||th.getBoundingClientRect().width);
   h.addEventListener("focus",()=>val(th.getBoundingClientRect().width));
   const put=w=>{ w=Math.max(60,Math.min(900,w)); th.style.width=w+"px"; th.style.minWidth=w+"px"; shared.RZ[k]=Math.round(w); val(w); };
   h.addEventListener("click",e=>e.stopPropagation());
@@ -315,8 +320,8 @@ export const DGROUPS=[["status","Status"],["owner","Decision maker"],["due","Nee
 /* BL-129 (sprint-work-views): each tab's groupings, for the List's groups, the Board's columns and its swimlanes */
 export const GROUPS={actions:[...BGROUPS,["project","Project"],["priority","Priority"],["workstream","Workstream"]],raid:[...BGROUPS,["project","Project"],["priority","Priority"],["type","Type"]],decisions:[...DGROUPS,["project","Project"]]};
 export const groupsOf=t=>GROUPS[t];
-export const WLAY=store.get("creaite-worklay",{}), WGRP=store.get("creaite-workgrp",{}), BHIDE=store.get("creaite-boardhide",{}), BCOLL=store.get("creaite-boardcoll",{});
-export let BCUR=null, BDRAG=null, BNOCLICK=0; shared.LAYCHOSEN=false; export const BSHOWALL=new Set(), BCLALL=new Set(store.get("creaite-boardclosedall",[]));   /* BCLALL (BL-128): tabs whose Closed column shows all */
+export const WLAY=store.obj("creaite-worklay"), WGRP=store.obj("creaite-workgrp"), BHIDE=store.obj("creaite-boardhide"), BCOLL=store.obj("creaite-boardcoll");   /* #256 */
+export let BCUR=null, BDRAG=null, BNOCLICK=0; shared.LAYCHOSEN=false; export const BSHOWALL=new Set(), BCLALL=new Set(store.list("creaite-boardclosedall"));   /* BCLALL (BL-128): tabs whose Closed column shows all */
 export const layoutOf=t=>WLAY[t]==="board"&&(shared.LAYCHOSEN||innerWidth>=640)?"board":"list";   /* under 640px the List is the default */
 export const groupOf=t=>{ const ok=g=>groupsOf(t).some(x=>x[0]===g), set=({actions:S.bgActions,raid:S.bgRaid,decisions:S.bgDecisions})[t]; return ok(WGRP[t])?WGRP[t]:ok(set)?set:BDEFG[t]; };
 export const isoAdd=(iso,n)=>{ const d=new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}`; };
@@ -374,7 +379,7 @@ const bwOk=w=>typeof w==="number"&&Number.isFinite(w)&&w>=BW_MIN&&w<=BW_MAX;
 const bwClean=raw=>{ const out={}; if(!raw||typeof raw!=="object"||Array.isArray(raw)) return out;
   Object.keys(raw).forEach(b=>{ const o=raw[b]; if(!o||typeof o!=="object"||Array.isArray(o)) return; const k={};
     Object.keys(o).forEach(c=>{ if(bwOk(o[c])) k[c]=Math.round(o[c]); }); if(Object.keys(k).length) out[b]=k; }); return out; };
-export const BW=bwClean(store.get("creaite-boardw",{}));
+export const BW=bwClean(store.obj("creaite-boardw"));
 const bwBoard=()=>BCUR?`${BCUR.t}|${BCUR.g}`:`${shared.WT}|${groupOf(shared.WT)}`;
 export const bwGet=(b,key)=>{ const o=BW[b]; if(!o||typeof o!=="object") return undefined; const w=o[key]; return bwOk(w)?w:undefined; };
 const bwStyle=(b,key)=>{ const w=bwGet(b,key); return w?` style="flex-basis:${w}px;width:${w}px"`:""; };
@@ -507,7 +512,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&BDRAG&&BDRAG.activ
    columns and the Board card's fields, at most four on a card) and Show (empty groups; on the Board, the Closed column's window). Options
    that don't apply to the layout in use are hidden, not greyed (BL-114). Reset returns the tab's display to its default (the layout
    stays as it is). D opens it; Esc or Done closes it and puts the focus back on the button. Nothing here changes what is filtered. */
-export const WLGRP=store.get("creaite-listgrp",{}), WSUB=store.get("creaite-worksub",{});    /* the List's grouping per tab (none by default); the sub-group per tab and layout */
+export const WLGRP=store.obj("creaite-listgrp"), WSUB=store.obj("creaite-worksub");    /* the List's grouping per tab (none by default); the sub-group per tab and layout */
 export const DEFCOLS={actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","st","by","due","date","src"]};
 export const dispOpen=()=>$("#dispMenu").classList.contains("on");
 export const SORTOPTS=t=>t==="decisions"?[["","Default order"],["due","Needed by"],["date","Date"],["st","Status"],["by","Made by"],["t","Title"],["upd","Last updated"],["id","ID"]]
@@ -556,7 +561,8 @@ $("#dispMenu").addEventListener("change",e=>{ const t=shared.WT, i=e.target;
   if(i.id==="wbsort"){ const v=i.value; SORT[t]=v?{col:v,dir:v==="upd"||v==="raised"||v==="date"?"desc":"asc"}:null; dispChanged(); return; }
   if(i.id==="wshowempty"){ BHIDE[t]=!i.checked; store.set("creaite-boardhide",BHIDE); dispChanged(); return; }
   if(i.id==="wclosed"){ i.value==="all"?BCLALL.add(t):BCLALL.delete(t); store.set("creaite-boardclosedall",[...BCLALL]); dispChanged(); return; }
-  if(i.dataset.prop!==undefined){ const L=shared.COLVIS[t], v=i.value; i.checked?L.includes(v)||L.push(v):L.splice(L.indexOf(v),1); store.set("creaite-cols",shared.COLVIS); dispChanged(); } });
+  if(i.dataset.prop!==undefined){ const cur=shared.COLVIS[t]; if(!Array.isArray(cur)||!cur.some(k=>COLS[t].some(c=>c[0]===k))) shared.COLVIS[t]=visOf(t);   /* #256: a tab with no usable saved columns starts from what it shows */
+    const L=shared.COLVIS[t], v=i.value; i.checked?L.includes(v)||L.push(v):L.splice(L.indexOf(v),1); store.set("creaite-cols",shared.COLVIS); dispChanged(); } });
 $("#dispMenu").addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); closeDisp(true); } });
 document.addEventListener("click",e=>{ if(dispOpen()&&!e.target.closest(".ddisp")) closeDisp(false); });
 }
@@ -605,7 +611,7 @@ export async function decBoardDrop(id,key){ const t="decisions", x=REC(t,id), g=
    "Select all N matching" is the one exception: it states N, which counts collapsed groups too. On a swimlane board a card moved
    across a column and a lane states both changes and saves them as one proposal (one Undo); Move to… offers the column and the
    lane as two steps. Decisions keep their board rules (FR-110); a lane move reassigns who is asked. */
-export const LCOLL=store.get("creaite-listcoll",{});
+export const LCOLL=store.obj("creaite-listcoll");
 export let HLNOTE=""; shared.HLALL=false;                       /* HLALL: "Select all N matching" is in force; HLNOTE: what the bar says after a collapse */
 export const grpOK=(t,g)=>groupsOf(t).some(x=>x[0]===g);
 export function listGroupOf(t){ return grpOK(t,WLGRP[t])?WLGRP[t]:"none"; }
@@ -1065,7 +1071,7 @@ export function allRows(){ if(ALLC) return ALLC;
 export const allLate=x=>x.st==="Open"&&!!x.due&&x.due<TODAY;
 export const kOfId=id=>A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null;
 /* the filters: Status (the three buckets), Due, Owner, Project, Priority on the toolbar; Type, Stale, Last updated and Raised in
-   "+ Filter". Fields that only some types have (Workstream, Response, Milestone, Source, Client-visible) are not offered. */
+   "+ Filter". Fields that only some types have (Workstream, Response, Source, Client-visible) are not offered; Milestone (#251) is, by name (a decision is never attached). */
    /* no priority (a decision) sorts after Low */
 /* The tab (stage 2): BL-128 to BL-132's own components pointed at allRows(). The List only (no Board: the layout switch and the
    Display menu's Layout are hidden here). Read-only: no cell editing (BL-123), no bulk bar (BL-124), no New button; a click
@@ -1102,7 +1108,8 @@ FDEFS.all=[["st","Status",()=>ALL_ST.map(v=>[v,v]),x=>x.st],
   ["o","Owner",ownerOpts,x=>x.o],["p","Project",()=>P.map(p=>[p.code,p.name]),x=>x.p],["pr","Priority",()=>PRIOS.map(v=>[v,v]),x=>x.pr],
   ["ty","Type",()=>ALL_TYPES.map(v=>[v,v]),x=>x.type,1],
   ["sl","Stale",()=>[["yes",`Stale (no change for ${+S.staleDays||7} days)`],["no","Not stale"]],x=>{ const a=staleAge("all",x); return x.st==="Open"&&a!==null&&a>=(+S.staleDays||7)?"yes":"no"; },1],
-  ["lu","Last updated",()=>lastDays,x=>x.upd_at,1,(x,set)=>within(x.upd_at,set)],["rd","Raised",()=>lastDays,x=>x.raised,1,(x,set)=>within(x.raised,set)]];
+  ["lu","Last updated",()=>lastDays,x=>x.upd_at,1,(x,set)=>within(x.upd_at,set)],["rd","Raised",()=>lastDays,x=>x.raised,1,(x,set)=>within(x.raised,set)],
+  ["mi","Milestone",()=>P.flatMap(p=>(p.ms||[]).filter(m=>m[3]).map(m=>[m[3],P.length>1?`${m[0]} (${p.name})`:m[0]])),x=>x.ms||"",1]];   /* #251: Today's milestone rows open the items attached to one milestone */
 /* the default order: overdue first, then due soonest, undated last (a made decision by its date) */
 // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items sort first)
 DEFSORT.all=(a,b)=>(allLate(b)-allLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id);

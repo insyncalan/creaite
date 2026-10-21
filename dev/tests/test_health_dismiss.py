@@ -165,7 +165,6 @@ class DismissInTheDashboard(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         super().load(v)
-        (v.root / "projects/zz Archive").mkdir(parents=True, exist_ok=True)     # one warning to dismiss (BL-09's old name)
 
     def open_health(self):
         self.b.eval("go('settings','health')")

@@ -111,6 +111,7 @@ except ImportError:
 import tracker  # noqa: E402  (fingerprint, transcript text)
 import docx_tools  # noqa: E402
 import extraction  # noqa: E402  (sprint-drafts-extraction: repeats, probably done, vague titles)
+import minutes_spec  # noqa: E402  (#269: what stage accepts as a meeting spec)
 
 RAID_HEADING = "Risks, Issues, Assumptions & Dependencies"
 RAID_TYPES = ("Risk", "Issue", "Assumption", "Dependency")
@@ -1070,7 +1071,11 @@ def cmd_stage(spec_file):
     Returns 1 when the extraction checks find a problem (BL-218, BL-220, BL-221); otherwise the spec file is
     deleted once staged (BL-118).
     """
-    spec = json.loads(Path(spec_file).read_text(encoding="utf-8"))
+    spec, why = minutes_spec.load_spec(spec_file)       # #269: read once; the spec and every path it names checked first
+    if why:
+        print(f"Not staged: {why}.")
+        debuglog.warn("minutes", "stage refused: the meeting spec names a file stage doesn't take (#269)")
+        return 1
     refused, key = stage_gate(spec)
     if refused is not None:
         return refused

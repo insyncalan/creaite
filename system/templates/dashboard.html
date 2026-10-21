@@ -691,6 +691,7 @@ h2{font:500 var(--fs-h2)/var(--lh-h2) var(--font);margin:0}   /* BL-325: the one
 #hWeek,#hRes{gap:4px}   /* "Week ahead to 09-10" reads as one phrase, not a count */ .th .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)} .th a{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)}
 ol.bl{list-style:none;margin:0;padding:0} ol.bl>li{position:relative;display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--day-rule)}
 ol.bl>li[hidden],.tsec .sub[hidden]{display:none}
+ol.bl>li[data-msattn] .t u{text-decoration:underline;text-underline-offset:3px;font-weight:700}   /* #251: "Milestone <u>name</u> is due …", the name the link */
 .bl .n{flex:none;width:16px;font-size:var(--fs-md);color:var(--day-muted)} .bl .tb{min-width:0;flex:1}
 .bl .tb p,.tb .none{margin:4px 0 0;font-size:var(--fs-md);color:var(--day-muted)}
 .tbrief a.t{color:var(--day-ink);font-weight:700;text-decoration:none} .tbrief a.t:hover{text-decoration:underline}
@@ -847,6 +848,9 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .cimgdel{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:var(--lh-1);font-size:var(--fs-lg)} .cimgdel:hover{color:var(--bad);border-color:var(--bad)} .pencil[aria-disabled="true"]{opacity:.3;cursor:default}
 tr.mchild td.title{padding-left:32px;position:relative} tr.mchild td.title::before{content:"";position:absolute;left:16px;top:0;bottom:0;border-left:2px solid var(--line)}
 tr.mparent td.title{font-weight:500} .mini.tog{margin-right:4px}
+/* #271: Review never scrolls sideways. The title cell takes the room the buttons leave (max-width:0 stops its nowrap meta line
+   setting the column's width), the meta line truncates with an ellipsis (full text on its tip) and a long title or tag wraps */
+@media (min-width:641px){ #reviewBody td.title{width:100%;max-width:0;overflow-wrap:anywhere} }
 .wfilters{display:flex;gap:6px;flex-wrap:wrap} .fbtn.on{border-color:var(--ink);font-weight:500}
 .wapplied{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;min-height:24px;font-size:var(--fs-sm)}
 .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--sunk);border-radius:var(--r-pill);padding:2px 4px 2px 10px} .fchip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-1);padding:0 4px} .fchip button:hover{color:var(--ink)}
@@ -2663,6 +2667,10 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
 .ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
 #actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+#actUsage .urev .qtab td,#actUsage .urev .qtab th{white-space:normal;overflow-wrap:anywhere} #actUsage .urev .qtab td:first-child{white-space:nowrap;width:7.5em}   /* v2.5.3: Your reviews */
+.urevact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0} .urevact .sub{margin:0}
+.urevform{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;align-items:center;max-width:760px;margin:10px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.urevform label{font-size:var(--fs-sm);color:var(--muted)} .urevform input{width:100%;min-width:0} .urevform .urevdate{width:auto} .urevform .urevact{margin:4px 0 0}
 /* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
@@ -6013,10 +6021,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     moveFigure: () => moveFigure,
     moveSection: () => moveSection,
     moveView: () => moveView,
+    msAttention: () => msAttention,
+    msAttnMenu: () => msAttnMenu,
+    msAttnOpenWork: () => msAttnOpenWork,
+    msAttnRow: () => msAttnRow,
+    msAttnWorkWord: () => msAttnWorkWord,
     msChoices: () => msChoices,
     msCreate: () => msCreate,
     msFind: () => msFind,
     msInfo: () => msInfo,
+    msItemWords: () => msItemWords,
     msLabel: () => msLabel,
     msLinked: () => msLinked,
     msName: () => msName,
@@ -6728,6 +6742,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvWhyNot: () => rvWhyNot,
     rwWrap: () => rwWrap,
     rzApply: () => rzApply,
+    rzOf: () => rzOf,
     sLink: () => sLink,
     safeTriangle: () => safeTriangle,
     sameF: () => sameF,
@@ -6971,6 +6986,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     vipPoll: () => vipPoll,
     vipSectionHtml: () => vipSectionHtml,
     vipWhen: () => vipWhen,
+    visOf: () => visOf,
     vnum: () => vnum,
     vput: () => vput,
     vq: () => vq,
@@ -7853,19 +7869,32 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var kindOf = (t47, x5) => t47 === "actions" ? "action" : t47 === "raid" ? x5 && x5.type || "Risk" : t47 === "decisions" ? "decision" : "milestone";
   var ico = (k5) => KI[k5] ? `<span class="ki" title="${KL[k5] || k5}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k5]}</svg></span>` : "";
   var revIco = (r4) => r4.kind === "actions" ? ico("action") : r4.kind === "raid" ? ico(r4.rec.type || "Risk") : r4.kind === "decisions" ? ico("decision") : "";
-  var store = { get: (k5, d5) => {
-    try {
-      const v5 = localStorage.getItem(k5);
-      return v5 ? JSON.parse(v5) : d5;
-    } catch (e4) {
-      return d5;
+  var store = {
+    get: (k5, d5) => {
+      try {
+        const v5 = localStorage.getItem(k5);
+        return v5 ? JSON.parse(v5) : d5;
+      } catch (e4) {
+        return d5;
+      }
+    },
+    set: (k5, v5) => {
+      try {
+        localStorage.setItem(k5, JSON.stringify(v5));
+      } catch (e4) {
+      }
+    },
+    /* #256: a saved map or list read tolerantly: anything else (null, a number, a string, the other shape) reads as empty. Reading
+       never writes: what is saved stays exactly as saved until Alan changes something. */
+    obj: (k5) => {
+      const v5 = store.get(k5, {});
+      return v5 && typeof v5 === "object" && !Array.isArray(v5) ? v5 : {};
+    },
+    list: (k5) => {
+      const v5 = store.get(k5, []);
+      return Array.isArray(v5) ? v5 : [];
     }
-  }, set: (k5, v5) => {
-    try {
-      localStorage.setItem(k5, JSON.stringify(v5));
-    } catch (e4) {
-    }
-  } };
+  };
   var CMT = "What it is: \nWhat it means for you: \nWhat is being done: ";
   var CMH = ["What it is:", "What it means for you:", "What is being done:"];
   var cmHeads = (t47) => CMH.every((h5) => (t47 || "").split("\n").some((l6) => l6.trim().startsWith(h5)));
@@ -28930,9 +28959,15 @@ ${s5}`;
       const cur = noteCur.value;
       let base = cur && cur.path === n4.path ? cur.base : "";
       if (!open2) base = n4.base || "";
-      const r4 = await api("/api/notes/delete", { path: n4.path, base });
+      let r4 = await api("/api/notes/delete/now", { path: n4.path, base });
+      if (r4 && !r4.ok && r4.message === OLDSERVER) r4 = await api("/api/notes/delete", { path: n4.path, base });
       noteDeleting.value = null;
       if (n4.row) focusRow(n4.path, n4.next);
+      if (r4 && r4.ok && r4.moved) {
+        await moved(n4, r4.apply_id);
+        if (n4.row) focusRow(n4.path, n4.next);
+        return true;
+      }
       if (!r4 || !r4.ok || !r4.card) {
         snack(oneLine(r4 && r4.message || "Not deleted."));
         return false;
@@ -28971,12 +29006,15 @@ ${s5}`;
       remember(null);
     }
     if (!done) return false;
+    await moved(n4, done.apply);
+    return true;
+  }
+  async function moved(n4, id2) {
     if (noteCur.value && noteCur.value.path === n4.path) {
       noteGone(n4.path);
       navWrite(false);
     }
     await loadNotes(notesCode.value || n4.code);
-    const id2 = done.apply;
     snack(`Moved “${n4.title}” to the archive`, id2 ? async () => {
       const u5 = await api("/api/undo", { apply_id: id2 });
       snack(undoWords(u5, n4.title));
@@ -28985,7 +29023,6 @@ ${s5}`;
         await loadNotes(notesCode.value || n4.code);
       }
     } : null);
-    return true;
   }
   function resumeDeleteNote(card) {
     let v5 = null;
@@ -29039,7 +29076,7 @@ ${s5}`;
         where2,
         ", not away for good. Restore it any time from Files › Archived. Anything that links to it shows the link as missing until it is restored."
       ] }),
-      /* @__PURE__ */ u4("p", { class: "sub", children: "The move then waits on the approval card in ask creaite: nothing moves until you approve it there." }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "It moves as soon as you press Delete note, and the message that follows has Undo." }),
       /* @__PURE__ */ u4("div", { class: "nnfoot", children: [
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "ndelCancel", onClick: () => closeBox(), disabled: busy.value, children: "Cancel" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn danger", id: "ndelGo", disabled: busy.value, onClick: () => deleteNote(n4), children: busy.value ? "Working…" : "Delete note" })
@@ -30621,7 +30658,7 @@ ${s5}`;
     root2.className = "slashroot";
     (el2.closest("dialog[open]") || document.body).appendChild(root2);
     let st2 = null;
-    let dismissed = -1, opened = false, typedSlash = false, moved = false;
+    let dismissed = -1, opened = false, typedSlash = false, moved2 = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u4(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -30671,7 +30708,7 @@ ${s5}`;
       if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
       const fresh = !st2 || st2.from !== a5.from;
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
-      if (fresh) moved = false;
+      if (fresh) moved2 = false;
       draw2();
     };
     const choose = (r4) => {
@@ -30707,14 +30744,14 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         if (n4) {
-          moved = true;
+          moved2 = true;
           st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
           draw2();
         }
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
         const row2 = n4 ? st2.rows[st2.i] : null;
         const rank = row2 ? slashRank(row2, st2.q) : 9, lead = editor.state.doc.resolve(st2.from).parentOffset === 0;
-        if (row2 && (moved || rank === 0 || rank === 1 && (lead || st2.q.trim().length >= 3))) {
+        if (row2 && (moved2 || rank === 0 || rank === 1 && (lead || st2.q.trim().length >= 3))) {
           e4.preventDefault();
           e4.stopPropagation();
           choose(row2);
@@ -32222,7 +32259,7 @@ ${s5}`;
     for (const [code, L3] of Object.entries(allNotes())) if ((L3 || []).some((n4) => n4.path === path)) return code;
     return null;
   }
-  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/_Archive\//.test(path));
+  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/(99 Archive|_Archive|zz Archive)\//i.test(path));
   var notesCodeOk = (code) => code === "_portfolio" || P4.some((p6) => p6.code === code);
   function renderNotes(code) {
     const el2 = $("#v-notes");
@@ -32742,6 +32779,36 @@ ${s5}`;
           ),
           " ",
           /* @__PURE__ */ u4("span", { class: "sub", children: "minutes" })
+        ] });
+        break;
+      case "vip.quiet_overnight":
+        control = /* @__PURE__ */ u4("span", { class: "setpair", children: [
+          sw3(),
+          [["vip.quiet_from", "From", "19:00"], ["vip.quiet_to", "To", "07:00"]].map(([key2, l6, d5], i5) => [
+            i5 ? " to " : " ",
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                type: "text",
+                "aria-label": `${row2.label}: ${l6.toLowerCase()}`,
+                value: val(key2) ?? d5,
+                size: 6,
+                placeholder: "HH:MM",
+                onChange: async (e4) => {
+                  const el2 = (
+                    /** @type {HTMLInputElement} */
+                    e4.currentTarget
+                  ), v5 = el2.value.trim();
+                  if (!HHMM.test(v5)) {
+                    snack(`Use 24-hour HH:MM, such as ${d5}`);
+                    el2.value = val(key2) ?? d5;
+                    return;
+                  }
+                  if (!await save2({ [key2]: v5 })) el2.value = val(key2) ?? d5;
+                }
+              }
+            )
+          ])
         ] });
         break;
       case "dashboard.theme":
@@ -34119,7 +34186,7 @@ ${s5}`;
   }
   function mLeave(page) {
     if (!page) return;
-    const cur = store.get("creaite-lastviewed", {});
+    const cur = store.obj("creaite-lastviewed");
     cur[page] = `${TODAY} ${(/* @__PURE__ */ new Date()).toTimeString().slice(0, 5)}`;
     store.set("creaite-lastviewed", cur);
   }
@@ -34870,7 +34937,7 @@ ${s5}`;
   async function matchInternalNow(ids) {
     const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
     if (!d02 || !i5 || !sameWeek(i5, d02)) return;
-    const moved = () => crIdentity() !== opened || !sameReport(d02) || !sameWeek(crInternal.value, d02);
+    const moved2 = () => crIdentity() !== opened || !sameReport(d02) || !sameWeek(crInternal.value, d02);
     const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
     const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
     const internalText = (id2) => {
@@ -34892,7 +34959,7 @@ ${s5}`;
       return;
     }
     const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
-    if (moved()) return;
+    if (moved2()) return;
     if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
       failed();
       return;
@@ -34934,10 +35001,10 @@ ${s5}`;
     if (clean.length) {
       for (let tries = 0; ; tries++) {
         const now = crDoc.value;
-        if (!now || moved()) return;
+        if (!now || moved2()) return;
         const d5 = onto(now);
         const last = await api("/api/report/match-check", { docs: [d5] });
-        if (moved()) return;
+        if (moved2()) return;
         const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
         if (!extra || extra.length) {
           failed();
@@ -42540,8 +42607,9 @@ ${s5}`;
   var RV_WK = /<div class="wkrv">.*?<\/div>/, RV_DR = /<span class="tag drrv">.*?<\/span> /, RV_ND = /<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
   var rvTipText = (r4) => {
     const d5 = (revDetail(r4) || "").replace(RV_WK, "").replace(RV_DR, "").replace(RV_ND, "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
-    if (!d5) return "";
-    return d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
+    const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
+    const tail = [r4.why, fdText(srcShort(r4.src))].map((x5) => String(x5 ?? "").trim()).filter((x5) => x5 && x5 !== "—").join(" · ");
+    return t47 ? [t47, tail].filter(Boolean).join(" · ") : "";
   };
   var WKRVF = { actions: ["due", "due_date"], raid: ["due", "due_date"], decisions: ["due", "needed_by"] };
   var draftOn = (f5) => !(S.drafting && S.drafting[f5] === false);
@@ -43236,7 +43304,7 @@ ${s5}`;
   } };
 
   // today.js
-  var dismissedF = () => store.get("creaite-dismiss", []), dismissedS = () => {
+  var dismissedF = () => store.list("creaite-dismiss"), dismissedS = () => {
     try {
       return JSON.parse(sessionStorage.getItem("creaite-dismiss-s") || "[]");
     } catch (e4) {
@@ -43310,7 +43378,65 @@ ${s5}`;
         out.unshift({ decisions: true, html: (n4) => tl2(n4, tLink('data-decpending="1"', parts.join(", ") + (late ? `, ${late} late` : "")), `${andList(show)}${L3.length > 3 ? ` and ${L3.length - 3} more` : ""}.`) });
       }
     }
+    out.unshift(...msAttention().map((r4) => ({ milestone: r4.ms, html: (n4) => msAttnRow(n4, r4) })));
     return out;
+  }
+  var msLate = (x5) => !!x5.due && days(x5.due) < 0;
+  function msAttention() {
+    const out = [];
+    for (const p6 of P4) for (const m5 of p6.ms || []) {
+      const id2 = m5[3], when2 = m5[8] || m5[4];
+      if (!id2 || !when2 || m5[6] !== "Planned" || days(when2) > S.dueSoon) continue;
+      const its = [...A4.filter((a5) => a5.ms === id2 && open(a5)), ...R3.filter((r4) => r4.ms === id2 && r4.type === "Issue" && r4.st === "Open")];
+      if (!its.length) continue;
+      its.sort((a5, b5) => msLate(b5) - msLate(a5) || (a5.due || "9").localeCompare(b5.due || "9") || a5.id.localeCompare(b5.id));
+      out.push({ ms: id2, p: p6.code, name: m5[0], when: when2, its });
+    }
+    return out.sort((a5, b5) => a5.when.localeCompare(b5.when) || pName(a5.p).localeCompare(pName(b5.p)) || a5.name.localeCompare(b5.name));
+  }
+  function msItemWords(x5) {
+    const n4 = x5.due ? days(x5.due) : null, t47 = `${esc(x5.id)} ${esc(decShort(x5.t || "", 70))}`, own = !x5.o || x5.o === "TBC" ? ", no owner" : "";
+    if (n4 !== null && n4 < 0) return `<span class="late">${t47}, ${-n4} day${n4 === -1 ? "" : "s"} late</span>${own}`;
+    const due = n4 === null ? "no due date" : n4 === 0 ? "due today" : n4 === 1 ? "due tomorrow" : n4 < 7 ? `due ${longDay(x5.due).split(" ")[0]}` : `due ${longDay(x5.due)}`;
+    return `${t47}, ${due}${own}`;
+  }
+  function msAttnOpenWork(id2) {
+    const r4 = msAttention().find((x5) => x5.ms === id2);
+    if (!r4) return;
+    openWork(r4.p, "all", "open", { st: ["Open"], ty: ["Action", "Issue"], mi: [r4.ms] });
+  }
+  var msAttnWorkWord = (r4) => r4.its.length === 1 ? "Open in Work" : `Open all ${r4.its.length} in Work`;
+  function msAttnRow(n4, r4) {
+    const k5 = days(r4.when), c5 = r4.its.length, items2 = `${c5} open item${c5 === 1 ? "" : "s"} must close`;
+    const when2 = k5 < 0 ? `is overdue by ${-k5} day${k5 === -1 ? "" : "s"} (due ${longDay(r4.when)}): ${items2} before it can be achieved` : `is due ${k5 === 0 ? "today" : k5 === 1 ? "tomorrow" : longDay(r4.when)}: ${items2} for it to hold`;
+    const shown2 = r4.its.slice(0, 3).map(msItemWords), more = c5 > 3 ? [`and ${c5 - 3} more`] : [];
+    return tl2(
+      n4,
+      tLink(html`data-ms="${r4.ms}"`, html`Milestone <u>${r4.name}</u> ${raw(when2)}`),
+      [...shown2, ...more, projLink(r4.p), sLink(html`data-msattnwork="${r4.ms}"`, msAttnWorkWord(r4))].join(" · "),
+      `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r4.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
+      html`data-msattn="${r4.ms}"`
+    );
+  }
+  function msAttnMenu(b5, id2) {
+    if (menuOpenFor(b5)) {
+      closeMenu();
+      return;
+    }
+    const r4 = msAttention().find((x5) => x5.ms === id2);
+    if (!r4) return;
+    openMenu(b5, {
+      label: `Options: milestone ${r4.name}`,
+      id: "msAttnMenu",
+      align: "right",
+      onPick: (d5) => {
+        closeMenu();
+        if (d5 === "ms") openMilestone(r4.ms);
+        else if (d5 === "work") msAttnOpenWork(r4.ms);
+        else go2("cockpit", r4.p);
+      },
+      items: [{ id: "ms", name: "Open the milestone", data: { d: "ms" } }, { id: "work", name: msAttnWorkWord(r4).replace(/^Open in Work$/, "Open it in Work"), data: { d: "work" } }, { id: "proj", name: `Open ${pName(r4.p)}`, data: { d: "proj" } }]
+    });
   }
   var dueWords = (d5) => {
     const n4 = days(d5);
@@ -43922,6 +44048,19 @@ ${s5}`;
   function bootToday0028() {
     wireSpark();
     $("#attnList").addEventListener("click", (e4) => {
+      const mb2 = e4.target.closest("li[data-msattn] .dots");
+      if (mb2) {
+        e4.stopPropagation();
+        msAttnMenu(mb2, mb2.closest("li").dataset.msattn);
+        return;
+      }
+      const mw2 = e4.target.closest("[data-msattnwork]");
+      if (mw2) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        msAttnOpenWork(mw2.dataset.msattnwork);
+        return;
+      }
       const n4 = e4.target.closest(".rem");
       if (!n4) return;
       const b5 = e4.target.closest("button");
@@ -44473,7 +44612,7 @@ ${s5}`;
   function intakeIds() {
     return {
       meetings: MTG().filter(txReady).map((m5) => tqHash("m|" + (m5.key || m5.id || `${m5.day}|${m5.start}|${m5.title}`))),
-      proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}` : `n${r4.n}`))),
+      proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}|${r4.made || ""}` : `n${r4.n}`))),
       files: irFreshFiles().ready.map((f5) => tqHash("f|" + (f5.path || f5.name)))
     };
   }
@@ -44497,28 +44636,32 @@ ${s5}`;
       return false;
     }
   }
+  var tqDigest = (
+    /** @param {string[]} l */
+    (l6) => `${tqHash([...l6].sort().join(","))}:${l6.length}`
+  );
   function tqKeep() {
-    const all = intakeIds(), ids = (
+    const now = intakeIds(), ids = (
       /** @type {Record<string,string[]>} */
       {}
-    ), over = (
-      /** @type {Record<string,number>} */
+    ), all = (
+      /** @type {Record<string,string>} */
       {}
     );
     TQKINDS.forEach((k5) => {
-      const l6 = [...new Set(all[k5])];
+      const l6 = [...new Set(now[k5])];
       ids[k5] = l6.slice(-TQCAP);
-      if (l6.length > TQCAP) over[k5] = l6.length - TQCAP;
+      if (l6.length > TQCAP) all[k5] = tqDigest(l6);
     });
-    return Object.keys(over).length ? { day: TODAY, ids, over } : { day: TODAY, ids };
+    return Object.keys(all).length ? { day: TODAY, ids, all } : { day: TODAY, ids };
   }
   function intakeDismissed() {
     const d5 = tqRead();
     if (!d5 || d5.day !== TODAY || !d5.ids || typeof d5.ids !== "object") return false;
     const now = intakeIds();
     return TQKINDS.every((k5) => {
-      const kept = new Set(Array.isArray(d5.ids[k5]) ? d5.ids[k5] : []);
-      return now[k5].filter((h5) => !kept.has(h5)).length <= (d5.over && +d5.over[k5] || 0);
+      const l6 = [...new Set(now[k5])], kept = new Set(Array.isArray(d5.ids[k5]) ? d5.ids[k5] : []);
+      return l6.every((h5) => kept.has(h5)) || !!d5.all && typeof d5.all[k5] === "string" && d5.all[k5] === tqDigest(l6);
     });
   }
   function renderIntakeLine() {
@@ -44788,7 +44931,7 @@ ${s5}`;
 
   // files.js
   shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
-  var FOPEN = new Set(store.get("creaite-files-open", []));
+  var FOPEN = new Set(store.list("creaite-files-open"));
   var farch = () => D.files_archived || [];
   var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
   var EMPTY = { archived: "Nothing has been archived.", latest: "No reports yet.", week: "No meetings this week." };
@@ -44819,7 +44962,7 @@ ${s5}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
@@ -45025,7 +45168,7 @@ ${s5}`;
     $("#filesTbl").addEventListener("click", (e4) => {
       const mb2 = e4.target.closest("[data-moveback]");
       if (mb2) {
-        moveBack(mb2.dataset.moveback);
+        moveBack(mb2.dataset.moveback, mb2.dataset.mbkind);
         return;
       }
       const tr2 = e4.target.closest("tr[data-fp]");
@@ -45034,10 +45177,25 @@ ${s5}`;
       $$("#filesTbl tr[data-fp]").forEach((r4) => r4.classList.toggle("sel", r4 === tr2));
     });
   }
-  async function moveBack(path) {
+  async function moveBack(path, kind) {
     if (!viaServer()) {
       snack("Moving a file back needs the live server");
       return;
+    }
+    if (kind === "notes") {
+      const n4 = await api("/api/files/move-back/now", { path });
+      if (n4.ok && n4.moved) {
+        await refreshFiles(true);
+        snack(oneLine(n4.message), async () => {
+          await undoApply(n4.apply_id);
+          await refreshFiles(true);
+        });
+        return;
+      }
+      if (n4.message !== OLDSERVER) {
+        snack(oneLine(n4.message || "It couldn't be moved back"));
+        return;
+      }
     }
     const r4 = await api("/api/files/move-back", { path });
     snack(oneLine(r4.message || (r4.ok ? "On the approval card" : "It couldn't be prepared")));
@@ -47712,7 +47870,7 @@ ${pre}**Current state title:** ${title}`);
     const typ = $("#f_type"), ms2 = $("#f_ms");
     if (!typ || !ms2 || typ.value !== "Dependency" || ms2.value) return;
     const code = $("#f_p")?.value || formProject(), dueTxt = $("#f_due")?.value || "", due = DDATE.test(dueTxt) ? toIso(dueTxt) : "", key2 = shared.CUR.id || "new";
-    if (store.get("creaite-dep-none", {})[key2] === depHash($("#f_t")?.value)) return;
+    if (store.obj("creaite-dep-none")[key2] === depHash($("#f_t")?.value)) return;
     const L3 = depSuggest(code, due);
     if (!L3.length) return;
     depSugDraw(ms2.closest("dd"), L3, "depms");
@@ -47803,7 +47961,7 @@ ${pre}**Current state title:** ${title}`);
         ms2.dispatchEvent(new Event("change", { bubbles: true }));
         depFormDraw();
       } else if (n4) {
-        const d5 = store.get("creaite-dep-none", {});
+        const d5 = store.obj("creaite-dep-none");
         d5[shared.CUR.id || "new"] = depHash($("#f_t")?.value);
         store.set("creaite-dep-none", d5);
         depFormDraw();
@@ -49837,12 +49995,12 @@ ${pre}**Current state title:** ${title}`);
     <div class="mv-detog"><button type="button" data-mvact="det" aria-expanded="${MVDET}" aria-controls="mvRows-${host2}"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>${MVDET ? "Hide milestone details" : "Show milestone details"}</button></div>
     <div class="mv-rows" id="mvRows-${host2}"${MVDET ? "" : " hidden"}>`;
     list.forEach((m5) => {
-      const st2 = m5.state, moved = st2 !== "achieved" && m5.agr && m5.fc > m5.agr, ach = st2 === "achieved";
+      const st2 = m5.state, moved2 = st2 !== "achieved" && m5.agr && m5.fc > m5.agr, ach = st2 === "achieved";
       const blk = cli || ach ? [] : R3.filter((r4) => r4.p === code && r4.type === "Dependency" && r4.st === "Open" && r4.ms === m5.id && depWarn(r4));
       h5 += `<div class="mv-prow${blk.length ? " atrisk" : ""}" role="button" tabindex="0" data-mvedit="${m5.id}" aria-label="Edit ${esc(m5.n)}"${m5.desc ? ` title="${esc(m5.desc)}"` : ""}>
       <div><div class="nm">${esc(m5.n)}${!m5.cvis && !cli ? ' <span class="mv-tag">Internal only</span>' : ""}${blk.length ? ` <span class="mv-tag warn waiting" title="${esc(blk.map((d5) => depWarn(d5).text).join("\n"))}">waiting on ${blk.map((d5) => esc(d5.id)).join(", ")}</span>` : ""}</div>${cli && m5.cw ? `<div class="mv-cw">${esc(m5.cw)}</div>` : ""}</div>
       <div><div class="mv-lbl">State</div>${mvTag(st2, cli)}${!cli && mvMismatch(m5) ? `<div class="mv-sugg">Dates suggest ${MVWORD[m5.sug]}</div>` : ""}</div>
-      <div><div class="mv-lbl">${ach ? "Achieved" : "Agreed date"}</div><div class="dt"${ach ? ' style="color:var(--ok)"' : ""}>${ach ? fd(m5.actual || m5.fc) : m5.agr ? fd(m5.agr) : "Not agreed yet"}</div>${ach && m5.agr ? `<div class="mv-hint">Agreed ${fd(m5.agr)}${m5.actual === m5.agr ? " · on the agreed date" : ""}</div>` : ""}${moved ? `<div class="exp">Expected ${fd(m5.fc)} (${mvDays(m5.fc, m5.agr)} days later)</div>` : ""}${!cli ? mvRevised(m5) : ""}</div>
+      <div><div class="mv-lbl">${ach ? "Achieved" : "Agreed date"}</div><div class="dt"${ach ? ' style="color:var(--ok)"' : ""}>${ach ? fd(m5.actual || m5.fc) : m5.agr ? fd(m5.agr) : "Not agreed yet"}</div>${ach && m5.agr ? `<div class="mv-hint">Agreed ${fd(m5.agr)}${m5.actual === m5.agr ? " · on the agreed date" : ""}</div>` : ""}${moved2 ? `<div class="exp">Expected ${fd(m5.fc)} (${mvDays(m5.fc, m5.agr)} days later)</div>` : ""}${!cli ? mvRevised(m5) : ""}</div>
       <div>${mvPct(m5)}</div></div>`;
     });
     return h5 + "</div>";
@@ -51145,7 +51303,7 @@ ${pre}**Current state title:** ${title}`);
   shared.SEL = null;
   shared.WQ = "";
   var OWN = /* @__PURE__ */ new Set(), PROJF = /* @__PURE__ */ new Set(), PRIF = /* @__PURE__ */ new Set();
-  var FX = { st: /* @__PURE__ */ new Set(), due: /* @__PURE__ */ new Set(), ws: /* @__PURE__ */ new Set(), ty: /* @__PURE__ */ new Set(), rs: /* @__PURE__ */ new Set(), src: /* @__PURE__ */ new Set(), cv: /* @__PURE__ */ new Set(), dt: /* @__PURE__ */ new Set(), ms: /* @__PURE__ */ new Set() };
+  var FX = { st: /* @__PURE__ */ new Set(), due: /* @__PURE__ */ new Set(), ws: /* @__PURE__ */ new Set(), ty: /* @__PURE__ */ new Set(), rs: /* @__PURE__ */ new Set(), src: /* @__PURE__ */ new Set(), cv: /* @__PURE__ */ new Set(), dt: /* @__PURE__ */ new Set(), ms: /* @__PURE__ */ new Set(), mi: /* @__PURE__ */ new Set() };
   var RR = { from: "", to: "" };
   shared.DR = { from: "", to: "" };
   shared.CR = { from: "", to: "" };
@@ -51465,7 +51623,12 @@ ${pre}**Current state title:** ${title}`);
     /* BL-128: Milestone and Last updated can be shown */
     decisions: [["id", "ID"], ["t", "Decision"], ["st", "Status"], ["by", "Made by"], ["due", "Needed by"], ["date", "Date"], ["src", "Source"]]
   };
-  shared.COLVIS = store.get("creaite-cols", { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] });
+  shared.COLVIS = store.get("creaite-cols", null);
+  if (!shared.COLVIS || typeof shared.COLVIS !== "object" || Array.isArray(shared.COLVIS)) shared.COLVIS = { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] };
+  var visOf = (t47) => {
+    const v5 = shared.COLVIS[t47], known2 = Array.isArray(v5) && COLS[t47] ? v5.filter((k5) => COLS[t47].some((c5) => c5[0] === k5)) : [];
+    return known2.length ? known2 : [...DEFCOLS[t47] || []];
+  };
   var cmTag = (x5) => x5.client && !("cmd" in x5 ? cmdOK(x5.cmd) : cmOK(x5.cm)) ? ' <span class="tag warn">· client messaging to complete</span>' : "";
   function cell(k5, x5, t47 = shared.WT) {
     if (t47 === "all") return allCell(k5, x5);
@@ -51499,7 +51662,7 @@ ${pre}**Current state title:** ${title}`);
     }
     return ((D.milestone_names || {})[id2] || [id2])[0];
   };
-  var rowHead = (t47, C5, s5, o5 = {}) => `<thead><tr>${o5.pick ? '<th class="pickcol" aria-label="Select"></th>' : ""}${C5.map((c5) => `<th data-col="${c5[0]}"${o5.fixed ? "" : ' draggable="true"'} aria-sort="${s5 && s5.col === c5[0] ? s5.dir === "asc" ? "ascending" : "descending" : "none"}" title="Sort by ${c5[1].toLowerCase()}"${o5.rz && shared.RZ[t47 + "|" + c5[0]] ? ` style="width:${shared.RZ[t47 + "|" + c5[0]]}px;min-width:${shared.RZ[t47 + "|" + c5[0]]}px"` : ""}>${c5[1]}${s5 && s5.col === c5[0] ? `<span class="sarrow">${s5.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("")}</tr></thead>`;
+  var rowHead = (t47, C5, s5, o5 = {}) => `<thead><tr>${o5.pick ? '<th class="pickcol" aria-label="Select"></th>' : ""}${C5.map((c5) => `<th data-col="${c5[0]}"${o5.fixed ? "" : ' draggable="true"'} aria-sort="${s5 && s5.col === c5[0] ? s5.dir === "asc" ? "ascending" : "descending" : "none"}" title="Sort by ${c5[1].toLowerCase()}"${o5.rz && rzOf(t47 + "|" + c5[0]) ? ` style="width:${rzOf(t47 + "|" + c5[0])}px;min-width:${rzOf(t47 + "|" + c5[0])}px"` : ""}>${c5[1]}${s5 && s5.col === c5[0] ? `<span class="sarrow">${s5.dir === "asc" ? "▲" : "▼"}</span>` : ""}</th>`).join("")}</tr></thead>`;
   var rowHtml = (t47, x5, C5, o5 = {}) => `<tr class="click ${o5.sel === x5.id ? "sel" : ""}${o5.pick ? " handpick" : ""}" data-row="${x5.id}"${o5.tr || ""}>${o5.pick ? `<td class="pickcol"><input type="checkbox" class="handbox" data-hk="${t47}:${x5.id}" aria-label="Hand over ${esc(x5.id)}" ${o5.pick.has(t47 + ":" + x5.id) ? "checked" : ""}></td>` : ""}${C5.map((c5) => cell(c5[0], x5, t47)).join("")}</tr>`;
   function renderWork() {
     const fresh = !WINIT[shared.WT], dv = fresh ? defaultView(shared.WT) : null;
@@ -51555,9 +51718,9 @@ ${pre}**Current state title:** ${title}`);
       markStagedRows();
     }
   }
-  shared.COLORD = store.get("creaite-colorder", {});
+  shared.COLORD = store.obj("creaite-colorder");
   function orderedCols(t47 = shared.WT) {
-    const vis = COLS[t47].filter((c5) => shared.COLVIS[t47].includes(c5[0]) || c5[0] === "t"), ord = shared.COLORD[t47] || [];
+    const shown2 = visOf(t47), vis = COLS[t47].filter((c5) => shown2.includes(c5[0]) || c5[0] === "t"), ord = Array.isArray(shared.COLORD[t47]) ? shared.COLORD[t47] : [];
     return vis.sort((a5, b5) => {
       const i5 = ord.indexOf(a5[0]), j5 = ord.indexOf(b5[0]);
       return (i5 < 0 ? 99 + COLS[t47].indexOf(a5) : i5) - (j5 < 0 ? 99 + COLS[t47].indexOf(b5) : j5);
@@ -51668,11 +51831,15 @@ ${pre}**Current state title:** ${title}`);
       return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown2 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
     }).join("");
   }
-  shared.RZ = store.get("creaite-colwidths", {});
+  shared.RZ = store.obj("creaite-colwidths");
+  var rzOf = (k5) => {
+    const w6 = shared.RZ[k5];
+    return typeof w6 === "number" && Number.isFinite(w6) && w6 > 0 ? w6 : 0;
+  };
   function colResizer(th2, k5, after) {
-    if (shared.RZ[k5]) {
-      th2.style.width = shared.RZ[k5] + "px";
-      th2.style.minWidth = shared.RZ[k5] + "px";
+    if (rzOf(k5)) {
+      th2.style.width = rzOf(k5) + "px";
+      th2.style.minWidth = rzOf(k5) + "px";
     }
     const h5 = document.createElement("span");
     h5.className = "colrz";
@@ -51683,7 +51850,7 @@ ${pre}**Current state title:** ${title}`);
     h5.setAttribute("aria-orientation", "vertical");
     h5.setAttribute("aria-valuemin", "60");
     h5.setAttribute("aria-valuemax", "900");
-    val2(shared.RZ[k5] || th2.getBoundingClientRect().width);
+    val2(rzOf(k5) || th2.getBoundingClientRect().width);
     h5.addEventListener("focus", () => val2(th2.getBoundingClientRect().width));
     const put2 = (w6) => {
       w6 = Math.max(60, Math.min(900, w6));
@@ -51886,10 +52053,10 @@ ${pre}**Current state title:** ${title}`);
   var DGROUPS = [["status", "Status"], ["owner", "Decision maker"], ["due", "Needed by"]];
   var GROUPS = { actions: [...BGROUPS, ["project", "Project"], ["priority", "Priority"], ["workstream", "Workstream"]], raid: [...BGROUPS, ["project", "Project"], ["priority", "Priority"], ["type", "Type"]], decisions: [...DGROUPS, ["project", "Project"]] };
   var groupsOf = (t47) => GROUPS[t47];
-  var WLAY = store.get("creaite-worklay", {}), WGRP = store.get("creaite-workgrp", {}), BHIDE = store.get("creaite-boardhide", {}), BCOLL = store.get("creaite-boardcoll", {});
+  var WLAY = store.obj("creaite-worklay"), WGRP = store.obj("creaite-workgrp"), BHIDE = store.obj("creaite-boardhide"), BCOLL = store.obj("creaite-boardcoll");
   var BCUR = null, BDRAG = null, BNOCLICK = 0;
   shared.LAYCHOSEN = false;
-  var BSHOWALL = /* @__PURE__ */ new Set(), BCLALL = new Set(store.get("creaite-boardclosedall", []));
+  var BSHOWALL = /* @__PURE__ */ new Set(), BCLALL = new Set(store.list("creaite-boardclosedall"));
   var layoutOf = (t47) => WLAY[t47] === "board" && (shared.LAYCHOSEN || innerWidth >= 640) ? "board" : "list";
   var groupOf = (t47) => {
     const ok2 = (g5) => groupsOf(t47).some((x5) => x5[0] === g5), set = { actions: S.bgActions, raid: S.bgRaid, decisions: S.bgDecisions }[t47];
@@ -52019,7 +52186,7 @@ ${pre}**Current state title:** ${title}`);
     });
     return out;
   };
-  var BW = bwClean(store.get("creaite-boardw", {}));
+  var BW = bwClean(store.obj("creaite-boardw"));
   var bwBoard = () => BCUR ? `${BCUR.t}|${BCUR.g}` : `${shared.WT}|${groupOf(shared.WT)}`;
   var bwGet = (b5, key2) => {
     const o5 = BW[b5];
@@ -52479,7 +52646,7 @@ ${pre}**Current state title:** ${title}`);
       }
     }, true);
   }
-  var WLGRP = store.get("creaite-listgrp", {}), WSUB = store.get("creaite-worksub", {});
+  var WLGRP = store.obj("creaite-listgrp"), WSUB = store.obj("creaite-worksub");
   var DEFCOLS = { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] };
   var dispOpen = () => $("#dispMenu").classList.contains("on");
   var SORTOPTS = (t47) => t47 === "decisions" ? [["", "Default order"], ["due", "Needed by"], ["date", "Date"], ["st", "Status"], ["by", "Made by"], ["t", "Title"], ["upd", "Last updated"], ["id", "ID"]] : [["", "Default order"], ["due", "Due date"], ["pr", "Priority"], ["st", "Status"], ["o", "Owner"], ["t", "Title"], ["upd", "Last updated"], ["raised", "Raised"], ["id", "ID"]];
@@ -52657,6 +52824,8 @@ ${pre}**Current state title:** ${title}`);
         return;
       }
       if (i5.dataset.prop !== void 0) {
+        const cur = shared.COLVIS[t47];
+        if (!Array.isArray(cur) || !cur.some((k5) => COLS[t47].some((c5) => c5[0] === k5))) shared.COLVIS[t47] = visOf(t47);
         const L3 = shared.COLVIS[t47], v5 = i5.value;
         i5.checked ? L3.includes(v5) || L3.push(v5) : L3.splice(L3.indexOf(v5), 1);
         store.set("creaite-cols", shared.COLVIS);
@@ -52752,7 +52921,7 @@ ${pre}**Current state title:** ${title}`);
     if (!d5) return false;
     return await boardMove(t47, id2, { due: d5 }, what);
   }
-  var LCOLL = store.get("creaite-listcoll", {});
+  var LCOLL = store.obj("creaite-listcoll");
   var HLNOTE = "";
   shared.HLALL = false;
   var grpOK = (t47, g5) => groupsOf(t47).some((x5) => x5[0] === g5);
@@ -53926,7 +54095,8 @@ ${pre}**Current state title:** ${title}`);
         return x5.st === "Open" && a5 !== null && a5 >= (+S.staleDays || 7) ? "yes" : "no";
       }, 1],
       ["lu", "Last updated", () => lastDays, (x5) => x5.upd_at, 1, (x5, set) => within(x5.upd_at, set)],
-      ["rd", "Raised", () => lastDays, (x5) => x5.raised, 1, (x5, set) => within(x5.raised, set)]
+      ["rd", "Raised", () => lastDays, (x5) => x5.raised, 1, (x5, set) => within(x5.raised, set)],
+      ["mi", "Milestone", () => P4.flatMap((p6) => (p6.ms || []).filter((m5) => m5[3]).map((m5) => [m5[3], P4.length > 1 ? `${m5[0]} (${p6.name})` : m5[0]])), (x5) => x5.ms || "", 1]
     ];
     DEFSORT.all = (a5, b5) => allLate(b5) - allLate(a5) || (a5.due || "9").localeCompare(b5.due || "9") || a5.id.localeCompare(b5.id);
     CLOSEDST.all = ["Closed", "Cancelled"];
@@ -56373,18 +56543,18 @@ ${pre}**Current state title:** ${title}`);
       drawWsMgr();
       return;
     }
-    const before = { ...w6 }, old = w6.name, moved = [...A4, ...R3].filter((x5) => x5.p === w6.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
+    const before = { ...w6 }, old = w6.name, moved2 = [...A4, ...R3].filter((x5) => x5.p === w6.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
     await save(
       `${pName(w6.p)} workstream ${old} ${changes.name ? `renamed ${changes.name}` : "updated"}`,
       [{ op: "update", table: "workstreams", id: id2, changes, based_on: w6.updated_at }],
       null,
       () => {
         Object.assign(w6, Object.fromEntries(Object.entries(changes).map(([k5, x5]) => [k5, x5 || ""])));
-        if (changes.name) moved.forEach((x5) => x5.ws = changes.name);
+        if (changes.name) moved2.forEach((x5) => x5.ws = changes.name);
       },
       () => {
         Object.assign(w6, before);
-        moved.forEach((x5) => x5.ws = old);
+        moved2.forEach((x5) => x5.ws = old);
       }
     );
     drawWsMgr();
@@ -60891,7 +61061,7 @@ ${d5.text}`);
     box.textContent = "";
     if (k5 !== "raid" || x5.type !== "Dependency" || x5.ms || !x5.p || !OPENST(x5.st || "Open")) return;
     const key2 = shared.CUR.mode === "new" ? "new" : pkCid();
-    if (store.get("creaite-dep-none", {})[key2] === depHash(x5.t)) return;
+    if (store.obj("creaite-dep-none")[key2] === depHash(x5.t)) return;
     const L3 = depSuggest(x5.p, x5.due || "");
     if (!L3.length) return;
     depSugDraw(box, L3, "pkdep");
@@ -60904,7 +61074,7 @@ ${d5.text}`);
       const a5 = e4.target.closest("[data-pkdep]"), n4 = e4.target.closest("[data-pkdepnone]"), x5 = curObj(), k5 = shared.CUR.k, id2 = pkCid();
       if (a5) pkCommit(k5, id2, { ms: a5.dataset.pkdep }, "Milestone", "none", msName(a5.dataset.pkdep));
       else if (n4) {
-        const d5 = store.get("creaite-dep-none", {});
+        const d5 = store.obj("creaite-dep-none");
         d5[shared.CUR.mode === "new" ? "new" : id2] = depHash(x5.t);
         store.set("creaite-dep-none", d5);
         pkDepDraw(x5, k5);
@@ -61281,6 +61451,7 @@ ${d5.text}`);
         return;
       }
       if (res.nothing) {
+        mine.nothing = true;
         mine.html = `<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`;
         pkDrDraw();
         return;
@@ -61296,6 +61467,12 @@ ${d5.text}`);
       pkDrDraw();
       $(`#${mine.host} .drcard`)?.focus?.();
     });
+    const pkDrNoneGo = (e4) => {
+      const c5 = shared.PKDRC;
+      if (c5 && c5.nothing && !(e4.target.closest && e4.target.closest(".drnone"))) pkDrDrop();
+    };
+    $("#panel").addEventListener("input", pkDrNoneGo, true);
+    $("#panel").addEventListener("pointerdown", pkDrNoneGo, true);
     $("#panel").addEventListener("click", (e4) => {
       const a5 = e4.target.closest(".pkdrhost [data-drdo]");
       if (!a5 || !shared.PKDRC || !shared.PKDRC.d) return;
@@ -62499,6 +62676,10 @@ ${d5.text}`);
       if (out.stopped) {
         shared.RBOUT = "stopped";
         return { ok: false, stopped: true, message: "Stopped; nothing changed" };
+      }
+      if (out.got && out.nothing) {
+        shared.RBOUT = "done";
+        return { ok: true, nothing: String(out.nothing) };
       }
       if (!out.got || !out.text && !out.items && !out.prefill && !(out.health && out.reason)) {
         shared.RBOUT = "failed";
@@ -64475,6 +64656,8 @@ ${d5.text}`);
     check: "Transcript check",
     load: "Transcript load",
     vip: "Alert check",
+    process: "Intake processing",
+    calendar: "Calendar refresh",
     other: "Other"
   };
   var FILE = {
@@ -64624,7 +64807,140 @@ ${d5.text}`);
     const k5 = Math.abs(r4.change_bytes) / 1e3;
     return `${r4.change_bytes > 0 ? "+" : "−"}${Number((k5 >= 10 ? Math.round(k5) : k5).toFixed(1))} KB since ${fd3(r4.since)}`;
   }
-  function UsagePanel({ usage, fd: fd3 }) {
+  var REVIEW_ROUTE = "/api/usage/review", MAX_NOTE = 200;
+  var NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs the live server";
+  var FORMULA = /^[=+\-@\t\r]/;
+  var csvCell = (v5) => {
+    let s5 = String(v5 ?? "");
+    if (FORMULA.test(s5)) s5 = `'${s5}`;
+    return `"${s5.replace(/"/g, '""')}"`;
+  };
+  var reviewsCsv = (list, fd3) => [["Date", "What you saw", "What you decided"], ...list.slice().reverse().map((r4) => [fd3(r4.date), r4.saw, r4.decided])].map((row2) => `${row2.map(csvCell).join(",")}\r
+`).join("");
+  function saveFile(text, name) {
+    const url = URL.createObjectURL(new Blob(["\uFEFF", text], { type: "text/csv;charset=utf-8" }));
+    const a5 = document.createElement("a");
+    a5.href = url;
+    a5.download = name;
+    document.body.append(a5);
+    a5.click();
+    a5.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+  }
+  function Reviews({ list, fd: fd3, held, onSaved }) {
+    const [open2, setOpen2] = d2(false), [busy2, setBusy] = d2(false), [msg, setMsg] = d2("");
+    const [day, setDay] = d2(""), [saw, setSaw] = d2(""), [dec, setDec] = d2("");
+    const focusAdd = () => setTimeout(() => (
+      /** @type {HTMLElement | null} */
+      document.querySelector("#uRevAdd")?.focus()
+    ), 0);
+    const start = () => {
+      if (held) return;
+      setDay(fd3(TODAY));
+      setSaw("");
+      setDec("");
+      setMsg("");
+      setOpen2(true);
+      setTimeout(() => (
+        /** @type {HTMLElement | null} */
+        document.querySelector("#uRevSaw")?.focus()
+      ), 0);
+    };
+    const close = () => {
+      setOpen2(false);
+      focusAdd();
+    };
+    const save2 = async () => {
+      const date = readDate(day);
+      if (!date) return setMsg("Write the date as DD-MM-YYYY.");
+      if (!saw.trim() && !dec.trim()) return setMsg("Write what you saw or what you decided.");
+      setBusy(true);
+      setMsg("");
+      const r4 = await api(REVIEW_ROUTE, { date, saw, decided: dec });
+      setBusy(false);
+      if (!r4 || !r4.ok) return setMsg(r4 && r4.message === OLDSERVER ? `${NEEDS_UPDATE}.` : r4 && r4.message || "Not saved.");
+      onSaved(r4.reviews || []);
+      setOpen2(false);
+      snack("Review note saved");
+      focusAdd();
+    };
+    const keys = (e4) => {
+      if (e4.key === "Enter") {
+        e4.preventDefault();
+        save2();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        close();
+      }
+    };
+    const val2 = (e4) => (
+      /** @type {HTMLInputElement} */
+      e4.currentTarget.value
+    );
+    const rows2 = list.slice().reverse(), none = !rows2.length;
+    return /* @__PURE__ */ u4("section", { class: "urev", "aria-labelledby": "uRevH", children: [
+      /* @__PURE__ */ u4("h2", { id: "uRevH", children: "Your reviews" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "Write down what you decided after looking, so the trend has a story. Your own note and a date only; kept on this laptop." }),
+      none ? /* @__PURE__ */ u4("p", { class: "sub uempty", role: "status", children: "No review notes yet." }) : /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { class: "qtab", "aria-label": "Your reviews", children: [
+        /* @__PURE__ */ u4("thead", { children: /* @__PURE__ */ u4("tr", { children: [
+          /* @__PURE__ */ u4("th", { scope: "col", children: "Date" }),
+          /* @__PURE__ */ u4("th", { scope: "col", children: "What you saw" }),
+          /* @__PURE__ */ u4("th", { scope: "col", children: "What you decided" })
+        ] }) }),
+        /* @__PURE__ */ u4("tbody", { children: rows2.map((r4, i5) => /* @__PURE__ */ u4("tr", { children: [
+          /* @__PURE__ */ u4("td", { children: fd3(r4.date) }),
+          /* @__PURE__ */ u4("td", { children: r4.saw }),
+          /* @__PURE__ */ u4("td", { children: r4.decided })
+        ] }, `${r4.date}-${i5}`)) })
+      ] }) }),
+      open2 ? /* @__PURE__ */ u4("div", { class: "urevform", id: "uRevForm", role: "group", "aria-label": "New review note", onKeyDown: keys, children: [
+        /* @__PURE__ */ u4("label", { for: "uRevDate", children: "Date" }),
+        /* @__PURE__ */ u4("input", { type: "text", id: "uRevDate", class: "urevdate", size: 11, maxLength: 20, placeholder: "DD-MM-YYYY", value: day, onInput: (e4) => setDay(val2(e4)) }),
+        /* @__PURE__ */ u4("label", { for: "uRevSaw", children: "What you saw" }),
+        /* @__PURE__ */ u4("input", { type: "text", id: "uRevSaw", maxLength: MAX_NOTE, value: saw, onInput: (e4) => setSaw(val2(e4)) }),
+        /* @__PURE__ */ u4("label", { for: "uRevDec", children: "What you decided" }),
+        /* @__PURE__ */ u4("input", { type: "text", id: "uRevDec", maxLength: MAX_NOTE, value: dec, onInput: (e4) => setDec(val2(e4)) }),
+        /* @__PURE__ */ u4("span", {}),
+        /* @__PURE__ */ u4("div", { class: "urevact", children: [
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "uRevSave", disabled: busy2, onClick: save2, children: busy2 ? "Saving…" : "Save note" }),
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn", disabled: busy2, onClick: close, children: "Cancel" }),
+          /* @__PURE__ */ u4("span", { class: "sub", id: "uRevMsg", role: "status", children: msg })
+        ] })
+      ] }) : null,
+      /* @__PURE__ */ u4("div", { class: "urevact", children: [
+        open2 ? null : /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "btn",
+            id: "uRevAdd",
+            "aria-disabled": held ? "true" : void 0,
+            "data-tip": held || void 0,
+            "aria-label": held ? `Add a review note: ${held.toLowerCase()}` : void 0,
+            onClick: start,
+            children: "Add a review note"
+          }
+        ),
+        /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "btn",
+            id: "uRevCsv",
+            "aria-disabled": none ? "true" : void 0,
+            "data-tip": none ? "No review notes yet" : void 0,
+            onClick: () => {
+              if (!none) saveFile(reviewsCsv(list, fd3), `${TODAY} creaite usage reviews.csv`);
+            },
+            children: "Download as CSV"
+          }
+        )
+      ] })
+    ] });
+  }
+  function UsagePanel({ usage, fd: fd3, live = false, onReviews = () => {
+  } }) {
     const u5 = usage || {};
     const bad = !usage || usage.error;
     return /* @__PURE__ */ u4(S2, { children: [
@@ -64635,7 +64951,8 @@ ${d5.text}`);
       ] }),
       bad || u5.empty ? /* @__PURE__ */ u4("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here." }) : /* @__PURE__ */ u4(Runs, { u: u5, fd: fd3 }),
       /* @__PURE__ */ u4(Loads, { rows: u5.context || [], start: u5.cards?.start?.now, fd: fd3 }),
-      bad || u5.empty ? null : /* @__PURE__ */ u4(Skills, { skills: u5.skills || [] })
+      bad || u5.empty ? null : /* @__PURE__ */ u4(Skills, { skills: u5.skills || [] }),
+      /* @__PURE__ */ u4(Reviews, { list: u5.reviews || [], fd: fd3, held: !live ? NEEDS_LIVE : u5.reviews_save ? "" : NEEDS_UPDATE, onSaved: onReviews })
     ] });
   }
   function mountUsage(host2, props) {
@@ -65076,7 +65393,16 @@ ${d5.text}`);
   var actShowQuality = (q5) => actShowTab(q5 ? "q" : "ch");
   var USAGE_ROUTE = true;
   function usageDraw() {
-    mountUsage($("#actUsage"), { usage: D.usage, fd });
+    mountUsage($("#actUsage"), {
+      usage: D.usage,
+      fd,
+      live: viaServer(),
+      /* v2.5.3: Your reviews, saved through the server's route */
+      onReviews: (list) => {
+        D.usage = { ...D.usage || {}, reviews: list };
+        usageDraw();
+      }
+    });
   }
   async function usageOpen() {
     usageDraw();
@@ -76210,6 +76536,7 @@ ${d5.text}`);
         "PrepShape",
         "Progress",
         "ProjectSettings",
+        "QUEUE",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -76306,6 +76633,7 @@ ${d5.text}`);
         "askWorking",
         "attachRun",
         "attachSlash",
+        "attentionItems",
         "autoGrow",
         "batchMove",
         "bkDate",
@@ -76547,6 +76875,7 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
+        "isMin",
         "isNotePath",
         "itemDatePicker",
         "items",
@@ -76595,6 +76924,10 @@ ${d5.text}`);
         "mountStatusDots",
         "mounted",
         "moveCol",
+        "msAttention",
+        "msAttnMenu",
+        "msFind",
+        "msItemWords",
         "msOpts",
         "mtgBusy",
         "mtgCheckable",
@@ -76674,6 +77007,7 @@ ${d5.text}`);
         "openRecord",
         "openSpace",
         "orderedCols",
+        "ordinal",
         "overdue",
         "ownerFinal",
         "ownerMatches",

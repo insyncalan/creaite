@@ -191,7 +191,8 @@ export const actShowQuality=q=>actShowTab(q?"q":"ch");
 /* #238: Usage draws D.usage (built into the page from usage_report.py --json) and, where the live server has GET /api/usage, the fresh figures. Absent
    (a 404, a refusal, no server): the page's own copy stays, and the route is not asked again. Nothing is sent; the tab has no control. */
 let USAGE_ROUTE=true;
-export function usageDraw(){ mountUsage($("#actUsage"),{usage:D.usage,fd}); }
+export function usageDraw(){ mountUsage($("#actUsage"),{usage:D.usage,fd,live:viaServer(),   /* v2.5.3: Your reviews, saved through the server's route */
+  onReviews:list=>{ D.usage={...(D.usage||{}),reviews:list}; usageDraw(); }}); }
 export async function usageOpen(){ usageDraw();
   if(!USAGE_ROUTE||!viaServer()) return;
   try{ const r=await fetch("/api/usage",{headers:{"X-Creaite-Token":D.token||""}});

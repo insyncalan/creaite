@@ -1,4 +1,4 @@
-"""BL-03: reports, minutes and Steerco one-pagers moved into the engagement's own _Archive after 12 months (v1.9.5; Alan, 14-10-2026).
+"""BL-03: reports, minutes and Steerco one-pagers moved into the engagement's own 99 Archive after 12 months (v1.9.5; Alan, 14-10-2026).
 
 Run: python3 dev/tests/test_archive_reports.py     (quick tier: no Chrome; one live server)
 
@@ -10,7 +10,7 @@ What is covered, with the clock pinned (CREAITE_NOW, and CREAITE_STAMP_DAY for t
 - the one-click route: refused without the token and with a body; it only puts the moves on the approval card; Approve moves them
   through tracker.py apply; undo moves them back and removes the folders it made;
 - stored paths still resolve; the archived files aren't indexed and ask creaite can't read them;
-- reach.archive_move_problem's "reports" shape: one file of those folders into its own engagement's _Archive, nothing else;
+- reach.archive_move_problem's "reports" shape: one file of those folders into its own engagement's 99 Archive, nothing else;
 - the same with the projects in a OneDrive-style folder (mapped folders).
 Everything is fictional and temporary.
 """
@@ -88,7 +88,7 @@ class VaultReports(unittest.TestCase):
         spec = json.loads(self.run_at("reports").stdout)
         moves = {(o["from"], o["to"]) for o in spec["file_changes"]["file_ops"]}
         base = f"projects/{self.abc.name}"
-        self.assertEqual(moves, {(f"{base}/{f}", f"{base}/_Archive/{f}") for f in self.due})
+        self.assertEqual(moves, {(f"{base}/{f}", f"{base}/99 Archive/{f}") for f in self.due})
         self.assertEqual(spec["file_changes"]["archive"], "reports")
         self.assertEqual(spec["file_changes"]["title"], "Archive 5 reports and minutes older than 12 months")
         c = self.doctor()["archive_reports"]
@@ -107,18 +107,18 @@ class VaultReports(unittest.TestCase):
 
     def test_the_move_through_apply_resolves_is_not_indexed_and_undoes(self):
         preview = self.stage_and_apply()
-        self.assertIn(f"Move file projects/{self.abc.name}/{self.due[0]} → projects/{self.abc.name}/_Archive/{self.due[0]}", preview)
+        self.assertIn(f"Move file projects/{self.abc.name}/{self.due[0]} → projects/{self.abc.name}/99 Archive/{self.due[0]}", preview)
         for f in self.due:
             self.assertFalse((self.abc / f).exists(), f)
-            self.assertTrue((self.abc / "_Archive" / f).is_file(), f)        # its place below _Archive kept
+            self.assertTrue((self.abc / "99 Archive" / f).is_file(), f)        # its place below 99 Archive kept
         for f in self.kept:
             self.assertTrue((self.abc / f).is_file(), f)
         stored = [f"projects/{self.abc.name}/{f}" for f in self.due]
         o = self.py(f"import paths, reach, tracker; s = {stored!r}; print(json.dumps([[str(paths.resolve(x)) for x in s], "
                     "[reach.classify(x, 'read')[0] for x in s], [str(f) for f, _, _ in tracker.index_files()]]))")
-        self.assertEqual(o[0], [str((self.abc / "_Archive" / f).resolve()) for f in self.due])   # stored paths still open
+        self.assertEqual(o[0], [str((self.abc / "99 Archive" / f).resolve()) for f in self.due])   # stored paths still open
         self.assertEqual(set(o[1]), {"never"})                               # ask creaite can't read them
-        self.assertFalse(any("/_Archive/" in f for f in o[2]))                # nor are they indexed
+        self.assertFalse(any("/99 Archive/" in f for f in o[2]))                # nor are they indexed
         self.assertTrue(any(f.endswith("2025-10-15 Checkpoint.md") for f in o[2]))
         c = self.doctor()["archive_reports"]                                  # quiet for the rest of the month
         self.assertEqual(c["status"], "pass")
@@ -130,30 +130,30 @@ class VaultReports(unittest.TestCase):
         self.assertNotIn("skipped", out)
         for f in self.due:
             self.assertTrue((self.abc / f).is_file(), f)
-        self.assertFalse((self.abc / "_Archive").exists())                   # the folders the move made are gone again
+        self.assertFalse((self.abc / "99 Archive").exists())                   # the folders the move made are gone again
 
     def test_only_one_report_file_into_its_own_archive(self):
         b = f"projects/{self.abc.name}"
         (self.v.root / "projects/DEF Other").mkdir()
         cases = {
-            "transcript": (f"{b}/transcripts/2024-01-01 Steering.vtt", f"{b}/_Archive/transcripts/2024-01-01 Steering.vtt"),
-            "document": (f"{b}/documents/2024-01-01 SOW.docx", f"{b}/_Archive/documents/2024-01-01 SOW.docx"),
-            "another engagement": (f"{b}/{self.due[0]}", f"projects/DEF Other/_Archive/{self.due[0]}"),
-            "a different place": (f"{b}/{self.due[0]}", f"{b}/_Archive/reports/2025-09-30 Steering committee.docx"),
-            "a folder": (f"{b}/minutes", f"{b}/_Archive/minutes"),
-            "the projects archive": (f"{b}/{self.due[0]}", f"projects/_Archive/{self.abc.name}/{self.due[0]}"),
+            "transcript": (f"{b}/transcripts/2024-01-01 Steering.vtt", f"{b}/99 Archive/transcripts/2024-01-01 Steering.vtt"),
+            "document": (f"{b}/documents/2024-01-01 SOW.docx", f"{b}/99 Archive/documents/2024-01-01 SOW.docx"),
+            "another engagement": (f"{b}/{self.due[0]}", f"projects/DEF Other/99 Archive/{self.due[0]}"),
+            "a different place": (f"{b}/{self.due[0]}", f"{b}/99 Archive/reports/2025-09-30 Steering committee.docx"),
+            "a folder": (f"{b}/minutes", f"{b}/99 Archive/minutes"),
+            "the projects archive": (f"{b}/{self.due[0]}", f"projects/99 Archive/{self.abc.name}/{self.due[0]}"),
         }
         o = self.py("import reach; c = " + json.dumps(cases) + "\n"
                     "print(json.dumps({k: reach.archive_move_problem(a, b, 'reports') for k, (a, b) in c.items()}))")
         for k, why in o.items():
             self.assertTrue(why, k)
         ok = self.py(f"import reach; print(json.dumps(reach.archive_move_problem({cases['another engagement'][0]!r}, "
-                     f"{(b + '/_Archive/' + self.due[0])!r}, 'reports')))")
+                     f"{(b + '/99 Archive/' + self.due[0])!r}, 'reports')))")
         self.assertIsNone(ok)
-        touch(self.abc / "_Archive" / self.due[0])                           # never onto a file that is there
+        touch(self.abc / "99 Archive" / self.due[0])                           # never onto a file that is there
         self.assertIn("already exists", self.py(f"import reach; print(json.dumps(reach.archive_move_problem("
-                                                f"{cases['another engagement'][0]!r}, {(b + '/_Archive/' + self.due[0])!r}, 'reports')))"))
-        for f in (self.abc / "_Archive" / self.due[0],):
+                                                f"{cases['another engagement'][0]!r}, {(b + '/99 Archive/' + self.due[0])!r}, 'reports')))"))
+        for f in (self.abc / "99 Archive" / self.due[0],):
             f.unlink()
         spec = {"source_run": "cx-edit", "items": [], "file_changes": {"title": "x", "archive": "reports",
                 "file_changes_decision": "approved",
@@ -171,25 +171,25 @@ class VaultReports(unittest.TestCase):
         spec = json.loads(self.run_at("reports").stdout)
         moves = {(o["from"], o["to"]) for o in spec["file_changes"]["file_ops"]}
         self.assertIn(("projects/_portfolio/minutes/2025-06-01 Portfolio sync.md",
-                       "projects/_portfolio/_Archive/minutes/2025-06-01 Portfolio sync.md"), moves)
+                       "projects/_portfolio/99 Archive/minutes/2025-06-01 Portfolio sync.md"), moves)
         self.assertFalse(any("transcripts" in a or "2026-06-01" in a for a, _ in moves))
         bad = self.py("import reach; print(json.dumps([reach.archive_move_problem(a, b, 'reports') for a, b in ["
                       "('projects/_portfolio/transcripts/2025-06-01 Portfolio sync.vtt', "
-                      "'projects/_portfolio/_Archive/transcripts/2025-06-01 Portfolio sync.vtt'), "
+                      "'projects/_portfolio/99 Archive/transcripts/2025-06-01 Portfolio sync.vtt'), "
                       "('projects/_portfolio/minutes/2025-06-01 Portfolio sync.md', "
-                      f"'projects/{self.abc.name}/_Archive/minutes/2025-06-01 Portfolio sync.md')]]))")
-        self.assertTrue(all(bad), bad)                                # the portfolio: its minutes, into its own _Archive only
+                      f"'projects/{self.abc.name}/99 Archive/minutes/2025-06-01 Portfolio sync.md')]]))")
+        self.assertTrue(all(bad), bad)                                # the portfolio: its minutes, into its own 99 Archive only
         self.stage_and_apply()
-        self.assertTrue((pf / "_Archive/minutes/2025-06-01 Portfolio sync.md").is_file())
+        self.assertTrue((pf / "99 Archive/minutes/2025-06-01 Portfolio sync.md").is_file())
         stored = "projects/_portfolio/minutes/2025-06-01 Portfolio sync.md"
         o = self.py(f"import paths, reach, tracker; print(json.dumps([str(paths.resolve({stored!r})), "
                     f"reach.classify({stored!r}, 'read')[0], [str(f) for f, _, _ in tracker.index_files()]]))")
-        self.assertEqual(o[0], str((pf / "_Archive/minutes/2025-06-01 Portfolio sync.md").resolve()))
+        self.assertEqual(o[0], str((pf / "99 Archive/minutes/2025-06-01 Portfolio sync.md").resolve()))
         self.assertEqual(o[1], "never")
-        self.assertFalse(any("/_Archive/" in f for f in o[2]))
+        self.assertFalse(any("/99 Archive/" in f for f in o[2]))
         self.run_at("undo", script="tracker.py")
         self.assertTrue((pf / "minutes/2025-06-01 Portfolio sync.md").is_file())
-        self.assertFalse((pf / "_Archive").exists())
+        self.assertFalse((pf / "99 Archive").exists())
 
 
 class ReportRoute(unittest.TestCase):
@@ -249,12 +249,12 @@ class ReportRoute(unittest.TestCase):
         done = self.post("/api/edit/approve", {"card": card["card"]})
         self.assertTrue(done["ok"], done)
         for f in self.due:
-            self.assertTrue((self.abc / "_Archive" / f).is_file(), f)
+            self.assertTrue((self.abc / "99 Archive" / f).is_file(), f)
         self.assertIn(route.rsplit("/", 1)[1], [f["id"] for f in self.post("/api/health/fixes", {})["fixes"]])
 
 
 class OneDriveReports(OneDriveCase):
-    """The projects in a OneDrive-style folder: the mapped folders, each kept below the engagement's own _Archive."""
+    """The projects in a OneDrive-style folder: the mapped folders, each kept below the engagement's own 99 Archive."""
 
     def test_mapped_folders_move_into_the_engagements_own_archive(self):
         files = ["02 Meetings/Minutes/2025-06-01 Steering.docx", "04 Reporting/Weekly/2025-06-06 Weekly report - Example Programme.docx",
@@ -277,17 +277,17 @@ class OneDriveReports(OneDriveCase):
         finally:
             os.environ.pop("CREAITE_NOW", None)
         for x in files:
-            self.assertTrue(self.eng("ABC", "_Archive", x).is_file(), x)
+            self.assertTrue(self.eng("ABC", "99 Archive", x).is_file(), x)
             self.assertFalse(self.eng("ABC", x).exists(), x)
         for x in kept:
             self.assertTrue(self.eng("ABC", x).is_file(), x)
         stored = "projects/Example Programme/" + files[1]
         o = self.py(f"import paths, reach; print(json.dumps([str(paths.resolve({stored!r})), reach.classify({stored!r}, 'read')[0]]))")
-        self.assertEqual(o, [str(self.eng("ABC", "_Archive", files[1])), "never"])
-        self.assertTrue((self.root / "_Portfolio/_Archive" / portfolio).is_file())        # the portfolio's own _Archive
+        self.assertEqual(o, [str(self.eng("ABC", "99 Archive", files[1])), "never"])
+        self.assertTrue((self.root / "_Portfolio/99 Archive" / portfolio).is_file())        # the portfolio's own 99 Archive
         stored = "projects/_portfolio/" + portfolio
         o = self.py(f"import paths, reach; print(json.dumps([str(paths.resolve({stored!r})), reach.classify({stored!r}, 'read')[0]]))")
-        self.assertEqual(o, [str(self.root / "_Portfolio/_Archive" / portfolio), "never"])
+        self.assertEqual(o, [str(self.root / "_Portfolio/99 Archive" / portfolio), "never"])
         self.v.run("undo")
         self.assertTrue((self.root / "_Portfolio" / portfolio).is_file())
         for x in files:

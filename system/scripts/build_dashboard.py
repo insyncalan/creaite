@@ -477,8 +477,9 @@ def files(folders, documents=False):
 
 
 def archived_files(folders):
-    """BL-331: the reports and minutes BL-03 archived that are still in their _Archive, for the listed projects and the portfolio
-    (archive.archived_files: names, sizes and dates from the apply records; nothing in _Archive is read or indexed)."""
+    """BL-331: the reports and minutes BL-03 archived that are still in their 99 Archive (or _Archive, zz Archive), for the listed
+    projects and the portfolio (archive.archived_files: names, sizes and dates from the apply records; nothing in an archive
+    folder is read or indexed)."""
     import archive
     return [f for f in archive.archived_files() if f["p"] in folders or f["p"] == "_portfolio"]
 
@@ -711,7 +712,7 @@ def review_queue(con):
     overlap = float(paths.load_settings().get("review", {}).get("duplicate_overlap", 0.6) or 0.6)   # BL-133 stage B
     for p, data in review.proposals():
         age = review.age(data)
-        aged = {"age": age, "stale": age > limit}
+        aged = {"age": age, "stale": age > limit, "made": data.get("created") or ""}   # #245: made is part of Today's dismissed id
         for key, field, label in review.BLOCKS:
             b = data.get(key)
             if b and not b.get("applied") and b.get(field, "pending") == "pending":

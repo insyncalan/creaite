@@ -2834,3 +2834,20 @@ Plan: `dev/sprints/v210-reporting.md`; contract: `dev/sprints/v210-contract.md` 
 - `system/templates/help.md` (and the two guides): the Review and Intake task and reference sections now describe the one page (keys, Process, Add files, Later and Not needed, Approve routine, the reject menu); the guides are regenerated.
 - **Hand checks for 2.6.0** are `dev/handchecks/v2.6.0.md` and `dev/tests/handchecks/test_v260.py` on `handchecks-v260` (not touched here). The screenshot sheet comes from `just handchecks v2.6.0`; Board, Two panes, dark and both palettes are judgement on it, and the palette contrast is `test_intake_review_themes`.
 - **Not on the Intake page (to confirm):** see the list in `dashboard-spec.md`.
+
+## #264: Intake's Process as its own run kind (v2.5.3)
+
+Pressing Process (Upload files, and Calendar import's Process selected after its load) starts the run kind `process`
+(`POST /api/intake/process`, token-checked, under `START_LOCK`), not an ask creaite chat. The server checks the files
+(`intake_process.validate_request`: directly in `inbox/`, plain files, at most 20, none already in Review); the guard hook's mode
+`process` (`reach.py`) lets the run read, run creaite's read commands and the minutes steps, and stage proposals for those files
+only; it refuses the record, `propose.py stage`, `filechange.py` and any write but its own `.json` in `system/staging/drafts/`.
+Questions go on the row ("Needs you"); ask creaite opens only when Alan asks. Usage kind `process`.
+
+- Design, contract and the first review: `dev/proposals/intake-process/README.md` (`reach.diff`, `live_server.diff`, applied).
+- R1 (a run's own files by its record, never by time): `r1-reach.diff` there, applied.
+- Round 2 (Team Cap's review of R1: M2 claims only after every check and a file's print as first seen; L1 a lock on
+  `run.json`; L2 the queue starts under `START_LOCK`; L3 reading only the vault and the projects; L4 the record only for the
+  hook's own run; the rules paragraph): `dev/proposals/intake-process-round2/`, for Jarvis to apply.
+- Tests: `dev/tests/test_intake_process.py`, `test_intake_process_round2.py`, `test_intake_process_ui.py`, `test_transcripts_ui.py`.
+- Follow-ups: Refresh as a direct job (#265, done); Re-extract in the Minutes view still opens ask creaite (#268, for 2.6).

@@ -82,7 +82,7 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
     return `<${tag} aria-label="${esc(srText(l)+(ex?": "+ex:""))}"${rest}>`; }); }
 /* ===== BL-09: Archive and Restore in Settings › Projects =====
    Each project has Archive (Restore for an archived one, listed with Show archived). The live server builds the change with
-   propose.py (the folder to _Archive, the register row to Retired codes, the project and its items marked archived) and puts it on
+   propose.py (the folder to 99 Archive, the register row to Retired codes, the project and its items marked archived) and puts it on
    the approval card in ask creaite; Approve applies it through tracker.py apply, and Undo reverses it. A project with open items
    lists them first: Cancel them all and archive, or Stop. */
 const PSTATE={active:"Active",closed:"Closed",archived:"Archived"};

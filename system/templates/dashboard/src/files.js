@@ -6,13 +6,13 @@ import { howLink } from "./helpscreen.js";
 import { FILES, fpName, P, pName, WEEKSTART } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, paintIcons, putHTML, raw } from "./core/dom.js";
 import { D, DDATE, fd, S, store, toIso } from "./core/page.js";
-import { api, oneLine, reloadData, renderBadge, SERVED, snack, viaServer } from "./core/server.js";
+import { api, OLDSERVER, oneLine, reloadData, renderBadge, SERVED, snack, undoApply, viaServer } from "./core/server.js";
 import { irModelBehind, irTick } from "./stores/intakeReview.js";   /* #232-C */
 import { shared } from "./core/state.js";
 import { pendingEdit } from "./ask.js";
 import { renderToday } from "./today.js";
 /* ======================= Files ======================= */
-shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.get("creaite-files-open",[]));
+shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.list("creaite-files-open"));
 /* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
 export const farch=()=>D.files_archived||[];
 export const FNAME=Object.assign({_portfolio:"projects/_portfolio",inbox:"inbox"},D.folders);
@@ -32,7 +32,7 @@ export function renderFiles(){ const cnt=f=>FILES.filter(f).length; const pr=(b)
   if(shared.FSEL.quick==="week") L=FILES.filter(f=>(f.f==="minutes"||f.f==="transcripts")&&f.date>=WEEKSTART);
   if(shared.FSEL.quick==="archived") L=farch().slice();   /* BL-331 */
   L=L.filter(f=>(t==="All"||f.type===t)&&(!fr||f.date>=fr)&&(!to||f.date<=to)).sort((a,b)=>(b.date||"0").localeCompare(a.date||"0"));
-  putHTML($("#filesTbl"),html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L.length?L.map(f=>html`<tr data-fp="${f.at||f.path}"${f.at?html` data-hp="${f.path}"`:""} class="${shared.FSELFILE===(f.at||f.path)?"sel":""}"><td><span class="ftype">${f.type}</span><a href="#" data-openfile="${f.at||f.path}">${f.n}</a>${FNEW.has(f.path)&&html` <span class="tag new">New</span>`}${f.archived&&html` <span class="tag">Archived</span>`}</td><td class="x">${f.p==="inbox"?"Intake":`${fpName(f.p)} › ${f.f}${f.sub?" › "+f.sub:""}`}</td><td style="white-space:nowrap">${f.date?fd(f.date):"—"}</td><td class="x">${f.kb>=1000?(f.kb/1000).toFixed(1)+" MB":f.kb+" KB"}</td><td style="text-align:right">${f.archived?html`<button class="mini" data-moveback="${f.at||f.path}" aria-label="Move back ${f.n}">Move back</button>`:raw(ibtn("folderopen","Open folder",html`data-openfile="${f.path.slice(0,f.path.lastIndexOf("/")+1)}"`,"sm"))}</td></tr>`):html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick]&&ffCount()===0?EMPTY[shared.FSEL.quick]:"No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`); filesStatus(L.length); filterChrome();
+  putHTML($("#filesTbl"),html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L.length?L.map(f=>html`<tr data-fp="${f.at||f.path}"${f.at?html` data-hp="${f.path}"`:""} class="${shared.FSELFILE===(f.at||f.path)?"sel":""}"><td><span class="ftype">${f.type}</span><a href="#" data-openfile="${f.at||f.path}">${f.n}</a>${FNEW.has(f.path)&&html` <span class="tag new">New</span>`}${f.archived&&html` <span class="tag">Archived</span>`}</td><td class="x">${f.p==="inbox"?"Intake":`${fpName(f.p)} › ${f.f}${f.sub?" › "+f.sub:""}`}</td><td style="white-space:nowrap">${f.date?fd(f.date):"—"}</td><td class="x">${f.kb>=1000?(f.kb/1000).toFixed(1)+" MB":f.kb+" KB"}</td><td style="text-align:right">${f.archived?html`<button class="mini" data-moveback="${f.at||f.path}" data-mbkind="${f.f}" aria-label="Move back ${f.n}">Move back</button>`:raw(ibtn("folderopen","Open folder",html`data-openfile="${f.path.slice(0,f.path.lastIndexOf("/")+1)}"`,"sm"))}</td></tr>`):html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick]&&ffCount()===0?EMPTY[shared.FSEL.quick]:"No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`); filesStatus(L.length); filterChrome();
 }
 /* ===== #192: the Filter (Work's funnel icon button, on the pills' line): Type and two dates inside the chosen view and folder =====
    Dates are held YYYY-MM-DD and shown DD-MM-YYYY; the From and To boxes use the app's popup calendar (data-cal) as Work's due dates do. */
@@ -104,9 +104,15 @@ export function filesOpened(){ if(FSEEN){ FNEW.clear(); FSEEN=new Set(FILES.map(
 export function bootFiles0069(){
 window.addEventListener("focus",()=>{ if(shared.VIEW==="files"||shared.VIEW==="intake-review") refreshFiles(false); });
 $("#filesRefresh").onclick=()=>{ refreshFiles(true); if(!SERVED) snack("Refresh needs the live server; this page shows the file list of the last build"); };
-$("#filesTbl").addEventListener("click",e=>{ const mb=e.target.closest("[data-moveback]"); if(mb){ moveBack(mb.dataset.moveback); return; } const tr=e.target.closest("tr[data-fp]"); if(!tr||e.target.closest("a,button")) return; shared.FSELFILE=tr.dataset.fp; $$("#filesTbl tr[data-fp]").forEach(r=>r.classList.toggle("sel",r===tr)); });
+$("#filesTbl").addEventListener("click",e=>{ const mb=e.target.closest("[data-moveback]"); if(mb){ moveBack(mb.dataset.moveback,mb.dataset.mbkind); return; } const tr=e.target.closest("tr[data-fp]"); if(!tr||e.target.closest("a,button")) return; shared.FSELFILE=tr.dataset.fp; $$("#filesTbl tr[data-fp]").forEach(r=>r.classList.toggle("sel",r===tr)); });
 }
 /* BL-331: Move back one archived report or minutes. The server builds the move (only a file the archive moved, back to its own
-   place, never onto a file that is there) and puts it on the approval card; Approve applies it through tracker.py apply. */
-export async function moveBack(path){ if(!viaServer()){ snack("Moving a file back needs the live server"); return; }
+   place, never onto a file that is there) and puts it on the approval card; Approve applies it through tracker.py apply.
+   #255 (Alan, 20-10-2026): a deleted note's Move back (kind "notes") is the click itself: the server moves it at once
+   (/api/files/move-back/now, the same checks and the same one-time approval inside the server, no card) and the toast has Undo.
+   A server from before #255 doesn't know that route: the note's Move back then goes on the card as before. */
+export async function moveBack(path,kind){ if(!viaServer()){ snack("Moving a file back needs the live server"); return; }
+  if(kind==="notes"){ const n=await api("/api/files/move-back/now",{path});
+    if(n.ok&&n.moved){ await refreshFiles(true); snack(oneLine(n.message),async()=>{ await undoApply(n.apply_id); await refreshFiles(true); }); return; }
+    if(n.message!==OLDSERVER){ snack(oneLine(n.message||"It couldn't be moved back")); return; } }   /* an older server: on to the card */
   const r=await api("/api/files/move-back",{path}); snack(oneLine(r.message||(r.ok?"On the approval card":"It couldn't be prepared"))); if(r.ok) await pendingEdit(); }

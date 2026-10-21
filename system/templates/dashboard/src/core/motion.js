@@ -126,7 +126,7 @@ export function mDots(page){ if(!page) return; if(!(page in MLVAT)) MLVAT[page]=
   if(!shared.MNEWIO&&"IntersectionObserver" in window) shared.MNEWIO=new IntersectionObserver(es=>es.forEach(e=>{ const d=e.target; clearTimeout(d._mt); if(e.isIntersecting) d._mt=setTimeout(()=>mDotGo(d),2000); }),{threshold:1});
   $$(".mnew").forEach(d=>{ if(!d._mo){ d._mo=1; shared.MNEWIO&&shared.MNEWIO.observe(d); } }); }
 export function mDotGo(d){ if(!d||!d.isConnected) return; MNEWGONE.add(d.dataset.mk); shared.MNEWIO&&shared.MNEWIO.unobserve(d); const a=anim(d,[{opacity:1,transform:"none"},{opacity:0,transform:"scale(.2)"}],{duration:600,fill:"forwards"}); setTimeout(()=>d.remove(),reduced()?0:600*mK()+40); }
-export function mLeave(page){ if(!page) return; const cur=store.get("creaite-lastviewed",{}); cur[page]=`${TODAY} ${new Date().toTimeString().slice(0,5)}`; store.set("creaite-lastviewed",cur); }   /* read again first: another tab may have written */
+export function mLeave(page){ if(!page) return; const cur=store.obj("creaite-lastviewed"); cur[page]=`${TODAY} ${new Date().toTimeString().slice(0,5)}`; store.set("creaite-lastviewed",cur); }   /* read again first: another tab may have written */
 /* ===== end BL-136 hooks ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0156's place) */
 export function bootMotionHooks(){

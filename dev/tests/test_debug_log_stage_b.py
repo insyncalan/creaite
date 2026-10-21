@@ -175,21 +175,23 @@ class Sweep(Staged):
 
 class Minutes(Staged):
     def test_stage_logs_the_key_kind_counts_and_skips(self):
-        spec = self.root / "system" / "staging" / "meeting.json"
+        spec = self.root / "system" / "staging" / "drafts" / "meeting.json"      # #269: a meeting spec is read only from drafts
         values = {"project": "ABC", "description": "CANARY-MINUTES action", "owner": "Alan Carter", "due_date": "2026-10-20"}
-        spec.write_text(json.dumps({"date": "2026-10-01", "title": "CANARY-TITLE steering", "projects": ["ABC"], "items": [
+        body = json.dumps({"date": "2026-10-01", "title": "CANARY-TITLE steering", "projects": ["ABC"], "items": [
             {"table": "actions", "values": values, "match": "strong"},
-            {"table": "actions", "values": {**values, "project": "ZZZ"}, "match": "strong"}]}))
+            {"table": "actions", "values": {**values, "project": "ZZZ"}, "match": "strong"}]})
+        spec.write_text(body)
         self.run_script("minutes.py", "stage", str(spec))
         self.assertLogged(r"INFO  minutes\s+staged proposed-.*\.json: fp key, 2026-10-01, projects ABC, 1 item\(s\) \(actions 1\), "
                           r"notes: other project 1")
         self.assertNoCanary()
         self.v.run("apply")
+        spec.write_text(body)                                   # staged specs are deleted (BL-118): the same meeting again
         self.run_script("minutes.py", "stage", str(spec), ok=False)
         self.assertNoCanary()
 
     def test_a_meeting_with_no_project_is_logged_without_its_title(self):
-        spec = self.root / "system" / "staging" / "meeting.json"
+        spec = self.root / "system" / "staging" / "drafts" / "meeting.json"
         spec.write_text(json.dumps({"date": "2026-10-01", "title": "CANARY-NOPROJECT", "projects": [], "items": []}))
         self.run_script("minutes.py", "stage", str(spec), ok=False)
         self.assertLogged(r"INFO  minutes\s+stage skipped: no project matched \(fp key, 2026-10-01\)")

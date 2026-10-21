@@ -74,11 +74,11 @@ class IconSet(LiveBrowserCase):
         self.hover("#themeBtn")
         b.pump(0.1)
         self.assertIsNone(self.tip())                                        # not at once on hover
-        b.pump(0.35)
-        self.assertIn("theme", self.tip())                                   # after 250ms
+        b.wait("(()=>{ const t=document.getElementById('tip'); return !!(t&&t.classList.contains('on')); })()", 5)    # #152f: after 250ms, drawn a frame later
+        self.assertIn("theme", self.tip())
         self.assertEqual(b.eval("document.getElementById('tip').getAttribute('role')"), "tooltip")
         self.away()
-        b.pump(0.3)
+        b.wait("(()=>{ const t=document.getElementById('tip'); return !(t&&t.classList.contains('on')); })()", 5)
         self.assertIsNone(self.tip())
         b.eval("document.getElementById('themeBtn').focus()")               # keyboard focus: at once
         b.key("Tab", 8)
