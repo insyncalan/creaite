@@ -4133,9 +4133,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .crx-wait,.crx-err{padding:16px}
 
 /* #281: the Draft email preview is resizable, once for every entry point (the dialog's #dePrev and the peek pane's #chMail): drag the
-   grip on the bottom edge; the text and table reflow. Starts at 46vh, tall enough for the table. */
-#dePrev,#chMail{resize:vertical;box-sizing:border-box;height:46vh;min-height:8rem;max-height:90vh}
-#dePrev:focus-visible,#chMail:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+   grip in its bottom-right corner; the text and table reflow. It starts fitted to the email, at most 28vh so the grip shows without
+   scrolling the popup; once dragged (an inline height) it may grow to 90vh. A press that starts on the grip and ends on the scrim
+   never closes the popup (Dialog.jsx). The size is kept while the popup is redrawn (drafts.js drawDraftEmail). */
+#dePrev,#chMail{resize:vertical;box-sizing:border-box;height:auto;min-height:8rem;max-height:90vh}
+#dePrev:not([style*="height"]),#chMail:not([style*="height"]){max-height:28vh}
+#dePrev:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -9201,9 +9204,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     const typed2 = () => {
       if (ref.current) TYPED.set(ref.current, true);
     };
+    const pressedOn = A2(
+      /** @type {EventTarget | null} */
+      null
+    );
+    const press = (e4) => {
+      pressedOn.current = e4.target;
+    };
     const scrim = (e4) => {
-      const d5 = ref.current;
-      if (!d5 || e4.target !== d5) return;
+      const d5 = ref.current, from = pressedOn.current;
+      pressedOn.current = null;
+      if (!d5 || e4.target !== d5 || from !== d5) return;
       const busy2 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
       if (busy2) return;
       const r4 = d5.getBoundingClientRect();
@@ -9227,6 +9238,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         onKeyDown: cmdKey ? (e4) => {
           if (ref.current) cmdEnter(e4, ref.current);
         } : void 0,
+        onMouseDown: press,
         onClick: scrim,
         onInput: typed2,
         children
@@ -51019,6 +51031,7 @@ ${pre}**Current state title:** ${title}`);
   function drawDraftEmail(first) {
     const em2 = deBuild(), codes = [...new Set(shared.DE.items.map((i5) => i5.p))].sort();
     if (first) {
+      const keepH = $("#dePrev")?.style.height || "";
       dePrevDrop();
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
@@ -51037,6 +51050,7 @@ ${pre}**Current state title:** ${title}`);
       $("#deDone").onclick = () => $("#deDlg").close();
       if (shared.DE.includeUpdate && $("#deUpd")) $("#deUpd").checked = true;
       if (shared.DE.replyBy) $("#deReply").value = fd(shared.DE.replyBy);
+      if (keepH) $("#dePrev").style.height = keepH;
     }
     dePrevPut(em2.html);
     shared.DE.edited = false;
