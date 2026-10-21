@@ -4727,6 +4727,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     P: () => P4,
     P1_DAYS: () => P1_DAYS,
     PAD_MM: () => PAD_MM,
+    PAGE_KEYS: () => PAGE_KEYS,
     PANE: () => PANE,
     PANELF: () => PANELF,
     PARTNERS_MAX: () => PARTNERS_MAX,
@@ -4759,6 +4760,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PKTABS: () => PKTABS,
     PLAINEV: () => PLAINEV,
     POLISH_TONES: () => POLISH_TONES,
+    POPUPS: () => POPUPS,
     PREPN: () => PREPN,
     PREPSAVED: () => PREPSAVED,
     PREP_KEY: () => PREP_KEY,
@@ -6552,6 +6554,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
+    popupOpen: () => popupOpen,
     portfolioTable: () => portfolioTable,
     prepDated: () => prepDated,
     prepDlg: () => prepDlg,
@@ -33989,7 +33992,7 @@ ${s5}`;
         menuLabel: "Filter people",
         count: n4,
         on: !!n4,
-        key: "F",
+        key: "Shift+F",
         listLabel: "Filters",
         headId: `${ids}Fph`,
         field: s5.pk,
@@ -35176,6 +35179,875 @@ ${s5}`;
     addEventListener("pagehide", () => {
       if (shared.PDT) pdWrite();
     });
+  }
+
+  // components/sidebar/RailIcon.jsx
+  var RAIL_ICONS = {
+    today: [["circle", { cx: "12", cy: "12", r: "4" }], ["path", { d: "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" }]],
+    inbox: [["path", { d: "M4 13l2.5-8h11L20 13v6H4z" }], ["path", { d: "M4 13h5l1 2h4l1-2h5" }]],
+    /* #232 Q8: the locked mockup's tray */
+    projects: [["path", { d: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z" }]],
+    work: [["path", { d: "M8 6h12M8 12h12M8 18h12" }], ["path", { d: "m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2" }]],
+    people: [["circle", { cx: "9", cy: "8", r: "3.2" }], ["path", { d: "M3.5 19v-1a4.5 4.5 0 0 1 4.5-4.5h2a4.5 4.5 0 0 1 4.5 4.5v1" }], ["path", { d: "M16 5.2a3.2 3.2 0 0 1 0 5.6M18.5 13.8a4.5 4.5 0 0 1 2 3.7V19" }]],
+    review: [["path", { d: "M4 5h16v11H8l-4 4z" }], ["path", { d: "m9 10.5 2 2 4-4" }]],
+    activity: [["path", { d: "M12 7v5l3 2" }], ["circle", { cx: "12", cy: "12", r: "8.5" }]],
+    filetext: [["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" }], ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8" }]],
+    folder: [["path", { d: "M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }]],
+    gear: [["path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }], ["circle", { cx: "12", cy: "12", r: "3" }]],
+    more: [["circle", { cx: "5", cy: "12", r: "1" }], ["circle", { cx: "12", cy: "12", r: "1" }], ["circle", { cx: "19", cy: "12", r: "1" }]],
+    pulse: [["path", { d: "M3 12h4l2.5-6 4 12 2.5-6H21" }]],
+    help: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" }]],
+    sliders: [["path", { d: "M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" }]],
+    panel: [["rect", { x: "3", y: "4", width: "18", height: "16", rx: "3" }], ["path", { d: "M9 4v16" }]],
+    grip: [["circle", { cx: "9", cy: "6", r: "1" }], ["circle", { cx: "15", cy: "6", r: "1" }], ["circle", { cx: "9", cy: "12", r: "1" }], ["circle", { cx: "15", cy: "12", r: "1" }], ["circle", { cx: "9", cy: "18", r: "1" }], ["circle", { cx: "15", cy: "18", r: "1" }]],
+    up: [["path", { d: "m18 15-6-6-6 6" }]],
+    down: [["path", { d: "m6 9 6 6 6-6" }]],
+    right: [["path", { d: "M5 12h14M13 6l6 6-6 6" }]],
+    left: [["path", { d: "M19 12H5M11 6l-6 6 6 6" }]]
+  };
+  function RailIcon({ name }) {
+    return /* @__PURE__ */ u4(
+      "svg",
+      {
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "1.8",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "aria-hidden": "true",
+        "data-icn": name,
+        children: (RAIL_ICONS[name] || []).map(([tag, attrs], i5) => tag === "circle" ? /* @__PURE__ */ u4("circle", { ...attrs }, i5) : tag === "rect" ? /* @__PURE__ */ u4("rect", { ...attrs }, i5) : /* @__PURE__ */ u4("path", { ...attrs }, i5))
+      }
+    );
+  }
+
+  // components/sidebar/CustomiseSidebar.jsx
+  var draftOf = (c5) => ({ top: [...c5.order], more: [...c5.more], icons: c5.display === "icons", labels: railLabelsOn.value, size: railIconSize.value });
+  var same = (a5, b5) => a5.top.join() === b5.top.join() && a5.more.join() === b5.more.join() && a5.icons === b5.icons && a5.labels === b5.labels && a5.size === b5.size;
+  function placed(d5, id2, zone, at2) {
+    const top = d5.top.filter((x5) => x5 !== id2), more = d5.more.filter((x5) => x5 !== id2), L3 = zone === "top" ? top : more;
+    L3.splice(Math.max(zone === "top" ? 1 : 0, Math.min(at2, L3.length)), 0, id2);
+    return { ...d5, top, more };
+  }
+  function CustomiseSidebar({ onSave, onClose }) {
+    const open2 = railCustOpen.value;
+    const zones = A2(
+      /** @type {Record<string, HTMLUListElement | null>} */
+      {}
+    );
+    const focusNext = A2(
+      /** @type {[string, string] | null} */
+      null
+    );
+    const [d5, setD] = d2(() => draftOf(railCfg.value));
+    const [said2, setSaid] = d2("");
+    const [drag, setDrag] = d2(
+      /** @type {string | null} */
+      null
+    );
+    const dRef = A2(d5);
+    dRef.current = d5;
+    _2(() => {
+      if (open2) {
+        setD(draftOf(railCfg.value));
+        setSaid("");
+      }
+    }, [open2]);
+    _2(() => {
+      const f5 = focusNext.current, box = document.getElementById("railCust");
+      if (!f5 || !box) return;
+      focusNext.current = null;
+      const li2 = (
+        /** @type {HTMLElement | null} */
+        box.querySelector(`li[data-rid="${f5[0]}"]`)
+      );
+      const b5 = (
+        /** @type {HTMLButtonElement | null} */
+        li2 && li2.querySelector(`[data-mv="${f5[1]}"]`)
+      );
+      (b5 && !b5.disabled ? b5 : li2)?.focus();
+    });
+    h2(() => {
+      if (!drag) return;
+      const move = (e4) => {
+        const off = (k5) => {
+          const r4 = zones.current[k5]?.getBoundingClientRect();
+          return r4 ? Math.abs(e4.clientX - (r4.left + r4.width / 2)) : Infinity;
+        };
+        const zone = off("top") <= off("more") ? "top" : "more";
+        const rows2 = [...zones.current[zone]?.querySelectorAll("li[data-rid]") || []].filter((li2) => (
+          /** @type {HTMLElement} */
+          li2.dataset.rid !== drag
+        ));
+        let at2 = rows2.findIndex((li2) => {
+          const r4 = li2.getBoundingClientRect();
+          return e4.clientY < r4.top + r4.height / 2;
+        });
+        if (at2 < 0) at2 = rows2.length;
+        const next = placed(dRef.current, drag, zone, at2);
+        if (!same(next, dRef.current)) setD(next);
+      };
+      const up2 = () => {
+        const id2 = drag;
+        setDrag(null);
+        setSaid(`${railItem(id2).title} moved`);
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up2);
+      return () => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up2);
+      };
+    }, [drag]);
+    const mv = (id2, how) => {
+      const zone = d5.top.includes(id2) ? "top" : "more", L3 = zone === "top" ? d5.top : d5.more, i5 = L3.indexOf(id2);
+      if (id2 === "today") return;
+      if (how === "swap") {
+        const to2 = zone === "top" ? "more" : "top";
+        setD(placed(d5, id2, to2, (to2 === "top" ? d5.top : d5.more).length));
+        setSaid(`${railItem(id2).title} moved to ${to2 === "top" ? "the sidebar" : "More"}`);
+      } else {
+        const j5 = i5 + (how === "up" ? -1 : 1);
+        if (j5 < (zone === "top" ? 1 : 0) || j5 >= L3.length) return;
+        setD(placed(d5, id2, zone, j5));
+        setSaid(`${railItem(id2).title} moved ${how}, ${j5 + 1} of ${L3.length}`);
+      }
+      focusNext.current = [id2, how];
+    };
+    const rowKeys2 = (e4) => {
+      const li2 = (
+        /** @type {HTMLElement | null} */
+        /** @type {Element} */
+        e4.target.closest("li[data-rid]")
+      );
+      if (!li2 || !e4.altKey) return;
+      const id2 = li2.dataset.rid, inTop = d5.top.includes(id2);
+      const how = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: inTop ? null : "swap", ArrowRight: inTop ? "swap" : null }[e4.key];
+      if (!how) return;
+      e4.preventDefault();
+      mv(
+        id2,
+        /** @type {"up"|"down"|"swap"} */
+        how
+      );
+    };
+    const done = () => {
+      onSave({ order: d5.top, more: d5.more, hidden: [], display: d5.icons ? "icons" : "titles" }, d5.labels, d5.size);
+      closeDialog("railCust");
+    };
+    const shut = () => {
+      const el2 = (
+        /** @type {HTMLDialogElement | null} */
+        document.getElementById("railCust")
+      );
+      if (el2 && el2.open) el2.close();
+      else onClose();
+    };
+    const row2 = (id2, zone, i5, n4) => {
+      const it2 = railItem(id2), fixed = id2 === "today", to2 = zone === "top" ? "More" : "the sidebar";
+      return /* @__PURE__ */ u4("li", { "data-rid": id2, tabindex: -1, class: `rpi${drag === id2 ? " dragging" : ""}`, "aria-label": it2.title, children: [
+        /* @__PURE__ */ u4(
+          "span",
+          {
+            class: "grip",
+            "data-rgrip": true,
+            "aria-hidden": "true",
+            hidden: fixed,
+            onPointerDown: (e4) => {
+              if (e4.button !== 0) return;
+              e4.preventDefault();
+              try {
+                e4.currentTarget.setPointerCapture(e4.pointerId);
+              } catch (x5) {
+              }
+              setDrag(id2);
+            },
+            children: /* @__PURE__ */ u4(RailIcon, { name: "grip" })
+          }
+        ),
+        /* @__PURE__ */ u4("span", { class: "rpn", children: [
+          /* @__PURE__ */ u4(RailIcon, { name: it2.icon }),
+          /* @__PURE__ */ u4("span", { class: "rpt", children: [
+            /* @__PURE__ */ u4("span", { children: it2.title }),
+            fixed ? /* @__PURE__ */ u4("span", { class: "why", children: "Always first" }) : null
+          ] })
+        ] }),
+        fixed ? null : /* @__PURE__ */ u4(S2, { children: [
+          /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              class: "ib sm",
+              "data-mv": "up",
+              "aria-label": `Move ${it2.title} up`,
+              "data-tip": `Move ${it2.title} up`,
+              disabled: i5 <= (zone === "top" ? 1 : 0),
+              onClick: () => mv(id2, "up"),
+              children: /* @__PURE__ */ u4(RailIcon, { name: "up" })
+            }
+          ),
+          /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              class: "ib sm",
+              "data-mv": "down",
+              "aria-label": `Move ${it2.title} down`,
+              "data-tip": `Move ${it2.title} down`,
+              disabled: i5 >= n4 - 1,
+              onClick: () => mv(id2, "down"),
+              children: /* @__PURE__ */ u4(RailIcon, { name: "down" })
+            }
+          ),
+          /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              class: "ib sm",
+              "data-mv": "swap",
+              "aria-label": `Move ${it2.title} to ${to2}`,
+              "data-tip": `Move to ${to2}`,
+              onClick: () => mv(id2, "swap"),
+              children: /* @__PURE__ */ u4(RailIcon, { name: zone === "top" ? "right" : "left" })
+            }
+          )
+        ] })
+      ] }, id2);
+    };
+    return /* @__PURE__ */ u4(
+      Dialog,
+      {
+        open: open2,
+        onClose: shut,
+        id: "railCust",
+        labelledBy: "railCustH",
+        describedBy: "railCustSub",
+        dirty: !same(d5, draftOf(railCfg.value)),
+        children: [
+          /* @__PURE__ */ u4("h2", { id: "railCustH", children: "Customise sidebar" }),
+          /* @__PURE__ */ u4("p", { class: "sub", id: "railCustSub", children: "Drag a handle between the two lists, or use the arrows (Alt with an arrow key on a row). Today always comes first; Settings can live in either." }),
+          /* @__PURE__ */ u4("div", { class: "rccols", onKeyDown: rowKeys2, children: [
+            /* @__PURE__ */ u4("div", { children: [
+              /* @__PURE__ */ u4("h3", { id: "railCustTop", children: "In the sidebar" }),
+              /* @__PURE__ */ u4("ul", { "aria-labelledby": "railCustTop", "data-zone": "top", ref: (el2) => {
+                zones.current.top = el2;
+              }, children: d5.top.map((id2, i5) => row2(id2, "top", i5, d5.top.length)) })
+            ] }),
+            /* @__PURE__ */ u4("div", { children: [
+              /* @__PURE__ */ u4("h3", { id: "railCustMore", children: "In More" }),
+              /* @__PURE__ */ u4("ul", { "aria-labelledby": "railCustMore", "data-zone": "more", ref: (el2) => {
+                zones.current.more = el2;
+              }, children: d5.more.map((id2, i5) => row2(id2, "more", i5, d5.more.length)) }),
+              d5.more.length ? null : /* @__PURE__ */ u4("p", { class: "sub rcempty", children: "Empty: More is hidden." })
+            ] })
+          ] }),
+          /* @__PURE__ */ u4("label", { class: "rcicons", children: [
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                type: "checkbox",
+                class: "switch",
+                role: "switch",
+                id: "railCustLabels",
+                checked: d5.labels && !d5.icons,
+                onChange: (e4) => {
+                  const on2 = (
+                    /** @type {HTMLInputElement} */
+                    e4.currentTarget.checked
+                  );
+                  setD({ ...d5, labels: on2, icons: on2 ? false : d5.icons });
+                }
+              }
+            ),
+            " Labels when collapsed"
+          ] }),
+          /* @__PURE__ */ u4("label", { class: "rcicons", children: [
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                type: "checkbox",
+                class: "switch",
+                role: "switch",
+                id: "railCustIcons",
+                checked: d5.icons,
+                onChange: (e4) => {
+                  const on2 = (
+                    /** @type {HTMLInputElement} */
+                    e4.currentTarget.checked
+                  );
+                  setD({ ...d5, icons: on2, labels: on2 ? false : d5.labels });
+                }
+              }
+            ),
+            " Icons only"
+          ] }),
+          /* @__PURE__ */ u4("div", { class: "rcsize", role: "group", "aria-labelledby": "railCustSizeH", children: [
+            /* @__PURE__ */ u4("h3", { id: "railCustSizeH", children: "Icon size" }),
+            /* @__PURE__ */ u4("div", { class: "rcszs", children: [["small", "Small"], ["medium", "Medium"], ["large", "Large"]].map(([k5, l6]) => /* @__PURE__ */ u4("button", { type: "button", class: "rcsz", "data-size": k5, "aria-pressed": d5.size === k5 ? "true" : "false", onClick: () => {
+              setD({ ...d5, size: k5 });
+              setSaid(`${l6} icons`);
+            }, children: [
+              /* @__PURE__ */ u4("span", { class: "rcszi", "aria-hidden": "true", children: /* @__PURE__ */ u4(RailIcon, { name: "today" }) }),
+              /* @__PURE__ */ u4("span", { children: l6 })
+            ] })) })
+          ] }),
+          /* @__PURE__ */ u4("p", { class: "vh", "aria-live": "polite", children: said2 }),
+          /* @__PURE__ */ u4("div", { class: "rcfoot", children: [
+            /* @__PURE__ */ u4(
+              "button",
+              {
+                type: "button",
+                class: "btn quiet",
+                id: "railCustReset",
+                onClick: () => {
+                  setD({ ...draftOf(RAIL_DEF), labels: true, size: "small" });
+                  setSaid("Back to the default sidebar");
+                },
+                children: "Reset to default"
+              }
+            ),
+            /* @__PURE__ */ u4("span", { class: "grow" }),
+            /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "railCustCancel", onClick: () => closeDialog("railCust"), children: "Cancel" }),
+            /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "railCustDone", onClick: done, children: "Done" })
+          ] })
+        ]
+      }
+    );
+  }
+
+  // components/StatusDot.jsx
+  function Dot({ status: status2, word, wordId, live, label, cls }) {
+    const c5 = [cls || "dot", status2 === "warn" || status2 === "bad" || status2 === "off" ? status2 : ""].filter(Boolean).join(" ");
+    const named = !!label;
+    const dot = /* @__PURE__ */ u4("span", { class: c5, role: named ? "img" : void 0, "aria-label": label, "data-tip": label, "aria-hidden": named ? void 0 : "true" });
+    if (wordId) return /* @__PURE__ */ u4(S2, { children: [
+      dot,
+      /* @__PURE__ */ u4("span", { id: wordId, "aria-live": live ? "polite" : void 0, children: word })
+    ] });
+    return /* @__PURE__ */ u4(S2, { children: [
+      dot,
+      word
+    ] });
+  }
+  function StatusDot(props) {
+    if (props.status) return /* @__PURE__ */ u4(Dot, { ...props });
+    const { health: health2 } = props, k5 = hk(health2);
+    return /* @__PURE__ */ u4("span", { class: `health h-${k5}`, children: [
+      /* @__PURE__ */ u4("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", children: HEALTH_SHAPES[k5].map(([tag, attrs]) => tag === "circle" ? /* @__PURE__ */ u4("circle", { ...attrs }) : /* @__PURE__ */ u4("path", { ...attrs })) }),
+      health2 || "Not set"
+    ] });
+  }
+  function statusDotNodes(props) {
+    const box = document.createElement("span");
+    R(/* @__PURE__ */ u4(StatusDot, { ...props }), box);
+    return [...box.childNodes];
+  }
+  function drawStatusDot(host2, props) {
+    R(/* @__PURE__ */ u4(StatusDot, { ...props }), host2);
+  }
+  function mountStatusDots(root2) {
+    if (!root2) return;
+    for (const ph2 of root2.querySelectorAll("span[data-statusdot]")) ph2.replaceWith(...statusDotNodes({ health: ph2.getAttribute("data-statusdot") || "" }));
+  }
+
+  // components/sidebar/RailButton.jsx
+  var attr = (el2, k5, v5) => {
+    if (v5 == null) el2.removeAttribute(k5);
+    else if (el2.getAttribute(k5) !== v5) el2.setAttribute(k5, v5);
+  };
+  var capCount = (n4) => n4 > 99 ? "99+" : String(n4);
+  function RailButton({ id: id2, inMenu, onGo, fly, onFly }) {
+    const it2 = railItem(id2), hasFly = !!fly && !inMenu;
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    );
+    const bd2 = A2(
+      /** @type {HTMLSpanElement | null} */
+      null
+    );
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const [open2, setOpen2] = d2(false);
+    const byPointer = A2(false), isOpen = A2(false);
+    isOpen.current = open2;
+    _2(() => j3(() => {
+      const b5 = btn.current;
+      if (!b5) return;
+      const c5 = railCounts.value[id2] || { n: 0, label: void 0 };
+      attr(b5, "aria-current", railView.value === id2 ? "page" : "false");
+      attr(b5, "aria-label", `${it2.title}${c5.n ? `, ${c5.n} waiting` : ""}`);
+      attr(b5, "data-tip", !inMenu && !hasFly && railMode.value === "icons" ? it2.title : void 0);
+      const s5 = bd2.current;
+      if (s5) {
+        const t47 = capCount(c5.n);
+        if (s5.textContent !== t47) s5.textContent = t47;
+        s5.style.display = c5.n ? "" : "none";
+        attr(s5, "aria-label", c5.label);
+      }
+    }), [id2, inMenu, hasFly]);
+    h2(() => {
+      const b5 = btn.current;
+      if (!hasFly || !b5) return;
+      return hoverAttach(b5, {
+        group: menuGroup,
+        focusOpens: false,
+        panel: () => box.current,
+        open: () => {
+          if (isOpen.current) return;
+          byPointer.current = true;
+          tipHide();
+          setOpen2(true);
+        },
+        close: () => setOpen2(false)
+      });
+    }, [hasFly]);
+    h2(() => j3(() => {
+      void railView.value;
+      if (isOpen.current) shut(false);
+    }), []);
+    function shut(back2) {
+      if (menuGroup.current === btn.current) menuGroup.close();
+      setOpen2(false);
+      if (back2) btn.current?.focus();
+    }
+    _2(() => {
+      const el2 = box.current, b5 = btn.current;
+      if (!open2 || !el2 || !b5) return;
+      const r4 = b5.getBoundingClientRect(), rail = b5.closest(".rail")?.getBoundingClientRect() || r4;
+      el2.style.left = `${Math.round(rail.right + 4)}px`;
+      el2.style.top = `${Math.round(Math.max(8, Math.min(r4.top - 4, innerHeight - el2.offsetHeight - 8)))}px`;
+    }, [open2, railMode.value]);
+    const key2 = (e4) => {
+      if (!hasFly || e4.key !== "ArrowRight" && e4.key !== "ArrowDown") return;
+      e4.preventDefault();
+      menuGroup.release(btn.current);
+      byPointer.current = false;
+      if (open2) menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
+      else setOpen2(true);
+    };
+    const items2 = open2 && fly ? fly() : [];
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "nv",
+          "data-v": id2,
+          role: inMenu ? "menuitem" : void 0,
+          ref: btn,
+          "aria-haspopup": hasFly ? "menu" : void 0,
+          "aria-expanded": hasFly ? open2 ? "true" : "false" : void 0,
+          "aria-controls": hasFly && open2 ? `railFly-${id2}` : void 0,
+          onKeyDown: hasFly ? key2 : void 0,
+          onClick: () => {
+            if (hasFly) {
+              menuGroup.release(btn.current);
+              shut(false);
+            }
+            onGo(id2);
+          },
+          children: [
+            /* @__PURE__ */ u4(RailIcon, { name: it2.icon }),
+            /* @__PURE__ */ u4("span", { class: "rl", children: it2.title }),
+            it2.badge ? /* @__PURE__ */ u4("span", { class: "badge", id: it2.badge, ref: bd2, style: "display:none" }) : null
+          ]
+        }
+      ),
+      hasFly && open2 ? /* @__PURE__ */ u4(
+        MenuPanel,
+        {
+          bare: true,
+          cls: "railfly",
+          id: `railFly-${id2}`,
+          label: it2.title,
+          boxRef: box,
+          anchor: btn.current,
+          autoFocus: !byPointer.current,
+          onClose: (how) => shut(how === "esc"),
+          onKey: (e4) => {
+            if (e4.key === "ArrowLeft") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              shut(true);
+            }
+          },
+          children: items2.map((x5) => x5.note ? /* @__PURE__ */ u4("div", { class: "mnote sub", role: "presentation", children: x5.note }, x5.id) : /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              role: "menuitem",
+              tabIndex: -1,
+              class: "fi",
+              "data-pick": x5.id,
+              onClick: () => {
+                shut(false);
+                onFly && onFly(id2, x5.id);
+              },
+              children: [
+                /* @__PURE__ */ u4("span", { class: "mname", children: x5.name }),
+                x5.health ? /* @__PURE__ */ u4(StatusDot, { health: x5.health }) : null,
+                x5.count != null ? /* @__PURE__ */ u4("span", { class: "fcount", children: x5.count }) : null
+              ]
+            },
+            x5.id
+          ))
+        }
+      ) : null
+    ] });
+  }
+
+  // components/sidebar/RailMore.jsx
+  function RailMore({ onGo, onCustomise, onHealth, onHelp }) {
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    );
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const [at2, setAt] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const [ptr, setPtr] = d2(false);
+    const open2 = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more;
+    const bd2 = A2(
+      /** @type {HTMLSpanElement | null} */
+      null
+    );
+    const isOpen = A2(false);
+    isOpen.current = open2;
+    _2(() => j3(() => {
+      const b5 = btn.current, s5 = bd2.current;
+      if (!b5 || !s5) return;
+      const n5 = healthCount.value;
+      b5.setAttribute("aria-label", `More${n5 ? `, ${n5} ${n5 === 1 ? "problem" : "problems"}` : ""}`);
+      s5.textContent = capCount(n5);
+      s5.style.display = n5 ? "" : "none";
+      s5.setAttribute("aria-label", `${n5} ${n5 === 1 ? "problem" : "problems"}`);
+    }), [more.length > 0]);
+    h2(() => {
+      const b5 = btn.current;
+      if (!b5) return;
+      return hoverAttach(b5, {
+        group: menuGroup,
+        focusOpens: false,
+        panel: () => box.current,
+        open: () => {
+          if (isOpen.current) return;
+          tipHide();
+          setPtr(true);
+          railMoreOpen.value = true;
+        },
+        close: () => {
+          railMoreOpen.value = false;
+        }
+      });
+    }, [more.length > 0]);
+    h2(() => j3(() => {
+      void railView.value;
+      if (isOpen.current) close(false);
+    }), []);
+    const close = (focusBack2) => {
+      if (menuGroup.current === btn.current) menuGroup.close();
+      railMoreOpen.value = false;
+      if (focusBack2) btn.current?.focus();
+    };
+    _2(() => {
+      if (!open2 || !btn.current) return;
+      tipHide();
+      const r4 = btn.current.getBoundingClientRect(), rail = btn.current.closest(".rail")?.getBoundingClientRect() || r4;
+      setAt({ left: `${rail.right + 4}px`, bottom: `${Math.max(8, innerHeight - r4.bottom)}px` });
+    }, [open2, mode]);
+    if (!more.length) return null;
+    const go3 = (id2) => {
+      close(false);
+      onGo(id2);
+    };
+    const n4 = healthCount.value;
+    const health2 = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHealth", onClick: () => {
+      close(false);
+      onHealth();
+    }, children: [
+      /* @__PURE__ */ u4(RailIcon, { name: "pulse" }),
+      /* @__PURE__ */ u4("span", { class: "rl", children: "Health" }),
+      /* @__PURE__ */ u4("span", { class: "badge warn", id: "railHealthBadge", style: n4 ? "" : "display:none", "aria-label": `${n4} ${n4 === 1 ? "problem" : "problems"}`, children: capCount(n4) }),
+      /* @__PURE__ */ u4("span", { class: "vh", children: n4 ? `: ${n4} ${n4 === 1 ? "problem" : "problems"}` : "" })
+    ] }, "health");
+    const help = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHelp", onClick: () => {
+      close(false);
+      onHelp();
+    }, children: [
+      /* @__PURE__ */ u4(RailIcon, { name: "help" }),
+      /* @__PURE__ */ u4("span", { class: "rl", children: "Help" })
+    ] }, "help");
+    const rows2 = [];
+    more.forEach((id2) => {
+      if (id2 === "settings") rows2.push(health2);
+      rows2.push(/* @__PURE__ */ u4(RailButton, { id: id2, inMenu: true, onGo: go3 }, id2));
+      if (id2 === "settings") rows2.push(help);
+    });
+    if (!more.includes("settings")) rows2.push(health2, help);
+    return /* @__PURE__ */ u4("div", { class: "railmore", children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "nv",
+          id: "railMore",
+          ref: btn,
+          "aria-haspopup": "menu",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-controls": "railMoreMenu",
+          onClick: () => {
+            menuGroup.release(btn.current);
+            setPtr(false);
+            railMoreOpen.value = !open2;
+            if (open2 && menuGroup.current === btn.current) menuGroup.close();
+          },
+          onKeyDown: (e4) => {
+            if (e4.key !== "ArrowUp" && e4.key !== "ArrowRight") return;
+            e4.preventDefault();
+            menuGroup.release(btn.current);
+            setPtr(false);
+            if (open2) menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
+            else railMoreOpen.value = true;
+          },
+          children: [
+            /* @__PURE__ */ u4(RailIcon, { name: "more" }),
+            /* @__PURE__ */ u4("span", { class: "rl", children: "More" }),
+            /* @__PURE__ */ u4("span", { class: "badge warn", id: "railMoreBadge", ref: bd2, style: "display:none" })
+          ]
+        }
+      ),
+      /* @__PURE__ */ u4(
+        MenuPanel,
+        {
+          bare: true,
+          id: "railMoreMenu",
+          label: "More",
+          hidden: !open2,
+          style: at2,
+          anchor: btn.current,
+          boxRef: box,
+          autoFocus: !ptr,
+          onClose: (how) => close(how === "esc"),
+          children: [
+            rows2,
+            /* @__PURE__ */ u4("div", { role: "separator", class: "railsep" }),
+            /* @__PURE__ */ u4("div", { class: "fsec2", role: "presentation", children: "Customise sidebar" }),
+            /* @__PURE__ */ u4(
+              "button",
+              {
+                type: "button",
+                class: "nv",
+                role: "menuitem",
+                id: "railCustBtn",
+                "aria-haspopup": "dialog",
+                onClick: () => {
+                  close(false);
+                  onCustomise(btn.current);
+                },
+                children: [
+                  /* @__PURE__ */ u4(RailIcon, { name: "sliders" }),
+                  /* @__PURE__ */ u4("span", { class: "rl", children: "Customise sidebar…" })
+                ]
+              }
+            )
+          ]
+        }
+      )
+    ] });
+  }
+
+  // components/sidebar/RailNav.jsx
+  function RailNav({ onGo, flyouts = {}, onFly }) {
+    return /* @__PURE__ */ u4(S2, { children: railCfg.value.order.map((id2) => /* @__PURE__ */ u4(RailButton, { id: id2, onGo, fly: flyouts[id2], onFly }, id2)) });
+  }
+
+  // rail.js
+  var RAILOPENER = (
+    /** @type {HTMLElement | null} */
+    null
+  );
+  async function railSave(cfg) {
+    const was = railCfg.value;
+    railCfg.value = railNorm(cfg);
+    S.rail = railCfg.value;
+    const ok2 = await writeSettings({ "dashboard.rail": railCfg.value });
+    if (!ok2) {
+      railCfg.value = was;
+      S.rail = was;
+    }
+    return ok2;
+  }
+  function railToggle() {
+    if (!railNarrow.value) railSetUser(!railCollapsed.value);
+  }
+  async function railSetLabels(on2) {
+    const was = railLabelsOn.value;
+    railLabelsOn.value = on2;
+    S.railLabels = on2;
+    if (!await writeSettings({ "dashboard.rail_labels": on2 })) {
+      railLabelsOn.value = was;
+      S.railLabels = was;
+      return false;
+    }
+    return true;
+  }
+  async function railSetIconSize(size) {
+    const was = railIconSize.value, now = railSizeNorm(size);
+    railIconSize.value = now;
+    S.railIconSize = now;
+    if (!await writeSettings({ "dashboard.rail_icon_size": now })) {
+      railIconSize.value = was;
+      S.railIconSize = was;
+      return false;
+    }
+    if (catalogue.value) await loadCatalogue();
+    return true;
+  }
+  async function railDone(cfg, labels, size) {
+    const icons = cfg.display === "icons", was = railCfg.value.display === "icons";
+    const ok2 = await railSave(cfg);
+    if (ok2 && icons !== was && !railNarrow.value) railSetUser(icons);
+    if (labels !== railLabelsOn.value) await railSetLabels(labels);
+    if (size && size !== railIconSize.value) await railSetIconSize(size);
+    return ok2;
+  }
+  function railCustomise(opener2) {
+    railMoreOpen.value = false;
+    RAILOPENER = /** @type {HTMLElement | null} */
+    opener2 || document.querySelector('.rail button[aria-current="page"]') || $("#railMore");
+    railCustOpen.value = true;
+  }
+  var railPopOpen = railCustomise;
+  function railCustClosed() {
+    railCustOpen.value = false;
+    const was = RAILOPENER;
+    RAILOPENER = null;
+    const o5 = was && !was.isConnected && was.id ? document.getElementById(was.id) : was;
+    if (o5 && o5.isConnected && o5.getClientRects().length) o5.focus();
+    else $("#railMore")?.focus();
+  }
+  var railGo = (id2) => id2 === "review" ? "intake-review" : id2;
+  function renderRail() {
+    let cur = "";
+    try {
+      cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects", "intake-review": "review", inbox: "review" }[shared.VIEW] || shared.VIEW;
+    } catch (x5) {
+    }
+    setRailView(cur);
+  }
+  function bootRail0007() {
+    Object.assign(ICONS, {
+      grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
+      arrowdown: '<path d="M12 5v14M19 12l-7 7-7-7"/>',
+      more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'
+    });
+    Object.defineProperty(shared, "RAILCFG", { configurable: true, enumerable: true, get: () => railCfg.value, set: (v5) => {
+      railCfg.value = railNorm(v5);
+    } });
+    railCfg.value = railNorm(S.rail);
+    railLabelsOn.value = S.railLabels !== false;
+    railIconSize.value = railSizeNorm(S.railIconSize);
+    railLoadUser();
+    const mq = matchMedia("(max-width:899px)");
+    railNarrow.value = mq.matches;
+    mq.addEventListener("change", (e4) => {
+      railNarrow.value = e4.matches;
+    });
+    const mw2 = matchMedia("(min-width:1200px)");
+    railWide.value = mw2.matches;
+    mw2.addEventListener("change", (e4) => {
+      railWide.value = e4.matches;
+    });
+    j3(() => {
+      const z4 = railIconSize.value, root2 = document.documentElement;
+      root2.classList.toggle("railsz-medium", z4 === "medium");
+      root2.classList.toggle("railsz-large", z4 === "large");
+    });
+    j3(() => {
+      const c5 = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");
+      document.documentElement.classList.toggle("railicons", c5);
+      document.documentElement.classList.toggle("raillabels", lab);
+      if (nav) {
+        nav.classList.toggle("icons", c5 && !lab);
+        nav.classList.toggle("collapsed", c5);
+        nav.classList.toggle("labelled", lab);
+      }
+    });
+    const tog = (
+      /** @type {HTMLButtonElement | null} */
+      $("#railTog")
+    );
+    if (tog) {
+      j3(() => {
+        const c5 = railCollapsed.value, what = c5 ? "Expand the rail" : "Collapse the rail";
+        tog.setAttribute("aria-expanded", c5 ? "false" : "true");
+        tog.setAttribute("aria-label", what);
+        tog.setAttribute("data-key", MAC ? "⌘\\" : "Ctrl+\\");
+        tog.disabled = railNarrow.value;
+      });
+      tog.addEventListener("click", railToggle);
+    }
+    const onGo = (id2) => go2(railGo(id2));
+    const flyouts = {
+      projects: () => {
+        const a5 = P4.filter((p6) => p6.active !== false && !p6.archived);
+        return a5.length ? a5.map((p6) => ({ id: p6.code, name: p6.name, health: p6.health || "" })) : [{ id: "-", note: "No active projects" }];
+      },
+      work: () => {
+        const n4 = { actions: A4.filter(open).length, raid: R3.filter(open).length, decisions: DEC.filter(open).length };
+        return WTABS.map((t47) => ({ id: t47.id, name: t47.label, count: t47.id === "all" ? n4.actions + n4.raid + n4.decisions : n4[t47.id] }));
+      }
+    };
+    const onFly = (id2, pick) => {
+      if (id2 === "projects") go2("cockpit", pick);
+      else if (id2 === "work") {
+        if (shared.VIEW !== "work") go2("work");
+        if (shared.WT !== pick) workTabGo(pick);
+      }
+    };
+    R(k(RailNav, { onGo, flyouts, onFly }), $("#railMain"));
+    R(k(RailMore, { onGo, onCustomise: railCustomise, onHealth: () => go2("settings", "health"), onHelp: () => go2("help") }), $("#railFoot"));
+    addHTML(document.body, "beforeend", html`<div id="railCustBox"></div>`);
+    R(k(CustomiseSidebar, { onSave: railDone, onClose: railCustClosed }), $("#railCustBox"));
+    document.addEventListener("click", (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (t47.closest && t47.closest("[data-railcust]")) railCustomise(t47.closest("[data-railcust]"));
+    });
+    document.addEventListener("contextmenu", (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      const nav = t47.closest && t47.closest(".rail");
+      if (!nav) return;
+      e4.preventDefault();
+      const byKey = !e4.clientX && !e4.clientY, a5 = document.activeElement;
+      railCustomise(t47.closest(".rail button") || byKey && a5 && a5.closest && a5.closest(".rail button") || null);
+    });
+    document.addEventListener("keydown", (e4) => {
+      if ((e4.metaKey || e4.ctrlKey) && !e4.altKey && !e4.shiftKey && e4.key === "\\") {
+        e4.preventDefault();
+        railToggle();
+      }
+    });
+    renderRail();
+  }
+  function bootRail0077() {
+    const ap2 = SETSECTIONS.find((x5) => x5.id === "appearance"), r02 = ap2.render;
+    ap2.kw += " left rail sidebar navigation hide reorder order icons only titles customise collapse more";
+    ap2.render = () => r02() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in More, put them in your own order, or show icons only");
   }
 
   // components/report/sheetLib.js
@@ -44259,41 +45131,6 @@ ${s5}`;
     return !!OPEN;
   }
 
-  // components/StatusDot.jsx
-  function Dot({ status: status2, word, wordId, live, label, cls }) {
-    const c5 = [cls || "dot", status2 === "warn" || status2 === "bad" || status2 === "off" ? status2 : ""].filter(Boolean).join(" ");
-    const named = !!label;
-    const dot = /* @__PURE__ */ u4("span", { class: c5, role: named ? "img" : void 0, "aria-label": label, "data-tip": label, "aria-hidden": named ? void 0 : "true" });
-    if (wordId) return /* @__PURE__ */ u4(S2, { children: [
-      dot,
-      /* @__PURE__ */ u4("span", { id: wordId, "aria-live": live ? "polite" : void 0, children: word })
-    ] });
-    return /* @__PURE__ */ u4(S2, { children: [
-      dot,
-      word
-    ] });
-  }
-  function StatusDot(props) {
-    if (props.status) return /* @__PURE__ */ u4(Dot, { ...props });
-    const { health: health2 } = props, k5 = hk(health2);
-    return /* @__PURE__ */ u4("span", { class: `health h-${k5}`, children: [
-      /* @__PURE__ */ u4("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", children: HEALTH_SHAPES[k5].map(([tag, attrs]) => tag === "circle" ? /* @__PURE__ */ u4("circle", { ...attrs }) : /* @__PURE__ */ u4("path", { ...attrs })) }),
-      health2 || "Not set"
-    ] });
-  }
-  function statusDotNodes(props) {
-    const box = document.createElement("span");
-    R(/* @__PURE__ */ u4(StatusDot, { ...props }), box);
-    return [...box.childNodes];
-  }
-  function drawStatusDot(host2, props) {
-    R(/* @__PURE__ */ u4(StatusDot, { ...props }), host2);
-  }
-  function mountStatusDots(root2) {
-    if (!root2) return;
-    for (const ph2 of root2.querySelectorAll("span[data-statusdot]")) ph2.replaceWith(...statusDotNodes({ health: ph2.getAttribute("data-statusdot") || "" }));
-  }
-
   // components/closeday/FirstThing.jsx
   var TABLE = { Action: "actions", "RAID item": "raid", Decision: "decisions" };
   function ftOpenProposal(ref) {
@@ -52789,6 +53626,12 @@ ${pre}**Current state title:** ${title}`);
       }
     }, true);
   }
+  var POPUPS = "[role=menu],[role=listbox],[role=dialog],.ddmenu,.combo-list,.cal,.pkpop,.linkpop";
+  function popupOpen() {
+    if (document.querySelector("dialog[open]") || shared.CAL || shared.EDITING || shared.PKPOP || helpPanelOpen() || $("#panel")?.classList.contains("on") || $("#chat")?.classList.contains("on")) return true;
+    return [...document.querySelectorAll(POPUPS)].some((el2) => el2.getClientRects().length > 0 && getComputedStyle(el2).visibility !== "hidden");
+  }
+  var PAGE_KEYS = { t: "today", p: "projects", w: "work", i: "review", f: "files", a: "activity", s: "settings", r: "reports", e: "people" };
   var typing = () => {
     const a5 = document.activeElement;
     return a5 && (/^(INPUT|TEXTAREA|SELECT)$/.test(a5.tagName) || a5.isContentEditable || !!a5.closest?.('.ddmenu [role="option"]'));
@@ -52852,10 +53695,18 @@ ${pre}**Current state title:** ${title}`);
         openCapture();
         return;
       }
-      if ((e4.key === "f" || e4.key === "F") && (shared.VIEW === "work" || shared.VIEW === "mine")) {
+      if (e4.key === "F" && e4.shiftKey && (shared.VIEW === "work" || shared.VIEW === "mine") && !popupOpen()) {
         e4.preventDefault();
         if (!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click();
         $("#fpq")?.focus();
+        return;
+      }
+      if (e4.key === "F" && e4.shiftKey && shared.VIEW === "people" && !popupOpen()) {
+        const b5 = $("#plFBtn");
+        if (b5) {
+          e4.preventDefault();
+          b5.click();
+        }
         return;
       }
       if ((e4.key === "d" || e4.key === "D") && (shared.VIEW === "work" || shared.VIEW === "mine")) {
@@ -52880,6 +53731,12 @@ ${pre}**Current state title:** ${title}`);
       }
       if (["[", "]", "t", "T"].includes(e4.key) && shared.VIEW === "today" && dayKey(e4)) {
         e4.preventDefault();
+        return;
+      }
+      if (!e4.shiftKey && !e4.repeat && PAGE_KEYS[e4.key.toLowerCase()] && !(shared.VIEW === "intake-review" && /^[ar]$/i.test(e4.key)) && !popupOpen()) {
+        e4.preventDefault();
+        if (shared.VIEW === "today" && e4.key.toLowerCase() === "t") return;
+        go2(railGo(PAGE_KEYS[e4.key.toLowerCase()]));
         return;
       }
       if ((shared.VIEW === "work" || shared.VIEW === "mine" || shared.VIEW === "person") && !(shared.VIEW === "person" && shared.HAND) && hlKey(e4)) return;
@@ -53142,7 +53999,7 @@ ${pre}**Current state title:** ${title}`);
         label: funnelTip(wfCount()),
         menuLabel: "Add a filter",
         count: wfCount(),
-        key: "F",
+        key: "Shift+F",
         on: defs().some((d5) => d5[4] && setOf(d5[0]).size) || !!(shared.DR.from || shared.DR.to || RR.from || RR.to || shared.CR.from || shared.CR.to),
         field: shared.FPK,
         onField: (k5) => {
@@ -54248,7 +55105,7 @@ ${pre}**Current state title:** ${title}`);
     [["Enter"], "or the ID opens", "both"],
     ["", "drag a card, or use its <b>Move to…</b> menu, to change it", "board"],
     [["D"], "display", "both"],
-    [["F"], "filters", "both"],
+    [["Shift+F"], "filters", "both"],
     [["Esc"], "clear", "both"],
     ["", "click a heading to sort", "list"],
     ["", "drag a column edge to resize", "list"]
@@ -70214,840 +71071,6 @@ ${d5.text}`);
     window.setInterval(helpScreenSync, 300);
   }
 
-  // components/sidebar/RailIcon.jsx
-  var RAIL_ICONS = {
-    today: [["circle", { cx: "12", cy: "12", r: "4" }], ["path", { d: "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" }]],
-    inbox: [["path", { d: "M4 13l2.5-8h11L20 13v6H4z" }], ["path", { d: "M4 13h5l1 2h4l1-2h5" }]],
-    /* #232 Q8: the locked mockup's tray */
-    projects: [["path", { d: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z" }]],
-    work: [["path", { d: "M8 6h12M8 12h12M8 18h12" }], ["path", { d: "m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2" }]],
-    people: [["circle", { cx: "9", cy: "8", r: "3.2" }], ["path", { d: "M3.5 19v-1a4.5 4.5 0 0 1 4.5-4.5h2a4.5 4.5 0 0 1 4.5 4.5v1" }], ["path", { d: "M16 5.2a3.2 3.2 0 0 1 0 5.6M18.5 13.8a4.5 4.5 0 0 1 2 3.7V19" }]],
-    review: [["path", { d: "M4 5h16v11H8l-4 4z" }], ["path", { d: "m9 10.5 2 2 4-4" }]],
-    activity: [["path", { d: "M12 7v5l3 2" }], ["circle", { cx: "12", cy: "12", r: "8.5" }]],
-    filetext: [["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" }], ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8" }]],
-    folder: [["path", { d: "M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }]],
-    gear: [["path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }], ["circle", { cx: "12", cy: "12", r: "3" }]],
-    more: [["circle", { cx: "5", cy: "12", r: "1" }], ["circle", { cx: "12", cy: "12", r: "1" }], ["circle", { cx: "19", cy: "12", r: "1" }]],
-    pulse: [["path", { d: "M3 12h4l2.5-6 4 12 2.5-6H21" }]],
-    help: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" }]],
-    sliders: [["path", { d: "M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" }]],
-    panel: [["rect", { x: "3", y: "4", width: "18", height: "16", rx: "3" }], ["path", { d: "M9 4v16" }]],
-    grip: [["circle", { cx: "9", cy: "6", r: "1" }], ["circle", { cx: "15", cy: "6", r: "1" }], ["circle", { cx: "9", cy: "12", r: "1" }], ["circle", { cx: "15", cy: "12", r: "1" }], ["circle", { cx: "9", cy: "18", r: "1" }], ["circle", { cx: "15", cy: "18", r: "1" }]],
-    up: [["path", { d: "m18 15-6-6-6 6" }]],
-    down: [["path", { d: "m6 9 6 6 6-6" }]],
-    right: [["path", { d: "M5 12h14M13 6l6 6-6 6" }]],
-    left: [["path", { d: "M19 12H5M11 6l-6 6 6 6" }]]
-  };
-  function RailIcon({ name }) {
-    return /* @__PURE__ */ u4(
-      "svg",
-      {
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        "stroke-width": "1.8",
-        "stroke-linecap": "round",
-        "stroke-linejoin": "round",
-        "aria-hidden": "true",
-        "data-icn": name,
-        children: (RAIL_ICONS[name] || []).map(([tag, attrs], i5) => tag === "circle" ? /* @__PURE__ */ u4("circle", { ...attrs }, i5) : tag === "rect" ? /* @__PURE__ */ u4("rect", { ...attrs }, i5) : /* @__PURE__ */ u4("path", { ...attrs }, i5))
-      }
-    );
-  }
-
-  // components/sidebar/CustomiseSidebar.jsx
-  var draftOf = (c5) => ({ top: [...c5.order], more: [...c5.more], icons: c5.display === "icons", labels: railLabelsOn.value, size: railIconSize.value });
-  var same = (a5, b5) => a5.top.join() === b5.top.join() && a5.more.join() === b5.more.join() && a5.icons === b5.icons && a5.labels === b5.labels && a5.size === b5.size;
-  function placed(d5, id2, zone, at2) {
-    const top = d5.top.filter((x5) => x5 !== id2), more = d5.more.filter((x5) => x5 !== id2), L3 = zone === "top" ? top : more;
-    L3.splice(Math.max(zone === "top" ? 1 : 0, Math.min(at2, L3.length)), 0, id2);
-    return { ...d5, top, more };
-  }
-  function CustomiseSidebar({ onSave, onClose }) {
-    const open2 = railCustOpen.value;
-    const zones = A2(
-      /** @type {Record<string, HTMLUListElement | null>} */
-      {}
-    );
-    const focusNext = A2(
-      /** @type {[string, string] | null} */
-      null
-    );
-    const [d5, setD] = d2(() => draftOf(railCfg.value));
-    const [said2, setSaid] = d2("");
-    const [drag, setDrag] = d2(
-      /** @type {string | null} */
-      null
-    );
-    const dRef = A2(d5);
-    dRef.current = d5;
-    _2(() => {
-      if (open2) {
-        setD(draftOf(railCfg.value));
-        setSaid("");
-      }
-    }, [open2]);
-    _2(() => {
-      const f5 = focusNext.current, box = document.getElementById("railCust");
-      if (!f5 || !box) return;
-      focusNext.current = null;
-      const li2 = (
-        /** @type {HTMLElement | null} */
-        box.querySelector(`li[data-rid="${f5[0]}"]`)
-      );
-      const b5 = (
-        /** @type {HTMLButtonElement | null} */
-        li2 && li2.querySelector(`[data-mv="${f5[1]}"]`)
-      );
-      (b5 && !b5.disabled ? b5 : li2)?.focus();
-    });
-    h2(() => {
-      if (!drag) return;
-      const move = (e4) => {
-        const off = (k5) => {
-          const r4 = zones.current[k5]?.getBoundingClientRect();
-          return r4 ? Math.abs(e4.clientX - (r4.left + r4.width / 2)) : Infinity;
-        };
-        const zone = off("top") <= off("more") ? "top" : "more";
-        const rows2 = [...zones.current[zone]?.querySelectorAll("li[data-rid]") || []].filter((li2) => (
-          /** @type {HTMLElement} */
-          li2.dataset.rid !== drag
-        ));
-        let at2 = rows2.findIndex((li2) => {
-          const r4 = li2.getBoundingClientRect();
-          return e4.clientY < r4.top + r4.height / 2;
-        });
-        if (at2 < 0) at2 = rows2.length;
-        const next = placed(dRef.current, drag, zone, at2);
-        if (!same(next, dRef.current)) setD(next);
-      };
-      const up2 = () => {
-        const id2 = drag;
-        setDrag(null);
-        setSaid(`${railItem(id2).title} moved`);
-      };
-      document.addEventListener("pointermove", move);
-      document.addEventListener("pointerup", up2);
-      return () => {
-        document.removeEventListener("pointermove", move);
-        document.removeEventListener("pointerup", up2);
-      };
-    }, [drag]);
-    const mv = (id2, how) => {
-      const zone = d5.top.includes(id2) ? "top" : "more", L3 = zone === "top" ? d5.top : d5.more, i5 = L3.indexOf(id2);
-      if (id2 === "today") return;
-      if (how === "swap") {
-        const to2 = zone === "top" ? "more" : "top";
-        setD(placed(d5, id2, to2, (to2 === "top" ? d5.top : d5.more).length));
-        setSaid(`${railItem(id2).title} moved to ${to2 === "top" ? "the sidebar" : "More"}`);
-      } else {
-        const j5 = i5 + (how === "up" ? -1 : 1);
-        if (j5 < (zone === "top" ? 1 : 0) || j5 >= L3.length) return;
-        setD(placed(d5, id2, zone, j5));
-        setSaid(`${railItem(id2).title} moved ${how}, ${j5 + 1} of ${L3.length}`);
-      }
-      focusNext.current = [id2, how];
-    };
-    const rowKeys2 = (e4) => {
-      const li2 = (
-        /** @type {HTMLElement | null} */
-        /** @type {Element} */
-        e4.target.closest("li[data-rid]")
-      );
-      if (!li2 || !e4.altKey) return;
-      const id2 = li2.dataset.rid, inTop = d5.top.includes(id2);
-      const how = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: inTop ? null : "swap", ArrowRight: inTop ? "swap" : null }[e4.key];
-      if (!how) return;
-      e4.preventDefault();
-      mv(
-        id2,
-        /** @type {"up"|"down"|"swap"} */
-        how
-      );
-    };
-    const done = () => {
-      onSave({ order: d5.top, more: d5.more, hidden: [], display: d5.icons ? "icons" : "titles" }, d5.labels, d5.size);
-      closeDialog("railCust");
-    };
-    const shut = () => {
-      const el2 = (
-        /** @type {HTMLDialogElement | null} */
-        document.getElementById("railCust")
-      );
-      if (el2 && el2.open) el2.close();
-      else onClose();
-    };
-    const row2 = (id2, zone, i5, n4) => {
-      const it2 = railItem(id2), fixed = id2 === "today", to2 = zone === "top" ? "More" : "the sidebar";
-      return /* @__PURE__ */ u4("li", { "data-rid": id2, tabindex: -1, class: `rpi${drag === id2 ? " dragging" : ""}`, "aria-label": it2.title, children: [
-        /* @__PURE__ */ u4(
-          "span",
-          {
-            class: "grip",
-            "data-rgrip": true,
-            "aria-hidden": "true",
-            hidden: fixed,
-            onPointerDown: (e4) => {
-              if (e4.button !== 0) return;
-              e4.preventDefault();
-              try {
-                e4.currentTarget.setPointerCapture(e4.pointerId);
-              } catch (x5) {
-              }
-              setDrag(id2);
-            },
-            children: /* @__PURE__ */ u4(RailIcon, { name: "grip" })
-          }
-        ),
-        /* @__PURE__ */ u4("span", { class: "rpn", children: [
-          /* @__PURE__ */ u4(RailIcon, { name: it2.icon }),
-          /* @__PURE__ */ u4("span", { class: "rpt", children: [
-            /* @__PURE__ */ u4("span", { children: it2.title }),
-            fixed ? /* @__PURE__ */ u4("span", { class: "why", children: "Always first" }) : null
-          ] })
-        ] }),
-        fixed ? null : /* @__PURE__ */ u4(S2, { children: [
-          /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              class: "ib sm",
-              "data-mv": "up",
-              "aria-label": `Move ${it2.title} up`,
-              "data-tip": `Move ${it2.title} up`,
-              disabled: i5 <= (zone === "top" ? 1 : 0),
-              onClick: () => mv(id2, "up"),
-              children: /* @__PURE__ */ u4(RailIcon, { name: "up" })
-            }
-          ),
-          /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              class: "ib sm",
-              "data-mv": "down",
-              "aria-label": `Move ${it2.title} down`,
-              "data-tip": `Move ${it2.title} down`,
-              disabled: i5 >= n4 - 1,
-              onClick: () => mv(id2, "down"),
-              children: /* @__PURE__ */ u4(RailIcon, { name: "down" })
-            }
-          ),
-          /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              class: "ib sm",
-              "data-mv": "swap",
-              "aria-label": `Move ${it2.title} to ${to2}`,
-              "data-tip": `Move to ${to2}`,
-              onClick: () => mv(id2, "swap"),
-              children: /* @__PURE__ */ u4(RailIcon, { name: zone === "top" ? "right" : "left" })
-            }
-          )
-        ] })
-      ] }, id2);
-    };
-    return /* @__PURE__ */ u4(
-      Dialog,
-      {
-        open: open2,
-        onClose: shut,
-        id: "railCust",
-        labelledBy: "railCustH",
-        describedBy: "railCustSub",
-        dirty: !same(d5, draftOf(railCfg.value)),
-        children: [
-          /* @__PURE__ */ u4("h2", { id: "railCustH", children: "Customise sidebar" }),
-          /* @__PURE__ */ u4("p", { class: "sub", id: "railCustSub", children: "Drag a handle between the two lists, or use the arrows (Alt with an arrow key on a row). Today always comes first; Settings can live in either." }),
-          /* @__PURE__ */ u4("div", { class: "rccols", onKeyDown: rowKeys2, children: [
-            /* @__PURE__ */ u4("div", { children: [
-              /* @__PURE__ */ u4("h3", { id: "railCustTop", children: "In the sidebar" }),
-              /* @__PURE__ */ u4("ul", { "aria-labelledby": "railCustTop", "data-zone": "top", ref: (el2) => {
-                zones.current.top = el2;
-              }, children: d5.top.map((id2, i5) => row2(id2, "top", i5, d5.top.length)) })
-            ] }),
-            /* @__PURE__ */ u4("div", { children: [
-              /* @__PURE__ */ u4("h3", { id: "railCustMore", children: "In More" }),
-              /* @__PURE__ */ u4("ul", { "aria-labelledby": "railCustMore", "data-zone": "more", ref: (el2) => {
-                zones.current.more = el2;
-              }, children: d5.more.map((id2, i5) => row2(id2, "more", i5, d5.more.length)) }),
-              d5.more.length ? null : /* @__PURE__ */ u4("p", { class: "sub rcempty", children: "Empty: More is hidden." })
-            ] })
-          ] }),
-          /* @__PURE__ */ u4("label", { class: "rcicons", children: [
-            /* @__PURE__ */ u4(
-              "input",
-              {
-                type: "checkbox",
-                class: "switch",
-                role: "switch",
-                id: "railCustLabels",
-                checked: d5.labels && !d5.icons,
-                onChange: (e4) => {
-                  const on2 = (
-                    /** @type {HTMLInputElement} */
-                    e4.currentTarget.checked
-                  );
-                  setD({ ...d5, labels: on2, icons: on2 ? false : d5.icons });
-                }
-              }
-            ),
-            " Labels when collapsed"
-          ] }),
-          /* @__PURE__ */ u4("label", { class: "rcicons", children: [
-            /* @__PURE__ */ u4(
-              "input",
-              {
-                type: "checkbox",
-                class: "switch",
-                role: "switch",
-                id: "railCustIcons",
-                checked: d5.icons,
-                onChange: (e4) => {
-                  const on2 = (
-                    /** @type {HTMLInputElement} */
-                    e4.currentTarget.checked
-                  );
-                  setD({ ...d5, icons: on2, labels: on2 ? false : d5.labels });
-                }
-              }
-            ),
-            " Icons only"
-          ] }),
-          /* @__PURE__ */ u4("div", { class: "rcsize", role: "group", "aria-labelledby": "railCustSizeH", children: [
-            /* @__PURE__ */ u4("h3", { id: "railCustSizeH", children: "Icon size" }),
-            /* @__PURE__ */ u4("div", { class: "rcszs", children: [["small", "Small"], ["medium", "Medium"], ["large", "Large"]].map(([k5, l6]) => /* @__PURE__ */ u4("button", { type: "button", class: "rcsz", "data-size": k5, "aria-pressed": d5.size === k5 ? "true" : "false", onClick: () => {
-              setD({ ...d5, size: k5 });
-              setSaid(`${l6} icons`);
-            }, children: [
-              /* @__PURE__ */ u4("span", { class: "rcszi", "aria-hidden": "true", children: /* @__PURE__ */ u4(RailIcon, { name: "today" }) }),
-              /* @__PURE__ */ u4("span", { children: l6 })
-            ] })) })
-          ] }),
-          /* @__PURE__ */ u4("p", { class: "vh", "aria-live": "polite", children: said2 }),
-          /* @__PURE__ */ u4("div", { class: "rcfoot", children: [
-            /* @__PURE__ */ u4(
-              "button",
-              {
-                type: "button",
-                class: "btn quiet",
-                id: "railCustReset",
-                onClick: () => {
-                  setD({ ...draftOf(RAIL_DEF), labels: true, size: "small" });
-                  setSaid("Back to the default sidebar");
-                },
-                children: "Reset to default"
-              }
-            ),
-            /* @__PURE__ */ u4("span", { class: "grow" }),
-            /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "railCustCancel", onClick: () => closeDialog("railCust"), children: "Cancel" }),
-            /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "railCustDone", onClick: done, children: "Done" })
-          ] })
-        ]
-      }
-    );
-  }
-
-  // components/sidebar/RailButton.jsx
-  var attr = (el2, k5, v5) => {
-    if (v5 == null) el2.removeAttribute(k5);
-    else if (el2.getAttribute(k5) !== v5) el2.setAttribute(k5, v5);
-  };
-  var capCount = (n4) => n4 > 99 ? "99+" : String(n4);
-  function RailButton({ id: id2, inMenu, onGo, fly, onFly }) {
-    const it2 = railItem(id2), hasFly = !!fly && !inMenu;
-    const btn = A2(
-      /** @type {HTMLButtonElement | null} */
-      null
-    );
-    const bd2 = A2(
-      /** @type {HTMLSpanElement | null} */
-      null
-    );
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    const [open2, setOpen2] = d2(false);
-    const byPointer = A2(false), isOpen = A2(false);
-    isOpen.current = open2;
-    _2(() => j3(() => {
-      const b5 = btn.current;
-      if (!b5) return;
-      const c5 = railCounts.value[id2] || { n: 0, label: void 0 };
-      attr(b5, "aria-current", railView.value === id2 ? "page" : "false");
-      attr(b5, "aria-label", `${it2.title}${c5.n ? `, ${c5.n} waiting` : ""}`);
-      attr(b5, "data-tip", !inMenu && !hasFly && railMode.value === "icons" ? it2.title : void 0);
-      const s5 = bd2.current;
-      if (s5) {
-        const t47 = capCount(c5.n);
-        if (s5.textContent !== t47) s5.textContent = t47;
-        s5.style.display = c5.n ? "" : "none";
-        attr(s5, "aria-label", c5.label);
-      }
-    }), [id2, inMenu, hasFly]);
-    h2(() => {
-      const b5 = btn.current;
-      if (!hasFly || !b5) return;
-      return hoverAttach(b5, {
-        group: menuGroup,
-        focusOpens: false,
-        panel: () => box.current,
-        open: () => {
-          if (isOpen.current) return;
-          byPointer.current = true;
-          tipHide();
-          setOpen2(true);
-        },
-        close: () => setOpen2(false)
-      });
-    }, [hasFly]);
-    h2(() => j3(() => {
-      void railView.value;
-      if (isOpen.current) shut(false);
-    }), []);
-    function shut(back2) {
-      if (menuGroup.current === btn.current) menuGroup.close();
-      setOpen2(false);
-      if (back2) btn.current?.focus();
-    }
-    _2(() => {
-      const el2 = box.current, b5 = btn.current;
-      if (!open2 || !el2 || !b5) return;
-      const r4 = b5.getBoundingClientRect(), rail = b5.closest(".rail")?.getBoundingClientRect() || r4;
-      el2.style.left = `${Math.round(rail.right + 4)}px`;
-      el2.style.top = `${Math.round(Math.max(8, Math.min(r4.top - 4, innerHeight - el2.offsetHeight - 8)))}px`;
-    }, [open2, railMode.value]);
-    const key2 = (e4) => {
-      if (!hasFly || e4.key !== "ArrowRight" && e4.key !== "ArrowDown") return;
-      e4.preventDefault();
-      menuGroup.release(btn.current);
-      byPointer.current = false;
-      if (open2) menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
-      else setOpen2(true);
-    };
-    const items2 = open2 && fly ? fly() : [];
-    return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4(
-        "button",
-        {
-          type: "button",
-          class: "nv",
-          "data-v": id2,
-          role: inMenu ? "menuitem" : void 0,
-          ref: btn,
-          "aria-haspopup": hasFly ? "menu" : void 0,
-          "aria-expanded": hasFly ? open2 ? "true" : "false" : void 0,
-          "aria-controls": hasFly && open2 ? `railFly-${id2}` : void 0,
-          onKeyDown: hasFly ? key2 : void 0,
-          onClick: () => {
-            if (hasFly) {
-              menuGroup.release(btn.current);
-              shut(false);
-            }
-            onGo(id2);
-          },
-          children: [
-            /* @__PURE__ */ u4(RailIcon, { name: it2.icon }),
-            /* @__PURE__ */ u4("span", { class: "rl", children: it2.title }),
-            it2.badge ? /* @__PURE__ */ u4("span", { class: "badge", id: it2.badge, ref: bd2, style: "display:none" }) : null
-          ]
-        }
-      ),
-      hasFly && open2 ? /* @__PURE__ */ u4(
-        MenuPanel,
-        {
-          bare: true,
-          cls: "railfly",
-          id: `railFly-${id2}`,
-          label: it2.title,
-          boxRef: box,
-          anchor: btn.current,
-          autoFocus: !byPointer.current,
-          onClose: (how) => shut(how === "esc"),
-          onKey: (e4) => {
-            if (e4.key === "ArrowLeft") {
-              e4.preventDefault();
-              e4.stopPropagation();
-              shut(true);
-            }
-          },
-          children: items2.map((x5) => x5.note ? /* @__PURE__ */ u4("div", { class: "mnote sub", role: "presentation", children: x5.note }, x5.id) : /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              role: "menuitem",
-              tabIndex: -1,
-              class: "fi",
-              "data-pick": x5.id,
-              onClick: () => {
-                shut(false);
-                onFly && onFly(id2, x5.id);
-              },
-              children: [
-                /* @__PURE__ */ u4("span", { class: "mname", children: x5.name }),
-                x5.health ? /* @__PURE__ */ u4(StatusDot, { health: x5.health }) : null,
-                x5.count != null ? /* @__PURE__ */ u4("span", { class: "fcount", children: x5.count }) : null
-              ]
-            },
-            x5.id
-          ))
-        }
-      ) : null
-    ] });
-  }
-
-  // components/sidebar/RailMore.jsx
-  function RailMore({ onGo, onCustomise, onHealth, onHelp }) {
-    const btn = A2(
-      /** @type {HTMLButtonElement | null} */
-      null
-    );
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    const [at2, setAt] = d2(
-      /** @type {Record<string, string>} */
-      {}
-    );
-    const [ptr, setPtr] = d2(false);
-    const open2 = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more;
-    const bd2 = A2(
-      /** @type {HTMLSpanElement | null} */
-      null
-    );
-    const isOpen = A2(false);
-    isOpen.current = open2;
-    _2(() => j3(() => {
-      const b5 = btn.current, s5 = bd2.current;
-      if (!b5 || !s5) return;
-      const n5 = healthCount.value;
-      b5.setAttribute("aria-label", `More${n5 ? `, ${n5} ${n5 === 1 ? "problem" : "problems"}` : ""}`);
-      s5.textContent = capCount(n5);
-      s5.style.display = n5 ? "" : "none";
-      s5.setAttribute("aria-label", `${n5} ${n5 === 1 ? "problem" : "problems"}`);
-    }), [more.length > 0]);
-    h2(() => {
-      const b5 = btn.current;
-      if (!b5) return;
-      return hoverAttach(b5, {
-        group: menuGroup,
-        focusOpens: false,
-        panel: () => box.current,
-        open: () => {
-          if (isOpen.current) return;
-          tipHide();
-          setPtr(true);
-          railMoreOpen.value = true;
-        },
-        close: () => {
-          railMoreOpen.value = false;
-        }
-      });
-    }, [more.length > 0]);
-    h2(() => j3(() => {
-      void railView.value;
-      if (isOpen.current) close(false);
-    }), []);
-    const close = (focusBack2) => {
-      if (menuGroup.current === btn.current) menuGroup.close();
-      railMoreOpen.value = false;
-      if (focusBack2) btn.current?.focus();
-    };
-    _2(() => {
-      if (!open2 || !btn.current) return;
-      tipHide();
-      const r4 = btn.current.getBoundingClientRect(), rail = btn.current.closest(".rail")?.getBoundingClientRect() || r4;
-      setAt({ left: `${rail.right + 4}px`, bottom: `${Math.max(8, innerHeight - r4.bottom)}px` });
-    }, [open2, mode]);
-    if (!more.length) return null;
-    const go3 = (id2) => {
-      close(false);
-      onGo(id2);
-    };
-    const n4 = healthCount.value;
-    const health2 = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHealth", onClick: () => {
-      close(false);
-      onHealth();
-    }, children: [
-      /* @__PURE__ */ u4(RailIcon, { name: "pulse" }),
-      /* @__PURE__ */ u4("span", { class: "rl", children: "Health" }),
-      /* @__PURE__ */ u4("span", { class: "badge warn", id: "railHealthBadge", style: n4 ? "" : "display:none", "aria-label": `${n4} ${n4 === 1 ? "problem" : "problems"}`, children: capCount(n4) }),
-      /* @__PURE__ */ u4("span", { class: "vh", children: n4 ? `: ${n4} ${n4 === 1 ? "problem" : "problems"}` : "" })
-    ] }, "health");
-    const help = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHelp", onClick: () => {
-      close(false);
-      onHelp();
-    }, children: [
-      /* @__PURE__ */ u4(RailIcon, { name: "help" }),
-      /* @__PURE__ */ u4("span", { class: "rl", children: "Help" })
-    ] }, "help");
-    const rows2 = [];
-    more.forEach((id2) => {
-      if (id2 === "settings") rows2.push(health2);
-      rows2.push(/* @__PURE__ */ u4(RailButton, { id: id2, inMenu: true, onGo: go3 }, id2));
-      if (id2 === "settings") rows2.push(help);
-    });
-    if (!more.includes("settings")) rows2.push(health2, help);
-    return /* @__PURE__ */ u4("div", { class: "railmore", children: [
-      /* @__PURE__ */ u4(
-        "button",
-        {
-          type: "button",
-          class: "nv",
-          id: "railMore",
-          ref: btn,
-          "aria-haspopup": "menu",
-          "aria-expanded": open2 ? "true" : "false",
-          "aria-controls": "railMoreMenu",
-          onClick: () => {
-            menuGroup.release(btn.current);
-            setPtr(false);
-            railMoreOpen.value = !open2;
-            if (open2 && menuGroup.current === btn.current) menuGroup.close();
-          },
-          onKeyDown: (e4) => {
-            if (e4.key !== "ArrowUp" && e4.key !== "ArrowRight") return;
-            e4.preventDefault();
-            menuGroup.release(btn.current);
-            setPtr(false);
-            if (open2) menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
-            else railMoreOpen.value = true;
-          },
-          children: [
-            /* @__PURE__ */ u4(RailIcon, { name: "more" }),
-            /* @__PURE__ */ u4("span", { class: "rl", children: "More" }),
-            /* @__PURE__ */ u4("span", { class: "badge warn", id: "railMoreBadge", ref: bd2, style: "display:none" })
-          ]
-        }
-      ),
-      /* @__PURE__ */ u4(
-        MenuPanel,
-        {
-          bare: true,
-          id: "railMoreMenu",
-          label: "More",
-          hidden: !open2,
-          style: at2,
-          anchor: btn.current,
-          boxRef: box,
-          autoFocus: !ptr,
-          onClose: (how) => close(how === "esc"),
-          children: [
-            rows2,
-            /* @__PURE__ */ u4("div", { role: "separator", class: "railsep" }),
-            /* @__PURE__ */ u4("div", { class: "fsec2", role: "presentation", children: "Customise sidebar" }),
-            /* @__PURE__ */ u4(
-              "button",
-              {
-                type: "button",
-                class: "nv",
-                role: "menuitem",
-                id: "railCustBtn",
-                "aria-haspopup": "dialog",
-                onClick: () => {
-                  close(false);
-                  onCustomise(btn.current);
-                },
-                children: [
-                  /* @__PURE__ */ u4(RailIcon, { name: "sliders" }),
-                  /* @__PURE__ */ u4("span", { class: "rl", children: "Customise sidebar…" })
-                ]
-              }
-            )
-          ]
-        }
-      )
-    ] });
-  }
-
-  // components/sidebar/RailNav.jsx
-  function RailNav({ onGo, flyouts = {}, onFly }) {
-    return /* @__PURE__ */ u4(S2, { children: railCfg.value.order.map((id2) => /* @__PURE__ */ u4(RailButton, { id: id2, onGo, fly: flyouts[id2], onFly }, id2)) });
-  }
-
-  // rail.js
-  var RAILOPENER = (
-    /** @type {HTMLElement | null} */
-    null
-  );
-  async function railSave(cfg) {
-    const was = railCfg.value;
-    railCfg.value = railNorm(cfg);
-    S.rail = railCfg.value;
-    const ok2 = await writeSettings({ "dashboard.rail": railCfg.value });
-    if (!ok2) {
-      railCfg.value = was;
-      S.rail = was;
-    }
-    return ok2;
-  }
-  function railToggle() {
-    if (!railNarrow.value) railSetUser(!railCollapsed.value);
-  }
-  async function railSetLabels(on2) {
-    const was = railLabelsOn.value;
-    railLabelsOn.value = on2;
-    S.railLabels = on2;
-    if (!await writeSettings({ "dashboard.rail_labels": on2 })) {
-      railLabelsOn.value = was;
-      S.railLabels = was;
-      return false;
-    }
-    return true;
-  }
-  async function railSetIconSize(size) {
-    const was = railIconSize.value, now = railSizeNorm(size);
-    railIconSize.value = now;
-    S.railIconSize = now;
-    if (!await writeSettings({ "dashboard.rail_icon_size": now })) {
-      railIconSize.value = was;
-      S.railIconSize = was;
-      return false;
-    }
-    if (catalogue.value) await loadCatalogue();
-    return true;
-  }
-  async function railDone(cfg, labels, size) {
-    const icons = cfg.display === "icons", was = railCfg.value.display === "icons";
-    const ok2 = await railSave(cfg);
-    if (ok2 && icons !== was && !railNarrow.value) railSetUser(icons);
-    if (labels !== railLabelsOn.value) await railSetLabels(labels);
-    if (size && size !== railIconSize.value) await railSetIconSize(size);
-    return ok2;
-  }
-  function railCustomise(opener2) {
-    railMoreOpen.value = false;
-    RAILOPENER = /** @type {HTMLElement | null} */
-    opener2 || document.querySelector('.rail button[aria-current="page"]') || $("#railMore");
-    railCustOpen.value = true;
-  }
-  var railPopOpen = railCustomise;
-  function railCustClosed() {
-    railCustOpen.value = false;
-    const was = RAILOPENER;
-    RAILOPENER = null;
-    const o5 = was && !was.isConnected && was.id ? document.getElementById(was.id) : was;
-    if (o5 && o5.isConnected && o5.getClientRects().length) o5.focus();
-    else $("#railMore")?.focus();
-  }
-  var railGo = (id2) => id2 === "review" ? "intake-review" : id2;
-  function renderRail() {
-    let cur = "";
-    try {
-      cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects", "intake-review": "review", inbox: "review" }[shared.VIEW] || shared.VIEW;
-    } catch (x5) {
-    }
-    setRailView(cur);
-  }
-  function bootRail0007() {
-    Object.assign(ICONS, {
-      grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
-      arrowdown: '<path d="M12 5v14M19 12l-7 7-7-7"/>',
-      more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'
-    });
-    Object.defineProperty(shared, "RAILCFG", { configurable: true, enumerable: true, get: () => railCfg.value, set: (v5) => {
-      railCfg.value = railNorm(v5);
-    } });
-    railCfg.value = railNorm(S.rail);
-    railLabelsOn.value = S.railLabels !== false;
-    railIconSize.value = railSizeNorm(S.railIconSize);
-    railLoadUser();
-    const mq = matchMedia("(max-width:899px)");
-    railNarrow.value = mq.matches;
-    mq.addEventListener("change", (e4) => {
-      railNarrow.value = e4.matches;
-    });
-    const mw2 = matchMedia("(min-width:1200px)");
-    railWide.value = mw2.matches;
-    mw2.addEventListener("change", (e4) => {
-      railWide.value = e4.matches;
-    });
-    j3(() => {
-      const z4 = railIconSize.value, root2 = document.documentElement;
-      root2.classList.toggle("railsz-medium", z4 === "medium");
-      root2.classList.toggle("railsz-large", z4 === "large");
-    });
-    j3(() => {
-      const c5 = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");
-      document.documentElement.classList.toggle("railicons", c5);
-      document.documentElement.classList.toggle("raillabels", lab);
-      if (nav) {
-        nav.classList.toggle("icons", c5 && !lab);
-        nav.classList.toggle("collapsed", c5);
-        nav.classList.toggle("labelled", lab);
-      }
-    });
-    const tog = (
-      /** @type {HTMLButtonElement | null} */
-      $("#railTog")
-    );
-    if (tog) {
-      j3(() => {
-        const c5 = railCollapsed.value, what = c5 ? "Expand the rail" : "Collapse the rail";
-        tog.setAttribute("aria-expanded", c5 ? "false" : "true");
-        tog.setAttribute("aria-label", what);
-        tog.setAttribute("data-key", MAC ? "⌘\\" : "Ctrl+\\");
-        tog.disabled = railNarrow.value;
-      });
-      tog.addEventListener("click", railToggle);
-    }
-    const onGo = (id2) => go2(railGo(id2));
-    const flyouts = {
-      projects: () => {
-        const a5 = P4.filter((p6) => p6.active !== false && !p6.archived);
-        return a5.length ? a5.map((p6) => ({ id: p6.code, name: p6.name, health: p6.health || "" })) : [{ id: "-", note: "No active projects" }];
-      },
-      work: () => {
-        const n4 = { actions: A4.filter(open).length, raid: R3.filter(open).length, decisions: DEC.filter(open).length };
-        return WTABS.map((t47) => ({ id: t47.id, name: t47.label, count: t47.id === "all" ? n4.actions + n4.raid + n4.decisions : n4[t47.id] }));
-      }
-    };
-    const onFly = (id2, pick) => {
-      if (id2 === "projects") go2("cockpit", pick);
-      else if (id2 === "work") {
-        if (shared.VIEW !== "work") go2("work");
-        if (shared.WT !== pick) workTabGo(pick);
-      }
-    };
-    R(k(RailNav, { onGo, flyouts, onFly }), $("#railMain"));
-    R(k(RailMore, { onGo, onCustomise: railCustomise, onHealth: () => go2("settings", "health"), onHelp: () => go2("help") }), $("#railFoot"));
-    addHTML(document.body, "beforeend", html`<div id="railCustBox"></div>`);
-    R(k(CustomiseSidebar, { onSave: railDone, onClose: railCustClosed }), $("#railCustBox"));
-    document.addEventListener("click", (e4) => {
-      const t47 = (
-        /** @type {Element} */
-        e4.target
-      );
-      if (t47.closest && t47.closest("[data-railcust]")) railCustomise(t47.closest("[data-railcust]"));
-    });
-    document.addEventListener("contextmenu", (e4) => {
-      const t47 = (
-        /** @type {Element} */
-        e4.target
-      );
-      const nav = t47.closest && t47.closest(".rail");
-      if (!nav) return;
-      e4.preventDefault();
-      const byKey = !e4.clientX && !e4.clientY, a5 = document.activeElement;
-      railCustomise(t47.closest(".rail button") || byKey && a5 && a5.closest && a5.closest(".rail button") || null);
-    });
-    document.addEventListener("keydown", (e4) => {
-      if ((e4.metaKey || e4.ctrlKey) && !e4.altKey && !e4.shiftKey && e4.key === "\\") {
-        e4.preventDefault();
-        railToggle();
-      }
-    });
-    renderRail();
-  }
-  function bootRail0077() {
-    const ap2 = SETSECTIONS.find((x5) => x5.id === "appearance"), r02 = ap2.render;
-    ap2.kw += " left rail sidebar navigation hide reorder order icons only titles customise collapse more";
-    ap2.render = () => r02() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in More, put them in your own order, or show icons only");
-  }
-
   // components/closeday/CloseDay.jsx
   var CD_STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"];
   var PLACES = [["review", "Review now"], ["first", "First thing tomorrow"], ["leave", "Leave"]];
@@ -78416,6 +78439,7 @@ ${d5.text}`);
         "pkShort",
         "pkUndoLast",
         "pkWsAddOK",
+        "popupOpen",
         "portfolioTable",
         "prepDlg",
         "prepHref",

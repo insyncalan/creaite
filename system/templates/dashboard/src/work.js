@@ -124,7 +124,7 @@ export function workBarProps(){ const R=FPRANGES(), main=defs().filter(d=>!d[4])
     onSelect:(k,vals)=>{ const set=setOf(k); set.clear(); vals.forEach(v=>set.add(v)); workChanged(); },
     onNot:(k,n)=>{ n?NEG.add(k):NEG.delete(k); workChanged(); },
     onRange:(k,end,text)=>{ const v=text.trim(); if(v&&!DDATE.test(v)){ snack("Not a date creaite knows. "+DATE_HELP); return; } rng(k)[end]=v?toIso(v):""; workChanged(); },
-    more:{id:"moreBtn",menuId:"moreMenu",label:funnelTip(wfCount()),menuLabel:"Add a filter",count:wfCount(),key:"F",
+    more:{id:"moreBtn",menuId:"moreMenu",label:funnelTip(wfCount()),menuLabel:"Add a filter",count:wfCount(),key:"Shift+F",
       on:defs().some(d=>d[4]&&setOf(d[0]).size)||!!(shared.DR.from||shared.DR.to||RR.from||RR.to||shared.CR.from||shared.CR.to),
       field:shared.FPK,onField:k=>{ shared.FPK=k; drawWorkFilters(); },query:shared.FPQ,
       onQuery:q=>{ shared.FPQ=q; const vis=[...defs().map(d=>[d[0],d[1]]),...FPRANGES()].filter(f=>!q||f[1].toLowerCase().includes(q.toLowerCase()));
@@ -521,7 +521,7 @@ export const SORTOPTS=t=>t==="decisions"?[["","Default order"],["due","Needed by
 /* the key-hint line for each layout, built from the controls that exist (BL-114, BL-122, BL-123, BL-128) */
 /** @type {[string[] | "", string, string][]} the keys (or none), what they do, and the layout they belong to */
 export const HINTS=[[["J","K"],"move","list"],[["J","K"],"step through the cards","board"],[["Space"],"select","both"],["","click a value to change it","list"],[["Enter"],"or the ID opens","both"],
-  ["","drag a card, or use its <b>Move to…</b> menu, to change it","board"],[["D"],"display","both"],[["F"],"filters","both"],[["Esc"],"clear","both"],["","click a heading to sort","list"],["","drag a column edge to resize","list"]];
+  ["","drag a card, or use its <b>Move to…</b> menu, to change it","board"],[["D"],"display","both"],[["Shift+F"],"filters","both"],[["Esc"],"clear","both"],["","click a heading to sort","list"],["","drag a column edge to resize","list"]];
 export function workHint(lay){ return HINTS.filter(h=>h[2]==="both"||h[2]===lay).map(([k,t])=>(k?k.map(x=>`<span class="kbd">${x}</span>`).join(" ")+" ":"")+t).join(" · "); }
 export function drawDisp(){ const m=$("#dispMenu"), t=shared.WT, bd=layoutOf(t)==="board", s=SORT[t], cur=s?(s.col==="_def"?"":s.col):"", opts=SORTOPTS(t), focusKey=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.id||document.activeElement.dataset.mv+"|"+document.activeElement.dataset.d):null;
   const gopts=bd?groupsOf(t):[["none","None"],...groupsOf(t)], gcur=bd?groupOf(t):listGroupOf(t), sub=subOf(t,bd?"board":"list");   /* BL-129: the List groups too */
