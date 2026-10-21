@@ -75,4 +75,22 @@ filed report hand-edited on disk, the Word client report and the client-safe one
 
 ## Checked with every diff applied
 
-RESULTS
+A plain copy of v251-step3 with all five diffs applied (`patch -p1`, in this order: step1 client_leak, step2 live_server, step2
+reach, step3 tracker, step3 creaite-rules) and P16json's `expectedFailure` removed: `python3 dev/tools/check.py` says
+`check: OK`; test_client_output_step1/2/3, test_client_leak, test_client_gate, _reviews, _late, test_client_audience,
+test_client_item_links, test_reach, test_reports and test_client_output_properties all pass (P16json passes; step 3's
+"without the tracker proposal" mutant skips itself, as it should once the diff is in). When applying the step 1 diff, remove
+the `expectedFailure` on `test_P16_json_escaped_form_needs_the_guarded_gate_diff`.
+
+## Tests and goldens
+
+- Client suites on v251-step3 (one file at a time): all pass but those below.
+- Failing on the real clock, the same on the untouched v2.5.0 tree (not this work): `test_steerco` (3), `test_report_builders_pinned`
+  (11 subtests) and `test_snapshots` [milestones]: the real date has passed the demo milestone's agreed day (19-10-2026), so it
+  reads Overdue / Late. No golden was updated: nothing in this step changes a screen on purpose.
+- Browser timeouts under load (the machine was shared; load 10 to 16) that pass alone: test_report_export_save,
+  test_report_text_section_ui, test_reports_page, test_report_editor (one test each).
+- `test_report_sheet` ClientSheet: an order dependency from step 2 (Show as exported saves first), fixed by starting the picker test
+  from a fresh draft (failed the same on v251-step2).
+- Property tests: smoke P1..P24 green (P12 browser tier, not run; P25 in `test_client_output_p25.py`, green with its mutation
+  proof); the full-size run (CREAITE_PROPS_FULL=1): FULLRESULT.
