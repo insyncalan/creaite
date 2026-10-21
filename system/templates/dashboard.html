@@ -5005,6 +5005,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     applyTheme: () => applyTheme,
     applyView: () => applyView,
     applyWords: () => applyWords,
+    approveRoutineTracked: () => approveRoutineTracked,
     approveTracked: () => approveTracked,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
@@ -43090,6 +43091,38 @@ ${s5}`;
     } : null);
     await reloadData();
   }
+  async function approveRoutineTracked(m5) {
+    const v5 = await openMinutesRecord({ file: m5.file });
+    if (!v5 || !v5.ok) {
+      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      return;
+    }
+    const item = (x5) => x5.file === m5.file && !["draft", "files"].includes(x5.kind) && !x5.done, mine = new Set(REV.filter(item).map((x5) => x5.ref));
+    const tr2 = await trackApprove(v5, { only: (n4) => mine.has(n4), approve: false }), made = tr2.made;
+    if (made) await reloadData();
+    if (!tr2.ok) {
+      snack(trackFailWords(tr2, "Approve routine"));
+      return;
+    }
+    const ks2 = REV.filter((x5) => item(x5) && rvBulkOK(x5)), left = REV.filter((x5) => item(x5) && !rvBulkOK(x5)).length;
+    let undo = null;
+    if (ks2.length) {
+      const res = await rvDecideMany(ks2, "approved");
+      undo = res.undo || null;
+    } else if (made && S.autoApply) {
+      const res = await applyNow();
+      if (res.ok) undo = () => undoApply(res.apply_id);
+    }
+    const tail = made ? ` · ${made} line${made === 1 ? "" : "s"} taken out of the minutes or kept as lines only` : "";
+    snack(
+      `Approved ${ks2.length} item${ks2.length === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}`,
+      undo ? async () => {
+        await undo();
+        await openMinutesRecord({ file: m5.file });
+        await reloadData();
+      } : null
+    );
+  }
   async function rejectMinutes(m5) {
     await decide(m5.n, "rejected");
     const pend = REV.filter((x5) => x5.file === m5.file && !["draft", "files"].includes(x5.kind) && !x5.done);
@@ -74945,6 +74978,11 @@ ${d5.text}`);
     else decide(n4, "rejected");
   }
   async function irApproveRoutine(groups) {
+    const min = [...groups.needs, ...groups.routine].map(irRow).find((r4) => !!r4 && !r4.done && isRecordMin(r4));
+    if (min && viaServer()) {
+      await approveRoutineTracked(min);
+      return;
+    }
     const list = irBulk(groups, irDone, irHeld).map(irRow).filter((r4) => rvBulkOK(r4));
     if (!list.length) {
       snack("Nothing routine to approve");
@@ -77331,6 +77369,7 @@ ${d5.text}`);
         "applyView",
         "applyWords",
         "approveArgs",
+        "approveTracked",
         "askChangesHtml",
         "askDeleteNote",
         "askLive",
@@ -77590,7 +77629,6 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
-        "isMin",
         "isNotePath",
         "itemDatePicker",
         "items",

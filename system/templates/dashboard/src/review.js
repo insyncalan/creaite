@@ -108,6 +108,23 @@ export async function approveTracked(r,g){ const v=await openMinutesRecord({file
   if(!res.ok){ snack(trackFailWords(res,"Approve")); await reloadData(); return; }
   snack(trackApprovedWords(res),res.apply_id?async()=>{ await undoApply(res.apply_id); await openMinutesRecord({file:r.file}); await reloadData(); }:null);
   await reloadData(); }
+/* #275 (Cap's M-c), on the Intake page's Approve routine (n) under minutes kept as a record (the old Review's Approve n routine,
+   ported when Review retired): the Track column's crosses and neithers on the meeting's items first (trackApprove with approve
+   false, the minutes view's changes), then the routine items, in one apply whose Undo also settles the minutes back, exactly as
+   they were. The minutes, and an item approved one by one, still wait for their own Approve (the bulk rule). */
+export async function approveRoutineTracked(m){ const v=await openMinutesRecord({file:m.file});
+  if(!v||!v.ok){ snack(oneLine((v&&v.message)||"")||"Couldn't open the minutes"); return; }
+  const item=x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done, mine=new Set(REV.filter(item).map(x=>x.ref));
+  const tr=await trackApprove(v,{only:n=>mine.has(n),approve:false}), made=tr.made;
+  if(made) await reloadData();
+  if(!tr.ok){ snack(trackFailWords(tr,"Approve routine")); return; }
+  const ks=REV.filter(x=>item(x)&&rvBulkOK(x)), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
+  let undo=null;
+  if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; }
+  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); }
+  const tail=made?` · ${made} line${made===1?"":"s"} taken out of the minutes or kept as lines only`:"";
+  snack(`Approved ${ks.length} item${ks.length===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}`,
+    undo?async()=>{ await undo(); await openMinutesRecord({file:m.file}); await reloadData(); }:null); }
 export async function rejectMinutes(m){ await decide(m.n,"rejected"); const pend=REV.filter(x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done);
   if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay for review.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); },`Reject ${pend.length===1?"it":"them"} too`); }                                     /* a batch over this asks first (a let, so a test can lower it) */
 /* #232-B: the page's rule is the server's (review.hold_reason, carried on each row as `hold`; "" is routine, "invalid" is held back). A row without it (an edit made on the page) keeps the older test */
