@@ -1,6 +1,7 @@
 exit 0
 {
  "carried": [],
+ "chosen": true,
  "day": "2026-10-09",
  "due_soon_days": 7,
  "items": [
@@ -197,5 +198,6 @@ exit 0
    "projects/ABC Example Programme/transcripts/2026-10-04 Steering.vtt"
   ]
  },
+ "series": "abc weekly",
  "since": "2026-10-02"
 }

@@ -363,7 +363,7 @@ def _meeting(ctx):
     return {"title": mt["title"], "day": ctx["day"], "day_shown": shown(ctx["day"]), "start": mt.get("start", ""),
             "end": mt.get("end", ""), "where": mt.get("where", ""), "confidential": bool(mt.get("confidential")),
             "project": ctx["project"], "chosen": ctx.get("chosen", True), "series": ctx.get("series", ""),
-            "project_name": "Portfolio" if allp else ctx.get("project_name") or "",
+            "project_name": prep_page.NO_PROJECT if allp else ctx.get("project_name") or "",
             "body": "" if mt.get("confidential") else mt.get("body", "")}
 
 
@@ -463,11 +463,24 @@ def _resolve(key):
     return ctx, (stored or {}).get("reply") or {}, stored, d
 
 
+def _other_project(ctx, stored):
+    """#279: {project, project_name} when the stored research was done for another project than the meeting's now, else None.
+    Content is kept by meeting, not by project, so a series switched to another project must never show the old research."""
+    was = ((stored or {}).get("context") or {}).get("project") or (stored or {}).get("project")
+    if not stored or not was or was == ctx.get("project"):
+        return None
+    name = ((stored.get("context") or {}).get("project_name")) or ""
+    return {"project": was, "project_name": prep_page.NO_PROJECT if was == "_portfolio" else name or was}
+
+
 def view(key):
     """{ok, model, stored, saved, live} for the in-app prep page (Meetings › Prep), or {ok: False, message}. Claude is never run."""
     ctx, reply, stored, d = _resolve(key)
     if ctx.get("error"):
         return {"ok": False, "message": ctx["error"]}
+    stale = _other_project(ctx, stored)
+    if stale:                                   # #279: the earlier page is kept; its research isn't shown under this project
+        reply, stored = {}, None
     m = prep_page.meeting_entry(d, key)
     focus = prep_shape.get(prep_shape.canonical(ctx["key"], ctx["day"]))
     model = assemble(ctx, reply, focus, d, m)
@@ -476,7 +489,7 @@ def view(key):
     saved = None
     if stored and stored.get("page"):
         saved = {"path": stored["page"], "at": stored.get("built_at"), "at_shown": shown(stored.get("built_at"))}
-    return {"ok": True, "model": model, "stored": bool(stored), "saved": saved, "live": bool(m)}
+    return {"ok": True, "model": model, "stored": bool(stored), "saved": saved, "live": bool(m), "stale": stale}
 
 
 def regenerate(key, day):
@@ -486,6 +499,13 @@ def regenerate(key, day):
     if not stored or not stored.get("page"):
         return None
     ctx, d = stored["context"], _data()
+    if d:
+        with prep_page.using(d):
+            live = prep_page.context(key)
+    else:
+        live = prep_page.context(key)
+    if not live.get("error") and _other_project(live, stored):
+        return None                             # #279: researched for another project: never filed again under either
     rel = prep_page.save(ctx, page_for(ctx, stored["reply"], d))
     stored["page"], stored["built_at"] = rel, prep_page.now().strftime("%Y-%m-%d %H:%M")
     target = content_path(stored["id"])
