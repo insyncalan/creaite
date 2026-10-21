@@ -71,31 +71,31 @@ TEAMS_MER = f"Teams · Channel: MER pilot · From: Priya Nair · Sent: {d(-18)} 
 # (project, description, workstream, owner, priority, due, status, raised, milestone index or None, source, client, update)
 ACTIONS = [
     ("FAL", "Escalate production data access to Northgate CIO", "Data", "Alan Carter", "Urgent", d(3), "Open", d(-4), 2,
-     FAL_MIN + f"{d(-4)} Steering committee.docx — Action Items", False, f"{d(-3)}: CIO meeting requested"),
+     FAL_MIN + f"{d(-4)} Steering committee.docx — Actions", False, f"{d(-3)}: CIO meeting requested"),
     ("FAL", "Confirm revised go-live plan with sponsor", "Governance", "Alan Carter", "High", d(-2), "Open", d(-11), 2,
-     FAL_MIN + f"{d(-11)} Weekly delivery.docx — Action Items", False, ""),
+     FAL_MIN + f"{d(-11)} Weekly delivery.docx — Actions", False, ""),
     ("FAL", "Provide masked sample datasets for domain 3", "Data", "Rashid Al Suwaidi (Northgate)", "High", d(-13), "Open",
      d(-20), 1, f"Email · From: Rashid Al Suwaidi <rashid@northgate.example> · Subject: [FAL] Domain 3 data · "
                 f"Sent: {d(-20)} 10:20", True, f"{d(-5)}: chased; promised by {d(1)}"),
     ("FAL", "Complete security review of ingestion pipeline", "Build", "Lena Fischer", "Medium", d(5), "Open", d(-18), None,
-     FAL_MIN + f"{d(-18)} Weekly delivery.docx — Action Items", False, ""),
+     FAL_MIN + f"{d(-18)} Weekly delivery.docx — Actions", False, ""),
     ("ORX", "Deliver UAT test data pack", "Testing", "Mei Tan (Orbit)", "High", d(-11), "Open", d(-13), 1, EMAIL_ORX, True,
      f"{d(-4)}: partial pack this week"),
     ("ORX", "Approve payment-provider sandbox credentials", "Release", "James Okafor (Orbit)", "High", d(-12), "Open",
      d(-13), 1, EMAIL_ORX, False, ""),
     ("ORX", "Send UAT entry criteria to client", "Testing", "Alan Carter", "High", d(0), "Open", d(-6), 1,
-     f"projects/ORX Orbit Customer App/minutes/{d(-6)} Project board.docx — Action Items", False, ""),
+     f"projects/ORX Orbit Customer App/minutes/{d(-6)} Project board.docx — Actions", False, ""),
     ("ORX", "Book UAT testers and rooms", "Testing", "Sara Khan", "Medium", d(3), "Open", d(-6), 1,
-     f"projects/ORX Orbit Customer App/minutes/{d(-6)} Project board.docx — Action Items", False, ""),
+     f"projects/ORX Orbit Customer App/minutes/{d(-6)} Project board.docx — Actions", False, ""),
     ("MER", "Share week-4 pilot metrics pack", "Adoption", "Dev Patel", "Medium", d(1), "Open", d(-6), 1, TEAMS_MER, True, ""),
     ("MER", "Draft roll-out options paper for the pilot review", "Adoption", "Alan Carter", "Medium", d(15), "Open", d(-18),
      1, TEAMS_MER, False, ""),
     ("MER", "Agree pilot success criteria with Meridian", "Adoption", "Priya Nair (Meridian)", "Medium", d(-20), "Closed",
      d(-34), 0, TEAMS_MER, False, ""),
     ("TID", "Schedule final cut-over rehearsal", "Cut-over", "Omar Haddad", "High", d(4), "Delayed", d(-9), 1,
-     f"projects/TID Tide Billing Migration/minutes/{d(-9)} Cut-over rehearsal review.docx — Action Items", False, ""),
+     f"projects/TID Tide Billing Migration/minutes/{d(-9)} Cut-over rehearsal review.docx — Actions", False, ""),
     ("TID", "Update rollback runbook after rehearsal 2", "Cut-over", "TBC", "Medium", None, "Open", d(-9), None,
-     f"projects/TID Tide Billing Migration/minutes/{d(-9)} Cut-over rehearsal review.docx — Action Items", False, ""),
+     f"projects/TID Tide Billing Migration/minutes/{d(-9)} Cut-over rehearsal review.docx — Actions", False, ""),
 ]
 # (project, type, description, workstream, owner, response, due, impact, likelihood, raised, source)
 RAID = [
@@ -318,7 +318,7 @@ def load():
             {"n": 3, "op": "new", "table": "actions", "match": "strong", "flags": ["no-owner", "no-due-date"],
              "decision": "pending", "values": {"project": "FAL", "description": "Share masked domain-3 extract with QA",
                                                "workstream": "Data", "owner": "TBC", "raised": d(-1),
-                                               "source": fal_src + " — Action Items"}}],
+                                               "source": fal_src + " — Actions"}}],
             "meeting": {"key": "demo:fal-steering", "title": "FAL Steering committee", "date": d(-1), "projects": ["FAL"],
                         "draft": paths.rel(draft), "transcript": None, "minutes_decision": "pending", "file_ops": []}}),
     ]

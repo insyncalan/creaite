@@ -1265,7 +1265,7 @@ class MinutesFlow(MinutesBase):
         v = self.view(name)
         before = len(hcbase.db_rows(self.vault, "SELECT apply_id FROM applies WHERE undone_at IS NULL"))
         r = self.approve(name, v)
-        src = f"{filed} — Action Items"
+        src = f"{filed} — Actions"
         after = hcbase.db_rows(self.vault, "SELECT apply_id FROM applies WHERE undone_at IS NULL")
         self.assertEqual(len(after) - before, 1, "one apply")
         self.assertEqual(r["apply_id"], after[-1]["apply_id"])
@@ -1282,7 +1282,7 @@ class MinutesFlow(MinutesBase):
     def test_c43_filed_minutes(self):
         """43. The filed `projects/FAL …/minutes/<date> Steering committee.html` says "Approved by Alan on <long date>", its rows
         carry the new IDs (FAL-A-…, FAL-D-…), the transcript is in Transcripts, `inbox/` and the draft are empty of it, and the
-        new action's source names the filed `.html` and "Action Items"."""
+        new action's source names the filed `.html` and "Actions" (#296: "Action Items" before 2.6.0)."""
         name, draft, filed, day, out = self.stage()
         v = self.view(name)
         self.approve(name, v)
@@ -1296,7 +1296,7 @@ class MinutesFlow(MinutesBase):
         self.assertFalse((self.vault / draft).exists(), "the draft is gone")
         src = hcbase.db_rows(self.vault, "SELECT source FROM actions WHERE description LIKE '%s%%'" % self.W[0] + " AND source LIKE ?", f"%{day}%")[0]["source"]
         self.assertIn(filed, src)
-        self.assertIn("Action Items", src)
+        self.assertTrue(src.endswith(" — Actions"), src)
         self.note(43, f"rows carry {sorted(refs)[:4]} in the page data; source: {src}")
 
     def test_c44_undo(self):

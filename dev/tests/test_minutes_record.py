@@ -123,7 +123,7 @@ class Record(Base):
         m = data["meeting"]
         self.assertEqual(m["draft"], DRAFT)
         self.assertIn({"op": "copy", "from": "draft", "to": FILED}, m["file_ops"])
-        self.assertEqual(data["items"][0]["values"]["source"], f"{FILED} — Action Items")
+        self.assertEqual(data["items"][0]["values"]["source"], f"{FILED} — Actions")
         doc = self.doc()
         self.assertEqual((doc["kind"], doc["title"], doc["date"], doc["project_name"]),
                          ("minutes", "Steering committee", DAY, "Example Programme"))

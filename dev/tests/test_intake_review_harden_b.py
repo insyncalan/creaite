@@ -21,7 +21,7 @@ from test_tracker import action  # noqa: E402
 
 ROW = "#v-intake-review tr.irprop"
 WORDING = "Each has a project and no conflict, and none is a change you approve one by one."
-SRC = "projects/ABC Example Programme/minutes/2026-10-05 Example steering.html — Action Items"
+SRC = "projects/ABC Example Programme/minutes/2026-10-05 Example steering.html — Actions"
 
 
 def extras():

@@ -17,7 +17,7 @@ def pending(item):
 
 def meeting_items():
     """Four routine actions, a new risk, a new decision and a closing update: the last three need a decision."""
-    src = "projects/ABC Example Programme/minutes/2026-10-05 Example steering.html — Action Items"
+    src = "projects/ABC Example Programme/minutes/2026-10-05 Example steering.html — Actions"
     acts = [pending(action(i + 1, description=f"Steering action {i}", owner="Sara Example", due_date="2026-12-01", source=src)) for i in range(4)]
     return acts + [
         pending({"n": 5, "op": "new", "table": "raid", "match": "strong", "flags": [], "values": {"project": "ABC", "type": "Risk",

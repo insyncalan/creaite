@@ -22,7 +22,7 @@ class FactsCase(unittest.TestCase):
     def setUp(self):
         self.v = ReportVault()
         populate(self.v)
-        src = f"{ABC}/minutes/2026-10-06 Steering.docx — Action Items"
+        src = f"{ABC}/minutes/2026-10-06 Steering.docx — Actions"
         (self.v.root / ABC / "minutes").mkdir(exist_ok=True)
         (self.v.root / ABC / "minutes/2026-10-06 Steering.md").write_text(
             "# Steering\n\nThe pilot finished. Handling time is down 11% against an 8% target.\n\nEveryone agreed to meet again.\n")

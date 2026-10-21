@@ -244,7 +244,7 @@ print(json.dumps([ls.allowed('read', 'projects/Example Programme/CLAUDE.md'), ls
         mine = "projects/Example Programme/02 Meetings"
         self.assertIn({"op": "copy", "from": "draft", "to": f"{mine}/Minutes/2026-10-01 Steering committee.docx"}, data["meeting"]["file_ops"])
         self.assertIn({"op": "copy", "from": "transcript", "to": f"{mine}/Transcripts/2026-10-01 Steering committee.vtt"}, data["meeting"]["file_ops"])
-        self.assertEqual(data["items"][0]["values"]["source"], f"{mine}/Minutes/2026-10-01 Steering committee.docx — Action Items")
+        self.assertEqual(data["items"][0]["values"]["source"], f"{mine}/Minutes/2026-10-01 Steering committee.docx — Actions")
         # approve the minutes and apply: the files land in OneDrive's folders, nothing in the vault's own projects/
         data["meeting"]["minutes_decision"] = "approved"
         for i in data["items"]:
@@ -255,7 +255,7 @@ print(json.dumps([ls.allowed('read', 'projects/Example Programme/CLAUDE.md'), ls
         self.assertTrue(self.eng("ABC", "02 Meetings", "Minutes", "2026-10-01 Steering committee.docx").is_file())
         self.assertTrue(self.eng("ABC", "02 Meetings", "Transcripts", "2026-10-01 Steering committee.vtt").is_file())
         self.assertFalse((v.root / "projects/ABC Example Programme/minutes/2026-10-01 Steering committee.docx").exists())
-        self.assertEqual(v.rows("actions")[0]["source"], f"{mine}/Minutes/2026-10-01 Steering committee.docx — Action Items")
+        self.assertEqual(v.rows("actions")[0]["source"], f"{mine}/Minutes/2026-10-01 Steering committee.docx — Actions")
         # the stored source resolves to the real file, and an undo takes both files away again
         real = self.py("import paths; print(json.dumps(str(paths.resolve('projects/Example Programme/02 Meetings/Minutes/2026-10-01 Steering committee.docx'))))")
         self.assertTrue(Path(real).is_file())
@@ -424,7 +424,7 @@ class TeamsNamesTests(OneDriveCase):
         self.assertEqual([o["op"] for o in ops], ["copy", "remove"])                  # the minutes in, the draft out: the transcript is left alone
         self.assertEqual(ops[0]["to"], f"projects/Example Programme/02 Meetings/Minutes/{date} Weekly sync.docx")
         self.assertFalse(any(o.get("path") == rel or o.get("from") == "transcript" for o in ops))
-        self.assertEqual(data["items"][0]["values"]["source"], f"projects/Example Programme/02 Meetings/Minutes/{date} Weekly sync.docx — Action Items")
+        self.assertEqual(data["items"][0]["values"]["source"], f"projects/Example Programme/02 Meetings/Minutes/{date} Weekly sync.docx — Actions")
         self.assertEqual(all("date-from-file" in i["flags"] for i in data["items"]), flagged)
         self.assertEqual(data["meeting"].get("date_from_file", False), flagged)
         return t, before, data, prop
