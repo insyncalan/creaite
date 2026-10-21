@@ -258,7 +258,7 @@ class TrackFromReview(LiveBrowserCase):
         Driven through Intake's Approve routine (irApproveRoutine, which calls rvDecideMany)."""
         b = self.b
         msg = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 2: crossed in the minutes' Track column; "
-               "it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
+               "it is back on Intake: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
         b.eval("window.__api0=api; window.api=async(p,body)=>p==='/api/apply'?{ok:false,message:" + json.dumps(msg) + "}:__api0(p,body)")
         self.ev("(()=>{ const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + ");"
                 " window.__t8=null; irApproveRoutine({needs:[],routine:[r.n]}).then(()=>{ window.__t8=document.getElementById('snack').textContent; }); })()")

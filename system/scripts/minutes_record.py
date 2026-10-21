@@ -1095,15 +1095,15 @@ def _track_blocked(data, decisions):
             and not (t == "" and _waits(items[n], review.minutes_group(items[n])))}
 
 
-TRACK_STUCK = ("it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), "
+TRACK_STUCK = ("it is back on Intake: approve the minutes in the Minutes view (it clears crossed lines), "
                "or tick it there to register it")
 
 
 def track_apply_problems(name, data):
     """#275 (Cap's re-review): tracker.py apply's check (the guarded diff's track_problems). An APPROVED item that Alan crossed or
     left with neither in the minutes' Track column is never written, whatever path approved it (a stale page, a proposal edited by
-    hand): the apply stops, all or nothing, and the item goes back to pending (saved when the apply stops), so it is in Review's
-    queue again, where approving the minutes clears it or it can be rejected. A pending item, the normal state between crossing a
+    hand): the apply stops, all or nothing, and the item goes back to pending (saved when the apply stops), so it is on Intake
+    again, where approving the minutes clears it or it can be rejected. A pending item, the normal state between crossing a
     row and approving the minutes, never stops it. Fails closed: a draft record that can't be read, with an approved item not yet
     applied, stops the apply. Returns the problems, one line each, with `name` (the proposal's file name)."""
     try:
