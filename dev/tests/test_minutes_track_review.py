@@ -332,6 +332,69 @@ class ServerTrack(ma.Base):
         self.assertEqual(len(out), 1, out)
         self.assertIn("the minutes record can't be read", out[0])
 
+    def test_the_apply_check_fails_closed_for_a_deleted_record(self):
+        """Cap's round 2 (4): a record that is gone, with an approved item not yet applied, stops the apply."""
+        (self.v.root / ma.DRAFT).unlink()
+        self.assertEqual(self.check()[0], [], "nothing approved: nothing to stop")
+        self.set_decision(3, "approved")
+        out = self.check()[0]
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("the minutes record can't be read", out[0])
+
+    def test_the_apply_check_fails_closed_for_a_record_with_no_data_block(self):
+        f = self.v.root / ma.DRAFT
+        f.write_text(re.sub(r'<script type="application/json" id="creaite-data">.*?</script>', "",
+                            f.read_text(encoding="utf-8"), flags=re.S), encoding="utf-8")
+        self.set_decision(3, "approved")
+        out = self.check()[0]
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("the minutes record can't be read", out[0])
+
+    def test_the_apply_check_fails_closed_for_a_record_whose_state_was_changed(self):
+        for state in ("final", "approved"):
+            f = self.v.root / ma.DRAFT
+            text = f.read_text(encoding="utf-8")
+            m = re.search(r'(<script type="application/json" id="creaite-data">)(.*?)(</script>)', text, flags=re.S)
+            doc = json.loads(m.group(2))
+            doc["state"] = state
+            f.write_text(text[:m.start(2)] + json.dumps(doc) + text[m.end(2):], encoding="utf-8")
+            self.set_decision(3, "approved")
+            out = self.check()[0]
+            self.assertEqual(len(out), 1, (state, out))
+            self.assertIn("isn't a draft", out[0])
+
+    def undo_out_of_the_view(self):
+        """Approve the minutes with a cross on item 2 and neither on item 3, apply, then Undo with tracker.py (Activity's undo):
+        items 2 and 3 are pending again but the record lost their rows (they are in meta.removed)."""
+        self.track({"2": "n", "3": ""})
+        self.v.run("approve", str(self.number("meeting")), script="review.py")
+        self.v.run("apply")
+        self.assertIn("Undid apply", self.v.run("undo").stdout)
+        self.assertEqual((self.item(2)["decision"], self.item(3)["decision"]), ("pending", "pending"))
+
+    def test_after_undo_out_of_the_view_bulk_never_registers_the_crossed_item(self):
+        """Cap's round 2 (1): the crossed item whose row the record took out is still held after tracker.py undo."""
+        self.undo_out_of_the_view()
+        out = self.v.run("bulk", script="review.py").stdout
+        self.assertIn("not ticked in the minutes", out)
+        self.assertEqual(self.item(2)["decision"], "pending", "the crossed issue is held, not approved")
+        self.v.run("apply", ok=False)
+        self.assertNotIn("Test data isn't anonymised", [r["description"] for r in self.v.rows("raid")])
+
+    def test_after_undo_out_of_the_view_the_apply_check_stops_the_crossed_item(self):
+        self.undo_out_of_the_view()
+        self.set_decision(2, "approved")
+        out, dec = self.check()
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("item 2: crossed in the minutes' Track column", out[0])
+        self.assertEqual(dec["2"], "pending")
+
+    def test_after_undo_out_of_the_view_approve_item_refuses_the_crossed_item(self):
+        self.undo_out_of_the_view()
+        out = self.v.run("approve", str(self.number(2)), script="review.py").stdout
+        self.assertIn("crossed in the minutes' Track column", out)
+        self.assertEqual(self.item(2)["decision"], "pending")
+
     @unittest.skipUnless(DIFF_APPLIED, "dev/proposals/track-from-review/tracker-track-problems.diff not applied yet")
     def test_apply_refuses_a_crossed_item_approved_by_hand(self):
         self.track({"1": "n"})
