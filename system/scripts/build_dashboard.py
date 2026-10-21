@@ -1996,11 +1996,13 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
     for d in out.values():             # holds Alan's; the page's quiet line counts other people's), so a day is Urgent, High, the rest
         d["items"].sort(key=lambda i: rank.get(i.get("pr"), 2))
     # Urgent work with no date can't sit on a day: it leads the Week ahead instead
-    undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent"}
+    # #286: a RAID item keeps its type in every group, so its icon names it (Risk, Issue, Assumption, Dependency)
+    typed = lambda k, x: {"type": x.get("type")} if k == "raid" else {}  # noqa: E731
+    undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent", **typed(k, x)}
                for k, x in open_items if x.get("pr") == "Urgent" and not x["due"] and (shown is None or "Urgent" in shown)]
     # Further ahead: the two weeks after, key milestones and Urgent or High deadlines only, so it stays short
     end, horizon = days[-1].isoformat(), (days[-1] + timedelta(days=FURTHER_DAYS)).isoformat()
-    further = [{"date": x["due"], "kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr")}
+    further = [{"date": x["due"], "kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr"), **typed(k, x)}
                for k, x in open_items if x["due"] and end < x["due"] <= horizon
                and x.get("pr") in ("Urgent", "High") and (shown is None or x.get("pr") in shown)]
     further += [{"date": m[1], "kind": "milestone", "id": m[3], "p": p["code"], "t": m[0]} for p in projects for m in p["ms"]

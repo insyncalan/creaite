@@ -10,7 +10,7 @@ import { A, P, peopleAll, pName, R } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, paintIcons, putHTML, raw } from "./core/dom.js";
 import { autoGrow, DATE_HELP, onCmdEnter, srcHTML } from "./core/fields.js";
 import { go, hashOf, navState, navWrite, parseHash, restoreNav } from "./core/nav.js";
-import { D, DATE, fd, fdText, MOD, mScroll, reduced, S, TODAY } from "./core/page.js";
+import { D, DATE, fd, fdText, MOD, mScroll, reduced, S, TODAY, typeWord } from "./core/page.js";
 import { needVault, reloadData, renderBadge, save, snack, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { draftStat } from "./drafts.js";
@@ -192,6 +192,8 @@ export const mvMismatch=m=>m.state!=="achieved"&&MVRANK[m.state]<MVRANK[m.sug];
    tracker.client_milestones, given here as cvis); Movement and the internal view show every one */
 export function mvVis(code,cli,move){ return mvAll(code).filter(m=>!cli||move||m.cvis); }
 export function mvOpen(code,cli,move){ return mvVis(code,cli,move).filter(m=>m.state!=="achieved").sort((a,b)=>(a.agr||a.fc||"9").localeCompare(b.agr||b.fc||"9")); }
+/* #286: a milestone marker on the Plan strip and the Movement list names its type first, "Milestone: …", on hover (data-tip) and to a screen reader */
+const MSW=typeWord("milestone");
 export function mvShape(st,sz){ sz=sz||16;
   const p={achieved:'<circle cx="8" cy="8" r="7" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.5"/><path d="M4.6 8.2l2.3 2.3 4.5-4.7" fill="none" stroke="var(--ok)" stroke-width="1.8"/>',
    ontrack:'<circle cx="8" cy="8" r="6" fill="var(--ok)"/>',
@@ -223,9 +225,9 @@ export function mvStrip(list,cli){ const {A0,A1,months}=mvAxis(list,false), W=Ma
     while(levels[lv]!==undefined&&left<levels[lv]+8) lv++; levels[lv]=left+text; const top=base+lv*LH, nm=m.n.length>26?m.n.slice(0,25)+"…":m.n;
     h+=`<div class="mv-lead" style="left:${x}px;top:56px;height:${top-56}px"></div>`;
     if(it.g){ const ax=px(mvT(m.agr));
-      h+=`<div class="mv-gconn" style="left:${ax}px;width:${x-ax}px"></div><div class="mv-ghost" style="left:${x}px" title="${esc(m.n)} now expected ${fd(m.fc)}"></div>`;
+      h+=`<div class="mv-gconn" style="left:${ax}px;width:${x-ax}px"></div><div class="mv-ghost" style="left:${x}px" role="img" aria-label="${MSW}: ${esc(m.n)} now expected ${fd(m.fc)}" data-tip="${MSW}: ${esc(m.n)} now expected ${fd(m.fc)}"></div>`;
       h+=`<button type="button" class="mv-lab gl" data-mvedit="${m.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m.n)} now expected ${fd(m.fc)}"><b>Expected ${fd(m.fc)}</b><span>${esc(m.n.length>20?m.n.slice(0,19)+"…":m.n)}</span></button>`; }
-    else{ h+=`<button type="button" class="mv-mk ${st}" data-mvedit="${m.id}" style="left:${x}px" aria-label="${esc(m.n)}, ${(cli?MVCWORD:MVWORD)[st]}, ${ach?"achieved "+fd(m.actual||m.fc):"agreed "+fd(m.agr||m.fc)}">${mvShape(st,20)}</button>`;
+    else{ h+=`${(w=>`<button type="button" class="mv-mk ${st}" data-mvedit="${m.id}" style="left:${x}px" aria-label="${w}" data-tip="${w}">${mvShape(st,20)}</button>`)(`${MSW}: ${esc(m.n)}, ${(cli?MVCWORD:MVWORD)[st]}, ${ach?"achieved "+fd(m.actual||m.fc):"agreed "+fd(m.agr||m.fc)}`)}`;
       h+=`<button type="button" class="mv-lab${st==="overdue"?" late":""}${ach?" ok":""}" data-mvedit="${m.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m.n)}"><b>${esc(nm)}</b><span>${fd(mvWhen(m))}</span></button>`; } });
   h+=`<div class="tday" style="left:${px(mvT(TODAY))}px;height:${base-6}px"><span>Today</span></div>`;
   const first=new Date(A0), last=new Date(A1-864e5);
@@ -287,7 +289,7 @@ export function mvMovement(code){ const list=mvOpen(code,false,true), behind=lis
     const aria=`${m.n}, ${MVWORD[st]}${vs>0?`, ${vs} days behind agreed`:""}, agreed ${fd(m.agr)||"not set"}, forecast ${fd(m.fc)||"not set"}`;
     h+=`<div class="mv-lrow" role="option" tabindex="0" data-mvsel="${m.id}" aria-selected="${m.id===shared.MV.sel}" aria-label="${esc(aria)}">
       <div><div class="nm">${esc(m.n)}</div><div class="sub">${mvTag(st)}${m.cvis?"":" · internal"}</div><div class="sub">Agreed ${fd(m.agr)||"not set"}${m.fc!==m.agr?` · forecast ${fd(m.fc)}`:""}</div></div>
-      <div class="mv-track" aria-hidden="true">${months.map(t=>`<div class="tm" style="left:${pos(t)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb?`<div class="orig" style="left:${pos(mvT(m.orig))}"></div>`:""}${m.agr?`<div class="agr" style="left:${pos(mvT(m.agr))}"></div>`:""}${m.fc?`<div class="fc" style="left:${pos(mvT(m.fc))}">${mvShape(st,20)}</div>`:""}</div>
+      <div class="mv-track" aria-hidden="true">${months.map(t=>`<div class="tm" style="left:${pos(t)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb?`<div class="orig" style="left:${pos(mvT(m.orig))}" role="img" aria-label="${MSW}: original date ${fd(m.orig)}" data-tip="${MSW}: original date ${fd(m.orig)}"></div>`:""}${m.agr?`<div class="agr" style="left:${pos(mvT(m.agr))}"></div>`:""}${m.fc?`<div class="fc" style="left:${pos(mvT(m.fc))}" role="img" aria-label="${MSW}: ${MVWORD[st]}, forecast ${fd(m.fc)}" data-tip="${MSW}: ${MVWORD[st]}, forecast ${fd(m.fc)}">${mvShape(st,20)}</div>`:""}</div>
       <div class="mv-chips"><span class="v ${vs>0?"bad":"ok"}">${vs>0?"+"+vs+" d":"0 d"} <small>vs agreed</small></span>${rb?`<span class="v ${vo>0?"bad":"ok"}">${vo>0?"+":""}${vo} d <small>vs original</small></span>`:""}${m.moves?`<span class="mv-hint">Moved ${m.moves}×${rb?" · rebaselined":""}</span>`:'<span class="mv-hint">Not moved</span>'}</div></div>`; });
   h+=`</div><div class="mv-legend"><span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="none" stroke="var(--faint)" stroke-width="2"/></svg>Original (if rebaselined)</span><span><svg width="6" height="16" aria-hidden="true"><rect width="3" height="16" x="1.5" fill="var(--ink)"/></svg>Agreed</span><span>Forecast, shaped by state</span><span><svg width="18" height="4" aria-hidden="true"><rect width="18" height="3" fill="var(--bad)" opacity=".55"/></svg>Distance past agreed</span><span><svg width="2" height="14" aria-hidden="true"><rect width="1" height="14" fill="var(--accent)"/></svg>Today</span></div></div>`;
   return h+mvDetail(code); }
