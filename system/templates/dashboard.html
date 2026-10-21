@@ -7001,6 +7001,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
+    trkLeftOut: () => trkLeftOut,
     tx: () => tx2,
     txReady: () => txReady,
     typedLinkUrl: () => typedLinkUrl,
@@ -46702,7 +46703,13 @@ ${s5}`;
   }
   var decide = async function(n4, v5, written, g5) {
     const res = await (async () => {
-      const r4 = REV.find((x5) => x5.n === n4);
+      let r4 = REV.find((x5) => x5.n === n4);
+      if (v5 === "approved" && r4 && TRKRELOAD) {
+        const k5 = [r4.file, String(r4.ref)];
+        await TRKRELOAD;
+        r4 = REV.find((x5) => x5.file === k5[0] && String(x5.ref) === k5[1]);
+        if (r4) n4 = r4.n;
+      }
       if (!r4 || r4.done) return;
       if (v5 === "approved" && r4.kind === "draft" && r4.nodraft) {
         snack(NODRAFT_MSG);
@@ -46835,17 +46842,23 @@ ${s5}`;
       return;
     }
     const ks2 = REV.filter((x5) => item(x5) && rvBulkOK(x5)), left = REV.filter((x5) => item(x5) && !rvBulkOK(x5)).length;
-    let undo = null;
+    let undo = null, out = [], got = ks2.length;
     if (ks2.length) {
       const res = await rvDecideMany(ks2, "approved");
       undo = res.undo || null;
+      out = trkLeftOut(res);
+      got = res.n;
+      if (res.stopped) {
+        snack(`Approved 0 items from these minutes · ${out.join(" · ")}`);
+        return;
+      }
     } else if (made && S.autoApply) {
       const res = await applyNow();
       if (res.ok) undo = () => undoApply(res.apply_id);
     }
     const tail = made ? ` · ${made} line${made === 1 ? "" : "s"} taken out of the minutes or kept as lines only` : "";
     snack(
-      `Approved ${ks2.length} item${ks2.length === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}`,
+      `Approved ${got} item${got === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}${out.length ? " · " + out.join(" · ") : ""}`,
       undo ? async () => {
         await undo();
         await openMinutesRecord({ file: m5.file });
@@ -46871,13 +46884,16 @@ ${s5}`;
     return ["indiv", `${String(r4.why || "this").toLowerCase()} is never approved in bulk`];
   }
   async function rvDecideMany(list, v5) {
+    let dropped = [];
     if (v5 === "approved") {
       if (TRKRELOAD) await TRKRELOAD;
-      list = list.map((r4) => r4 && (REV.includes(r4) ? r4 : REV.find((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref)))).filter((r4) => r4 && r4.trk == null);
+      list = list.map((r4) => r4 && (REV.includes(r4) ? r4 : REV.find((x5) => x5.file === r4.file && String(x5.ref) === String(r4.ref))));
+      dropped = list.filter((r4) => r4 && !r4.done && r4.trk != null);
+      list = list.filter((r4) => r4 && r4.trk == null);
     }
     list = list.filter((r4) => r4 && !r4.done);
-    if (!list.length) return { n: 0 };
-    if (!await needVault()) return { n: 0 };
+    if (!list.length) return { n: 0, dropped };
+    if (!await needVault()) return { n: 0, dropped };
     const byFile = /* @__PURE__ */ new Map();
     list.forEach((r4) => {
       if (!byFile.has(r4.file)) byFile.set(r4.file, []);
@@ -46905,7 +46921,15 @@ ${s5}`;
       done.forEach((r4) => r4.done = v5);
       refreshAll();
       const res = await applyNow();
-      return { n: done.length, failed, undo: res.ok ? () => undoApply(res.apply_id) : null, res };
+      if (!res.ok) {
+        await undoFiles();
+        done.forEach((r4) => {
+          delete r4.done;
+        });
+        await reloadData();
+        return { n: 0, failed, dropped, stopped: oneLine(res.message), res };
+      }
+      return { n: done.length, failed, dropped, undo: () => undoApply(res.apply_id), res };
     }
     let undoRecs = [];
     const what = `${done.length} proposal${done.length === 1 ? "" : "s"} ${v5}`;
@@ -46920,12 +46944,16 @@ ${s5}`;
       undoRecs = [];
       await undoFiles();
     }, "You, in Intake");
-    return { n: done.length, failed, undo: shared.UNDO };
+    return { n: done.length, failed, dropped, undo: shared.UNDO };
+  }
+  function trkLeftOut(res) {
+    const dr2 = res && res.dropped || [], dn2 = dr2.filter((r4) => r4.trk === "n").length, dk2 = dr2.length - dn2;
+    return [res && res.stopped ? `apply stopped, all back on Intake: ${res.stopped}` : "", dn2 ? `${dn2} crossed in the minutes' Track column` : "", dk2 ? `${dk2} kept in the minutes only (Track: neither)` : ""].filter(Boolean);
   }
   function rvSummary(verb, res, left) {
     const by2 = { project: 0, indiv: 0, conflict: 0 };
     left.forEach((r4) => by2[rvWhyNot(r4)[0]]++);
-    const parts = [by2.project ? `${by2.project} need${by2.project === 1 ? "s" : ""} a project` : "", by2.indiv ? `${by2.indiv} need${by2.indiv === 1 ? "s" : ""} individual approval` : "", by2.conflict ? `${by2.conflict} ${by2.conflict === 1 ? "has a conflict" : "have conflicts"}` : "", res.failed && res.failed.length ? `not saved: ${res.failed.join(", ")}` : ""].filter(Boolean);
+    const parts = [...trkLeftOut({ stopped: res.stopped }), by2.project ? `${by2.project} need${by2.project === 1 ? "s" : ""} a project` : "", by2.indiv ? `${by2.indiv} need${by2.indiv === 1 ? "s" : ""} individual approval` : "", by2.conflict ? `${by2.conflict} ${by2.conflict === 1 ? "has a conflict" : "have conflicts"}` : "", ...trkLeftOut({ dropped: res.dropped }), res.failed && res.failed.length ? `not saved: ${res.failed.join(", ")}` : ""].filter(Boolean);
     const text = `${verb} ${res.n}${parts.length ? " · " + parts.join(" · ") : ""}`;
     if (res.undo) snack(text, res.undo);
     else snack(text);
@@ -75476,7 +75504,8 @@ ${d5.text}`);
     }
     const res = await rvDecideMany(list, "approved");
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
-    snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+    const out = trkLeftOut(res);
+    snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
   }
   var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
   var canDraftResponse = (r4) => !!r4 && !r4.done && r4.kind === "raid" && !String(r4.rec && r4.rec.resp || "").trim() && !(r4.rec.type && r4.rec.type !== "Risk") && draftOn("thinking");
@@ -76559,7 +76588,9 @@ ${d5.text}`);
   var oneLine = (m5) => String(m5 || "").split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
   var applyWords = (m5) => {
     const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
-    return f5 ? `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.` : t47;
+    if (f5) return `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`;
+    if (!/in the minutes' Track column|the minutes record can't be read/.test(t47)) return t47;
+    return t47.split("\n").map((x5) => x5.trim()).filter((x5) => x5 && !/^Apply stopped\. Nothing was written\.$/.test(x5)).map((x5) => x5.replace(/^proposed-\S+\.json (item \d+|minutes): /, (a5, w6) => w6 === "minutes" ? "" : "an item was ")).join("\n");
   };
   async function reloadData() {
     PULSE.reloads++;
@@ -78054,6 +78085,8 @@ ${d5.text}`);
         "intakeSeams",
         "intakeTarget",
         "invitees",
+        "irApprove",
+        "irApproveRoutine",
         "irAside",
         "irAsk",
         "irBulk",

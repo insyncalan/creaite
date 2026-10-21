@@ -16,7 +16,7 @@ import { closePanel, PK, pkOn } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
-import { approveRoutineTracked, decide, draftOn, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
+import { approveRoutineTracked, decide, draftOn, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
 import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
@@ -129,7 +129,8 @@ export async function irApproveRoutine(groups) {
   if (!list.length) { snack("Nothing routine to approve"); return; }
   const res = await rvDecideMany(list, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
-  snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+  const out = trkLeftOut(res);      /* #275 round 3: an apply that stopped (the batch back on Intake) and rows the Track reload left out */
+  snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
 }
 
 /** The meta line's hover when a proposal has no owner, date or priority to show (minutes, reports, file changes). */

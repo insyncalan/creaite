@@ -48,7 +48,9 @@ export function setDecision(data,r,v){ const bf={meeting:"minutes_decision",repo
     if(it&&it.suggested&&it.suggested.feature==="promise"&&(v==="approved"||v==="rejected")) draftStat("promise",v==="rejected"?"rejected":it.as_proposed?"edited":"used");   /* BL-342 Part 5 */
     if(it&&it.looks_like&&v==="rejected"&&it.duplicate_of===it.looks_like.id) draftStat("repeat","used");   /* BL-221: rejected as its duplicate */ }
 export let decide = async function(n,v,written,g){
-  const res=await (async()=>{ const r=REV.find(x=>x.n===n); if(!r||r.done) return; if(v==="approved"&&r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 point 4 (fix-minutes-approve): never approved; Reject still works */
+  const res=await (async()=>{ let r=REV.find(x=>x.n===n);
+  if(v==="approved"&&r&&TRKRELOAD){ const k=[r.file,String(r.ref)]; await TRKRELOAD; r=REV.find(x=>x.file===k[0]&&String(x.ref)===k[1]); if(r) n=r.n; }   /* #275 round 3: Intake's row Approve and A (irApprove) wait for the Track reload too, then take the row as the data now has it */
+  if(!r||r.done) return; if(v==="approved"&&r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 point 4 (fix-minutes-approve): never approved; Reject still works */
   if(v==="approved"&&!r.p&&r.kind!=="files"){ snack("Choose a project first — open the item to set it"); openProposal(n); return; }
   if(viaServer()&&v==="approved"&&isRecordMin(r)) return approveTracked(r,g);   /* #275: the Track column, as the minutes view's Approve minutes */
   if(v==="approved"&&r.trk!=null){ snack(`${r.trk==="n"?"Crossed":"Kept in the minutes only"} in the minutes' Track column: tick it there to register it`); return; }   /* #275 */
@@ -119,11 +121,11 @@ export async function approveRoutineTracked(m){ const v=await openMinutesRecord(
   if(made) await reloadData();
   if(!tr.ok){ snack(trackFailWords(tr,"Approve routine")); return; }
   const ks=REV.filter(x=>item(x)&&rvBulkOK(x)), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
-  let undo=null;
-  if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; }
+  let undo=null, out=[], got=ks.length;
+  if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ snack(`Approved 0 items from these minutes · ${out.join(" · ")}`); return; } }   /* #275 round 3 */
   else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); }
   const tail=made?` · ${made} line${made===1?"":"s"} taken out of the minutes or kept as lines only`:"";
-  snack(`Approved ${ks.length} item${ks.length===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}`,
+  snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}`,
     undo?async()=>{ await undo(); await openMinutesRecord({file:m.file}); await reloadData(); }:null); }
 export async function rejectMinutes(m){ await decide(m.n,"rejected"); const pend=REV.filter(x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done);
   if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay for review.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); },`Reject ${pend.length===1?"it":"them"} too`); }                                     /* a batch over this asks first (a let, so a test can lower it) */
@@ -137,18 +139,28 @@ export function rvWhyNot(r){ if(!r.p&&r.kind!=="files") return ["project","needs
   return ["indiv",`${String(r.why||"this").toLowerCase()} is never approved in bulk`]; }
 /* ── deciding several: one write per proposal file, one apply, one Undo ── */
 /* #275 (Cap's re-review): an approval waits for a reload still bringing the Track choices (TRKRELOAD), then takes each row as the
-   data now has it (REV's rows are replaced on a reload) and never one crossed or left with neither in the minutes (r.trk) */
-export async function rvDecideMany(list,v){ if(v==="approved"){ if(TRKRELOAD) await TRKRELOAD; list=list.map(r=>r&&(REV.includes(r)?r:REV.find(x=>x.file===r.file&&String(x.ref)===String(r.ref)))).filter(r=>r&&r.trk==null); }
-  list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0}; if(!await needVault()) return {n:0};
+   data now has it (REV's rows are replaced on a reload) and never one crossed or left with neither in the minutes (r.trk). Round 3:
+   a row left out that way is returned (dropped) so the summary says why (trkLeftOut); an apply that stops puts the batch back to
+   pending, so every row is on Intake again, and says so (stopped) rather than "Approved n" */
+export async function rvDecideMany(list,v){ let dropped=[];
+  if(v==="approved"){ if(TRKRELOAD) await TRKRELOAD; list=list.map(r=>r&&(REV.includes(r)?r:REV.find(x=>x.file===r.file&&String(x.ref)===String(r.ref))));
+    dropped=list.filter(r=>r&&!r.done&&r.trk!=null); list=list.filter(r=>r&&r.trk==null); }
+  list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0,dropped}; if(!await needVault()) return {n:0,dropped};
   const byFile=new Map(); list.forEach(r=>{ if(!byFile.has(r.file)) byFile.set(r.file,[]); byFile.get(r.file).push(r); }); const done=[], failed=[];
   for(const [file,rs] of byFile){ try{ await editProposal(file,data=>rs.forEach(r=>setDecision(data,r,v))); done.push(...rs); }catch(e){ failed.push(...rs.map(r=>`#${r.n} (${e.message})`)); } }
   const undoFiles=async()=>{ for(const [file,rs] of byFile){ const mine=rs.filter(r=>done.includes(r)); if(mine.length) try{ await editProposal(file,data=>mine.forEach(r=>setDecision(data,r,"pending"))); }catch(e){} } };
-  if(viaServer()&&S.autoApply){ done.forEach(r=>r.done=v); refreshAll(); const res=await applyNow(); return {n:done.length,failed,undo:res.ok?()=>undoApply(res.apply_id):null,res}; }
+  if(viaServer()&&S.autoApply){ done.forEach(r=>r.done=v); refreshAll(); const res=await applyNow();
+    if(!res.ok){ await undoFiles(); done.forEach(r=>{ delete r.done; }); await reloadData(); return {n:0,failed,dropped,stopped:oneLine(res.message),res}; }
+    return {n:done.length,failed,dropped,undo:()=>undoApply(res.apply_id),res}; }
   let undoRecs=[]; const what=`${done.length} proposal${done.length===1?"":"s"} ${v}`;
   apply(what,()=>{ done.forEach(r=>{ r.done=v; if(v==="approved") undoRecs.push(applyProposal(r)); }); },async()=>{ done.forEach(r=>delete r.done); undoRecs.forEach(u=>u()); undoRecs=[]; await undoFiles(); },"You, in Intake");
-  return {n:done.length,failed,undo:shared.UNDO}; }
+  return {n:done.length,failed,dropped,undo:shared.UNDO}; }
+/* #275 round 3: what an rvDecideMany result left out, in words: an apply that stopped (all back on Intake) and the rows the Track
+   reload left out (crossed, or kept in the minutes only) */
+export function trkLeftOut(res){ const dr=(res&&res.dropped)||[], dn=dr.filter(r=>r.trk==="n").length, dk=dr.length-dn;
+  return [res&&res.stopped?`apply stopped, all back on Intake: ${res.stopped}`:"",dn?`${dn} crossed in the minutes' Track column`:"",dk?`${dk} kept in the minutes only (Track: neither)`:""].filter(Boolean); }
 export function rvSummary(verb,res,left){ const by={project:0,indiv:0,conflict:0}; left.forEach(r=>by[rvWhyNot(r)[0]]++);
-  const parts=[by.project?`${by.project} need${by.project===1?"s":""} a project`:"",by.indiv?`${by.indiv} need${by.indiv===1?"s":""} individual approval`:"",by.conflict?`${by.conflict} ${by.conflict===1?"has a conflict":"have conflicts"}`:"",res.failed&&res.failed.length?`not saved: ${res.failed.join(", ")}`:""].filter(Boolean);
+  const parts=[...trkLeftOut({stopped:res.stopped}),by.project?`${by.project} need${by.project===1?"s":""} a project`:"",by.indiv?`${by.indiv} need${by.indiv===1?"s":""} individual approval`:"",by.conflict?`${by.conflict} ${by.conflict===1?"has a conflict":"have conflicts"}`:"",...trkLeftOut({dropped:res.dropped}),res.failed&&res.failed.length?`not saved: ${res.failed.join(", ")}`:""].filter(Boolean);
   const text=`${verb} ${res.n}${parts.length?" · "+parts.join(" · "):""}`;
   if(res.undo) snack(text,res.undo); else snack(text); }
 /* a reload renumbers the proposals (review.py's order): the selection and the cursor follow them by file and item, not by number */

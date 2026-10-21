@@ -1040,6 +1040,9 @@ def track_state(doc, data):
     import review
     if not doc or doc.get("state") != "draft" or not data:
         return {}
+    if unsettled(doc, data):            # Cap's round 2 (1): after tracker.py undo (Activity's undo) the rows the approve took out
+        doc, data = json.loads(json.dumps(doc)), json.loads(json.dumps(data))      # are in meta.removed: put back, on a copy
+        settle(doc, data)
     choices, items, out = _choices(doc), {i.get("n"): i for i in data.get("items") or []}, {}
     for sid, n, row in _track_rows(doc):
         item = items.get(n)
@@ -1079,9 +1082,13 @@ def _track_blocked(data, decisions):
     """track_blocked for the items whose decision is in `decisions`; raises creaite_doc.DocError when the record can't be read."""
     import review
     draft = (data.get("meeting") or {}).get("draft")
-    if not (data.get("meeting") and not data["meeting"].get("applied") and is_record(draft)):
-        return {}
+    if not (data.get("meeting") and not data["meeting"].get("applied") and str(draft or "").lower().endswith(".html")):
+        return {}                       # no minutes, minutes applied, or a Word draft (no Track column)
+    if not is_record(draft):            # Cap's round 2 (4): a record deleted or with its data block removed fails closed
+        raise creaite_doc.DocError("it isn't there or has no creaite-data block")
     doc = creaite_doc.read(draft)
+    if doc.get("state") != "draft":     # a state changed by hand before the minutes are applied fails closed too
+        raise creaite_doc.DocError("it isn't a draft any more")
     choices, items = _choices(doc), {i.get("n"): i for i in data.get("items") or []}
     return {n: t for n, t in track_state(doc, data).items()
             if choices.get(str(n)) in ("n", "") and items[n].get("decision") in decisions

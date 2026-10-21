@@ -203,8 +203,8 @@ class TrackFromReview(LiveBrowserCase):
 
     def test_06_a_bulk_approval_straight_after_leaving_the_minutes_waits_for_the_track_choices(self):
         """Cap's re-review (2): leaving the Minutes view reloads the data without waiting, so the Intake page first draws the old
-        rows; a bulk approval made at once (rvDecideMany, which every bulk path calls), on a row crossed a moment ago and still shown
-        as routine, waits for the reload and leaves it out."""
+        rows; a bulk approval made at once (Approve routine, through rvDecideMany, which every bulk path calls), on a row crossed a
+        moment ago and still shown as routine, waits for the reload, leaves it out and says so."""
         b = self.b
         self.open()
         b.click(ROW % 1 + " .mntrk button.n")                   # SOW crossed now
@@ -214,17 +214,67 @@ class TrackFromReview(LiveBrowserCase):
             b.pump(0.25)
         self.assertEqual(self.record()["layout"]["track"].get("1"), "n")
         stale = self.ev("(()=>{ go('intake-review'); const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); window.__t6=null;"
-                        " const t=r.trk; rvDecideMany([r],'approved').then(()=>{ window.__t6='done'; });"
+                        " const t=r.trk; irApproveRoutine({needs:[],routine:[r.n]}).then(()=>{ window.__t6=document.getElementById('snack').textContent; });"
                         " return t===undefined?null:t; })()")
         self.assertIsNone(stale, "the row as the page first drew it: not yet marked crossed (the race)")
         for _ in range(120):
-            if self.ev("window.__t6") == "done":
+            if self.ev("window.__t6") is not None:
                 break
             b.pump(0.25)
-        self.assertEqual(self.ev("window.__t6"), "done")
+        shown = self.ev("window.__t6")
+        self.assertIsNotNone(shown)
         b.pump(1.5)
         self.assertNotIn(SOW, self.descs(), "crossed a moment ago: never registered")
         self.assertEqual(self.staged(1)["decision"], "pending")
+        self.assertIn("Approved 0 routine · 1 crossed in the minutes' Track column", shown,
+                      "Cap's round 2 (5): the row left out after the reload is reported, with why")
+
+    def test_07_the_row_approve_straight_after_leaving_the_minutes_waits_for_the_track_choices(self):
+        """Cap's round 2 (2): Intake's row Approve and the A key (irApprove, which is decide) wait for the Track reload as the bulk
+        paths do."""
+        b = self.b
+        self.open()
+        b.click(ROW % 1 + " .mntrk button.n")                   # SOW crossed now
+        for _ in range(60):
+            if (self.record().get("layout") or {}).get("track", {}).get("1") == "n":
+                break
+            b.pump(0.25)
+        stale = self.ev("(()=>{ go('intake-review'); const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + "); window.__t7=null;"
+                        " const t=r.trk; irApprove(r.n).then(()=>{ window.__t7='done'; }); return t===undefined?null:t; })()")
+        self.assertIsNone(stale, "the row as Intake first drew it: not yet marked crossed (the race)")
+        for _ in range(120):
+            if self.ev("window.__t7") == "done":
+                break
+            b.pump(0.25)
+        self.assertEqual(self.ev("window.__t7"), "done")
+        self.assertIn("Crossed in the minutes' Track column", self.snack())
+        b.pump(1.5)
+        self.assertNotIn(SOW, self.descs(), "crossed a moment ago: never registered")
+        self.assertEqual(self.staged(1)["decision"], "pending")
+
+    def test_08_a_bulk_approval_whose_apply_stops_says_so_and_puts_the_batch_back(self):
+        """Cap's round 2 (3): an apply that stops (here forced, as the guarded diff's Track check stops one) is never "Approved n":
+        the summary says it stopped, in plain words (no tracker.py header, no file name), and the batch is pending on Intake again.
+        Driven through Intake's Approve routine (irApproveRoutine, which calls rvDecideMany)."""
+        b = self.b
+        msg = ("Apply stopped. Nothing was written.\n  proposed-2026-10-01-x.json item 2: crossed in the minutes' Track column; "
+               "it is back in Review: approve the minutes in the Minutes view (it clears crossed lines), or tick it there to register it")
+        b.eval("window.__api0=api; window.api=async(p,body)=>p==='/api/apply'?{ok:false,message:" + json.dumps(msg) + "}:__api0(p,body)")
+        self.ev("(()=>{ const r=REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + ");"
+                " window.__t8=null; irApproveRoutine({needs:[],routine:[r.n]}).then(()=>{ window.__t8=document.getElementById('snack').textContent; }); })()")
+        for _ in range(120):
+            if self.ev("window.__t8") is not None:
+                break
+            b.pump(0.25)
+        text = self.ev("window.__t8")
+        self.assertIsNotNone(text)
+        self.assertIn("Approved 0", text)
+        self.assertIn("apply stopped, all back on Intake: an item was crossed in the minutes' Track column", text)
+        self.assertNotIn("proposed-", text)
+        self.assertNotIn("Nothing was written", text)
+        self.assertEqual(self.staged(1)["decision"], "pending", "the batch put back: on Intake again")
+        self.assertFalse(self.ev("!!(REV.find(x=>x.rec&&x.rec.t===" + json.dumps(SOW) + ")||{}).done"), "undecided on the page")
+        self.assertNotIn(SOW, self.descs())
 
 
 class TwoProjects(LiveBrowserCase):
@@ -351,6 +401,69 @@ class ServerTrack(ma.Base):
         out = self.check()[0]
         self.assertEqual(len(out), 1, out)
         self.assertIn("the minutes record can't be read", out[0])
+
+    def test_the_apply_check_fails_closed_for_a_deleted_record(self):
+        """Cap's round 2 (4): a record that is gone, with an approved item not yet applied, stops the apply."""
+        (self.v.root / ma.DRAFT).unlink()
+        self.assertEqual(self.check()[0], [], "nothing approved: nothing to stop")
+        self.set_decision(3, "approved")
+        out = self.check()[0]
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("the minutes record can't be read", out[0])
+
+    def test_the_apply_check_fails_closed_for_a_record_with_no_data_block(self):
+        f = self.v.root / ma.DRAFT
+        f.write_text(re.sub(r'<script type="application/json" id="creaite-data">.*?</script>', "",
+                            f.read_text(encoding="utf-8"), flags=re.S), encoding="utf-8")
+        self.set_decision(3, "approved")
+        out = self.check()[0]
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("the minutes record can't be read", out[0])
+
+    def test_the_apply_check_fails_closed_for_a_record_whose_state_was_changed(self):
+        for state in ("final", "approved"):
+            f = self.v.root / ma.DRAFT
+            text = f.read_text(encoding="utf-8")
+            m = re.search(r'(<script type="application/json" id="creaite-data">)(.*?)(</script>)', text, flags=re.S)
+            doc = json.loads(m.group(2))
+            doc["state"] = state
+            f.write_text(text[:m.start(2)] + json.dumps(doc) + text[m.end(2):], encoding="utf-8")
+            self.set_decision(3, "approved")
+            out = self.check()[0]
+            self.assertEqual(len(out), 1, (state, out))
+            self.assertIn("isn't a draft", out[0])
+
+    def undo_out_of_the_view(self):
+        """Approve the minutes with a cross on item 2 and neither on item 3, apply, then Undo with tracker.py (Activity's undo):
+        items 2 and 3 are pending again but the record lost their rows (they are in meta.removed)."""
+        self.track({"2": "n", "3": ""})
+        self.v.run("approve", str(self.number("meeting")), script="review.py")
+        self.v.run("apply")
+        self.assertIn("Undid apply", self.v.run("undo").stdout)
+        self.assertEqual((self.item(2)["decision"], self.item(3)["decision"]), ("pending", "pending"))
+
+    def test_after_undo_out_of_the_view_bulk_never_registers_the_crossed_item(self):
+        """Cap's round 2 (1): the crossed item whose row the record took out is still held after tracker.py undo."""
+        self.undo_out_of_the_view()
+        out = self.v.run("bulk", script="review.py").stdout
+        self.assertIn("not ticked in the minutes", out)
+        self.assertEqual(self.item(2)["decision"], "pending", "the crossed issue is held, not approved")
+        self.v.run("apply", ok=False)
+        self.assertNotIn("Test data isn't anonymised", [r["description"] for r in self.v.rows("raid")])
+
+    def test_after_undo_out_of_the_view_the_apply_check_stops_the_crossed_item(self):
+        self.undo_out_of_the_view()
+        self.set_decision(2, "approved")
+        out, dec = self.check()
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("item 2: crossed in the minutes' Track column", out[0])
+        self.assertEqual(dec["2"], "pending")
+
+    def test_after_undo_out_of_the_view_approve_item_refuses_the_crossed_item(self):
+        self.undo_out_of_the_view()
+        out = self.v.run("approve", str(self.number(2)), script="review.py").stdout
+        self.assertIn("crossed in the minutes' Track column", out)
+        self.assertEqual(self.item(2)["decision"], "pending")
 
     @unittest.skipUnless(DIFF_APPLIED, "dev/proposals/track-from-review/tracker-track-problems.diff not applied yet")
     def test_apply_refuses_a_crossed_item_approved_by_hand(self):
