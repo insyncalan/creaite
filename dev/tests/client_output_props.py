@@ -1728,8 +1728,18 @@ def _page_used():
 
 
 def _decoder_off():
+    """The look-alike decoder off for the letters from U+0410 on (Cyrillic, Greek...). It is in two places, so both go:
+    edit_ai.LOOK_ALIKE (edit_ai.normal) and confusables.TABLE (confusables.skeleton, v2.5.1), which the gate reads beside it."""
     import edit_ai
     edit_ai.LOOK_ALIKE = {k: v for k, v in edit_ai.LOOK_ALIKE.items() if k not in confusables.TABLE or k < 0x0410}
+    confusables.TABLE = {k: v for k, v in confusables.TABLE.items() if k < 0x0410}
+
+
+def _names_off():
+    """The typed export name's checks off. There are two, and both go: _name_problem (in _plain_name) and name_problem (v2.5.1,
+    in _settle_name), which repeats it."""
+    report_server._name_problem = lambda name, own=None: None
+    report_server.name_problem = lambda name, own=None: None
 
 
 def _other_parser():
@@ -1793,7 +1803,7 @@ MUTANTS = {
     "allow_off": lambda: setattr(creaite_doc, "client_shape", lambda doc: copy.deepcopy(doc)),
     "signs_off": lambda: setattr(creaite_doc, "report_signs", lambda path, doc: []),
     "same_report_off": lambda: setattr(report_doc, "same_report", lambda *a, **k: None),
-    "names_off": lambda: setattr(report_server, "_name_problem", lambda name, own=None: None),
+    "names_off": _names_off,
     "logos_off": lambda: setattr(creaite_doc._Word, "logo_files", _logo_files_stored),
     "stub_off": lambda: setattr(creaite_doc, "_stub_row", lambda row: dict(row)),
     "facts_off": lambda: setattr(creaite_doc, "derive_facts", lambda doc: doc),                  # v2.5.3 (#259, K3)
