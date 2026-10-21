@@ -145,7 +145,7 @@ class BodyAndFields(unittest.TestCase):
         row = sweep.calendar_row(event(title="Budget (PIN 4321)"), "09:00", "10:00", False)
         self.assertEqual(row["title"], "Meeting")             # H3: a numbered label drops the field whole, as 2.5.3 (was "Budget")
         for title, want in (("Code 2 review", "Meeting"), ("Board Meeting ID 123 456 789 sync", "Meeting"),
-                            ("Sync Passcode: 4321", "Sync"), ("PIN 4321", "Meeting")):
+                            ("Sync Passcode: 4321", "Meeting"), ("PIN 4321", "Meeting")):    # H3c: was "Sync"
             with self.subTest(title):
                 self.assertEqual(sweep.calendar_row(event(title=title), "09:00", "10:00", False)["title"], want)
         row = sweep.calendar_row(event(title="Kickoff", organiser="Jane https://bit.ly/abc123"), "09:00", "10:00", False)
@@ -235,7 +235,7 @@ class LetterOnlyValues(unittest.TestCase):
                     with self.subTest(text=text):
                         out = invite_clean.scrub(text, 140)
                         self.assertNotIn(value.lower(), out.lower(), (text, out))
-        for text, want in (("Password kqZxyw", ""), ("Key kqZxyw", ""), ("Steering Password kqZxyw", "Steering"),
+        for text, want in (("Password kqZxyw", ""), ("Key kqZxyw", ""), ("Steering Password kqZxyw", ""),   # H3c: was "Steering"
                            ("Key kqZxyw steering", "")):     # text after a letter-only value may be more of it: dropped whole
             with self.subTest(text):
                 self.assertEqual(invite_clean.scrub(text, 140), want)
@@ -248,9 +248,10 @@ class LetterOnlyValues(unittest.TestCase):
                 self.assertEqual(invite_clean.scrub(text, 140), text)
 
     def test_legitimate_titles_keep_their_words(self):
-        # H3: a numbered label drops the field whole, as 2.5.3 (were "review", "Board sync", "Budget")
+        # H3: a numbered label drops the field whole, as 2.5.3 (were "review", "Board sync", "Budget"); H3c: so does a trailing
+        # passcode or bare join host (were "Sync", "Weekly sync")
         for text, want in (("Code 2 review", ""), ("Board Meeting ID 123 456 789 sync", ""),
-                           ("Budget (PIN 4321)", ""), ("Sync Passcode: 4321", "Sync"), ("Weekly sync zoom.us", "Weekly sync"),
+                           ("Budget (PIN 4321)", ""), ("Sync Passcode: 4321", ""), ("Weekly sync zoom.us", ""),
                            ("Code review of the supplier SOW", "Code review of the supplier SOW"),
                            ("Passwords policy review", "Passwords policy review"), ("Key takeaways", "Key takeaways")):
             with self.subTest(text):
@@ -383,7 +384,7 @@ class PasswordWordAfterNumberedLabel(unittest.TestCase):
                            ("Token economics workshop", "Token economics workshop"), ("Access review", "Access review"),
                            ("Sprint 12 - planning", "Sprint 12 - planning"), ("Code 2 review", ""),       # H3: were
                            ("Board Meeting ID 123 456 789 sync", ""), ("Budget (PIN 4321)", ""),         # "review", "Board sync",
-                           ("Budget passcode: 4321", "Budget"), ("PIN 4321 review", "")):                # "Budget", "review"
+                           ("Budget passcode: 4321", ""), ("PIN 4321 review", "")):       # "Budget", "review"; H3c: was "Budget"
             with self.subTest(text):
                 self.assertEqual(invite_clean.scrub(text, 140), want)
 
@@ -423,8 +424,9 @@ class PasswordValueBeforeLabel(unittest.TestCase):
                 self.assertEqual(invite_clean.scrub(text, 140), "")
                 _no_value_anywhere(self, text)
 
-    def test_label_with_value_after_keeps_the_rest_before(self):
-        for text, want in (("Budget passcode: 4321", "Budget"), ("Budget (PIN 4321)", ""),       # H3: a PIN drops the field
+    def test_label_with_value_after_drops_the_field_too(self):
+        # H3c (fail closed, as 2.5.3): a trailing passcode label with its value drops the field (was "Budget"); a PIN did since H3
+        for text, want in (("Budget passcode: 4321", ""), ("Budget (PIN 4321)", ""),
                            ("Steering Passcode: kqZxyw", "")):
             with self.subTest(text):
                 self.assertEqual(invite_clean.scrub(text, 140), want)
@@ -494,7 +496,7 @@ class NumberedLabelDropsField(unittest.TestCase):
                      "Password: swordfish then lunch", "Weekly sync zoom.us 98765432101"):
             with self.subTest(text):
                 self.assertEqual(invite_clean.scrub(text, 140), "")
-        for text, want in (("Sync Passcode: 4321", "Sync"), ("Weekly sync zoom.us", "Weekly sync"),
+        for text, want in (("Sync Passcode: 4321", ""), ("Weekly sync zoom.us", ""),      # H3c: were "Sync", "Weekly sync"
                            ("Project ID 12 kickoff", "Project ID 12 kickoff"), ("Code review sync", "Code review sync"),
                            ("Sprint 12 - planning", "Sprint 12 - planning"), ("Key dates - Q4", "Key dates - Q4")):
             with self.subTest(text):
@@ -507,6 +509,81 @@ class NumberedLabelDropsField(unittest.TestCase):
                 start = time.perf_counter()
                 self.assertEqual(invite_clean.scrub(text, 140), "")
                 self.assertLess(time.perf_counter() - start, 2.0)
+
+
+class TrailingCutDropsField(unittest.TestCase):
+    """v2.6 review H3c (Jarvis, fail closed, no regression from 2.5.3): a passcode or password label, a bare join host (zoom.us),
+    a scheme (msteams:) or a dial-in at the END of a field was cut and the text before it kept, guarded only by a list of password
+    words that cannot be complete: "Hasło abcdefg Passcode: 4321" gave "Hasło abcdefg", "abcdefg zoom.us" gave "abcdefg". 2.5.3
+    dropped these fields whole, and so does scrub now: only a complete join link is taken out of a field; any other key in it
+    drops the field."""
+
+    # the review's 30 distinct regression rows (rvh3b, gen2.py), and the round's named examples
+    ROWS = ("Board: Login BLUEFOX msteams:", "abcdefg Kenncode 22", "Steering hunter2 Wagwoord Senha: 3",
+            "Verification - kqZxyw Q3 zoommtg:", "Weekly sync Verification\xa09f3a1cde - Passcode: 4321",
+            "Budget Login Tr0ub4dor zoommtg:", "abcdefg Passphrase: 6", "Weekly sync swordfish Wagwoord Contraseña: 2",
+            "Verification = 9f3a1cde Q3 msteams:", "Board: Verification:abcdefg | pwd 4321", "Kod abcdefg zoom.us",
+            "abcdefg zoom.us", "Weekly sync rtyu Wagwoord Wachtwoord: 4", "Verification - Tr0ub4dor Weekly sync (Passcode 4321)",
+            "Budget Verification = hunter2 [Passcode: 4321]", "Budget Login swordfish webex.com", "abcdefg Wachtwoord: 4",
+            "Weekly sync 739104 Wagwoord Mot de passe: 5", "Verification is Tr0ub4dor Weekly sync bluejeans.com",
+            "Q3 Verification = Tr0ub4dor / zoom.us", "Login 9f3a1cde meet.google.com", "abcdefg teams.microsoft.com",
+            "x7-q2 Wagwoord Passphrase: 6", "Verification: swordfish Q3 [Passcode: 4321]",
+            "Budget Verification: hunter2 (Passcode 4321)", "Weekly sync Kod kqZxyw teams.microsoft.com", "abcdefg Senha: 3",
+            "Weekly sync BLUEFOX Wagwoord Passwort: 7", "Verification x7-q2 Budget gotomeeting.com",
+            "Steering Kennung\xa0swordfish Passcode: 4321",
+            "Hasło abcdefg Passcode: 4321", "Auth abcdefg zoom.us", "abcdefg Passcode: 4321", "abcdefg Kennwort - Passcode: 4321")
+    # MEDIUM-2: a dial-in after a passcode label was read as that label's value, so the field was cut, not dropped
+    DIAL_ROWS = ("739104 PWD, +44 20 7946 0000,,123#", "Weekly sync Passcode +44 20 7946 0000,,123#",
+                 "abcdefg Passcode: +44 20 7946 0000", "Sync abcdefg 123456#", "abcdefg tel:+15550001111")
+    # MEDIUM-1: a label match that ends inside the next word ("Kennwort - P") hid the password word from the old check
+    GLUED = tuple(f"abcdefg {w} - Passcode: 4321" for w in ("Kennwort", "Contraseña", "Senha", "Wachtwoord")) + tuple(
+        f"abcdefg {w}: Passcode: 4321" for w in ("Kennwort", "Contraseña", "Senha", "Wachtwoord"))
+    VALUES = ("abcdefg", "hunter2", "swordfish", "9f3a1cde", "kqZxyw", "739104", "BLUEFOX", "x7-q2", "rtyu", "Tr0ub4dor", "7946")
+
+    def _value(self, text):
+        return next(v for v in self.VALUES if v in text)
+
+    def test_review_rows(self):
+        for text in self.ROWS + self.DIAL_ROWS + self.GLUED:
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), "")
+                self.assertEqual(invite_clean.scrub(text, 80), "")
+                self.assertTrue(invite_clean.is_secret(text))
+
+    def test_every_trailer_after_a_value(self):
+        trailers = ("Passcode: 4321", "Passcode 4321", "pwd=4321", "Password: 9", "Kennwort: 9", "Host key 99", "zoom.us",
+                    "teams.microsoft.com", "meet.google.com", "webex.com", "msteams:", "zoommtg:", "+44 20 7946 0000,,123#",
+                    "123456#", "(Passcode 4321)", "[Passcode: 4321]", "- Passcode: 4321", "| pwd 4321", "/ zoom.us")
+        for word in ("", "Hasło ", "Login ", "Auth ", "Kod ", "Mdp ", "Kennwort - ", "Steering "):
+            for value in self.VALUES:
+                for trailer in trailers:
+                    text = f"{word}{value} {trailer}"
+                    with self.subTest(text=text):
+                        self.assertEqual(invite_clean.scrub(text, 140), "")
+
+    def test_no_value_in_calendar_row_invite_text_or_clean_row(self):
+        for text in self.ROWS + self.DIAL_ROWS + self.GLUED:
+            value = self._value(text)
+            with self.subTest(text):
+                row = sweep.calendar_row(event(title=text, where=text, organiser=text, body="Agenda\n" + text + "\nEnd"),
+                                         "09:00", "10:00", False)
+                self.assertEqual((row["title"], row["where"], row["organiser"]), ("Meeting", "", False))
+                self.assertNotIn(value.lower(), json.dumps(row, ensure_ascii=False).lower())
+                self.assertIn(" ".join(invite_clean.invite_text("Agenda\n" + text + "\nEnd").split()), ("Agenda End", "Agenda"))
+                self.assertEqual(invite_clean.clean_row(row), row)
+
+    def test_a_complete_join_link_is_still_taken_out(self):
+        for text, want in (("Sync https://zoom.us/j/1?pwd=abc", "Sync"), ("Zoom: https://acme.zoom.us/my/room", "Zoom:"),
+                           ("Jane https://bit.ly/abc123", "Jane"), ("Budget review", "Budget review"),
+                           ("Sync Passcode: 4321", ""), ("Weekly sync zoom.us", ""), ("Budget (Passcode: 4321)", "")):
+            with self.subTest(text):
+                self.assertEqual(invite_clean.scrub(text, 140), want)
+
+    def test_scrub_settles(self):
+        for text in self.ROWS + self.DIAL_ROWS + self.GLUED + ("Sync https://zoom.us/j/1?pwd=abc", "Budget review"):
+            with self.subTest(text):
+                once = invite_clean.scrub(text, 140)
+                self.assertEqual(invite_clean.scrub(once, 140), once)
 
 
 class Timing(unittest.TestCase):
@@ -759,7 +836,8 @@ class SavedCalendar(unittest.TestCase):
         self.cal.write_text(json.dumps({"fetched": past + " 08:00", "days": {past: old}}))
         self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
         rows = {r["id"]: r for r in self.held()[past]}
-        self.assertEqual(rows["o1"], {"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Sync", "where": "",
+        # H3c: a trailing passcode drops the title whole, as 2.5.3 (was "Sync")
+        self.assertEqual(rows["o1"], {"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Meeting", "where": "",
                                       "teams": False, "private": False, "organiser": False, "sensitivity": "confidential"})
         self.assertEqual((rows["o2"]["body"], rows["o2"]["attachments"], rows["o2"]["attendees"][0]["name"]),
                          ("Agenda: budget", ["pack.pdf"], "x@example.test"))
