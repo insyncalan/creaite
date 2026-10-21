@@ -32,3 +32,14 @@ its own behaviour; #275 is ported onto what survives.
 
 Judgment call: the Intake page's "Approve routine" group comes from the server's `hold`, which does not know `r.trk`; a
 crossed/neither row may be listed as routine but `rvBulkOK`/`rvDecideMany` skip it, so it is never approved.
+
+## 3. origin/v26-review-fixes (4468986f)
+
+Clean. Rebuilt; nothing changed.
+
+## 4. origin/v26-186 (ece270df)
+
+| File | Resolution | Why |
+|------|-----------|-----|
+| `system/templates/help.md` | ours (#268 minutes v2 lines) + theirs' new "AI on the minutes" line | judgment call: the #262 line still speaks of the Internal and Distributed versions, which minutes v2 replaced with one version; kept verbatim for the #186/#262 owner to reword |
+| `dashboard.html` | theirs, rebuilt | generated |

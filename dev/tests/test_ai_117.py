@@ -74,6 +74,8 @@ class TheServerSide(unittest.TestCase):
         cls.v.cleanup()
 
     def ctx(self, body):
+        if body.get("place") == "email" and "recipients" not in body:      # #186: an email to a colleague (the server decides by address)
+            body = {**body, "recipients": ["sam.patel@brightwater.example"]}
         r = subprocess.run([sys.executable, "system/scripts/edit_ai.py", "context"], input=json.dumps(body), capture_output=True,
                            text=True, cwd=self.v.root)
         return json.loads(r.stdout)
@@ -84,7 +86,8 @@ class TheServerSide(unittest.TestCase):
         return json.loads(r.stdout)
 
     def test_places_options_and_the_room_for_a_client_place(self):
-        self.assertEqual(sorted(edit_ai.PLACES), ["client", "current", "email", "line", "minutes", "notes", "plain", "readonly", "report"])
+        self.assertEqual(sorted(edit_ai.PLACES), ["client", "client_message", "current", "email", "line", "minutes", "notes", "plain", "readonly", "report"])
+        self.assertEqual(edit_ai.PLACES["client_message"], edit_ai.PLACES["plain"])     # #263: Client messaging, plain with the client rules
         self.assertEqual(set(edit_ai.PLACES), set(edit_ai.FORMATS))             # a new place (`client`) is one entry in each of these
         self.assertEqual(set(edit_ai.PLACES), set(edit_ai.FORMAT_RULES))
         self.assertEqual(edit_ai.PLACES["notes"], ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"])
@@ -121,7 +124,8 @@ class TheServerSide(unittest.TestCase):
                 if opt == "custom":
                     continue
                 text = "First point.\n\nSecond point." if opt == "notes" else "A point."
-                p = self.ctx({"option": opt, "text": text, "place": place})["prompt"]
+                code = {"code": "ABC"} if place in edit_ai.CLIENT_FIELDS else {}      # #263: a client field needs its project
+                p = self.ctx({"option": opt, "text": text, "place": place, **code})["prompt"]
                 self.assertIn("Also correct any spelling, grammar and punctuation, in British English", p, (place, opt))
         p = self.ctx({"option": "custom", "instruction": "Make it louder", "text": "x", "place": "notes"})["prompt"]
         self.assertNotIn("spelling, grammar", p)                                # Ask… does only what was asked
@@ -294,7 +298,8 @@ class Bar117(LiveBrowserCase):
                 "current": dict(ai=True, turnInto=False, formatNotes=True, improveOnly=False),
                 "email": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),       # v2.1.0 had the bar here: it stays on
                 "plain": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
-                "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}
+                "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
+                "client_message": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}     # #263: Client messaging
         sheet = {"report", "minutes", "client", "readonly"}
         self.assertEqual({k: v for k, v in b.eval("AI_PLACE_TABLE").items() if k not in sheet}, want)
         self.assertEqual([k for k in b.eval("Object.keys(AI_PLACE_TABLE)") if k not in sheet], list(want))

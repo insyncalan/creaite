@@ -5423,6 +5423,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     days: () => days,
     dcIcon: () => dcIcon,
     dcText: () => dcText,
+    deAiCheck: () => deAiCheck,
+    deAiSafe: () => deAiSafe,
     deBarred: () => deBarred,
     deBuild: () => deBuild,
     deBuildArgs: () => deBuildArgs,
@@ -5465,6 +5467,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     dePrevDrop: () => dePrevDrop,
     dePrevPut: () => dePrevPut,
     deRank: () => deRank,
+    deRecipients: () => deRecipients,
     deReplyBy: () => deReplyBy,
     deRowHtml: () => deRowHtml,
     deSay: () => deSay,
@@ -6404,6 +6407,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkChipsDraw: () => pkChipsDraw,
     pkCid: () => pkCid,
     pkClient: () => pkClient,
+    pkClientMsg: () => pkClientMsg,
     pkCommit: () => pkCommit,
     pkCommit1: () => pkCommit1,
     pkDepDraw: () => pkDepDraw,
@@ -28249,6 +28253,8 @@ ${s5}`;
       minutes: ["shorter", "executive", "polish", "custom"],
       client: ["shorter", "executive", "polish", "custom"],
       // #123: the client sheet (client-visible facts only; the reply checked)
+      client_message: ["rewrite", "shorter", "executive", "custom"],
+      // #263: the item panel's Client messaging (plain, with the client rules)
       readonly: []
       // a sheet that can't be edited: only Find the source
     }
@@ -28266,6 +28272,8 @@ ${s5}`;
       minutes: [["Improve", ["shorter", "executive", "polish"]]],
       client: [["Improve", ["shorter", "executive", "polish"]]],
       // #123: the client sheet; Shorten, executive, Polish, no Make into
+      client_message: [["Improve", ["rewrite", "shorter", "executive"]]],
+      // #263: as plain
       readonly: []
       // only Find the source, the sheet's own item
     }
@@ -28281,6 +28289,8 @@ ${s5}`;
     minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
     client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
     // #123: the client sheet (edit_ai.py's client place)
+    client_message: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    // #263: Client messaging (edit_ai.py CLIENT_FIELDS)
     readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
   };
   var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
@@ -28334,7 +28344,7 @@ ${s5}`;
   };
   var keepOpenUntil = 0;
   function barFor(h5, ai2) {
-    if (!aiPlaceOn(ai2.place)) return;
+    if (!aiPlaceOn(ai2.place) || ai2.enabled && !ai2.enabled()) return;
     const s5 = h5.editor.state.selection;
     if (s5.empty || h5.editor.isDestroyed || !h5.editor.state.doc.textBetween(s5.from, s5.to, " ").trim()) {
       if (aiBar.value && aiBar.value.h === h5 && !barBusy()) aiBar.value = null;
@@ -28406,7 +28416,7 @@ ${s5}`;
         return;
       }
       if (e4.altKey && !e4.metaKey && !e4.ctrlKey && (e4.code === "Slash" || e4.key === "/")) {
-        if (!aiPlaceOn(ai2.place)) return;
+        if (!aiPlaceOn(ai2.place) || ai2.enabled && !ai2.enabled()) return;
         e4.preventDefault();
         e4.stopPropagation();
         if (!edSelection(h5)) {
@@ -28466,6 +28476,10 @@ ${s5}`;
       aiSug.value = { ...s5, status: "failed", message: "AI on selected text needs the live server" };
       return;
     }
+    if (s5.ai.enabled && !s5.ai.enabled()) {
+      aiSug.value = { ...s5, status: "failed", message: "AI suggestions are off here" };
+      return;
+    }
     if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) {
       aiSug.value = { ...s5, status: "failed", message: "ask creaite is busy; try again when it's finished" };
       return;
@@ -28476,15 +28490,20 @@ ${s5}`;
     ), steps: 0 };
     aiSug.value = cur;
     const doc = s5.ai.document ? s5.ai.document() : null;
-    const r4 = await draftAsk({
-      option: s5.option,
-      instruction: s5.instruction,
-      text: s5.range.text,
-      place: s5.ai.place,
-      code: s5.ai.project && s5.ai.project() || "",
-      ...doc ? { document: doc } : {}
-    }, { url: "/api/edit/ai", label: `${s5.label}, with Claude`, status: () => {
-    } });
+    const to2 = s5.ai.recipients ? s5.ai.recipients() : null;
+    const r4 = await draftAsk(
+      {
+        option: s5.option,
+        instruction: s5.instruction,
+        text: s5.range.text,
+        place: s5.ai.place,
+        code: s5.ai.project && s5.ai.project() || "",
+        ...doc ? { document: doc } : {},
+        ...Array.isArray(to2) ? { recipients: to2 } : {}
+      },
+      { url: "/api/edit/ai", label: `${s5.label}, with Claude`, status: () => {
+      } }
+    );
     if (aiSug.value !== cur) return;
     if (r4.ok && r4.text) {
       draftStat(AI_FEATURE, "offered");
@@ -60897,13 +60916,14 @@ ${d5.text}`);
         prop: "textContent",
         links: !!el2.dataset.pkml,
         /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
-        ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: { place: el2.dataset.pkml ? "plain" : "line", project: () => {
+        ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: { place: pkClientMsg(el2) ? "client_message" : el2.dataset.pkml ? "plain" : "line", project: () => {
           const x5 = shared.CUR && pkX(shared.CUR.k, pkCid());
           return x5 && x5.p || "";
         } } } : {}
       });
     });
   }
+  var pkClientMsg = (el2) => el2.dataset.pkf === "cm" || el2.dataset.pkf === "cmd";
   var pkDetOpen = (x5, id2) => !!(PK.pc && PK.pc.id === id2 || (id2 in PK.det ? PK.det[id2] : !!x5.client));
   function pkDetails(x5, k5) {
     const id2 = pkCid(), open2 = pkDetOpen(x5, id2), tg2 = $("#pkDetT");
@@ -62677,7 +62697,7 @@ ${d5.text}`);
       const outsideNote = shared.DE.mode === "followup" ? shared.DE.attendees.length ? "An attendee's address is outside your own domains" : "There are no attendee addresses on record" : shared.DE.email ? "This address is outside your own domains" : "There's no email address on record";
       putHtml($("#deBody"), `${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>
-      ${shared.DE.outside ? `<div class="denote">${outsideNote}, so items that aren't client-visible are unticked and marked internal. Tick any you want to include.</div>` : ""}
+      ${shared.DE.outside ? `<div class="denote">${outsideNote}, so items that aren't client-visible are unticked and marked internal. Tick any you want to include.${deAiSafe() ? " AI suggestions on this email use client-visible items only, and one that brings in anything internal is dropped." : ""}</div>` : ""}
       ${shared.DE.left ? `<div class="denote">${shared.DE.left} item${shared.DE.left === 1 ? "" : "s"} left out: marked confidential or restricted, or from a project's documents.</div>` : ""}${deExtraHtml()}
       <div class="deinc" id="deInc">${codes.map((c5) => `<div class="pph">${esc(pName(c5))}</div>${shared.DE.items.filter((i5) => i5.p === c5).sort((a5, b5) => deSort(a5, b5, TODAY)).map(row2).join("")}`).join("")}</div>
       <div class="deopts">${shared.DE.mode === "followup" ? "" : '<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
@@ -62693,20 +62713,44 @@ ${d5.text}`);
     $("#deNote").hidden = true;
     if (!shared.DE.subjEdited) $("#deSubj").value = em2.subject;
   }
+  var DE_AI_SAFE = false, deAiAsking = null, deAiNoUntil = 0;
+  var DE_AI_NO_MS = 6e4;
+  var deAiSafe = () => DE_AI_SAFE;
+  function deAiCheck() {
+    if (DE_AI_SAFE || deAiAsking || !viaServer() || Date.now() < deAiNoUntil) return deAiAsking;
+    const q5 = Promise.resolve().then(() => api("/api/edit/ai/caps", {})).then((r4) => DE_AI_SAFE = !!(r4 && r4.ok && r4.email_audience === "recipients"), () => false).then((ok2) => {
+      if (!ok2) deAiNoUntil = Date.now() + DE_AI_NO_MS;
+      return ok2;
+    });
+    deAiAsking = q5;
+    q5.then(() => {
+      if (deAiAsking === q5) deAiAsking = null;
+    });
+    return q5;
+  }
+  var deRecipients = () => {
+    const d5 = shared.DE;
+    if (!d5) return [""];
+    return d5.mode === "followup" ? (d5.attendees || []).map((a5) => String(a5.email || "")) : [String(d5.email || "")];
+  };
   function dePrevPut(html2) {
     const el2 = $("#dePrev");
     if (!el2) return;
     shared.DE.built = html2;
-    const ai2 = !shared.DE.outside;
-    if (el2.cxed && !el2.cxed.editor.isDestroyed && el2.cxed.aiOn === ai2) {
+    if (!deAiSafe()) deAiCheck();
+    if (el2.cxed && !el2.cxed.editor.isDestroyed) {
       el2.cxed.setValue(html2);
       return;
     }
-    creaiteEditor(el2, { features: "email", html: html2, ...ai2 ? { ai: { place: "email", project: () => {
-      const d5 = shared.DE;
-      return d5 && (d5.items && d5.items[0] && d5.items[0].p || d5.codes && d5.codes[0]) || "";
-    } } } : {} });
-    if (el2.cxed) el2.cxed.aiOn = ai2;
+    creaiteEditor(el2, { features: "email", html: html2, ai: {
+      place: "email",
+      project: () => {
+        const d5 = shared.DE;
+        return d5 && (d5.items && d5.items[0] && d5.items[0].p || d5.codes && d5.codes[0]) || "";
+      },
+      enabled: () => !!shared.DE && (!shared.DE.outside || deAiSafe()),
+      recipients: () => deAiSafe() ? deRecipients() : null
+    } });
   }
   function dePrevDrop() {
     const el2 = $("#dePrev");
@@ -75869,7 +75913,7 @@ ${d5.text}`);
   var OLDSERVER = "The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Terminal window, then python3 system/scripts/live_server.py";
   var OWNPOST = 0;
   var api = async function(path, body2) {
-    if (!/^\/api\/(here|pulse|vip|files|ask\/running|review\/guesses|review\/rejects|review\/candidates)$/.test(path)) OWNPOST = Date.now();
+    if (!/^\/api\/(here|pulse|vip|files|ask\/running|review\/guesses|review\/rejects|review\/candidates|edit\/ai\/caps)$/.test(path)) OWNPOST = Date.now();
     try {
       const r4 = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token || "" }, body: JSON.stringify(body2 || {}) });
       const j5 = await r4.json().catch(() => ({ ok: false, message: `HTTP ${r4.status}` }));
@@ -77310,6 +77354,7 @@ ${d5.text}`);
         "dayShown",
         "days",
         "dcIcon",
+        "deAiSafe",
         "deBuild",
         "deCopyText",
         "dePolish",
@@ -77642,8 +77687,10 @@ ${d5.text}`);
         "pkApply",
         "pkCid",
         "pkClient",
+        "pkClientMsg",
         "pkCommit",
         "pkDescL",
+        "pkDetOpen",
         "pkDraw",
         "pkEdMount",
         "pkEscBusy",

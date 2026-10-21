@@ -1,0 +1,93 @@
+--- system/scripts/live_server.py
++++ system/scripts/live_server.py
+@@ -146,10 +146,12 @@
+                          a reject instead (review.py; BL-315)
+ - POST /api/draft {kind, …}: an AI draft (drafts.py context, then Claude, streamed; nothing reaches the tracker); /api/draft/stat
+                          {feature, event, n} counts what was done with one; /api/drafts each feature and its counts (BL-219 on)
+-- POST /api/edit/ai {option, text, code, place, instruction, document?}: AI on selected text (BL-301 D): edit_ai.py's prompt
++- POST /api/edit/ai {option, text, code, place, instruction, document?, recipients?}: AI on selected text (BL-301 D): edit_ai.py's prompt
+                          (the text, the option, the project's name, people and open item IDs only), Claude with no tools at all
+                          (kind "edit-ai"), streamed; the "draft" event is the suggestion and its check. Nothing is written. The
+-                         place is edit_ai.py's: a client report `document` binds the client place (#123); other keys are a 400
++                         place is edit_ai.py's: a client report `document` binds the client place (#123); other keys are a 400.
++                         The Draft email's `recipients` (#186) decide in edit_ai.py whether it goes outside (client facts and
++                         checks); /api/edit/ai/caps says the server decides that, so the page shows the bar for an outside email
+ - POST /api/agenda/save {key, parts, agenda, attendees}: write a drafted agenda into the Agendas folder, never overwriting (BL-223)
+ - POST /api/email/followup {key, eid, day, start, title, files}: a follow-up email's attendees and summary, nothing sent;
+                          /api/chases {ids, mode} records a chase Alan says he sent (system/staging/chases.json, IDs only;
+@@ -5996,7 +5998,7 @@
+     quiet = True                                            # the page shows the suggestion, not the reply as it streams
+ 
+ 
+-EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document"}
++EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document", "recipients"}
+ EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
+ 
+ 
+@@ -6013,14 +6015,57 @@
+         if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
+             return None
+         body["document"] = {k: x[:120] for k, x in d.items()}
++    rc = req.get("recipients")                     # #186: the Draft email's addresses, passed whole (edit_ai.email_outside decides)
++    if rc is not None:
++        if edit_ai_recipients_problem(req):
++            return None
++        body["recipients"] = list(rc)
+     return body
++
++
++def edit_ai_recipients_problem(req):
++    """Why a request's `recipients` can't be taken (#186), as the message the page shows, or "" when they can (or there are none):
++    only the Draft email sends addresses, at most 50, each text of at most 320 characters. Never cut: a list is taken whole or not."""
++    rc = req.get("recipients") if isinstance(req, dict) else None
++    if rc is None:
++        return ""
++    if str(req.get("place") or "") != "email":
++        return "Addresses go only with the Draft email, so nothing was sent to Claude."
++    if not isinstance(rc, list) or any(not isinstance(x, str) or len(x) > 320 for x in rc):
++        return "The email's addresses couldn't be read, so nothing was sent to Claude."
++    if len(rc) > 50:
++        return "That email has too many recipients for a suggestion (50 at most), so nothing was sent to Claude."
++    return ""
++
++
++def own_domains_state():
++    """Whether the own-domains setting can decide who is inside (#186 review): "ok", "none" (empty: everyone is outside), "not a list",
++    "no usable domain" (a list with no domain in it, such as [1] or [""]: everyone is outside) or "unreadable". Never the domains."""
++    try:
++        given = (paths.load_settings().get("identity") or {}).get("own_domains")
++    except Exception:  # noqa: BLE001
++        return "unreadable"
++    if given is None or given == []:
++        return "none"
++    if not isinstance(given, list):
++        return "not a list"
++    usable = [d for d in given if isinstance(d, str) and d.strip().lstrip("@")]      # as edit_ai.own_domains reads them
++    return "ok" if usable else "no usable domain"
++
++
++def edit_ai_caps_route(handler, req):
++    """POST /api/edit/ai/caps (#186): what this server's edit_ai.py decides for itself, so the page can show the Draft email's AI bar
++    for an outside recipient (an older server answers 404 and the page keeps the bar off), and whether the own-domains setting is
++    usable (a setting that isn't a list makes every recipient outside)."""
++    return handler.send(200, {"ok": True, "email_audience": "recipients", "own_domains": own_domains_state()})
+ 
+ 
+ def edit_ai_route(handler, req):
+     """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
+     body = edit_ai_request(req)
+     if body is None:
+-        return handler.send(400, {"ok": False, "message": "That request isn't one creaite knows."})
++        why = isinstance(req, dict) and not set(req) - EDIT_AI_KEYS and edit_ai_recipients_problem(req)   # #186: a plain message
++        return handler.send(400, {"ok": False, "message": why or "That request isn't one creaite knows."})
+     busy = current_run()
+     if busy and not busy.done:
+         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
+@@ -6046,6 +6091,7 @@
+ 
+ 
+ DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
++DRAFT_ROUTES["/api/edit/ai/caps"] = edit_ai_caps_route        # #186
+ # ===== end BL-301 D =====
+ 
+ # ===== BL-223 (sprint-drafts-writing) ===== Draft agenda: the kind "agenda" on /api/draft (the meeting's key and the style), and
