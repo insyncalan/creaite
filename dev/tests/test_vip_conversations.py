@@ -3,7 +3,7 @@
 Run: python3 dev/tests/test_vip_conversations.py
 A throwaway vault with fictional people and a stand-in Claude (never Microsoft 365). Covers each "Done when" point: a
 three-message chat (greeting, commitment, decision) gives one card with one summary, one action and one decision, its
-project matched from the chat's title; a greeting-only chat gives one quiet line and no buttons; a later message updates the
+project matched from the chat's title; a greeting-only chat gives one quiet line with only Seen; a later message updates the
 same card; Dismiss stages nothing and Create work item stages one proposal; a later sweep proposes nothing from a
 conversation already summarised; vip.json holds no message text. Also: the check keeps its own read-only allow list, the wait
 for quiet (at most 15 minutes), the title fallback, the project from the people, a private conversation's neutral line, and
@@ -288,7 +288,7 @@ class ConversationRecordTests(unittest.TestCase):
 
 class ConversationPageTests(unittest.TestCase):
     """Today: one card per conversation (its title, "updated HH:MM" at its last message, the summary, each candidate with Create work item and
-    Dismiss), the quiet line with no buttons and no count, and never the word VIP."""
+    Dismiss), the quiet line with only Seen and no count, and never the word VIP."""
 
     @classmethod
     def setUpClass(cls):
