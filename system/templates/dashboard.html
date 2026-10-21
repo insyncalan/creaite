@@ -70600,16 +70600,21 @@ ${d5.text}`);
       id: f5,
       name: f5,
       icon: HEALTH_ICON[f5][0],
-      mark: f5 === flag ? "now" : void 0,
-      data: { tone: HEALTH_ICON[f5][1], ...f5 === flag ? { current: "true" } : {} }
+      radio: true,
+      checked: f5 === flag,
+      data: { tone: HEALTH_ICON[f5][1] }
     }));
+    const pick = (f5) => {
+      closeMenu("pick");
+      onPick(f5);
+    };
     const open2 = (anchor) => {
       if (menuOpenFor(anchor)) {
         closeMenu("away");
         return;
       }
       const rail = document.querySelector(".rail"), keep2 = rail ? rail.getBoundingClientRect().right + 8 : 8;
-      openMenu(anchor, { label: "Health for this week", items: items2, onPick, cls: "rsmenu wr-hmenu", minLeft: keep2 });
+      openMenu(anchor, { label: "Health for this week", items: items2, onPick: pick, cls: "rsmenu wr-hmenu", minLeft: keep2 });
     };
     return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2(
       "button",

@@ -23,14 +23,16 @@ const HEALTH_ICON = /** @type {Record<string, [string, string]>} */ ({ "On track
 
 /** HealthChange (#287): the Change button under the flag. Its menu is the section menu's popup (openMenu, class "rsmenu", kept
     clear of the side bar), never a menu inside the scaled page: compact icon-and-word rows that follow the palette, the current
-    health marked. @param {{flag: string, onPick: (f: string) => void}} props */
+    health ticked (aria-checked). @param {{flag: string, onPick: (f: string) => void}} props */
 function HealthChange({ flag, onPick }) {
-  const items = HEALTH_FLAGS.map(f => ({ id: f, name: f, icon: HEALTH_ICON[f][0], mark: f === flag ? "now" : undefined,
-    data: { tone: HEALTH_ICON[f][1], ...(f === flag ? { current: "true" } : {}) } }));
+  /* menuitemradio items, aria-checked on the current health (its icon becomes a tick, in the same tone) */
+  const items = HEALTH_FLAGS.map(f => ({ id: f, name: f, icon: HEALTH_ICON[f][0], radio: true, checked: f === flag,
+    data: { tone: HEALTH_ICON[f][1] } }));
+  const pick = (/** @type {string} */ f) => { closeMenu("pick"); onPick(f); };   /* openMenu keeps a checked item's menu open: a radio pick closes it */
   const open = (/** @type {HTMLElement} */ anchor) => {
     if (menuOpenFor(anchor)) { closeMenu("away"); return; }
     const rail = document.querySelector(".rail"), keep = rail ? rail.getBoundingClientRect().right + 8 : 8;
-    openMenu(anchor, { label: "Health for this week", items, onPick, cls: "rsmenu wr-hmenu", minLeft: keep });
+    openMenu(anchor, { label: "Health for this week", items, onPick: pick, cls: "rsmenu wr-hmenu", minLeft: keep });
   };
   return (
     <span class="dd">

@@ -27,7 +27,7 @@ REPORT = """((sel)=>{const m=document.querySelector(sel); if(!m) return null;
     inScaled:!!m.closest('.sheet-a4'), outline:c.outlineStyle+' '+c.outlineWidth, shadow:c.boxShadow, border:c.borderTopWidth+' '+c.borderTopStyle,
     radius:c.borderTopLeftRadius, names:items.map(i=>i.textContent.trim()), h:items.map(i=>i.getBoundingClientRect().height),
     fs:items.map(i=>getComputedStyle(i).fontSize), icons:items.map(i=>!!i.querySelector('svg')),
-    current:items.map(i=>i.dataset.current||''),
+    roles:items.map(i=>i.getAttribute('role')), current:items.map(i=>i.getAttribute('aria-checked')==='true'),
     hit:items.map(i=>{const b=i.getBoundingClientRect(), e=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2); return !!e && m.contains(e)})}})"""
 
 
@@ -81,7 +81,8 @@ class HealthChangeMenu(LiveBrowserCase):
                     self.assertEqual(set(m["fs"]), {"13px"}, "normal text size")
                     self.assertTrue(all(m["icons"]), "a small icon before each word")
                     self.assertEqual(m["outline"].split()[0], "none", "no outline on the menu box")
-                    self.assertEqual(sum(1 for c in m["current"] if c), 1, "the current health is marked")
+                    self.assertEqual(set(m["roles"]), {"menuitemradio"}, "one of three: radio items")
+                    self.assertEqual(sum(1 for c in m["current"] if c), 1, "the current health is aria-checked")
                     sec = self.section_menu()
                     for k in ("shadow", "border", "radius", "outline"):
                         self.assertEqual(m[k], sec[k], f"{k}: the same look as the section menu in {palette}")
@@ -93,11 +94,12 @@ class HealthChangeMenu(LiveBrowserCase):
         want = next(n for n in ("On track", "At risk", "Off track") if n.upper() != before)
         self.assertIn(self.b.eval("document.activeElement.closest('[role=menu]')?.getAttribute('aria-label')||''"), "Health for this week",
                       "focus moves into the menu")
-        self.b.eval(f"[...document.querySelectorAll('{MENU} [role=menuitem]')].find(b=>b.textContent.trim().startsWith({want!r})).click()")
+        self.b.eval(f"[...document.querySelectorAll('{MENU} [role=menuitemradio]')].find(b=>b.textContent.trim().startsWith({want!r})).click()")
         self.b.wait(f"!document.querySelector({MENU!r})", 5)
         self.b.wait(f"document.querySelector('#v-reporting .wr-flag').textContent.trim()==={want.upper()!r}", 5)
         self.assertEqual(self.b.eval("document.querySelector('#v-reporting .wr-chg').getAttribute('aria-expanded')"), "false")
-        self.open_health()
+        m = self.open_health()
+        self.assertEqual([n.split("·")[0].strip() for n, c in zip(m["names"], m["current"]) if c], [want], "the new health is the checked one")
         self.b.key("Escape")
         self.b.wait(f"!document.querySelector({MENU!r})", 5)
         self.assertTrue(self.b.eval("document.activeElement===document.querySelector('#v-reporting .wr-chg')"), "Esc gives focus back")
