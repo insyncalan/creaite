@@ -51,6 +51,9 @@
 :root{
   --fs-2xs:10px; --fs-xs:12px; --fs-sm:13px; --fs-md:14px; --fs-lg:16px; --fs-xl:18px; --fs-2xl:22px; --fs-display:34px;
   --r-xs:2px; --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-pill:999px;
+  /* token_audit P1 (hand check 20): read in every theme, defined only in some; these defaults keep the others as they drew
+     (no shadow) and give them the monospace the rules ask for. A palette's own value still wins. */
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; --shadow-card:none; --shadow-pop:none;
   --shadow-sm:0 4px 12px rgba(0,0,0,.14); --shadow-md:0 8px 24px rgba(0,0,0,.18); --shadow-lg:0 12px 32px rgba(0,0,0,.26);
   --shadow-side:-14px 0 32px rgba(0,0,0,.16);
   --scrim:rgba(0,0,0,.25);   /* a modal dialog's backdrop; darker in dark mode (below), where .25 black barely shows */
@@ -3435,7 +3438,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 /* ===== v2.1.0 P5 (BL-335, BL-338): the A4 sheet (components/report/Sheet.jsx). The chrome (bar, handles, pop-ups) uses the page's
    tokens; the page itself is a document, the same in every theme as it exports (creaite_doc.CSS: paper, ink, rules), so it has
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
-:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F
+:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F;
   /* #268 (Cap's review M2): the state colours on the paper, light in every theme, as the paper is */
   --paper-ok:#2E6B3A; --paper-ok-soft:#E3F2E5; --paper-bad:#B3261E; --paper-bad-soft:#FBE7E5; --paper-warn:#8A5A00; --paper-warn-soft:#FBF0DA;
   --paper-accent-soft:#D3EAEE; --paper-focus:#0B6E7F}
@@ -4259,7 +4262,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 /* v2.5.1 (#239): the client report's Show as exported is the server's render of its checked preview snapshot, in a sandboxed frame */
 .crx{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px}
 .crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
-.crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:#fff}
+.crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:var(--paper)}
 .crx-wait,.crx-err{padding:16px}
 </style>
 </head>
