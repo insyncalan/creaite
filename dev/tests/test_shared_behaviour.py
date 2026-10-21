@@ -162,12 +162,13 @@ VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#pmFBtn")
 # screens stay together (they share the one note they make) and a dialog script (KEYED) runs with its screen. A new screen goes into
 # a part (test_every_screen_is_in_exactly_one_part says so), then behaviour_witness.py refreshes behaviour_witness.json.
 # 2.6.0 (#232 C2): the old Review and Intake screens are retired; the one Intake page ("intake-review") takes Review's place in
-# part a of each.
+# part a of each; Settings › People and projects went with #228 and #246, so its slot holds the AI drafts tab and the project
+# settings page.
 KEYS_PARTS = {"a": ("intake-review", "activity", "person", "help", "settings-health", "rail-expanded", "rail-icons", "work-board", "work-panel-decision", "review-peek", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "archive-ask", "notes", "notes-ai", "notes-session"),
               "b": ("work-panel", "cockpit", "people", "settings-essentials", "settings-advanced", "rail-collapsed", "activity-selected", "work-panel-details", "work-panel-raid", "work-panel-new", "work-display", "work-views", "shell", "clientreport"),
-              "c": ("today", "work", "files", "projects", "milestones", "settings-people", "ask", "work-decisions", "milestone-editor", "minutes-approve", "weekly", "reports", "reporting", "today-days")}
+              "c": ("today", "work", "files", "projects", "milestones", "settings-ai", "ask", "work-decisions", "milestone-editor", "minutes-approve", "weekly", "reports", "reporting", "today-days", "project-settings")}
 UNDO_PARTS = {"a": ("intake-review", "activity", "cockpit", "people", "help", "settings-essentials", "settings-advanced", "settings-health", "rail-expanded", "rail-collapsed", "activity-selected", "work-panel-raid", "work-panel-decision", "work-panel-new", "work-decisions", "work-views", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "weekly", "shell"),
-              "b": ("today", "work", "work-panel", "files", "projects", "milestones", "person", "settings-people", "ask", "rail-icons", "work-board", "work-panel-details", "review-peek", "work-display", "milestone-editor", "minutes-approve", "reports", "reporting", "archive-ask", "today-days", "notes", "notes-ai", "notes-session", "clientreport")}
+              "b": ("today", "work", "work-panel", "files", "projects", "milestones", "person", "settings-ai", "ask", "rail-icons", "work-board", "work-panel-details", "review-peek", "work-display", "milestone-editor", "minutes-approve", "reports", "reporting", "archive-ask", "today-days", "notes", "notes-ai", "notes-session", "clientreport", "project-settings")}
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
 SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
@@ -829,6 +830,30 @@ class Keys(Driver):
         finally:
             self.tidy("" if n is None else "const r=REV.find(r=>r.n===%s); if(r){ delete r.dup; irTick.value++; }" % n)
 
+    def railcust(self):
+        """Customise sidebar (#railCust): since the tabbed Settings (#246) its one opener is the item in the sidebar's More menu
+        (#railCustBtn, inside the menu, so the keys script never reaches it). Enter on the item opens it with focus in it; Esc
+        closes it and focus goes back to More (#railMore: the menu it came from is closed). Nothing is saved."""
+        b = self.b
+        try:
+            if b.eval("document.getElementById('railMoreMenu').hidden"):
+                b.eval("document.getElementById('railMore').click()")
+            b.wait("!!document.getElementById('railCustBtn') && !document.getElementById('railMoreMenu').hidden", 10)
+            bad, opened = self.enter_on("document.getElementById('railCustBtn')", "document.getElementById('railCust')?.open")
+            if not opened:
+                return bad
+            self.seen.append({"ids": ["railCust"], "labels": [], "classes": []})
+            if not b.eval("document.getElementById('railCust').contains(document.activeElement)"):
+                bad.append("focus stays outside the dialog")
+            self.press("Escape", 0.5)
+            if b.eval("document.getElementById('railCust').open"):
+                bad.append("Esc leaves it open")
+            elif not b.eval("document.activeElement===document.getElementById('railMore')"):
+                bad.append("Esc doesn't return focus to More")
+            return bad
+        finally:
+            self.tidy("const m=document.getElementById('railMoreMenu'); if(m&&!m.hidden) document.getElementById('railMore').click();")
+
     def searchprev(self):
         """The search preview (#searchPrev): a vault search on Files finds a meeting's minutes; Enter on that result previews it.
         The sample vault's minutes have no text to preview (the server then opens the file instead), so the server's answer for
@@ -858,7 +883,8 @@ class Keys(Driver):
              ("today", "rail", "rail menu#railFly", "Shell", "→ on Projects, Work", "Rail flyouts"),
              ("work-board", "boardask", "boardask dialog#boardDlg", "Shell", "Move ▸ a due column", "Due date for"),
              ("intake-review", "llcompare", "llcompare dialog#llDlg", "Shell", "Compare", "Looks like"),
-             ("files", "searchprev", "searchprev dialog#searchPrev", "Shell", "a search result", "Preview"))
+             ("files", "searchprev", "searchprev dialog#searchPrev", "Shell", "a search result", "Preview"),
+             ("rail-expanded", "railcust", "railcust dialog#railCust", "Shell", "More ▸ Customise sidebar…", "Customise sidebar"))
 
     def keyed_dialogs(self, only, report, found):
         for screen, script, sig, area, how, label in self.KEYED:
