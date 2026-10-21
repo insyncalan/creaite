@@ -1,4 +1,4 @@
-"""#265 in real Chrome: Calendar import's Refresh reads the calendar through its own route and the meetings appear, without
+"""#265 in real Chrome: Intake's Refresh (the icon beside "Calendar read") reads the calendar through its own route and the meetings appear, without
 ask creaite opening or a message in it.
 
 Run: python3 dev/tests/test_calendar_refresh_ui.py     (needs Google Chrome; skipped otherwise)
@@ -29,13 +29,14 @@ class CalendarRefreshPage(LiveBrowserCase):
 
     @needs_diff
     def test_refresh_reads_the_calendar_and_the_meetings_appear(self):
-        self.b.eval("go('inbox')")
-        self.b.wait("!!document.getElementById('mtgRefresh')&&!document.getElementById('mtgRefresh').disabled")
+        self.b.eval("go('inbox')")                       # #232: the Intake page; Refresh is the icon beside "Calendar read"
+        self.b.wait("!!document.getElementById('icRef')&&!document.getElementById('icRef').disabled")
         said = self.b.eval("document.querySelectorAll('#chLog .msg.u').length")
-        self.b.click("#mtgRefresh")
-        self.b.wait("[...document.querySelectorAll('#mtgBody tr[data-mid] td.title')].some(t=>/Pilot readiness review/.test(t.innerText))"
-                    "&&document.getElementById('mtgRefresh').textContent==='Refresh'", timeout=90)
-        self.assertTrue(self.b.eval("document.getElementById('mtgRead').textContent").startswith("Calendar read"))
+        self.b.click("#icRef")
+        self.b.wait("[...document.querySelectorAll('#v-intake-review tr[data-irm]')].some(t=>/Pilot readiness review/.test(t.innerText))"
+                    "&&!document.getElementById('icRef').disabled&&!/Refreshing/.test(document.querySelector('[data-ircalread]').textContent)",
+                    timeout=90)
+        self.assertTrue(self.b.eval("document.querySelector('[data-ircalread]').textContent").startswith("Calendar read"))
         self.assertFalse(self.b.eval("document.getElementById('chat').classList.contains('on')"))   # the panel stayed shut
         self.assertEqual(self.b.eval("document.querySelectorAll('#chLog .msg.u').length"), said)   # nothing said in a chat
         self.assertIsNone(self.b.eval("RUN"))

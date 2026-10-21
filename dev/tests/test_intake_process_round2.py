@@ -240,12 +240,17 @@ class Queue(unittest.TestCase):
 class ProcessSelectedMeetings(unittest.TestCase):
 
     def test_m1_ask_creaite_opens_only_when_a_transcript_has_to_be_loaded(self):
-        """Process selected on a loaded meeting goes straight to /api/intake/process: openChat() sits inside the not-loaded branch."""
-        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/intake.js").read_text(encoding="utf-8")
-        body = src[src.index("export async function processMeetings"):src.index("/* ===== #265")]
-        self.assertEqual(body.count("openChat()"), 1)
-        self.assertLess(body.index("if(!m.loaded){"), body.index("openChat()"))
-        self.assertLess(body.index("openChat()"), body.index("processLive("))
+        """Process on a meeting goes straight to /api/intake/process (a transcript not yet loaded is loaded first through its own
+        job): since #232 the Intake page's Process never opens ask creaite; only "ask creaite about this" does, when asked."""
+        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/intakeReview/actions.js").read_text(
+            encoding="utf-8")
+        body = src[src.index("export async function irProcess("):src.index("export function irStop(")]
+        self.assertNotIn("openChat()", body)
+        self.assertLess(body.index("if (!file) {"), body.index('jobLive("/api/transcripts/load"'))
+        self.assertLess(body.index('jobLive("/api/transcripts/load"'), body.index("processLive("))
+        ask = src[src.index("export function irAskAbout("):src.index("export async function irProcessAll(")]
+        self.assertEqual(ask.count("openChat()"), 1)
+        self.assertEqual(src.count("openChat()"), 1)
 
 
 if __name__ == "__main__":
