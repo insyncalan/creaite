@@ -93,7 +93,8 @@ class ValidateOnlyInStaging(unittest.TestCase):
                 with self.subTest(target=name, mode=mode):
                     code, why = self.hook(mode, f"system/scripts/run tracker.py validate {target}")
                     self.assertEqual(code, 2, why)
-                    self.assertIn("runs only on a proposal in system/staging/", why)
+                    self.assertIn("wildcard or pattern character" if name == "an unquoted wildcard"    # #174 F5: refused first
+                                  else "runs only on a proposal in system/staging/", why)
 
     def test_a_proposal_in_staging_runs(self):
         for target in (str(self.prop.relative_to(self.root)), self.prop.name):

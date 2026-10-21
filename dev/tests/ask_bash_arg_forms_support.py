@@ -46,12 +46,12 @@ def forms(root, home):
         ("// after a separator (not a URL)", f"{T} a=/{home}/.ssh/id_rsa", NEVER),
         ("symlink to the file", f"{T} system/staging/drafts/key.vtt", NEVER),
         ("symlink to the folder", f"{T} system/staging/drafts/keys/id_rsa", NEVER),
-        ("wildcard ? (python3 form)", f"{P} ~/.ss?/id_rsa", NEVER),
-        ("wildcard ?", f"{T} ~/.ss?/id_rsa", NEVER),
-        ("wildcard *", f"{T} ~/.s*/id_r*", NEVER),
+        ("wildcard ? (python3 form)", f"{P} ~/.ss?/id_rsa", WORDS),
+        ("wildcard ?", f"{T} ~/.ss?/id_rsa", WORDS),
+        ("wildcard *", f"{T} ~/.s*/id_r*", WORDS),
         ("wildcard [ ]", f"{T} ~/.ssh/id_[r]sa", NEVER),
-        ("wildcard, absolute", f"{T} {home}/.*/id_rsa", NEVER),
-        ("wildcard after =", f"{T} --from=~/.ss?/id_rsa", NEVER),
+        ("wildcard, absolute", f"{T} {home}/.*/id_rsa", WORDS),
+        ("wildcard after =", f"{T} --from=~/.ss?/id_rsa", WORDS),
         ("bare $HOME", f"{T} $HOME/.ssh/id_rsa", SHELL),
         ("double-quoted $HOME", f'{T} "$HOME/.ssh/id_rsa"', SHELL),
         ("${HOME}", f"{T} ${{HOME}}/.ssh/id_rsa", SHELL),
@@ -103,6 +103,8 @@ def by(why):
         return NEVER
     if "hands over to another command" in why:
         return HANDOVER
+    if "wildcard or pattern character" in why:       # #174 F5: an unquoted * ? [ ^ # or mid-word ~ is refused before the never list
+        return WORDS
     if "# comment" in why or "turns into another folder" in why or "through every folder" in why:
         return WORDS
     if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
@@ -163,7 +165,7 @@ def handovers(root):
         ("reach.py wrap (python3 form)", "python3 system/scripts/reach.py wrap tracker.py apply", HANDOVER),
         ("reach.py wrap (full vault path)", f"python3 {root}/system/scripts/reach.py wrap tracker.py apply", HANDOVER),
         ("reach.py wrap permissions.py", "system/scripts/run reach.py wrap permissions.py edit x", HANDOVER),
-        ("reach.py wrap, a stage command", "system/scripts/run reach.py wrap report.py adhoc x.json", HANDOVER),
+        ("reach.py wrap, a stage command", "system/scripts/run reach.py wrap minutes.py stage x.json", HANDOVER),  # #174: report.py adhoc is refused earlier, as a report draft
         ("reach.py wrap, an option first", "system/scripts/run reach.py --x wrap doctor.py", HANDOVER),
         ("reach.py wrap with a secret", "system/scripts/run reach.py wrap minutes.py transcript ~/.ssh/id_rsa", NEVER),
         ("reach.py hook", "system/scripts/run reach.py hook --run r --mode confirmed", HANDOVER),
@@ -182,20 +184,21 @@ SHELL_WORDS = [
     ("~- after =", f"{SR} minutes.py transcript --from=~-/x.vtt", WORDS),
     ("~+ after :", f"{SR} minutes.py transcript a:~+/x.vtt", WORDS),
     ("** (recursive in zsh)", f"{SR} minutes.py transcript projects/**/x.vtt", WORDS),
+    ("# inside a word (zsh x#, #174 F5)", f"{SR} tracker.py read ABC#1", WORDS),
 ]
 SHELL_WORDS_ALLOWED = [
     f"{SR} search.py query '#12 owner: Sara, ~-5 days, **bold**'",
     f'{SR} search.py query "issue #4 ~+ ~1"',
-    f"{SR} tracker.py read ABC#1",
+    f"{SR} tracker.py read 'ABC#1'",
     f"{SR} search.py query 'a ~ b'",
     f"{SR} minutes.py transcript '{ABC}/transcripts/2026-10-0*.vtt'",
 ]
 ASK_TILDE = [(n, c, WORDS) for n, c, _ in TILDE_FORMS if "quoted" not in n]
 HIDDEN = [
-    ("* matching a hidden folder", f"{T} ~/*/id_rsa", NEVER),
-    ("? matching a hidden folder", f"{T} ~/?ssh/id_rsa", NEVER),
-    ("[ ] matching a hidden folder", f"{T} ~/[.]ssh/id_rsa", NEVER),
-    ("* after =", f"{T} --from=~/*/id_rsa", NEVER),
+    ("* matching a hidden folder", f"{T} ~/*/id_rsa", WORDS),
+    ("? matching a hidden folder", f"{T} ~/?ssh/id_rsa", WORDS),
+    ("[ ] matching a hidden folder", f"{T} ~/[.]ssh/id_rsa", WORDS),
+    ("* after =", f"{T} --from=~/*/id_rsa", WORDS),
 ]
 def shared_forms(root, home):
     return [(n, c) for n, c, _ in ASK_TILDE] + [(n, c) for n, c, _ in HIDDEN] + [

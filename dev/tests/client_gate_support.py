@@ -71,9 +71,15 @@ class Base(unittest.TestCase):
     def ctx(self, req):
         return self.py(f"print(json.dumps(drafts.context({req!r}), ensure_ascii=False))")
 
-    def assert_linear(self, out):
+    def assert_linear(self, out, again=None):
         """Each {name: [seconds at size n, seconds at 4n]} grows linearly (#127 round 6: growth, not wall-clock seconds, so a loaded
-        machine doesn't fail it): 4n takes under 8 times n (linear is about 4, quadratic 16) or under a second, and under 30 s."""
+        machine doesn't fail it): 4n takes under 8 times n (linear is about 4, quadratic 16) or under a second, and under 30 s.
+        again (2.5.3 gate): when a run looks too slow, measure once more and keep each size's fastest time, so one stall on a
+        loaded runner doesn't fail it; the bound is the same, and real quadratic growth (16 times) fails both runs."""
+        slow = [n for n, (small, large) in out.items() if large >= max(8 * small, 1.0) or large >= 30.0]
+        if slow and again is not None:
+            more = again()
+            out = {n: [min(a, b) for a, b in zip(v, more[n])] for n, v in out.items()}
         for name, (small, large) in out.items():
             self.assertLess(large, 30.0, name)
             self.assertLess(large, max(8 * small, 1.0), (name, small, large))

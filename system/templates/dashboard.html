@@ -35609,9 +35609,16 @@ ${s5}`;
     const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
     const everyPartner = parts.every((k5) => list.includes(k5));
     const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
-    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
+    const before = p6.crlogos;
     p6.crlogos = list;
     changed();
+    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) {
+      if (p6.crlogos === list) {
+        p6.crlogos = before;
+        changed();
+      }
+      return false;
+    }
     return true;
   }
   var CLIENT_NAME_MAX = 80;
@@ -58668,7 +58675,6 @@ ${d5.text}`);
     PULSE.reloads++;
     let n4 = null;
     try {
-      const hold = o5.hold ? o5.hold() : null;
       try {
         const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o5.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
         if (r4.ok) n4 = await r4.json();
@@ -58676,6 +58682,7 @@ ${d5.text}`);
         n4 = null;
       }
       if (!n4 || !n4.ok) return false;
+      const hold = o5.hold ? o5.hold() : null;
       RECSTAT.records++;
       recMerge(n4);
       refreshAll();
@@ -76761,6 +76768,7 @@ ${d5.text}`);
         "UI",
         "UPLOAD_MAX",
         "UPLOAD_TYPES",
+        "UsagePanel",
         "VIPS",
         "WARNS",
         "WEEKSTART",
