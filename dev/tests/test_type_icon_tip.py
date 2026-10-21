@@ -16,6 +16,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+import build_dashboard as bd  # noqa: E402
+from datetime import date  # noqa: E402
 
 WORDS = ["Action", "Decision", "Risk", "Issue", "Assumption", "Dependency", "Milestone"]
 # every type icon on the page: [tooltip, name, role, title, svg hidden]
@@ -95,6 +98,11 @@ class TypeIconTip(LiveBrowserCase):
         self.assertEqual(b.eval(f"{ICONS}('#weekList .wkic').map(x=>x[0])"),
                          ["Action", "Decision", "Risk", "Issue", "Assumption", "Dependency", "Milestone"])
         self.named("#weekList .wkic")
+        b.eval("""D.week.days=[]; D.week.undated=[{kind:"raid",id:"ABC-R-920",p:"ABC",t:"Undated issue",o:"Omar Ali",pr:"Urgent",type:"Issue"}];
+            D.week.further=[{date:pkAdd(TODAY,10),kind:"raid",id:"ABC-R-921",p:"ABC",t:"Later dependency",o:"Omar Ali",pr:"High",type:"Dependency"}];
+            D.week.further_to=pkAdd(TODAY,20); renderToday()""")
+        b.wait("document.querySelectorAll('#weekList .wkic').length===2")
+        self.assertEqual(b.eval(f"{ICONS}('#weekList .wkic').map(x=>x[0])"), ["Issue", "Dependency"])   # Urgent with no date; Further ahead
 
     def milestone_marks(self, sel):
         got = self.b.eval(f"[...document.querySelectorAll({sel!r})].map(e=>[e.dataset.tip||'',e.getAttribute('aria-label')||'',e.getAttribute('title')])")
@@ -120,6 +128,20 @@ class TypeIconTip(LiveBrowserCase):
         if b.eval("!!document.querySelector('#v-milestones .mv-track .orig')"):
             self.milestone_marks("#v-milestones .mv-track .orig")                       # Movement: the original date
         b.eval("try{ localStorage.removeItem('creaite.cockpit.milestones.view'); }catch(e){} go('today')")
+
+
+class WeekAheadTypeData(unittest.TestCase):
+    """The Week ahead's data carries a RAID item's type in every group (dated days, Urgent with no date, Further ahead),
+    so each row's icon can name it (Cap's review of #286)."""
+
+    def test_undated_and_further_rows_carry_the_type(self):
+        raid = [{"id": "ABC-R-001", "p": "ABC", "t": "Undated", "o": "Omar Ali", "st": "Open", "due": None, "pr": "Urgent", "type": "Issue"},
+                {"id": "ABC-R-002", "p": "ABC", "t": "Later", "o": "Omar Ali", "st": "Open", "due": "2026-10-20", "pr": "High", "type": "Dependency"},
+                {"id": "ABC-R-003", "p": "ABC", "t": "This week", "o": "Omar Ali", "st": "Open", "due": "2026-10-07", "pr": "High", "type": "Assumption"}]
+        w = bd.week_ahead(date(2026, 10, 5), [], raid, [], [], {}, None)
+        self.assertEqual([(i["id"], i.get("type")) for i in w["undated"]], [("ABC-R-001", "Issue")])          # Urgent, with no date
+        self.assertEqual([(i["id"], i.get("type")) for i in w["further"]], [("ABC-R-002", "Dependency")])     # Further ahead
+        self.assertEqual([(i["id"], i.get("type")) for d in w["days"] for i in d["items"]], [("ABC-R-003", "Assumption")])
 
 
 if __name__ == "__main__":
