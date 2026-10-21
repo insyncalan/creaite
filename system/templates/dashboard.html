@@ -6209,6 +6209,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ovKey: () => ovKey,
     ovReapply: () => ovReapply,
     overdue: () => overdue,
+    ownHeld: () => ownHeld,
     ownedBy: () => ownedBy,
     ownerFinal: () => ownerFinal,
     ownerMatches: () => ownerMatches,
@@ -75581,6 +75582,10 @@ ${d5.text}`);
     const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
     return f5 ? `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.` : t47;
   };
+  function ownHeld(msg, own) {
+    const pre = "Held in Review, not applied: " + own + " item ";
+    return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => x5.startsWith(pre)).map((x5) => x5.slice(pre.length).replace(/^\d+: /, ""));
+  }
   function applyBlockers(msg, own) {
     const t47 = String(msg || "");
     if (!/Apply stopped/.test(t47)) return [];
@@ -75912,6 +75917,10 @@ ${d5.text}`);
     op2.state = "failed";
     opRevert(op2);
     if (opTargeted(op2) && viaServer()) await refreshRecords(opIds(op2));
+    if (act === false) {
+      snack(msg);
+      return false;
+    }
     if (act) {
       snack(msg, act.run, act.label);
       return false;
@@ -75957,6 +75966,18 @@ ${d5.text}`);
         held = await shared.VW.exists("system/staging/" + op2.name);
       } catch (e4) {
         held = false;
+      }
+      const why = held ? ownHeld(res.message, op2.name) : [];
+      if (why.length) {
+        let wrote = false;
+        try {
+          wrote = JSON.parse(await shared.VW.read("system/staging/" + op2.name)).items.some((i5) => i5 && i5.applied);
+        } catch (e4) {
+          wrote = false;
+        }
+        const left = wrote && !(res.apply_id != null && (await api("/api/undo", { apply_id: res.apply_id })).ok);
+        await opDropFile(op2.name);
+        return await opFail(op2, "Not saved: " + oneLine(why.join("\n")) + (left ? " (the rest was applied: undo it in Activity)" : ""), false);
       }
       if (held) {
         await opDropFile(op2.name);

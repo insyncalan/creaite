@@ -106,6 +106,52 @@ class SaveAppliesOnlyItsOwn(unittest.TestCase):
             self.assertNotIn(f, res["message"])
         self.assertTrue(self.post("/api/undo", {"apply_id": res["apply_id"]})["ok"])
 
+    def change(self, n, id_, owner):
+        a = next(a for a in self.v.rows("actions") if a["id"] == id_)
+        return {"n": n, "op": "update", "table": "actions", "id": id_, "changes": {"owner": owner},
+                "based_on": a["updated_at"], "match": "strong", "flags": [], "decision": "approved"}
+
+    def namesakes(self, name, owner, root_owner, id_="ABC-A-001"):
+        """A staged save, and a file of the same name in the vault root holding another approved change (as an ask creaite run
+        could plant: a root .json is an ordinary create)."""
+        for f in STALE:
+            (self.v.root / "system/staging" / f).unlink(missing_ok=True)
+        staged, planted = self.v.root / "system/staging" / name, self.v.root / name
+        staged.write_text(json.dumps({"created": "2026-10-21T12:00:00", "source_run": "dashboard", "files": [],
+                                      "items": [self.change(1, id_, owner)]}), encoding="utf-8")
+        raw = json.dumps({"created": "2026-10-21T12:00:00", "source_run": "dashboard", "files": [],
+                          "items": [self.change(1, id_, root_owner)]})
+        planted.write_text(raw, encoding="utf-8")
+        self.addCleanup(planted.unlink, missing_ok=True)
+        return staged, planted, raw
+
+    def test_only_applies_the_staging_file_never_a_root_namesake(self):
+        name = "proposed-2026-10-21-120000-dashboard.json"
+        staged, planted, raw = self.namesakes(name, "From Staging", "From The Root")
+        res = self.post("/api/apply", {"hold_peek": True, "only": name})
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.owner("ABC-A-001"), "From Staging")
+        self.assertFalse(staged.exists(), "the staged save was applied")
+        self.assertEqual(planted.read_text(encoding="utf-8"), raw, "the root namesake is never read")
+        self.assertTrue(self.post("/api/undo", {"apply_id": res["apply_id"]})["ok"])
+
+    def test_hold_peek_applies_staging_files_never_root_namesakes(self):
+        peek = self.v.root / "system/staging/proposed-2026-10-21-110000-dashboard.json"
+        peek.write_text(json.dumps({"created": "2026-10-21T11:00:00", "source_run": "dashboard", "files": [],
+                                    "peek": {"k": "actions", "id": "ABC-A-002", "ms": 1},
+                                    "items": [self.change(1, "ABC-A-002", "Peek Waits")]}), encoding="utf-8")
+        self.addCleanup(peek.unlink, missing_ok=True)
+        name = "proposed-2026-10-21-120500-dashboard.json"
+        staged, planted, raw = self.namesakes(name, "Held Peek Staging", "Held Peek Root")
+        res = self.post("/api/apply", {"hold_peek": True})
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res.get("held"), 1, res)
+        self.assertEqual(self.owner("ABC-A-001"), "Held Peek Staging")
+        self.assertNotEqual(self.owner("ABC-A-002"), "Peek Waits")
+        self.assertFalse(staged.exists())
+        self.assertEqual(planted.read_text(encoding="utf-8"), raw, "the root namesake is never read")
+        self.assertTrue(self.post("/api/undo", {"apply_id": res["apply_id"]})["ok"])
+
     def test_only_names_one_staged_proposal(self):
         for bad in ("../tracker.db", "proposed-none-such.json", "system/staging/proposed-x.json", 7, ""):
             res = self.post("/api/apply", {"only": bad})
@@ -142,6 +188,63 @@ class BlockedSaveWords(LiveBrowserCase):
         b.eval(f"openBlockersInReview({json.dumps(list(STALE))})")
         b.wait("shared.VIEW==='review'", timeout=10)
         self.assertEqual(b.errors, [])
+
+
+@unittest.skipUnless("#280" in (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
+                     and "Held in Review, not applied: {p.name} item" in (REPO / "system/scripts/tracker.py").read_text(encoding="utf-8"),
+                     "live_server.py and tracker.py have not taken dev/proposals/280/ yet")
+class OwnItemHeld(LiveBrowserCase):
+    """A page save whose own item the tracker refuses: tracker.py holds it in Review and exits 0, so the server says ok. The page
+    says the tracker's reason (never "changed elsewhere"), puts the record back and drops its own proposal; a save is all or
+    nothing, so another item of the same save that was written is undone."""
+
+    def setUp(self):
+        super().setUp()
+        self.b.eval("S.autoApply=true")
+
+    def item(self, n, id_, changes):
+        a = next(a for a in self.v.rows("actions") if a["id"] == id_)
+        return {"n": n, "op": "update", "table": "actions", "id": id_, "changes": changes, "based_on": a["updated_at"],
+                "match": "strong", "flags": [], "decision": "approved"}
+
+    def save(self, items):
+        recs = [{"k": "actions", "id": i["id"], "f": "o"} for i in items]
+        return self.b.eval(f"(async()=>await save('Owner changed',{json.dumps(items)},{{}},()=>{{}},()=>{{}},'test',"
+                           f"{{recs:{json.dumps(recs)},wait:true}}))()")
+
+    def snack(self):
+        self.b.wait("document.getElementById('snackT')&&document.getElementById('snackT').textContent.length>0", 10)
+        return self.b.eval("document.getElementById('snackT').textContent")
+
+    def dashboard_proposals(self):
+        return sorted(p.name for p in (self.v.root / "system/staging").glob("proposed-*dashboard*.json"))
+
+    def owner(self, id_):
+        return next(a["owner"] for a in self.v.rows("actions") if a["id"] == id_)
+
+    def test_its_own_invalid_item_says_the_reason_and_leaves_nothing(self):
+        was, applies = self.owner("ABC-A-001"), len(self.v.rows("applies"))
+        ok = self.save([self.item(1, "ABC-A-001", {"owner": "Never Saved", "bogus_field": "x"})])
+        self.assertFalse(ok)
+        text = self.snack()
+        self.assertIn("Not saved", text)
+        self.assertIn("bogus_field", text)
+        self.assertNotIn("changed elsewhere", text)
+        self.assertEqual(self.owner("ABC-A-001"), was)
+        self.assertEqual(self.dashboard_proposals(), [], "the page's own proposal is dropped, not left half-held")
+        self.assertLessEqual(len(self.v.rows("applies")), applies + 1)
+        self.assertEqual(self.b.errors, [])
+
+    def test_a_save_is_all_or_nothing_when_one_of_its_items_is_held(self):
+        was2, was1 = self.owner("ABC-A-002"), self.owner("ABC-A-001")
+        ok = self.save([self.item(1, "ABC-A-002", {"owner": "Half Saved"}),
+                        self.item(2, "ABC-A-001", {"owner": "Never Saved", "bogus_field": "x"})])
+        self.assertFalse(ok)
+        self.assertIn("bogus_field", self.snack())
+        self.assertEqual(self.owner("ABC-A-002"), was2, "the written part of the save is undone")
+        self.assertEqual(self.owner("ABC-A-001"), was1)
+        self.assertEqual(self.dashboard_proposals(), [])
+        self.assertEqual(self.b.errors, [])
 
 
 if __name__ == "__main__":

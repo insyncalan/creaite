@@ -59,14 +59,31 @@ class Base(unittest.TestCase):
         return self.v.run("apply", str(p))
 
     def refused(self, *items):
-        """Apply stops with a reason and writes nothing; returns the reason text."""
+        """The schema refuses the item with a reason and writes nothing; returns the reason text.
+
+        #280 (agreed in the review of v254-280-4): an invalid item no longer stops the whole apply. With tracker.py.diff it is
+        held in Review with its reason and Apply exits 0 ("Held in Review, not applied: … <reason>"); before it, Apply stops
+        (exit 1, "Apply stopped"). Either way the rule holds: no row of the refused item reaches the tracker."""
         self.n += 1
+        before = self.written()
         p = self.v.propose(f"r{self.n}", list(items))
         r = self.v.run("apply", str(p), ok=False)
-        p.unlink()
-        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
-        self.assertIn("Apply stopped", r.stdout)
+        held = p.exists() and any(i.get("decision") == "pending" and "invalid" in i.get("flags", [])
+                                  for i in json.loads(p.read_text(encoding="utf-8")).get("items", []))
+        p.unlink(missing_ok=True)
+        if r.returncode == 0:
+            self.assertIn("Held in Review, not applied", r.stdout)
+            self.assertTrue(held, "a held item goes back to pending, flagged invalid")
+        else:
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("Apply stopped", r.stdout)
+        self.assertEqual(self.written(), before, "a refused item writes nothing")
         return r.stdout
+
+    def written(self):
+        """What the tracker holds that an item could change: every change_log row and every decision, link and label."""
+        return [sql(self.v, q) for q in ("SELECT * FROM change_log", "SELECT * FROM decisions", "SELECT * FROM links",
+                                         "SELECT * FROM item_labels", "SELECT * FROM labels", "SELECT * FROM promises")]
 
     def undo(self):
         return self.v.run("undo").stdout
