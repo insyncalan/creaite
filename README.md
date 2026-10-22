@@ -4,88 +4,117 @@
 
 <h1 align="center">creaite</h1>
 
-<p align="center"><b>Write up less. Check more.</b><br>
-The programme manager's assistant that turns your meetings, mail and Teams into a record you can trust.</p>
+<p align="center"><b>Write up less. Check more.</b></p>
+
+<p align="center">The programme manager's assistant that turns your meetings, mail and Teams into a record you can trust.</p>
 
 <p align="center"><i>Every action, decision and risk comes with its source, and nothing is saved until you approve it.</i></p>
 
+<p align="center">Mac · Local-first · Runs on Claude and your Microsoft 365 · Early access: pilot users wanted</p>
+
 ---
 
-**You run programmes. You should not also be the note-taker.** creaite reads your Teams transcripts, Outlook and Teams, drafts the minutes, and proposes the actions, decisions, risks and issues that came out of them, each with an owner, a due date and a link back to the line it came from. You check, tick and approve. creaite keeps the record, shows you what needs you today, and writes the weekly report, the client report and the steering one-pager from it.
+## The meeting ends. The admin begins.
+
+You leave the steering committee with six new actions, a decision nobody wrote down and a risk someone mentioned in passing. By Friday you are rebuilding the same status report from memory, chasing owners, and wondering which tracker is the real one.
+
+**creaite does that part.** It reads your Teams transcripts, Outlook and Teams, drafts the minutes, and proposes the actions, decisions, risks and issues that came out of them, each with an owner, a due date and the source it came from. You check, tick and approve. creaite keeps one record and writes everything else from it: Today, the weekly report, the client report, the steering one-pager.
+
+<p align="center">
+  <img src="docs/screenshots/cockpit.png" alt="A project page: current state, health with the evidence behind it, early warnings, milestones, and the actions due or overdue" width="900"><br>
+  <sub>A project at a glance: current state, health with the evidence behind it, early warnings, milestones and what is due. Sample data.</sub>
+</p>
+
+## How it works
+
+1. **Capture.** Drop in a transcript, or let creaite check your mail and Teams each morning. It reads; it never replies, sends or deletes.
+2. **Approve.** Suggestions wait in one place, Intake. You tick what becomes a tracked work item, fix what is wrong in place, and approve with one click. Every save has Undo.
+3. **Report.** One approved record feeds Today, weekly reports, client-safe reports and the steering one-pager. You review each draft and send it yourself.
+
+```
+ transcripts · minutes · Outlook · Teams
+                  │  creaite reads
+                  ▼
+        suggestions, each with its source
+                  │  you approve
+                  ▼
+   one record ──► Today · weekly report · client report · steering one-pager
+```
+
+## Built so you can trust it
+
+AI that writes to your record unchecked is how a status goes quietly wrong. creaite is built the other way round.
 
 | | |
 |---|---|
-| **You stay in control** | Nothing is saved until you approve it. Every change has Undo. |
-| **Every item has a source** | The transcript line, email or chat it came from, one click away. |
-| **It never sends anything** | No mail, no Teams messages, no reports. Drafts are yours to send. |
-| **One record, every report** | Today, weekly, client-safe and steering reports all come from the same approved record. |
-| **Your data stays local** | Local-first: your data lives in your own tools, on your Mac and your company's OneDrive. creaite adds no cloud of its own. Claude reads the content it works on, under your own Claude plan. |
+| **Nothing changes until you approve it** | Suggestions wait. Routine ones can be approved together; new decisions, new risks and health changes always need your eye. |
+| **Every item has a source** | Each action, decision, risk and issue cites the meeting, email or chat it came from. In the minutes, hover a row to see the transcript line behind it. |
+| **Every change can be undone** | Every save has Undo, and changes to your files are backed up first. |
+| **It never sends anything** | No mail, no Teams messages, no reports. Microsoft 365 is read-only for creaite. Drafts are yours to send. |
+| **Status is worked out, not guessed** | Health, overdue and slipping are calculated from your own record by ordinary code, not by a model's opinion. |
+| **It tells you its limits** | It can misread an owner or a date. That is why you approve each item. |
 
-<p align="center">
-  <img src="docs/screenshots/projects.png" alt="The Projects page: every programme's health, the evidence behind it, and the next milestone, on one screen" width="860"><br>
-  <sub>Every programme's health with the evidence behind it, and the next milestone. Sample data.</sub>
-</p>
+## Everything it does for you
 
-<p align="center">
-  <img src="docs/screenshots/intake.png" alt="The Intake page: meetings and files waiting, with proposals to approve" width="860"><br>
-  <sub>Intake: everything that arrives and waits for you, in one place. Sample data.</sub>
-</p>
+| | |
+|---|---|
+| **Minutes you can edit in place** | Tick the lines that become work items, cross the ones that do not, and export as Word, PDF or HTML, or draft the follow-up email. |
+| **Today** | The meetings in your day, what is overdue or due soon, decisions waiting on you or on others, what you owe and are owed, and milestones that are slipping, with the open work behind each. |
+| **Mail and Teams check** | Follow-ups and commitments in your Outlook and Teams, offered as suggestions. People you follow are never missed. |
+| **Reports without the Friday scramble** | A weekly report per project with health and the reasons, a client-safe report that shows only what you have flagged as client-visible, and a one-page steering summary. All drafted as Word documents. |
+| **Meeting prep in a minute** | The open items that matter, the latest reporting, suggested questions, and notes with sources. |
+| **Ask creaite** | Ask in plain English ("what is blocking go-live?", "make a document of open risks") and get an answer from your own record, with where it came from. |
+| **Work, People, Projects** | Actions, risks, issues and decisions across every programme; who owns what; health with its evidence. |
 
-> **This repository holds the creaite engine and fictional sample data only.** No real client, company or person is named here. Current version: see [`VERSION`](VERSION), with plain-English notes for each release in [`dev/release-notes/`](dev/release-notes/).
-
-## What it does for you
-
-**From a meeting to tracked work**
-Drop in a Teams transcript. creaite drafts the minutes and lists every action, decision, risk and issue with an owner, a due date and a link back to the line in the transcript. You tick what becomes a tracked work item, fix what is wrong in place, and approve with one click. Export the minutes as Word, PDF or HTML, or draft the follow-up email.
-
-**One page for what needs you today**
-Today shows the meetings in your day, what is overdue or due soon, decisions waiting on you or on others, what you owe and what others owe you, and milestones that are slipping, with the open work each one depends on. Everything is a link to the item itself.
-
-**Mail and Teams, checked for you**
-creaite reads your Outlook and Teams, spots follow-ups and commitments, and offers them as suggestions. People you follow are never missed. Nothing is sent, replied to or deleted: it only reads.
-
-**Reports without the Friday scramble**
-A weekly report per project with health and the reasons, a client-safe report that shows only what you have flagged as client-visible, and a one-page steering committee summary, internal or client-safe. All draft as Word documents for you to review.
-
-**Meeting prep in a minute**
-A prep page for any meeting: the open items that matter, the latest reporting, suggested questions, and notes with sources.
-
-**Ask in plain English**
-Ask creaite for anything in your portfolio ("what is blocking go-live?", "move the pilot milestone to the 20th", "make a document of open risks"). It answers from your own record and cites where it came from.
-
-## You stay in control
-
-- **Nothing changes until you approve it.** Suggestions wait in one place, Intake. Routine ones can be approved together; new decisions, new risks and health changes always need your eye.
-- **Everything can be undone.** Every save has an Undo, and changes to your files are backed up first.
-- **A source on every item.** Each action, decision, risk and issue points to the meeting, email or chat it came from.
-- **creaite never sends anything.** It does not send mail or Teams messages or publish reports. Drafts are for you to copy and send.
-- **Your data stays local.** Local-first: your record lives on your Mac and your company's OneDrive, and creaite adds no cloud of its own. Claude reads the content it works on, under your own Claude plan. Confidential material can be kept out of reports and prep pages.
-- **Plain language, plain numbers.** The status is worked out from your own record by ordinary code, not guessed by a model.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/work.png" alt="The Work page: open actions across programmes with owner, due date and priority"><br><sub>Work: every open action across your programmes. Sample data.</sub></td>
+    <td width="50%"><img src="docs/screenshots/intake.png" alt="The Intake page: meetings and files waiting, with suggestions to approve"><br><sub>Intake: everything that arrives and waits for you. Sample data.</sub></td>
+  </tr>
+</table>
 
 ## A week with creaite
 
-1. **Monday to Thursday.** Meetings happen. creaite checks mail and Teams each morning; you open Today, see what needs you, and approve the suggestions from yesterday's meetings in a few minutes.
-2. **Before a meeting.** Press Prep: the open items, the latest status and questions to raise.
-3. **Friday.** The weekly report is already drafted per project. Review, adjust, file.
-4. **Steering committee.** One click for the one-pager, from the same record.
+- **Monday to Thursday.** Meetings happen. You open Today, see what needs you, and approve the suggestions from yesterday's meetings in a few minutes.
+- **Before a meeting.** Press Prep: the open items, the latest status and questions to raise.
+- **Friday.** The weekly report is already drafted per project. Review, adjust, file.
+- **Steering committee.** One click for the one-pager, from the same record.
 
-## What you need
+## Your data stays local
 
-- A Mac (the only tested platform), with FileVault on.
-- The Claude desktop app and the `claude` command, signed in, with Microsoft 365 connected and Anthropic's Word (docx) skill.
-- Python 3.9 or later (creaite installs nothing at run time; its libraries are bundled), git, and Chrome or Edge for the dashboard.
+**Local-first: your data lives in your own tools, on your Mac and your company's OneDrive.** creaite adds no cloud of its own.
 
-Step-by-step set-up, including the optional double-click launcher and the sign-in start-up agent, is in [`dev/SETUP.md`](dev/SETUP.md). Say "setup" to creaite and it checks your machine for you.
+Claude reads the content it works on, under your own Claude plan. Confidential material can be kept out of reports and prep pages.
 
-## Try it with sample data
+## Questions you will have
 
-This repository includes a fictional portfolio so you can look around before using real data:
+**Will it get things wrong?** Yes, sometimes: an owner, a date, a risk that was only mentioned. That is why nothing is saved until you approve it, why every item shows its source, and why every save can be undone.
+
+**Does it send anything on my behalf?** No. It does not send mail or Teams messages and does not publish reports.
+
+**Where does my data go?** The record stays on your Mac, backed up daily to your company OneDrive. Claude reads the content it works on, under your own Claude plan. creaite has no servers of its own.
+
+**Can I use it at work?** It runs under your own Claude plan and your own Microsoft 365 permissions. Check your company's AI policy, as you would for any AI tool.
+
+**What do I need?** A Mac, the Claude desktop app with a Claude subscription and Microsoft 365 connected, Python 3.9 or later, git, and Chrome or Edge. Set-up is guided: say "setup" and creaite checks your machine.
+
+**Is it finished?** No. It is an early product with frequent releases, and the plain-English notes for each one are in [`dev/release-notes/`](dev/release-notes/).
+
+## Be one of the first ten
+
+We are looking for a small group of programme managers to use creaite on real work and tell us what is missing. If you run one to five programmes and spend your week writing up meetings and chasing owners, [open an issue](https://github.com/insyncalan/creaite/issues/new) titled **Pilot** and tell us what you run.
+
+## Get started
+
+Step-by-step set-up, including the optional double-click launcher and the sign-in start-up agent, is in [`dev/SETUP.md`](dev/SETUP.md). To look around first, this repository includes a fictional portfolio:
 
 ```sh
 git config core.hooksPath dev/hooks          # blocks commits of real data
 python3 dev/tools/demo_data.py load          # fictional demo portfolio (purge to remove)
 system/scripts/run live_server.py            # serve the dashboard on 127.0.0.1
 ```
+
+> **This repository holds the creaite engine and fictional sample data only.** No real client, company or person is named here. Current version: see [`VERSION`](VERSION).
 
 ---
 
