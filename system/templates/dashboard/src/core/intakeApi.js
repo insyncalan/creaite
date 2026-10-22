@@ -14,6 +14,8 @@ import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "./server.
 import { shared } from "./state.js";
 
 /* ===== The meeting list: this week's meetings from the saved calendar, and the state kept for each ===== */
+/* #307: a server answer that is a raw error or shows a folder path is never put on the page */
+const SAFE_WHY=m=>/OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m)?(/too long/i.test(m)?"the file name is too long. Rename it and add it again":"it couldn't be saved. Try again"):m;
 export const MTG=()=>(D.meetings&&D.meetings.rows)||[], MRUN={};
 /* A meeting that hasn't ended can't have a transcript yet: greyed and not selectable until it ends (Alan, 2026-10-09).
    Worked out in the page, so a meeting becomes selectable on its own once its end time passes. */
@@ -44,8 +46,9 @@ export async function uploadInboxFile(f){ const ext=(f.name.match(/\.[^.]+$/)||[
   if(!UPLOAD_TYPES.includes(ext)) return {fail:addFailed(f.name,"Intake takes transcripts (VTT), Word, text, Markdown and PDF files, not this kind")};
   if(f.size>UPLOAD_MAX) return {fail:addFailed(f.name,"it is over 25 MB")};
   if(!f.size) return {fail:addFailed(f.name,"the file is empty")};
+  if(f.name.length>200) return {fail:addFailed(f.name.slice(0,40)+"…","the file name is too long. Rename it and add it again")};
   const data=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]||""); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(f); });
-  const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return false; } return {fail:addFailed(f.name,oneLine(r.message))}; }
+  const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return false; } return {fail:addFailed(f.name,SAFE_WHY(oneLine(r.message)))}; }
   return {r,ext}; }
 /* preview before processing; remove moves the file to backups (Undo puts it back) */
 export async function previewInbox(path){ if(!viaServer()){ snack(needsConnection("Previewing")); return; } const r=await api("/api/inbox/preview",{path});

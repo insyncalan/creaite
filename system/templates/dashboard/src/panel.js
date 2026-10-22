@@ -206,12 +206,19 @@ export function openNew(k,how){ (()=>{ if(!PKK.includes(k)) return; if(curGuard(
 /* ===== BL-260 (fix-minutes-draft) ===== a minutes row with no Word draft (build_dashboard sets nodraft): Edit says so and opens nothing */
 export const NODRAFT_MSG="No Word draft was made for these minutes: Reject them and process the meeting again";
 /* ===== end BL-260 ===== */
+/* #307 (HIGH3): the peek remembers which item it opened (file + ref) and what it said, so a save never lands on another item */
+export const pkIdent=r=>({key:`${r.file}|${r.ref}`,fp:JSON.stringify([r.rec,r.p,r.kind,r.flags||null])});
+export const PK_STALE="That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+export async function pkFresh(){ const c=shared.CUR; if(!c||c.mode!=="proposal"||!c.key) return true;
+  await reloadData(); const r=REV.find(x=>`${x.file}|${x.ref}`===c.key);
+  if(r&&!r.done&&pkIdent(r).fp===c.fp){ c.n=r.n; return true; }
+  snack(PK_STALE); shared.EDITING=false; closePanel(); return false; }
 export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if(r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 */
   if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (the live server isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
-  if(r.kind==="update"){ const u=updOpen(r); if(u){ shared.CUR={mode:"proposal",k:u.table,n,draft:u.draft,upd:u.upd}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); return; } }   /* #232-B: an update proposal opens the whole item in the peek; one that can't keeps the old form */
-  shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+  if(r.kind==="update"){ const u=updOpen(r); if(u){ shared.CUR={mode:"proposal",k:u.table,n,draft:u.draft,upd:u.upd,...pkIdent(r)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); return; } }   /* #232-B: an update proposal opens the whole item in the peek; one that can't keeps the old form */
+  shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec),...pkIdent(r)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
 /* ===== #232-B (release 2.6) ===== an update proposal in the peek. The item is the live tracker row (REC), with the proposal's
    changes applied to the editable columns (Status, Due, Latest update) in the draft; the other changes are read-only `was → now`.
    core/irUpdate.js holds the rules (the one list of changes, the save); components/intakeReview/UpdatePeek.jsx draws them.
@@ -869,7 +876,7 @@ if(shared.CUR&&pkOn()) drawPanel();
    minutes, files and update proposals keep their own panels. */
 export function pkCid(){ return shared.CUR&&shared.CUR.mode==="new"?shared.CUR.nid:shared.CUR?(shared.CUR.mode==="proposal"?"rv"+shared.CUR.n:shared.CUR.id):null; }
 export function pkX(k,id){ if(String(id).startsWith("nw")) return shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===id?shared.CUR.draft:null; if(String(id).startsWith("rv")) return shared.CUR&&shared.CUR.mode==="proposal"&&"rv"+shared.CUR.n===id?shared.CUR.draft:null; return REC(k,id); }
-export const pkRev=()=>shared.CUR&&shared.CUR.mode==="proposal"?REV.find(r=>r.n===shared.CUR.n):null;
+export const pkRev=()=>shared.CUR&&shared.CUR.mode==="proposal"?(shared.CUR.key&&REV.find(r=>`${r.file}|${r.ref}`===shared.CUR.key))||REV.find(r=>r.n===shared.CUR.n):null;
 export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#panel").classList.toggle("pkprop",on);
   const nav=!!(shared.PKSRC&&shared.PKSRC.view&&shared.PKSRC.view===shared.VIEW);   /* #232-B: Intake and Review's proposals step with Previous and Next */
   ["pkLink","pkMore","pkPrev","pkNext","pkExpand","pkCv"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"&&!(nav&&(id==="pkPrev"||id==="pkNext")); }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
@@ -884,6 +891,7 @@ export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#pane
 /* Save: the draft goes through the panel's own save for proposals (readForm is given the draft for that one call) */
 export async function pkPropSave(approve){ if(!shared.CUR||shared.CUR.mode!=="proposal"||PK.closing) return; PK.closing=true;
   try{ closePicker("owner",false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await shared.PKQ;
+    if(!(await pkFresh())) return;
     if(shared.CUR.upd){ await updSave(approve); return; }   /* #232-B: an update proposal saves the columns Alan edited (core/irUpdate.js irSaveChanges) */
     if(PK.pc){ pkNote(PKMSGNEED(PK.pc.k)+" Or turn Client-visible off."); return; }
     const x=shared.CUR.draft, k=shared.CUR.k, F=fieldsFor(k,x).filter(f=>f[0]!=="#"&&!["ro","calc","dref"].includes(f[2])).map(f=>f[0]);

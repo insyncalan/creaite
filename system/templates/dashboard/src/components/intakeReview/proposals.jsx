@@ -164,8 +164,8 @@ export async function irApproveRoutine(groups) {
   const min = (minKey && REV.find(y => revKey(y) === minKey && !y.done && isRecordMin(y))) || same.find(r => isRecordMin(r));
   if (min && viaServer()) { await approveRoutineTracked(min, keys, left); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
   const list = same.filter(r => rvBulkOK(r));
-  if (!list.length) { snack("Nothing routine to approve"); return; }
-  const res = await rvDecideMany(list, "approved");
+  if (!list.length && !same.length) { snack("Nothing routine to approve"); return; }   /* rows the bulk rule now leaves out (crossed in Track) still go through rvDecideMany, which says so */
+  const res = await rvDecideMany(list.length ? list : same, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
   const out = trkLeftOut(res);      /* #275 round 3: an apply that stopped (the batch back on Intake) and rows the Track reload left out */
   if (left) out.push(left);

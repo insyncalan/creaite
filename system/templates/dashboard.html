@@ -4833,6 +4833,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PKREC: () => PKREC,
     PKSTORE: () => PKSTORE,
     PKTABS: () => PKTABS,
+    PK_STALE: () => PK_STALE,
     PLAINEV: () => PLAINEV,
     POLISH_TONES: () => POLISH_TONES,
     POPUPS: () => POPUPS,
@@ -6592,9 +6593,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkFeedItems: () => pkFeedItems,
     pkFile: () => pkFile,
     pkFollowable: () => pkFollowable,
+    pkFresh: () => pkFresh,
     pkFromVault: () => pkFromVault,
     pkHistory: () => pkHistory,
     pkIdText: () => pkIdText,
+    pkIdent: () => pkIdent,
     pkImpLik: () => pkImpLik,
     pkIs: () => pkIs,
     pkKeepFocus: () => pkKeepFocus,
@@ -36535,6 +36538,8 @@ ${s5}`;
       [/nothing was written to the tracker/g, "nothing was saved"],
       [/transcript no longer in the inbox/g, "the transcript is no longer in Intake"],
       [/\b(\d+) of (\d+) staged for Review; (\d+) not staged\b/g, "$1 of $2 drafted; $3 not drafted"],
+      [/\b0 of \d+ waiting in Review;? (\d+) couldn't be read\b/g, "Nothing was drafted. $1 couldn't be read"],
+      [/\b0 of \d+ waiting in Review\b/g, "Nothing was drafted"],
       [/\b(\d+) of (\d+) waiting in Review\b/g, "$1 of $2 drafted, ready to check in Intake"],
       [/\bNot staged: process it again\b/g, "Nothing was drafted: process it again"],
       [/\bNot in Review yet\b/g, "Not drafted yet"],
@@ -36609,6 +36614,7 @@ ${s5}`;
   var addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
 
   // core/intakeApi.js
+  var SAFE_WHY = (m5) => /OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m5) ? /too long/i.test(m5) ? "the file name is too long. Rename it and add it again" : "it couldn't be saved. Try again" : m5;
   var MTG = () => D.meetings && D.meetings.rows || [], MRUN = {};
   var nowHM = function() {
     const n4 = /* @__PURE__ */ new Date();
@@ -36658,6 +36664,7 @@ ${s5}`;
     if (!UPLOAD_TYPES.includes(ext)) return { fail: addFailed(f5.name, "Intake takes transcripts (VTT), Word, text, Markdown and PDF files, not this kind") };
     if (f5.size > UPLOAD_MAX) return { fail: addFailed(f5.name, "it is over 25 MB") };
     if (!f5.size) return { fail: addFailed(f5.name, "the file is empty") };
+    if (f5.name.length > 200) return { fail: addFailed(f5.name.slice(0, 40) + "…", "the file name is too long. Rename it and add it again") };
     const data = await new Promise((res, rej) => {
       const fr2 = new FileReader();
       fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
@@ -36670,7 +36677,7 @@ ${s5}`;
         snack(OLDSERVER);
         return false;
       }
-      return { fail: addFailed(f5.name, oneLine(r4.message)) };
+      return { fail: addFailed(f5.name, SAFE_WHY(oneLine(r4.message))) };
     }
     return { r: r4, ext };
   }
@@ -37368,7 +37375,7 @@ ${s5}`;
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-  var isMovedMinutes = (m5) => /isn't there|nothing pending/i.test(String(m5 || ""));
+  var isMovedMinutes = (m5) => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m5 || "").trim());
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
     const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
@@ -61633,6 +61640,22 @@ ${d5.text}`);
     pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when2}${t47 ? `, “${esc(pkShort(t47, 50))}”` : ""}, kept in this browser.</span><button type="button" class="btn primary" data-pknd="restore">Restore</button><button type="button" class="btn" data-pknd="discard">Discard</button>`);
   }
   var NODRAFT_MSG = "No Word draft was made for these minutes: Reject them and process the meeting again";
+  var pkIdent = (r4) => ({ key: `${r4.file}|${r4.ref}`, fp: JSON.stringify([r4.rec, r4.p, r4.kind, r4.flags || null]) });
+  var PK_STALE = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+  async function pkFresh() {
+    const c5 = shared.CUR;
+    if (!c5 || c5.mode !== "proposal" || !c5.key) return true;
+    await reloadData();
+    const r4 = REV.find((x5) => `${x5.file}|${x5.ref}` === c5.key);
+    if (r4 && !r4.done && pkIdent(r4).fp === c5.fp) {
+      c5.n = r4.n;
+      return true;
+    }
+    snack(PK_STALE);
+    shared.EDITING = false;
+    closePanel();
+    return false;
+  }
   function openProposal(n4) {
     const r4 = REV.find((x5) => x5.n === n4);
     if (!r4) return;
@@ -61661,14 +61684,14 @@ ${d5.text}`);
     if (r4.kind === "update") {
       const u5 = updOpen(r4);
       if (u5) {
-        shared.CUR = { mode: "proposal", k: u5.table, n: n4, draft: u5.draft, upd: u5.upd };
+        shared.CUR = { mode: "proposal", k: u5.table, n: n4, draft: u5.draft, upd: u5.upd, ...pkIdent(r4) };
         shared.EDITING = true;
         drawPanel();
         $("#panel").classList.add("on");
         return;
       }
     }
-    shared.CUR = { mode: "proposal", k: r4.kind, n: n4, draft: Object.assign({ p: r4.p }, r4.rec) };
+    shared.CUR = { mode: "proposal", k: r4.kind, n: n4, draft: Object.assign({ p: r4.p }, r4.rec), ...pkIdent(r4) };
     shared.EDITING = true;
     drawPanel();
     $("#panel").classList.add("on");
@@ -63301,7 +63324,7 @@ ${d5.text}`);
     if (String(id2).startsWith("rv")) return shared.CUR && shared.CUR.mode === "proposal" && "rv" + shared.CUR.n === id2 ? shared.CUR.draft : null;
     return REC(k5, id2);
   }
-  var pkRev = () => shared.CUR && shared.CUR.mode === "proposal" ? REV.find((r4) => r4.n === shared.CUR.n) : null;
+  var pkRev = () => shared.CUR && shared.CUR.mode === "proposal" ? shared.CUR.key && REV.find((r4) => `${r4.file}|${r4.ref}` === shared.CUR.key) || REV.find((r4) => r4.n === shared.CUR.n) : null;
   function pkPropDraw(x5, k5) {
     const on2 = shared.CUR.mode === "proposal";
     $("#panel").classList.toggle("pkprop", on2);
@@ -63336,6 +63359,7 @@ ${d5.text}`);
       const a5 = document.activeElement;
       if (a5 && a5.matches && a5.matches("#panel [data-pkf][contenteditable]")) a5.blur();
       await shared.PKQ;
+      if (!await pkFresh()) return;
       if (shared.CUR.upd) {
         await updSave(approve);
         return;
@@ -77010,6 +77034,10 @@ ${d5.text}`);
   }
   async function irApproveRoutine(groups) {
     const looked = (groups.routine || []).map((n4) => ({ key: modelKeyOf(n4), fp: (SNAP.keys.get(n4) || {}).fp })).filter((x5) => x5.key);
+    const minKey = [...groups.needs || [], ...groups.routine || []].map((n4) => {
+      const r4 = irRow(n4);
+      return r4 && !r4.done && isRecordMin(r4) ? modelKeyOf(n4) : null;
+    }).find(Boolean);
     await reloadData();
     const now = looked.map((x5) => {
       const r4 = REV.find((y5) => revKey(y5) === x5.key);
@@ -77025,17 +77053,17 @@ ${d5.text}`);
       return;
     }
     const keys = new Set(same2.map(revKey));
-    const min = same2.find((r4) => isRecordMin(r4));
+    const min = minKey && REV.find((y5) => revKey(y5) === minKey && !y5.done && isRecordMin(y5)) || same2.find((r4) => isRecordMin(r4));
     if (min && viaServer()) {
       await approveRoutineTracked(min, keys, left);
       return;
     }
     const list = same2.filter((r4) => rvBulkOK(r4));
-    if (!list.length) {
+    if (!list.length && !same2.length) {
       snack("Nothing routine to approve");
       return;
     }
-    const res = await rvDecideMany(list, "approved");
+    const res = await rvDecideMany(list.length ? list : same2, "approved");
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
     const out = trkLeftOut(res);
     if (left) out.push(left);
@@ -78246,7 +78274,13 @@ ${d5.text}`);
     APPLYL.push({ r: row2 || null, v: verb || "approved" });
     clearTimeout(APPLYT);
     APPLYT = setTimeout(async () => {
-      const L3 = APPLYL;
+      const seen = /* @__PURE__ */ new Set(), L3 = APPLYL.filter((x5) => {
+        const k5 = x5.r ? `${x5.r.file}|${x5.r.ref}|${x5.v}` : null;
+        if (!k5) return true;
+        if (seen.has(k5)) return false;
+        seen.add(k5);
+        return true;
+      });
       APPLYN = 0;
       APPLYL = [];
       const r4 = await applyNow();

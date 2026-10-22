@@ -11,6 +11,8 @@ const REWORDS = /** @type {[RegExp, string][]} */ ([
   [/nothing was written to the tracker/g, "nothing was saved"],
   [/transcript no longer in the inbox/g, "the transcript is no longer in Intake"],
   [/\b(\d+) of (\d+) staged for Review; (\d+) not staged\b/g, "$1 of $2 drafted; $3 not drafted"],
+  [/\b0 of \d+ waiting in Review;? (\d+) couldn't be read\b/g, "Nothing was drafted. $1 couldn't be read"],
+  [/\b0 of \d+ waiting in Review\b/g, "Nothing was drafted"],
   [/\b(\d+) of (\d+) waiting in Review\b/g, "$1 of $2 drafted, ready to check in Intake"],
   [/\bNot staged: process it again\b/g, "Nothing was drafted: process it again"],
   [/\bNot in Review yet\b/g, "Not drafted yet"],
