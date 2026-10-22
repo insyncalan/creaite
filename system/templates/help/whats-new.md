@@ -4,14 +4,14 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ## creaite 2.6.1
 
-2.6.1 contains all of 2.6.0. It fixes the problems found in the first day of using 2.6.0, closes the last places where internal material could reach a client copy, and adds a few things you asked for. Some old words ("proposal", "apply", "Review") are still on screen in a few places; they are replaced in 2.6.2.
+2.6.1 contains all of 2.6.0. It fixes the problems found in the first day of using 2.6.0, closes the last places where internal material could reach a client copy, and adds a few things you asked for. Some older wording is still on screen in a few places; it is replaced in 2.6.2.
 
 
 ### Approving and filing minutes
 - **Approve minutes no longer fails on an item you already approved.** It skips that item, says which one and why, and carries on with the rest. The message names the item in words, never "Item 6". (#308)
 - **Minutes held because the transcript is gone can now be filed.** In the minutes view, Approve minutes offers **File without the transcript copy** in place: one click, Undo, and it says what was saved. "Approve without the transcript" on a held row now really files the minutes (it used to do nothing), and a failed attempt no longer changes the minutes. (#306)
 - **Intake can no longer approve the wrong item.** If the list changed behind an open page (you approved in Claude Code, in another tab, or a check ran), a button used to act on a different item. Each row is now tied to its own item; a stale click says "already approved or changed, nothing saved" and refreshes the list. Approve routine does the same and leaves changed items for you. (#307)
-- **Every Intake message says what happened in plain words** ("Saved 1 action", "Not saved because …", no file paths or ".vtt"). Add files names each file it could not add and why, and the note stays until you dismiss it. Approved this week now counts minutes made from a dropped transcript, and Restore says so when the file has gone.
+- **Every Intake message says what happened in plain words** ("Saved 1 action", "Not saved because …", with no internal file names in them). Add files names each file it could not add and why, and the note stays until you dismiss it. Approved this week now counts minutes made from a dropped transcript, and Restore says so when the file has gone.
 
 ### Minutes editor
 - The Done buttons are gone. **Track** is three icon buttons (tick, document, cross) that name the chosen one; **Approve minutes** says how much it tracks ("tracks 3 actions"); an attention strip shows how many tracked items still need an owner or a date, with a Next button; Decisions have more room. (#302)
@@ -30,7 +30,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - **Work items**: marks, compact rows, keys, one-click client-visible, full history. (#241)
 - **Read again** on the chat re-reads a meeting's transcript and keeps your Track choices. (#283)
 - **Start creaite when I sign in**: a switch in Settings (with a note in Help) so creaite is running after a restart. (#300)
-- An avatar menu replaces More at the foot of the sidebar (#295); a switch in Settings turns the single-key shortcuts off (#298); the milestone strip can be made taller by dragging its corner (#301); the People page shows one pencil and a flag saying what is missing (#304); the health Change button is a small icon (#305); file paths, script names and the word "sweep" are off the screens that showed them, with a test that keeps them off (#289-#291).
+- An avatar menu replaces More at the foot of the sidebar (#295); a switch in Settings turns the single-key shortcuts off (#298); the milestone strip can be made taller by dragging its corner (#301); the People page shows one pencil and a flag saying what is missing (#304); the health Change button is a small icon (#305); internal file names and commands are off the screens that showed them, with a test that keeps them off (#289-#291).
 
 
 Nothing is required. To have creaite start by itself, turn on Start creaite when I sign in in Settings, then check it once after signing out and in.
