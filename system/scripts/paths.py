@@ -207,10 +207,20 @@ def portfolio_dir() -> Path:
     return projects_root() / str(locations().get("portfolio") or "_Portfolio") if external() else ROOT / "projects" / "_portfolio"
 
 
+def _resolved(p) -> Path:
+    """Path(p).resolve(), the same on every Python: CPython 3.9.25's realpath raises OSError (EINVAL, with the full path) when a link
+    at the last part is swapped for a file between its lstat and its readlink, where later versions keep that part as it is. So
+    does this: the folder is resolved and the name kept (v2.6 gate: the E1 flip test on Python 3.9)."""
+    try:
+        return Path(p).resolve()
+    except OSError:
+        return Path(p).parent.resolve() / Path(p).name
+
+
 def rel(p: Path) -> str:
     """Path as stored anywhere (database, proposals, links): relative to ROOT with forward slashes; a path in the projects
     root or the portfolio folder is stored under the logical prefix projects/ (BL-85)."""
-    p = Path(p).resolve()
+    p = _resolved(p)
     if external():
         for base, prefix in ((portfolio_dir(), LOGICAL_PORTFOLIO), (projects_root(), LOGICAL)):
             try:
