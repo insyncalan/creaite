@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
-from test_tracker import Vault  # noqa: E402
+from test_tracker import HELD_IN_REVIEW, Vault  # noqa: E402
 import sneak_peek  # noqa: E402
 
 NOW = "2026-10-14 10:00"          # a Wednesday
@@ -393,11 +393,15 @@ class Tasks(SneakCase):
         before = self.v.rows("links")
         r = self.v.run("apply", p.name, ok=False)
         self.assertIn("isn't a new item written before it", r.stdout)
-        self.assertIn(f"Held in Review, not applied: {p.name} item 2:", r.stdout)     # #280: the bad link is held, never written
+        if HELD_IN_REVIEW:
+            self.assertIn(f"Held in Review, not applied: {p.name} item 2:", r.stdout)     # #280: the bad link is held, never written
+        else:                                                                     # before tracker.py takes dev/proposals/280
+            self.assertIn("Apply stopped. Nothing was written.", r.stdout)
         self.assertEqual(self.v.rows("links"), before)
-        link = json.loads(p.read_text())["items"][1]
-        self.assertEqual((link["decision"], "invalid" in link["flags"]), ("pending", True))
-        self.v.run("undo")                                                    # the action #280 let through: the vault as it was
+        if HELD_IN_REVIEW:
+            link = json.loads(p.read_text())["items"][1]
+            self.assertEqual((link["decision"], "invalid" in link["flags"]), ("pending", True))
+            self.v.run("undo")                                                # the action #280 let through: the vault as it was
         self.assertFalse(any(a["description"] == "Check the lab" for a in self.v.rows("actions")))
         p.unlink()
 

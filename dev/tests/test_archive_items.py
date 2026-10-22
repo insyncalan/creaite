@@ -22,7 +22,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_tracker import Vault  # noqa: E402
+from test_tracker import HELD_IN_REVIEW, Vault  # noqa: E402
 
 DAY = "2026-10-14 09:00"
 SRC = "projects/ABC Example Programme/minutes/2026-01-05 Steering.docx"
@@ -135,8 +135,12 @@ class ArchiveItems(unittest.TestCase):
             p = self.v.propose("bad", [{"n": 1, "op": "archive_item", "table": t, "id": i, "decision": "approved",
                                         "match": "strong", "flags": []}])
             r = self.run_at(DAY, "apply", str(p), script="tracker.py", ok=False)
-            self.assertIn("Held in Review, not applied: proposed-bad.json item 1:", r.stdout, words)   # #280: held, not written
-            self.assertIn("Nothing applied", r.stdout, words)
+            if HELD_IN_REVIEW:
+                self.assertIn("Held in Review, not applied: proposed-bad.json item 1:", r.stdout, words)   # #280: held, not written
+                self.assertIn("Nothing applied", r.stdout, words)
+            else:                                                       # before tracker.py takes dev/proposals/280
+                self.assertNotEqual(r.returncode, 0, words)
+                self.assertIn("Apply stopped. Nothing was written.", r.stdout)
             p.unlink()
         self.assertEqual(self.flagged(), [])
         p = self.v.propose("hand", [{"n": 1, "op": "update", "table": "actions", "id": self.ids["Closed on the boundary"][1],

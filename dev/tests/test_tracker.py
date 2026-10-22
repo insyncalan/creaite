@@ -19,6 +19,9 @@ from contextlib import closing
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+# #280: tracker.py holds an invalid item in Review and applies the rest once it takes dev/proposals/280 (guarded; on the 2.6 line
+# the HOPD applies the stack after the 2.5.4 merge). Until then one bad item stops the whole apply: tests check whichever is in.
+HELD_IN_REVIEW = "Held in Review, not applied" in (REPO / "system/scripts/tracker.py").read_text(encoding="utf-8")
 ABC = "projects/ABC Example Programme"
 
 
