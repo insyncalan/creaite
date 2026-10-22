@@ -906,8 +906,8 @@ class Project247(V260Case):
         self.assertNotIn("VIP", b.eval("document.querySelector('#s-people').textContent"))
         stars = b.eval("document.querySelectorAll('#psPeopleRows .pstar').length")
         for js, ready in (("go('today')", "VIEW==='today'"), ("go('work')", "VIEW==='work'"), ("go('people')", "VIEW==='people'"),
-                          ("go('person','Rashid Al Suwaidi')", "VIEW==='person'"), ("go('review')", "VIEW==='review'"),
-                          ("go('inbox')", "VIEW==='inbox'"), ("go('cockpit','FAL')", "VIEW==='cockpit'"), ("go('projects')", "VIEW==='projects'")):
+                          ("go('person','Rashid Al Suwaidi')", "VIEW==='person'"), ("go('review')", "VIEW==='intake-review'"),   # #232 C2: Review and Inbox are Intake's one page
+                          ("go('inbox')", "VIEW==='intake-review'"), ("go('cockpit','FAL')", "VIEW==='cockpit'"), ("go('projects')", "VIEW==='projects'")):
             b.eval(js)
             b.wait(ready, 15)
             b.pump(0.3)
