@@ -121,6 +121,10 @@ sys.path.insert(0, "system/scripts")
 import live_server as ls
 sent = []
 class H:
+    client_address = ("127.0.0.1", 1)
+    headers = {"Sec-Fetch-Site": "same-origin", "Origin": "http://127.0.0.1:8765"}     # the open page's own call (page_call)
+    class server: server_address = ("127.0.0.1", 8765)
+    def host_ok(self): return True
     def send(self, code, body): sent.append((code, body))
 state = {"on": False, "supported": True, "dev": False, "installed": False, "loaded": False, "folder": "x"}
 calls = []
@@ -212,6 +216,16 @@ class AutostartPage(LiveBrowserCase):
         b.eval("go('settings','health')")
         b.wait("!!document.querySelector('#asCard')", 20)
         b.pump(0.5)
+        if stub and routes_exist():
+            # #300 review M1: with the real routes the page's own refresh (started at boot, or by opening Settings) can answer after the
+            # stub went in and put the real vault's folder over the stub's. Ask again through the stub until its answer is the one held.
+            for _ in range(20):
+                b.eval("asStatus(true)")
+                b.pump(0.3)
+                if b.eval("!!(window.AS && AS.status && String(AS.status.folder).startsWith('/Users/example'))"):
+                    break
+            else:
+                self.fail("the stubbed status never replaced the real one")
 
     @unittest.skipIf(routes_exist(), "the live server has the routes, so there is nothing to degrade")
     def test_without_the_routes_the_card_degrades_cleanly(self):

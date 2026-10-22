@@ -455,12 +455,19 @@ def older_agents():
     return [f for f in agent_dir().glob(f"*.creaite.{agent_slug()}.plist") if f.name != agent_file().name]
 
 
+def agent_is_own_server():
+    """#300 review H1: whether this process is a server (or a script a server runs) that launchd started from this vault's own
+    agent (launchd sets XPC_SERVICE_NAME to the job's label). Unloading that job would stop the very process asking."""
+    return os.environ.get("XPC_SERVICE_NAME") == agent_label()
+
+
 def drop_older_agents():
     """Unload and delete this vault's agent under an earlier label; returns how many."""
     old = older_agents()
     for f in old:
-        launchctl("bootout", f"{agent_domain()}/{f.stem}")
-        f.unlink(missing_ok=True)
+        f.unlink(missing_ok=True)                                           # the file first, so it is gone whatever happens next
+        if os.environ.get("XPC_SERVICE_NAME") != f.stem:                    # never unload the job this process is running in
+            launchctl("bootout", f"{agent_domain()}/{f.stem}")
     return len(old)
 
 
@@ -522,6 +529,10 @@ def agent_install():
         print("Removed this vault's login agent under its earlier name.")
     p = port()
     seen = health(p)
+    if agent_is_own_server():       # #300 review H1: unloading would stop this very server; the new file is read at the next sign-in
+        print(f"Login agent installed: {f}\nThis copy of creaite is the one the agent started, so it carries on as it is; "
+              "the agent starts it at your next sign-in.")
+        return 0
     if agent_loaded():
         launchctl("bootout", f"{agent_domain()}/{label}")
     r = launchctl("bootstrap", agent_domain(), str(f))
@@ -538,18 +549,27 @@ def agent_install():
 
 
 def agent_remove():
-    """Unload and delete this vault's login agent (BL-243); a server it started keeps running."""
+    """Delete this vault's login agent, then unload it (BL-243). The file goes first (#300 review H1), so it is gone even if the unload
+    ends this process; and when this process is the agent's own server the unload is left out: it would stop the server that is
+    answering, so that copy carries on and simply isn't started again at the next sign-in."""
     f = agent_file()
-    if agent_loaded():
-        launchctl("bootout", f"{agent_domain()}/{agent_label()}")
-    if drop_older_agents() and not f.exists():
-        print("Login agent removed (it had an earlier name).")
-        return 0
-    if f.exists():
+    own = agent_is_own_server()
+    had = f.exists()
+    if had:
         f.unlink()
-        print(f"Login agent removed ({f}). A server it started may still be running: stop it in Settings, or it ends at the next restart.")
-    else:
+    old = drop_older_agents()
+    if not (had or old):
         print("No login agent for this vault.")
+        return 0
+    if own:
+        print("Login agent removed. This copy of creaite is the one it started, so it carries on until you stop it; "
+              "it won't start again when you sign in.")
+        return 0
+    loaded = agent_loaded()
+    if loaded:
+        launchctl("bootout", f"{agent_domain()}/{agent_label()}")
+    print(("Login agent removed. creaite won't start when you sign in." if had else "Login agent removed (it had an earlier name).")
+          + (" The copy it had started has stopped." if loaded else ""))
     return 0
 
 
@@ -565,7 +585,7 @@ def agent_state():
     except OSError:
         installed, loaded = False, None
     return {"supported": mac and not dev, "dev": dev, "mac": mac, "installed": installed, "loaded": loaded,
-            "on": bool(installed and loaded is not False), "folder": str(paths.ROOT)}
+            "on": bool(installed and loaded is not False), "own": agent_is_own_server(), "folder": str(paths.ROOT)}
 
 
 def agent_status(as_json=False):
