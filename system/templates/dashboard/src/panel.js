@@ -265,7 +265,7 @@ export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=sha
   try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
       const m=irMergeEdits(it.changes||{},plan); if("error" in m) throw new Error(m.error);   /* the file's own changes now, with only the columns edited here put right */
       const cols=Object.keys(m.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));   /* status first: the proposal's field is its first change, and the hold reads it */
-      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
+      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } },r); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
   const was=r.rec.changes||[], cols=Object.keys(fin); r.rec.changes=cols.map(c=>({field:irLabel(c).toLowerCase(),col:c,from:u.liveDb[c]??null,to:fin[c]}));
   const f=r.rec.changes[0]; r.rec.field=f.col; r.rec.from=f.from; r.rec.to=f.to;
   if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${irLineParts(r.rec.changes).join("; ")}`;   /* in words ("due 20-10-2026 → 23-10-2026"), never a column name or a long text */
@@ -408,7 +408,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
         const vals=toDb(r.kind,ch); ["raised","date"].forEach(k=>{ if(vals[k]===null) delete vals[k]; });
         it.values=Object.assign(it.values||{},vals); (r.badf||[]).forEach(k=>{ delete it.values[k]; });   /* #291 fix: a field the tracker doesn't keep, which no field here shows, is left out */
         if(f.p&&f.p!==r.p){ it.values.project=f.p; it.match="strong"; if(r.p){ if(it.moved_from===f.p) delete it.moved_from; else it.moved_from=it.moved_from||r.p; } /* BL-200 */ if(it.values.milestone&&!String(it.values.milestone).startsWith(f.p+"-M-")) it.values.milestone=null; } else if(f.p&&!r.p){ it.values.project=f.p; it.match="strong"; } }
-      it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
+      it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } },r); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
     if("hold" in r) r.hold=irHold(r);   /* #232-B: the server's rule (review.hold_reason) again on what the edit left: an Issue made a Risk is held, a project set clears "need a project" */
