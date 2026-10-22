@@ -21,12 +21,13 @@ import { Menu } from "../Menu.jsx";
 import { countRedraft, redrafter } from "../report/redraft.js";
 import { Sheet } from "../report/Sheet.jsx";
 import { ApprovePopup } from "./ApprovePopup.jsx";
+import { Attention } from "./Attention.jsx";
 import { MinutesCtx } from "./context.js";
 import { Coverage } from "./Coverage.jsx";
 import { ItemTable } from "./ItemTable.jsx";
 import { checksOf } from "./minutesDoc.js";
 import { SummaryText, TextLines } from "./TextLines.jsx";
-import { approveProblems, trackCounts, trackSummary } from "./track.js";
+import { approveLabel, approveProblems, trackCounts, trackedKinds, trackSummary } from "./track.js";
 import { jumpTo, TranscriptPane } from "./TranscriptPane.jsx";
 import { REV } from "../../core/data.js";
 import { $ } from "../../core/dom.js";
@@ -163,7 +164,7 @@ function Bar({ doc, zoom, setZoom, exported, setExported, status, bad, scale }) 
         {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"
           data-tip="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}
         {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan) || approving.value}
-          data-tip={v && v.plan ? undefined : "Nothing pending to approve"} onClick={() => approveNow(false)}>{approving.value ? "Approving…" : "Approve minutes"}</button> : null}
+          data-tip={v && v.plan ? undefined : "Nothing pending to approve"} onClick={() => approveNow(false)}>{approving.value ? "Approving…" : approveLabel(trackedKinds(doc, plan))}</button> : null}
       </span></span>
     </>
   );
@@ -224,6 +225,7 @@ export function MinutesView() {
       </header>
       <div class={`mnwrap${paneOpen.value ? " withpane" : ""}`}>
         <div class="mnsheet">
+          {draft && plan ? <Attention doc={doc} plan={plan} checks={checks} /> : null}
           <MinutesCtx.Provider value={ctx}>
             <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max} zoomDefault={MN_ZOOM.fit} fitMax={MN_ZOOM.fitMax} continuous headings={mnHeading}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}

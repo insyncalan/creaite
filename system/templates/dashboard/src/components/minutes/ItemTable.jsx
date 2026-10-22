@@ -25,7 +25,8 @@ import { Icon } from "../Icon.jsx";
 import { CheckMark } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
 import { DeadlinePopover } from "./DeadlinePopover.jsx";
-import { nextTrack, setTrack, trackOf, rowN } from "./track.js";
+import { attnFilter, attnFocus, hiddenBy } from "./Attention.jsx";
+import { needsOf, nextTrack, setTrack, trackOf, rowN } from "./track.js";
 import { A, DEC, R, wsFor } from "../../core/data.js";
 import { go } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
@@ -47,6 +48,9 @@ export const raidPriority = v => {
   if (!i || !l) return "";
   return i === "High" && l === "High" ? "Urgent" : i === "High" || l === "High" ? "High" : i === "Low" && l === "Low" ? "Low" : "Medium";
 };
+/** The Track control's three choices: key, the word it shows, its icon and what it does (the tooltip). */
+const TRACK_KINDS = [["y", "Tracked", "check", "Register a work item"], ["m", "Minutes only", "filetext", "Keep the line in the minutes, no work item"],
+  ["n", "Dropped", "x", "Remove the line from the minutes"]];
 export const TRACK_TIP = "Tick to register a work item; cross to remove the line from the minutes; neither keeps it in the minutes only";
 
 /** A tracker item by its ITEM_ID, or null. @param {string} id */
@@ -65,14 +69,20 @@ function Linked({ text }) {
   return <span>{parts}</span>;
 }
 
-/** The Track buttons. @param {{t: string, label: string, onPick: (which: "y"|"n") => void}} props */
+/** The Track control (#302, option D): three icons, the chosen one raised and showing its word. Tick = Tracked (a work item is
+    made), document = Minutes only (the line stays, no work item), cross = Dropped (the line leaves the minutes). A click on the
+    pressed tick or cross clears it to Minutes only, as before. @param {{t: string, label: string, onPick: (which: "y"|"m"|"n") => void}} props */
 function TrackButtons({ t, label, onPick }) {
+  const now = t === "y" ? "Tracked" : t === "n" ? "Dropped" : "Minutes only";
   return (
-    <span class="mntrk" role="group" aria-label={`Track: ${label}`}>
-      <button type="button" class="y" data-trk="y" aria-pressed={t === "y" ? "true" : "false"} aria-label="Register a work item" data-tip="Register a work item"
-        onClick={() => onPick("y")}><Icon name="check" /></button>
-      <button type="button" class="n" data-trk="n" aria-pressed={t === "n" ? "true" : "false"} aria-label="Remove from the minutes" data-tip="Remove from the minutes"
-        onClick={() => onPick("n")}><Icon name="x" /></button>
+    <span class="mntrk" role="group" aria-label={`Track: ${label}. Now ${now}`}>
+      <span class="mntrb">
+        {TRACK_KINDS.map(([k, word, icon, tip]) => (
+          <button key={k} type="button" class={k} data-trk={k} aria-pressed={(k === (t === "y" || t === "n" ? t : "m")) ? "true" : "false"} aria-label={`${word}: ${tip}`}
+            data-tip={tip} onClick={() => onPick(/** @type {"y"|"m"|"n"} */ (k))}><Icon name={icon} /></button>
+        ))}
+      </span>
+      <span class={`mntrw ${t === "y" || t === "n" ? t : "m"}`} aria-hidden="true">{now}</span>
     </span>
   );
 }
@@ -163,24 +173,27 @@ function MnRow({ r, ctx, full }) {
   const owner = isNew ? String(v[ownerField] || "") : String(cells.owner || cells.by || "");
   const people = shared.REG.filter((/** @type {any} */ p) => !p.hidden).map((/** @type {any} */ p) => String(p.name)).sort();
   const dash = <span class="sub">—</span>;
+  const need = t === "y" ? needsOf(ctx.doc, m.plan, m.checks).get(n) : undefined, hide = hiddenBy(need, attnFilter.value);
   const held = row.ref ? ((minutesView.value || {}).withheld || {})[String(row.ref)] || "" : "";    // Cap's #268 review L2: read only
   return (
-    <tr class={`mi${lit ? " hl" : ""}`} data-n={n} data-trk={t} data-ref={row.ref || undefined} data-turn={turn || undefined}
+    <tr class={`mi${lit ? " hl" : ""}${attnFocus.value === n ? " nx" : ""}`} hidden={hide || undefined} data-n={n} data-trk={t} data-ref={row.ref || undefined} data-turn={turn || undefined}
       onMouseEnter={() => { if (turn) hoverTurn.value = { turn, from: "row" }; }} onMouseLeave={() => { if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null; }}>
-      <td class="mntc"><TrackButtons t={t} label={label} onPick={w => ctx.setDoc(setTrack(ctx.doc, n, nextTrack(t, w)), "Track")} /></td>
+      <td class="mntc"><TrackButtons t={t} label={label} onPick={w => ctx.setDoc(setTrack(ctx.doc, n, w === "m" ? "" : nextTrack(t, w)), "Track")} /></td>
       <td class="mnic">
         {isNew ? <ItemText value={String(v[ROW_FIELD[sid]] || "")} label={`${ctx.section.heading}: ${label}`} n={n} onSave={x => edit({ [ROW_FIELD[sid]]: x })} />
           : <div class="mnit mnit-ro"><Linked text={String(cells[MAIN[sid]] || "")} /></div>}
-        {(held || own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
+        {(held || need || own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
           <div class="mnrow2">
             {held ? <span class="mck info mnsens" data-tip={`Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`}>
               {held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}`}</span> : null}
             {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} />
               {row.ref ? <button type="button" class="linkbtn mnstaged" data-tip="Open the staged update in Review" onClick={() => m.openItem(String(row.ref))}>Open</button> : null}</span> : null}
+            {need && need.owner ? <span class="mnflag2" data-flag="owner">Needs an owner</span> : null}
+            {need && need.date ? <span class="mnflag2" data-flag="date">{need.vague ? "Vague date: pick one" : "Needs a date"}</span> : null}
             {own ? <span class="mck" data-check={own.id}><span>{own.quote} needs details</span>
               <button type="button" class="linkbtn" data-ckact="details" onClick={() => addDetails(own.quote)}>Add details</button></span> : null}
             {isNew ? <LooksLike item={item} n={n} /> : null}
-            {checks.filter(c => c !== own).map(c => <CheckMark key={c.id} check={c}>{c.kind === "due" ? "Deadline?" : c.kind === "figure" ? `${c.quote}?` : c.kind === "owner" ? c.note.replace(/\.$/, "") : "Check"}</CheckMark>)}
+            {checks.filter(c => c !== own && !(need && need.owner && c.kind === "owner")).map(c => <CheckMark key={c.id} check={c}>{c.kind === "due" ? "Deadline?" : c.kind === "figure" ? `${c.quote}?` : c.kind === "owner" ? c.note.replace(/\.$/, "") : "Check"}</CheckMark>)}
           </div>) : null}
       </td>
       <td class="mnoc">{isNew ? <RowSelect value={owner} label={`Owner of ${label}`} options={people} none="No owner"
@@ -202,12 +215,17 @@ function MnRow({ r, ctx, full }) {
 
 /** One aligned table. @param {{ctx: SectionCtx, rows: TrackRow[], kind: string, full: boolean}} props */
 function MnTable({ ctx, rows, kind, full }) {
+  const m = useContext(MinutesCtx);
+  if (attnFilter.value && m) {                      // a chip is pressed: a table with no row to show leaves too
+    const need = needsOf(ctx.doc, m.plan, m.checks);
+    if (rows.every(r => hiddenBy(need.get(r.n), attnFilter.value))) return null;
+  }
   return (
     <table class="mnt">
       <colgroup><col class="c-trk" /><col />{full ? <><col class="c-own" /><col class="c-due" /><col class="c-pri" /><col class="c-ws" /></> : <col class="c-by" />}</colgroup>
       <thead><tr>
         <th scope="col" data-tip={TRACK_TIP} aria-description={TRACK_TIP} tabIndex={0}>Track</th>
-        <th scope="col">{kind}</th><th scope="col">Owner</th>
+        <th scope="col">{kind}</th><th scope="col">{full ? "Owner" : "Made by"}</th>
         {full ? <><th scope="col">Due</th><th scope="col">Priority</th><th scope="col">Workstream</th></> : null}
       </tr></thead>
       <tbody>{rows.map(r => <MnRow key={r.n} r={r} ctx={ctx} full={full} />)}</tbody>

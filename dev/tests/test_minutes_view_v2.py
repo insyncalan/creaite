@@ -160,7 +160,7 @@ class MinutesViewV2(LiveBrowserCase):
           off=[...t.querySelectorAll('thead th')].map((h,i)=>Math.abs(h.getBoundingClientRect().left-t.querySelector('tbody tr').children[i].getBoundingClientRect().left));
           return [sec, th, cells, Math.max(...off)]; })""")
         by = {h[0]: h for h in heads}
-        self.assertEqual(by["decisions"][1], ["Track", "Decision", "Owner"])
+        self.assertEqual(by["decisions"][1], ["Track", "Decision", "Made by"])   # #302 A: Decisions say who made them
         self.assertEqual(by["actions"][1], ["Track", "Action", "Owner", "Due", "Priority", "Workstream"])
         self.assertEqual(by["raid"][1], ["Track", "Risk", "Owner", "Due", "Priority", "Workstream"])
         for sec, th, cells, off in heads:
@@ -416,7 +416,7 @@ class MinutesViewV2(LiveBrowserCase):
         icons = self.ev(f"[...document.querySelectorAll('{bar} .ib')].map(b=>b.getAttribute('aria-label'))")
         self.assertEqual(icons, ["Show as exported", "Transcript", "Export", "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"])
         labelled = self.ev(f"[...document.querySelectorAll('{bar} button')].filter(b=>!b.classList.contains('ib') && b.textContent.trim().length>4).map(b=>b.textContent.trim())")
-        self.assertEqual(labelled, ["Approve minutes"], "only Approve minutes keeps a label")
+        self.assertEqual(labelled, ["Approve minutes · tracks 3 actions"], "only Approve minutes keeps a label, and it says what it tracks (#302 A)")
         self.assertIn("M12 4v11", self.ev("document.querySelector('#v-minutes [data-mnexport] svg').innerHTML"), "Export is the download arrow")
         self.assertRegex(self.ev("document.querySelector('#v-minutes .sheet-status').textContent"), r"^Saved · version \d+$")
         self.assertEqual(self.ev("[...document.querySelectorAll('#mnSum b')].map(b=>b.textContent)"), ["3", "2"], "bold counts")

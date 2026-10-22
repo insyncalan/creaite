@@ -73,12 +73,14 @@ export function TextLines({ ctx }) {
       const t = /** @type {HTMLElement|null} */ (e.target);
       if (t && box.current && !box.current.contains(t) && !t.closest("#aiBarBox, .aisug, .ddmenu, .snack, #snack")) setEd(false);
     };
+    const esc = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector("#aiBarBox, .aisug, dialog[open]")) setEd(false); };
     document.addEventListener("pointerdown", away, true);
-    return () => document.removeEventListener("pointerdown", away, true);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away, true); document.removeEventListener("keydown", esc); };
   }, [open]);
   if (open) {
     return (
-      <div class="mnedit" ref={box} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); setEd(false); } }}>
+      <div class="mnedit" ref={box}>
         <Text field="text" rich label={s.heading} />
       </div>
     );

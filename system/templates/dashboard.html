@@ -3603,12 +3603,17 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
 .sheet-a4 .page table.mnt th{padding:5px 8px;font-size:var(--fs-xs);position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
 .sheet-a4 .page table.mnt td{padding:7px 8px}
-.mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
+.mnt col.c-trk{width:96px} .mnt col.c-own{width:108px} .mnt col.c-by{width:120px} .mnt col.c-due{width:92px} .mnt col.c-pri{width:76px} .mnt col.c-ws{width:96px}
 .mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:var(--fs-xs)}
-.mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
-.mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
-.mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
-.mntrk button.y[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok)} .mntrk button.n[aria-pressed="true"]{background:var(--bad-soft);color:var(--bad)}
+/* #302 A, option D: three icons; the chosen one is raised and its word sits under it (Tracked green, Minutes only grey, Dropped red) */
+.mntrk{display:inline-flex;flex-direction:column;gap:2px;vertical-align:top}
+.mntrb{display:inline-flex;gap:2px;background:var(--sunk);border-radius:var(--r-md);padding:2px;align-items:center;align-self:flex-start}
+.mntrk button{width:26px;height:26px;border:0;border-radius:var(--r-sm);background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--surface)}
+.mntrk button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.mntrk button.y[aria-pressed="true"]{color:var(--ok)} .mntrk button.n[aria-pressed="true"]{color:var(--bad)}
+.mntrk button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.mntrw{font-size:var(--fs-xs);font-weight:600;color:var(--muted);padding-left:2px;white-space:nowrap} .mntrw.y{color:var(--ok)} .mntrw.n{color:var(--bad)}
 .page tr.mi[data-trk="y"] td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
 .page tr.mi[data-trk="n"]{opacity:.55} .page tr.mi[data-trk="n"] .mnit{text-decoration:line-through;color:var(--muted)}
 .page tr.mi.hl td{background:var(--accent-soft)}
@@ -3624,8 +3629,15 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:var(--lh-24)}
 .msel.mnro{cursor:default} .msel.mnro:hover{border-color:transparent;background:var(--sunk)} .msel.mnro.empty:hover{background:none;border-color:var(--line)}
 .msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
-.msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
+.msel.empty{color:var(--muted);background:none;border:1px dashed var(--line);opacity:.7} .mnt tr:hover .msel.empty,.msel.empty:hover,.msel.empty:focus{opacity:1} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
 .mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
+/* #302 A: the attention strip, the plain flags on ticked rows, the row Next moved to */
+.mnattn{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:none;background:var(--warn-soft);border-bottom:1px solid var(--line);padding:8px 14px;font-size:var(--fs-sm)} .mnattn.ok{background:var(--ok-soft)}
+.mnfchip{font:inherit;font-size:var(--fs-xs);border:1px solid var(--warn);color:var(--warn);background:var(--surface);border-radius:var(--r-pill);padding:2px 10px;cursor:pointer;min-height:24px}
+.mnfchip[aria-pressed="true"]{background:var(--warn);color:var(--surface)}
+.mnflag2{display:inline-block;font-size:var(--fs-xs);color:var(--warn);background:var(--warn-soft);border-radius:var(--r-pill);padding:1px 9px}
+.page tr.mi.nx td{background:var(--accent-soft)}
+.page tr.mi[hidden]{display:none}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -3655,7 +3667,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .mnap-filed{margin:0 0 4px} .mnap-ck{margin:12px 0 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);font-size:var(--fs-sm)} .mnap-ck ul{margin:4px 0 0}
 @media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
-  #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
+  #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9} #v-minutes .sheet-bar .sheet-status{order:8;margin-left:0} #v-minutes .sheet-bar .sheet-barr{order:5} #v-minutes .mnattn .sub{display:none}   /* #302: the longer Approve button keeps the buttons on the first row; the save line and the Track summary share the second */
   #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}
   #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-mini{flex:0 1 auto;display:block} }     /* scrolled, the slim bar stays one row: the title shortens */
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
@@ -36995,6 +37007,31 @@ ${s5}`;
   }
   var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
   var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
+  function trackedKinds(doc, plan) {
+    const out = {};
+    for (const r4 of trackRows(doc)) {
+      if (trackOf(doc, r4, plan) !== "y" || planGroupOf(plan, r4.n) === "applied") continue;
+      const it2 = r4.item || {}, ty2 = String((it2.values || {}).type || (r4.row.cells || {}).type || "Risk").toLowerCase();
+      const k5 = it2.op === "update" ? "update" : r4.section === "actions" ? "action" : r4.section === "decisions" ? "decision" : ["issue", "assumption", "dependency"].includes(ty2) ? ty2 : "risk";
+      out[k5] = (out[k5] || 0) + 1;
+    }
+    return out;
+  }
+  function approveLabel(k5) {
+    const order = ["action", "decision", "issue", "risk", "assumption", "dependency", "update"];
+    const parts = order.filter((x5) => k5[x5]).map((x5) => `${k5[x5]} ${x5}${k5[x5] === 1 ? "" : "s"}`);
+    return `Approve minutes · tracks ${parts.length ? parts.join(", ") : "nothing"}`;
+  }
+  function needsOf(doc, plan, checks) {
+    const out = /* @__PURE__ */ new Map();
+    for (const r4 of trackRows(doc)) {
+      if (r4.section === "decisions" || !r4.item || r4.item.op !== "new" || trackOf(doc, r4, plan) !== "y" || planGroupOf(plan, r4.n) === "applied") continue;
+      const v5 = r4.item.values || {}, o5 = String(v5.owner || "").trim();
+      const owner = !o5 || o5 === "TBC", date = !v5.due_date, vague = date && (checks || []).some((c5) => c5.kind === "due" && c5.n === r4.n);
+      if (owner || date) out.set(r4.n, { owner, date, vague });
+    }
+    return out;
+  }
   function reconcileOps(doc, plan) {
     const ops = [];
     for (const r4 of trackRows(doc)) {
@@ -69625,6 +69662,84 @@ ${d5.text}`);
     ] }) });
   }
 
+  // components/minutes/Attention.jsx
+  var attnFilter = y3(
+    /** @type {"owner"|"date"|""} */
+    ""
+  );
+  var attnFocus = y3(
+    /** @type {number|null} */
+    null
+  );
+  var hiddenBy = (need, f5) => !!f5 && !(need && (f5 === "owner" ? need.owner : need.date));
+  function Attention({ doc, plan, checks }) {
+    const need = needsOf(doc, plan, checks), tot = Object.values(trackedKinds(doc, plan)).reduce((a5, b5) => a5 + b5, 0);
+    if (!tot) return null;
+    const no2 = [...need.values()].filter((x5) => x5.owner).length, nd2 = [...need.values()].filter((x5) => x5.date).length;
+    const f5 = attnFilter.value === "owner" && no2 || attnFilter.value === "date" && nd2 ? attnFilter.value : "";
+    const next = () => {
+      const list = [...need.keys()].filter((n5) => !f5 || !hiddenBy(need.get(n5), f5)), at2 = list.indexOf(
+        /** @type {number} */
+        attnFocus.value
+      );
+      const n4 = list[(at2 + 1) % list.length];
+      attnFocus.value = n4;
+      const row2 = document.querySelector(`#v-minutes tr.mi[data-n='${n4}']`);
+      if (row2) row2.scrollIntoView({ block: "center", behavior: "smooth" });
+    };
+    if (!need.size) return /* @__PURE__ */ u4("div", { class: "mnattn ok", id: "mnAttn", role: "status", children: /* @__PURE__ */ u4("b", { children: "Every tracked item has an owner and a date." }) });
+    return /* @__PURE__ */ u4("div", { class: "mnattn", id: "mnAttn", role: "status", "data-need": need.size, children: [
+      /* @__PURE__ */ u4("b", { children: [
+        need.size,
+        " of ",
+        tot,
+        " tracked item",
+        tot === 1 ? "" : "s",
+        " need",
+        need.size === 1 ? "s" : "",
+        " attention"
+      ] }),
+      no2 ? /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "mnfchip",
+          "data-fl": "owner",
+          "aria-pressed": f5 === "owner" ? "true" : "false",
+          onClick: () => {
+            attnFilter.value = f5 === "owner" ? "" : "owner";
+          },
+          children: [
+            no2,
+            " need",
+            no2 === 1 ? "s" : "",
+            " an owner"
+          ]
+        }
+      ) : null,
+      nd2 ? /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "mnfchip",
+          "data-fl": "date",
+          "aria-pressed": f5 === "date" ? "true" : "false",
+          onClick: () => {
+            attnFilter.value = f5 === "date" ? "" : "date";
+          },
+          children: [
+            nd2,
+            " need",
+            nd2 === 1 ? "s" : "",
+            " a date"
+          ]
+        }
+      ) : null,
+      /* @__PURE__ */ u4("span", { class: "sub", children: f5 ? "Showing only these. Press the chip again to show everything." : "Press a chip to show only these." }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", id: "mnNext", onClick: next, children: "Next ↓" })
+    ] });
+  }
+
   // components/minutes/context.js
   var MinutesCtx = X(
     /** @type {MinutesCtxValue|null} */
@@ -69956,6 +70071,11 @@ ${d5.text}`);
     if (!i5 || !l6) return "";
     return i5 === "High" && l6 === "High" ? "Urgent" : i5 === "High" || l6 === "High" ? "High" : i5 === "Low" && l6 === "Low" ? "Low" : "Medium";
   };
+  var TRACK_KINDS = [
+    ["y", "Tracked", "check", "Register a work item"],
+    ["m", "Minutes only", "filetext", "Keep the line in the minutes, no work item"],
+    ["n", "Dropped", "x", "Remove the line from the minutes"]
+  ];
   var TRACK_TIP = "Tick to register a work item; cross to remove the line from the minutes; neither keeps it in the minutes only";
   var recOf = (id2) => A4.find((x5) => x5.id === id2) || R3.find((x5) => x5.id === id2) || DEC.find((x5) => x5.id === id2) || null;
   function Linked({ text }) {
@@ -69970,33 +70090,26 @@ ${d5.text}`);
     return /* @__PURE__ */ u4("span", { children: parts });
   }
   function TrackButtons({ t: t47, label, onPick }) {
-    return /* @__PURE__ */ u4("span", { class: "mntrk", role: "group", "aria-label": `Track: ${label}`, children: [
-      /* @__PURE__ */ u4(
+    const now = t47 === "y" ? "Tracked" : t47 === "n" ? "Dropped" : "Minutes only";
+    return /* @__PURE__ */ u4("span", { class: "mntrk", role: "group", "aria-label": `Track: ${label}. Now ${now}`, children: [
+      /* @__PURE__ */ u4("span", { class: "mntrb", children: TRACK_KINDS.map(([k5, word, icon, tip]) => /* @__PURE__ */ u4(
         "button",
         {
           type: "button",
-          class: "y",
-          "data-trk": "y",
-          "aria-pressed": t47 === "y" ? "true" : "false",
-          "aria-label": "Register a work item",
-          "data-tip": "Register a work item",
-          onClick: () => onPick("y"),
-          children: /* @__PURE__ */ u4(Icon, { name: "check" })
-        }
-      ),
-      /* @__PURE__ */ u4(
-        "button",
-        {
-          type: "button",
-          class: "n",
-          "data-trk": "n",
-          "aria-pressed": t47 === "n" ? "true" : "false",
-          "aria-label": "Remove from the minutes",
-          "data-tip": "Remove from the minutes",
-          onClick: () => onPick("n"),
-          children: /* @__PURE__ */ u4(Icon, { name: "x" })
-        }
-      )
+          class: k5,
+          "data-trk": k5,
+          "aria-pressed": k5 === (t47 === "y" || t47 === "n" ? t47 : "m") ? "true" : "false",
+          "aria-label": `${word}: ${tip}`,
+          "data-tip": tip,
+          onClick: () => onPick(
+            /** @type {"y"|"m"|"n"} */
+            k5
+          ),
+          children: /* @__PURE__ */ u4(Icon, { name: icon })
+        },
+        k5
+      )) }),
+      /* @__PURE__ */ u4("span", { class: `mntrw ${t47 === "y" || t47 === "n" ? t47 : "m"}`, "aria-hidden": "true", children: now })
     ] });
   }
   function ItemText({ value, label, n: n4, onSave }) {
@@ -70143,11 +70256,13 @@ ${d5.text}`);
     const owner = isNew ? String(v5[ownerField] || "") : String(cells.owner || cells.by || "");
     const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => String(p6.name)).sort();
     const dash = /* @__PURE__ */ u4("span", { class: "sub", children: "—" });
+    const need = t47 === "y" ? needsOf(ctx.doc, m5.plan, m5.checks).get(n4) : void 0, hide = hiddenBy(need, attnFilter.value);
     const held = row2.ref ? ((minutesView.value || {}).withheld || {})[String(row2.ref)] || "" : "";
     return /* @__PURE__ */ u4(
       "tr",
       {
-        class: `mi${lit ? " hl" : ""}`,
+        class: `mi${lit ? " hl" : ""}${attnFocus.value === n4 ? " nx" : ""}`,
+        hidden: hide || void 0,
         "data-n": n4,
         "data-trk": t47,
         "data-ref": row2.ref || void 0,
@@ -70159,15 +70274,17 @@ ${d5.text}`);
           if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null;
         },
         children: [
-          /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, nextTrack(t47, w6)), "Track") }) }),
+          /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, w6 === "m" ? "" : nextTrack(t47, w6)), "Track") }) }),
           /* @__PURE__ */ u4("td", { class: "mnic", children: [
             isNew ? /* @__PURE__ */ u4(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u4("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u4(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
-            held || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("div", { class: "mnrow2", children: [
+            held || need || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("div", { class: "mnrow2", children: [
               held ? /* @__PURE__ */ u4("span", { class: "mck info mnsens", "data-tip": `Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`, children: held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}` }) : null,
               !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("span", { class: "mck info", children: [
                 /* @__PURE__ */ u4(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }),
                 row2.ref ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn mnstaged", "data-tip": "Open the staged update in Review", onClick: () => m5.openItem(String(row2.ref)), children: "Open" }) : null
               ] }) : null,
+              need && need.owner ? /* @__PURE__ */ u4("span", { class: "mnflag2", "data-flag": "owner", children: "Needs an owner" }) : null,
+              need && need.date ? /* @__PURE__ */ u4("span", { class: "mnflag2", "data-flag": "date", children: need.vague ? "Vague date: pick one" : "Needs a date" }) : null,
               own ? /* @__PURE__ */ u4("span", { class: "mck", "data-check": own.id, children: [
                 /* @__PURE__ */ u4("span", { children: [
                   own.quote,
@@ -70176,7 +70293,7 @@ ${d5.text}`);
                 /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ckact": "details", onClick: () => addDetails(own.quote), children: "Add details" })
               ] }) : null,
               isNew ? /* @__PURE__ */ u4(LooksLike, { item, n: n4 }) : null,
-              checks.filter((c5) => c5 !== own).map((c5) => /* @__PURE__ */ u4(CheckMark, { check: c5, children: c5.kind === "due" ? "Deadline?" : c5.kind === "figure" ? `${c5.quote}?` : c5.kind === "owner" ? c5.note.replace(/\.$/, "") : "Check" }, c5.id))
+              checks.filter((c5) => c5 !== own && !(need && need.owner && c5.kind === "owner")).map((c5) => /* @__PURE__ */ u4(CheckMark, { check: c5, children: c5.kind === "due" ? "Deadline?" : c5.kind === "figure" ? `${c5.quote}?` : c5.kind === "owner" ? c5.note.replace(/\.$/, "") : "Check" }, c5.id))
             ] }) : null
           ] }),
           /* @__PURE__ */ u4("td", { class: "mnoc", children: isNew ? /* @__PURE__ */ u4(
@@ -70218,6 +70335,11 @@ ${d5.text}`);
     );
   }
   function MnTable({ ctx, rows: rows2, kind, full }) {
+    const m5 = x2(MinutesCtx);
+    if (attnFilter.value && m5) {
+      const need = needsOf(ctx.doc, m5.plan, m5.checks);
+      if (rows2.every((r4) => hiddenBy(need.get(r4.n), attnFilter.value))) return null;
+    }
     return /* @__PURE__ */ u4("table", { class: "mnt", children: [
       /* @__PURE__ */ u4("colgroup", { children: [
         /* @__PURE__ */ u4("col", { class: "c-trk" }),
@@ -70232,7 +70354,7 @@ ${d5.text}`);
       /* @__PURE__ */ u4("thead", { children: /* @__PURE__ */ u4("tr", { children: [
         /* @__PURE__ */ u4("th", { scope: "col", "data-tip": TRACK_TIP, "aria-description": TRACK_TIP, tabIndex: 0, children: "Track" }),
         /* @__PURE__ */ u4("th", { scope: "col", children: kind }),
-        /* @__PURE__ */ u4("th", { scope: "col", children: "Owner" }),
+        /* @__PURE__ */ u4("th", { scope: "col", children: full ? "Owner" : "Made by" }),
         full ? /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("th", { scope: "col", children: "Due" }),
           /* @__PURE__ */ u4("th", { scope: "col", children: "Priority" }),
@@ -70655,12 +70777,32 @@ ${d5.text}`);
   }
   function TextLines({ ctx }) {
     const [ed3, setEd] = d2(false);
-    const s5 = ctx.section, { Text: Text2 } = ctx;
-    if (ctx.editing && ed3) {
-      return /* @__PURE__ */ u4("div", { class: "mnedit", children: [
-        /* @__PURE__ */ u4(Text2, { field: "text", rich: true, label: s5.heading }),
-        /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: () => setEd(false), children: "Done" })
-      ] });
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const s5 = ctx.section, { Text: Text2 } = ctx, open2 = ctx.editing && ed3;
+    h2(() => {
+      if (!open2) return void 0;
+      const away = (e4) => {
+        const t47 = (
+          /** @type {HTMLElement|null} */
+          e4.target
+        );
+        if (t47 && box.current && !box.current.contains(t47) && !t47.closest("#aiBarBox, .aisug, .ddmenu, .snack, #snack")) setEd(false);
+      };
+      const esc2 = (e4) => {
+        if (e4.key === "Escape" && !e4.defaultPrevented && !document.querySelector("#aiBarBox, .aisug, dialog[open]")) setEd(false);
+      };
+      document.addEventListener("pointerdown", away, true);
+      document.addEventListener("keydown", esc2);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        document.removeEventListener("keydown", esc2);
+      };
+    }, [open2]);
+    if (open2) {
+      return /* @__PURE__ */ u4("div", { class: "mnedit", ref: box, children: /* @__PURE__ */ u4(Text2, { field: "text", rich: true, label: s5.heading }) });
     }
     const ls2 = mdLines(s5.text || "");
     return /* @__PURE__ */ u4("div", { class: "mnlines", children: [
@@ -70936,7 +71078,7 @@ ${d5.text}`);
             disabled: !(v5 && v5.plan) || approving.value,
             "data-tip": v5 && v5.plan ? void 0 : "Nothing pending to approve",
             onClick: () => approveNow(false),
-            children: approving.value ? "Approving…" : "Approve minutes"
+            children: approving.value ? "Approving…" : approveLabel(trackedKinds(doc, plan))
           }
         ) : null
       ] }) })
@@ -71012,40 +71154,43 @@ ${d5.text}`);
         ] })
       ] }),
       /* @__PURE__ */ u4("div", { class: `mnwrap${paneOpen.value ? " withpane" : ""}`, children: [
-        /* @__PURE__ */ u4("div", { class: "mnsheet", children: /* @__PURE__ */ u4(MinutesCtx.Provider, { value: ctx, children: /* @__PURE__ */ u4(
-          Sheet,
-          {
-            doc,
-            baseVersion: minutesBase.value,
-            scrollKey: `minutes:${v5.path}`,
-            readOnly: !draft,
-            zoomMin: MN_ZOOM.min,
-            zoomMax: MN_ZOOM.max,
-            zoomDefault: MN_ZOOM.fit,
-            fitMax: MN_ZOOM.fitMax,
-            continuous: true,
-            headings: mnHeading,
-            renderers: RENDER,
-            extras: EXTRAS,
-            checks,
-            onOpenItem: (ref) => ref.startsWith("@") ? openStaged(ref) : false,
-            onChange: onDoc,
-            onSave: async (req) => {
-              const now = minutesView.value;
-              if (!now || !now.doc || now.doc.state !== "draft" || req.doc.state !== "draft") return { ok: true, version: minutesBase.value };
-              const r4 = await saveMinutesPage(req);
-              if (r4.ok) dirty = false;
-              return r4;
-            },
-            ai: { place: "minutes", project: () => project2, confidential: () => false },
-            onRedraft: redrafter(() => ({ path: v5.path, version: "internal" }), "minutes"),
-            onEvent: (ev) => {
-              if (ev.type === "reload") loadMinutes({ path: v5.path });
-              else countRedraft(ev, "minutes");
-            },
-            renderBar: (b5) => /* @__PURE__ */ u4(Bar, { doc, ...b5 })
-          }
-        ) }) }),
+        /* @__PURE__ */ u4("div", { class: "mnsheet", children: [
+          draft && plan ? /* @__PURE__ */ u4(Attention, { doc, plan, checks }) : null,
+          /* @__PURE__ */ u4(MinutesCtx.Provider, { value: ctx, children: /* @__PURE__ */ u4(
+            Sheet,
+            {
+              doc,
+              baseVersion: minutesBase.value,
+              scrollKey: `minutes:${v5.path}`,
+              readOnly: !draft,
+              zoomMin: MN_ZOOM.min,
+              zoomMax: MN_ZOOM.max,
+              zoomDefault: MN_ZOOM.fit,
+              fitMax: MN_ZOOM.fitMax,
+              continuous: true,
+              headings: mnHeading,
+              renderers: RENDER,
+              extras: EXTRAS,
+              checks,
+              onOpenItem: (ref) => ref.startsWith("@") ? openStaged(ref) : false,
+              onChange: onDoc,
+              onSave: async (req) => {
+                const now = minutesView.value;
+                if (!now || !now.doc || now.doc.state !== "draft" || req.doc.state !== "draft") return { ok: true, version: minutesBase.value };
+                const r4 = await saveMinutesPage(req);
+                if (r4.ok) dirty = false;
+                return r4;
+              },
+              ai: { place: "minutes", project: () => project2, confidential: () => false },
+              onRedraft: redrafter(() => ({ path: v5.path, version: "internal" }), "minutes"),
+              onEvent: (ev) => {
+                if (ev.type === "reload") loadMinutes({ path: v5.path });
+                else countRedraft(ev, "minutes");
+              },
+              renderBar: (b5) => /* @__PURE__ */ u4(Bar, { doc, ...b5 })
+            }
+          ) })
+        ] }),
         /* @__PURE__ */ u4(TranscriptPane, {})
       ] }),
       /* @__PURE__ */ u4(
