@@ -270,7 +270,7 @@ class Rows(Base):
         self.change({"op": "remove", "n": 2, "keep_line": True})
         rows = self.rows(self.doc(), "raid")
         self.assertEqual(rows[0], {"ref": None, "cells": {"type": "Issue", "description": "Test data isn't anonymised", "owner": ""},
-                                   "shown": True, "kept_line": True, "was": "@2"})
+                                   "shown": True, "kept_line": True, "was": "@2", "held": "", "does": "New issue"})
         self.assertTrue(self.change({"op": "restore", "n": 2})["ok"])
         rows = self.rows(self.doc(), "raid")
         self.assertEqual([x["ref"] for x in rows], ["@2", "@5"])

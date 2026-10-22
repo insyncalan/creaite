@@ -525,10 +525,11 @@ def remove(doc, data, n, keep_line=False):
     removed = doc["meta"].setdefault("removed", {})
     if s is not None:
         row = s["rows"][i]
-        removed[str(n)] = {"section": s["id"], "index": i, "row": row, "kept_line": bool(keep_line),
-                           "held": _held_why(item, doc["items"].get(f"@{n}"))}
-        if keep_line:
-            s["rows"][i] = {"ref": None, "cells": row["cells"], "shown": True, "kept_line": True, "was": row["ref"]}
+        held = _held_why(item, doc["items"].get(f"@{n}"))
+        removed[str(n)] = {"section": s["id"], "index": i, "row": row, "kept_line": bool(keep_line), "held": held}
+        if keep_line:     # held and does live on the kept row itself: Approve minutes empties meta.removed (tracker._stamp_record)
+            s["rows"][i] = {"ref": None, "cells": row["cells"], "shown": True, "kept_line": True, "was": row["ref"], "held": held,
+                            **({"does": row["does"]} if row.get("does") else {})}
         else:
             del s["rows"][i]
     doc["items"].pop(f"@{n}", None)
@@ -1368,7 +1369,7 @@ def _kept_held(doc):
             if not (r.get("kept_line") and r.get("was")):
                 continue
             rec = removed.get(str(r["was"]).lstrip("@")) or {}
-            why = rec.get("held") if "held" in rec else "Sensitivity unknown"
+            why = r["held"] if "held" in r else rec.get("held") if "held" in rec else "Sensitivity unknown"
             if why:
                 out[str(r["was"])] = why
     return out
@@ -1417,7 +1418,8 @@ def _distributed_table(s, marks, gone_refs):
     number once filed). Adds the refs it drops to `gone_refs`."""
     marked = {m["ref"] for m in marks if m.get("ref")}
     gone_refs |= {r["ref"] for r in s.get("rows") or [] if r.get("ref") in marked or f"@{r.get('n')}" in marked}
-    s["rows"] = [r for r in s.get("rows") or [] if not ((r.get("ref") or r.get("was")) in gone_refs)]
+    s["rows"] = [r for r in s.get("rows") or [] if not ((r.get("ref") or r.get("was")) in gone_refs)
+                 and not (r.get("kept_line") and not r.get("was"))]      # a kept line that names no item: fail closed
     s["text"] = "" if s["rows"] else "None recorded."
 
 

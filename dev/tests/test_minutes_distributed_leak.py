@@ -21,6 +21,7 @@ import test_minutes_approve as ta  # noqa: E402
 from test_minutes_approve import DRAFT, FILED, Base  # noqa: E402
 
 SECRET = {"actions": "Book the UAT environment", "decisions": "Go-live stays on 20 November"}
+ORD_DEC = "Training stays on site"
 OPEN = "Share the training schedule"
 N = {"actions": 1, "decisions": 4}
 CASES = [(kind, choice) for kind in ("actions", "decisions") for choice in ("y", "n", "")]
@@ -50,6 +51,7 @@ class Sensitive(Base):
             s = flagged()
             extra = s["items"].pop(0)
             s["items"].append(extra)
+            s["items"].append({"table": "decisions", "values": {"project": "ABC", "decision": ORD_DEC, "made_by": "Jane Doe"}})
             return s
         ta.spec = spec
         try:
@@ -105,6 +107,7 @@ class Sensitive(Base):
         out = self.js("import minutes_record\nimport creaite_doc\n"
                       f"d = minutes_record.tracked_of(creaite_doc.read({DRAFT!r}))\n"
                       "for rec in d['meta']['removed'].values(): rec.pop('held', None)\n"
+                      "for s in d['sections']:\n    for r in s.get('rows') or []: r.pop('held', None)\n"
                       "h = minutes_record.withheld(d)\n"
                       "print(json.dumps({'h': h, 'dist': json.dumps(minutes_record.distributed_of(d, h))}))")
         self.assertEqual(out["h"].get("@4"), "Sensitivity unknown")
@@ -137,6 +140,50 @@ class Sensitive(Base):
                         zipfile.ZipFile(made).read("word/document.xml").decode("utf-8")
                     self.assertNotIn(SECRET[kind], text, f"{fmt}: the Distributed export")
                     self.assertIn(OPEN, text, f"{fmt}: the unmarked action is there")
+
+    # ── v2.6.0 regression: Approve minutes empties meta.removed, so the held mark must live on the kept row ──
+    def test_ordinary_kept_decision_and_risk_survive_in_the_filed_distributed_version(self):
+        for kind, choice in CASES:
+            with self.subTest(kind=kind, track=choice or "neither"):
+                self.tearDown()
+                self.setUp()
+                self.js("import creaite_doc, minutes_record\n"
+                        f"d = creaite_doc.read({DRAFT!r}); d.setdefault('layout', {{}})['track'] = "
+                        f"{{{str(N[kind])!r}: {choice!r}, '5': '', '9': ''}}\n"
+                        "print(json.dumps(minutes_record.save_page(%r, d)['ok']))" % (DRAFT,))
+                r = self.js(f"import review\nprint(json.dumps(review.approve_minutes({self.name!r}, True, [])))")
+                self.assertTrue(r["ok"], r)
+                f = self.facts("distributed", FILED)
+                self.assertIn(ORD_DEC, json.dumps(f, ensure_ascii=False), "ordinary decision in the filed follow-up")
+                for fmt in ("html", "docx", "pdf"):
+                    r = self.js("import minutes_record\n"
+                                f"print(json.dumps(minutes_record.export({FILED!r}, {fmt!r}, False, 'distributed')))")
+                    made = self.v.root / r["path"]
+                    text = pdf_text(made) if fmt == "pdf" else made.read_text(encoding="utf-8") if fmt == "html" else \
+                        zipfile.ZipFile(made).read("word/document.xml").decode("utf-8")
+                    self.assertIn(ORD_DEC, text, f"{fmt}: ordinary decision survives")
+                    self.assertIn("Vendor capacity is short", text, f"{fmt}: ordinary new risk survives")
+                    self.assertNotIn(SECRET[kind], text, f"{fmt}: Sensitive still withheld")
+
+    def test_a_kept_update_line_is_not_a_new_item_in_the_distributed_follow_up(self):
+        self.approved("decisions", "")
+        f = self.facts("distributed", FILED)
+        self.assertNotIn("Closest site", json.dumps(f["items"], ensure_ascii=False))
+        kept = self.js("import creaite_doc\nd = creaite_doc.read(%r)\n"
+                       "print(json.dumps([r for s in d['sections'] for r in s.get('rows') or [] if r.get('kept_line')]))" % (FILED,))
+        for r in kept:
+            if str(r.get("does") or "").startswith("Updates"):
+                self.assertNotIn(r["cells"].get("decision") or r["cells"].get("action"), [i["t"] for i in f["items"]])
+
+    def test_a_kept_line_with_no_was_is_withheld(self):
+        self.track("decisions", "")
+        out = self.js("import minutes_record, creaite_doc\n"
+                      f"d = minutes_record.tracked_of(creaite_doc.read({DRAFT!r}))\n"
+                      "for s in d['sections']:\n    for r in s.get('rows') or []:\n"
+                      "        if r.get('kept_line'): r.pop('was', None); r.pop('held', None)\n"
+                      "print(json.dumps(json.dumps(minutes_record.distributed_of(d, minutes_record.withheld(d)))))")
+        self.assertNotIn(SECRET["decisions"], out)
+        self.assertNotIn(ORD_DEC, out)
 
     # ── the meeting's follow-up email (drafts.followup_facts) and the dashboard's Sensitive mark ──
     def email_facts(self, files):
