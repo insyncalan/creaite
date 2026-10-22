@@ -75888,16 +75888,21 @@ ${d5.text}`);
       snack("Adding files needs the live server");
       return;
     }
-    let added = 0;
-    for (const f5 of files) {
-      const u5 = await uploadInboxFile(f5);
-      if (u5 === false) return;
-      if (u5) added++;
+    let added = 0, skipped = 0;
+    try {
+      for (const f5 of files) {
+        const u5 = await uploadInboxFile(f5);
+        if (u5 === false) return;
+        if (u5) added++;
+        else skipped++;
+      }
+    } catch (e4) {
+      snack("The files couldn't be added: creaite didn't answer. Try again.");
+      if (added) await reloadData();
+      return;
     }
-    if (added) {
-      await reloadData();
-      snack(`${added} file${added === 1 ? "" : "s"} added`);
-    }
+    if (added) await reloadData();
+    if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} could not be added` : ""}`);
   }
   async function irRefreshCalendar() {
     if (irRefRun.value) {
@@ -76829,33 +76834,8 @@ ${d5.text}`);
     );
   }
   function UploadFiles() {
-    const pick = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
     const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
-    return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("button", { type: "button", class: "ib", "data-irpick": "1", "aria-label": tip, "data-tip": tip, onClick: () => pick.current && pick.current.click(), children: /* @__PURE__ */ u4(IrIcon, { name: "upload" }) }),
-      /* @__PURE__ */ u4(
-        "input",
-        {
-          type: "file",
-          ref: pick,
-          multiple: true,
-          hidden: true,
-          accept: IR_UPLOAD_TYPES.join(","),
-          "aria-label": "Choose transcripts or minutes to add",
-          onChange: (e4) => {
-            const el2 = (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget
-            );
-            irAddFiles([...el2.files || []]);
-            el2.value = "";
-          }
-        }
-      )
-    ] });
+    return /* @__PURE__ */ u4("button", { type: "button", class: "ib", "data-irpick": "1", "aria-label": tip, "data-tip": tip, onClick: () => irPickFiles(), children: /* @__PURE__ */ u4(IrIcon, { name: "upload" }) });
   }
   function DropOverlay() {
     const types = IR_UPLOAD_TYPES.slice(0, -1).join(", ") + " or " + IR_UPLOAD_TYPES[IR_UPLOAD_TYPES.length - 1];
@@ -78811,6 +78791,7 @@ ${d5.text}`);
         "SETSECTIONS",
         "SKEY",
         "SORT",
+        "START_CMD",
         "STATUSES",
         "SU",
         "SWEPT",

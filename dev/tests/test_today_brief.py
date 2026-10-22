@@ -94,7 +94,7 @@ class LiveIndicatorTests(PageTests):
 
     def test_every_state_the_dot_showed_is_covered_by_the_alert(self):
         o = self.probe("""
-          const a=document.getElementById("liveAlert"), q=()=>({on:a.classList.contains("on"), found:a.classList.contains("found"), text:a.textContent, copy:!!a.querySelector("[data-copycmd]"), check:!!a.querySelector("#checkLive")});
+          const a=document.getElementById("liveAlert"), q=()=>({on:a.classList.contains("on"), found:a.classList.contains("found"), text:a.textContent, copy:!!a.querySelector("[data-copycmd]"), cmd:[...a.querySelectorAll("code")].map(c=>c.textContent), start:START_CMD, check:!!a.querySelector("#checkLive")});
           LIVELINK=false; setLive(true); const running=q();                                       // server running: nothing to show
           setLive(false); const stopped=q();                                                      // stopped: the alert, with the command and Check again
           LIVELINK=true; setLive(false); const fileCopy=q();                                      // the file version of the dashboard while the server runs
@@ -102,9 +102,13 @@ class LiveIndicatorTests(PageTests):
           window.OUT={running,stopped,fileCopy};""")
         self.assertFalse(o["running"]["on"])
         self.assertTrue(o["stopped"]["on"] and o["stopped"]["check"])
-        self.assertFalse(o["stopped"]["copy"], "#291 Tier 1: no typed command on the alert")
+        self.assertTrue(o["stopped"]["copy"], "the stopped alert carries the restart command with Copy (b0f439eb)")
+        self.assertEqual(o["stopped"]["cmd"], [o["stopped"]["start"]])                            # exactly the restart command, nothing else typed
+        self.assertIn("paste this into Terminal", o["stopped"]["text"])
         self.assertIn("creaite has stopped", o["stopped"]["text"])
         self.assertTrue(o["fileCopy"]["on"] and o["fileCopy"]["found"])
+        self.assertFalse(o["fileCopy"]["copy"], "#291 Tier 1: only the stopped alert shows a typed command")
+        self.assertEqual(o["fileCopy"]["cmd"], [])
         self.assertIn("creaite is running. This copy of the dashboard is the file version", o["fileCopy"]["text"])
 
     def test_the_top_strip_stays_quiet_and_shows_only_what_needs_an_action(self):

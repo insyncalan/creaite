@@ -139,6 +139,7 @@
    "SETSECTIONS",
    "SKEY",
    "SORT",
+   "START_CMD",
    "STATUSES",
    "SU",
    "SWEPT",

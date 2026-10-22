@@ -202,13 +202,16 @@ export function irAskReason(m, anchor) { if (irCanSetAside(m)) irAside.value = {
 export async function irAddFiles(files) {
   if (!files.length) return;
   if (!viaServer()) { snack("Adding files needs the live server"); return; }
-  let added = 0;
-  for (const f of files) {
-    const u = await uploadInboxFile(f);
-    if (u === false) return;
-    if (u) added++;
-  }
-  if (added) { await reloadData(); snack(`${added} file${added === 1 ? "" : "s"} added`); }
+  let added = 0, skipped = 0;
+  try {
+    for (const f of files) {
+      const u = await uploadInboxFile(f);
+      if (u === false) return;
+      if (u) added++; else skipped++;
+    }
+  } catch (e) { snack("The files couldn't be added: creaite didn't answer. Try again."); if (added) await reloadData(); return; }
+  if (added) await reloadData();
+  if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} could not be added` : ""}`);
 }
 
 /** Refresh the calendar (the icon beside "Calendar read" under the heading): the calendar's own run kind (#265). ask creaite's
