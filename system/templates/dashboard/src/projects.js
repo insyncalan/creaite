@@ -161,7 +161,7 @@ export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run||DRRUN){ sna
   putHTML($("#genStart"),raw(GEN_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-gstart="${k}">${l}</button>`).join(" ")));
   putHTML($("#genSrc"),raw(GEN_SRC.map(([k,l,on])=>`<label><input type="checkbox" value="${k}" ${on?"checked":""}> ${l}</label>`).join("")));
   genSrcOpen(false); $("#genKbd").textContent=MOD+"↵";
-  $("#genSweep").textContent=SWEPT&&SWEPT!=="never"?`Mail and Teams last swept ${fd(SWEPT)}; anything newer isn't in the vault yet.`:"Mail and Teams haven't been swept yet.";
+  $("#genSweep").textContent=SWEPT&&SWEPT!=="never"?`Mail and Teams last checked ${fd(SWEPT)}; anything newer isn't in your project record yet.`:"Mail and Teams haven't been checked yet.";
   genOptions(); openDialog("genDlg"); })();
   const ttl=csTitle(code), h=ttl===CST_DEF?"Generate current state":`Generate: ${ttl}`; if(shared.GEN.form==="current") $("#genTitle").textContent=h; }   /* a remembered other form keeps its own "Write an …" title */   /* the dialog's title, which names it, names the status (BL-274) */
 export function genStatus(html){ const el=$("#genStatus"); if(!el) return; el.hidden=!html; putHtml(el,html||""); }

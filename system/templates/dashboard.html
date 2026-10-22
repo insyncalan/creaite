@@ -51806,7 +51806,7 @@ ${s5}`;
       putHTML($("#genSrc"), raw(GEN_SRC.map(([k5, l6, on2]) => `<label><input type="checkbox" value="${k5}" ${on2 ? "checked" : ""}> ${l6}</label>`).join("")));
       genSrcOpen(false);
       $("#genKbd").textContent = MOD + "↵";
-      $("#genSweep").textContent = SWEPT && SWEPT !== "never" ? `Mail and Teams last swept ${fd(SWEPT)}; anything newer isn't in the vault yet.` : "Mail and Teams haven't been swept yet.";
+      $("#genSweep").textContent = SWEPT && SWEPT !== "never" ? `Mail and Teams last checked ${fd(SWEPT)}; anything newer isn't in your project record yet.` : "Mail and Teams haven't been checked yet.";
       genOptions();
       openDialog("genDlg");
     })();

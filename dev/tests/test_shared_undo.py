@@ -47,7 +47,7 @@ class Undo(Driver):
         self.press("Enter", 1.0)
         if b.eval("SB.writes().writes") == w0:
             return None                              # nothing saved (a filter, a view, a page): nothing to undo
-        for _ in range(8):
+        for _ in range(24):                          # up to ~6 s: the save's round trip is slow on a loaded machine (#297)
             u = b.eval("SB.undo()")
             if u:
                 b.eval(f"document.querySelector({u!r}).click()")         # put the sample back for the next control
