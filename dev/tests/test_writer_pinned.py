@@ -6,6 +6,10 @@ expectation in dev/tests/pinned/. The split must leave every one of them byte-fo
 Run: python3 dev/tests/test_writer_pinned.py                     (quick tier: no Chrome)
 Record (only before the split, or for a reviewed, deliberate change):  CREAITE_PIN_RECORD=1 python3 dev/tests/test_writer_pinned.py
 
+2.6.1 re-record (deliberate): the pins now carry the `item_events` table (every apply writes its events), which comes from the work-item-history
+chain diff (dev/proposals/work-item-history/schema.diff and tracker.diff, in GUARDED-2.6.1.chain). Only item_events was added: every other table, the
+change_log, the applies and apply's output are unchanged. old-code.sql and old-code-undo.json are the code-before-the-split fixture and are not re-recorded.
+
 What varies from run to run is normalised: every timestamp becomes <TS> (which events land in the same millisecond varies
 between runs), today's date becomes <TODAY>, and the vault path becomes <VAULT>. Apply IDs are sequential in a fresh vault.
 Fixture dates are far from today (2026 and 2030), so rules that compare with today give the same answer every day.

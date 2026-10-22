@@ -43,7 +43,7 @@ ALLOWED = (
 
 # Baselines: reads of the real clock today, per file. They only go down (#178). Not an approval of any one of them.
 LEGACY_TESTS = {
-    "test_archive_items_browser.py": 1, "test_bulk_edit.py": 3, "test_capture_drawer.py": 1, "test_cell_edit.py": 4,
+    "test_archive_items_browser.py": 1, "test_bulk_edit.py": 3, "test_calendar_refresh.py": 1, "test_capture_drawer.py": 1, "test_cell_edit.py": 4,
     "test_chat_and_sweep.py": 6, "test_check_py39.py": 1, "test_current_state_live.py": 1, "test_dashboard_editing.py": 2,
     "test_decisions_dashboard.py": 1, "test_forecast.py": 1, "live_updates_support.py": 2,
     "test_milestone_states.py": 1, "test_new_item_peek.py": 1, "test_notes_175.py": 1, "test_notes_autosave_backups.py": 2, "test_notes_header.py": 2,
@@ -53,11 +53,13 @@ LEGACY_TESTS = {
     "test_work_all_items.py": 1, "test_work_filter_picker.py": 1, "test_work_grouping.py": 1, "test_work_item_peek.py": 1,
     "test_work_saved_views.py": 1, "test_workstreams.py": 2, "test_writer_pinned.py": 2, "work_board_case.py": 2,
 }
+# reextract.py (#283): 4 time.time() stamps (held, ended, replaced, undone) that are compared across processes: wall-clock on purpose, like the timers
+# below. test_calendar_refresh.py: 1 date.today() in its stand-in harness, which runs as a subprocess on the real clock (#318), like test_run_chat's.
 SCRIPTS = {
     "archive.py": 3, "backup.py": 3, "build_dashboard.py": 5, "capture.py": 1, "creaite_doc.py": 3, "doctor.py": 2,
     "drafts.py": 7, "excel_sync.py": 5, "extraction.py": 1, "filechange.py": 3, "health.py": 1, "health_fixes.py": 1,
     "launch.py": 2, "live_server.py": 46, "log.py": 1, "minutes.py": 4, "notes.py": 3, "notes_find.py": 3, "permissions.py": 4,
-    "propose.py": 7, "quality.py": 1, "reach.py": 3, "review.py": 5, "search.py": 1, "settings_catalogue.py": 2,
+    "propose.py": 7, "reextract.py": 4, "quality.py": 1, "reach.py": 3, "review.py": 5, "search.py": 1, "settings_catalogue.py": 2,
     "sneak_peek.py": 1, "status_checks.py": 1, "sweep.py": 3, "tracker.py": 7, "transcripts.py": 1, "update.py": 3, "usage_log.py": 1, "usage_report.py": 1,
 }
 DASHBOARD_JS = {
