@@ -75296,12 +75296,12 @@ ${d5.text}`);
         else skipped++;
       }
     } catch (e4) {
-      snack("The files couldn't be added: the live server didn't answer. Try again.");
+      snack("The files couldn't be added: creaite didn't answer. Try again.");
       if (added) await reloadData();
       return;
     }
     if (added) await reloadData();
-    if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} not added (only .vtt, .docx, .txt, .md or .pdf, up to 25 MB each)` : ""}`);
+    if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} could not be added` : ""}`);
   }
   async function irRefreshCalendar() {
     if (irRefRun.value) {
@@ -78188,6 +78188,7 @@ ${d5.text}`);
         "SETSECTIONS",
         "SKEY",
         "SORT",
+        "START_CMD",
         "STATUSES",
         "SU",
         "SWEPT",

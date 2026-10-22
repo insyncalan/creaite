@@ -209,9 +209,9 @@ export async function irAddFiles(files) {
       if (u === false) return;
       if (u) added++; else skipped++;
     }
-  } catch (e) { snack("The files couldn't be added: the live server didn't answer. Try again."); if (added) await reloadData(); return; }
+  } catch (e) { snack("The files couldn't be added: creaite didn't answer. Try again."); if (added) await reloadData(); return; }
   if (added) await reloadData();
-  if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} not added (only .vtt, .docx, .txt, .md or .pdf, up to 25 MB each)` : ""}`);
+  if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} could not be added` : ""}`);
 }
 
 /** Refresh the calendar (the icon beside "Calendar read" under the heading): the calendar's own run kind (#265). ask creaite's
