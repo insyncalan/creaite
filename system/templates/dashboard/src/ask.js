@@ -368,7 +368,7 @@ $("#chLog").addEventListener("click",e=>{ const b=e.target.closest("[data-chgcop
 }
 /* ======================= ask creaite ======================= */
 export const sleep=ms=>new Promise(r=>setTimeout(r,ms)); shared.BUSY=false;
-export const GREET="Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.";
+export const GREET="Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.";
 /* ===== BL-262 (sprint-ask-flow) ===== reopening shows the chat as it was: openChat never clears or redraws the log; an empty one
    is filled from the history in one step, or greeted at once (never typed out). SHOWN is the run whose events are on screen and
    the last event drawn (its sequence number), so a reattach asks only for what is newer. */

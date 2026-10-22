@@ -96,7 +96,7 @@
   },
   "ask.js | apply | cb300d77ee58": {
    "count": 1,
-   "text": "Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
+   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
   },
   "ask.js | live server | 0067b4023192": {
    "count": 1,
@@ -256,7 +256,7 @@
   },
   "ask.js | vault | cb300d77ee58": {
    "count": 1,
-   "text": "Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
+   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
   },
   "build_dashboard.py | sweep | 7baa85f2636f": {
    "count": 1,
