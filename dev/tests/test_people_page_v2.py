@@ -49,6 +49,28 @@ class PeoplePage(Base):
         self.assertTrue(b.eval("!!document.querySelector('#plRows tr[data-pn=\"Sara Example\"] .cntl[data-nav^=\"actions:open:\"]')"))
         self.assertTrue(b.eval("!!document.querySelector('#plAdd')"))
 
+    def test_a_missing_detail_is_a_quiet_flag_that_opens_the_same_form_as_the_pencil(self):
+        """#304: no second "Add details" button; one pencil, and a flag naming what is missing when something is."""
+        b = self.b
+        self.open()
+        row = "#plRows tr[data-pn=%r]"
+        self.assertEqual(b.eval(f"document.querySelector({row % 'Omar Ali'!r} + ' [data-pl-details]').textContent.trim()"), "No email")
+        self.assertEqual(b.eval(f"document.querySelector({row % 'Jane Doe'!r} + ' [data-pl-details]').textContent.trim()"), "No email, no organisation, no role")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#plRows button')].filter(x=>x.textContent.trim()==='Add details').length"), 0)
+        self.assertEqual(b.eval(f"document.querySelectorAll({row % 'Omar Ali'!r} + ' [data-pl-edit]').length"), 1)
+        self.assertEqual(b.eval(f"document.querySelectorAll({row % 'Sara Example'!r} + ' [data-pl-details]').length"), 0, "complete: only the pencil")
+        self.assertEqual(b.eval(f"document.querySelectorAll({row % 'Mia Hale'!r} + ' [data-pl-details]').length"), 0)
+        self.assertIn("No email", b.eval(f"document.querySelector({row % 'Omar Ali'!r} + ' [data-pl-details]').getAttribute('aria-label')"))
+        titles = []
+        for sel in ("[data-pl-details='Omar Ali']", "[data-pl-edit='Omar Ali']"):
+            self.tap(sel)
+            b.wait("!!document.querySelector('#personEdit[open] #peSave')")
+            titles.append(b.eval("document.querySelector('#peTitle').textContent"))
+            self.tap("#peCancel")
+            b.wait("!document.querySelector('#personEdit[open]')")
+        self.assertEqual(titles[0], titles[1])
+        self.assertEqual(titles[0], "Edit Omar Ali")
+
     def test_with_work_nothing_assigned_and_needs_attention(self):
         b = self.b
         self.open()

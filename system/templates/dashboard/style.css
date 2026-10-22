@@ -843,6 +843,7 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .cimgdel{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:var(--lh-1);font-size:var(--fs-lg)} .cimgdel:hover{color:var(--bad);border-color:var(--bad)} .pencil[aria-disabled="true"]{opacity:.3;cursor:default}
 tr.mchild td.title{padding-left:32px;position:relative} tr.mchild td.title::before{content:"";position:absolute;left:16px;top:0;bottom:0;border-left:2px solid var(--line)}
 tr.mparent td.title{font-weight:500} .mini.tog{margin-right:4px}
+.miniflag{border:0;background:none;padding:0 6px;font:500 var(--fs-xs)/16px var(--font);color:var(--warn);cursor:pointer;white-space:nowrap;text-decoration:underline dotted;text-underline-offset:2px} .miniflag:hover{text-decoration-style:solid}   /* #304: the quiet "No email" flag on a People row */
 /* #271: Review never scrolls sideways. The title cell takes the room the buttons leave (max-width:0 stops its nowrap meta line
    setting the column's width), the meta line truncates with an ellipsis (full text on its tip) and a long title or tag wraps */
 @media (min-width:641px){ #reviewBody td.title{width:100%;max-width:0;overflow-wrap:anywhere} }

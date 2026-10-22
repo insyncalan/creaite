@@ -853,6 +853,7 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .cimgdel{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:var(--lh-1);font-size:var(--fs-lg)} .cimgdel:hover{color:var(--bad);border-color:var(--bad)} .pencil[aria-disabled="true"]{opacity:.3;cursor:default}
 tr.mchild td.title{padding-left:32px;position:relative} tr.mchild td.title::before{content:"";position:absolute;left:16px;top:0;bottom:0;border-left:2px solid var(--line)}
 tr.mparent td.title{font-weight:500} .mini.tog{margin-right:4px}
+.miniflag{border:0;background:none;padding:0 6px;font:500 var(--fs-xs)/16px var(--font);color:var(--warn);cursor:pointer;white-space:nowrap;text-decoration:underline dotted;text-underline-offset:2px} .miniflag:hover{text-decoration-style:solid}   /* #304: the quiet "No email" flag on a People row */
 /* #271: Review never scrolls sideways. The title cell takes the room the buttons leave (max-width:0 stops its nowrap meta line
    setting the column's width), the meta line truncates with an ellipsis (full text on its tip) and a long title or tag wraps */
 @media (min-width:641px){ #reviewBody td.title{width:100%;max-width:0;overflow-wrap:anywhere} }
@@ -33749,6 +33750,7 @@ ${s5}`;
     return { ...x5, p: p6, me: me2, email, org, role, aliases: p6 && p6.aliases || [], followed: followedIn(extra), derived, on: P4.map((q5) => q5.code).filter((c5) => on2.includes(c5)), missing, late: lateItems.length, lateItems };
   }
   var missingWords = (x5) => x5.missing.length ? `Missing: ${x5.missing.join(", ")}` : "";
+  var missingFlag = (x5) => x5.missing.length ? "No " + x5.missing.join(", no ") : "";
   function countsIn(x5, code) {
     const cs2 = code ? [code] : Object.keys(x5.it);
     return cs2.reduce((s5, c5) => {
@@ -34307,7 +34309,7 @@ ${s5}`;
         }
       ) }),
       /* @__PURE__ */ u4("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u4("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u4(S2, { children: [
-        x5.missing.length ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-pl-details": x5.n, "aria-haspopup": "dialog", "aria-label": `Add details for ${x5.n}`, onClick: edit, children: "Add details" }) : null,
+        x5.missing.length ? /* @__PURE__ */ u4("button", { type: "button", class: "miniflag", "data-pl-details": x5.n, "aria-haspopup": "dialog", "aria-label": `${missingFlag(x5)} for ${x5.n}: edit details`, onClick: edit, children: missingFlag(x5) }) : null,
         /* @__PURE__ */ u4(IconButton, { icon: "pencil", label: "Edit details", name: `Edit details: ${x5.n}`, haspopup: "dialog", data: { "pl-edit": x5.n }, onClick: edit }),
         /* @__PURE__ */ u4(RemoveButton, { x: x5 })
       ] }) })
@@ -68000,7 +68002,7 @@ ${d5.text}`);
       /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: c5.a, label: `${peoplePlural(c5.a, "action")} owned by ${x5.n} in this project, any status`, nav: `actions:open:${code}`, extra: { st: [], o: [x5.n] } }) }),
       /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: c5.r, label: `${peoplePlural(c5.r, "RAID item")} owned by ${x5.n} in this project, any status`, nav: `raid:open:${code}`, extra: { st: [], o: [x5.n] } }) }),
       /* @__PURE__ */ u4("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u4("span", { class: "x", children: ME_NOTE }) : /* @__PURE__ */ u4(S2, { children: [
-        x5.missing.length ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-pm-details": x5.n, "aria-haspopup": "dialog", "aria-label": `Add details for ${x5.n}`, onClick: edit, children: "Add details" }) : null,
+        x5.missing.length ? /* @__PURE__ */ u4("button", { type: "button", class: "miniflag", "data-pm-details": x5.n, "aria-haspopup": "dialog", "aria-label": `${missingFlag(x5)} for ${x5.n}: edit details`, onClick: edit, children: missingFlag(x5) }) : null,
         /* @__PURE__ */ u4(IconButton, { icon: "pencil", label: "Edit details", name: `Edit ${x5.n}`, haspopup: "dialog", data: { "pm-edit": x5.n }, onClick: edit }),
         /* @__PURE__ */ u4(
           IconButton,
