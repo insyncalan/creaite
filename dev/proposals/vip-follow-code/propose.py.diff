@@ -1,0 +1,35 @@
+diff --git a/system/scripts/propose.py b/system/scripts/propose.py
+index 944e2f7f..70f10e85 100644
+--- a/system/scripts/propose.py
++++ b/system/scripts/propose.py
+@@ -826,9 +826,9 @@ def people_text(text, people):
+ 
+ 
+ # ===== Sweep and alerts (BL-97, BL-99, BL-98) =====
+-# BL-99: a person may have several addresses (Email, comma-separated), and a VIP column (blank, or management, client
+-# or yes). VIP is kept as one of the register's extra columns, so both parsers carry it untouched; when BL-94 (labels
+-# on people) is built it moves into a built-in label.
++# BL-99: a person may have several addresses (Email, comma-separated), and a Follow column (blank, or yes). An older
++# register's VIP column (blank, or management, client or yes) is still read, until the register is next saved from the app.
++# The column is one of the register's extra columns, so both parsers carry it untouched.
+ 
+ def person_emails(p):
+     """A person's addresses, lower case: the Email cell split on commas (or semicolons)."""
+@@ -836,13 +836,14 @@ def person_emails(p):
+ 
+ 
+ def person_vip(p):
+-    """The person's VIP kind ("management", "client", "yes"…), or "" when they aren't one."""
+-    v = str((p.get("extra") or {}).get("VIP") or "").strip()
++    """The person's follow value ("yes", or an older register's kind), or "" when they aren't followed. Reads Follow, else VIP."""
++    x = p.get("extra") or {}
++    v = str(x.get("Follow") or x.get("VIP") or "").strip()
+     return "" if v.lower() in ("", "no", "n", "false", "0", "-") else v
+ 
+ 
+ def vip_people():
+-    """[{name, kind, emails}] of the register's VIPs."""
++    """[{name, kind, emails}] of the people the register marks as followed."""
+     return [{"name": p["name"], "kind": person_vip(p), "emails": person_emails(p)}
+             for p in people_parse(people_register_text()[0]) if person_vip(p)]
+ 
