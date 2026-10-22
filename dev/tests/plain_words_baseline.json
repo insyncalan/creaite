@@ -14,7 +14,8 @@
    "settings.js#diagCardHtml": "Settings › Diagnostics",
    "settings.js#diagRefusals": "Settings › Diagnostics",
    "settings.js#diagRepeats": "Settings › Diagnostics",
-   "core/server.js#diagErr": "Settings › Diagnostics"
+   "core/server.js#diagErr": "Settings › Diagnostics",
+   "autostart.js#asCommand": "#300: the Terminal note's copyable command block beside Stop, with the user's own folder (a Help and Diagnostics command block)"
   }
  },
  "offenders": {

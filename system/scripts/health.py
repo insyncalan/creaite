@@ -43,6 +43,8 @@ FIXES = {
     "offsite": ("Make it now", "session.py backup: today's backup and zip, then the newest zip copied into the OneDrive folder",
                 "writes outside the vault", "It is made after the next daily backup, at the first session of the day"),
     "setup": ("Open set-up", "the cx-setup skill", "runs set-up steps that change files", "Ask Claude to set creaite up"),
+    "autostart": ("Turn it on", "nothing here: Settings › creaite and backups has the switch", "",
+                  "Settings › creaite and backups › Start creaite when I sign in"),
     "manual": ("How to fix", "nothing: a step only you can take", "", ""),
 }
 # doctor check id -> (plain words for the line, the fix kind)
@@ -78,6 +80,7 @@ PLAIN = {
     "debug_log": ("Errors keep coming back", "manual"),
     "minutes_drafts": ("Staged minutes have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),
+    "autostart": ("creaite won't start by itself after a restart", "autostart"),      # #300: a suggestion, dismissible
     "version": ("The version file is wrong", "reinstall"),
     "rules_imported": ("CLAUDE.md doesn't import creaite's rules", "setup"),
     "scripts_use_paths": ("A script doesn't take its locations from paths.py", "reinstall"),
@@ -142,6 +145,20 @@ def doctor_checks():
     raise RuntimeError("the health check gave no result" + (f": {r.stderr.strip().splitlines()[-1]}" if r.stderr.strip() else ""))
 
 
+def autostart_check():
+    """#300: a doctor-shaped warning while creaite wouldn't start by itself after a restart, else None. Only on macOS, never in the
+    development repository (no login agent there), and never when the state can't be read. Dismissible like any other problem."""
+    try:
+        import launch
+        st = launch.agent_state()
+    except Exception:  # noqa: BLE001  a suggestion never breaks Health
+        return None
+    if not st.get("supported") or st.get("on"):
+        return None
+    return {"id": "autostart", "name": "Start when you sign in", "status": "warn",
+            "detail": "creaite isn't set to start when you sign in, so after a restart it stays closed until you open it"}
+
+
 def home_short(text):
     """The home folder written as ~, so a line reads as it does in Finder."""
     return str(text).replace(str(Path.home()), "~")
@@ -191,7 +208,8 @@ def health(result=None, dismissed=None):
     health.dismissed list (the tests pass one), else settings.json's (#242)."""
     result = doctor_checks() if result is None else result
     problems, fine = [], []
-    for c in result.get("checks") or []:
+    extra = autostart_check()
+    for c in [*(result.get("checks") or []), *([extra] if extra else [])]:
         if c.get("status") == "pass":
             fine.append(c.get("name", ""))
             continue

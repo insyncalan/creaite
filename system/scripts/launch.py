@@ -18,7 +18,7 @@
                                                        update its copy of the app's icon (writes system/staging/app-icon.json only)
   python3 system/scripts/launch.py restart            BL-320: ask this vault's running live server to restart (SIGUSR1); it
                                                        restarts once no job is running. Nothing running: nothing to do
-  python3 system/scripts/launch.py agent install|remove|status
+  python3 system/scripts/launch.py agent install|remove|status [--json]
                                                        macOS only: a per-user LaunchAgent (~/Library/LaunchAgents, no admin) that
                                                        starts the live server at login and restarts it if it crashes. Alan runs
                                                        this himself in Terminal; ask creaite cannot (reach.py never list)
@@ -553,8 +553,26 @@ def agent_remove():
     return 0
 
 
-def agent_status():
-    """Print whether the login agent is installed and loaded, and whether the server answers."""
+def agent_state():
+    """#300: the login agent's real state as plain data, for the page and Health (nothing is written). supported: macOS and not the
+    development repository; installed: this vault's plist is there; loaded: launchd has it (None when it can't be asked);
+    folder: where this vault is, for the Terminal note. Never raises."""
+    dev = (paths.ROOT / ".creaite-dev").exists()
+    mac = sys.platform == "darwin" or bool(os.environ.get("CREAITE_AGENT_DIR"))
+    try:
+        installed = agent_file().exists()
+        loaded = agent_loaded() if installed else False
+    except OSError:
+        installed, loaded = False, None
+    return {"supported": mac and not dev, "dev": dev, "mac": mac, "installed": installed, "loaded": loaded,
+            "on": bool(installed and loaded is not False), "folder": str(paths.ROOT)}
+
+
+def agent_status(as_json=False):
+    """Print whether the login agent is installed and loaded, and whether the server answers (as one JSON line with --json, #300)."""
+    if as_json:
+        print(json.dumps(agent_state()))
+        return 0
     f = agent_file()
     loaded = agent_loaded()
     seen = health(port())
@@ -605,6 +623,8 @@ def main(argv):
             print(__doc__)
             return 2
         return make_launcher(where, opts.get("--dest"), replace)
+    if argv == ["agent", "status", "--json"]:             # #300: the page's and Health's read of the agent
+        return agent_status(True)
     if argv and argv[0] == "agent" and len(argv) == 2 and argv[1] in ("install", "remove", "status"):
         return {"install": agent_install, "remove": agent_remove, "status": agent_status}[argv[1]]()
     if argv:
