@@ -21,7 +21,7 @@ The record is a SQLite database at `system/tracker.db`, defined in `system/scrip
 
 ## Allowed values
 
-- **raised** (actions and RAID; BL-26): always written, as the source's date — the meeting date for minutes and transcripts, the Sent date for an email or Teams message — never the review date. If it's missing, `tracker.py apply` fills it the same way (the source's date, else the day the proposal was staged) and says so.
+- **raised** (actions, RAID and promises, never decisions: a decision is dated by `date`, #280; BL-26): always written, as the source's date — the meeting date for minutes and transcripts, the Sent date for an email or Teams message — never the review date. If it's missing, `tracker.py apply` fills it the same way (the source's date, else the day the proposal was staged) and says so.
 - **status:** actions `Open`, `Delayed`, `Closed`, `Cancelled` (Delayed counts as open); RAID `Open`, `Closed`, `Cancelled`. Closing or cancelling sets `closed` (YYYY-MM-DD, not before `raised`). "Done" in plain English means Closed.
 - **decisions status (BL-53):** `Pending`, `Made`, `Withdrawn`. Every decision made before BL-53 is `Made`.
 - **promises status (BL-50):** `Open`, `Done`, `Dropped` (Done and Dropped set `closed`).

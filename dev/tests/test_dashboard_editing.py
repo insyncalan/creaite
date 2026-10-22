@@ -242,7 +242,7 @@ SCRIPT = r"""
     openNew("raid"); document.getElementById("pkTitle").textContent="Half typed"; history.back(); await wait(200); out.navBlocked=[VIEW,!!CUR,location.hash.includes("item="+rid),!document.getElementById("pkAsk").hidden];   /* BL-179: a new item with a title asks Keep or Discard first */
     document.querySelector('#pkAsk [data-pkask="discard"]').click(); await wait(200);
     const da=A.find(a=>a.p==="DEF"); go("work"); openRecord("actions",da.id); document.querySelector('#pkId [data-proj]').click(); out.navPanel=[VIEW,COCK];
-    switchProject(1); out.navSw=[COCK]; document.dispatchEvent(new KeyboardEvent("keydown",{key:"[",bubbles:true})); out.navSw.push(COCK);
+    out.navSw=[COCK]; document.dispatchEvent(new KeyboardEvent("keydown",{key:"[",bubbles:true})); out.navSw.push(COCK,!!document.querySelector("#v-cockpit [data-psw]"));   /* #285: no [ ] or arrows on the project page */
     out.navSee=[...document.querySelectorAll("#v-cockpit .seeall")].map(a=>a.textContent);
     out.navParse=parseHash("#work=raid&v=open&p=ABC&from=ABC&item="+rid); out.rid=rid;
     // BL-48: the actions card is capped, shows the total, and links to the rest in Work
@@ -549,7 +549,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertEqual(r["navFwd"], ["work", "raid", r["rid"], r["navItem"]])        # Forward: Work with the item open
         self.assertEqual(r["navBlocked"], ["work", True, True, True])                   # a typed new item: Back asks first
         self.assertEqual(r["navPanel"], ["cockpit", "DEF"])                             # item → its project
-        self.assertEqual(r["navSw"], ["ABC", "DEF"])                                    # ] wraps to ABC, [ back to DEF
+        self.assertEqual(r["navSw"], ["DEF", "DEF", False])                             # #285: [ leaves the project page as it is; no arrows
         self.assertTrue(r["navSee"] and all(t.startswith("All ") for t in r["navSee"]))
         self.assertEqual({k: r["navParse"][k] for k in ("v", "wt", "wv", "p", "from")},
                          {"v": "work", "wt": "raid", "wv": "open", "p": ["ABC"], "from": "ABC"})

@@ -16,14 +16,14 @@ import { closePanel, PK, pkOn } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
-import { approveRoutineTracked, decide, draftOn, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
+import { approveRoutineTracked, BAD_MSG, decide, draftOn, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
 import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
 import { ConflictBlock } from "./UpdatePeek.jsx";
 
 /** Why a proposal is not routine, in words (the row's `hold`, from review.hold_reason). */
-const HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Held back: not valid" };
+const HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Can't be saved as it is" };   /* #291: the old Review row's words */
 const PEEKABLE = ["actions", "raid", "decisions", "update"];
 
 /** The kind pill's word. @param {any} r */
@@ -96,6 +96,24 @@ function ConflictChoices({ r }) {
   </>;
 }
 
+/** #280: minutes held because a file they file has gone (their transcript left the inbox): Approve without the transcript copy and
+    Discard in place of Approve (review.py approve --without-transcript, reject --discard, through the live server). @param {{r: any}} props */
+function HeldChoices({ r }) {
+  const live = viaServer(), off = live ? undefined : "Needs the live server";
+  return <>
+    <button type="button" class="mini ok" data-ira="held-approve" data-act="hw" disabled={!live} title={off || heldMsg(r)} onClick={() => heldApprove(r)}>Approve without the transcript</button>
+    {" "}<button type="button" class="mini" data-ira="held-discard" data-act="hd" disabled={!live} title={off} onClick={() => heldDiscard(r)}>Discard</button>
+  </>;
+}
+
+/** #280, #291: why a held or invalid proposal waits, on its row (not only in the tip). @param {{r: any}} props */
+function HeldNote({ r }) {
+  if (r.done) return null;
+  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the proposal</div>;
+  if (r.bad) return <div class="rvnote"><span class="h-warn">Can't be saved as it is: {r.bad}</span> · Edit it or reject it</div>;
+  return null;
+}
+
 /** Open the proposal in the peek, with previous and next over the proposals on this page. @param {number} n */
 export function irOpenPeek(n) {
   const r = irRow(n);
@@ -166,10 +184,12 @@ export function ProposalLine({ n, child }) {
         {r.ws_suggest && !r.done && (r.flags || []).includes("new-workstream") ? <div class="wsq">New workstream “{r.ws_suggest}” for {r.p || "?"}? <button type="button" class="mini" data-wsq="add" data-n={r.n}>Add workstream</button><button type="button" class="mini" data-wsq="skip" data-n={r.n}>Leave blank</button></div> : null}   {/* BL-58: the old Review row's offer (settings.js handles the buttons); #232 C2 put it back on the Intake page's row */}
         <WeekendNote r={r} />
         {r.nodraft ? <div class="rvnote"><span class="h-warn">No Word draft was made for these minutes</span> · Reject them and process the meeting again</div> : null}
+        <HeldNote r={r} />
       </td>
       <td class="iracts">
         {r.kind !== "files" ? <button type="button" class="ib sm" data-ira="edit" aria-label="Open in the peek" data-tip="Open in the peek" onClick={() => irOpenPeek(n)}>✎</button> : null}
-        {" "}{conflict ? <ConflictChoices r={r} /> : <button type="button" class="mini ok" data-ira="approve" disabled={!!r.nodraft} title={r.nodraft ? NODRAFT_MSG : undefined} onClick={() => irApprove(n)}>Approve</button>}
+        {" "}{conflict ? <ConflictChoices r={r} /> : r.kind === "draft" && r.held && !r.done ? <HeldChoices r={r} />
+          : <button type="button" class="mini ok" data-ira="approve" disabled={!!r.nodraft || !!r.bad} title={r.nodraft ? NODRAFT_MSG : r.bad ? BAD_MSG : undefined} onClick={() => irApprove(n)}>Approve</button>}
         {" "}{rej ? <button type="button" class="ib sm no" data-ira="reject" aria-haspopup={rvRejectOK(r) ? "menu" : undefined} aria-label={rvRejectOK(r) ? "Reject, with a reason" : "Reject"}
           data-tip={rvRejectOK(r) ? "Reject, with a reason" : "Reject"} onClick={e => irReject(n, /** @type {Element} */ (e.currentTarget))}>✕</button> : null}
       </td>

@@ -742,7 +742,8 @@ def queue_block(n, p, key, label, b, aged):
             "src": b.get("draft") or "", "file": p.name, "ref": key,
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
-            **draft_missing(key, b)}   # BL-260
+            **draft_missing(key, b),   # BL-260
+            **({"held": review.held_reason(b)} if key in ("meeting", "report") and review.held_reason(b) else {})}   # #280
 
 
 def queue_item(con, n, p, item, aged, overlap):
@@ -759,13 +760,24 @@ def queue_item(con, n, p, item, aged, overlap):
             "dup": dup, "signals": signals,
             "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
-            "mf": item.get("moved_from"), "op": item.get("op")}   # BL-200 (sprint-review-work): moved on its own; new or update
+            "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
+            **({"bad": invalid_words(item.get("invalid_reason"))} if "invalid" in flags else {})}   # #291: why it can't be saved
+
+
+def invalid_words(reason):
+    """#291: why an item can't be saved as it is, in plain words for its Review row (the tracker's reason, without its field list)."""
+    m = re.match(r"unknown field\(s\) for \w+: ([^.]+)", reason or "")
+    if m:
+        return f"it has a field the tracker doesn't keep ({m.group(1).strip()})"
+    return (reason or "it doesn't pass the tracker's checks").split(". Valid:")[0].strip().rstrip(".")
 
 
 def item_why(item, project, flags):
     """Why the item is in Review, as its row says."""
     if project is None:
         return "Possible match" if item.get("match") == "possible" else "Needs a project"
+    if "invalid" in flags:
+        return "Can't be saved as it is"                                  # #291: before the bulk rule's words
     return (review.individual_only(item) or "").capitalize() or \
         ("Conflict with a newer change" if "conflict" in flags else
          "No owner yet" if "no-owner" in flags else
@@ -2063,11 +2075,13 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
     for d in out.values():             # holds Alan's; the page's quiet line counts other people's), so a day is Urgent, High, the rest
         d["items"].sort(key=lambda i: rank.get(i.get("pr"), 2))
     # Urgent work with no date can't sit on a day: it leads the Week ahead instead
-    undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent"}
+    # #286: a RAID item keeps its type in every group, so its icon names it (Risk, Issue, Assumption, Dependency)
+    typed = lambda k, x: {"type": x.get("type")} if k == "raid" else {}  # noqa: E731
+    undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent", **typed(k, x)}
                for k, x in open_items if x.get("pr") == "Urgent" and not x["due"] and (shown is None or "Urgent" in shown)]
     # Further ahead: the two weeks after, key milestones and Urgent or High deadlines only, so it stays short
     end, horizon = days[-1].isoformat(), (days[-1] + timedelta(days=FURTHER_DAYS)).isoformat()
-    further = [{"date": x["due"], "kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr")}
+    further = [{"date": x["due"], "kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr"), **typed(k, x)}
                for k, x in open_items if x["due"] and end < x["due"] <= horizon
                and x.get("pr") in ("Urgent", "High") and (shown is None or x.get("pr") in shown)]
     further += [{"date": m[1], "kind": "milestone", "id": m[3], "p": p["code"], "t": m[0]} for p in projects for m in p["ms"]

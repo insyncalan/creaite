@@ -20,7 +20,7 @@ import { $ } from "../../core/dom.js";
 import { LINK_REL } from "../../core/linkUrl.js";
 import { openWork, tabTitle } from "../../core/nav.js";
 import { D, fd, mScroll, TODAY } from "../../core/page.js";
-import { snack, viaServer } from "../../core/server.js";
+import { snack, viaServer, writeSettings } from "../../core/server.js";
 import { draftAgenda, prepOpen, prepPage } from "../../meetings.js";
 import { openPrep } from "../../projects.js";
 import { kOfId } from "../../work.js";
@@ -77,6 +77,33 @@ function ppSrcKind(s) {
   return ["list", ""];
 }
 
+/** #279: the meeting's project as a picker: the projects and "No project (general meeting)" (the saved value "_portfolio", the
+    all-projects view). Saved like the Prep brief's own choice (settings prep.series, one place, remembered for the series);
+    nothing chosen is "" and stays a different thing from "No project". @param {{mt: any}} props */
+function ProjectChip({ mt }) {
+  const NONE = "_portfolio", series = mt.series || "";
+  const pick = async (/** @type {string} */ code) => {
+    if (!code) return;
+    if (!series) { snack("This meeting has no series to remember a project for"); return; }
+    if (!viaServer()) { snack("Choosing the project needs the live server"); return; }
+    const map = { ...((D.prep || {}).series || {}), [series]: code };
+    if (!await writeSettings({ "prep.series": map })) return;
+    if (!D.prep) D.prep = {};
+    D.prep.series = map;
+    Object.values((D.prep || {}).meetings || {}).forEach((/** @type {any} */ x) => { if (x.series === series) { x.p = code; x.how = "remembered"; } });
+    snack("Remembered for this series");
+    loadPrep(prepViewKey.value, { keepTab: true });
+  };
+  return (
+    <Chip name="Project" cls="ppproj">
+      <select class="fsel" aria-label="Project" data-ppproject="1" value={mt.chosen ? mt.project : ""} onChange={e => pick(/** @type {HTMLSelectElement} */ (e.currentTarget).value)}>
+        {!mt.chosen ? <option value="">Choose a project…</option> : null}
+        {(D.projects || []).map((/** @type {any} */ p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+        <option value={NONE}>No project (general meeting)</option>
+      </select>
+    </Chip>);
+}
+
 function Header({ v, researching }) {
   const mo = v.model, mt = mo.meeting, people = (mo.brief || {}).people || {}, series = (mo.brief || {}).series || {};
   const ev = eventOf(mt), past = mt.day < TODAY;
@@ -104,7 +131,7 @@ function Header({ v, researching }) {
       <div class="ppmeta">
         <span class="tag ppint" data-tip="Your preparation: not for the client, never sent">Internal</span>
         <Chip icon="calendar" name="When">{mt.day_shown}{mt.start ? ` · ${mt.start}${mt.end ? ` – ${mt.end}` : ""}` : ""}</Chip>
-        {mt.project_name ? <Chip name="Project">{mt.project_name}</Chip> : null}
+        <ProjectChip mt={mt} />
         {(mo.reporting || []).length === 1 && mo.reporting[0].health ? <Chip name="Health"><StatusDot health={mo.reporting[0].health} /></Chip> : null}
         {!mt.confidential && series.text ? <Chip icon="history" name="Series">{series.text}</Chip> : null}
         {!mt.confidential && inv.length ? (
@@ -122,6 +149,7 @@ function Header({ v, researching }) {
         {v.saved ? <button type="button" class="btn" onClick={() => prepOpen(v.saved.path)} data-tip={v.saved.path}><Icon name="external" />Open the file</button> : null}
         <button type="button" class="btn" onClick={printIt}>Print</button>
       </div>
+      {v.stale ? <p class="wnote" role="status" data-ppstale="1">{`The research was done for ${v.stale.project_name}. Press Refresh research for ${mt.project_name || "this meeting"}; the earlier page is kept in Agendas.`}</p> : null}
       <Tabs tabs={tabs} selected={prepTab.value} onSelect={id => { prepTab.value = id; }} label="Prep page" idBase="pp" cls="pptabs" />
     </header>
   );

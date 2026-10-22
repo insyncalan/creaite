@@ -2544,7 +2544,7 @@
        "changes": {
         "status": "Pending"
        },
-       "decision": "approved",
+       "decision": "pending",
        "flags": [
         "invalid"
        ],
@@ -2624,9 +2624,9 @@
     }
    ]
   },
-  "exit": 1,
+  "exit": 0,
   "stderr": "",
-  "stdout": "Apply stopped. Nothing was written.\n  proposed-step2.json item 1: a decision that has been Made can't go back to Pending; record a new decision that replaces it\n",
+  "stdout": "Held in Review, not applied: proposed-step2.json item 1: a decision that has been Made can't go back to Pending; record a new decision that replaces it\nNothing applied: every decided item is held in Review.\n",
   "step": "pending"
  },
  {
@@ -4684,7 +4684,7 @@
        "changes": {
         "status": "Pending"
        },
-       "decision": "approved",
+       "decision": "pending",
        "flags": [
         "invalid"
        ],
@@ -6764,7 +6764,7 @@
        "changes": {
         "status": "Pending"
        },
-       "decision": "approved",
+       "decision": "pending",
        "flags": [
         "invalid"
        ],

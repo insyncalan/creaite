@@ -570,7 +570,6 @@ button.chip{cursor:pointer} button.chip:hover{background:var(--sunk)}
 .wbulk .dwrap input,
 .saveview input,
 .drange input,
-.pswitch select,
 .ddmenu input[type=search],
 .fgrid input[type=text],
 .fgrid select,
@@ -869,7 +868,7 @@ th[data-col]{cursor:pointer} .sarrow{margin-left:4px;font-size:var(--fs-2xs)}
 .plink{cursor:pointer} .plink:hover,.plink:focus-visible{text-decoration:underline} a.hlink{color:inherit;text-decoration:none} a.hlink:hover{text-decoration:underline}
 .seeall{display:inline-block;margin-top:10px;font-size:var(--fs-sm);color:var(--muted);text-decoration:none} .seeall:hover{color:var(--ink);text-decoration:underline}
 .evbox.click{cursor:pointer} .evbox.click:hover,.evbox.click:focus-visible{background:var(--sunk)}
-.pswitch{display:flex;gap:4px;align-items:center} .pswitch select{max-width:240px} .pencil:hover,.pencil:focus-visible{opacity:1;color:var(--ink);background:var(--sunk)}
+.pencil:hover,.pencil:focus-visible{opacity:1;color:var(--ink);background:var(--sunk)}
 .ddmenu.left{left:0;right:auto} .ddmenu.on{display:block} .ddmenu.up{top:auto;bottom:calc(100% + 4px)}
 .ddmenu label{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;font-size:var(--fs-sm)} .ddmenu label:hover{background:var(--sunk)}
 .ddmenu small{margin-left:auto;color:var(--muted)} .ddmenu .acts{display:flex;gap:4px;padding:2px 10px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
@@ -1243,7 +1242,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .derow>input[type=text]{}
 .deinc{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;margin:10px 0;max-height:190px;overflow:auto} .deinc .pph{margin:6px 0 2px} .deinc label.it{display:flex;gap:8px;align-items:baseline;padding:2px 0;font-size:var(--fs-sm);cursor:pointer}
 .deinc .it .sub{margin-left:auto;white-space:nowrap} .deopts{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0;font-size:var(--fs-sm)} .deopts .dwrap{width:150px}
-#dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;max-height:46vh;overflow:auto}
+#dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;overflow:auto}
 .deacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .deacts .sp{flex:1} .denote{background:var(--sunk);border-radius:var(--r-md);padding:8px 12px;margin:8px 0;font-size:var(--fs-sm)}
 .prepbody{padding:10px 16px 16px;overflow:auto;max-height:calc(84vh - 72px)} .prepbody>p.sub{margin:8px 0 0}
 .preppick select{margin-left:6px}
@@ -2179,7 +2178,7 @@ body:has(#panel.pkprop.on) .snack,body:has(#panel.pkprop.on) .pkstage{bottom:76p
 .ch-inc{font-size:var(--fs-xs);color:var(--muted);display:flex;gap:6px;align-items:center}
 .ch-mailwrap{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
 .ch-mailhead{background:var(--sunk);padding:8px 10px;font-size:var(--fs-xs);display:grid;gap:2px;overflow-wrap:anywhere} .ch-mailhead span{color:var(--muted)}
-.ch-mail{padding:14px 16px;overflow-x:auto}
+.ch-mail{padding:14px 16px;overflow:auto}
 #chMail th,#chMail td{position:static;text-transform:none;letter-spacing:normal;white-space:normal;z-index:auto}   /* the page's own table look stays out of the email */
 .ch-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
 .ch-said{margin-right:auto;font-size:var(--fs-xs);color:var(--ok)} .ch-said.fail{color:var(--bad)}
@@ -2710,7 +2709,6 @@ a.seeall{margin-top:8px}
 .tree{min-width:0;max-width:100%} .tree button{overflow-wrap:anywhere}
 .flgrid{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))} .flfoot{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
 .hp-steps{grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr))}
-.pswitch{min-width:0;max-width:100%} .pswitch select{min-width:0;max-width:min(240px,100%)}
 .cockfoot{flex-wrap:wrap}
 .actdates{flex-wrap:wrap}
 .dispmenu{max-width:calc(100vw - var(--rail-w,72px) - 16px)}
@@ -2784,10 +2782,8 @@ a.seeall{margin-top:8px}
 .dcbtn.closed{color:var(--accent);border-color:var(--accent)}
 .dcbtn .dcdot{display:none;position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--warn);border:2px solid var(--surface)}
 .dcbtn.nudge .dcdot{display:block}
-.dhelp{position:absolute;right:64px;bottom:14px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--day-muted);font:500 var(--fs-md)/1 var(--font);display:grid;place-items:center;padding:0;cursor:pointer}   /* hand check 6: no .7 opacity, so the "?" is AA text (4.5:1) in every theme */   /* #237 (Alan, 19-10-2026): Today's help, quiet, beside Close the day; no box under Needs attention */
-.dhelp:hover,.dhelp:focus-visible{opacity:1;color:var(--day-ink)} .dhelp:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .calfoot{text-align:right;font-size:var(--fs-xs);color:var(--faint);margin:24px 0 0} .calfoot .calold{color:var(--warn)}
-@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} .dhelp{right:56px} }
+@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} }
 @media (forced-colors: active){ .dcbtn .dcdot,.dcbtn.closed{forced-color-adjust:none} .dcbtn.closed{color:Highlight;border-color:Highlight} }
 /* ===== end BL-270 ===== */
 /* ===== BL-255: Settings › Diagnostics' error rows (was a <style> the page added at run time) ===== */
@@ -3907,6 +3903,7 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .ddmenu.pop.rsmenu{min-width:0;width:max-content;max-width:min(280px,calc(100vw - 16px));padding:4px;font-size:var(--fs-sm)}
 .rsmenu button{align-items:center;gap:8px;padding:4px 10px;min-height:28px;white-space:nowrap}
 .rsmenu button svg.i{margin-top:0;width:15px;height:15px;color:var(--muted);flex:none} .rsmenu b{font-weight:400}
+.wr-hmenu [data-tone=g] svg.i{color:var(--ok)} .wr-hmenu [data-tone=a] svg.i{color:var(--warn)} .wr-hmenu [data-tone=r] svg.i{color:var(--bad)}   /* #287: the health menu's icons in the flag's tones */
 .rs-pick{margin-top:6px}
 .rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
 .rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
@@ -4267,6 +4264,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
 .crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:var(--paper)}
 .crx-wait,.crx-err{padding:16px}
+
+/* #281: the Draft email preview is resizable, once for every entry point (the dialog's #dePrev and the peek pane's #chMail): drag the
+   grip in its bottom-right corner; the text and table reflow. It starts fitted to the email, at most 28vh so the grip shows without
+   scrolling the popup; once dragged (an inline height) it may grow to 90vh. A press that starts on the grip and ends on the scrim
+   never closes the popup (Dialog.jsx). The size is kept while the popup is redrawn (drafts.js drawDraftEmail). */
+#dePrev,#chMail{resize:vertical;box-sizing:border-box;height:auto;min-height:8rem;max-height:90vh}
+#dePrev:not([style*="height"]),#chMail:not([style*="height"]){max-height:28vh}
+#dePrev:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -4297,7 +4302,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="dayband"><div class="bandin">
           <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
-        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button><button type="button" class="dhelp" data-thelp="1" aria-label="Help for Today" data-tip="Help for Today">?</button></div><!-- BL-270 -->
+        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270; #284: no ? button here, the ? key opens Help -->
         <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
@@ -4467,6 +4472,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     AiMenu: () => AiMenu,
     AiSpark: () => AiSpark,
     AiSuggestion: () => AiSuggestion,
+    BAD_MSG: () => BAD_MSG,
     BASETITLE: () => BASETITLE,
     BCLALL: () => BCLALL,
     BCOLL: () => BCOLL,
@@ -5049,6 +5055,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     api: () => api,
     appTint: () => appTint,
     apply: () => apply,
+    applyBlockers: () => applyBlockers,
     applyFilters: () => applyFilters,
     applyLink: () => applyLink,
     applyMotion: () => applyMotion,
@@ -5097,6 +5104,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bl175Clamp: () => bl175Clamp,
     bl185Row: () => bl185Row,
     blankCells: () => blankCells,
+    blockerWords: () => blockerWords,
     boardAsk: () => boardAsk,
     boardCols: () => boardCols,
     boardDragEnd: () => boardDragEnd,
@@ -5797,6 +5805,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     healthCount: () => healthCount,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
+    heldApprove: () => heldApprove,
+    heldDiscard: () => heldDiscard,
+    heldLines: () => heldLines,
+    heldMsg: () => heldMsg,
+    heldWords: () => heldWords,
     helpCk: () => helpCk,
     helpFind: () => helpFind,
     helpFocusSearch: () => helpFocusSearch,
@@ -6310,6 +6323,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     onceFor: () => onceFor,
     oneLine: () => oneLine,
     open: () => open,
+    openBlockersInIntake: () => openBlockersInIntake,
     openCal: () => openCal,
     openCapture: () => openCapture,
     openChat: () => openChat,
@@ -6365,6 +6379,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ovKey: () => ovKey,
     ovReapply: () => ovReapply,
     overdue: () => overdue,
+    ownHeld: () => ownHeld,
     ownedBy: () => ownedBy,
     ownerFinal: () => ownerFinal,
     ownerMatches: () => ownerMatches,
@@ -6602,6 +6617,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     promQuiet: () => promQuiet,
     promWaiting: () => promWaiting,
     promWho: () => promWho,
+    proposalLabel: () => proposalLabel,
     psCat: () => psCat,
     psCatOf: () => psCatOf,
     psChanged: () => psChanged,
@@ -6988,7 +7004,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     swapHTML: () => swapHTML,
     sweepDueShown: () => sweepDueShown,
     swept: () => swept,
-    switchProject: () => switchProject,
     syncLayout: () => syncLayout,
     syncView: () => syncView,
     synthDay: () => synthDay,
@@ -7019,12 +7034,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toDecideRows: () => toDecideRows,
     toIso: () => toIso,
     toastLayer: () => toastLayer,
-    toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     trkLeftOut: () => trkLeftOut,
     tx: () => tx2,
     txReady: () => txReady,
+    typeWord: () => typeWord,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
     undCommit: () => undCommit,
@@ -7957,7 +7972,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var KI = { action: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>', Risk: '<path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/>', Issue: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.4"/>', Assumption: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.6v.4M12 17v.4"/>', Dependency: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>', decision: '<path d="m13.5 3.5 7 7-3 3-7-7z"/><path d="m11.5 8.5-8 8 4 4 8-8"/>', milestone: '<path d="M5 21V4h11l-2 4 2 4H5"/>' };
   var KL = { action: "Action", decision: "Decision", milestone: "Milestone" };
   var kindOf = (t47, x5) => t47 === "actions" ? "action" : t47 === "raid" ? x5 && x5.type || "Risk" : t47 === "decisions" ? "decision" : "milestone";
-  var ico = (k5) => KI[k5] ? `<span class="ki" title="${KL[k5] || k5}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k5]}</svg></span>` : "";
+  var typeWord = (t47, x5) => {
+    const k5 = kindOf(t47, x5);
+    return KL[k5] || k5;
+  };
+  var ico = (k5) => KI[k5] ? `<span class="ki" role="img" aria-label="${KL[k5] || k5}" data-tip="${KL[k5] || k5}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KI[k5]}</svg></span>` : "";
   var revIco = (r4) => r4.kind === "actions" ? ico("action") : r4.kind === "raid" ? ico(r4.rec.type || "Risk") : r4.kind === "decisions" ? ico("decision") : "";
   var store = {
     get: (k5, d5) => {
@@ -10216,9 +10235,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     const typed2 = () => {
       if (ref.current) TYPED.set(ref.current, true);
     };
+    const pressedOn = A2(
+      /** @type {EventTarget | null} */
+      null
+    );
+    const press = (e4) => {
+      pressedOn.current = e4.target;
+    };
     const scrim = (e4) => {
-      const d5 = ref.current;
-      if (!d5 || e4.target !== d5) return;
+      const d5 = ref.current, from = pressedOn.current;
+      pressedOn.current = null;
+      if (!d5 || e4.target !== d5 || from !== d5) return;
       const busy2 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
       if (busy2) return;
       const r4 = d5.getBoundingClientRect();
@@ -10242,6 +10269,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         onKeyDown: cmdKey ? (e4) => {
           if (ref.current) cmdEnter(e4, ref.current);
         } : void 0,
+        onMouseDown: press,
         onClick: scrim,
         onInput: typed2,
         children
@@ -38827,6 +38855,7 @@ ${s5}`;
   function mvOpen(code, cli, move) {
     return mvVis(code, cli, move).filter((m5) => m5.state !== "achieved").sort((a5, b5) => (a5.agr || a5.fc || "9").localeCompare(b5.agr || b5.fc || "9"));
   }
+  var MSW = typeWord("milestone");
   function mvShape(st2, sz) {
     sz = sz || 16;
     const p6 = {
@@ -38894,10 +38923,10 @@ ${s5}`;
       h5 += `<div class="mv-lead" style="left:${x5}px;top:56px;height:${top - 56}px"></div>`;
       if (it2.g) {
         const ax2 = px2(mvT(m5.agr));
-        h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" title="${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
+        h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" role="img" aria-label="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}" data-tip="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
         h5 += `<button type="button" class="mv-lab gl" data-mvedit="${m5.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m5.n)} now expected ${fd(m5.fc)}"><b>Expected ${fd(m5.fc)}</b><span>${esc(m5.n.length > 20 ? m5.n.slice(0, 19) + "…" : m5.n)}</span></button>`;
       } else {
-        h5 += `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}">${mvShape(st2, 20)}</button>`;
+        h5 += `${((w6) => `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${w6}" data-tip="${w6}">${mvShape(st2, 20)}</button>`)(`${MSW}: ${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}`)}`;
         h5 += `<button type="button" class="mv-lab${st2 === "overdue" ? " late" : ""}${ach ? " ok" : ""}" data-mvedit="${m5.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m5.n)}"><b>${esc(nm3)}</b><span>${fd(mvWhen(m5))}</span></button>`;
       }
     });
@@ -38959,7 +38988,6 @@ ${s5}`;
     if (cli && shared.MV.view === "move") shared.MV.view = "plan";
     let h5 = `<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${code}">${esc(p6.name)}</a><span aria-hidden="true">›</span><span aria-current="page">Milestones</span></nav>
     <div class="mv-pageh"><h1>Milestones: Plan and Movement</h1><span class="sp"></span>
-      <div class="pswitch"><button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="mvProjSw" aria-label="Switch project">${P4.map((x5) => `<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${esc(x5.name)}</option>`).join("")}</select><button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project" ${P4.length < 2 ? "disabled" : ""}>›</button></div>
       <button type="button" class="mv-btn pri" id="mvAdd" data-mvadd="1">${ic("plus")}Add milestone</button></div>
     <div class="mv-ctl"><div class="mv-seg" role="group" aria-label="Milestone view"><button type="button" id="mvVPlan" data-mvview="plan" aria-pressed="${shared.MV.view === "plan"}">Plan</button><button type="button" id="mvVMove" data-mvview="move" aria-pressed="${shared.MV.view === "move"}"${cli ? ' aria-disabled="true" data-tip="Movement is internal only and is hidden in Client view"' : ""}>Movement <span class="mv-tag">Internal</span></button></div>
       <div class="mv-seg" role="group" aria-label="Audience"><button type="button" id="mvAInt" data-mvaud="int" aria-pressed="${!cli}">Internal view</button><button type="button" id="mvACli" data-mvaud="cli" aria-pressed="${cli}">Client view</button></div></div>`;
@@ -38987,7 +39015,7 @@ ${s5}`;
       const aria = `${m5.n}, ${MVWORD[st2]}${vs2 > 0 ? `, ${vs2} days behind agreed` : ""}, agreed ${fd(m5.agr) || "not set"}, forecast ${fd(m5.fc) || "not set"}`;
       h5 += `<div class="mv-lrow" role="option" tabindex="0" data-mvsel="${m5.id}" aria-selected="${m5.id === shared.MV.sel}" aria-label="${esc(aria)}">
       <div><div class="nm">${esc(m5.n)}</div><div class="sub">${mvTag(st2)}${m5.cvis ? "" : " · internal"}</div><div class="sub">Agreed ${fd(m5.agr) || "not set"}${m5.fc !== m5.agr ? ` · forecast ${fd(m5.fc)}` : ""}</div></div>
-      <div class="mv-track" aria-hidden="true">${months.map((t47) => `<div class="tm" style="left:${pos(t47)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb2 ? `<div class="orig" style="left:${pos(mvT(m5.orig))}"></div>` : ""}${m5.agr ? `<div class="agr" style="left:${pos(mvT(m5.agr))}"></div>` : ""}${m5.fc ? `<div class="fc" style="left:${pos(mvT(m5.fc))}">${mvShape(st2, 20)}</div>` : ""}</div>
+      <div class="mv-track" aria-hidden="true">${months.map((t47) => `<div class="tm" style="left:${pos(t47)}"></div>`).join("")}<div class="td" style="left:${pos(mvT(TODAY))}"></div>${conn}${rb2 ? `<div class="orig" style="left:${pos(mvT(m5.orig))}" role="img" aria-label="${MSW}: original date ${fd(m5.orig)}" data-tip="${MSW}: original date ${fd(m5.orig)}"></div>` : ""}${m5.agr ? `<div class="agr" style="left:${pos(mvT(m5.agr))}"></div>` : ""}${m5.fc ? `<div class="fc" style="left:${pos(mvT(m5.fc))}" role="img" aria-label="${MSW}: ${MVWORD[st2]}, forecast ${fd(m5.fc)}" data-tip="${MSW}: ${MVWORD[st2]}, forecast ${fd(m5.fc)}">${mvShape(st2, 20)}</div>` : ""}</div>
       <div class="mv-chips"><span class="v ${vs2 > 0 ? "bad" : "ok"}">${vs2 > 0 ? "+" + vs2 + " d" : "0 d"} <small>vs agreed</small></span>${rb2 ? `<span class="v ${vo2 > 0 ? "bad" : "ok"}">${vo2 > 0 ? "+" : ""}${vo2} d <small>vs original</small></span>` : ""}${m5.moves ? `<span class="mv-hint">Moved ${m5.moves}×${rb2 ? " · rebaselined" : ""}</span>` : '<span class="mv-hint">Not moved</span>'}</div></div>`;
     });
     h5 += `</div><div class="mv-legend"><span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="none" stroke="var(--faint)" stroke-width="2"/></svg>Original (if rebaselined)</span><span><svg width="6" height="16" aria-hidden="true"><rect width="3" height="16" x="1.5" fill="var(--ink)"/></svg>Agreed</span><span>Forecast, shaped by state</span><span><svg width="18" height="4" aria-hidden="true"><rect width="18" height="3" fill="var(--bad)" opacity=".55"/></svg>Distance past agreed</span><span><svg width="2" height="14" aria-hidden="true"><rect width="1" height="14" fill="var(--accent)"/></svg>Today</span></div></div>`;
@@ -39835,12 +39863,6 @@ ${s5}`;
         $(shared.MVAUD === "cli" ? "#mvACli" : "#mvAInt")?.focus();
         return;
       }
-      const ps2 = t47.closest("[data-mvpsw]");
-      if (ps2) {
-        const i5 = P4.findIndex((x5) => x5.code === shared.MSCODE);
-        mvOpenPage(P4[(i5 + +ps2.dataset.mvpsw + P4.length) % P4.length].code);
-        return;
-      }
       const se2 = t47.closest("[data-mvsel]");
       if (se2) {
         shared.MV.sel = se2.dataset.mvsel;
@@ -40033,10 +40055,6 @@ ${s5}`;
     });
     document.addEventListener("change", (e4) => {
       const t47 = e4.target, code = mvCode(), m5 = shared.MV.peek ? mvGet(code, shared.MV.peek) : null;
-      if (t47.id === "mvProjSw") {
-        mvOpenPage(t47.value);
-        return;
-      }
       if (t47.id === "mvNote") {
         const n4 = mvGet(shared.MSCODE, t47.dataset.mvnote);
         if (n4 && t47.value.trim() !== n4.note) mvSave(n4, { internal_note: t47.value.trim() || null }, `${n4.id} internal note saved`);
@@ -43485,6 +43503,58 @@ ${s5}`;
     return /* @__PURE__ */ u4(ReportHeader, { ctx, logos: v5 && v5.logos || [], data: weeklyLogos.value });
   }
   var HEALTH_FLAGS = ["On track", "At risk", "Off track"];
+  var HEALTH_ICON = (
+    /** @type {Record<string, [string, string]>} */
+    { "On track": ["done", "g"], "At risk": ["alert", "a"], "Off track": ["x", "r"] }
+  );
+  function HealthChange({ flag, onPick }) {
+    const items2 = HEALTH_FLAGS.map((f5) => ({
+      id: f5,
+      name: f5,
+      icon: HEALTH_ICON[f5][0],
+      radio: true,
+      checked: f5 === flag,
+      data: { tone: HEALTH_ICON[f5][1] }
+    }));
+    const pick = (f5) => {
+      closeMenu("pick");
+      onPick(f5);
+    };
+    const open2 = (anchor) => {
+      if (menuOpenFor(anchor)) {
+        closeMenu("away");
+        return;
+      }
+      const rail = document.querySelector(".rail"), keep2 = rail ? rail.getBoundingClientRect().right + 8 : 8;
+      openMenu(anchor, { label: "Health for this week", items: items2, onPick: pick, cls: "rsmenu wr-hmenu", minLeft: keep2 });
+    };
+    return /* @__PURE__ */ u4("span", { class: "dd", children: /* @__PURE__ */ u4(
+      "button",
+      {
+        type: "button",
+        class: "btn sm wr-chg",
+        "aria-haspopup": "menu",
+        "aria-expanded": "false",
+        onClick: (e4) => open2(
+          /** @type {HTMLElement} */
+          e4.currentTarget
+        ),
+        onKeyDown: (e4) => {
+          if (e4.key === "ArrowDown") {
+            e4.preventDefault();
+            open2(
+              /** @type {HTMLElement} */
+              e4.currentTarget
+            );
+          }
+        },
+        children: [
+          /* @__PURE__ */ u4("span", { children: "Change" }),
+          /* @__PURE__ */ u4(Icon, { name: "chevdown", cls: "nch" })
+        ]
+      }
+    ) });
+  }
   function WkHealth({ ctx }) {
     const { doc, section: s5 } = ctx, d5 = s5.data || {}, flag = d5.flag || "";
     const past = (d5.trend || []).filter((x5) => x5.date !== doc.date), weeks = [...past.slice(-5), { date: doc.date, flag }];
@@ -43495,7 +43565,7 @@ ${s5}`;
         ctx,
         flag,
         trend: weeks,
-        change: /* @__PURE__ */ u4(Menu, { label: "Change", btnCls: "btn sm wr-chg", menuLabel: "Health for this week", items: HEALTH_FLAGS.map((f5) => ({ id: f5, name: f5, checked: f5 === flag })), onPick: set }),
+        change: /* @__PURE__ */ u4(HealthChange, { flag, onPick: set }),
         why: /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4(Rich, { ctx, text: s5.text, label: "Why this health", empty: "Say why health is what it is" }),
           d5.last_week && d5.last_week.flag ? /* @__PURE__ */ u4("div", { class: "wr-last", children: [
@@ -45335,7 +45405,7 @@ ${s5}`;
     const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential);
     const series = brief && brief.series ? brief.series.text : [cadence(m5.invite && m5.invite.recurrence), m5.last ? `last ${fd(m5.last)}` : ""].filter(Boolean).join(" · ");
     const inv = conf ? [] : invitees(m5, brief);
-    const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
+    const name = code === "_portfolio" ? "No project (general meeting)" : code ? pName(code) : "";
     const pickProject = (ev) => {
       const btn = (
         /** @type {HTMLElement} */
@@ -45346,12 +45416,12 @@ ${s5}`;
         value: code,
         options: [
           ...P4.filter((p6) => p6.active !== false || p6.code === code).map((p6) => ({ v: p6.code, label: p6.name, icon: "projects" })),
-          { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }
+          { v: "_portfolio", label: "No project (general meeting)", icon: "projects" }
         ],
         onPick: async (v5) => {
           if (v5 === code) return;
           await choosePrep(v5);
-          if (code) snack(`Remembered for this series: ${v5 === "_portfolio" ? "Portfolio (all projects)" : pName(v5)}`, () => {
+          if (code) snack(`Remembered for this series: ${v5 === "_portfolio" ? "No project (general meeting)" : pName(v5)}`, () => {
             choosePrep(code);
           });
         }
@@ -46385,8 +46455,9 @@ ${s5}`;
     { u: "Urgent", h: "High" }
   );
   var Diamond = () => /* @__PURE__ */ u4("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round", "aria-hidden": "true", children: /* @__PURE__ */ u4("path", { d: "M12 3l9 9-9 9-9-9z" }) });
-  function Kind({ kind }) {
-    return /* @__PURE__ */ u4("span", { class: "wkic", "aria-hidden": "true", children: kind === "milestone" ? /* @__PURE__ */ u4(Diamond, {}) : /* @__PURE__ */ u4(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
+  function Kind({ kind, type }) {
+    const w6 = typeWord(kind, { type });
+    return /* @__PURE__ */ u4("span", { class: "wkic", role: "img", "aria-label": w6, "data-tip": w6, children: kind === "milestone" ? /* @__PURE__ */ u4(Diamond, {}) : /* @__PURE__ */ u4(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
   }
   function PrepChip({ c: c5, openFile }) {
     const pk2 = usePeek(), id2 = `wkpk-${c5.day}-${c5.start}`.replace(/[^\w-]/g, "");
@@ -46434,7 +46505,7 @@ ${s5}`;
     return /* @__PURE__ */ u4("li", { class: `wkrow wk-${r4.kind}`, "data-wk": r4.key, hidden, children: [
       meeting ? /* @__PURE__ */ u4("span", { class: "wktm", children: r4.time }) : /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("span", { class: `wkdot${r4.dot ? " " + r4.dot : ""}`, role: r4.dot ? "img" : void 0, "aria-label": r4.dot ? DOTS[r4.dot] : void 0, "aria-hidden": r4.dot ? void 0 : "true" }),
-        /* @__PURE__ */ u4(Kind, { kind: r4.kind })
+        /* @__PURE__ */ u4(Kind, { kind: r4.kind, type: r4.type })
       ] }),
       /* @__PURE__ */ u4("div", { class: "tb", children: [
         r4.open ? /* @__PURE__ */ u4("a", { class: "t", href: "#", ...dataOf(r4.open), children: r4.t }) : /* @__PURE__ */ u4("span", { class: "t", children: r4.t }),
@@ -47584,6 +47655,14 @@ ${s5}`;
         snack(NODRAFT_MSG);
         return;
       }
+      if (v5 === "approved" && r4.bad) {
+        snack(`Can't be saved as it is: ${r4.bad}. Edit it or reject it`, () => openProposal(n4), "Edit");
+        return;
+      }
+      if (v5 === "approved" && r4.kind === "draft" && r4.held) {
+        snack(heldMsg(r4), () => heldApprove(r4), "Approve without it");
+        return;
+      }
       if (v5 === "approved" && !r4.p && r4.kind !== "files") {
         snack("Choose a project first — open the item to set it");
         openProposal(n4);
@@ -47641,10 +47720,11 @@ ${s5}`;
     })();
     return res;
   };
-  var RV_WK = /<div class="wkrv">.*?<\/div>/, RV_DR = /<span class="tag drrv">.*?<\/span> /, RV_ND = /<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
+  var BAD_MSG = "Can't be saved as it is: edit it or reject it";
+  var RV_WK = /<div class="wkrv">.*?<\/div>/, RV_DR = /<span class="tag drrv">.*?<\/span> /, RV_ND = /<span class="h-warn">(?:No Word draft was made for these minutes<\/span> · Reject them and process the meeting again|Held: [^<]*<\/span> · Approve the minutes without the transcript copy, or discard the proposal|Can't be saved as it is: [^<]*<\/span> · Edit it or reject it)/;
   var rvTipText = (r4) => {
     const d5 = (revDetail(r4) || "").replace(RV_WK, "").replace(RV_DR, "").replace(RV_ND, "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
-    const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
+    const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim().replace(/\s*·$/, "");
     const tail = [r4.why, fdText(srcShort(r4.src))].map((x5) => String(x5 ?? "").trim()).filter((x5) => x5 && x5 !== "—").join(" · ");
     return t47 ? [t47, tail].filter(Boolean).join(" · ") : "";
   };
@@ -47656,7 +47736,8 @@ ${s5}`;
       if (!d5) return w6("No due date");
       const n4 = Math.round((new Date(d5) - new Date(TODAY)) / 864e5);
       return n4 < 0 ? w6(`${fd(d5)} · ${-n4} day${n4 === -1 ? "" : "s"} overdue`) : `${fd(d5)} · ${n4 === 0 ? "today" : `in ${n4} day${n4 === 1 ? "" : "s"}`}`;
-    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : [];
+    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : r4.kind === "draft" && r4.held && !r4.done ? [w6("Held: " + esc(r4.held)), "Approve the minutes without the transcript copy, or discard the proposal"] : [];
+    if (r4.bad && !r4.done) parts.push(w6("Can't be saved as it is: " + esc(r4.bad)), "Edit it or reject it");
     let h5 = (r4.dn ? dnHtml(r4) : "") + parts.filter(Boolean).join(" · ") + shRvHtml(r4);
     if (r4.kind === "update" && r4.rec && r4.rec.why) h5 = `${h5} · <span class="sub">“${esc(r4.rec.why)}”</span>`;
     if (!shared.LOADING) {
@@ -47751,9 +47832,10 @@ ${s5}`;
       for (const k5 of pend) await decide(k5.n, "rejected");
     }, `Reject ${pend.length === 1 ? "it" : "them"} too`);
   }
-  var rvBulkOK = (r4) => !!r4 && !r4.done && !(r4.flags || []).includes("invalid") && ("hold" in r4 ? !r4.hold : !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict")) && r4.trk == null;
+  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.bad && !(r4.flags || []).includes("invalid") && ("hold" in r4 ? !r4.hold : !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict")) && r4.trk == null;
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvWhyNot(r4) {
+    if (r4.bad) return ["indiv", "can't be saved as it is: edit it or reject it"];
     if (!r4.p && r4.kind !== "files") return ["project", "needs a project"];
     if ((r4.flags || []).includes("conflict")) return ["conflict", "has a conflict to settle"];
     if (r4.trk != null) return ["indiv", r4.trk === "n" ? "is crossed in the minutes' Track column" : "is kept in the minutes only (Track: neither)"];
@@ -48432,6 +48514,32 @@ ${s5}`;
   var reviewSeams = { decide: (v5) => {
     decide = v5;
   } };
+  var heldMsg = (r4) => `Held: ${r4.held}. Approve the minutes without the transcript copy, or discard the proposal`;
+  async function heldApprove(r4) {
+    if (!viaServer()) {
+      snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r4.n} --without-transcript” in Claude Code`);
+      return;
+    }
+    return reviewViaServer(r4, "approved", ["without-transcript"]);
+  }
+  async function heldDiscard(r4) {
+    if (!viaServer()) {
+      snack(`Discarding a proposal needs the live server; or say “reject ${r4.n} --discard” in Claude Code`);
+      return;
+    }
+    const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "discard" });
+    await reloadData();
+    snack(oneLine(res.message));
+  }
+  function heldLines(msg) {
+    return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => x5.startsWith("Held in Review, not applied:"));
+  }
+  function heldWords(msg) {
+    const L3 = heldLines(msg), i5 = L3.filter((x5) => /^Held in Review, not applied: \S+ item \d+:/.test(x5)).length, f5 = L3.length - i5, out = [];
+    if (i5) out.push(`${i5} item${i5 === 1 ? " is" : "s are"} held in Intake: ${i5 === 1 ? "it can't be saved as it is" : "they can't be saved as they are"}`);
+    if (f5) out.push(`${f5} proposal${f5 === 1 ? " is" : "s are"} held in Intake: a file to be filed has gone`);
+    return out.length ? ". " + out.join(". ") : "";
+  }
 
   // today.js
   var dismissedF = () => store.list("creaite-dismiss"), dismissedS = () => {
@@ -48963,7 +49071,6 @@ ${s5}`;
     }
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("[data-refcal]")) irRefreshCalendar();
-      if (e4.target.closest("[data-thelp]")) toggleHelpPanel("today");
     });
   }
   var PEOPLE_MOVE = "setup: move the people still listed in settings.json into the people register";
@@ -49995,6 +50102,7 @@ ${s5}`;
     const item = (i5, key2, further, undated = false) => ({
       key: key2,
       kind: i5.kind,
+      type: i5.type || "",
       dot: dotOf(i5),
       t: i5.t || i5.id,
       open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
@@ -51195,8 +51303,7 @@ ${s5}`;
       const paras = curReadHtml(p6);
       const pi2 = P4.findIndex((x5) => x5.code === code), nOpenA = A4.filter((x5) => x5.p === code && openOnly(x5)).length, nOpenR = R3.filter((r4) => r4.p === code && r4.st === "Open").length, nDec = DEC.filter((d5) => d5.p === code).length;
       putHTML($("#v-cockpit"), html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p6.name}</span></nav>
-   <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div>
-     <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="projSw" aria-label="Switch project">${P4.map((x5) => html`<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${x5.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P4.length < 2 ? "disabled" : ""}>›</button></div></div>
+   <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div></div>
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
@@ -53524,7 +53631,7 @@ ${pre}**Current state title:** ${title}`);
     }
     (() => {
       const m5 = prepOf(shared.PREPEV) || {}, code = m5.p, all = code === "_portfolio";
-      const pick = code ? "" : '<div class="wnote">Not sure which project this meeting is for. Choose one from the project chip above, and creaite remembers it for this series.</div>';
+      const pick = code ? "" : '<div class="wnote">No project chosen for this meeting yet. Choose one from the project chip above, or No project (general meeting), and creaite remembers it for this series.</div>';
       if (!code) {
         putHtml($("#prepBody"), pick);
         return;
@@ -53597,7 +53704,7 @@ ${pre}**Current state title:** ${title}`);
   }
 
   // core/keys.js
-  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
+  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
   function bootCopyCommand() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-copycmd]");
@@ -53722,11 +53829,6 @@ ${pre}**Current state title:** ${title}`);
           return;
         }
         if (!openHelpPanel(screenKey())) go2("help");
-        return;
-      }
-      if ((e4.key === "[" || e4.key === "]") && shared.VIEW === "cockpit") {
-        e4.preventDefault();
-        switchProject(e4.key === "]" ? 1 : -1);
         return;
       }
       if (["[", "]", "t", "T"].includes(e4.key) && shared.VIEW === "today" && dayKey(e4)) {
@@ -63856,6 +63958,7 @@ ${d5.text}`);
   function drawDraftEmail(first) {
     const em2 = deBuild(), codes = [...new Set(shared.DE.items.map((i5) => i5.p))].sort();
     if (first) {
+      const keepH = $("#dePrev")?.style.height || "";
       dePrevDrop();
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
@@ -63874,6 +63977,7 @@ ${d5.text}`);
       $("#deDone").onclick = () => $("#deDlg").close();
       if (shared.DE.includeUpdate && $("#deUpd")) $("#deUpd").checked = true;
       if (shared.DE.replyBy) $("#deReply").value = fd(shared.DE.replyBy);
+      if (keepH) $("#dePrev").style.height = keepH;
     }
     dePrevPut(em2.html);
     shared.DE.edited = false;
@@ -67196,6 +67300,40 @@ ${d5.text}`);
     if (s5.type === "invite") return ["calendar", "The calendar invite"];
     return ["list", ""];
   }
+  function ProjectChip({ mt: mt2 }) {
+    const NONE = "_portfolio", series = mt2.series || "";
+    const pick = async (code) => {
+      if (!code) return;
+      if (!series) {
+        snack("This meeting has no series to remember a project for");
+        return;
+      }
+      if (!viaServer()) {
+        snack("Choosing the project needs the live server");
+        return;
+      }
+      const map = { ...(D.prep || {}).series || {}, [series]: code };
+      if (!await writeSettings({ "prep.series": map })) return;
+      if (!D.prep) D.prep = {};
+      D.prep.series = map;
+      Object.values((D.prep || {}).meetings || {}).forEach((x5) => {
+        if (x5.series === series) {
+          x5.p = code;
+          x5.how = "remembered";
+        }
+      });
+      snack("Remembered for this series");
+      loadPrep(prepViewKey.value, { keepTab: true });
+    };
+    return /* @__PURE__ */ u4(Chip, { name: "Project", cls: "ppproj", children: /* @__PURE__ */ u4("select", { class: "fsel", "aria-label": "Project", "data-ppproject": "1", value: mt2.chosen ? mt2.project : "", onChange: (e4) => pick(
+      /** @type {HTMLSelectElement} */
+      e4.currentTarget.value
+    ), children: [
+      !mt2.chosen ? /* @__PURE__ */ u4("option", { value: "", children: "Choose a project…" }) : null,
+      (D.projects || []).map((p6) => /* @__PURE__ */ u4("option", { value: p6.code, children: p6.name }, p6.code)),
+      /* @__PURE__ */ u4("option", { value: NONE, children: "No project (general meeting)" })
+    ] }) });
+  }
   function Header({ v: v5, researching }) {
     const mo2 = v5.model, mt2 = mo2.meeting, people = (mo2.brief || {}).people || {}, series = (mo2.brief || {}).series || {};
     const ev = eventOf(mt2), past = mt2.day < TODAY;
@@ -67250,7 +67388,7 @@ ${d5.text}`);
           mt2.day_shown,
           mt2.start ? ` · ${mt2.start}${mt2.end ? ` – ${mt2.end}` : ""}` : ""
         ] }),
-        mt2.project_name ? /* @__PURE__ */ u4(Chip, { name: "Project", children: mt2.project_name }) : null,
+        /* @__PURE__ */ u4(ProjectChip, { mt: mt2 }),
         (mo2.reporting || []).length === 1 && mo2.reporting[0].health ? /* @__PURE__ */ u4(Chip, { name: "Health", children: /* @__PURE__ */ u4(StatusDot, { health: mo2.reporting[0].health }) }) : null,
         !mt2.confidential && series.text ? /* @__PURE__ */ u4(Chip, { icon: "history", name: "Series", children: series.text }) : null,
         !mt2.confidential && inv.length ? /* @__PURE__ */ u4(Chip, { name: "Invited", cls: "ppwho", children: [
@@ -67288,6 +67426,7 @@ ${d5.text}`);
         ] }) : null,
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: printIt, children: "Print" })
       ] }),
+      v5.stale ? /* @__PURE__ */ u4("p", { class: "wnote", role: "status", "data-ppstale": "1", children: `The research was done for ${v5.stale.project_name}. Press Refresh research for ${mt2.project_name || "this meeting"}; the earlier page is kept in Agendas.` }) : null,
       /* @__PURE__ */ u4(Tabs, { tabs, selected: prepTab.value, onSelect: (id2) => {
         prepTab.value = id2;
       }, label: "Prep page", idBase: "pp", cls: "pptabs" })
@@ -70678,11 +70817,6 @@ ${d5.text}`);
     return r4;
   }
   var seeAll = (n4, what, nav) => n4 ? `<a href="#" class="seeall" data-nav="${nav}">All ${n4} ${what}${n4 === 1 ? "" : "s"} ›</a>` : "";
-  function switchProject(d5) {
-    if (shared.VIEW !== "cockpit" || P4.length < 2) return;
-    const i5 = P4.findIndex((x5) => x5.code === shared.COCK);
-    go2("cockpit", P4[(i5 + d5 + P4.length) % P4.length].code);
-  }
   var pLink = (code) => code ? `<span class="pcode plink" data-proj="${code}" role="link" tabindex="0" title="Open ${esc(pName(code))}">${esc(pName(code))}</span>` : '<span class="pcode">No project</span>';
   function openWork(code, wt2, view, extra) {
     if (navBlocked(() => openWork(code, wt2, view, extra))) return;
@@ -70750,8 +70884,6 @@ ${d5.text}`);
         go2("cockpit", pj.dataset.proj);
         return;
       }
-      const sw3 = e4.target.closest("[data-psw]");
-      if (sw3) switchProject(+sw3.dataset.psw);
     }, true);
     document.addEventListener("keydown", (e4) => {
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches("[data-proj][role=link]")) {
@@ -70763,12 +70895,6 @@ ${d5.text}`);
         e4.preventDefault();
         const { wt: wt2, view, code, extra } = navParse(e4.target.dataset.nav);
         openWork(code, wt2, view, extra);
-      }
-    });
-    document.addEventListener("change", (e4) => {
-      if (e4.target.id === "projSw") {
-        const c5 = e4.target.value;
-        if (!go2("cockpit", c5)) e4.target.value = shared.COCK;
       }
     });
   }
@@ -70907,14 +71033,7 @@ ${d5.text}`);
     if (p6.contains(document.activeElement)) document.activeElement.blur();
     if (!noReturn && t47 && t47.isConnected) t47.focus();
   }
-  function toggleHelpPanel(key2) {
-    if (helpPanelOpen()) {
-      closeHelpPanel();
-      return true;
-    }
-    return openHelpPanel(key2);
-  }
-  var HELP_KEEP = "#helpPanel,[data-thelp],dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
+  var HELP_KEEP = "#helpPanel,dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
   var CONTROL = "a[href],button,input,select,textarea,[contenteditable=true],[contenteditable=''],[tabindex]:not([tabindex='-1'])";
   function helpOutsidePress(e4) {
     const t47 = (
@@ -75485,7 +75604,7 @@ ${d5.text}`);
   }
 
   // components/intakeReview/proposals.jsx
-  var HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Held back: not valid" };
+  var HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Can't be saved as it is" };
   var PEEKABLE = ["actions", "raid", "decisions", "update"];
   function irPill(r4) {
     if (r4.kind === "raid") return r4.rec && r4.rec.type || "Risk";
@@ -75567,6 +75686,32 @@ ${d5.text}`);
       " ",
       /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-act": "co", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: (e4) => pick(e4, "override"), children: "Use this one" })
     ] });
+  }
+  function HeldChoices({ r: r4 }) {
+    const live = viaServer(), off = live ? void 0 : "Needs the live server";
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-ira": "held-approve", "data-act": "hw", disabled: !live, title: off || heldMsg(r4), onClick: () => heldApprove(r4), children: "Approve without the transcript" }),
+      " ",
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "held-discard", "data-act": "hd", disabled: !live, title: off, onClick: () => heldDiscard(r4), children: "Discard" })
+    ] });
+  }
+  function HeldNote({ r: r4 }) {
+    if (r4.done) return null;
+    if (r4.kind === "draft" && r4.held) return /* @__PURE__ */ u4("div", { class: "rvnote", children: [
+      /* @__PURE__ */ u4("span", { class: "h-warn", children: [
+        "Held: ",
+        r4.held
+      ] }),
+      " · Approve the minutes without the transcript copy, or discard the proposal"
+    ] });
+    if (r4.bad) return /* @__PURE__ */ u4("div", { class: "rvnote", children: [
+      /* @__PURE__ */ u4("span", { class: "h-warn", children: [
+        "Can't be saved as it is: ",
+        r4.bad
+      ] }),
+      " · Edit it or reject it"
+    ] });
+    return null;
   }
   function irOpenPeek(n4) {
     const r4 = irRow(n4);
@@ -75696,12 +75841,13 @@ ${d5.text}`);
             r4.nodraft ? /* @__PURE__ */ u4("div", { class: "rvnote", children: [
               /* @__PURE__ */ u4("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),
               " · Reject them and process the meeting again"
-            ] }) : null
+            ] }) : null,
+            /* @__PURE__ */ u4(HeldNote, { r: r4 })
           ] }),
           /* @__PURE__ */ u4("td", { class: "iracts", children: [
             r4.kind !== "files" ? /* @__PURE__ */ u4("button", { type: "button", class: "ib sm", "data-ira": "edit", "aria-label": "Open in the peek", "data-tip": "Open in the peek", onClick: () => irOpenPeek(n4), children: "✎" }) : null,
             " ",
-            conflict ? /* @__PURE__ */ u4(ConflictChoices, { r: r4 }) : /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft, title: r4.nodraft ? NODRAFT_MSG : void 0, onClick: () => irApprove(n4), children: "Approve" }),
+            conflict ? /* @__PURE__ */ u4(ConflictChoices, { r: r4 }) : r4.kind === "draft" && r4.held && !r4.done ? /* @__PURE__ */ u4(HeldChoices, { r: r4 }) : /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft || !!r4.bad, title: r4.nodraft ? NODRAFT_MSG : r4.bad ? BAD_MSG : void 0, onClick: () => irApprove(n4), children: "Approve" }),
             " ",
             rej ? /* @__PURE__ */ u4(
               "button",
@@ -76695,6 +76841,45 @@ ${d5.text}`);
     if (!/in the minutes' Track column|the minutes record can't be read/.test(t47)) return t47;
     return t47.split("\n").map((x5) => x5.trim()).filter((x5) => x5 && !/^Apply stopped\. Nothing was written\.$/.test(x5)).map((x5) => x5.replace(/^proposed-\S+\.json (item \d+|minutes): /, (a5, w6) => w6 === "minutes" ? "" : "an item was ")).join("\n");
   };
+  function ownHeld(msg, own) {
+    const pre = "Held in Review, not applied: " + own + " item ";
+    return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => x5.startsWith(pre)).map((x5) => x5.slice(pre.length).replace(/^\d+: /, ""));
+  }
+  function applyBlockers(msg, own) {
+    const t47 = String(msg || "");
+    if (!/Apply stopped/.test(t47)) return [];
+    const by2 = /* @__PURE__ */ new Map();
+    for (const m5 of t47.matchAll(/(proposed-[^\s\/\\:]+\.json)((?: item \d+| [a-z_]+)?: [^\n]*)/g)) {
+      if (m5[1] === own) continue;
+      if (!by2.has(m5[1])) by2.set(m5[1], []);
+      by2.get(m5[1]).push((m5[1] + m5[2]).trim());
+    }
+    return [...by2].map(([file, why]) => ({ file, why }));
+  }
+  async function proposalLabel(file) {
+    let data = null;
+    try {
+      data = JSON.parse(await shared.VW.read("system/staging/" + file));
+    } catch (e4) {
+      data = null;
+    }
+    const b5 = data && (data.meeting || data.report), title = b5 && b5.title ? String(b5.title) : "", made = b5 && b5.date || data && data.created || (file.match(/\d{4}-\d{2}-\d{2}/) || [""])[0];
+    const when2 = fd(String(made).slice(0, 10));
+    return title ? `${title}${when2 ? " (" + when2 + ")" : ""}` : `a proposal staged ${when2 || "earlier"}`;
+  }
+  async function blockerWords(list) {
+    const parts = [];
+    for (const b5 of list) parts.push(`${await proposalLabel(b5.file)}: ${b5.why.join("; ")}`);
+    return `Not saved, and not because of your edit: ${list.length > 1 ? `${list.length} older staged proposals are` : "an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length > 1 ? "those items" : "that item"} in Intake, then save again.`;
+  }
+  function openBlockersInIntake(files) {
+    const L3 = REV.filter((x5) => files.includes(x5.file) && !x5.done);
+    go2("intake-review", L3.length ? { n: L3[0].n } : void 0);
+    if (L3.length) {
+      irReveal(L3.map((x5) => x5.n));
+      openProposal(L3[0].n);
+    }
+  }
   async function reloadData() {
     PULSE.reloads++;
     try {
@@ -76771,7 +76956,8 @@ ${d5.text}`);
       const n4 = APPLYN;
       APPLYN = 0;
       const r4 = await applyNow();
-      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}` : "Apply stopped: " + oneLine(r4.message), r4.ok ? () => undoApply(r4.apply_id) : null);
+      const held = r4.ok ? heldWords(r4.message) : "";
+      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}${held}` : "Apply stopped: " + oneLine(r4.message), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
@@ -76967,10 +77153,18 @@ ${d5.text}`);
       return false;
     }
   }
-  async function opFail(op2, msg) {
+  async function opFail(op2, msg, act) {
     op2.state = "failed";
     opRevert(op2);
     if (opTargeted(op2) && viaServer()) await refreshRecords(opIds(op2));
+    if (act === false) {
+      snack(msg);
+      return false;
+    }
+    if (act) {
+      snack(msg, act.run, act.label);
+      return false;
+    }
     snack(msg, () => {
       save(op2.what, op2.items, op2.extra, op2.doIt, op2.undoIt, op2.by, { ...op2.opt, retry: true });
     }, "Retry");
@@ -76996,8 +77190,14 @@ ${d5.text}`);
         return false;
       }
       op2.state = "applying";
-      const res = await api("/api/apply", { hold_peek: true });
+      const res = await api("/api/apply", { hold_peek: true, only: op2.name });
       if (!res.ok) {
+        const bl2 = applyBlockers(res.message, op2.name);
+        if (bl2.length) {
+          const words = await blockerWords(bl2);
+          await opDropFile(op2.name);
+          return await opFail(op2, words, { label: "Open in Intake", run: () => openBlockersInIntake(bl2.map((b5) => b5.file)) });
+        }
         await opDropFile(op2.name);
         return await opFail(op2, "Not saved: " + oneLine(applyWords(res.message)));
       }
@@ -77006,6 +77206,18 @@ ${d5.text}`);
         held = await shared.VW.exists("system/staging/" + op2.name);
       } catch (e4) {
         held = false;
+      }
+      const why = held ? ownHeld(res.message, op2.name) : [];
+      if (why.length) {
+        let wrote = false;
+        try {
+          wrote = JSON.parse(await shared.VW.read("system/staging/" + op2.name)).items.some((i5) => i5 && i5.applied);
+        } catch (e4) {
+          wrote = false;
+        }
+        const left = wrote && !(res.apply_id != null && (await api("/api/undo", { apply_id: res.apply_id })).ok);
+        await opDropFile(op2.name);
+        return await opFail(op2, "Not saved: " + oneLine(why.join("\n")) + (left ? " (the rest was applied: undo it in Activity)" : ""), false);
       }
       if (held) {
         await opDropFile(op2.name);
@@ -77985,6 +78197,7 @@ ${d5.text}`);
         "anim",
         "api",
         "apply",
+        "applyBlockers",
         "applyFilters",
         "applyMotion",
         "applyNow",
@@ -78006,6 +78219,7 @@ ${d5.text}`);
         "autoGrow",
         "batchMove",
         "bkDate",
+        "blockerWords",
         "boardAsk",
         "boardKeyOf",
         "boardMove",
@@ -78157,6 +78371,8 @@ ${d5.text}`);
         "healthCount",
         "healthEvidence",
         "healthFacts",
+        "heldLines",
+        "heldWords",
         "helpFind",
         "helpGo",
         "helpLineReset",
@@ -78182,6 +78398,7 @@ ${d5.text}`);
         "hubView",
         "ibtn",
         "ic",
+        "ico",
         "iconShapes",
         "igText",
         "insertImage",
@@ -78454,6 +78671,7 @@ ${d5.text}`);
         "profileTools",
         "projPeople",
         "projectState",
+        "proposalLabel",
         "psCat",
         "psCode",
         "publish",
@@ -78537,6 +78755,7 @@ ${d5.text}`);
         "sayMd",
         "screenKey",
         "searchFetch",
+        "searchIco",
         "seeAll",
         "send",
         "sensitive",
@@ -78582,7 +78801,6 @@ ${d5.text}`);
         "store",
         "sw",
         "swept",
-        "switchProject",
         "syncView",
         "synthDay",
         "tabId",
@@ -78598,6 +78816,7 @@ ${d5.text}`);
         "trackSummary",
         "tx",
         "txReady",
+        "typeWord",
         "typedLinkUrl",
         "typing",
         "undatedCard",

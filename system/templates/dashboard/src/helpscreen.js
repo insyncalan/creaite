@@ -39,10 +39,8 @@ export function closeHelpPanel(/** @type {boolean=} */ noReturn){ const p=$("#he
   p.classList.remove("on"); const t=PANELFROM; PANELFROM=null;
   if(p.contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
   if(!noReturn&&t&&t.isConnected) /** @type {HTMLElement} */ (t).focus(); }
-/** #249: the header's ? (Today) toggles the panel: open, it closes and focus stays on the button. */
-export function toggleHelpPanel(/** @type {string} */ key){ if(helpPanelOpen()){ closeHelpPanel(); return true; } return openHelpPanel(key); }
 /** #249: what a press outside the panel may be on and leave it open: the panel, its opener, and the layers above it. */
-const HELP_KEEP="#helpPanel,[data-thelp],dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
+const HELP_KEEP="#helpPanel,dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
 const CONTROL="a[href],button,input,select,textarea,[contenteditable=true],[contenteditable=''],[tabindex]:not([tabindex='-1'])";
 /** #249 (Alan, 19-10-2026): a press outside the panel closes it. The press still does its own job (the panel is a side sheet
     with no backdrop, not a modal: what is beside it is in plain sight, so a press there means that thing). Focus goes back to

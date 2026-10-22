@@ -289,9 +289,9 @@ class TrackerTests(unittest.TestCase):
         self.assertIn("Open, Delayed, Closed, Cancelled", reasons[2])
         self.assertIn("XYZ", reasons[3])
         self.assertIn("client messaging", reasons[4])
-        # Apply refuses the whole batch and writes nothing
+        # Apply writes none of them and names each (#280: stopped whole before, now held in Review one by one)
         r = self.v.run("apply", str(p), ok=False)
-        self.assertIn("Nothing was written", r.stdout)
+        self.assertTrue("Nothing was written" in r.stdout or "Held in Review" in r.stdout, r.stdout)
         self.assertEqual(self.v.rows("actions"), [])
         # Fixing the proposal clears the flag
         data = json.loads(p.read_text())

@@ -81,8 +81,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
   const paras=curReadHtml(p);
   const pi=P.findIndex(x=>x.code===code), nOpenA=A.filter(x=>x.p===code&&openOnly(x)).length, nOpenR=R.filter(r=>r.p===code&&r.st==="Open").length, nDec=DEC.filter(d=>d.p===code).length;
   putHTML($("#v-cockpit"),html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p.name}</span></nav>
-   <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div>
-     <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P.length<2?"disabled":""}>‹</button><select id="projSw" aria-label="Switch project">${P.map(x=>html`<option value="${x.code}" ${x.code===code?"selected":""}>${x.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P.length<2?"disabled":""}>›</button></div></div>
+   <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div></div>
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run||DRRUN?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run||DRRUN?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
@@ -932,7 +931,7 @@ export function prepPeekEnd(){ const d=$("#prepDlg"), was=shared.PREPPEEK; if(!w
   const back=was.el&&$$(`${prepPeekRoot()} [data-open]`).find(x=>x.dataset.open===was.el); if(back) back.focus(); }
 export function drawPrep(){ popupRev.value++; { const key=prepKey(shared.PREPEV,shared.PREPDAY); putHtml($("#prepAgenda"),AGD&&AGD.key===key?AGD.html:""); }   /* BL-286: the header, toolbar and facts line redraw too */
   (()=>{ const m=prepOf(shared.PREPEV)||{}, code=m.p, all=code==="_portfolio";
-  const pick=code?"":'<div class="wnote">Not sure which project this meeting is for. Choose one from the project chip above, and creaite remembers it for this series.</div>';
+  const pick=code?"":'<div class="wnote">No project chosen for this meeting yet. Choose one from the project chip above, or No project (general meeting), and creaite remembers it for this series.</div>';
   if(!code){ putHtml($("#prepBody"),pick); return; }
   const inP=x=>all||x.p===code, pc=x=>all?pLink(x.p)+" ":"";
   // @ts-expect-error TS2362: true and false subtract as 1 and 0 (overdue actions sort first)

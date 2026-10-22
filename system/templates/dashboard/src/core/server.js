@@ -20,13 +20,14 @@ import { mCells, mCounts } from "./motion.js";
 import { go, tabTitle } from "./nav.js";
 import { D, days, fd, fdMd, fdText, mK, mSay, nowStamp, prio, reduced, S, TODAY } from "./page.js";
 import { shared } from "./state.js";
-import { rjLoadGuesses } from "../review.js";
+import { heldWords, rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
-import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw, REC } from "../panel.js";
+import { drawPanel, errBanner, MD_IMG, markStagedRows, openProposal, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
+import { irReveal } from "../stores/intakeReview.js";
 import { ownerFinal, renderPerson, row, savedNow, vipPoll, WSD, wsNewOf } from "../settings.js";
 import { renderToday } from "../today.js";
 import { hit, items, renderPeople, renderWork } from "../work.js";
@@ -90,6 +91,28 @@ export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) chan
   if(!/in the minutes' Track column|the minutes record can't be read/.test(t)) return t;
   return t.split("\n").map(x=>x.trim()).filter(x=>x&&!/^Apply stopped\. Nothing was written\.$/.test(x))
     .map(x=>x.replace(/^proposed-\S+\.json (item \d+|minutes): /,(a,w)=>w==="minutes"?"":"an item was ")).join("\n"); };
+/* #280: an apply that stopped because of other, older staged proposals (an older server applied everything staged with a save).
+   Every proposal the refusal names other than the save's own, in order, each with its problems: [{file, why:[…]}]. */
+/* #280: the reasons the tracker held this save's own items in Review ("Held in Review, not applied: <own> item n: <reason>") */
+export function ownHeld(msg,own){ const pre="Held in Review, not applied: "+own+" item ";
+  return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>x.startsWith(pre)).map(x=>x.slice(pre.length).replace(/^\d+: /,"")); }
+export function applyBlockers(msg,own){ const t=String(msg||""); if(!/Apply stopped/.test(t)) return [];
+  const by=new Map();
+  for(const m of t.matchAll(/(proposed-[^\s\/\\:]+\.json)((?: item \d+| [a-z_]+)?: [^\n]*)/g)){ if(m[1]===own) continue;
+    if(!by.has(m[1])) by.set(m[1],[]); by.get(m[1]).push((m[1]+m[2]).trim()); }
+  return [...by].map(([file,why])=>({file,why})); }
+/* the meeting (or report) a staged proposal came from, and its date, for the message; the file's own date when it has neither */
+export async function proposalLabel(file){ let data=null; try{ data=JSON.parse(await shared.VW.read("system/staging/"+file)); }catch(e){ data=null; }
+  const b=data&&(data.meeting||data.report), title=b&&b.title?String(b.title):"", made=(b&&b.date)||(data&&data.created)||(file.match(/\d{4}-\d{2}-\d{2}/)||[""])[0];
+  const when=fd(String(made).slice(0,10));
+  return title?`${title}${when?" ("+when+")":""}`:`a proposal staged ${when||"earlier"}`; }
+/* #280: the words: an older proposal is stopping it, not his edit; every blocking file named; Intake offered */
+export async function blockerWords(list){ const parts=[];
+  for(const b of list) parts.push(`${await proposalLabel(b.file)}: ${b.why.join("; ")}`);
+  return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older staged proposals are`:"an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Intake, then save again.`; }
+/* Intake (the one page for Review since #232), with the blocking proposals' meeting open and the first one in the peek */
+export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done);
+  go("intake-review",L.length?{n:L[0].n}:undefined); if(L.length){ irReveal(L.map(x=>x.n)); openProposal(L[0].n); } }
 /* fresh data after an apply or undo */
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
@@ -117,7 +140,8 @@ export async function refreshRecords(ids){ if(!SERVED) return false; return awai
 /* several quick decisions (bulk approve) become one apply */
 export let APPLYT=null, APPLYN=0;
 export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
-  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
+  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
   if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }
@@ -200,17 +224,26 @@ const opTargeted=op=>op.recs.length>0&&!op.opt.wsNew&&op.items.every(it=>RECORD_
 /* back on screen as it was: the change's own undo, then what is still saving on top again */
 function opRevert(op){ ovDrop(op.recs); op.undoIt(); ovReapply(); refreshAll(); }
 async function opDropFile(name){ try{ await vq(async()=>{ const pth="system/staging/"+name; if(await shared.VW.exists(pth)) await shared.VW.remove(pth); }); return true; }catch(e){ return false; } }
-async function opFail(op,msg){ op.state="failed"; opRevert(op);
+async function opFail(op,msg,act){ op.state="failed"; opRevert(op);
   if(opTargeted(op)&&viaServer()) await refreshRecords(opIds(op));   /* "reloaded it": the item as it is now */
+  if(act===false){ snack(msg); return false; }   /* #280: the tracker refused the change itself: Retry would be refused again */
+  if(act){ snack(msg,act.run,act.label); return false; }   /* #280: blocked by an older proposal: Retry would stop again, so Review is offered */
   snack(msg,()=>{ save(op.what,op.items,op.extra,op.doIt,op.undoIt,op.by,{...op.opt,retry:true}); },"Retry"); return false; }
 async function saveApply(op){ PULSE.reloads++;   /* its own change event waits for it */
   try{ if(op.cancel){ op.state="cancelled"; return false; }
     if(op.rebase) opRebase(op);
     op.state="writing"; try{ op.name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
     if(op.cancel){ await opDropFile(op.name); op.state="cancelled"; return false; }
-    op.state="applying"; const res=await api("/api/apply",{hold_peek:true});
-    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(applyWords(res.message))); }
+    op.state="applying"; const res=await api("/api/apply",{hold_peek:true,only:op.name});   /* #280: only what this save wrote */
+    if(!res.ok){ const bl=applyBlockers(res.message,op.name);
+      if(bl.length){ const words=await blockerWords(bl); await opDropFile(op.name); return await opFail(op,words,{label:"Open in Intake",run:()=>openBlockersInIntake(bl.map(b=>b.file))}); }
+      await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(applyWords(res.message))); }
     let held=false; try{ held=await shared.VW.exists("system/staging/"+op.name); }catch(e){ held=false; }
+    const why=held?ownHeld(res.message,op.name):[];
+    if(why.length){   /* #280: its own item refused (held in Review, exit 0): a save is all or nothing, so what was written is undone */
+      let wrote=false; try{ wrote=JSON.parse(await shared.VW.read("system/staging/"+op.name)).items.some(i=>i&&i.applied); }catch(e){ wrote=false; }
+      const left=wrote&&!(res.apply_id!=null&&(await api("/api/undo",{apply_id:res.apply_id})).ok);
+      await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(why.join("\n"))+(left?" (the rest was applied: undo it in Activity)":""),false); }
     if(held){ await opDropFile(op.name); const ids=opIds(op); return await opFail(op,`Not saved: ${ids.join(", ")||"it"} changed elsewhere; reloaded ${ids.length>1?"them":"it"}`); }   /* held as a conflict: not applied */
     op.state="done"; op.apply_id=res.apply_id; ovDrop(op.recs);
     if(!(opTargeted(op)&&await refreshRecords(opIds(op)))) await reloadData();

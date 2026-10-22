@@ -51,6 +51,8 @@ export let decide = async function(n,v,written,g){
   const res=await (async()=>{ let r=REV.find(x=>x.n===n);
   if(v==="approved"&&r&&TRKRELOAD){ const k=[r.file,String(r.ref)]; await TRKRELOAD; r=REV.find(x=>x.file===k[0]&&String(x.ref)===k[1]); if(r) n=r.n; }   /* #275 round 3: Intake's row Approve and A (irApprove) wait for the Track reload too, then take the row as the data now has it */
   if(!r||r.done) return; if(v==="approved"&&r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 point 4 (fix-minutes-approve): never approved; Reject still works */
+  if(v==="approved"&&r.bad){ snack(`Can't be saved as it is: ${r.bad}. Edit it or reject it`,()=>openProposal(n),"Edit"); return; }   /* #291: never approved as it is */
+  if(v==="approved"&&r.kind==="draft"&&r.held){ snack(heldMsg(r),()=>heldApprove(r),"Approve without it"); return; }   /* #280: never filed as staged */
   if(v==="approved"&&!r.p&&r.kind!=="files"){ snack("Choose a project first — open the item to set it"); openProposal(n); return; }
   if(viaServer()&&v==="approved"&&isRecordMin(r)) return approveTracked(r,g);   /* #275: the Track column, as the minutes view's Approve minutes */
   if(v==="approved"&&r.trk!=null){ snack(`${r.trk==="n"?"Crossed":"Kept in the minutes only"} in the minutes' Track column: tick it there to register it`); return; }   /* #275 */
@@ -65,8 +67,9 @@ export let decide = async function(n,v,written,g){
     async()=>{ delete r.done; undoRec(); try{ await editProposal(r.file,data=>setDecision(data,r,"pending")); }catch(e){ snack(viaServer()?"Already applied: undo it in Activity":"Already applied: use “undo last apply” in Claude Code"); } },"You, in Intake"); })();   /* BL-149 */
   return res; };   /* BL-225: stays on the row */
 /* #229 gate: what a user acts on or must notice stays visible beside the one meta line (never part of it): the weekend note with its buttons (BL-180), the "Drafted" tag (BL-218), the no-Word-draft notice (BL-260) */
-const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
-export const rvTipText=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
+export const BAD_MSG="Can't be saved as it is: edit it or reject it";   /* #291: declared before revRow, which runs at load */
+const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">(?:No Word draft was made for these minutes<\/span> · Reject them and process the meeting again|Held: [^<]*<\/span> · Approve the minutes without the transcript copy, or discard the proposal|Can't be saved as it is: [^<]*<\/span> · Edit it or reject it)/;   /* #291: held and invalid rows say why on the row, not only in the tip (Intake: HeldNote) */
+export const rvTipText=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim().replace(/\s*·$/,"");   /* #291: a note taken out of the end leaves no dot */
   /* #271: the line truncates with an ellipsis, so the tip ends with its reason and full source */
   const tail=[r.why,fdText(srcShort(r.src))].map(x=>String(x??"").trim()).filter(x=>x&&x!=="—").join(" · ");
   return t?[t,tail].filter(Boolean).join(" · "):""; };     /* no detail: the row's own fallback tip */
@@ -82,7 +85,9 @@ export function revDetail(r){ const x=r.rec, w=t=>`<span class="h-warn">${t}</sp
     r.kind==="raid"?[esc(x.type),who(x.o),x.imp&&x.lik?`${x.imp} × ${x.lik} → ${pc(prio(x.imp,x.lik))}`:w("Impact and likelihood not set"),x.resp?`Response: ${linkHtml(x.resp)}`:w("No response yet"),x.due?dueTxt(x.due):"",ms]:
     r.kind==="decisions"?[x.by?`Made by ${personLink(x.by,x.by)}`:w("Made by not recorded"),x.date?fd(x.date):""]:
     r.kind==="update"?(x.changes||[]).map(c=>`${esc(c.field)}: ${esc(fd(c.from==null||c.from===""?"—":linkWords(String(c.from))))} → ${esc(fd(c.to==null||c.to===""?"—":linkWords(String(c.to))))}`):
-    r.kind==="draft"&&r.nodraft&&!r.done?[w("No Word draft was made for these minutes"),"Reject them and process the meeting again"]:[];   /* BL-260 */
+    r.kind==="draft"&&r.nodraft&&!r.done?[w("No Word draft was made for these minutes"),"Reject them and process the meeting again"]:
+    r.kind==="draft"&&r.held&&!r.done?[w("Held: "+esc(r.held)),"Approve the minutes without the transcript copy, or discard the proposal"]:[];   /* BL-260; #280 */
+  if(r.bad&&!r.done) parts.push(w("Can't be saved as it is: "+esc(r.bad)),"Edit it or reject it");   /* #291 */
   let h=(r.dn?dnHtml(r):"")+parts.filter(Boolean).join(" · ")+shRvHtml(r);
   if(r.kind==="update"&&r.rec&&r.rec.why) h=`${h} · <span class="sub">“${esc(r.rec.why)}”</span>`;   /* BL-65 */
   if(!shared.LOADING){ { const fdef=r&&WKRVF[r.kind], v=fdef&&r.rec?r.rec[fdef[0]]:null, n=weekendNote(v); if(n&&!r.done) h+=`<div class="wkrv"><span class="h-warn">${r.kind==="decisions"?"Needed":"Due"} on a ${esc(n.day)}</span> <button type="button" class="mini" data-wkrv="${r.n}" data-to="${n.prev}">${esc(wkLong(n.prev))}</button> <button type="button" class="mini" data-wkrv="${r.n}" data-to="${n.next}">${esc(wkLong(n.next))}</button></div>`; }   /* BL-180 */
@@ -133,10 +138,10 @@ export async function approveRoutineTracked(m){ const v=await openMinutesRecord(
 export async function rejectMinutes(m){ await decide(m.n,"rejected"); const pend=REV.filter(x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done);
   if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay for review.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); },`Reject ${pend.length===1?"it":"them"} too`); }                                     /* a batch over this asks first (a let, so a test can lower it) */
 /* #232-B: the page's rule is the server's (review.hold_reason, carried on each row as `hold`; "" is routine, "invalid" is held back). A row without it (an edit made on the page) keeps the older test */
-export const rvBulkOK=r=>!!r&&!r.done&&!(r.flags||[]).includes("invalid")&&("hold" in r?!r.hold:!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict"))&&r.trk==null;   /* #275: r.trk, crossed or neither in the minutes' Track column (build_dashboard, minutes_record.track_blocked) */
+export const rvBulkOK=r=>!!r&&!r.done&&!r.bad&&!(r.flags||[]).includes("invalid")&&("hold" in r?!r.hold:!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict"))&&r.trk==null;   /* #275: r.trk, crossed or neither in the minutes' Track column (build_dashboard, minutes_record.track_blocked) */
 export const rvRejectOK=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind);
 /* why an item can't be approved in bulk, in words */
-export function rvWhyNot(r){ if(!r.p&&r.kind!=="files") return ["project","needs a project"]; if((r.flags||[]).includes("conflict")) return ["conflict","has a conflict to settle"];
+export function rvWhyNot(r){ if(r.bad) return ["indiv","can't be saved as it is: edit it or reject it"]; if(!r.p&&r.kind!=="files") return ["project","needs a project"]; if((r.flags||[]).includes("conflict")) return ["conflict","has a conflict to settle"];
   if(r.trk!=null) return ["indiv",r.trk==="n"?"is crossed in the minutes' Track column":"is kept in the minutes only (Track: neither)"];   /* #275 */
   if(r.kind==="draft") return ["indiv",`${r.ref==="meeting"?"minutes are":"a report is"} approved on its own`]; if(r.kind==="files") return ["indiv","a file change is approved on its own"];
   return ["indiv",`${String(r.why||"this").toLowerCase()} is never approved in bulk`]; }
@@ -455,3 +460,21 @@ window.addEventListener("keydown",e=>{ if(!(e.key==="ContextMenu"||(e.key==="F10
 }
 /* BL-231: decide is a seam (a test replaces it); the setter lets the page's own calls see the replacement */
 export const reviewSeams = { decide: v => { decide = v; } };
+
+/* ===== #280 (round 3) ===== minutes Apply held because a file they file has gone (their transcript is no longer in the inbox;
+   build_dashboard sets held with the reason). They are never approved as staged: Intake's row (components/intakeReview/proposals.jsx, HeldChoices) offers Approve without the transcript copy
+   (review.py approve --without-transcript: the draft is filed, the transcript is not) or Discard (review.py reject --discard: the
+   proposal is set aside in system/staging/discarded/, nothing written). Both go through the live server, so review.py's checks run. */
+export const heldMsg=r=>`Held: ${r.held}. Approve the minutes without the transcript copy, or discard the proposal`;
+export async function heldApprove(r){ if(!viaServer()){ snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r.n} --without-transcript” in Claude Code`); return; }
+  return reviewViaServer(r,"approved",["without-transcript"]); }
+export async function heldDiscard(r){ if(!viaServer()){ snack(`Discarding a proposal needs the live server; or say “reject ${r.n} --discard” in Claude Code`); return; }
+  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard"}); await reloadData(); snack(oneLine(res.message)); }
+/* the apply's "Held in Review, not applied: …" lines, for its snack */
+export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>x.startsWith("Held in Review, not applied:")); }
+/* #291: the snack's words for them: an item held because it can't be saved as it is, apart from a proposal whose file has gone */
+export function heldWords(msg){ const L=heldLines(msg), i=L.filter(x=>/^Held in Review, not applied: \S+ item \d+:/.test(x)).length, f=L.length-i, out=[];
+  if(i) out.push(`${i} item${i===1?" is":"s are"} held in Intake: ${i===1?"it can't be saved as it is":"they can't be saved as they are"}`);
+  if(f) out.push(`${f} proposal${f===1?" is":"s are"} held in Intake: a file to be filed has gone`);
+  return out.length?". "+out.join(". "):""; }
+/* ===== end #280 (round 3) ===== */

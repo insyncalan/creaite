@@ -86,9 +86,9 @@ class ApplyAndUndo(Staged):
     def test_an_invalid_item_logs_the_rule_without_the_value(self):
         self.v.propose("bad", [action(1, description="CANARY-BAD", status="CANARY-STATUS")])
         r = self.run_script("tracker.py", "apply", ok=False)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 0)                               # #280: held in Review, not a stopped apply
         self.assertLogged(r"WARN  tracker\s+invalid proposed-bad\.json item 1 \(actions new\): ")
-        self.assertLogged(r"WARN  tracker\s+apply stopped, nothing written: 1 problem\(s\) in 1 proposal\(s\)")
+        self.assertLogged(r"WARN  tracker\s+apply: nothing applied, every decided item held in Review \(1 proposal\(s\)\)")
         self.assertNoCanary()                                           # the printed reason may quote it; the log does not
 
     def test_a_held_conflict_and_a_rejected_item_are_counted(self):

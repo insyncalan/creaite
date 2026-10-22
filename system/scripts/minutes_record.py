@@ -30,7 +30,7 @@ import date_words  # noqa: E402
 
 FLAGS = ("PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE")
 HEADINGS = {"header": "Meeting", "summary": "Executive Summary", "updates": "Updates", "decisions": "Decisions",
-            "raid": "Risks, Issues, Assumptions & Dependencies", "actions": "Action Items",
+            "raid": "Risks, Issues, Assumptions & Dependencies", "actions": "Actions",
             "open_questions": "Open Questions / Escalations", "not_covered": "Not covered in this meeting", "source": "Source"}
 COLUMNS = {"decisions": [{"key": "decision", "label": "Decision"}, {"key": "by", "label": "Made by"}],
            "raid": [{"key": "type", "label": "Type"}, {"key": "description", "label": "Description"},
@@ -1195,6 +1195,20 @@ def tracked_of(doc):
     return out
 
 
+def actions_wording(doc):
+    """A copy of `doc` whose Actions section reads "Actions" where an older record stored "Action Items" (#282: wording only,
+    for the exports; the stored record, the item sources and the data are untouched)."""
+    out = {**doc, "sections": []}
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict) and s.get("id") == "actions":
+            if str(s.get("heading") or "").strip().lower() == "action items":
+                s = {**s, "heading": HEADINGS["actions"]}
+            if str(s.get("default_heading") or "").strip().lower() == "action items":
+                s = {**s, "default_heading": HEADINGS["actions"]}
+        out["sections"].append(s)
+    return out
+
+
 def export(path, fmt, file_beside=True, version="internal"):
     """An export of the minutes (HTML, Word or PDF) through creaite_doc.export (v2.1.0 P2, the contract's call). `version`
     "distributed" exports the distributed version instead (distributed_export)."""
@@ -1206,7 +1220,8 @@ def export(path, fmt, file_beside=True, version="internal"):
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
     return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes",
-                              doc=tracked_of(doc))   # one read, minutes only; #268 M3: a draft's Track choices applied
+                              doc=actions_wording(tracked_of(doc)))
+    # one read, minutes only; #268 M3: a draft's Track choices applied; #282: the Actions heading
 
 
 def _followup_does(row, removed):
@@ -1421,7 +1436,7 @@ def distributed_export(rel, doc, fmt, file_beside=True):
     creaite_doc refuses it until the internal minutes are approved."""
     if (doc.get("audience") or "internal") != "internal":
         raise RecordError("Export the distributed version from the internal minutes.")
-    dist = distributed_of(doc)
+    dist = actions_wording(distributed_of(doc))
     dist["based_on"] = {"path": rel, "version": doc.get("version")}
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
     work = paths.free_path(paths.DRAFTS, f"{creaite_doc.real(rel).stem} (distributed)", ".html")
