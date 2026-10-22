@@ -3048,7 +3048,7 @@ def calendar_days(d, now):
     if not span:
         return {"first": None, "last": None, "today": today.isoformat(), "fetched": None, "days": []}
     raw, look = saved_calendar_days(), day_lookups(d, now)
-    line_end = max(span[1], sweep.calendar_window(now.date())[1])      # #318: the line runs to next week's Friday
+    line_end = max(span[1], sweep.calendar_window(now.date())[1])      # #318: the line runs to the Friday of next calendar week
     out, day = [], span[0]
     while day <= line_end:
         rec = day_record(day, raw.get(day.isoformat()) if day <= span[1] else None, look)

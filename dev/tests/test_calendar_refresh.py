@@ -647,7 +647,7 @@ class SweepCalendarSave(unittest.TestCase):
         self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
         kept = self.cal.read_text()
         import sweep
-        span = (sweep.calendar_window(today())[1] - today()).days + 1      # #318: to next week's Friday
+        span = (sweep.calendar_window(today())[1] - today()).days + 1      # #318: to the Friday of next calendar week
         window = [(today() + timedelta(days=n)).isoformat() for n in range(span)]
         r = self.save({d: [] for d in window if d != self.tomorrow})
         self.assertEqual(r.returncode, 1, r.stdout)                      # tomorrow, which has a meeting, left out: refused

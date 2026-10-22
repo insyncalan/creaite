@@ -1,8 +1,8 @@
-"""#318: Today's day line always runs to next week's Friday.
+"""#318: Today's day line always runs to the Friday of next calendar week.
 
 Run: python3 dev/tests/test_day_line_318.py      (the browser part needs Chrome and is skipped without it)
-The rule: from Monday to Thursday the last day is the Friday of next week (11 to 8 days ahead); from Friday to Sunday it is the
-Friday after that (14 to 12 days ahead). Checked for every weekday of "today", across a month end and a year end; the saved
+The rule: the last day is always the Friday of next calendar week (Monday to Sunday): 11 days ahead on a Monday down to 5 on a
+Sunday. Checked for every weekday of "today", across a month end and a year end; the saved
 calendar's `to` (what it was read to) cuts what Prep may use and marks the days past it "not read yet" on the line; a calendar
 saved before `to` existed counts as read to seven days after its fetch; the browser shows those days as "Not read yet" with
 Refresh calendar, never as "no meetings".
@@ -35,21 +35,13 @@ class Window(unittest.TestCase):
         p.start()
         self.addCleanup(p.stop)
 
-    def test_the_last_day_is_next_week_s_friday_from_monday_to_thursday(self):
+    def test_the_last_day_is_the_friday_of_next_calendar_week_every_day(self):
         for monday in WEEKS:
-            for n in range(4):
+            for n in range(7):                                     # Monday to Sunday: 11, 10, 9, 8, 7, 6, 5 days ahead
                 today = monday + timedelta(days=n)
                 last = sweep.calendar_window(today)[1]
                 self.assertEqual(last, monday + timedelta(days=11), today)
                 self.assertEqual((last.weekday(), (last - today).days), (4, 11 - n), today)
-
-    def test_the_last_day_is_the_friday_after_that_from_friday_to_sunday(self):
-        for monday in WEEKS:
-            for n in range(4, 7):
-                today = monday + timedelta(days=n)
-                last = sweep.calendar_window(today)[1]
-                self.assertEqual(last, monday + timedelta(days=18), today)
-                self.assertEqual((last.weekday(), (last - today).days), (4, 18 - n), today)
 
     def test_the_start_is_unchanged(self):
         self.assertEqual(sweep.calendar_window(date(2026, 10, 22))[0], date(2026, 10, 19))
@@ -59,8 +51,9 @@ class Window(unittest.TestCase):
     def test_across_a_month_end_and_a_year_end(self):
         self.assertEqual(sweep.calendar_window(date(2026, 12, 30))[1], date(2027, 1, 8))    # a Wednesday
         self.assertEqual(sweep.calendar_window(date(2026, 12, 31))[1], date(2027, 1, 8))    # a Thursday
-        self.assertEqual(sweep.calendar_window(date(2027, 1, 1))[1], date(2027, 1, 15))     # a Friday
-        self.assertEqual(sweep.calendar_window(date(2026, 10, 24))[1], date(2026, 11, 6))   # a Saturday, into November
+        self.assertEqual(sweep.calendar_window(date(2027, 1, 1))[1], date(2027, 1, 8))      # a Friday: +7
+        self.assertEqual(sweep.calendar_window(date(2027, 1, 3))[1], date(2027, 1, 8))      # a Sunday: +5
+        self.assertEqual(sweep.calendar_window(date(2026, 10, 24))[1], date(2026, 10, 30))  # a Saturday: +6
 
 
 class Span(unittest.TestCase):
@@ -116,7 +109,7 @@ class Saved(unittest.TestCase):
         spec.write_text(json.dumps({"days": {"2026-10-13": [fx.ev("z1", "09:00", "09:30", "ABC check-in")]}}))
         out = fx.py(v, "import sweep; sweep.calendar('system/staging/drafts/calendar.json'); "
                        "print(json.dumps(json.load(open('system/staging/calendar.json'))['to']))")
-        self.assertEqual(out, "2026-10-23")                                      # Tuesday 13-10-2026: next week's Friday
+        self.assertEqual(out, "2026-10-23")                                      # Tuesday 13-10-2026: the Friday of next calendar week
 
 
 def unread_world(v):

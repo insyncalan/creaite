@@ -592,16 +592,14 @@ HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 def line_last_day(today):
-    """The last day of Today's day line and of the calendar read (#318): next week's Friday. From Monday to Thursday it is the
-    Friday of next week (8 to 11 days ahead); from Friday to Sunday the week is done, so it is the Friday after that (12 to 14
-    days ahead)."""
-    monday = today - timedelta(days=today.weekday())
-    return monday + timedelta(days=(7 if today.weekday() < 4 else 14) + 4)
+    """The last day of Today's day line and of the calendar read (#318): the Friday of next calendar week (Monday to Sunday),
+    always: Monday 11 days ahead, Tuesday 10, Wednesday 9, Thursday 8, Friday 7, Saturday 6, Sunday 5."""
+    return today - timedelta(days=today.weekday()) + timedelta(days=11)
 
 
 def calendar_window(today=None):
     """(first day, last day) the saved calendar covers (BL-42): from inbox.meetings_from ("monday": Monday of this
-    week; a number: that many days back) to next week's Friday (#318, line_last_day). `today` defaults to creaite's clock."""
+    week; a number: that many days back) to the Friday of next calendar week (#318, line_last_day). `today` defaults to creaite's clock."""
     today = today or now().date()
     back = (paths.load_settings().get("inbox") or {}).get("meetings_from", "monday")
     try:

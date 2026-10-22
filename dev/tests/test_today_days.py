@@ -135,7 +135,7 @@ class PrepByDay(unittest.TestCase):
         f.write_text(json.dumps({**CALENDAR, "fetched": "2026-10-08 07:00"}))
         try:
             self.assertIn("beyond the saved calendar, which runs to 15-10-2026", context(self.v, FRIDAY)["error"])
-            self.assertEqual(days(self.v)["last"], "2026-10-23")      # #318: the line is next week's Friday; the days past 15-10 are not read yet
+            self.assertEqual(days(self.v)["last"], "2026-10-23")      # #318: the line is the Friday of next calendar week; the days past 15-10 are not read yet
         finally:
             f.write_text(json.dumps(CALENDAR))
 
@@ -204,7 +204,7 @@ class DayData(unittest.TestCase):
         return next(m for m in self.by[day]["meetings"] if m["title"] == title)
 
     def test_every_working_day_from_monday_to_the_last_day_and_a_weekend_day_only_with_a_meeting(self):
-        self.assertEqual((self.d["first"], self.d["last"], self.d["today"]), ("2026-10-12", "2026-10-23", "2026-10-13"))   # #318: the line runs to next week's Friday
+        self.assertEqual((self.d["first"], self.d["last"], self.d["today"]), ("2026-10-12", "2026-10-23", "2026-10-13"))   # #318: the line runs to the Friday of next calendar week
         self.assertEqual(list(self.by), ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
                                          "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"])   # Saturday (all day only) out, Sunday in; 21 to 23 (#318) not read yet
         self.assertEqual([k for k, x in self.by.items() if x.get("unread")], ["2026-10-21", "2026-10-22", "2026-10-23"])

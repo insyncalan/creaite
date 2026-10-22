@@ -65,7 +65,7 @@ class DayLine(TodayFixture):
         b = self.b
         tabs = b.eval(f"{TABS}.map(t=>[t.dataset.tab,t.textContent,t.getAttribute('aria-selected'),t.getAttribute('aria-current'),t.tabIndex])")
         self.assertEqual([t[0] for t in tabs], ["2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
-                                                "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"])      # #318: to next week's Friday. #147: today on; Monday waits behind the icon. Saturday (all day only) out, Sunday in
+                                                "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"])      # #318: to the Friday of next calendar week. #147: today on; Monday waits behind the icon. Saturday (all day only) out, Sunday in
         self.assertEqual(tabs[0][1:], ["Tue 13 October", "true", "date", 0])
         self.assertEqual(tabs[1][1:], ["Wed 14", "false", None, -1])
         self.assertEqual(b.eval("document.querySelector('#todayDate [role=tablist]').getAttribute('aria-label')"), "Days in the calendar")
