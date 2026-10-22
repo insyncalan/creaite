@@ -3134,14 +3134,6 @@
    "count": 1,
    "text": "system/staging/uploads/{}-{}.{}"
   },
-  "projects.js | sweep | 052e3ac4347c": {
-   "count": 1,
-   "text": "Mail and Teams last swept {}; anything newer isn't in the vault yet."
-  },
-  "projects.js | sweep | 6ad499f23ea2": {
-   "count": 1,
-   "text": "Mail and Teams haven't been swept yet."
-  },
   "projects.js | sweep | 6c5a761bcd6b": {
    "count": 1,
    "text": "Mail and Teams items already swept"
@@ -3153,10 +3145,6 @@
   "projects.js | tracker | 65d9633f2011": {
    "count": 1,
    "text": "Tracker changes and open items"
-  },
-  "projects.js | vault | 052e3ac4347c": {
-   "count": 1,
-   "text": "Mail and Teams last swept {}; anything newer isn't in the vault yet."
   },
   "projects.js | vault | 05805c8b95c0": {
    "count": 1,
