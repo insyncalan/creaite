@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 import linktext  # noqa: E402  (#121: links in plain text show as their words in the activity lines)
+import item_fp  # noqa: E402  (#307 h2: a row's content fingerprint)
 import review  # noqa: E402  (classification shared with cx-review: bulk rule, needs a project)
 import minutes_record  # noqa: E402  (#275: the Track column on Review's rows)
 from docx_tools import md_normalise  # noqa: E402  (Current state is Markdown, BL-22, BL-47)
@@ -791,7 +792,7 @@ def queue_block(n, p, key, label, b, aged):
             "why": f"Draft {label.lower()}" if key in ("meeting", "report") else label, "indiv": True,
             "hold": "minutes" if key == "meeting" else "report" if key == "report" else "file changes",   # #232: never routine
             "rec": {"t": f"{label}: {b.get('title') or Path(b.get('draft') or '').stem}"},
-            "src": b.get("draft") or "", "file": p.name, "ref": key,
+            "src": b.get("draft") or "", "file": p.name, "ref": key, "fp": item_fp.block_fp(b),   # #307 h2: the row's content, not its number
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
             **draft_missing(key, b),   # BL-260
@@ -810,7 +811,7 @@ def queue_item(con, n, p, item, aged, overlap):
     return {"n": n, "p": project, "kind": kind, "why": item_why(item, project, flags), "indiv": bool(review.individual_only(item)),
             "hold": review.hold_reason(item) or "",                                         # #232: "" is routine (cmd_bulk's rule)
             "dup": dup, "signals": signals,
-            "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
+            "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), "fp": item_fp.item_fp(item), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
             "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
             **({"bad": invalid_words(item.get("invalid_reason")), "badf": unknown_fields(item.get("invalid_reason"))}
