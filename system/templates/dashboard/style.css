@@ -3577,6 +3577,8 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
   --ok:var(--paper-ok);--ok-soft:var(--paper-ok-soft);--bad:var(--paper-bad);--bad-soft:var(--paper-bad-soft);--warn:var(--paper-warn);--warn-soft:var(--paper-warn-soft);--accent-soft:var(--paper-accent-soft);--focus:var(--paper-focus)}   /* #268 M2: the paper stays white in a dark theme, so its state colours stay light ones */
 #v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+/* #283 Read again on the bar: its ask, or its step and Stop, in one line */
+.mnre{display:inline-flex;gap:8px;align-items:center;min-width:0}.mnre>.sub{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mnlines p,.mnlines li{margin:0 0 4px}
 .mnlines ul{margin:0 0 6px;padding-left:20px}
 .mntopic{font-size:var(--fs-md);margin:8px 0 2px}

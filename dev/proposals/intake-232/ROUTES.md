@@ -21,3 +21,11 @@ Branch `v26-232-next` (2.6 Intake line `p260-r-fix` + `v253-release`).
 `intake_process.py` takes `"as": "minutes"` (plain code, on the branch). The guard's half (`run.json` `files_as_minutes`,
 `_process_stage_problem` and `_runs_proposals` for `meeting.source_file`) is the guarded proposal in
 `dev/proposals/intake-232-minutes/`; until it is applied the run stages nothing for such a file (fail closed: "Not staged").
+
+## Read again in the Minutes view (#283): its own route too (guarded step pending)
+
+The Minutes view's Read again (was Re-extract, which opened ask creaite with the request written) calls `reLive`
+(`core/intakeApi.js`), `POST /api/minutes/reextract {proposal}`: the run kind `reextract`, Process's fence for the one transcript
+of the pending minutes record, a minutes record only. Undo is `reUndoLive`, `POST /api/minutes/reextract/undo {run}`. The server
+half is the guarded proposal in `dev/proposals/283-reextract/`; until it is applied the bar says it couldn't start and nothing
+changes. Plain code: `system/scripts/reextract.py`. Tests: `test_reextract.py`, `test_minutes_view_v2.py` (test_15, test_15b).

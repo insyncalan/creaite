@@ -414,7 +414,7 @@ class MinutesViewV2(LiveBrowserCase):
             self.assertNotIn(gone, txt)
         self.assertFalse(self.ev("!!document.querySelector('#v-minutes [data-mnmode], #v-minutes .mnio')"), "no switch, no Internal only marks")
         icons = self.ev(f"[...document.querySelectorAll('{bar} .ib')].map(b=>b.getAttribute('aria-label'))")
-        self.assertEqual(icons, ["Show as exported", "Transcript", "Export", "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"])
+        self.assertEqual(icons, ["Show as exported", "Transcript", "Export", "Read the transcript again"])      # #283: plain words
         labelled = self.ev(f"[...document.querySelectorAll('{bar} button')].filter(b=>!b.classList.contains('ib') && b.textContent.trim().length>4).map(b=>b.textContent.trim())")
         self.assertEqual(labelled, ["Approve minutes"], "only Approve minutes keeps a label")
         self.assertIn("M12 4v11", self.ev("document.querySelector('#v-minutes [data-mnexport] svg').innerHTML"), "Export is the download arrow")
@@ -540,7 +540,7 @@ class MinutesViewV2(LiveBrowserCase):
                     self.move(5, 5)
 
 
-    def test_15_esc_on_ai_keeps_the_words_and_re_extract_keeps_unsent_ask_text(self):
+    def test_15_esc_on_ai_keeps_the_words_and_read_again_never_touches_ask_creaite(self):
         b = self.b
         ed = ROW % 2 + " .mnit .sheet-ed"
         b.click(ed)
@@ -560,16 +560,37 @@ class MinutesViewV2(LiveBrowserCase):
         b.eval("openChat()")
         b.wait("document.getElementById('chIn')", 5)
         b.eval("(()=>{const t=document.getElementById('chIn'); t.value='half typed'; t.dispatchEvent(new Event('input',{bubbles:true}));})()")
-        b.eval("document.getElementById('mnReBtn').click()")
-        b.pump(0.4)
-        self.assertEqual(self.ev("document.getElementById('chIn').value"), "half typed", "unsent words are never written over")
-        self.assertIn("haven't sent", self.snack())
-        got = self.ev("""new Promise(r=>{ const t=document.getElementById('chIn'); t.value=''; let seen=false;
-          t.addEventListener('input', ()=>{ seen=true; }, {once:true}); document.getElementById('mnReBtn').click();
-          setTimeout(()=>r([t.value, seen]), 400); })""")
-        self.assertIn("re-extract the minutes of", got[0])
-        self.assertTrue(got[1], "the request is put in as typing would (input dispatched)")
+        b.eval("document.getElementById('mnReBtn').click()")              # #283: Read again asks first, on the bar
+        b.wait("document.getElementById('mnReGo')", 5)
+        self.assertIn("Your edits here are set aside", self.ev("document.querySelector('#v-minutes .mnre').textContent"))
+        b.eval("document.getElementById('mnReCancel').click()")
+        b.wait("document.getElementById('mnReBtn')", 5)
+        self.assertEqual(self.ev("document.getElementById('chIn').value"), "half typed", "ask creaite is never written into")
 
+
+    def test_15b_read_again_runs_on_the_bar_and_opens_the_new_draft_with_undo(self):
+        """#283: Read again is its own run (reLive, POST /api/minutes/reextract), never an ask creaite message: it asks first,
+        then its step and Stop are on the bar and Approve minutes waits; at the end the new draft opens and the toast has Undo
+        (reUndoLive), which brings the earlier one back. The server is stood in for (the seams): test_reextract runs the route."""
+        b = self.b
+        b.eval("""(()=>{ window.__re=[]; const p=%s;
+          intakeSeams.reLive((x,onEv)=>{ window.__re.push(['run',x]); onEv({type:'run',id:'x-ui-1'}); onEv({type:'step',label:'Reading the transcript'});
+            return new Promise(r=>{ window.__reDone=()=>r({ok:true,reextract:{run:'x-ui-1',state:'replaced',proposal:p,path:'x'},
+              closure:{line:'Read again: 5 items found in the meeting. Your earlier version is set aside: Undo brings it back.'}}); }); });
+          intakeSeams.reUndoLive(run=>{ window.__re.push(['undo',run]); return Promise.resolve({ok:true,proposal:p}); }); })()""" % json.dumps(self.proposal))
+        b.eval("document.getElementById('mnReBtn').click()")
+        b.wait("document.getElementById('mnReGo')", 5)
+        b.eval("document.getElementById('mnReGo').click()")
+        b.wait("document.getElementById('mnReStop')", 5)
+        self.assertIn("Reading the transcript again: Reading the transcript", self.ev("document.querySelector('#v-minutes .mnre').textContent"))
+        self.assertTrue(self.ev("document.getElementById('mnApproveBtn').disabled"), "Approve minutes waits while it reads")
+        b.eval("window.__reDone()")
+        b.wait("document.getElementById('mnReBtn') && /Read again: 5 items/.test(document.getElementById('snack').textContent)", 15)
+        b.click("#snackU")
+        b.wait("window.__re.length===2", 10)
+        self.assertEqual(self.ev("window.__re"), [["run", self.proposal], ["undo", "x-ui-1"]])
+        b.wait("/earlier minutes are back/.test(document.getElementById('snack').textContent)", 10)
+        b.wait("document.querySelector('#v-minutes .sheet-bar') && !document.getElementById('mnReStop')", 10)
 
     def test_16_the_full_template_on_one_continuous_sheet_with_a_thin_page_marker(self):
         """Item 4 (PM, Alan agreed, 20-10-2026): the whole minutes template stays, laid out as one continuous sheet: a section is

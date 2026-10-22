@@ -367,18 +367,6 @@
    "count": 1,
    "text": "Open the staged update in Review"
   },
-  "components/minutes/MinutesView.jsx | extract | 1390ab0f655a": {
-   "count": 2,
-   "text": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"
-  },
-  "components/minutes/MinutesView.jsx | extract | 4ca6970a8005": {
-   "count": 1,
-   "text": "re-extract the minutes of “{}” ({}) from the transcript"
-  },
-  "components/minutes/MinutesView.jsx | extract | 4f9766323da2": {
-   "count": 1,
-   "text": "ask creaite has words you haven't sent: send or clear them, then press Re-extract again"
-  },
   "components/minutes/minutesDoc.js | refused | 78bc250ea494": {
    "count": 1,
    "text": "The tracker's checks refused this item as it stands: change it in Review."

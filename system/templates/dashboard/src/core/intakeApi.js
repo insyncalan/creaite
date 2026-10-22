@@ -92,6 +92,21 @@ export function stopRun(id){ if(id) api("/api/ask/stop",{run:id}); }
 /** @param {(ev: any) => void} [onEv] @returns {Promise<CalendarResult>} */
 export let calendarLive = function(onEv){ return runRoute("/api/calendar/refresh",{},"c",(got,ev)=>{ if(ev.type==="calendar"){ got.saved=ev.saved; got.meetings=ev.meetings; got.days=ev.days; got.transcripts=ev.transcripts; } },onEv); };
 
+/* ===== #283: Read again is its own run kind (POST /api/minutes/reextract), not an ask creaite message =====
+   The click (after the Minutes view's ask) is Alan's go-ahead to draft one meeting's minutes afresh from its transcript: the server
+   sets the earlier draft aside and runs cx-minutes under a guard that may stage that one meeting and nothing else; the new draft
+   takes the place, with the Track choices carried where the item is the same, or the earlier one comes back (Stop, a failure, a
+   question). Undo (POST /api/minutes/reextract/undo) brings the earlier one back. ask creaite doesn't open. */
+/** @typedef {{run?: string, state?: string, proposal?: string, path?: string, items?: number, new?: number, gone?: number, kept?: number, question?: string}} ReadAgainOutcome */
+/** @typedef {{ok: boolean, reextract?: ReadAgainOutcome, closure?: any, stopped?: boolean, message?: string}} ReadAgainResult */
+/* One Read again run (a seam, so tests can stand in for the server). */
+/** @param {string} proposal @param {(ev: any) => void} [onEv] @returns {Promise<ReadAgainResult>} */
+export let reLive = function(proposal,onEv){ return runRoute("/api/minutes/reextract",{proposal},"x",(got,ev)=>{ if(ev.type==="reextract") got.reextract=ev; },onEv); };
+/* Undo of a Read again, by its run's ID (a seam too). */
+/** @param {string} run @returns {Promise<{ok: boolean, message?: string, proposal?: string, path?: string}>} */
+export let reUndoLive = function(run){ return api("/api/minutes/reextract/undo",{run}); };
+
 /** The test seams for the values above that tests replace (a stub transcript job, the clock). */
 export const intakeSeams = { jobLive: /** @param {typeof jobLive} v */ v => { jobLive = v; }, nowHM: /** @param {typeof nowHM} v */ v => { nowHM = v; },
-  processLive: /** @param {typeof processLive} v */ v => { processLive = v; }, calendarLive: /** @param {typeof calendarLive} v */ v => { calendarLive = v; } };
+  processLive: /** @param {typeof processLive} v */ v => { processLive = v; }, calendarLive: /** @param {typeof calendarLive} v */ v => { calendarLive = v; },
+  reLive: /** @param {typeof reLive} v */ v => { reLive = v; }, reUndoLive: /** @param {typeof reUndoLive} v */ v => { reUndoLive = v; } };
