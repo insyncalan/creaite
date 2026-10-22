@@ -21,7 +21,7 @@ Commands:
                            plain code, for cx-sweep to judge. Read-only; the input file is removed once read
   calendar <calendar.json> save Alan's meetings for the dashboard's Today day view and the Inbox's Meetings
                            (system/staging/calendar.json); days before the window start are dropped; past days already held are kept
-  calendar-window          the days a sweep reads from Outlook, as JSON: today to 7 days ahead (#146; past days already held are
+  calendar-window          the days a sweep reads from Outlook, as JSON: today to next week's Friday (#146, #318; past days already held are
                            kept, not read again); keep_from is the start of the Calendar import window (settings.json
                            inbox.meetings_from: "monday" = Monday of this week, or a number of days back)
   transcripts todo|record <facts.json>|show
@@ -591,22 +591,39 @@ def done_candidates_cmd(spec_file):
 HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
+def line_last_day(today):
+    """The last day of Today's day line and of the calendar read (#318): the Friday of next calendar week (Monday to Sunday),
+    always: Monday 11 days ahead, Tuesday 10, Wednesday 9, Thursday 8, Friday 7, Saturday 6, Sunday 5."""
+    return today - timedelta(days=today.weekday()) + timedelta(days=11)
+
+
 def calendar_window(today=None):
     """(first day, last day) the saved calendar covers (BL-42): from inbox.meetings_from ("monday": Monday of this
-    week; a number: that many days back) to 7 days ahead. `today` defaults to creaite's clock."""
+    week; a number: that many days back) to the Friday of next calendar week (#318, line_last_day). `today` defaults to creaite's clock."""
     today = today or now().date()
     back = (paths.load_settings().get("inbox") or {}).get("meetings_from", "monday")
     try:
         start = today - timedelta(days=int(back))
     except (TypeError, ValueError):
         start = today - timedelta(days=today.weekday())
-    return start, today + timedelta(days=7)
+    return start, line_last_day(today)
+
+
+def calendar_covered_to(data, fallback):
+    """The last day a saved calendar was read to (#318): its own "to", else (a calendar saved before that) seven days after its
+    fetch, else `fallback`. `data` is calendar.json's dict."""
+    for raw, extra in ((data.get("to"), 0), (str(data.get("fetched") or "")[:10], 7)):
+        try:
+            return datetime.strptime(str(raw)[:10], "%Y-%m-%d").date() + timedelta(days=extra)
+        except (ValueError, TypeError):
+            continue                       # no "to", or no fetch time: try the next
+    return fallback
 
 
 def calendar_fetch_from(today=None):
     """First day a sweep asks Outlook for (#146): today, because a past meeting does not change. Earlier only when the saved
     calendar has a gap: none saved yet (the whole window), or it was last fetched more than a week before today (its
-    seven days ahead no longer reach today). Never before the window start. calendar() keeps past days already saved."""
+    read-to day no longer reaches today). Never before the window start. calendar() keeps past days already saved."""
     today = today or now().date()
     start = calendar_window(today)[0]
     try:
@@ -614,7 +631,8 @@ def calendar_fetch_from(today=None):
     except (OSError, ValueError):
         return start
     try:
-        held_to = datetime.strptime(str((data or {}).get("fetched") or "")[:10], "%Y-%m-%d").date() + timedelta(days=7)
+        datetime.strptime(str((data or {}).get("fetched") or "")[:10], "%Y-%m-%d")
+        held_to = calendar_covered_to(data, today)
     except (ValueError, AttributeError):
         return today                       # a calendar with no fetch date: nothing to say about a gap
     return min(today, max(start, held_to + timedelta(days=1)))
@@ -622,17 +640,14 @@ def calendar_fetch_from(today=None):
 
 def calendar_span(today=None):
     """(first day, last day) the saved calendar holds now, as dates, or None without one (BL-293): calendar_window(), its last
-    day cut to the fetch's own seven days ahead when the calendar was saved on an earlier day."""
+    day cut to the day the calendar was read to (#318: its "to"; a calendar saved before that, seven days after its fetch)."""
     try:
-        fetched = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("fetched") or ""
+        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        data.get("fetched")
     except (OSError, ValueError, AttributeError):
         return None
     first, last = calendar_window(today)
-    try:
-        last = min(last, datetime.strptime(str(fetched)[:10], "%Y-%m-%d").date() + timedelta(days=7))
-    except ValueError:  # a calendar with no fetch date: the window as it is
-        pass
-    return first, last
+    return first, min(last, calendar_covered_to(data, last))
 
 
 # BL-107: Microsoft 365 gives calendar times in UTC (or with their own zone). The script, not Claude, converts them to
@@ -880,7 +895,8 @@ def calendar(spec_file):
                       f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")
         return 1
     days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
-    saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days}, indent=1, ensure_ascii=False)
+    saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days},
+                       indent=1, ensure_ascii=False)
     if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
         print(CAL_REFUSED)
         debuglog.warn("sweep", f"calendar: a reply that would save {len(saved.encode('utf-8'))} bytes was refused")

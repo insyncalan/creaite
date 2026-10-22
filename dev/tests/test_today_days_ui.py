@@ -65,7 +65,7 @@ class DayLine(TodayFixture):
         b = self.b
         tabs = b.eval(f"{TABS}.map(t=>[t.dataset.tab,t.textContent,t.getAttribute('aria-selected'),t.getAttribute('aria-current'),t.tabIndex])")
         self.assertEqual([t[0] for t in tabs], ["2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
-                                                "2026-10-19", "2026-10-20"])      # #147: today on; Monday waits behind the icon. Saturday (all day only) out, Sunday in
+                                                "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"])      # #318: to the Friday of next calendar week. #147: today on; Monday waits behind the icon. Saturday (all day only) out, Sunday in
         self.assertEqual(tabs[0][1:], ["Tue 13 October", "true", "date", 0])
         self.assertEqual(tabs[1][1:], ["Wed 14", "false", None, -1])
         self.assertEqual(b.eval("document.querySelector('#todayDate [role=tablist]').getAttribute('aria-label')"), "Days in the calendar")
@@ -133,7 +133,7 @@ class DayLine(TodayFixture):
         b.key("ArrowRight")
         self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-14", "2026-10-14"))
         b.key("End")
-        self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-20", "2026-10-20"))
+        self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-23", "2026-10-23"))   # #318
         b.key("Home")
         self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-13", "2026-10-13"))   # the line starts at today (#147)
         b.key("ArrowLeft")
@@ -181,10 +181,10 @@ class DayLine(TodayFixture):
         b.eval(f"{drag}(-20)")
         self.assertEqual(self.chosen(), "2026-10-12")                       # a short drag is not a step
         self.assertTrue(b.eval("document.querySelector('.dayedge.l').disabled"))       # hover edges hidden at the ends
-        b.click('#todayDate [data-tab="2026-10-20"]')
+        b.click('#todayDate [data-tab="2026-10-23"]')
         self.assertTrue(b.eval("document.querySelector('.dayedge.r').disabled"))
         b.eval("document.querySelector('.dayedge.l').click()")
-        self.assertEqual(self.chosen(), "2026-10-19")
+        self.assertEqual(self.chosen(), "2026-10-22")
 
     def test_a_reload_opens_on_today(self):
         b = self.b
@@ -387,7 +387,7 @@ def arrows_hold_still(case, width=None):
         for t in ("mousePressed", "mouseReleased"):
             b.call("Input.dispatchMouseEvent", type=t, x=x, y=y, button="left", clickCount=1)
         b.pump(0.35)
-    case.assertEqual(case.chosen(), "2026-10-20")                    # the clicks reached the last day
+    case.assertEqual(case.chosen(), "2026-10-23")                    # the clicks reached the last day
     case.assertGreater(len(heights), 1, "the fixture's days change the band's height")
     case.assertEqual(seen, [first] * len(seen))
     end = b.eval("(()=>{ const r=document.querySelector('.dayedge.r'); return [r.disabled, getComputedStyle(r).display, +getComputedStyle(r).opacity<0.3]; })()")

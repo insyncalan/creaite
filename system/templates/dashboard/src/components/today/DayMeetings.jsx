@@ -25,9 +25,9 @@ import { wheelRef } from "./wheel.js";
 /** @typedef {{open: (path: string) => void, process: (m: DayMeeting) => void,
     check: (m: DayMeeting) => void, review: () => void, name: (code: string) => string}} DayActs */
 /** @typedef {{day: string, dow: string, isToday: boolean, past: boolean, now: number, mode: string, live: boolean,
-    calendar: boolean, lastRead?: string, meetings: DayMeeting[], allDay: AllDay[], acts: DayActs,
+    calendar: boolean, unread?: boolean, lastRead?: string, meetings: DayMeeting[], allDay: AllDay[], acts: DayActs,
     onWheel?: (e: WheelEvent) => void}} DayMeetingsProps
-    `mode`: "meetings", or "none" (no calendar for today yet: Refresh calendar). */
+    `mode`: "meetings", or "none" (no calendar for today yet, or, with `unread`, a day the calendar has not been read to: Refresh calendar). */
 
 
 /** A project by name, opening it as pLink does. @param {{code: string, name: (c: string) => string}} props */
@@ -79,10 +79,10 @@ function Title({ m, day, dow, isToday, live, acts }) {
 /** The day's meetings.
     @param {DayMeetingsProps} props */
 export function DayMeetings(props) {
-  const { day, dow, isToday, past, now, mode, live, calendar, lastRead, meetings, allDay, acts, onWheel } = props;
+  const { day, dow, isToday, past, now, mode, live, calendar, unread, lastRead, meetings, allDay, acts, onWheel } = props;
   const ref = wheelRef(onWheel);
   if (mode === "none") return (
-    <div class="daynone" ref={ref}><span>{calendar ? "No calendar for today yet" : "No calendar yet"}</span>
+    <div class="daynone" ref={ref}><span>{unread ? "Not read yet" : calendar ? "No calendar for today yet" : "No calendar yet"}</span>
       <button type="button" class="btn" data-refcal="" disabled={!live} title={live ? undefined : "creaite isn’t running"}>Refresh calendar</button>
       {lastRead ? <span class="sub">Last read {lastRead}</span> : null}</div>);
   const st = (/** @type {DayMeeting} */ e) => past ? "past" : !isToday ? "" : minsOf(e.end) <= now ? "past" : minsOf(e.start) <= now && now < minsOf(e.end) ? "now" : "";

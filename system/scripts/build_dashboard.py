@@ -3037,7 +3037,7 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=
 
 
 # ===== BL-293 (sprint-today-days-server) ===== Today moves between the calendar's days. calendar_days gives every working day
-# the saved calendar holds (sweep.calendar_span: Monday of this week, or inbox.meetings_from, to seven days ahead), with a weekend
+# the saved calendar holds (sweep.calendar_span: Monday of this week, or inbox.meetings_from, to next week's Friday, #318), with a weekend
 # day only when it has a meeting. Each meeting carries its times, and: an ended one its follow-up (Minutes made, Transcript ready,
 # No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar import reads them); today
 # and later its Prep key, whether it is worth preparing for (the Week ahead's plan) and its prep page (BL-286's records). A
@@ -3049,15 +3049,19 @@ TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not trans
 
 def calendar_days(d, now):
     """{"first", "last", "today", "fetched", "days": [day]} for Today's day line (BL-293), from the collected data `d`. A day:
-    {date, date_shown, dow, short, long, today, past, weekend, week (0 this week, 1 the next…), meetings, all_day}."""
+    {date, date_shown, dow, short, long, today, past, weekend, week (0 this week, 1 the next…), meetings, all_day,
+    unread (#318: not read yet)}."""
     import sweep
     span, today = sweep.calendar_span(now.date()), now.date()
     if not span:
         return {"first": None, "last": None, "today": today.isoformat(), "fetched": None, "days": []}
     raw, look = saved_calendar_days(), day_lookups(d, now)
+    line_end = max(span[1], sweep.calendar_window(now.date())[1])      # #318: the line runs to the Friday of next calendar week
     out, day = [], span[0]
-    while day <= span[1]:
-        rec = day_record(day, raw.get(day.isoformat()), look)
+    while day <= line_end:
+        rec = day_record(day, raw.get(day.isoformat()) if day <= span[1] else None, look)
+        if rec and day > span[1]:
+            rec["unread"] = True                  # #318: beyond what the calendar was read to: not "no meetings", not read yet
         if rec:
             out.append(rec)
         day += timedelta(days=1)
@@ -3065,7 +3069,8 @@ def calendar_days(d, now):
         fetched = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("fetched")
     except (OSError, ValueError, AttributeError):  # read a moment ago by calendar_span; gone since: no fetch time
         fetched = None
-    return {"first": span[0].isoformat(), "last": span[1].isoformat(), "today": today.isoformat(), "fetched": fetched, "days": out}
+    return {"first": span[0].isoformat(), "last": line_end.isoformat(), "read_to": span[1].isoformat(), "today": today.isoformat(),
+            "fetched": fetched, "days": out}
 
 
 def day_lookups(d, now):

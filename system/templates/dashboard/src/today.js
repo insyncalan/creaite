@@ -218,14 +218,14 @@ export function renderDay(){ const cal=D.calendar, first=(S.me||"").split(" ")[0
   const line=$("#dayLine"), meets=$("#dayMeets"); line.hidden=!on; meets.hidden=!on;
   if(tabs){ meets.setAttribute("role","tabpanel"); meets.setAttribute("aria-label",rec.long); } else { meets.removeAttribute("role"); meets.removeAttribute("aria-label"); }
   const v=on?dayView(iso):{known:false,meetings:[],allDay:[]};
-  $("#dayHead").textContent=v.known?dayShape(v.meetings,first,iso):`Good ${nowMins()<12*60?"morning":nowMins()<18*60?"afternoon":"evening"}${first?", "+first:""}.`;
+  $("#dayHead").textContent=v.known?dayShape(v.meetings,first,iso):v.unread?`${rec.dow} has not been read yet${first?", "+first:""}.`:`Good ${nowMins()<12*60?"morning":nowMins()<18*60?"afternoon":"evening"}${first?", "+first:""}.`;
   if(!on){ drawDayCurve(line,null); drawDayMeetings(meets,null); calFoot(null); return; }
   /* ===== BL-151 (sprint-ux) ===== no calendar for today: the band is one quiet line, "No calendar yet", with Refresh calendar
      (Intake's action) beside it; no empty timeline. When the calendar arrives the band opens as before; a day read with no
      meetings keeps its line and says so ("No meetings today"). BL-270: that line says when it was read. */
   const common={day:iso,dow:rec.dow||synthDay(iso).dow,isToday,past:iso<TODAY,now:nowMins(),live:viaServer(),calendar:!!cal,acts:DAYACTS,onWheel:onDayWheel,meetings:v.meetings,allDay:v.allDay};
   if(!v.known){ line.hidden=true; drawDayCurve(line,null);
-    drawDayMeetings(meets,{...common,mode:"none",lastRead:cal&&cal.fetched?longDay(cal.fetched)+(cal.fetched.length>10?", "+cal.fetched.slice(11,16):""):""}); calFoot(null); return; }
+    drawDayMeetings(meets,{...common,mode:"none",unread:!!v.unread,lastRead:cal&&cal.fetched?longDay(cal.fetched)+(cal.fetched.length>10?", "+cal.fetched.slice(11,16):""):""}); calFoot(null); return; }
   /* ===== end BL-151 ===== */
   const n=v.meetings.length;
   drawDayCurve(line,{day:iso,timed:v.meetings,now:isToday?nowMins():null,past:iso<TODAY,label:isToday?`Today's meetings: ${n}`:`${rec.long}: ${plur(n,"meeting")}`,width:line.clientWidth,onWheel:onDayWheel});
@@ -252,6 +252,7 @@ export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=da
         const prep=priv?null:(s&&s.prep)||(iso>=TODAY&&prepOf(e,iso)?{key:prepKey(e,iso)}:null);
         return extra({start:e.start,end:e.end,title:e.title??"",private:priv,confidential:conf,id:e.id||(s&&s.id)||null,p:priv||conf?null:(s&&s.p)||e.p||null,
           where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i,attendees:conf||priv||!Array.isArray(e.attendees)?undefined:e.attendees.length}); })}; }
+  if(rec&&rec.unread) return {known:false,unread:true,meetings:[],allDay:[]};   /* #318: a day beyond what the calendar was read to is "Not read yet", never "no meetings" */
   if(rec&&iso!==TODAY) return {known:true,meetings:srv.map(m=>extra({...m,ix:null})),allDay:(rec.all_day||[]).map(t=>({title:t,p:null}))};
   return {known:false,meetings:[],allDay:[]}; }
 /** Show day `iso`, sliding the band in from its side. False when there is no day line. */
