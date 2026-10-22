@@ -47,5 +47,31 @@ class FailedApproveWritesNothing(LiveBrowserCase):
                          "no record was added")
 
 
+class ApprovedThisWeek(LiveBrowserCase):
+    """Path 8: minutes made from a dropped transcript, once approved, count under Approved this week and have a Done row."""
+
+    @classmethod
+    def load(cls, v):
+        populate(v)
+        cls.proposal = me.stage_meeting(v)
+
+    def test_a_dropped_transcript_counts_when_approved(self):
+        b = self.b
+        before = b.eval("D.intake_review.counts.approved")
+        b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
+        b.wait("document.querySelector('#v-minutes tr.mi')", 15)
+        b.pump(0.5)
+        b.eval("document.getElementById('mnApproveBtn').click()")
+        b.pump(0.5)
+        if b.eval("!!document.getElementById('mnApproveGo')"):
+            b.eval("document.getElementById('mnApproveGo').click()")
+        b.wait("(document.getElementById('toastHost')||{innerText:''}).innerText.includes('Minutes approved')", timeout=25)
+        b.pump(1.5)
+        b.pump(1.0)
+        self.assertEqual(b.eval("D.intake_review.counts.approved"), before + 1, "Approved this week moved")
+        self.assertTrue(b.eval("D.intake_review.meetings.some(m=>m.stage==='approved'&&/Steering committee/i.test(m.title))"),
+                        "a Done row")
+
+
 if __name__ == "__main__":
     unittest.main()

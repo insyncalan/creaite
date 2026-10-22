@@ -2868,12 +2868,36 @@ def proposal_meta():
     return out
 
 
+def processed_this_week(today):
+    """#307: the minutes filed this week for a meeting with no calendar entry (a dropped transcript, someone's minutes; their
+    processed.txt key starts "fp:"), as [{key, day, title, path, p}], newest first. A calendar meeting is its own Done row."""
+    try:
+        lines = paths.PROCESSED.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    monday, out = (today - timedelta(days=today.weekday())).isoformat(), []
+    folders = {v: k for k, v in paths.register_folders().items()}
+    for line in lines:
+        cells = [c.strip() for c in line.split(" | ")]
+        if len(cells) < 3 or not cells[1].startswith("fp:") or not cells[0] >= monday:
+            continue
+        filed = next((f.strip() for f in cells[2].split(";") if f.strip().endswith(".docx")), "")
+        parts = filed.split("/")
+        key_day = cells[1][3:13]
+        title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else ""
+        title = title or (cells[1].split("|")[1:2] or ["Meeting"])[0].strip().capitalize()
+        out.append({"key": cells[1], "day": key_day if re.fullmatch(r"\d{4}-\d{2}-\d{2}", key_day) else cells[0], "title": title,
+                    "path": filed or None, "p": folders.get(parts[1]) if len(parts) > 1 and parts[0] == "projects" else None})
+    return out[::-1]
+
+
 def intake_review(meetings, files, queue, today, meta=None, stale_after=None, aside=None):
     """The merged row model for Intake and Review (#232), from the built meetings, inbox and review lists. `aside` is
     intake-cleared.json's entries (Not needed and Later), which also keep an uploaded file away from the rows (#232-A)."""
     return intake_review_model(meetings or {}, files or [], queue or [], proposal_meta() if meta is None else meta, today,
                                review.stale_days() if stale_after is None else stale_after,
-                               cleared_load(today=today) if aside is None else aside)
+                               cleared_load(today=today) if aside is None else aside,
+                               processed_this_week(today))
 
 
 def _ir_split(rows):
@@ -2976,6 +3000,13 @@ def _ir_drafts(by_mkey, by_path, used, meta, today, stale_after):
     return out
 
 
+def _ir_filed(done, used, today, stale_after):
+    """#307: a Done row for minutes filed this week from a dropped transcript or someone's minutes (nothing is left in the inbox
+    or in Review to make a row from), so Approved this week counts them."""
+    return [_ir_row("draft", d["key"], [], "done", today, stale_after, mkey=d["key"], path=d.get("path"), title=d["title"],
+                    day=d["day"], p=d.get("p")) for d in done if d["key"] not in used]
+
+
 def _ir_counts(out, queue):
     """The stage counts, the proposals to approve and the badge (ready meetings and files, plus proposals). A file whose kind is
     not sure (`ft` ""; transcript or minutes is not known yet) is not ready: `need_type` counts them (#232-A5; the mockup's nProc)."""
@@ -3014,7 +3045,7 @@ def _ir_aside_lists(meetings, files, aside):
     return later + later_files, not_needed + gone_files
 
 
-def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None):
+def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None, done=None):
     """Pure: the model from its inputs (unit tested in dev/tests/test_intake_review_model.py).
     {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
     row: {id, src (calendar|upload|draft), key, mkey, path, title, day, start, end, p, stage (arrived|drafted|approved),
@@ -3029,6 +3060,7 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=
     out += _ir_uploads(files, by_path, loaded, today, stale_after, aside_keys)
     used = {r["mkey"] for r in out if r["mkey"]} | {r["path"] for r in out if r["path"]}
     out += _ir_drafts(by_mkey, by_path, used, meta, today, stale_after)
+    out += _ir_filed(done or [], {r["mkey"] for r in out if r["mkey"]}, today, stale_after)      # #307
     out.sort(key=lambda r: r["start"])
     out.sort(key=lambda r: r["day"], reverse=True)       # newest day first, each day in time order (as Intake); stable sorts
     later, not_needed = _ir_aside_lists(meetings, files, aside)
