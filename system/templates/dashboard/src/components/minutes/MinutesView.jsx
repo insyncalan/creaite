@@ -8,8 +8,9 @@
    #268: one version only (no distributed version or Internal only marks in the view; the server's distributed code is left
    as it is). The bar is one row: the title (when slim), zoom, Show as exported, the save line, the Track summary ("n work
    items to register · n kept in the minutes only · n removed"), then Transcript (pressed while shown, remembered per browser),
-   Export (Word, PDF, HTML and Draft the follow-up email), Re-extract (opens ask creaite with the request written, to send;
-   it doesn't re-draft by itself: Cap's #268 review M4) and Approve minutes, the one labelled button.
+   Export (Word, PDF, HTML and Draft the follow-up email), Read again (#283: the minutes drafted afresh from the transcript as
+   their own run, never an ask creaite message; it asks first, then progress and Stop are on the bar) and Approve minutes, the
+   one labelled button.
    Approve minutes is one click: the record is brought in line with the Track column (track.reconcileOps: the existing
    remove, keep-the-line and restore changes), then the minutes and every ticked item are applied in one apply
    (/api/minutes/approve), with Undo on the snack: stores/minutes.trackApprove, which Review's Approve calls too (#275).
@@ -32,8 +33,8 @@ import { REV } from "../../core/data.js";
 import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
-import { reloadData, snack, undoApply } from "../../core/server.js";
-import { ckAsk, openChat } from "../../ask.js";
+import { mtgBusy, reLive, reUndoLive, stopRun } from "../../core/intakeApi.js";
+import { oneLine, reloadData, snack, undoApply, viaServer } from "../../core/server.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
@@ -58,6 +59,9 @@ export const MN_EXPORTS = [
 
 let dirty = false;
 const approving = signal(false);
+/** #283 Read again: asking (the first press), running (progress and Stop on the bar), the step in words, the run's ID for Stop. */
+export const reAsk = signal(false), reBusy = signal(false), reStep = signal("");
+let reRun = "";
 
 /** The staged item of a row ("@3") in the peek: its Review proposal. @param {string} ref */
 function openStaged(ref) {
@@ -86,13 +90,55 @@ async function exportAs(id) {
   snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
 }
 
-/** Re-extract: creaite's chat with the request written, to send when Alan is ready; nothing is re-drafted until he sends it,
-    and the outcome is for the planned Re-extract run kind to define (Cap's #268 review M4). Words Alan has typed there and not
-    sent are never written over (review LOW): the chat opens with them and the toast says so. @param {SheetDoc} doc */
-function reExtract(doc) {
-  const box = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("chIn"));
-  if (box && box.value.trim()) { openChat(); snack("ask creaite has words you haven't sent: send or clear them, then press Re-extract again"); return; }
-  ckAsk(`re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`);
+/** #283 Read again: the meeting's minutes drafted afresh from its transcript, as their own run (POST /api/minutes/reextract through
+    reLive), never an ask creaite message. Pressed after the bar's ask: page edits saved first, then the run; its steps on the bar,
+    Stop beside them. At the end the new draft opens with Undo on the toast (the earlier one comes back), or the earlier one stays
+    open as it was (Stop, a failure, a question, nothing new). The server sets the earlier draft aside and carries the Track
+    choices; nothing here moves a file. */
+export async function readAgain() {
+  const v = minutesView.value;
+  reAsk.value = false;
+  if (!v || !v.proposal || reBusy.value) return;
+  if (!viaServer()) { snack("Reading again needs creaite running"); return; }
+  if (mtgBusy()) { snack("ask creaite is busy; try again when it's finished"); return; }
+  if (!(await mnSaveFirst())) return;
+  reBusy.value = true; reStep.value = "";
+  let r = /** @type {import("../../core/intakeApi.js").ReadAgainResult|null} */ (null);
+  try { r = await reLive(v.proposal, ev => { if (ev.type === "run") reRun = ev.id; else if (ev.type === "step") reStep.value = ev.label || ""; }); }
+  catch (e) { /* said below, from what came back */ }
+  finally { reBusy.value = false; reStep.value = ""; reRun = ""; }
+  const o = r && r.reextract, line = oneLine((r && r.closure && r.closure.line) || (r && r.message) || "Nothing changed");
+  await reloadData();
+  if (o && o.state === "replaced" && o.proposal) {
+    const run = o.run || "";
+    snack(line, run ? () => { undoReadAgain(run); } : null);
+    await loadMinutes({ file: o.proposal });
+    return;
+  }
+  snack(line);
+  await loadMinutes({ file: (o && o.proposal) || v.proposal });
+}
+
+/** Undo of a Read again: the earlier draft back, opened. @param {string} run */
+async function undoReadAgain(run) {
+  const u = await reUndoLive(run);
+  snack(u && u.ok ? "Your earlier minutes are back" : oneLine((u && u.message) || "Not undone"));
+  if (u && u.ok) { await reloadData(); if (u.proposal) await loadMinutes({ file: u.proposal }); }
+}
+
+/** Stop on the bar: the server ends the run and puts the earlier minutes back. */
+export function stopReadAgain() { if (reRun) stopRun(reRun); }
+
+/** Read again's place on the bar: the button; its ask (Read again or Cancel); or, while it runs, the step and Stop. */
+function ReadAgain() {
+  if (reBusy.value) return (<span class="mnre" role="status"><span class="sub">Reading the transcript again{reStep.value ? `: ${reStep.value}` : "…"}</span>
+    <button type="button" class="btn sm" id="mnReStop" onClick={stopReadAgain}>Stop</button></span>);
+  if (reAsk.value) return (<span class="mnre" role="group" aria-label="Read the transcript again">
+    <span class="sub">Draft these minutes again from the transcript? Your edits here are set aside; Undo brings them back.</span>
+    <button type="button" class="btn sm primary" id="mnReGo" onClick={() => { readAgain(); }}>Read again</button>
+    <button type="button" class="btn sm" id="mnReCancel" onClick={() => { reAsk.value = false; }}>Cancel</button></span>);
+  return (<button type="button" class="ib sm" id="mnReBtn" aria-label="Read the transcript again"
+    data-tip="Read the transcript again: drafts these minutes afresh" onClick={() => { reAsk.value = true; }}><Icon name="refresh" /></button>);
 }
 
 /** Approve minutes: the Track column first, then one apply. @param {boolean} anyway past the Before approving box */
@@ -144,9 +190,8 @@ function Bar({ doc, zoom, setZoom, exported, setExported, status, bad, scale }) 
           onClick={() => setPane(!paneOpen.value)}><Icon name="chat" /></button>
         <Menu label="" id="mnExport" icon="download" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
           items={/** @type {any} */ (MN_EXPORTS)} onPick={exportAs} />
-        {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"
-          data-tip="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}
-        {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan) || approving.value}
+        {draft && v && v.proposal ? <ReadAgain /> : null}
+        {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan) || approving.value || reBusy.value}
           data-tip={v && v.plan ? undefined : "Nothing pending to approve"} onClick={() => approveNow(false)}>{approving.value ? "Approving…" : "Approve minutes"}</button> : null}
       </span></span>
     </>
