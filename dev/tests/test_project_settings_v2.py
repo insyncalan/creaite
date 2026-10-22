@@ -198,6 +198,11 @@ class People(Base):
         page = b.eval("document.querySelector('#s-people').textContent")
         self.assertNotIn("not in register", page.lower())
         self.assertNotIn("Add to register", page)
+        flag = lambda n: b.eval(f"document.querySelector('#psPeopleRows tr[data-pn=\"{n}\"] [data-pm-details]').textContent.trim()")   # #304
+        self.assertEqual(flag("Jane Doe"), "No email, no organisation, no role")
+        self.assertEqual(flag("Omar Ali"), "No email")
+        self.assertEqual(b.eval("document.querySelectorAll('#psPeopleRows tr[data-pn=\"Mia Hale\"] [data-pm-details], #psPeopleRows tr[data-pn=\"Sara Example\"] [data-pm-details]').length"), 0)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#psPeopleRows button')].filter(x=>x.textContent.trim()==='Add details').length"), 0)
         self.tap("[data-pm-details='Jane Doe']")
         b.wait("!!document.querySelector('#personEdit[open] #peSave')")
         self.assertEqual(b.eval("document.querySelector('#peTitle').textContent"), "Edit Jane Doe")
