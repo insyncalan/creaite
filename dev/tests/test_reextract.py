@@ -157,6 +157,51 @@ class Helpers(Fixture, unittest.TestCase):
         t.unlink()
         self.assertIn("can't be found", in_vault(self.v, f"import reextract as r; print(json.dumps(r.validate_request({{'proposal': {self.proposal!r}}})[1]))"))
 
+    def test_a_transcript_gone_from_the_inbox_says_so_and_leaves_the_earlier_minutes_alone(self):
+        """#306's transcript-missing hold: the request is refused before anything is set aside, in plain words."""
+        import hashlib
+        p = self.v.root / "system/staging" / self.proposal
+        rec = self.v.root / self.draft
+        before = (hashlib.sha256(p.read_bytes()).hexdigest(), hashlib.sha256(rec.read_bytes()).hexdigest())
+        (self.v.root / self.data["meeting"]["transcript"]).unlink()
+        got = in_vault(self.v, f"import reextract as r; print(json.dumps(r.validate_request({{'proposal': {self.proposal!r}}})))")
+        self.assertEqual(got[0], None)
+        self.assertEqual(got[1], "The meeting's transcript can't be found where it was, so it can't be read again.")
+        for banned in ("re-extract", "proposal", "stage", "system/", ".json", "inbox"):
+            self.assertNotIn(banned, got[1].lower())
+        self.assertEqual(before, (hashlib.sha256(p.read_bytes()).hexdigest(), hashlib.sha256(rec.read_bytes()).hexdigest()))
+        self.assertFalse((self.v.root / "system/staging/reextract").exists() and any((self.v.root / "system/staging/reextract").iterdir()))
+
+    def test_two_stages_in_one_run_the_newest_takes_the_place_and_the_numbering_is_its_own(self):
+        """Review L5: a run that stages twice. The newest draft takes the place with Track choices on its own item numbers; the
+        other, and its record, are set aside in unused/, nothing deleted."""
+        self.set_track({"2": "n", "4": "y"})
+        started = in_vault(self.v, "import reextract as r; c, _ = r.validate_request({'proposal': json.loads(sys.stdin.read())}); "
+                                   "r.hold(c, 'x-test-5'); print(time.time())", self.proposal)
+        first = again_spec()
+        first["items"] = first["items"][:3]                                  # the first try: three items
+        f = self.v.root / "system/staging/drafts/first.json"
+        f.write_text(json.dumps(first), encoding="utf-8")
+        self.v.run("stage", str(f), script="minutes.py")
+        time.sleep(1.1)
+        self.stage_again()                                                   # the second try: five items
+        new = staged(self.v)
+        new = {n: rec for n, rec in new.items() if rec != self.draft}
+        self.assertEqual(len(new), 2, new)
+        out = in_vault(self.v, "import reextract as r; print(json.dumps(r.finish('x-test-5', json.loads(sys.stdin.read()), [], 'done')))",
+                       started)
+        self.assertEqual(out["state"], "replaced", out)
+        self.assertEqual(out["items"], 5, "the newest stage took the place")
+        after = {n: rec for n, rec in staged(self.v).items() if rec != self.draft}
+        self.assertEqual(list(after), [out["proposal"]])
+        hold = self.v.root / "system/staging/reextract/x-test-5/unused"
+        self.assertEqual(len(list(hold.glob("proposed-*.json"))), 1, "the other stage is kept aside, not deleted")
+        self.assertEqual(len(list(hold.glob("*.html"))) + len(list(hold.glob("*.json"))) >= 2, True)
+        rec = in_vault(self.v, "import creaite_doc; print(json.dumps(creaite_doc.read(json.loads(sys.stdin.read()))))", out["path"])
+        refs = {int(k[1:]) for k in rec["items"]}
+        self.assertEqual(refs, set(range(1, 6)), "numbered 1 to 5 from the winner alone")
+        self.assertTrue(set(int(k) for k in rec["layout"]["track"]) <= refs)
+
     def test_the_prompt_and_label_are_fixed(self):
         prompt, label = in_vault(self.v, "import reextract as r; c, _ = r.validate_request({'proposal': json.loads(sys.stdin.read())}); print(json.dumps([r.build_prompt(c), r.label(c)]))", self.proposal)
         t = self.data["meeting"]["transcript"]

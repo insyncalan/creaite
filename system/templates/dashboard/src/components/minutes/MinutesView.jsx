@@ -35,7 +35,6 @@ import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
 import { mtgBusy, reLive, reUndoLive, stopRun } from "../../core/intakeApi.js";
 import { oneLine, reloadData, snack, undoApply, viaServer } from "../../core/server.js";
-import { ckAsk, openChat } from "../../ask.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";

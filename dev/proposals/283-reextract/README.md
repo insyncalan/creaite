@@ -25,6 +25,25 @@ unable to edit its own spec or map its people (it fails closed: "Nothing new"). 
 - (review L1) puts the earlier draft back on any fault starting the run, not only `OSError`.
 The old pairs (`reach.diff`/`live_server.diff` on 7a900841, and the `-after-232` pair) are replaced by this one.
 
+## Rebased for 2.6.1 (23-10-2026, branch `v261-283`)
+
+`origin/v26-283-2` is merged onto `v261-line2` (conflicts: `MinutesView.jsx`, one import line, and the generated `dashboard.html`,
+rebuilt; line2's #306 File without the transcript copy and approve fix are kept). The two diffs needed no change: they apply
+(`git apply --check`) and reverse (`git apply -R --check`) in two states, both in a throwaway detached worktree, never committed:
+1. on `v261-line2` alone (the 283 pair on its own);
+2. after the whole guarded chain of `dev/proposals/GUARDED-2.6.1.md` (low-notes tracker, inode-gap tracker, work-item-history
+   schema and tracker, 291 update, 291 live_server, 300 live_server, work-item-history live_server, tests-after), applied in that
+   order, then `reach.diff` and `live_server.diff` together. `test_reextract` passes 22 of 22 there (22 now: two tests added).
+Order in the chain: after the work-item-history tests-after diff; the hunks' anchors are distinct.
+
+Also checked: #306's transcript-missing hold. If the transcript has gone from the inbox, Read again refuses before anything is set
+aside ("The meeting's transcript can't be found where it was, so it can't be read again."), the earlier minutes and their record
+are byte for byte as they were (`test_a_transcript_gone_from_the_inbox_says_so_...`). Review L5 (two stages in one run: the newest
+takes the place, numbered from itself alone, the other kept aside) has a test. Review L6 (Stop reaching a running stage child):
+the stand-in Claude's slow run is stopped through `/api/ask/stop` and the earlier minutes come back (`test_3`); a real Claude
+Code child that has started `minutes.py stage` when Stop arrives cannot be tested here, and stays a hand check. M2's line is in
+`RELEASE-NOTE.md`.
+
 ## Apply, check, undo
 
 Apply **both files together, in one command** (live_server alone would start the run under a plain chat's hook rules for an
@@ -43,7 +62,7 @@ files. The server must be restarted after applying (the route table and the run 
 ## Verify after applying (one at a time; check the load first)
 
 ```
-python3 dev/tests/test_reextract.py            # 21 tests, all pass (6 are expected failures before the diffs)
+python3 dev/tests/test_reextract.py            # 22 tests, all pass (6 are expected failures before the diffs)
 python3 dev/tests/test_intake_process.py       # #264 unchanged (29)
 python3 dev/tests/test_intake_process_round2.py
 python3 dev/tests/test_intake_process_minutes.py
