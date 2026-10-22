@@ -1057,6 +1057,7 @@ def decide_entry(n, p, data, ref, block, decision, mode=None, drop=False):
         return held
     if drop:
         drop_transcript(block)
+        save(p, data)        # #306: a minutes record is settled from the file (track_minutes), so the dropped copy must be on disk first
     if ref == "meeting" and str(block.get("draft") or "").lower().endswith(".html"):
         return no_draft_refusal(n, ref, block, decision) or decide_record(n, p, data, block, decision)
     return no_draft_refusal(n, ref, block, decision) or decide_draft(n, p, data, ref, block, decision, mode)
@@ -2473,6 +2474,10 @@ def minutes_plan(data):
             "items": rows, "group": sum(1 for r in rows if r["group"] == "group"), "joins": sorted(MINUTES_GROUP_JOINS)}
 
 
+HELD_MINUTES_WORDS = ("These minutes can't be filed yet: the transcript is no longer in your inbox. "
+                      "You can file the minutes without the transcript copy.")
+
+
 def _minutes_refusal(p, data):
     """Why these minutes can't be approved from the minutes view, or None."""
     import minutes_record
@@ -2482,8 +2487,7 @@ def _minutes_refusal(p, data):
     if not minutes_record.is_record(meeting.get("draft")):
         return "These minutes are a Word draft: approve them in Review."
     if held_reason(meeting):                                             # #280: its transcript has gone; Review offers the two ways out
-        return (f"These minutes can't be filed as staged: {held_reason(meeting)}. In Review, approve them without the transcript "
-                "copy, or discard the proposal.")
+        return HELD_MINUTES_WORDS   # #306: plain words; the page offers "File without the transcript copy" in place
     return None
 
 

@@ -109,7 +109,7 @@ function HeldChoices({ r }) {
 /** #280, #291: why a held or invalid proposal waits, on its row (not only in the tip). @param {{r: any}} props */
 function HeldNote({ r }) {
   if (r.done) return null;
-  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the suggestion</div>;
+  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the suggestion{r.heldErr ? <div class="h-warn" data-ira="held-error">Not saved because {r.heldErr}</div> : null}</div>;
   if (r.bad) return <div class="rvnote"><span class="h-warn">Can't be saved as it is: {r.bad}</span> · Edit it or reject it</div>;
   return null;
 }

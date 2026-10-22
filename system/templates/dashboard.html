@@ -5812,6 +5812,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     heldDiscard: () => heldDiscard,
     heldLines: () => heldLines,
     heldMsg: () => heldMsg,
+    heldWhy: () => heldWhy,
     heldWords: () => heldWords,
     helpCk: () => helpCk,
     helpFind: () => helpFind,
@@ -47287,6 +47288,15 @@ ${s5}`;
     if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
     return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
   }
+  var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
+  async function fileWithoutTranscript(proposal) {
+    const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
+    if (!res || !res.ok) return { ok: false, message: oneLine(res && res.message || "creaite couldn't file these minutes").replace(/^\d+:\s*/, "").replace(/not approved — /, "") };
+    const a5 = await applyNow();
+    if (!a5.ok) return { ok: false, message: oneLine(a5.message || "creaite couldn't file these minutes") };
+    const n4 = Number((String(a5.message || "").match(/written (\d+)/) || [])[1] || 0);
+    return { ok: true, message: "", n: n4, apply_id: a5.apply_id };
+  }
 
   // components/review/ContextMenu.jsx
   var LV = (
@@ -48530,8 +48540,36 @@ ${s5}`;
       snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r4.n} --without-transcript” in Claude Code`);
       return;
     }
-    return reviewViaServer(r4, "approved", ["without-transcript"]);
+    const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "approved", modes: ["without-transcript"] });
+    if (!res.ok) {
+      const why = heldWhy(res.message);
+      r4.heldErr = why;
+      await reloadData();
+      snack(`Not saved because ${why}`);
+      refreshAll();
+      return;
+    }
+    r4.heldErr = "";
+    if (!S.autoApply) {
+      await reloadData();
+      snack("Approved without the transcript: not saved yet");
+      return;
+    }
+    const a5 = await applyNow();
+    if (!a5.ok) {
+      const why = heldWhy(a5.message);
+      r4.heldErr = why;
+      snack(`Not saved because ${why}`);
+      refreshAll();
+      return;
+    }
+    const n4 = Number((String(a5.message || "").match(/written (\d+)/) || [])[1] || 0);
+    snack(`Approved without the transcript: ${n4} item${n4 === 1 ? "" : "s"} saved${heldWords(a5.message)}`, () => undoApply(a5.apply_id));
   }
+  var heldWhy = (m5) => {
+    const t47 = String(m5 || "").replace(/^\s*Approved \d+\.\s*/, "").replace(/^\s*\d+:\s*/, "").replace(/not approved — /, "").replace(/,? or say “[^”]*”\.?/g, "").replace(/\n\s*\(say [\s\S]*\)\s*$/, "").replace(/the draft differs from the staged items:/, "these minutes don't match the suggestions waiting in Review:");
+    return oneLine(t47).replace(/\s*\.?\s*$/, "") || "creaite couldn't save these minutes";
+  };
   async function heldDiscard(r4) {
     if (!viaServer()) {
       snack(`Discarding a proposal needs the live server; or say “reject ${r4.n} --discard” in Claude Code`);
@@ -70118,6 +70156,10 @@ ${d5.text}`);
     try {
       if (!await mnSaveFirst()) return;
       const r4 = await trackApprove({ ...v5, doc }, { change: changeMinutes });
+      if (!r4.ok && isHeldMinutes(r4.message) && v5.proposal) {
+        snack(oneLine(r4.message), () => fileWithout(v5), "File without the transcript copy");
+        return;
+      }
       if (!r4.ok) {
         snack(trackFailWords(r4, "Approve minutes"));
         return;
@@ -70134,6 +70176,22 @@ ${d5.text}`);
     } finally {
       approving.value = false;
     }
+  }
+  async function fileWithout(v5) {
+    const r4 = await fileWithoutTranscript(v5.proposal);
+    if (!r4.ok) {
+      snack(`Not saved because ${r4.message.replace(/\.$/, "")}`);
+      return;
+    }
+    snack(
+      `Filed without the transcript copy: ${r4.n} item${r4.n === 1 ? "" : "s"} saved`,
+      r4.apply_id ? async () => {
+        await undoApply(r4.apply_id);
+        loadMinutes({ file: v5.proposal });
+      } : null
+    );
+    await reloadData();
+    if (v5.plan && v5.plan.files[0]) loadMinutes({ path: v5.plan.files[0] });
   }
   function TrackSum({ c: c5 }) {
     const parts = trackSummary(c5).split(/(\d+)/);
@@ -75756,7 +75814,11 @@ ${d5.text}`);
         "Held: ",
         r4.held
       ] }),
-      " · Approve the minutes without the transcript copy, or discard the suggestion"
+      " · Approve the minutes without the transcript copy, or discard the suggestion",
+      r4.heldErr ? /* @__PURE__ */ u4("div", { class: "h-warn", "data-ira": "held-error", children: [
+        "Not saved because ",
+        r4.heldErr
+      ] }) : null
     ] });
     if (r4.bad) return /* @__PURE__ */ u4("div", { class: "rvnote", children: [
       /* @__PURE__ */ u4("span", { class: "h-warn", children: [
@@ -78161,6 +78223,7 @@ ${d5.text}`);
         "MVCWORD",
         "Menu",
         "MenuPanel",
+        "MinutesView",
         "NEG",
         "NOTE_OPEN",
         "NoteEditor",
@@ -78448,6 +78511,7 @@ ${d5.text}`);
         "healthCount",
         "healthEvidence",
         "healthFacts",
+        "heldApprove",
         "heldLines",
         "heldWords",
         "helpFind",

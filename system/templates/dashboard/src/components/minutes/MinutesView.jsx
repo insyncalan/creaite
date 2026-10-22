@@ -32,13 +32,13 @@ import { REV } from "../../core/data.js";
 import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
-import { reloadData, snack, undoApply } from "../../core/server.js";
+import { oneLine, reloadData, snack, undoApply } from "../../core/server.js";
 import { ckAsk, openChat } from "../../ask.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
 import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc,
-  minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
+  fileWithoutTranscript, isHeldMinutes, minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
 import { signal } from "@preact/signals";
 
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -107,12 +107,26 @@ async function approveNow(anyway) {
   try {
     if (!(await mnSaveFirst())) return;
     const r = await trackApprove({ ...v, doc }, { change: changeMinutes });      // #275: the one implementation, Review's too
+    if (!r.ok && isHeldMinutes(r.message) && v.proposal) {                      // #306: the transcript has gone: one click files without it
+      snack(oneLine(r.message), () => fileWithout(v), "File without the transcript copy");
+      return;
+    }
     if (!r.ok) { snack(trackFailWords(r, "Approve minutes")); return; }
     snack(trackApprovedWords(r),
       r.apply_id ? async () => { await undoApply(r.apply_id); if (v.proposal) loadMinutes({ file: v.proposal }); } : null);   // Undo: the draft comes back, so does its page
     await reloadData();
     if (v.plan.files[0]) loadMinutes({ path: v.plan.files[0] });
   } finally { approving.value = false; }
+}
+
+/** #306: file the minutes without the transcript copy, then say what was saved (with Undo) or why not. @param {any} v the minutes view */
+async function fileWithout(v) {
+  const r = await fileWithoutTranscript(v.proposal);
+  if (!r.ok) { snack(`Not saved because ${r.message.replace(/\.$/, "")}`); return; }
+  snack(`Filed without the transcript copy: ${r.n} item${r.n === 1 ? "" : "s"} saved`,
+    r.apply_id ? async () => { await undoApply(r.apply_id); loadMinutes({ file: v.proposal }); } : null);
+  await reloadData();
+  if (v.plan && v.plan.files[0]) loadMinutes({ path: v.plan.files[0] });
 }
 
 /** The Track summary with its counts in bold (the words are trackSummary's). @param {{c: {y: number, k: number, n: number}}} props */
