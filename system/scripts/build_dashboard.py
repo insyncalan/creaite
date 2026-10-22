@@ -657,9 +657,11 @@ def review_queue(con):
         review.write_index(rows_n)
     limit = review.stale_days()         # BL-133 (sprint-work-views): each proposal's age, and stale past review.stale_after_days (FR-24)
     overlap = float(paths.load_settings().get("review", {}).get("duplicate_overlap", 0.6) or 0.6)   # BL-133 stage B
+    mem = {}                            # #291 fix: the in-memory copy invalid items are checked again on, made once a build
     for p, data in review.proposals():
         age = review.age(data)
         aged = {"age": age, "stale": age > limit, "made": data.get("created") or ""}   # #245: made is part of Today's dismissed id
+        data = recheck_invalid(p, data, mem)
         for key, field, label in review.BLOCKS:
             b = data.get(key)
             if b and not b.get("applied") and b.get(field, "pending") == "pending":
@@ -670,7 +672,57 @@ def review_queue(con):
                 continue
             n = num.get((p.name, item.get("n")), n + 1)
             out.append(queue_item(con, n, p, item, aged, overlap))
+    if mem.get("con") is not None:
+        mem["con"].close()
     return out
+
+
+# ===== #291 fix: an item fixed in the panel stops being held =====
+def recheck_invalid(p, data, mem):
+    """#291 fix: an item flagged invalid is checked again from its fields as they are now, with the tracker's own check (the
+    dry run `tracker.py validate` uses), so an item edited in the panel stops being held without a new route. The check runs on
+    an in-memory copy of the database: the build never writes. Returns the proposal with each flagged item's flag and reason as
+    they are now (a copy; the file is unchanged, and the approval clears its flag). A check that can't run keeps the flags."""
+    def flagged(i):
+        """A pending item still flagged invalid."""
+        return "invalid" in (i.get("flags") or []) and not i.get("applied") and i.get("decision") == "pending"
+    if not any(flagged(i) for i in data.get("items", [])) or not paths.DB.exists():
+        return data
+    import copy
+    import tracker
+    try:
+        if "con" not in mem:
+            mem["con"] = None
+            src = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+            try:
+                m = sqlite3.connect(":memory:", isolation_level=None)
+                src.backup(m)
+            finally:
+                src.close()
+            m.row_factory = sqlite3.Row
+            m.execute("PRAGMA foreign_keys = ON")
+            mem["con"] = m
+        if mem["con"] is None:
+            return data
+        trial = copy.deepcopy(data)
+        tracker.fill_raised(trial)
+        problems = tracker.dry_run(mem["con"], trial, tracker.via_for(p, trial), only_approved=False)
+    except Exception:  # noqa: BLE001  a check that can't run never hides a flag
+        return data
+    out = copy.deepcopy(data)
+    for item in out.get("items", []):
+        if flagged(item):
+            kind, reason = problems.get(item.get("n"), (None, None))
+            tracker.set_flag(item, "invalid", kind == "invalid", reason)
+    return out
+
+
+def unknown_fields(reason):
+    """#291 fix: the fields the tracker doesn't keep, from an invalid item's reason ([] for any other reason): the panel's Save
+    leaves them out, as no field of the panel can show them."""
+    m = re.match(r"unknown field\(s\) for \w+: ([^.]+)", reason or "")
+    return [f.strip() for f in m.group(1).split(",") if f.strip()] if m else []
+# ===== end #291 fix =====
 
 
 def queue_block(n, p, key, label, b, aged):
@@ -682,7 +734,8 @@ def queue_block(n, p, key, label, b, aged):
             "src": b.get("draft") or "", "file": p.name, "ref": key,
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
-            **draft_missing(key, b)}   # BL-260
+            **draft_missing(key, b),   # BL-260
+            **({"held": review.held_reason(b)} if key in ("meeting", "report") and review.held_reason(b) else {})}   # #280
 
 
 def queue_item(con, n, p, item, aged, overlap):
@@ -698,13 +751,25 @@ def queue_item(con, n, p, item, aged, overlap):
             "dup": dup, "signals": signals,
             "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
-            "mf": item.get("moved_from"), "op": item.get("op")}   # BL-200 (sprint-review-work): moved on its own; new or update
+            "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
+            **({"bad": invalid_words(item.get("invalid_reason")), "badf": unknown_fields(item.get("invalid_reason"))}
+               if "invalid" in flags else {})}   # #291: why it can't be saved; the fields Save leaves out
+
+
+def invalid_words(reason):
+    """#291: why an item can't be saved as it is, in plain words for its Review row (the tracker's reason, without its field list)."""
+    m = re.match(r"unknown field\(s\) for \w+: ([^.]+)", reason or "")
+    if m:
+        return f"it has a field the tracker doesn't keep ({m.group(1).strip()})"
+    return (reason or "it doesn't pass the tracker's checks").split(". Valid:")[0].strip().rstrip(".")
 
 
 def item_why(item, project, flags):
     """Why the item is in Review, as its row says."""
     if project is None:
         return "Possible match" if item.get("match") == "possible" else "Needs a project"
+    if "invalid" in flags:
+        return "Can't be saved as it is"                                  # #291: before the bulk rule's words
     return (review.individual_only(item) or "").capitalize() or \
         ("Conflict with a newer change" if "conflict" in flags else
          "No owner yet" if "no-owner" in flags else
@@ -1995,11 +2060,13 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
     for d in out.values():             # holds Alan's; the page's quiet line counts other people's), so a day is Urgent, High, the rest
         d["items"].sort(key=lambda i: rank.get(i.get("pr"), 2))
     # Urgent work with no date can't sit on a day: it leads the Week ahead instead
-    undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent"}
+    # #286: a RAID item keeps its type in every group, so its icon names it (Risk, Issue, Assumption, Dependency)
+    typed = lambda k, x: {"type": x.get("type")} if k == "raid" else {}  # noqa: E731
+    undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent", **typed(k, x)}
                for k, x in open_items if x.get("pr") == "Urgent" and not x["due"] and (shown is None or "Urgent" in shown)]
     # Further ahead: the two weeks after, key milestones and Urgent or High deadlines only, so it stays short
     end, horizon = days[-1].isoformat(), (days[-1] + timedelta(days=FURTHER_DAYS)).isoformat()
-    further = [{"date": x["due"], "kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr")}
+    further = [{"date": x["due"], "kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr"), **typed(k, x)}
                for k, x in open_items if x["due"] and end < x["due"] <= horizon
                and x.get("pr") in ("Urgent", "High") and (shown is None or x.get("pr") in shown)]
     further += [{"date": m[1], "kind": "milestone", "id": m[3], "p": p["code"], "t": m[0]} for p in projects for m in p["ms"]

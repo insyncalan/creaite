@@ -1,0 +1,37 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index b183f921..a4103dbb 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -27,7 +27,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
+ - POST /api/fs           read, write, append, remove or test a file, within a fixed allowlist (proposals, settings,
+                          settings backups and log, project CLAUDE.md files); upload a PNG or JPEG (base64, 2 MB at
+                          most) to system/staging/uploads/ for an image added in the Current state editor (BL-63)
+-- POST /api/apply        tracker.py apply (all decided proposals; {hold_peek:true} leaves the peek's staged ones, BL-189); POST /api/undo {apply_id} undoes that apply only
++- POST /api/apply        tracker.py apply (all decided proposals; {hold_peek:true} leaves the peek's staged ones, BL-189;
++                         {only:"proposed-….json"} applies that one proposal only, #280); POST /api/undo {apply_id} undoes that apply only
+ - POST /api/undo-changes {rowids, dry_run}: tracker.py undo-changes (BL-164): put back chosen past changes as one new apply;
+                          with dry_run, what would happen. Returns the done and skipped lists
+                          if it's still the latest
+@@ -1359,6 +1360,12 @@ class Handler(BaseHTTPRequestHandler):
+     def apply(self, req):
+         """POST /api/apply: tracker.py apply, which writes the database; {hold_peek} leaves the peek's staged proposals (BL-189)."""
+         with LOCK, notes_lock_if(staged_note_move()):         # #124: LOCK, then NOTES_LOCK, as a note's card does
++            if "only" in req:                        # #280: a save applies only the proposal it wrote, so an older staged
++                name = req["only"] if isinstance(req["only"], str) else ""     # proposal (a stale invalid item) never stops it
++                if not re.fullmatch(r"proposed-[^/\\]+\.json", name) or not (paths.STAGING / name).is_file():
++                    return self.send(200, {"ok": False, "message": "That save is no longer in staging, so nothing was applied."})
++                code, out = run("tracker.py", "apply", "system/staging/" + name)     # never a vault-root namesake
++                return self.send(200, {"ok": code == 0, "message": out, "apply_id": latest_apply(), "only": name})
+             # ===== BL-189 (sprint-milestones) ===== another apply (a cell edit, a bulk change, a Review approval, Settings' Apply)
+             # sends hold_peek: the peek's staged proposals (build_dashboard.peek_staged, any window's) are left for the peek's own
+             # Apply or ⌘↵, which sends nothing and applies everything decided, as before. tracker.py's rules are unchanged: it is
+@@ -1366,7 +1373,8 @@ class Handler(BaseHTTPRequestHandler):
+             if req.get("hold_peek"):
+                 held = {m["name"] for m in build_dashboard.peek_staged()}
+                 if held:
+-                    rest = [p.name for p in sorted(paths.STAGING.glob("proposed-*.json")) if p.name not in held]
++                    rest = ["system/staging/" + p.name for p in sorted(paths.STAGING.glob("proposed-*.json"))  # #280: the
++                            if p.name not in held]                                # staging file by path, never a root namesake
+                     if not rest:
+                         return self.send(200, {"ok": True, "message": "Nothing to apply: no decided items.",
+                                                "apply_id": latest_apply(), "held": len(held)})

@@ -292,6 +292,8 @@ def check(doc):
         raise DocError("Its audience or state isn't one creaite knows.")
     if not DATE.match(str(doc.get("date") or "")):
         raise DocError("Its date must be YYYY-MM-DD.")
+    if doc.get("project") is not None and not isinstance(doc.get("project"), str):   # #277: a list or an object where the code
+        raise DocError("Its project must be one project code.")                       # goes is refused here, never a fault later
     check_sections(doc.get("sections") or [])
 
 

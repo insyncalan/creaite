@@ -58,7 +58,10 @@ export const health=h=>`<span class="health h-${hk(h)}"><svg viewBox="0 0 24 24"
 export const KI={action:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>',Risk:'<path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/>',Issue:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.4"/>',Assumption:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.6v.4M12 17v.4"/>',Dependency:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',decision:'<path d="m13.5 3.5 7 7-3 3-7-7z"/><path d="m11.5 8.5-8 8 4 4 8-8"/>',milestone:'<path d="M5 21V4h11l-2 4 2 4H5"/>'};
 export const KL={action:"Action",decision:"Decision",milestone:"Milestone"};
 export const kindOf=(t,x)=>t==="actions"?"action":t==="raid"?((x&&x.type)||"Risk"):t==="decisions"?"decision":"milestone";
-export const ico=k=>KI[k]?`<span class="ki" title="${KL[k]||k}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KI[k]}</svg></span>`:"";
+/** a work item's type in words ("Action", "Risk", "Milestone"…), from its table and record: the type icon's tooltip and name (#286) */
+export const typeWord=(t,x)=>{ const k=kindOf(t,x); return KL[k]||k; };
+/* #286: the type icon names its type on hover with the one tooltip (data-tip) and to a screen reader with the same words */
+export const ico=k=>KI[k]?`<span class="ki" role="img" aria-label="${KL[k]||k}" data-tip="${KL[k]||k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KI[k]}</svg></span>`:"";
 export const revIco=r=>r.kind==="actions"?ico("action"):r.kind==="raid"?ico(r.rec.type||"Risk"):r.kind==="decisions"?ico("decision"):"";
 export const store={get:(k,d)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set:(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
   /* #256: a saved map or list read tolerantly: anything else (null, a number, a string, the other shape) reads as empty. Reading

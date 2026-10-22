@@ -2,7 +2,6 @@
 /* today.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0025-today.js, 0026-today-brief-bl-72.js, 0027-bl-149-sprint-ux.js, 0028-after-bl-149.js, 0159-bl-156-sprint-ux.js, 0164-bl-166-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { toggleHelpPanel } from "./helpscreen.js";
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { linkWords as lw } from "./core/linkText.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
@@ -294,7 +293,7 @@ window.addEventListener("resize",()=>{ if(shared.VIEW==="today") renderDay(); })
   band.addEventListener("pointerup",e=>{ if(sx==null) return; const dx=e.clientX-sx, dy=e.clientY-sy; sx=null;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) stepDay(dx<0?1:-1); });
   band.addEventListener("pointercancel",()=>{ sx=null; }); }
-document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) refreshCalendar(); if(e.target.closest("[data-thelp]")) toggleHelpPanel("today"); });   /* #237: the header's ? opens the same panel as the ? key; #249: and closes it again */
+document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) refreshCalendar(); });   /* #284: the header's ? is gone (the ? key opens Help) */
 }
 /* ===== BL-149 (sprint-ux) ===== no dead ends into Claude Code. If the dashboard can do it, it does; the command is a footnote,
    shown only when the live server is down. A reminder gets one primary button on its row (Draft weekly report, Draft client
@@ -539,7 +538,7 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
   return tdl.map((x,i)=>({x,i})).sort((a,b)=>(a.x.overdue?0:1)-(b.x.overdue?0:1)||(a.x.overdue&&b.x.overdue?a.x.due.localeCompare(b.x.due):0)||b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
 /* ----- BL-334: a conversation, not a message. One card per conversation: its own title (or the people in it), where it is,
    "updated HH:MM", Claude's summary, then each candidate item with Create work item and Dismiss (Dismiss stages nothing). A
-   conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
+   conversation with nothing for Alan is one quiet line with only Seen (#276). Never labelled (BL-288). ----- */
 const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
 /** BL-342: the one thing a thread asks of Alan, as its chip says it */
 export const CARDTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",fyi:"FYI / file",risk:"Risk"});
@@ -600,11 +599,13 @@ export function cardClose(a,mt){ const c=a.closes;
 /** "Mia Hale with Omar Ali: you replied 14:02" @param {any} a */
 export function repliedRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:String(a.replied_at||convAt(a)),tag:"Replied",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: you replied ${whenWords(String(a.replied_at||""))}`,
-    link:a.link||"",meta:convMeta(a),acts:[]}; }
+    link:a.link||"",meta:convMeta(a),acts:seenActs(a)}; }
+/** #276: a quiet line's one action, Seen (the eye): it clears the line for good (/api/vip/seen), with Undo @param {any} a */
+export const seenActs=a=>[{id:"seen",icon:"eye",label:"Seen",name:`Seen: ${a.who||""}${a.title?", "+a.title:""}`,data:{alertdo:"seen",id:a.id}}];
 /** "Mia Hale with Omar Ali: nothing for you" @param {any} a */
 export function quietRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:convAt(a),tag:"",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: nothing for you`,
-    link:a.link||"",meta:convMeta(a),acts:[]}; }
+    link:a.link||"",meta:convMeta(a),acts:seenActs(a)}; }
 /** where focus goes after a row's action takes the row away: the same action on the row now in its place, else the heading */
 let TDFOCUS=/** @type {{i:number,what:string,at:number}|null} */(null);
 export function tdFocusAfter(){ const f=TDFOCUS; if(!f||Date.now()-f.at>8000){ TDFOCUS=null; return; }
@@ -720,7 +721,7 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
     const d=further&&i.date?` ${longDay(i.date)}`:"";
     return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
-  const item=(i,key,further,undated=false)=>({key,kind:i.kind,dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
+  const item=(i,key,further,undated=false)=>({key,kind:i.kind,type:i.type||"",dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
   const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"", key=prepKey(e,day);

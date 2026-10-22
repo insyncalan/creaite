@@ -48,17 +48,17 @@ export function PrepHead() {
   const series = brief && brief.series ? brief.series.text
     : [cadence(m.invite && m.invite.recurrence), m.last ? `last ${fd(m.last)}` : ""].filter(Boolean).join(" · ");
   const inv = conf ? [] : invitees(m, brief);
-  const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
+  const name = code === "_portfolio" ? "No project (general meeting)" : code ? pName(code) : "";
 
   /** @param {MouseEvent} ev */
   const pickProject = ev => {
     const btn = /** @type {HTMLElement} */ (ev.currentTarget);
     openPicker(btn, { label: "Project", value: code,
       options: [...P.filter(p => p.active !== false || p.code === code).map(p => ({ v: p.code, label: p.name, icon: "projects" })),
-        { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }],
+        { v: "_portfolio", label: "No project (general meeting)", icon: "projects" }],
       onPick: async v => { if (v === code) return; await choosePrep(v);
         /* BL-316: a change offers Undo (the series is remembered for the project it had) */
-        if (code) snack(`Remembered for this series: ${v === "_portfolio" ? "Portfolio (all projects)" : pName(v)}`, () => { choosePrep(code); }); } });
+        if (code) snack(`Remembered for this series: ${v === "_portfolio" ? "No project (general meeting)" : pName(v)}`, () => { choosePrep(code); }); } });
   };
 
   return (

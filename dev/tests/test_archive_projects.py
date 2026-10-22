@@ -304,7 +304,7 @@ class ArchiveRestore(unittest.TestCase):
         bad = {"items": [{"n": 1, "op": "archive", "table": "projects", "id": "ABC", "decision": "approved"}]}   # no folder move
         self.v.propose("bad", bad["items"])
         r = self.v.run("apply", ok=False)
-        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Held in Review, not applied: proposed-bad.json item 1: Example Programme has 1 open item(s)", r.stdout)  # #280
         self.assertEqual(self.v.rows("projects")[0]["archived"], 0)
 
     def test_archive_then_undo_round_trips_exactly(self):

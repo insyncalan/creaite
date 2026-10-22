@@ -10,6 +10,11 @@ Commands:
                                 staged owners and due dates to match the draft; --as-staged keeps them. Approved
                                 drafts are cleaned (tracked changes accepted, comments removed). A draft open in
                                 Word is refused (close it first); no sensitivity label is needed.
+  approve <number> --without-transcript
+                                #280: minutes whose transcript is no longer in the inbox (held by apply) are approved without
+                                the transcript copy: the draft is filed, the transcript is not; refused while it is still there
+  reject <number> --discard     #280: set a held proposal aside (minutes or a report whose file to be filed has gone) in
+                                system/staging/discarded/, writing nothing to the tracker; only a held proposal
   reject <numbers> [--reason=TEXT] [--duplicate-of=ID]
                                 BL-133: the reason is stored with the rejection (Duplicate, Not mine to track, Not an
                                 action, Other or Alan's words) and given to extraction as guidance; "reject 4 as a
@@ -182,12 +187,16 @@ def stale_days():
     return paths.load_settings().get("review", {}).get("stale_after_days", 7)
 
 
+def clock():
+    """creaite's clock: the time now, or CREAITE_NOW when tests fix it, as elsewhere (#178: the one clock read for these)."""
+    fixed = os.environ.get("CREAITE_NOW")
+    return datetime.fromisoformat(fixed) if fixed else datetime.now()
+
+
 def age(data):
     """How many days old a proposal is, from its `created` time; 0 if that can't be read."""
     try:
-        fixed = os.environ.get("CREAITE_NOW")           # creaite's clock: CREAITE_NOW fixes it in tests, as elsewhere
-        now = datetime.fromisoformat(fixed) if fixed else datetime.now()
-        return (now - datetime.fromisoformat(data.get("created", ""))).days
+        return (clock() - datetime.fromisoformat(data.get("created", ""))).days
     except ValueError:
         return 0
 
@@ -323,7 +332,8 @@ def build_rows(scope=None):
                                  "kind": label, "text": f"{b.get('title', '')} ({tracker.shown(b.get('date'))})",
                                  "owner": "", "due": "", "match": "", "flags": "",
                                  "source": b.get("draft") or "", "first": code == (b.get("projects") or ["?"])[0],
-                                 "nest": p.name if key == "meeting" else None, "child": False})
+                                 "nest": p.name if key == "meeting" else None, "child": False,
+                                 "note": held_reason(b)})                               # #280
         for item in data.get("items", []):
             if item.get("applied") or item.get("decision") != "pending":
                 continue
@@ -1014,8 +1024,14 @@ def no_draft_refusal(n, ref, block, decision):
     return None
 
 
-def decide_entry(n, p, data, ref, block, decision, mode=None):
-    """decide_draft, after the no-draft check; a minutes record has no Word to compare or clean (v2.1.0 P4)."""
+def decide_entry(n, p, data, ref, block, decision, mode=None, drop=False):
+    """decide_draft, after the no-draft check; a minutes record has no Word to compare or clean (v2.1.0 P4). #280: minutes whose
+    transcript has gone are approved only with `drop` (--without-transcript), which leaves the transcript copy out."""
+    held = held_refusal(n, ref, block, decision, drop)
+    if held:
+        return held
+    if drop:
+        drop_transcript(block)
     if ref == "meeting" and str(block.get("draft") or "").lower().endswith(".html"):
         return no_draft_refusal(n, ref, block, decision) or decide_record(n, p, data, block, decision)
     return no_draft_refusal(n, ref, block, decision) or decide_draft(n, p, data, ref, block, decision, mode)
@@ -1027,6 +1043,116 @@ def decide_record(n, p, data, block, decision):
     save(p, data)
     return f"{n}: Minutes {decision} — {block.get('title', '')}"
 # ===== end BL-260 point 4 =====
+
+
+# ===== #280 (round 3) ===== a proposal whose file operation can't run is held, never a blocker. In Alan's vault three approved minutes
+# failed every Apply with "copy: source not found": their transcripts had left the inbox, their drafts were still in staging/drafts.
+# tracker.py's apply (dev/proposals/280/tracker.py.diff) asks hold_missing: such a proposal is left in staging, its decision back to
+# pending with the reason (`held`), and the rest applies. Review names it and offers two ways out: approve the minutes without the
+# transcript copy (drop_transcript, `approve N --without-transcript`) or discard the proposal (cmd_discard). The draft's own copy is
+# BL-260's (minutes_draft_problems) and is left to it.
+HELD_TRANSCRIPT = "transcript no longer in the inbox"
+DISCARDED = paths.STAGING / "discarded"
+
+
+def missing_copies(blk, ops):
+    """The sources of the copy operations in `ops` (other than the draft's) that are no longer there."""
+    out = []
+    for fop in ops or []:
+        if isinstance(fop, dict) and fop.get("op") == "copy" and fop.get("from") != "draft":
+            src = tracker.op_source(fop, blk)
+            if not src or not paths.resolve(src).is_file():
+                out.append(src or "")
+    return out
+
+
+def held_words(blk, missing):
+    """Why a block is held, in Review's words."""
+    if missing and all(m == blk.get("transcript") for m in missing):
+        return f"{HELD_TRANSCRIPT} ({missing[0]})"
+    return f"a file to be filed is no longer there ({', '.join(m or 'no path' for m in missing)})"
+
+
+def held_reason(blk):
+    """The reason a pending minutes or report block can't be filed as staged (a file it copies has gone); '' when it can."""
+    if not blk or blk.get("applied") or blk.get("note"):
+        return ""
+    missing = missing_copies(blk, blk.get("file_ops"))
+    return held_words(blk, missing) if missing else ""
+
+
+def hold_missing(p, data):
+    """Apply's check (tracker.py, #280): for a decided block whose file operations would copy a file that has gone, the decision goes
+    back to pending with `held` (its reason) and the words for Apply are returned, so the proposal is left in staging; a block still
+    pending and held keeps the proposal back too, while its file is missing. None when the proposal can be applied."""
+    for blk, field in tracker.blocks(data):
+        if not isinstance(blk, dict) or blk.get("applied"):
+            continue
+        decided = blk.get(field) in ("approved", "rejected")
+        missing = missing_copies(blk, tracker.selected_ops(blk, field) if decided else blk.get("file_ops"))
+        if not missing:
+            blk.pop("held", None)
+            continue
+        if not decided and not blk.get("held"):
+            continue
+        blk["held"] = held_words(blk, missing)
+        if decided:
+            blk[field] = "pending"
+            blk.pop("decided_in", None)
+        label = {"minutes_decision": "minutes", "report_decision": "report"}.get(field, "file changes")
+        hint = ("approve the minutes without the transcript copy, or discard the proposal" if field == "minutes_decision"
+                and HELD_TRANSCRIPT in blk["held"] else "discard the proposal, or put the file back")
+        return f"{label} ({blk.get('title') or 'untitled'}): {blk['held']}. In Review: {hint}."
+    return None
+
+
+def held_refusal(n, ref, block, decision, drop):
+    """Minutes whose transcript has gone are approved only without the transcript copy; --without-transcript only then."""
+    if ref != "meeting" or decision != "approved":
+        return None
+    missing = missing_copies(block, block.get("file_ops"))
+    if drop and not missing:
+        return f"{n}: not approved — the transcript is still there, so it is filed with the minutes; approve without --without-transcript."
+    if drop and any(m != block.get("transcript") for m in missing):
+        return f"{n}: not approved — {held_words(block, missing)}; discard the proposal instead (say \"reject {n} --discard\")."
+    if missing and not drop:
+        return (f"{n}: not approved — {held_words(block, missing)}. Say \"approve {n} --without-transcript\" to file the minutes "
+                f"without it, or \"reject {n} --discard\" to set the proposal aside.")
+    return None
+
+
+def drop_transcript(block):
+    """Leave the transcript's copy (and its removal from the inbox) out of a minutes block, saying so in the block."""
+    tr = block.get("transcript")
+    block["file_ops"] = [f for f in block.get("file_ops") or [] if not (isinstance(f, dict) and (
+        (f.get("op") == "copy" and f.get("from") == "transcript") or (f.get("op") == "remove" and f.get("path") == tr)))]
+    block["transcript_dropped"] = {"path": tr, "why": HELD_TRANSCRIPT, "at": clock().isoformat(timespec="seconds")}
+    block["transcript_decision"] = "rejected"          # a later reject of the minutes files nothing either
+    block.pop("held", None)
+    debuglog.info("review", f"minutes approved without the transcript copy: {Path(tr or '').name or 'no transcript'}")
+
+
+def cmd_discard(n):
+    """Set a held proposal aside in system/staging/discarded/ (kept, never deleted); nothing reaches the tracker."""
+    p, data, ref, block = lookup(int(n))
+    if ref not in ("meeting", "report") or not held_reason(block):
+        print(f"{n}: not discarded — only minutes or a report held because a file to be filed has gone can be discarded; "
+              "reject it instead.")
+        return 2
+    if any(i.get("applied") for i in data.get("items", [])):
+        print(f"{n}: not discarded — some of its items are already in the tracker; reject the rest instead.")
+        return 2
+    DISCARDED.mkdir(parents=True, exist_ok=True)
+    dest, k = DISCARDED / p.name, 2
+    while dest.exists():
+        dest, k = DISCARDED / f"{p.stem}-{k}{p.suffix}", k + 1
+    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block)}
+    save(p, data)
+    p.replace(dest)
+    debuglog.info("review", f"discarded {p.name} ({ref}): held")
+    print(f"Discarded 1. {block.get('title') or p.name}: set aside in {paths.rel(dest)}; nothing was written to the tracker.")
+    return 0
+# ===== end #280 (round 3) =====
 
 
 def word_draft(draft):
@@ -1113,7 +1239,7 @@ def mark_rejected(target, why, dup):
     target["rejected_at"] = datetime.now().isoformat(timespec="seconds")
 
 
-def cmd_decide(spec, decision, mode=None, reason=None, duplicate_of=None, guesses=None):
+def cmd_decide(spec, decision, mode=None, reason=None, duplicate_of=None, guesses=None, drop=False):
     """Approve or reject the numbered items, writing the decisions into their proposals in system/staging/.
     A rejection keeps its reason or the item it duplicates (BL-133); with `guesses` ({n: (reason, duplicate_of)}, BL-315's Use each
     guess) each item takes its own. Nothing reaches the database until apply.
@@ -1136,7 +1262,7 @@ def cmd_decide(spec, decision, mode=None, reason=None, duplicate_of=None, guesse
     for n in parse_numbers(spec):
         p, data, ref, target = lookup(n)
         if ref in ("meeting", "report", "file_changes"):
-            msg = decide_entry(n, p, data, ref, target, decision, mode)   # BL-260 point 4: refuses minutes with no draft
+            msg = decide_entry(n, p, data, ref, target, decision, mode, drop)   # BL-260 point 4: refuses minutes with no draft
             out.append(msg)
             recorded = "not approved" not in msg and "open in Word" not in msg and "is open" not in msg
             done += recorded
@@ -1629,6 +1755,7 @@ def main(argv):
             print("--unlabelled is no longer an option: a draft is approved without any sensitivity label. Say it again without it.")
             return 2
         return cmd_decide(" ".join(args), "approved" if cmd == "approve" else "rejected", mode)
+
     if cmd == "bulk":
         return cmd_bulk(args[0] if args else None, "--strong" in flags)
     if cmd == "assign" and len(args) == 2:                     # BL-200: any pending new item, or a set of minutes
@@ -2259,6 +2386,9 @@ def _minutes_refusal(p, data):
         return "These minutes have already been approved, or this proposal has no minutes."
     if not minutes_record.is_record(meeting.get("draft")):
         return "These minutes are a Word draft: approve them in Review."
+    if held_reason(meeting):                                             # #280: its transcript has gone; Review offers the two ways out
+        return (f"These minutes can't be filed as staged: {held_reason(meeting)}. In Review, approve them without the transcript "
+                "copy, or discard the proposal.")
     return None
 
 
@@ -2321,6 +2451,23 @@ def _put_back(p, was):
                 it.pop("decided_in", None)
     save(target, data)
 # ===== end v2.1.0 P4 =====
+
+
+# ===== #280 (round 3) ===== the command line's two ways out for held minutes: "approve N --without-transcript" and "reject N --discard"
+def _main_with_held(argv):
+    cmd, rest = (argv[0], argv[1:]) if argv else ("", [])
+    keys = [a for a in rest if not a.startswith("--")]
+    if cmd == "reject" and "--discard" in rest and len(keys) == 1:
+        return cmd_discard(keys[0])
+    if cmd == "approve" and "--without-transcript" in rest and keys:
+        mode = "sync" if "--sync" in rest else "as-staged" if "--as-staged" in rest else None
+        return cmd_decide(" ".join(keys), "approved", mode, drop=True)
+    return _main_before_held(argv)
+
+
+_main_before_held = main
+main = _main_with_held
+# ===== end #280 (round 3) =====
 
 if __name__ == "__main__":
     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))

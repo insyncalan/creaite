@@ -116,10 +116,16 @@ export function Dialog({ open, onClose, labelledBy, ariaLabel, describedBy, id, 
     if (onClose && (open || !owned)) onClose();   // controlled: closed by the browser (a form's method=dialog), so tell the owner
   };
   const typed = () => { if (ref.current) TYPED.set(ref.current, true); };
+  /* #281: where the press began. A press inside the box that is released on the scrim (dragging a resize grip or selecting text past
+     the edge) makes the browser send the click to the dialog itself: only a press that began on the scrim may close it. */
+  const pressedOn = useRef(/** @type {EventTarget | null} */ (null));
+  /** @param {MouseEvent} e */
+  const press = e => { pressedOn.current = e.target; };
   /** @param {MouseEvent} e */
   const scrim = e => {
-    const d = ref.current;
-    if (!d || e.target !== d) return;
+    const d = ref.current, from = pressedOn.current;
+    pressedOn.current = null;
+    if (!d || e.target !== d || from !== d) return;
     const busy = typeof dirty === "function" ? dirty() : dirty === undefined ? !owned && !!TYPED.get(d) : dirty;
     if (busy) return;
     const r = d.getBoundingClientRect();
@@ -129,7 +135,7 @@ export function Dialog({ open, onClose, labelledBy, ariaLabel, describedBy, id, 
   };
   return (
     <dialog ref={ref} id={id} class={cls} aria-label={ariaLabel} aria-labelledby={labelledBy} aria-describedby={describedBy}
-      onCancel={cancel} onClose={closed} onKeyDown={cmdKey ? (/** @type {KeyboardEvent} */ e) => { if (ref.current) cmdEnter(e, ref.current); } : undefined} onClick={scrim} onInput={typed}>
+      onCancel={cancel} onClose={closed} onKeyDown={cmdKey ? (/** @type {KeyboardEvent} */ e) => { if (ref.current) cmdEnter(e, ref.current); } : undefined} onMouseDown={press} onClick={scrim} onInput={typed}>
       {children}
     </dialog>
   );

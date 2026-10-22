@@ -2342,6 +2342,7 @@ def cmd_apply(args):
     work = _load_work(args)
     if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
         work = _skip_card_leftovers(work)
+    work = _hold_missing_sources(work)  # #280: a proposal whose file to be filed has gone is held in Review, never a blocker
     if not work:
         print("Nothing to apply: no decided items.")
         return 0
@@ -2353,6 +2354,10 @@ def cmd_apply(args):
     if blocked:
         _report_blocked(work, blocked)
         return 1
+    work = _drop_all_held(work)        # #280 round 5: nothing left to write records no apply, so an undo still takes the last real one
+    if not work:
+        print("Nothing applied: every decided item is held in Review.")
+        return 0
     backup = backup_db("apply")
     debuglog.info("tracker", f"apply: backup {paths.rel(backup)}; proposals {', '.join(p.name for p, _ in work)}")
     file_records = []
@@ -2403,10 +2408,16 @@ def _validate_work(con, work):
     for p, data in work:
         for n, (kind, reason) in all_problems[p].items():
             if kind == "invalid":
-                blocked.append(f"{p.name} item {n}: {reason}")
-                item = next(i for i in data["items"] if i.get("n") == n)
-                debuglog.warn("tracker", f"invalid {p.name} item {n} ({item.get('table')} {item.get('id') or 'new'}): {debuglog.rule(reason)}")
-                set_flag(item, "invalid", True, reason)
+                item = next((i for i in data["items"] if i.get("n") == n), None)
+                where = f"{item.get('table')} {item.get('id') or 'new'}" if item else "?"
+                debuglog.warn("tracker", f"invalid {p.name} item {n} ({where}): {debuglog.rule(reason)}")
+                if item is None:                                       # not an item (a file block): it still stops the apply
+                    blocked.append(f"{p.name} item {n}: {reason}")
+                    continue
+                set_flag(item, "invalid", True, reason)                # #280: one bad item doesn't block the rest: it goes back
+                item["decision"] = "pending"                           # to Review with its reason, and the apply names it
+                item.pop("decided_in", None)
+                print(f"Held in Review, not applied: {p.name} item {n}: {reason}")
             else:
                 held[(p, n)] = (kind, reason)
         blocked += _file_op_problems(p, data, written)
@@ -2484,6 +2495,39 @@ def _skip_card_leftovers(work):
         if why:
             debuglog.warn("tracker", f"apply: left {p.name} in staging: a card-only move with no approval card")
             print(f"Left in staging, not applied: {why[0]}. Delete note or Move back again, or remove {p.name}.")
+        else:
+            keep.append((p, data))
+    return keep
+
+
+def _drop_all_held(work):
+    """#280 round 5: after the dry run, a proposal whose decided items all went back to Review (invalid, held) is saved, with
+    each reason, and left out of the apply; when none is left the apply writes nothing and records nothing (no backup, no
+    applies row), so "undo last apply" still undoes the last apply that wrote something."""
+    keep = []
+    for p, data in work:
+        items, blks = decided(data)
+        if items or blks:
+            keep.append((p, data))
+        else:
+            save(p, data)
+    if not keep:
+        debuglog.warn("tracker", f"apply: nothing applied, every decided item held in Review ({len(work)} proposal(s))")
+    return keep
+
+
+def _hold_missing_sources(work):
+    """#280: a proposal whose file operation can't run (a file it copies has gone, as a transcript no longer in the inbox) is left in
+    staging, its decision back to pending with the reason (review.hold_missing), and named; the rest applies. Review offers
+    approving the minutes without the transcript copy, or discarding the proposal."""
+    import review
+    keep = []
+    for p, data in work:
+        why = review.hold_missing(p, data)
+        if why:
+            save(p, data)
+            debuglog.warn("tracker", f"apply: held {p.name} in Review: a file to be filed has gone")
+            print(f"Held in Review, not applied: {p.name} {why}")
         else:
             keep.append((p, data))
     return keep
