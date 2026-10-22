@@ -60,7 +60,7 @@ An item flagged `unknown-owner` has an owner who isn't in the people register (`
    3. **Individual approval only:** weekly and client reports (with links), health changes, new decisions and new risks.
    4. **Everything else:** actions, issues, assumptions, dependencies, updates to existing items, and cx-edit changes.
 3. **Stale items** (pending more than `review.stale_after_days` in `system/config/settings.json`, default 7) are marked ⚠ and sorted to the top of their section. They never expire.
-4. **VIP items first (BL-99), unlabelled (BL-288):** an item flagged `vip` (sourced from a VIP's message, set by `sweep.py stage`) is listed first in its section, ahead of stale items. The flag is for ordering only: never show `vip` in the Flags column, never label the item or its sender a VIP, and never say why it is first. The dashboard's Review does the same.
+4. **Items from people you follow first (BL-99), unlabelled (BL-288):** an item flagged `vip` (an internal name; sourced from a followed person's message, set by `sweep.py stage`) is listed first in its section, ahead of stale items. The flag is for ordering only: never show `vip` in the Flags column, never label the item or its sender, and never say why it is first. The dashboard's Review does the same.
 
 Number items continuously across the whole review, so numbers are unique.
 

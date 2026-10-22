@@ -2313,7 +2313,7 @@ FOLLOWED_TAGS = {"actions": "action", "decisions": "decision", "promises": "prom
 
 
 def followed_names():
-    """({address: name}, {lower-case name: name}) of the people Alan follows (the register's VIP column)."""
+    """({address: name}, {lower-case name: name}) of the people Alan follows (the register's Follow column)."""
     vips = vip_addresses()
     return vips, {n.lower(): n for n in vips.values()}
 
@@ -2549,7 +2549,7 @@ def vip_cmd(a):
         return 0
     if a.what == "seen":
         n = vip_seen(None if a.all else set(a.args))
-        print(f"Marked {n} VIP alert{'s' if n != 1 else ''} seen.")
+        print(f"Marked {n} follow alert{'s' if n != 1 else ''} seen.")
         return 0
     if not a.args:
         print("Give the found messages' JSON file.")
@@ -2560,7 +2560,7 @@ def vip_cmd(a):
         print(f"Can't read {a.args[0]}: {e}")
         return 1
     new = vip_record(found.get("messages") if isinstance(found, dict) else found, a.found)
-    print(f"VIP: {len(new)} new alert{'s' if len(new) != 1 else ''}" +
+    print(f"Followed: {len(new)} new alert{'s' if len(new) != 1 else ''}" +
           "".join(f"\n  {x['who']}: {x['subject']} ({x['sent']}){' · ' + x['marker'] if x['marker'] else ''}"
                   for x in new))
     paths.consume_draft(a.args[0])                                      # BL-118: recorded

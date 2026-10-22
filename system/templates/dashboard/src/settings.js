@@ -470,7 +470,7 @@ export function askPerson(o){ const pr=new Promise(res=>{ const dlg=$("#personDl
     $("#personForm").onsubmit=e=>{ if(e.submitter&&e.submitter.value==="cancel") return; e.preventDefault(); if(!$("#pdSave").hidden) $("#pdSave").click(); };
     dlg.addEventListener("close",onClose); $("#personForm [value=cancel]").onclick=e=>{ e.preventDefault(); fin(null); }; openDialog(dlg); });
   /* #248 M2 (Alan, 20-10-2026): no followed field here; people you follow are set on the project settings page, and a save
-     leaves the register's extra columns (VIP among them) as they are (regEdit assigns only the fields above) */
+     leaves the register's extra columns (Follow among them) as they are (regEdit assigns only the fields above) */
   return pr; }
 /* an owner typed or picked: mapped to the full name if known, otherwise ask (matches first). null = cancelled */
 export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); if(!typed||typed==="TBC") return typed||"TBC"; const r=resolvePerson(typed);
@@ -607,7 +607,7 @@ document.addEventListener("change",e=>{ if(e.target.id==="handAll"&&shared.HAND)
 /* ===== Sweep and alerts (BL-97, BL-99, BL-98) ===== */
 /* BL-97: Settings › Sweep lists the ignore rules (settings.json sweep.ignore, saved with a backup and a log entry):
    a switch, Edit and Delete on each, and Add a rule. The private rule is built in: it can be switched off, never
-   deleted. sweep.py applies the rules (window, stage, calendar) and counts what they skip; a VIP always comes through. */
+   deleted. sweep.py applies the rules (window, stage, calendar) and counts what they skip; a followed person always comes through. */
 export const SA=()=>D.sweep_alerts||(D.sweep_alerts={ignore:[]});
 export const IGW={mail:"Mail",teams:"Teams",calendar:"Calendar"}, IGF={subject:"Subject or title",sender:"Sender",channel:"Teams channel or chat"},
   IGH={begins:"begins with",contains:"contains",equals:"is exactly",address:"is the address",domain:"is in the domain"},
@@ -630,11 +630,11 @@ export function renderIgnore(){ const el=$("#ignMgr"); if(!el) return; const L=S
   if(IGEDIT!==null&&$("#igName")) $("#igName").focus(); }
 export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.ignore":list})) return false; SA().ignore=list; if(msg) snack(msg); return true; }
 
-/* BL-99 VIPs: people marked VIP in the register (an extra "VIP" column: management, client or yes). What they send is
+/* BL-99: people you follow, marked in the register (an extra "Follow" column; an older "VIP" column is still read). What they send is
    recorded by sweep.py vip (the sweep, the session start and the live server's timer) in system/staging/vip.json, and
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
-   is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
+   is open. Proposals from followed people sort first in Review. Nothing leaves the laptop. */
 /* BL-342 Part 5: a card with a promise of Alan's to add (or one staged) or a promise that looks kept stays a full card, even
    when he replied last (his promise is usually in that reply) or the thread is otherwise quiet, until he acts on it */
 const vipOffers=/** @param {any} a */a=>a.marker!=="private"&&((a.promises||[]).some(/** @param {any} p */p=>p&&(p.state==="offered"||p.state==="staged"))||!!(a.kept&&a.kept.id&&a.kept.open!==false));
@@ -801,11 +801,10 @@ export function vipNotify(list){ if(VIPD().notify===false||!("Notification" in w
 export async function vipPoll(){ if(!viaServer()) return; const r=await api("/api/vip"); if(!r.ok) return;
   const before=vipSig(); Object.assign(VIPD(),{alerts:r.alerts||[],last_check:r.last_check});
   if(vipSig()!==before){ vipNotify(VIPS()); vipBadge(); if(shared.VIEW==="today") renderToday(); } }
-/* Settings › VIP alerts: the switches, and what "always" can honestly mean */
+/* Settings › People I follow: the switches, and what "always" can honestly mean */
 export function vipSectionHtml(){ const v=VIPD();
   return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow on each project's settings page, under People and partners.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v.notify!==false?"checked":""} aria-label="Browser notification"></div></div>`; }
-/* BL-99 in Work, Draft email and early warnings: a VIP chip on owners and makers, a VIP filter ("+ Filter"), a note
-   in the Draft email when it goes to a VIP, and the "overdue item owned by a VIP" signal in Settings › Early warnings */
+/* BL-99 in Work, Draft email and early warnings: the People I follow filter ("+ Filter") and the "overdue item owned by someone you follow" signal in Settings › Early warnings */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
@@ -819,8 +818,8 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],
 PKDRAW.push(alertPeekDraw);
 setInterval(vipPoll,60*1000);
 vipBadge();
-/* Review: proposals from a VIP (flag "vip", set by sweep.py stage) first, labelled VIP */
-/* no VIP chip on a person's page and no followed field in the person dialog (BL-288, #247): followed is set on the project settings page only */
+/* Review: proposals from a followed person (flag "vip", set by sweep.py stage) first, unlabelled */
+/* no chip on a person's page and no followed field in the person dialog (BL-288, #247): followed is set on the project settings page only */
 FX.vip=new Set();
 ["actions","raid","decisions"].forEach(t=>FDEFS[t].push(["vip","People I follow",()=>[["yes",t==="decisions"?"Made by someone I follow":"Owned by someone I follow"],["no","Not followed"]],x=>vipKind(x.o||x.by)?"yes":"no",1]));
 WSIG.push(["vip_overdue","Overdue item owned by someone you follow closely","days","Overdue by at least (days)"]);
