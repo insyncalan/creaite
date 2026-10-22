@@ -15,7 +15,7 @@ import { shared } from "./state.js";
 
 /* ===== The meeting list: this week's meetings from the saved calendar, and the state kept for each ===== */
 /* #307: a server answer that is a raw error or shows a folder path is never put on the page */
-const SAFE_WHY=m=>/OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m)?(/too long/i.test(m)?"the file name is too long. Rename it and add it again":"it couldn't be saved. Try again"):m;
+export const SAFE_WHY=m=>/OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m)?(/too long/i.test(m)?"the file name is too long. Rename it and add it again":"it couldn't be saved. Try again"):m;
 export const MTG=()=>(D.meetings&&D.meetings.rows)||[], MRUN={};
 /* A meeting that hasn't ended can't have a transcript yet: greyed and not selectable until it ends (Alan, 2026-10-09).
    Worked out in the page, so a meeting becomes selectable on its own once its end time passes. */

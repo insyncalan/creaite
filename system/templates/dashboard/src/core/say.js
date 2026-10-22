@@ -81,5 +81,14 @@ export function decidedWords(list) {
   return out.length ? out.join(". ") : "Saved";
 }
 
+/** #307: the decided rows, cut to what the server's apply line says it really saved ("Apply 12: written 1, filed 0, rejected 0, …"),
+    so a repeated click is never counted twice. An apply line that cannot be read leaves the list as it is. @param {{r: any, v: string}[]} list @param {unknown} msg */
+export function savedCapped(list, msg) {
+  const m = /written (\d+), filed (\d+), rejected (\d+)/.exec(String(msg || ""));
+  if (!m) return list;
+  let ok = +m[1] + +m[2], no = +m[3];
+  return list.filter(x => x.v === "rejected" ? no-- > 0 : ok-- > 0);
+}
+
 /** Why a file could not be added, one line: the page's own rule, or the server's answer in plain words. @param {string} name @param {string} why */
 export const addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;

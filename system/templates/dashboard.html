@@ -4897,6 +4897,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     RejectsList: () => RejectsList,
     S: () => S,
     SA: () => SA,
+    SAFE_WHY: () => SAFE_WHY,
     SAVEQ: () => SAVEQ,
     SCREEN_OF: () => SCREEN_OF,
     SEARCHCFG: () => SEARCHCFG,
@@ -5057,6 +5058,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actUndoSelected: () => actUndoSelected,
     activeFilters: () => activeFilters,
     addEl: () => addEl,
+    addFailed: () => addFailed,
     addHTML: () => addHTML,
     addImages: () => addImages,
     addNoteImage: () => addNoteImage,
@@ -5650,6 +5652,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     decRevisit: () => decRevisit,
     decShort: () => decShort,
     decide: () => decide,
+    decidedWords: () => decidedWords,
     decisionCheck: () => decisionCheck,
     decisionFields: () => decisionFields,
     decodeHtml: () => decodeHtml,
@@ -6088,6 +6091,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isLinkUrl: () => isLinkUrl,
     isMe: () => isMe,
     isMin: () => isMin,
+    isMovedMinutes: () => isMovedMinutes,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
     isRecordMin: () => isRecordMin,
@@ -6677,6 +6681,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkX: () => pkX,
     placePicker: () => placePicker,
     plainPaths: () => plainPaths,
+    plainSay: () => plainSay,
     playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
@@ -6976,6 +6981,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     saveTab: () => saveTab,
     saveView: () => saveView,
     saveWs: () => saveWs,
+    savedCapped: () => savedCapped,
     savedFactsHtml: () => savedFactsHtml,
     savedNow: () => savedNow,
     savedViewMenu: () => savedViewMenu,
@@ -36610,6 +36616,12 @@ ${s5}`;
       if (parts.length) out.push(`${verb === "approved" ? "Saved" : "Rejected"} ${parts.length > 1 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts[0]}`);
     }
     return out.length ? out.join(". ") : "Saved";
+  }
+  function savedCapped(list, msg) {
+    const m5 = /written (\d+), filed (\d+), rejected (\d+)/.exec(String(msg || ""));
+    if (!m5) return list;
+    let ok2 = +m5[1] + +m5[2], no2 = +m5[3];
+    return list.filter((x5) => x5.v === "rejected" ? no2-- > 0 : ok2-- > 0);
   }
   var addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
 
@@ -78274,18 +78286,12 @@ ${d5.text}`);
     APPLYL.push({ r: row2 || null, v: verb || "approved" });
     clearTimeout(APPLYT);
     APPLYT = setTimeout(async () => {
-      const seen = /* @__PURE__ */ new Set(), L3 = APPLYL.filter((x5) => {
-        const k5 = x5.r ? `${x5.r.file}|${x5.r.ref}|${x5.v}` : null;
-        if (!k5) return true;
-        if (seen.has(k5)) return false;
-        seen.add(k5);
-        return true;
-      });
+      const L3 = APPLYL;
       APPLYN = 0;
       APPLYL = [];
       const r4 = await applyNow();
       const held = r4.ok ? heldWords(r4.message) : "";
-      snack(r4.ok ? `${decidedWords(L3)}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
+      snack(r4.ok ? `${decidedWords(savedCapped(L3, r4.message))}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
@@ -79845,6 +79851,7 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
+        "isMovedMinutes",
         "isNotePath",
         "itemDatePicker",
         "itemFp",
@@ -80136,6 +80143,7 @@ ${d5.text}`);
         "saveCurrent",
         "savePanel",
         "saveView",
+        "savedCapped",
         "savesSettled",
         "say",
         "sayMd",
