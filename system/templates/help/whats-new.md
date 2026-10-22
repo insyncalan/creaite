@@ -2,6 +2,29 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.5.4
+
+A release of fixes and small tidy-ups: Prep opens for any meeting, one stuck item no longer stops your saves, and several menus, icons and pages are clearer. Written only from what landed.
+
+
+- **Prep opens for any meeting, with or without a project.** If a meeting has no project, the Prep page opens anyway and the Project chip becomes a picker: choose a project, or "No project (general meeting)". Your choice is remembered for that meeting. A "No project" meeting files to the portfolio's Agendas folder and looks across all your projects. If earlier research was done for another project, the page says so and offers Refresh research instead of showing old text. (#279)
+- **One stuck item no longer stops everything else from saving.** Saving a work item or approving items used to fail with "unknown field(s)" or "source not found" because of an older, unrelated item. Now a save only saves its own change. An older item that can't be saved is held in Review and says why on its own row, for example "Can't be saved as it is: … Edit it or reject it" (Approve is switched off until it's fixed), or "Held: transcript no longer in the inbox". For held minutes you can approve without the transcript copy, discard them, or edit the item. Minutes no longer write a field that a decision doesn't have. (#280)
+- **The Draft email preview can be resized.** Drag the grip in the bottom corner to make the mail window taller or shorter, in every Draft email window (the dialog and the chase pane). (#281)
+- **Exports say "Actions", not "Action Items".** The Word, PDF, HTML and follow-up email exports use the same word as the Minutes view. (#282)
+- **The type icon names its type when you point at it.** Actions, decisions, risks, issues, assumptions, dependencies and milestones show a tooltip in Work, Review, search, project pages, the person page and Week ahead, including the milestone markers on the Milestones page and the project's Milestones card. (#286)
+- **The health "Change" menu is readable.** It is a compact menu like the others, inside the window, with the current choice marked, in every palette. (#287)
+- **A tidier project page and Milestones page.** The project dropdown, the ‹ › arrows and the [ ] keys are gone from both; open a project from the Projects list or search, and its Milestones from the project's Milestones card. (#285)
+- **The "?" button is gone from Today's header.** The ? key still opens Help for Today, and Close the day is unchanged. (#284)
+- **The "Replied" and "nothing for you" lines on Today can be cleared.** Both get a Seen action. A new ask reopens the line. (#276)
+- **A document with a list as its project code no longer breaks the match check.** It is refused with a clear message instead of failing. (#277)
+
+
+Nothing is required. Any minutes that were stuck before this release (they failed with "unknown field" or "source not found") now show in Review as held items: approve them without the transcript copy, or discard them.
+
+
+- Each item's source note still ends "— Action Items" in the item's own record; that changes in 2.6.
+- Single-key page shortcuts are planned for 2.6.0, and Re-extract on the chat for 2.6.1.
+
 ## creaite 2.5.3
 
 A release of fixes and follow-ups: Process and Refresh calendar run as their own jobs, the last client-export gaps are closed, milestones show on Today, and the alert check pauses overnight. Written only from what landed.
