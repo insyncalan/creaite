@@ -2544,7 +2544,7 @@
        "changes": {
         "baseline_date": "2030-07-12"
        },
-       "decision": "approved",
+       "decision": "pending",
        "flags": [
         "invalid"
        ],
@@ -2624,9 +2624,9 @@
     }
    ]
   },
-  "exit": 1,
+  "exit": 0,
   "stderr": "",
-  "stdout": "Apply stopped. Nothing was written.\n  proposed-step2.json item 1: changing the agreed date is a rebaseline and records a decision: give who agreed it (agreed_with), the reason, the source in the item's rebaseline\n",
+  "stdout": "Held in Review, not applied: proposed-step2.json item 1: changing the agreed date is a rebaseline and records a decision: give who agreed it (agreed_with), the reason, the source in the item's rebaseline\nNothing applied: every decided item is held in Review.\n",
   "step": "bare"
  },
  {
@@ -4684,7 +4684,7 @@
        "changes": {
         "baseline_date": "2030-07-12"
        },
-       "decision": "approved",
+       "decision": "pending",
        "flags": [
         "invalid"
        ],
@@ -6764,7 +6764,7 @@
        "changes": {
         "baseline_date": "2030-07-12"
        },
-       "decision": "approved",
+       "decision": "pending",
        "flags": [
         "invalid"
        ],

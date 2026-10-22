@@ -135,8 +135,8 @@ class ArchiveItems(unittest.TestCase):
             p = self.v.propose("bad", [{"n": 1, "op": "archive_item", "table": t, "id": i, "decision": "approved",
                                         "match": "strong", "flags": []}])
             r = self.run_at(DAY, "apply", str(p), script="tracker.py", ok=False)
-            self.assertNotEqual(r.returncode, 0, words)
-            self.assertIn("Apply stopped. Nothing was written.", r.stdout)
+            self.assertIn("Held in Review, not applied: proposed-bad.json item 1:", r.stdout, words)   # #280: held, not written
+            self.assertIn("Nothing applied", r.stdout, words)
             p.unlink()
         self.assertEqual(self.flagged(), [])
         p = self.v.propose("hand", [{"n": 1, "op": "update", "table": "actions", "id": self.ids["Closed on the boundary"][1],

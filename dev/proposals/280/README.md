@@ -96,3 +96,28 @@ are unchanged.
    "changed elsewhere"), puts the record back, drops its own proposal (nothing of it is left in Review), and, as a save is all or
    nothing, undoes the apply when another item of the same save was written. No Retry: it would be refused again. Tests:
    `test_save_not_blocked` `OwnItemHeld` (2, browser; failed before with "changed elsewhere").
+
+## Fifth round: 2.5.4 gate 1 (cut 2635fc97, CI run 39698918503)
+
+One more diff, `tracker-round5.py.diff`, made against `tracker.py` with the four applied (origin/v254-rc 285e3a64). All five apply
+in this order: `tracker.py.diff`, `tracker-held.py.diff`, `live_server.py.diff`, `live_server-held.py.diff`,
+`tracker-round5.py.diff`; `-R` in reverse order restores `tracker.py` and `live_server.py` byte for byte (checked in a throwaway
+copy of 6029ecb3). On the v254-rc tree alone: `git apply --check dev/proposals/280/tracker-round5.py.diff` (and `-R --check` once
+applied) are clean.
+
+1. **Regression: an apply with every decided item held recorded an empty apply.** With the four diffs, an apply whose only
+   approved items were all invalid went on: a backup, an `applies` row, "Apply n: written 0 …". The next "undo last apply" then
+   undid that empty apply ("Undid apply n: 0 item(s) reversed") instead of the last real one (`test_writer_pinned`
+   made_decision_back_to_pending, `test_workstreams` close/undo). Now `_drop_all_held` (after the dry run) saves and leaves out
+   every proposal with nothing decided left; when none is left Apply prints `Nothing applied: every decided item is held in
+   Review.`, logs `apply: nothing applied, every decided item held in Review (n proposal(s))`, records nothing and exits 0 (the
+   page's `ownHeld` reads the Held lines, as before; `wrote` is false, so it undoes nothing).
+2. **Debug log line restored.** The invalid item's log line names the item again: `invalid <proposal> item n (actions new): <rule>`
+   (the four diffs had dropped the ID / `new`).
+
+Tests updated for the intended change (each held item is named, nothing of it is written, the rest applies):
+`test_writer_pinned` (four pins re-recorded: exit 0, the Held line, the item back to pending; batch_with_one_invalid_item also
+writes the good action, which its undo reverses), `test_workstreams`, `test_sneak_peek_read` (a bad `@n` link is held, the action
+is written; renamed `…_is_held_in_review`), `test_debug_log_stage_b`, `test_archive_items`, `test_archive_projects`. Not guarded:
+`review.py`'s two new stamps read the clock through its `clock()` helper (CREAITE_NOW), `test_clock_guard` passes at 5.
+These tests need `tracker-round5.py.diff` applied.

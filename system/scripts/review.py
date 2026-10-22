@@ -187,12 +187,16 @@ def stale_days():
     return paths.load_settings().get("review", {}).get("stale_after_days", 7)
 
 
+def clock():
+    """creaite's clock: the time now, or CREAITE_NOW when tests fix it, as elsewhere (#178: the one clock read for these)."""
+    fixed = os.environ.get("CREAITE_NOW")
+    return datetime.fromisoformat(fixed) if fixed else datetime.now()
+
+
 def age(data):
     """How many days old a proposal is, from its `created` time; 0 if that can't be read."""
     try:
-        fixed = os.environ.get("CREAITE_NOW")           # creaite's clock: CREAITE_NOW fixes it in tests, as elsewhere
-        now = datetime.fromisoformat(fixed) if fixed else datetime.now()
-        return (now - datetime.fromisoformat(data.get("created", ""))).days
+        return (clock() - datetime.fromisoformat(data.get("created", ""))).days
     except ValueError:
         return 0
 
@@ -1122,7 +1126,7 @@ def drop_transcript(block):
     tr = block.get("transcript")
     block["file_ops"] = [f for f in block.get("file_ops") or [] if not (isinstance(f, dict) and (
         (f.get("op") == "copy" and f.get("from") == "transcript") or (f.get("op") == "remove" and f.get("path") == tr)))]
-    block["transcript_dropped"] = {"path": tr, "why": HELD_TRANSCRIPT, "at": datetime.now().isoformat(timespec="seconds")}
+    block["transcript_dropped"] = {"path": tr, "why": HELD_TRANSCRIPT, "at": clock().isoformat(timespec="seconds")}
     block["transcript_decision"] = "rejected"          # a later reject of the minutes files nothing either
     block.pop("held", None)
     debuglog.info("review", f"minutes approved without the transcript copy: {Path(tr or '').name or 'no transcript'}")
@@ -1142,7 +1146,7 @@ def cmd_discard(n):
     dest, k = DISCARDED / p.name, 2
     while dest.exists():
         dest, k = DISCARDED / f"{p.stem}-{k}{p.suffix}", k + 1
-    data["discarded"] = {"at": datetime.now().isoformat(timespec="seconds"), "why": held_reason(block)}
+    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block)}
     save(p, data)
     p.replace(dest)
     debuglog.info("review", f"discarded {p.name} ({ref}): held")
