@@ -358,15 +358,17 @@ class CopySourceStaysInTheVault(unittest.TestCase):
         (self.root / "system/staging/proposed-m3.json").unlink()
 
     def test_a_nul_source_is_refused_and_later_applies_still_run(self):
-        """A NUL in a copy's source is 'source not found' at apply (never a crash in card_op_problem), and once that proposal is
-        gone the next apply runs."""
+        """A NUL in a copy's source never crashes apply (card_op_problem): under #280 the proposal is held in Review as its
+        transcript is no longer in the inbox, nothing is filed for it, and once that proposal is gone the next apply runs."""
         m = {"key": "fp:nul", "title": "T", "date": DAY, "projects": ["ABC"], "transcript": "inbox/a\x00b.vtt",
              "minutes_decision": "approved", "file_ops": [{"op": "copy", "from": "transcript", "to": f"{TR}/nul.vtt"}]}
         self.v.propose("nul", [], source_run="cx-minutes", meeting=m)
         r = self.v.run("apply", ok=False)
         said = r.stdout + r.stderr
         self.assertNotIn("Traceback", said)
-        self.assertIn("source not found", said)
+        self.assertIn("Held in Review, not applied", said)
+        self.assertIn("transcript no longer in the inbox", said)
+        self.assertFalse((self.root / f"{TR}/nul.vtt").exists())
         (self.root / "system/staging/proposed-nul.json").unlink()
         self.assertEqual(self.v.run("apply", ok=False).returncode, 0)
 
