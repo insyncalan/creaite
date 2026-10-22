@@ -153,6 +153,49 @@ class RailAvatar(LiveBrowserCase):
         self.close_menu()
         self.assertEqual(b.eval("document.activeElement.id"), "railMore")                      # focus back, as More's
 
+    def popups(self):
+        return self.b.eval("[...document.querySelectorAll('#railMoreMenu:not([hidden]), [id^=railFly-]')].filter(e=>!e.hidden&&e.getClientRects().length>0).map(e=>e.id)")
+
+    def point(self, sel):
+        p = self.b.box(sel)
+        self.b.call("Input.dispatchMouseEvent", type="mouseMoved", x=p["x"], y=p["y"], button="none")
+
+    def one_popup_while_the_avatar_menu_is_open(self):
+        """Pointing at (or focusing) Projects then Work while the avatar menu is open opens no flyout beside it; Esc and a click
+        away still close the menu, with focus back on the avatar for Esc."""
+        b = self.b
+        for how in ("esc", "away"):
+            with self.subTest(close=how):
+                self.open_menu()
+                for v in ("projects", "work"):
+                    self.point(f".rail #railMain [data-v={v}]")
+                    b.pump(0.8)                                                                # past the menu open delay (200 ms)
+                    self.assertEqual(self.popups(), ["railMoreMenu"], v)
+                    b.eval(f"document.querySelector('.rail #railMain [data-v={v}]').dispatchEvent(new FocusEvent('focusin',{{bubbles:true}}))")
+                    b.pump(0.3)
+                    self.assertLessEqual(len(self.popups()), 1, v)
+                    b.eval("document.querySelector('#railMoreMenu [role=menuitem]').focus()")
+                if how == "esc":
+                    self.close_menu()
+                    self.assertEqual(b.eval("document.activeElement.id"), "railMore")
+                else:
+                    b.click("#dayHead")
+                    b.wait("document.getElementById('railMoreMenu').hidden", 5)
+                self.assertEqual(self.popups(), [])
+                self.point("#dayHead")                                                         # off the rail: the next run starts clean
+                b.pump(0.5)
+        # with the menu shut, the flyouts open on hover as before
+        self.point(".rail #railMain [data-v=projects]")
+        b.wait("!!document.querySelector('#railFly-projects')", 5)
+
+    def test_flyouts_do_not_open_beside_the_avatar_menu(self):
+        self.one_popup_while_the_avatar_menu_is_open()
+
+    def test_flyouts_do_not_open_beside_the_avatar_menu_at_900px(self):
+        self.b.resize(900, 800)
+        self.b.wait("innerWidth===900", 5)
+        self.one_popup_while_the_avatar_menu_is_open()
+
     def test_with_more_empty_the_avatar_still_opens_health_help_and_customise(self):
         b = self.b
         b.eval("railSave({...RAILCFG,order:['today','work','review','projects','reports','people','files','activity','settings'],more:[]})")

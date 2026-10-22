@@ -16,7 +16,7 @@ import { tipHide } from "../../core/dom.js";
 import { hoverAttach, menuGroup } from "../../core/hover.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
 import { StatusDot } from "../StatusDot.jsx";
-import { railCounts, railItem, railMode, railView } from "../../stores/rail.js";
+import { railCounts, railItem, railMode, railMoreOpen, railView } from "../../stores/rail.js";
 import { RailIcon } from "./RailIcon.jsx";
 
 /** @typedef {{id: string, name?: string, health?: string, count?: number, note?: string}} FlyItem */
@@ -46,11 +46,12 @@ export function RailButton({ id, inMenu, onGo, fly, onFly }) {
     const s = bd.current;
     if (s) { const t = capCount(c.n); if (s.textContent !== t) s.textContent = t; s.style.display = c.n ? "" : "none"; attr(s, "aria-label", c.label); }
   }), [id, inMenu, hasFly]);
-  /* #139: the hover standard's wiring (pointer, safe triangle, one menu at a time) */
+  /* #139: the hover standard's wiring (pointer, safe triangle, one menu at a time). #295: the avatar's menu opens on a click and
+     is the menu the user is working in (#160), so while it is open pointing here opens nothing beside it. */
   useEffect(() => {
     const b = btn.current; if (!hasFly || !b) return;
     return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current,
-      open: () => { if (isOpen.current) return; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
+      open: () => { if (railMoreOpen.peek()) { menuGroup.close(); return; } if (isOpen.current) return; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
   }, [hasFly]);
   /* any navigation (go, ⌘K) folds an open flyout */
   useEffect(() => effect(() => { void railView.value; if (isOpen.current) shut(false); }), []);

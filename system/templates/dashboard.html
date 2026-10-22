@@ -35634,6 +35634,10 @@ ${s5}`;
         focusOpens: false,
         panel: () => box.current,
         open: () => {
+          if (railMoreOpen.peek()) {
+            menuGroup.close();
+            return;
+          }
           if (isOpen.current) return;
           byPointer.current = true;
           tipHide();
