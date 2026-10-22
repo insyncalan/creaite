@@ -2512,8 +2512,8 @@ def approve_minutes(name, group=True, own=(), via="dashboard"):
     data["meeting"].update(minutes_decision="approved", decided_in="minutes")
     save(p, data)
     debuglog.info("review", f"{p.name} minutes approved with {approved} item(s) in one apply; {len(waiting)} wait in Review ({via})")
-    r = subprocess.run([sys.executable, str(Path(__file__).with_name("tracker.py")), "apply", p.name], cwd=paths.ROOT,
-                       capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(Path(__file__).with_name("tracker.py")), "apply", "system/staging/" + p.name],
+                       cwd=paths.ROOT, capture_output=True, text=True)          # #280 follow-up: never a vault-root namesake
     out = (r.stdout + r.stderr).strip()
     if r.returncode != 0:
         _put_back(p, was)

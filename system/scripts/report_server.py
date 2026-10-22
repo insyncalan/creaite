@@ -276,7 +276,7 @@ def approve_route(handler, req):
             return refuse(handler, "There is no draft to approve: save the report first (a filed report is approved already).")
         stage = report_doc.stage_weekly if kind == "weekly" else report_doc.stage_client
         prop = stage(draft, force=bool(req.get("force")), code=code, fri=fri)
-        code_, out = HOST["run"]("tracker.py", "apply", prop.name)
+        code_, out = HOST["run"]("tracker.py", "apply", "system/staging/" + prop.name)   # #280 follow-up: never a root namesake
         if code_ != 0 and prop.exists():
             prop.unlink()                    # nothing was written: the proposal this Approve staged goes, the draft stays
         answered = {"ok": code_ == 0, "message": out, "apply_id": HOST["latest_apply"](),

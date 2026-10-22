@@ -1,0 +1,289 @@
+diff --git a/dev/tests/pinned/batch_with_one_invalid_item.json b/dev/tests/pinned/batch_with_one_invalid_item.json
+index 878876ef..2eac3c56 100644
+--- a/dev/tests/pinned/batch_with_one_invalid_item.json
++++ b/dev/tests/pinned/batch_with_one_invalid_item.json
+@@ -267,7 +267,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Held in Review, not applied: proposed-step1.json item 2: type must be one of Risk, Assumption, Issue, Dependency (got 'Wish')\nApply 1: written 1, filed 0, rejected 0, held 0, 1 still pending.\n",
++  "stdout": "Held in Review, not applied: proposed-step1.json item 2: type must be one of Risk, Assumption, Issue, Dependency (got 'Wish')\nApply 1: written 1, filed 0, rejected 0, 1 still pending.\n",
+   "step": "batch"
+  },
+  {
+diff --git a/dev/tests/pinned/cancel.json b/dev/tests/pinned/cancel.json
+index cf128daf..a3eac210 100644
+--- a/dev/tests/pinned/cancel.json
++++ b/dev/tests/pinned/cancel.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+@@ -2739,7 +2739,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 3, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 2: written 3, filed 0, rejected 0, 0 still pending.\n",
+   "step": "cancel"
+  },
+  {
+diff --git a/dev/tests/pinned/conflict.json b/dev/tests/pinned/conflict.json
+index 13fa7978..414c0424 100644
+--- a/dev/tests/pinned/conflict.json
++++ b/dev/tests/pinned/conflict.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+diff --git a/dev/tests/pinned/labels.json b/dev/tests/pinned/labels.json
+index 9cd82bd0..21fcdb5e 100644
+--- a/dev/tests/pinned/labels.json
++++ b/dev/tests/pinned/labels.json
+@@ -315,7 +315,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "labelled"
+  },
+  {
+@@ -665,7 +665,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 2: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "relabel"
+  },
+  {
+diff --git a/dev/tests/pinned/made_decision_back_to_pending.json b/dev/tests/pinned/made_decision_back_to_pending.json
+index 69b87c2b..96436ece 100644
+--- a/dev/tests/pinned/made_decision_back_to_pending.json
++++ b/dev/tests/pinned/made_decision_back_to_pending.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+diff --git a/dev/tests/pinned/meeting_filed.json b/dev/tests/pinned/meeting_filed.json
+index c91d5a0c..74f5e830 100644
+--- a/dev/tests/pinned/meeting_filed.json
++++ b/dev/tests/pinned/meeting_filed.json
+@@ -322,7 +322,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 1, filed 1, rejected 1, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 1, filed 1, rejected 1, 0 still pending.\n",
+   "step": "meeting"
+  },
+  {
+diff --git a/dev/tests/pinned/meeting_minutes_rejected.json b/dev/tests/pinned/meeting_minutes_rejected.json
+index 79664494..b41687f3 100644
+--- a/dev/tests/pinned/meeting_minutes_rejected.json
++++ b/dev/tests/pinned/meeting_minutes_rejected.json
+@@ -319,7 +319,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 1, filed 1, rejected 1, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 1, filed 1, rejected 1, 0 still pending.\n",
+   "step": "meeting"
+  },
+  {
+diff --git a/dev/tests/pinned/new_each_table.json b/dev/tests/pinned/new_each_table.json
+index 0f254301..07ac19cd 100644
+--- a/dev/tests/pinned/new_each_table.json
++++ b/dev/tests/pinned/new_each_table.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+diff --git a/dev/tests/pinned/rebaseline.json b/dev/tests/pinned/rebaseline.json
+index ee36fecd..273240f4 100644
+--- a/dev/tests/pinned/rebaseline.json
++++ b/dev/tests/pinned/rebaseline.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+@@ -2813,7 +2813,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 2: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "rebaseline"
+  },
+  {
+diff --git a/dev/tests/pinned/rebaseline_without_its_block.json b/dev/tests/pinned/rebaseline_without_its_block.json
+index b6d677a7..47bb9d61 100644
+--- a/dev/tests/pinned/rebaseline_without_its_block.json
++++ b/dev/tests/pinned/rebaseline_without_its_block.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+diff --git a/dev/tests/pinned/recode.json b/dev/tests/pinned/recode.json
+index 347a80c2..2c549b7e 100644
+--- a/dev/tests/pinned/recode.json
++++ b/dev/tests/pinned/recode.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+@@ -2643,7 +2643,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 2: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "recode"
+  },
+  {
+diff --git a/dev/tests/pinned/rejected_pending_and_a_repeat.json b/dev/tests/pinned/rejected_pending_and_a_repeat.json
+index 91b80526..e0ed4dd7 100644
+--- a/dev/tests/pinned/rejected_pending_and_a_repeat.json
++++ b/dev/tests/pinned/rejected_pending_and_a_repeat.json
+@@ -300,7 +300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 1, filed 0, rejected 1, held 0, 1 still pending.\n",
++  "stdout": "Apply 1: written 1, filed 0, rejected 1, 1 still pending.\n",
+   "step": "decide"
+  },
+  {
+@@ -670,7 +670,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 0, filed 0, rejected 2, held 0, 1 still pending.\n",
++  "stdout": "Apply 2: written 0, filed 0, rejected 2, 1 still pending.\n",
+   "step": "again"
+  },
+  {
+diff --git a/dev/tests/pinned/undo_skips_a_row_changed_since.json b/dev/tests/pinned/undo_skips_a_row_changed_since.json
+index 912fc7d3..385381b5 100644
+--- a/dev/tests/pinned/undo_skips_a_row_changed_since.json
++++ b/dev/tests/pinned/undo_skips_a_row_changed_since.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+diff --git a/dev/tests/pinned/undo_with_its_proposal_gone.json b/dev/tests/pinned/undo_with_its_proposal_gone.json
+index e2b0ea3a..e443f13f 100644
+--- a/dev/tests/pinned/undo_with_its_proposal_gone.json
++++ b/dev/tests/pinned/undo_with_its_proposal_gone.json
+@@ -1148,7 +1148,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+diff --git a/dev/tests/pinned/updates.json b/dev/tests/pinned/updates.json
+index 4ed2024a..3c0b810f 100644
+--- a/dev/tests/pinned/updates.json
++++ b/dev/tests/pinned/updates.json
+@@ -1300,7 +1300,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 8, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 8, filed 0, rejected 0, 0 still pending.\n",
+   "step": "new"
+  },
+  {
+@@ -2915,7 +2915,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 6, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 2: written 6, filed 0, rejected 0, 0 still pending.\n",
+   "step": "update"
+  },
+  {
+@@ -4591,7 +4591,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 3: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 3: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "reopen"
+  },
+  {
+diff --git a/dev/tests/pinned/workstream_rename.json b/dev/tests/pinned/workstream_rename.json
+index 79d39dfd..def4d0f5 100644
+--- a/dev/tests/pinned/workstream_rename.json
++++ b/dev/tests/pinned/workstream_rename.json
+@@ -185,7 +185,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 1: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 1: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "workstream"
+  },
+  {
+@@ -571,7 +571,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 2: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "item in it"
+  },
+  {
+@@ -1029,7 +1029,7 @@
+   },
+   "exit": 0,
+   "stderr": "",
+-  "stdout": "Apply 3: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
++  "stdout": "Apply 3: written 1, filed 0, rejected 0, 0 still pending.\n",
+   "step": "rename"
+  },
+  {

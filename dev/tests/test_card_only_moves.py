@@ -262,14 +262,14 @@ class CardOnly(CardOnlyMoves):
         def approve(name, rewrite):
             self.new(name)
             return self.py_json(
-                "import archive, live_server as ls, paths\n"
+                "import pathlib, archive, live_server as ls, paths\n"
                 f"rel = {f'{ABC}/notes/{name}.md'!r}\n"
                 "spec, why = archive.note_delete_spec(rel)\n"
                 "card, why = ls.server_edit_card('t', json.dumps(spec).encode('utf-8'))\n"
                 "seen, real = [], ls.run\n"
                 "def run(script, *args):\n"
                 "    if script == 'tracker.py' and args and args[0] == 'apply':\n"
-                "        f = paths.STAGING / args[1]; raw = f.read_bytes()\n"
+                "        f = paths.STAGING / pathlib.Path(args[1]).name; raw = f.read_bytes()\n"
                 "        seen.append(sorted(m.name for m in paths.GUARD.glob('move-*')))\n"
                 f"        f.write_bytes({'json.dumps(json.loads(raw), indent=4).encode()' if rewrite == 'other' else 'raw'})\n"
                 "        seen.append(f.read_bytes() == raw)\n"
