@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_onedrive_projects import OneDriveCase, touch  # noqa: E402
-from test_tracker import HELD_IN_REVIEW, Vault  # noqa: E402
+from test_tracker import Vault  # noqa: E402
 
 NEW, OLDS = "99 Archive", ("_Archive", "zz Archive")
 
@@ -304,11 +304,7 @@ class ArchiveRestore(unittest.TestCase):
         bad = {"items": [{"n": 1, "op": "archive", "table": "projects", "id": "ABC", "decision": "approved"}]}   # no folder move
         self.v.propose("bad", bad["items"])
         r = self.v.run("apply", ok=False)
-        if HELD_IN_REVIEW:
-            self.assertIn("Held in Review, not applied: proposed-bad.json item 1: Example Programme has 1 open item(s)", r.stdout)  # #280
-        else:                                                           # before tracker.py takes dev/proposals/280
-            self.assertNotEqual(r.returncode, 0)
-            self.assertIn("Example Programme has 1 open item(s)", r.stdout)
+        self.assertIn("Held in Review, not applied: proposed-bad.json item 1: Example Programme has 1 open item(s)", r.stdout)  # #280
         self.assertEqual(self.v.rows("projects")[0]["archived"], 0)
 
     def test_archive_then_undo_round_trips_exactly(self):

@@ -12,7 +12,7 @@ from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_tracker import HELD_IN_REVIEW, REPO, Vault, action  # noqa: E402
+from test_tracker import REPO, Vault, action  # noqa: E402
 
 
 def ws(n, project="ABC", **v):
@@ -104,12 +104,9 @@ class TrackerTests(unittest.TestCase):
         self.assertIn("“Commercial” isn't an active workstream of ABC", out)
         self.assertIn("“Testing” isn't an active workstream of DEF", out)              # ABC's Testing doesn't count for DEF
         out = v.run("apply", ok=False).stdout                                          # #280: each bad item is held in Review
-        if HELD_IN_REVIEW:
-            self.assertIn("Held in Review, not applied: proposed-bad.json item 1:", out)
-            self.assertIn("Held in Review, not applied: proposed-bad.json item 2:", out)
-            self.assertIn("Nothing applied", out)
-        else:                                                                          # before tracker.py takes dev/proposals/280
-            self.assertIn("Nothing was written", out)
+        self.assertIn("Held in Review, not applied: proposed-bad.json item 1:", out)
+        self.assertIn("Held in Review, not applied: proposed-bad.json item 2:", out)
+        self.assertIn("Nothing applied", out)
         self.assertEqual(v.rows("actions"), [])
         bad.unlink()
         v.propose("good", [action(1, description="Any case", workstream="data"), action(2, description="Blank", workstream="")])

@@ -21,7 +21,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_tracker import ABC, HELD_IN_REVIEW, Vault, docx_text, make_draft  # noqa: E402
+from test_tracker import ABC, Vault, docx_text, make_draft  # noqa: E402
 
 PINNED = Path(__file__).resolve().parent / "pinned"
 # The approval stamp an approved draft gets ("Approved by Alan on 12 October 2026") is in the filed Word file, so in its text and
@@ -337,8 +337,6 @@ def validate_writes_nothing():
 # ---------- the test ----------
 def expected(name, actual):
     f = PINNED / f"{name}.json"
-    if not HELD_IN_REVIEW and (PINNED / "pre280" / f.name).exists():
-        f = PINNED / "pre280" / f.name   # #280 not in tracker.py yet (the guarded stack): these cases pin the stopped apply
     if RECORD:
         PINNED.mkdir(exist_ok=True)
         f.write_text(json.dumps(actual, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
