@@ -248,7 +248,7 @@ class Deadlines(Base):
         self.stage()
         r = self.change({"op": "deadline", "n": 2, "words": "end of month"})
         self.assertTrue(r["ok"], r)
-        self.assertEqual(r["message"], "Item 2 changed; due Friday 30-10-2026.")
+        self.assertEqual(r["message"], "“Book the UAT environment” changed; due Friday 30-10-2026.")
         self.assertEqual(self.proposal()[1]["items"][1]["values"]["due_date"], "2026-10-30")
         self.assertEqual(self.section(self.doc(), "actions")["rows"][1]["cells"]["due"], "30-10-2026")
         self.assertEqual(self.doc()["version"], r["version"])

@@ -47098,6 +47098,7 @@ ${s5}`;
     const c5 = { y: 0, k: 0, n: 0, w: 0 };
     for (const r4 of trackRows(doc)) {
       const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
+      if (g5 === "applied") continue;
       if (t47 === "n") c5.n++;
       else if (t47 === "y") {
         if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
@@ -47113,6 +47114,7 @@ ${s5}`;
   function reconcileOps(doc, plan) {
     const ops = [];
     for (const r4 of trackRows(doc)) {
+      if (planGroupOf(plan, r4.n) === "applied") continue;
       const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
       if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
       if (r4.kept) {
