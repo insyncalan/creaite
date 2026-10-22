@@ -1705,6 +1705,7 @@ def ui_settings(s):
             "srcChannels": g("sweep", "sources", "teams_channels", d=True),
             "srcCalendar": g("sweep", "sources", "calendar", d=True),
             "possible": g("sweep", "show_possible_matches", d=True),
+            "fetchTx": g("sweep", "fetch_transcripts", d=False) is True,     # #250 (#181 C2): off by default
             "catchupSweep": g("day", "catchup_sweep", d="start"),          # BL-295: Close the day's catch-up sweep: start, offer or off
             "catchupAfter": g("day", "catchup_after_minutes", d=30),       # BL-295: when the last sweep counts as old
             "overdueDays": g("health", "at_risk_overdue_days", d=7),

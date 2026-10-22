@@ -136,6 +136,8 @@ export const SETSECTIONS=[
  {id:"files",cat:"work",title:"Files",groups:["Files"],kw:"files page documents project minutes transcripts reports search intake portfolio excel export",
   render:()=>row("Show project documents",sw("filesDocs"),"Off by default: the Files page lists minutes, transcripts and reports (Weekly, Adhoc and Steerco), and skips the rest of a large engagement folder. Search still reads documents. Steerco is only read; creaite files nothing there.")},
  moreSection("work"),
+ {id:"transcripts",cat:"sweep",title:"Transcripts",kw:"transcripts fetch intake check mail teams process meetings ready",   /* #250 (#181 C2): off by default */
+  render:()=>row("Fetch transcripts as they appear",sw("fetchTx"),"Off: creaite fetches a transcript when you press Process. On: each mail and Teams check fetches the transcripts of meetings that have ended, so they are ready when you open Intake. It only reads: no AI runs and nothing is added to your project records. Confidential meetings are never fetched.")},
  {id:"sweep",cat:"sweep",title:"Checking mail and Teams",groups:["Checking mail and Teams"],kw:"sweep check mail teams inbox sent items chats channels calendar look-back possible matches ignore rules what creaite skips due from promises",
   render:()=>row("First-run look-back (days)",nm("lookback"),"When the check runs and what it reads are in Essentials › Your day")
    +row("Show possible matches",sw("possible"))+'<div id="ignMgr"></div>',
