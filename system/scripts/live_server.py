@@ -27,11 +27,13 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/fs           read, write, append, remove or test a file, within a fixed allowlist (proposals, settings,
                          settings backups and log, project CLAUDE.md files); upload a PNG or JPEG (base64, 2 MB at
                          most) to system/staging/uploads/ for an image added in the Current state editor (BL-63)
-- POST /api/apply        tracker.py apply (all decided proposals; {hold_peek:true} leaves the peek's staged ones, BL-189); POST /api/undo {apply_id} undoes that apply only
+- POST /api/apply        tracker.py apply (all decided proposals; {hold_peek:true} leaves the peek's staged ones, BL-189;
+                         {only:"proposed-….json"} applies that one proposal only, #280); POST /api/undo {apply_id} undoes that apply only
 - POST /api/undo-changes {rowids, dry_run}: tracker.py undo-changes (BL-164): put back chosen past changes as one new apply;
                          with dry_run, what would happen. Returns the done and skipped lists
                          if it's still the latest
-- POST /api/review       a cx-review decision through review.py (drafts, conflicts), with its checks
+- POST /api/review       a cx-review decision through review.py (drafts, conflicts), with its checks; #280: decision
+                         "discard" sets a held proposal aside, mode "without-transcript" approves held minutes without it
 - POST /api/review/assign {file, ref, code, from, moved, dry_run}: change the project of a pending item or a set of minutes
                          (review.py assign, BL-200); dry_run previews it
 - POST /api/refresh      re-extract a meeting's items from its edited draft minutes (minutes.py refresh)
@@ -1361,6 +1363,12 @@ class Handler(BaseHTTPRequestHandler):
     def apply(self, req):
         """POST /api/apply: tracker.py apply, which writes the database; {hold_peek} leaves the peek's staged proposals (BL-189)."""
         with LOCK, notes_lock_if(staged_note_move()):         # #124: LOCK, then NOTES_LOCK, as a note's card does
+            if "only" in req:                        # #280: a save applies only the proposal it wrote, so an older staged
+                name = req["only"] if isinstance(req["only"], str) else ""     # proposal (a stale invalid item) never stops it
+                if not re.fullmatch(r"proposed-[^/\\]+\.json", name) or not (paths.STAGING / name).is_file():
+                    return self.send(200, {"ok": False, "message": "That save is no longer in staging, so nothing was applied."})
+                code, out = run("tracker.py", "apply", "system/staging/" + name)     # never a vault-root namesake
+                return self.send(200, {"ok": code == 0, "message": out, "apply_id": latest_apply(), "only": name})
             # ===== BL-189 (sprint-milestones) ===== another apply (a cell edit, a bulk change, a Review approval, Settings' Apply)
             # sends hold_peek: the peek's staged proposals (build_dashboard.peek_staged, any window's) are left for the peek's own
             # Apply or ⌘↵, which sends nothing and applies everything decided, as before. tracker.py's rules are unchanged: it is
@@ -1368,7 +1376,8 @@ class Handler(BaseHTTPRequestHandler):
             if req.get("hold_peek"):
                 held = {m["name"] for m in build_dashboard.peek_staged()}
                 if held:
-                    rest = [p.name for p in sorted(paths.STAGING.glob("proposed-*.json")) if p.name not in held]
+                    rest = ["system/staging/" + p.name for p in sorted(paths.STAGING.glob("proposed-*.json"))  # #280: the
+                            if p.name not in held]                                # staging file by path, never a root namesake
                     if not rest:
                         return self.send(200, {"ok": True, "message": "Nothing to apply: no decided items.",
                                                "apply_id": latest_apply(), "held": len(held)})
@@ -1401,17 +1410,33 @@ class Handler(BaseHTTPRequestHandler):
             n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
             if n is None:
                 return self.send(200, {"ok": False, "message": "That proposal is no longer pending."})
-            action = {"approved": "approve", "rejected": "reject", "keep": "keep", "override": "override"}[req["decision"]]
-            args = [action, str(n)] + [f"--{m}" for m in req.get("modes", []) if m in ("sync", "as-staged")]
-            if action == "reject":                                        # BL-133 stage B: the reason travels with the decision
-                reason, dup = str(req.get("reason") or "").strip(), str(req.get("duplicate_of") or "").strip()
-                if reason and len(reason) <= 200 and "\n" not in reason:
-                    args.append(f"--reason={reason}")
-                if dup and re.fullmatch(r"[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}", dup):
-                    args.append(f"--duplicate-of={dup}")
+            args = self.review_args(req, n)
+            if args is None:
+                return self.send(200, {"ok": False, "message": "That isn't a decision Review knows."})
             code, out = run("review.py", *args)
+            if req.get("decision") == "discard":                        # #280: a held proposal set aside, nothing written
+                return self.send(200, {"ok": code == 0, "message": out})
             done = code == 0 and "not approved" not in out and "is open in Word" not in out and "Approved 0." not in out
             return self.send(200, {"ok": done, "message": out})
+
+    @staticmethod
+    def review_args(req, n):
+        """review.py's arguments for one decision on row n, or None for a decision Review doesn't know. #280: discard is
+        `reject N --discard` (review.py checks the proposal is held); without-transcript goes only with an approve."""
+        if req.get("decision") == "discard":
+            return ["reject", str(n), "--discard"]
+        action = {"approved": "approve", "rejected": "reject", "keep": "keep", "override": "override"}.get(req.get("decision"))
+        if action is None:
+            return None
+        args = [action, str(n)] + [f"--{m}" for m in req.get("modes", [])
+                                   if m in ("sync", "as-staged") or (m == "without-transcript" and action == "approve")]
+        if action == "reject":                                        # BL-133 stage B: the reason travels with the decision
+            reason, dup = str(req.get("reason") or "").strip(), str(req.get("duplicate_of") or "").strip()
+            if reason and len(reason) <= 200 and "\n" not in reason:
+                args.append(f"--reason={reason}")
+            if dup and re.fullmatch(r"[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}", dup):
+                args.append(f"--duplicate-of={dup}")
+        return args
 
     def refresh(self, req):
         """POST /api/refresh {file}: re-extract a meeting's items from its edited draft minutes (minutes.py refresh)."""
