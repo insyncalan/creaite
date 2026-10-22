@@ -4,7 +4,7 @@
 - Health: "creaite won't start by itself after a restart" while the agent is off on a Mac live vault, dismissible, never in the
   development repository (.creaite-dev) and not once it is on;
 - the page: until the live server has the routes the switch says "Not available yet" and nothing is broken; with a stubbed pair of
-  routes (the guarded proposal's contract) the switch shows the state, asks first, turns it on or off, the Terminal note prints the
+  routes (the guarded proposal's contract) the switch shows the state, asks first, turns it on or off, the Terminal commands (in Help) print the
   user's own folder (filled in at run time, never written in code) and Today's first-run question answers Yes or Not now;
 - the proposal (dev/proposals/300/live_server.diff) applies and reverses cleanly, and its routes work against a stubbed launcher;
 - no real folder or name in the source (test_no_real_names covers the repo).
@@ -128,12 +128,43 @@ ls.autostart_set_route(H(), {"on": True})
 ls.autostart_set_route(H(), {"on": "yes"})
 state["supported"] = False; state["dev"] = True
 ls.autostart_set_route(H(), {"on": True})
-print(json.dumps({"sent": sent, "installs": [c for c in calls if c[1] == "install"], "routes": sorted(k for k in ls.SETUP_ROUTES if "autostart" in k)}))
+first = list(sent)
+first_installs = [c for c in calls if c[1] == "install"]
+import tempfile, pathlib
+tmp = pathlib.Path(tempfile.mkdtemp())
+state.update(supported=True, dev=False, on=False)
+runs = {}
+for name, content in (("absent", None), ("in_progress", '{"run": "r-1", "mode": "chat", "marked": []}'), ("marked", '{"marked": ["read mail"]}'),
+                      ("bad_json", "{not json"), ("not_a_dict", "[1]"), ("unreadable", "DIR"), ("empty", "{}")):
+    f = tmp / name
+    if content == "DIR":
+        f.mkdir()
+    elif content is not None:
+        f.write_text(content)
+    ls.reach.RUN_FILE = f
+    before = len([c for c in calls if c[1] == "install"])
+    sent.clear()
+    ls.autostart_set_route(H(), {"on": True})
+    runs[name] = {"ok": sent[0][1]["ok"], "msg": sent[0][1].get("message", ""), "installed": len([c for c in calls if c[1] == "install"]) - before}
+    state["on"] = False
+print(json.dumps({"runs": runs, "first": first, "installs": first_installs, "routes": sorted(k for k in ls.SETUP_ROUTES if "autostart" in k)}))
 '''
         r = subprocess.run([sys.executable, "-c", script], cwd=d, capture_output=True, text=True, timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr[-800:])
         out = json.loads(r.stdout.strip().splitlines()[-1])
-        s = out["sent"]
+        runs = out["runs"]
+        for name in ("in_progress", "marked", "bad_json", "not_a_dict", "unreadable"):     # busy, and failing closed
+            self.assertFalse(runs[name]["ok"], name)
+            self.assertEqual(runs[name]["installed"], 0, name)
+            self.assertNotRegex(runs[name]["msg"], r"run\.json|launch\.py|guard|json", name)
+        self.assertIn("ask creaite is working", runs["in_progress"]["msg"])
+        self.assertIn("ask creaite is working", runs["marked"]["msg"])
+        self.assertIn("can't tell", runs["bad_json"]["msg"])
+        self.assertIn("can't tell", runs["unreadable"]["msg"])
+        for name in ("absent", "empty"):                                                    # no run: the user's own click goes through
+            self.assertTrue(runs[name]["ok"], name)
+            self.assertEqual(runs[name]["installed"], 1, name)
+        s = out["first"]
         self.assertEqual(s[0][1]["on"], False)
         self.assertTrue(s[0][1]["ok"])
         self.assertTrue(s[1][1]["ok"] and s[1][1]["on"])
@@ -205,7 +236,13 @@ class AutostartPage(LiveBrowserCase):
     def test_the_terminal_note_prints_the_users_own_folder(self):
         self.settings(True)
         b = self.b
-        b.wait("!!document.querySelector('#asCmd-install')", 10)
+        self.assertFalse(b.eval("!!document.querySelector('#asCmd-install')"))        # not in Settings: Help has the block
+        b.click("#asTerm a")                                                          # the pointer opens Help's section
+        b.wait("!!document.querySelector('#asHelp #asCmd-install')", 10)
+        b.eval("window.__copied=null; navigator.clipboard.writeText=t=>{window.__copied=t; return Promise.resolve();}")
+        b.click("[data-ascopy='remove']")
+        b.wait("window.__copied!==null", 5)
+        self.assertTrue(b.eval("window.__copied").endswith("agent remove"))
         on = b.eval("document.querySelector('#asCmd-install').textContent")
         off = b.eval("document.querySelector('#asCmd-remove').textContent")
         self.assertEqual(on, "cd '/Users/example/My Programmes/creaite'\nsystem/scripts/run launch.py agent install")

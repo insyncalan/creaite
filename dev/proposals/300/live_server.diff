@@ -1,5 +1,5 @@
---- a/system/scripts/live_server.py	2026-10-22 20:41:58
-+++ b/system/scripts/live_server.py	2026-10-22 20:42:11
+--- a/system/scripts/live_server.py	2026-10-22 21:15:51
++++ b/system/scripts/live_server.py	2026-10-22 21:15:51
 @@ -141,6 +141,8 @@
  - POST /api/edit/approve, /reject, /stage {card}; /api/edit/pending: ask creaite's change card for the record (BL-258):
                           Approve applies it at once through tracker.py, Stage leaves it in Review, Reject drops it
@@ -9,7 +9,7 @@
  - POST /api/health/fixes  Health's Fix its, each with what it does and its one command (read only); POST /api/health/fix/<id> with
                           an empty body runs that one fixed command under the job lock and logs it (BL-320). SIGUSR1 (launch.py
                           restart, after an update) restarts the server in place once no job is running
-@@ -5723,6 +5725,60 @@
+@@ -5723,6 +5725,81 @@
  
  SETUP_ROUTES = {"/api/setup/status": setup_status_route, "/api/setup/run": setup_run_route}
  # ===== end BL-166 =====
@@ -18,7 +18,8 @@
 +#                                      launch.py agent status --json (read only). `supported` is false off macOS and in the
 +#                                      development repository.
 +# POST /api/autostart/set {on: bool}   installs (`launch.py agent install`) or removes (`agent remove`) this vault's login agent,
-+#                                      under the job lock. Token-checked like every POST. It is the user's own click in the app:
++#                                      under the job lock. Token-checked like every POST, and refused while an ask creaite run is in progress or marked
++#                                      (system/guard/run.json; unreadable counts as busy). It is the user's own click in the app:
 +#                                      ~/Library/LaunchAgents is on reach.py's never list, so ask creaite can't write it, and
 +#                                      launch.py stays RECORD (never run by the panel). The page asks first; the reply is words,
 +#                                      never the script's own text. Nothing here is a new permission and no allow-list rule changes.
@@ -35,6 +36,23 @@
 +    return None
 +
 +
++def autostart_run_blocks():
++    """Why the agent can't be changed now, in plain words, or None. It is refused while an ask creaite run is in progress or marked
++    (system/guard/run.json, written only by this server) and, failing closed, when that file is there but can't be read or understood.
++    No file: no run, so the user's own click goes through."""
++    try:
++        data = json.loads(reach.RUN_FILE.read_text(encoding="utf-8"))
++    except FileNotFoundError:
++        return None
++    except (OSError, ValueError):
++        return "creaite can't tell whether ask creaite is working, so nothing was changed. Try again in a moment."
++    if not isinstance(data, dict):
++        return "creaite can't tell whether ask creaite is working, so nothing was changed. Try again in a moment."
++    if data.get("run") or data.get("marked"):
++        return "ask creaite is working, so nothing was changed. Try again when it has finished."
++    return None
++
++
 +def autostart_status_route(handler, req):
 +    """POST /api/autostart/status: the agent's state for the Settings switch, Today's question and Health (read only)."""
 +    st = autostart_state()
@@ -48,6 +66,9 @@
 +    on = req.get("on")
 +    if not isinstance(on, bool):
 +        return handler.send(400, {"ok": False, "message": "Say whether to turn it on or off."})
++    busy = autostart_run_blocks()
++    if busy:
++        return handler.send(200, {"ok": False, "message": busy})
 +    st = autostart_state()
 +    if st is None or not st.get("supported"):
 +        why = "This is the development copy, so creaite doesn't start by itself here." if st and st.get("dev") else \

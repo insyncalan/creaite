@@ -12,6 +12,7 @@ import { shared } from "./core/state.js";
 import { drawPanel, PDAGE, pdAll, pdPut, pkNew, REC } from "./panel.js";
 import { hit } from "./work.js";
 import { openChat } from "./ask.js";
+import { AS_HELP_ID, asHelpHtml } from "./autostart.js";
 /* ===== Help (BL-84) ===== */
 /* Three tabs from help.md (built by build_dashboard.help_sections): Start here, How do I… and Reference. Each has an
    address (#help-start, #help-howto, #help-howto-<task>, #help-reference, #help-reference-<section>), so Back and
@@ -27,7 +28,8 @@ export function renderHelp(arg){ helpSearchClear(); if(!HD.tabs.length){ putHTML
   shared.HELPARG=a; store.set("creaite-help-tab",tab);
   drawTabs($("#helpTabsHost"),{items:HD.tabs.map(t=>({id:t.id,label:t.title,tabId:"htab-"+t.id,data:{help:t.id}})),selected:tab,onSelect:helpGo,label:"Help",className:"tabs",id:"helpTabs",wrap:true});   /* BL-316: the Tabs block */
   if(changed){ const html=HD.tabs.find(t=>t.id===tab).html.replace("<p>[start command]</p>",cmdBox());
-    putHTML($("#helpPane"),raw(`<div class="hp-wrap hp-${tab}">${html}</div>`)); $("#helpPane").dataset.tab=tab; $("#helpPane").setAttribute("aria-labelledby","htab-"+tab); }
+    putHTML($("#helpPane"),raw(`<div class="hp-wrap hp-${tab}">${html}</div>`)); $("#helpPane").dataset.tab=tab; $("#helpPane").setAttribute("aria-labelledby","htab-"+tab);
+    const fix=tab==="howto"&&document.getElementById("ht-"+AS_HELP_ID); if(fix) addHTML(fix,"beforeend",raw(asHelpHtml())); }   /* #300: the Terminal commands, with the user's own folder */
   $$("#helpPane .hp-task").forEach(t=>t.classList.toggle("hp-hl",!!rest&&tab==="howto"&&t.dataset.task===rest));
   $$("#helpPane .hp-refidx a").forEach(l=>l.toggleAttribute("aria-current",tab==="reference"&&l.dataset.help==="reference-"+rest));
   const target=rest?document.getElementById((tab==="howto"?"ht-":tab==="reference"?"hr-":"hn-")+rest):null;

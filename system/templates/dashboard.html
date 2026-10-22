@@ -4467,6 +4467,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ASKMARK: () => ASKMARK,
     ASKTICK: () => ASKTICK,
     ASKVK: () => ASKVK,
+    AS_HELP_ID: () => AS_HELP_ID,
     ATTACHED: () => ATTACHED,
     AUTOSAVE_MS: () => AUTOSAVE_MS,
     AiBar: () => AiBar,
@@ -5075,6 +5076,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     asCardHtml: () => asCardHtml,
     asCommand: () => asCommand,
     asFolderArg: () => asFolderArg,
+    asHelpHtml: () => asHelpHtml,
     asQuestionDue: () => asQuestionDue,
     asQuestionHtml: () => asQuestionHtml,
     asRedraw: () => asRedraw,
@@ -39345,6 +39347,8 @@ ${s5}`;
       putHTML($("#helpPane"), raw(`<div class="hp-wrap hp-${tab}">${html2}</div>`));
       $("#helpPane").dataset.tab = tab;
       $("#helpPane").setAttribute("aria-labelledby", "htab-" + tab);
+      const fix = tab === "howto" && document.getElementById("ht-" + AS_HELP_ID);
+      if (fix) addHTML(fix, "beforeend", raw(asHelpHtml()));
     }
     $$("#helpPane .hp-task").forEach((t47) => t47.classList.toggle("hp-hl", !!rest && tab === "howto" && t47.dataset.task === rest));
     $$("#helpPane .hp-refidx a").forEach((l6) => l6.toggleAttribute("aria-current", tab === "reference" && l6.dataset.help === "reference-" + rest));
@@ -56172,6 +56176,7 @@ ${pre}**Current state title:** ${title}`);
     ),
     busy: false
   };
+  var AS_HELP_ID = "fix-a-stopped-server-and-other-problems";
   var ASKED_KEY = "creaite-autostart-asked";
   async function asStatus(force) {
     if (!viaServer()) {
@@ -56232,12 +56237,10 @@ system/scripts/run launch.py agent ${what}`;
     const sw3 = `<button type="button" class="btn" id="asSwitch" role="switch" aria-checked="${on2}" aria-label="Start creaite when I sign in" ${off}>${on2 ? "Turn off…" : "Turn on…"}</button>`;
     const ask2 = AS.confirm ? `<div class="sushown" id="asConfirm" role="group" aria-label="Confirm">${AS.confirm === "on" ? "creaite will open by itself each time you sign in to this Mac, and open again if it ever crashes. Stop still keeps it stopped until the next sign-in." : "creaite will no longer open by itself when you sign in. It keeps running now, and you open it from its launcher."}
     <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-ascancel>Cancel</button><button type="button" class="btn primary" id="asGo">${AS.confirm === "on" ? "Turn on" : "Turn off"}</button></span></div>` : "";
-    const cmd = (what) => `<div class="sucmd"><code id="asCmd-${what}" style="white-space:pre">${esc(asCommand(what))}</code><button type="button" class="mini" data-ascopy="${what}">Copy</button></div>`;
     return `<div class="card" id="asCard" data-sec="signin"><h2>Start creaite when I sign in</h2>
    <div class="srow"><div><span id="asLab">Start creaite when I sign in</span><small>Opens creaite in the background each time you sign in to this Mac. Stop still keeps it stopped until next time</small></div><div>${state} ${st2 && st2.supported ? sw3 : ""}</div></div>
    ${ask2}
-   <details class="sures" id="asTerm"><summary>Prefer Terminal?</summary><p class="sub">Open Terminal and paste the lines under the one you want. They use your own creaite folder.</p>
-    <p class="sub">Turn it on</p>${cmd("install")}<p class="sub">Turn it off</p>${cmd("remove")}</details></div>`;
+   <p class="sub" id="asTerm">Prefer Terminal? <a href="#help-howto-${AS_HELP_ID}" data-help="howto-${AS_HELP_ID}">Help › Fix a stopped server</a> has the commands, with your own folder filled in.</p></div>`;
   }
   function asWire(redraw) {
     const b5 = (id2) => document.getElementById(id2);
@@ -56258,25 +56261,11 @@ system/scripts/run launch.py agent ${what}`;
       await asSet(on2);
       redraw();
     };
-    document.querySelectorAll("[data-ascopy]").forEach((x5) => {
-      x5.onclick = async () => {
-        const t47 = asCommand(
-          /** @type {"install"|"remove"} */
-          /** @type {HTMLElement} */
-          x5.dataset.ascopy
-        );
-        try {
-          await navigator.clipboard.writeText(t47);
-          copied(
-            /** @type {HTMLElement} */
-            x5
-          );
-          snack("Copied");
-        } catch (e4) {
-          prompt("Copy this:", t47);
-        }
-      };
-    });
+  }
+  function asHelpHtml() {
+    const cmd = (what) => `<div class="sucmd"><code id="asCmd-${what}" style="white-space:pre">${esc(asCommand(what))}</code><button type="button" class="mini" data-ascopy="${what}">Copy</button></div>`;
+    return `<div class="hp-signin" id="asHelp"><p><b>Start creaite when you sign in, from Terminal.</b> Open Terminal and paste the lines under the one you want. They use your own creaite folder. Settings › creaite and backups has the same switch.</p>
+    <p class="sub">Turn it on</p>${cmd("install")}<p class="sub">Turn it off</p>${cmd("remove")}</div>`;
   }
   function asQuestionHtml() {
     return asQuestionDue() ? `<div class="tb" id="asQ"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
@@ -56307,6 +56296,26 @@ system/scripts/run launch.py agent ${what}`;
       await asAnswer(yes);
       if (!yes) snack("Okay. Settings › creaite and backups has the switch if you change your mind");
       if (shared.VIEW === "today") renderSetup();
+    });
+    document.addEventListener("click", async (e4) => {
+      const x5 = (
+        /** @type {HTMLElement|null} */
+        /** @type {HTMLElement} */
+        e4.target.closest("[data-ascopy]")
+      );
+      if (!x5) return;
+      e4.preventDefault();
+      const t47 = asCommand(
+        /** @type {"install"|"remove"} */
+        x5.dataset.ascopy
+      );
+      try {
+        await navigator.clipboard.writeText(t47);
+        copied(x5);
+        snack("Copied");
+      } catch (err) {
+        prompt("Copy this:", t47);
+      }
     });
     if (viaServer()) asRefresh();
   }

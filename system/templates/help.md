@@ -588,7 +588,8 @@ Where: Bottom of the left bar · Claude Code
 1. **A hollow red dot under Settings, or a red alert:** the live server isn't running. Start it again in Terminal. Your edits are held until it's back.
 2. **"Reconnect vault":** you opened the dashboard as a file. Use the live server's address instead.
 3. **Something failed or looks wrong:** when there were errors in the last day, a quiet banner under the top bar says how many and what kind (one fault that repeats counts once: "1 error (30 times)"). **Investigate** opens Diagnostics; **ask creaite to look** (with the live server) asks it to read the log and explain, changing nothing; **×** dismisses it until a new error. With ask creaite open it stops at the chat's edge, its words shortened if need be, so these stay in reach. Or open **Settings › Health › Diagnostics** yourself. It lists the latest errors and how many commands ask creaite's guard refused in the last seven days, by shape (a pipe, a redirect, `cd … &&`; counts only, and a rise means its instruction isn't holding); press **Copy diagnostics** and paste the report into a chat with Claude. The report holds no mail, minutes, notes or names, and nothing leaves your laptop unless you paste it. The same log is in `system/logs/` (a file a day, the last seven kept), and ask creaite can read it.
-4. **Anything else:** say the phrase below. It checks everything and offers each fix before making it.
+4. **creaite is closed after every restart:** turn on **Settings › creaite and backups › Start creaite when I sign in** (it asks first). If you prefer Terminal, the lines to paste are in the box at the end of this section, with your own folder already in them. Stop still keeps creaite stopped until the next sign-in.
+5. **Anything else:** say the phrase below. It checks everything and offers each fix before making it.
 
 Or say: `health check` `setup`
 
