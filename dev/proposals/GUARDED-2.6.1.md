@@ -34,7 +34,8 @@ absent it applies the diff to a throwaway copy and tests that, so it is green be
 - `test_autostart_300`: two tests skip.
 - Plain-words total: `v261-line2` is at 1,087 (via #291b); step 5 takes it to 1,084 (the baseline file only falls).
 
-## If it joins (not merged, not in the chain)
+## Last pair: #283 Read again (merged here as `v261-283`)
 
-`dev/proposals/283-reextract/` on `origin/v26-283-2` (not copied here): `reach.diff` and `live_server.diff`, applied together in one
-command (the README says so). Both pass `git apply --check` on the chain above. Until they join, Read again says it couldn't start.
+`dev/proposals/283-reextract/reach.diff`, then `live_server.diff`, applied together in one command (its README says so), after the nine
+above. Both pass `git apply --check` on the chain. Until they are applied, Read again says it couldn't start, and the six expected
+failures in `test_reextract` stay expected failures. After them the plain-words total falls by 4 more.
