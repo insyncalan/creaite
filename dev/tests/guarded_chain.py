@@ -22,50 +22,64 @@ def _is_guarded(f):
     return f.startswith("system/scripts/") and Path(f).name in GUARDED
 
 
-def chain_explains(repo, sha, files):
-    """True when reverse-applying the listed chain diffs to the guarded `files` of commit `sha` gives each file's parent content."""
-    chain = _git(repo, "show", f"{sha}:{CHAIN_FILE}")
+def _blob(repo, ref, f):
+    r = _git(repo, "show", f"{ref}:{f}", text=False)
+    return r.stdout if r.returncode == 0 else None
+
+
+def reversed_chain(repo, chain_sha, content_ref, files):
+    """{file: bytes}: the `files` as they are at content_ref with the chain diffs (listed in chain_sha's own tree) reverse-applied,
+    last diff first. None when the chain file or a listed diff is missing, a file is absent, or a diff doesn't reverse."""
+    chain = _git(repo, "show", f"{chain_sha}:{CHAIN_FILE}")
     if chain.returncode != 0:
-        return False
+        return None
     diffs = [l.strip() for l in chain.stdout.splitlines() if l.strip() and not l.lstrip().startswith("#")]
     if not diffs:
-        return False
+        return None
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        parents = {}
         for f in files:
-            now = _git(repo, "show", f"{sha}:{f}", text=False)
-            before = _git(repo, "show", f"{sha}^:{f}", text=False)
-            if now.returncode != 0 or before.returncode != 0:        # added or deleted: not an explained change
-                return False
+            now = _blob(repo, content_ref, f)
+            if now is None:
+                return None
             (tmp / f).parent.mkdir(parents=True, exist_ok=True)
-            (tmp / f).write_bytes(now.stdout)
-            parents[f] = before.stdout
+            (tmp / f).write_bytes(now)
         inc = [a for f in files for a in ("--include", f)]
         for d in reversed(diffs):
-            body = _git(repo, "show", f"{sha}:{d}", text=False)
-            if body.returncode != 0:
-                return False
-            r = subprocess.run(["git", "apply", "-R", "--unsafe-paths", "--directory", "", *inc, "-"], cwd=tmp, input=body.stdout,
-                               capture_output=True)
+            body = _blob(repo, chain_sha, d)
+            if body is None:
+                return None
+            r = subprocess.run(["git", "apply", "-R", "--unsafe-paths", "--directory", "", *inc, "-"], cwd=tmp, input=body, capture_output=True)
             if r.returncode != 0:
-                return False
-        return all((tmp / f).read_bytes() == parents[f] for f in files)
+                return None
+        return {f: (tmp / f).read_bytes() for f in files}
+
+
+def chain_explains(repo, sha, files):
+    """True when the chain diffs, reversed on commit `sha`'s `files`, give each file's parent content."""
+    back = reversed_chain(repo, sha, sha, files)
+    return back is not None and all(back[f] == _blob(repo, sha + "^", f) for f in files)
 
 
 def guarded_touched(repo, base, head="HEAD"):
-    """Guarded script paths changed by the commits in base..head, commit by commit (merge commits themselves skipped, the commits
-    they bring in are not). None when git history for base isn't available (the caller skips)."""
-    r = _git(repo, "log", "--no-merges", "--format=%H", f"{base}..{head}")
-    if r.returncode != 0:
+    """Guarded script paths whose content differs between base and head (the net change), except what the one approved chain
+    commit explains: a commit in the range whose subject starts with CHAIN_MARKER and which passes chain_explains; the chain
+    diffs reversed on head's files must then give base's content. None when git history for base isn't available."""
+    d = _git(repo, "diff", "--name-only", base, head)
+    if d.returncode != 0:
         return None
-    touched = []
-    for sha in r.stdout.split():
-        files = [f for f in _git(repo, "diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha).stdout.splitlines() if _is_guarded(f)]
-        if not files:
-            continue
-        subject = _git(repo, "log", "-1", "--format=%s", sha).stdout.strip()
-        if subject.startswith(CHAIN_MARKER) and chain_explains(repo, sha, files):
-            continue
-        touched += files
-    return touched
+    net = [f for f in d.stdout.splitlines() if _is_guarded(f)]
+    if not net:
+        return []
+    log = _git(repo, "log", "--no-merges", "--format=%H%x09%s", f"{base}..{head}")
+    marked = [l.split("\t")[0] for l in log.stdout.splitlines() if l.split("\t", 1)[-1].startswith(CHAIN_MARKER)]
+    if not marked:
+        return net
+    for sha in marked:                              # every marked commit must be exactly the chain
+        own = [f for f in _git(repo, "diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha).stdout.splitlines() if _is_guarded(f)]
+        if own and not chain_explains(repo, sha, own):
+            return net
+    back = reversed_chain(repo, marked[0], head, net)
+    if back is None:
+        return net
+    return [f for f in net if back[f] != _blob(repo, base, f)]

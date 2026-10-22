@@ -103,6 +103,13 @@ class GuardedChain(unittest.TestCase):
         self.r.commit("later")
         self.assertIn(UPD, self.r.touched())
 
+    def test_an_unmarked_edit_that_is_reverted_nets_to_nothing(self):
+        self.r.write(TRK, "a\nb\nc\nd\n")
+        self.r.commit("tweak")
+        self.r.write(TRK, "a\nb\nc\n")
+        self.r.commit("put back")
+        self.assertEqual(self.r.touched(), [])
+
     def test_missing_base_gives_none(self):
         self.assertIsNone(guarded_touched(self.r.d, "origin/nope", "HEAD"))
 
