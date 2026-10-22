@@ -18,3 +18,12 @@ A file that fails in its shard is run alone; "flake" = failed in the shard, pass
 | test_decisions_needed.py | stale test | the Draft email now reads /api/edit/ai/caps (a read): allowed in the no-writes filter |
 | test_drafts_scaffold.py | stale test | #246 puts the agenda style in the AI drafts tab: switches = features, rows = features + 1 |
 | test_followed_needs.py | stale test | #232 C2: Today's proposal link lands on Intake › Review (no RHL); note: a sweep proposal has no meeting to open, so nothing is highlighted |
+
+### Shard 2/8: 67 passed, 5 failed (all failed alone too), 0 flakes
+| File | Class | Fix |
+|---|---|---|
+| test_panel_drafts.py | **real product bug (2.6, B2 #232)**, non-guarded | a page opened on an item (`#work…&item=…`) threw in pkUpdReset (`#pkPSaveA` is added by a later boot step), stopping start-up: no staged bar after a reload. panel.js now skips it when it isn't there yet; dashboard.html rebuilt |
+| test_intake_review_chrome.py | stale test (also fails on pristine v26-rc) | `self.setUp()` opens a new page; the test kept driving the old one (whose ASKED still held iteration 1's call). It now drives the new page and restores the chooser stub inline |
+| test_intake_review_update_peek.py | stale test (date drift) | the sample's due date follows the day it runs: read from the live row, not "25-10-2026". Note: the saved row title reads "status Open → Open; due …" (an unchanged status in words) |
+| test_project_settings_v2.py | stale test | #232 C2: go('review') / go('inbox') land on intake-review |
+| test_day_past_and_sizes.py | stale test | #232 C2 left 7 controls on the checked screens: "at least one per selector" instead of "> 10" |

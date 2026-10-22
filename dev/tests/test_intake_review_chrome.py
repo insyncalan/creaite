@@ -112,10 +112,10 @@ class AddFiles(IntakeBase):
         """irPickFiles opens the chooser from anywhere; irProcessById takes a row id, an event ID or a file path."""
         b = self.b
         b.eval("""window.PICKED=[]; window.REALCLICK=HTMLInputElement.prototype.click; HTMLInputElement.prototype.click=function(){ window.PICKED.push([this.type,this.multiple,this.accept,this.isConnected]); }; irPickFiles(); 0""")
-        self.addCleanup(lambda: b.eval("HTMLInputElement.prototype.click=window.REALCLICK; 0"))
         self.assertEqual(b.eval("PICKED"), [["file", True, ".vtt,.docx,.txt,.md,.pdf", True]])
         b.eval("document.body.lastElementChild.dispatchEvent(new Event('cancel'))")
         self.assertFalse(b.eval("!!document.querySelector('body > input[type=file]')"))                    # a cancelled chooser leaves nothing behind
+        b.eval("HTMLInputElement.prototype.click=window.REALCLICK; 0")                                      # this page is left below
         ids = ("ev-1", b.eval("D.intake_review.meetings.find(m=>m.title==='ABC Steering'&&m.src!=='draft').id"))
         for i, ident in enumerate(ids):
             if i:
