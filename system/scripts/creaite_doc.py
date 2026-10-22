@@ -667,20 +667,21 @@ pre code{background:none;padding:0}
 # The minutes template's look, once (a test reads the Word template and checks every token here is in it, and in the HTML and PDF).
 BRAND = {"CHARCOAL": "1E1F1E", "GREEN": "91FF01", "GREY": "6B6F76", "OFFWHITE": "F8F8FF", "LINK": "0563C1", "FONT": "Calibri"}
 _BRAND_CSS = """
-.brand{font:14px/1.45 @FONT@,Carlito,"Segoe UI",Arial,sans-serif;color:@CHARCOAL@;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.brand{font:13.33px/1.45 @FONT@,Carlito,"Segoe UI",Arial,sans-serif;color:@CHARCOAL@;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .brand .wordmark{display:block;width:130px;height:auto;margin:0 0 16px}
 .brand header.doc{display:block;border:0;margin:0 0 4px}
 .brand header.doc h1{font-size:22.5px;font-weight:700;margin:0 0 3px;color:@CHARCOAL@}
 .brand header.doc .subtitle{font-size:16px;font-style:italic;color:@GREY@;margin:0 0 3px}
 .brand header.doc .status{font-size:12px;font-style:italic;color:@GREY@;margin:0 0 10px}
-.brand header.doc .when{font-size:13.5px;font-weight:700;margin:0 0 3px}
-.brand header.doc .sub{font-size:13.5px;color:@CHARCOAL@}
+.brand header.doc .when{font-size:13.33px;font-weight:700;margin:0 0 3px}
+.brand header.doc .sub{font-size:13.33px;color:@CHARCOAL@}
 .brand section{margin:0 0 6px}
 .brand section h2{font-size:17px;font-weight:700;text-transform:uppercase;margin:21px 0 10px;padding-bottom:3px;
 border-bottom:2px solid @GREEN@}
 .brand th{background:@CHARCOAL@;color:@OFFWHITE@;border:1px solid @CHARCOAL@;padding:6px 8px}
 .brand td{border:1px solid @CHARCOAL@;padding:6px 8px}
-.brand table{font-size:13.5px}
+.brand table{font-size:13.33px;width:94.4%}
+@media print{@page{size:A4;margin:15.9mm 17.6mm}}
 .brand .figure,.brand pre,.brand code{border-color:@CHARCOAL@}
 .brand .ft a{color:@LINK@}
 """
