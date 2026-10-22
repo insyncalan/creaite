@@ -402,10 +402,7 @@ class Checks(Base):
         # the Word writer itself never touches a guarded file
         guarded = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py")
         # 2.6: the HOPD's approved guarded diffs are on the candidate (origin/v260-release); anything on top of it is the Word writer's
-        # 2.6.1: the HOPD's guarded chain (dev/proposals/GUARDED-2.6.1.md), once applied as a commit titled "Guarded ...", is not the Word writer's either
-        head = subprocess.run(["git", "log", "-1", "--format=%s"], cwd=REPO, capture_output=True, text=True).stdout
-        top = "HEAD~1" if head.startswith("Guarded") else "HEAD"
-        r = subprocess.run(["git", "diff", "--name-only", "origin/v260-release", top], cwd=REPO, capture_output=True, text=True)
+        r = subprocess.run(["git", "diff", "--name-only", "origin/v260-release", "HEAD"], cwd=REPO, capture_output=True, text=True)
         if r.returncode != 0:
             self.skipTest("git history for origin/v260-release isn't available here: check 9 NOT run")
         touched = [f for f in r.stdout.split() if f.startswith("system/scripts/") and Path(f).name in guarded]
