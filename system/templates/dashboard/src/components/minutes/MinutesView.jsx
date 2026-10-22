@@ -40,7 +40,7 @@ import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
 import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc,
-  fileWithoutTranscript, isHeldMinutes, minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
+  fileWithoutTranscript, HELD_MINUTES_WORDS, isHeldMinutes, minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
 import { signal } from "@preact/signals";
 
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -149,6 +149,10 @@ async function approveNow(anyway) {
   const v = minutesView.value, doc = minutesDoc.value;
   if (!v || !v.plan || !doc || approving.value) return;
   const plan = v.plan.items;
+  if (v.proposal && REV.some(r => r.kind === "draft" && r.file === v.proposal && r.held)) {   // #307: the transcript has gone: say so before anything is written (a failed approve bumped the version)
+    snack(HELD_MINUTES_WORDS, () => fileWithout(v), "File without the transcript copy");
+    return;
+  }
   if (!anyway && approveProblems(doc, plan, unknownOwner).length) { approveOpen.value = true; return; }
   approving.value = true;
   try {

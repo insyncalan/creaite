@@ -198,6 +198,9 @@ export async function exportMinutes(format) {
   return (await api("/api/minutes/export", { path: v.path, format, file_beside: true })) || { ok: false, message: "Not exported." };
 }
 
+/** #306: the words when the transcript has gone (review.HELD_MINUTES_WORDS). */
+export const HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
+
 /** #306: Approve minutes stopped because the transcript has left the inbox (the server's plain words say so). @param {string} m */
 export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));
 
