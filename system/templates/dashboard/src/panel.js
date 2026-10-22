@@ -232,7 +232,7 @@ export function pkUpdReset(on){ if(on) pkUpdMount(); const t=$("#pkTitle"), ed=t
   if(on) t.setAttribute("aria-readonly","true"); else t.removeAttribute("aria-readonly");
   const a=on&&shared.CUR.k==="actions"; $(".pk-dlrow").hidden=on&&!a; $("#pkDesc").hidden=on&&!a;
   const det=$("#pkDetT")?.closest("section"); if(det) det.hidden=on;                       /* Details would edit columns this peek leaves read-only */
-  $("#pkPSaveA").hidden=on&&isConflict(pkRev());
+  const saveA=$("#pkPSaveA"); if(saveA) saveA.hidden=on&&isConflict(pkRev());   /* not there yet when the page opens on an item (#pkFoot2 is added by a later boot step) */
   $("#pkDesc").classList.toggle("updnew",false);
   if(!on&&$("#pkUpd")){ drawUpdateBody($("#pkUpd"),null); drawLatestWas($("#pkUpdWas"),null); drawLast($("#pkUpdLast"),null); } }
 export function updDraw(x,k,r){ const {u,now,list}=updModel(), t=u.table;

@@ -270,7 +270,8 @@ class UpdatePeekSaves(LiveBrowserCase, Fixture):
         b.click("#pkPSave")
         b.wait("!document.getElementById('panel').classList.contains('on')")
         title = b.eval(f"REV.find(r=>r.n==={n}).rec.t")
-        self.assertIn("due 25-10-2026 → 04-12-2026", title)
+        was = self.live[self.cio]["due_date"]                                               # the sample's due date follows the day it runs
+        self.assertIn(f"due {was[8:10]}-{was[5:7]}-{was[:4]} → 04-12-2026", title)
         self.assertNotRegex(title, r"[a-z]_[a-z]")                                        # no column names ("due_date"), no raw values
 
     def test_a_conflict_hides_save_and_approve_and_shows_the_two_values(self):

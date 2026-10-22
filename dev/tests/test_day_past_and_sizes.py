@@ -156,7 +156,7 @@ class OneControlSize(Base):
                 self.assertTrue(hs, f"{name}: no {sel} on screen")
                 n += len(hs)
                 off += [f"{name} {sel} {h}px" for h in sorted(set(hs)) if h != want]
-        self.assertGreater(n, 10)
+        self.assertGreaterEqual(n, sum(len(sels) for *_x, sels in SCREENS))   # #232 C2 left 7 controls (one per selector at least)
         self.assertEqual(off, [])
 
 

@@ -426,7 +426,8 @@ class FollowedIsPrivate(Base):
         self.open("people")
         self.assertEqual(b.eval("document.querySelectorAll('#v-psettings .pstar').length"), 1)
         for js, ready in (("go('today')", "VIEW==='today'"), ("go('work')", "VIEW==='work'"), ("go('people')", "VIEW==='people'"),
-                          ("go('person','Sara Example')", "VIEW==='person'"), ("go('review')", "VIEW==='review'"), ("go('inbox')", "VIEW==='inbox'"),
+                          ("go('person','Sara Example')", "VIEW==='person'"), ("go('review')", "VIEW==='intake-review'"),   # #232 C2: Review and Inbox are Intake's page
+                          ("go('inbox')", "VIEW==='intake-review'"),
                           ("go('cockpit','ABC')", "VIEW==='cockpit'"), ("go('projects')", "VIEW==='projects'"),
                           ("go('work'); openRecord('actions', A.find(a=>a.o==='Sara Example').id)", "!!document.querySelector('#panel.on, .peek')")):
             b.eval(js)

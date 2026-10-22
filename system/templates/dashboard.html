@@ -60769,7 +60769,8 @@ ${d5.text}`);
     $("#pkDesc").hidden = on2 && !a5;
     const det = $("#pkDetT")?.closest("section");
     if (det) det.hidden = on2;
-    $("#pkPSaveA").hidden = on2 && isConflict(pkRev());
+    const saveA = $("#pkPSaveA");
+    if (saveA) saveA.hidden = on2 && isConflict(pkRev());
     $("#pkDesc").classList.toggle("updnew", false);
     if (!on2 && $("#pkUpd")) {
       drawUpdateBody($("#pkUpd"), null);

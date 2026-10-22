@@ -120,6 +120,7 @@ class AddFiles(IntakeBase):
         for i, ident in enumerate(ids):
             if i:
                 self.setUp()                                                                                # a fresh page and no draft for the second id
+                b = self.b                                                                                  # setUp may open a new page: drive that one
             self.stage_stub()
             b.eval("irProcessById(%s)" % json.dumps(ident))
             b.wait("ASKED.length===1 && irBusy.value.length===0", 30)
