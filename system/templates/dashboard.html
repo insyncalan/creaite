@@ -39969,7 +39969,12 @@ ${s5}`;
   ];
   function workHint(lay) {
     const off = S.singleKeys === false;
-    return HINTS.map(([k5, t47, l6, a5]) => off && k5 ? [k5.filter((x5) => !/^(Shift\+)?[A-Z]$/.test(x5)), t47, l6, a5] : [k5, t47, l6, a5]).filter((h5) => !(off && h5[0] !== "" && !h5[0].length)).filter((h5) => (h5[2] === "both" || h5[2] === lay) && !(h5[3] && shared.WT === "all")).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
+    const LETTER = /^(Shift\+)?[A-Z]$/;
+    return HINTS.filter((h5) => (h5[2] === "both" || h5[2] === lay) && !(h5[3] && shared.WT === "all")).map(([k5, t47]) => {
+      const ks2 = k5 && off ? k5.filter((x5) => !LETTER.test(x5)) : k5;
+      return k5 && !/** @type {string[]} */
+      ks2.length ? "" : (ks2 ? ks2.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47;
+    }).filter(Boolean).join(" · ");
   }
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
