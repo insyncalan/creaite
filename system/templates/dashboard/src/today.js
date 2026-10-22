@@ -30,7 +30,7 @@ import { openMilestone } from "./milestones.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MTG } from "./core/intakeApi.js";
 import { irProcessById, irRefreshCalendar } from "./components/intakeReview/actions.js";   /* #232-C2: Today's day line and Refresh calendar go through the Intake page's own actions */
-import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
+import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, dnList, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn } from "./review.js";
@@ -76,14 +76,28 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
       gl.map(([p,g])=>{ const own=[cnt(p,"actions",g.actions,"action","actions"),cnt(p,"raid",g.raid,"risk or issue","risks and issues")].filter(Boolean),
         parts=[own.length?`${andList(own)} with no owner`:"",g.due?`${cnt(p,"due",g.due,"action","actions")} with no due date`:""].filter(Boolean);
         return `${p?projLink(p):"No project"}: ${parts.join("; ")}`; }).join(". ")+".")}); }
-  { const L=decPending().sort(decRank); if(L.length){
-    const mine=L.filter(d=>isMe(d.by)).length, others=L.length-mine, late=L.filter(decLate).length, parts=[];
+  { const L=decPending().sort(decRank); if(L.length){   /* #313: a decision under Decisions needed is counted here, never named again */
+    const mine=L.filter(d=>isMe(d.by)).length, others=L.length-mine, late=L.filter(decLate).length, parts=[], dnIds=new Set(dnList().map(d=>d.id)), rest=L.filter(d=>!dnIds.has(d.id)), above=L.length-rest.length;
     if(others) parts.push(`${plur(others,"decision")} waiting on others`); if(mine) parts.push(others?`${mine} for you`:`${plur(mine,"decision")} for you`);
-    const show=L.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
-    out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),`${andList(show)}${L.length>3?` and ${L.length-3} more`:""}.`)}); } }
+    const show=rest.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
+    const body=[show.length?`${andList(show)}${rest.length>3?` and ${rest.length-3} more`:""}.`:"",above?(above===L.length?"All of them are listed under Decisions needed.":`${above===1?"1 is":`${above} are`} listed under Decisions needed.`):""].filter(Boolean).join(" ");
+    out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),body)}); } }
   out.unshift(...msAttention().map(r=>({milestone:r.ms,html:n=>msAttnRow(n,r)})));   /* #251: time-critical, so first, soonest first */
   out.push(...attnAlertItems());   /* #236: after the decisions, the reminders and the gaps line, as the help says (Stark's review: they led the list) */
   return out; }
+/* ===== #313 (2.6.1): no item is shown twice on Today. The one-row rule, in one place so it cannot drift =====
+   An item is a row in ONE section; every other section counts it or links to it, never lists it again. The order, most urgent
+   first: Decisions needed (a pending decision with a decision maker and a needed-by date), Your commitments (Alan's own actions
+   due or overdue), Needs attention (a milestone row names the other open items on it, a decisions line names the pending decisions
+   that have no decision maker or date), then the Week ahead, which leaves out whatever is already listed above and says how many.
+   You owe and Waiting on are promises, with their own IDs. A decision's "If it stays open" line and a Messages card's matched-item
+   chip name an ID as context, not as a row. dev/tests/test_today_once.py fails when any two sections list the same ID. */
+const todayMineIds=()=>new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id));
+/** the IDs already listed above the Week ahead, by section @returns {{dn:Set<string>,mine:Set<string>,attn:Set<string>,above:Set<string>}} */
+export function todayClaims(){ const dn=new Set(dnList().map(d=>d.id)), mine=todayMineIds(), attn=new Set();
+  msAttention().forEach(r=>{ attn.add(r.ms); r.named.slice(0,3).forEach(x=>attn.add(x.id)); });
+  decPending().filter(d=>!dn.has(d.id)).sort(decRank).slice(0,3).forEach(d=>attn.add(d.id));
+  return {dn,mine,attn,above:new Set([...dn,...mine,...attn])}; }
 /* #251 (Alan, 19-10 and 20-10-2026): one Needs attention row per milestone not yet achieved (or dropped) that is due within the
    Due soon window (review.due_soon_days), or already past due, by its forecast date when it has one, else its agreed date, and
    has open work attached that must close for it to hold: open (or delayed) actions and open issues. Risks are left out (a
@@ -96,7 +110,8 @@ export function msAttention(){ const out=[];
     if(!its.length) continue;
     // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items first)
     its.sort((a,b)=>(msLate(b)-msLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id));
-    out.push({ms:id,p:p.code,name:m[0],when,its}); }
+    const mineIds=todayMineIds(), named=its.filter(x=>!mineIds.has(x.id));   /* #313: Alan's own are rows under Your commitments, counted here */
+    out.push({ms:id,p:p.code,name:m[0],when,its,named,inMine:its.length-named.length}); }
   return out.sort((a,b)=>a.when.localeCompare(b.when)||pName(a.p).localeCompare(pName(b.p))||a.name.localeCompare(b.name)); }
 /* one attached item: "DEF-A-003 Confirm licence count, 1 day late" (red), "…, due Thursday", "…, no due date, no owner" */
 export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} ${esc(decShort(x.t||"",70))}`, own=!x.o||x.o==="TBC"?", no owner":"";
@@ -111,9 +126,9 @@ export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its
 export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
   const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`
     :`is due ${k===0?"today":k===1?"tomorrow":longDay(r.when)}: ${items} for it to hold`;
-  const shown=r.its.slice(0,3).map(msItemWords), more=c>3?[`and ${c-3} more`]:[];
+  const shown=r.named.slice(0,3).map(msItemWords), more=r.named.length>3?[`and ${r.named.length-3} more`]:[], mineWords=r.inMine?[`${r.inMine===1?"1 is":`${r.inMine} are`} under Your commitments`]:[];
   return tl(n,tLink(html`data-ms="${r.ms}"`,html`Milestone <u>${r.name}</u> ${raw(when)}`),
-    [...shown,...more,projLink(r.p),sLink(html`data-msattnwork="${r.ms}"`,msAttnWorkWord(r))].join(" · "),
+    [...shown,...more,...mineWords,projLink(r.p),sLink(html`data-msattnwork="${r.ms}"`,msAttnWorkWord(r))].join(" · "),
     `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
     html`data-msattn="${r.ms}"`); }
 export function msAttnMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=msAttention().find(x=>x.ms===id); if(!r) return;
@@ -745,9 +760,10 @@ export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="
 /** the Week ahead's groups: Urgent with no date, each day, Further ahead.
     #112 (Alan, 16-10-2026): calm rows. Overdue work is not here (it is in Your commitments when it is Alan's, and in the quiet
     line above the days when it is someone else's); nothing already under Your commitments is repeated. */
-export function weekGroups(){ const W=D.week; if(!W) return [];
+export function weekGroups(){ const W=D.week; if(!W) return Object.assign(/** @type {any[]} */([]),{above:0});
   const live=viaServer(), out=/** @type {any[]} */([]);
-  const mineIds=new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id)), quiet=i=>i.kind==="actions"&&mineIds.has(i.id);   /* mine are already under Your commitments */
+  const above=todayClaims().above, quiet=i=>above.has(i.id);   /* #313: whatever is already listed above (Your commitments, Decisions needed, Needs attention) is not a row again */
+  let hidden=0; const only=L=>L.filter(i=>{ if(quiet(i)){ hidden++; return false; } return true; });
   const dotOf=i=>i.pr==="Urgent"?"u":i.pr==="High"?"h":"";
   const whyOf=(i,further,undated)=>{ if(undated) return "no date set";
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
@@ -764,11 +780,11 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
         pname:e.p?pName(e.p):"",pageWhen:pg?pg.when:"",page:pg?pg.path:null}:undefined,
       acts:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
-  group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
+  group("wkund","Urgent, with no date",only(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
   (W.days||[]).forEach(d=>{
-    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
-  group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
-  return out; }
+    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...only(d.items||[]).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
+  group("wkfur","Further ahead",only(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
+  return Object.assign(out,{above:hidden}); }   /* #313: `above` counts the rows left out because they are listed above */
 /** The open actions that are overdue and owned by others (RAID items, decisions and milestones are not counted, so the count is exactly the Actions tab's list at the address): the quiet line above the days (#112). */
 export function othersOverdue(){ const n=[...A].filter(x=>overdue(x)&&!isMe(x.o)).length;
   return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
@@ -778,8 +794,9 @@ function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; w
   f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
   const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
-  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}`:"";   /* #105: the quiet count and the end date, as Resolved's */
-  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const above=groups.above||0;   /* #313: the rows left out because they are listed above are counted, not dropped silently */
+  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}${above?` · ${above} more listed above`:""}`:"";   /* #105: the quiet count and the end date, as Resolved's */
+  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:above?`The rest of what is due until ${W?longDay(W.to):"next Monday"} is listed above.`:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

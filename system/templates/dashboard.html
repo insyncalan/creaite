@@ -7038,6 +7038,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toDecideRows: () => toDecideRows,
     toIso: () => toIso,
     toastLayer: () => toastLayer,
+    todayClaims: () => todayClaims,
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     trkLeftOut: () => trkLeftOut,
@@ -48617,16 +48618,27 @@ ${s5}`;
     {
       const L3 = decPending().sort(decRank);
       if (L3.length) {
-        const mine = L3.filter((d5) => isMe(d5.by)).length, others = L3.length - mine, late = L3.filter(decLate).length, parts = [];
+        const mine = L3.filter((d5) => isMe(d5.by)).length, others = L3.length - mine, late = L3.filter(decLate).length, parts = [], dnIds = new Set(dnList().map((d5) => d5.id)), rest = L3.filter((d5) => !dnIds.has(d5.id)), above = L3.length - rest.length;
         if (others) parts.push(`${plur(others, "decision")} waiting on others`);
         if (mine) parts.push(others ? `${mine} for you` : `${plur(mine, "decision")} for you`);
-        const show = L3.slice(0, 3).map((d5) => `${sLink(`data-open="decisions:${d5.id}"`, esc(decShort(d5.t, 70)))} (${decAsked(d5)}${d5.due ? `, ${decLate(d5) ? `<span class="late">${decLateWords(d5)}</span>` : `by ${fd(d5.due).slice(0, 5)}`}` : ""})`);
-        out.unshift({ decisions: true, html: (n4) => tl2(n4, tLink('data-decpending="1"', parts.join(", ") + (late ? `, ${late} late` : "")), `${andList(show)}${L3.length > 3 ? ` and ${L3.length - 3} more` : ""}.`) });
+        const show = rest.slice(0, 3).map((d5) => `${sLink(`data-open="decisions:${d5.id}"`, esc(decShort(d5.t, 70)))} (${decAsked(d5)}${d5.due ? `, ${decLate(d5) ? `<span class="late">${decLateWords(d5)}</span>` : `by ${fd(d5.due).slice(0, 5)}`}` : ""})`);
+        const body2 = [show.length ? `${andList(show)}${rest.length > 3 ? ` and ${rest.length - 3} more` : ""}.` : "", above ? above === L3.length ? "All of them are listed under Decisions needed." : `${above === 1 ? "1 is" : `${above} are`} listed under Decisions needed.` : ""].filter(Boolean).join(" ");
+        out.unshift({ decisions: true, html: (n4) => tl2(n4, tLink('data-decpending="1"', parts.join(", ") + (late ? `, ${late} late` : "")), body2) });
       }
     }
     out.unshift(...msAttention().map((r4) => ({ milestone: r4.ms, html: (n4) => msAttnRow(n4, r4) })));
     out.push(...attnAlertItems());
     return out;
+  }
+  var todayMineIds = () => new Set(A4.filter((x5) => isMe(x5.o) && (overdue(x5) || soon(x5))).map((x5) => x5.id));
+  function todayClaims() {
+    const dn2 = new Set(dnList().map((d5) => d5.id)), mine = todayMineIds(), attn = /* @__PURE__ */ new Set();
+    msAttention().forEach((r4) => {
+      attn.add(r4.ms);
+      r4.named.slice(0, 3).forEach((x5) => attn.add(x5.id));
+    });
+    decPending().filter((d5) => !dn2.has(d5.id)).sort(decRank).slice(0, 3).forEach((d5) => attn.add(d5.id));
+    return { dn: dn2, mine, attn, above: /* @__PURE__ */ new Set([...dn2, ...mine, ...attn]) };
   }
   var msLate = (x5) => !!x5.due && days(x5.due) < 0;
   function msAttention() {
@@ -48637,7 +48649,8 @@ ${s5}`;
       const its = [...A4.filter((a5) => a5.ms === id2 && open(a5)), ...R3.filter((r4) => r4.ms === id2 && r4.type === "Issue" && r4.st === "Open")];
       if (!its.length) continue;
       its.sort((a5, b5) => msLate(b5) - msLate(a5) || (a5.due || "9").localeCompare(b5.due || "9") || a5.id.localeCompare(b5.id));
-      out.push({ ms: id2, p: p6.code, name: m5[0], when: when2, its });
+      const mineIds = todayMineIds(), named = its.filter((x5) => !mineIds.has(x5.id));
+      out.push({ ms: id2, p: p6.code, name: m5[0], when: when2, its, named, inMine: its.length - named.length });
     }
     return out.sort((a5, b5) => a5.when.localeCompare(b5.when) || pName(a5.p).localeCompare(pName(b5.p)) || a5.name.localeCompare(b5.name));
   }
@@ -48656,11 +48669,11 @@ ${s5}`;
   function msAttnRow(n4, r4) {
     const k5 = days(r4.when), c5 = r4.its.length, items2 = `${c5} open item${c5 === 1 ? "" : "s"} must close`;
     const when2 = k5 < 0 ? `is overdue by ${-k5} day${k5 === -1 ? "" : "s"} (due ${longDay(r4.when)}): ${items2} before it can be achieved` : `is due ${k5 === 0 ? "today" : k5 === 1 ? "tomorrow" : longDay(r4.when)}: ${items2} for it to hold`;
-    const shown2 = r4.its.slice(0, 3).map(msItemWords), more = c5 > 3 ? [`and ${c5 - 3} more`] : [];
+    const shown2 = r4.named.slice(0, 3).map(msItemWords), more = r4.named.length > 3 ? [`and ${r4.named.length - 3} more`] : [], mineWords = r4.inMine ? [`${r4.inMine === 1 ? "1 is" : `${r4.inMine} are`} under Your commitments`] : [];
     return tl2(
       n4,
       tLink(html`data-ms="${r4.ms}"`, html`Milestone <u>${r4.name}</u> ${raw(when2)}`),
-      [...shown2, ...more, projLink(r4.p), sLink(html`data-msattnwork="${r4.ms}"`, msAttnWorkWord(r4))].join(" · "),
+      [...shown2, ...more, ...mineWords, projLink(r4.p), sLink(html`data-msattnwork="${r4.ms}"`, msAttnWorkWord(r4))].join(" · "),
       `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r4.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
       html`data-msattn="${r4.ms}"`
     );
@@ -50093,12 +50106,24 @@ ${s5}`;
   }
   function weekGroups() {
     const W3 = D.week;
-    if (!W3) return [];
+    if (!W3) return Object.assign(
+      /** @type {any[]} */
+      [],
+      { above: 0 }
+    );
     const live = viaServer(), out = (
       /** @type {any[]} */
       []
     );
-    const mineIds = new Set(A4.filter((x5) => isMe(x5.o) && (overdue(x5) || soon(x5))).map((x5) => x5.id)), quiet = (i5) => i5.kind === "actions" && mineIds.has(i5.id);
+    const above = todayClaims().above, quiet = (i5) => above.has(i5.id);
+    let hidden = 0;
+    const only = (L3) => L3.filter((i5) => {
+      if (quiet(i5)) {
+        hidden++;
+        return false;
+      }
+      return true;
+    });
     const dotOf = (i5) => i5.pr === "Urgent" ? "u" : i5.pr === "High" ? "h" : "";
     const whyOf = (i5, further, undated) => {
       if (undated) return "no date set";
@@ -50153,12 +50178,12 @@ ${s5}`;
     const group = (key2, title, L3, note) => {
       if (L3.length) out.push({ key: key2, title, note: note || "", rows: L3, cap: 6, open: EXPAND.has(key2) });
     };
-    group("wkund", "Urgent, with no date", (W3.undated || []).map((i5, n4) => item(i5, `u${n4}${i5.id}`, false, true)));
+    group("wkund", "Urgent, with no date", only(W3.undated || []).map((i5, n4) => item(i5, `u${n4}${i5.id}`, false, true)));
     (W3.days || []).forEach((d5) => {
-      group("wk" + d5.date, d5.date === W3.from ? "Today" : longDay(d5.date), [...(d5.meetings || []).map((e4) => meeting(e4, d5.date)), ...(d5.items || []).filter((i5) => !quiet(i5)).map((i5) => item(i5, `${d5.date}${i5.kind}${i5.id}`, false))]);
+      group("wk" + d5.date, d5.date === W3.from ? "Today" : longDay(d5.date), [...(d5.meetings || []).map((e4) => meeting(e4, d5.date)), ...only(d5.items || []).map((i5) => item(i5, `${d5.date}${i5.kind}${i5.id}`, false))]);
     });
-    group("wkfur", "Further ahead", (W3.further || []).map((i5) => item(i5, `f${i5.date}${i5.kind}${i5.id}`, true)), W3.further_to ? ` to ${longDay(W3.further_to)}` : "");
-    return out;
+    group("wkfur", "Further ahead", only(W3.further || []).map((i5) => item(i5, `f${i5.date}${i5.kind}${i5.id}`, true)), W3.further_to ? ` to ${longDay(W3.further_to)}` : "");
+    return Object.assign(out, { above: hidden });
   }
   function othersOverdue() {
     const n4 = [...A4].filter((x5) => overdue(x5) && !isMe(x5.o)).length;
@@ -50178,14 +50203,15 @@ ${s5}`;
     if (!host2) return;
     wireWeekFold();
     const groups = weekGroups(), n4 = groups.reduce((t47, g5) => t47 + g5.rows.length, 0);
-    $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}` : "";
+    const above = groups.above || 0;
+    $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}${above ? ` · ${above} more listed above` : ""}` : "";
     drawWeekAhead(host2, {
       groups,
       openFile: (p6) => {
         prepOpen(p6);
       },
       others: othersOverdue(),
-      empty: `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
+      empty: above ? `The rest of what is due until ${W3 ? longDay(W3.to) : "next Monday"} is listed above.` : `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
       onAct: (r4, a5, btn) => {
         if (a5.data && a5.data.id) workAct(a5.data.k, a5.data.id, a5.id, btn);
       },

@@ -197,7 +197,7 @@ class WeekCalm(Header):
     def test_the_fold_says_how_many_items_and_to_when_like_resolved(self):
         b = self.b
         self.draw()
-        self.assertEqual(b.eval("document.getElementById('weekTo').textContent"), "6 items to Monday 19th October")
+        self.assertEqual(b.eval("document.getElementById('weekTo').textContent"), "6 items to Monday 19th October · 1 more listed above")   # #313: the one left out is already under Your commitments
         self.assertEqual(b.eval("document.querySelector('#weekFold>summary h2').firstChild.textContent.trim()"), "Week ahead")
 
     def test_quiet_overdue_line_counts_other_people_s_work_links_to_work_and_hides_at_zero(self):

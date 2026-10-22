@@ -429,7 +429,7 @@ class TodayBriefTests(PageTests):
         self.assertEqual(o["days"][2][2][0], "Over the weekend — Sara Example · Example Programme | due over the weekend")   # BL-319: why it is there
         self.assertEqual(o["days"][2][2][1], "UAT start — Example Programme | on track")
         self.assertIn("Friday action", o["days"][3][2][0])
-        self.assertEqual(o["to"], "5 items to Friday 16th October")        # #105: the count and the end date, as Resolved's
+        self.assertEqual(o["to"], "5 items to Friday 16th October · 1 more listed above")   # #105 and #313: the count, the end date, and the one counted not repeated
         self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
         self.assertEqual(o["acts"][0], ["Draft email", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone
