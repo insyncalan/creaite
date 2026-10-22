@@ -400,8 +400,10 @@ def guard_settings(run_id, mode, held=False):
     import shlex
     cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode,     # BL-237
                                             *(("--held", "1") if held else ())))
-    return json.dumps({"disableAllHooks": False,
-                       "hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}})
+    hooks = {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}
+    if mode == "process":       # #264 round 3: what the run's own tool made is recorded when it returns (reach.post_tool)
+        hooks["PostToolUse"] = [{"matcher": "*", "hooks": [{"type": "command", "command": cmd + " --event post", "timeout": 30}]}]
+    return json.dumps({"disableAllHooks": False, "hooks": hooks})
 
 
 def reach_dirs():
@@ -480,9 +482,9 @@ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), r
               "Read .claude/settings.json first: if the script is already allowed there, the refusal was about the command's "
               "shape, so say which command was refused and why instead of asking for a rule. If one narrow rule would let you "
               "do the request, end with exactly one line: PERMISSION: <the rule> | <why it is needed>, for example PERMISSION: "
-              "Write(system/search/**) | to save summaries, or PERMISSION: Bash(python3 system/scripts/<name>.py <subcommand> *) "
-              "| <why> for a script (always that form, never with `:*`). Alan approves it in the panel; only a rule "
-              "for a creaite script or a path inside one project's folder is accepted. Never edit .claude/settings.json yourself. "
+              "Bash(python3 system/scripts/<name>.py <subcommand> *) | <why> for a script (always that form, never with `:*`; "
+              "never an Edit or Write rule: files change through filechange.py). Alan approves it in the panel; only a rule "
+              "for a creaite script is accepted. Never edit .claude/settings.json yourself. "
               "You may read all of Microsoft 365 (calendar, mail, Teams chats and channels, SharePoint and OneDrive search, "
               "people, and read_resource for events, chats and meeting transcripts) and every vault file, whenever it helps. "
               "Never send, delete or change anything in Microsoft 365: those tools are not available to you. "
@@ -1793,6 +1795,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 task = Run(run_id, intake_process.build_prompt(files), None, None, None, kind="process",
                            files=[f["path"] for f in files], label=intake_process.label(files),
+                           as_minutes=[f["path"] for f in files if f.get("as") == intake_process.AS_MINUTES],
                            closer=intake_process.closer(files))
             except OSError as e:
                 return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
@@ -2422,13 +2425,15 @@ def held_deny(deny, held, guarded):
     return deny + [t for t in HELD_DENIES if t not in deny] if held and not guarded else deny
 
 
-def guard_args(run_id, mode, held, session, files=None):
+def guard_args(run_id, mode, held, session, files=None, as_minutes=None):
     """The guard hook's --settings for a run: a guarded run's mode (BL-141, BL-295; the run written to system/guard/run.json),
     with `--held 1` when creaite started it (#60); else mode "held" for a run creaite starts itself; else none. #264: a Process
-    run's checked Intake files go in the run record, the only ones its hook lets it stage."""
+    run's checked Intake files go in the run record, the only ones its hook lets it stage; #232 E1: with the ones Alan pressed
+    Find work items on (`as_minutes`), staged only as someone else's minutes."""
     if mode:
         settings = guard_settings(run_id, mode, held)
-        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session, files=list(files or []) if mode == "process" else None)
+        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session, files=list(files or []) if mode == "process" else None,
+                        as_minutes=list(as_minutes or []) if mode == "process" else None)
         return ["--settings", settings]
     return ["--settings", guard_settings(run_id, "held")] if held else []   # #60: the hook refuses a confidential note
 
@@ -2445,7 +2450,7 @@ class Run:
     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
 
     def __init__(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
-                 sweep=False, lines=None, closer=None, files=None):
+                 sweep=False, lines=None, closer=None, files=None, as_minutes=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
@@ -2461,7 +2466,7 @@ class Run:
         for d in run_dirs(policy, guarded):                     # #264: a Process run reads the vault and the projects folder
             cmd += ["--add-dir", d]
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session,
-                          files=files)                                              # #264: kept for a Process run only
+                          files=files, as_minutes=as_minutes)                       # #264, #232 E1: a Process run only
         self.guarded = guarded
         if session:
             cmd += ["--resume", session]
