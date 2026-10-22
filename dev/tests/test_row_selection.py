@@ -133,7 +133,9 @@ class Selecting(LiveBrowserCase):
 
     def test_links_and_controls_in_a_row_do_their_own_job(self):
         b = self.open_work()
-        a = self.ids()[0]
+        # #241: the project name sits beside the title and is clipped away when the title fills the line, so use a row where it shows
+        a = b.eval("[...document.querySelectorAll('#workTbl tr[data-row]')].find(tr=>{const r=tr.querySelector('.pcode.plink').getBoundingClientRect();"
+                   "return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2).closest('.plink')}).dataset.row")
         b.click(f'#workTbl tr[data-row="{a}"] .pcode.plink')              # the project link goes to the project, and highlights nothing
         b.wait("VIEW==='cockpit'")
         b.eval("go('work')")
