@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import work_data as W  # noqa: E402
 from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 
 META = 4
@@ -33,6 +34,10 @@ def shown(s):
 
 class CellEdit(LiveBrowserCase):
     width, height = 1500, 1000
+
+    def setUp(self):
+        super().setUp()
+        W.closed_open(self.b)            # #241 b: an item closed here stays on screen in its open Closed group, as before
 
     def open_work(self, tab="actions"):
         b = self.b
@@ -294,7 +299,9 @@ class CellEdit(LiveBrowserCase):
 
     def test_the_double_click_opens_the_sidebar_and_does_not_edit(self):
         b = self.open_work()
-        b.click(self.cell("ABC-A-002", "ws") if False else '#workTbl tr[data-row="ABC-A-002"] td.title', count=2)
+        # #241 a: the Compact row puts the ID and the project link on the title's line, so the cell's centre can be a link; the
+        # double-click lands on the title cell's own marks (not a link), as it landed on the cell before
+        b.click('#workTbl tr[data-row="ABC-A-002"] td.title .wkm', count=2)
         b.wait("document.getElementById('panel').classList.contains('on')")
         self.assertFalse(b.eval("EDITING"))
 

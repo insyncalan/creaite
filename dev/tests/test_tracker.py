@@ -88,6 +88,7 @@ def make_vault():
               "intake_process.py",                                 # #264: Intake's Process, its own run kind
               "calendar_refresh.py",                               # #265: Calendar import's Refresh, its own run kind
               "invite_clean.py",                                   # #265 review M1, M2: what a saved invite may keep
+              "item_history.py",                                   # #241 D: a work item's complete history (read only)
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)

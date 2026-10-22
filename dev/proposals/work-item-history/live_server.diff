@@ -1,0 +1,38 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index ded1d52..c56b17d 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -20,6 +20,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
+ - GET  /api/records?ids=A,B  BL-304: just those actions, RAID items and decisions (the page's shape), with Review, Activity
+                          and the latest apply: the page's targeted refresh after a save or a live update. Read only.
+                          &aged=1 (BL-10): an item archived for its age too, for search to open it
++- GET  /api/item/history?id=ABC-A-001  #241 D: one work item's complete history for the peek (item_history.py), read only
+ - GET  /api/events       BL-253: one server-sent events stream per page: `hello` (the fingerprint), then `changed` {seq, parts, v}
+                          (BL-304: and `ids`, {table: [item IDs]} from the change log, when the tracker changed)
+                          within about a second of a change on disk (at once for a save through the server), `ping` every 25 s.
+@@ -884,6 +885,17 @@ def records_route(handler):
+ # ===== end BL-304 =====
+ 
+ 
++def item_history_route(handler):
++    """#241 D: GET /api/item/history?id=ABC-A-001: the item's events, newest first (item_history.history_of; the shape is in
++    dev/proposals/work-item-history/DESIGN.md). Read only, token-checked by the caller; anything but one item ID is refused."""
++    from urllib.parse import parse_qs, urlparse
++    import item_history
++    ids = parse_qs(urlparse(handler.path).query).get("id") or []
++    if len(ids) != 1 or not RECORD_ID.fullmatch(ids[0].strip()):
++        return handler.send(400, {"ok": False, "message": "Bad item ID"})
++    return handler.send(200, {"ok": True, **item_history.history_of(ids[0].strip())})
++
++
+ # ===== BL-253 (sprint-live-updates) =====
+ def app_file(route):
+     """The installable app's static files (BL-86): (body, type, extra headers) for `send`, or None for any other route.
+@@ -1189,6 +1201,7 @@ class Handler(BaseHTTPRequestHandler):
+             return self.send(200, html, "text/html")
+         api_get = {"/api/data": lambda: self.send(200, live_data()),
+                    "/api/records": lambda: records_route(self),            # BL-304: just the changed items
++                   "/api/item/history": lambda: item_history_route(self),  # #241 D: one item's complete history
+                    "/api/search": self.search_get,                          # BL-07
+                    "/api/files": self.files_get}.get(route)                 # BL-87
+         if api_get:

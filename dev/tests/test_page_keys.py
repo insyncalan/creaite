@@ -104,7 +104,7 @@ class PageKeys(LiveBrowserCase):
         b.wait("document.getElementById('panel').classList.contains('on')", 5)
         self.assertFalse(b.eval("EDITING"))
         b.eval("document.activeElement&&document.activeElement.blur()")
-        b.key("p")
+        b.key("i")                                                             # (P, S and T are the peek's own chips while it is open, #241)
         b.pump(0.3)
         self.assertEqual(b.eval("VIEW"), "work", "a peek is open")
         b.key("Escape")

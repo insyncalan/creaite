@@ -223,7 +223,9 @@ class BulkEdit(LiveBrowserCase):
     def test_editing_a_cell_of_a_highlighted_row_changes_all_of_them(self):
         b = self.open_work()
         self.select("ABC-A-001", "ABC-A-002")
-        b.click('#workTbl tr[data-row="ABC-A-002"] td[data-f="o"]')
+        # #241 A: in the Compact row the owner cell's centre is the person link (which opens the person, as a link should); the
+        # cell's own ▾ opens its editor, which is what this test checks
+        b.click('#workTbl tr[data-row="ABC-A-002"] td[data-f="o"] .cebtn')
         b.wait("document.querySelector('#workTbl td.editing select')")
         self.assertEqual(sorted(b.eval("[...HL.keys()]")), ["ABC-A-001", "ABC-A-002"])   # the group stays highlighted
         b.eval("""(()=>{ const s=document.querySelector('#workTbl td.editing select'); s.value='Omar Ali'; s.dispatchEvent(new Event('change',{bubbles:true})); })()""")

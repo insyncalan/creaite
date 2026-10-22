@@ -100,14 +100,17 @@ class ListGroups(BoardCase):
         b.click('#workTbl tr.wgh[data-gk="actions|priority|High"] .wgtog')               # Enter on the button does the same (a button)
         b.wait("!document.querySelector('#workTbl tr.wgh[data-gk=\"actions|priority|High\"]').classList.contains('coll')")
 
+    # #241 a: a Compact row has the ID and the project link on the title's line, so these clicks land on the title cell's own
+    # status mark (not a link) to select a row, as they landed on the cell before
+
     def test_a_shift_range_never_reaches_a_collapsed_group(self):
         b = self.open_list("actions", "priority")
         b.click('#workTbl tr.wgh[data-gk="actions|priority|High"] .wgtog')
         b.pump(0.2)
         urgent = b.eval("[...document.querySelectorAll('#workTbl tr[data-row][data-g1=\"actions|priority|Urgent\"]')].map(r=>r.dataset.row)")
         medium = b.eval("[...document.querySelectorAll('#workTbl tr[data-row][data-g1=\"actions|priority|Medium\"]')].map(r=>r.dataset.row)")
-        b.click(f'#workTbl tr[data-row="{urgent[-1]}"] td.title')
-        b.click(f'#workTbl tr[data-row="{medium[0]}"] td.title', modifiers=SHIFT)
+        b.click(f'#workTbl tr[data-row="{urgent[-1]}"] td.title .wkm')
+        b.click(f'#workTbl tr[data-row="{medium[0]}"] td.title .wkm', modifiers=SHIFT)
         hl = b.eval("[...HL.keys()]")
         self.assertEqual(sorted(hl), sorted([urgent[-1], medium[0]]))
         self.assertFalse(b.eval("[...HL.keys()].some(id=>A.find(a=>a.id===id).pr==='High')"))
@@ -119,9 +122,9 @@ class ListGroups(BoardCase):
         b = self.open_list("actions", "priority")
         urgent = b.eval("[...document.querySelectorAll('#workTbl tr[data-row][data-g1=\"actions|priority|Urgent\"]')].map(r=>r.dataset.row)")
         high = b.eval("[...document.querySelectorAll('#workTbl tr[data-row][data-g1=\"actions|priority|High\"]')].map(r=>r.dataset.row)")
-        b.click(f'#workTbl tr[data-row="{urgent[0]}"] td.title')
-        b.click(f'#workTbl tr[data-row="{high[0]}"] td.title', modifiers=META)
-        b.click(f'#workTbl tr[data-row="{high[1]}"] td.title', modifiers=META)
+        b.click(f'#workTbl tr[data-row="{urgent[0]}"] td.title .wkm')
+        b.click(f'#workTbl tr[data-row="{high[0]}"] td.title .wkm', modifiers=META)
+        b.click(f'#workTbl tr[data-row="{high[1]}"] td.title .wkm', modifiers=META)
         b.click('#workTbl tr.wgh[data-gk="actions|priority|High"] .wgtog')
         b.pump(0.3)
         self.assertEqual(b.eval("[...HL.keys()]"), [urgent[0]])

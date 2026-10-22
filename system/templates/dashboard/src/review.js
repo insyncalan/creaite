@@ -33,7 +33,7 @@ import { approveProblems } from "./components/minutes/track.js";
 import { contextMenuOpen, openContextMenu } from "./components/review/ContextMenu.jsx";
 import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
 import { rjAddGone, rjDropGone, rjGone, rjGuessFor, rjGuesses, rjOpenMenu, rjReasons, rjRecent, rjSetGone } from "./stores/rejects.js";
-import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, HL, hlOnly, items, kOfId, recordFromBoard, rows, thisFriday } from "./work.js";     /* RHL: the highlighted rows (BL-122); a row that may be ticked is ticked too, so the two are one selection */
+import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, HL, hlOnly, items, kOfId, recordFromBoard, rows, thisFriday, wkClientToggle } from "./work.js";     /* RHL: the highlighted rows (BL-122); a row that may be ticked is ticked too, so the two are one selection */
 export function applyProposal(r){ if(r.kind==="actions"){ const rec=Object.assign({id:nextId("actions",r.p),p:r.p,raised:TODAY,closed:null,src:r.src,upd_at:nowStamp()},r.rec); A.push(rec); return ()=>A.splice(A.indexOf(rec),1); }
   if(r.kind==="raid"){ const rec=Object.assign({id:nextId("raid",r.p),p:r.p,raised:TODAY,closed:null,src:r.src,upd_at:nowStamp()},r.rec); rec.pr=prio(rec.imp,rec.lik); R.push(rec); return ()=>R.splice(R.indexOf(rec),1); }
   if(r.kind==="decisions"){ const rec=Object.assign({id:nextId("decisions",r.p),p:r.p,src:r.src,upd_at:nowStamp()},r.rec); DEC.push(rec); return ()=>DEC.splice(DEC.indexOf(rec),1); }
@@ -318,6 +318,7 @@ export function cxWork(k,id){ const x=REC(k,id), one=(patch,label)=>boardMove(k,
         :[{label:"Impact",icon:"alert",sub:()=>cxList(["High","Medium","Low"],x.imp,v=>one({imp:v}))},{label:"Likelihood",icon:"alert",sub:()=>cxList(["High","Medium","Low"],x.lik,v=>one({lik:v}))}]),
       {label:"Workstream",icon:"layers",sub:()=>cxList([...wsFor(x.p),["","None"]],x.ws||"",v=>one({ws:v}),"layers")},
       {label:"Milestone",icon:"flag",sub:()=>cxList(msChoices(x.p,x.ms),x.ms||"",v=>one({ms:v}),"flag")}); }
+  out.push({label:"Client-visible",icon:"eye",checked:!!x.client,hint:x.client?"On: it can appear in client reports":"Off",desc:x.client?"Turn off":"Turn on",run:()=>wkClientToggle(k,id)});   /* #241 C */
   out.push({sep:true},{label:"Copy ID",icon:"copy",run:()=>cxCopy(id,id)},{label:"Copy link",icon:"link",run:()=>cxCopy(cxLink(id),`the link to ${id}`)});
   const who=k==="decisions"?null:pkWho(x.o); if(who&&PERS().some(p=>p.name===who)) { out.push({label:"Draft email",icon:"mail",desc:"Asks for an update (update request)",run:()=>openDraftEmail(who)}); if(x.due&&x.due<TODAY&&OPENST(x.st)&&!deMe(who)) out.push({label:"Draft email",icon:"mail",desc:"Chases this overdue item (chase)",run:()=>openDraftEmail(who,"chase")}); }   /* BL-224 */
   return out; }
