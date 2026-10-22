@@ -108,6 +108,12 @@ export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} 
    lists exactly the items counted */
 export function msAttnOpenWork(id){ const r=msAttention().find(x=>x.ms===id); if(!r) return;
   openWork(r.p,"all","open",{st:["Open"],ty:["Action","Issue"],mi:[r.ms]}); }
+/* #310 (Alan, 22-10-2026): the Week ahead's milestone row says how many open work items it depends on: the open actions (Open or
+   Delayed, as Work's open filter has it) and open RAID items attached to it, never an archived one; decisions carry no milestone.
+   It is exactly the list Work shows for the Milestone filter with open items only. */
+export function msOpenItems(id){ const its=[...A.filter(a=>a.ms===id&&open(a)&&!a.ar),...R.filter(r=>r.ms===id&&r.st==="Open"&&!r.ar)];
+  return {n:its.length,over:its.filter(x=>!!x.due&&x.due<TODAY).length}; }
+export function msItemsOpenWork(id,code){ openWork(code,"all","open",{st:["Open"],mi:[id]}); }
 export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its.length} in Work`;
 export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
   const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`
@@ -396,6 +402,7 @@ $("#attnList").addEventListener("click",e=>{ const mb=e.target.closest("li[data-
   const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-wkitems]"); if(b){ e.preventDefault(); msItemsOpenWork(b.dataset.wkitems,b.dataset.p||""); return; } });   /* #310 */
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
 }
 /* ===== BL-156 (sprint-ux) ===== first run: a short checklist on Today. On a vault that hasn't finished set-up (no project, no
@@ -756,9 +763,13 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
     const d=further&&i.date?` ${longDay(i.date)}`:"";
     return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
+  const msItems=i=>{ const c=msOpenItems(i.id); if(!c.n) return undefined; const w=`${c.n} open work item${c.n===1?"":"s"}`;
+    return {ms:i.id,p:i.p,n:c.n,over:c.over,label:c.over?`${c.n} open`:`${c.n} open item${c.n===1?"":"s"}`,overLabel:c.over?`, ${c.over} overdue`:"",
+      tip:`${w} this milestone depends on`,aria:`Milestone ${i.t}: ${w}${c.over?`, ${c.over} overdue`:""}. Open the list`}; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
-  const item=(i,key,further,undated=false)=>({key,kind:i.kind,type:i.type||"",dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
+  const item=(i,key,further,undated=false)=>({key,kind:i.kind,type:i.type||"",dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{ms:i.id}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
+    items:i.kind==="milestone"?msItems(i):undefined,
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
   const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"", key=prepKey(e,day);
     return {key:`m${day}${e.start}${e.title}`,kind:"meeting",time:e.start||"",t,
