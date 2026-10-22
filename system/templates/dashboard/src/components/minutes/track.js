@@ -92,6 +92,7 @@ export function trackCounts(doc, plan) {
   const c = { y: 0, k: 0, n: 0, w: 0 };
   for (const r of trackRows(doc)) {
     const t = trackOf(doc, r, plan), g = planGroupOf(plan, r.n);
+    if (g === "applied") continue;                      // approved earlier: its work item is in the tracker, nothing left to count
     if (t === "n") c.n++;
     else if (t === "y") { if (r.kept || g === "group" || g === "own") c.y++; else c.w++; }
     else if (waitsWhenNeither(r, plan)) c.w++;
@@ -113,6 +114,7 @@ export const trackSummary = c => `${trackPlural(c.y, "work item", "work items")}
 export function reconcileOps(doc, plan) {
   const ops = [];
   for (const r of trackRows(doc)) {
+    if (planGroupOf(plan, r.n) === "applied") continue;                      // approved earlier: nothing to change, never an error
     const want = trackOf(doc, r, plan), now = r.kept ? "" : "y";
     if (want === now || (want === "" && waitsWhenNeither(r, plan))) continue;     // an update decided one by one stays in Review
     if (r.kept) { ops.push({ op: "restore", n: r.n }); if (want === "n") ops.push({ op: "remove", n: r.n, keep_line: false }); }
