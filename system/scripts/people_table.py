@@ -25,7 +25,8 @@ SECTION = "## People"
 PRIVATE_FILE = "system/staging/people-private.json"
 TEXT_FIELDS = ("name", "org", "role")
 LIST_FIELDS = ("emails", "aliases", "labels")
-INTRO = ("# People register\n\nThis copy is made from creaite's people table after each save, so Claude can read it. Change people "
+MARK = "<!-- people-table: generated from the people table -->"
+INTRO = ("# People register\n\n" + MARK + "\n\nThis copy is made from creaite's people table after each save, so Claude can read it. Change people "
          "on the People page or with cx-edit, not in this file. VIP and Hidden are not kept here: each laptop keeps its own.\n")
 
 
@@ -60,6 +61,11 @@ def _table(lines):
         rows.append(j)
         j += 1
     return i, rows
+
+
+def is_generated(text):
+    """Whether a register is the generated copy (it carries the mark and no Hidden or VIP column)."""
+    return MARK in str(text or "")
 
 
 def _yes(v):
