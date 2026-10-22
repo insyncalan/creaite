@@ -95,6 +95,22 @@ class PeopleTableDb(unittest.TestCase):
         self.assertEqual(self.v.rows("projects"), before)
         self.assertIn("6 people: 6 new", self.v.run("people-import").stdout)
 
+    def test_a_recode_works_with_the_people_table_and_leaves_it_alone(self):
+        """The recode refuses a table with an ID-looking column it does not know ("people.person_id"); RECODE_OTHER names it.
+        Without dev/proposals/f3/recode.diff this fails at the staging step ("doesn't know how to recode people")."""
+        import shutil
+        from test_tracker import action
+        self.v.propose("seed", [action(1)])
+        self.v.run("apply")
+        self.v.run("people-import")
+        before = self.v.rows("people")
+        root = self.v.root / "projects"
+        shutil.move(str(root / "ABC Example Programme"), str(root / "XPL Example Plus"))
+        self.v.run("recode", "ABC", "XPL", "--name", "Example Plus", "--folder", "XPL Example Plus", script="propose.py")
+        self.v.run("apply")
+        self.assertEqual([r["id"] for r in self.v.rows("actions")], ["XPL-A-001"])
+        self.assertEqual(self.v.rows("people"), before)
+
     def test_a_thousand_people_import_is_quick(self):
         import time
         rows = ["| Full name | Email | Aliases | Organisation | Role | Hidden | VIP | Labels |", "|---|---|---|---|---|---|---|---|"]
