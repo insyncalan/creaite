@@ -173,7 +173,7 @@ class HeldMissingSource(unittest.TestCase):
             self.assertEqual(r.returncode, 2, args)
             self.assertNotIn("Traceback", r.stdout + r.stderr, args)
             self.assertNotIn("ValueError", r.stdout + r.stderr, args)
-            self.assertIn("not a review number", r.stdout, args)
+            self.assertIn("review number", r.stdout, args)      # "not a review number" (or the #280 follow-up's discard words)
             self.assertEqual(len(r.stdout.strip().splitlines()), 1, args)
 
     def test_the_dashboard_row_is_marked_held(self):

@@ -2561,14 +2561,6 @@ def _put_back(p, was):
 
 # ===== #280 (round 3) ===== the command line's two ways out for held minutes: "approve N --without-transcript" and "reject N --discard"
 def _main_with_held(argv):
-    try:
-        return _main_held(argv)
-    except NotANumber as e:                 # "approve abc": one plain line, as --discard's refusals
-        print(e)
-        return 2
-
-
-def _main_held(argv):
     cmd, rest = (argv[0], argv[1:]) if argv else ("", [])
     keys = [a for a in rest if not a.startswith("--")]
     if cmd == "reject" and "--discard" in rest and len(keys) == 1:
@@ -2582,6 +2574,19 @@ def _main_held(argv):
 _main_before_held = main
 main = _main_with_held
 # ===== end #280 (round 3) =====
+
+
+def _main_with_numbers(argv):
+    """"approve abc" (any review number that isn't one): one plain line and exit 2, as --discard's refusals, never a ValueError."""
+    try:
+        return _main_before_numbers(argv)
+    except NotANumber as e:
+        print(e)
+        return 2
+
+
+_main_before_numbers = main
+main = _main_with_numbers
 
 if __name__ == "__main__":
     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))
