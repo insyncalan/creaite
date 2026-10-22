@@ -1,0 +1,17 @@
+diff --git a/.claude/skills/cx-minutes/references/tracker-conventions.md b/.claude/skills/cx-minutes/references/tracker-conventions.md
+index a70671a9..77ed49a2 100644
+--- a/.claude/skills/cx-minutes/references/tracker-conventions.md
++++ b/.claude/skills/cx-minutes/references/tracker-conventions.md
+@@ -34,9 +34,9 @@ The record is a SQLite database at `system/tracker.db`, defined in `system/scrip
+ ## IDs
+ 
+ - `<CODE>` is the project code: 3 to 7 capital letters or digits, starting with a letter (e.g. `ABC`, `ORX2C`).
+-- Milestones `<CODE>-M-<3 digits>` (e.g. `ABC-M-002`).
+-- Promises `<CODE>-P-<3 digits>` (e.g. `ABC-P-001`). Links and item labels have no ID of their own: a link is `from_item|to_item|kind`, an item label `item_id|label` (in `change_log` and `id` fields of proposals).
+-- Format: actions `<CODE>-A-<3 digits>` (e.g. `ABC-A-014`, `ORX2C-A-003`), decisions `<CODE>-D-<3 digits>`, RAID items `<CODE>-<3 digits>` (e.g. `ABC-007`; the type is a field, not part of the ID). One number sequence per project is shared by actions, RAID items, decisions and promises, so a number is never used twice across them (`ABC-A-002` means there is no `ABC-002` or `ABC-D-002`). Milestones and workstreams count separately. IDs issued before this rule may repeat a number across types; they are not renumbered.
++- Milestones `<CODE>-M-<3 to 5 digits>` (e.g. `ABC-M-002`; a number is at least three digits and may pass 999: `ABC-A-999`, then `ABC-A-1000`).
++- Promises `<CODE>-P-<3 to 5 digits>` (e.g. `ABC-P-001`). Links and item labels have no ID of their own: a link is `from_item|to_item|kind`, an item label `item_id|label` (in `change_log` and `id` fields of proposals).
++- Format: actions `<CODE>-A-<3 to 5 digits>` (e.g. `ABC-A-014`, `ORX2C-A-003`), decisions `<CODE>-D-<3 to 5 digits>`, RAID items `<CODE>-<3 to 5 digits>` (e.g. `ABC-007`; the type is a field, not part of the ID). One number sequence per project is shared by actions, RAID items, decisions and promises, so a number is never used twice across them (`ABC-A-002` means there is no `ABC-002` or `ABC-D-002`). Milestones and workstreams count separately. IDs issued before this rule may repeat a number across types; they are not renumbered.
+ - `tracker.py` assigns IDs on apply. Proposals never include IDs for new items.
+ - **A project's code can change** (BL-111, `propose.py recode`): every ID keeps its number and takes the new code (`ORX-A-001` becomes `FAL-A-001`), and the history follows. The old code is retired for good. Never edit IDs by hand or with SQL.
+ 

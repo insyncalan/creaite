@@ -5,7 +5,7 @@ Kinds of break with a 4-digit ID such as `ABC-A-1000`:
 - **fullmatch, `\b` or `(?!…)` after `\d{3}`: the ID is not recognised at all** (no link, no chip, no check, no Find updates match).
 - **no boundary after `\d{3}`: the ID is silently cut to `ABC-A-100`**, which can name a different, real item (worst case: `item_history.py` ITEM_RE, `activity.js` ID_RE, `prep_view.py` ID_RE).
 - `next_id` (tracker.py) and the dashboard's `nextId` / `msNextId` ignore IDs that are not three digits, so they would re-issue an existing number (the simulation shows this on the old engine: "actions already has ABC-A-1000").
-- Text sorts (D, E) put `ABC-A-1000` before `ABC-A-999`. Most are tie-breaks after a date or priority, so the effect is order among equals; the plain `ORDER BY id` lists (build_dashboard.py 1929-1932, report_doc.py, client_check.py, tracker.py) are the visible ones.
+- (Status: section A, C, D and E are all fixed by the F2 diffs, except `search.py` line 286; see README.) Text sorts (D, E) put `ABC-A-1000` before `ABC-A-999`. Most are tie-breaks after a date or priority, so the effect is order among equals; the plain `ORDER BY id` lists (build_dashboard.py 1929-1932, report_doc.py, client_check.py, tracker.py) are the visible ones.
 - Not found by this grep and to check by hand: the Excel Review sheet and the Excel import's ID column (excel_sync.py reads IDs as text, no digit count found), `search.py` (index stores IDs as words; a 4-digit ID is one token, fine), the skills' reference text (`.claude/skills/*/references/*.md` and the conventions file say "NNN").
 
 ## A. Patterns that read an ID as exactly three digits (a 4-digit ID is missed, or cut to its first three digits when there is no boundary)

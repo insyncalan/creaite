@@ -33,12 +33,12 @@
    "text_sort_max_action": "ABC-A-991"
   },
   "undo_exit": 0,
-  "undo_secs": 0.6,
+  "undo_secs": 0.9,
   "undo_restores_counts": true,
   "undo_priority_back": true,
   "recode_stage_exit": 0,
   "recode_apply_exit": 0,
-  "recode_apply_secs": 0.9,
+  "recode_apply_secs": 0.8,
   "recode_ids_ok": true,
   "recode_top_action": "XPL-A-700",
   "recode_counts_same": true,
@@ -60,7 +60,7 @@
  "steps": [
   {
    "step": "F1",
-   "dated_backup": "tracker-2026-10-23-000633-pre-F1.db",
+   "dated_backup": "tracker-2026-10-23-002228-pre-F1.db",
    "counts_before": {
     "actions": 700,
     "applies": 4,
@@ -78,9 +78,9 @@
     "workstreams": 0
    },
    "migrate_exit": 0,
-   "migrate_secs": 0.15,
+   "migrate_secs": 0.2,
    "migrate_tail": [
-    "Migrated applies (4 rows), change_log (11428 rows). Backup from before: system/backups/tracker-2026-10-23-000633-migrate.db"
+    "Migrated applies (4 rows), change_log (11428 rows). Backup from before: system/backups/tracker-2026-10-23-002228-migrate.db"
    ],
    "counts_after": {
     "actions": 700,
@@ -115,7 +115,7 @@
    ],
    "round_trip": {
     "apply_exit": 0,
-    "apply_secs": 0.7,
+    "apply_secs": 0.8,
     "apply_delta": {
      "actions": 1,
      "applies": 1,
@@ -131,12 +131,12 @@
      "text_sort_max_action": "ABC-A-991"
     },
     "undo_exit": 0,
-    "undo_secs": 0.8,
+    "undo_secs": 0.7,
     "undo_restores_counts": true,
     "undo_priority_back": true,
     "recode_stage_exit": 0,
     "recode_apply_exit": 0,
-    "recode_apply_secs": 0.7,
+    "recode_apply_secs": 0.8,
     "recode_ids_ok": true,
     "recode_top_action": "XPL-A-700",
     "recode_counts_same": true,
@@ -227,7 +227,7 @@
     },
     "round_trip": {
      "apply_exit": 0,
-     "apply_secs": 0.9,
+     "apply_secs": 1.1,
      "apply_delta": {
       "actions": 1,
       "applies": 1,
@@ -248,7 +248,7 @@
      "undo_priority_back": true,
      "recode_stage_exit": 0,
      "recode_apply_exit": 0,
-     "recode_apply_secs": 0.7,
+     "recode_apply_secs": 0.8,
      "recode_ids_ok": true,
      "recode_top_action": "XPL-A-700",
      "recode_counts_same": true,
@@ -282,7 +282,7 @@
     "old_engine_migrate_on_new_db": {
      "exit": 0,
      "tail": [
-      "Migrated applies (7 rows), change_log (11519 rows). Backup from before: system/backups/tracker-2026-10-23-000643-migrate.db"
+      "Migrated applies (7 rows), change_log (11519 rows). Backup from before: system/backups/tracker-2026-10-23-002240-migrate.db"
      ]
     },
     "counts_after_old_migrate": {
@@ -305,7 +305,7 @@
   },
   {
    "step": "F2",
-   "dated_backup": "tracker-2026-10-23-000644-pre-F2.db",
+   "dated_backup": "tracker-2026-10-23-002241-pre-F2.db",
    "counts_before": {
     "actions": 700,
     "applies": 6,
@@ -323,9 +323,9 @@
     "workstreams": 0
    },
    "migrate_exit": 0,
-   "migrate_secs": 0.16,
+   "migrate_secs": 0.27,
    "migrate_tail": [
-    "Migrated milestones (0 rows), workstreams (0 rows), actions (700 rows), raid (150 rows), decisions (90 rows), promises (50 rows). Backup from before: system/backups/tracker-2026-10-23-000644-migrate.db"
+    "Migrated milestones (0 rows), workstreams (0 rows), actions (700 rows), raid (150 rows), decisions (90 rows), promises (50 rows). Backup from before: system/backups/tracker-2026-10-23-002242-migrate.db"
    ],
    "counts_after": {
     "actions": 700,
@@ -365,10 +365,10 @@
    "seed_after": [
     0,
     "Apply 7: written 201, filed 0, rejected 0, 1 still pending.",
-    0.96396803855896
+    1.216529130935669
    ],
    "staging_leftovers": [
-    "proposed-2026-10-23-000636-edit.json"
+    "proposed-2026-10-23-002231-edit.json"
    ],
    "top_ids_after_seed": {
     "actions": 1140,
@@ -379,7 +379,7 @@
    },
    "round_trip": {
     "apply_exit": 0,
-    "apply_secs": 0.7,
+    "apply_secs": 1.0,
     "apply_delta": {
      "actions": 1,
      "applies": 1,
@@ -395,7 +395,7 @@
      "text_sort_max_action": "ABC-A-999"
     },
     "undo_exit": 0,
-    "undo_secs": 0.7,
+    "undo_secs": 0.8,
     "undo_restores_counts": true,
     "undo_priority_back": true,
     "recode_stage_exit": 0,
@@ -509,7 +509,7 @@
     },
     "round_trip": {
      "apply_exit": 0,
-     "apply_secs": 0.9,
+     "apply_secs": 1.2,
      "apply_delta": {
       "actions": 1,
       "applies": 1,
@@ -525,7 +525,7 @@
       "text_sort_max_action": "ABC-A-991"
      },
      "undo_exit": 0,
-     "undo_secs": 0.6,
+     "undo_secs": 0.7,
      "undo_restores_counts": true,
      "undo_priority_back": true,
      "recode_stage_exit": 0,
@@ -588,7 +588,7 @@
   },
   {
    "step": "F3",
-   "dated_backup": "tracker-2026-10-23-000655-pre-F3.db",
+   "dated_backup": "tracker-2026-10-23-002255-pre-F3.db",
    "counts_before": {
     "actions": 850,
     "applies": 9,
@@ -606,18 +606,54 @@
     "workstreams": 0
    },
    "migrate_exit": 0,
-   "migrate_secs": 0.14,
+   "migrate_secs": 0.19,
    "migrate_tail": [
     "Schema is up to date."
    ],
    "extra": [
     {
-     "cmd": "tracker.py people-import",
+     "cmd": "tracker.py people-import --file system/staging/drafts/people-fixture.md --dry-run",
      "exit": 0,
-     "secs": 0.14,
+     "secs": 0.19,
      "tail": [
-      "3 people: 3 new, 0 changed, 0 removed, 0 the same; 0 gained an email.",
-      "Done. Backup from before: system/backups/tracker-2026-10-23-000655-migrate.db"
+      "  needs a look: Dev Placeholder: no email: its ID comes from the name",
+      "Dry run: nothing was written."
+     ]
+    },
+    {
+     "cmd": "tracker.py people-import --file system/staging/drafts/people-fixture.md",
+     "exit": 0,
+     "secs": 0.18,
+     "tail": [
+      "  needs a look: Dev Placeholder: no email: its ID comes from the name",
+      "Done. Backup from before: system/backups/tracker-2026-10-23-002256-migrate.db"
+     ]
+    },
+    {
+     "cmd": "tracker.py people-import --file system/staging/drafts/people-1000.md",
+     "exit": 0,
+     "secs": 0.18,
+     "tail": [
+      "  needs a look: Person Number0975: no email: its ID comes from the name",
+      "Done. Backup from before: system/backups/tracker-2026-10-23-002256-migrate-2.db"
+     ]
+    },
+    {
+     "cmd": "tracker.py people-import --file system/staging/drafts/people-1000.md",
+     "exit": 0,
+     "secs": 0.19,
+     "tail": [
+      "  needs a look: Person Number0975: no email: its ID comes from the name",
+      "Done. Backup from before: system/backups/tracker-2026-10-23-002256-migrate-3.db"
+     ]
+    },
+    {
+     "cmd": "tracker.py people-export",
+     "exit": 0,
+     "secs": 0.17,
+     "tail": [
+      "| Person Number0998 | person0998@org38.example | P998 | Org 38 | Role 8 |  |",
+      "| Person Number0999 | person0999@org39.example | P999 | Org 39 | Role 0 |  |"
      ]
     }
    ],
@@ -630,7 +666,7 @@
     "labels": 1,
     "links": 0,
     "milestones": 0,
-    "people": 3,
+    "people": 1000,
     "projects": 1,
     "promises": 56,
     "raid": 180,
@@ -642,7 +678,7 @@
    "row_count_changes": {
     "people": [
      null,
-     3
+     1000
     ]
    },
    "integrity": [
@@ -657,7 +693,7 @@
    ],
    "round_trip": {
     "apply_exit": 0,
-    "apply_secs": 0.7,
+    "apply_secs": 0.9,
     "apply_delta": {
      "actions": 1,
      "applies": 1,
@@ -673,12 +709,12 @@
      "text_sort_max_action": "ABC-A-999"
     },
     "undo_exit": 0,
-    "undo_secs": 0.7,
+    "undo_secs": 0.9,
     "undo_restores_counts": true,
     "undo_priority_back": true,
     "recode_stage_exit": 0,
     "recode_apply_exit": 0,
-    "recode_apply_secs": 0.8,
+    "recode_apply_secs": 1.0,
     "recode_ids_ok": true,
     "recode_top_action": "XPL-A-999",
     "recode_counts_same": true,
@@ -787,7 +823,7 @@
     },
     "round_trip": {
      "apply_exit": 0,
-     "apply_secs": 1.0,
+     "apply_secs": 1.3,
      "apply_delta": {
       "actions": 1,
       "applies": 1,
@@ -803,12 +839,12 @@
       "text_sort_max_action": "ABC-A-999"
      },
      "undo_exit": 0,
-     "undo_secs": 0.7,
+     "undo_secs": 0.8,
      "undo_restores_counts": true,
      "undo_priority_back": true,
      "recode_stage_exit": 0,
      "recode_apply_exit": 0,
-     "recode_apply_secs": 0.9,
+     "recode_apply_secs": 1.0,
      "recode_ids_ok": true,
      "recode_top_action": "XPL-A-999",
      "recode_counts_same": true,
