@@ -3567,6 +3567,8 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
   --ok:var(--paper-ok);--ok-soft:var(--paper-ok-soft);--bad:var(--paper-bad);--bad-soft:var(--paper-bad-soft);--warn:var(--paper-warn);--warn-soft:var(--paper-warn-soft);--accent-soft:var(--paper-accent-soft);--focus:var(--paper-focus)}   /* #268 M2: the paper stays white in a dark theme, so its state colours stay light ones */
 #v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+/* #283 Read again on the bar: its ask, or its step and Stop, in one line */
+.mnre{display:inline-flex;gap:8px;align-items:center;min-width:0}.mnre>.sub{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mnlines p,.mnlines li{margin:0 0 4px}
 .mnlines ul{margin:0 0 6px;padding-left:20px}
 .mntopic{font-size:var(--fs-md);margin:8px 0 2px}
@@ -6734,6 +6736,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rbStop: () => rbStop,
     rbTick: () => rbTick,
     rbUnmark: () => rbUnmark,
+    reLive: () => reLive,
+    reUndoLive: () => reUndoLive,
     readClaims: () => readClaims,
     readClientLogos: () => readClientLogos,
     readDate: () => readDate,
@@ -36646,6 +36650,14 @@ ${s5}`;
       }
     }, onEv);
   };
+  var reLive = function(proposal, onEv) {
+    return runRoute("/api/minutes/reextract", { proposal }, "x", (got, ev) => {
+      if (ev.type === "reextract") got.reextract = ev;
+    }, onEv);
+  };
+  var reUndoLive = function(run) {
+    return api("/api/minutes/reextract/undo", { run });
+  };
   var intakeSeams = {
     jobLive: (
       /** @param {typeof jobLive} v */
@@ -36669,6 +36681,18 @@ ${s5}`;
       /** @param {typeof calendarLive} v */
       (v5) => {
         calendarLive = v5;
+      }
+    ),
+    reLive: (
+      /** @param {typeof reLive} v */
+      (v5) => {
+        reLive = v5;
+      }
+    ),
+    reUndoLive: (
+      /** @param {typeof reUndoLive} v */
+      (v5) => {
+        reUndoLive = v5;
       }
     )
   };
@@ -67108,6 +67132,7 @@ ${d5.text}`);
     vip: "Alert check",
     process: "Intake processing",
     calendar: "Calendar refresh",
+    reextract: "Read again",
     other: "Other"
   };
   var FILE = {
@@ -70737,6 +70762,8 @@ ${d5.text}`);
   ];
   var dirty = false;
   var approving = y3(false);
+  var reAsk = y3(false), reBusy = y3(false), reStep = y3("");
+  var reRun = "";
   function openStaged(ref) {
     const v5 = minutesView.value, n4 = Number(String(ref).replace(/^@/, ""));
     const r4 = v5 && REV.find((x5) => x5.file === v5.proposal && x5.ref === n4);
@@ -70769,17 +70796,91 @@ ${d5.text}`);
     const r4 = await exportMinutes(id2);
     snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
   }
-  function reExtract(doc) {
-    const box = (
-      /** @type {HTMLTextAreaElement|null} */
-      document.getElementById("chIn")
-    );
-    if (box && box.value.trim()) {
-      openChat();
-      snack("ask creaite has words you haven't sent: send or clear them, then press Re-extract again");
+  async function readAgain() {
+    const v5 = minutesView.value;
+    reAsk.value = false;
+    if (!v5 || !v5.proposal || reBusy.value) return;
+    if (!viaServer()) {
+      snack("Reading again needs creaite running");
       return;
     }
-    ckAsk(`re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`);
+    if (mtgBusy()) {
+      snack("ask creaite is busy; try again when it's finished");
+      return;
+    }
+    if (!await mnSaveFirst()) return;
+    reBusy.value = true;
+    reStep.value = "";
+    let r4 = (
+      /** @type {import("../../core/intakeApi.js").ReadAgainResult|null} */
+      null
+    );
+    try {
+      r4 = await reLive(v5.proposal, (ev) => {
+        if (ev.type === "run") reRun = ev.id;
+        else if (ev.type === "step") reStep.value = ev.label || "";
+      });
+    } catch (e4) {
+    } finally {
+      reBusy.value = false;
+      reStep.value = "";
+      reRun = "";
+    }
+    const o5 = r4 && r4.reextract, line = oneLine(r4 && r4.closure && r4.closure.line || r4 && r4.message || "Nothing changed");
+    await reloadData();
+    if (o5 && o5.state === "replaced" && o5.proposal) {
+      const run = o5.run || "";
+      snack(line, run ? () => {
+        undoReadAgain(run);
+      } : null);
+      await loadMinutes({ file: o5.proposal });
+      return;
+    }
+    snack(line);
+    await loadMinutes({ file: o5 && o5.proposal || v5.proposal });
+  }
+  async function undoReadAgain(run) {
+    const u5 = await reUndoLive(run);
+    snack(u5 && u5.ok ? "Your earlier minutes are back" : oneLine(u5 && u5.message || "Not undone"));
+    if (u5 && u5.ok) {
+      await reloadData();
+      if (u5.proposal) await loadMinutes({ file: u5.proposal });
+    }
+  }
+  function stopReadAgain() {
+    if (reRun) stopRun(reRun);
+  }
+  function ReadAgain() {
+    if (reBusy.value) return /* @__PURE__ */ u4("span", { class: "mnre", role: "status", children: [
+      /* @__PURE__ */ u4("span", { class: "sub", children: [
+        "Reading the transcript again",
+        reStep.value ? `: ${reStep.value}` : "…"
+      ] }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", id: "mnReStop", onClick: stopReadAgain, children: "Stop" })
+    ] });
+    if (reAsk.value) return /* @__PURE__ */ u4("span", { class: "mnre", role: "group", "aria-label": "Read the transcript again", children: [
+      /* @__PURE__ */ u4("span", { class: "sub", children: "Draft these minutes again from the transcript? Your edits here are set aside; Undo brings them back." }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm primary", id: "mnReGo", onClick: () => {
+        readAgain();
+      }, children: "Read again" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", id: "mnReCancel", onClick: () => {
+        reAsk.value = false;
+      }, children: "Cancel" })
+    ] });
+    return /* @__PURE__ */ u4(
+      "button",
+      {
+        type: "button",
+        class: "ib sm",
+        id: "mnReBtn",
+        "aria-label": "Read the transcript again",
+        "data-tip": "Read the transcript again: drafts these minutes afresh",
+        onClick: () => {
+          reAsk.value = true;
+        },
+        children: /* @__PURE__ */ u4(Icon, { name: "refresh" })
+      }
+    );
   }
   async function approveNow(anyway) {
     const v5 = minutesView.value, doc = minutesDoc.value;
@@ -70915,25 +71016,14 @@ ${d5.text}`);
             onPick: exportAs
           }
         ),
-        draft ? /* @__PURE__ */ u4(
-          "button",
-          {
-            type: "button",
-            class: "ib sm",
-            id: "mnReBtn",
-            "aria-label": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself",
-            "data-tip": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself",
-            onClick: () => reExtract(doc),
-            children: /* @__PURE__ */ u4(Icon, { name: "refresh" })
-          }
-        ) : null,
+        draft && v5 && v5.proposal ? /* @__PURE__ */ u4(ReadAgain, {}) : null,
         draft ? /* @__PURE__ */ u4(
           "button",
           {
             type: "button",
             class: "btn sm primary",
             id: "mnApproveBtn",
-            disabled: !(v5 && v5.plan) || approving.value,
+            disabled: !(v5 && v5.plan) || approving.value || reBusy.value,
             "data-tip": v5 && v5.plan ? void 0 : "Nothing pending to approve",
             onClick: () => approveNow(false),
             children: approving.value ? "Approving…" : "Approve minutes"
@@ -79465,6 +79555,8 @@ ${d5.text}`);
         "rbStop",
         "rbTick",
         "rbUnmark",
+        "reLive",
+        "reUndoLive",
         "readClientLogos",
         "readDate",
         "readForm",

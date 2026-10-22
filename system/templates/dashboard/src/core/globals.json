@@ -708,6 +708,8 @@
    "rbStop",
    "rbTick",
    "rbUnmark",
+   "reLive",
+   "reUndoLive",
    "readClientLogos",
    "readDate",
    "readForm",
