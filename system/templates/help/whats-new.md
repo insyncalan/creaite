@@ -2,6 +2,43 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.1
+
+2.6.1 contains all of 2.6.0. It fixes the problems found in the first day of using 2.6.0, closes the last places where internal material could reach a client copy, and adds a few things you asked for. Some old words ("proposal", "apply", "Review") are still on screen in a few places; they are replaced in 2.6.2.
+
+
+### Approving and filing minutes
+- **Approve minutes no longer fails on an item you already approved.** It skips that item, says which one and why, and carries on with the rest. The message names the item in words, never "Item 6". (#308)
+- **Minutes held because the transcript is gone can now be filed.** In the minutes view, Approve minutes offers **File without the transcript copy** in place: one click, Undo, and it says what was saved. "Approve without the transcript" on a held row now really files the minutes (it used to do nothing), and a failed attempt no longer changes the minutes. (#306)
+- **Intake can no longer approve the wrong item.** If the list changed behind an open page (you approved in Claude Code, in another tab, or a check ran), a button used to act on a different item. Each row is now tied to its own item; a stale click says "already approved or changed, nothing saved" and refreshes the list. Approve routine does the same and leaves changed items for you. (#307)
+- **Every Intake message says what happened in plain words** ("Saved 1 action", "Not saved because …", no file paths or ".vtt"). Add files names each file it could not add and why, and the note stays until you dismiss it. Approved this week now counts minutes made from a dropped transcript, and Restore says so when the file has gone.
+
+### Minutes editor
+- The Done buttons are gone. **Track** is three icon buttons (tick, document, cross) that name the chosen one; **Approve minutes** says how much it tracks ("tracks 3 actions"); an attention strip shows how many tracked items still need an owner or a date, with a Next button; Decisions have more room. (#302)
+- A **source time chip** on each row opens the transcript at that point and lights the line. (#302)
+- The minutes in **HTML and PDF carry the firm's look** (wordmark, colours, fonts, headings and tables), like the Word minutes, and still say Internal or Distributed. (#303)
+
+### Keeping internal material out of client copies
+- **Draft the follow-up email** from the minutes is now the shareable version by default; the internal one is a separate, marked choice. Sensitive items stay out of the shareable follow-up, Word, HTML and PDF, including a decision kept in the minutes only.
+- A Sensitive item is never pre-ticked for outside attendees, even when it is client-visible, and the follow-up summary comes only from the shareable version.
+- The internal Word, HTML and PDF export say "Internal, not for distribution"; the shareable ones say "Distributed". The text the client report writer gets no longer includes Sensitive or held items. (#309)
+
+### Today, Work and Settings
+- **Today shows no item twice** across Decisions needed, Your commitments, Needs attention and Week ahead; Week ahead says how many are already listed above. (#313)
+- **The day line always runs to the Friday of next calendar week** (Monday 11 days ahead, down to Sunday 5). A day you have not read yet says "has not been read yet" with a Refresh button, never "No meetings". (#318)
+- **A Week ahead milestone shows how many open work items it depends on** and opens the milestone, and from there Work filtered to it. (#310)
+- **Work items**: marks, compact rows, keys, one-click client-visible, full history. (#241)
+- **Read again** on the chat re-reads a meeting's transcript and keeps your Track choices. (#283)
+- **Start creaite when I sign in**: a switch in Settings (with a note in Help) so creaite is running after a restart. (#300)
+- An avatar menu replaces More at the foot of the sidebar (#295); a switch in Settings turns the single-key shortcuts off (#298); the milestone strip can be made taller by dragging its corner (#301); the People page shows one pencil and a flag saying what is missing (#304); the health Change button is a small icon (#305); file paths, script names and the word "sweep" are off the screens that showed them, with a test that keeps them off (#289-#291).
+
+
+Nothing is required. To have creaite start by itself, turn on Start creaite when I sign in in Settings, then check it once after signing out and in.
+
+
+- Not in 2.6.1: Your profile on first run, the Outlook draft button, fetching transcripts as they appear, and the rest of the plain-words pass (2.6.2 and later).
+- The hardened Add files button is not proven to fix the one case seen on a real Mac; if it still shows no file picker in the app window, open the dashboard in a normal Chrome tab and tell us.
+
 ## creaite 2.6.0
 
 2.6.0 contains all of 2.5.4; those items are not repeated here. Old words ("Review", "proposal", "staged", "sweep") stay on screen until 2.6.1, so the lines below quote the labels as they appear today.
