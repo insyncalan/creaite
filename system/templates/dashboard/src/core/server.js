@@ -162,7 +162,10 @@ export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(a
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
   if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }
-  openChat(); const m=res.message||""; let acts="";
+  const m=res.message||"";
+  if(/differs from the staged items/.test(m)&&shared.VIEW==="intake-review"){   /* #307 path 4: on Intake's row the reason is said in plain words with its way out, not in the ask panel */
+    snack("The Word draft doesn't match the suggestions for these minutes. File them as they are, or fix the Word draft and try again.",()=>reviewViaServer(r,decision,[...(modes||[]),"as-staged"]),"File as they are"); return; }
+  openChat(); let acts="";
   if(/possible internal content/.test(m)) acts=`<button class="mini" data-rv="retry">I've edited the draft: check again</button><button class="mini" data-rv="as-staged">File it anyway</button>`;
   else if(/differs from the staged items/.test(m)) acts=(/--sync/.test(m)?`<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>`:"")+(r.ref==="meeting"?`<button class="mini" data-rv="refresh">Rebuild from the minutes</button>`:"")+`<button class="mini" data-rv="as-staged">Keep the items as they are</button>`;
   /* review.py speaks to Claude Code ("2: …, or say “approve 2 --as-staged”"); here the buttons do that */
