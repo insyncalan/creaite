@@ -14,6 +14,7 @@ import os
 import sys
 import unittest
 import zipfile
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import test_minutes_approve as ta  # noqa: E402
@@ -23,6 +24,13 @@ SECRET = {"actions": "Book the UAT environment", "decisions": "Go-live stays on 
 OPEN = "Share the training schedule"
 N = {"actions": 1, "decisions": 4}
 CASES = [(kind, choice) for kind in ("actions", "decisions") for choice in ("y", "n", "")]
+
+
+def pdf_text(path):
+    """A PDF's text, read with the bundled pypdf."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts/vendor"))
+    import pypdf
+    return " ".join(p.extract_text() for p in pypdf.PdfReader(str(path)).pages)
 
 
 class Sensitive(Base):
@@ -120,12 +128,12 @@ class Sensitive(Base):
                     self.approved(kind, choice)
                 f = self.facts("distributed", FILED)
                 self.assertNotIn(SECRET[kind], json.dumps(f, ensure_ascii=False), "follow-up from the filed minutes")
-                for fmt in ("html", "docx"):
+                for fmt in ("html", "docx", "pdf"):
                     r = self.js("import minutes_record\n"
                                 f"print(json.dumps(minutes_record.export({FILED!r}, {fmt!r}, False, 'distributed')))")
                     self.assertTrue(r["ok"], r)
                     made = self.v.root / r["path"]
-                    text = made.read_text(encoding="utf-8") if fmt == "html" else \
+                    text = pdf_text(made) if fmt == "pdf" else made.read_text(encoding="utf-8") if fmt == "html" else \
                         zipfile.ZipFile(made).read("word/document.xml").decode("utf-8")
                     self.assertNotIn(SECRET[kind], text, f"{fmt}: the Distributed export")
                     self.assertIn(OPEN, text, f"{fmt}: the unmarked action is there")
