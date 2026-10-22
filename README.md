@@ -1,16 +1,15 @@
 <p align="center">
-  <img src="dev/icon/creaite-icon-512.png" alt="creaite" width="120">
+  <img src="docs/screenshots/banner.png" alt="creaite: Write up less. Check more. The programme manager's assistant that turns your meetings, mail and Teams into a record you can trust." width="100%">
 </p>
-
-<h1 align="center">creaite</h1>
-
-<p align="center"><b>Write up less. Check more.</b></p>
-
-<p align="center">The programme manager's assistant that turns your meetings, mail and Teams into a record you can trust.</p>
 
 <p align="center"><i>Every action, decision and risk comes with its source, and nothing is saved until you approve it.</i></p>
 
-<p align="center">Mac · Local-first · Runs on Claude and your Microsoft 365 · Early access: pilot users wanted</p>
+<p align="center">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-only-18181B?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Local-first" src="https://img.shields.io/badge/local--first-your%20data%20stays%20local-F2B544?style=flat-square&labelColor=18181B">
+  <img alt="Runs on Claude and Microsoft 365" src="https://img.shields.io/badge/runs%20on-Claude%20%2B%20Microsoft%20365-0B6E7F?style=flat-square&labelColor=18181B">
+  <img alt="Early access" src="https://img.shields.io/badge/early%20access-pilot%20users%20wanted-18181B?style=flat-square">
+</p>
 
 ---
 
@@ -27,19 +26,9 @@ You leave the steering committee with six new actions, a decision nobody wrote d
 
 ## How it works
 
-1. **Capture.** Drop in a transcript, or let creaite check your mail and Teams each morning. It reads; it never replies, sends or deletes.
-2. **Approve.** Everything that arrives and waits is on one page, Intake, as a list, a board or two panes. You tick what becomes a tracked work item, fix what is wrong in place, and approve with one click. Every save has Undo.
-3. **Report.** One approved record feeds Today, weekly reports, client-safe reports and the steering one-pager. You review each draft and send it yourself.
-
-```
- transcripts · minutes · Outlook · Teams
-                  │  creaite reads
-                  ▼
-        suggestions, each with its source
-                  │  you approve
-                  ▼
-   one record ──► Today · weekly report · client report · steering one-pager
-```
+<p align="center">
+  <img src="docs/screenshots/how-it-works.png" alt="Capture: drop in a transcript or let creaite check Outlook and Teams. Approve: suggestions wait in Intake, each with its source; you tick, fix and approve, and every save has Undo. Report: one approved record feeds Today, the weekly report, the client report and the steering one-pager." width="100%">
+</p>
 
 ## Built so you can trust it
 
