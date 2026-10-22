@@ -2,6 +2,74 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.0
+
+2.6.0 contains all of 2.5.4; those items are not repeated here. Old words ("Review", "proposal", "staged", "sweep") stay on screen until 2.6.1, so the lines below quote the labels as they appear today.
+
+A bigger release: Intake becomes one page for everything that arrives and waits, the Minutes view is rebuilt as one clean document, approving minutes follows your Track choices, and Settings and People are reorganised.
+
+
+### Intake: one page for everything that arrives and waits
+- Intake and Review are now one page, **Intake**, with one entry in the sidebar and one number. The old Review and Intake addresses open it.
+- Three views, remembered in this browser: List, Board and Two panes. Stage boxes across the top (Arrived, Drafted and so on, with Show all), each with its count.
+- Suggestions are split into routine and needs-your-decision. **Approve routine** approves the routine group in one go, with one Undo.
+- Click a meeting row to open it, and again to close it. Enter, N (not needed) and H (later) work on the focused row.
+- Each meeting row has Process, Later, Not needed (with a reason) and Restore. **Process all ready** skips private meetings, and Stop ends it. Process and Refresh run as their own jobs with progress and Stop.
+- **Add files**, or drop files anywhere on the page. Each file shows its size, its likely project and a kind (transcript, minutes, not sure); a "not sure" file waits for you to choose.
+- Minutes written by someone else can be added as minutes: **Find work items** suggests items from them without drafting new minutes.
+- A Search box finds meetings, files and suggestions by title, project name or source; Esc clears it.
+- **Calendar read hh:mm**, with a refresh icon, replaces the separate Calendar import step.
+- A suggestion that changes an existing item opens the whole item in the peek, each change marked "was → now", and you can edit what it changes. Previous and Next step through the suggestions.
+- A confidential meeting shows only its title and times; a private conversation never names a project.
+- Today's Intake line, the sidebar number and Close the day's "Review now" all point at the one page and show the same number. A file dropped into the inbox gets its row at once, and the page never scrolls sideways at 900 or 1440 pixels. (#232)
+
+### Minutes view v2: one clean document
+- **One version of the minutes:** what you see is what is filed and exported. There are no separate Internal and Distributed tabs.
+- A **Track** column on every table: a tick makes the line a work item, a cross removes it from the minutes, and neither keeps it in the minutes only.
+- Edit in place: click the words and type. Owner, Priority and Workstream are drop-downs in the row; Due opens the usual deadline box. Under an owner who isn't in your people list it says "Needs details", with **Add details**.
+- **Approve minutes** is one click with an Undo. A box appears only when a ticked item has a real problem, and it says where. Minutes with nothing ticked can still be approved. Undo leaves the minutes exactly as they were.
+- One continuous sheet with a thin page marker that never splits a table row; fit to width stops at 100%; table headers no longer stick over rows. The "done" green and the monospace text show correctly on the page.
+- Hover a row to light the transcript turn it came from. Whether the transcript pane is open or closed is remembered.
+- Export as Word, PDF or HTML, and **Draft the follow-up email**; both follow your Track choices. A risk or issue keeps its workstream from the minutes.
+- Esc on an AI suggestion keeps your words, and reading a meeting again keeps any unsent text in ask creaite. (#268, which also covers #261)
+
+### Approving minutes from Intake follows your Track choices
+- Approve on a minutes row in Intake does exactly what Approve minutes does: ticked lines become work items, crossed lines are removed, and lines with neither stay in the minutes only.
+- Approve routine and the group tick never approve a line you crossed or left with neither.
+- If an approval is stopped, it says so plainly, says the item is back on Intake, and puts the batch and your Track choices back as they were. (#275)
+
+### AI drafts and checks
+- Draft email: the AI bar (Improve, Tone, Ask) is back for recipients outside your own domains. It works from client-visible facts only, and its reply gets the client checks.
+- AI on the minutes (the ✦, and a section redraft): a suggestion that adds something internal (an item not client-visible, a name, internal wording) is dropped, with a message saying why.
+- The client messaging field gets AI suggestions from client facts only, with the same reply check. The item editor offers AI on selected text.
+- A drafted reply such as "I can't give a firm date, but …" is no longer thrown away as a refusal. (#186, #262, #263)
+
+### People you follow, on Today
+- What the check of mail and Teams takes from a followed person's mail or chat is a **From <name>** row in Needs attention, listing each item. From rows come after the milestone rows; a reply or forward joins its thread.
+- Dismissing a From row keeps it gone until the thread adds something new or changes an open item. A private conversation is a title and times only; a confidential or private thread saves nothing for review. No label says the person is followed. (#236)
+
+### Settings, People and project settings
+- Settings is reorganised into tabs, one card per group.
+- **People** is now the home of the whole register: four tabs, search and filters, add, edit details and remove. Every link to a person opens the People page, and the old Settings addresses for People, Workstreams and Projects open their new homes.
+- Removing someone is refused, with the reason, while they still own items or are named as a stakeholder, milestone owner or workstream lead.
+- Project settings is one scrolling page: General, People on the project, Workstreams, Logos, Reporting, and Archive and close. Following someone is set on the project's settings page only. (#246, #247, #248)
+
+### Page keys
+- Single keys open pages from anywhere: T Today, P Projects, W Work, I Intake, F Files, A Activity, S Settings, R Reporting, E People. Work's filter picker moves from F to **Shift+F**, and E no longer opens a row in Work (Enter does).
+- On Intake, A and R keep approving and rejecting the focused suggestion and never jump to Activity or Reports there (on every other page A opens Activity and R opens Reports). An open peek, ask creaite, a menu or a dialog holds the page keys. (#288)
+
+### Smaller fixes
+- A week with no meetings in the calendar no longer stops Refresh.
+- The project settings page's people search box matches the People page's.
+- An item's source note says "— Actions" (it was "— Action Items"); notes already written in the old words still link to the right section. (#296)
+
+
+Nothing is required. Find your project's people on the new People page, and try the page keys.
+
+
+- Some words you will still see are being replaced in 2.6.1 ("Review" on labels that now point at Intake, "proposal", "staged" and the mail check's old name).
+- Not in 2.6.0: Re-extract on the chat as "Read again" (2.6.1), Plain words (2.6.1), the avatar menu (2.6.1), the work-item refinements (#241), Draft email into Outlook (#183) and fetching transcripts as they appear (#250).
+
 ## creaite 2.5.4
 
 A release of fixes and small tidy-ups: Prep opens for any meeting, one stuck item no longer stops your saves, and several menus, icons and pages are clearer. Written only from what landed.
