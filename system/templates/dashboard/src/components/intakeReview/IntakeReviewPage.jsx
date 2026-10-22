@@ -34,7 +34,7 @@ const irPlural = (/** @type {number} */ n, /** @type {string} */ w) => `${n} ${w
 /** The stage counts: each a filter (one click shows that stage, a second shows all), with an icon, and Show all as a fourth box
     after a thin rule. @param {{c: Record<string, number>}} props */
 export function StagePipe({ c }) {
-  const sub = { arrived: `${c.ready} ready to process${c.need_type ? ` · ${c.need_type} need a type` : ""}`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+  const sub = { arrived: `${c.ready} ready to process${c.need_type ? ` · ${c.need_type} need a type` : ""}`, drafted: `${irPlural(c.to_approve, "suggestion")} to check`, approved: "this week", all: "meetings and files" };
   const word = { ...IR_STAGE_NAMES, all: "Show all" };
   const box = (/** @type {"arrived"|"drafted"|"approved"|"all"} */ g) => (
     <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
@@ -43,7 +43,7 @@ export function StagePipe({ c }) {
       <div class="l">{word[g]}</div><div class="icsub">{sub[g]}</div>
     </div>);
   return (
-    <div class="icpipe" role="group" aria-label="Stages">
+    <div class="icpipe" role="group" aria-label="Steps">
       {box("arrived")}<span class="ar" aria-hidden="true">→</span>{box("drafted")}<span class="ar" aria-hidden="true">→</span>{box("approved")}
       <span class="icsep" aria-hidden="true"></span>{box("all")}
     </div>
@@ -139,7 +139,7 @@ function IntakeReviewView() {
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
-      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
+      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "suggestion")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
         <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
           onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}

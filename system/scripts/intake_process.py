@@ -327,12 +327,12 @@ def closure_line(res):
     """The run's one closure line, from its outcome."""
     n, s, q = len(res["files"]), res["staged"], res["needs"]
     if s == n:
-        return f"{'The file is' if n == 1 else f'All {n} files are'} staged: the drafts are waiting in Review."
-    parts = [f"{s} of {n} staged for Review"]
+        return f"{'The file is' if n == 1 else f'All {n} files are'} ready: the drafts are waiting in Review."
+    parts = [f"{s} of {n} waiting in Review"]
     if q:
         parts.append(f"{q} need{'s' if q == 1 else ''} you (see Intake)")
     if n - s - q:
-        parts.append(f"{n - s - q} not staged")
+        parts.append(f"{n - s - q} couldn't be read: process {'it' if n - s - q == 1 else 'them'} again")
     return "; ".join(parts) + "."
 
 

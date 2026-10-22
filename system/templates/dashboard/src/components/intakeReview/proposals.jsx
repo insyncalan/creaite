@@ -91,15 +91,15 @@ function WeekendNote({ r }) {
 function ConflictChoices({ r }) {
   const live = viaServer(), pick = (/** @type {Event} */ e, /** @type {"keep"|"override"} */ how) => { /** @type {HTMLButtonElement} */ (e.currentTarget).disabled = true; reviewViaServer(r, how, []); };
   return <>
-    <button type="button" class="mini" data-act="ck" disabled={!live} title={live ? undefined : "Needs the live server"} onClick={e => pick(e, "keep")}>Keep current</button>
-    {" "}<button type="button" class="mini ok" data-act="co" disabled={!live} title={live ? undefined : "Needs the live server"} onClick={e => pick(e, "override")}>Use this one</button>
+    <button type="button" class="mini" data-act="ck" disabled={!live} title={live ? undefined : "creaite isn’t running"} onClick={e => pick(e, "keep")}>Keep current</button>
+    {" "}<button type="button" class="mini ok" data-act="co" disabled={!live} title={live ? undefined : "creaite isn’t running"} onClick={e => pick(e, "override")}>Use this one</button>
   </>;
 }
 
 /** #280: minutes held because a file they file has gone (their transcript left the inbox): Approve without the transcript copy and
     Discard in place of Approve (review.py approve --without-transcript, reject --discard, through the live server). @param {{r: any}} props */
 function HeldChoices({ r }) {
-  const live = viaServer(), off = live ? undefined : "Needs the live server";
+  const live = viaServer(), off = live ? undefined : "creaite isn’t running";
   return <>
     <button type="button" class="mini ok" data-ira="held-approve" data-act="hw" disabled={!live} title={off || heldMsg(r)} onClick={() => heldApprove(r)}>Approve without the transcript</button>
     {" "}<button type="button" class="mini" data-ira="held-discard" data-act="hd" disabled={!live} title={off} onClick={() => heldDiscard(r)}>Discard</button>
@@ -109,7 +109,7 @@ function HeldChoices({ r }) {
 /** #280, #291: why a held or invalid proposal waits, on its row (not only in the tip). @param {{r: any}} props */
 function HeldNote({ r }) {
   if (r.done) return null;
-  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the proposal</div>;
+  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the suggestion</div>;
   if (r.bad) return <div class="rvnote"><span class="h-warn">Can't be saved as it is: {r.bad}</span> · Edit it or reject it</div>;
   return null;
 }
@@ -118,7 +118,7 @@ function HeldNote({ r }) {
 export function irOpenPeek(n) {
   const r = irRow(n);
   if (!r || r.done || !PEEKABLE.includes(r.kind) && r.kind !== "draft") return;
-  if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n && PK.dirty && pkOn()) { pkNote("Save or cancel this proposal first: its changes aren't saved yet."); return; }   /* #232 C2: the old Review row's guard (BL-198): edits not yet saved stay */
+  if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n && PK.dirty && pkOn()) { pkNote("Save or cancel this suggestion first: its changes aren't saved yet."); return; }   /* #232 C2: the old Review row's guard (BL-198): edits not yet saved stay */
   shared.PKSRC = {
     view: "intake-review",
     order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "") || t.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t.getAttribute("data-irn") || 0)))).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
@@ -152,7 +152,7 @@ export async function irApproveRoutine(groups) {
 }
 
 /** The meta line's hover when a proposal has no owner, date or priority to show (minutes, reports, file changes). */
-const TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
+const TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the suggestion to see them" };
 
 /** Whether a new risk with no response offers Draft a response (BL-225). @param {any} r */
 const canDraftResponse = r => !!r && !r.done && r.kind === "raid" && !String((r.rec && r.rec.resp) || "").trim() && !(r.rec.type && r.rec.type !== "Risk") && draftOn("thinking");
@@ -205,7 +205,7 @@ export function ProposalGroups({ groups, meet, child }) {
       <tr class={`icsubhead ${g.kind}${child ? " child" : ""}`} data-irg={g.kind}><td colSpan={2}>
         <span class="icsh">{meet ? `${meet} · ` : ""}{IR_GROUP_HEAD[g.kind][0]} · {g.ns.length}</span>
         <span class="icshs">{IR_GROUP_HEAD[g.kind][1]}</span>
-        {g.kind === "routine" ? <span class="icshr"><button type="button" class="mini ok" data-ira="routine" title="Approves every routine proposal here; the ones above stay for you"
+        {g.kind === "routine" ? <span class="icshr"><button type="button" class="mini ok" data-ira="routine" title="Approves every routine suggestion here; the ones above stay for you"
           onClick={() => irApproveRoutine(groups)}>Approve routine ({g.ns.length})</button></span> : null}
       </td></tr>
       {g.ns.map(n => <ProposalLine n={n} child={child} />)}

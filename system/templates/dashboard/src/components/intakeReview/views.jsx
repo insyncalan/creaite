@@ -18,10 +18,10 @@ function MailSections({ model }) {
   const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
   const nm = mail.needs.length + mail.routine.length, no = other.needs.length + other.routine.length;
   return <>
-    <div class="rgroup irsec" data-irsec="mail"><h2>From mail and Teams <span class="sub rgc">{nm} proposal{nm === 1 ? "" : "s"}</span></h2></div>
+    <div class="rgroup irsec" data-irsec="mail"><h2>From mail and Teams <span class="sub rgc">{nm} suggestion{nm === 1 ? "" : "s"}</span></h2></div>
     {nm ? <div class="tbl"><table><tbody><ProposalGroups groups={model.mail} /></tbody></table></div> : <div class="empty">{irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve."}</div>}
     {no ? <>
-      <div class="rgroup irsec" data-irsec="other"><h2>Other proposals <span class="sub rgc">{no}</span></h2></div>
+      <div class="rgroup irsec" data-irsec="other"><h2>Other suggestions <span class="sub rgc">{no}</span></h2></div>
       <div class="tbl"><table><tbody><ProposalGroups groups={model.other} /></tbody></table></div>
     </> : null}
   </>;
@@ -76,7 +76,7 @@ export function BoardView({ model }) {
 export function TwoPanes({ model, list }) {
   const sel = list.find(m => m.id === irSel.value) || list[0], c = irLiveCounts();
   const hidden = (/** @type {any} */ m) => m.private || m.confidential;      /* title and times only */
-  const right = (/** @type {any} */ m) => { const n = m.groups.needs.length + m.groups.routine.length; return n ? `${n} proposal${n === 1 ? "" : "s"}` : m.stage === "arrived" && m.state === "ready" ? "ready" : ""; };
+  const right = (/** @type {any} */ m) => { const n = m.groups.needs.length + m.groups.routine.length; return n ? `${n} suggestion${n === 1 ? "" : "s"}` : m.stage === "arrived" && m.state === "ready" ? "ready" : ""; };
   return <div data-irv="two">
     <div class="icsplit">
       <div>

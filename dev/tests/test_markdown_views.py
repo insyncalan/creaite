@@ -44,7 +44,7 @@ class MarkdownViews(LiveBrowserCase):
     def release_notes(self):
         b = self.b
         b.eval("go('settings','version')")
-        b.wait("!!document.getElementById('updCard') && /Installed|Needs the live server/.test(document.getElementById('updCard').textContent)", 15)
+        b.wait("!!document.getElementById('updCard') && /Installed|creaite isn.t running/.test(document.getElementById('updCard').textContent)", 15)
         b.pump(0.5)                                                         # the card has drawn itself (it is redrawn once)
         b.eval(f"""(()=>{{ window.RAN=0; const plan={json.dumps(PLAN)};
           if(!document.getElementById('updPlan')){{ const d=document.createElement('div'); d.id='updPlan'; document.getElementById('updCard').appendChild(d); }}

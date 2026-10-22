@@ -99,8 +99,8 @@ export async function irProcess(m) {
     const o = r && (r.files || []).find((/** @type {any} */ f) => f.path === file);
     if (!done && o && (o.state === "needs" || o.state === "not_staged")) {     /* the run's own question, with ask creaite about this */
       irSetAskQ(m.id, { state: o.state, question: oneLine(o.question || "") });
-      irNote(m.id, o.state === "needs" ? `Needs you: ${oneLine(o.question || "")}` : "Not staged: process it again, or ask creaite");
-    } else if (!done) irNote(m.id, r && r.stopped ? "Stopped: nothing was staged" : `Couldn't: ${oneLine((r && r.message) || "no draft came back")}`);
+      irNote(m.id, o.state === "needs" ? `Needs you: ${oneLine(o.question || "")}` : "Not in Review yet: process it again, or ask creaite");
+    } else if (!done) irNote(m.id, r && r.stopped ? "Stopped: nothing was added to Review" : `Couldn't: ${oneLine((r && r.message) || "no draft came back")}`);
     if (r && r.closure && r.closure.line) snack(oneLine(r.closure.line));
     return done;
   } finally { irSetBusy(m.id, false); }

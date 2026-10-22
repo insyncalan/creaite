@@ -30,7 +30,7 @@
       <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
-    <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
+    <div class="livealert" id="liveAlert" role="alert"><b>creaite has stopped.</b> Reopen the creaite app. Your changes are kept and saved when it's back. <code id="alertCmd" hidden></code> <button class="mini" id="checkLive">Check again</button></div>
     <div class="livealert stalealert" id="staleAlert" role="alert" hidden><b>This page is out of date.</b> <span id="staleMsg"></span> <button class="mini" id="staleReload">Reload</button></div><!-- BL-174 -->
     <div class="errbanner" id="errBanner" role="status" aria-live="polite" hidden></div><!-- BL-180: under the other page banners, errors last -->
     <div class="content">
@@ -118,7 +118,7 @@
         <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select><p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
-        <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+        <p class="sub">Settings save instantly, with a backup and a log entry.</p>
       </div></section>
       <section class="view" id="v-help" hidden><div class="hp-shell"><div class="hp-search" id="helpSearch" role="search"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><input id="helpQ" type="search" placeholder="Search Help: a job, a button, a word" aria-label="Search Help" autocomplete="off"><kbd>/</kbd></div><div class="tabhost" id="helpTabsHost"></div><div id="helpResults" class="hp-results" hidden></div><div id="helpPane" role="tabpanel"></div></div></section>
       <aside class="panel" id="panel" aria-label="Details"><div class="pin">
@@ -134,7 +134,7 @@
 <aside id="chat" aria-label="ask creaite"><div class="chgrip" id="chGrip" role="separator" aria-orientation="vertical" aria-label="Resize ask creaite" tabindex="0" title="Drag to resize; double-click to reset"></div>
   <div class="chh"><h2>ask creaite</h2><button class="iconbtn chbtn" id="chNew" title="New chat" aria-label="New chat"><svg data-ic="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button><span class="dd"><button class="iconbtn chbtn" id="chHist" title="History" aria-label="History" aria-haspopup="menu" aria-expanded="false"><svg data-ic="history" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button></span><button class="iconbtn" id="chatClose" aria-label="Close" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
   <div class="chs" id="chSub"></div>
-  <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Sweep</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
+  <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
   <div class="chthumbs" id="chThumbs" hidden></div>

@@ -18,7 +18,7 @@ SRC = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/core
 
 
 def words(message):
-    code = re.search(r"export const applyWords=.*?\n.*?;\s*\};", SRC.read_text(), re.S).group(0).replace("export ", "")
+    code = re.search(r"export const applyTitle=.*?(?=\n/\* #280: an apply that stopped)", SRC.read_text(), re.S).group(0).replace("export ", "")
     out = subprocess.run(["node", "-e", code + "\nprocess.stdout.write(JSON.stringify(applyWords(JSON.parse(process.argv[1]))))",
                           json.dumps(message)], capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
@@ -44,19 +44,21 @@ class RefusedApplyWords(unittest.TestCase):
         raw = (r.stdout + r.stderr).strip()
         self.assertIn("changed since this proposal was made", raw)       # what the server passes through today
         shown = words(raw)
-        self.assertIn("CLAUDE.md changed after this item was staged", shown)
-        self.assertIn("Stage it again", shown)
+        self.assertIn("A file changed after this suggestion was made", shown)
+        self.assertIn("Make the suggestion again", shown)
         self.assertIn("drop it in Review", shown)
+        self.assertNotIn("CLAUDE.md", shown)                    # #291 Tier 1: never a file name
         self.assertNotIn("proposal", shown)
         self.assertNotIn("Apply failed", shown)
 
     def test_other_messages_pass_through(self):
         self.assertEqual(words("Nothing to apply: no decided items."), "Nothing to apply: no decided items.")
-        self.assertEqual(words("Apply failed; nothing was written. Invalid: x"), "Apply failed; nothing was written. Invalid: x")
+        self.assertEqual(words("Apply failed; nothing was written. Invalid: x"),
+                         "Nothing was saved. Something in the suggestions needs fixing in Review.")   # #291 Tier 1
 
     def test_failed_apply_line_form(self):
         m = "Apply failed; nothing was written. Invalid: write: projects/_portfolio/people-register.md changed since this proposal was made"
-        self.assertTrue(words(m).startswith("people-register.md changed after this item was staged"))
+        self.assertTrue(words(m).startswith("A file changed after this suggestion was made"))
 
     def test_track_refusal_drops_the_header_and_the_file_name(self):
         """#275 round 3 (Cap's 3): the page says "Apply stopped" itself; the proposal's file name is never shown."""
@@ -69,7 +71,20 @@ class RefusedApplyWords(unittest.TestCase):
         self.assertNotIn("proposed-", shown)
         self.assertNotIn("Apply stopped", shown)
         other = "Apply stopped. Nothing was written.\n  proposed-x.json item 1: invalid owner"
-        self.assertEqual(words(other), other, "other refusals pass through unchanged")
+        self.assertEqual(words(other), "One suggestion couldn't be saved. It needs fixing in Review. Nothing was saved.")   # #291 Tier 1
+        field = ("Apply stopped. Nothing was written.\n  proposed-2026-10-22-0905-sweep.json item 1: unknown field(s) for decisions: raised. "
+                 "Valid: project, decision, made_by")
+        shown = words(field)
+        for banned in ("proposed-", ".json", "Valid", "unknown field", "Apply stopped"):
+            self.assertNotIn(banned, shown)
+
+    def test_missing_source_says_the_transcript_is_gone(self):                  # #291 Tier 1
+        m = ("Apply stopped. Nothing was written.\n  proposed-2026-10-22-0910-minutes.json minutes_decision: copy: source not "
+             "found (inbox/Recording - X.vtt)")
+        shown = words(m)
+        self.assertIn("couldn't be filed: the transcript isn't in your inbox any more", shown)
+        self.assertNotIn("inbox/", shown)
+        self.assertNotIn(".vtt", shown)
 
 
 if __name__ == "__main__":

@@ -229,7 +229,7 @@ class Helpers(unittest.TestCase):
             prop.unlink()
         self.assertEqual([r["state"] for r in res["files"]], ["staged", "needs", "not_staged"])
         self.assertEqual(res["files"][1]["question"], "Which project?")
-        self.assertEqual(line, "1 of 3 staged for Review; 1 needs you (see Intake); 1 not staged.")
+        self.assertEqual(line, "1 of 3 waiting in Review; 1 needs you (see Intake); 1 couldn't be read: process it again.")
 
 
 class Fence(unittest.TestCase):
@@ -703,7 +703,7 @@ class ThroughTheServer(unittest.TestCase):
         intake = next(e for e in evs if e["type"] == "intake")
         self.assertEqual([f["state"] for f in intake["files"]], ["staged"] * 3, intake)
         closure = next(e for e in evs if e["type"] == "closure")
-        self.assertEqual(closure["line"], "All 3 files are staged: the drafts are waiting in Review.")
+        self.assertEqual(closure["line"], "All 3 files are ready: the drafts are waiting in Review.")
         self.assertEqual(closure.get("href"), "#review")
         waiting = self.waiting()
         self.assertEqual(sorted(waiting), sorted(self.files))                   # all three in Review

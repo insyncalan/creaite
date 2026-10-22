@@ -140,7 +140,7 @@ class Catalogue(unittest.TestCase):
     def test_the_sweep_lookback_cap_is_an_advanced_setting_with_its_reason(self):      # #146
         key = "sweep.max_lookback_days"
         self.assertEqual(self.flat[key], 3)
-        self.assertEqual(sc.CATALOGUE[key][0], "Sweep")
+        self.assertEqual(sc.CATALOGUE[key][0], "Checking mail and Teams")
         self.assertIn("three days", sc.CATALOGUE[key][3].lower())
         self.assertNotIn(key, {k for r in sc.ESSENTIAL_ROWS for k in r[3]})            # Advanced, not Essentials
         self.assertEqual(json.loads((REPO / "system/config/settings.json").read_text())["sweep"]["max_lookback_days"], 3)

@@ -8,7 +8,7 @@
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Mail, Teams and Intake</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="ai" data-scat="ai">AI drafts</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
@@ -20,7 +20,7 @@
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
 <option value="work">Work and reports</option>
-<option value="sweep">Sweep and Intake</option>
+<option value="sweep">Mail, Teams and Intake</option>
 <option value="reports">Reports and minutes</option>
 <option value="ai">AI drafts</option>
 <option value="look">Look and help</option>
@@ -53,7 +53,7 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#2">Review: move to the next proposal after a decision</span>
+<span id="sr#2">Review: move to the next suggestion after a decision</span>
 <small id="sr#2h">After Approve or Reject, the next undecided row is ready for the keyboard</small>
 </div>
 <div>
@@ -63,7 +63,7 @@
 <div class="srow">
 <div>
 <span id="sr#3">Review: possible duplicate when words overlap at least</span>
-<small id="sr#3h">0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project</small>
+<small id="sr#3h">0.6 by default: the share of words a suggestion has in common with an open item of the same type in the same project</small>
 </div>
 <div>
 <input aria-labelledby="sr#3" aria-describedby="sr#3h" type="number" data-k="dupOverlap" value="0.6" min="0.1" max="1" step="0.05" style="width:#px">
@@ -150,10 +150,10 @@
 </div>
 <div class="srow">
 <div>
-<span id="sr#12">Raised in at least (meetings or sweeps)</span>
+<span id="sr#12">Raised in at least (meetings or checks)</span>
 </div>
 <div>
-<input type="number" data-wk="repeat_risk.mentions" value="3" min="1" step="1" style="width:#px" aria-label="Raised in at least (meetings or sweeps)">
+<input type="number" data-wk="repeat_risk.mentions" value="3" min="1" step="1" style="width:#px" aria-label="Raised in at least (meetings or checks)">
 </div>
 </div>
 <div class="srow">
@@ -292,6 +292,6 @@
 </div>
 <button class="btn" data-go="help">Open help</button>
 </div>
-<p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+<p class="sub">Settings save instantly, with a backup and a log entry.</p>
 </div>
 </section>

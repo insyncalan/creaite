@@ -39,7 +39,7 @@ function Proj({ code, name }) {
 
 /** What a past meeting's follow-up is. @param {{m: DayMeeting, live: boolean, acts: DayActs}} props */
 function FollowUp({ m, live, acts }) {
-  const f = m.follow, off = live ? undefined : "Needs the live server";
+  const f = m.follow, off = live ? undefined : "creaite isn’t running";
   if (!f) return null;
   if (m.running) return <span class="sub" role="status">{m.running}</span>;
   if (f.state === "minutes") return f.draft
@@ -83,7 +83,7 @@ export function DayMeetings(props) {
   const ref = wheelRef(onWheel);
   if (mode === "none") return (
     <div class="daynone" ref={ref}><span>{calendar ? "No calendar for today yet" : "No calendar yet"}</span>
-      <button type="button" class="btn" data-refcal="" disabled={!live} title={live ? undefined : "Needs the live server"}>Refresh calendar</button>
+      <button type="button" class="btn" data-refcal="" disabled={!live} title={live ? undefined : "creaite isn’t running"}>Refresh calendar</button>
       {lastRead ? <span class="sub">Last read {lastRead}</span> : null}</div>);
   const st = (/** @type {DayMeeting} */ e) => past ? "past" : !isToday ? "" : minsOf(e.end) <= now ? "past" : minsOf(e.start) <= now && now < minsOf(e.end) ? "now" : "";
   return (

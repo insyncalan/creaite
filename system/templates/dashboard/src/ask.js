@@ -264,16 +264,27 @@ export async function pendingCard(){ if(!viaServer()) return; const r=await api(
    change: nothing else pending), Reject stages nothing, Stage for review (offered when another change to the same item waits in
    Review, or another job holds the tracker) leaves it in Review. Every item is listed; the approval is the server's, used once. The
    result names the item IDs, with Undo. BL-141's card for file changes is separate and unchanged. */
-export function edLine(ln){ const m=/^(\s*)(.*)$/.exec(ln), ind=m[1].length>0, body=m[2], mid=/^(\S+) · (.*)$/.exec(body);
+/* #291 Tier 1: a file change in words (the file's name and the folder's friendly name), never its path */
+export function edFilePlain(b){
+  const nm=p=>{ const s=String(p).replace(/\/+$/,"").split("/").pop().replace(/\.[A-Za-z0-9]{1,5}$/,""), d=/^(\d{4})-(\d{2})-(\d{2}) (.+)$/.exec(s); return d?`${d[4]}, ${d[3]}-${d[2]}-${d[1]}`:s; },
+    arch=p=>/(^|\/)(_Archive|99 Archive|zz Archive)(\/|$)/.test(p), at=re=>re.exec(b);
+  const mf=at(/^Move file (.+) → (.+)$/), md=at(/^Move folder (.+) → (.+)$/), cf=at(/^Create folder (.+)$/), cr=at(/^Create (\S.*?) \((\d+) lines?\)$/), ch=at(/^Change (.+):$/);
+  if(mf) return `Move ${nm(mf[1])} → ${arch(mf[2])?"the project's Archive folder":"back to its project folder"}`;
+  if(md) return `Move the folder ${nm(md[1])} → ${arch(md[2])?"Archive":"its place in the projects folder"}`;
+  if(cf) return `Create the folder ${nm(cf[1])}`;
+  if(cr) return `Create ${nm(cr[1])} (${cr[2]} line${cr[2]==="1"?"":"s"})`;
+  if(ch) return `Change ${nm(ch[1])}:`;
+  return b; }
+export function edLine(ln){ const m=/^(\s*)(.*)$/.exec(ln), ind=m[1].length>0, body=edFilePlain(m[2]), mid=/^(\S+) · (.*)$/.exec(body);
   const field=t=>{ const f=/^([^:]+): (.*?) → (.*)$/.exec(t); return f?`<span class="edf"><span class="ckf">${esc(f[1])}</span> <span class="eddel">${esc(f[2])}</span> → <span class="edadd">${esc(f[3])}</span></span>`:esc(t); };
   if(mid) return `<li><b>${esc(mid[1])}</b> ${mid[2].split("; ").map(field).join(" ")}</li>`;
   return `<li class="${ind?"edsub":""}">${ind?esc(body):`<b>${esc(body)}</b>`}</li>`; }
 export function editCardHtml(c){ const n=c.lines.filter(l=>!/^\s/.test(l)).length;
   return `<div class="confirm edcard" role="group" aria-label="A change waiting for your approval" data-ecard="${esc(c.card)}"><b>${esc(c.title)}</b>`+
-    `<span class="sub">Nothing has been written yet. ${c.valid?`Approve writes ${n===1?"this change":`all ${n} changes`} to the tracker at once; Reject discards ${n===1?"it":"them"}.`:"It has problems, so it can't be applied: ask creaite to fix it."}</span>`+
+    `<span class="sub">Nothing has been saved yet. ${c.valid?`Approve saves ${n===1?"this change":`all ${n} changes`} to your project record at once; Reject discards ${n===1?"it":"them"}.`:"It has problems, so it can't be saved: ask creaite to fix it."}</span>`+
     `<ul class="edlines">${c.lines.map(edLine).join("")}</ul>`+
     `${(c.problems||[]).length?`<div class="sub edprob">${c.problems.map(esc).join("<br>")}</div>`:""}`+
-    `${(c.clash||[]).length?`<div class="sub">${esc(c.clash.join(", "))} already ${c.clash.length===1?"has":"have"} a change waiting in Review, so this one can only be staged for review.</div>`:""}`+
+    `${(c.clash||[]).length?`<div class="sub">${esc(c.clash.join(", "))} already ${c.clash.length===1?"has":"have"} a change waiting in Review, so this one can only wait in Review.</div>`:""}`+
     `<div class="acts"></div></div>`; }
 export function edActs(acts,kinds){ const word={reject:"Reject",stage:"Stage for review",approve:"Approve"};
   acts.replaceChildren(...kinds.map(k=>{ const b=document.createElement("button"); b.type="button"; b.className="btn"+(k===kinds[kinds.length-1]&&k!=="reject"?" primary":""); b.dataset.ed=k; b.textContent=word[k]; return b; })); }

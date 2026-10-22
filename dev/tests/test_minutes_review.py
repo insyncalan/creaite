@@ -242,7 +242,7 @@ class MeetingFlowTests(unittest.TestCase):
         apply_label(self.v.root / self.draft)               # Word may label it on save: cleaning must keep that label
         out = self.review("approve", "1-3").stdout
         self.assertIn("Approved 2.", out)                 # the minutes wait: the draft differs from the staged items
-        self.assertIn("Action 1 owner: draft says Sara Example; staged Omar Ali", out)
+        self.assertIn("Action 1 owner: draft says Sara Example; in Review Omar Ali", out)
         out = self.review("approve", "1", "--sync").stdout  # Alan: "yes, update the staged proposal"
         self.assertIn("Approved 1.", out)
         self.assertIn("Accepted 2 tracked changes and removed 1 comment", out)

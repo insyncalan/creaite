@@ -25,7 +25,7 @@ export function PrepToolbar() {
   if (!e) return null;
   const code = m.p || "", conf = !!(m.invite && m.invite.confidential), page = prepPageOf(e, day);
   const live = viaServer(), shape = prepShape.value;
-  const openWhy = !code ? "Choose the project first" : !live ? "Needs the live server" : "";
+  const openWhy = !code ? "Choose the project first" : !live ? "creaite isn’t running" : "";
   const openTip = openWhy || (page ? `Open the prep page (saved ${page.when})` : "Research the meeting and open its prep page in creaite");
   const why = draftWhyNot("agenda"), style = agendaStyle(), withInv = agendaInvited();
   return (

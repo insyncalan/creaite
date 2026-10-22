@@ -72,7 +72,7 @@ function RestoreBackup() {
   return (
     <div class="hrestore" id="backupRestore">
       <h3 class="hsub">Restore from a backup</h3>
-      <p class="sub">Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched.</p>
+      <p class="sub">Puts creaite back as it was in a daily backup: your project record, settings, items waiting in Review and history. The current database and every file it replaces are kept first. Project files are never touched.</p>
       {!zips && <button type="button" class="btn" id="backupList" disabled={busy || !viaServer()} onClick={list}>Choose a backup…</button>}
       {zips && !plan && (zips.length
         ? <ul class="hlist" aria-label="Backups">{zips.map(z => (
@@ -191,7 +191,7 @@ export function Health() {
         <span class="sub" role="status">{busy ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : ""}</span>
         <button type="button" class="btn" id="healthCheck" disabled={busy || !viaServer()} onClick={() => checkHealth()}>Check again</button>
       </div>
-      {!viaServer() && !res && <p class="sub">The health check needs the live server.</p>}
+      {!viaServer() && !res && <p class="sub">The health check needs creaite running.</p>}
       {err && <p class="sub hbad" role="alert">{err}</p>}
       {res && (
         <>
@@ -241,7 +241,7 @@ export function Health() {
         <>
           {/* BL-323: the last OneDrive copy, restore check and Tidy up, and what leaves the laptop */}
           <h3 class="hsub">Backups</h3>
-          <p class="sub">Each day a closed zip of the database backup, your settings, staging and the vault's history goes to your OneDrive backup folder. ask creaite's chats, the people you follow, the engine and the live database never leave the laptop.</p>
+          <p class="sub">Each day a closed zip of the database backup, your settings, the items waiting in Review and creaite's history goes to your OneDrive backup folder. ask creaite's chats, the people you follow, the engine and the live database never leave the laptop.</p>
           <ul class="hsteps">{res.backups.map(b => <li>{b}</li>)}</ul>
         </>
       )}
@@ -249,9 +249,9 @@ export function Health() {
       <h3 class="hsub">After every update, creaite does this for you</h3>
       <ul class="hsteps">
         <li>Backs up first, and rolls back if a step fails</li>
-        <li>Makes this vault's launcher again</li>
+        <li>Makes creaite's launcher again</li>
         <li>Asks Chrome to refresh its copy of the app's icon</li>
-        <li>Restarts the live server on the new version, and runs the health check</li>
+        <li>Restarts creaite on the new version, and runs the health check</li>
       </ul>
     </div>
   );

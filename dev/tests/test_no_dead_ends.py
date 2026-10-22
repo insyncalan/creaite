@@ -77,7 +77,7 @@ class NoDeadEnds(LiveBrowserCase):
         self.assertIn("Claude Code", txt)
         run = f"document.querySelector('#attnList li.rem[data-id=\"{rid}\"] .rmgo [data-d=run]')"
         self.assertEqual(b.eval(f"{run}.getAttribute('aria-disabled')"), "true")      # blocked, still focusable, says why
-        self.assertEqual(b.eval(f"{run}.dataset.tip"), "Needs the live server")
+        self.assertEqual(b.eval(f"{run}.dataset.tip"), "creaite isn’t running")
         b.eval("setLive(true)")
 
     def test_approve_on_a_draft_goes_through_review_py_and_routine_skips_minutes(self):

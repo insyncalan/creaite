@@ -174,16 +174,17 @@ class BlockedSaveWords(LiveBrowserCase):
         self.assertEqual(b.eval("applyBlockers('Saved.\\n  proposed-a.json item 1: x','b').length"), 0)
         words = b.eval(f"(async()=>await blockerWords(applyBlockers({json.dumps(msg)},{json.dumps(own)})))()")
         self.assertIn("not because of your edit", words)
-        self.assertIn("2 older staged proposals", words)
+        self.assertIn("2 older suggestions", words)
         self.assertIn("Supplier checkpoint (20-10-2026)", words)
         self.assertIn("Budget review (20-10-2026)", words)
         for f in STALE:
-            self.assertIn(f, words)
+            self.assertNotIn(f, words)                     # #291 Tier 1: never a file name
+        self.assertNotIn("unknown field", words)
         self.assertIn("in Intake", words)
         (self.v.root / "system/staging/proposed-2026-10-19-0900-sweep.json").write_text(
             json.dumps({"created": "2026-10-19T09:00:00", "items": []}), encoding="utf-8")
         self.assertEqual(b.eval("(async()=>await proposalLabel('proposed-2026-10-19-0900-sweep.json'))()"),
-                         "a proposal staged 19-10-2026")
+                         "a suggestion from 19-10-2026")
         b.eval("reloadData()")
         b.wait("REV.some(x=>x.file==='proposed-2026-10-20-1757-3.json')", timeout=15)
         first = b.eval(f"REV.filter(x=>{json.dumps(list(STALE))}.includes(x.file)&&!x.done)[0].n")
