@@ -1,10 +1,35 @@
-# creaite
+<p align="center">
+  <img src="dev/icon/creaite-icon-512.png" alt="creaite" width="120">
+</p>
 
-**Meetings in. A status you can trust out.**
+<h1 align="center">creaite</h1>
 
-creaite is a programme manager's assistant that does the admin of running a portfolio. It reads your meeting transcripts, Outlook and Teams, drafts the minutes, and proposes the actions, decisions, risks and issues that came out of them. You approve what is right. creaite keeps the record, tells you what needs attention today, and writes the weekly report, the client report and the steering one-pager from it.
+<p align="center"><b>Write up less. Check more.</b><br>
+The programme manager's assistant that turns your meetings, mail and Teams into a record you can trust.</p>
 
-It runs on your Mac, on your own project files, and it never changes anything until you say so.
+<p align="center"><i>Every action, decision and risk comes with its source, and nothing is saved until you approve it.</i></p>
+
+---
+
+**You run programmes. You should not also be the note-taker.** creaite reads your Teams transcripts, Outlook and Teams, drafts the minutes, and proposes the actions, decisions, risks and issues that came out of them, each with an owner, a due date and a link back to the line it came from. You check, tick and approve. creaite keeps the record, shows you what needs you today, and writes the weekly report, the client report and the steering one-pager from it.
+
+| | |
+|---|---|
+| **You stay in control** | Nothing is saved until you approve it. Every change has Undo. |
+| **Every item has a source** | The transcript line, email or chat it came from, one click away. |
+| **It never sends anything** | No mail, no Teams messages, no reports. Drafts are yours to send. |
+| **One record, every report** | Today, weekly, client-safe and steering reports all come from the same approved record. |
+| **Your data stays local** | Local-first: your data lives in your own tools, on your Mac and your company's OneDrive. creaite adds no cloud of its own. Claude reads the content it works on, under your own Claude plan. |
+
+<p align="center">
+  <img src="docs/screenshots/projects.png" alt="The Projects page: every programme's health, the evidence behind it, and the next milestone, on one screen" width="860"><br>
+  <sub>Every programme's health with the evidence behind it, and the next milestone. Sample data.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/intake.png" alt="The Intake page: meetings and files waiting, with proposals to approve" width="860"><br>
+  <sub>Intake: everything that arrives and waits for you, in one place. Sample data.</sub>
+</p>
 
 > **This repository holds the creaite engine and fictional sample data only.** No real client, company or person is named here. Current version: see [`VERSION`](VERSION), with plain-English notes for each release in [`dev/release-notes/`](dev/release-notes/).
 
@@ -34,7 +59,7 @@ Ask creaite for anything in your portfolio ("what is blocking go-live?", "move t
 - **Everything can be undone.** Every save has an Undo, and changes to your files are backed up first.
 - **A source on every item.** Each action, decision, risk and issue points to the meeting, email or chat it came from.
 - **creaite never sends anything.** It does not send mail or Teams messages or publish reports. Drafts are for you to copy and send.
-- **Your record stays on your Mac.** The database, the dashboard and the backups live on your laptop. Claude reads the content it works on, and the daily backup zip goes to your company OneDrive. Confidential material can be kept out of reports and prep pages.
+- **Your data stays local.** Local-first: your record lives on your Mac and your company's OneDrive, and creaite adds no cloud of its own. Claude reads the content it works on, under your own Claude plan. Confidential material can be kept out of reports and prep pages.
 - **Plain language, plain numbers.** The status is worked out from your own record by ordinary code, not guessed by a model.
 
 ## A week with creaite
