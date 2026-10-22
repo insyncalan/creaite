@@ -39,7 +39,7 @@ class Routes(IntakeBase):
         self.assertEqual(b.eval("PROC"), [[{"path": STEERING}]])
         self.assertEqual(b.eval("CHAT"), [], "Process sent an ask creaite message")
         self.assertFalse(self.chat_open())
-        b.wait("SNACKS.includes('Staged for Review.')", 10)
+        b.wait("SNACKS.includes('Drafted in Intake.')", 10)
 
     def test_a_project_goes_with_the_file_only_when_alan_chose_it(self):
         b = self.b

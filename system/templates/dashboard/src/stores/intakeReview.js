@@ -83,6 +83,9 @@ export const irLiveCounts = () => {
    components/intakeReview/actions.js (re-exported by IntakeReviewPage.jsx). Keep this section 232-A's. */
 /** A row's note after a Process that did not draft anything (Skipped: …, Couldn't: …), by meeting id. */
 export const irNotes = signal(/** @type {Record<string, string>} */ ({}));
+/** #307: the files the last Add files could not add, each named with why ("notes.xlsx: …"). They stay on the page until dismissed
+    or the next Add files replaces them (a toast would vanish, and the next file's toast would replace it). */
+export const irAddProblems = signal(/** @type {string[]} */ ([]));
 /** The Not needed reasons menu: the meeting it is for and what opened it, or null. */
 export const irAside = signal(/** @type {{id: string, anchor: HTMLElement | null} | null} */ (null));
 /** A note on a meeting's row, or "" to clear it. @param {string} id @param {string} text */

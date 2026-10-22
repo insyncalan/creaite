@@ -344,7 +344,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertIn(("approved", "dashboard"), decided.values())
         self.assertIn(("rejected", "dashboard"), decided.values())
         self.assertEqual(pending["meeting"]["minutes_decision"], "pending")     # drafts are approved in Claude Code
-        self.assertIn("Approving a draft needs the live server", self.result["draftSnack"])   # BL-149: the command is the footnote
+        self.assertIn("Approving a draft needs creaite", self.result["draftSnack"])   # BL-149: the command is the footnote
 
     def test_closing_fills_closed_date_in_shown_form(self):
         today = __import__("datetime").date.today()

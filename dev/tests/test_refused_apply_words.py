@@ -46,7 +46,7 @@ class RefusedApplyWords(unittest.TestCase):
         shown = words(raw)
         self.assertIn("A file changed after this suggestion was made", shown)
         self.assertIn("Make the suggestion again", shown)
-        self.assertIn("drop it in Review", shown)
+        self.assertIn("drop it in Intake", shown)
         self.assertNotIn("CLAUDE.md", shown)                    # #291 Tier 1: never a file name
         self.assertNotIn("proposal", shown)
         self.assertNotIn("Apply failed", shown)
@@ -84,7 +84,7 @@ class RefusedApplyWords(unittest.TestCase):
         self.assertNotIn("proposed-", shown)
         self.assertNotIn("Apply stopped", shown)
         other = "Apply stopped. Nothing was written.\n  proposed-x.json item 1: invalid owner"
-        self.assertEqual(words(other), "One suggestion couldn't be saved. It needs fixing in Review. Nothing was saved.")   # #291 Tier 1
+        self.assertEqual(words(other), "One suggestion couldn't be saved. It needs fixing in Intake. Nothing was saved.")   # #291 Tier 1
         field = ("Apply stopped. Nothing was written.\n  proposed-2026-10-22-0905-sweep.json item 1: unknown field(s) for decisions: raised. "
                  "Valid: project, decision, made_by")
         shown = words(field)

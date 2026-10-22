@@ -15,7 +15,7 @@ import { $ } from "../../core/dom.js";
 import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
@@ -152,6 +152,11 @@ function IntakeReviewView() {
           ))}
         </span>
       </div>
+      {irAddProblems.value.length ? <div class="why irnote iraddfail" role="alert" data-iraddfail="1">
+        <b>{irAddProblems.value.length === 1 ? "1 file wasn't added" : `${irAddProblems.value.length} files weren't added`}</b>
+        <ul style={{ margin: "4px 0 0", paddingLeft: "18px" }}>{irAddProblems.value.map(p => <li>{p}</li>)}</ul>
+        <button type="button" class="linkbtn" data-ira="dismissaddfail" onClick={() => { irAddProblems.value = []; }}>Dismiss</button>
+      </div> : null}
       {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: {IR_LEFT_WHY}.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
       <FoldSection sec="later" title="Later" n={model.later.length}>

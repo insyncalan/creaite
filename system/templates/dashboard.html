@@ -4518,6 +4518,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ALLTAB: () => ALLTAB,
     ALL_ST: () => ALL_ST,
     ALL_TYPES: () => ALL_TYPES,
+    APPLYL: () => APPLYL,
     APPLYN: () => APPLYN,
     APPLYT: () => APPLYT,
     AS: () => AS,
@@ -5974,6 +5975,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     intakeTarget: () => intakeTarget,
     internalIn: () => internalIn,
     irAddFiles: () => irAddFiles,
+    irAddProblems: () => irAddProblems,
     irAfterData: () => irAfterData,
     irApprove: () => irApprove,
     irApproveRoutine: () => irApproveRoutine,
@@ -9650,6 +9652,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var irNotes = y3(
     /** @type {Record<string, string>} */
     {}
+  );
+  var irAddProblems = y3(
+    /** @type {string[]} */
+    []
   );
   var irAside = y3(
     /** @type {{id: string, anchor: HTMLElement | null} | null} */
@@ -36504,6 +36510,91 @@ ${s5}`;
     }
   }
 
+  // core/say.js
+  var REWORDS = (
+    /** @type {[RegExp, string][]} */
+    [
+      [/\s*\((?:inbox|system|projects)\/[^)]*\)/g, ""],
+      /* a path in brackets */
+      [/\b(?:inbox|system|projects)\/\S+/g, "the file"],
+      /* a path on its own */
+      [/set aside in the file;? nothing was written to the tracker\.?/g, "kept aside; nothing was saved."],
+      [/nothing was written to the tracker/g, "nothing was saved"],
+      [/transcript no longer in the inbox/g, "the transcript is no longer in Intake"],
+      [/\b(\d+) of (\d+) staged for Review; (\d+) not staged\b/g, "$1 of $2 drafted; $3 not drafted"],
+      [/\b(\d+) of (\d+) waiting in Review\b/g, "$1 of $2 drafted, ready to check in Intake"],
+      [/\bNot staged: process it again\b/g, "Nothing was drafted: process it again"],
+      [/\bNot in Review yet\b/g, "Not drafted yet"],
+      [/\bnothing was added to Review\b/g, "nothing was drafted"],
+      [/\b(?:is|are) staged: the drafts are waiting in Review/g, "is ready: the drafts are waiting in Intake"],
+      [/\bwaiting in Review\b/g, "waiting in Intake"],
+      [/\bHeld in Review, not applied\b/g, "Held in Intake, not saved"],
+      [/\bnew items? in Review\b/g, "new items to check in Intake"],
+      [/\bin Review\b/g, "in Intake"],
+      [/\bfor Review\b/g, "in Intake"],
+      [/\bnot staged\b/gi, "not drafted"],
+      [/\bstaged\b/gi, "drafted"],
+      [/\bproposals\b/gi, "suggestions"],
+      [/\bproposal\b/gi, "suggestion"],
+      [/\bproposed\b/gi, "suggested"],
+      [/\bnot applied\b/gi, "not saved"],
+      [/\balready applied\b/gi, "already saved"],
+      [/\bapplied\b/gi, "saved"],
+      [/\bthe tracker\b/gi, "your records"],
+      [/\bthe live server\b/gi, "creaite"],
+      [/\bReview\b/g, "Intake"]
+    ]
+  );
+  function plainSay(msg) {
+    let t47 = String(msg == null ? "" : msg);
+    for (const [re2, to2] of REWORDS) t47 = t47.replace(re2, (...a5) => {
+      const m5 = a5[0], out = to2.replace(/\$(\d)/g, (_6, i5) => String(a5[+i5] ?? ""));
+      return /^[A-Z]/.test(m5) && /^[a-z]/.test(out) ? out[0].toUpperCase() + out.slice(1) : out;
+    });
+    return t47;
+  }
+  var needsConnection = (what) => `${what} needs creaite to be connected. Reopen it and try again.`;
+  function savedNoun(r4) {
+    if (!r4) return ["change", "changes"];
+    if (r4.op === "update") return ["update", "updates"];
+    switch (r4.kind) {
+      case "actions":
+        return ["action", "actions"];
+      case "decisions":
+        return ["decision", "decisions"];
+      case "raid":
+        return ["risk or issue", "risks or issues"];
+      case "milestones":
+        return ["milestone change", "milestone changes"];
+      case "promises":
+        return ["promise", "promises"];
+      case "draft":
+        return /^Report/.test(String(r4.rec && r4.rec.t || "")) ? ["report", "reports"] : ["set of minutes", "sets of minutes"];
+      case "files":
+        return ["file change", "file changes"];
+      default:
+        return ["change", "changes"];
+    }
+  }
+  function decidedWords(list) {
+    const out = [];
+    for (const verb of ["approved", "rejected"]) {
+      const by2 = (
+        /** @type {Map<string, [number, string, string]>} */
+        /* @__PURE__ */ new Map()
+      );
+      for (const x5 of list.filter((y5) => y5.v === verb)) {
+        const [one, many] = savedNoun(x5.r), e4 = by2.get(one) || [0, one, many];
+        e4[0]++;
+        by2.set(one, e4);
+      }
+      const parts = [...by2.values()].map(([n4, one, many]) => `${n4} ${n4 === 1 ? one : many}`);
+      if (parts.length) out.push(`${verb === "approved" ? "Saved" : "Rejected"} ${parts.length > 1 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts[0]}`);
+    }
+    return out.length ? out.join(". ") : "Saved";
+  }
+  var addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
+
   // core/intakeApi.js
   var MTG = () => D.meetings && D.meetings.rows || [], MRUN = {};
   var nowHM = function() {
@@ -36530,7 +36621,7 @@ ${s5}`;
   };
   async function checkMeeting(m5) {
     if (!viaServer()) {
-      snack("Checking needs the live server");
+      snack(needsConnection("Checking"));
       return;
     }
     if (mtgBusy()) {
@@ -36551,14 +36642,9 @@ ${s5}`;
   var UPLOAD_TYPES = [".vtt", ".docx", ".txt", ".md", ".pdf"], UPLOAD_MAX = 25 * 1048576;
   async function uploadInboxFile(f5) {
     const ext = (f5.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
-    if (!UPLOAD_TYPES.includes(ext)) {
-      snack(`${f5.name}: only .vtt, .docx, .txt, .md or .pdf`);
-      return null;
-    }
-    if (f5.size > UPLOAD_MAX) {
-      snack(`${f5.name} is over 25 MB`);
-      return null;
-    }
+    if (!UPLOAD_TYPES.includes(ext)) return { fail: addFailed(f5.name, "Intake takes transcripts (VTT), Word, text, Markdown and PDF files, not this kind") };
+    if (f5.size > UPLOAD_MAX) return { fail: addFailed(f5.name, "it is over 25 MB") };
+    if (!f5.size) return { fail: addFailed(f5.name, "the file is empty") };
     const data = await new Promise((res, rej) => {
       const fr2 = new FileReader();
       fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
@@ -36571,14 +36657,13 @@ ${s5}`;
         snack(OLDSERVER);
         return false;
       }
-      snack(`${f5.name}: ${oneLine(r4.message)}`);
-      return null;
+      return { fail: addFailed(f5.name, oneLine(r4.message)) };
     }
     return { r: r4, ext };
   }
   async function previewInbox(path) {
     if (!viaServer()) {
-      snack("Previewing needs the live server");
+      snack(needsConnection("Previewing"));
       return;
     }
     const r4 = await api("/api/inbox/preview", { path });
@@ -36605,7 +36690,7 @@ ${s5}`;
   }
   async function removeInbox(path) {
     if (!viaServer()) {
-      snack("Removing needs the live server");
+      snack(needsConnection("Removing"));
       return;
     }
     const f5 = (D.inbox || []).find((x5) => x5.path === path), r4 = await api("/api/inbox/remove", { path });
@@ -36657,7 +36742,7 @@ ${s5}`;
       const r4 = await fetch(url, { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token || "" }, body: JSON.stringify({ ...body2, run: id2 }) });
       if (!r4.ok || !r4.body) {
         const j5 = await r4.json().catch(() => ({}));
-        return { ok: false, message: j5.message || "It couldn't start: check the live server." };
+        return { ok: false, message: j5.message || "It couldn't start: check that creaite is running." };
       }
       await readEvents(r4, (ev) => {
         if (ev.type === "closure") got.closure = ev;
@@ -36667,7 +36752,7 @@ ${s5}`;
       }, onEv);
       return { ok: true, ...got };
     } catch (e4) {
-      return { ok: false, stopped: e4 && e4.name === "AbortError", message: e4 && e4.name === "AbortError" ? "Stopped" : "The live server stopped." };
+      return { ok: false, stopped: e4 && e4.name === "AbortError", message: e4 && e4.name === "AbortError" ? "Stopped" : "creaite stopped." };
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -37176,7 +37261,7 @@ ${s5}`;
     const mine = ++mnAsked;
     minutesArg.value = arg;
     if (!viaServer()) {
-      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
+      minutesView.value = { ok: false, message: needsConnection("The minutes view") };
       return;
     }
     minutesBusy.value = "Opening the minutes…";
@@ -37244,7 +37329,7 @@ ${s5}`;
     if (how.approve === false) return { ok: true, made, done };
     if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
-    return { ...r4 || { ok: false, message: "The apply didn't run; nothing was changed." }, made };
+    return { ...r4 || { ok: false, message: "Nothing was saved or changed." }, made };
   }
   async function trackPutBack(path, done) {
     const cur = await api("/api/minutes/draft", { path });
@@ -37258,10 +37343,10 @@ ${s5}`;
     }
     return { ok: true, message: "" };
   }
-  var trackFailWords = (r4, button) => r4.made ? `${r4.message ? `${oneLine(r4.message)} ` : ""}Some changes were made to the minutes; press ${button} again.` : String(r4.message || "The minutes weren't approved; nothing was applied.").split("\n")[0];
+  var trackFailWords = (r4, button) => r4.made ? `${r4.message ? `${oneLine(r4.message)} ` : ""}Some changes were made to the minutes; press ${button} again.` : String(r4.message || "The minutes weren't approved; nothing was saved.").split("\n")[0];
   function trackApprovedWords(r4) {
     const n4 = r4.approved || 0, left = (r4.waiting || []).length;
-    return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
+    return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} still to check` : ""}`;
   }
   async function exportMinutes(format) {
     const v5 = minutesView.value;
@@ -37578,6 +37663,7 @@ ${s5}`;
   }
 
   // review.js
+  var saidPlain = (m5) => plainSay(oneLine(m5));
   function applyProposal(r4) {
     if (r4.kind === "actions") {
       const rec = Object.assign({ id: nextId("actions", r4.p), p: r4.p, raised: TODAY, closed: null, src: r4.src, upd_at: nowStamp() }, r4.rec);
@@ -37610,13 +37696,13 @@ ${s5}`;
   function setDecision(data, r4, v5) {
     const bf2 = { meeting: "minutes_decision", report: "report_decision", file_changes: "file_changes_decision" }[r4.ref];
     if (bf2) {
-      if (!data[r4.ref] || data[r4.ref].applied) throw new Error("already applied");
+      if (!data[r4.ref] || data[r4.ref].applied) throw new Error("already saved");
       data[r4.ref][bf2] = v5;
       data[r4.ref].decided_in = "dashboard";
       return;
     }
     const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
-    if (!it2 || it2.applied) throw new Error("already applied");
+    if (!it2 || it2.applied) throw new Error("already saved");
     it2.decision = v5;
     it2.decided_in = "dashboard";
     if (v5 === "approved" && !r4.bad && (it2.flags || []).includes("invalid")) {
@@ -37676,11 +37762,11 @@ ${s5}`;
       if (viaServer() && v5 === "approved" && r4.kind === "draft") return reviewViaServer(r4, "approved", []);
       if (viaServer() && v5 === "approved" && (r4.flags || []).includes("conflict")) return conflictChoice(r4);
       if (v5 === "approved" && r4.kind === "draft") {
-        snack(`Approving a draft needs the live server, which checks and cleans it first; or say “approve ${r4.rec.t.replace(/^Minutes: /, "minutes for ").replace(/^Report: /, "report for ")}” in Claude Code`);
+        snack(needsConnection("Approving a draft"));
         return;
       }
       if (v5 === "approved" && (r4.flags || []).includes("conflict")) {
-        snack("This conflicts with a newer change: Keep current or Use this one needs the live server; or say “keep” or “override” in Claude Code (review)");
+        snack(`This conflicts with a newer change. ${needsConnection("Keep current or Use this one")}`);
         return;
       }
       if (!written) {
@@ -37695,7 +37781,7 @@ ${s5}`;
       if (viaServer() && S.autoApply) {
         r4.done = v5;
         refreshAll();
-        applySoon();
+        applySoon(r4, v5);
         return;
       }
       let undoRec = () => {
@@ -37712,7 +37798,7 @@ ${s5}`;
           try {
             await editProposal(r4.file, (data) => setDecision(data, r4, "pending"));
           } catch (e4) {
-            snack(viaServer() ? "Already applied: undo it in Activity" : "Already applied: use “undo last apply” in Claude Code");
+            snack(viaServer() ? "Already saved: undo it in Activity" : "Already saved: ask Claude Code to undo the last save");
           }
         },
         "You, in Intake"
@@ -37721,7 +37807,7 @@ ${s5}`;
     return res;
   };
   var BAD_MSG = "Can't be saved as it is: edit it or reject it";
-  var RV_WK = /<div class="wkrv">.*?<\/div>/, RV_DR = /<span class="tag drrv">.*?<\/span> /, RV_ND = /<span class="h-warn">(?:No Word draft was made for these minutes<\/span> · Reject them and process the meeting again|Held: [^<]*<\/span> · Approve the minutes without the transcript copy, or discard the proposal|Can't be saved as it is: [^<]*<\/span> · Edit it or reject it)/;
+  var RV_WK = /<div class="wkrv">.*?<\/div>/, RV_DR = /<span class="tag drrv">.*?<\/span> /, RV_ND = /<span class="h-warn">(?:No Word draft was made for these minutes<\/span> · Reject them and process the meeting again|Held: [^<]*<\/span> · Approve the minutes without the transcript copy, or discard the suggestion|Can't be saved as it is: [^<]*<\/span> · Edit it or reject it)/;
   var rvTipText = (r4) => {
     const d5 = (revDetail(r4) || "").replace(RV_WK, "").replace(RV_DR, "").replace(RV_ND, "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
     const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim().replace(/\s*·$/, "");
@@ -37736,7 +37822,7 @@ ${s5}`;
       if (!d5) return w6("No due date");
       const n4 = Math.round((new Date(d5) - new Date(TODAY)) / 864e5);
       return n4 < 0 ? w6(`${fd(d5)} · ${-n4} day${n4 === -1 ? "" : "s"} overdue`) : `${fd(d5)} · ${n4 === 0 ? "today" : `in ${n4} day${n4 === 1 ? "" : "s"}`}`;
-    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : r4.kind === "draft" && r4.held && !r4.done ? [w6("Held: " + esc(r4.held)), "Approve the minutes without the transcript copy, or discard the proposal"] : [];
+    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : r4.kind === "draft" && r4.held && !r4.done ? [w6("Held: " + esc(plainSay(r4.held))), "Approve the minutes without the transcript copy, or discard the suggestion"] : [];
     if (r4.bad && !r4.done) parts.push(w6("Can't be saved as it is: " + esc(r4.bad)), "Edit it or reject it");
     let h5 = (r4.dn ? dnHtml(r4) : "") + parts.filter(Boolean).join(" · ") + shRvHtml(r4);
     if (r4.kind === "update" && r4.rec && r4.rec.why) h5 = `${h5} · <span class="sub">“${esc(r4.rec.why)}”</span>`;
@@ -37757,7 +37843,7 @@ ${s5}`;
   async function approveTracked(r4, g5) {
     const v5 = await openMinutesRecord({ file: r4.file });
     if (!v5 || !v5.ok) {
-      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      snack(saidPlain(v5 && v5.message || "") || "Couldn't open the minutes");
       return;
     }
     const mine = g5 && g5 !== "*" && (r4.projects || []).length > 1 ? new Set(REV.filter((x5) => x5.file === r4.file && !["draft", "files"].includes(x5.kind) && (x5.p || "?") === g5).map((x5) => x5.ref)) : null;
@@ -37781,7 +37867,7 @@ ${s5}`;
   async function approveRoutineTracked(m5) {
     const v5 = await openMinutesRecord({ file: m5.file });
     if (!v5 || !v5.ok) {
-      snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
+      snack(saidPlain(v5 && v5.message || "") || "Couldn't open the minutes");
       return;
     }
     const item = (x5) => x5.file === m5.file && !["draft", "files"].includes(x5.kind) && !x5.done, mine = new Set(REV.filter(item).map((x5) => x5.ref));
@@ -37811,7 +37897,7 @@ ${s5}`;
       const res = await applyNow();
       if (res.ok) undo = () => undoApply(res.apply_id);
       else {
-        await putBack(oneLine(applyWords(res.message)));
+        await putBack(saidPlain(applyWords(res.message)));
         return;
       }
     }
@@ -37828,7 +37914,7 @@ ${s5}`;
   async function rejectMinutes(m5) {
     await decide(m5.n, "rejected");
     const pend = REV.filter((x5) => x5.file === m5.file && !["draft", "files"].includes(x5.kind) && !x5.done);
-    if (pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length === 1 ? "" : "s"} stay for review.`, async () => {
+    if (pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length === 1 ? "" : "s"} stay to check.`, async () => {
       for (const k5 of pend) await decide(k5.n, "rejected");
     }, `Reject ${pend.length === 1 ? "it" : "them"} too`);
   }
@@ -37887,7 +37973,7 @@ ${s5}`;
           delete r4.done;
         });
         await reloadData();
-        return { n: 0, failed, dropped, stopped: oneLine(res.message), res };
+        return { n: 0, failed, dropped, stopped: saidPlain(res.message), res };
       }
       return { n: done.length, failed, dropped, undo: () => undoApply(res.apply_id), res };
     }
@@ -37908,7 +37994,7 @@ ${s5}`;
   }
   function trkLeftOut(res) {
     const dr2 = res && res.dropped || [], dn2 = dr2.filter((r4) => r4.trk === "n").length, dk2 = dr2.length - dn2;
-    return [res && res.stopped ? `apply stopped, all back on Intake: ${res.stopped}` : "", dn2 ? `${dn2} crossed in the minutes' Track column` : "", dk2 ? `${dk2} kept in the minutes only (Track: neither)` : ""].filter(Boolean);
+    return [res && res.stopped ? `saving stopped, all back in Intake: ${res.stopped}` : "", dn2 ? `${dn2} crossed in the minutes' Track column` : "", dk2 ? `${dk2} kept in the minutes only (Track: neither)` : ""].filter(Boolean);
   }
   function rvSummary(verb, res, left) {
     const by2 = { project: 0, indiv: 0, conflict: 0 };
@@ -37956,11 +38042,11 @@ ${s5}`;
   async function llAct(how, r4) {
     if (!r4 || r4.done) return;
     if (!viaServer()) {
-      snack(`${how === "merge" ? "Merging" : "Keeping it as new"} needs the live server; or say “${how === "merge" ? "merge" : "keep-new"} ${r4.n}” in Claude Code (review)`);
+      snack(needsConnection(how === "merge" ? "Merging" : "Keeping it as new"));
       return;
     }
     const res = await api("/api/review/repeat", { file: r4.file, ref: r4.ref, how });
-    snack(oneLine(res.message) || (res.ok ? "Done" : "Not changed"));
+    snack(saidPlain(res.message) || (res.ok ? "Done" : "Not changed"));
     if (res.ok) {
       closePanel();
       await reloadData();
@@ -37979,14 +38065,14 @@ ${s5}`;
   async function rtOpen(anchor, r4) {
     if (!rtOK(r4)) return;
     if (!viaServer()) {
-      snack(`Updating an existing item instead needs the live server; or say “${r4.n} is an update to <ID>” in Claude Code (review)`);
+      snack(needsConnection("Updating an existing item instead"));
       return;
     }
     anchor.setAttribute("aria-busy", "true");
     const res = await api("/api/review/candidates", { file: r4.file, ref: r4.ref });
     anchor.removeAttribute("aria-busy");
     if (!res || !res.ok) {
-      snack(oneLine(res && res.message) || "Couldn't list the items");
+      snack(saidPlain(res && res.message) || "Couldn't list the items");
       return;
     }
     const L3 = res.items || [];
@@ -38004,7 +38090,7 @@ ${s5}`;
     const at2 = { file: r4.file, ref: r4.ref };
     const res = await api("/api/review/retarget", { ...at2, id: id2 });
     if (!res || !res.ok) {
-      snack(oneLine(res && res.message) || "Not changed");
+      snack(saidPlain(res && res.message) || "Not changed");
       return;
     }
     if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n === r4.n) closePanel();
@@ -38012,7 +38098,7 @@ ${s5}`;
     const dup = /duplicate/i.test(res.message || "");
     snack(dup ? `Rejected as a duplicate of ${id2}: it carried nothing new` : `Now an update to ${id2}`, async () => {
       const back2 = await api("/api/review/retarget", { ...at2, undo: true });
-      snack(back2 && back2.ok ? "Back to a new item, as it was proposed" : oneLine(back2 && back2.message) || "Not undone");
+      snack(back2 && back2.ok ? "Back to a new item, as it was suggested" : saidPlain(back2 && back2.message) || "Not undone");
       if (back2 && back2.ok) await reloadData();
     });
   }
@@ -38248,7 +38334,7 @@ ${s5}`;
   async function rjReject(list, c5, after) {
     list = list.filter((r4) => rvRejectOK(r4));
     if (!list.length) return;
-    if (list.length > shared.RV_MAX && !await boardAsk({ title: `Reject ${list.length} proposals?`, hint: "Rejecting writes nothing to the tracker; Undo brings them back", clear: true, okText: `Reject ${list.length}` })) return;
+    if (list.length > shared.RV_MAX && !await boardAsk({ title: `Reject ${list.length} suggestions?`, hint: "Rejecting saves nothing; Undo brings them back", clear: true, okText: `Reject ${list.length}` })) return;
     const why = (r4) => {
       if (!c5.guess) return c5.reason || null;
       const g5 = rjGuessOf(r4);
@@ -38285,7 +38371,7 @@ ${s5}`;
         const r4 = L3.find((y5) => y5.file === x5.file && String(y5.ref) === String(x5.ref));
         if (r4) done.push(r4);
       });
-      else msgs.push(oneLine(res.message));
+      else msgs.push(saidPlain(res.message));
     }
     if (!done.length) {
       snack("Not rejected: " + (msgs[0] || "nothing changed"));
@@ -38298,7 +38384,7 @@ ${s5}`;
     rjAddGone(G3);
     irTick.value++;
     const ap2 = S.autoApply ? await applyNow() : (await reloadData(), null);
-    const n4 = done.length, text = `Rejected ${n4 === 1 ? "1" : n4} ${how}` + (ap2 && !ap2.ok ? ` · not applied: ${oneLine(ap2.message)}` : "") + (msgs.length ? ` · not rejected: ${msgs[0]}` : "");
+    const n4 = done.length, text = `Rejected ${n4 === 1 ? "1" : n4} ${how}` + (ap2 && !ap2.ok ? ` · not saved: ${saidPlain(ap2.message)}` : "") + (msgs.length ? ` · not rejected: ${msgs[0]}` : "");
     rjSay(text, () => rjUnreject(G3));
     if (after) after();
   }
@@ -38306,7 +38392,7 @@ ${s5}`;
     return api("/api/review/rejected", { rows: rows2.map((r4) => ({ file: r4.file, ref: r4.ref })), how, ...extra || {} });
   }
   var rjOff = (what) => {
-    snack(`${what} needs the live server; or say “review” in Claude Code`);
+    snack(needsConnection(what));
   };
   async function rjUnreject(rows2) {
     if (!viaServer()) {
@@ -38315,7 +38401,7 @@ ${s5}`;
     }
     const res = await rjRejected(rows2, "undo");
     if (!res.ok) {
-      snack("Not undone: " + oneLine(res.message));
+      snack("Not undone: " + saidPlain(res.message));
       return;
     }
     const keys = rows2.map((r4) => r4.key || rjKey(r4));
@@ -38341,7 +38427,7 @@ ${s5}`;
       const res = await rjRejected(L3, "reason", b5);
       if (res.ok) {
         (res.done || []).forEach((d5) => done.push({ ...d5, now: b5 }));
-      } else msgs.push(oneLine(res.message));
+      } else msgs.push(saidPlain(res.message));
     }
     if (!done.length) {
       snack("Not changed: " + (msgs[0] || "nothing changed"));
@@ -38366,20 +38452,20 @@ ${s5}`;
     }
     const res = await rjRejected(rows2, "approve");
     if (!res.ok) {
-      snack("Not approved: " + oneLine(res.message));
+      snack("Not approved: " + saidPlain(res.message));
       return;
     }
     const was = res.done || [], open2 = res.open || [], keys = rows2.map((r4) => r4.key || rjKey(r4)), ghosts = rjGone.value.filter((g5) => keys.includes(g5.key));
     rjDropGone(keys);
     const ap2 = S.autoApply && was.length ? await applyNow() : (await reloadData(), null);
     if (shared.VIEW === "activity") rjLoadRecent();
-    const n4 = was.length, text = [n4 ? `Approved instead: ${n4}` : "", open2.length ? `${open2.length} need${open2.length === 1 ? "s" : ""} approving on ${open2.length === 1 ? "its" : "their"} own` : "", ap2 && !ap2.ok ? `not applied: ${oneLine(ap2.message)}` : ""].filter(Boolean).join(" · ");
+    const n4 = was.length, text = [n4 ? `Approved instead: ${n4}` : "", open2.length ? `${open2.length} need${open2.length === 1 ? "s" : ""} approving on ${open2.length === 1 ? "its" : "their"} own` : "", ap2 && !ap2.ok ? `not saved: ${saidPlain(ap2.message)}` : ""].filter(Boolean).join(" · ");
     const undo = n4 ? async () => {
       const back2 = was.map((d5) => ({ ...rjRef(d5.key), key: d5.key, was: d5.was || {} }));
       if (ap2 && ap2.ok && ap2.apply_id) {
         const u5 = await api("/api/undo", { apply_id: ap2.apply_id });
         if (!u5.ok) {
-          snack("Not undone: " + oneLine(u5.message));
+          snack("Not undone: " + saidPlain(u5.message));
           return;
         }
         await reloadData();
@@ -38389,7 +38475,7 @@ ${s5}`;
           try {
             await editProposal(x5.file, (data) => {
               const it2 = (data.items || []).find((i5) => i5.n === x5.ref);
-              if (!it2 || it2.applied) throw new Error("already applied");
+              if (!it2 || it2.applied) throw new Error("already saved");
               it2.decision = "rejected";
               it2.decided_in = "dashboard";
               if (x5.was.reason) it2.reject_reason = x5.was.reason;
@@ -38424,7 +38510,7 @@ ${s5}`;
     }
     rjRecent.value = { ...rjRecent.value, state: "loading" };
     const res = await api("/api/review/rejects", { limit: 50 });
-    rjRecent.value = res.ok ? { state: "ok", items: res.items || [] } : { state: "error", items: [], message: oneLine(res.message) };
+    rjRecent.value = res.ok ? { state: "ok", items: res.items || [] } : { state: "error", items: [], message: saidPlain(res.message) };
   }
   function bootProposalActions() {
     mountRejectMenu();
@@ -38515,10 +38601,10 @@ ${s5}`;
   var reviewSeams = { decide: (v5) => {
     decide = v5;
   } };
-  var heldMsg = (r4) => `Held: ${r4.held}. Approve the minutes without the transcript copy, or discard the proposal`;
+  var heldMsg = (r4) => `Held: ${plainSay(r4.held)}. Approve the minutes without the transcript copy, or discard the suggestion`;
   async function heldApprove(r4) {
     if (!viaServer()) {
-      snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r4.n} --without-transcript” in Claude Code`);
+      snack(needsConnection("Approving these minutes without the transcript"));
       return;
     }
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "approved", modes: ["without-transcript"] });
@@ -38549,25 +38635,25 @@ ${s5}`;
   }
   var HELD_ERR = /* @__PURE__ */ new Map();
   var heldWhy = (m5) => {
-    const t47 = String(m5 || "").replace(/^\s*Approved \d+\.\s*/, "").replace(/^\s*\d+:\s*/, "").replace(/not approved — /, "").replace(/,? or say “[^”]*”\.?/g, "").replace(/\n\s*\(say [\s\S]*\)\s*$/, "").replace(/the draft differs from the staged items:/, "these minutes don't match the suggestions waiting in Review:");
-    return oneLine(t47).replace(/\s*\.?\s*$/, "") || "creaite couldn't save these minutes";
+    const t47 = String(m5 || "").replace(/^\s*Approved \d+\.\s*/, "").replace(/^\s*\d+:\s*/, "").replace(/not approved — /, "").replace(/,? or say “[^”]*”\.?/g, "").replace(/\n\s*\(say [\s\S]*\)\s*$/, "").replace(/the draft differs from the staged items:/, "these minutes don't match the suggestions waiting in Intake:");
+    return saidPlain(t47).replace(/\s*\.?\s*$/, "") || "creaite couldn't save these minutes";
   };
   async function heldDiscard(r4) {
     if (!viaServer()) {
-      snack(`Discarding a proposal needs the live server; or say “reject ${r4.n} --discard” in Claude Code`);
+      snack(needsConnection("Discarding these minutes"));
       return;
     }
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "discard" });
     await reloadData();
-    snack(oneLine(res.message));
+    snack(saidPlain(res.message));
   }
   function heldLines(msg) {
-    return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => x5.startsWith("Held in Review, not applied:"));
+    return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => /^Held in Review, not applied:/.test(x5));
   }
   function heldWords(msg) {
     const L3 = heldLines(msg), i5 = L3.filter((x5) => /^Held in Review, not applied: \S+ item \d+:/.test(x5)).length, f5 = L3.length - i5, out = [];
     if (i5) out.push(`${i5} item${i5 === 1 ? " is" : "s are"} held in Intake: ${i5 === 1 ? "it can't be saved as it is" : "they can't be saved as they are"}`);
-    if (f5) out.push(`${f5} proposal${f5 === 1 ? " is" : "s are"} held in Intake: a file to be filed has gone`);
+    if (f5) out.push(`${f5} suggestion${f5 === 1 ? " is" : "s are"} held in Intake: a file to be filed has gone`);
     return out.length ? ". " + out.join(". ") : "";
   }
 
@@ -76146,7 +76232,7 @@ ${d5.text}`);
       return false;
     }
     if (!viaServer()) {
-      snack("Processing needs the live server");
+      snack(needsConnection("Processing"));
       return false;
     }
     if (mtgBusy() || irBusy.value.length || irChecking.value.length) {
@@ -76219,9 +76305,9 @@ ${d5.text}`);
       const o5 = r4 && (r4.files || []).find((f5) => f5.path === file);
       if (!done && o5 && (o5.state === "needs" || o5.state === "not_staged")) {
         irSetAskQ(m5.id, { state: o5.state, question: oneLine(o5.question || "") });
-        irNote(m5.id, o5.state === "needs" ? `Needs you: ${oneLine(o5.question || "")}` : "Not in Review yet: process it again, or ask creaite");
-      } else if (!done) irNote(m5.id, r4 && r4.stopped ? "Stopped: nothing was added to Review" : `Couldn't: ${oneLine(r4 && r4.message || "no draft came back")}`);
-      if (r4 && r4.closure && r4.closure.line) snack(oneLine(r4.closure.line));
+        irNote(m5.id, o5.state === "needs" ? `Needs you: ${plainSay(oneLine(o5.question || ""))}` : "Not drafted yet: process it again, or ask creaite");
+      } else if (!done) irNote(m5.id, r4 && r4.stopped ? "Stopped: nothing was drafted" : `Couldn't: ${plainSay(oneLine(r4 && r4.message || "no draft came back"))}`);
+      if (r4 && r4.closure && r4.closure.line) snack(plainSay(oneLine(r4.closure.line)));
       return done;
     } finally {
       irSetBusy(m5.id, false);
@@ -76242,13 +76328,13 @@ ${d5.text}`);
       document.getElementById("chIn")
     );
     if (box) {
-      box.value = `About the Intake file “${m5.title}”: ${q5.question || "Process didn't stage it. Why not, and what should I do?"}`;
+      box.value = `About the Intake file “${m5.title}”: ${q5.question || "Process didn't draft it. Why not, and what should I do?"}`;
       box.focus();
     }
   }
   async function irProcessAll() {
     if (!viaServer()) {
-      snack("Processing needs the live server");
+      snack(needsConnection("Processing"));
       return;
     }
     if (mtgBusy() || irBusy.value.length || irChecking.value.length) {
@@ -76276,12 +76362,12 @@ ${d5.text}`);
   var asideItem = (m5, extra) => ({ key: m5.key || m5.path, day: m5.src === "upload" ? TODAY : m5.day, start: m5.start || "", title: m5.title, ...extra });
   async function setAside(ms2, extra, what) {
     if (!viaServer()) {
-      snack("This needs the live server");
+      snack(needsConnection("This"));
       return false;
     }
     const r4 = await api("/api/intake/clear", { op: "clear", items: ms2.map((m5) => asideItem(m5, extra)) });
     if (!r4.ok) {
-      snack(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't do that"));
+      snack(plainSay(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't do that")));
       return false;
     }
     const keys = ms2.map((m5) => m5.key || m5.path);
@@ -76303,7 +76389,7 @@ ${d5.text}`);
   async function irRestore(keys) {
     const r4 = await api("/api/intake/clear", { op: "restore", keys });
     if (!r4.ok) {
-      snack(oneLine(r4.message || "Couldn't restore"));
+      snack(plainSay(oneLine(r4.message || "Couldn't restore")));
       return false;
     }
     await reloadData();
@@ -76317,7 +76403,7 @@ ${d5.text}`);
   async function irCheck(m5) {
     if (!irCanCheck(m5)) return false;
     if (!viaServer()) {
-      snack("Checking needs the live server");
+      snack(needsConnection("Checking"));
       return false;
     }
     if (mtgBusy() || irBusy.value.length || irChecking.value.length) {
@@ -76346,24 +76432,28 @@ ${d5.text}`);
   async function irAddFiles(files) {
     if (!files.length) return;
     if (!viaServer()) {
-      snack("Adding files needs the live server");
+      snack(needsConnection("Adding files"));
       return;
     }
-    let added = 0, skipped = 0;
+    let added = 0;
+    const problems = (
+      /** @type {string[]} */
+      []
+    );
+    irAddProblems.value = [];
     try {
       for (const f5 of files) {
         const u5 = await uploadInboxFile(f5);
         if (u5 === false) return;
-        if (u5) added++;
-        else skipped++;
+        if (u5 && "fail" in u5) problems.push(u5.fail);
+        else if (u5) added++;
       }
     } catch (e4) {
-      snack("The files couldn't be added: creaite didn't answer. Try again.");
-      if (added) await reloadData();
-      return;
+      problems.push("The files couldn't be added: creaite didn't answer. Try again.");
     }
     if (added) await reloadData();
-    if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} could not be added` : ""}`);
+    irAddProblems.value = problems;
+    if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${problems.length ? `; ${problems.length} could not be added (see the note under the toolbar)` : ""}`);
   }
   async function irRefreshCalendar() {
     if (irRefRun.value) {
@@ -76371,7 +76461,7 @@ ${d5.text}`);
       return false;
     }
     if (!viaServer()) {
-      snack("Refreshing needs the live server");
+      snack(needsConnection("Refreshing"));
       return false;
     }
     if (mtgBusy() || irBlocked() || irRefreshing.value) {
@@ -76397,7 +76487,7 @@ ${d5.text}`);
       }
       irRefRun.value = null;
       await reloadData();
-      snack(r4 && r4.closure ? oneLine(r4.closure.line) : r4 && r4.stopped ? "Stopped" : oneLine(r4 && r4.message || "The calendar was not saved"));
+      snack(r4 && r4.closure ? plainSay(oneLine(r4.closure.line)) : r4 && r4.stopped ? "Stopped" : plainSay(oneLine(r4 && r4.message || "The calendar was not saved")));
       return true;
     } finally {
       irRefRun.value = null;
@@ -76414,12 +76504,12 @@ ${d5.text}`);
   async function irRemoveFile(m5) {
     if (!m5 || m5.src !== "upload" || !m5.path) return false;
     if (!viaServer()) {
-      snack("Removing needs the live server");
+      snack(needsConnection("Removing"));
       return false;
     }
     const r4 = await api("/api/inbox/remove", { path: m5.path });
     if (!r4.ok) {
-      snack(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't remove it"));
+      snack(plainSay(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't remove it")));
       return false;
     }
     await reloadData();
@@ -76428,7 +76518,7 @@ ${d5.text}`);
       if (b5.ok) {
         await reloadData();
         snack("Back in Intake");
-      } else snack(oneLine(b5.message));
+      } else snack(plainSay(oneLine(b5.message)));
     });
     return true;
   }
@@ -76517,7 +76607,7 @@ ${d5.text}`);
   var irKind = (r4) => r4.kind === "raid" ? r4.rec && r4.rec.type || "Risk" : IR_KIND_WORDS[
     /** @type {keyof IR_KIND_WORDS} */
     r4.kind
-  ] || "Proposal";
+  ] || "Suggestion";
   var ageWords = (d5) => d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
   var irSize = (n4) => n4 > 1048576 ? `${(n4 / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round((n4 || 0) / 1024))} KB`;
   var irFileFacts = (m5) => {
@@ -76567,7 +76657,7 @@ ${d5.text}`);
   var irWhen = (m5) => m5.src === "upload" ? irAdded(m5) : `${m5.day ? fd(m5.day) : ""}${m5.start ? ` ${m5.start}` : ""}`.trim();
   function StageTrack({ m: m5 }) {
     const names = ["Arrived", "Drafted", "Approved"], at2 = ["arrived", "drafted", "approved"].indexOf(m5.stage);
-    return /* @__PURE__ */ u4("span", { class: "ictrack", "aria-label": `Stage: ${names[at2] || ""}`, "data-irtrack": m5.stage, children: names.map((n4, k5) => /* @__PURE__ */ u4(S2, { children: [
+    return /* @__PURE__ */ u4("span", { class: "ictrack", "aria-label": `Step: ${names[at2] || ""}`, "data-irtrack": m5.stage, children: names.map((n4, k5) => /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("i", { class: k5 < at2 ? "done" : k5 === at2 ? "now" : "" }),
       /* @__PURE__ */ u4("span", { class: k5 === at2 ? "on" : "", children: n4 })
     ] })) });
@@ -76731,7 +76821,7 @@ ${d5.text}`);
     return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[
       /** @type {"actions"} */
       r4.kind
-    ] || "Proposal";
+    ] || "Suggestion";
   }
   var irDueWords = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
   var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
@@ -76819,7 +76909,7 @@ ${d5.text}`);
     if (r4.kind === "draft" && r4.held) return /* @__PURE__ */ u4("div", { class: "rvnote", children: [
       /* @__PURE__ */ u4("span", { class: "h-warn", children: [
         "Held: ",
-        r4.held
+        plainSay(r4.held)
       ] }),
       " · Approve the minutes without the transcript copy, or discard the suggestion",
       HELD_ERR.get(r4.file) ? /* @__PURE__ */ u4("div", { class: "h-warn", "data-ira": "held-error", children: [
@@ -76876,7 +76966,7 @@ ${d5.text}`);
     const res = await rvDecideMany(list, "approved");
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
     const out = trkLeftOut(res);
-    snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
+    snack(`Approved ${res.n} routine item${res.n === 1 ? "" : "s"}${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
   }
   var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the suggestion to see them" };
   var canDraftResponse = (r4) => !!r4 && !r4.done && r4.kind === "raid" && !String(r4.rec && r4.rec.resp || "").trim() && !(r4.rec.type && r4.rec.type !== "Risk") && draftOn("thinking");
@@ -77426,6 +77516,13 @@ ${d5.text}`);
           /* @__PURE__ */ u4("span", { style: { marginLeft: "6px" }, children: l6 })
         ] })) })
       ] }),
+      irAddProblems.value.length ? /* @__PURE__ */ u4("div", { class: "why irnote iraddfail", role: "alert", "data-iraddfail": "1", children: [
+        /* @__PURE__ */ u4("b", { children: irAddProblems.value.length === 1 ? "1 file wasn't added" : `${irAddProblems.value.length} files weren't added` }),
+        /* @__PURE__ */ u4("ul", { style: { margin: "4px 0 0", paddingLeft: "18px" }, children: irAddProblems.value.map((p6) => /* @__PURE__ */ u4("li", { children: p6 })) }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "dismissaddfail", onClick: () => {
+          irAddProblems.value = [];
+        }, children: "Dismiss" })
+      ] }) : null,
       irLeftOut().length ? /* @__PURE__ */ u4("p", { class: "icsub irleft", "data-irleft": "1", children: [
         irLeftOut().length,
         " left out of Process all ready: ",
@@ -77940,7 +78037,7 @@ ${d5.text}`);
   };
   var applyWords = (m5) => {
     const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
-    if (f5) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Review.";
+    if (f5) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Intake.";
     if (!/in the minutes' Track column|the minutes record can't be read/.test(t47)) {
       const miss = t47.match(/(proposed-[^\s\/\\:]+\.json) \w+: copy: source not found/);
       if (miss) {
@@ -77950,9 +78047,9 @@ ${d5.text}`);
       const bad = [...t47.matchAll(/(proposed-[^\s\/\\:]+\.json) item (\d+): /g)];
       if (bad.length) {
         const one = bad.length === 1, n4 = applyTitle(bad[0][1], bad[0][2]);
-        return `${one ? "One suggestion" : bad.length + " suggestions"}${one && n4 ? ` (${n4})` : ""} couldn't be saved. ${one ? "It needs" : "They need"} fixing in Review. Nothing was saved.`;
+        return `${one ? "One suggestion" : bad.length + " suggestions"}${one && n4 ? ` (${n4})` : ""} couldn't be saved. ${one ? "It needs" : "They need"} fixing in Intake. Nothing was saved.`;
       }
-      if (/a recode is applied on its own/.test(t47)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Review first, then ask for the code change again.";
+      if (/a recode is applied on its own/.test(t47)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Intake first, then ask for the code change again.";
       if (/^Apply failed/m.test(t47)) return "creaite couldn't save this, so nothing was changed. Settings › Health › Diagnostics has the reason.";
       if (/Apply stopped|proposed-\S+\.json/.test(t47)) return "Nothing was saved. creaite stopped before changing anything; Settings › Health › Diagnostics has the reason.";
       return t47;
@@ -78052,7 +78149,7 @@ ${d5.text}`);
   async function applyNow(o5) {
     const r4 = await api("/api/apply", o5 && o5.peek ? {} : { hold_peek: true });
     await reloadData();
-    if (!r4.ok) r4.message = applyWords(r4.message);
+    if (!r4.ok) r4.message = plainSay(applyWords(r4.message));
     return r4;
   }
   var undoApply = async function(id2, ids) {
@@ -78066,24 +78163,29 @@ ${d5.text}`);
       await pkReconcile();
     } });
   }
-  var APPLYT = null, APPLYN = 0;
-  function applySoon() {
+  var APPLYT = null, APPLYN = 0, APPLYL = (
+    /** @type {{r:any,v:string}[]} */
+    []
+  );
+  function applySoon(row2, verb) {
     APPLYN++;
+    APPLYL.push({ r: row2 || null, v: verb || "approved" });
     clearTimeout(APPLYT);
     APPLYT = setTimeout(async () => {
-      const n4 = APPLYN;
+      const L3 = APPLYL;
       APPLYN = 0;
+      APPLYL = [];
       const r4 = await applyNow();
       const held = r4.ok ? heldWords(r4.message) : "";
-      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}${held}` : oneLine(applyWords(r4.message)), r4.ok ? () => undoApply(r4.apply_id) : null);
+      snack(r4.ok ? `${decidedWords(L3)}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision, modes: modes || [] });
     if (res.ok) {
-      if (S.autoApply) applySoon();
+      if (S.autoApply) applySoon(r4, decision);
       else await reloadData();
-      snack(oneLine(res.message));
+      snack(plainSay(oneLine(res.message)));
       return;
     }
     openChat();
@@ -79305,6 +79407,7 @@ ${d5.text}`);
         "actPaint",
         "actTools",
         "addEl",
+        "addFailed",
         "addPartner",
         "addTextSection",
         "aiAction",
@@ -79324,6 +79427,7 @@ ${d5.text}`);
         "applyFilters",
         "applyMotion",
         "applyNow",
+        "applySoon",
         "applyTheme",
         "applyTitle",
         "applyView",
@@ -79432,6 +79536,7 @@ ${d5.text}`);
         "deTextRows",
         "decPending",
         "decide",
+        "decidedWords",
         "defaultTrack",
         "defs",
         "designation",
@@ -79683,6 +79788,7 @@ ${d5.text}`);
         "navState",
         "navWrite",
         "needVault",
+        "needsConnection",
         "newChat",
         "newMenuOpen",
         "nextId",
@@ -79791,6 +79897,7 @@ ${d5.text}`);
         "pkShort",
         "pkUndoLast",
         "pkWsAddOK",
+        "plainSay",
         "popupOpen",
         "portfolioTable",
         "prepDlg",

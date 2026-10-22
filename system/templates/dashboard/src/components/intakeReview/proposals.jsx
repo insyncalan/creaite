@@ -13,6 +13,7 @@ import { irBulk, irGroupsShown } from "../../core/irFold.js";
 import { irLineHead, irLineParts, irVerb } from "../../core/irUpdate.js";
 import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel, PK, pkOn } from "../../projects.js";
+import { plainSay } from "../../core/say.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
@@ -30,7 +31,7 @@ const PEEKABLE = ["actions", "raid", "decisions", "update"];
 export function irPill(r) {
   if (r.kind === "raid") return (r.rec && r.rec.type) || "Risk";
   if (r.kind === "draft") return r.ref === "report" ? "Report" : "Minutes";
-  return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[/** @type {"actions"} */ (r.kind)] || "Proposal";
+  return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[/** @type {"actions"} */ (r.kind)] || "Suggestion";
 }
 
 const irDueWords = (/** @type {string|null|undefined} */ d) => (d ? `due ${fd(d)}` : "No due date");
@@ -109,7 +110,7 @@ function HeldChoices({ r }) {
 /** #280, #291: why a held or invalid proposal waits, on its row (not only in the tip). @param {{r: any}} props */
 function HeldNote({ r }) {
   if (r.done) return null;
-  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the suggestion{HELD_ERR.get(r.file) ? <div class="h-warn" data-ira="held-error">Not saved because {HELD_ERR.get(r.file)}</div> : null}</div>;
+  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {plainSay(r.held)}</span> · Approve the minutes without the transcript copy, or discard the suggestion{HELD_ERR.get(r.file) ? <div class="h-warn" data-ira="held-error">Not saved because {HELD_ERR.get(r.file)}</div> : null}</div>;
   if (r.bad) return <div class="rvnote"><span class="h-warn">Can't be saved as it is: {r.bad}</span> · Edit it or reject it</div>;
   return null;
 }
@@ -148,7 +149,7 @@ export async function irApproveRoutine(groups) {
   const res = await rvDecideMany(list, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
   const out = trkLeftOut(res);      /* #275 round 3: an apply that stopped (the batch back on Intake) and rows the Track reload left out */
-  snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
+  snack(`Approved ${res.n} routine item${res.n === 1 ? "" : "s"}${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
 }
 
 /** The meta line's hover when a proposal has no owner, date or priority to show (minutes, reports, file changes). */

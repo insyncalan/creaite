@@ -12,11 +12,12 @@ import { openChat } from "../../ask.js";
 import { calendarLive, jobLive, mtgBusy, mtgCheckable, mtgProcessFile, mtgSkip, processLive, stopRun, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
 import { D, fd, fdText, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
+import { addFailed, needsConnection, plainSay } from "../../core/say.js";
 import { shared } from "../../core/state.js";
 import { pName } from "../../core/data.js";
 import { srcShort } from "../../core/fields.js";
 import { irFixed, irKindOf, irMatches, irNameOk, irUnsure } from "../../core/irFold.js";
-import { irAside, irAskQ, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefRun, irRow, irRefreshing, irSetAskQ, irSetBusy, irSetChecking, irSetFileKind, irStep, irTick } from "../../stores/intakeReview.js";
+import { irAddProblems, irAside, irAskQ, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefRun, irRow, irRefreshing, irSetAskQ, irSetBusy, irSetChecking, irSetFileKind, irStep, irTick } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
@@ -60,7 +61,7 @@ export async function irProcess(m) {
   if (!irCanProcess(m)) return false;
   if (irBadName(m)) { irNote(m.id, "Rename this file to process it"); return false; }
   if (irUnsure(m, irFileKinds.value)) { irNote(m.id, "Say whether it is a transcript or minutes first"); return false; }
-  if (!viaServer()) { snack("Processing needs the live server"); return false; }
+  if (!viaServer()) { snack(needsConnection("Processing")); return false; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return false; }
   irNote(m.id, ""); irSetBusy(m.id, true);
   const label = `Processing “${m.title}”`;
@@ -99,9 +100,9 @@ export async function irProcess(m) {
     const o = r && (r.files || []).find((/** @type {any} */ f) => f.path === file);
     if (!done && o && (o.state === "needs" || o.state === "not_staged")) {     /* the run's own question, with ask creaite about this */
       irSetAskQ(m.id, { state: o.state, question: oneLine(o.question || "") });
-      irNote(m.id, o.state === "needs" ? `Needs you: ${oneLine(o.question || "")}` : "Not in Review yet: process it again, or ask creaite");
-    } else if (!done) irNote(m.id, r && r.stopped ? "Stopped: nothing was added to Review" : `Couldn't: ${oneLine((r && r.message) || "no draft came back")}`);
-    if (r && r.closure && r.closure.line) snack(oneLine(r.closure.line));
+      irNote(m.id, o.state === "needs" ? `Needs you: ${plainSay(oneLine(o.question || ""))}` : "Not drafted yet: process it again, or ask creaite");
+    } else if (!done) irNote(m.id, r && r.stopped ? "Stopped: nothing was drafted" : `Couldn't: ${plainSay(oneLine((r && r.message) || "no draft came back"))}`);
+    if (r && r.closure && r.closure.line) snack(plainSay(oneLine(r.closure.line)));
     return done;
   } finally { irSetBusy(m.id, false); }
 }
@@ -118,12 +119,12 @@ export function irAskAbout(m) {
   const q = irAskQ.value[m.id]; if (!q) return;
   openChat();
   const box = /** @type {HTMLTextAreaElement | null} */ (document.getElementById("chIn"));
-  if (box) { box.value = `About the Intake file “${m.title}”: ${q.question || "Process didn't stage it. Why not, and what should I do?"}`; box.focus(); }
+  if (box) { box.value = `About the Intake file “${m.title}”: ${q.question || "Process didn't draft it. Why not, and what should I do?"}`; box.focus(); }
 }
 
 /** Process every meeting and file whose transcript is ready, one after another. Stop on the running row ends the rest too. */
 export async function irProcessAll() {
-  if (!viaServer()) { snack("Processing needs the live server"); return; }
+  if (!viaServer()) { snack(needsConnection("Processing")); return; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
   const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length;
   irStopped = false; let ran = 0;
@@ -140,9 +141,9 @@ const asideItem = (m, extra) => ({ key: m.key || m.path, day: m.src === "upload"
 
 /** Set meetings aside through the clear route, then offer Undo. @param {any[]} ms @param {Record<string, any>} extra @param {string} what */
 async function setAside(ms, extra, what) {
-  if (!viaServer()) { snack("This needs the live server"); return false; }
+  if (!viaServer()) { snack(needsConnection("This")); return false; }
   const r = await api("/api/intake/clear", { op: "clear", items: ms.map(m => asideItem(m, extra)) });
-  if (!r.ok) { snack(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't do that")); return false; }
+  if (!r.ok) { snack(plainSay(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't do that"))); return false; }
   const keys = ms.map(m => m.key || m.path);
   await reloadData();
   snack(`${what}: ${ms.length === 1 ? ms[0].title : `${ms.length} meetings`}`, () => irRestore(keys));
@@ -168,7 +169,7 @@ export function irRestoredWords(keys, n) {
 /** Bring meetings back from Later or Not needed, by key. @param {string[]} keys */
 export async function irRestore(keys) {
   const r = await api("/api/intake/clear", { op: "restore", keys });
-  if (!r.ok) { snack(oneLine(r.message || "Couldn't restore")); return false; }
+  if (!r.ok) { snack(plainSay(oneLine(r.message || "Couldn't restore"))); return false; }
   await reloadData();
   snack(irRestoredWords(keys, r.count));
   return true;
@@ -184,7 +185,7 @@ export function irCanCheck(m) {
     @param {any} m @returns {Promise<boolean>} whether a check ran */
 export async function irCheck(m) {
   if (!irCanCheck(m)) return false;
-  if (!viaServer()) { snack("Checking needs the live server"); return false; }
+  if (!viaServer()) { snack(needsConnection("Checking")); return false; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return false; }
   irSetChecking(m.id, true);
   try {
@@ -201,17 +202,20 @@ export function irAskReason(m, anchor) { if (irCanSetAside(m)) irAside.value = {
 /** Upload files (picked or dropped anywhere on the page): each becomes a row. @param {File[]} files */
 export async function irAddFiles(files) {
   if (!files.length) return;
-  if (!viaServer()) { snack("Adding files needs the live server"); return; }
-  let added = 0, skipped = 0;
+  if (!viaServer()) { snack(needsConnection("Adding files")); return; }
+  let added = 0;
+  const problems = /** @type {string[]} */ ([]);
+  irAddProblems.value = [];
   try {
     for (const f of files) {
       const u = await uploadInboxFile(f);
       if (u === false) return;
-      if (u) added++; else skipped++;
+      if (u && "fail" in u) problems.push(u.fail); else if (u) added++;
     }
-  } catch (e) { snack("The files couldn't be added: creaite didn't answer. Try again."); if (added) await reloadData(); return; }
+  } catch (e) { problems.push("The files couldn't be added: creaite didn't answer. Try again."); }
   if (added) await reloadData();
-  if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${skipped ? `; ${skipped} could not be added` : ""}`);
+  irAddProblems.value = problems;       /* #307: each failed file by name and why, kept on the page until dismissed */
+  if (added) snack(`${added} file${added === 1 ? "" : "s"} added to Intake${problems.length ? `; ${problems.length} could not be added (see the note under the toolbar)` : ""}`);
 }
 
 /** Refresh the calendar (the icon beside "Calendar read" under the heading): the calendar's own run kind (#265). ask creaite's
@@ -219,7 +223,7 @@ export async function irAddFiles(files) {
     @returns {Promise<boolean>} whether it ran */
 export async function irRefreshCalendar() {
   if (irRefRun.value) { stopRun(irRefRun.value.id); return false; }       /* the icon is Stop while it runs */
-  if (!viaServer()) { snack("Refreshing needs the live server"); return false; }
+  if (!viaServer()) { snack(needsConnection("Refreshing")); return false; }
   if (mtgBusy() || irBlocked() || irRefreshing.value) { snack(BUSY); return false; }
   irRefreshing.value = true; irRefRun.value = { id: "", step: "" };
   let r = /** @type {any} */ (null);
@@ -231,7 +235,7 @@ export async function irRefreshCalendar() {
     } catch (e) { /* the sub-line shows the time it has */ }
     irRefRun.value = null;
     await reloadData();
-    snack(r && r.closure ? oneLine(r.closure.line) : r && r.stopped ? "Stopped" : oneLine((r && r.message) || "The calendar was not saved"));
+    snack(r && r.closure ? plainSay(oneLine(r.closure.line)) : r && r.stopped ? "Stopped" : plainSay(oneLine((r && r.message) || "The calendar was not saved")));
     return true;
   } finally { irRefRun.value = null; irRefreshing.value = false; irTick.value++; }
 }
@@ -249,13 +253,13 @@ export function irCalendarRead(fetched, today) {
     @param {any} m @returns {Promise<boolean>} */
 export async function irRemoveFile(m) {
   if (!m || m.src !== "upload" || !m.path) return false;
-  if (!viaServer()) { snack("Removing needs the live server"); return false; }
+  if (!viaServer()) { snack(needsConnection("Removing")); return false; }
   const r = await api("/api/inbox/remove", { path: m.path });
-  if (!r.ok) { snack(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't remove it")); return false; }
+  if (!r.ok) { snack(plainSay(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't remove it"))); return false; }
   await reloadData();
   snack(`Removed ${m.title} from Intake (kept in backups)`, async () => {
     const b = await api("/api/inbox/restore", { kept: r.kept });
-    if (b.ok) { await reloadData(); snack("Back in Intake"); } else snack(oneLine(b.message));
+    if (b.ok) { await reloadData(); snack("Back in Intake"); } else snack(plainSay(oneLine(b.message)));
   });
   return true;
 }

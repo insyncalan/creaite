@@ -9,6 +9,7 @@
 import { signal } from "@preact/signals";
 import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
+import { needsConnection } from "../core/say.js";
 import { api, applyNow, oneLine, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -70,7 +71,7 @@ export async function openMinutesRecord(arg, stale = () => false) {
 export async function loadMinutes(arg) {
   const mine = ++mnAsked;
   minutesArg.value = arg;
-  if (!viaServer()) { minutesView.value = { ok: false, message: "The minutes view needs the live server." }; return; }
+  if (!viaServer()) { minutesView.value = { ok: false, message: needsConnection("The minutes view") }; return; }
   minutesBusy.value = "Opening the minutes…";
   const r = await openMinutesRecord(arg, () => mine !== mnAsked);
   if (r === null) return;
@@ -158,7 +159,7 @@ export async function trackApprove(v, how = {}) {
   if (how.approve === false) return { ok: true, made, done };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
   const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
-  return { ...(r || { ok: false, message: "The apply didn't run; nothing was changed." }), made };
+  return { ...(r || { ok: false, message: "Nothing was saved or changed." }), made };
 }
 
 /** #275 round 3: the Track column's changes a trackApprove made (`done`, in order) taken back, newest first: a `remove` by
@@ -182,12 +183,12 @@ export async function trackPutBack(path, done) {
 /** What a failed trackApprove says (review M1: and that some of the Track column's changes were made). @param {TrackApproved} r
     @param {string} button the button to press again */
 export const trackFailWords = (r, button) => (r.made ? `${r.message ? `${oneLine(r.message)} ` : ""}Some changes were made to the minutes; press ${button} again.`
-  : String(r.message || "The minutes weren't approved; nothing was applied.").split("\n")[0]);
+  : String(r.message || "The minutes weren't approved; nothing was saved.").split("\n")[0]);
 
-/** What an approve says: "Minutes approved · 3 work items registered · 1 wait in Review". @param {TrackApproved} r */
+/** What an approve says: "Minutes approved · 3 work items registered · 1 still to check". @param {TrackApproved} r */
 export function trackApprovedWords(r) {
   const n = r.approved || 0, left = (r.waiting || []).length;
-  return `Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
+  return `Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} still to check` : ""}`;
 }
 
 /** Export the minutes as HTML, Word or PDF (P2's export, opened once made). #268: one version only: the view never asks for
