@@ -1928,6 +1928,25 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail.icons .badge{right:3px;top:1px}
 .rail .badge.warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);line-height:var(--lh-16)}
 .railmore{flex:none}
+/* #295: the avatar in More's place (RailMore.jsx): an initials circle (accent fill, --accent-ink letters; a person icon with no
+   name), the name and a second line (muted; --warn when Health has a problem), the amber count on the circle. Its size follows
+   the icon size (#182): 28, 32 or 36px; the rows: expanded 44/48/52, labels under 52/56/62, icons only 36/40/44. No motion. */
+.rail{--av-d:28px} :root.railsz-medium .rail{--av-d:32px} :root.railsz-large .rail{--av-d:36px}
+.rail .av{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:var(--av-d);height:var(--av-d);border-radius:50%;background:var(--accent);color:var(--accent-ink);font:700 var(--fs-xs)/var(--lh-1) var(--font);letter-spacing:.02em}
+:root.railsz-large .rail .av{font-size:var(--fs-sm)}
+.rail .av svg,.rail #railMoreMenu .av svg{width:62%;height:62%;stroke-width:2}
+.rail .avt{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1 1 auto}
+.rail .avn{color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rail .avs,.rail .avv{font:400 var(--fs-xs)/var(--lh-16) var(--font);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rail #railMore.avwarn .avs{color:var(--warn);font-weight:500}
+.rail #railMore{height:44px;gap:10px} :root.railsz-medium .rail #railMore{height:48px} :root.railsz-large .rail #railMore{height:52px}
+.rail #railMore .av .badge{position:absolute;top:-5px;right:-7px;margin:0;min-width:16px;height:16px;font-size:var(--fs-2xs);line-height:var(--lh-14);padding:0 4px}
+.rail.labelled #railMore{height:52px;gap:2px} :root.railsz-medium .rail.labelled #railMore{height:56px} :root.railsz-large .rail.labelled #railMore{height:62px}
+.rail.labelled #railMore .avt{flex:none;align-items:center;max-width:100%} .rail.labelled #railMore .avs{display:none}
+.rail.icons #railMore{height:36px} :root.railsz-medium .rail.icons #railMore{height:40px} :root.railsz-large .rail.icons #railMore{height:44px}
+.rail.icons #railMore .avt{display:none} .rail.icons #railMore .av .badge{right:-8px}
+.rail #railMoreMenu .avhead{--av-d:32px;display:flex;align-items:center;gap:10px;padding:6px 8px;min-width:0}
+.rail #railMoreMenu .avhead .avn{font-size:var(--fs-sm);line-height:var(--lh-18)}
 #railMoreMenu{position:fixed;z-index:var(--z-menu);width:240px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:1px}
 #railMoreMenu[hidden]{display:none}
 .rail #railMoreMenu button.nv{justify-content:flex-start;flex-direction:row;height:36px;padding:0 8px;font-size:var(--fs-sm)} .rail #railMoreMenu .rl{display:inline;font-size:var(--fs-sm);text-align:left}
@@ -2736,6 +2755,7 @@ a.seeall{margin-top:8px}
   .tabs button[aria-selected="true"],.pk-tabs button[aria-selected="true"],.acttabs [role=tab][aria-selected="true"]{border-bottom-color:Highlight}
   .setcats button{border-left:2px solid Canvas} .setcats button[aria-selected="true"]{border-left-color:Highlight}
   .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight;border:2px solid Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
+  .rail .av{border:1px solid CanvasText}
   .rail .railfly,#railMoreMenu{border:1px solid CanvasText} .rail .railfly button:hover,.rail .railfly button:focus-visible,#railMoreMenu button:focus-visible{outline:2px solid Highlight}
   .rail button.rtog:focus-visible{outline-color:Highlight}
   #cmdkList button[aria-selected="true"],#cmdkList button:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
