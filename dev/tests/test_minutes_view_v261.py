@@ -84,7 +84,7 @@ class MinutesViewV261(LiveBrowserCase):
     def test_01_the_sensitive_items_are_marked_in_the_record(self):
         self.assertEqual(self.ev("document.querySelectorAll('#v-minutes .mnsens').length"), 2, "the two marked rows carry the tag")
 
-    def test_02_the_follow_up_email_the_menu_opens_holds_no_sensitive_item(self):
+    def test_02_the_follow_up_email_the_menu_opens_is_internal_and_keeps_both_sensitive_items(self):
         b = self.b
         b.click("#v-minutes [data-mnexport]")
         b.wait("document.querySelector('#v-minutes .ddmenu.on')")
@@ -92,18 +92,28 @@ class MinutesViewV261(LiveBrowserCase):
         b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         b.pump(0.4)
         whole = self.ev("document.getElementById('deDlg').textContent + ' ' + document.querySelector('#deSubj').value")
-        self.assertNotIn(SECRET_DECISION, whole, "a Sensitive decision never reaches the draft")
-        self.assertNotIn(SECRET_ACTION, whole, "a Sensitive action never reaches the draft")
+        subject = self.ev("document.querySelector('#deSubj').value")
+        self.assertIn("[Internal]", subject, "the Internal follow-up is marked [Internal]")
+        self.assertIn(SECRET_DECISION, whole, "Internal keeps a Sensitive decision, by design")
+        self.assertIn(SECRET_ACTION, whole, "Internal keeps a Sensitive action, by design")
         self.assertIn(OPEN_ACTION, whole, "the unmarked action is there (the draft is not empty)")
 
-    def test_03_the_server_builds_neither_version_with_a_sensitive_item(self):
+    def test_03_the_server_builds_internal_with_both_and_distributed_with_neither(self):
+        """Internal (marked internal) keeps both Sensitive items by design; only Distributed withholds: the leak guard."""
         for version in ("internal", "distributed"):
             with self.subTest(version=version):
                 f = self.facts(version)
-                text = json.dumps(f, ensure_ascii=False)
-                self.assertNotIn(SECRET_DECISION, text, f"{version}: a Sensitive decision")
-                self.assertNotIn(SECRET_ACTION, text, f"{version}: a Sensitive action")
-                self.assertIn(OPEN_ACTION, [i["t"] for i in f["items"]], f"{version}: the unmarked action")
+                words = [i["t"] for i in f["items"]]
+                self.assertIn(OPEN_ACTION, words, f"{version}: the unmarked action")
+                if version == "internal":
+                    self.assertTrue(f["marked_internal"], "internal: marked internal")
+                    self.assertIn(SECRET_DECISION, words, "internal: a Sensitive decision is kept")
+                    self.assertIn(SECRET_ACTION, words, "internal: a Sensitive action is kept")
+                else:
+                    self.assertFalse(f["marked_internal"])
+                    text = json.dumps(f, ensure_ascii=False)
+                    self.assertNotIn(SECRET_DECISION, text, "distributed: a Sensitive decision")
+                    self.assertNotIn(SECRET_ACTION, text, "distributed: a Sensitive action")
 
     # ── 2. deadline popover ──
     def test_04_quick_picks_show_their_exact_dates_and_unreadable_words_say_so(self):

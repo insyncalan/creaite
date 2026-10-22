@@ -525,7 +525,8 @@ def remove(doc, data, n, keep_line=False):
     removed = doc["meta"].setdefault("removed", {})
     if s is not None:
         row = s["rows"][i]
-        removed[str(n)] = {"section": s["id"], "index": i, "row": row, "kept_line": bool(keep_line)}
+        removed[str(n)] = {"section": s["id"], "index": i, "row": row, "kept_line": bool(keep_line),
+                           "held": _held_why(item, doc["items"].get(f"@{n}"))}
         if keep_line:
             s["rows"][i] = {"ref": None, "cells": row["cells"], "shown": True, "kept_line": True, "was": row["ref"]}
         else:
@@ -596,7 +597,7 @@ def update_that_one(doc, data, p, n, target):
         s, i = find_row(doc, n)
         if s is not None:
             doc["meta"].setdefault("removed", {})[str(n)] = {"section": s["id"], "index": i, "row": s["rows"].pop(i),
-                                                            "kept_line": False}
+                                                            "kept_line": False, "held": _held_why(item, doc["items"].get(f"@{n}"))}
         doc["items"].pop(f"@{n}", None)
         return f"Nothing new to carry to {target}: item {n} repeats it, so it was taken out of the minutes."
     sync_item(doc, item)
@@ -1346,12 +1347,39 @@ def _flagged_sensitive(item):
     return any(re.search("sensitive", str(f), re.I) for f in item.get("flags") or []) or bool((item.get("values") or {}).get("sensitive"))
 
 
+def _held_why(item, snap=None):
+    """Why a staged item (and its record snapshot) is kept out of the distributed version: "Sensitive", "partner-only" or an
+    excluding label's reason; "" when it is not. Read when a row is taken out of the minutes (remove), because a line kept in the
+    minutes only has no item left in the record afterwards (the v2.6.0 leak: tracked_of / Approve minutes dropped the flag)."""
+    merged = {"flags": list((item or {}).get("flags") or []) + list((snap or {}).get("flags") or []),
+              "values": {**((snap or {}).get("values") or {}), **((item or {}).get("values") or {})},
+              "changes": {**((snap or {}).get("changes") or {}), **((item or {}).get("changes") or {})},
+              "id": (item or {}).get("id") or (snap or {}).get("id")}
+    return next(iter(withheld({"items": {"@x": merged}}).values()), "")
+
+
+def _kept_held(doc):
+    """{"@n": why} for each line kept in the minutes only (a row with no item, `was` = its old ref) that the distributed version
+    never shows. Fails closed: a kept line whose sensitivity was not recorded (an older record, or one made by hand) is withheld."""
+    removed = (doc.get("meta") or {}).get("removed") or {}
+    out = {}
+    for s in doc.get("sections") or []:
+        for r in s.get("rows") or []:
+            if not (r.get("kept_line") and r.get("was")):
+                continue
+            rec = removed.get(str(r["was"]).lstrip("@")) or {}
+            why = rec.get("held") if "held" in rec else "Sensitivity unknown"
+            if why:
+                out[str(r["was"])] = why
+    return out
+
+
 def withheld(doc, labels=None, con=None):
     """{row ref: why} for each item the distributed version never shows: Sensitive (a flag, a value or a label), partner-only, or
-    labelled with a label that excludes."""
+    labelled with a label that excludes; and each line kept in the minutes only that was one (or whose sensitivity is unknown)."""
     labels = item_labels(doc, con) if labels is None else labels
     blocking = _blocking(con)
-    out = {}
+    out = dict(_kept_held(doc))
     for ref, it in (doc.get("items") or {}).items():
         why = "Sensitive" if _flagged_sensitive(it) else next(
             (blocking[n.lower()] for n in labels.get(ref) or [] if n.lower() in blocking), None)
@@ -1389,7 +1417,7 @@ def _distributed_table(s, marks, gone_refs):
     number once filed). Adds the refs it drops to `gone_refs`."""
     marked = {m["ref"] for m in marks if m.get("ref")}
     gone_refs |= {r["ref"] for r in s.get("rows") or [] if r.get("ref") in marked or f"@{r.get('n')}" in marked}
-    s["rows"] = [r for r in s.get("rows") or [] if not (r.get("ref") and r["ref"] in gone_refs)]
+    s["rows"] = [r for r in s.get("rows") or [] if not ((r.get("ref") or r.get("was")) in gone_refs)]
     s["text"] = "" if s["rows"] else "None recorded."
 
 
@@ -1424,6 +1452,8 @@ def _without_items(out, gone_refs, version):
         if s.get("tags"):
             s["tags"] = [t for t in s["tags"] if t.get("ref") not in gone_refs]
     out["items"] = {k: v for k, v in (out.get("items") or {}).items() if k not in gone_refs}
+    if isinstance(out.get("meta"), dict):          # rows taken out of the minutes (kept for Undo) hold their words: never in the distributed record
+        out["meta"] = {k: v for k, v in out["meta"].items() if k != "removed"}
     out["layout"] = {k: v for k, v in (out.get("layout") or {}).items() if k != "internal_only"}
     out.update(audience="distributed", based_on={"path": None, "version": version})
     return out
