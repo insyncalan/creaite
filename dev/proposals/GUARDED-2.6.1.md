@@ -12,8 +12,8 @@ Checked 22-10-2026: the first nine below apply one after another, in this order,
 | 2 | `dev/proposals/261-inode-gap/tracker-inode.py.diff` | `tracker.py` | Closes the inode gap in the file checks | its README names them |
 | 3 | `dev/proposals/work-item-history/schema.diff` | `schema.sql` | New table `item_events` and indexes | `test_item_history`, `test_item_history_route` |
 | 4 | `dev/proposals/work-item-history/tracker.diff` | `tracker.py` | `emit_event()` writes an event row per change; undo and recode follow | same |
-| 5 | `dev/proposals/291/update.py.diff` | `update.py` | The update refusals in plain words; carries the `test_update.py` hunk and the plain-words baseline hunk | `test_update`, `test_plain_words` (total 1,090 to 1,087 for this diff) |
-| 6 | `dev/proposals/291/live_server.py.diff` | `live_server.py` | "check my mail ..." added to `PANEL_SWEEP_WORDS` | `test_the_plain_words_are_sweeps` (expected failure until applied) |
+| 5 | `dev/proposals/291/live_server.py.diff` | `live_server.py` | "check my mail ..." added to `PANEL_SWEEP_WORDS` | `test_the_plain_words_are_sweeps` (expected failure until applied) |
+| 6 | `dev/proposals/291/update.py.diff` | `update.py` | The update refusals in plain words; carries the `test_update.py` hunk and the plain-words baseline hunk | `test_update`, `test_plain_words` (total 1,090 to 1,087 for this diff) |
 | 7 | `dev/proposals/300/live_server.diff` | `live_server.py` | Routes for Start creaite at sign-in | `test_autostart_300` (two tests skip until applied) |
 | 8 | `dev/proposals/work-item-history/live_server.diff` | `live_server.py` | `GET /api/item/history?id=...` | `test_item_history_route` |
 | 9 | `dev/proposals/work-item-history/tests-after.diff` | the two item-history tests | Removes the five `@unittest.expectedFailure` decorators; apply last | `test_item_history`, `test_item_history_route` |
@@ -24,8 +24,7 @@ The hunks have distinct anchors, so no order dependence was found between the gr
 ## 300 order (verified on 5369ebd1 and with the work-item-history diffs in either order)
 
 Apply the 300 diff after both 291 diffs: 291 `live_server.py.diff`, 291 `update.py.diff`, then 300 `live_server.diff`
-(`dev/proposals/300/live_server.diff` and its README were updated by `v261-300c`). The table's step numbers 5 to 7 show the order
-tried in the first check; the order above is the one to use. `test_autostart_300_routes` runs in both states: when the routes are
+(`dev/proposals/300/live_server.diff` and its README were updated by `v261-300c`). The table above is in that order. `test_autostart_300_routes` runs in both states: when the routes are
 absent it applies the diff to a throwaway copy and tests that, so it is green before and after the diff is applied.
 
 ## Until applied
