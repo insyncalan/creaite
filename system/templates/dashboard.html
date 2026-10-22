@@ -37270,7 +37270,7 @@ ${s5}`;
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-  var isMovedMinutes = (m5) => /isn't there|nothing pending|not found|no longer/i.test(String(m5 || ""));
+  var isMovedMinutes = (m5) => /isn't there|nothing pending/i.test(String(m5 || ""));
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
     const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
@@ -78109,8 +78109,12 @@ ${d5.text}`);
       snack(oneLine(res.message));
       return;
     }
-    openChat();
     const m5 = res.message || "";
+    if (/differs from the staged items/.test(m5) && shared.VIEW === "intake-review") {
+      snack("The Word draft doesn't match the suggestions for these minutes. File them as they are, or fix the Word draft and try again.", () => reviewViaServer(r4, decision, [...modes || [], "as-staged"]), "File as they are");
+      return;
+    }
+    openChat();
     let acts2 = "";
     if (/possible internal content/.test(m5)) acts2 = `<button class="mini" data-rv="retry">I've edited the draft: check again</button><button class="mini" data-rv="as-staged">File it anyway</button>`;
     else if (/differs from the staged items/.test(m5)) acts2 = (/--sync/.test(m5) ? `<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>` : "") + (r4.ref === "meeting" ? `<button class="mini" data-rv="refresh">Rebuild from the minutes</button>` : "") + `<button class="mini" data-rv="as-staged">Keep the items as they are</button>`;
@@ -79895,6 +79899,7 @@ ${d5.text}`);
         "resolvePerson",
         "restoreNav",
         "revDetail",
+        "reviewViaServer",
         "rjGuesses",
         "rkText",
         "row",

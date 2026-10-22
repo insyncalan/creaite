@@ -102,6 +102,33 @@ class StaleMinutesView(LiveBrowserCase):
                          "the view no longer offers Approve minutes")
 
 
+class WordDraftRefusalOnTheRow(LiveBrowserCase):
+    """Path 4: the Word draft doesn't match the suggestions: Intake's row says so in plain words and offers the way out; no panel."""
+
+    @classmethod
+    def load(cls, v):
+        populate(v)
+        cls.proposal = me.stage_meeting(v)
+
+    def test_the_refusal_is_plain_and_has_a_button(self):
+        b = self.b
+        b.eval("go('intake-review')")
+        b.wait("D.review.some(x=>x.kind==='draft')", 15)
+        b.eval("window.CALLS=[]; const real=window.api; window.api=(p,o)=>p==='/api/review'&&!(o.modes||[]).includes('as-staged')"
+               "?Promise.resolve({ok:false,message:\"2: not approved — the draft differs from the staged items:\\n    A RAID item in Review isn't in the draft: x\\n  (say \\\"approve 2 --as-staged\\\" to keep them)\"}):"
+               "(CALLS.push(o.modes),Promise.resolve({ok:true,message:'ok'}));"
+               "reviewViaServer(D.review.find(x=>x.kind==='draft'),'approved',[]); 0")
+        b.wait("/Word draft/.test((document.getElementById('toastHost')||{innerText:''}).innerText)", timeout=10)
+        t = toast(b)
+        self.assertIn("The Word draft doesn't match the suggestions", t)
+        for jargon in ("staged", "as-staged", "RAID item", "Review isn't", "--"):
+            self.assertNotIn(jargon, t)
+        self.assertFalse(b.eval("document.getElementById('chat').classList.contains('on')"), "ask creaite's panel stays shut")
+        b.click("#toastHost button")
+        b.wait("CALLS.length===1", 10)
+        self.assertIn("as-staged", b.eval("CALLS[0]"))
+
+
 def toast(b):
     return b.eval("(document.getElementById('toastHost')||{innerText:''}).innerText")
 
