@@ -336,8 +336,8 @@ class Shared254(Case254):
             b.pump(0.3)
             seen |= self.named("#workTbl .ki")
         self.assertTrue({"Action", "Decision", "Risk"} <= seen, seen)
-        self.screen("review")
-        rev = self.named("#reviewBody .ki") if b.eval("document.querySelectorAll('#reviewBody .ki').length") else set()
+        self.screen("review")      # 2.6: Review is the Intake page (#232); its proposal rows' type icons, if any, are named too
+        rev = self.named("#v-intake-review tr.irprop .ki") if b.eval("document.querySelectorAll('#v-intake-review tr.irprop .ki').length") else set()
         # hover shows the tooltip with the type's word
         self.screen("work")
         b.click('#wtabs [data-t="actions"]')

@@ -273,13 +273,18 @@ class HeldRowOnThePage(LiveBrowserCase):
         b = self.b
         b.wait("REV.some(x=>x.ref==='meeting'&&x.held)", timeout=15)
         self.assertIn("transcript no longer in the inbox", b.eval("REV.find(x=>x.ref==='meeting').held"))
-        b.eval("go('review')")
-        b.wait("!!document.querySelector('#reviewBody [data-act=hw]')", timeout=10)
-        self.assertEqual(b.eval("document.querySelectorAll('#reviewBody [data-act=hd]').length"), 1)
-        self.assertEqual(b.eval("(()=>{ const r=REV.find(x=>x.ref==='meeting'); const tr=document.querySelector(`#reviewBody tr[data-n=\"${r.n}\"]`); "
-                                "return !!tr.querySelector('[data-act=a]'); })()"), False, "no plain Approve on a held row")
-        self.assertIn("Approve without the transcript copy",
-                      b.eval("cxReview(REV.find(x=>x.ref==='meeting'),document.body).map(x=>x.label).join('|')"))
+        n = b.eval("REV.find(x=>x.ref==='meeting').n")
+        row = f'#v-intake-review tr.irprop[data-irn="{n}"]'      # 2.6: the Intake page's row (#232), its meeting opens
+        b.eval(f"go('intake-review', {n})")
+        b.wait(f"!!document.querySelector('{row} [data-ira=held-approve]')", timeout=10)
+        self.assertEqual(b.eval("document.querySelectorAll('#v-intake-review [data-ira=held-discard]').length"), 1)
+        self.assertEqual(b.eval(f"!!document.querySelector('{row} [data-ira=approve]')"), False, "no plain Approve on a held row")
+        self.assertIn("Approve the minutes without the transcript copy",
+                      b.eval(f"document.querySelector('{row} [data-ira=held-approve]').title"))
+        # Intake has no right-click menu on a proposal (the old Review's cxReview); A on the row says why and offers the way out
+        b.eval(f"irApprove({n})")
+        b.wait("(document.body.innerText||'').includes('Approve the minutes without the transcript copy')", timeout=5)
+        b.wait("/Approve without it/.test((document.getElementById('snackU')||{}).textContent||'')", timeout=5)
         self.assertEqual(b.eval("heldLines('Apply 4: 1 written\\nHeld in Review, not applied: proposed-x.json minutes (A): gone').length"), 1)
         self.assertEqual(b.errors, [])
 

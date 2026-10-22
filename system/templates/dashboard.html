@@ -76895,11 +76895,11 @@ ${d5.text}`);
     return `Not saved, and not because of your edit: ${list.length > 1 ? `${list.length} older staged proposals are` : "an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length > 1 ? "those items" : "that item"} in Intake, then save again.`;
   }
   function openBlockersInIntake(files) {
-    const L3 = REV.filter((x5) => files.includes(x5.file) && !x5.done);
-    go2("intake-review", L3.length ? { n: L3[0].n } : void 0);
-    if (L3.length) {
-      irReveal(L3.map((x5) => x5.n));
-      openProposal(L3[0].n);
+    const L3 = REV.filter((x5) => files.includes(x5.file) && !x5.done), first = L3.find((x5) => !["draft", "files"].includes(x5.kind)) || L3[0];
+    go2("intake-review", first ? { n: first.n } : void 0);
+    if (first) {
+      irReveal([first.n, ...L3.map((x5) => x5.n)]);
+      openProposal(first.n);
     }
   }
   async function reloadData() {
@@ -78458,6 +78458,7 @@ ${d5.text}`);
         "irLineParts",
         "irLive",
         "irLiveCounts",
+        "irMeetingOf",
         "irMergeEdits",
         "irMissing",
         "irModel",
@@ -78598,6 +78599,7 @@ ${d5.text}`);
         "nowIso",
         "oneLine",
         "open",
+        "openBlockersInIntake",
         "openCal",
         "openCapture",
         "openChat",

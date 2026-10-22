@@ -64,10 +64,14 @@ class TypeIconTip(LiveBrowserCase):
                 self.assertEqual(seen, want, tab)
             else:
                 self.assertTrue(seen <= {"Risk", "Issue", "Assumption", "Dependency"} and len(seen) >= 2, seen)
-        b.eval("go('review')")
+        # 2.6: Review is the Intake page (#232); a proposal row names its type in words (the kind pill), and any type icon on it
+        # is named as everywhere else
+        b.eval("go('intake-review')")
         b.pump(0.3)
-        if b.eval("document.querySelectorAll('#reviewBody .ki').length"):
-            self.named("#reviewBody .ki")
+        if b.eval("document.querySelectorAll('#v-intake-review tr.irprop .ki').length"):
+            self.named("#v-intake-review tr.irprop .ki")
+        pills = b.eval("[...document.querySelectorAll('#v-intake-review tr.irprop .ickind')].map(e=>e.textContent.trim())")
+        self.assertTrue(all(p in WORDS + ["Update", "Minutes", "Report", "File changes"] for p in pills), pills)
 
     def test_hover_shows_the_type(self):
         b = self.b

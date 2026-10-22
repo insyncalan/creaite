@@ -110,9 +110,10 @@ export async function proposalLabel(file){ let data=null; try{ data=JSON.parse(a
 export async function blockerWords(list){ const parts=[];
   for(const b of list) parts.push(`${await proposalLabel(b.file)}: ${b.why.join("; ")}`);
   return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older staged proposals are`:"an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Intake, then save again.`; }
-/* Intake (the one page for Review since #232), with the blocking proposals' meeting open and the first one in the peek */
-export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done);
-  go("intake-review",L.length?{n:L[0].n}:undefined); if(L.length){ irReveal(L.map(x=>x.n)); openProposal(L[0].n); } }
+/* Intake (the one page for Review since #232), with the blocking proposals' meeting open and the first blocking item in the peek
+   (an item, not its minutes: the refusal names items, and minutes open in their own view) */
+export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done), first=L.find(x=>!["draft","files"].includes(x.kind))||L[0];
+  go("intake-review",first?{n:first.n}:undefined); if(first){ irReveal([first.n,...L.map(x=>x.n)]); openProposal(first.n); } }
 /* fresh data after an apply or undo */
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
