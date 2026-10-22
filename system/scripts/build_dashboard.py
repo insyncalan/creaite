@@ -2873,7 +2873,10 @@ def _filed_row(line, folders):
     cells = [c.strip() for c in line.split(" | ")]
     if len(cells) < 3 or not cells[1].startswith("fp:"):
         return None
-    filed = next((f.strip() for f in cells[2].split(";") if f.strip().endswith(".docx")), "")
+    if cells[2].lower() in ("not filed", ""):          # #307: rejected minutes are written "not filed | 0"; they are not approved
+        return None
+    names = [f.strip() for f in cells[2].split(";") if f.strip()]
+    filed = next((f for f in names if f.endswith(".docx")), "") or next((f for f in names if f.lower().endswith(".html")), "")
     parts = filed.split("/")
     day = cells[1][3:13] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", cells[1][3:13]) else cells[0]
     title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else (cells[1].split("|") + ["Meeting"])[1].strip().capitalize()

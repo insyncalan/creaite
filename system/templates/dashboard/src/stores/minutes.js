@@ -204,7 +204,7 @@ export const HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcr
 
 /** #307: the minutes were filed or moved elsewhere while this view was open (the server's "That file isn't there." or "nothing pending"). */
 export const MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-export const isMovedMinutes = m => /isn't there|nothing pending/i.test(String(m || ""));
+export const isMovedMinutes = m => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m || "").trim());
 
 /** #306: Approve minutes stopped because the transcript has left the inbox (the server's plain words say so). @param {string} m */
 export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));
