@@ -1938,6 +1938,25 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail.icons .badge{right:3px;top:1px}
 .rail .badge.warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);line-height:var(--lh-16)}
 .railmore{flex:none}
+/* #295: the avatar in More's place (RailMore.jsx): an initials circle (accent fill, --accent-ink letters; a person icon with no
+   name), the name and a second line (muted; --warn when Health has a problem), the amber count on the circle. Its size follows
+   the icon size (#182): 28, 32 or 36px; the rows: expanded 44/48/52, labels under 52/56/62, icons only 36/40/44. No motion. */
+.rail{--av-d:28px} :root.railsz-medium .rail{--av-d:32px} :root.railsz-large .rail{--av-d:36px}
+.rail .av{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:var(--av-d);height:var(--av-d);border-radius:50%;background:var(--accent);color:var(--accent-ink);font:700 var(--fs-xs)/var(--lh-1) var(--font);letter-spacing:.02em}
+:root.railsz-large .rail .av{font-size:var(--fs-sm)}
+.rail .av svg,.rail #railMoreMenu .av svg{width:62%;height:62%;stroke-width:2}
+.rail .avt{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1 1 auto}
+.rail .avn{color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rail .avs,.rail .avv{font:400 var(--fs-xs)/var(--lh-16) var(--font);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rail #railMore.avwarn .avs{color:var(--warn);font-weight:500}
+.rail #railMore{height:44px;gap:10px} :root.railsz-medium .rail #railMore{height:48px} :root.railsz-large .rail #railMore{height:52px}
+.rail #railMore .av .badge{position:absolute;top:-5px;right:-7px;margin:0;min-width:16px;height:16px;font-size:var(--fs-2xs);line-height:var(--lh-14);padding:0 4px}
+.rail.labelled #railMore{height:52px;gap:2px} :root.railsz-medium .rail.labelled #railMore{height:56px} :root.railsz-large .rail.labelled #railMore{height:62px}
+.rail.labelled #railMore .avt{flex:none;align-items:center;max-width:100%} .rail.labelled #railMore .avs{display:none}
+.rail.icons #railMore{height:36px} :root.railsz-medium .rail.icons #railMore{height:40px} :root.railsz-large .rail.icons #railMore{height:44px}
+.rail.icons #railMore .avt{display:none} .rail.icons #railMore .av .badge{right:-8px}
+.rail #railMoreMenu .avhead{--av-d:32px;display:flex;align-items:center;gap:10px;padding:6px 8px;min-width:0}
+.rail #railMoreMenu .avhead .avn{font-size:var(--fs-sm);line-height:var(--lh-18)}
 #railMoreMenu{position:fixed;z-index:var(--z-menu);width:240px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:1px}
 #railMoreMenu[hidden]{display:none}
 .rail #railMoreMenu button.nv{justify-content:flex-start;flex-direction:row;height:36px;padding:0 8px;font-size:var(--fs-sm)} .rail #railMoreMenu .rl{display:inline;font-size:var(--fs-sm);text-align:left}
@@ -2747,6 +2766,7 @@ a.seeall{margin-top:8px}
   .tabs button[aria-selected="true"],.pk-tabs button[aria-selected="true"],.acttabs [role=tab][aria-selected="true"]{border-bottom-color:Highlight}
   .setcats button{border-left:2px solid Canvas} .setcats button[aria-selected="true"]{border-left-color:Highlight}
   .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight;border:2px solid Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
+  .rail .av{border:1px solid CanvasText}
   .rail .railfly,#railMoreMenu{border:1px solid CanvasText} .rail .railfly button:hover,.rail .railfly button:focus-visible,#railMoreMenu button:focus-visible{outline:2px solid Highlight}
   .rail button.rtog:focus-visible{outline-color:Highlight}
   #cmdkList button[aria-selected="true"],#cmdkList button:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
@@ -5797,6 +5817,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     healthCount: () => healthCount,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
+    healthFirst: () => healthFirst,
     helpCk: () => helpCk,
     helpFind: () => helpFind,
     helpFocusSearch: () => helpFocusSearch,
@@ -6638,6 +6659,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     railIconSize: () => railIconSize,
     railItem: () => railItem,
     railLabelsOn: () => railLabelsOn,
+    railName: () => railName,
     railNorm: () => railNorm,
     railPopOpen: () => railPopOpen,
     railSave: () => railSave,
@@ -32533,6 +32555,8 @@ ${s5}`;
   };
   var COUNT_KEY = "creaite-health-count";
   var healthCount = y3(0);
+  var healthFirst = y3("");
+  var firstOf = (problems) => problems[0] && problems[0].title || "";
   var healthCheckedAt = g3(() => healthResult.value ? healthResult.value.checked : "");
   var SAVED = [];
   var told = (changes) => SAVED.forEach((f5) => {
@@ -32585,9 +32609,10 @@ ${s5}`;
         healthResult.value = /** @type {HealthResult} */
         r4;
         healthCount.value = (r4.problems || []).length;
+        healthFirst.value = firstOf(r4.problems || []);
         const still = (r4.problems || []).map((p6) => p6.fix && p6.fix.id);
         healthCardWaiting.value = healthCardWaiting.value.filter((id2) => still.includes(id2));
-        store.set(COUNT_KEY, { n: healthCount.value, at: Date.now() });
+        store.set(COUNT_KEY, { n: healthCount.value, at: Date.now(), first: healthFirst.value });
       } else healthError.value = r4.message || "The health check didn't run";
     } finally {
       healthBusy.value = false;
@@ -32603,7 +32628,8 @@ ${s5}`;
     if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
     healthResult.value = { ...res, problems, dismissed: gone };
     healthCount.value = problems.length;
-    store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() });
+    healthFirst.value = firstOf(problems);
+    store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt(), first: healthFirst.value });
     return true;
   }
   function dismissProblem(p6, reason) {
@@ -32626,7 +32652,10 @@ ${s5}`;
   }
   function startSettingsStore() {
     const c5 = store.get(COUNT_KEY, null);
-    if (c5 && typeof c5.n === "number") healthCount.value = c5.n;
+    if (c5 && typeof c5.n === "number") {
+      healthCount.value = c5.n;
+      healthFirst.value = typeof c5.first === "string" ? c5.first : "";
+    }
     j3(() => showHealthCount(healthCount.value));
   }
 
@@ -33397,6 +33426,12 @@ ${s5}`;
     {}
   );
   var railMoreOpen = y3(false);
+  var railName = y3("");
+  var railInitials = (name) => {
+    const w6 = String(name || "").trim().split(/\s+/).filter(Boolean);
+    const first = (x5) => Array.from(x5)[0] || "";
+    return (w6.length > 1 ? first(w6[0]) + first(w6[w6.length - 1]) : first(w6[0] || "")).toUpperCase();
+  };
   var railCustOpen = y3(false);
   var railLabelsOn = y3(true);
   var railIconSize = y3(
@@ -35195,6 +35230,8 @@ ${s5}`;
     folder: [["path", { d: "M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }]],
     gear: [["path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }], ["circle", { cx: "12", cy: "12", r: "3" }]],
     more: [["circle", { cx: "5", cy: "12", r: "1" }], ["circle", { cx: "12", cy: "12", r: "1" }], ["circle", { cx: "19", cy: "12", r: "1" }]],
+    user: [["circle", { cx: "12", cy: "8.5", r: "3.6" }], ["path", { d: "M5 20v-.5a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v.5" }]],
+    /* #295: the avatar with no name set */
     pulse: [["path", { d: "M3 12h4l2.5-6 4 12 2.5-6H21" }]],
     help: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" }]],
     sliders: [["path", { d: "M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" }]],
@@ -35306,7 +35343,7 @@ ${s5}`;
       if (how === "swap") {
         const to2 = zone === "top" ? "more" : "top";
         setD(placed(d5, id2, to2, (to2 === "top" ? d5.top : d5.more).length));
-        setSaid(`${railItem(id2).title} moved to ${to2 === "top" ? "the sidebar" : "More"}`);
+        setSaid(`${railItem(id2).title} moved to ${to2 === "top" ? "the sidebar" : "the menu under your name"}`);
       } else {
         const j5 = i5 + (how === "up" ? -1 : 1);
         if (j5 < (zone === "top" ? 1 : 0) || j5 >= L3.length) return;
@@ -35345,7 +35382,7 @@ ${s5}`;
       else onClose();
     };
     const row2 = (id2, zone, i5, n4) => {
-      const it2 = railItem(id2), fixed = id2 === "today", to2 = zone === "top" ? "More" : "the sidebar";
+      const it2 = railItem(id2), fixed = id2 === "today", to2 = zone === "top" ? "the menu under your name" : "the sidebar";
       return /* @__PURE__ */ u4("li", { "data-rid": id2, tabindex: -1, class: `rpi${drag === id2 ? " dragging" : ""}`, "aria-label": it2.title, children: [
         /* @__PURE__ */ u4(
           "span",
@@ -35435,11 +35472,11 @@ ${s5}`;
               }, children: d5.top.map((id2, i5) => row2(id2, "top", i5, d5.top.length)) })
             ] }),
             /* @__PURE__ */ u4("div", { children: [
-              /* @__PURE__ */ u4("h3", { id: "railCustMore", children: "In More" }),
+              /* @__PURE__ */ u4("h3", { id: "railCustMore", children: "In the menu under your name" }),
               /* @__PURE__ */ u4("ul", { "aria-labelledby": "railCustMore", "data-zone": "more", ref: (el2) => {
                 zones.current.more = el2;
               }, children: d5.more.map((id2, i5) => row2(id2, "more", i5, d5.more.length)) }),
-              d5.more.length ? null : /* @__PURE__ */ u4("p", { class: "sub rcempty", children: "Empty: More is hidden." })
+              d5.more.length ? null : /* @__PURE__ */ u4("p", { class: "sub rcempty", children: "Empty: the menu under your name still holds Health, Help and Customise sidebar." })
             ] })
           ] }),
           /* @__PURE__ */ u4("label", { class: "rcicons", children: [
@@ -35701,6 +35738,7 @@ ${s5}`;
   }
 
   // components/sidebar/RailMore.jsx
+  var probs = (n4) => `${n4} ${n4 === 1 ? "problem" : "problems"}`;
   function RailMore({ onGo, onCustomise, onHealth, onHelp }) {
     const btn = A2(
       /** @type {HTMLButtonElement | null} */
@@ -35716,6 +35754,7 @@ ${s5}`;
     );
     const [ptr, setPtr] = d2(false);
     const open2 = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more;
+    const name = railName.value, who2 = name || "You", init = railInitials(name);
     const bd2 = A2(
       /** @type {HTMLSpanElement | null} */
       null
@@ -35726,29 +35765,11 @@ ${s5}`;
       const b5 = btn.current, s5 = bd2.current;
       if (!b5 || !s5) return;
       const n5 = healthCount.value;
-      b5.setAttribute("aria-label", `More${n5 ? `, ${n5} ${n5 === 1 ? "problem" : "problems"}` : ""}`);
+      b5.setAttribute("aria-label", `${railName.value || "You"}, menu${n5 ? `, ${probs(n5)}` : ""}`);
       s5.textContent = capCount(n5);
       s5.style.display = n5 ? "" : "none";
-      s5.setAttribute("aria-label", `${n5} ${n5 === 1 ? "problem" : "problems"}`);
-    }), [more.length > 0]);
-    h2(() => {
-      const b5 = btn.current;
-      if (!b5) return;
-      return hoverAttach(b5, {
-        group: menuGroup,
-        focusOpens: false,
-        panel: () => box.current,
-        open: () => {
-          if (isOpen.current) return;
-          tipHide();
-          setPtr(true);
-          railMoreOpen.value = true;
-        },
-        close: () => {
-          railMoreOpen.value = false;
-        }
-      });
-    }, [more.length > 0]);
+      s5.setAttribute("aria-label", probs(n5));
+    }), []);
     h2(() => j3(() => {
       void railView.value;
       if (isOpen.current) close(false);
@@ -35764,20 +35785,24 @@ ${s5}`;
       const r4 = btn.current.getBoundingClientRect(), rail = btn.current.closest(".rail")?.getBoundingClientRect() || r4;
       setAt({ left: `${rail.right + 4}px`, bottom: `${Math.max(8, innerHeight - r4.bottom)}px` });
     }, [open2, mode]);
-    if (!more.length) return null;
     const go3 = (id2) => {
       close(false);
       onGo(id2);
     };
-    const n4 = healthCount.value;
+    const n4 = healthCount.value, first = healthFirst.value;
+    const line = n4 ? first || `${probs(n4)} to fix` : "Settings and health";
+    const circle = (badge) => /* @__PURE__ */ u4("span", { class: "av", "aria-hidden": "true", children: [
+      init ? /* @__PURE__ */ u4("span", { class: "avi", children: init }, "i") : /* @__PURE__ */ u4(RailIcon, { name: "user" }, "u"),
+      badge
+    ] });
     const health2 = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHealth", onClick: () => {
       close(false);
       onHealth();
     }, children: [
       /* @__PURE__ */ u4(RailIcon, { name: "pulse" }),
       /* @__PURE__ */ u4("span", { class: "rl", children: "Health" }),
-      /* @__PURE__ */ u4("span", { class: "badge warn", id: "railHealthBadge", style: n4 ? "" : "display:none", "aria-label": `${n4} ${n4 === 1 ? "problem" : "problems"}`, children: capCount(n4) }),
-      /* @__PURE__ */ u4("span", { class: "vh", children: n4 ? `: ${n4} ${n4 === 1 ? "problem" : "problems"}` : "" })
+      /* @__PURE__ */ u4("span", { class: "badge warn", id: "railHealthBadge", style: n4 ? "" : "display:none", "aria-label": probs(n4), children: capCount(n4) }),
+      /* @__PURE__ */ u4("span", { class: "vh", children: n4 ? `: ${probs(n4)}` : "" })
     ] }, "health");
     const help = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHelp", onClick: () => {
       close(false);
@@ -35798,7 +35823,7 @@ ${s5}`;
         "button",
         {
           type: "button",
-          class: "nv",
+          class: `nv avbtn${n4 ? " avwarn" : ""}`,
           id: "railMore",
           ref: btn,
           "aria-haspopup": "menu",
@@ -35807,6 +35832,7 @@ ${s5}`;
           onClick: () => {
             menuGroup.release(btn.current);
             setPtr(false);
+            if (!open2 && menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
             railMoreOpen.value = !open2;
             if (open2 && menuGroup.current === btn.current) menuGroup.close();
           },
@@ -35819,9 +35845,11 @@ ${s5}`;
             else railMoreOpen.value = true;
           },
           children: [
-            /* @__PURE__ */ u4(RailIcon, { name: "more" }),
-            /* @__PURE__ */ u4("span", { class: "rl", children: "More" }),
-            /* @__PURE__ */ u4("span", { class: "badge warn", id: "railMoreBadge", ref: bd2, style: "display:none" })
+            circle(/* @__PURE__ */ u4("span", { class: "badge warn", id: "railMoreBadge", ref: bd2, style: "display:none" }, "b")),
+            /* @__PURE__ */ u4("span", { class: "avt", children: [
+              /* @__PURE__ */ u4("span", { class: "rl avn", children: mode === "labels" ? who2.split(/\s+/)[0] : who2 }),
+              /* @__PURE__ */ u4("span", { class: "avs", children: line })
+            ] })
           ]
         }
       ),
@@ -35830,7 +35858,7 @@ ${s5}`;
         {
           bare: true,
           id: "railMoreMenu",
-          label: "More",
+          label: who2,
           hidden: !open2,
           style: at2,
           anchor: btn.current,
@@ -35838,6 +35866,14 @@ ${s5}`;
           autoFocus: !ptr,
           onClose: (how) => close(how === "esc"),
           children: [
+            /* @__PURE__ */ u4("div", { class: "avhead", role: "presentation", children: [
+              circle(null),
+              /* @__PURE__ */ u4("span", { class: "avt", children: [
+                /* @__PURE__ */ u4("span", { class: "avn", children: who2 }),
+                /* @__PURE__ */ u4("span", { class: "avv", children: S.version ? `creaite · v${S.version}` : "creaite" })
+              ] })
+            ] }),
+            /* @__PURE__ */ u4("div", { role: "separator", class: "railsep" }),
             rows2,
             /* @__PURE__ */ u4("div", { role: "separator", class: "railsep" }),
             /* @__PURE__ */ u4("div", { class: "fsec2", role: "presentation", children: "Customise sidebar" }),
@@ -35957,6 +35993,7 @@ ${s5}`;
     railLabelsOn.value = S.railLabels !== false;
     railIconSize.value = railSizeNorm(S.railIconSize);
     railLoadUser();
+    railName.value = S.meSet === false ? "" : String(S.me || "").trim();
     const mq = matchMedia("(max-width:899px)");
     railNarrow.value = mq.matches;
     mq.addEventListener("change", (e4) => {
@@ -36046,8 +36083,8 @@ ${s5}`;
   }
   function bootRail0077() {
     const ap2 = SETSECTIONS.find((x5) => x5.id === "appearance"), r02 = ap2.render;
-    ap2.kw += " left rail sidebar navigation hide reorder order icons only titles customise collapse more";
-    ap2.render = () => r02() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in More, put them in your own order, or show icons only");
+    ap2.kw += " left rail sidebar navigation hide reorder order icons only titles customise collapse more menu name avatar";
+    ap2.render = () => r02() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in the menu under your name, put them in your own order, or show icons only");
   }
 
   // components/report/sheetLib.js
@@ -57295,7 +57332,10 @@ ${pre}**Current state title:** ${title}`);
         W3[sig] = { ...W3[sig] || {}, [f5]: v5 };
       } else if (k5 === "search.debounce_ms") SEARCHCFG.debounce_ms = v5;
       else if (k5 === "dashboard.generate_days") S.genDays = v5;
-      else if (k5 === "dashboard.rail_labels") railLabelsOn.value = v5 !== false;
+      else if (k5 === "identity.name") {
+        S.meSet = !!String(v5 || "").trim();
+        railName.value = String(v5 || "").trim();
+      } else if (k5 === "dashboard.rail_labels") railLabelsOn.value = v5 !== false;
       else if (k5 === "dashboard.rail_icon_size") {
         railIconSize.value = railSizeNorm(v5);
         S.railIconSize = railIconSize.value;
@@ -74368,7 +74408,7 @@ ${d5.text}`);
       add("Actions", "ask creaite", "/", openChat);
       add("Actions", "Switch light or dark", "", () => $("#themeBtn").click());
       THEMES.forEach((t47) => add("Actions", `Theme: ${t47.id}`, themeOf(S.palette) === t47 ? "current" : "", () => setPalette(t47.id)));
-      add("Actions", "Customise the rail", "right-click the rail", () => railPopOpen());
+      add("Actions", "Customise the rail", "right-click the rail, or the menu under your name", () => railPopOpen());
       if (q6.length > 1) {
         P4.forEach((p6) => (p6.ms || []).filter((m5) => m5[3]).forEach((m5) => add("Milestones", `${m5[3]} · ${m5[0]}`, m5[1] ? fd(m5[1]) : "", () => openMilestone(m5[3]))));
         (D.inbox || []).forEach((f5) => add("Intake", f5.name, "preview", () => {
@@ -78157,6 +78197,7 @@ ${d5.text}`);
         "healthCount",
         "healthEvidence",
         "healthFacts",
+        "healthFirst",
         "helpFind",
         "helpGo",
         "helpLineReset",
@@ -78184,6 +78225,7 @@ ${d5.text}`);
         "ic",
         "iconShapes",
         "igText",
+        "initials",
         "insertImage",
         "intakeSeams",
         "intakeTarget",
@@ -78465,8 +78507,10 @@ ${d5.text}`);
         "quipNow",
         "railIconSize",
         "railLabelsOn",
+        "railName",
         "railNorm",
         "railSave",
+        "railSetIconSize",
         "railSetLabels",
         "raw",
         "rbDismiss",

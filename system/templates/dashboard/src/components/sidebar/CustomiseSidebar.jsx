@@ -1,5 +1,5 @@
 // @ts-check
-/* CustomiseSidebar (BL-319 part 6): two lists, "In the sidebar" and "In More". A page moves by dragging its handle (within
+/* CustomiseSidebar (BL-319 part 6): two lists, "In the sidebar" and "In the menu under your name" (More until #295). A page moves by dragging its handle (within
    a list or across to the other), by its arrow buttons (Move up, Move down, Move to More or Move to the sidebar), or
    with Alt and an arrow key on its row (↑ ↓ within the list, ← → across). Today always comes first in the sidebar;
    Settings can live in either. Icons only collapses the sidebar to icons (what older versions saved as display "icons"), and
@@ -75,7 +75,7 @@ export function CustomiseSidebar({ onSave, onClose }) {
     const zone = d.top.includes(id) ? "top" : "more", L = zone === "top" ? d.top : d.more, i = L.indexOf(id);
     if (id === "today") return;
     if (how === "swap") { const to = zone === "top" ? "more" : "top"; setD(placed(d, id, to, (to === "top" ? d.top : d.more).length));
-      setSaid(`${railItem(id).title} moved to ${to === "top" ? "the sidebar" : "More"}`); }
+      setSaid(`${railItem(id).title} moved to ${to === "top" ? "the sidebar" : "the menu under your name"}`); }
     else { const j = i + (how === "up" ? -1 : 1); if (j < (zone === "top" ? 1 : 0) || j >= L.length) return;
       setD(placed(d, id, zone, j)); setSaid(`${railItem(id).title} moved ${how}, ${j + 1} of ${L.length}`); }
     focusNext.current = [id, how];
@@ -93,7 +93,7 @@ export function CustomiseSidebar({ onSave, onClose }) {
 
   /** @param {string} id @param {"top"|"more"} zone @param {number} i @param {number} n */
   const row = (id, zone, i, n) => {
-    const it = railItem(id), fixed = id === "today", to = zone === "top" ? "More" : "the sidebar";
+    const it = railItem(id), fixed = id === "today", to = zone === "top" ? "the menu under your name" : "the sidebar";
     return (
       <li key={id} data-rid={id} tabindex={-1} class={`rpi${drag === id ? " dragging" : ""}`} aria-label={it.title}>
         <span class="grip" data-rgrip aria-hidden="true" hidden={fixed}
@@ -120,9 +120,9 @@ export function CustomiseSidebar({ onSave, onClose }) {
       <div class="rccols" onKeyDown={rowKeys}>
         <div><h3 id="railCustTop">In the sidebar</h3>
           <ul aria-labelledby="railCustTop" data-zone="top" ref={el => { zones.current.top = el; }}>{d.top.map((id, i) => row(id, "top", i, d.top.length))}</ul></div>
-        <div><h3 id="railCustMore">In More</h3>
+        <div><h3 id="railCustMore">In the menu under your name</h3>
           <ul aria-labelledby="railCustMore" data-zone="more" ref={el => { zones.current.more = el; }}>{d.more.map((id, i) => row(id, "more", i, d.more.length))}</ul>
-          {d.more.length ? null : <p class="sub rcempty">Empty: More is hidden.</p>}</div>
+          {d.more.length ? null : <p class="sub rcempty">Empty: the menu under your name still holds Health, Help and Customise sidebar.</p>}</div>
       </div>
       <label class="rcicons"><input type="checkbox" class="switch" role="switch" id="railCustLabels" checked={d.labels && !d.icons}
         onChange={e => { const on = /** @type {HTMLInputElement} */ (e.currentTarget).checked; setD({ ...d, labels: on, icons: on ? false : d.icons }); }} /> Labels when collapsed</label>

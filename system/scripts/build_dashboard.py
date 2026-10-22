@@ -1614,11 +1614,19 @@ def sweep_due_info():
         return {"due": False, "due_from": "07:00", "last": None}
 
 
+def installed_version():
+    """#295: the installed version for the avatar menu, or "" when the VERSION file is missing."""
+    f = paths.VERSION_FILE
+    return f.read_text(encoding="utf-8").strip() if f.exists() else ""
+
+
 def ui_settings(s):
     """settings.json → the dashboard's settings keys."""
     import tracker      # BL-181: the weekend days
     g = lambda *k, d=None: _dig(s, k, d)  # noqa: E731
     return {"me": g("identity", "name", d="Alan Carter"), "short": ", ".join(g("identity", "short_forms", d=[])),
+            "meSet": bool(str(g("identity", "name", d="") or "").strip()),   # #295: the avatar shows "You" until a name is set
+            "version": installed_version(),                                  # #295: the avatar menu's "creaite · v…"
             "ownDomains": [str(d).lower() for d in g("identity", "own_domains", d=[])],        # BL-83: who counts as inside the company
             "staleDays": g("review", "stale_after_days", d=7), "rvAdvance": g("review", "auto_advance", d=True),   # BL-133
             "dupOverlap": g("review", "duplicate_overlap", d=0.6),   # BL-133 stage B: how close a proposal must be to an open item "dueSoon": g("review", "due_soon_days", d=7),

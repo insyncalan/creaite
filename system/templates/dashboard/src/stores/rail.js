@@ -1,7 +1,7 @@
 // @ts-check
 /* stores/rail.js (BL-319 part 6, dev/COMPONENTS.md): the sidebar's store. The items, the saved choice and the signals
    the sidebar's components read: the choice (railCfg), the page it marks (railView), the counts on its badges
-   (railCounts), whether More is open, whether the window is narrow. Old code changes them only through the functions
+   (railCounts), whether More (the avatar's menu, #295) is open, whether the window is narrow, the name on the avatar. Old code changes them only through the functions
    here (setRailView, setRailCount); nothing writes into the sidebar's DOM.
 
    The saved choice is settings.json's dashboard.rail = {order, more, hidden, display}:
@@ -73,6 +73,14 @@ export const railView = signal("today");
 export const railCounts = signal(/** @type {Record<string, RailCount>} */ ({}));
 /** Whether More's menu is open. */
 export const railMoreOpen = signal(false);
+/** #295: the name on the avatar (settings' identity.name, Settings › Essentials › Your name); "" when none is set, which
+    shows a person icon and "You". Never written in code: rail.js reads it from the page's settings and keeps it in step. */
+export const railName = signal("");
+/** The avatar's initials: the first letters of the first and last words, or the first letter of one word ("" with no name).
+    @param {string} name */
+export const railInitials = name => { const w = String(name || "").trim().split(/\s+/).filter(Boolean);
+  const first = (/** @type {string} */ x) => Array.from(x)[0] || "";
+  return (w.length > 1 ? first(w[0]) + first(w[w.length - 1]) : first(w[0] || "")).toUpperCase(); };
 /** Whether Customise sidebar is open. */
 export const railCustOpen = signal(false);
 /** The setting "Labels when collapsed" (dashboard.rail_labels, on by default). */
