@@ -14,7 +14,7 @@ A file that fails in its shard is run alone; "flake" = failed in the shard, pass
 |---|---|---|
 | test_looks_like.py | stale test | #232 C2 retired llTag; looks for the peek note's `Looks like <a … data-open>` |
 | test_dashboard_split.py | merge artefact | the guard-small test's comment "(FAT)" read as a page name; reworded |
-| test_clock_guard.py | stale baseline / merge artefact | drafts.js 4 → 6 (the AI check's back-off timer); test_calendar_refresh and test_followed_needs use test_dashboard.today() |
+| test_clock_guard.py | merge artefact | baseline kept at 4 (Jarvis): drafts.js's AI check now uses core/server.js's onceFor (in-flight read + 60 s cache) instead of two Date.now() reads; test_calendar_refresh and test_followed_needs use test_dashboard.today() |
 | test_decisions_needed.py | stale test | the Draft email now reads /api/edit/ai/caps (a read): allowed in the no-writes filter |
 | test_drafts_scaffold.py | stale test | #246 puts the agenda style in the AI drafts tab: switches = features, rows = features + 1 |
 | test_followed_needs.py | stale test | #232 C2: Today's proposal link lands on Intake › Review (no RHL); note: a sweep proposal has no meeting to open, so nothing is highlighted |

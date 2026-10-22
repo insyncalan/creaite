@@ -14,7 +14,7 @@ import { $, $$, addHTML, esc, html, ic, ICONS, putHTML, raw } from "./core/dom.j
 import { creaiteEditor, edEmailHtml } from "./core/editor.js";
 import { CALI, CMDENTER, closeCal, onCmdEnter, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
-import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
+import { api, OLDSERVER, oneLine, onceFor, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, pkUndoLast, REC } from "./panel.js";
@@ -215,15 +215,14 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
    internal. The page only asks whether this server does that (/api/edit/ai/caps, until it says yes); until then the bar stays off for an
    outside recipient (#133's interim) and no addresses are sent, so an older server is never asked for something it can't check. The page's
    own `outside` only shows or hides the bar: it is never sent. */
-let DE_AI_SAFE=false, deAiAsking=null, deAiNoUntil=0;
+let DE_AI_SAFE=false;
 const DE_AI_NO_MS=60000;   /* a no (an older server's 404, or an error) is kept a minute, so a redraw doesn't ask again each time */
 /** Whether this server decides the email's audience itself (kept once it says yes; a no is asked again after a minute). */
 export const deAiSafe=()=>DE_AI_SAFE;
+/* core/server.js's onceFor keeps the one read in flight and its answer for a minute, so this file reads no clock of its own */
+const deAiAsk=onceFor(DE_AI_NO_MS,()=>api("/api/edit/ai/caps",{}).then(r=>(DE_AI_SAFE=!!(r&&r.ok&&r.email_audience==="recipients")),()=>false));
 /** Ask the server, once at a time. @returns {Promise<boolean>|null} */
-export function deAiCheck(){ if(DE_AI_SAFE||deAiAsking||!viaServer()||Date.now()<deAiNoUntil) return deAiAsking;
-  const q=Promise.resolve().then(()=>api("/api/edit/ai/caps",{})).then(r=>(DE_AI_SAFE=!!(r&&r.ok&&r.email_audience==="recipients")),()=>false)
-    .then(ok=>{ if(!ok) deAiNoUntil=Date.now()+DE_AI_NO_MS; return ok; });
-  deAiAsking=q; q.then(()=>{ if(deAiAsking===q) deAiAsking=null; }); return q; }
+export function deAiCheck(){ if(DE_AI_SAFE||!viaServer()) return null; return deAiAsk(); }
 /** The addresses the email goes to, as the server judges them: the person's, or every attendee's ("" for anyone with none on record). */
 export const deRecipients=()=>{ const d=shared.DE; if(!d) return [""]; return d.mode==="followup"?(d.attendees||[]).map(a=>String(a.email||"")):[String(d.email||"")]; };
 /** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
