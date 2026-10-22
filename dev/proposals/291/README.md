@@ -10,3 +10,6 @@ can send "check my mail" and the bubble reads in plain words. Until then they se
 
 Add a test beside `test_panel_sweep.py` for the new phrases (a "check my mail and apply" must stay a plain chat: `PANEL_SWEEP_NOT`
 already refuses it).
+
+## update.py (guarded by test_word_export_227 check 9)
+`update.py.diff` holds the #291 Tier 1 plain-words change to `system/scripts/update.py` (the "Refused: …" messages become one plain "download is damaged or was changed" line) together with the matching `dev/tests/test_update.py` expectation. Apply both together; verified with `git apply --check` and `-R --check`. Until it is applied the line keeps the old wording and the old test.
