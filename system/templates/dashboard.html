@@ -4294,7 +4294,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
-    <div class="livealert" id="liveAlert" role="alert"><b>creaite has stopped.</b> Reopen the creaite app. Your changes are kept and saved when it's back. <code id="alertCmd" hidden></code> <button class="mini" id="checkLive">Check again</button></div>
+    <div class="livealert" id="liveAlert" role="alert"><b>creaite has stopped.</b> Reopen the creaite app, or paste this into Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> Your changes are kept and saved when it's back. <button class="mini" id="checkLive">Check again</button></div>
     <div class="livealert stalealert" id="staleAlert" role="alert" hidden><b>This page is out of date.</b> <span id="staleMsg"></span> <button class="mini" id="staleReload">Reload</button></div><!-- BL-174 -->
     <div class="errbanner" id="errBanner" role="status" aria-live="polite" hidden></div><!-- BL-180: under the other page banners, errors last -->
     <div class="content">
@@ -47819,7 +47819,7 @@ ${s5}`;
       const res = await applyNow();
       if (res.ok) undo = () => undoApply(res.apply_id);
       else {
-        await putBack(oneLine(res.message));
+        await putBack(oneLine(applyWords(res.message)));
         return;
       }
     }
@@ -62016,7 +62016,7 @@ ${d5.text}`);
       await pkReconcile();
       if (!r4.ok) {
         pkSaving("fail", "Not applied");
-        snack(oneLine(r4.message));
+        snack(oneLine(applyWords(r4.message)));
         return -1;
       }
       const done = n4 - shared.PKS.length;
@@ -72475,7 +72475,17 @@ ${d5.text}`);
     if (md2) return `Move the folder ${fnm(md2[1])} → ${arch(md2[2]) ? "Archive" : "its place in the projects folder"}`;
     if (cf2) return `Create the folder ${fnm(cf2[1])}`;
     if (cr2) return `Create ${fnm(cr2[1])} (${cr2[2]} line${cr2[2] === "1" ? "" : "s"})`;
-    if (ch2) return `Change ${fnm(ch2[1])}:`;
+    if (ch2) {
+      const q5 = ch2[1].replace(/\/+$/, "").split("/"), last = q5[q5.length - 1], fold = q5.length > 1 ? q5[q5.length - 2] : "";
+      if (last === "CLAUDE.md") {
+        const pr2 = P4.find((x5) => fold === x5.name || fold === `${x5.code} ${x5.name}` || fold.startsWith(x5.code + " "));
+        const n4 = pr2 ? pr2.name : fold.replace(/^[A-Z][A-Z0-9]{2,6} /, "");
+        return n4 && n4 !== "projects" ? `Change ${n4} memory:` : "Change this project's memory:";
+      }
+      if (last === "project-register.md") return "Change the project register:";
+      if (last === "people-register.md") return "Change the people register:";
+      return `Change ${fnm(ch2[1])}:`;
+    }
     return b5;
   }
   function edLine(ln2) {
@@ -76896,7 +76906,9 @@ ${d5.text}`);
         const one = bad.length === 1, n4 = applyTitle(bad[0][1], bad[0][2]);
         return `${one ? "One suggestion" : bad.length + " suggestions"}${one && n4 ? ` (${n4})` : ""} couldn't be saved. ${one ? "It needs" : "They need"} fixing in Review. Nothing was saved.`;
       }
-      if (/Apply (stopped|failed)|proposed-\S+\.json/.test(t47)) return "Nothing was saved. Something in the suggestions needs fixing in Review.";
+      if (/a recode is applied on its own/.test(t47)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Review first, then ask for the code change again.";
+      if (/^Apply failed/m.test(t47)) return "creaite couldn't save this, so nothing was changed. Settings › Health › Diagnostics has the reason.";
+      if (/Apply stopped|proposed-\S+\.json/.test(t47)) return "Nothing was saved. creaite stopped before changing anything; Settings › Health › Diagnostics has the reason.";
       return t47;
     }
     return t47.split("\n").map((x5) => x5.trim()).filter((x5) => x5 && !/^Apply stopped\. Nothing was written\.$/.test(x5)).map((x5) => x5.replace(/^proposed-\S+\.json (item \d+|minutes): /, (a5, w6) => w6 === "minutes" ? "" : "an item was ")).join("\n");

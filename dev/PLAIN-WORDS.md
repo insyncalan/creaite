@@ -21,7 +21,7 @@ The words creaite uses in anything the user reads, and the words it never shows.
 | apply / applied | **save** / **approve** | Apply button → **Save approved items**; "Apply stopped. Nothing was written." → "Nothing was saved." |
 | tracker | **your project record** (or "your work items") | "Updating the tracker", "Checked against the tracker", "isn't in the tracker". Lower priority: acceptable if explained once |
 | vault | **your creaite folder** / "creaite" | "Search the vault" → **Search everything**; "the vault isn't connected"; "isn't in the vault yet" |
-| live server / server | **creaite** ("creaite isn't running") | "The live server isn't reachable" → "creaite has stopped. Reopen the creaite app."; "Saving needs the live server"; "Live server needed: search runs through it" |
+| live server / server | **creaite** ("creaite isn't running") | "The live server isn't reachable" → "creaite has stopped. Reopen the creaite app, or paste this into Terminal: <the start command>" (the stopped alert and Settings › Health › Diagnostics are the only two places that show the restart command); "Saving needs the live server"; "Live server needed: search runs through it" |
 | extract / extraction / re-extract | **find items in the meeting** / "read it again" | Intake, minutes: "so you can check the extraction", "never extracted" |
 | refused / "whatever is approved" | "creaite can't do that", with one plain reason | Approval card, permission messages |
 | unknown field / invalid / validation errors | Name the meeting and the item, never the file: "One suggestion (Budget review, decision 1) couldn't be saved. It needs fixing in Review." | Apply errors, e.g. "unknown field(s) for decisions: raised. Valid: …" |

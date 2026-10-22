@@ -27,7 +27,7 @@ import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
 import { openProjectWs } from "./stores/projectSettings.js";   /* v2.6: a workstream is added in its project's settings */
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
-import { api, applyNow, applySoon, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
+import { api, applyNow, applySoon, applyWords, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
 import { hsAsk, hsCardHtml, hsSparkHtml, hsStat, hsUse } from "./healthSuggest.js";
@@ -696,7 +696,7 @@ export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.P
   if(!viaServer()){ snack("Applying needs the live server: start it, or say “apply” in Claude Code"); return -1; }
   $("#pkApply").disabled=true; pkSaving("busy","Applying…");
   try{ const r=await applyNow({peek:true}); await pkReconcile();
-    if(!r.ok){ pkSaving("fail","Not applied"); snack(oneLine(r.message)); return -1; }
+    if(!r.ok){ pkSaving("fail","Not applied"); snack(oneLine(applyWords(r.message))); return -1; }
     const done=n-shared.PKS.length; if(shared.CUR&&pkOn()) pkDraw();
     snack(done?`Applied ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still staged (changed elsewhere since)`:""}. A backup was taken first`:"Nothing applied: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }

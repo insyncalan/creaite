@@ -53,8 +53,21 @@ class RefusedApplyWords(unittest.TestCase):
 
     def test_other_messages_pass_through(self):
         self.assertEqual(words("Nothing to apply: no decided items."), "Nothing to apply: no decided items.")
-        self.assertEqual(words("Apply failed; nothing was written. Invalid: x"),
-                         "Nothing was saved. Something in the suggestions needs fixing in Review.")   # #291 Tier 1
+        failed = words("Apply failed; nothing was written. Invalid: x")           # #275 (Cap's 1): a failure Review can't fix
+        self.assertIn("nothing was changed", failed)
+        self.assertIn("Diagnostics", failed)
+        self.assertNotIn("Review", failed)
+
+    def test_the_recode_refusal_and_a_stop_are_not_sent_to_review_to_fix(self):
+        recode = "Apply stopped. Nothing was written.\n  proposed-x.json: a recode is applied on its own, with no other items in its proposal."
+        shown = words(recode)
+        self.assertIn("has to go through on its own", shown)
+        self.assertIn("ask for the code change again", shown)
+        self.assertNotIn("needs fixing", shown)
+        self.assertNotIn("proposed-", shown)
+        stop = words("Apply stopped. Nothing was written.\n  proposed-x.json something new")
+        self.assertIn("Diagnostics", stop)
+        self.assertNotIn("needs fixing in Review", stop)
 
     def test_failed_apply_line_form(self):
         m = "Apply failed; nothing was written. Invalid: write: projects/_portfolio/people-register.md changed since this proposal was made"
