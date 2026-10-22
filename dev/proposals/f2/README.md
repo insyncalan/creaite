@@ -25,4 +25,4 @@ Restore the dated database copy and `update.py undo`, **before** any number abov
 
 ## Check
 `git apply --check` and `-R --check` pass on `origin/v261-line2` with F1 applied. Tests on the patched tree: test_tracker, test_codes, test_schema_sprint5, test_milestone_states, test_milestones, test_ask_claims, test_item_history, test_edit_ai_client_place pass. The ID check was kept on one line per table because `test_codes.v1_schema` rewrites it line by line. Run the full suite before approving.
-Simulation: see `../f1/README.md`.
+Simulation: see `../f1/README.md`. `f2-sortkey.diff` was rebased on the current line2 (its `today.js` hunk had stopped applying after #313; 16 files, the same set).
