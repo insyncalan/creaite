@@ -1,6 +1,6 @@
---- a/system/scripts/live_server.py	2026-10-22 21:15:51
-+++ b/system/scripts/live_server.py	2026-10-22 21:15:51
-@@ -141,6 +141,8 @@
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -141,6 +141,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
  - POST /api/edit/approve, /reject, /stage {card}; /api/edit/pending: ask creaite's change card for the record (BL-258):
                           Approve applies it at once through tracker.py, Stage leaves it in Review, Reject drops it
  - POST /api/setup/status  what the set-up checklist needs, read only; /api/setup/run {step} a step the allow list permits (BL-166)
@@ -9,7 +9,7 @@
  - POST /api/health/fixes  Health's Fix its, each with what it does and its one command (read only); POST /api/health/fix/<id> with
                           an empty body runs that one fixed command under the job lock and logs it (BL-320). SIGUSR1 (launch.py
                           restart, after an update) restarts the server in place once no job is running
-@@ -5723,6 +5725,81 @@
+@@ -5738,6 +5740,99 @@ def setup_run_route(handler, req):
  
  SETUP_ROUTES = {"/api/setup/status": setup_status_route, "/api/setup/run": setup_run_route}
  # ===== end BL-166 =====
@@ -18,8 +18,8 @@
 +#                                      launch.py agent status --json (read only). `supported` is false off macOS and in the
 +#                                      development repository.
 +# POST /api/autostart/set {on: bool}   installs (`launch.py agent install`) or removes (`agent remove`) this vault's login agent,
-+#                                      under the job lock. Token-checked like every POST, and refused while an ask creaite run is in progress or marked
-+#                                      (system/guard/run.json; unreadable counts as busy). It is the user's own click in the app:
++#                                      under the job lock. Token-checked like every POST, the open page's own call only (page_call), and refused while an ask creaite run is in progress or marked
++#                                      (system/guard/run.json, read under START_LOCK; unreadable counts as busy). It is the user's own click in the app:
 +#                                      ~/Library/LaunchAgents is on reach.py's never list, so ask creaite can't write it, and
 +#                                      launch.py stays RECORD (never run by the panel). The page asks first; the reply is words,
 +#                                      never the script's own text. Nothing here is a new permission and no allow-list rule changes.
@@ -62,27 +62,45 @@
 +
 +
 +def autostart_set_route(handler, req):
-+    """POST /api/autostart/set {on}: turn the login agent on or off (the user's own click), then say the new state."""
++    """POST /api/autostart/set {on}: turn the login agent on or off (the user's own click), then say the new state.
++    Review of #300: the open page's own call only (page_call, as the Health fixes and the Notes moves), and the ask creaite run
++    check is made under START_LOCK, the lock every run start takes, so a run can't start between the check and the change."""
++    if not page_call(handler):
++        return handler.send(403, {"ok": False, "message": "Not allowed"})
 +    on = req.get("on")
 +    if not isinstance(on, bool):
 +        return handler.send(400, {"ok": False, "message": "Say whether to turn it on or off."})
-+    busy = autostart_run_blocks()
-+    if busy:
-+        return handler.send(200, {"ok": False, "message": busy})
 +    st = autostart_state()
 +    if st is None or not st.get("supported"):
 +        why = "This is the development copy, so creaite doesn't start by itself here." if st and st.get("dev") else \
 +            "Starting creaite when you sign in works only on a Mac."
 +        return handler.send(200, {"ok": False, "message": why})
-+    with LOCK:
-+        code, out = run("launch.py", "agent", "install" if on else "remove")
++    with START_LOCK:
++        busy = autostart_run_blocks()
++        if busy:
++            if debuglog is not None:
++                debuglog.info("autostart", "refused: ask creaite is working")
++            return handler.send(200, {"ok": False, "message": busy})
++        if not LOCK.acquire(blocking=False):                 # as the Health fixes: never wait behind an apply
++            return handler.send(200, {"ok": False, "message": "Something else is running: try again when it has finished."})
++        try:
++            code, out = run("launch.py", "agent", "install" if on else "remove")
++        finally:
++            LOCK.release()
 +    after = autostart_state() or {}
 +    if code != 0 or bool(after.get("on")) != on:
++        if debuglog is not None:
++            debuglog.warn("autostart", f"turn {'on' if on else 'off'} failed: exit {code}, now {'on' if after.get('on') else 'off'}")
 +        return handler.send(200, {"ok": False, "message": "That didn't change. Your set-up is as it was; Settings › Diagnostics has the details."})
 +    if debuglog is not None:
-+        debuglog.info("server", "autostart on" if on else "autostart off")
-+    return handler.send(200, dict(after, ok=True, message="creaite will start when you sign in." if on
-+                                  else "creaite won't start when you sign in."))
++        debuglog.info("autostart", "on" if on else "off")
++    if on:
++        msg = "creaite will start when you sign in."
++    elif st.get("own"):
++        msg = "creaite won't start when you sign in. This copy keeps running until you stop it."
++    else:
++        msg = "creaite won't start when you sign in."
++    return handler.send(200, dict(after, ok=True, message=msg))
 +
 +
 +AUTOSTART_ROUTES = {"/api/autostart/status": autostart_status_route, "/api/autostart/set": autostart_set_route}
