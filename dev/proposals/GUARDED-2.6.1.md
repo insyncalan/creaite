@@ -24,8 +24,8 @@ repo, including the forgeries. CI needs `fetch-depth: 0`: `dev/proposals/guardte
 
 The final `.chain` is the nine diffs below, the 283 pair (`reach.diff`, `live_server.diff`) and `snapshots-after-chain.diff`, in apply order.
 Once it is in, the assembler recomputes the pin and puts it in `CHAIN_SHA256` (`python3 dev/tests/guarded_chain.py` prints it from the
-committed files; run it after the commit that adds the final `.chain` and its diffs, and before the chain commit). Check 9 watches eight
-files: tracker, filechange, reach, permissions, backup, update, live_server and client_leak. The reverse-apply is limited to the guarded
+committed files; run it after the commit that adds the final `.chain` and its diffs, and before the chain commit). Check 9 watches nine
+files: tracker, filechange, reach, permissions, backup, update, live_server, client_leak and edit_ai (the client-safety gate on AI suggestions; no chain diff touches it). The reverse-apply is limited to the guarded
 files that changed, with `git apply -R --include <path>` for each, so a diff that also touches other files (the `update.py` diff's test hunk,
 the goldens in `snapshots-after-chain.diff`) is tolerated: the non-guarded hunks are skipped, not checked. Several diffs to one file
 (live_server.py has three, four with 283) are reversed one after another, last first. `test_guarded_chain.py` covers this

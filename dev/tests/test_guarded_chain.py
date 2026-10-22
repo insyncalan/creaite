@@ -12,7 +12,7 @@ import guarded_chain  # noqa: E402
 from guarded_chain import CHAIN_FILE, CHAIN_MARKER, HistoryMissing, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
-LIVE, LEAK, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "dev/tests/snapshots/golden.txt"
+LIVE, LEAK, EDIT, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "dev/tests/snapshots/golden.txt"
 DIFF_T, DIFF_U = "dev/proposals/x/tracker.diff", "dev/proposals/x/update.diff"
 
 
@@ -31,6 +31,7 @@ class Repo:
         self.write(REA, "r1\nr2\n")
         self.write(LIVE, "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n")
         self.write(LEAK, "k1\nk2\n")
+        self.write(EDIT, "e1\ne2\n")
         self.write(GOLD, "g1\ng2\n")
         self.commit("base")
         run(self.d, "tag", "base")
@@ -168,6 +169,17 @@ class GuardedChain(unittest.TestCase):
         self.r.write(LEAK, "k1\nk2\nk3\n")
         self.r.commit("tweak")
         self.assertEqual(self.r.touched(), [LEAK])
+
+    def test_an_unmarked_edit_ai_edit_fails(self):
+        self.r.write(EDIT, "e1\ne2\ne3\n")
+        self.r.commit("tweak")
+        self.assertEqual(self.r.touched(), [EDIT])
+
+    def test_marked_commit_with_an_extra_edit_ai_edit_fails(self):
+        self.r.chain()
+        self.r.write(EDIT, "e1\ne2\ne3\n")
+        self.r.commit(CHAIN_MARKER + " tracker and update")
+        self.assertIn(EDIT, self.r.touched())
 
     def test_a_golden_only_change_is_not_guarded(self):
         self.r.write(GOLD, "g1\nother\n")

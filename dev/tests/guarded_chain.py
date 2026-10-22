@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-GUARDED = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py", "live_server.py", "client_leak.py")   # edit_ai.py: see dev/proposals/guardtest/README.md
+GUARDED = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py", "live_server.py", "client_leak.py", "edit_ai.py")
 CHAIN_MARKER = "Guarded 2.6.1 chain:"
 CHAIN_FILE = "dev/proposals/GUARDED-2.6.1.chain"
 # The release the check starts from, as a commit (a branch name can move). Alan's say to change.
