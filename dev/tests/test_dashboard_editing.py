@@ -466,7 +466,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertIn('"name":"Stuck","f":{"st":["Cancelled"]}', r["saved"][2])
         saved = json.loads(self.result["files"]["system/config/settings.json"])["work"]["saved_views"]["actions"]
         self.assertEqual(saved, [{"name": "Stuck", "f": {"st": ["Cancelled"]}, "lay": "list", "g": "due", "o": None,     # BL-103: a saved view keeps its layout and grouping
-                                  "lg": "none", "sg": "none", "lsg": "none"}])                                            # BL-128, BL-129: its order, List grouping and sub-groups
+                                  "lg": "due", "sg": "none", "lsg": "none"}])                                            # BL-128, BL-129: its order, List grouping and sub-groups; #241 A: Actions are grouped by due where nothing is saved, and a view keeps what was shown
 
     def test_more_filters(self):
         self.assertEqual(self.result["more"], ["Workstream", "Source", "Client-visible", "Stale", "Last updated", "Raised", "Milestone", "People I follow",
