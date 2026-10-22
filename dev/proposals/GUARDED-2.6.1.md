@@ -21,6 +21,13 @@ Checked 22-10-2026: the first nine below apply one after another, in this order,
 Steps 3, 4, 8, 9 are the work-item-history set; its own recommended order is schema, tracker, live_server, tests-after.
 The hunks have distinct anchors, so no order dependence was found between the groups.
 
+## 300 order (verified on 5369ebd1 and with the work-item-history diffs in either order)
+
+Apply the 300 diff after both 291 diffs: 291 `live_server.py.diff`, 291 `update.py.diff`, then 300 `live_server.diff`
+(`dev/proposals/300/live_server.diff` and its README were updated by `v261-300c`). The table's step numbers 5 to 7 show the order
+tried in the first check; the order above is the one to use. `test_autostart_300_routes` runs in both states: when the routes are
+absent it applies the diff to a throwaway copy and tests that, so it is green before and after the diff is applied.
+
 ## Until applied
 
 - `test_item_history` and `test_item_history_route`: marked expected failures.
