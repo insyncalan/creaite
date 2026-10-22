@@ -319,8 +319,8 @@ def build_outputs_class():
                "KITCONFBODY", "KITCONFATT"]
 
         def plant(self):
-            from test_dashboard import today
-            day = (today() + timedelta(days=1)).isoformat()
+            from datetime import date
+            day = (date.fromisoformat(S.NOW[:10]) + timedelta(days=1)).isoformat()   # the planted day follows the pinned CREAITE_NOW, not the real today (the 23-10 window of #318 left real today+1 outside it)
             ev = [{"id": "o1", "start": "09:00", "end": "10:00", "title": "KITTITLECANARY ABC steering", "where": "KITPLACECANARY room",
                    "organiser": "KITORGCANARY Person", "teams": True, "sensitivity": "normal",
                    "body": "KITBODYCANARY roadmap and budget talk", "attachments": ["KITATTACH-plan.docx"],
