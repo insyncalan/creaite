@@ -5,7 +5,7 @@ Run them all, fill the Results table and make the screenshot sheet:  python3 dev
 Run this file on its own (it makes the vaults itself):               python3 dev/tests/handchecks/test_v254.py
 
 One check per item, `test_cNN_...`, its docstring quoting the item's own check (gh issue view N -R insyncalan/creaite-plan). There is
-no Product Manager's sheet for 2.5.4 yet; the numbers are the items in order, so Natasha can number them in:
+no Product Manager's sheet for 2.5.4 yet; the numbers are the items in order, so the PM can number them in:
 
    1 #276 a Replied (and nothing for you) line has Seen          6 #282 minutes exports say Actions
    2 #277 match-check refuses a non-string project code          7 #284 no ? button in Today's day band; the ? key opens Help
@@ -26,7 +26,7 @@ which is missing; with both it runs. (Checked: with v254-280-4 merged and no dif
 Check 5 also repeats Cap's HIGH on v254-281 (the grip dragged and let go below the Draft email dialog closes it): on 4b45fbe9 the
 resize itself passes and that last step fails; on v254-release 9d90cefa (the fix in) the whole check passes.
 
-Judgement only (for Natasha's sheet; the checks take the screenshots where noted):
+Judgement only (for the PM's sheet; the checks take the screenshots where noted):
   1 the Seen eye's look on a quiet line, and whether "a later message reopens it" matches Alan's wish (a new ask reopens; chatter doesn't)
   3 the Project picker's look in the Prep page header
   5 whether the grip is easy to find and the preview tall enough to read the table (screenshots); the PDF/Outlook paste of the result
