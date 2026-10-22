@@ -126,7 +126,7 @@ class ServerCommand(unittest.TestCase):
         a = self.args
         self.assertEqual(a.count("--"), 1)
         self.assertEqual(a.index("--"), len(a) - 2)
-        self.assertTrue(a[-1].startswith("creaite VIP check."))
+        self.assertTrue(a[-1].startswith(("creaite VIP check.", "creaite follow check.")))
 
     def test_no_tools_flag(self):
         self.assertNotIn("--tools", self.args[:self.args.index("--")])     # #116: `--tools ""` hid the Microsoft 365 tools

@@ -1401,7 +1401,7 @@ import json, os, subprocess, sys
 args = sys.argv[1:]
 p = args[args.index("--") + 1]
 out = lambda o: print(json.dumps(o), flush=True)
-if p.startswith("creaite VIP check"):
+if p.startswith(("creaite VIP check", "creaite follow check")):
     out({"type": "result", "result": "[]", "session_id": "sess-vip"})
     sys.exit(0)
 LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_claude_guarded.jsonl")

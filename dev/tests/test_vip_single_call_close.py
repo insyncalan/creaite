@@ -280,7 +280,7 @@ class FailedCheckWordsTests(ServerCheck, unittest.TestCase):
         try:
             self.wait(lambda: "check failed" in self.log(), "the failure logged")
             error = self.post("/api/vip", {})["error"]
-            self.assertIn("the VIP check didn't finish: its reply couldn't be used (", error)
+            self.assertIn("check didn't finish: its reply couldn't be used (", error)
             self.assertRegex(error, r"\(\d+ characters held back\)$")
             self.assertNotIn(SECRET, error + self.log())
             self.assertNotIn("Sorry", error)

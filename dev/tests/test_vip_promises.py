@@ -691,7 +691,7 @@ class PromiseServerTests(unittest.TestCase):
         self.assertNotIn("ABC-P-009", prompt)                                                 # a Done one never
         self.assertIn('"kept": {"id": "the ID exactly as listed"', prompt)
         self.assertIn("no items, type, ask, due, owners, match, closes, promises or kept", prompt)
-        self.assertEqual(re.findall(r"VIP", prompt.replace("creaite VIP check.", "").replace("Never use the word VIP", "")), [])
+        self.assertEqual(re.findall(r"VIP", prompt.replace("creaite VIP check.", "").replace("creaite follow check.", "").replace("Never use the word VIP", "")), [])
 
     def test_the_debug_line_counts_the_promises(self):
         lines = [ln for ln in self.log().splitlines() if re.search(r"\s+vip\s", ln)]
