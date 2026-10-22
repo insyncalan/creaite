@@ -9,3 +9,6 @@ dev/proposals/291/update.py.diff
 dev/proposals/300/live_server.diff
 dev/proposals/work-item-history/live_server.diff
 dev/proposals/work-item-history/tests-after.diff
+dev/proposals/283-reextract/reach.diff
+dev/proposals/283-reextract/live_server.diff
+dev/proposals/snapshots-after-chain.diff
