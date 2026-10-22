@@ -204,7 +204,7 @@ export function writeProposal(items,extra){ return vq(async()=>{ let name=`propo
   while(await shared.VW.exists("system/staging/"+name)) name=`proposed-${stampFile()}-dashboard-${i++}.json`;
   const data=Object.assign({created:stampFull().replace(" ","T"),source_run:"dashboard",files:[],items:items.map((it,j)=>Object.assign({n:j+1,match:"strong",flags:[],decision:"approved"},it))},extra||{});
   await shared.VW.write("system/staging/"+name,JSON.stringify(data,null,2)+"\n"); return name; }); }
-export let editProposal = function(file,mut){ return vq(async()=>{ const path="system/staging/"+file; let data; try{ data=JSON.parse(await shared.VW.read(path)); }catch(e){ throw new Error("that proposal has already been applied or removed"); } const apWas=apSnap(data); mut(data); apStamp(data,apWas); await shared.VW.write(path,JSON.stringify(data,null,2)+"\n"); }); };
+export let editProposal = function(file,mut,_row){ return vq(async()=>{ const path="system/staging/"+file; let data; try{ data=JSON.parse(await shared.VW.read(path)); }catch(e){ throw new Error("that proposal has already been applied or removed"); } const apWas=apSnap(data); mut(data); apStamp(data,apWas); await shared.VW.write(path,JSON.stringify(data,null,2)+"\n"); }); };
 /* ===== BL-232 (fix-as-proposed): capture edits. Every page edit of a proposal goes through editProposal, which (as
    tracker.stamp_as_proposed does for review.py and minutes.py) gives an item whose values (new) or changes (update) the
    edit altered a write-once as_proposed copy of what they were. One that has it keeps it; one whose as_proposed an

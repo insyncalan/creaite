@@ -1,6 +1,6 @@
 """#307 fix2: processed.txt lines that are not filed (rejected minutes) are not "Approved this week"; a filed .html record keeps its title."""
-import sys, tempfile, unittest
-from datetime import date
+import sys
+import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "system" / "scripts"))
