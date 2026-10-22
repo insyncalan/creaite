@@ -1753,6 +1753,23 @@ def action_row(a):
             "ms": a.get("milestone"), **archived_mark(a)}
 
 
+def mark_held(con, rows_):
+    """v2.6.0: {"sens": True} on each action, RAID and decision row whose tracker labels keep it out of anything distributed
+    (Sensitive, partner-only, an excluding label: minutes_record._blocking), so the page's drafts (a meeting's follow-up email) leave
+    it out even when it is client-visible. A row with none is unchanged. Fails closed to the names that always block."""
+    blocking = minutes_record._blocking(con)
+    held = set()
+    try:
+        held = {i for i, lab in con.execute("SELECT item_id, label FROM item_labels") if str(lab or "").strip().lower() in blocking}
+    except Exception as e:  # noqa: BLE001  no item_labels table (an older vault): no labels
+        if "no such table" not in str(e):
+            raise
+    for r in rows_:
+        if r.get("id") in held:
+            r["sens"] = True
+    return rows_
+
+
 def archived_mark(r):
     """BL-10: {"ar": True} on an archived row (its own age or its project's), shown only with Show archived on; else nothing,
     so a page without archived items is unchanged."""
@@ -1793,11 +1810,12 @@ def records_of(con, ids):
     if not ids:
         return out, []
     marks = ",".join("?" * len(ids))
-    out["actions"] = [action_row(a) for a in rows(con, f"SELECT * FROM actions WHERE id IN ({marks}) ORDER BY id", *ids)]
-    out["raid"] = [raid_row(r) for r in rows(con, f"SELECT * FROM raid WHERE id IN ({marks}) ORDER BY id", *ids)]
+    out["actions"] = mark_held(con, [action_row(a) for a in rows(con, f"SELECT * FROM actions WHERE id IN ({marks}) ORDER BY id", *ids)])
+    out["raid"] = mark_held(con, [raid_row(r) for r in rows(con, f"SELECT * FROM raid WHERE id IN ({marks}) ORDER BY id", *ids)])
     rby = replaced_by_map(con)
     out["decisions"] = decision_waits(con, [decision_row(d, rby) for d in
                                             rows(con, f"SELECT * FROM decisions WHERE id IN ({marks}) ORDER BY id", *ids)])
+    mark_held(con, out["decisions"])
     found = {x["id"] for t in RECORD_TABLES for x in out[t]}
     return out, [i for i in ids if i not in found]
 
@@ -1908,10 +1926,10 @@ def collect(now=None, timings=None):
         except LookupError:  # BL-228: a project without a folder simply has no files to list
             pass
 
-    actions = [action_row(a) for a in rows(con, "SELECT * FROM actions ORDER BY id")]
-    raid = [raid_row(r) for r in rows(con, "SELECT * FROM raid ORDER BY id")]
+    actions = mark_held(con, [action_row(a) for a in rows(con, "SELECT * FROM actions ORDER BY id")])
+    raid = mark_held(con, [raid_row(r) for r in rows(con, "SELECT * FROM raid ORDER BY id")])
     replaced_by = replaced_by_map(con)
-    decisions = [decision_row(d, replaced_by) for d in rows(con, "SELECT * FROM decisions ORDER BY date DESC, id DESC")]
+    decisions = mark_held(con, [decision_row(d, replaced_by) for d in rows(con, "SELECT * FROM decisions ORDER BY date DESC, id DESC")])
 
     import tracker      # the highest number used across actions, RAID, decisions and promises
     projects = []

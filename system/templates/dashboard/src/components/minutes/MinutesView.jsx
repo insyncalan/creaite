@@ -54,7 +54,8 @@ export const MN_EXPORTS = [
   { id: "pdf", name: "PDF", line: "Printed from the page" },
   { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
   { id: "sep", sep: true },
-  { id: "followup", name: "Draft the follow-up email", line: "From these minutes; copied, never sent" }];
+  { id: "followup", name: "Draft the follow-up email", line: "For sending: no Internal-only or Sensitive items; copied, never sent" },
+  { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }];
 
 let dirty = false;
 const approving = signal(false);
@@ -81,7 +82,8 @@ async function mnSaveFirst() {
 async function exportAs(id) {
   if (!(await mnSaveFirst())) return;
   const v = minutesView.value;
-  if (id === "followup") { openMinutesFollowup(v && v.path, "internal"); return; }
+  if (id === "followup") { openMinutesFollowup(v && v.path, "distributed"); return; }          // the default: nothing Internal or Sensitive
+  if (id === "followup-internal") { openMinutesFollowup(v && v.path, "internal"); return; }   // a deliberate choice
   const r = await exportMinutes(id);
   snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
 }

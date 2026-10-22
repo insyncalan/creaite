@@ -84,19 +84,38 @@ class MinutesViewV261(LiveBrowserCase):
     def test_01_the_sensitive_items_are_marked_in_the_record(self):
         self.assertEqual(self.ev("document.querySelectorAll('#v-minutes .mnsens').length"), 2, "the two marked rows carry the tag")
 
-    def test_02_the_follow_up_email_the_menu_opens_is_internal_and_keeps_both_sensitive_items(self):
+    def open_followup(self, label):
         b = self.b
         b.click("#v-minutes [data-mnexport]")
         b.wait("document.querySelector('#v-minutes .ddmenu.on')")
-        b.eval("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].find(x=>x.textContent.includes('Draft the follow-up email')).click()")
+        b.eval("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].find(x=>x.textContent.includes(%s)).click()" % json.dumps(label))
         b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         b.pump(0.4)
-        whole = self.ev("document.getElementById('deDlg').textContent + ' ' + document.querySelector('#deSubj').value")
-        subject = self.ev("document.querySelector('#deSubj').value")
-        self.assertIn("[Internal]", subject, "the Internal follow-up is marked [Internal]")
-        self.assertIn(SECRET_DECISION, whole, "Internal keeps a Sensitive decision, by design")
-        self.assertIn(SECRET_ACTION, whole, "Internal keeps a Sensitive action, by design")
+        return (self.ev("document.getElementById('deDlg').textContent + ' ' + document.querySelector('#deSubj').value"),
+                self.ev("document.querySelector('#deSubj').value"))
+
+    def test_02_the_default_follow_up_email_is_the_distributed_version_with_no_sensitive_item(self):
+        whole, subject = self.open_followup("Draft the follow-up email")
+        self.assertNotIn("[Internal]", subject, "the default is not the Internal version")
+        self.assertNotIn(SECRET_DECISION, whole, "a Sensitive decision never reaches the default draft")
+        self.assertNotIn(SECRET_ACTION, whole, "a Sensitive action never reaches the default draft")
         self.assertIn(OPEN_ACTION, whole, "the unmarked action is there (the draft is not empty)")
+        self.assertEqual(self.ev("DE.version"), "distributed")
+
+    def test_02b_the_internal_follow_up_is_a_deliberate_choice_marked_internal_with_sensitive_items_unticked(self):
+        whole, subject = self.open_followup("Draft an Internal follow-up email")
+        self.assertIn("[Internal]", subject, "the Internal follow-up is marked [Internal]")
+        self.assertIn(SECRET_DECISION, whole, "Internal keeps a Sensitive decision, by design (offered)")
+        self.assertIn(SECRET_ACTION, whole, "Internal keeps a Sensitive action, by design (offered)")
+        picked = self.ev("DE.items.filter(i=>DE.picked.has(i.k+':'+i.id)).map(i=>i.t)")
+        self.assertNotIn(SECRET_DECISION, picked, "nothing Sensitive starts ticked")
+        self.assertNotIn(SECRET_ACTION, picked, "nothing Sensitive starts ticked")
+        self.assertIn(OPEN_ACTION, picked)
+
+    def test_02c_deBarred_honours_sensitive_even_when_client_visible(self):
+        self.assertTrue(self.ev("deBarred({t:'x',client:true,sens:true,src:''})"))
+        self.assertFalse(self.ev("deBarred({t:'x',client:true,sens:false,src:''})"))
+        self.assertFalse(self.ev("deBarred({t:'x',sens:true,src:''},false)"), "an own-domain address (the update email) may keep it")
 
     def test_03_the_server_builds_internal_with_both_and_distributed_with_neither(self):
         """Internal (marked internal) keeps both Sensitive items by design; only Distributed withholds: the leak guard."""

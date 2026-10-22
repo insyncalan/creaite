@@ -63778,8 +63778,8 @@ ${d5.text}`);
     return !h5 || !(S.ownDomains || []).includes(h5);
   };
   var deOutsideAll = (L3) => !L3.length || L3.some((a5) => deOutside(a5.email));
-  var deBarred = (i5) => /\b(confidential|restricted)\b/i.test([i5.t, i5.resp, i5.upd, i5.src, i5.cm].join(" ")) || /(^|\/)documents\//i.test(String(i5.src || ""));
-  var deItem = (k5, i5) => ({ k: k5, id: i5.id, p: i5.p, t: i5.t, due: i5.due || null, pr: i5.pr, type: i5.type, resp: i5.resp, upd: i5.upd, client: !!i5.client, src: i5.src, cm: i5.cm, o: i5.o || i5.by || "", by: i5.by || "" });
+  var deBarred = (i5, outside = true) => /\b(confidential|restricted)\b/i.test([i5.t, i5.resp, i5.upd, i5.src, i5.cm].join(" ")) || /(^|\/)documents\//i.test(String(i5.src || "")) || outside && !!i5.sens;
+  var deItem = (k5, i5) => ({ k: k5, id: i5.id, p: i5.p, sens: !!i5.sens, t: i5.t, due: i5.due || null, pr: i5.pr, type: i5.type, resp: i5.resp, upd: i5.upd, client: !!i5.client, src: i5.src, cm: i5.cm, o: i5.o || i5.by || "", by: i5.by || "" });
   function deItems(x5) {
     return [...x5.oa.map((a5) => deItem("actions", a5)), ...x5.or.map((r4) => deItem("raid", r4)), ...(x5.D || []).filter((d5) => d5.st === "Pending").map((d5) => deItem("decisions", d5))];
   }
@@ -63813,7 +63813,7 @@ ${d5.text}`);
     (() => {
       const x5 = PERS().find((y5) => y5.name === name);
       if (!x5) return;
-      const all = deItems(x5), ok2 = all.filter((i5) => !deBarred(i5)), email = x5.p && x5.p.email || "", chase = ok2.filter(deOverdue);
+      const all = deItems(x5), email = x5.p && x5.p.email || "", ok2 = all.filter((i5) => !deBarred(i5, deOutside(email))), chase = ok2.filter(deOverdue);
       if (!ok2.length) {
         snack(`Nothing open for ${name}, so no email is needed`);
         return;
@@ -63873,7 +63873,7 @@ ${d5.text}`);
       snack(oneLine(r4 && r4.message || "") || "Couldn't read the minutes for the email");
       return;
     }
-    const all = (r4.items || []).map((x5) => ({ ...x5, p: (r4.codes || [])[0] || "", due: x5.due || null, pr: "", client: version === "distributed", noid: /^@/.test(x5.id), by: x5.by || "", o: x5.o || x5.by || "" })), ok2 = all.filter((i5) => !deBarred(i5));
+    const all = (r4.items || []).map((x5) => ({ ...x5, p: (r4.codes || [])[0] || "", due: x5.due || null, pr: "", client: version === "distributed", noid: /^@/.test(x5.id), by: x5.by || "", o: x5.o || x5.by || "" })), ok2 = all.filter((i5) => !deBarred({ ...i5, sens: false }));
     if (!ok2.length) {
       snack(version === "distributed" ? "The distributed version has no actions or decisions to put in an email" : "The minutes have no actions or decisions to put in an email");
       return;
@@ -63890,7 +63890,7 @@ ${d5.text}`);
       attendees: r4.attendees || [],
       lead: "",
       summary: r4.summary || "",
-      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal.",
+      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
       picked: /* @__PURE__ */ new Set(),
       includeUpdate: false,
       replyBy: "",
@@ -63905,7 +63905,7 @@ ${d5.text}`);
     shared.DE = de2;
     const owners = new Set(ok2.map((i5) => i5.o));
     de2.lead = (de2.attendees.find((a5) => owners.has(a5.name)) || {}).name || "";
-    de2.picked = new Set(ok2.map((i5) => i5.k + ":" + i5.id));
+    de2.picked = new Set(ok2.filter((i5) => !i5.sens).map((i5) => i5.k + ":" + i5.id));
     deShow(`${version === "distributed" ? "Distributed" : "Internal"} follow-up: ${r4.title}`);
   }
   async function deFollowFacts(de2, m5) {
@@ -70051,7 +70051,8 @@ ${d5.text}`);
     { id: "pdf", name: "PDF", line: "Printed from the page" },
     { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
     { id: "sep", sep: true },
-    { id: "followup", name: "Draft the follow-up email", line: "From these minutes; copied, never sent" }
+    { id: "followup", name: "Draft the follow-up email", line: "For sending: no Internal-only or Sensitive items; copied, never sent" },
+    { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
   ];
   var dirty = false;
   var approving = y3(false);
@@ -70077,6 +70078,10 @@ ${d5.text}`);
     if (!await mnSaveFirst()) return;
     const v5 = minutesView.value;
     if (id2 === "followup") {
+      openMinutesFollowup(v5 && v5.path, "distributed");
+      return;
+    }
+    if (id2 === "followup-internal") {
       openMinutesFollowup(v5 && v5.path, "internal");
       return;
     }
@@ -78313,6 +78318,7 @@ ${d5.text}`);
         "days",
         "dcIcon",
         "deAiSafe",
+        "deBarred",
         "deBuild",
         "deCopyText",
         "dePolish",

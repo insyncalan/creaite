@@ -126,8 +126,10 @@ export const deHost=addr=>String(addr||"").split("@")[1]?.trim().toLowerCase()||
 export const deOutside=email=>{ const h=deHost(email); return !h||!(S.ownDomains||[]).includes(h); };   /* no address on record counts as outside */
 export const deOutsideAll=L=>!L.length||L.some(a=>deOutside(a.email));                                    /* follow-up: one outside address is enough */
 /* items marked confidential or restricted, or from a project's documents/, are never offered */
-export const deBarred=i=>/\b(confidential|restricted)\b/i.test([i.t,i.resp,i.upd,i.src,i.cm].join(" "))||/(^|\/)documents\//i.test(String(i.src||""));
-export const deItem=(k,i)=>({k,id:i.id,p:i.p,t:i.t,due:i.due||null,pr:i.pr,type:i.type,resp:i.resp,upd:i.upd,client:!!i.client,src:i.src,cm:i.cm,o:i.o||i.by||"",by:i.by||""});
+/* v2.6.0: a Sensitive item (i.sens, from its tracker labels) is barred as well, even when it is client-visible; `outside` false (an own-domain
+   address) is the only case that keeps it, and nothing that goes to a meeting's attendees passes false */
+export const deBarred=(i,outside=true)=>/\b(confidential|restricted)\b/i.test([i.t,i.resp,i.upd,i.src,i.cm].join(" "))||/(^|\/)documents\//i.test(String(i.src||""))||(outside&&!!i.sens);
+export const deItem=(k,i)=>({k,id:i.id,p:i.p,sens:!!i.sens,t:i.t,due:i.due||null,pr:i.pr,type:i.type,resp:i.resp,upd:i.upd,client:!!i.client,src:i.src,cm:i.cm,o:i.o||i.by||"",by:i.by||""});
 export function deItems(x){ return [...x.oa.map(a=>deItem("actions",a)),...x.or.map(r=>deItem("raid",r)),...(x.D||[]).filter(d=>d.st==="Pending").map(d=>deItem("decisions",d))]; }   /* BL-53: decisions we need from them */
 export const deOverdue=i=>!!i.due&&i.due<TODAY;
 /* the default tick set: all of them for an address on an own domain; for anyone else only what is client-visible */
@@ -139,7 +141,7 @@ export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=titl
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
 export function openDraftEmail(name,mode="update",only){ shared.SENTVIA=""; (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
-  const all=deItems(x), ok=all.filter(i=>!deBarred(i)), email=(x.p&&x.p.email)||"", chase=ok.filter(deOverdue);
+  const all=deItems(x), email=(x.p&&x.p.email)||"", ok=all.filter(i=>!deBarred(i,deOutside(email))), chase=ok.filter(deOverdue);
   if(!ok.length){ snack(`Nothing open for ${name}, so no email is needed`); return; }
   if(mode==="chase"&&(!chase.length||deMe(name)||(only&&!chase.some(i=>i.id===only)))) mode="update";   /* BL-342 N3: a thread's Chase on an item not past its date opens the update email */
   const items=mode==="chase"?chase:ok, outside=deOutside(email), picked=deDefaults(items,outside);
@@ -160,13 +162,13 @@ export function openFollowup(t){ const m=(D.hub||{})[t]; if(!m){ snack("That mee
    excluded content reaches the draft); the Internal version is marked Internal. The same popup, builder and Polish as the meeting's. */
 export async function openMinutesFollowup(path,version){ const r=await api("/api/minutes/followup",{path,version});
   if(!r||!r.ok){ snack(oneLine((r&&r.message)||"")||"Couldn't read the minutes for the email"); return; }
-  const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred(i));
+  const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred({...i,sens:false}));
   if(!ok.length){ snack(version==="distributed"?"The distributed version has no actions or decisions to put in an email":"The minutes have no actions or decisions to put in an email"); return; }
   const outside=version==="distributed"?deOutsideAll(r.attendees||[]):false;
   const de={mode:"followup",token:"",title:r.title,day:r.day,codes:r.codes||[],items:ok,left:all.length-ok.length,attendees:r.attendees||[],lead:"",summary:r.summary||"",
-    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal.",
+    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
     picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:false,cover:"",polish:null,internal:version!=="distributed",version};
-  shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.map(i=>i.k+":"+i.id));
+  shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.filter(i=>!i.sens).map(i=>i.k+":"+i.id));   /* nothing Sensitive starts ticked */
   deShow(`${version==="distributed"?"Distributed":"Internal"} follow-up: ${r.title}`); }
 export async function deFollowFacts(de,m){ const r=await api("/api/email/followup",{key:m.key,eid:m.eid||"",day:m.day,start:m.start,title:m.title,files:[...(m.files||[]),...(m.draft?[m.draft]:[])]});
   if(shared.DE!==de) return; if(!r.ok){ de.note=oneLine(r.message)||"Couldn't read the attendees and the summary"; drawDraftEmail(true); return; }

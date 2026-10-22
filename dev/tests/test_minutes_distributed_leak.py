@@ -130,6 +130,44 @@ class Sensitive(Base):
                     self.assertNotIn(SECRET[kind], text, f"{fmt}: the Distributed export")
                     self.assertIn(OPEN, text, f"{fmt}: the unmarked action is there")
 
+    # ── the meeting's follow-up email (drafts.followup_facts) and the dashboard's Sensitive mark ──
+    def email_facts(self, files):
+        r = self.js("import drafts\nprint(json.dumps(drafts.followup_facts({'files': %r})))" % (files,))
+        return r
+
+    def test_the_meeting_email_summary_comes_from_the_distributed_record_never_an_internal_file(self):
+        md = f"{ta.ABC}/minutes/2026-10-14 Steering committee notes.md"
+        (self.v.root / md).parent.mkdir(parents=True, exist_ok=True)
+        (self.v.root / md).write_text("## Summary\n\nInternal only: the client is unhappy with the vendor.\n", encoding="utf-8")
+        f = self.email_facts([md])
+        self.assertEqual(f["summary"], "", "an internal Markdown file gives no summary")
+        # an internal line in the record's summary stays out of the email's summary
+        self.js("import creaite_doc, minutes_record\n"
+                f"d = creaite_doc.read({DRAFT!r})\n"
+                "s = next(x for x in d['sections'] if x['id'] == 'summary')\n"
+                "s['text'] = 'The committee met.\\n\\nInternal only: the client is unhappy.'\n"
+                "d.setdefault('layout', {}).setdefault('internal_only', []).append({'section': 'summary', 'text': 'Internal only: the client is unhappy.'})\n"
+                f"print(json.dumps(minutes_record.save_page({DRAFT!r}, d)['ok']))")
+        f = self.email_facts([DRAFT])
+        self.assertIn("The committee met.", f["summary"])
+        self.assertNotIn("unhappy", f["summary"], "a line marked Internal only never reaches the summary")
+
+    def test_dashboard_rows_carry_sens_for_a_sensitive_label_and_the_page_bars_them(self):
+        import sqlite3
+        con = sqlite3.connect(self.v.root / "system/tracker.db")
+        try:
+            con.execute("INSERT OR IGNORE INTO labels (name, builtin) VALUES ('Sensitive', 1)")
+            con.execute("INSERT INTO item_labels (item_id, label) VALUES ('ABC-A-001', 'Sensitive')")
+            con.commit()
+        finally:
+            con.close()
+        rec = self.js("import build_dashboard as b, tracker\ncon = tracker.connect()\nout, _ = b.records_of(con, ['ABC-A-001', 'ABC-A-002'])\n"
+                      "print(json.dumps({r['id']: r.get('sens', False) for r in out['actions']}))")
+        self.assertEqual(rec, {"ABC-A-001": True, "ABC-A-002": False})
+        data = self.js("import build_dashboard as b\nprint(json.dumps({a['id']: a.get('sens', False) for a in b.collect()['actions']}))")
+        self.assertTrue(data["ABC-A-001"])
+        self.assertFalse(data["ABC-A-002"])
+
 
 if __name__ == "__main__":
     unittest.main()

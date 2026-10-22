@@ -1321,12 +1321,31 @@ def followup_facts(req):
     ev = calendar_event(req)
     confidential = (ev.get("sensitivity") or "") == "confidential"
     p = minutes_file(req.get("files"))
-    text = file_text(p) if p else ""
-    summary = "" if confidential or secret(text) else minutes_summary(text)
-    note = "Confidential: the summary is left out." if text and (confidential or secret(text)) else \
-        "" if summary else "The minutes have no summary paragraph yet." if p else "No minutes yet, so no summary."
+    # v2.6.0: this email goes to the meeting's attendees, so its summary is only ever the Distributed version's: from a minutes
+    # record (distributed_of), never from an Internal Word, Markdown or text file, which may hold what is not for distribution.
+    summary, rec = "", _distributed_record(req.get("files"))
+    if rec is not None and not confidential:
+        import minutes_record
+        text = minutes_record._followup_text(rec, "summary")
+        summary = "" if secret(text) else short(text, 1500)
+    note = ("Confidential: the summary is left out." if confidential else "" if summary else
+            "The minutes have no summary paragraph yet." if rec is not None else
+            "The minutes aren't a creaite record, so their summary is left out (it could be internal)." if p else
+            "No minutes yet, so no summary.")
     return {"attendees": [] if confidential else attendees_of(ev), "summary": summary, "note": note,
             "minutes": paths.rel(p) if p else None, "confidential": confidential}
+
+
+def _distributed_record(files):
+    """The Distributed version of the first minutes record among `files` (a filed one or a draft), or None."""
+    import minutes_record
+    for f in files or []:
+        try:
+            _, doc = minutes_record.record_at(f)
+            return minutes_record.distributed_of(doc)
+        except (minutes_record.RecordError, OSError, ValueError, KeyError, TypeError):  # not a minutes record: try the next file
+            continue
+    return None
 
 
 @kind("polish", "email")

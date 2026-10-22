@@ -1282,7 +1282,7 @@ def followup_facts(path, version="internal"):
     """The follow-up email's content from the version shown (v2.1.0 P7; Alan, 15-10-2026): the meeting, its summary, the new
     decisions and actions, and the attendees. The Distributed version is built by distributed_of, the one rule: no Internal only
     line or row, no Sensitive, partner-only or excluded item, so none of it can reach the draft. The Internal version is marked
-    internal. Plain code; nothing is sent."""
+    internal and flags each held item `sens` (the email starts with those unticked). Plain code; nothing is sent."""
     import drafts
     if version not in (None, "", "internal", "distributed"):
         raise RecordError("Draft from the internal or the distributed version.")
@@ -1297,7 +1297,8 @@ def followup_facts(path, version="internal"):
             "day": use.get("date") or "", "codes": codes,
             "summary": "" if drafts.secret(summary) else drafts.short(summary, 1500),
             "attendees": drafts.attendees_of({"attendees": [{"name": n, "email": ""} for n in _followup_names(use)]}),
-            "items": _followup_items(use, doc), "left_out": len(held) if dist else 0, "marked_internal": not dist}
+            "items": [{**i, **({"sens": True} if i["id"] in held else {})} for i in _followup_items(use, doc)],
+            "left_out": len(held) if dist else 0, "marked_internal": not dist}
 
 
 # ── The distributed version (BL-338 point 13; Jarvis, 15-10-2026 on plan #70) ──
@@ -1351,10 +1352,9 @@ def _held_why(item, snap=None):
     """Why a staged item (and its record snapshot) is kept out of the distributed version: "Sensitive", "partner-only" or an
     excluding label's reason; "" when it is not. Read when a row is taken out of the minutes (remove), because a line kept in the
     minutes only has no item left in the record afterwards (the v2.6.0 leak: tracked_of / Approve minutes dropped the flag)."""
-    merged = {"flags": list((item or {}).get("flags") or []) + list((snap or {}).get("flags") or []),
-              "values": {**((snap or {}).get("values") or {}), **((item or {}).get("values") or {})},
-              "changes": {**((snap or {}).get("changes") or {}), **((item or {}).get("changes") or {})},
-              "id": (item or {}).get("id") or (snap or {}).get("id")}
+    item, snap = item or {}, snap or {}
+    merged = {"flags": list(item.get("flags") or []) + list(snap.get("flags") or []), "id": item.get("id") or snap.get("id"),
+              **{k: {**(snap.get(k) or {}), **(item.get(k) or {})} for k in ("values", "changes")}}
     return next(iter(withheld({"items": {"@x": merged}}).values()), "")
 
 
@@ -1452,7 +1452,7 @@ def _without_items(out, gone_refs, version):
         if s.get("tags"):
             s["tags"] = [t for t in s["tags"] if t.get("ref") not in gone_refs]
     out["items"] = {k: v for k, v in (out.get("items") or {}).items() if k not in gone_refs}
-    if isinstance(out.get("meta"), dict):          # rows taken out of the minutes (kept for Undo) hold their words: never in the distributed record
+    if isinstance(out.get("meta"), dict):          # rows taken out (kept for Undo) hold their words: never in the distributed record
         out["meta"] = {k: v for k, v in out["meta"].items() if k != "removed"}
     out["layout"] = {k: v for k, v in (out.get("layout") or {}).items() if k != "internal_only"}
     out.update(audience="distributed", based_on={"path": None, "version": version})

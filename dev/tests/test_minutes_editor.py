@@ -326,11 +326,12 @@ class MinutesEditor(LiveBrowserCase):
         self.b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         self.b.pump(0.4)
 
-    def test_7_follow_up_email_internal_version_is_marked_internal(self):
+    def test_7_follow_up_email_internal_version_is_a_deliberate_choice_and_marked_internal(self):
         names = self.menu_names()
         self.assertTrue(any("Draft the follow-up email" in n for n in names), names)
-        self.assertEqual(sum("follow-up" in n for n in names), 1, "one version: one entry")
-        self.pick("Draft the follow-up email")
+        self.assertEqual(sum("follow-up" in n for n in names), 2, "v2.6.0: the default (shareable) entry and a deliberate Internal one")
+        self.assertTrue(any("Draft an Internal follow-up email" in n for n in names), names)
+        self.pick("Draft an Internal follow-up email")
         self.assertEqual(self.ev("document.querySelector('#deSubj').value").startswith("[Internal] "), True)
         prev = self.ev("document.querySelector('#dePrev').textContent")
         self.assertIn("Internal: not for distribution.", prev)
