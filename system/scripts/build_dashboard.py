@@ -712,9 +712,11 @@ def review_queue(con):
         review.write_index(rows_n)
     limit = review.stale_days()         # BL-133 (sprint-work-views): each proposal's age, and stale past review.stale_after_days (FR-24)
     overlap = float(paths.load_settings().get("review", {}).get("duplicate_overlap", 0.6) or 0.6)   # BL-133 stage B
+    mem = {}                            # #291 fix: the in-memory copy invalid items are checked again on, made once a build
     for p, data in review.proposals():
         age = review.age(data)
         aged = {"age": age, "stale": age > limit, "made": data.get("created") or ""}   # #245: made is part of Today's dismissed id
+        data = recheck_invalid(p, data, mem)
         for key, field, label in review.BLOCKS:
             b = data.get(key)
             if b and not b.get("applied") and b.get(field, "pending") == "pending":
@@ -729,7 +731,57 @@ def review_queue(con):
             if item.get("n") in blocked:
                 row["trk"] = blocked[item["n"]]
             out.append(row)
+    if mem.get("con") is not None:
+        mem["con"].close()
     return out
+
+
+# ===== #291 fix: an item fixed in the panel stops being held =====
+def recheck_invalid(p, data, mem):
+    """#291 fix: an item flagged invalid is checked again from its fields as they are now, with the tracker's own check (the
+    dry run `tracker.py validate` uses), so an item edited in the panel stops being held without a new route. The check runs on
+    an in-memory copy of the database: the build never writes. Returns the proposal with each flagged item's flag and reason as
+    they are now (a copy; the file is unchanged, and the approval clears its flag). A check that can't run keeps the flags."""
+    def flagged(i):
+        """A pending item still flagged invalid."""
+        return "invalid" in (i.get("flags") or []) and not i.get("applied") and i.get("decision") == "pending"
+    if not any(flagged(i) for i in data.get("items", [])) or not paths.DB.exists():
+        return data
+    import copy
+    import tracker
+    try:
+        if "con" not in mem:
+            mem["con"] = None
+            src = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+            try:
+                m = sqlite3.connect(":memory:", isolation_level=None)
+                src.backup(m)
+            finally:
+                src.close()
+            m.row_factory = sqlite3.Row
+            m.execute("PRAGMA foreign_keys = ON")
+            mem["con"] = m
+        if mem["con"] is None:
+            return data
+        trial = copy.deepcopy(data)
+        tracker.fill_raised(trial)
+        problems = tracker.dry_run(mem["con"], trial, tracker.via_for(p, trial), only_approved=False)
+    except Exception:  # noqa: BLE001  a check that can't run never hides a flag
+        return data
+    out = copy.deepcopy(data)
+    for item in out.get("items", []):
+        if flagged(item):
+            kind, reason = problems.get(item.get("n"), (None, None))
+            tracker.set_flag(item, "invalid", kind == "invalid", reason)
+    return out
+
+
+def unknown_fields(reason):
+    """#291 fix: the fields the tracker doesn't keep, from an invalid item's reason ([] for any other reason): the panel's Save
+    leaves them out, as no field of the panel can show them."""
+    m = re.match(r"unknown field\(s\) for \w+: ([^.]+)", reason or "")
+    return [f.strip() for f in m.group(1).split(",") if f.strip()] if m else []
+# ===== end #291 fix =====
 
 
 def queue_block(n, p, key, label, b, aged):
@@ -761,7 +813,8 @@ def queue_item(con, n, p, item, aged, overlap):
             "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
             "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
-            **({"bad": invalid_words(item.get("invalid_reason"))} if "invalid" in flags else {})}   # #291: why it can't be saved
+            **({"bad": invalid_words(item.get("invalid_reason")), "badf": unknown_fields(item.get("invalid_reason"))}
+               if "invalid" in flags else {})}   # #291: why it can't be saved; the fields Save leaves out
 
 
 def invalid_words(reason):

@@ -744,6 +744,7 @@
    "runSearch",
    "rvBulkOK",
    "rvDecideMany",
+   "rvWhyNot",
    "save",
    "saveCurEdit",
    "saveCurrent",

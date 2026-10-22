@@ -41,6 +41,7 @@ export function applyProposal(r){ if(r.kind==="actions"){ const rec=Object.assig
 export function setDecision(data,r,v){ const bf={meeting:"minutes_decision",report:"report_decision",file_changes:"file_changes_decision"}[r.ref];
   if(bf){ if(!data[r.ref]||data[r.ref].applied) throw new Error("already applied"); data[r.ref][bf]=v; data[r.ref].decided_in="dashboard"; return; }
   const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("already applied"); it.decision=v; it.decided_in="dashboard";
+  if(v==="approved"&&!r.bad&&(it.flags||[]).includes("invalid")){ it.flags=it.flags.filter(f=>f!=="invalid"); delete it.invalid_reason; }   /* #291 fix: checked again and now valid, so the stored flag goes */
   const w=RVREASON.get(r.n);
     if(v==="rejected"&&w){ it.reject_reason=w.reason; if(w.dup) it.duplicate_of=w.dup; else delete it.duplicate_of; RVREASON.delete(r.n); } else if(v!=="rejected"){ delete it.reject_reason; delete it.duplicate_of; }
     if(it&&it.drafted&&(v==="approved"||v==="rejected")){ const f=Object.keys(it.changes||{})[0]; draftStat(it.drafted,v==="rejected"?"rejected":drSame((it.changes||{})[f],it.drafted_text)?"used":"edited"); }

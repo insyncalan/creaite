@@ -5091,6 +5091,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     attnAlertHtml: () => attnAlertHtml,
     attnAlertItems: () => attnAlertItems,
     autoGrow: () => autoGrow,
+    badSaved: () => badSaved,
     batchMove: () => batchMove,
     bcKey: () => bcKey,
     bindTextSections: () => bindTextSections,
@@ -47623,6 +47624,10 @@ ${s5}`;
     if (!it2 || it2.applied) throw new Error("already applied");
     it2.decision = v5;
     it2.decided_in = "dashboard";
+    if (v5 === "approved" && !r4.bad && (it2.flags || []).includes("invalid")) {
+      it2.flags = it2.flags.filter((f5) => f5 !== "invalid");
+      delete it2.invalid_reason;
+    }
     const w6 = RVREASON.get(r4.n);
     if (v5 === "rejected" && w6) {
       it2.reject_reason = w6.reason;
@@ -61227,6 +61232,9 @@ ${d5.text}`);
               if (vals[k6] === null) delete vals[k6];
             });
             it2.values = Object.assign(it2.values || {}, vals);
+            (r4.badf || []).forEach((k6) => {
+              delete it2.values[k6];
+            });
             if (f5.p && f5.p !== r4.p) {
               it2.values.project = f5.p;
               it2.match = "strong";
@@ -61241,7 +61249,7 @@ ${d5.text}`);
             }
           }
           it2.edited_in = "dashboard";
-          if (approve) {
+          if (approve && !r4.bad) {
             it2.decision = "approved";
             it2.decided_in = "dashboard";
           }
@@ -61261,6 +61269,7 @@ ${d5.text}`);
       }
       r4.edited = true;
       if ("hold" in r4) r4.hold = irHold(r4);
+      if (r4.bad) return badSaved(r4, approve);
       closePanel();
       if (approve) decide(r4.n, "approved", true);
       else {
@@ -61276,6 +61285,19 @@ ${d5.text}`);
       await save(`${p6.name} health: ${before.health || "not set"} → ${f5.health}`, [{ op: "update", table: "projects", id: p6.code, changes: { health: f5.health, health_reason: f5.reason } }], null, () => Object.assign(p6, f5), () => Object.assign(p6, before));
       return;
     }
+  }
+  async function badSaved(r4, approve) {
+    const file = r4.file, ref = r4.ref;
+    closePanel();
+    await reloadData();
+    const now = REV.find((x5) => x5.file === file && x5.ref === ref && !["draft", "files"].includes(x5.kind));
+    refreshAll();
+    if (now && now.bad) {
+      snack(`Saved, but it still can't be saved as it is: ${now.bad}. Edit it or reject it`, () => openProposal(now.n), "Edit");
+      return;
+    }
+    if (now && approve) return decide(now.n, "approved");
+    snack(`Proposal updated — still waiting for review`);
   }
   async function saveCurrent(code, md2, imgOps = [], added = [], dropped = []) {
     const p6 = P4.find((x5) => x5.code === code), before = p6.current, imgsBefore = p6.images;
@@ -62342,7 +62364,7 @@ ${d5.text}`);
       return;
     }
     putHTML($("#pkId"), html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}${k5 === "raid" ? html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x5.type ?? ""}" data-tip="Type">${x5.type ?? ""}${raw(ic("chevdown"))}</button>` : ""}`);
-    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x5.p ? "" : html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r4) && !r4.done ? raw(llNoteHtml(r4)) : ""}${raw(rtNoteHtml(r4))}`);
+    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x5.p ? "" : html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r4) && !r4.done ? raw(llNoteHtml(r4)) : ""}${raw(rtNoteHtml(r4))}${r4.bad && !r4.done ? html`<div class="cmnote pk-bad">Can't be saved as it is: ${r4.bad}. ${(r4.badf || []).length ? `Saving leaves out ${r4.badf.join(", ")}.` : "Change it here and save: it's checked again."}</div>` : ""}`);
     const sig = learnable(r4), was = $("#f_learn")?.checked;
     putHTML($("#pkPropEnd"), sig && x5.p ? html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind ?? ""}" data-value="${sig.value ?? ""}"${was ? raw(" checked") : ""}><span>Remember ${sig.value ?? ""} (${KINDL[sig.kind] || sig.kind || ""}) for ${pName(x5.p) ?? ""}, so items like this match on their own. Added to the register when applied.</span></label>` : html``);
     putHTML($("#pkFeed"), html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("filetext"))}</span><div><b>Source</b><div class="pk-src">${raw(srcHTML(r4.src))}</div></div></div>`);
@@ -78745,6 +78767,7 @@ ${d5.text}`);
         "runSearch",
         "rvBulkOK",
         "rvDecideMany",
+        "rvWhyNot",
         "save",
         "saveCurEdit",
         "saveCurrent",

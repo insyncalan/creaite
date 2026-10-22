@@ -398,15 +398,24 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
         const same=(a,b)=>String(a??"").trim()===String(b??"").trim(), ch={};
         for(const n of Object.keys(f)){ const was=n==="p"?r.p:r.rec[n]; if(typeof f[n]==="boolean"?!!was!==f[n]:!same(was,f[n])) ch[n]=f[n]; }
         const vals=toDb(r.kind,ch); ["raised","date"].forEach(k=>{ if(vals[k]===null) delete vals[k]; });
-        it.values=Object.assign(it.values||{},vals); if(f.p&&f.p!==r.p){ it.values.project=f.p; it.match="strong"; if(r.p){ if(it.moved_from===f.p) delete it.moved_from; else it.moved_from=it.moved_from||r.p; } /* BL-200 */ if(it.values.milestone&&!String(it.values.milestone).startsWith(f.p+"-M-")) it.values.milestone=null; } else if(f.p&&!r.p){ it.values.project=f.p; it.match="strong"; } }
-      it.edited_in="dashboard"; if(approve){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }
+        it.values=Object.assign(it.values||{},vals); (r.badf||[]).forEach(k=>{ delete it.values[k]; });   /* #291 fix: a field the tracker doesn't keep, which no field here shows, is left out */
+        if(f.p&&f.p!==r.p){ it.values.project=f.p; it.match="strong"; if(r.p){ if(it.moved_from===f.p) delete it.moved_from; else it.moved_from=it.moved_from||r.p; } /* BL-200 */ if(it.values.milestone&&!String(it.values.milestone).startsWith(f.p+"-M-")) it.values.milestone=null; } else if(f.p&&!r.p){ it.values.project=f.p; it.match="strong"; } }
+      it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
     if("hold" in r) r.hold=irHold(r);   /* #232-B: the server's rule (review.hold_reason) again on what the edit left: an Issue made a Risk is held, a project set clears "need a project" */
+    if(r.bad) return badSaved(r,approve);   /* #291 fix */
     closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } return; }
   if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; hsSaved(); closePanel();
     await save(`${p.name} health: ${before.health||"not set"} → ${f.health}`,[{op:"update",table:"projects",id:p.code,changes:{health:f.health,health_reason:f.reason}}],null,()=>Object.assign(p,f),()=>Object.assign(p,before)); return; }
 }
+/* #291 fix: an item held because it can't be saved, edited here: the page's data is fetched again, which checks it again with the
+   tracker's own check (build_dashboard.recheck_invalid), so its row stops being held once it's fixed, and Save and approve then approves it */
+export async function badSaved(r,approve){ const file=r.file, ref=r.ref; closePanel(); await reloadData();
+  const now=REV.find(x=>x.file===file&&x.ref===ref&&!["draft","files"].includes(x.kind)); refreshAll();
+  if(now&&now.bad){ snack(`Saved, but it still can't be saved as it is: ${now.bad}. Edit it or reject it`,()=>openProposal(now.n),"Edit"); return; }
+  if(now&&approve) return decide(now.n,"approved");
+  snack(`Proposal updated — still waiting for review`); }
 /* Current state is saved as a proposal that rewrites the section in the project's CLAUDE.md (undoable) */
 export async function saveCurrent(code,md,imgOps=[],added=[],dropped=[]){ const p=P.find(x=>x.code===code), before=p.current, imgsBefore=p.images; if(!await needVault()) return false; let old;
   try{ old=await vq(()=>shared.VW.read(memPath(p.code))); }catch(e){ snack(`Can't read ${memPath(p.code)}: ${e.message}`); return false; }
@@ -860,7 +869,7 @@ export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#pane
   const r=pkRev(); if(!r) return;
   if(shared.CUR.upd){ updDraw(x,k,r); return; }   /* #232-B: an update proposal draws the whole item (updDraw) */
   putHTML($("#pkId"),html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type??""}" data-tip="Type">${x.type??""}${raw(ic("chevdown"))}</button>`:""}`);
-  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x.p?"":html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r)&&!r.done?raw(llNoteHtml(r)):""}${raw(rtNoteHtml(r))}`);   /* BL-297 D */
+  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x.p?"":html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r)&&!r.done?raw(llNoteHtml(r)):""}${raw(rtNoteHtml(r))}${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. ${(r.badf||[]).length?`Saving leaves out ${r.badf.join(", ")}.`:"Change it here and save: it's checked again."}</div>`:""}`);   /* BL-297 D; #291 fix */
   const sig=learnable(r), was=$("#f_learn")?.checked;
   putHTML($("#pkPropEnd"),sig&&x.p?html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind??""}" data-value="${sig.value??""}"${was?raw(" checked"):""}><span>Remember ${sig.value??""} (${KINDL[sig.kind]||sig.kind||""}) for ${pName(x.p)??""}, so items like this match on their own. Added to the register when applied.</span></label>`:html``);
   putHTML($("#pkFeed"),html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("filetext"))}</span><div><b>Source</b><div class="pk-src">${raw(srcHTML(r.src))}</div></div></div>`); }
