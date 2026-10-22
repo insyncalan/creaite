@@ -106,7 +106,7 @@ class HeldOnThePage(LiveBrowserCase):
 
     def test_held_minutes_say_why_on_the_row(self):
         n, text = self.row("x=>x.kind==='draft'&&!!x.held")
-        self.assertIn("Held: transcript no longer in the inbox", text)
+        self.assertIn("Held: the transcript is no longer in Intake", text)
         b = self.b
         self.assertFalse(b.eval(f"!!document.querySelector('{ROW % n} [data-ira=approve]')"), "never Approve as staged")
         self.assertTrue(b.eval(f"!!document.querySelector('{ROW % n} [data-ira=held-approve]')"))
@@ -123,10 +123,10 @@ class HeldOnThePage(LiveBrowserCase):
         self.assertEqual(b.eval(f"heldWords({json.dumps(item)})"),
                          ". 1 item is held in Intake: it can't be saved as it is")
         self.assertEqual(b.eval(f"heldWords({json.dumps(mins)})"),
-                         ". 1 proposal is held in Intake: a file to be filed has gone")
+                         ". 1 suggestion is held in Intake: a file to be filed has gone")
         self.assertEqual(b.eval(f"heldWords({json.dumps(item + chr(10) + item + chr(10) + mins)})"),
                          ". 2 items are held in Intake: they can't be saved as they are. "
-                         "1 proposal is held in Intake: a file to be filed has gone")
+                         "1 suggestion is held in Intake: a file to be filed has gone")
         self.assertEqual(b.eval("heldWords('Apply 3: 2 written')"), "")
 
 

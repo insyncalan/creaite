@@ -19,7 +19,7 @@ export const IR_GROUP_HEAD = {
 };
 const IR_KIND_WORDS = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
 /** The kind pill's word for a Review row. @param {any} r */
-export const irKind = r => (r.kind === "raid" ? (r.rec && r.rec.type) || "Risk" : IR_KIND_WORDS[/** @type {keyof IR_KIND_WORDS} */ (r.kind)] || "Proposal");
+export const irKind = r => (r.kind === "raid" ? (r.rec && r.rec.type) || "Risk" : IR_KIND_WORDS[/** @type {keyof IR_KIND_WORDS} */ (r.kind)] || "Suggestion");
 const ageWords = (/** @type {number} */ d) => (d === 0 ? "today" : d === 1 ? "1 day" : `${d} days`);
 
 /** A file's size in words (the Intake file list's). @param {number} n bytes */
@@ -72,7 +72,7 @@ export const irWhen = m => (m.src === "upload" ? irAdded(m) : `${m.day ? fd(m.da
 export function StageTrack({ m }) {
   const names = ["Arrived", "Drafted", "Approved"], at = ["arrived", "drafted", "approved"].indexOf(m.stage);
   return (
-    <span class="ictrack" aria-label={`Stage: ${names[at] || ""}`} data-irtrack={m.stage}>
+    <span class="ictrack" aria-label={`Step: ${names[at] || ""}`} data-irtrack={m.stage}>
       {names.map((n, k) => <><i class={k < at ? "done" : k === at ? "now" : ""}></i><span class={k === at ? "on" : ""}>{n}</span></>)}
     </span>
   );

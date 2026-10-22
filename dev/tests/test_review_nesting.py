@@ -40,7 +40,7 @@ SCRIPT = r"""
     head()||(irOpen.value=null); go("intake-review",m.n); await until(()=>rowsNow().length===out.open); out.reopened=rowsNow().length;
     // Approve routine in the meeting: its routine items only; the risk, the minutes and the DEF item (needs a project) stay
     document.querySelector("#v-intake-review tr.icsubhead.routine.child [data-ira=routine]").click();
-    await until(()=>REV.some(r=>r.file===m.file&&r.done==="approved")&&/Approved 1 routine/.test(document.getElementById("snackT").textContent));
+    await until(()=>REV.some(r=>r.file===m.file&&r.done==="approved")&&/Approved 1 routine item/.test(document.getElementById("snackT").textContent));
     out.afterGroup=REV.filter(r=>r.file===m.file).map(r=>[r.kind,r.done||"pending"]); out.groupSnack=document.getElementById("snackT").textContent;
     // rejecting the minutes offers to reject what's left
     document.querySelector("#v-intake-review tr.irprop[data-kind=draft] [data-ira=reject]").click();
@@ -140,8 +140,8 @@ class ReviewNestingTests(unittest.TestCase):
         self.assertEqual(r["reopened"], r["open"])
         self.assertEqual(sorted(r["afterGroup"]), [["actions", "approved"], ["actions", "pending"], ["draft", "pending"],
                                                    ["raid", "pending"]])                     # the DEF item needs a project
-        self.assertIn("Approved 1 routine", r["groupSnack"])
-        self.assertEqual(r["rejectSnack"], ["Minutes rejected. Its 2 items stay for review.", "Reject them too"])
+        self.assertIn("Approved 1 routine item", r["groupSnack"])
+        self.assertEqual(r["rejectSnack"], ["Minutes rejected. Its 2 items stay to check.", "Reject them too"])
         self.assertEqual(sorted(r["afterRejectAll"]), [["actions", "approved"], ["actions", "rejected"], ["draft", "rejected"],
                                                        ["raid", "rejected"]], "messages shown: " + " | ".join(r["snacks"]))
 

@@ -9,6 +9,7 @@ import { askStream, mdView, openChat, runAsk, setRunning } from "../ask.js";
 import { $, html, putHTML, raw } from "./dom.js";
 import { addEl } from "./fields.js";
 import { D, fd, TODAY } from "./page.js";
+import { addFailed, needsConnection } from "./say.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "./server.js";
 import { shared } from "./state.js";
 
@@ -29,28 +30,30 @@ const runId = kind => `${kind}-${Date.now().toString(36)}-${Math.random().toStri
 /* ===== A transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files ===== */
 export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=runId("r"), ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
   try{ await askStream(url,{...body,run:id},true,ctl,undefined,true); } finally{ shared.RUN=null; setRunning(false); } };   /* BL-326: drawn plainly (steps and the closure) */
-export async function checkMeeting(m){ if(!viaServer()){ snack("Checking needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
+export async function checkMeeting(m){ if(!viaServer()){ snack(needsConnection("Checking")); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MRUN[m.id]="checking"; openChat(); runAsk(addEl("msg u",html`${`Check the transcript of “${m.title}” (${fd(m.day)} at ${m.start})`}`));
   try{ await jobLive("/api/transcripts/check",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); }
 
 /* ===== The inbox: the upload rules, preview and remove ===== */
 export const kb=n=>n>1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;   /* a size in words (was intake.js's) */
 /* One place for the upload rules (types, 25 MB, the upload call): Add files on the Intake page uses it.
-   Returns {r, ext} for a file added; null for one skipped (a snack says why); false when the server is too old to go on. */
+   Returns {r, ext} for a file added; {fail} for one skipped (the file's name and why, #307: the page keeps it on screen until it is
+   dismissed, never a toast that the next file replaces); false when the server is too old to go on (a snack says so). */
 export const UPLOAD_TYPES=[".vtt",".docx",".txt",".md",".pdf"], UPLOAD_MAX=25*1048576;
 export async function uploadInboxFile(f){ const ext=(f.name.match(/\.[^.]+$/)||[""])[0].toLowerCase();
-  if(!UPLOAD_TYPES.includes(ext)){ snack(`${f.name}: only .vtt, .docx, .txt, .md or .pdf`); return null; }
-  if(f.size>UPLOAD_MAX){ snack(`${f.name} is over 25 MB`); return null; }
+  if(!UPLOAD_TYPES.includes(ext)) return {fail:addFailed(f.name,"Intake takes transcripts (VTT), Word, text, Markdown and PDF files, not this kind")};
+  if(f.size>UPLOAD_MAX) return {fail:addFailed(f.name,"it is over 25 MB")};
+  if(!f.size) return {fail:addFailed(f.name,"the file is empty")};
   const data=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]||""); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(f); });
-  const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return false; } snack(`${f.name}: ${oneLine(r.message)}`); return null; }
+  const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return false; } return {fail:addFailed(f.name,oneLine(r.message))}; }
   return {r,ext}; }
 /* preview before processing; remove moves the file to backups (Undo puts it back) */
-export async function previewInbox(path){ if(!viaServer()){ snack("Previewing needs the live server"); return; } const r=await api("/api/inbox/preview",{path});
+export async function previewInbox(path){ if(!viaServer()){ snack(needsConnection("Previewing")); return; } const r=await api("/api/inbox/preview",{path});
   if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
   if(r.open){ const o=await api("/api/open",{path}); snack(o.ok?"Opened in its own app":oneLine(o.message)); return; }
   $("#inPrevName").textContent=r.name; $("#inPrevText").textContent=r.text||"(empty)";
   { const md=/\.(md|markdown)$/i.test(r.name||path)&&!!r.text; $("#inPrevText").hidden=md; $("#inPrevMd").hidden=!md; putHTML($("#inPrevMd"),raw(md?mdView(r.text,{hBase:2}):"")); }   /* BL-196: a Markdown file is shown formatted */ $("#inPrevCut").hidden=!r.cut; $("#inPrev").dataset.path=path; openDialog("inPrev"); }
-export async function removeInbox(path){ if(!viaServer()){ snack("Removing needs the live server"); return; } const f=(D.inbox||[]).find(x=>x.path===path), r=await api("/api/inbox/remove",{path});
+export async function removeInbox(path){ if(!viaServer()){ snack(needsConnection("Removing")); return; } const f=(D.inbox||[]).find(x=>x.path===path), r=await api("/api/inbox/remove",{path});
   if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
   D.inbox=(D.inbox||[]).filter(x=>x.path!==path);
   snack(`Removed ${f?f.name:path} from Intake (kept in backups)`,async()=>{ const b=await api("/api/inbox/restore",{kept:r.kept}); if(b.ok){ await reloadData(); snack("Back in Intake"); } else snack(oneLine(b.message)); }); }
@@ -69,10 +72,10 @@ async function readEvents(r, fold, onEv){ const rd=/** @type {ReadableStream<Uin
 async function runRoute(url, body, pre, fold, onEv){ const id=runId(pre), ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ const got={};
   if(onEv) onEv({type:"run",id});     /* the run's ID first, for Stop */
   try{ const r=await fetch(url,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify({...body,run:id})});
-    if(!r.ok||!r.body){ const j=await r.json().catch(()=>({})); return {ok:false,message:j.message||"It couldn't start: check the live server."}; }
+    if(!r.ok||!r.body){ const j=await r.json().catch(()=>({})); return {ok:false,message:j.message||"It couldn't start: check that creaite is running."}; }
     await readEvents(r, ev=>{ if(ev.type==="closure") got.closure=ev; else if(ev.type==="stopped") got.stopped=true; else if(ev.type==="error") got.message=ev.message; else fold(got,ev); }, onEv);
     return {ok:true,...got}; }
-  catch(e){ return {ok:false,stopped:e&&e.name==="AbortError",message:e&&e.name==="AbortError"?"Stopped":"The live server stopped."}; }
+  catch(e){ return {ok:false,stopped:e&&e.name==="AbortError",message:e&&e.name==="AbortError"?"Stopped":"creaite stopped."}; }
   finally{ shared.RUN=null; setRunning(false); api("/api/ask/ack",{run:id}); } }
 /* One Process run (a seam, so tests can stand in for the server). */
 /** @param {{path: string, project?: string}[]} files @param {(ev: any) => void} [onEv] @returns {Promise<ProcessResult>} */

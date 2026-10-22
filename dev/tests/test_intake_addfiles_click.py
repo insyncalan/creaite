@@ -38,6 +38,35 @@ class AddFilesClick(IntakeBase):
         b.wait("D.intake_review.meetings.some(m=>m.title==='Chosen minutes.txt')", 30)
         self.assertIn("1 file added to Intake", b.eval("document.body.innerText"))
 
+    def test_failed_files_are_named_with_why_and_stay_until_dismissed(self):
+        """#307 A4: a refused file is named with its reason on the page, not in a toast the next file replaces."""
+        b = self.b
+        bad, empty, good = (self.v.root.parent / n for n in ("notes.xlsx", "empty.vtt", "Kept minutes.txt"))
+        bad.write_bytes(b"x" * 40)
+        empty.write_bytes(b"")
+        good.write_text("minutes " * 30)
+        for f in (bad, empty, good):
+            self.addCleanup(f.unlink, missing_ok=True)
+        self.addCleanup((self.v.root / "inbox" / "Kept minutes.txt").unlink, missing_ok=True)
+        b.call("Page.enable")
+        b.call("Page.setInterceptFileChooserDialog", enabled=True)
+        b.click("[data-irpick]")
+        b.set_files("body > input[type=file]", [bad, empty, good])
+        b.wait("D.intake_review.meetings.some(m=>m.title==='Kept minutes.txt')", 30)
+        b.wait("document.querySelector('[data-iraddfail]')", 10)
+        note = b.eval("document.querySelector('[data-iraddfail]').innerText")
+        self.assertIn("2 files weren't added", note)
+        self.assertIn("notes.xlsx:", note)                       # each failed file by name ...
+        self.assertIn("empty.vtt:", note)
+        self.assertIn("not this kind", note)                    # ... and why
+        self.assertIn("empty", note.split("empty.vtt:")[1])
+        for word in (".vtt,", "tracker", "live server", "staged"):
+            self.assertNotIn(word, note)
+        b.pump(7)                                                # longer than any toast
+        self.assertIn("notes.xlsx:", b.eval("document.querySelector('[data-iraddfail]').innerText"), "the note vanished with the toast")
+        b.click("[data-ira=dismissaddfail]")
+        self.assertFalse(b.eval("!!document.querySelector('[data-iraddfail]')"))
+
 
 if __name__ == "__main__":
     unittest.main()

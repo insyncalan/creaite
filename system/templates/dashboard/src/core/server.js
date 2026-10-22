@@ -20,6 +20,7 @@ import { mCells, mCounts } from "./motion.js";
 import { go, tabTitle } from "./nav.js";
 import { D, days, fd, fdMd, fdText, mK, mSay, nowStamp, prio, reduced, S, TODAY } from "./page.js";
 import { shared } from "./state.js";
+import { decidedWords, plainSay } from "./say.js";
 import { heldWords, rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
@@ -91,7 +92,7 @@ export const oneLine=m=>noPath(m).split("\n").map(x=>x.trim()).filter(Boolean).j
 export const applyTitle=(file,ref)=>{ const L=typeof REV!=="undefined"?REV.filter(x=>x.file===file):[], row=L.find(x=>ref!=null&&String(x.ref)===String(ref))||L.find(x=>x.kind==="draft")||L[0], r=(row&&row.rec)||{};
   return String(r.t||r.title||r.decision||"").replace(/^[A-Z][A-Za-z ]{0,20}: /,"").trim(); };
 export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
-  if(f) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Review.";
+  if(f) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Intake.";
   /* #275 round 3: the Track check's refusal, without tracker.py's header or the proposal's file */
   if(!/in the minutes' Track column|the minutes record can't be read/.test(t)){
     /* #291 Tier 1: a stop in plain words: which suggestion, never the file, the field list or the script's header */
@@ -99,9 +100,9 @@ export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) chan
     if(miss){ const n=applyTitle(miss[1]); return `The minutes${n?` for ${n}`:""} couldn't be filed: the transcript isn't in your inbox any more. Nothing was saved.`; }
     const bad=[...t.matchAll(/(proposed-[^\s\/\\:]+\.json) item (\d+): /g)];
     if(bad.length){ const one=bad.length===1, n=applyTitle(bad[0][1],bad[0][2]);
-      return `${one?"One suggestion":bad.length+" suggestions"}${one&&n?` (${n})`:""} couldn't be saved. ${one?"It needs":"They need"} fixing in Review. Nothing was saved.`; }
+      return `${one?"One suggestion":bad.length+" suggestions"}${one&&n?` (${n})`:""} couldn't be saved. ${one?"It needs":"They need"} fixing in Intake. Nothing was saved.`; }
     /* #275 (Cap's 1): the two shapes that are not a suggestion's own fault are not sent to Review */
-    if(/a recode is applied on its own/.test(t)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Review first, then ask for the code change again.";
+    if(/a recode is applied on its own/.test(t)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Intake first, then ask for the code change again.";
     if(/^Apply failed/m.test(t)) return "creaite couldn't save this, so nothing was changed. Settings › Health › Diagnostics has the reason.";
     if(/Apply stopped|proposed-\S+\.json/.test(t)) return "Nothing was saved. creaite stopped before changing anything; Settings › Health › Diagnostics has the reason.";
     return t; }
@@ -150,18 +151,19 @@ export let TRKRELOAD=null;
 export function reloadForTrack(){ const p=reloadData().finally(()=>{ if(TRKRELOAD===p) TRKRELOAD=null; }); TRKRELOAD=p; return p; }
 export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 /* BL-189 (sprint-milestones): every apply but the peek's own leaves the peek's staged changes in staging (hold_peek); pkApply passes peek */
-export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=applyWords(r.message); return r; }
+export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=plainSay(applyWords(r.message)); return r; }
 export let undoApply = async function(id,ids){ const u=await api("/api/undo",{apply_id:id}); if(!(ids&&await refreshRecords(ids))) await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };   /* BL-304: ids, just those items again */
 /* BL-304: just these items again (Review keeps its selection; the peek's staging is reconciled), or false */
 export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{after:async()=>{ await pkReconcile(); }}); }
 /* several quick decisions (bulk approve) become one apply */
-export let APPLYT=null, APPLYN=0;
-export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
+/* #307: applySoon(row, "approved"|"rejected") says what was saved from the real kind and count ("Saved 1 action"), never "decision" for everything */
+export let APPLYT=null, APPLYN=0, APPLYL=/** @type {{r:any,v:string}[]} */ ([]);
+export function applySoon(row,verb){ APPLYN++; APPLYL.push({r:row||null,v:verb||"approved"}); clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const L=APPLYL; APPLYN=0; APPLYL=[]; const r=await applyNow();
   const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
-  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:oneLine(applyWords(r.message)),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  snack(r.ok?`${decidedWords(L)}${held}`:plainSay(oneLine(applyWords(r.message))),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
-  if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }
+  if(res.ok){ if(S.autoApply) applySoon(r,decision); else await reloadData(); snack(plainSay(oneLine(res.message))); return; }
   const m=res.message||"";
   if(/differs from the staged items/.test(m)&&shared.VIEW==="intake-review"){   /* #307 path 4: on Intake's row the reason is said in plain words with its way out, not in the ask panel */
     snack("The Word draft doesn't match the suggestions for these minutes. File them as they are, or fix the Word draft and try again.",()=>reviewViaServer(r,decision,[...(modes||[]),"as-staged"]),"File as they are"); return; }

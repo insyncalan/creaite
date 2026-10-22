@@ -323,46 +323,6 @@
    "count": 1,
    "text": "Changed in the tracker after this was proposed."
   },
-  "components/intakeReview/actions.js | live server | 35355cd61a48": {
-   "count": 1,
-   "text": "Checking needs the live server"
-  },
-  "components/intakeReview/actions.js | live server | 355164ff6c3e": {
-   "count": 1,
-   "text": "This needs the live server"
-  },
-  "components/intakeReview/actions.js | live server | 3766246c27a6": {
-   "count": 2,
-   "text": "Processing needs the live server"
-  },
-  "components/intakeReview/actions.js | live server | 3afce8e28722": {
-   "count": 1,
-   "text": "Removing needs the live server"
-  },
-  "components/intakeReview/actions.js | live server | 87c525dcb4d2": {
-   "count": 1,
-   "text": "Refreshing needs the live server"
-  },
-  "components/intakeReview/actions.js | live server | b3afd04168db": {
-   "count": 1,
-   "text": "Adding files needs the live server"
-  },
-  "components/intakeReview/actions.js | stage | 5a219deadfa7": {
-   "count": 1,
-   "text": "Process didn't stage it. Why not, and what should I do?"
-  },
-  "components/intakeReview/proposals.jsx | proposal | 929017ada05a": {
-   "count": 1,
-   "text": "Proposal"
-  },
-  "components/intakeReview/rows.jsx | proposal | 929017ada05a": {
-   "count": 1,
-   "text": "Proposal"
-  },
-  "components/intakeReview/rows.jsx | stage | d44e2d2c09ea": {
-   "count": 1,
-   "text": "Stage: {}"
-  },
   "components/minutes/ItemTable.jsx | stage | 232be7b4edab": {
    "count": 1,
    "text": "Open the staged update in Review"
@@ -599,30 +559,6 @@
    "count": 1,
    "text": "Proposal moved to {}: still waiting for review"
   },
-  "core/intakeApi.js | live server | 33ee652abd0b": {
-   "count": 1,
-   "text": "It couldn't start: check the live server."
-  },
-  "core/intakeApi.js | live server | 35355cd61a48": {
-   "count": 1,
-   "text": "Checking needs the live server"
-  },
-  "core/intakeApi.js | live server | 3afce8e28722": {
-   "count": 1,
-   "text": "Removing needs the live server"
-  },
-  "core/intakeApi.js | live server | c264629e880e": {
-   "count": 1,
-   "text": "The live server stopped."
-  },
-  "core/intakeApi.js | live server | e990465954de": {
-   "count": 1,
-   "text": "Previewing needs the live server"
-  },
-  "core/intakeApi.js | path | aa61a75091c0": {
-   "count": 1,
-   "text": "{}: only .vtt, .docx, .txt, .md or .pdf"
-  },
   "core/itemLink.js | tracker | 4d40a158a573": {
    "count": 1,
    "text": "not in the tracker"
@@ -674,10 +610,6 @@
   "core/server.js | apply | ed5f7918eb13": {
    "count": 1,
    "text": "Already applied: undo it in Activity"
-  },
-  "core/server.js | apply | f0ac1a83cc5f": {
-   "count": 1,
-   "text": "Applied {} decision{}{}"
   },
   "core/server.js | apply | f5732392a182": {
    "count": 1,
@@ -3211,86 +3143,6 @@
    "count": 1,
    "text": "{} isn't in the tracker."
   },
-  "review.js | apply | 0d5206d285b6": {
-   "count": 1,
-   "text": "apply stopped, all back on Intake: {}"
-  },
-  "review.js | apply | 2f971dc2c83d": {
-   "count": 1,
-   "text": "· not applied: {}"
-  },
-  "review.js | apply | 67a592edc610": {
-   "count": 3,
-   "text": "already applied"
-  },
-  "review.js | apply | cc249626f107": {
-   "count": 1,
-   "text": "Already applied: use “undo last apply” in Claude Code"
-  },
-  "review.js | apply | d37610ba3639": {
-   "count": 1,
-   "text": "not applied: {}"
-  },
-  "review.js | apply | ed5f7918eb13": {
-   "count": 1,
-   "text": "Already applied: undo it in Activity"
-  },
-  "review.js | live server | 167ffb3b915b": {
-   "count": 1,
-   "text": "Discarding a proposal needs the live server; or say “reject {} --discard” in Claude Code"
-  },
-  "review.js | live server | 6351caf065e6": {
-   "count": 1,
-   "text": "This conflicts with a newer change: Keep current or Use this one needs the live server; or say “keep"
-  },
-  "review.js | live server | 6601f93704c1": {
-   "count": 1,
-   "text": "Approving these minutes without the transcript needs the live server; or say “approve {} --without-t"
-  },
-  "review.js | live server | a9ae3d7ed829": {
-   "count": 1,
-   "text": "Updating an existing item instead needs the live server; or say “{} is an update to"
-  },
-  "review.js | live server | b1022761cf71": {
-   "count": 1,
-   "text": "Approving a draft needs the live server, which checks and cleans it first; or say “approve {}” in Cl"
-  },
-  "review.js | live server | e0402fc79c95": {
-   "count": 1,
-   "text": "{} needs the live server; or say “{} {}” in Claude Code (review)"
-  },
-  "review.js | live server | fbeba651877f": {
-   "count": 1,
-   "text": "{} needs the live server; or say “review” in Claude Code"
-  },
-  "review.js | proposal | 167ffb3b915b": {
-   "count": 1,
-   "text": "Discarding a proposal needs the live server; or say “reject {} --discard” in Claude Code"
-  },
-  "review.js | proposal | 5e6b547b4d7a": {
-   "count": 1,
-   "text": "Approve the minutes without the transcript copy, or discard the proposal"
-  },
-  "review.js | proposal | 685d70322990": {
-   "count": 1,
-   "text": "Back to a new item, as it was proposed"
-  },
-  "review.js | proposal | 7c0b7b404623": {
-   "count": 1,
-   "text": "Reject {} proposals?"
-  },
-  "review.js | proposal | 823dc1a05951": {
-   "count": 1,
-   "text": "{} proposal{} held in Intake: a file to be filed has gone"
-  },
-  "review.js | proposal | 91345817da3c": {
-   "count": 1,
-   "text": "Held: {}. Approve the minutes without the transcript copy, or discard the proposal"
-  },
-  "review.js | tracker | fc62f580e27a": {
-   "count": 1,
-   "text": "Rejecting writes nothing to the tracker; Undo brings them back"
-  },
   "review.py | extract | c455bdd8f621": {
    "count": 1,
    "text": "say \"re-extract\" (minutes.py refresh) to rebuild the staged items from the draft, or \"approve {} --a"
@@ -3518,18 +3370,6 @@
   "stores/findUpdates.js | tracker | 9c2e869a2bfe": {
    "count": 1,
    "text": "Nothing in the new lines to turn into tracker changes. That's fine: not every line needs to be an it"
-  },
-  "stores/minutes.js | apply | 0d4ad046bee6": {
-   "count": 1,
-   "text": "The apply didn't run; nothing was changed."
-  },
-  "stores/minutes.js | apply | f1c499ab377e": {
-   "count": 1,
-   "text": "The minutes weren't approved; nothing was applied."
-  },
-  "stores/minutes.js | live server | da60a01b8a86": {
-   "count": 1,
-   "text": "The minutes view needs the live server."
   },
   "stores/notes.js | live server | 28f5cce4b664": {
    "count": 1,
