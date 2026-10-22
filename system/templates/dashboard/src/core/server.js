@@ -100,7 +100,10 @@ export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) chan
     const bad=[...t.matchAll(/(proposed-[^\s\/\\:]+\.json) item (\d+): /g)];
     if(bad.length){ const one=bad.length===1, n=applyTitle(bad[0][1],bad[0][2]);
       return `${one?"One suggestion":bad.length+" suggestions"}${one&&n?` (${n})`:""} couldn't be saved. ${one?"It needs":"They need"} fixing in Review. Nothing was saved.`; }
-    if(/Apply (stopped|failed)|proposed-\S+\.json/.test(t)) return "Nothing was saved. Something in the suggestions needs fixing in Review.";
+    /* #275 (Cap's 1): the two shapes that are not a suggestion's own fault are not sent to Review */
+    if(/a recode is applied on its own/.test(t)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Review first, then ask for the code change again.";
+    if(/^Apply failed/m.test(t)) return "creaite couldn't save this, so nothing was changed. Settings › Health › Diagnostics has the reason.";
+    if(/Apply stopped|proposed-\S+\.json/.test(t)) return "Nothing was saved. creaite stopped before changing anything; Settings › Health › Diagnostics has the reason.";
     return t; }
   return t.split("\n").map(x=>x.trim()).filter(x=>x&&!/^Apply stopped\. Nothing was written\.$/.test(x))
     .map(x=>x.replace(/^proposed-\S+\.json (item \d+|minutes): /,(a,w)=>w==="minutes"?"":"an item was ")).join("\n"); };

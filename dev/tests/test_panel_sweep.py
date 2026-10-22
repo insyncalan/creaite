@@ -84,6 +84,17 @@ class Recogniser(unittest.TestCase):
                   "please sweep", "sweep now"):
             self.assertTrue(self.ls.panel_sweep(m), m)
 
+    @unittest.skipUnless("check (?:my )?(?:mail" in open(REPO / "system/scripts/live_server.py").read(),
+                         "needs dev/proposals/291/live_server.py.diff applied")
+    def test_the_plain_words_are_sweeps(self):
+        """#291: Today's Check now and the panel chip send these; they are the same as "sweep"."""
+        for m in ("check my mail", "check my mail and Teams", "check mail for ABC", "check my mail the last 7 days",
+                  "check my mail for the last 7 days", "Check my email.", "check mail for abc", "check my mail for ORX2C"):
+            self.assertTrue(self.ls.panel_sweep(m), m)
+        for m in ("check my mail and apply", "check my mail then approve", "check email for invoices", "check my mail for urgent",
+                  "check my mail for all", "sweep for today", "check the last 7 days"):
+            self.assertFalse(self.ls.panel_sweep(m), m)       # an ordinary word is never read as a project code
+
     def test_anything_more_is_a_plain_chat(self):
         for m in ("sweep and apply", "sweep then approve everything", "sweep, then apply", "sweep; apply", "apply",
                   "sweep mail for ABC and mark ABC-A-003 done", "sweep the budget and apply thread",

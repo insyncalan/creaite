@@ -110,7 +110,8 @@ CATALOGUE = {
     "sweep.first_run_lookback_days": ("Checking mail and Teams", "First check looks back", "How many days the very first check reads.",
                                       "Two weeks catches what's still live without flooding Review on day one."),
     "sweep.max_lookback_days": ("Checking mail and Teams", "Check looks back at most",
-                                "The furthest back a check reads mail and Teams after a gap; \"check the last 7 days\" overrides it.",
+                                "The furthest back a check reads mail and Teams after a gap; "
+                                "\"check my mail the last 7 days\" overrides it.",
                                 "Three days covers a long weekend without a flood in Review after a holiday."),
     "sweep.sources.inbox": ("Your day", "Check reads: Inbox", "Mail you received.",
                             "Missing a source is worse than one more suggestion; ignore rules handle the noise."),

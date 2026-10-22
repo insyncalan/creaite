@@ -273,7 +273,13 @@ export function edFilePlain(b){
   if(md) return `Move the folder ${fnm(md[1])} → ${arch(md[2])?"Archive":"its place in the projects folder"}`;
   if(cf) return `Create the folder ${fnm(cf[1])}`;
   if(cr) return `Create ${fnm(cr[1])} (${cr[2]} line${cr[2]==="1"?"":"s"})`;
-  if(ch) return `Change ${fnm(ch[1])}:`;
+  if(ch){ const q=ch[1].replace(/\/+$/,"").split("/"), last=q[q.length-1], fold=q.length>1?q[q.length-2]:"";
+    /* #275 (Cap's LOW 4): a project's memory says whose it is, by the project's full name (never the code) */
+    if(last==="CLAUDE.md"){ const pr=P.find(x=>fold===x.name||fold===`${x.code} ${x.name}`||fold.startsWith(x.code+" ")); const n=pr?pr.name:fold.replace(/^[A-Z][A-Z0-9]{2,6} /,"");
+      return n&&n!=="projects"?`Change ${n} memory:`:"Change this project's memory:"; }
+    if(last==="project-register.md") return "Change the project register:";
+    if(last==="people-register.md") return "Change the people register:";
+    return `Change ${fnm(ch[1])}:`; }
   return b; }
 export function edLine(ln){ const m=/^(\s*)(.*)$/.exec(ln), ind=m[1].length>0, body=edFilePlain(m[2]), mid=/^(\S+) · (.*)$/.exec(body);
   const field=t=>{ const f=/^([^:]+): (.*?) → (.*)$/.exec(t); return f?`<span class="edf"><span class="ckf">${esc(f[1])}</span> <span class="eddel">${esc(f[2])}</span> → <span class="edadd">${esc(f[3])}</span></span>`:esc(t); };
@@ -368,7 +374,7 @@ $("#chLog").addEventListener("click",e=>{ const b=e.target.closest("[data-chgcop
 }
 /* ======================= ask creaite ======================= */
 export const sleep=ms=>new Promise(r=>setTimeout(r,ms)); shared.BUSY=false;
-export const GREET="Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.";
+export const GREET="Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.";
 /* ===== BL-262 (sprint-ask-flow) ===== reopening shows the chat as it was: openChat never clears or redraws the log; an empty one
    is filled from the history in one step, or greeted at once (never typed out). SHOWN is the run whose events are on screen and
    the last event drawn (its sequence number), so a reattach asks only for what is newer. */
