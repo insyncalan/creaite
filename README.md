@@ -28,7 +28,7 @@ You leave the steering committee with six new actions, a decision nobody wrote d
 ## How it works
 
 1. **Capture.** Drop in a transcript, or let creaite check your mail and Teams each morning. It reads; it never replies, sends or deletes.
-2. **Approve.** Suggestions wait in one place, Intake. You tick what becomes a tracked work item, fix what is wrong in place, and approve with one click. Every save has Undo.
+2. **Approve.** Everything that arrives and waits is on one page, Intake, as a list, a board or two panes. You tick what becomes a tracked work item, fix what is wrong in place, and approve with one click. Every save has Undo.
 3. **Report.** One approved record feeds Today, weekly reports, client-safe reports and the steering one-pager. You review each draft and send it yourself.
 
 ```
@@ -58,13 +58,13 @@ AI that writes to your record unchecked is how a status goes quietly wrong. crea
 
 | | |
 |---|---|
-| **Minutes you can edit in place** | Tick the lines that become work items, cross the ones that do not, and export as Word, PDF or HTML, or draft the follow-up email. |
+| **Minutes you can edit in place** | One clean document with a Track column: tick a line to make it a work item, cross it to remove it, leave it to keep it in the minutes only. Edit words, owners, dates and priorities in the row, hover a row to see the transcript line it came from, then approve in one click. Export as Word, PDF or HTML, or draft the follow-up email. |
 | **Today** | The meetings in your day, what is overdue or due soon, decisions waiting on you or on others, what you owe and are owed, and milestones that are slipping, with the open work behind each. |
-| **Mail and Teams check** | Follow-ups and commitments in your Outlook and Teams, offered as suggestions. People you follow are never missed. |
+| **Mail and Teams check** | Follow-ups and commitments in your Outlook and Teams, offered as suggestions. What people you follow send you shows up on Today, so nothing from them is missed. |
 | **Reports without the Friday scramble** | A weekly report per project with health and the reasons, a client-safe report that shows only what you have flagged as client-visible, and a one-page steering summary. All drafted as Word documents. |
 | **Meeting prep in a minute** | The open items that matter, the latest reporting, suggested questions, and notes with sources. |
 | **Ask creaite** | Ask in plain English ("what is blocking go-live?", "make a document of open risks") and get an answer from your own record, with where it came from. |
-| **Work, People, Projects** | Actions, risks, issues and decisions across every programme; who owns what; health with its evidence. |
+| **Work, People, Projects** | Actions, risks, issues and decisions across every programme; one People page for who owns what; health with its evidence. Single keys jump between pages: T Today, P Projects, W Work, I Intake, F Files, A Activity, R Reports, S Settings, E People. |
 
 <table>
   <tr>
@@ -79,6 +79,15 @@ AI that writes to your record unchecked is how a status goes quietly wrong. crea
 - **Before a meeting.** Press Prep: the open items, the latest status and questions to raise.
 - **Friday.** The weekly report is already drafted per project. Review, adjust, file.
 - **Steering committee.** One click for the one-pager, from the same record.
+
+## New in 2.6
+
+- **One Intake.** Review and Intake are now one page, with List, Board and Two panes views, and **Approve routine** for the routine suggestions.
+- **Minutes, rebuilt.** One version of the minutes, a Track column, edit in place, and one-click **Approve minutes** with Undo.
+- **People page.** The whole register in one place, with search, filters, add, edit and remove.
+- **Page keys** and a reorganised Settings.
+
+The plain-English notes for every release are in [`dev/release-notes/`](dev/release-notes/) ([2.6.0](dev/release-notes/2.6.0-plain.md)). This README is refreshed with each release.
 
 ## Your data stays local
 
