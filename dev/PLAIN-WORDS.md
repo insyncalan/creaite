@@ -49,3 +49,28 @@ ask creaite keeps understanding the old commands (`sweep`, `apply`, `process new
 5. Tier 3: the Help rewrite and the chat command wording.
 
 A review pack with before and after screenshots per tier goes to Alan before commit.
+
+## Step 2: the guard test (#290)
+
+`dev/tests/test_plain_words.py` checks every user-visible string against the banned list above, and
+`dev/tests/plain_words_baseline.json` holds its data. It is a ratchet: the count may only fall.
+
+- **What it reads.** The dashboard (the built page's script, module by module, and the shell's text and visible
+  attributes, with HTML tags taken out first), the Help (`help.md` and What's new), and the Python messages that reach
+  the dashboard (values under a message key such as `message`, `error`, `problem` or `why`, `("problem", …)` pairs, the
+  message of a `raise`, and `print` in `session.py` and `tracker.py`). Comments, logs, keys, class names, selectors and
+  addresses are skipped.
+- **What fails.** A string that breaks a rule and isn't in the baseline (a new offender), or a baseline offender that has
+  gone (it was fixed or reworded): take it out so the count can't climb back. Each offender is its file, its rule and a
+  fingerprint of the string, so moving code within a file changes nothing.
+- **Warn, not fail.** `severity` in the data file: `"tracker": "warn"` reports and never fails until Tier 2 (#292) lands;
+  then delete that line and it fails like the rest.
+- **Allow-lists** are by file (`allow.files`: Diagnostics' and the debug log's own code, `doctor.py`) or by identifier
+  (`allow.identifiers`: one function, `settings.js#diagCardHtml`, or one Help section, `help.md#<section title>`), each
+  with its reason. Never by word: a visible string that says "stage", "valid" or "refused" still fails everywhere else.
+- **Run it:** `python3 dev/tests/test_plain_words.py`. It prints the offenders per rule and the total.
+- **After fixing offenders** (Tier 1 to 3), rewrite the baseline and commit it with the fix:
+  `CREAITE_UPDATE_PLAIN_BASELINE=1 python3 dev/tests/test_plain_words.py`. It rewrites only `offenders` and keeps
+  `severity` and `allow`. A rewrite that adds offenders needs a deliberate reason in the commit message.
+- **The dashboard is read from the built page** (`system/templates/dashboard.html`): rebuild it after changing its source
+  (`check.py` fails until you do).

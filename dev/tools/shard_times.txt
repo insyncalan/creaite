@@ -242,6 +242,7 @@ test_permissions.py 41
 test_permissions_mcp.py 33
 test_person_rows.py 8
 test_plain_dates.py 11
+test_plain_words.py 4
 test_populate_clock.py 32
 test_portability.py 57
 test_portfolio_table.py 68
