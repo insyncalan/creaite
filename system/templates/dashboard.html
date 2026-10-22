@@ -54615,10 +54615,10 @@ ${pre}**Current state title:** ${title}`);
     ] });
   }
   function DayMeetings(props) {
-    const { day, dow: dow2, isToday, past, now, mode, live, calendar, lastRead, meetings, allDay, acts: acts2, onWheel } = props;
+    const { day, dow: dow2, isToday, past, now, mode, live, calendar, unread, lastRead, meetings, allDay, acts: acts2, onWheel } = props;
     const ref = wheelRef(onWheel);
     if (mode === "none") return /* @__PURE__ */ u4("div", { class: "daynone", ref, children: [
-      /* @__PURE__ */ u4("span", { children: calendar ? "No calendar for today yet" : "No calendar yet" }),
+      /* @__PURE__ */ u4("span", { children: unread ? "Not read yet" : calendar ? "No calendar for today yet" : "No calendar yet" }),
       /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-refcal": "", disabled: !live, title: live ? void 0 : "creaite isn’t running", children: "Refresh calendar" }),
       lastRead ? /* @__PURE__ */ u4("span", { class: "sub", children: [
         "Last read ",
@@ -55295,7 +55295,7 @@ ${pre}**Current state title:** ${title}`);
       meets.removeAttribute("aria-label");
     }
     const v5 = on2 ? dayView(iso2) : { known: false, meetings: [], allDay: [] };
-    $("#dayHead").textContent = v5.known ? dayShape(v5.meetings, first, iso2) : `Good ${nowMins() < 12 * 60 ? "morning" : nowMins() < 18 * 60 ? "afternoon" : "evening"}${first ? ", " + first : ""}.`;
+    $("#dayHead").textContent = v5.known ? dayShape(v5.meetings, first, iso2) : v5.unread ? `${rec.dow} has not been read yet${first ? ", " + first : ""}.` : `Good ${nowMins() < 12 * 60 ? "morning" : nowMins() < 18 * 60 ? "afternoon" : "evening"}${first ? ", " + first : ""}.`;
     if (!on2) {
       drawDayCurve(line, null);
       drawDayMeetings(meets, null);
@@ -55306,7 +55306,7 @@ ${pre}**Current state title:** ${title}`);
     if (!v5.known) {
       line.hidden = true;
       drawDayCurve(line, null);
-      drawDayMeetings(meets, { ...common, mode: "none", lastRead: cal && cal.fetched ? longDay(cal.fetched) + (cal.fetched.length > 10 ? ", " + cal.fetched.slice(11, 16) : "") : "" });
+      drawDayMeetings(meets, { ...common, mode: "none", unread: !!v5.unread, lastRead: cal && cal.fetched ? longDay(cal.fetched) + (cal.fetched.length > 10 ? ", " + cal.fetched.slice(11, 16) : "") : "" });
       calFoot(null);
       return;
     }
@@ -55369,6 +55369,7 @@ ${pre}**Current state title:** ${title}`);
         })
       };
     }
+    if (rec && rec.unread) return { known: false, unread: true, meetings: [], allDay: [] };
     if (rec && iso2 !== TODAY) return { known: true, meetings: srv.map((m5) => extra({ ...m5, ix: null })), allDay: (rec.all_day || []).map((t47) => ({ title: t47, p: null })) };
     return { known: false, meetings: [], allDay: [] };
   }

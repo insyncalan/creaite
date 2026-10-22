@@ -348,7 +348,7 @@ if "--mode calendar" in settings:
              "write_spec": ("Write", {"file_path": str(root / "system/staging/drafts/calendar.json")})}
     verdicts = {k: hook(t, i) for k, (t, i) in calls.items()}
     window = bash(0, "system/scripts/run sweep.py calendar-window")
-    today = (date.fromisoformat(json.loads(window)["to"]) - timedelta(days=7)).isoformat()   # creaite's own clock (CREAITE_NOW)
+    today = date.today().isoformat()   # creaite's own clock (no CREAITE_NOW here); #318: the window's end is no longer a week on
     if write("system/staging/drafts/calendar.json", {"days": {today: [
             {"id": "ev-r1", "start": "23:00", "end": "23:30", "title": "Pilot readiness review", "where": "Teams", "teams": True,
              "organiser": True, "sensitivity": "normal"},
@@ -646,7 +646,9 @@ class SweepCalendarSave(unittest.TestCase):
         from test_dashboard import today
         self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
         kept = self.cal.read_text()
-        window = [(today() + timedelta(days=n)).isoformat() for n in range(8)]
+        import sweep
+        span = (sweep.calendar_window(today())[1] - today()).days + 1      # #318: to next week's Friday
+        window = [(today() + timedelta(days=n)).isoformat() for n in range(span)]
         r = self.save({d: [] for d in window if d != self.tomorrow})
         self.assertEqual(r.returncode, 1, r.stdout)                      # tomorrow, which has a meeting, left out: refused
         self.assertEqual(self.cal.read_text(), kept)
