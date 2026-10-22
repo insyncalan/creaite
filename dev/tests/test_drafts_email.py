@@ -58,10 +58,11 @@ class FollowupFacts(unittest.TestCase):
                            cwd=self.v.root)
         return json.loads(r.stdout)
 
-    def test_the_attendees_without_alan_and_the_summary_paragraph(self):
+    def test_the_attendees_without_alan_and_no_summary_from_an_internal_file(self):
         f = self.facts()
         self.assertEqual(f["attendees"], [{"name": "Sara Example", "email": "sara@example.com"}])
-        self.assertEqual(f["summary"], "The pilot is extended by two weeks. Data access is the main risk.")
+        self.assertEqual(f["summary"], "", "v2.6.0: never taken from an Internal Word, Markdown or text file (it goes to attendees)")
+        self.assertIn("aren't a creaite record", f["note"])
 
     def test_a_confidential_meeting_gives_no_attendees_and_no_summary(self):
         self.cal({"sensitivity": "confidential"})
@@ -200,7 +201,7 @@ class Popup(EmailCase):
             self.assertEqual(b.eval("[...document.querySelectorAll('#deInc [data-deit]')].filter(i=>i.checked).length"), 0)
             b.eval("document.getElementById('deDlg').close()")
 
-    def test_the_followup_from_the_meeting_page_reads_attendees_and_summary_from_the_server(self):
+    def test_the_followup_from_the_meeting_page_reads_attendees_from_the_server_and_no_internal_summary(self):
         b = self.b
         (self.v.root / f"{ABC}/minutes/{TODAY} ABC weekly.md").write_text("## Summary\n\nThe pilot is extended.\n\n## Actions\n")
         (self.v.root / "system/staging/calendar.json").write_text(json.dumps({"days": {TODAY: [{"id": "e9", "start": "09:00", "end": "10:00",
@@ -209,7 +210,7 @@ class Popup(EmailCase):
             files:['{ABC}/minutes/{TODAY} ABC weekly.md'],items:[{{k:'actions',id:'ABC-A-006',state:'Open'}},{{k:'actions',id:'ABC-A-007',state:'Open'}},
             {{k:'decisions',id:'ABC-D-009',state:'Made'}}]}}}}; openFollowup('tk1')""")
         b.wait("DE&&DE.attendees.length===1", 20)
-        self.assertEqual(b.eval("DE.summary"), "The pilot is extended.")
+        self.assertEqual(b.eval("DE.summary"), "", "v2.6.0: no summary from an internal file")
         ids = b.eval("[...document.querySelectorAll('#deInc [data-deit]')].map(i=>i.dataset.deit)")
         self.assertNotIn("actions:ABC-A-007", ids)                           # confidential: never offered
         self.assertIn("sara@example.com", b.eval("document.getElementById('deTo').textContent"))

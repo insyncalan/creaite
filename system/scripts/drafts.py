@@ -1321,12 +1321,31 @@ def followup_facts(req):
     ev = calendar_event(req)
     confidential = (ev.get("sensitivity") or "") == "confidential"
     p = minutes_file(req.get("files"))
-    text = file_text(p) if p else ""
-    summary = "" if confidential or secret(text) else minutes_summary(text)
-    note = "Confidential: the summary is left out." if text and (confidential or secret(text)) else \
-        "" if summary else "The minutes have no summary paragraph yet." if p else "No minutes yet, so no summary."
+    # v2.6.0: this email goes to the meeting's attendees, so its summary is only ever the Distributed version's: from a minutes
+    # record (distributed_of), never from an Internal Word, Markdown or text file, which may hold what is not for distribution.
+    summary, rec = "", _distributed_record(req.get("files"))
+    if rec is not None and not confidential:
+        import minutes_record
+        text = minutes_record._followup_text(rec, "summary")
+        summary = "" if secret(text) else short(text, 1500)
+    note = ("Confidential: the summary is left out." if confidential else "" if summary else
+            "The minutes have no summary paragraph yet." if rec is not None else
+            "The minutes aren't a creaite record, so their summary is left out (it could be internal)." if p else
+            "No minutes yet, so no summary.")
     return {"attendees": [] if confidential else attendees_of(ev), "summary": summary, "note": note,
             "minutes": paths.rel(p) if p else None, "confidential": confidential}
+
+
+def _distributed_record(files):
+    """The Distributed version of the first minutes record among `files` (a filed one or a draft), or None."""
+    import minutes_record
+    for f in files or []:
+        try:
+            _, doc = minutes_record.record_at(f)
+            return minutes_record.distributed_of(doc)
+        except (minutes_record.RecordError, OSError, ValueError, KeyError, TypeError):  # not a minutes record: try the next file
+            continue
+    return None
 
 
 @kind("polish", "email")
@@ -2497,7 +2516,7 @@ def report_request(con, req):
     bad = edit_ai.client_problems(code, current, current) if client else []
     if bad == [edit_ai.REGISTER]:
         raise Refused("The people register couldn't be read, so the names couldn't be checked and nothing was sent to a draft. "
-                      "Fix it in Settings › People, then try again.")
+                      "Fix it on the People page, then try again.")
     if bad:
         raise Refused("This section already holds wording that isn't client-safe. Fix it first; nothing was sent to a draft.")
     return code, client, fri, action, task, current, panes
@@ -2568,6 +2587,7 @@ def minutes_version(req):
     except minutes_record.RecordError as e:
         raise Refused(str(e)) from None
     dist = version == "distributed"
+    minutes_project(doc)
     shared = minutes_record.distributed_of(doc)
     sid = str(req.get("section") or "")
     sec = next((s for s in (shared if dist else doc).get("sections") or [] if s.get("id") == sid), None)
@@ -2577,6 +2597,16 @@ def minutes_version(req):
         raise Refused("This section has lines marked Internal only, and a redraft would lose their mark. Redraft it in the "
                       "distributed version, or take the mark off first.")
     return shared, dist, sec
+
+
+def minutes_project(doc):
+    """The minutes' project code, read from the record (never the page), or Refused before Claude runs when there is none or the
+    tracker doesn't hold it (#262, 2.6): the reply is checked against it, so with none every draft would be dropped."""
+    import edit_ai
+    code = str(((doc.get("meta") or {}).get("projects") or [doc.get("project")])[0] or "")
+    if not code or not edit_ai._project_known(code):
+        raise Refused(edit_ai.NO_MINUTES_PROJECT)
+    return code
 
 
 @kind("minutes-section", "minutes-section")
@@ -2602,7 +2632,8 @@ def build_minutes_section(con, req):
                   "shape": section_shape(panes), "sources": listed},
                  kept, item={"section": sid, "version": "distributed" if dist else "internal"},
                  extra={"template": "minutes-section", "section": sid, "action": action, "original": current,
-                        "panes": [p["title"] for p in panes], "audience": "distributed" if dist else "internal", "code": "",
+                        "panes": [p["title"] for p in panes], "audience": "distributed" if dist else "internal",
+                        "code": minutes_project(shared),
                         "people": people_names()})
 
 
@@ -2686,6 +2717,30 @@ def internal_findings(con, code, text, original=""):
     return found
 
 
+def section_dropped(text, ex):
+    """Why a redrafted section is dropped, or "": something private (VIP however written, 2.6), the minutes' check against the
+    record's project (#262, 2.6: the minutes go to attendees, as the AI bar's check), a client report's whole client check (#127),
+    or something confidential the section didn't hold."""
+    import edit_ai
+    original = ex.get("original") or ""
+    if VIP_RE.search(text) or (edit_ai._private(text) and not edit_ai._private(original)):
+        return "The draft named something private, so it was dropped. Try again."
+    if ex.get("template") == "minutes-section":
+        bad = edit_ai.minutes_problems(ex.get("code") or "", edit_ai._untagged(text), edit_ai._untagged(original))  # M2: HTML read through
+        if bad:
+            return (edit_ai.refusal(bad, True) if set(bad) & set(edit_ai.FAIL_CLOSED) else
+                    "The draft was dropped: it added something internal (an item that isn't client-visible, a name or internal "
+                    "wording) that the minutes would carry to attendees. Try again.")
+    if ex.get("audience") == "client":
+        bad = edit_ai.client_problems(ex.get("code") or "", text, original)
+        if bad:
+            return "The draft was dropped: " + ("the people register couldn't be read, so its names couldn't be checked."
+                                                if bad == [edit_ai.REGISTER] else "it held wording that isn't client-safe.")
+    elif secret(text) and not secret(original):
+        return "The draft was dropped: it brought in something marked confidential."
+    return ""
+
+
 @parser("report-section")
 def parse_section(reply, ctx):
     """The redrafted section: its words, its sources, and edit_ai's plain-code check of what it lost or added. A draft that fails
@@ -2696,16 +2751,9 @@ def parse_section(reply, ctx):
     text = out["text"]
     out.update(section=ex.get("section") or "", action=ex.get("action"), notes=[])
     dropped = {**out, "text": "", "sentences": []}
-    if VIP_RE.search(text):
-        return {**dropped, "message": "The draft named something private, so it was dropped. Try again."}
-    if ex.get("audience") == "client":                    # #127: the client place's whole check (items however written, names)
-        bad = edit_ai.client_problems(ex.get("code") or "", text, ex.get("original") or "")
-        if bad:
-            return {**dropped, "message": "The draft was dropped: " + (
-                "the people register couldn't be read, so its names couldn't be checked." if bad == [edit_ai.REGISTER] else
-                "it held wording that isn't client-safe.")}
-    elif secret(text) and not secret(ex.get("original")):
-        return {**dropped, "message": "The draft was dropped: it brought in something marked confidential."}
+    why = section_dropped(text, ex)
+    if why:
+        return {**dropped, "message": why}
     out["notes"] = edit_ai.check(ex.get("original") or "", text, ex.get("people") or [])
     if ex.get("panes"):
         out["panes"] = split_panes(text, ex["panes"])
@@ -2758,12 +2806,35 @@ def is_no_suggestion(text):
     return _HEAD.sub("", t).strip(_WRAP) == NO_SUGGESTION
 
 
-def reads_as_refusal(text):
-    """The backstop: the first sentence (at most 200 characters) reads as the model saying it can't suggest anything. Only the
-    first sentence is read, so a real suggestion that says "can't" later, or about someone else, passes."""
+_CONTRAST = re.compile(r"\b(?:but|however|though|although|instead|meanwhile)\b[,\s]+(.+)", re.I)
+_FIELD_HEAD = re.compile(r"^[A-Z][A-Z ]*:")
+
+
+def _refuses(text):
+    return any(r.search(text or "") for r in REFUSAL_RES)
+
+
+def usable_body(first, hits, marked_rest=()):
+    """v2.6 review: True when a reply whose first sentence reads as a refusal still carries a suggestion: the first sentence goes
+    on past its refusal with "but", "however"… and three or more words that don't refuse ("I can't give a firm date, but plan UAT
+    for December"), or a later sentence carries a source tag and doesn't refuse (a field head such as IMPACT: aside)."""
+    tail = first[max(m.end() for m in hits):]
+    c = _CONTRAST.search(tail)
+    if c and len(c.group(1).split()) >= 3 and not _refuses(c.group(1)):
+        return True
+    return any(s.get("refs") and not _FIELD_HEAD.match(s.get("text") or "") and not _refuses(s.get("text"))
+               for s in marked_rest if isinstance(s, dict))
+
+
+def reads_as_refusal(text, marked_sentences=None):
+    """The backstop: the first sentence (at most 200 characters) reads as the model saying it can't suggest anything, and the
+    reply has no usable body (usable_body). Only the first sentence is read for the refusal, so a real suggestion that says
+    "can't" later, or about someone else, passes; `marked_sentences` (the parsed sentences, with their source refs) lets a
+    sourced later sentence count as a body."""
     first = next(iter(sentences(clean(text))), "")
     first = re.sub(r"^[-–•*\s]+", "", first)[:200]
-    return any(r.search(first) for r in REFUSAL_RES)
+    hits = [m for m in (r.search(first) for r in REFUSAL_RES) if m]
+    return bool(hits) and not usable_body(first, hits, (marked_sentences or [])[1:])
 
 
 def nothing_note(ctx):
@@ -2786,7 +2857,8 @@ def said_nothing(ctx, reply, out):
     if ctx.get("kind") not in SUGGEST_KINDS:
         return None
     body = out.get("text") or ""
-    if is_no_suggestion(reply) or is_no_suggestion(body) or reads_as_refusal(body) or (not body.strip() and reads_as_refusal(reply)):
+    if (is_no_suggestion(reply) or is_no_suggestion(body) or reads_as_refusal(body, out.get("sentences"))
+            or (not body.strip() and reads_as_refusal(reply))):
         return nothing_note(ctx)
     return None
 # ===== end #272 =====

@@ -1,9 +1,12 @@
 """creaite minutes helper — the deterministic parts of cx-minutes (standard library only).
 
 Commands:
-  transcript <file>        print a transcript (.vtt, .docx or .txt) as readable speaker turns
-  key --date YYYY-MM-DD --title "<title>" [--transcript <file>] [--event-id <id>]
-                           print the meeting key and whether system/processed.txt already has it
+  transcript <file> [--minutes]
+                           print a transcript (.vtt, .docx or .txt) as readable speaker turns; with --minutes (someone else's
+                           minutes, #232 E1) the file's plain text, in order, with no speaker-turn reading
+  key --date YYYY-MM-DD --title "<title>" [--transcript <file>] [--event-id <id>] [--minutes <file>]
+                           print the meeting key and whether system/processed.txt already has it; --minutes <file> keys
+                           someone else's minutes by the file's content (never an event ID, #232 E1)
   filename --date YYYY-MM-DD --title "<title>"
                            print the file name stem: "YYYY-MM-DD Title" ([CODE] tags and unsafe characters removed)
   filedate <file>          the meeting date and title of a file, as JSON: from its name (creaite's `YYYY-MM-DD Title`, or Teams'
@@ -69,6 +72,19 @@ An item may instead update an open item of the meeting's project (BL-65), for so
   apply holds a conflict if the item changed after the proposal was made, and refuses (naming the item) an update to
   an item that is closed, in another project or not in the tracker. A new item that matches an open item of the same
   project becomes an update to it when it carries a changed due date, response or update, else only a mention.
+Someone else's minutes (#232 E1, Intake's "Find work items"): give "as": "minutes" and "file": "inbox/<file>" in place of
+"draft", "minutes", "transcript" and "note" (any of them with "as" is refused: a transcript is never staged this way, BL-260
+holds). Nothing is drafted: no Word draft and no minutes record. Only actions, decisions, risks and issues, and updates to open
+ones, are read from it (a promise is left out: it is said in passing, in a meeting). "file" is a plain relative path (no
+"..", backslash or leading "/") in inbox/ or in a matched project's minutes folder; a .vtt, .srt, or a file with a calendar
+event ID in its header, is refused as a transcript; it must be a .txt, .md, .docx or .pdf (Intake's upload types) and neither
+inbox/ nor the minutes folder may be a symlink. The ops carry "src_sha256" (the file's checksum when staged); the destination
+is numbered against files on disk and other staged proposals; the same file can't be staged twice. The file is read where it is; on approval it
+is copied to each matched project's minutes folder as "YYYY-MM-DD Title.ext" and the inbox copy removed (a file already in a
+project's minutes folder stays where it is: Alan's own, never copied, moved or renamed). The proposal's meeting block has
+"kind": "minutes by others", "minutes_decision": "approved" (like a quick note: no minutes to approve), "draft": null
+and "note" (the first filed copy, which also tells apply there is no draft to file); each item's source is the filed copy plus
+its section. The key is "fp:<day>|<title>|<hash of the file>", so the same file again says "Already processed".
 A quick note (BL-54) is already filed where it belongs: give "note": "projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick
 note - <title>.md" instead of "draft" and "transcript". Nothing is copied or moved, no Word minutes are drafted, and
 each item's source is the note plus the section.
@@ -77,6 +93,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import date, datetime, timedelta
@@ -98,19 +115,45 @@ import minutes_spec  # noqa: E402  (#269: what stage accepts as a meeting spec)
 
 RAID_HEADING = "Risks, Issues, Assumptions & Dependencies"
 RAID_TYPES = ("Risk", "Issue", "Assumption", "Dependency")
-SECTIONS = {"actions": "Action Items", "decisions": "Decisions", "raid": RAID_HEADING, "promises": "Promises"}
+SECTIONS = {"actions": "Actions", "decisions": "Decisions", "raid": RAID_HEADING, "promises": "Promises"}
+# #296: an item's source note names its section as "— Actions" (it said "— Action Items" before 2.6.0). Notes already in the
+# tracker and in staging keep the old words (no migration), so every read accepts both, and a spec's old words are written new.
+LEGACY_SECTIONS = {"Action Items": "Actions"}
+ACTION_HEADINGS = ("Action Items", "Actions")       # the minutes' own actions heading: the template's, and the shorter one
+
+
+def section_name(section):
+    """The section as a source note writes it: an older name ("Action Items") becomes today's ("Actions")."""
+    section = str(section or "").strip()
+    return LEGACY_SECTIONS.get(section, section)
+
+
+def source_words(source):
+    """A whole source note with its section in today's words ("… .html — Action Items" → "… .html — Actions")."""
+    head, sep, tail = str(source or "").partition(" — ")
+    return f"{head}{sep}{section_name(tail)}" if sep else str(source or "")
+
+
+def source_section(source):
+    """Which section a file source note names ("actions", "decisions", "raid", "promises"), from the old words or the new;
+    None when it names none of them."""
+    if " — " not in str(source or ""):
+        return None
+    name = section_name(str(source).split(" — ", 1)[1])
+    return next((sid for sid, heading in SECTIONS.items() if heading == name), None)
 RAISED_TABLES = ("actions", "raid", "promises")         # dated by `raised` (the meeting's date); decisions by `date`
 ATTRIBUTION = r" — (?:proposed|raised|agreed|owner)\b"
 
 
 def _section(lines, start, end):
-    try:
-        i = lines.index(start)
-    except ValueError:
+    """The non-empty lines between a heading and the next; either may be given as several names (#296: old or new words)."""
+    starts, ends = (start,) if isinstance(start, str) else tuple(start), (end,) if isinstance(end, str) else tuple(end)
+    i = next((n for n, line in enumerate(lines) if line in starts), None)
+    if i is None:
         return []
     out = []
     for line in lines[i + 1:]:
-        if line == end:
+        if line in ends:
             break
         if line.strip() and line.strip() != docx_tools.NONE:
             out.append(line.strip())
@@ -123,7 +166,7 @@ def parse_draft(path):
     xml = next(raw.decode("utf-8") for info, raw in parts if info.filename == "word/document.xml")
     lines = docx_tools.story_text(docx_tools.accept_xml(xml)[0]).splitlines()
     actions = []
-    for line in _section(lines, "Action Items", "Open Questions / Escalations"):
+    for line in _section(lines, ACTION_HEADINGS, "Open Questions / Escalations"):
         cells = [c.strip() for c in line.split("|")]
         if len(cells) >= 3 and cells[0] != "Owner" and docx_tools.NONE not in cells[:2]:
             due = cells[2]
@@ -135,7 +178,7 @@ def parse_draft(path):
     decisions = [re.split(ATTRIBUTION, d, maxsplit=1)[0].strip()
                  for d in _section(lines, "Decisions", RAID_HEADING)]
     raid = []
-    for line in _section(lines, RAID_HEADING, "Action Items"):
+    for line in _section(lines, RAID_HEADING, ACTION_HEADINGS):
         text = re.split(ATTRIBUTION, line, maxsplit=1)[0].strip()
         m = re.match(r"(Risk|Issue|Assumption|Dependency)\s*[:—-]\s*(.+)$", text, re.I)
         raid.append({"type": m.group(1).capitalize() if m else None, "text": m.group(2).strip() if m else text})
@@ -285,6 +328,14 @@ def meeting_key(day, title, transcript=None, event_id=None):
     if transcript:
         p = paths.resolve(transcript)
         content = hashlib.sha256(p.read_bytes()).hexdigest()[:12] if p.exists() else ""
+    return f"fp:{day}|{norm_title(title)}|{content}"
+
+
+def minutes_key(day, title, file):
+    """#232 E1: the key for someone else's minutes: 'fp:<day>|<title>|<hash of the file>'. Never an event ID: the file isn't
+    the meeting's transcript, so it must not mark the meeting processed."""
+    p = paths.resolve(file)
+    content = hashlib.sha256(p.read_bytes()).hexdigest()[:12]
     return f"fp:{day}|{norm_title(title)}|{content}"
 
 
@@ -511,7 +562,9 @@ def carried_for(title, day):
 
 # ===== BL-260 (fix-minutes-draft) =====
 def stage_refused(spec):
-    """True (and says why) when a quick note can't be staged: it goes alone and must exist."""
+    """True (and says why) when a quick note, or someone else's minutes, can't be staged: it goes alone and must exist."""
+    if spec.get("as") is not None:
+        return minutes_by_others_refused(spec)
     note = spec.get("note")
     if note and (spec.get("draft") or spec.get("transcript")):
         print("A quick note is staged on its own: give \"note\" without \"draft\" or \"transcript\".")
@@ -524,9 +577,14 @@ def stage_refused(spec):
     return False
 
 
+
+
 def draft_refused(spec):
     """True (and says why) when a transcript comes without its draft Word minutes, or the named draft doesn't exist:
-    otherwise Review shows a minutes row with nothing to open. Only a quick note has no draft."""
+    otherwise Review shows a minutes row with nothing to open. Only a quick note, or someone else's minutes (#232 E1: a file, no
+    transcript), has no draft."""
+    if by_others(spec):
+        return False
     if spec.get("minutes") is not None:          # v2.1.0 P4 (BL-338): the minutes record, drafted by stage itself
         if not isinstance(spec["minutes"], dict) or spec.get("draft"):
             print("The minutes record (\"minutes\") is an object, given without a Word \"draft\". Nothing staged.")
@@ -545,12 +603,263 @@ def draft_refused(spec):
 # ===== end BL-260 =====
 
 
+# ===== #232 E1 (Find work items) =====
+BY_OTHERS = "minutes by others"
+MINUTES_TYPES = (".txt", ".md", ".docx", ".pdf")     # Intake's upload types (.vtt is a transcript: refused)
+
+
+def by_others(spec):
+    """Whether the spec is someone else's minutes (\"as\": \"minutes\"): no draft, no minutes record, no transcript."""
+    return spec.get("as") == "minutes"
+
+
+def minutes_by_others_refused(spec):
+    """True (and says why) when someone else's minutes can't be staged: they go alone, as a readable file in `inbox/` (or already
+    in a matched project's minutes folder) that is not a transcript. A transcript is never staged this way, so BL-260 (never
+    minutes without a draft) holds for every transcript."""
+    if spec.get("as") != "minutes":
+        print(f"Unknown \"as\": {spec.get('as')!r}. The only value is \"minutes\" (someone else's minutes). Nothing staged.")
+        return True
+    if any(spec.get(k) is not None for k in ("draft", "minutes", "transcript", "note")):     # also an empty one: {} or ""
+        print("Someone else's minutes are staged on their own: give \"as\": \"minutes\" and \"file\" without \"draft\", "
+              "\"minutes\", \"transcript\" or \"note\" (a transcript needs draft minutes). Nothing staged.")
+        debuglog.warn("minutes", "stage refused: minutes by others were given with a draft, a transcript or a note")
+        return True
+    why = file_problem(spec.get("file"), spec.get("projects") or [])
+    if why:
+        print(f"{why} Nothing staged.")
+        debuglog.warn("minutes", "stage refused: the minutes file was not acceptable")
+        return True
+    return False
+
+
+def _inside(real, folder):
+    """Whether real path `real` is `folder` or below it (both already real paths)."""
+    return real == folder or real.startswith(folder.rstrip(os.sep) + os.sep)
+
+
+def _real_folder(folder, base):
+    """Whether `folder` is a real folder under `base`: neither it nor any folder between is a symlink (a link would make
+    everything under its target count as that folder). `base` itself may be reached through links (macOS /tmp, OneDrive)."""
+    try:
+        parts = Path(folder).relative_to(base).parts
+    except ValueError:
+        return False
+    return not any(os.path.islink(Path(base).joinpath(*parts[:i + 1])) for i in range(len(parts)))
+
+
+def _in_minutes_folder(file, real, code):
+    """Whether stored path `file` (real path `real`) is in project `code`'s minutes folder; an unknown project has none."""
+    try:
+        folder = paths.folder(code, "minutes")
+        base = paths.projects_root() if paths.external() else paths.ROOT
+        return (file.startswith(paths.rel(folder) + "/") and _real_folder(folder, base)
+                and _inside(real, os.path.realpath(folder)))
+    except (LookupError, ValueError, OSError):
+        return False
+
+
+def file_problem(file, projects):
+    """Why `file` can't be staged as someone else's minutes, or None. It must be a plain relative path (no `..`, backslash, NUL),
+    and, once every symlink is followed, a file in `inbox/` or in a matched project's minutes folder: never anywhere else, so the
+    inbox copy removal can't reach another file. A transcript (.vtt, .srt, or a calendar event ID in its header) is refused."""
+    if not isinstance(file, str) or not file.strip():
+        return "Minutes file not found: (no file given)."
+    parts = file.split("/")
+    if ("\x00" in file or "\\" in file or file.startswith(("/", "~")) or any(x in ("", ".", "..") for x in parts)
+            or minutes_spec.stored_problem("file", file) or _odd_text(file)):          # #269's rules for a stored path, and more
+        return (f"Minutes file not acceptable: {file!r} is not a plain path inside the vault (no control, bidirectional or "
+                "invisible characters, no spaces around it).")
+    why = _file_problem(file, parts, projects)
+    return why or _pending_problem(file)
+
+
+def _odd_text(s):
+    """True when `s` has a character no file name of creaite's should: a control character (a newline, a tab), a format
+    character (bidirectional marks and overrides, zero-width ones) or an unassigned one."""
+    import unicodedata
+    return any(unicodedata.category(c) in ("Cc", "Cf", "Cn", "Zl", "Zp") for c in s)
+
+
+def _pending_problem(file):
+    """#232 E1 review: why `file` can't be staged as someone else's minutes because another staged proposal already names it
+    (as a transcript, a draft, or someone else's minutes), or None. The first one staged keeps it; the way forward is said."""
+    other = minutes_spec._pending_refs(file)
+    if not other:
+        return None
+    return (f"Minutes file not acceptable: {file} is already in {other[0][0]} (staged for Review). Approve or reject that one "
+            "first; once it is applied or rejected, stage this file again if it is still in inbox/.")
+
+
+def _where_problem(file, p, real, in_inbox, projects):
+    """#269's rules for a staged file, applied to someone else's minutes: never in a folder creaite skips (99 Archive, _Archive,
+    _Templates, a hidden folder), never a hidden or temporary name, a link, a second hard link or anything but a regular file."""
+    import stat
+    folder = Path(os.path.realpath(paths.INBOX)) if in_inbox else next(
+        (Path(os.path.realpath(paths.folder(c, "minutes"))) for c in projects
+         if _in_minutes_folder(file, real, c)), None)
+    if folder is not None and minutes_spec._skipped(Path(real), folder):
+        return f"Minutes file not acceptable: {file} is in a folder creaite doesn't read (an archive, a template or a hidden folder)."
+    try:
+        if not stat.S_ISREG(os.lstat(p).st_mode) and not p.is_symlink():
+            return f"Minutes file not acceptable: {file} is not a regular file."
+    except OSError:
+        return f"Minutes file not found: {file}."
+    why = minutes_spec._plain_file_problem("file", p, Path(real))
+    return f"Minutes file not acceptable: {why}." if why else None
+
+
+def _special_file(p):
+    """True when `p` is a pipe or a socket (looked at, never opened)."""
+    import stat
+    try:
+        mode = os.lstat(p).st_mode
+    except OSError:              # not there: the caller says "not found"
+        return False
+    return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
+
+
+def _file_problem(file, parts, projects):
+    """file_problem's second half: the path is plain; where it points, and what it is."""
+    p = paths.resolve(file)
+    if _special_file(p):                                  # never opened: a pipe would wait
+        return f"Minutes file not acceptable: {file} is not a regular file."
+    if not p.is_file():
+        return f"Minutes file not found: {file}."
+    real = os.path.realpath(p)
+    in_inbox = (parts[0] == "inbox" and len(parts) > 1 and _real_folder(paths.INBOX, paths.ROOT)
+                and _inside(real, os.path.realpath(paths.INBOX)))
+    in_place = any(_in_minutes_folder(file, real, c) for c in projects)
+    if not (in_inbox or in_place):
+        return f"Minutes file not acceptable: {file} is neither in inbox/ nor in the matched project's minutes folder."
+    why = _where_problem(file, p, real, in_inbox, projects)
+    if why:
+        return why
+    if p.suffix.lower() in (".vtt", ".srt") or file_event_id(file):
+        return (f"{file} is a transcript, not minutes: a transcript needs draft minutes (use Make minutes). "
+                "Nothing is read as minutes from it.")
+    if p.suffix.lower() not in MINUTES_TYPES:        # also "a.txt." and "a.txt ": their suffix is not .txt
+        types = f"{', '.join(MINUTES_TYPES[:-1])} or {MINUTES_TYPES[-1]}"
+        return f"Minutes file not acceptable: {file} must end in {types} (Intake's upload types)."
+    try:
+        p.read_bytes()
+    except OSError as e:
+        return f"Minutes file can't be read: {file} ({type(e).__name__})."
+    return None
+
+
+def _same_bytes(a, b):
+    """Whether two files hold the same bytes; unreadable counts as different."""
+    try:
+        return a.read_bytes() == b.read_bytes()
+    except OSError:
+        return False
+
+
+def staged_with_key(key):
+    """The name of a staged proposal for meeting key `key`, or None."""
+    for f in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            if (json.loads(f.read_text(encoding="utf-8")).get("meeting") or {}).get("key") == key:
+                return f.name
+        except (OSError, ValueError):
+            continue    # a proposal that can't be read isn't one for this file
+    return None
+
+
+def staged_targets():
+    """{filed path, folded (_fold): sha256 of the file it comes from} for the copies other staged proposals will make (None: the
+    source is gone)."""
+    out = {}
+    for f in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            meeting = json.loads(f.read_text(encoding="utf-8")).get("meeting") or {}
+        except (OSError, ValueError):
+            continue    # a proposal that can't be read has no destinations to avoid
+        for op in meeting.get("file_ops") or []:
+            if op.get("op") == "copy" and op.get("to"):
+                src = meeting.get(op.get("from")) if op.get("from") in ("draft", "transcript") else op.get("from")
+                out[_fold(op["to"])] = op.get("src_sha256") or _sha(src)
+    return out
+
+
+def _fold(rel):
+    """A stored path as macOS compares names (APFS: case- and normalisation-insensitive): "Vendor call" and "Vendor Call" are
+    one file there, so two staged copies to them would collide only at apply."""
+    import unicodedata
+    return unicodedata.normalize("NFC", str(rel)).casefold()
+
+
+def _sha(rel):
+    """The SHA-256 of a stored path's file, or None if it can't be read."""
+    try:
+        return hashlib.sha256(paths.resolve(rel).read_bytes()).hexdigest()
+    except (OSError, TypeError, ValueError):
+        return None
+
+
+def filed_name(code, name, ext, src):
+    """Where someone else's minutes are filed in project `code`: '<minutes folder>/<name><ext>', numbered when a different file
+    already has that name, on disk or as another staged proposal's destination (apply never overwrites, and a refused
+    destination would fail every later apply); the same file already there keeps its name (apply copies nothing)."""
+    mdir = paths.rel(paths.folder(code, "minutes"))
+    mine, staged = _sha(src), staged_targets()
+    for n in range(1, 100):
+        to = f"{mdir}/{name}{ext}" if n == 1 else f"{mdir}/{name} ({n}){ext}"
+        there = paths.resolve(to)
+        free_on_disk = not there.exists() or _same_bytes(there, paths.resolve(src))
+        free_in_queue = _fold(to) not in staged or staged[_fold(to)] == mine
+        if free_on_disk and free_in_queue:
+            return to
+    return f"{mdir}/{name}{ext}"
+
+
+def by_others_ops(spec, projects, name):
+    """The file operations for someone else's minutes: a copy to each project's minutes folder, and the inbox copy removed. A
+    file already in one of the projects' minutes folders is Alan's own: left where it is. (folders, ops, copies)."""
+    src, ext = spec["file"], Path(spec["file"]).suffix.lower()          # a type from MINUTES_TYPES (file_problem)
+    sha = _sha(src)
+    spath = paths.resolve(src).resolve()
+    in_place = lambda code: paths.folder(code, "minutes").resolve() in (spath.parent, *spath.parents)   # noqa: E731
+    folders, ops, copies = {}, [], {}
+    for code in projects:
+        folders[code] = (paths.rel(paths.folder(code, "minutes")), paths.rel(paths.folder(code, "transcripts")))
+        if in_place(code):
+            copies[code] = src
+        else:
+            copies[code] = filed_name(code, name, ext, src)
+            ops.append({"op": "copy", "from": src, "to": copies[code], "src_sha256": sha})
+    if src.startswith("inbox/") and not any(in_place(c) for c in projects):
+        ops.append({"op": "remove", "path": src, "src_sha256": sha})
+    return folders, ops, copies
+# ===== end #232 E1 =====
+
+
+def _by_others_holding(rel):
+    """The staged proposal that files `rel` as someone else's minutes (#232 E1), or None."""
+    if not rel:
+        return None
+    for name, data in minutes_spec._pending_refs(rel):
+        if (data.get("meeting") or {}).get("kind") == BY_OTHERS:
+            return name
+    return None
+
+
 def stage_gate(spec):
     """The refusals, in order (BL-229: out of cmd_stage): (exit code, or None to go on; the meeting key)."""
     day, title = spec["date"], spec["title"]
     if stage_refused(spec):       # BL-260: the quick note checks, moved out of here
         return 1, None
-    key = meeting_key(day, title, spec.get("note") or spec.get("transcript"), spec.get("event_id"))
+    key = (minutes_key(day, title, spec["file"]) if by_others(spec)
+           else meeting_key(day, title, spec.get("note") or spec.get("transcript"), spec.get("event_id")))
+    taken = None if by_others(spec) else _by_others_holding(spec.get("transcript"))
+    if taken:                                             # #232 E1 review: the file is already someone else's minutes in Review
+        print(f"{spec['transcript']} is already staged in {taken} as someone else's minutes: approve or reject that one first. "
+              "Nothing staged.")
+        return 1, key
+    if by_others(spec) and staged_with_key(key):          # a second proposal for the same file would fail once the first has moved it
+        print(f"Already staged in {staged_with_key(key)}: review that one. Nothing staged.")
+        return 3, key
     done = processed_on(key)
     if done:
         print(f"Already processed on {tracker.shown(done)}: {title}. Nothing staged.")
@@ -602,7 +911,9 @@ class Staging:
         self.copies = copies or {}                 # v2.1.0 P4: where a minutes record is filed, per project
         self.day, self.title, self.note = spec["date"], spec["title"], spec.get("note")
         self.ext = Path(spec["transcript"]).suffix if spec.get("transcript") else None
-        self.date_from_file = bool(spec.get("transcript")) and paths.file_date(spec["transcript"])[1] == "file"   # a dateless name (BL-85)
+        self.by_others = by_others(spec)                                           # #232 E1: someone else's minutes
+        dated = spec.get("transcript") or spec.get("file")
+        self.date_from_file = bool(dated) and paths.file_date(dated)[1] == "file"   # a dateless name (BL-85)
         self.con = tracker.connect()
         self.rcon = tracker.connect()          # rows by name, for the open items an update touches
         self.con.row_factory = None
@@ -617,10 +928,12 @@ class Staging:
     def source_for(self, project, section, table):
         """Where an item came from: the note, the filed minutes, or the filed transcript, and the section. A promise cites the
         transcript when there is one: it was said in passing, so it isn't in the minutes (BL-125 A)."""
+        if self.by_others:                              # #232 E1: the filed copy of their minutes
+            return f"{self.copies[project]} — {section_name(section) or SECTIONS.get(table, RAID_HEADING)}"
         cite_minutes = self.spec.get("draft") and not (table == "promises" and self.ext)
         where = self.note or ((self.copies.get(project) or f"{self.folders[project][0]}/{self.name}.docx") if cite_minutes else
                               self.tcopies.get(project) or f"{self.folders[project][1]}/{self.name}{self.ext}")
-        return f"{where} — {section or SECTIONS.get(table, RAID_HEADING)}"
+        return f"{where} — {section_name(section) or SECTIONS.get(table, RAID_HEADING)}"
 
     def stage_update(self, table, row, changes, why, source):
         """One update item for an open item; two for the same item in one meeting are merged."""
@@ -637,6 +950,9 @@ class Staging:
 
     def take(self, raw):
         """One item from the spec: an update to an open item, or a new one."""
+        if self.by_others and raw.get("table") == "promises":    # #232 E1: a promise is said in passing; minutes don't hold one
+            self.notes.append("skipped: a promise is not read from someone else's minutes")
+            return
         if raw.get("op") == "update":                                       # BL-65: something the meeting discussed
             self.take_update(raw)
         else:
@@ -656,7 +972,7 @@ class Staging:
             self.notes.append(f"no change to {item_id} (already as the meeting left it); logged as discussed")
             return
         self.stage_update(table, row, changes, raw.get("why"),
-                          raw.get("source") or self.source_for(row["project"], raw.get("section") or "Updates", table))
+                          source_words(raw.get("source")) or self.source_for(row["project"], raw.get("section") or "Updates", table))
 
     def new_values(self, raw, table):
         """The new item's values with the meeting's defaults and its source."""
@@ -734,7 +1050,7 @@ def stage_proposal(spec, key, projects, ops, source_map, staging):
     proposal = {
         "created": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "source_run": "cx-minutes",
-        "files": [f for f in (spec.get("draft"), spec.get("transcript")) if f],
+        "files": [f for f in (spec.get("draft"), spec.get("transcript"), spec.get("file")) if f],
         "meeting": {"key": key, "title": title, "date": day, "projects": projects,
                     "draft": spec.get("draft"), "transcript": spec.get("transcript"),
                     "minutes_decision": "pending", "file_ops": ops, "source_map": source_map,
@@ -743,6 +1059,9 @@ def stage_proposal(spec, key, projects, ops, source_map, staging):
         "items": staging.items,
         "status_signals": spec.get("status_signals", []),
     }
+    if by_others(spec):      # #232 E1: no minutes to approve (none are made), so nothing waits on a draft; apply files the copy
+        first = (staging.copies or {}).get(projects[0])
+        proposal["meeting"].update(kind=BY_OTHERS, minutes_decision="approved", source_file=spec["file"], note=first)
     if spec.get("note"):     # BL-54: no minutes to approve and no files to move; the block only records the note as processed
         proposal["meeting"].update(note=spec["note"], kind="quick note", minutes_decision="approved")
     return proposal
@@ -775,7 +1094,17 @@ def log_staged(out, spec, key, projects, staging):
     debuglog.info("minutes", f"staged {out.name}: {key.split(':')[0]} key, {spec['date']}, projects {', '.join(projects)}, "
                   f"{len(staging.items)} item(s) ({', '.join(f'{k} {v}' for k, v in sorted(by_table.items())) or 'none'})"
                   + (f", notes: {note_kinds(notes)}" if notes else "") + (", quick note" if spec.get("note") else "")
+                  + (", minutes by others (copied on approval)" if by_others(spec) else "")
                   + (", draft + transcript copied on approval" if spec.get("draft") and spec.get("transcript") else ""))
+
+
+def say_by_others(spec, proposal):
+    """#232 E1: never say minutes were drafted (BL-260): none were. Says where the file is filed on approval."""
+    if not by_others(spec):
+        return
+    filed = [o["to"] for o in proposal["meeting"]["file_ops"] if o["op"] == "copy"]
+    print(f"No minutes drafted: {spec['file']} is someone else's minutes. "
+          + (f"On approval it is filed as {'; '.join(filed)}." if filed else "It is already in the project's minutes folder."))
 
 
 def print_staged(out, spec, projects, proposal, notes):
@@ -784,6 +1113,7 @@ def print_staged(out, spec, projects, proposal, notes):
           f"{', '.join(tracker.project_label(c) for c in projects)}")
     if spec.get("draft"):
         print(f"Draft minutes: {spec['draft']}")
+    say_by_others(spec, proposal)
     print("# · Project · Type · Description · Owner · Due · Flags")
     data = json.loads(out.read_text(encoding="utf-8"))
     for it in data["items"]:
@@ -859,7 +1189,11 @@ def cmd_stage(spec_file):
     name = stem(spec["date"], spec["title"])
     record = spec.get("minutes") is not None            # v2.1.0 P4 (BL-338): the minutes record instead of the Word draft
     copies = record_copies(spec, projects) if record else None
-    folders, ops, source_map, tcopies = stage_ops(spec, projects, name, copies)
+    if by_others(spec):                                  # #232 E1: no draft, no record, no transcript
+        folders, ops, copies = by_others_ops(spec, projects, name)
+        source_map, tcopies = {}, {}
+    else:
+        folders, ops, source_map, tcopies = stage_ops(spec, projects, name, copies)
     staging = Staging(spec, key, name, folders, tcopies, copies)
     at_of = {}
     for raw in spec.get("items", []):
@@ -1114,27 +1448,52 @@ def cmd_baseline(code, all_existing, keep_weeks, dry_run):
     return 0
 
 
+def cmd_transcript(args):
+    """`transcript <file> [--minutes]`: the transcript's speaker turns, or (#232 E1) someone else's minutes as plain text."""
+    if len(args) == 2 and args[1] != "--minutes":
+        print("usage: minutes.py transcript <file> [--minutes]")
+        return 2
+    try:
+        if not paths.resolve(args[0]).is_file():
+            raise FileNotFoundError(args[0])
+        print(tracker.text_of(paths.resolve(args[0])) if len(args) == 2 else transcript_text(args[0]))
+    except OSError as e:                          # a missing or unreadable file: one line, not a traceback
+        print(f"creaite: can't read {args[0]}: {type(e).__name__}")
+        return 1
+    return 0
+
+
+def key_of(a):
+    """The key `minutes.py key` prints: someone else's minutes by the file's content (#232 E1), else the meeting's."""
+    if a.minutes:
+        try:
+            return minutes_key(a.date, a.title, a.minutes)
+        except OSError as e:
+            raise SystemExit(f"creaite: can't read {a.minutes}: {type(e).__name__}") from e
+    return meeting_key(a.date, a.title, a.transcript, a.event_id)
+
+
 def main(argv):
     """Run the minutes command in `argv` (see the module docstring)."""
     if not argv:
         print(__doc__)
         return 2
     cmd = argv[0]
-    if cmd == "transcript" and len(argv) == 2:
-        print(transcript_text(argv[1]))
-        return 0
+    if cmd == "transcript" and len(argv) in (2, 3):
+        return cmd_transcript(argv[1:])
     if cmd in ("key", "filename"):
         ap = argparse.ArgumentParser(prog=f"minutes.py {cmd}")
         ap.add_argument("--date", required=True)
         ap.add_argument("--title", required=True)
         ap.add_argument("--transcript")
         ap.add_argument("--event-id")
+        ap.add_argument("--minutes")           # #232 E1: someone else's minutes, keyed by the file's content
         a = ap.parse_args(argv[1:])
         date.fromisoformat(a.date)
         if cmd == "filename":
             print(stem(a.date, a.title))
             return 0
-        key = meeting_key(a.date, a.title, a.transcript, a.event_id)
+        key = key_of(a)
         done = processed_on(key)
         print(json.dumps({"key": key, "processed_on": done}))
         return 0

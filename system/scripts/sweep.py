@@ -68,7 +68,7 @@ import os
 import re
 import sys
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -347,6 +347,8 @@ def stage(spec_file):
                          + str((raw.get("values") or {}).get("description") or raw.get("id") or "a promise"))
             why["promises off"] = why.get("promises off", 0) + 1
             continue
+        if closed_skip(raw, notes, why):                                # #236: a private or confidential thread is never staged
+            continue
         if raw.get("op") == "update":                                   # BL-113: a message makes or withdraws a pending decision
             decision_update(raw, con, items, notes, why, ignored, updated, rules, vips, named, seen)
             continue
@@ -364,7 +366,7 @@ def stage(spec_file):
             ignored[rule] = ignored.get(rule, 0) + 1
             notes.append(f"skipped (ignore rule “{rule}”): {text}")
             continue
-        if summarised(v["source"], raw.get("conversation")):           # BL-334 C: on Today's card already, nothing newer
+        if summarised(v["source"], raw.get("conversation"), text):     # BL-334 C: on Today's card already, nothing newer
             notes.append(f"skipped (that conversation is summarised on Today; Create work item there): {text}")
             why["summarised on Today"] = why.get("summarised on Today", 0) + 1
             continue
@@ -390,9 +392,7 @@ def stage(spec_file):
             flags.append("vip")                                        # BL-99: sorts first in Review
         new_defaults(table, v, flags)
         items.append({**item, "n": len(items) + 1, "match": match, "flags": flags, "decision": "pending"})
-        import review as _review                          # BL-208: the fields cx-sweep guessed, and why
-        if _review.clean_inferred(raw.get("inferred") if isinstance(raw, dict) else None):
-            items[-1]["inferred"] = _review.clean_inferred(raw.get("inferred"))
+        add_inferred(items[-1], raw)
         tracker.flag_workstream(con, items[-1])           # BL-58: the project's own workstreams only
     possible = sum(i["match"] == "possible" for i in items)
     out = None
@@ -753,6 +753,18 @@ def saved_meetings_from(day):
 EMPTY_SPEC = "The reply held no meetings; kept the saved calendar."
 
 
+def names_an_empty_window(spec, today_day):
+    """v2.6 review: True when the reply names every day from today to the window's last day, each as an empty list: a diary
+    that has genuinely emptied (its meetings cancelled), which may replace the saved calendar. A reply that leaves out a day,
+    or holds events on it that came to nothing (unreadable times, ignored), is not one (#265 review L4 still holds)."""
+    raw = spec.get("days") if isinstance(spec, dict) else None
+    if not isinstance(raw, dict):
+        return False
+    first, last = date.fromisoformat(today_day), calendar_window()[1]
+    want = [(first + timedelta(days=n)).isoformat() for n in range((last - first).days + 1)]
+    return bool(want) and all(raw.get(d) == [] for d in want)
+
+
 def calendar_row(ev, start, end, all_day):
     """One saved meeting (BL-98, BL-97, #265 review L5, M1, M2): a private one is "Busy" (ID and Teams kept, nothing else); a
     confidential one keeps only its title and times (and ID): no place, organiser, Teams flag, recurrence, body or
@@ -861,7 +873,8 @@ def calendar(spec_file):
     today_day = now().date().isoformat()
     fetch_from = calendar_fetch_from().isoformat()       # before the save: the save moves the "fetched" stamp
     days, skipped = calendar_days(spec, bad, ignored)
-    if not sum(len(v) for d, v in days.items() if d >= today_day) and saved_meetings_from(today_day):
+    if (not sum(len(v) for d, v in days.items() if d >= today_day) and saved_meetings_from(today_day)
+            and not names_an_empty_window(spec, today_day)):
         print(EMPTY_SPEC)
         debuglog.warn("sweep", "calendar: a reply with no meeting to keep from today was refused; the saved calendar still holds "
                       f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")
@@ -1465,6 +1478,7 @@ def conv_record(st, m, vips, how, held, checked=None):
     a.update(conv_content(m, conv_people(people_raw, vips), people_raw))
     vip_match(a, m, st["alerts"])                                      # BL-342 part 2: New, Update or Chase against open work
     conv_finish(a, last, m.get("link"))
+    card_reopen(a)                                                     # #236: only a genuine change brings a settled card back
     if replied and replied >= last:
         replied_set(a, replied)                                        # he answered after the last message
         if checked is not None and a.get("state") == "replied":
@@ -1472,6 +1486,7 @@ def conv_record(st, m, vips, how, held, checked=None):
     if checked is not None:
         vip_closes(a, m, checked)                                      # BL-342 Part 3 B, step 9: a close suggestion
         vip_promises(a, m, checked)                                    # BL-342 Part 5: Alan's promises and a kept promise
+        card_reopen(a)                                                 # #236: a suggested close or a kept promise is a change too
     return a
 
 
@@ -1518,13 +1533,18 @@ def conv_finish(a, last, link):
     asks = bool(a.get("ask")) and a.get("type") in ("action", "decision", "risk")
     a.update({"quiet": not private and not fresh and not a.get("ask"), "sent": last, "last": last,
               "updated": now().strftime("%Y-%m-%d %H:%M"), "link": str(link or a.get("link") or "")[:1000] or None})
-    if a.get("seen") and (fresh or private or asks):
-        a["seen"] = None                                               # carried on with something new: back on Today
+    if legacy_back(a, fresh, private, asks):
+        a["seen"] = None                                               # carried on with something new: back on Today (an older record)
     if not a.get("seen"):
         a["state"] = "open"
         a.pop("replied_at", None)
         a.pop("handled_at", None)
     return a
+
+
+def legacy_back(a, fresh, private, asks):
+    """Whether a card settled before signatures were kept (#236) comes back on carrying on with something new (the earlier rule)."""
+    return bool(a.get("seen")) and "seen_sig" not in a and bool(fresh or private or asks)
 
 
 def still_talking(held, key, last):
@@ -1596,28 +1616,82 @@ def conv_merge(old, cands):
 
 def vip_open(a):
     """Whether an alert still waits for Alan: not seen, not a quiet line, and (BL-342) not one he has already answered."""
-    return not a.get("seen") and not a.get("quiet") and a.get("state") != "replied"
+    return not a.get("seen") and not a.get("quiet") and a.get("state") != "replied" and a.get("kind") not in FOLLOWED_KINDS
 
 
 def cand_settled(a):
     """Mark a conversation seen once every candidate is made or dismissed (a private one has none: Dismiss settles it)."""
     c = a.get("candidates") or []
     if c and all(x.get("made") or x.get("dismissed") for x in c) and not a.get("seen"):
-        a["seen"] = now().strftime("%Y-%m-%d %H:%M")
+        mark_seen(a, now().strftime("%Y-%m-%d %H:%M"))
 
 
-def summarised(source, conversation=None):
+def source_ref(source, conversation=None):
+    """What identifies the thread a structured source is from: its conversation ID, link, the kind and the title with reply
+    prefixes taken off (a card is found on this, never on the raw subject: "RE: x" and "x" are one thread)."""
+    msg = message_of_source(source)
+    return {"conv": conversation, "link": link_of(source), "title": strip_reply(msg["subject"] or msg["channel"] or "").lower(),
+            "kind": msg["kind"]}
+
+
+def closed_thread(source, conversation=None, sensitivity=None):
+    """#236 (Stark's review, HIGH): "private" or "confidential" when a thread must not be read into proposals, else None. The sweep's
+    rule for a followed person's private or confidential thread is that it is alerted with its marker and its content is not read into
+    proposals (cx-sweep, VIP section); an item from it is never staged, whatever the card lists (main staged none: the card was
+    "summarised"). Taken from the item's own sensitivity when the spec carries it, else from any alert for the thread (a card or an
+    older message alert), whatever its age. Spelling and case of the marker do not matter (marker_of)."""
+    own = marker_of({"sensitivity": sensitivity})
+    if own:
+        return own
+    ref = source_ref(source, conversation)
+    for a in vip_state()["alerts"]:
+        marker = a.get("marker") or ("confidential" if a.get("confidential") else None)
+        if marker in ("private", "confidential") and a.get("kind") not in FOLLOWED_KINDS and same_conv(a, ref):
+            return marker
+    return None
+
+
+def closed_skip(raw, notes, why):
+    """True (and noted, counted, without echoing the item) when a spec item, new or an update, is from a private or confidential
+    thread: nothing from it is staged (#236)."""
+    source = str(raw.get("source") or (raw.get("values") or {}).get("source") or "")
+    closed = closed_thread(source, raw.get("conversation"), raw.get("sensitivity")) if source else None
+    if closed:
+        notes.append(f"skipped (a {closed} thread: nothing from it is staged)")
+        why[f"{closed} thread"] = why.get(f"{closed} thread", 0) + 1
+    return bool(closed)
+
+
+def add_inferred(item, raw):
+    """BL-208: the fields cx-sweep guessed, and why, on a staged item."""
+    import review as _review
+    inferred = _review.clean_inferred(raw.get("inferred") if isinstance(raw, dict) else None)
+    if inferred:
+        item["inferred"] = inferred
+
+
+def summarised(source, conversation=None, text=None):
     """BL-334 C: the alert that has already summarised the conversation an item comes from, with nothing newer since
     (the item's Sent time is not after the summary's last message), else None. Matched by the conversation ID, else the
-    link, else the kind and the thread's own title."""
-    msg = message_of_source(source)
-    title = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[ext\]\s*)+", "", msg["subject"] or msg["channel"] or "", flags=re.I)
-    ref = {"conv": conversation, "link": link_of(source), "title": title.strip().lower(), "kind": msg["kind"]}
+    link, else the kind and the thread's own title.
+    #236: and, given the item's text, only when the card offers it (one of its items, or its ask, says the same): an item the
+    card does not list was being dropped here, shown nowhere; it is staged for Review (and on Today as a row) instead. A private
+    or confidential thread is never staged at all (closed_thread, before this)."""
+    ref = source_ref(source, conversation)
     sent = _when((re.search(r"Sent: ([0-9: T-]+)", source or "") or [None, ""])[1]) or ""
     for a in vip_state()["alerts"]:
-        if "summary" in a and same_conv(a, ref) and (not sent or sent <= (a.get("last") or "")):
+        if "summary" in a and same_conv(a, ref) and (not sent or sent <= (a.get("last") or "")) and \
+                (text is None or a.get("marker") == "private" or card_offers(a, text)):
             return a
     return None
+
+
+def card_offers(a, text):
+    """Whether a conversation's card lists an item that says the same as `text`: one of its candidates (made or dismissed too) or
+    its ask."""
+    mine = "c:" + norm(text)
+    seen = ["c:" + norm(c.get("text")) for c in a.get("candidates") or []] + (["c:" + norm(a["ask"])] if a.get("ask") else [])
+    return any(sig_similar(mine, x) for x in seen)
 
 
 def same_conv(a, ref):
@@ -1626,7 +1700,7 @@ def same_conv(a, ref):
         return True
     if ref["link"] and a.get("link") == ref["link"]:
         return True
-    return bool(ref["title"]) and a.get("kind") == ref["kind"] and str(a.get("title") or "").strip().lower() == ref["title"]
+    return bool(ref["title"]) and a.get("kind") == ref["kind"] and strip_reply(a.get("title")).lower() == ref["title"]
 
 # ===== end BL-334 =====
 
@@ -1679,11 +1753,25 @@ def card_fields(m, cands):
             "owners": card_owners(m.get("owners"))}
 
 
+REPLY_PREFIX = r"(?:re|fw|fwd|aw|wg|sv|vs|tr|rv|enc)\s*(?:[\[(]\d+[\])])?\s*[:\uff1a]"
+
+
+def strip_reply(text):
+    """A subject without reply and forward prefixes (Re:, RE:, Fw:, Fwd:, AW:, RE[2]:, Re(3):, repeated, in any case, and a leading
+    [EXT] tag), keeping any other bracketed tag. #236: the Confidential mark and a thread's card are found on this, not the raw subject."""
+    t = " ".join(str(text or "").split())
+    while True:
+        u = re.sub(r"^(?:" + REPLY_PREFIX + r"|\[ext(?:ernal)?\])\s*", "", t, flags=re.I)
+        if u == t:
+            return t.strip()
+        t = u
+
+
 def norm_subject(text):
     """A mail subject without Re:, Fw:, bracketed tags, case or extra spaces."""
     t = " ".join(str(text or "").split())
     while True:
-        u = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[[^\]]*\]\s*)+", "", t, flags=re.I)
+        u = re.sub(r"^(?:" + REPLY_PREFIX + r"\s*|\[[^\]]*\]\s*)+", "", t, flags=re.I)
         if u == t:
             break
         t = u
@@ -1708,6 +1796,8 @@ def conv_keys(m):
 
 def card_keys(a):
     """The keys a card is known by: those it stored, and (an older card) its conversation ID and link."""
+    if a.get("kind") in FOLLOWED_KINDS:
+        return set()                                                # #236: a pointer to Review, not a thread
     return set(a.get("keys") or []) | ({"id:" + a["conv"]} if a.get("conv") else set()) | \
         ({"link:" + a["link"]} if a.get("link") else set())
 
@@ -1809,6 +1899,7 @@ def merge_state(keep, drop, newer):
         keep.update({"state": "handled", "handled_at": handled[0].get("handled_at"), "seen": handled[0].get("seen")})
     elif keep.get("seen") and drop.get("seen"):
         keep["seen"] = max(keep["seen"], drop["seen"])
+        keep["seen_sig"] = sorted(set(keep.get("seen_sig") or []) | set(drop.get("seen_sig") or []))
     else:
         keep["seen"] = None
         keep["state"] = newer.get("state") or "open"
@@ -1840,9 +1931,11 @@ def vip_handled(ids=None):
     """Handled (BL-342): the same effect as Dismiss (out of Needs attention, kept in vip.json, Undo puts it back), recorded
     as `handled` with a time. Returns the IDs settled."""
     st, done, at = vip_state(), [], now().strftime("%Y-%m-%d %H:%M")
+    followed_sync(st)                                                  # #236: the rows exist before they are settled
     for a in st["alerts"]:
         if not a.get("seen") and (ids is None or a["id"] in ids):
-            a.update({"seen": at, "state": "handled", "handled_at": at})
+            mark_seen(a, at, "handled")
+            a["handled_at"] = at
             done.append(a["id"])
     if done:
         vip_save(st)
@@ -1913,9 +2006,10 @@ def vip_log(aid):
 def vip_seen(ids=None):
     """Mark alerts seen (all of them when ids is None). Returns how many changed."""
     st, n = vip_state(), 0
+    followed_sync(st)
     for a in st["alerts"]:
         if not a.get("seen") and (ids is None or a["id"] in ids):
-            a["seen"] = now().strftime("%Y-%m-%d %H:%M")
+            mark_seen(a, now().strftime("%Y-%m-%d %H:%M"))
             n += 1
     if n:
         vip_save(st)
@@ -1954,9 +2048,10 @@ def vip_dismiss(ids=None, cand=None):
     if cand is not None:
         return cand_dismiss(ids or set(), cand, True)
     st, done = vip_state(), []
+    followed_sync(st)                                                  # #236: the rows exist before they are dismissed
     for a in st["alerts"]:
         if not a.get("seen") and (ids is None or a["id"] in ids):
-            a["seen"] = now().strftime("%Y-%m-%d %H:%M")
+            mark_seen(a, now().strftime("%Y-%m-%d %H:%M"))             # remembers what it was dismissed with (a re-mention is not a change)
             done.append(a["id"])
     if done:
         vip_save(st)
@@ -1982,7 +2077,7 @@ def cand_dismiss(ids, cand, on):
             c.pop("dismissed", None)
             if isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone":
                 c.pop("made")                                          # its proposal was removed before an apply (Undo)
-            a["seen"] = None
+            unmark_seen(a)
             done.append(a["id"])
     if done:
         vip_save(st)
@@ -1995,9 +2090,10 @@ def vip_undismiss(ids, cand=None):
     if cand is not None:
         return cand_dismiss(ids, cand, False)
     st, done = vip_state(), []
+    followed_sync(st)
     for a in st["alerts"]:
         if a["id"] in ids and a.get("seen"):
-            a["seen"] = None
+            unmark_seen(a)
             if a.get("state") == "handled":
                 a["state"] = "open"                                    # BL-342: Handled undone
                 a.pop("handled_at", None)
@@ -2057,7 +2153,8 @@ def made_state(made):
 
 def vip_made_refresh():
     """Fill in the ID of each made item an apply has written since; saves only when one changed. Returns the state."""
-    st, changed = vip_state(), False
+    st = vip_state()
+    changed = followed_sync(st)                                        # #236: the rows for followed people's proposals and notes
     for a in st["alerts"]:
         for m in [a.get("made")] + [c.get("made") for c in a.get("candidates") or []]:     # BL-334: each candidate's too
             if isinstance(m, dict) and not m.get("id"):
@@ -2102,8 +2199,9 @@ def vip_prefill(aid, kind=None, cand=None):
 def prefill_target(aid, cand):
     """(alert, candidate or None) for a prefill; raises LookupError when either has gone."""
     a = vip_find(aid)
-    if a is None:
-        raise LookupError("That message isn't in Needs attention any more.")
+    if a is None or a.get("kind") in FOLLOWED_KINDS:
+        raise LookupError("That message isn't in Needs attention any more." if a is None else
+                          "That is a proposal already in Review; open it there.")
     c = cand_of(a, cand) if cand is not None else None
     if cand is not None and c is None:
         raise LookupError("That item isn't on the card any more.")
@@ -2192,10 +2290,248 @@ def mark_made(aid, cand, made):
             c["made"] = made
             cand_settled(a)
         elif a["id"] == aid and cand is None:
-            a["seen"] = a.get("seen") or now().strftime("%Y-%m-%d %H:%M")
+            if not a.get("seen"):
+                mark_seen(a, now().strftime("%Y-%m-%d %H:%M"))
             a["made"] = made
     vip_save(st)
 # ===== end BL-296 =====
+
+
+# ===== #236 (v2.6): what the sweep pulls out of a followed person's messages reaches Today =====
+# Alan, 19-10-2026: the proposals the sweep stages from a followed person's mail or chat, and a note about them written into a
+# project's memory, show on Today as "From <person>" rows linking to the proposal or note (Review still holds them). They are
+# derived here from what is pending in system/staging (a staged item whose source is from a followed person; a file_changes block
+# whose `source` is), kept as entries of vip.json's alerts (kind "proposal" or "note") so the page's poll, Dismiss, Handled and Undo
+# carry them unchanged. References only (file, item number, tag), never message text. A dismissed row stays gone until a genuine
+# change: a new staged item on the thread (a new action, risk or decision, or an update of an active item). A note is not an item.
+# A private thread keeps only its title and times. The entries are pointers to Review: not unseen messages (vip_open), never
+# offered to the model (no "summary"), never matched to a card (card_keys).
+
+FOLLOWED_KINDS = ("proposal", "note")
+FOLLOWED_TAGS = {"actions": "action", "decisions": "decision", "promises": "promise", "milestones": "milestone",
+                 "workstreams": "workstream"}
+
+
+def followed_names():
+    """({address: name}, {lower-case name: name}) of the people Alan follows (the register's VIP column)."""
+    vips = vip_addresses()
+    return vips, {n.lower(): n for n in vips.values()}
+
+
+def followed_from(source, vips, names):
+    """(name, address) of the followed person a structured source is from, else None. A Teams source may name the sender without
+    an address, so the register name matches too (only when the source has no address: a name beside another address is not followed)."""
+    sender = message_of_source(source)["from"]
+    addr = address_of(sender)
+    if addr in vips:
+        return vips[addr], addr
+    who = names.get(_person(sender).lower()) if sender and not addr else None     # a name alone, never beside another address
+    return (who, "") if who else None
+
+
+def followed_tag(item):
+    """What a staged item is, in one lower-case word: action, risk, issue, decision, promise or update."""
+    table, v = item.get("table"), item.get("values") or {}
+    if item.get("op") == "update":
+        return "update"
+    if table == "raid":
+        return str(v.get("type") or "risk").lower()
+    return FOLLOWED_TAGS.get(table, str(table or "item"))
+
+
+def followed_row(source, typ, who, addr, ref, project, st_alerts):
+    """A new row (before it is joined to others of its thread) for one ref."""
+    msg = message_of_source(source)
+    subject = _clean(strip_reply(msg["subject"] or msg["channel"]), 200) or "(no subject)"
+    return {"typ": typ, "who": who, "address": addr, "medium": msg["kind"], "title": subject, "link": link_of(source),
+            "sent": _when((re.search(r"Sent: ([0-9: T-]+)", source) or [None, ""])[1]), "p": project, "ref": ref,
+            "thread": msg["kind"] + "|" + norm_subject(subject) + "|" + who.lower()}
+
+
+def followed_sig(item):
+    """What a staged item says, for telling a repeat from a change: "c:" and its words for a new item, "u:" the item and its
+    changes for an update (the proposal's own description: Claude's words, not the message's)."""
+    if item.get("op") == "update":
+        return "u:" + str(item.get("id")) + ":" + norm(json.dumps(item.get("changes") or {}, sort_keys=True))[:160]
+    v = item.get("values") or {}
+    return "c:" + norm(v.get("description") or v.get("decision") or v.get("name") or "")[:160]
+
+
+def followed_item_refs(p, data, vips, names):
+    """The pending items of one proposal file that are from a followed person: [(row fields, ref, sig)]. Not one Alan made himself
+    from a card (source_run dashboard): he has seen it."""
+    out = []
+    for it in [] if data.get("source_run") == "dashboard" else data.get("items") or []:
+        v = it.get("values") or {}
+        source = str(v.get("source") or it.get("source") or "")
+        who = followed_from(source, vips, names) if source.startswith(("Email · ", "Teams · ")) else None
+        if who and not it.get("applied") and it.get("decision") == "pending":
+            project = v.get("project") or (str(it["id"]).split("-")[0] if "-" in str(it.get("id") or "") else None)
+            out.append((followed_row(source, "proposal", who[0], who[1], it.get("n"), project or None, None),
+                        {"file": p.name, "ref": it.get("n"), "tag": followed_tag(it)}, followed_sig(it)))
+    return out
+
+
+def followed_note_refs(p, data, vips, names):
+    """The memory note of one proposal file when it is about a followed person's message and not yet applied (cx-edit stages
+    one approved, a sweep could stage one pending): [(row fields, ref, sig)]."""
+    fc = data.get("file_changes") or {}
+    source = str(fc.get("source") or "")
+    who = followed_from(source, vips, names) if source.startswith(("Email · ", "Teams · ")) else None
+    if not who or fc.get("applied") or fc.get("file_changes_decision", "pending") not in ("pending", "approved"):
+        return []
+    return [(followed_row(source, "note", who[0], who[1], "file_changes", fc.get("project"), None),
+             {"file": p.name, "ref": "file_changes", "tag": "note"}, "n:" + p.name)]
+
+
+def followed_refs(vips, names):
+    """The pending refs, each with the row fields of its thread: [(row fields, ref {file, ref, tag}, sig)]."""
+    out = []
+    for p in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):                                  # a file being written or not a proposal: the next look finds it
+            continue
+        out += followed_item_refs(p, data, vips, names) + followed_note_refs(p, data, vips, names)
+    return out
+
+
+def followed_join(refs):
+    """The refs grouped into rows by thread and type, by ID: {id: row}."""
+    rows = {}
+    for fields, ref, sig in refs:
+        rid = "fp" + __import__("hashlib").sha1(f"followed:{fields['typ']}:{fields['thread']}".encode("utf-8")).hexdigest()[:10]
+        row = rows.setdefault(rid, {"id": rid, "kind": fields["typ"], "medium": fields["medium"], "who": fields["who"],
+                                    "address": fields["address"], "title": fields["title"], "subject": fields["title"],
+                                    "link": None, "sent": None, "p": None, "refs": [], "sigs": [], "marker": None})
+        row["refs"].append(ref)
+        row["sigs"].append(sig)
+        row["sent"] = max(row["sent"] or "", fields["sent"] or "") or None
+        row["p"] = row["p"] or fields["p"]
+        row["link"] = row["link"] or fields["link"]
+    for row in rows.values():
+        row["last"] = row["sent"]
+    return rows
+
+
+def followed_rows(alerts):
+    """The rows the pending proposals and notes give now, by ID: {id: row}. A thread whose card is private is shown by the card's
+    own neutral title, with no project; a confidential one is marked (the page draws it with its mark)."""
+    rows = followed_join(followed_refs(*followed_names()))
+    for row in rows.values():
+        ref = {"conv": None, "link": row["link"], "title": strip_reply(row["title"]).lower(), "kind": row["medium"]}
+        card = next((a for a in alerts if a.get("kind") not in FOLLOWED_KINDS and a.get("marker") and same_conv(a, ref)), None)
+        if card and card.get("marker") in ("private", "confidential"):
+            row["marker"] = card["marker"]
+            if card["marker"] == "private":
+                row.update({"title": card.get("title") or "Conversation", "subject": card.get("title") or "Conversation", "p": None})
+    return rows
+
+
+FOLLOWED_FIELDS = ("medium", "who", "address", "title", "subject", "link", "sent", "last", "p", "refs", "sigs", "marker")
+
+
+def followed_update(a, row, stamp):
+    """Bring one existing row up to date with what is pending; a dismissed proposal row returns, as new, for an item it was not
+    dismissed with (a note never does: it is not an item)."""
+    if a.get("seen") and "seen_sig" not in a:
+        a["seen_sig"] = list(a.get("sigs") or [])                  # seen by an older path: what it showed then is what it saw
+    old = list(a.get("seen_sig") or [])
+    new = [x for x in row["sigs"] if not any(sig_similar(x, y) for y in old)]
+    a.update({k: row[k] for k in FOLLOWED_FIELDS})
+    if a.get("seen") and a["kind"] == "proposal" and new:
+        a.update({"seen": None, "state": "open", "returned": stamp, "updated": stamp})
+        a.pop("handled_at", None)
+        a.pop("seen_sig", None)
+    elif new and not a.get("seen"):
+        a["updated"] = stamp
+
+
+def followed_sync(st):
+    """Bring st's followed rows (kind proposal or note) in line with what is pending; True when st changed. A row new to vip.json
+    is added open; one whose refs are all decided or gone is dropped."""
+    stamp = now().strftime("%Y-%m-%d %H:%M")
+    have = {a.get("id"): a for a in st["alerts"] if a.get("kind") in FOLLOWED_KINDS}
+    want, changed = followed_rows(st["alerts"]), False
+    for rid, row in want.items():
+        a = have.pop(rid, None)
+        if a is None:
+            st["alerts"].append({**row, "found": "sweep", "at": stamp, "updated": stamp, "seen": None, "state": "open", "quiet": False})
+            changed = True
+            continue
+        before = json.dumps(a, sort_keys=True)
+        followed_update(a, row, stamp)
+        changed = changed or json.dumps(a, sort_keys=True) != before
+    for gone in have.values():
+        st["alerts"].remove(gone)
+        changed = True
+    return changed
+
+
+def mark_seen(a, at, state=None):
+    """Settle an alert (Dismiss, Handled, Seen, all candidates made or dismissed) and remember what it was settled with: a
+    followed row what its items said (`sigs`), a conversation its signature (card_sig), so only a genuine change brings it back."""
+    a["seen"] = at
+    if state:
+        a["state"] = state
+    if a.get("kind") in FOLLOWED_KINDS:
+        a["seen_sig"] = list(a.get("sigs") or [])
+    elif "summary" in a:
+        a["seen_sig"] = sorted(card_sig(a))
+    return a
+
+
+def unmark_seen(a):
+    """Put an alert back (Undo): nothing remembered of the earlier settling."""
+    a["seen"] = None
+    a.pop("seen_sig", None)
+    a.pop("returned", None)
+    return a
+
+
+def card_sig(a):
+    """What a conversation's card asks of Alan, as a set of strings: each candidate, the ask for an action, decision or risk, the
+    item it is matched to, a suggested close and a kept promise. A private one asks nothing."""
+    if a.get("marker") == "private":
+        return set()
+    sig = {"c:" + norm(c.get("text")) for c in a.get("candidates") or [] if c.get("text")}
+    if a.get("ask") and a.get("type") in ("action", "decision", "risk"):
+        sig.add("a:" + norm(a["ask"]))
+    m = a.get("match") if isinstance(a.get("match"), dict) else {}
+    if m.get("id") and m.get("relation") not in (None, "new"):
+        sig.add("m:" + str(m["id"]))
+    if isinstance(a.get("closes"), dict) and a["closes"].get("id"):
+        sig.add("x:" + str(a["closes"]["id"]))
+    if isinstance(a.get("kept"), dict) and a["kept"].get("id") and a["kept"].get("open") is not False:
+        sig.add("k:" + str(a["kept"]["id"]))
+    return sig
+
+
+def sig_similar(x, y):
+    """Whether two signature strings say the same thing: the same kind and, for words, mostly the same words (Claude rewords a
+    candidate each time it reads a thread)."""
+    if x == y:
+        return True
+    if x[:2] != y[:2] or x[:2] not in ("c:", "a:"):
+        return False
+    a, b = {w for w in x[2:].split() if len(w) > 2}, {w for w in y[2:].split() if len(w) > 2}
+    return bool(a and b) and len(a & b) / min(len(a), len(b)) >= 0.7 and len(a & b) / len(a | b) >= 0.5
+
+
+def card_reopen(a):
+    """A card Alan settled comes back, as new, only when its signature has something it was not settled with. A card settled
+    before signatures were kept has none, and keeps the earlier rule (conv_finish)."""
+    if not a.get("seen") or "seen_sig" not in a:
+        return False
+    old = list(a["seen_sig"])
+    if not [x for x in card_sig(a) if not any(sig_similar(x, y) for y in old)]:
+        return False
+    unmark_seen(a)
+    a["state"] = "open"
+    a.pop("handled_at", None)
+    a.pop("replied_at", None)
+    return True
+# ===== end #236 =====
 
 
 def vip_cmd(a):

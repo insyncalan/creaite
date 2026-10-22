@@ -19,9 +19,13 @@ import { creaiteEditor } from "./core/editor.js";
 import { linkAnchor, linkUrl, unescHtml } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
-import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
+import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, projFirst, projPeople, srcHTML, WK, wkAsk } from "./core/fields.js";
+import { irHold } from "./core/irFold.js";
+import { EDITABLE, irChanged, irIfApproved, irLabel, irLineParts, irMergeEdits, irNowRow, irSaveChanges, irUpdateList, irWord, UI } from "./core/irUpdate.js";
+import { drawLast, drawLatestWas, drawUpdateBody, updateChipNodes, updateChips } from "./components/intakeReview/UpdatePeek.jsx";
 import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
+import { openProjectWs } from "./stores/projectSettings.js";   /* v2.6: a workstream is added in its project's settings */
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
 import { api, applyNow, applySoon, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -35,8 +39,8 @@ import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLink
 import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
 import { decide, isMin, llNoteHtml, rejectMinutes, rjMenuFor, rtNoteHtml, rvDup, rvRejectOK } from "./review.js";
 import { alertStage, alertStaged, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
-import { pkAdd, plur, renderToday } from "./today.js";
-import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF, rvPaint } from "./work.js";
+import { isConflict, plur, renderToday } from "./today.js";
+import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF } from "./work.js";
 /* ======================= detail panel ======================= */
 shared.CUR=null; shared.EDITING=false;
 export const REC=(k,id)=>(k==="actions"?A:k==="raid"?R:DEC).find(x=>x.id===id);
@@ -47,7 +51,7 @@ export function fieldsFor(k,x){ const F=(()=>{ const projOpts=P.map(p=>[p.code,p
   if(k==="actions") return [["t","Action","area"],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["pr","Priority","sel",["Urgent","High","Medium","Low"]],["due","Due date","date"],["st","Status","sel",["Open","Delayed","Closed","Cancelled"]],["raised","Raised","date"],["closed","Closed","date"],["upd","Latest update","area"],["ms","Milestone","sel",msOpts],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
   if(k==="raid") return [["t","Description","area"],["type","Type","sel",["Risk","Issue","Assumption","Dependency"]],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["resp",RESPL(x.type),"area"],["imp","Impact","sel",["High","Medium","Low"]],["lik","Likelihood","sel",["High","Medium","Low"]],["pr","Priority","calc"],["due","Due date","date"],["st","Status","sel",["Open","Closed","Cancelled"]],["raised","Raised","date"],["closed","Date closed","date"],["ms","Milestone","sel",msOpts],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
   if(k==="decisions") return decisionFields(x,projOpts);   /* BL-53: status, needed by, reasoning, options, revisit, replaces */
-  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to","Proposed value",x.field==="status"?"sel":"text",["Open","Delayed","Closed","Cancelled"]]];
+  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to",x.field==="status"?"Status":"Proposed value",x.field==="status"?"sel":"text",["Open","Delayed","Closed","Cancelled"]]];
   if(k==="project") return [["health","Health","sel",["On track","At risk","Off track"]],["reason","Health reason","area"]];
   if(k==="milestone") return shared.CUR.mode==="rebase"?[["fc","New baseline (and forecast)","date"],["with","Agreed with (full names, separated by commas)","text"],["reason","Reason for rebaselining","area"]]
     :[["name","Milestone","text"],["desc","Description","area"],["fc",shared.CUR.mode==="msnew"?"Date (baseline and forecast)":"Forecast date","date"],["st","Status","sel",["Planned","Done"]],["pc","% complete","pct"],["ord","Order","text"],...(shared.CUR.mode==="msnew"?[]:[["base","Baseline","ro"]])];
@@ -206,7 +210,62 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
   if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (the live server isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
+  if(r.kind==="update"){ const u=updOpen(r); if(u){ shared.CUR={mode:"proposal",k:u.table,n,draft:u.draft,upd:u.upd}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); return; } }   /* #232-B: an update proposal opens the whole item in the peek; one that can't keeps the old form */
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+/* ===== #232-B (release 2.6) ===== an update proposal in the peek. The item is the live tracker row (REC), with the proposal's
+   changes applied to the editable columns (Status, Due, Latest update) in the draft; the other changes are read-only `was → now`.
+   core/irUpdate.js holds the rules (the one list of changes, the save); components/intakeReview/UpdatePeek.jsx draws them.
+   CUR.upd keeps the row as it was when the peek opened (live), the proposal's own changes, and the editable columns as opened. */
+export const updPeekable=r=>{ const rec=(r&&r.rec)||{}; return PKK.includes(rec.table)&&!!REC(rec.table,rec.target)&&(rec.changes||[]).some(c=>c.col); };   /* the item is in the tracker and the changes name their columns */
+export function updOpen(r){ const rec=r.rec||{}, t=rec.table, id=rec.target, x=PKK.includes(t)?REC(t,id):null;
+  if(!x){ if(PKK.includes(t)) snack(`${id} is no longer in the tracker: its change is shown in the old form`); return null; }
+  const cols=(rec.changes||[]).filter(c=>c.col); if(!cols.length) return null;
+  const live={...x}, liveDb=toDb(t,live), changes=Object.fromEntries(cols.map(c=>[c.col,c.to])), draft={...live};
+  for(const col of [...(EDITABLE[t]||[])]) if(col in changes&&UI[t][col]) draft[UI[t][col]]=changes[col]??"";
+  return {table:t,draft,upd:{table:t,id,live,liveDb,changes,opened:toDb(t,draft)}}; }
+export function updModel(){ const u=shared.CUR.upd, x=shared.CUR.draft, now=irNowRow(u.table,u.liveDb,u.changes,toDb(u.table,x));
+  const list=irUpdateList(u.liveDb,now,Object.keys(u.changes)); return {u,x,now,list,changed:irChanged(list)}; }
+/* the peek's own parts are read-only or hidden for an update; every draw puts them right for the proposal on show */
+export function pkUpdMount(){ if($("#pkUpd")) return;                                 /* made the first time an update opens, so the peek's own markup is as it was */
+  addHTML($("#pkNote"),"afterend",html`<div id="pkUpd"></div>`); addHTML($(".pk-dlrow"),"beforebegin",html`<div id="pkUpdWas"></div>`); addHTML($("#pkDesc"),"afterend",html`<div id="pkUpdLast"></div>`); }
+export function pkUpdReset(on){ if(on) pkUpdMount(); const t=$("#pkTitle"), ed=t.cxed&&t.cxed.editor; if(ed&&ed.isEditable===on) ed.setEditable(!on,false);   /* the title is the item's own text: read-only here */
+  if(on) t.setAttribute("aria-readonly","true"); else t.removeAttribute("aria-readonly");
+  const a=on&&shared.CUR.k==="actions"; $(".pk-dlrow").hidden=on&&!a; $("#pkDesc").hidden=on&&!a;
+  const det=$("#pkDetT")?.closest("section"); if(det) det.hidden=on;                       /* Details would edit columns this peek leaves read-only */
+  const saveA=$("#pkPSaveA"); if(saveA) saveA.hidden=on&&isConflict(pkRev());   /* not there yet when the page opens on an item (#pkFoot2 is added by a later boot step) */
+  $("#pkDesc").classList.toggle("updnew",false);
+  if(!on&&$("#pkUpd")){ drawUpdateBody($("#pkUpd"),null); drawLatestWas($("#pkUpdWas"),null); drawLast($("#pkUpdLast"),null); } }
+export function updDraw(x,k,r){ const {u,now,list}=updModel(), t=u.table;
+  putHTML($("#pkId"),html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u.id}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}`);
+  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. Change it here and save: it's checked again.</div>`:""}`); $("#pkPropEnd").textContent="";   /* #291 fix */
+  const show=(col,v)=>col==="project"?(v?pName(v)||v:"—"):col==="owner"||col==="made_by"?(pkWho(v)||"—"):col==="milestone"?(v?msName(v):"—"):irWord(col,v);
+  const {row1,row2}=updateChips(t,list,now,show); $("#pkProps").replaceChildren(...updateChipNodes(row1)); $("#pkProps2").replaceChildren(...updateChipNodes(row2));
+  drawUpdateBody($("#pkUpd"),{id:u.id,title:u.live.t||"",table:t,list,rec:r.rec,conflict:isConflict(r),current:u.liveDb});
+  const lc=list.find(c=>c.col==="latest_update"), lat=!!lc&&!lc.same;
+  drawLatestWas($("#pkUpdWas"),t==="actions"?{was:u.liveDb.latest_update,changed:lat}:null); if(t==="actions"){ $("#pkDescL").textContent=lat?"New latest update":"Latest update"; $("#pkDesc").classList.toggle("updnew",lat); }
+  drawLast($("#pkUpdLast"),{id:u.id,at:u.live.upd_at||""}); updFeed(); }
+/* the activity: the pending "If approved" line from the same list, then the item's history and the source */
+export function updFeed(){ const {u,changed}=updModel(), r=pkRev(), tab=PK.tab||"all"; if(!r||!$("#pkFeed")) return;
+  const items=[...feedLines(pkHistory(u.id),ch=>/^created\b/.test(ch)?"src":ch.toLowerCase().startsWith(pkUpdLabel(u.table)+":")?"upd":"act"),{type:"src",who:"Source",html:`<div class="pk-src">${srcHTML(r.src)}</div>`,when:""}];
+  const pend=changed.length&&(tab==="all"||tab==="act")?html`<div class="pk-fe pending" data-t="act"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>If approved</b> · ${irIfApproved(changed)}</div></div>`:html``;
+  putHTML($("#pkFeed"),html`${pend}${raw(feedListHtml(items,tab))}`); }
+export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=shared.CUR.draft; if(!r) return;
+  const plan=irSaveChanges(u.table,u.changes,u.liveDb,u.opened,toDb(u.table,x));
+  if("error" in plan){ pkNote(plan.error); return; }
+  if(!plan.edited.length){ closePanel(); if(approve) decide(r.n,"approved",true); else snack("Nothing was changed"); return; }   /* nothing edited: the proposal is as it was */
+  if(!await needVault()) return;
+  let fin=null;
+  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
+      const m=irMergeEdits(it.changes||{},plan); if("error" in m) throw new Error(m.error);   /* the file's own changes now, with only the columns edited here put right */
+      const cols=Object.keys(m.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));   /* status first: the proposal's field is its first change, and the hold reads it */
+      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
+  const was=r.rec.changes||[], cols=Object.keys(fin); r.rec.changes=cols.map(c=>({field:irLabel(c).toLowerCase(),col:c,from:u.liveDb[c]??null,to:fin[c]}));
+  const f=r.rec.changes[0]; r.rec.field=f.col; r.rec.from=f.from; r.rec.to=f.to;
+  if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${irLineParts(r.rec.changes).join("; ")}`;   /* in words ("due 20-10-2026 → 23-10-2026"), never a column name or a long text */
+  r.edited=true; if("hold" in r) r.hold=irHold(r);
+  if(r.bad) return badSaved(r,approve);   /* #291 fix, as savePanel: checked again, approved only once it passes, else Edit */
+  closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } }
+/* ===== end #232-B ===== */
 export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; HSUSED=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
 export const PKK=["actions","raid","decisions"];   /* declared before drawPanel, which runs at load */
@@ -345,6 +404,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
       it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
+    if("hold" in r) r.hold=irHold(r);   /* #232-B: the server's rule (review.hold_reason) again on what the edit left: an Issue made a Risk is held, a project set clears "need a project" */
     if(r.bad) return badSaved(r,approve);   /* #291 fix */
     closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } return; }
   if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; hsSaved(); closePanel();
@@ -374,11 +434,11 @@ document.addEventListener("change",e=>{ if(e.target.id==="f_p") learnLabel(); })
    project health, new item and Review panels keep theirs. */
 export function pkIs(){ return !!(shared.CUR&&shared.CUR.mode==="new"&&PKK.includes(shared.CUR.k))||!!(shared.CUR&&(shared.CUR.mode==="record"||shared.CUR.mode==="proposal")&&PKK.includes(shared.CUR.k)); }
 /* the list the arrows step through: the same order J and K use (BL-122), on Work, Mine and a person's page */
-export function pkOrder(){ if(shared.PKSRC) return shared.PKSRC.order();   /* BL-286 E: the list of the screen the peek was opened from */
+export function pkOrder(){ if(shared.PKSRC&&(!shared.PKSRC.view||shared.PKSRC.view===shared.VIEW)) return shared.PKSRC.order();   /* #232-B: Intake and Review's peek steps through its own proposals */   /* BL-286 E: the list of the screen the peek was opened from */
   return shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person"?hlOrder():[]; }
 export function pkNav(){ const L=pkOrder(), i=shared.CUR?L.findIndex(o=>o.id===pkCid()):-1; $("#pkPrev").disabled=i<=0; $("#pkNext").disabled=i<0||i>=L.length-1; }
 export function pkStep(n){ const L=pkOrder(), i=L.findIndex(o=>o.id===(shared.CUR&&pkCid())), o=L[i+n]; if(i<0||!o) return;
-  if(shared.PKSRC){ shared.PKSRC.step(o); return; }
+  if(shared.PKSRC&&(!shared.PKSRC.view||shared.PKSRC.view===shared.VIEW)){ shared.PKSRC.step(o); return; }
   HL.clear(); HL.set(o.id,o.k); shared.HLA=shared.HLC=o.id; openRecord(o.k,o.id); hlPaint();
   const el=$$(layoutOf(shared.WT)==="board"&&shared.VIEW==="work"?"#workBoard .bcard[data-row]":shared.VIEW==="person"?"#v-person table.ptbl tr[data-row]":"#workTbl tr[data-row]").find(e=>e.dataset.row===o.id); el&&el.scrollIntoView({block:"nearest"}); }
 export function pkWide(on){ PK.wide=on; $("#panel").classList.toggle("pkwide",on); const b=$("#pkExpand"); if(!b) return; const t=on?"Back to half width":"Expand to full width";
@@ -387,6 +447,11 @@ export function pkWide(on){ PK.wide=on; $("#panel").classList.toggle("pkwide",on
 /* Esc closes the peek (a picker or a text field first, each in its own handler); from inside ask creaite it closes the chat and
    leaves the peek as it was. A menu, a dialog or the date picker keeps Esc for itself. */
 /* ===== end BL-176 (shell) ===== */
+/* Whether Esc belongs to something open over the peek (a dialog, the date picker, a combobox, a menu, a popup, the link form): the one
+   rule for the panel's own Esc below and for Intake and Review's peek (#232-B), so neither closes the peek over an open menu. */
+export function pkEscMenu(a){ return !!(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))); }   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+/* ... and also the chat, a text field being edited and the Draft email pane, each with its own Esc (#232-B). */
+export function pkEscBusy(a){ return pkEscMenu(a)||!!(a&&a.closest&&a.closest("#chat"))||!!(a&&a.isContentEditable)||chaseIsOpen(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0165(){
 Object.assign(ICONS,{arrowright:'<path d="M5 12h14M13 6l6 6-6 6"/>',expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',shrink:'<path d="M21 9h-6V3M3 15h6v6M15 9l6-6M9 15l-6 6"/>',
@@ -401,7 +466,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING||helpPanelOpen()) return;   /* #249: the ? panel over the peek takes Esc first (core/keys.js); the peek stays */
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))) return;   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(pkEscMenu(a)) return;
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft email goes back to the item first */
@@ -430,7 +495,9 @@ export const PKFL={t:null,upd:"Latest update",resp:null,why:"Reasoning",st:"Stat
 export const pkLabel=(k,f,x)=>f==="t"?pkTitleL(k):f==="resp"?RESPL(x.type):f==="due"?(k==="decisions"?"Needed by":"Due date"):PKFL[f]||f;
 /* the marks (a status ring, priority bars, initials) are PeekProps.jsx's (peekMark) */
 export const PKDRAW=[];                                   /* later blocks add what they draw (staging, details, activity) */
-export function pkNote(msg){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||""; }
+/** The peek's note line; `ws`, a project code, adds a link to that project's Workstreams (v2.6). @param {string} msg @param {string} [ws] */
+export function pkNote(msg,ws){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||"";
+  if(msg&&ws){ const b=document.createElement("button"); b.type="button"; b.className="linkbtn"; b.id="pkWsLink"; b.textContent="Open its workstreams"; b.onclick=()=>openProjectWs(ws); n.append(" ",b); } }
 export function pkDrawId(x,k){ putHTML($("#pkId"),html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type}" data-tip="Type">${x.type}${raw(ic("chevdown"))}</button>`:""}`);
   const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`));
   drawPeekNotes(shared.CUR.mode==="record"?pkCid():"");   /* BL-301 B: "2 notes mention this" */ }
@@ -454,7 +521,7 @@ export function pkDraw(){ const x=curObj(), k=shared.CUR.k; if(!x){ closePanel()
   if(shared.PKPOP&&!fresh){ PK.redraw=true; return; } closePicker("owner",false);
   if(fresh){ PK.key=key; PK.tab="all"; PK.pc=null; pkNote(""); }
   const a=document.activeElement, af=!fresh&&a&&a.closest&&a.closest("#panel [data-pkp]")?a.dataset.pkp:null;   /* a redraw keeps the focus on the same chip */
-  pkDrawId(x,k); pkDrawProps(x,k); pkDrawText(x,k); PKDRAW.forEach(f=>f(x,k,fresh));
+  pkUpdReset(!!shared.CUR.upd); pkDrawId(x,k); pkDrawProps(x,k); pkDrawText(x,k); PKDRAW.forEach(f=>f(x,k,fresh));
   if(fresh) $("#pkScroll").scrollTop=0;
   if(af&&!document.activeElement.closest("#panel")){ $(`#panel [data-pkp="${af}"]`)?.focus(); } }
 /* a field asked for when the item opens (a value clicked in a row): focus its chip or its text */
@@ -715,7 +782,10 @@ PK.det={};
 export function pkEdMount(root){ if(!root) return; root.querySelectorAll(".pked").forEach(el=>{ if(el.cxed) return;
   creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",links:!!el.dataset.pkml,      /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
     
-    ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
+    ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:pkClientMsg(el)?"client_message":el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
+/** #263: whether a peek field is Client messaging (its text goes to client reports): its AI place is "client_message", which the server gives
+    the client facts and the client check on the reply. @param {HTMLElement} el */
+export const pkClientMsg=el=>el.dataset.pkf==="cm"||el.dataset.pkf==="cmd";
 export const pkDetOpen=(x,id)=>!!((PK.pc&&PK.pc.id===id)||(id in PK.det?PK.det[id]:!!x.client));
 export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#pkDetT"); tg.setAttribute("aria-expanded",String(open)); $("#pkDet").hidden=!open; if(!open) return;
   const body=$("#pkDet"); if(body.contains(document.activeElement)&&document.activeElement.isContentEditable) return;   /* never under the cursor */
@@ -754,7 +824,7 @@ PKPROP.p=(a,x,k,id)=>openPicker(a,{label:"Project",value:x.p,onClose:pkPopDone(a
   if(x.ws&&!wsFor(v).some(w=>w.toLowerCase()===String(x.ws).toLowerCase())){ patch.ws=""; notes.push("workstream cleared: "+pName(v)+" has none called "+x.ws); }
   pkCommit(k,id,patch,"Project",pName(x.p),pName(v),{note:notes.join("; ")}); }});
 PKPROP.ws=(a,x,k,id)=>openPicker(a,{label:"Workstream",search:true,allowNew:true,value:x.ws||"",onClose:pkPopDone(a),options:[...wsFor(x.p).map(w=>({v:w,label:w,icon:"layers"})),{v:"",label:"None"}],onPick:(v,typed)=>{
-  if(typed){ const m=wsFor(x.p).find(w=>w.toLowerCase()===v.toLowerCase()); if(!m){ pkNote(`“${v}” isn't one of ${pName(x.p)}'s workstreams yet. Add it in Settings › People and projects › Workstreams, then choose it here.`); return; } v=m; }
+  if(typed){ const m=wsFor(x.p).find(w=>w.toLowerCase()===v.toLowerCase()); if(!m){ pkNote(`“${v}” isn't one of ${pName(x.p)}'s workstreams yet. Add it in ${pName(x.p)}'s settings › Workstreams, then choose it here.`,x.p); return; } v=m; }
   pkCommit(k,id,{ws:v},"Workstream",x.ws||"none",v||"none"); }});
 PKPROP.ms=(a,x,k,id)=>openPicker(a,{label:"Milestone",value:x.ms||"",onClose:pkPopDone(a),options:msChoices(x.p,x.ms).map(([v,l])=>({v,label:l,icon:"flag"})),onPick:v=>pkCommit(k,id,{ms:v},"Milestone",x.ms?msName(x.ms):"none",v?msName(v):"none")});
 PKPROP.replaces=(a,x,k,id)=>openPicker(a,{label:"Replaces",search:true,value:x.replaces||"",onClose:pkPopDone(a),options:[{v:"",label:"None"},...DEC.filter(d=>d.p===x.p&&d.id!==x.id).map(d=>({v:d.id,label:`${d.id} · ${decShort(d.t,60)}`,icon:"decision"}))],onPick:v=>pkCommit(k,id,{replaces:v},"Replaces",x.replaces||"none",v||"none")});
@@ -775,6 +845,7 @@ export const pkShort=(s,n=60)=>{ s=linkWords(String(s??"")).replace(/\s+/g," ").
 export function pkFeed(x,k){ const tab=PK.tab||"all";
   drawTabs($("#pkTabsHost"),{items:feedTabItems(tab,"pktab","pkTabSel"),selected:tab,onSelect:v=>{ if(!shared.CUR) return; PK.tab=v; pkFeed(curObj(),shared.CUR.k); },
     label:"Activity",className:"pk-tabs",tabClass:"pk-tab",id:"pkTabs",wrap:true});   /* BL-316: the Tabs building block */
+  if(shared.CUR&&shared.CUR.upd){ updFeed(); return; }   /* #232-B */
   putHTML($("#pkFeed"),raw(feedListHtml(pkFeedItems(x,k),tab))); }
 /* ===== end BL-176 (details and activity) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -793,9 +864,11 @@ export function pkCid(){ return shared.CUR&&shared.CUR.mode==="new"?shared.CUR.n
 export function pkX(k,id){ if(String(id).startsWith("nw")) return shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===id?shared.CUR.draft:null; if(String(id).startsWith("rv")) return shared.CUR&&shared.CUR.mode==="proposal"&&"rv"+shared.CUR.n===id?shared.CUR.draft:null; return REC(k,id); }
 export const pkRev=()=>shared.CUR&&shared.CUR.mode==="proposal"?REV.find(r=>r.n===shared.CUR.n):null;
 export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#panel").classList.toggle("pkprop",on);
-  ["pkLink","pkMore","pkPrev","pkNext","pkExpand"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"; }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
+  const nav=!!(shared.PKSRC&&shared.PKSRC.view&&shared.PKSRC.view===shared.VIEW);   /* #232-B: Intake and Review's proposals step with Previous and Next */
+  ["pkLink","pkMore","pkPrev","pkNext","pkExpand"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"&&!(nav&&(id==="pkPrev"||id==="pkNext")); }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
   if(!on){ $("#pkPropTop").textContent=""; $("#pkPropEnd").textContent=""; return; }
   const r=pkRev(); if(!r) return;
+  if(shared.CUR.upd){ updDraw(x,k,r); return; }   /* #232-B: an update proposal draws the whole item (updDraw) */
   putHTML($("#pkId"),html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type??""}" data-tip="Type">${x.type??""}${raw(ic("chevdown"))}</button>`:""}`);
   putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x.p?"":html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r)&&!r.done?raw(llNoteHtml(r)):""}${raw(rtNoteHtml(r))}${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. ${(r.badf||[]).length?`Saving leaves out ${r.badf.join(", ")}.`:"Change it here and save: it's checked again."}</div>`:""}`);   /* BL-297 D; #291 fix */
   const sig=learnable(r), was=$("#f_learn")?.checked;
@@ -804,6 +877,7 @@ export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#pane
 /* Save: the draft goes through the panel's own save for proposals (readForm is given the draft for that one call) */
 export async function pkPropSave(approve){ if(!shared.CUR||shared.CUR.mode!=="proposal"||PK.closing) return; PK.closing=true;
   try{ closePicker("owner",false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await shared.PKQ;
+    if(shared.CUR.upd){ await updSave(approve); return; }   /* #232-B: an update proposal saves the columns Alan edited (core/irUpdate.js irSaveChanges) */
     if(PK.pc){ pkNote(PKMSGNEED(PK.pc.k)+" Or turn Client-visible off."); return; }
     const x=shared.CUR.draft, k=shared.CUR.k, F=fieldsFor(k,x).filter(f=>f[0]!=="#"&&!["ro","calc","dref"].includes(f[2])).map(f=>f[0]);
     const form=Object.fromEntries(F.map(n=>[n,typeof x[n]==="boolean"?x[n]:String(x[n]??"")]));
@@ -821,6 +895,7 @@ export function bootPanel0173(){
 addHTML($("#pkScroll"),"afterend",html`<div class="pk-foot" id="pkFoot2"><button type="button" class="btn" id="pkReject" aria-haspopup="menu" aria-expanded="false">${raw(ic("x"))}Reject</button><span class="sp"></span><button type="button" class="btn" id="pkCancel">Cancel</button><button type="button" class="btn" id="pkPSave" data-key="${MOD}↵" data-tip="Save">Save</button><button type="button" class="btn primary" id="pkPSaveA">Save and approve</button></div>`);
 addHTML($("#pkWarn"),"afterend",html`<div class="pk-propnotes" id="pkPropTop"></div>`);
 addHTML($("#pkAfter"),"beforeend",html`<div id="pkPropEnd"></div>`);
+
 PKDRAW.push(pkPropDraw);
 $("#pkScroll").tabIndex=-1;
 $("#pkPSave").onclick=()=>pkPropSave(false);
@@ -839,10 +914,10 @@ export function bl175Clamp(m){ if(!m||m.hidden||!m.offsetParent) return; m.style
 /* ===== end BL-175 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0174(){
-{ const seen=new WeakMap(), check=()=>$$("#v-work .toolbar .ddmenu,#v-review .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ const vis=!!m.offsetParent&&getComputedStyle(m).display!=="none";
+{ const seen=new WeakMap(), check=()=>$$("#v-work .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ const vis=!!m.offsetParent&&getComputedStyle(m).display!=="none";
     if(vis&&!seen.get(m)) bl175Clamp(m); seen.set(m,vis); });
-  ["#v-work .toolbar","#v-review .toolbar","#wviews"].forEach(s=>{ const el=$(s); if(el) new MutationObserver(()=>requestAnimationFrame(check)).observe(el,{subtree:true,childList:true,attributes:true,attributeFilter:["class","hidden"]}); });
-  addEventListener("resize",()=>$$("#v-work .toolbar .ddmenu,#v-review .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ if(m.offsetParent) bl175Clamp(m); })); }
+  ["#v-work .toolbar","#wviews"].forEach(s=>{ const el=$(s); if(el) new MutationObserver(()=>requestAnimationFrame(check)).observe(el,{subtree:true,childList:true,attributes:true,attributeFilter:["class","hidden"]}); });
+  addEventListener("resize",()=>$$("#v-work .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ if(m.offsetParent) bl175Clamp(m); })); }
 }
 /* ===== BL-179 (sprint-peek-new) ===== New opens the peek, empty (Alan, 11-10-2026: creating an item looks and works like opening one).
    New action, New RAID item, and the Decisions menu's Record a decision and Ask for a decision open the peek with an empty title (the
@@ -1104,7 +1179,7 @@ export function pkWsForm(anchor,x,k,id,name){ const p=x.p, s=name?wsSuggest(p,na
   return openNewWorkstream(anchor,{title:`New workstream for ${pName(p)}`,name,fields:/** @type {[string, string][]} */(WS_FIELDS),suggest:nm=>wsSuggest(p,nm),onClose:pkPopDone(anchor),
     note:`${name?`Suggested from ${s.items} item${s.items===1?"":"s"}; change anything.`:"A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
     onAdd:async v=>{ const w=wsRow(p,v.name);
-      if(w&&w.st==="Closed") return `“${w.name}” is closed in ${pName(p)}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+      if(w&&w.st==="Closed") return `“${w.name}” is retired in ${pName(p)}: choose another (${pName(p)}'s settings › Workstreams lists the ones in use).`;
       const known=w?w.name:wsFor(p).find(n=>n.toLowerCase()===v.name.toLowerCase());
       closePicker("pick");
       if(known) return void pkCommit(k,id,{ws:known},"Workstream",x.ws||"none",known);   /* it is already there: just use it */
@@ -1147,10 +1222,6 @@ export function pkFromVault(){ const L=Array.isArray(D.peek_staged)?D.peek_stage
    and the highlight stay in step (the clicked row is the only one highlighted and the cursor); focus stays where it was. */
 export function pkFollowable(e){ return pkOn()&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey&&e.button===0; }
 export function pkKeepFocus(was,fn){ fn(); setTimeout(()=>{ const a=document.activeElement; if(a&&$("#panel").contains(a)&&!(was&&$("#panel").contains(was))){ if(was&&was!==document.body&&was.isConnected) was.focus({preventScroll:true}); else a.blur(); } },0); }
-export function pkFollowRev(e,n){ if(!pkFollowable(e)||(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===n)) return; const r=REV.find(x=>x.n===n);
-  if(!r||r.done||!PKK.includes(r.kind)) return;
-  if(shared.CUR&&shared.CUR.mode==="proposal"&&PK.dirty){ pkNote("Save or cancel this proposal first: its changes aren't saved yet."); return; }
-  const was=document.activeElement; pkKeepFocus(was,()=>{ openProposal(n); rvPaint(); }); }
 /* ===== end BL-198 ===== */
 /* ===== BL-219 (sprint-drafts-fields) ===== Draft the latest update. In the peek, Draft beside an open action's Latest update asks
    for one or two lines from what happened since the last update (drafts.py: its changes, the meetings and sweeps that raised it
@@ -1166,7 +1237,7 @@ export function pkDrDraw(){ ["pkAiDraft","pkAiDraftD"].forEach(h=>{ const el=doc
   if(el.innerHTML!==html) putHTML(el,raw(html)); }); }
 export function pkDrDrop(){ if(shared.PKDRC&&shared.PKDRC.d) draftStat(shared.PKDRC.feature,"rejected"); shared.PKDRC=null; pkDrDraw(); }
 export function pkDrPlace(x,k){ $("#pkDescDr")?.replaceChildren();          /* beside the label, never inside it: the label stays the field's name (BL-214) */
-  PKDRBTN.flatMap(fn=>fn(x,k,shared.CUR.mode)||[]).forEach(b=>{ const btn=draftBtn(b.kind,b.word,b.tip,`data-drf="${b.f}"`);
+  PKDRBTN.flatMap(fn=>fn(x,k,shared.CUR.upd?"update":shared.CUR.mode)||[])        /* #232-B: an update proposal offers no drafting: its title and wording are the item's own */.forEach(b=>{ const btn=draftBtn(b.kind,b.word,b.tip,`data-drf="${b.f}"`);
     if(["upd","resp","why","t"].includes(b.f)){ const l=b.f==="t"?$("#pkChips"):$("#pkDescDr"); if(l&&!l.querySelector(`[data-drf="${b.f}"]`)) addHTML(l,"beforeend",raw(btn)); return; }   /* "t": Sharpen sits with the chips under the title (BL-220); the rest beside the label, never inside it (BL-214) */
     const fld=$(`#pkDet [data-pkf="${b.f}"]`);                       /* Details: on its own line under the field */
     if(fld&&!fld.parentElement.querySelector(`[data-drf="${b.f}"]`)) addHTML(fld,"afterend",html`<div class="drline">${raw(btn)}</div>`); }); }
@@ -1189,7 +1260,7 @@ export async function draftBulk(ids,statusEl){ const why=draftWhyNot("update-bul
   const res=await draftAsk({kind:"update-bulk",ids:open},{label:`Drafting updates for ${plur(open.length,"action")}`,status:st});
   if(res.nothing){ snack(res.nothing); return; } if(!res.ok){ snack(res.message||"No drafts came back"); return; }
   const n=res.staged||0, skip=(res.skipped||[]).length; await reloadData();
-  snack(n?`${plur(n,"drafted update")} in Review, each approved on its own${skip?`; ${skip} had nothing new`:""}. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Review"); }
+  snack(n?`${plur(n,"drafted update")} in Intake, each approved on its own${skip?`; ${skip} had nothing new`:""}. Nothing was saved in place`:"No drafts came back",n?()=>go("intake-review"):null,"Open Intake"); }
 /* ===== end BL-219 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0197(){
@@ -1247,7 +1318,7 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drc
   const st=b.parentElement.querySelector(".drbst"), res=await draftAsk({kind:"client-bulk",code:b.dataset.drcmall},{label:"Drafting client wording",status:h=>{ if(st&&st.isConnected) putHTML(st,raw(h)); }});
   if(res.nothing){ snack(res.nothing); return; } if(!res.ok){ snack(res.message||"No drafts came back"); return; }
   const n=res.staged||0; await reloadData();
-  snack(n?`${plur(n,"client wording")} drafted, in Review: each is approved on its own. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Review"); });
+  snack(n?`${plur(n,"client wording")} drafted, in Intake: each is approved on its own. Nothing was saved in place`:"No drafts came back",n?()=>go("intake-review"):null,"Open Intake"); });
 }
 /* ===== BL-222 (sprint-drafts-fields) ===== Suggest the thinking fields. Suggest beside a decision's Reasoning and Options considered and
    a RAID item's response: drafts.py reads the item's source passage (its meeting, found by its words) and, for a risk, the closed
@@ -1258,6 +1329,8 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drc
 export const PKDRTHINK={resp:"response_action",why:"reasoning",opts:"options"};
 /* ===== end BL-222 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
+export function draftResponse(n){ const why=draftWhyNot("thinking"); if(why){ snack(why); return; } openProposal(n);   /* #232-B: Intake and Review's rows use it too */
+  setTimeout(()=>{ const t=$('#pkDescDr [data-draft="thinking"][data-drf="resp"]'); if(t) t.click(); },0); }
 export function bootPanel0199(){
 Object.assign(DRAFTKIND,{thinking:"thinking"});
 PKDRBTN.push((x,k,mode)=>{ if(mode!=="record"&&mode!=="proposal") return [];
@@ -1274,10 +1347,6 @@ PKDREXTRA.thinking=(d,k)=>{ if(k!=="raid"||!(d.impact||d.likelihood)) return "";
 $("#panel").addEventListener("click",e=>{ const b=e.target.closest(".pkdrhost [data-drset]"); if(!b||!pkOn()) return; e.preventDefault(); e.stopPropagation();
   const [f,v]=b.dataset.drset.split(":"), x=curObj(); if(!x||!["imp","lik"].includes(f)) return; if(x[f]===v){ snack(`${PKFL[f]} is already ${v}`); return; }
   pkImpLik(shared.CUR.k,pkCid(),f,v); b.disabled=true; b.textContent=`${PKFL[f]} set to ${v}`; });
-/* Review: a new risk with no response says so on its row, with Draft a response (it opens the proposal and asks) */
-$("#reviewBody").addEventListener("click",e=>{ const b=e.target.closest("[data-drrisk]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  const why=draftWhyNot("thinking"); if(why){ snack(why); return; } openProposal(+b.dataset.drrisk);
-  setTimeout(()=>{ const t=$('#pkDescDr [data-draft="thinking"][data-drf="resp"]'); if(t) t.click(); },0); },true);
 }
 /* ===== BL-226 (sprint-drafts-fields) ===== Draft the reason for a health or forecast change. Health: in the health form, Draft the
    reason sends the evidence the form already shows (healthEvidence's reasons, then the project's early warnings: no model in that)

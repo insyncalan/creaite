@@ -644,10 +644,16 @@ class _RunLock:
             fcntl.flock(self.fd, fcntl.LOCK_EX)
         except ImportError:  # no flock (Windows, untested): as before
             pass
+        except BaseException:  # review-fixes (6): a lock that fails (OSError, an interrupt) closes its file, never leaks it
+            os.close(self.fd)
+            self.fd = None
+            raise
         return self
 
     def __exit__(self, *exc):
-        os.close(self.fd)                                        # closing the file releases the lock
+        if self.fd is not None:                                  # closing the file releases the lock
+            fd, self.fd = self.fd, None
+            os.close(fd)
         return False
 
 
@@ -669,14 +675,17 @@ def marked_sessions():
         return set()
 
 
-def start_run(run, mode, outside, session=None, files=None):
+def start_run(run, mode, outside, session=None, files=None, as_minutes=None):
     """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
-    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
+    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage. #232 E1:
+    `as_minutes`, the ones of them Alan pressed Find work items on (someone else's minutes): those are staged only as
+    "as": "minutes", and the others only as a transcript."""
     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
     with _RunLock():                                             # #264 round 2 (L1): never between a hook's read and its write
         _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside,
                                "marked": marked, "session": session,
                                **({"files": [str(f) for f in files]} if files is not None else {}),
+                               **({"files_as_minutes": [str(f) for f in as_minutes or ()]} if files is not None else {}),
                                **(_process_start() if mode == "process" else {})})
 
 
@@ -1523,13 +1532,14 @@ def held_validate_reason(command):
 # ===== end held runs read only =====
 
 
-def decide(tool, inp, mode, run, held=False):
+def decide(tool, inp, mode, run, held=False, use_id=None):
     """(allow, reason) for one tool call, as the hook decides it: mode "prep" or "held" (a run creaite starts itself, #60) by
     prep_decision; a guarded mode with `held` (Close the day's sweep) refused first if it would read a confidential note; every
-    other call by hook_decision, unchanged."""
+    other call by hook_decision, unchanged. `use_id` (Claude Code's tool_use_id) ties a Process call to its PostToolUse."""
     if mode in HELD_MODES:
         return prep_decision(tool, inp)
-    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set())   # #264 round 2 (L4, M2)
+    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set(),   # #264 round 2 (L4, M2)
+                 call=(use_id, _call_key(tool, inp)))
     try:
         why = confidential_reason(tool, inp) if held else None
         ok, why = (False, why) if why else hook_decision(tool, inp, mode, run)
@@ -1537,7 +1547,7 @@ def decide(tool, inp, mode, run, held=False):
             ok, why = False, "the guard couldn't record this run's own files, so it can't let it write one (fail closed)"
         return ok, why
     finally:
-        _HOOK.update(run=None, claims=set(), seen={}, writes=set())
+        _HOOK.update(run=None, claims=set(), seen={}, writes=set(), call=None)
 # ===== end #60 option (a) =====
 
 
@@ -2027,7 +2037,7 @@ PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
 # #264 round 2 (Team Cap's review of R1): the hook's own state for the one call it is deciding (decide() sets and clears it).
 # "run" is the hook's --run, so the record is read only when it is that run's (L4); "claims", "seen" and "writes" are what the
 # call would add to the record, written only once every check has passed (M2: a refused call claims nothing).
-_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set()}
+_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set(), "call": None}
 
 
 def _process_record():
@@ -2046,6 +2056,15 @@ def process_files():
     if not data or not isinstance(data.get("files"), list):
         return set()
     return {f for f in data["files"] if isinstance(f, str)}
+
+
+def process_minutes_files():
+    """#232 E1: the Intake paths of this Process run that Alan pressed Find work items on (run.json "files_as_minutes": only the
+    server writes it), each also one of the run's files; none when the record isn't this hook's Process run (fail closed)."""
+    data = _process_record()
+    if not data or not isinstance(data.get("files_as_minutes"), list):
+        return set()
+    return {f for f in data["files_as_minutes"] if isinstance(f, str)} & process_files()
 
 
 def process_reach_problem(tool, inp):
@@ -2093,20 +2112,17 @@ def _print(rp):
 
 def _runs_own(rp):
     """True only for a file the hook let this Process run create (#264 R1: by its record, never by its time, so a file another
-    flow writes into drafts during the run is never the run's). Round 2 (M2): the record also keeps what the file was when the
-    hook first saw it after the run's own last write ("prints"); a file that has changed since (another flow wrote over it, or
-    put another file in its place) isn't the run's any more."""
+    flow writes into drafts during the run is never the run's). Round 2 (M2): the record also keeps what the file was
+    ("prints"); a file that has changed since (another flow wrote over it, or put another file in its place) isn't the run's any
+    more. Round 3 (#264 leftover): the print is taken only when the run's own tool has returned (the PostToolUse hook,
+    post_tool), never at first sight, so a name whose tool failed, or that another flow wrote before the tool's return was
+    recorded, is never the run's (fail closed: no print, not its own)."""
     made = _made()
     if made is None or str(rp) not in made:
         return False
     prints = (_process_record() or {}).get("prints")
     was = prints.get(str(rp)) if isinstance(prints, dict) else None
-    now = _print(rp)
-    if was is None:                                     # not seen since the run's own last write: what it is now is the run's
-        if now is not None:
-            _HOOK["seen"][str(rp)] = now
-        return True
-    return now == was
+    return isinstance(was, list) and _print(rp) == was
 
 
 def _may_make(rp):
@@ -2139,16 +2155,70 @@ def _commit_claims():
                 return False
             data["made"] = sorted(set(_made() or ()) | _HOOK["claims"])
             prints = data.get("prints") if isinstance(data.get("prints"), dict) else {}
-            for f, now in _HOOK["seen"].items():
-                if prints.get(f) is None:
-                    prints[f] = now
             for f in _HOOK["writes"]:
-                prints[f] = None
+                prints[f] = None                        # until the tool returns (post_tool), not the run's (round 3)
             data["prints"] = prints
+            _add_pending(data)
             _write_json(RUN_FILE, data)
         return True
     except (OSError, ValueError, TypeError):
         return False
+
+
+PENDING_MAX = 64          # pending calls kept in run.json; one that drops out was never answered: its files stay not the run's
+
+
+def _add_pending(data):
+    """#264 round 3: the files this call may write, kept in the record ("pending") for its PostToolUse (post_tool), by the call's
+    tool_use_id and its fingerprint (_call_key)."""
+    if _HOOK["writes"] and _HOOK.get("call"):
+        pending = data.get("pending") if isinstance(data.get("pending"), list) else []
+        use_id, key = _HOOK["call"]
+        data["pending"] = (pending + [{"id": use_id if isinstance(use_id, str) and use_id else None, "call": key,
+                                       "files": sorted(_HOOK["writes"])}])[-PENDING_MAX:]    # the newest; an older call never returned
+
+
+def _pending_of(entry, use_id, key):
+    """True when a pending entry is this PostToolUse's call: by tool_use_id when the PreToolUse had one, else by the fingerprint."""
+    if not isinstance(entry, dict):
+        return False
+    if entry.get("id"):
+        return isinstance(use_id, str) and entry["id"] == use_id
+    return entry.get("call") == key
+
+
+def _call_key(tool, inp):
+    """A tool call's fingerprint (its tool and input), to tie its PostToolUse to the PreToolUse that allowed it when Claude Code
+    gives no tool_use_id."""
+    return hashlib.sha256(json.dumps([str(tool), inp], sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()
+
+
+def post_tool(tool, inp, run, use_id=None):
+    """#264 round 3: the PostToolUse hook of a Process run (`reach.py hook --event post`), once the run's own tool has returned.
+    The files the PreToolUse let that call write (its "pending" entry, by tool_use_id or else by the call's fingerprint) get
+    their print now: what the run's tool made. A call that never returns (its tool failed) leaves its files without a print,
+    so they are never the run's; a Post that matches no pending call records nothing. True when something was recorded."""
+    _HOOK.update(run=run)
+    try:
+        key = _call_key(tool, inp)
+        with _RunLock():
+            data = _process_record()
+            pending = data.get("pending") if data is not None else None
+            if not isinstance(pending, list):
+                return False
+            hit = [e for e in pending if _pending_of(e, use_id, key)]
+            if not hit:
+                return False
+            prints = data.get("prints") if isinstance(data.get("prints"), dict) else {}
+            files = {f for e in hit for f in (e.get("files") or ()) if isinstance(f, str) and f in prints}
+            prints.update({f: _print(Path(f)) for f in files})
+            data["prints"], data["pending"] = prints, [e for e in pending if e not in hit]
+            _write_json(RUN_FILE, data)
+        return True
+    except (OSError, ValueError, TypeError):     # nothing recorded: the files stay not the run's (fail closed)
+        return False
+    finally:
+        _HOOK.update(run=None)
 
 
 def _runs_proposals():
@@ -2167,29 +2237,74 @@ def _runs_proposals():
             continue
         if isinstance(m, dict) and isinstance(m.get("transcript"), str) and m["transcript"] in files:
             out.append((Path(os.path.realpath(p)), m))
+        elif (isinstance(m, dict) and m.get("kind") == "minutes by others" and isinstance(m.get("source_file"), str)
+              and m["source_file"] in process_minutes_files()):       # #232 E1: someone else's minutes, by their source file
+            out.append((Path(os.path.realpath(p)), m))
     return out
 
 
 def _process_stage_problem(words):
     """Why `minutes.py stage` is refused in a Process run, or None: a spec in drafts for one of the run's files, no note, and a
-    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes)."""
+    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes). #232
+    E1: a spec with "as" is someone else's minutes (_process_minutes_stage_problem)."""
+    data, why = _process_stage_spec(words)
+    if why:
+        return why
+    if isinstance(data, dict) and "as" in data:          # #232 E1: someone else's minutes (Find work items)
+        return _process_minutes_stage_problem(data)
+    return _process_transcript_stage_problem(data)
+
+
+def _process_stage_spec(words):
+    """(the meeting spec `minutes.py stage` names, None) when it is a .json directly in drafts and can be read, else (None,
+    why)."""
     spec = _in_drafts(words[1], ".json") if len(words) == 2 else None
     if spec is None:
-        return "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
+        return None, "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
     try:
-        data = json.loads(spec.read_text(encoding="utf-8"))
+        return json.loads(spec.read_text(encoding="utf-8")), None
     except (OSError, ValueError):
-        return "the meeting spec can't be read"
+        return None, "the meeting spec can't be read"
+
+
+def _process_transcript_stage_problem(data):
+    """Why a Process run's spec for a transcript is refused, or None: its "transcript" one of the run's files (never one Alan
+    pressed Find work items on, #232 E1), no note, and a Word draft only one this run filled (_process_draft_problem)."""
+    if isinstance(data, dict) and isinstance(data.get("transcript"), str) and data["transcript"] in process_minutes_files():
+        return ("Alan pressed Find work items on that file: it is someone else's minutes, staged with \"as\": \"minutes\" "
+                "and \"file\", never as a transcript")
     if isinstance(data, dict) and not isinstance(data.get("transcript"), str):
         return "the meeting spec's \"transcript\" must be one of the Intake files Alan pressed Process on, as a path"
     if not isinstance(data, dict) or data.get("note") or data.get("transcript") not in process_files():
         return ("Process stages only the Intake files Alan pressed Process on: the spec's \"transcript\" must be one of "
                 "them, exactly as listed, and it can't stage a note")
-    draft = data.get("draft")
-    if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
+    return _process_draft_problem(data.get("draft"))
+
+
+def _process_draft_problem(draft):
+    """Why a spec's Word draft is refused in a Process run, or None: none, or a .docx directly in drafts that this run filled
+    (never another draft waiting in drafts, or a report)."""
+    if draft is None:
+        return None
+    if not isinstance(draft, str) or _in_drafts(draft, ".docx") is None:
         return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
-    if draft is not None and (not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx"))):
+    if not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx")):
         return "a Word draft named in the spec must be one this run filled, never another draft waiting in drafts"
+    return None
+
+
+def _process_minutes_stage_problem(data):
+    """#232 E1: why a Process run's spec for someone else's minutes is refused, or None: "as" is "minutes", "file" is one of
+    the run's files Alan pressed Find work items on (exactly as listed), and none of "draft", "minutes", "transcript" or
+    "note" (a transcript is never staged this way, BL-260; minutes.py refuses the same, this is the guard's own check)."""
+    if data.get("as") != "minutes":
+        return "Process stages someone else's minutes only with \"as\": \"minutes\""
+    if any(k in data for k in ("draft", "minutes", "transcript", "note")):
+        return ("someone else's minutes are staged with \"as\": \"minutes\" and \"file\" only: no \"draft\", "
+                "\"minutes\", \"transcript\" or \"note\"")
+    if not isinstance(data.get("file"), str) or data["file"] not in process_minutes_files():
+        return ("Process stages as someone else's minutes only the Intake files Alan pressed Find work items on: the spec's "
+                "\"file\" must be one of them, exactly as listed")
     return None
 
 
@@ -2390,7 +2505,12 @@ def hook_main(argv):
         opts = dict(zip(argv[0::2], argv[1::2]))
         call = json.loads(sys.stdin.read() or "{}")
         tool, inp = str(call.get("tool_name") or ""), call.get("tool_input") or {}
-        ok, why = decide(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""), opts.get("--held") == "1")   # #60
+        if opts.get("--event") == "post":            # #264 round 3: a Process run's PostToolUse; it never blocks (exit 0)
+            if opts.get("--mode") == "process":
+                post_tool(tool, inp, opts.get("--run", ""), call.get("tool_use_id"))
+            return 0
+        ok, why = decide(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""), opts.get("--held") == "1",   # #60
+                         call.get("tool_use_id"))
     except Exception as e:  # noqa: BLE001  fail closed
         ok, why = False, f"the guard couldn't check this call ({type(e).__name__})"
         tool = "?"

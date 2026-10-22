@@ -169,6 +169,8 @@ def check(rule, settings=None):
     tool, spec = m.groups()
     if tool == "Bash" and "permissions.py" in spec:
         return False, "permissions.py is never allowed to the panel", None
+    if tool == "Bash" and re.search(r"reach\.py(?!\s+(?:classify|never)\b)", spec):     # guard-small: hook and wrap hand over
+        return False, "reach.py is the guard: only its classify and never commands are allowed to the panel", None
     if SHELL_CHARS.search(spec):
         return False, "the rule has shell characters (; & | < > ` $ ( ) { } or a backslash)", None
     why = _bash_rule_refused(spec) if tool == "Bash" else _path_rule_refused(tool, spec)

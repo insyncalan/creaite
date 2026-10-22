@@ -156,6 +156,20 @@ def individual_only(item):
     return update_rule(item)                     # BL-297: a work item's update is routine only for its date and latest update
 
 
+def hold_reason(item):
+    """#232: why "Approve routine" leaves a pending item for Alan, or None when it is routine. The one rule for cmd_bulk and
+    for Intake and Review's two groups (build_dashboard.intake_review): no project (or a possible match), a conflict, an
+    invalid item (Alan, 18-10-2026: held back in the list too), or anything individual_only names. Owner, date and
+    evidence are never tested."""
+    if needs_project(item):
+        return "need a project"
+    if "conflict" in item.get("flags", []):
+        return "conflict"
+    if "invalid" in item.get("flags", []):
+        return "invalid"
+    return individual_only(item) or None
+
+
 # ===== AI drafts (sprint-drafts-fields) ===== a drafted proposal decided here is counted in draft-stats.json (counts only): approved
 # as drafted is "used", approved after an edit "edited", rejected "rejected". The dashboard's Review counts its own decisions.
 def count_draft(item, decision):
@@ -461,17 +475,28 @@ def cmd_pending():
     return 0
 
 
+class NotANumber(ValueError):
+    """A review number that isn't one (main prints it on one line and exits 2)."""
+
+
+def _number(part):
+    try:
+        return int(part)
+    except ValueError:
+        raise NotANumber(f"{part}: not a review number — say the numbers from the last review, such as 4 or 1-6,9.") from None
+
+
 def parse_numbers(spec):
-    """The review numbers in a spec such as '1-6,9'."""
+    """The review numbers in a spec such as '1-6,9'; NotANumber for anything else."""
     nums = []
     for part in re.split(r"[,\s]+", spec.replace("–", "-").strip()):
         if not part:
             continue
         if "-" in part:
             a, b = part.split("-", 1)
-            nums.extend(range(int(a), int(b) + 1))
+            nums.extend(range(_number(a), _number(b) + 1))
         else:
-            nums.append(int(part))
+            nums.append(_number(part))
     return nums
 
 
@@ -1038,10 +1063,64 @@ def decide_entry(n, p, data, ref, block, decision, mode=None, drop=False):
 
 
 def decide_record(n, p, data, block, decision):
-    """Record a decision on a minutes record (v2.1.0 P4, BL-338): its items are its rows, so there is nothing to reconcile."""
+    """Record a decision on a minutes record (v2.1.0 P4, BL-338): its items are its rows. #275: approving follows the Track column,
+    as Approve minutes does (track_minutes): crossed lines leave the minutes, lines left with neither stay untracked, and every
+    ticked row is approved with the minutes; an item with no row (a promise) waits in Review."""
+    if decision == "approved":
+        try:
+            data, ticked, lines = track_minutes(p, data)
+        except Exception as e:                                  # minutes_record.RecordError: nothing approved
+            return f"{n}: not approved — {e}"
+        block = data["meeting"]
+        block["minutes_decision"] = decision
+        save(p, data)
+        return f"{n}: Minutes {decision} — {block.get('title', '')}" + \
+            (f", with {len(ticked)} ticked item{'s' if len(ticked) != 1 else ''}" if ticked else "") + track_words(lines)
     block["minutes_decision"] = decision
     save(p, data)
     return f"{n}: Minutes {decision} — {block.get('title', '')}"
+
+
+def track_minutes(p, data, project=None):
+    """#275: a minutes record's proposal brought in line with its Track column (minutes_record.track_reconcile: the record settled,
+    crossed rows removed, neither kept as lines only), then each ticked row's item (of `project` when given) approved with the
+    minutes. Returns (the proposal as saved, the numbers approved, {"removed": n, "kept": n, "chosen": bool}: the lines this approval
+    took out of the minutes or kept as lines only, and whether Alan made any Track choice at all)."""
+    import minutes_record
+    draft = (data.get("meeting") or {}).get("draft")
+    made = minutes_record.track_reconcile(draft)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    doc = minutes_record.creaite_doc.read(draft)
+    ticked = minutes_record.track_ticked(doc, data, project)
+    for it in data.get("items") or []:
+        if it.get("n") in ticked and it.get("decision") == "pending":
+            it.update(decision="approved", decided_in="minutes")
+    save(p, data)
+    gone = (doc.get("meta") or {}).get("removed") or {}
+    out = [gone[str(m)] for m in made if isinstance(gone.get(str(m)), dict)]
+    return data, ticked, {"removed": sum(not g.get("kept_line") for g in out), "kept": sum(bool(g.get("kept_line")) for g in out),
+                          "chosen": bool(minutes_record._choices(doc))}
+
+
+def track_words(lines):
+    """Cap's #275 note 4: what `review.py approve <minutes>` did to the minutes' lines, for its output. With no Track choice made it
+    says the rows ticked by default are registered, as the Minutes view's Approve minutes does."""
+    if not lines.get("chosen"):
+        return ("; no Track choices made in the minutes, so the rows ticked by default are registered (as Approve minutes in the "
+                "Minutes view); the rest wait in Review")
+    r, k = lines.get("removed", 0), lines.get("kept", 0)
+    return (f"; {r} crossed line{'s' if r != 1 else ''} taken out of the minutes, {k} line{'s' if k != 1 else ''} kept in the "
+            "minutes untracked (Track: neither)")
+
+
+def track_refusal(n, p, data, target):
+    """#275: why a pending item of draft minutes can't be approved on its own: the Track column crossed it or left it with neither."""
+    import minutes_record
+    t = minutes_record.track_blocked(data).get(target.get("n"))
+    if t is None:
+        return None
+    what = "crossed in the minutes' Track column" if t == "n" else "kept in the minutes only (Track: neither)"
+    return f"{n}: not approved — {what}; tick it in the minutes to register it"
 # ===== end BL-260 point 4 =====
 
 
@@ -1134,7 +1213,7 @@ def drop_transcript(block):
 
 def cmd_discard(n):
     """Set a held proposal aside in system/staging/discarded/ (kept, never deleted); nothing reaches the tracker."""
-    p, data, ref, block = lookup(int(n))
+    p, data, ref, block = lookup(_number(n))
     if ref not in ("meeting", "report") or not held_reason(block):
         print(f"{n}: not discarded — only minutes or a report held because a file to be filed has gone can be discarded; "
               "reject it instead.")
@@ -1239,6 +1318,25 @@ def mark_rejected(target, why, dup):
     target["rejected_at"] = datetime.now().isoformat(timespec="seconds")
 
 
+def approve_refusal(n, p, data, target):
+    """Why item `target` can't be approved, logged, or None: it needs a project, is a conflict, is crossed or left with neither in
+    its minutes' Track column (#275), or is invalid."""
+    if needs_project(target):
+        debuglog.info("review", f"not approved: {p.name} item {target.get('n')} needs a project")
+        return f"{n}: needs a project first (say \"{n} is <CODE>\")"
+    if "conflict" in target.get("flags", []):
+        debuglog.info("review", f"not approved: {target.get('id') or p.name} is a conflict")
+        return f"{n}: conflict — say \"keep {n}\" (database version) or \"override {n}\" (this edit)"
+    why = track_refusal(n, p, data, target)
+    if why:
+        debuglog.info("review", f"not approved: {p.name} item {target.get('n')} is not ticked in the minutes")
+        return why
+    if "invalid" in target.get("flags", []):
+        debuglog.info("review", f"not approved: {p.name} item {target.get('n')} is invalid: {debuglog.rule(target.get('invalid_reason'))}")
+        return f"{n}: invalid — {target.get('invalid_reason')}; edit it first"
+    return None
+
+
 def cmd_decide(spec, decision, mode=None, reason=None, duplicate_of=None, guesses=None, drop=False):
     """Approve or reject the numbered items, writing the decisions into their proposals in system/staging/.
     A rejection keeps its reason or the item it duplicates (BL-133); with `guesses` ({n: (reason, duplicate_of)}, BL-315's Use each
@@ -1271,17 +1369,9 @@ def cmd_decide(spec, decision, mode=None, reason=None, duplicate_of=None, guesse
         if target.get("decision") != "pending":
             out.append(f"{n}: already {target.get('decision')}")
             continue
-        if decision == "approved" and needs_project(target):
-            out.append(f"{n}: needs a project first (say \"{n} is <CODE>\")")
-            debuglog.info("review", f"not approved: {p.name} item {target.get('n')} needs a project")
-            continue
-        if decision == "approved" and "conflict" in target.get("flags", []):
-            out.append(f"{n}: conflict — say \"keep {n}\" (database version) or \"override {n}\" (this edit)")
-            debuglog.info("review", f"not approved: {target.get('id') or p.name} is a conflict")
-            continue
-        if decision == "approved" and "invalid" in target.get("flags", []):
-            out.append(f"{n}: invalid — {target.get('invalid_reason')}; edit it first")
-            debuglog.info("review", f"not approved: {p.name} item {target.get('n')} is invalid: {debuglog.rule(target.get('invalid_reason'))}")
+        refused = decision == "approved" and approve_refusal(n, p, data, target)
+        if refused:
+            out.append(refused)
             continue
         target["decision"] = decision
         if decision == "rejected":                                           # BL-133 stage B; BL-315's own guess per item
@@ -1324,28 +1414,33 @@ def no_draft_minutes(drafts):
 # ===== end BL-260 point 4 =====
 
 
+def bulk_reason(item, strong, blocked):
+    """Why a pending item is held back from bulk approval, or None: #232's hold_reason, then a weak match with `strong`,
+    then #275's `blocked` (minutes_record.track_blocked: crossed or neither in the minutes)."""
+    reason = hold_reason(item)
+    if not reason and strong and item.get("match") != "strong":
+        reason = "not a strong match"
+    if not reason and item.get("n") in blocked:
+        reason = "not ticked in the minutes"
+    return reason
+
+
 def cmd_bulk(scope=None, strong=False):
     """Approve the routine pending items (one project with `scope`; strong matches only with `strong`). Never drafts,
     health changes, new decisions, new risks, weekly updates, conflicts or items without a project.
     """
     approved, held = 0, {}
     rows = build_rows(scope if scope else None)
+    import minutes_record
     for p, data in proposals():
         changed = False
+        blocked = minutes_record.track_blocked(data)                         # #275: crossed or neither in the minutes
         for item in data.get("items", []):
             if item.get("applied") or item.get("decision") != "pending":
                 continue
             if scope and project_of(item) != scope:
                 continue
-            reason = individual_only(item)
-            if needs_project(item):
-                reason = "need a project"
-            elif "conflict" in item.get("flags", []):
-                reason = "conflict"
-            elif "invalid" in item.get("flags", []):
-                reason = "invalid"
-            elif strong and item.get("match") != "strong":
-                reason = "not a strong match"
+            reason = bulk_reason(item, strong, blocked)
             if reason:
                 held[reason] = held.get(reason, 0) + 1
                 continue
@@ -2394,7 +2489,7 @@ def _minutes_refusal(p, data):
 
 def approve_minutes(name, group=True, own=(), via="dashboard"):
     """Approve a meeting's minutes and the ticked items in one apply: {ok, message, apply_id, approved, waiting}. `group` ticks
-    actions and updates; `own` lists the numbers of the items ticked one by one. On a failed apply nothing changes: every decision
+    actions and updates; `own` lists the numbers of the items ticked one by one (with `group` False, of every ticked item). On a failed apply nothing changes: every decision
     is put back as it was."""
     p = paths.STAGING / Path(str(name)).name
     if not re.fullmatch(r"proposed-[\w.-]+\.json", p.name) or not p.is_file():
@@ -2403,14 +2498,22 @@ def approve_minutes(name, group=True, own=(), via="dashboard"):
     why = _minutes_refusal(p, data)
     if why:
         return {"ok": False, "message": why}
+    import minutes_record
+    draft = data["meeting"]["draft"]
+    try:                                    # #275: the Track column first (a no-op after the view's own changes), on the server
+        minutes_record.track_reconcile(draft, via=via)
+    except minutes_record.RecordError as e:
+        return {"ok": False, "message": str(e)}
+    data = json.loads(p.read_text(encoding="utf-8"))
+    allowed = minutes_record.track_rowed(minutes_record.creaite_doc.read(draft), data)   # never crossed, neither, or rowless
     was = {"meeting": data["meeting"].get("minutes_decision"),
            "items": {i.get("n"): (i.get("decision"), i.get("decided_in")) for i in data.get("items") or []}}
-    approved, waiting = _tick(data, group, {int(n) for n in own or () if str(n).isdigit()})
+    approved, waiting = _tick(data, group, {int(n) for n in own or () if str(n).isdigit()}, allowed)
     data["meeting"].update(minutes_decision="approved", decided_in="minutes")
     save(p, data)
     debuglog.info("review", f"{p.name} minutes approved with {approved} item(s) in one apply; {len(waiting)} wait in Review ({via})")
-    r = subprocess.run([sys.executable, str(Path(__file__).with_name("tracker.py")), "apply", p.name], cwd=paths.ROOT,
-                       capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(Path(__file__).with_name("tracker.py")), "apply", "system/staging/" + p.name],
+                       cwd=paths.ROOT, capture_output=True, text=True)          # #280 follow-up: never a vault-root namesake
     out = (r.stdout + r.stderr).strip()
     if r.returncode != 0:
         _put_back(p, was)
@@ -2419,12 +2522,15 @@ def approve_minutes(name, group=True, own=(), via="dashboard"):
     return {"ok": True, "message": out, "apply_id": int(m.group(1)) if m else None, "approved": approved, "waiting": waiting}
 
 
-def _tick(data, group, own):
-    """Approve the ticked items: the group when `group`, and each of `own`. (how many, [the numbers left waiting in Review])."""
+def _tick(data, group, own, allowed=None):
+    """Approve the ticked items: the group when `group`, and each of `own`. (how many, [the numbers left waiting in Review]).
+    #268 (Cap's review H1): the minutes view sends group False and every ticked row's number in `own`, a group item's too, so
+    an item the minutes show no row for (a promise) is never approved unseen."""
     approved, waiting = 0, []
     for it in data.get("items") or []:
         g = minutes_group(it)
-        if (g == "group" and group) or (g == "own" and it.get("n") in own):
+        if ((g == "group" and group) or (g in ("group", "own") and it.get("n") in own)) and \
+                (allowed is None or it.get("n") in allowed):          # #275: only what the Track column ticks
             it.update(decision="approved", decided_in="minutes")
             approved += 1
         elif g in ("group", "own", "milestone", "waits"):
@@ -2457,7 +2563,10 @@ def _put_back(p, was):
 def _main_with_held(argv):
     cmd, rest = (argv[0], argv[1:]) if argv else ("", [])
     keys = [a for a in rest if not a.startswith("--")]
-    if cmd == "reject" and "--discard" in rest and len(keys) == 1:
+    if cmd == "reject" and "--discard" in rest:
+        if len(keys) != 1 or not keys[0].isdigit():                     # #280 follow-up: a plain answer, never a traceback
+            print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
+            return 2
         return cmd_discard(keys[0])
     if cmd == "approve" and "--without-transcript" in rest and keys:
         mode = "sync" if "--sync" in rest else "as-staged" if "--as-staged" in rest else None
@@ -2468,6 +2577,19 @@ def _main_with_held(argv):
 _main_before_held = main
 main = _main_with_held
 # ===== end #280 (round 3) =====
+
+
+def _main_with_numbers(argv):
+    """"approve abc" (any review number that isn't one): one plain line and exit 2, as --discard's refusals, never a ValueError."""
+    try:
+        return _main_before_numbers(argv)
+    except NotANumber as e:
+        print(e)
+        return 2
+
+
+_main_before_numbers = main
+main = _main_with_numbers
 
 if __name__ == "__main__":
     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))

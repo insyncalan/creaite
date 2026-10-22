@@ -47,9 +47,10 @@ a = json.loads(sys.stdin.read())
 reach.start_run(a["record_run"], "process", {}, None, files=a["files"])
 d = json.loads(reach.RUN_FILE.read_text())
 d["made"] = [os.path.realpath("system/staging/drafts/" + n) for n in a["own"]]
+d["prints"] = {m: reach._print(m) for m in d["made"] if os.path.exists(m)}    # the run made them earlier: their tools returned
 d["before"] = [n for n in d["before"] if n not in a["staged"]]
 reach.RUN_FILE.write_text(json.dumps(d))
-out = []
+out, last = [], None
 for step in a["steps"]:
     if "write" in step:
         p = "system/staging/drafts/" + step["write"]
@@ -59,8 +60,11 @@ for step in a["steps"]:
         out.append(None)
     elif "make" in step:
         open("system/staging/drafts/" + step["make"], "w").write(step["data"])   # the run's own tool, after the hook allowed it
+        if hasattr(reach, "post_tool"):                     # #264 round 3: and its PostToolUse, as Claude Code runs it
+            reach.post_tool(last["tool"], last["inp"], a["hook_run"])
         out.append(None)
     else:
+        last = step
         out.append(reach.decide(step["tool"], step["inp"], "process", a["hook_run"], True)[0])
 d = json.loads(reach.RUN_FILE.read_text())
 print(json.dumps({"ok": out, "made": sorted(os.path.basename(m) for m in d.get("made", []))}))
@@ -239,13 +243,17 @@ class Queue(unittest.TestCase):
 
 class ProcessSelectedMeetings(unittest.TestCase):
 
-    def test_m1_ask_creaite_opens_only_when_a_transcript_has_to_be_loaded(self):
-        """Process selected on a loaded meeting goes straight to /api/intake/process: openChat() sits inside the not-loaded branch."""
-        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/intake.js").read_text(encoding="utf-8")
-        body = src[src.index("export async function processMeetings"):src.index("/* ===== #265")]
-        self.assertEqual(body.count("openChat()"), 1)
-        self.assertLess(body.index("if(!m.loaded){"), body.index("openChat()"))
-        self.assertLess(body.index("openChat()"), body.index("processLive("))
+    def test_m1_ask_creaite_never_opens_when_intake_processes(self):
+        """2.6's one Intake page (#232; the old page's processMeetings was retired in C2): Process, Make minutes and Find work
+        items go straight to /api/intake/process through processLive; ask creaite's panel opens only for "ask creaite about
+        this", and nothing on the page sends an ask creaite message."""
+        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/intakeReview/actions.js").read_text(
+            encoding="utf-8")
+        self.assertEqual(src.count("openChat()"), 1)
+        self.assertLess(src.index("export function irAskAbout"), src.index("openChat()"))
+        self.assertNotIn("askLive", src)
+        body = src[src.index("export async function irProcess("):src.index("export function irStop")]
+        self.assertEqual(body.count("processLive("), 1)
 
 
 if __name__ == "__main__":

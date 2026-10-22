@@ -207,10 +207,20 @@ def portfolio_dir() -> Path:
     return projects_root() / str(locations().get("portfolio") or "_Portfolio") if external() else ROOT / "projects" / "_portfolio"
 
 
+def _resolved(p) -> Path:
+    """Path(p).resolve(), the same on every Python: CPython 3.9.25's realpath raises OSError (EINVAL, with the full path) when a link
+    at the last part is swapped for a file between its lstat and its readlink, where later versions keep that part as it is. So
+    does this: the folder is resolved and the name kept (v2.6 gate: the E1 flip test on Python 3.9)."""
+    try:
+        return Path(p).resolve()
+    except OSError:
+        return Path(p).parent.resolve() / Path(p).name
+
+
 def rel(p: Path) -> str:
     """Path as stored anywhere (database, proposals, links): relative to ROOT with forward slashes; a path in the projects
     root or the portfolio folder is stored under the logical prefix projects/ (BL-85)."""
-    p = Path(p).resolve()
+    p = _resolved(p)
     if external():
         for base, prefix in ((portfolio_dir(), LOGICAL_PORTFOLIO), (projects_root(), LOGICAL)):
             try:
@@ -224,12 +234,18 @@ def resolve(stored, archived=True) -> Path:
     """The inverse of rel: a stored path as a real path. Not checked for safety; tracker.safe_path does that. An archived project's
     path is mapped into 99 Archive (BL-09) unless `archived` is False (the apply's own folder moves). #252: a stored path that
     names an archive folder (an apply's record keeps the name it had) follows a folder renamed by hand: see follow_stored."""
-    p = _resolve_raw(stored, archived)
-    if os.path.lexists(p):
-        return p
     s = str(stored).replace("\\", "/")
+    p = _resolve_raw(s, archived)
+    if not _names_archive(s) or os.path.lexists(p):      # v2.6 review: no look at the disk for an ordinary path (the hot path)
+        return p
     f = follow_stored(s)
     return _resolve_raw(f, archived) if f != s else p
+
+
+def _names_archive(s) -> bool:
+    """Whether a stored path (forward slashes) is one follow_stored could change: under projects/, with an archive folder part."""
+    parts = s.split("/")
+    return parts[0] == LOGICAL and any(i and is_archive_name(x) for i, x in enumerate(parts))
 
 
 def _resolve_raw(stored, archived=True) -> Path:

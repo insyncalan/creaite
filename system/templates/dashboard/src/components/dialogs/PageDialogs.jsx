@@ -4,7 +4,7 @@
    parts (a list, a preview, a form's options) are still filled by that code, by id. The Dialog owns only the frame: the name,
    focus on opening, Esc, the scrim, focus back to the opener.
    - bootDialogs() draws the ones that were in shell.html, once, as the page starts (before any other start-up step):
-     ⌘K (#cmdk), the Intake and search previews (#inPrev, #searchPrev), Compare a repeat (#llDlg), the approval preview (#rvDlg),
+     ⌘K (#cmdk), the Intake and search previews (#inPrev, #searchPrev), Compare a repeat (#llDlg),
      the date prompt (#boardDlg), Generate current state (#genDlg) and the person prompt (#personDlg);
    - the ones made the first time they are needed: the draft email (#deDlg, drafts.js), Undo changes (#actDlg, activity.js), archiving a project with open
      items (#parchDlg, settings.js) and the Prep popup (#prepDlg, projects.js). */
@@ -42,12 +42,6 @@ export function PageDialogs() {
         <div class="row" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><span class="sp" style="flex:1"></span>
           <button type="button" class="btn" id="llClose">Close</button><button type="button" class="btn" id="llKeep">Keep as new</button>
           <button type="button" class="btn primary" id="llMerge">Merge</button></div>
-      </Dialog>
-      {/* BL-133: the preview before a large or global approval */}
-      <Dialog cmdEnter={false} id="rvDlg" class="bdlg rvdlg" labelledBy="rvDlgTitle">
-        <div id="rvDlgBody"></div>
-        <div class="row" style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span>
-          <button type="button" class="btn" id="rvDlgCancel">Cancel</button><button type="button" class="btn primary" id="rvDlgOk">Approve</button></div>
       </Dialog>
       <Dialog id="boardDlg" labelledBy="bdTitle">
         <div id="bdForm">
@@ -106,7 +100,7 @@ export function PageDialogs() {
             <button class="btn primary" id="genGo" value="go" data-cmdenter=""><span id="genGoT">Generate</span><span class="kbd" id="genKbd" aria-hidden="true"></span></button></div>
         </form>
       </Dialog>
-      {/* People (BL-55, BL-56); the VIP field shows when editing (BL-99) */}
+      {/* People (BL-55, BL-56); no followed field (#248 M2: that is the project settings page's) */}
       <Dialog id="personDlg" labelledBy="pdTitle">
         <form method="dialog" id="personForm">
           <h2 id="pdTitle" style="margin:0 0 10px">New person</h2>
@@ -115,9 +109,7 @@ export function PageDialogs() {
             <label for="pd_email">Email</label><input id="pd_email" type="text" autocomplete="off" />
             <label for="pd_aliases">Aliases</label><input id="pd_aliases" type="text" autocomplete="off" placeholder="Sara, Sara K, SK" />
             <label for="pd_org">Organisation</label><input id="pd_org" type="text" autocomplete="off" />
-            <label for="pd_role">Role</label><input id="pd_role" type="text" autocomplete="off" />
-            <label for="pd_vip" class="pdvip">VIP</label><select id="pd_vip" class="pdvip"><option value="">No</option>
-              <option value="management">Management</option><option value="client">Client</option><option value="yes">Yes</option></select></div>
+            <label for="pd_role">Role</label><input id="pd_role" type="text" autocomplete="off" /></div>
           <div class="sub" id="pdErr" role="alert" style="color:var(--bad)"></div>
           <div class="curacts"><span class="sp"></span><button class="btn" value="cancel" formnovalidate>Cancel</button>
             <button type="button" class="btn primary" id="pdSave">Save</button></div>

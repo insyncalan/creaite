@@ -13,8 +13,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 
 META = 4
 STATE = """(()=>({panel:document.getElementById('panel').classList.contains('on'), hl:HL.size,
-  marked:[...document.querySelectorAll('tr.hl,.bcard.hl')].filter(e=>e.offsetParent).length,
-  rhl:RHL.size}))()"""
+  marked:[...document.querySelectorAll('tr.hl,.bcard.hl')].filter(e=>e.offsetParent).length}))()"""
 
 
 class EscClosesThePeek(LiveBrowserCase):
@@ -105,16 +104,17 @@ class EscClosesThePeek(LiveBrowserCase):
         self.closed_clean("person page")
 
     def test_review_one_esc(self):
+        """#232 C2: Intake's proposal rows; one Esc closes the peek (test_intake_review_peek has the meeting-closes-next half)."""
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
-        n = b.eval("+document.querySelector('#reviewBody tr[data-n]').dataset.n")
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title', count=2)
+        n = b.eval("REV.find(r=>!r.done&&['actions','raid','decisions'].includes(r.kind)).n")
+        b.eval(f"go('intake-review', {n})")
+        b.wait(f"document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"]')")
+        b.click(f'#v-intake-review tr.irprop[data-irn="{n}"] td.title')
         self.opened()
         b.key("Escape")
         b.pump(0.3)
         o = self.state()
-        self.assertEqual((o["panel"], o["rhl"]), (False, 0), "Review")
+        self.assertEqual((o["panel"], o["marked"]), (False, 0), "Intake")
 
     # ── the other layers still go first ──
     def open_peek(self):

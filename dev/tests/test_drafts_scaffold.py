@@ -116,9 +116,13 @@ class Routes(LiveBrowserCase):
         b = self.b
         b.eval("go('settings','drafts')")
         b.wait("document.querySelector('#settingsBody [data-sec=drafts] [data-drsw=update]')")
+        # the agenda style's row comes from the settings catalogue, which arrives after the switches (slower on CI): wait for it
+        b.wait(f"document.querySelectorAll('#settingsBody [data-sec=drafts] .srow').length>={len(features()) + 1}")
         labels = b.eval("[...document.querySelectorAll('#settingsBody [data-sec=drafts] .srow')].map(r=>r.firstElementChild.textContent)")
         self.assertTrue(any(l.startswith("Draft the latest update") for l in labels), labels)
-        self.assertEqual(len(labels), len(features()))
+        # v2.6 (#246): the agenda style joins the AI drafts tab, so its rows are a switch per feature and one more
+        self.assertEqual(b.eval("document.querySelectorAll('#settingsBody [data-sec=drafts] [data-drsw]').length"), len(features()))
+        self.assertEqual(len(labels), len(features()) + 1)
         b.click("#settingsBody [data-drsw=thinking]")
         log = self.v.root / "system/config/settings-log.jsonl"
         b.wait("!document.querySelector('#settingsBody [data-drsw=thinking]').checked && S.drafting.thinking===false")

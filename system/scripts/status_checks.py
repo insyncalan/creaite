@@ -236,7 +236,8 @@ def quote(path, words):
 
 
 def source_path(source):
-    """The file in an item's source note ("projects/…/minutes/2026-10-06 Steering.docx — Action Items"), or ""."""
+    """The file in an item's source note ("projects/…/minutes/2026-10-06 Steering.docx — Actions"; "— Action Items" before
+    #296), or ""."""
     m = re.match(r"\s*(projects/[^—]+?\.(?:docx|md|txt|vtt))\b", source or "")
     return m.group(1) if m else ""
 

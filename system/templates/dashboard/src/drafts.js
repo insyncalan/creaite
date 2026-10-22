@@ -14,7 +14,7 @@ import { $, $$, addHTML, esc, html, ic, ICONS, putHTML, raw } from "./core/dom.j
 import { creaiteEditor, edEmailHtml } from "./core/editor.js";
 import { CALI, CMDENTER, closeCal, onCmdEnter, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
-import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
+import { api, OLDSERVER, oneLine, onceFor, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, pkUndoLast, REC } from "./panel.js";
@@ -126,8 +126,10 @@ export const deHost=addr=>String(addr||"").split("@")[1]?.trim().toLowerCase()||
 export const deOutside=email=>{ const h=deHost(email); return !h||!(S.ownDomains||[]).includes(h); };   /* no address on record counts as outside */
 export const deOutsideAll=L=>!L.length||L.some(a=>deOutside(a.email));                                    /* follow-up: one outside address is enough */
 /* items marked confidential or restricted, or from a project's documents/, are never offered */
-export const deBarred=i=>/\b(confidential|restricted)\b/i.test([i.t,i.resp,i.upd,i.src,i.cm].join(" "))||/(^|\/)documents\//i.test(String(i.src||""));
-export const deItem=(k,i)=>({k,id:i.id,p:i.p,t:i.t,due:i.due||null,pr:i.pr,type:i.type,resp:i.resp,upd:i.upd,client:!!i.client,src:i.src,cm:i.cm,o:i.o||i.by||"",by:i.by||""});
+/* v2.6.0: a Sensitive item (i.sens, from its tracker labels) is barred as well, even when it is client-visible; `outside` false (an own-domain
+   address) is the only case that keeps it, and nothing that goes to a meeting's attendees passes false */
+export const deBarred=(i,outside=true)=>/\b(confidential|restricted)\b/i.test([i.t,i.resp,i.upd,i.src,i.cm].join(" "))||/(^|\/)documents\//i.test(String(i.src||""))||(outside&&!!i.sens);
+export const deItem=(k,i)=>({k,id:i.id,p:i.p,sens:!!i.sens,t:i.t,due:i.due||null,pr:i.pr,type:i.type,resp:i.resp,upd:i.upd,client:!!i.client,src:i.src,cm:i.cm,o:i.o||i.by||"",by:i.by||""});
 export function deItems(x){ return [...x.oa.map(a=>deItem("actions",a)),...x.or.map(r=>deItem("raid",r)),...(x.D||[]).filter(d=>d.st==="Pending").map(d=>deItem("decisions",d))]; }   /* BL-53: decisions we need from them */
 export const deOverdue=i=>!!i.due&&i.due<TODAY;
 /* the default tick set: all of them for an address on an own domain; for anyone else only what is client-visible */
@@ -139,7 +141,7 @@ export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=titl
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
 export function openDraftEmail(name,mode="update",only){ shared.SENTVIA=""; (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
-  const all=deItems(x), ok=all.filter(i=>!deBarred(i)), email=(x.p&&x.p.email)||"", chase=ok.filter(deOverdue);
+  const all=deItems(x), email=(x.p&&x.p.email)||"", ok=all.filter(i=>!deBarred(i,deOutside(email))), chase=ok.filter(deOverdue);
   if(!ok.length){ snack(`Nothing open for ${name}, so no email is needed`); return; }
   if(mode==="chase"&&(!chase.length||deMe(name)||(only&&!chase.some(i=>i.id===only)))) mode="update";   /* BL-342 N3: a thread's Chase on an item not past its date opens the update email */
   const items=mode==="chase"?chase:ok, outside=deOutside(email), picked=deDefaults(items,outside);
@@ -160,13 +162,13 @@ export function openFollowup(t){ const m=(D.hub||{})[t]; if(!m){ snack("That mee
    excluded content reaches the draft); the Internal version is marked Internal. The same popup, builder and Polish as the meeting's. */
 export async function openMinutesFollowup(path,version){ const r=await api("/api/minutes/followup",{path,version});
   if(!r||!r.ok){ snack(oneLine((r&&r.message)||"")||"Couldn't read the minutes for the email"); return; }
-  const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred(i));
+  const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred({...i,sens:false}));
   if(!ok.length){ snack(version==="distributed"?"The distributed version has no actions or decisions to put in an email":"The minutes have no actions or decisions to put in an email"); return; }
   const outside=version==="distributed"?deOutsideAll(r.attendees||[]):false;
   const de={mode:"followup",token:"",title:r.title,day:r.day,codes:r.codes||[],items:ok,left:all.length-ok.length,attendees:r.attendees||[],lead:"",summary:r.summary||"",
-    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal.",
+    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
     picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:false,cover:"",polish:null,internal:version!=="distributed",version};
-  shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.map(i=>i.k+":"+i.id));
+  shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.filter(i=>!i.sens).map(i=>i.k+":"+i.id));   /* nothing Sensitive starts ticked */
   deShow(`${version==="distributed"?"Distributed":"Internal"} follow-up: ${r.title}`); }
 export async function deFollowFacts(de,m){ const r=await api("/api/email/followup",{key:m.key,eid:m.eid||"",day:m.day,start:m.start,title:m.title,files:[...(m.files||[]),...(m.draft?[m.draft]:[])]});
   if(shared.DE!==de) return; if(!r.ok){ de.note=oneLine(r.message)||"Couldn't read the attendees and the summary"; drawDraftEmail(true); return; }
@@ -192,11 +194,11 @@ export function dePolishHtml(){ const tone=shared.DE.tone||"neutral", off=!draft
   return `<div class="detone${off?" off":""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm","neutral","firm"].map(t=>`<button type="button" class="vchip" data-detone="${t}" aria-pressed="${tone===t}"${off?" disabled":""}>${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}${draftBtn("polish","Polish","Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched",'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish?shared.DE.polish.html:""}</div>`; }
 /* redraw the whole popup (first: build it) or just the preview and subject */
 export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(shared.DE.items.map(i=>i.p))].sort();
-  if(first){ const keepH=$("#dePrev")?.style.height||""; dePrevDrop(); const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${i.noid?"":esc(i.id)+" · "}${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
+  if(first){ const keepH=$("#dePrev")?.style.height||""; dePrevDrop(); const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${i.noid?"":esc(i.id)+" · "}${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}${i.kept?'<span class="tag" data-tip="A line in the minutes only: no work item is made">minutes only</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
     const outsideNote=shared.DE.mode==="followup"?(shared.DE.attendees.length?"An attendee's address is outside your own domains":"There are no attendee addresses on record"):shared.DE.email?"This address is outside your own domains":"There's no email address on record";
     putHtml($("#deBody"),`${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>
-      ${shared.DE.outside?`<div class="denote">${outsideNote}, so items that aren't client-visible are unticked and marked internal. Tick any you want to include.</div>`:""}
+      ${shared.DE.outside?`<div class="denote">${outsideNote}, so items that aren't client-visible are unticked and marked internal. Tick any you want to include.${deAiSafe()?" AI suggestions on this email use client-visible items only, and one that brings in anything internal is dropped.":""}</div>`:""}
       ${shared.DE.left?`<div class="denote">${shared.DE.left} item${shared.DE.left===1?"":"s"} left out: marked confidential or restricted, or from a project's documents.</div>`:""}${deExtraHtml()}
       <div class="deinc" id="deInc">${codes.map(c=>`<div class="pph">${esc(pName(c))}</div>${shared.DE.items.filter(i=>i.p===c).sort((a,b)=>deSort(a,b,TODAY)).map(row).join("")}`).join("")}</div>
       <div class="deopts">${shared.DE.mode==="followup"?"":'<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
@@ -210,15 +212,31 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
    (Improve: Rewrite, Shorter, Longer; Tone: More formal, Warmer; Ask…), on text inside one paragraph or cell, so the table and the colours
    are never reshaped. The builder (draftEmail) stays the source (BL-83): the preview shows what it built, `shared.DE.built` is that HTML,
    and what is copied is that HTML until the email is edited, then the editor's document in the same wrapper (deHtml). */
+/* #186: the AI bar for an outside recipient. The server decides who the email goes to from its addresses (edit_ai.email_outside: the own
+   domains, every address, failing closed), then gives Claude the client-visible items only and drops a suggestion that brings in anything
+   internal. The page only asks whether this server does that (/api/edit/ai/caps, until it says yes); until then the bar stays off for an
+   outside recipient (#133's interim) and no addresses are sent, so an older server is never asked for something it can't check. The page's
+   own `outside` only shows or hides the bar: it is never sent. */
+let DE_AI_SAFE=false;
+const DE_AI_NO_MS=60000;   /* a no (an older server's 404, or an error) is kept a minute, so a redraw doesn't ask again each time */
+/** Whether this server decides the email's audience itself (kept once it says yes; a no is asked again after a minute). */
+export const deAiSafe=()=>DE_AI_SAFE;
+/* core/server.js's onceFor keeps the one read in flight and its answer for a minute, so this file reads no clock of its own */
+const deAiAsk=onceFor(DE_AI_NO_MS,()=>api("/api/edit/ai/caps",{}).then(r=>(DE_AI_SAFE=!!(r&&r.ok&&r.email_audience==="recipients")),()=>false));
+/** Ask the server, once at a time. @returns {Promise<boolean>|null} */
+export function deAiCheck(){ if(DE_AI_SAFE||!viaServer()) return null; return deAiAsk(); }
+/** The addresses the email goes to, as the server judges them: the person's, or every attendee's ("" for anyone with none on record). */
+export const deRecipients=()=>{ const d=shared.DE; if(!d) return [""]; return d.mode==="followup"?(d.attendees||[]).map(a=>String(a.email||"")):[String(d.email||"")]; };
 /** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
 export function dePrevPut(html){ const el=$("#dePrev"); if(!el) return; shared.DE.built=html;
-  /* INTERIM (#133, until the edit_ai client-facts fix): the AI bar is off whenever the recipient is outside, because a suggestion for an
-     outside email could be written without the client-safe facts. It is mounted again when the recipient is internal; an editor that
-     was mounted the other way is rebuilt (the recipient changes with the follow-up's attendees, which redraw the popup). */
-  const ai=!shared.DE.outside;
-  if(el.cxed&&!el.cxed.editor.isDestroyed&&el.cxed.aiOn===ai){ el.cxed.setValue(html); return; }
-  creaiteEditor(el,{ features:"email", html, ...(ai?{ ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; } } }:{}) });
-  if(el.cxed) el.cxed.aiOn=ai; }
+  /* The bar is on for an internal recipient, and for an outside one once the server has said it decides the audience (#186): `enabled`
+     is read each time a selection would show the sparkle, so the editor is never rebuilt when the answer comes (a rebuild would take
+     the focus and the caret away while you type). With that yes the request carries the addresses (read when you ask, so a follow-up's
+     attendees loaded later count); without it none are sent. */
+  if(!deAiSafe()) deAiCheck();
+  if(el.cxed&&!el.cxed.editor.isDestroyed){ el.cxed.setValue(html); return; }
+  creaiteEditor(el,{ features:"email", html, ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; },
+    enabled:()=>!!shared.DE&&(!shared.DE.outside||deAiSafe()), recipients:()=>deAiSafe()?deRecipients():null } }); }
 /** End the preview's editor (the popup is redrawn or closed), and with it the selection bar over it. */
 export function dePrevDrop(){ const el=$("#dePrev"); if(el&&el.cxed) el.cxed.destroy(); }
 /** The HTML Copy email puts on the clipboard. An unedited email is the builder's HTML as the browser holds it (what the preview's own
@@ -424,8 +442,8 @@ Object.assign(ICONS,{spark:ICONS.spark||SPARKI});
 document.addEventListener("click",e=>{ if(e.target.closest("[data-drstop]")&&DRRUN){ api("/api/ask/stop",{run:DRRUN.id}).then(r=>{ if(!r.ok&&DRRUN) DRRUN.ctl.abort(); }); } });
 document.addEventListener("click",async e=>{ const a=e.target.closest("[data-dropen]"); if(!a) return; e.preventDefault();
   if(!viaServer()){ snack("Opening a file needs the live server"); return; } const r=await api("/api/open",{path:a.dataset.dropen}); if(!r.ok) snack(oneLine(r.message)||"Couldn't open it"); });
-/* Settings › Advanced › AI drafts: a switch per feature, and what Alan has done with each kind of draft (from draft-stats.json) */
-SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="appearance")+1,0,{id:"drafts",cat:"general",title:"AI drafts",
+/* Settings › AI drafts: a switch per feature, and what Alan has done with each kind of draft (from draft-stats.json) */
+SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="more-ai"),0,{id:"drafts",cat:"ai",title:"AI drafts",groups:["AI drafts"],   /* v2.6 (#246): its own tab; the agenda style joins it */
   kw:"ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
   render:()=>`<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>`
     +DRAFTFEATURES.map(([f,l,h])=>row(l,`<input type="checkbox" class="switch" data-drsw="${f}" ${draftOn(f)?"checked":""} aria-label="${esc(l)}">`,h)).join("")

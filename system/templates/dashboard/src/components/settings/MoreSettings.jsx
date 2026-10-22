@@ -81,21 +81,33 @@ function One({ s }) {
   );
 }
 
-/** @typedef {{covered:(key:string)=>boolean}} MoreSettingsProps */
+/** @typedef {{covered:(key:string)=>boolean, tab?:string, groups?:string[], skip?:string[], bare?:boolean, all?:boolean}} MoreSettingsProps
+    v2.6 (#246): `tab` ("work", "advanced/review"…) draws, as cards, the catalogue groups on that tab other than `skip` (the
+    groups a hand-made card holds). `groups` with `bare` draws just those groups' rows, with no card, inside the hand-made card
+    of the same name (one card per group: Sweep, Reminders, Close the day…). `all` shows every row even while searching (the
+    card's own title matched). */
 
-/** Advanced's settings that have no card of their own, by group. @param {MoreSettingsProps} props */
-export function MoreSettings({ covered }) {
+/** The catalogue's tab for a setting: its own, or its group's (an older server), or none. @param {any} c @param {any} s */
+export const tabOfSetting = (c, s) => s.tab !== undefined ? s.tab : ((c.group_tabs || {})[s.tier === "developer" ? "Developer" : s.group] ?? null);
+
+/** The catalogue settings that are drawn as rows (not Essentials, not on a hand-made card's own controls), that a search finds.
+    @param {any} c @param {(key:string)=>boolean} covered @param {string[]} w */
+export const moreRows = (c, covered, w) => c.settings.filter(s => s.tier !== "essentials" && !covered(s.key) && tabOfSetting(c, s) !== null
+  && (!w.length || settingHasAll(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`, w)));
+
+/** Catalogue settings by group: cards for a tab, or one hand-made card's rows. @param {MoreSettingsProps} props */
+export function MoreSettings({ covered, tab, groups, skip = [], bare, all }) {
   const c = catalogue.value;
   if (!c) return null;
-  const w = settingWords(query.value);
-  const list = c.settings.filter(s => s.tier !== "essentials" && !covered(s.key)
-    && (!w.length || settingHasAll(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`, w)));
-  if (!list.length) return null;
+  const w = all ? [] : settingWords(query.value);
   const groupOf = s => s.tier === "developer" ? "Developer" : s.group;
-  const groups = [...c.groups.filter(g => g !== "Developer"), "Developer"].filter(g => list.some(s => groupOf(s) === g));
+  const list = moreRows(c, covered, w).filter(s => groups ? groups.includes(groupOf(s)) : tabOfSetting(c, s) === tab && !skip.includes(groupOf(s)));
+  if (!list.length) return null;
+  if (bare) return <>{list.map(s => <One key={s.key} s={s} />)}</>;
+  const order = [...c.groups.filter(g => g !== "Developer"), "Developer"].filter(g => list.some(s => groupOf(s) === g));
   return (
     <div class="setstack">
-      {groups.map(g => (
+      {order.map(g => (
         <div class="card" data-more={g}>
           <h2>{g}</h2>
           {list.filter(s => groupOf(s) === g).map(s => <One key={s.key} s={s} />)}

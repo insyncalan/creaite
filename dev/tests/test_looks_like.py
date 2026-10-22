@@ -157,7 +157,8 @@ class LooksLike(unittest.TestCase):
 class Page(unittest.TestCase):
     def test_the_page_says_looks_like_with_compare_merge_and_keep(self):
         page = readable_page()     # BL-231: the source; the bundle reprints the code
-        for bit in ('id="llDlg"', "Looks like ${esc(d.id)}", "Merge as an update to", "Keep as new", "/api/review/repeat",
+        # #232 C2 retired the old Review row's llTag ("Looks like ${esc(d.id)}"): the peek's note links the item it repeats
+        for bit in ('id="llDlg"', 'Looks like <a href="#" data-open="${r.kind}:${esc(d.id)}">', "Merge as an update to", "Keep as new", "/api/review/repeat",
                     "data-rvdup"):
             self.assertIn(bit, page)
         self.assertNotIn("Possible duplicate of ${esc(r.dup.id)}", page)

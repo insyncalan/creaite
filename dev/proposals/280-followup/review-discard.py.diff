@@ -1,0 +1,16 @@
+diff --git a/system/scripts/review.py b/system/scripts/review.py
+index 94298bde..f0273c4a 100644
+--- a/system/scripts/review.py
++++ b/system/scripts/review.py
+@@ -2552,7 +2552,10 @@ def _put_back(p, was):
+ def _main_with_held(argv):
+     cmd, rest = (argv[0], argv[1:]) if argv else ("", [])
+     keys = [a for a in rest if not a.startswith("--")]
+-    if cmd == "reject" and "--discard" in rest and len(keys) == 1:
++    if cmd == "reject" and "--discard" in rest:
++        if len(keys) != 1 or not keys[0].isdigit():                     # #280 follow-up: a plain answer, never a traceback
++            print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
++            return 2
+         return cmd_discard(keys[0])
+     if cmd == "approve" and "--without-transcript" in rest and keys:
+         mode = "sync" if "--sync" in rest else "as-staged" if "--as-staged" in rest else None

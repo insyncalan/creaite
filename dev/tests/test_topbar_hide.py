@@ -279,8 +279,11 @@ class MinutesTop(Report, Common, LiveBrowserCase):
         cls.proposal = stage_meeting(v)
 
     def open_view(self):
+        # #268: at 900 px the transcript now sits beside the sheet (280 px), so the page is drawn smaller and this short meeting
+        # has too little to scroll; the scroll rules are tested on the full-width sheet, with the transcript hidden
+        self.b.eval("(()=>{try{localStorage.setItem('creaite-minutes-transcript', innerWidth<=900?'false':'true')}catch(e){}})()")
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
-        self.b.wait("document.querySelector('#v-minutes .mnrow')", 15)
+        self.b.wait("document.querySelector('#v-minutes tr.mi')", 15)     # #268: the item rows are the Track tables' rows
 
 
 if __name__ == "__main__":

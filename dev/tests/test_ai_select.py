@@ -181,7 +181,8 @@ class AiOnSelection(LiveBrowserCase):
         b = self.b
         self.assertEqual(b.eval("Object.fromEntries(Object.entries(AI_PLACE_TABLE).map(([k,v])=>[k,v.ai]))"),
                          {"notes": True, "current": True, "email": True, "plain": True, "line": True,
-                          "report": True, "minutes": True, "client": True, "readonly": True})      # every place v2.1.0 had the bar on
+                          "report": True, "minutes": True, "client": True, "readonly": True,
+                          "client_message": True})                                           # #263: Client messaging      # every place v2.1.0 had the bar on
         b.eval("for(const p of ['email','plain','line']) AI_PLACE_TABLE[p].ai=false; true")        # the switch still turns a place off
         for place in ("email", "plain", "line"):
             b.eval("""(p=>{ document.getElementById('offx')?.remove(); const el=document.createElement('div'); el.id='offx';

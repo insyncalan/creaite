@@ -218,10 +218,10 @@ class SaveAndClose(PanelCase):
 
     def test_a_proposal_in_review_is_saved_never_approved(self):
         b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>!r.done&&r.kind==='actions').n")
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title', count=2)
+        b.eval(f"go('intake-review', {n})")                                    # #232 C2: the Intake page; one click opens the peek
+        b.wait(f"!!document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"]')")
+        b.click(f'#v-intake-review tr.irprop[data-irn="{n}"] td.title .icttl')
         b.wait("EDITING && CUR.mode==='proposal'")
         self.title("Edited in review")                                         # BL-177: the peek layout, Save on ⌘↵
         b.key("Enter", modifiers=META)
@@ -320,10 +320,10 @@ class WidePanel(PanelCase):
         b.click("#pCancel")
         self.wait_closed()
         # a proposal in Review: the peek (BL-177), the same half
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>!r.done&&r.kind==='actions').n")
-        b.click(f'#reviewBody tr[data-n="{n}"] td.title', count=2)
+        b.eval(f"go('intake-review', {n})")                                    # #232 C2: the Intake page; one click opens the peek
+        b.wait(f"!!document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"]')")
+        b.click(f'#v-intake-review tr.irprop[data-irn="{n}"] td.title .icttl')
         b.wait("EDITING && CUR.mode==='proposal'")
         self.assertAlmostEqual(self.width(700), 700, delta=1)
         b.click("#pkCancel")

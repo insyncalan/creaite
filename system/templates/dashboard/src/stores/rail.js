@@ -29,11 +29,10 @@ import { store } from "../core/page.js";
 export const RAIL_ITEMS = [
   { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
   { id: "work", title: "Work", icon: "work", group: "top" },
-  { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
+  { id: "review", title: "Intake", icon: "inbox", badge: "revBadge", group: "top" },   /* #232: one entry for both; it keeps the id "review" and opens #intake-review (rail.js railGo) */
   { id: "projects", title: "Projects", icon: "projects", group: "top" },
   { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },   /* BL-337 */
   { id: "people", title: "People", icon: "people", group: "top" },
-  { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
   { id: "files", title: "Files", icon: "folder", group: "more" },
   { id: "activity", title: "Activity", icon: "activity", group: "more" },
   { id: "settings", title: "Settings", icon: "gear", group: "more" },

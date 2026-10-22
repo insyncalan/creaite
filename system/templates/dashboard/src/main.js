@@ -12,6 +12,8 @@ import * as page from "./main.js";
 
 export * from "./core/index.js";
 
+export * from "./core/intakeApi.js";   /* #232-C2: the shared Intake calls (was intake.js) */
+
 export * from "./rail.js";
 
 export * from "./today.js";
@@ -23,8 +25,6 @@ export * from "./work.js";
 export * from "./panel.js";
 
 export * from "./milestones.js";
-
-export * from "./intake.js";
 
 export * from "./review.js";
 
@@ -60,7 +60,7 @@ export * from "./components/report/redraft.js";   /* #90: the ✦ (redraftAnswer
 
 export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft email in the peek */
 export * from "./components/Tabs.jsx";
-export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and Settings › People */
+export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and the People pages */
 export * from "./components/Toast.jsx";   /* BL-316: the message at the foot of the page */
 export * from "./components/prep/PrepPage.jsx";   /* BL-286 D: Meetings › Prep */
 export * from "./components/settings/Health.jsx";   /* #159: runHealthFix is tested by name (test_link_renderers) */
@@ -110,6 +110,10 @@ export * from "./components/reporting/ReportingSpace.jsx";
 export * from "./stores/reportingSettings.js";   /* #221: clientReportOn, the one function the hub asks */
 export * from "./stores/hub.js";   /* #221: the Reporting hub's state */
 export * from "./components/reporting/ReportsPage.jsx";
+export * from "./core/irFold.js";   /* #232: Intake and Review, one page */
+export * from "./stores/intakeReview.js";
+export * from "./components/intakeReview/IntakeReviewPage.jsx";
+export * from "./components/intakeReview/proposals.jsx";   /* #275 round 3: Intake's row Approve and Approve routine are tested by name (test_minutes_track_review); no name it exports is exported by another module */
 export * from "./components/project/ProjectSettings.jsx";   /* #228: the full-page project settings */
 export * from "./stores/projectSettings.js";
 export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */
@@ -140,7 +144,6 @@ import { bootFiles0068, bootFiles0069 } from "./files.js";
 import { bootNotes } from "./notes.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
 import { bootHelpScreen } from "./helpscreen.js";
-import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
 import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, openFromAddress } from "./meetings.js";
 import { bootMilestones0051, bootMilestones0172, bootMilestones0184, bootMilestones0185, bootMilestones0186, bootMilestones0188, bootMilestones0189, bootMilestones0190, bootMilestones0191, bootMilestones0192 } from "./milestones.js";
@@ -148,9 +151,9 @@ import { bootPanel0050, bootPanel0165, bootPanel0166, bootPanelChase, bootPanel0
 import { bootProjects0029, bootProjects0054, bootProjects0055, bootProjects0056, bootProjects0058, bootProjects0059, bootProjects0081, bootProjects0083, bootProjects0124 } from "./projects.js";
 import { bootSneak } from "./sneak.js";
 import { bootRail0007, bootRail0077 } from "./rail.js";
-import { bootReview0060, bootReview0061, bootReview0063, bootReview0064, bootReview0065, bootReview0067, bootReview0193, bootReview0195, bootReview0209, bootReview0315 } from "./review.js";
+import { bootContextMenu, bootProposalActions } from "./review.js";
 import { bootSettings0073, bootSettings0076, bootSettings0078, bootSettings0079, bootSettings0127, bootSettings0138, bootSettings0140, bootSettings0155, bootSettings0163 } from "./settings.js";
-import { bootToday0026, bootToday0027, bootToday0028, bootToday0159, bootToday0164, bootToday319 } from "./today.js";
+import { bootToday0026, bootToday0028, bootToday0159, bootToday0164, bootToday319 } from "./today.js";
 import { bootWork0031, bootWork0034, bootWork0035, bootWork0036, bootWork0038, bootWork0039, bootWork0040, bootWork0041, bootWork0130, bootWork0132, bootWork0133, bootWork0147, bootWork0148, bootWork0150 } from "./work.js";
 
 publish(page);
@@ -173,7 +176,6 @@ bootTopBar();   /* #207 */
 bootCountLinks();
 bootGoLinks();
 bootToday0026();
-bootToday0027();
 bootToday0028();
 bootToday319();   /* BL-319 */
 bootProjects0029();
@@ -191,20 +193,14 @@ bootDateWords();
 bootOwnerCombo();
 bootPanel0050();
 bootMilestones0051();
-bootIntake0053();
 bootProjects0054();
 bootProjects0055();
 bootProjects0056();
 bootCmdEnter();
 bootProjects0058();
 bootProjects0059();
-bootReview0060();
-bootReview0061();
 bootTickBoxes();
-bootReview0063();
-bootReview0064();
-bootReview0065();
-bootReview0067();
+bootProposalActions();   /* #232-C2: the listeners the Intake page and the peek still use (was bootReview0064/0065/0067/0315) */
 bootFiles0068();
 bootFiles0069();
 bootActivity0071();
@@ -245,10 +241,6 @@ bootDrafts0129();
 bootWork0130();
 bootWork0132();
 bootWork0133();
-bootIntake0134();
-bootIntake0135();
-bootIntake0136();
-bootIntake0137();
 bootSettings0138();
 bootTabTitle();
 bootSettings0140();
@@ -261,7 +253,7 @@ bootWork0147();
 bootWork0148();
 bootWork0150();
 /* ======================= start ======================= */
-status(); renderBadge(); inboxBadge(); vaultInit(); checkLive(); setInterval(checkLive,(S.healthSecs||30)*1000); reattach();
+status(); renderBadge(); vaultInit(); checkLive(); setInterval(checkLive,(S.healthSecs||30)*1000); reattach();
 /* open on the place named in the address (BL-38): #review, #cockpit=ABC, #work=raid&p=ABC, …&item=ABC-003 */
 shared.HADHASH=!!location.hash&&!/^#openfile=/.test(location.hash);
 openFromAddress();                                                       /* BL-126: clears the address, so what follows is a plain start */
@@ -308,8 +300,7 @@ bootMilestones0189();
 bootMilestones0190();
 bootMilestones0191();
 bootMilestones0192();
-bootReview0193();
-bootReview0195();
+bootContextMenu();
 bootDrafts0196();
 bootPanel0197();
 bootPanel0198();
@@ -323,8 +314,6 @@ bootDrafts0204();
 bootActivity0205();
 bootAsk0207();
 bootAsk0208();
-bootReview0209();
-bootReview0315();
 bootNotes();   /* BL-301 B */
 bootDayRoll();   /* #171 */
 bootPageRefresh();   /* BL-327: last, once everything is drawn */

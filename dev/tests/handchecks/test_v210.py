@@ -33,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hcbase
 import measure
-from hcbase import NOTES, SCREENS, HandcheckCase
+from hcbase import NOTES, SCREENS, HandcheckCase, phase2
 from live_browser import pin_page_clock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "system" / "scripts"))
@@ -1265,7 +1265,7 @@ class MinutesFlow(MinutesBase):
         v = self.view(name)
         before = len(hcbase.db_rows(self.vault, "SELECT apply_id FROM applies WHERE undone_at IS NULL"))
         r = self.approve(name, v)
-        src = f"{filed} — Action Items"
+        src = f"{filed} — Actions"
         after = hcbase.db_rows(self.vault, "SELECT apply_id FROM applies WHERE undone_at IS NULL")
         self.assertEqual(len(after) - before, 1, "one apply")
         self.assertEqual(r["apply_id"], after[-1]["apply_id"])
@@ -1282,7 +1282,7 @@ class MinutesFlow(MinutesBase):
     def test_c43_filed_minutes(self):
         """43. The filed `projects/FAL …/minutes/<date> Steering committee.html` says "Approved by Alan on <long date>", its rows
         carry the new IDs (FAL-A-…, FAL-D-…), the transcript is in Transcripts, `inbox/` and the draft are empty of it, and the
-        new action's source names the filed `.html` and "Action Items"."""
+        new action's source names the filed `.html` and "Actions" (#296: "Action Items" before 2.6.0)."""
         name, draft, filed, day, out = self.stage()
         v = self.view(name)
         self.approve(name, v)
@@ -1296,7 +1296,7 @@ class MinutesFlow(MinutesBase):
         self.assertFalse((self.vault / draft).exists(), "the draft is gone")
         src = hcbase.db_rows(self.vault, "SELECT source FROM actions WHERE description LIKE '%s%%'" % self.W[0] + " AND source LIKE ?", f"%{day}%")[0]["source"]
         self.assertIn(filed, src)
-        self.assertIn("Action Items", src)
+        self.assertTrue(src.endswith(" — Actions"), src)
         self.note(43, f"rows carry {sorted(refs)[:4]} in the page data; source: {src}")
 
     def test_c44_undo(self):
@@ -1450,7 +1450,7 @@ class MinutesView(MinutesBase):
         self.name, self.draft, self.filed, self.mday, _ = self.stage()
         self.b.reload("typeof go==='function' && LIVE")                       # so Review lists the meeting just staged
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.name)}}})")
-        self.b.wait("!!document.querySelector('#v-minutes .mnrow')", 20)
+        self.b.wait("!!document.querySelector('#v-minutes tr.mi')", 20)
         self.b.pump(0.3)
 
     def ev(self, js):
@@ -1480,17 +1480,19 @@ class MinutesView(MinutesBase):
         """36. Review shows the minutes as one row with their items nested under it (the closing update of FAL-A-004 among them);
         Open draft opens the minutes view."""
         b = self.b
-        b.eval("go('review')")
-        b.wait("!!document.querySelector('#v-review') && !document.getElementById('v-review').hidden", 15)
+        b.eval("go('review')")                                            # an alias of Intake and Review since 2.6.0 (#232)
+        b.wait("VIEW==='intake-review' && !document.getElementById('v-intake-review').hidden", 15)
+        b.eval("document.querySelector('#v-intake-review [data-ira=open]').click()")      # "Check them" opens the drafted meeting
+        b.wait("!!document.querySelector('#v-intake-review tr.irprop')", 15)
         b.pump(0.5)
-        text = b.eval("document.getElementById('v-review').innerText")
+        text = b.eval("document.getElementById('v-intake-review').innerText")
         self.assertIn("Steering committee", text)
         self.assertIn("FAL-A-004", text, "the closing update is nested under the minutes")
         self.assertIn(self.W[0], text, "the minutes' items are nested under them")
-        self.assertTrue(b.eval("""(()=>{ const tr=[...document.querySelectorAll('#v-review tr')].find(t=>/Minutes: \\[FAL\\] Steering committee/.test(t.innerText));
-          const e=tr&&tr.querySelector('[data-act=e]'); if(!e) return false; return /Open draft/.test((e.getAttribute('aria-label')||'')+(e.title||'')+e.textContent); })()"""),
-                        "the minutes row has an Open draft button")
-        b.eval("""[...document.querySelectorAll('#v-review tr')].find(t=>/Minutes: \\[FAL\\] Steering committee/.test(t.innerText)).querySelector('[data-act=e]').click()""")
+        row = "[...document.querySelectorAll('#v-intake-review tr.irprop')].find(t=>/Minutes: \\[FAL\\] Steering committee/.test(t.innerText))"
+        self.assertTrue(b.eval(f"""(()=>{{ const tr={row}; const e=tr&&tr.querySelector('[data-ira=edit]'); return !!e; }})()"""),
+                        "the minutes row has its open button (Open in the peek, which opens the minutes view for a draft)")
+        b.eval(f"{row}.querySelector('[data-ira=edit]').click()")
         b.wait("VIEW==='minutes'", 15)
         self.note(36, "one minutes row with its items nested; Open draft opened the minutes view")
 
@@ -1509,10 +1511,11 @@ class MinutesView(MinutesBase):
         b.pump(0.4)
         self.assertTrue(self.ev("!!document.querySelector('.mnturns li.on')"), "the tag's turn is highlighted")
         self.assertEqual(self.ev("document.querySelector('#v-minutes .sheet-scroll').scrollTop"), 0, "the sheet itself never moves")
-        b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes .mnrow')")
+        b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes tr.mi')")
         self.assertEqual(self.ev("VIEW"), "minutes")
         self.note(50, f"5 turns; {len(tags)} time tags; a reload kept the view")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c51_side_by_side_levelled(self):
         """51. Choose Internal + distributed, mark a summary line Internal only, then Side by side → the matching section and topic
         headings are at the same height on both pages, at the top and after scrolling; the Distributed page alone does not hold
@@ -1543,6 +1546,7 @@ class MinutesView(MinutesBase):
         self.assertNotIn("The committee reviewed", self.ev("document.querySelector('#v-minutes .page').textContent"))
         self.note(51, f"{len(tops)} headings compared; the largest difference {worst}px")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c52_popups_close(self):
         """52. The deadline popover, the owner picker, a check, the Remove menu, Deal with it… and the approve popup (784 px
         wide) each close on Esc and on a click outside, with focus back on the button that opened them; Esc goes no further."""
@@ -1591,6 +1595,7 @@ class MinutesView(MinutesBase):
                 self.assertEqual(self.ev("document.activeElement.id"), "mnApproveBtn")
         self.note(52, "six popups closed on Esc and on a click outside; the approve popup is 784px wide")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c53_remove_undo_keep_line(self):
         """53. ✕ Remove on a row takes the item and its line out of the minutes (the item is rejected, "Removed in the minutes");
         Undo on the toast brings it back; Keep the line only keeps the words with no item."""
@@ -1614,6 +1619,7 @@ class MinutesView(MinutesBase):
         self.assertEqual(self.staged(2)["decision"], "rejected")
         self.note(53, "removed, undone from the toast, then kept as a line with no item")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c54_deadline_popover(self):
         """54. The deadline popover on an action with no date: its quick picks (Friday, next week, next Wednesday, end of month)
         show their dates worked out from the meeting's day; words typed (“in 2 weeks”) show their date before they are set; a
@@ -1658,6 +1664,7 @@ class MinutesView(MinutesBase):
         self.assertIn("read", self.ev("document.getElementById('mnDlSaid').textContent"))
         self.note(54, f"quick picks and typed words worked out from {day}; the row and its staged item moved together")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c55_checks_coverage_and_the_approve_popup(self):
         """55. The checks on a row say what is wrong (Pat Unknown isn't in the people register); Deal with it… on a point not
         discussed carries it to the series' next meeting, with a line in the minutes; the approve popup has the group's tick
@@ -1693,7 +1700,7 @@ class MinutesView(MinutesBase):
         self.assertTrue(json.loads(r.stdout.strip().splitlines()[-1])["ok"])
         self.b.eval("go('review')")
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.name)}}})")
-        self.b.wait("!!document.querySelector('#v-minutes .mnrow')", 15)
+        self.b.wait("!!document.querySelector('#v-minutes tr.mi')", 15)
         return dec["cells"]["decision"], act["cells"]["action"]
 
     def menu_names(self):
@@ -1706,6 +1713,7 @@ class MinutesView(MinutesBase):
         self.b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         self.b.pump(0.4)
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c56_follow_up_email(self):
         """56. Export › Draft the follow-up email follows the version shown. The Internal draft is marked "[Internal]" and says
         "Internal: not for distribution." and keeps everything. The Distributed draft holds no Internal-only line or row and no
@@ -1911,14 +1919,15 @@ class HubRetired(MinutesBase):
         pin_page_clock(b, f"{self.day.isoformat()} 12:00")
         tok = self.token("calendar:hc-1")
         b.eval(f"location.hash='#meeting={tok}'")
-        b.wait("VIEW==='review'", 15)
-        self.assertEqual(b.eval("location.hash"), "#review", "after the meeting, minutes waiting: Review")
+        b.wait("VIEW==='intake-review'", 15)
+        self.assertEqual(b.eval("location.hash"), "#intake-review", "after the meeting, minutes waiting: Intake and Review (2.6.0)")
         self.approve(name, self.view(name))
         b.reload("typeof go==='function' && LIVE")
         pin_page_clock(b, f"{self.day.isoformat()} 12:00")
         tok = self.token("calendar:hc-1")
         b.eval(f"location.hash='#meeting={tok}'")
         b.wait("VIEW==='minutes'", 20)
+        b.wait(f"location.hash === '#minutes=' + encodeURIComponent({json.dumps(filed)})", 15)      # the view settles the address once the filed record is read
         self.assertEqual(b.eval("location.hash"), "#minutes=" + b.eval(f"encodeURIComponent({json.dumps(filed)})"), "after approval: the filed minutes")
         b.eval("go('review')")
         b.eval("location.hash='#meeting=ffffffffff'")
@@ -1957,7 +1966,7 @@ class Seeded(MinutesBase):
             self.b.reload("typeof go==='function' && LIVE")
         hcbase.SCREENS.update({
             "client": (f"go('clientreport',{{code:'FAL',week:'{self.week}'}})", "!!document.querySelector('#v-clientreport .crhealth')"),
-            "minutes": (f"go('minutes',{{file:{json.dumps(cls.name)}}})", "!!document.querySelector('#v-minutes .mnrow')"),
+            "minutes": (f"go('minutes',{{file:{json.dumps(cls.name)}}})", "!!document.querySelector('#v-minutes tr.mi')"),
         })
         pin_page_clock(self.b, f"{self.week} 14:00")
 

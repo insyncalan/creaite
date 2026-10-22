@@ -179,23 +179,23 @@ class ClientReportPanel(LiveBrowserCase):
         self.wait_line("Client report logos", "firm")
         self.assertEqual(b.eval("document.querySelector('[data-logo-tick=firm]').checked"), True)       # the firm's stays
 
-    # ----- the same setting in Settings > Projects
+    # ----- the same setting on the project's settings page (Settings > Projects until the Settings line)
 
-    def test_settings_projects_and_the_panel_are_one_setting(self):
+    def test_the_project_settings_and_the_panel_are_one_setting(self):
         b = self.b
-        b.eval("go('settings','people')")
-        b.wait("!!document.querySelector('[data-crsw=ABC]')")
-        self.assertEqual(b.eval("document.querySelector('[data-crsw=ABC]').checked"), True)
-        self.assertIn("this project needs a separate client report", (b.eval("(e=>e.getAttribute('aria-label')||[...(e.getAttribute('aria-labelledby')||'').split(' ')].map(i=>document.getElementById(i)?.textContent).join(' '))(document.querySelector('[data-crsw=ABC]'))") or "").lower())
-        b.click("[data-crsw=ABC]")
+        b.eval("go('psettings','ABC')")
+        b.wait("!!document.querySelector('#psRepOn')")
+        self.assertEqual(b.eval("document.querySelector('#psRepOn').checked"), True)
+        self.assertIn("this project needs a separate client report", (b.eval("document.querySelector('#psRepOn').getAttribute('aria-label')") or "").lower())
+        b.click("#psRepOn", exact=True)                                                                 # the one scrolling page may still be settling (#152)
         self.wait_line("Client report", "off")
-        self.open_panel()                                                                              # the panel shows what Settings set
+        self.open_panel()                                                                              # the panel shows what the page set
         self.assertEqual(b.eval("document.querySelector('#cfgOn').checked"), False)
         b.click("#cfgOn")
         self.wait_line("Client report", "on")
-        b.eval("go('settings','people')")
-        b.wait("!!document.querySelector('[data-crsw=ABC]')")
-        self.assertEqual(b.eval("document.querySelector('[data-crsw=ABC]').checked"), True)
+        b.eval("go('psettings','ABC')")
+        b.wait("!!document.querySelector('#psRepOn')")
+        self.assertEqual(b.eval("document.querySelector('#psRepOn').checked"), True)
 
     # ----- when it is off
 

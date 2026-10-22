@@ -8,13 +8,15 @@ place that decides, for sweep.py's calendar save:
   confidential (restricted, secret, "Strictly Confidential", 2, True...), after case, spacing, zero-width characters and
   look-alike forms (NFKC) are removed; anything that says private or personal is private; a private flag stays "Busy".
 - invite_text(body): HTML to plain text, then every line that carries a join link or a key to the meeting is dropped.
-- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser); flagged(text) for names.
+- is_secret(text) / scrub(text): the same test for a single field (title, place, organiser); scrub takes out a complete join
+  link and drops the whole field when any other secret is left in it (a passcode, password or numbered label, a bare join host
+  or scheme, a dial-in number), as 2.5.3 did; flagged(text) for names.
 
 Text is matched after NFKC and with zero-width characters, combining marks and URL or HTML escapes (twice over) removed, so
 full-width "PIN", a zero-width space inside "zoom.us", "%3Fpwd%3D" and "https&#58;//" are caught, and look-alike letters from other
 alphabets are read as the Latin ones (confusables.py). A label alone on a line takes the line after it too (a table's "PIN" and
-its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N"),
-and a link to a provider this module does not know with no word of joining near it.
+its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N")
+are not found as a key, and a link to a provider this module does not know with no word of joining near it.
 """
 import html as htmllib
 import re
@@ -46,7 +48,9 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
                       r"click\s+(?:here\s+)?to)\b", re.I)
 
 # ---- keys: passcodes, PINs, meeting IDs, dial-in numbers ----
-_VAL = r"(?:\s*(?:[:=#\-\u2013]\s*\S|\bis\b\s*\S)|\s+(?:no\.?\s*)?\S*\d)"            # a label followed by a value
+# a label followed by a value: a separator, "is", a word with a digit, or (v2.6 review) a word that switches from a small
+# letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
+_VAL = r"(?:\s*(?:[:=#\-\u2013]\s*\S|\bis\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
 _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
                r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
                r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
@@ -136,8 +140,13 @@ def flagged(text):
 
 
 def scrub(text, limit):
-    """A title, place or organiser: join links taken out; the whole text dropped when a key or dial-in is left in it. Only the
-    first LINE_MAX characters are looked at (and a field is kept far shorter)."""
+    """A title, place or organiser: a complete join link taken out (a known provider, a short link, a keyed or join-shaped URL:
+    "Sync https://zoom.us/j/1?pwd=abc" keeps "Sync"), and then the whole field dropped when anything else is a secret, exactly as
+    2.5.3 did: a passcode or password label with or without its value, a numbered label (a meeting ID, PIN, "Code 2"), a bare
+    join host or scheme ("zoom.us", "msteams:") or a dial-in number, wherever it stands and whatever is beside it ("Sync Passcode:
+    4321", "Weekly sync zoom.us", "Code 2 review" and "Budget (PIN 4321)" all give ""). Nothing is cut out of the text around a
+    key: the words beside it may be its value, and no list of password words can be complete (v2.6 review H3, fail closed). Only
+    the first LINE_MAX characters are looked at (and a field is kept far shorter)."""
     t = normal(str(text if text is not None else "")[:LINE_MAX])
     t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
     t = re.sub(r"\s+", " ", t).strip()

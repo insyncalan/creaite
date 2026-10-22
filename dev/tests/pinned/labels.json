@@ -315,7 +315,7 @@
   },
   "exit": 0,
   "stderr": "",
-  "stdout": "Apply 1: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "stdout": "Apply 1: written 1, filed 0, rejected 0, 0 still pending.\n",
   "step": "labelled"
  },
  {
@@ -665,7 +665,7 @@
   },
   "exit": 0,
   "stderr": "",
-  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "stdout": "Apply 2: written 1, filed 0, rejected 0, 0 still pending.\n",
   "step": "relabel"
  },
  {

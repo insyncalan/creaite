@@ -525,9 +525,11 @@ def remove(doc, data, n, keep_line=False):
     removed = doc["meta"].setdefault("removed", {})
     if s is not None:
         row = s["rows"][i]
-        removed[str(n)] = {"section": s["id"], "index": i, "row": row, "kept_line": bool(keep_line)}
-        if keep_line:
-            s["rows"][i] = {"ref": None, "cells": row["cells"], "shown": True, "kept_line": True, "was": row["ref"]}
+        held = _held_why(item, doc["items"].get(f"@{n}"))
+        removed[str(n)] = {"section": s["id"], "index": i, "row": row, "kept_line": bool(keep_line), "held": held}
+        if keep_line:     # held and does live on the kept row itself: Approve minutes empties meta.removed (tracker._stamp_record)
+            s["rows"][i] = {"ref": None, "cells": row["cells"], "shown": True, "kept_line": True, "was": row["ref"], "held": held,
+                            **({"does": row["does"]} if row.get("does") else {})}
         else:
             del s["rows"][i]
     doc["items"].pop(f"@{n}", None)
@@ -537,9 +539,16 @@ def remove(doc, data, n, keep_line=False):
 def restore(doc, data, n):
     """Undo ✕ Remove: the item is pending again and its row back where it was."""
     item = item_of(data, n)
-    gone = doc["meta"].get("removed", {}).pop(str(n), None)
     if item.get("decision") != "rejected" or item.get("decided_in") != "minutes":
         raise RecordError(f"Item {n} wasn't removed here.")
+    _row_back(doc, data, item)
+    return f"Item {n} is back."
+
+
+def _row_back(doc, data, item):
+    """The item's row back where it was (out of meta.removed; a kept line gives way to the row) and the item pending again."""
+    n = item["n"]
+    gone = doc["meta"].get("removed", {}).pop(str(n), None)
     if isinstance(item.get("was"), dict) and item.get("duplicate_of"):    # Update that one found a duplicate: the item as it was
         item = {**item["was"], "n": n}
         data["items"][next(k for k, i in enumerate(data["items"]) if i.get("n") == n)] = item
@@ -551,7 +560,29 @@ def restore(doc, data, n):
         s["rows"] = [r for r in s["rows"] if not (r.get("kept_line") and r.get("was") == f"@{n}")]
         s["rows"].insert(min(gone["index"], len(s["rows"])), gone["row"])
     sync_item(doc, item)
-    return f"Item {n} is back."
+
+
+def unsettled(doc, data):
+    """#268: the rows the record took out (meta.removed: removed, or kept as a line only) whose items are pending again, newest
+    first. Undo of Approve minutes (tracker.py undo) puts the proposal's items back to pending but leaves the record as the
+    approve's own changes made it, so until it is settled the record doesn't match its items."""
+    removed = ((doc or {}).get("meta") or {}).get("removed") or {}
+    items = {i.get("n"): i for i in (data or {}).get("items") or []}
+    out = []
+    for k in reversed(list(removed)):
+        it = items.get(int(k)) if str(k).isdigit() else None
+        if it and not it.get("applied") and it.get("decision") != "rejected":
+            out.append(int(k))
+    return out
+
+
+def settle(doc, data):
+    """#268: each unsettled row back as it was, in the reverse order of the changes that took them out (so each goes back to its
+    own place): after Undo of Approve minutes the minutes are exactly as they were before Approve. Returns the numbers."""
+    ns = unsettled(doc, data)
+    for n in ns:
+        _row_back(doc, data, next(i for i in data["items"] if i.get("n") == n))
+    return ns
 
 
 def update_that_one(doc, data, p, n, target):
@@ -567,7 +598,7 @@ def update_that_one(doc, data, p, n, target):
         s, i = find_row(doc, n)
         if s is not None:
             doc["meta"].setdefault("removed", {})[str(n)] = {"section": s["id"], "index": i, "row": s["rows"].pop(i),
-                                                            "kept_line": False}
+                                                            "kept_line": False, "held": _held_why(item, doc["items"].get(f"@{n}"))}
         doc["items"].pop(f"@{n}", None)
         return f"Nothing new to carry to {target}: item {n} repeats it, so it was taken out of the minutes."
     sync_item(doc, item)
@@ -589,8 +620,30 @@ def keep_new(doc, data, p, n):
 
 
 EDITABLE = {"actions": ("description", "owner", "due_date", "workstream", "priority"),
-            "raid": ("description", "owner", "type", "impact", "likelihood", "response_action", "due_date"),
+            "raid": ("description", "owner", "type", "impact", "likelihood", "response_action", "due_date", "workstream"),
             "decisions": ("decision", "made_by", "reasoning", "options", "needed_by")}
+
+
+def _workstream(item, x):
+    """#268: a workstream set from the minutes (an action's, a risk's or an issue's): one of the item's project's Active workstreams,
+    in its own spelling (BL-58, tracker.active_workstream), or empty. Anything else is refused before it reaches the proposal: not
+    text, too long, a control character, or a name that isn't one of the project's workstreams."""
+    if x in (None, ""):
+        return None
+    if not isinstance(x, str) or len(x) > 120 or any(ord(c) < 32 or ord(c) == 127 for c in x) or not x.strip():
+        raise RecordError("That isn't a workstream.")
+    import tracker
+    try:
+        con = tracker.connect_or_raise()
+    except tracker.NoDatabase:
+        raise RecordError("The workstreams can't be read, so it wasn't changed.") from None
+    try:
+        w = tracker.active_workstream(con, str((item.get("values") or {}).get("project") or ""), x)
+    finally:
+        con.close()
+    if not w:
+        raise RecordError(f"“{x.strip()[:60]}” isn't an active workstream of this project.")
+    return w["name"]
 
 
 def edit_item(doc, data, n, values):
@@ -609,6 +662,8 @@ def edit_item(doc, data, n, values):
             if x and str(x).strip().lower() != "not set" and not got:
                 raise RecordError(f"“{x}” isn't a date creaite can read. Try “Friday”, “next week” or 30-10.")
             f, x = "due_date", got
+        elif f == "workstream":
+            x = _workstream(item, x)
         if x in (None, ""):
             v.pop(f, None)
         else:
@@ -732,14 +787,30 @@ def uncover(doc, data, point):
 
 # ── One change from the minutes view ─────────────────────────────────────────
 
+def _settled_words(settled):
+    """The `settle` change's message; with nothing to settle it is refused, so no new version is saved."""
+    if not settled:
+        raise RecordError("Nothing to put back.")
+    return f"Put back {len(settled)} line{'s' if len(settled) != 1 else ''} as they were before approving."
+
+
+def _tracked_words(made, settled):
+    """#275: the `track` change's message; with nothing to change it is refused, so no new version is saved."""
+    if not made and not settled:
+        raise RecordError("The minutes already follow the Track column.")
+    return f"Brought {len(made)} line{'s' if len(made) != 1 else ''} in line with the Track column."
+
+
 def change(path, op, base_version=None, via="dashboard"):
     """Apply one change from the minutes view to the draft record and its proposal, then save both. `op` is {op: remove | restore |
-    update | keep_new | edit | deadline | cover | uncover, n, keep_line, id, values, words, point, how, line}. Returns {ok, message,
-    version, doc}; refusals raise RecordError."""
+    update | keep_new | edit | deadline | cover | uncover | settle | track, n, keep_line, id, values, words, point, how, line,
+    project}. Returns
+    {ok, message, version, doc}; refusals raise RecordError. Every change first settles the record (#268: settle)."""
     doc = creaite_doc.read(path)
     if doc.get("state") == "approved":
         raise RecordError("These minutes are approved; their items are in the tracker. Change the items there.")
     p, data = proposal_for(doc)
+    settled = settle(doc, data)                             # #268: after an Undo of the approve, the record follows its items first
     kind, n = op.get("op"), op.get("n")
     if kind in ("remove", "restore", "update", "keep_new", "edit", "deadline") and not isinstance(n, int):
         raise RecordError("Which item?")
@@ -748,7 +819,9 @@ def change(path, op, base_version=None, via="dashboard"):
             "edit": lambda: edit_item(doc, data, n, dict(op.get("values") or {})),
             "deadline": lambda: edit_item(doc, data, n, {"due_words": op.get("words")}),
             "cover": lambda: cover(doc, data, str(op.get("point") or ""), op.get("how"), op.get("line", True) is not False),
-            "uncover": lambda: uncover(doc, data, str(op.get("point") or ""))}
+            "uncover": lambda: uncover(doc, data, str(op.get("point") or "")),
+            "settle": lambda: _settled_words(settled),
+            "track": lambda: _tracked_words(_track_reconcile(doc, data, op.get("project") or None), settled)}
     if kind not in acts:
         raise RecordError("That isn't a change the minutes know.")
     message = acts[kind]()
@@ -869,7 +942,8 @@ def view(file=None, path=None):
     labels = item_labels(doc)
     return {"ok": True, "path": rel, "doc": doc, "versions": creaite_doc.versions(rel), "turns": turns(meta.get("transcript")),
             "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None,
-            "labels": labels, "withheld": withheld(doc, labels)}
+            "labels": labels, "withheld": withheld(doc, labels),
+            "settle": unsettled(doc, data) if data and doc["state"] == "draft" else []}
 
 
 def save_page(path, page, base_version=None, via="dashboard"):
@@ -891,6 +965,236 @@ def save_page(path, page, base_version=None, via="dashboard"):
     out["sections"] += [s for s in cur["sections"] if s.get("id") in COLUMNS and s["id"] not in seen]
     r = save_record(rel, out, "Minutes saved", base_version=base_version, via=via)
     return {**r, "doc": creaite_doc.read(rel)}
+
+
+# ── #268 (Cap's review M3): the Track column's choices, applied to a copy ──
+# Until Approve minutes the choices live only in the record's layout (`layout.track`, components/minutes/track.js); the follow-up
+# email and a draft's export are built from the record, so they take the record with the choices applied first: a crossed line out,
+# a line left with neither kept as a line only, a ticked kept line back as its row; exactly what Approve minutes will file. The
+# rules mirror track.js (defaultTrack, trackOf, waitsWhenNeither, reconcileOps). Nothing is written.
+TRACK_SECTIONS = ("decisions", "raid", "actions")
+
+
+def _row_n(row):
+    """A row's item number: its own, or the one a kept line was ("@3")."""
+    if isinstance(row.get("n"), int):
+        return row["n"]
+    m = re.fullmatch(r"@(\d+)", str(row.get("was") or row.get("ref") or ""))
+    return int(m.group(1)) if m else None
+
+
+def _track_default(sid, item, group):
+    """track.js defaultTrack: decisions, risks and anything approved one by one start with neither; the rest ticked."""
+    v = item.get("values") or {}
+    risk = sid == "raid" and item.get("op") == "new" and (v.get("type") or "Risk") == "Risk"
+    return "" if group == "own" or sid == "decisions" or risk else "y"
+
+
+def _track_rows(doc):
+    """(section id, item number, row) for each trackable row of the record, in page order (track.js trackRows)."""
+    for s in doc.get("sections") or []:
+        if s.get("id") not in TRACK_SECTIONS or s.get("type") != "table":
+            continue
+        for row in s.get("rows") or []:
+            n = _row_n(row)
+            if n is not None and (row.get("ref") or row.get("kept_line")):
+                yield s["id"], n, row
+
+
+def _track_of(choices, sid, row, item, group):
+    """A row's Track state ("y", "n" or ""): the choice made, else a kept line is neither, else the default (track.js trackOf)."""
+    want = choices.get(str(item.get("n")))
+    return want if want in ("y", "n", "") else "" if row.get("kept_line") else _track_default(sid, item, group)
+
+
+def _waits(item, group):
+    """Neither on an update approved one by one changes nothing: it stays in Review (review H2, track.js waitsWhenNeither)."""
+    return item.get("op") == "update" and group == "own"
+
+
+def _track_want(choices, sid, row, item, group):
+    """What the Track column wants for a row ("y", "n" or ""), or None when the record already shows it (track.js trackOf and
+    reconcileOps: neither on an update decided one by one leaves it in Review)."""
+    kept = bool(row.get("kept_line"))
+    want = _track_of(choices, sid, row, item, group)
+    if want == ("" if kept else "y") or (want == "" and not kept and _waits(item, group)):
+        return None
+    return want
+
+
+def _choices(doc):
+    c = (doc.get("layout") or {}).get("track")
+    return c if isinstance(c, dict) else {}
+
+
+# ── #275: the Track column on the server, so every way of approving honours it ──
+# Review's Approve and Approve n routine, the minutes view, `review.py approve` (Claude Code and ask creaite) and Review's bulk
+# approvals all go through these. What Alan chose in the Track column (layout.track) is applied on the server: a cross takes the
+# line out, neither keeps it as a line only, a tick on a kept line brings it back (track_reconcile, the view's own changes), and an
+# item he crossed or left with neither is never approved (track_blocked), nor applied (track_apply_problems). Approving the
+# minutes registers the ticked rows, defaults included (track_ticked), and never an item the minutes show no row for (a
+# promise: track_rowed). A default he never changed is not a choice: the view applies it when he presses Approve minutes
+# there, and anywhere else a decision or a risk left at its default stays in Review for him to decide, as before.
+
+def track_state(doc, data):
+    """{item number: "y" | "n" | ""} for each trackable row of a draft record whose item is still in the proposal (pending, or
+    taken out here as a kept line or a removed row), as the Track column shows it (defaults included)."""
+    import review
+    if not doc or doc.get("state") != "draft" or not data:
+        return {}
+    if unsettled(doc, data):            # Cap's round 2 (1): after tracker.py undo (Activity's undo) the rows the approve took out
+        doc, data = json.loads(json.dumps(doc)), json.loads(json.dumps(data))      # are in meta.removed: put back, on a copy
+        settle(doc, data)
+    choices, items, out = _choices(doc), {i.get("n"): i for i in data.get("items") or []}, {}
+    for sid, n, row in _track_rows(doc):
+        item = items.get(n)
+        if item and not item.get("applied"):
+            out[n] = _track_of(choices, sid, row, item, review.minutes_group(item))
+    return out
+
+
+def track_ticked(doc, data, project=None):
+    """The pending items whose rows are ticked, in a group Approve minutes applies (review.minutes_group "group" or "own"), of
+    `project` when given: what approving the minutes registers (track.js approveArgs). An item with no row is never in it."""
+    import review
+    items = {i.get("n"): i for i in data.get("items") or []}
+    return [n for n, t in track_state(doc, data).items()
+            if t == "y" and items[n].get("decision") == "pending" and review.minutes_group(items[n]) in ("group", "own")
+            and (project is None or review.project_of(items[n]) == project)]
+
+
+def track_rowed(doc, data):
+    """The items of the proposal the record shows a row for and Alan didn't cross or leave with neither: the most Approve minutes
+    may register (never a promise with no row, Cap's #268 review H1; never an item whose Track choice is a cross or neither)."""
+    choices = _choices(doc)
+    return {n for n, t in track_state(doc, data).items() if choices.get(str(n)) not in ("n", "")}
+
+
+def track_blocked(data):
+    """{item number: "n" | ""} for the pending items of a proposal whose draft minutes record Alan crossed or left with neither in
+    the Track column (an update approved one by one with neither excepted: it stays in Review, H2). {} for anything else, and when
+    the record can't be read (Review then holds nothing back; tracker.py apply's check, track_apply_problems, fails closed)."""
+    try:
+        return _track_blocked(data, ("pending",))
+    except creaite_doc.DocError:
+        return {}
+
+
+def _track_blocked(data, decisions):
+    """track_blocked for the items whose decision is in `decisions`; raises creaite_doc.DocError when the record can't be read."""
+    import review
+    draft = (data.get("meeting") or {}).get("draft")
+    if not (data.get("meeting") and not data["meeting"].get("applied") and str(draft or "").lower().endswith(".html")):
+        return {}                       # no minutes, minutes applied, or a Word draft (no Track column)
+    if not is_record(draft):            # Cap's round 2 (4): a record deleted or with its data block removed fails closed
+        raise creaite_doc.DocError("it isn't there or has no creaite-data block")
+    doc = creaite_doc.read(draft)
+    if doc.get("state") != "draft":     # a state changed by hand before the minutes are applied fails closed too
+        raise creaite_doc.DocError("it isn't a draft any more")
+    choices, items = _choices(doc), {i.get("n"): i for i in data.get("items") or []}
+    return {n: t for n, t in track_state(doc, data).items()
+            if choices.get(str(n)) in ("n", "") and items[n].get("decision") in decisions
+            and not (t == "" and _waits(items[n], review.minutes_group(items[n])))}
+
+
+TRACK_STUCK = ("it is back on Intake: approve the minutes in the Minutes view (it clears crossed lines), "
+               "or tick it there to register it")
+
+
+def track_apply_problems(name, data):
+    """#275 (Cap's re-review): tracker.py apply's check (the guarded diff's track_problems). An APPROVED item that Alan crossed or
+    left with neither in the minutes' Track column is never written, whatever path approved it (a stale page, a proposal edited by
+    hand): the apply stops, all or nothing, and the item goes back to pending (saved when the apply stops), so it is on Intake
+    again, where approving the minutes clears it or it can be rejected. A pending item, the normal state between crossing a
+    row and approving the minutes, never stops it. Fails closed: a draft record that can't be read, with an approved item not yet
+    applied, stops the apply. Returns the problems, one line each, with `name` (the proposal's file name)."""
+    try:
+        blocked = _track_blocked(data, ("approved",))
+    except creaite_doc.DocError as e:
+        if any(i.get("decision") == "approved" and not i.get("applied") for i in data.get("items") or []):
+            return [f"{name} minutes: the minutes record can't be read ({e}), so its Track column can't be checked; "
+                    "open the minutes in the Minutes view, then apply again"]
+        return []
+    out, items = [], {i.get("n"): i for i in data.get("items") or []}
+    for n, t in blocked.items():
+        items[n]["decision"] = "pending"
+        items[n].pop("decided_in", None)
+        what = "crossed" if t == "n" else "kept in the minutes only (neither)"
+        out.append(f"{name} item {n}: {what} in the minutes' Track column; {TRACK_STUCK}")
+    return out
+
+
+def _track_reconcile(doc, data, project=None):
+    """The record and its proposal brought in line with Alan's Track choices, in place (of `project`'s items only when given): a cross
+    on a pending row is `remove`, neither `remove` with `keep_line` (not an update approved one by one), a tick on a kept line
+    `restore`, a cross on a kept line `restore` then `remove`. Returns the item numbers changed."""
+    import review
+    choices, items, made = _choices(doc), {i.get("n"): i for i in data.get("items") or []}, []
+    for sid, n, row in list(_track_rows(doc)):
+        item = items.get(n)
+        if not item or item.get("applied") or (project is not None and review.project_of(item) != project) or str(n) not in choices:
+            continue                                        # only Alan's own choices: a default is applied by the view's Approve
+        want = _track_want(choices, sid, row, item, review.minutes_group(item))
+        if want is None:
+            continue
+        kept = bool(row.get("kept_line"))
+        if kept:
+            restore(doc, data, n)
+        if want != "y":
+            remove(doc, data, n, keep_line=want == "")
+        made.append(n)
+    return made
+
+
+def track_reconcile(path, project=None, via="dashboard"):
+    """The draft record at `path` (and its proposal) settled (#268) and brought in line with its Track column, saved only when
+    something changed. Returns the item numbers changed."""
+    doc = creaite_doc.read(path)
+    if doc.get("state") != "draft":
+        return []
+    p, data = proposal_for(doc)
+    settled = settle(doc, data)
+    made = _track_reconcile(doc, data, project)
+    if not made and not settled:
+        return []
+    data = save_proposal(p, data)
+    for it in data.get("items") or []:
+        if f"@{it['n']}" in doc["items"]:
+            doc["items"][f"@{it['n']}"] = item_snapshot(it)
+    r = save_record(path, doc, "Minutes: the Track column", via=via)
+    if r.get("needs_approval"):
+        raise RecordError(r.get("message") or REFUSED_FILED)
+    return made
+
+
+def _track_apply(out, data, n, kept, want):
+    """One row in line with its choice, on the copy (the changes Approve minutes makes); a row that can't be is left as it is."""
+    try:
+        if kept:
+            restore(out, data, n)
+        if want != "y":
+            remove(out, data, n, keep_line=want == "")
+    except RecordError:
+        pass        # an item no longer pending (applied, or taken out in Review): the record already shows it as it is
+
+
+def tracked_of(doc):
+    """A copy of a draft minutes record with its Track choices applied (see above); any other record as it is."""
+    import review
+    if doc.get("state") != "draft":
+        return doc
+    try:
+        data = json.loads(json.dumps(proposal_for(doc)[1]))
+    except RecordError:
+        return doc
+    choices = _choices(doc)
+    out, items = json.loads(json.dumps(doc)), {i.get("n"): i for i in data.get("items") or []}
+    for sid, n, row in list(_track_rows(doc)):
+        item = items.get(n)
+        want = _track_want(choices, sid, row, item, review.minutes_group(item)) if item else None
+        if want is not None:
+            _track_apply(out, data, n, bool(row.get("kept_line")), want)
+    return out
 
 
 def actions_wording(doc):
@@ -917,19 +1221,33 @@ def export(path, fmt, file_beside=True, version="internal"):
         return distributed_export(rel, doc, fmt, file_beside)
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
-    shown = actions_wording(doc)                                  # one read, minutes only
-    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=shown)
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes",
+                              doc=actions_wording(tracked_of(doc)))
+    # one read, minutes only; #268 M3: a draft's Track choices applied; #282: the Actions heading
+
+
+def _followup_does(row, removed):
+    """What a row does; for a line kept in the minutes only, what its row did (#268: a kept update is still an update)."""
+    if row.get("does") or not row.get("kept_line"):
+        return str(row.get("does") or "")
+    return str(((removed.get(str(row.get("was") or "").lstrip("@")) or {}).get("row") or {}).get("does") or "")
 
 
 def _followup_rows(use, doc, sid):
     """The rows of section `sid` in `use` that are new in the minutes (not an update, a closure or a record of an existing item)."""
     sec = next((s for s in use.get("sections") or [] if s.get("id") == sid), None) or {}
+    removed = (use.get("meta") or {}).get("removed") or {}
     out = []
     for r in sec.get("rows") or []:
         it = (doc.get("items") or {}).get(r.get("ref")) or {}
-        if it.get("op", "new") == "new" and not str(r.get("does") or "").startswith(("Updates", "Closes", "Records")):
+        if it.get("op", "new") == "new" and not _followup_does(r, removed).startswith(("Updates", "Closes", "Records")):
             out.append((r, it))
     return out
+
+
+def _followup_base(r, kind):
+    """A follow-up item's id and kind; a line kept in the minutes only says so (#268 M3: not a work item)."""
+    return {"k": kind, "id": str(r.get("ref") or r.get("was") or ""), **({"kept": True} if r.get("kept_line") else {})}
 
 
 def _followup_items(use, doc):
@@ -938,11 +1256,11 @@ def _followup_items(use, doc):
     for r, _ in _followup_rows(use, doc, "decisions"):
         c = r.get("cells") or {}
         if c.get("decision"):
-            out.append({"k": "decisions", "id": str(r.get("ref") or ""), "t": c["decision"], "by": c.get("by") or ""})
+            out.append({**_followup_base(r, "decisions"), "t": c["decision"], "by": c.get("by") or ""})
     for r, it in _followup_rows(use, doc, "actions"):
         c, due = r.get("cells") or {}, str((it.get("values") or {}).get("due_date") or "")
         if c.get("action"):
-            out.append({"k": "actions", "id": str(r.get("ref") or ""), "t": c["action"], "o": c.get("owner") or "",
+            out.append({**_followup_base(r, "actions"), "t": c["action"], "o": c.get("owner") or "",
                         "due": due if re.fullmatch(r"\d{4}-\d\d-\d\d", due) else None})
     return out
 
@@ -965,11 +1283,12 @@ def followup_facts(path, version="internal"):
     """The follow-up email's content from the version shown (v2.1.0 P7; Alan, 15-10-2026): the meeting, its summary, the new
     decisions and actions, and the attendees. The Distributed version is built by distributed_of, the one rule: no Internal only
     line or row, no Sensitive, partner-only or excluded item, so none of it can reach the draft. The Internal version is marked
-    internal. Plain code; nothing is sent."""
+    internal and flags each held item `sens` (the email starts with those unticked). Plain code; nothing is sent."""
     import drafts
     if version not in (None, "", "internal", "distributed"):
         raise RecordError("Draft from the internal or the distributed version.")
     rel, doc = record_at(path)
+    doc = tracked_of(doc)                                   # #268 M3: a draft's Track choices applied (crossed lines out)
     dist = version == "distributed"
     held = withheld(doc)
     use = distributed_of(doc, held) if dist else doc
@@ -979,7 +1298,8 @@ def followup_facts(path, version="internal"):
             "day": use.get("date") or "", "codes": codes,
             "summary": "" if drafts.secret(summary) else drafts.short(summary, 1500),
             "attendees": drafts.attendees_of({"attendees": [{"name": n, "email": ""} for n in _followup_names(use)]}),
-            "items": _followup_items(use, doc), "left_out": len(held) if dist else 0, "marked_internal": not dist}
+            "items": [{**i, **({"sens": True} if i["id"] in held else {})} for i in _followup_items(use, doc)],
+            "left_out": len(held) if dist else 0, "marked_internal": not dist}
 
 
 # ── The distributed version (BL-338 point 13; Jarvis, 15-10-2026 on plan #70) ──
@@ -1029,12 +1349,38 @@ def _flagged_sensitive(item):
     return any(re.search("sensitive", str(f), re.I) for f in item.get("flags") or []) or bool((item.get("values") or {}).get("sensitive"))
 
 
+def _held_why(item, snap=None):
+    """Why a staged item (and its record snapshot) is kept out of the distributed version: "Sensitive", "partner-only" or an
+    excluding label's reason; "" when it is not. Read when a row is taken out of the minutes (remove), because a line kept in the
+    minutes only has no item left in the record afterwards (the v2.6.0 leak: tracked_of / Approve minutes dropped the flag)."""
+    item, snap = item or {}, snap or {}
+    merged = {"flags": list(item.get("flags") or []) + list(snap.get("flags") or []), "id": item.get("id") or snap.get("id"),
+              **{k: {**(snap.get(k) or {}), **(item.get(k) or {})} for k in ("values", "changes")}}
+    return next(iter(withheld({"items": {"@x": merged}}).values()), "")
+
+
+def _kept_held(doc):
+    """{"@n": why} for each line kept in the minutes only (a row with no item, `was` = its old ref) that the distributed version
+    never shows. Fails closed: a kept line whose sensitivity was not recorded (an older record, or one made by hand) is withheld."""
+    removed = (doc.get("meta") or {}).get("removed") or {}
+    out = {}
+    for s in doc.get("sections") or []:
+        for r in s.get("rows") or []:
+            if not (r.get("kept_line") and r.get("was")):
+                continue
+            rec = removed.get(str(r["was"]).lstrip("@")) or {}
+            why = r["held"] if "held" in r else rec.get("held") if "held" in rec else "Sensitivity unknown"
+            if why:
+                out[str(r["was"])] = why
+    return out
+
+
 def withheld(doc, labels=None, con=None):
     """{row ref: why} for each item the distributed version never shows: Sensitive (a flag, a value or a label), partner-only, or
-    labelled with a label that excludes."""
+    labelled with a label that excludes; and each line kept in the minutes only that was one (or whose sensitivity is unknown)."""
     labels = item_labels(doc, con) if labels is None else labels
     blocking = _blocking(con)
-    out = {}
+    out = dict(_kept_held(doc))
     for ref, it in (doc.get("items") or {}).items():
         why = "Sensitive" if _flagged_sensitive(it) else next(
             (blocking[n.lower()] for n in labels.get(ref) or [] if n.lower() in blocking), None)
@@ -1072,7 +1418,8 @@ def _distributed_table(s, marks, gone_refs):
     number once filed). Adds the refs it drops to `gone_refs`."""
     marked = {m["ref"] for m in marks if m.get("ref")}
     gone_refs |= {r["ref"] for r in s.get("rows") or [] if r.get("ref") in marked or f"@{r.get('n')}" in marked}
-    s["rows"] = [r for r in s.get("rows") or [] if not (r.get("ref") and r["ref"] in gone_refs)]
+    s["rows"] = [r for r in s.get("rows") or [] if not ((r.get("ref") or r.get("was")) in gone_refs)
+                 and not (r.get("kept_line") and not r.get("was"))]      # a kept line that names no item: fail closed
     s["text"] = "" if s["rows"] else "None recorded."
 
 
@@ -1107,6 +1454,8 @@ def _without_items(out, gone_refs, version):
         if s.get("tags"):
             s["tags"] = [t for t in s["tags"] if t.get("ref") not in gone_refs]
     out["items"] = {k: v for k, v in (out.get("items") or {}).items() if k not in gone_refs}
+    if isinstance(out.get("meta"), dict):          # rows taken out (kept for Undo) hold their words: never in the distributed record
+        out["meta"] = {k: v for k, v in out["meta"].items() if k != "removed"}
     out["layout"] = {k: v for k, v in (out.get("layout") or {}).items() if k != "internal_only"}
     out.update(audience="distributed", based_on={"path": None, "version": version})
     return out

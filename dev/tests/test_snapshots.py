@@ -44,7 +44,10 @@ META = 4
 MAC_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 "
           "Safari/537.36")                                  # the platform the goldens were recorded on, on any machine
 
-SETTINGS_TABS = ("essentials", "people", "advanced", "health")         # BL-320 (v1.9.2): four places, not six
+# BL-320 (v1.9.2): four places; v2.6 (#246): tabs. Essentials, Advanced (its first sub-tab), AI drafts (the counts card,
+# which Advanced held before) and Health. The Settings line retired the People and projects sections (their old address opens
+# the People page, whose golden is "people")
+SETTINGS_TABS = ("essentials", "advanced", "ai", "health")
 # Health's check runs doctor, whose answer depends on the machine (a launcher, Rosetta, OneDrive): the golden shows a fixed one.
 HEALTH_ANSWER = {"ok": True, "checked": "2026-10-09 09:00", "fine": 22, "fine_names": ["Database", "Backups"], "read_only": True,
                  "problems": [{"id": "offsite_backup", "title": "No copy of the backup in OneDrive yet", "check": "OneDrive copy",
@@ -65,9 +68,9 @@ def open_health(b):
 
 
 SETTINGS_READY = {"essentials": "!!document.querySelector('#set-essentials .srow')",
-                  "advanced": "!!document.querySelector('#set-more .srow') && !!document.querySelector('#drStats') && document.querySelector('#drStats').textContent.trim() !== ''",   # AI drafts' counts arrive from /api/drafts after the page draws; a slow reply must not be captured empty
-                  "health": "!!document.querySelector('#healthCard .hsum')",
-                  "people": "!!document.querySelector('#settingsBody [data-sec=people]')"}
+                  "advanced": "!!document.querySelector('#subtabs') && !!document.querySelector('#set-thresholds .setembed .srow')",
+                  "ai": "!!document.querySelector('#set-drafts .setembed .srow') && !!document.querySelector('#drStats') && document.querySelector('#drStats').textContent.trim() !== ''",   # AI drafts' counts arrive from /api/drafts after the page draws; a slow reply must not be captured empty
+                  "health": "!!document.querySelector('#healthCard .hsum')"}
 
 
 def open_first_item(b):
@@ -109,11 +112,10 @@ SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden", "#v-today"),
     "work": ("go('work')", "document.querySelector('#workTbl tbody tr')", "#v-work"),
     "work-panel": (open_first_item, "document.getElementById('panel').classList.contains('on')", "#panel"),
-    # BL-315's guesses come from /api/review/guesses, fetched when Review opens (two scripts under the server's lock): under load
-    # they landed after the reads below agreed, and the "Possible match" row lost its guess. Wait for them (the sample has one).
-    "review": ("go('review')", "!document.getElementById('v-review').hidden && Object.keys(rjGuesses.value).length > 0",
-               "#v-review"),
-    "intake": ("go('inbox')", "!document.getElementById('v-inbox').hidden", "#v-inbox"),
+    # #232 C2: Intake and Review are one page, one golden (intake-review.html replaces intake.html and review.html). The page asks for
+    # BL-315's guesses (/api/review/guesses) while it is open; they show in the reject menu, not on a row, so the page is ready without them.
+    "intake-review": ("go('intake-review')", "!document.getElementById('v-intake-review').hidden && !!document.querySelector('#v-intake-review h1') "
+                      "&& !!document.querySelector('#v-intake-review tr')", "#v-intake-review"),
     "files": ("go('files')", "!document.getElementById('v-files').hidden", "#v-files"),
     "activity": ("go('activity')", "!document.getElementById('v-activity').hidden", "#v-activity"),
     "projects": ("go('projects')", "!document.getElementById('v-projects').hidden", "#v-projects"),
@@ -196,7 +198,7 @@ class Snapshots(LiveBrowserCase):
                 if "updated_at" in [c[1] for c in con.execute(f"PRAGMA table_info({t})")]:
                     con.execute(f"UPDATE {t} SET updated_at = '{FIXED} 08:00:00.000'")
             con.commit()
-        # The files' own times (Intake's Added column, the order of Latest reports) are when the vault was built: the
+        # The files' own times (Intake's "Added" words, the order of Latest reports) are when the vault was built: the
         # fixed day instead, so Intake doesn't show the date the test ran.
         stamp = datetime(FIXED.year, FIXED.month, FIXED.day, 8, 0, tzinfo=timezone.utc).timestamp()
         for top in ("inbox", "projects"):

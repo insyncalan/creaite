@@ -57,7 +57,7 @@ SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
                              "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#pkId [data-pkp=\"p\"]')", "#panel")
 # BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached; plan
 # #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
-SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
+SCREENS["review-peek"] = ("go('intake-review'); openProposal(REV.find(r=>rtOK(r)).n)",
                           "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')"
                           " && Object.keys(rjGuesses.value).length > 0", "#panel")     # the guesses (/api/review/guesses) land late under load and redraw the peek's list: wait for them, as the review screen does
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
@@ -80,13 +80,14 @@ SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='AB
                               "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
                               "document.getElementById('mvRbAdd')", "#v-milestones")
 # v2.1.0 P7: the minutes view, its approve popup and the deadline popover, answered by test_minutes_editor's sample record (the
-# snapshot vault itself stays as it is).
-SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes .mnrow')", "#v-minutes")
+# snapshot vault itself stays as it is). #268: the rows are the Track tables' (tr.mi) and the popup is the Before approving box
+# (the sample's ticked items have a real problem, so Approve minutes opens it).
+SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes tr.mi')", "#v-minutes")
 SCREENS["minutes-approve"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#mnApproveBtn:not([disabled])')", 15),
                                          b.eval("document.getElementById('mnApproveBtn').click()")),
                               "document.getElementById('mnApprove') && document.getElementById('mnApprove').open", "#v-minutes")
-SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes .mnrow .mndue')", 15),
-                                          b.eval("document.querySelector('#v-minutes .mnrow .mndue').click()")),
+SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes tr.mi .mndue')", 15),
+                                          b.eval("document.querySelector('#v-minutes tr.mi .mndue').click()")),
                                "document.querySelector('#v-minutes .mnpop')", "#v-minutes")
 
 # v2.1.0 P6: the weekly report view (the snapshot vault's ABC project; the report is built by /api/report/draft, nothing is written).
@@ -97,10 +98,11 @@ SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.
                       "document.querySelector('#v-reports tbody tr')", "#v-reports")
 SCREENS["reporting"] = ("openSpace('ABC', '', 'client')", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
 
-# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
-# ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
-SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=document.querySelector('#projArch [data-parch=archive][data-pcode=ABC]'); "
-                          "b ? (b.focus(), b.click()) : n && setTimeout(()=>t(n-1),50); })(100)",
+# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): ABC's settings › Archive and close
+# (Settings › Projects and register until the Settings line), Archive… and its Archive pressed; the server only lists the
+# open items (nothing is staged until "Cancel them all and archive").
+SCREENS["archive-ask"] = ("go('psettings','ABC'); (function t(n){ const y=document.getElementById('psArchiveYes'), b=document.getElementById('psArchive'); "
+                          "y ? (y.focus(), y.click()) : b ? (b.click(), setTimeout(()=>t(n-1),50)) : n && setTimeout(()=>t(n-1),50); })(100)",
                           "document.getElementById('parchDlg')?.open && document.querySelector('#parchDlg .parchlist li')", "#parchDlg")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
@@ -171,16 +173,17 @@ class TargetSizes(UiSweepCase):
         self.goto("work-display")
         for w, h in b.eval("[...document.querySelectorAll('#dispMenu .colmv button')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})"):
             self.assertGreaterEqual(min(w, h), 24, "a move-column button")
-        self.goto("review")
-        sizes = b.eval("[...document.querySelectorAll('#reviewBody .ib.rvrr')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})")
+        self.goto("intake-review")
+        sizes = b.eval("[...document.querySelectorAll('#v-intake-review [data-ira=notneeded], #v-intake-review tr.irprop [data-ira=reject]')].map(e=>{const r=e.getBoundingClientRect(); return [r.width,r.height]})")
         self.assertTrue(sizes)
         for w, h in sizes:
-            self.assertGreaterEqual(min(w, h), 24, "Reject with a reason")
+            self.assertGreaterEqual(min(w, h), 24, "Not needed, with a reason (and a proposal's Reject, where the sample has one)")
 
     def test_a_tick_box_answers_a_click_beside_it(self):
+        """BL-217's tick-box check, on Activity's list (the Review page's tick boxes went with the old page, #232 C2)."""
         b = self.b
-        self.goto("review")
-        js = "document.querySelector('#reviewBody tr[data-n] td>input[type=checkbox]:not(:disabled)')"
+        self.goto("activity")
+        js = "document.querySelector('#actTbl tr[data-row] input[type=checkbox]:not(:disabled)')"
         x, y, was = b.eval(f"(()=>{{const i={js}, r=i.getBoundingClientRect(); return [r.left+r.width/2-10, r.top+r.height/2+9, i.checked]}})()")
         for kind in ("mousePressed", "mouseReleased"):
             b.call("Input.dispatchMouseEvent", type=kind, x=x, y=y, button="left", clickCount=1)
@@ -221,7 +224,7 @@ class Reflow(UiSweepCase):
                         self.assertEqual(r["scopeX"], 0, f"the view scrolls sideways: {r['culprits'][:3]}")
                         cut = [u for u in r["unreachable"] if not any(x in u["sig"] for x in REFLOW_SKIP)]
                         self.assertEqual(cut, [], "controls that can't be reached")
-                        if name in ("today", "review", "cockpit", "work", "people", "person", "activity"):
+                        if name in ("today", "intake-review", "cockpit", "work", "people", "person", "activity"):
                             cov = [c for c in r["covered"] if not any(x in c["sig"] for x in REFLOW_SKIP)
                                    and "a.cntl" not in c["sig"]]       # a count link in a sentence, under the sticky first column
                             self.assertEqual(cov, [], "controls under another")
@@ -277,14 +280,14 @@ class Reflow(UiSweepCase):
         finally:
             b.resize(self.width, self.height)
 
-    def test_review_stacks_its_rows_on_a_narrow_window(self):
+    def test_intake_stacks_its_rows_on_a_narrow_window(self):
         b = self.b
         try:
             b.resize(600, 800)
-            self.goto("review")
-            ok = b.eval("""(()=>{ const tr=document.querySelector('#reviewBody tr[data-n]'), t=tr.querySelector('td.title').getBoundingClientRect(),
-              a=tr.querySelector('button[data-act="a"]').getBoundingClientRect(); return a.top>=t.bottom-1 && !document.querySelector('#reviewBody .xcue'); })()""")
-            self.assertTrue(ok, "Approve sits under the item, and no table scrolls")
+            self.goto("intake-review")
+            ok = b.eval("""(()=>{ const trs=[...document.querySelectorAll('#v-intake-review tr[data-irm]')]; if(!trs.length) return false;
+              return document.documentElement.scrollWidth<=innerWidth && trs.every(tr=>[...tr.querySelectorAll('button')].every(x=>{ const r=x.getBoundingClientRect(); return !r.width||(r.left>=0&&r.right<=innerWidth+1); })); })()""")
+            self.assertTrue(ok, "the row's buttons stay in the window, and no table scrolls sideways")
         finally:
             b.resize(self.width, self.height)
 
@@ -298,7 +301,7 @@ class ForcedColours(UiSweepCase):
 
     def test_selected_states_and_edges_survive(self):
         b = self.b
-        for name in ("work", "work-board", "work-panel", "intake", "files", "activity", "milestones", "people", "help",
+        for name in ("work", "work-board", "work-panel", "intake-review", "files", "activity", "milestones", "people", "help",
                      "settings-advanced", "cmdk"):
             with self.subTest(name):
                 region = self.goto(name)

@@ -76,10 +76,8 @@ SCRIPT = r"""
       await runGen({code:"ABC",from:"2026-09-29",to:TODAY,sources:["tracker"],note:""}); window.fetch=realF;
       out.gen=[htmlToMd(document.getElementById("curEd")),document.querySelector("#v-cockpit .gensrc")?.textContent||"",CURED&&CURED.dirty];
       document.querySelector("[data-cure=cancel]").click(); document.querySelector('[data-dis="go"]').click(); }
-    // BL-42: the Inbox lists files with state; Select new picks only new ones
-    go("inbox"); out.inboxRows=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf]")].length; document.getElementById("inboxNew").click();
-    out.inboxBtns=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf] button")].map(b=>b.getAttribute("aria-label")).slice(0,2);   /* BL-161: icons, named */
-    out.inboxSel=[INSEL.size,(D.inbox||[]).filter(f=>f.state==="new").length,document.getElementById("inboxGo").textContent,location.hash]; INSEL.clear();
+    // BL-42: Intake lists the files in the inbox (#232 C2: as rows of the one page; Select new and the Upload table went with the old Intake page)
+    go("inbox"); out.inboxRows=(D.intake_review.meetings||[]).filter(m=>m.src==="upload").length; out.inboxHash=location.hash;
     // BL-62: Work filters behave
     { go("work"); loadTab("actions"); renderWork(); const a=A.find(x=>x.due); WQ=fd(a.due); out.f62search=rows().some(x=>x.id===a.id); WQ="";
       applyView("open"); PRIF.add("High"); syncView(); renderWork(); document.querySelector('#wtabs [data-t="raid"]').click(); out.f62raidClean=[...PRIF].length;
@@ -117,8 +115,10 @@ SCRIPT = r"""
       out.wsList=[...document.querySelectorAll(".pkpop .pkopt span")].map(o=>o.textContent).filter(t=>t!=="None"&&!t.startsWith("Add ")).every(v=>wsFor("ABC").includes(v));
       const wq=document.querySelector(".pkpop .pkq"); wq.value="Brand new stream"; wq.dispatchEvent(new Event("input")); [...document.querySelectorAll(".pkpop .pkopt")].find(o=>o.textContent.startsWith("Add “")).click();
       out.wsAsk=[(document.querySelector(".pkws .pkws-h")||{}).textContent,(document.querySelector('.pkws [data-wsn="name"]')||{}).value]; closePicker("owner",false); closePanel();   /* BL-187: the new workstream's form */
-      go("settings","people");
-      out.wsMgr=[...document.querySelectorAll("#wsMgr tbody tr td:first-child")].map(td=>td.textContent.trim()).filter(t=>t.endsWith("Cut-over"));
+      /* the Settings line: Settings › Workstreams is gone; each project's settings lists its own (#247), by the old address */
+      const wsT=D.ws_table||(D.ws_table=[]), tmp=[{id:"T-W-1",p:"ABC",name:"Cut-over",st:"Active",nA:1,nR:0},{id:"T-W-2",p:"DEF",name:"Cut-over",st:"Active",nA:1,nR:0}]; wsT.push(...tmp);
+      const wsOn=async c=>{ go("cockpit",c); go("settings","workstreams"); await wait(40); return [...document.querySelectorAll("#psWs tbody tr[data-ws]")].map(tr=>`${psCode.value} ${tr.dataset.ws}`).filter(t=>t.endsWith("Cut-over")); };
+      out.wsMgr=[...await wsOn("ABC"),...await wsOn("DEF")]; tmp.forEach(t=>wsT.splice(wsT.indexOf(t),1)); go("today");
       a1.ws=keep[0]; d1.ws=keep[1]; }
     // 5c. owner picker lists the project's own people first (BL-18 A; BL-179: the new item's owner chip); nothing saved
     openNew("actions"); await pkCommit("actions",CUR.nid,{p:"DEF"},"Project","",""); document.querySelector('#panel [data-pkp="o"]').click();
@@ -361,7 +361,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertEqual(r["wsFor"], [True, True, False])                       # BL-57: each project its own list
         self.assertTrue(r["wsList"])                                            # picker: this project's only
         self.assertEqual(r["wsAsk"], ["New workstream for Example Programme", "Brand new stream"])   # BL-187: added from the peek, with its details
-        self.assertEqual(sorted(r["wsMgr"]), ["ABC Cut-over", "DEF Cut-over"])   # Settings: per project
+        self.assertEqual(sorted(r["wsMgr"]), ["ABC Cut-over", "DEF Cut-over"])   # each project's settings: its own (Settings › Workstreams until the Settings line)
 
     def test_learn_option_in_review(self):
         self.assertTrue(self.result["learnTxt"].startswith("Remember sam@client.com (sender) for Digital Enablement"))
@@ -412,12 +412,8 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertFalse(r["evidenceOk"])                                           # worse or equal: no warning
 
     def test_inbox_view(self):
-        rows, (sel, new, label, hash_) = self.result["inboxRows"], self.result["inboxSel"]
-        self.assertGreaterEqual(rows, 1)
-        self.assertEqual(sel, new)
-        self.assertEqual(label, f"Process {new} selected")
-        self.assertEqual(hash_, "#intake")          # BL-70: the new address; #inbox still opens it (test_today_brief.py)
-        self.assertEqual(self.result["inboxBtns"], ["Preview", "Remove from Intake"])
+        self.assertGreaterEqual(self.result["inboxRows"], 1)
+        self.assertEqual(self.result["inboxHash"], "#intake-review")   # #232-C: the one page's address; #intake and #inbox still open it (test_intake_review_wiring.py)
 
     def test_work_filters_fixed(self):
         r = self.result
@@ -431,7 +427,7 @@ class DashboardEditingTests(unittest.TestCase):
 
     def test_command_palette_reaches_everything(self):
         go, views, acts, ms, files, inbox = self.result["ck"]
-        self.assertIn("Go to|Intake", go)
+        self.assertIn("Go to|Intake", go)   # #232-C: one entry for the one page
         self.assertIn("Go to|Your commitments", go)
         self.assertIn("Views|Actions: Overdue", views)
         self.assertEqual(sorted(acts), ["Actions|Edit current state: ABC", "Actions|Generate current state: ABC"])

@@ -2,6 +2,7 @@
 /* work.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0030-work.js, 0031-bl-150-sprint-ux.js, 0032-bl-159-sprint-icons.js, 0033-bl-160-sprint-icons.js, 0034-after-bl-160-js.js, 0035-work-board-bl-103-sprint-4a.js, 0036-bl-128-sprint-work-views.js, 0037-decisions-board-bl-103-sprint-debug-log.js, 0038-bl-129-sprint-work-views.js, 0039-bl-130-sprint-work-views.js, 0040-bl-132-sprint-work-views.js, 0041-bl-131-sprint-work-views.js, 0130-person-rows-bl-68.js, 0131-bl-122-sprint-polish.js, 0132-bl-123-sprint-polish.js, 0133-bl-124-sprint-polish.js, 0147-bl-134-sprint-all-items.js, 0148-bl-138-sprint-all-items.js, 0149-bl-190-sprint-links.js, 0150-after-bl-190-people.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { drawPeoplePage, savedPeopleTab, setPeopleTab } from "./components/people/PeoplePage.jsx";   /* #248 */
 import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml, linkWords } from "./core/linkText.js";
@@ -10,8 +11,8 @@ import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { drawNewTile } from "./components/work/NewTile.jsx";
-import { A, DEC, open, overdue, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
-import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
+import { A, DEC, open, overdue, P, peopleAll, pName, R, wsFor } from "./core/data.js";
+import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { CALI, closeCal, DATE_HELP, srcShort, WK, wkAsk, wkClear } from "./core/fields.js";
 import { typing } from "./core/keys.js";
 import { mDots, mFlipRows, mNoFade, mSnapRows, mTick } from "./core/motion.js";
@@ -20,12 +21,11 @@ import { anim, cmdOK, cmOK, D, days, DDATE, fd, fdText, ico, isMe, kindOf, nowSt
 import { oneLine, save, SKEY, snack, toDb, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { draftBtn } from "./drafts.js";
-import { kb } from "./intake.js";
+import { kb } from "./core/intakeApi.js";
 import { decLate, decLateWords, withdrawDecision } from "./meetings.js";
 import { ceListPlace } from "./milestones.js";
 import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
 import { closePanel, wflag } from "./projects.js";
-import { CHK, isMin, RHL, rvBar, rvBulkOK, RVF, RVFIELDS, rvSyncChk } from "./review.js";
 import { dueSort, isHiddenPerson, nm, ownerFinal, PERS, personLink, PSORTS, renderPerson, row, xcueAll } from "./settings.js";
 import { plur } from "./today.js";
 /* ======================= Work ======================= */
@@ -124,7 +124,7 @@ export function workBarProps(){ const R=FPRANGES(), main=defs().filter(d=>!d[4])
     onSelect:(k,vals)=>{ const set=setOf(k); set.clear(); vals.forEach(v=>set.add(v)); workChanged(); },
     onNot:(k,n)=>{ n?NEG.add(k):NEG.delete(k); workChanged(); },
     onRange:(k,end,text)=>{ const v=text.trim(); if(v&&!DDATE.test(v)){ snack("Not a date creaite knows. "+DATE_HELP); return; } rng(k)[end]=v?toIso(v):""; workChanged(); },
-    more:{id:"moreBtn",menuId:"moreMenu",label:funnelTip(wfCount()),menuLabel:"Add a filter",count:wfCount(),key:"F",
+    more:{id:"moreBtn",menuId:"moreMenu",label:funnelTip(wfCount()),menuLabel:"Add a filter",count:wfCount(),key:"Shift+F",
       on:defs().some(d=>d[4]&&setOf(d[0]).size)||!!(shared.DR.from||shared.DR.to||RR.from||RR.to||shared.CR.from||shared.CR.to),
       field:shared.FPK,onField:k=>{ shared.FPK=k; drawWorkFilters(); },query:shared.FPQ,
       onQuery:q=>{ shared.FPQ=q; const vis=[...defs().map(d=>[d[0],d[1]]),...FPRANGES()].filter(f=>!q||f[1].toLowerCase().includes(q.toLowerCase()));
@@ -147,11 +147,6 @@ export function newTile(){ const h=$("#newHost"); if(!h) return; const w=shared.
   drawNewTile(h,{word:w,decisions:shared.WT==="decisions",hidden:shared.WT==="all",onNew:()=>openNew(shared.WT),onDecision:how=>openNew("decisions",how==="needed"?"needed":undefined)}); }
 export function newMenuOpen(){ return !!$("#newDecMenu"); }
 /* ===== end BL-159 (JS) ===== */
-/* ===== BL-160 (sprint-icons) ===== Review in icons: the funnel counts its filters (Review's own: Kind, Needs, Source, Project, Age);
-   Approve and Reject keep their words in the bulk bar; on a row, Approve keeps its word, Reject is the x, and Edit and Refresh
-   items show on hover, on focus and on the cursor row (.rowact), so the keyboard still reaches them. */
-export function rvfCount(){ return RVFIELDS.filter(f=>RVF[f[0]]&&RVF[f[0]].size).length; }
-/* ===== end BL-160 (JS) ===== */
 /* BL-264: one applied-filter chip, shared by Work and Settings › People: its words (escaped here), an x that clears it (`attr`
    names the key), tinted when it is an exclusion (`neg`), quiet when it is a default (`def`); with `edit`, the words are a button
    (data-<edit>) that opens the picker at that field. */
@@ -526,7 +521,7 @@ export const SORTOPTS=t=>t==="decisions"?[["","Default order"],["due","Needed by
 /* the key-hint line for each layout, built from the controls that exist (BL-114, BL-122, BL-123, BL-128) */
 /** @type {[string[] | "", string, string][]} the keys (or none), what they do, and the layout they belong to */
 export const HINTS=[[["J","K"],"move","list"],[["J","K"],"step through the cards","board"],[["Space"],"select","both"],["","click a value to change it","list"],[["Enter"],"or the ID opens","both"],
-  ["","drag a card, or use its <b>Move to…</b> menu, to change it","board"],[["D"],"display","both"],[["F"],"filters","both"],[["Esc"],"clear","both"],["","click a heading to sort","list"],["","drag a column edge to resize","list"]];
+  ["","drag a card, or use its <b>Move to…</b> menu, to change it","board"],[["D"],"display","both"],[["Shift+F"],"filters","both"],[["Esc"],"clear","both"],["","click a heading to sort","list"],["","drag a column edge to resize","list"]];
 export function workHint(lay){ return HINTS.filter(h=>h[2]==="both"||h[2]===lay).map(([k,t])=>(k?k.map(x=>`<span class="kbd">${x}</span>`).join(" ")+" ":"")+t).join(" · "); }
 export function drawDisp(){ const m=$("#dispMenu"), t=shared.WT, bd=layoutOf(t)==="board", s=SORT[t], cur=s?(s.col==="_def"?"":s.col):"", opts=SORTOPTS(t), focusKey=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.id||document.activeElement.dataset.mv+"|"+document.activeElement.dataset.d):null;
   const gopts=bd?groupsOf(t):[["none","None"],...groupsOf(t)], gcur=bd?groupOf(t):listGroupOf(t), sub=subOf(t,bd?"board":"list");   /* BL-129: the List groups too */
@@ -903,21 +898,6 @@ export function hlKey(e){ if(e.shiftKey&&!/^[JK]$/.test(e.key)||e.altKey) return
   if(e.key===" "&&i>=0&&!onBoard){ e.preventDefault(); hlToggle(order[i].k,order[i].id); return true; }
   if(e.key==="Enter"&&i>=0&&!(shared.CUR&&$("#panel").classList.contains("on"))){ e.preventDefault(); const o=order[i]; hlOnly(o.k,o.id); openRecord(o.k,o.id); return true; }   /* BL-176: E retired with the Edit button */
   return false; }
-/* Review (BL-122): the same rules over the rows of #reviewBody. A highlighted row that may be ticked (not individual-approval) is ticked too. */
-export const RVTICK=new Set();   /* BL-263: the rows whose tick was drawn */
-export function rvPaint(){ const paint=()=>{ $$("#reviewBody tr[data-n]").forEach(tr=>{ const n=+tr.dataset.n, on=RHL.has(n), r=REV.find(x=>x.n===n); tr.classList.toggle("hl",on); tr.setAttribute("aria-selected",String(on));
-    tr.classList.toggle("sel",+tr.dataset.ri===shared.RSEL); const cb=tr.querySelector("input[type=checkbox]"); if(cb&&!cb.disabled&&r&&!isMin(r)) cb.checked=RHL.has(n); });
-  rvSyncChk(); rvBar(); };
-  if(shared.LOADING){ paint(); return; }   /* BL-231: as when the address was restored at load */
-  const changed=$$("#reviewBody tr[data-n]").filter(e=>e.classList.contains("hl")!==RHL.has(+e.dataset.n)||e.classList.contains("sel")!==(+e.dataset.ri===shared.RSEL)).length; mNoFade(()=>mTick("#reviewBody tr[data-n]",e=>e.dataset.n,RVTICK,paint),changed); }   /* BL-133: the bar replaces the two buttons */
-export const rvOrder=()=>$$("#reviewBody tr[data-n]").map(t=>+t.dataset.n);
-export function rvTick(n){ const r=REV.find(x=>x.n===n); if(r&&rvBulkOK(r)) CHK.add(n); }
-export function rvOnly(n){ RHL.clear(); CHK.clear(); RHL.add(n); rvTick(n); shared.RVA=n; }
-shared.RVA=null;                                        /* the anchor of a Shift range */
-export function rvPick(e,n){ const mod=e.metaKey||e.ctrlKey, order=rvOrder(), ai=shared.RVA==null?-1:order.indexOf(shared.RVA);
-  if(e.shiftKey&&ai>=0){ const bi=order.indexOf(n); if(!mod){ RHL.clear(); CHK.clear(); } order.slice(Math.min(ai,bi),Math.max(ai,bi)+1).forEach(x=>{ RHL.add(x); rvTick(x); }); }
-  else if(mod){ if(RHL.has(n)){ RHL.delete(n); CHK.delete(n); } else { RHL.add(n); rvTick(n); } shared.RVA=n; }
-  else rvOnly(n); }
 /* ===== end BL-122 ===== */
 /* ===== BL-123 (sprint-polish) =====
    Edit any field in the Work table in place. A click on an editable value (or its ▾ button, or Enter on the button) opens that field's
@@ -1146,48 +1126,25 @@ PRESETS.all=[["open","All open",{st:["Open"]}],["mine","Mine",{st:["Open"],o:["@
   ["overdue","Overdue",{st:["Open"],due:["overdue"]},true],["closed","Closed",{st:["Closed","Cancelled"]}]];
 if(!Array.isArray(shared.SAVED.all)) shared.SAVED.all=[];
 }
-/* ===== BL-138 (sprint-all-items) =====
-   People in two tabs. "With work" (first and default): anyone with an open action, an open risk or issue, or a decision waiting
-   on them (a Decision needed where they are the one asked, BL-53); made and withdrawn decisions are history, not an assignment.
-   You are always first on With work. "Nothing assigned": the other people creaite knows (the people register, which meeting
-   attendees, mail, Teams and reports add to, and anyone whose items are all closed), with the projects they appear in, a count
-   of their closed items and "not in register" for a name only seen on items. Nobody is on both; a hidden person (Settings ›
-   People) is on neither. Each tab keeps its own sort. The tab is kept in the address (#people/none) and remembered in this
-   browser, so the rail and the breadcrumbs return to it; a plain #people address opens With work. Counts only (BL-56). */
-export const PSORTT={work:{col:"late",dir:"desc"},none:{col:"name",dir:"asc"}};
-shared.PTAB=store.get("creaite-peopletab","work")==="none"?"none":"work";
-export function setPTab(t){ t=t==="none"?"none":"work"; PSORTT[shared.PTAB]=shared.PSORT; shared.PTAB=t; shared.PSORT=PSORTT[t]; store.set("creaite-peopletab",t); }
-export function peopleTabs(){ const L=PERS().filter(x=>!isHiddenPerson(x.name)).map(x=>Object.assign(x,{dw:x.D.filter(d=>d.st==="Pending"),cl:[...x.A,...x.R].filter(i=>!open(i)).length+x.D.filter(d=>d.st!=="Pending").length}));
-  const has=x=>x.oa.length||x.or.length||x.dw.length;
-  return {work:L.filter(x=>has(x)||isMe(x.name)),none:L.filter(x=>!has(x)&&!isMe(x.name))}; }
-export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none", f=PSORTS[shared.PSORT.col]||PSORTS.name;
-  const L=T[shared.PTAB].sort((a,b)=>(!none&&(isMe(a.name)?-1:isMe(b.name)?1:0))||(()=>{ const x=f(a),y=f(b); return (x<y?-1:x>y?1:0)*(shared.PSORT.dir==="asc"?1:-1); })()||a.name.localeCompare(b.name));
-  if(!$("#ptabsHost")) addHTML($("#peopleTbl"),"beforebegin",html`<div class="tabhost" id="ptabsHost"></div>`);   /* BL-316: the Tabs block */
-  drawTabs($("#ptabsHost"),{items:[["work","With work"],["none","Nothing assigned"]].map(([k,l])=>({id:k,label:l,count:T[k].length,data:{ptab:k}})),selected:shared.PTAB,
-    onSelect:k=>{ if(k===shared.PTAB) return; setPTab(k); renderPeople(); navWrite(false); },label:"People",className:"tabs",id:"ptabs",controls:"peopleTbl",wrap:true});
-  const th=(c,l,num)=>`<th class="${num?"num":""}" data-psort="${c}" aria-sort="${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?"ascending":"descending"):"none"}"><button type="button" class="thsort">${l}${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?" ▲":" ▼"):""}</button></th>`;   /* v1.9.5 (UI audit P1-7): aria-sort stays on the column header; the control is a real button inside it */
-  const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
-    <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
-  $("#peopleTbl").setAttribute("role","tabpanel");
-  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
-    ${raw(personCounts(x))}</tr>`)}</tbody></table>`); }
+/* ===== BL-138 (sprint-all-items), #248 (People page v2) =====
+   The People page is the home of the whole register: components/people/PeoplePage.jsx draws it (tabs Everyone, With work,
+   Nothing assigned, Needs attention; the register's columns; search, the filter, Add a person, edit and Remove from the
+   register). The tab is kept in the address (#people/<tab>) and remembered in this browser. The sort is shared.PSORT, which
+   the headings' click handler (settings.js, [data-psort]) flips; You are first on With work. Counts only (BL-56). */
+shared.PTAB=savedPeopleTab();
+export function setPTab(t){ setPeopleTab(t); }
+export function renderPeople(){ drawPeoplePage(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0148(){
-shared.PSORT=PSORTT[shared.PTAB];
-Object.assign(PSORTS,{dw:x=>x.dw.length,cl:x=>x.cl});
+shared.PSORT={col:"late",dir:"desc"};
 }
 /* ===== BL-190 (sprint-links) ===== the People list's figures open Work filtered to that person (every spelling of their name on
    the items counted, so aliases are included) and that kind: Open actions (status Open only, as All open lists them), Open RAID,
    Decisions waiting (they are the one asked) and Overdue (All items: their Open and Delayed actions and RAID items past due). A zero stays plain and is always written "0" (#190; never a dash). */
 export const ownersOf=L=>[...new Set(L.map(i=>i.o||i.by).filter(Boolean))];
 export const latesOf=x=>[...x.oa,...x.or].filter(i=>i.due&&i.due<TODAY);
-export function personCounts(x){ const nm=isMe(x.name)?"you":x.name, late=latesOf(x);
-  return `<td class="num">${countLink(`${plur(x.oo.length,"open action")} owned by ${nm}`,x.oo.length,"actions:open:",{o:ownersOf(x.oo)})}</td>`
-    +`<td class="num">${countLink(`${plur(x.or.length,"open RAID item")} owned by ${nm}`,x.or.length,"raid:open:",{o:ownersOf(x.or)})}</td>`
-    +`<td class="num">${countLink(`${plur(x.dw.length,"decision")} waiting on ${nm}`,x.dw.length,"decisions:pending:",{o:ownersOf(x.dw)})}</td>`
-    +`<td class="num ${x.late?"late":""}">${countLink(`${plur(late.length,"overdue item")} owned by ${nm}`,late.length,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(late)})}</td>`; }
 /* ===== end BL-190 (People) ===== */
-/* the address: #people is With work, #people/none Nothing assigned; go("people") with no tab keeps the one last used */
+/* the address: #people is Everyone, #people/work, #people/none and #people/att the other tabs; go("people") with no tab keeps the one last used */
 /* ===== end BL-138 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0150(){

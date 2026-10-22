@@ -95,8 +95,8 @@ class Page(LiveBrowserCase):
         self.assert_clean("panel", "New action")
         self.b.eval("closePanel()")
 
-    def test_review_and_intake_and_files_and_activity_and_people(self):
-        for v, root in (("review", "v-review"), ("inbox", "v-inbox"), ("files", "v-files"), ("activity", "v-activity"), ("people", "v-people")):
+    def test_intake_and_files_and_activity_and_people(self):
+        for v, root in (("intake-review", "v-intake-review"), ("files", "v-files"), ("activity", "v-activity"), ("people", "v-people")):   # #232 C2: Review and Intake are one page
             self.view(v)
             self.assert_clean(root, v)
 
@@ -138,10 +138,12 @@ class Page(LiveBrowserCase):
             self.assertRegex(cmd, r"\b(ABC|DEF)\b")                         # the command Alan can run keeps the code
         self.assertTrue(any("Example Programme" in t for t, _ in texts) or not texts)
 
-    def test_settings_projects_may_show_the_code_as_the_code(self):
-        self.b.eval("go('settings','projects')")
+    def test_the_project_settings_may_show_the_code_as_the_code(self):
+        # the Settings line: Settings › Projects is gone; a project's code is shown on its settings page
+        self.b.eval("go('psettings','ABC')")
+        self.b.wait("VIEW==='psettings'&&!!document.getElementById('psName')")
         self.b.pump(0.3)
-        self.assertRegex(self.b.eval("document.getElementById('settingsBody').innerText"), r"\bABC\b")        # where a code is defined, it is shown
+        self.assertRegex(self.b.eval("document.getElementById('v-psettings').innerText"), r"\bABC\b")        # where a code is defined, it is shown
 
 
 class Prints(unittest.TestCase):

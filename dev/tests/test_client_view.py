@@ -250,10 +250,19 @@ class ClientBrowser(LiveBrowserCase):
     def test_an_eye_hides_a_row_and_match_internal_copies_a_section(self):
         self.approve_internal("Quincebrook is on plan for the week.")   # v2.5.0: Match internal checks first; words like 'not for the client' are held
         self.open_view()
-        self.b.click("#v-reporting section[data-id=risks] .rs-eye")
-        self.assertTrue(self.b.eval("!!document.querySelector('#v-reporting section[data-id=risks] tr.hidrow')"))
+        eye, hid = "#v-reporting section[data-id=risks] .rs-eye", "!!document.querySelector('#v-reporting section[data-id=risks] tr.hidrow')"
+        self.b.wait(f"document.querySelector({json.dumps(eye)})?.getAttribute('aria-pressed')==='true'", 10)
+        for _ in range(3):   # the eye is a toggle: press again only if the press was lost to a redraw (still pressed, #152), never after it took
+            self.b.click(eye)
+            try:
+                self.b.wait(f"{hid} || document.querySelector({json.dumps(eye)})?.getAttribute('aria-pressed')==='false'", 3)
+                break
+            except TimeoutError:
+                self.assertEqual(self.b.eval(f"document.querySelector({json.dumps(eye)}).getAttribute('aria-pressed')"), "true")
+        self.b.wait(hid, 10)   # drawn by the next render, which a loaded runner can leave until after the click returns
         self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('#v-reporting section[data-id=risks] .wr-count').textContent"))
         self.b.click("#v-reporting section[data-id=risks] .rs-eye")                           # back: cells rebuilt from the client item
+        self.b.wait(f"!{hid}", 10)
         self.assertIn("Test licences are not yet ordered.", self.words("#v-reporting section[data-id=risks]"))
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
         self.b.click("[data-matchone='summary']")

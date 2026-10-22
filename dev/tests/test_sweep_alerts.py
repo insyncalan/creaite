@@ -349,7 +349,7 @@ class VipTests(unittest.TestCase):
 
 
 class VipPageTests(unittest.TestCase):
-    """BL-99: the VIP block opens Today's Needs attention, above the proposals; VIP proposals lead Review."""
+    """BL-99: the VIP block opens Today's Needs attention, above the proposals; VIP proposals lead Intake."""
 
     @classmethod
     def setUpClass(cls):
@@ -369,8 +369,8 @@ class VipPageTests(unittest.TestCase):
           const msg=document.querySelector('#tdList>li.td-message'), lis=[...document.querySelectorAll('#tdList>li')];   /* BL-319: the message is a row of To decide */
           out.first=[msg.className, msg.textContent.replace(/\\s+/g,' ').trim()]; out.second=(document.getElementById('tdQuiet')||{textContent:''}).textContent; out.order=document.getElementById('mineSec').compareDocumentPosition(msg);
           out.badge=document.getElementById('vipBadge').textContent; out.title=document.title;
-          go("review"); renderReview(); const rows=[...document.querySelectorAll('#reviewBody tr[data-n]')];
-          out.review=rows.map(r=>r.querySelector('td.title').textContent.replace(/\\s+/g,' ').trim().slice(0,40));
+          go("intake-review"); await new Promise(r=>setTimeout(r,300)); const rows=[...document.querySelectorAll('#v-intake-review tr.irprop')];   /* #232 C2: the Intake page's rows (the model puts a followed person's first) */
+          out.review=rows.map(r=>r.querySelector('.icttl').textContent.replace(/\\s+/g,' ').trim().slice(0,40));
           go("person","Mia Hale"); out.person=document.querySelector('#v-person h1').textContent;
           window.OUT=out;"""
         cls.out, cls.errors = chrome(v, probe, "vip-page")
@@ -394,8 +394,8 @@ class VipPageTests(unittest.TestCase):
         self.assertTrue(o["order"] & 4)                                                        # Your commitments (and the Intake line at its foot) come before the message card
         self.assertRegex(o["second"], r"^Intake: .*\d+ proposals? to approve")                  # #245: (the proposals' own order is Review's)
         self.assertIn("to approve", o["second"])                                               # #245: the proposals are counted in the quiet Intake line under Your commitments
-        self.assertEqual(o["badge"], "1")
-        self.assertTrue(o["title"].startswith("(1) "), o["title"])                          # BL-288: a plain count
+        self.assertEqual(o["badge"], "2")                                                      # #236: the message and the proposal row from the same person
+        self.assertTrue(o["title"].startswith("(2) "), o["title"])                          # BL-288: a plain count
         self.assertFalse(o["review"][0].startswith("VIP"), o["review"])                        # first, unlabelled
         self.assertIn("Confirm the go-live date", o["review"][0])
         self.assertNotIn("VIP", o["person"])

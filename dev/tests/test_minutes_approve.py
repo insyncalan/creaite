@@ -151,7 +151,7 @@ class Approve(Base):
         self.assertEqual(acts["ABC-A-002"]["status"], "Closed")
         self.assertEqual(acts["ABC-A-004"]["description"], "Book the UAT environment")
         self.assertEqual(acts["ABC-A-004"]["due_date"], "2026-10-16")
-        self.assertEqual(acts["ABC-A-004"]["source"], f"{FILED} — Action Items")
+        self.assertEqual(acts["ABC-A-004"]["source"], f"{FILED} — Actions")
         self.assertEqual(raid["ABC-005"]["type"], "Issue")
         self.assertEqual(decs["ABC-D-006"]["decision"], "Go-live stays on 20 November")
         self.assertEqual(decs["ABC-D-003"]["status"], "Pending")                # not ticked: waits
@@ -270,7 +270,7 @@ class Rows(Base):
         self.change({"op": "remove", "n": 2, "keep_line": True})
         rows = self.rows(self.doc(), "raid")
         self.assertEqual(rows[0], {"ref": None, "cells": {"type": "Issue", "description": "Test data isn't anonymised", "owner": ""},
-                                   "shown": True, "kept_line": True, "was": "@2"})
+                                   "shown": True, "kept_line": True, "was": "@2", "held": "", "does": "New issue"})
         self.assertTrue(self.change({"op": "restore", "n": 2})["ok"])
         rows = self.rows(self.doc(), "raid")
         self.assertEqual([x["ref"] for x in rows], ["@2", "@5"])

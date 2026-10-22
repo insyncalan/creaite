@@ -144,7 +144,8 @@ class Base(unittest.TestCase):
         self.addCleanup(setattr, report_doc, "logos", real_logos)
         # v2.5.3 (#259, K3): a client report's items are derived from the week's client-safe facts (report_doc.client_items); this
         # test has no tracker, so the facts are the fixture's, all of them, and the writer's own guards (client_safe_ids) are tested
-        for name, fake_fn in (("client_items", lambda code, fri: json.loads(json.dumps(ITEMS))), ("baseline", lambda code, on: None)):
+        # (2.6: client_items is also given base=)
+        for name, fake_fn in (("client_items", lambda code, fri, **_kw: json.loads(json.dumps(ITEMS))), ("baseline", lambda code, on: None)):
             self.addCleanup(setattr, report_doc, name, getattr(report_doc, name))
             setattr(report_doc, name, fake_fn)
         (self.tmp / "images").mkdir()
@@ -400,9 +401,10 @@ class Checks(Base):
         # live_server.py is left out: Jarvis applied the approved per-route body caps to it in the v2.4.0 guarded commit (Alan, 18-10-2026);
         # the Word writer itself never touches a guarded file
         guarded = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py")
-        r = subprocess.run(["git", "diff", "--name-only", "origin/v234-final", "HEAD"], cwd=REPO, capture_output=True, text=True)
+        # 2.6: the HOPD's approved guarded diffs are on the candidate (origin/v26-rc); anything on top of it is the Word writer's
+        r = subprocess.run(["git", "diff", "--name-only", "origin/v26-rc", "HEAD"], cwd=REPO, capture_output=True, text=True)
         if r.returncode != 0:
-            self.skipTest("git history for origin/v234-final isn't available here: check 9 NOT run")
+            self.skipTest("git history for origin/v26-rc isn't available here: check 9 NOT run")
         touched = [f for f in r.stdout.split() if f.startswith("system/scripts/") and Path(f).name in guarded]
         self.assertEqual(touched, [])
 

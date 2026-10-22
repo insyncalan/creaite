@@ -173,9 +173,9 @@ SCRIPT = r"""
   const wait=ms=>new Promise(r=>setTimeout(r,ms)), out={errors:[],opened:[],snacks:[]};
   try{
     await wait(300); openPath=p=>out.opened.push(p); snack=m=>out.snacks.push(m);
-    go("review"); await wait(100);
-    const r=REV.find(x=>x.kind==="draft"&&x.ref==="meeting"), tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`);
-    const b=tr.querySelector('[data-act="e"]'); out.button=(b.getAttribute("title")||"")+" "+(b.getAttribute("aria-label")||"")+" "+b.textContent;
+    const r=REV.find(x=>x.kind==="draft"&&x.ref==="meeting"); go("intake-review",r.n); await wait(100);   /* #232 C2: the Intake page's row (the meeting opens) */
+    const tr=document.querySelector(`#v-intake-review tr.irprop[data-irn="${r.n}"]`);
+    const b=tr.querySelector('[data-ira="edit"]'), ap=tr.querySelector('[data-ira="approve"]'); out.button=(ap.getAttribute("title")||"")+" "+(b.getAttribute("aria-label")||"");
     out.row=tr.textContent.replace(/\s+/g," "); const src=tr.querySelector("[data-openfile]"); out.source=src?src.dataset.openfile:null;
     b.click(); await wait(100);
     out.panel=document.querySelector("#panel").classList.contains("on");
@@ -193,7 +193,7 @@ LIVE_OPS = {**LIVE, "file_ops": [{"op": "copy", "from": "transcript", "to": TCOP
                                  {"op": "remove", "path": "inbox/catch-up.vtt"}]}
 ACTION = {"n": 1, "op": "new", "table": "actions", "decision": "approved", "match": "strong",
           "values": {"project": "ABC", "description": "Send the SOW", "owner": "Omar Ali",
-                     "source": f"{ABC}/minutes/2026-10-12 Catch up.docx — Action Items"}}
+                     "source": f"{ABC}/minutes/2026-10-12 Catch up.docx — Actions"}}
 
 
 class ApproveRefusedTests(Base):
@@ -291,7 +291,6 @@ class ApproveRefusedTests(Base):
         self.assertEqual(r["snacks"], ["No Word draft was made for these minutes: Reject them and process the meeting again"])
         self.assertEqual(r["edits"], 0)                                     # nothing saved, the row is still pending
         self.assertFalse(r["done"])
-        self.assertTrue(r["menuDisabled"])
         self.assertTrue(r["rejectOn"])
 
 
@@ -301,12 +300,11 @@ APPROVE_SCRIPT = r"""
   const wait=ms=>new Promise(r=>setTimeout(r,ms)), out={errors:[],snacks:[],edits:0};
   try{
     await wait(300); snack=m=>out.snacks.push(m); editProposal=async()=>{ out.edits++; };
-    go("review"); await wait(100);
-    const r=REV.find(x=>x.kind==="draft"&&x.ref==="meeting"), tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`);
-    const b=tr.querySelector('[data-act="a"]'); out.disabled=b.disabled; out.title=b.getAttribute("title")||"";
-    out.rejectOn=!tr.querySelector('[data-act="r"]').disabled;
-    await decide(r.n,"approved"); out.done=!!r.done;                       /* the keyboard and menu paths go through decide */
-    out.menuDisabled=!!cxReview(r,tr)[0].disabled;
+    const r=REV.find(x=>x.kind==="draft"&&x.ref==="meeting"); go("intake-review",r.n); await wait(100);   /* #232 C2: the Intake page's row (the meeting opens) */
+    const tr=document.querySelector(`#v-intake-review tr.irprop[data-irn="${r.n}"]`);
+    const b=tr.querySelector('[data-ira="approve"]'); out.disabled=b.disabled; out.title=b.getAttribute("title")||"";
+    out.rejectOn=!tr.querySelector('[data-ira="reject"]').disabled;
+    await decide(r.n,"approved"); out.done=!!r.done;                       /* the keyboard path goes through decide */
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre);
 })();

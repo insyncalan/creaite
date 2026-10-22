@@ -12,7 +12,7 @@ creaite's replies) used to keep their own https/mailto checks. Done when, in bot
 - an address that came through the HTML-escaped text ("&" as "&amp;") is judged as the address it is, not as an entity.
 
 Every other place that draws an address from mail, Teams or the register (the source line of an item, the VIP alert's "Open the
-message", the To decide rows, the prep page's sources, Settings › People's mailto, and the copy from the page back to Markdown) asks
+message", the To decide rows, the prep page's sources, a person's page's mailto, and the copy from the page back to Markdown) asks
 the same `linkUrl` (class CallSites), and a source-level guard (class NoBypass, no browser) fails when a new `href=` is built without
 `linkUrl`, `linkAnchor` or `sourceHref` unless it is one of the fixed internal addresses listed in INTERNAL_HREFS.
 """
@@ -159,13 +159,28 @@ class CallSites(LiveBrowserCase):
             self.assertEqual(r["a"][0]["text"], word)
             self.assertIn("not a web address", f("javascript:alert(1)")["text"])
 
-    def test_review_open_source_link(self):
-        for url in HOSTILE:
-            r = self.anchors("rvSrcLink({nodraft:false,src:%s})" % json.dumps(f"Email · From: A · Subject: S · Sent: 2026-10-01T09:00:00 · Link: {url}"))
-            with self.subTest(url=url):
-                self.assertEqual([a["href"] for a in r["a"]], [], "a refused address was drawn as a link")
-        r = self.anchors("rvSrcLink({nodraft:false,src:%s})" % json.dumps("Email · From: A · Subject: S · Sent: 2026-10-01T09:00:00 · Link: https://outlook.office.com/m/1"))
-        self.assertEqual([(a["href"], a["rel"]) for a in r["a"]], [("https://outlook.office.com/m/1", "noopener noreferrer")])
+    def test_intake_open_source_link(self):
+        """#232 C2: a proposal row's Open source on the Intake page (components/intakeReview/proposals.jsx SourceLine; the old Review row's
+        rvSrcLink went with that page). A refused address is no link; a good one opens in a new tab with the shared rel."""
+        b = self.b
+        n = b.eval("REV.find(r=>!r.done&&r.kind==='actions').n")
+        b.eval(f"go('intake-review', {n})")
+        b.wait(f"!!document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"] .icsrc')")
+
+        def links(src):
+            b.eval(f"REV.find(r=>r.n=={n}).src={json.dumps(src)}; irTick.value++")
+            b.pump(0.15)
+            return b.eval(f"(()=>{{ const e=document.querySelector('#v-intake-review tr.irprop[data-irn=\"{n}\"] .icsrc'); "
+                          "return {a:[...e.querySelectorAll('a')].map(a=>({href:a.getAttribute('href'),rel:a.getAttribute('rel'),target:a.getAttribute('target')}))}; })()")
+        try:
+            for url in HOSTILE:
+                r = links(f"Email · From: A · Subject: S · Sent: 2026-10-01T09:00:00 · Link: {url}")
+                with self.subTest(url=url):
+                    self.assertEqual([a["href"] for a in r["a"]], [], "a refused address was drawn as a link")
+            r = links("Email · From: A · Subject: S · Sent: 2026-10-01T09:00:00 · Link: https://outlook.office.com/m/1")
+            self.assertEqual([(a["href"], a["rel"], a["target"]) for a in r["a"]], [("https://outlook.office.com/m/1", "noopener noreferrer", "_blank")])
+        finally:
+            b.eval("go('today')")
 
     # the VIP alert's "Open the message" (settings.js alertPeekDraw)
     def test_the_alert_peek_open_the_message(self):
@@ -178,7 +193,7 @@ class CallSites(LiveBrowserCase):
         self.good(f)
         self.none(f)
 
-    # Settings › People: the register's mailbox
+    # a person's page: the register's mailbox (Settings › People's too, until the Settings line)
     def test_a_registers_mailbox_is_linked_only_when_it_is_one_mailbox(self):
         r = self.anchors('mailLink("sam@example.com")')
         self.assertEqual([(a["href"], a["rel"]) for a in r["a"]], [("mailto:sam@example.com", None)])     # a mailto opens the mail app: no rel

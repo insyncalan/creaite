@@ -180,8 +180,13 @@ class ProposeTests(unittest.TestCase):
         self.v.run("undo")                                                                           # the copy made once is undone once
         self.assertFalse((self.v.root / dst).exists())
         (self.v.root / dst).write_text("other content")                                              # a different file there: refused
-        self.stage_ops([{"op": "copy", "from": src, "to": dst}], "three")
-        self.assertIn("already exists; it is never overwritten", self.apply_fails())
+        # 2.6 (guard-small copy source): the copy is now refused when it is staged, not first at apply
+        before = self.staged()
+        r = self.p("stage", self.spec({"file_changes": {"title": "three", "file_ops": [{"op": "copy", "from": src, "to": dst}]}},
+                                      "three.json"), ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("already exists; it is never overwritten", r.stdout + r.stderr)
+        self.assertEqual(self.staged(), before)                                                      # nothing new staged
         self.assertEqual((self.v.root / dst).read_text(), "other content")
 
     def test_remove_and_mkdir_already_done_pass(self):

@@ -234,6 +234,26 @@ print(json.dumps(next((x for t in ('actions', 'decisions', 'raid', 'milestones')
         self.assertIsNotNone(want)
         self.assertEqual(got, want)
 
+    def test_k3_the_facts_are_read_once_per_call_chain(self):
+        """v2.6 review: a client report's facts (its approved week and its client-safe items) are read once for one call chain
+        (a snapshot's shaping: force_client_audience, then clean), not once per derive, and the result is the same."""
+        r = self.fresh()
+        got = self.py(f"""
+import copy, creaite_doc, report_doc, client_snapshot
+doc = json.loads({json.dumps(json.dumps(r['doc']))})
+calls = [0]
+real = report_doc.baseline
+def counted(*a, **k):
+    calls[0] += 1
+    return real(*a, **k)
+report_doc.baseline = counted
+shaped = client_snapshot.shaped(copy.deepcopy(doc))
+once = calls[0]
+again = client_snapshot.shaped(copy.deepcopy(doc))
+print(json.dumps([once, calls[0] - once, shaped == again, sorted(shaped.get('items') or {{}}) == sorted(again.get('items') or {{}})]))
+""")
+        self.assertEqual(got, [1, 1, True, True])
+
     # ── P16: item IDs and titles however written ──────────────────────────────────────────────────────────────────────────
     def findings_of(self, text):
         return self.py(f"import client_output\nprint(json.dumps(client_output.text_findings({{'project': 'ABC', 'sections': []}}, "

@@ -5,7 +5,8 @@ Run: python3 dev/tests/test_save_not_blocked.py
   staged proposal with an invalid approved item (a decision carrying `raised`, as Alan's Supplier checkpoint and Budget review)
   is left exactly as it was. Skips until live_server.py takes dev/proposals/280/live_server.py.diff.
 - Page (needs Google Chrome): when an older server applies everything and stops on those files, the message says it is not his
-  edit, names each blocking proposal by its meeting and date with every file, and offers Open in Review.
+  edit, names each blocking proposal by its meeting and date with every file, and offers Open in Intake (2.6: Review is the
+  Intake page, #232).
 """
 import json
 import os
@@ -178,15 +179,18 @@ class BlockedSaveWords(LiveBrowserCase):
         self.assertIn("Budget review (20-10-2026)", words)
         for f in STALE:
             self.assertIn(f, words)
-        self.assertIn("in Review", words)
+        self.assertIn("in Intake", words)
         (self.v.root / "system/staging/proposed-2026-10-19-0900-sweep.json").write_text(
             json.dumps({"created": "2026-10-19T09:00:00", "items": []}), encoding="utf-8")
         self.assertEqual(b.eval("(async()=>await proposalLabel('proposed-2026-10-19-0900-sweep.json'))()"),
                          "a proposal staged 19-10-2026")
         b.eval("reloadData()")
         b.wait("REV.some(x=>x.file==='proposed-2026-10-20-1757-3.json')", timeout=15)
-        b.eval(f"openBlockersInReview({json.dumps(list(STALE))})")
-        b.wait("shared.VIEW==='review'", timeout=10)
+        first = b.eval(f"REV.filter(x=>{json.dumps(list(STALE))}.includes(x.file)&&!x.done)[0].n")
+        b.eval(f"openBlockersInIntake({json.dumps(list(STALE))})")
+        b.wait("shared.VIEW==='intake-review'", timeout=10)
+        # its meeting is open on the page, with the blocking proposal's row shown (here the minutes: their items are approved)
+        b.wait(f"irOpen.value===irMeetingOf({first})&&!!document.querySelector('#v-intake-review tr.irprop[data-irn=\"{first}\"]')", timeout=10)
         self.assertEqual(b.errors, [])
 
 

@@ -4,13 +4,14 @@
    (P4's section `tags`: {ref: "transcript", turn, time}). A tag's click scrolls the transcript pane to what was said; ✕ on it
    (shown on hover or focus) takes the tag off. A check's words are underlined in the line. Edit, or a click on a line, opens
    the section in the sheet's Text (the one editor); Done goes back to the lines.
-   With the distributed version on, each line can be marked Internal only (kept in the record's layout, so it is saved with
-   the page). Each topic of Updates is a block with ctx.level, so Side by side keeps its heading level with its partner's.
+   #268: one version only, so no line is marked Internal only. The summary is edited where it stands (SummaryText).
+   Each topic of Updates is a block with ctx.level.
    Exported or read only: the lines alone, no tags, checks or controls. */
-import { useContext, useState } from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
+import { SheetEditor } from "../report/SheetText.jsx";
 import { Checked } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
-import { isInternal, mdLines, lineTag, toggleInternal } from "./minutesDoc.js";
+import { mdLines, lineTag } from "./minutesDoc.js";
 import { jumpTo } from "./TranscriptPane.jsx";
 
 /** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
@@ -31,25 +32,20 @@ export function TimeTag({ tag, onRemove }) {
   );
 }
 
-/** One line, with its flag, its checks underlined, its tag and its Internal only mark.
+/** One line, with its flag, its checks underlined and its tag.
     @param {{ctx: SectionCtx, line: Line, i: number, li: boolean, onEdit: () => void}} props */
 function TextLine({ ctx, line, i, li, onEdit }) {
   const m = useContext(MinutesCtx), s = ctx.section, live = ctx.editing && !ctx.exported;
   const tags = /** @type {TimeTag[]} */ (s.tags || []), tag = live ? lineTag(line, tags) : null;
   const checks = live && m ? m.checks.filter(c => c.section === s.id && c.line === i) : [];
-  const internal = m ? isInternal(m.doc, s.id, { text: line.text }) : false;
   const Tag = li ? "li" : "p";
   return (
-    <Tag class={`mnline${internal ? " internal" : ""}`} data-line={i}>
+    <Tag class="mnline" data-line={i}>
       {line.flag ? <b class="mnflag">{line.flag}</b> : null}
       {line.flag ? " " : null}
       {live ? <span class="mntext" onClick={e => { if (!(/** @type {HTMLElement} */ (e.target)).closest("button")) onEdit(); }}><Checked text={line.text} checks={checks} /></span>
         : <span>{line.text}</span>}
       {tag ? <TimeTag tag={tag} onRemove={() => ctx.update({ tags: tags.filter(t => t !== tag) }, "Time tag removed")} /> : null}
-      {live && m && m.distributed && s.type !== "header" ? (
-        <button type="button" class={`mnio${internal ? " on" : ""}`} aria-pressed={internal ? "true" : "false"}
-          aria-label={`Internal only: ${line.text.slice(0, 60)}`} onClick={() => m.setDoc(toggleInternal(m.doc, s.id, { text: line.text }), internal ? "Shown to attendees" : "Internal only")}>
-          Internal only</button>) : null}
     </Tag>
   );
 }
@@ -91,6 +87,36 @@ export function TextLines({ ctx }) {
         );
       })}
       {ctx.editing ? <button type="button" class="linkbtn mnedbtn" aria-label={`Edit ${s.heading}`} onClick={() => setEd(true)}>Edit</button> : null}
+    </div>
+  );
+}
+
+/** #268: the summary, edited where it stands in the one editor (Tiptap, with AI on selected text as elsewhere): every change is
+    kept on the page and saved by the sheet; a click away keeps it; Esc puts back the words it had when the editing began.
+    Show as exported, read only or filed: its lines. @param {{ctx: SectionCtx}} props */
+export function SummaryText({ ctx }) {
+  const m = useContext(MinutesCtx);
+  const s = ctx.section, [ver, setVer] = useState(0);
+  const start = useRef(/** @type {string|null} */ (null));
+  const box = useRef(/** @type {HTMLDivElement|null} */ (null));
+  if (!ctx.editing || ctx.exported || !m) return <TextLines ctx={ctx} />;
+  const text = String(s.text || "");
+  const checks = m.checks.map((c, n) => ({ ...c, n })).filter(c => c.section === s.id && c.line == null);
+  const ai = { place: "minutes", project: () => m.project, confidential: () => false, key: () => `minutes:${s.id}` };
+  return (
+    <div class="mnsum-ed" ref={box} data-mnsum=""
+      onFocusIn={() => { if (start.current == null) start.current = text; }}
+      onFocusOut={e => { const to = /** @type {Node|null} */ (e.relatedTarget); if (!to || !box.current || !box.current.contains(to)) start.current = null; }}
+      onKeyDownCapture={e => {
+        if (e.key !== "Escape" || start.current == null) return;
+        e.preventDefault(); e.stopPropagation();
+        const was = start.current;
+        start.current = null;
+        if (was !== text) ctx.update({ text: was }, "Summary put back");
+        setVer(x => x + 1);
+        const a = /** @type {HTMLElement|null} */ (document.activeElement); if (a && box.current && box.current.contains(a)) a.blur();
+      }}>
+      <SheetEditor key={ver} value={text} rich label={s.heading || "Summary"} ai={ai} checks={checks} onText={t => ctx.update({ text: t }, "Summary edited")} />
     </div>
   );
 }

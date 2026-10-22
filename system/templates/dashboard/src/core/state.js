@@ -46,7 +46,7 @@ export const shared = {
   ACTF: undefined,
   // settings: set where its `let` was
   HAND: undefined, MCREATED: undefined, MCREATEDOF: undefined, PKDONE: undefined, PKS: undefined, PKSEQ: undefined,
-  PSORT: undefined, SCAT: undefined, SETROW: undefined, SQ: undefined, WSNEW: undefined,
+  PSORT: undefined, SCAT: undefined, SSUB: undefined, SETROW: undefined, SQ: undefined, WSNEW: undefined,
   // ask: set where its `let` was
   AC: undefined, ASKCHAT: undefined, ASKQ: undefined, ASKSESSION: undefined, BUSY: undefined, CK: undefined,
   CKI: undefined, CKPICK: undefined, IMGURL: undefined, PIMG: undefined, QDECK: undefined, QNOW: undefined,

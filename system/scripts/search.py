@@ -579,7 +579,7 @@ def preview_for_run(rel, q=""):
 
 # ── Ask: what Claude reads first (BL-07) ───────────────────────────────────────
 
-HEADINGS = {"executive summary", "updates", "decisions", "action items", "open questions", "escalations",
+HEADINGS = {"executive summary", "updates", "decisions", "action items", "actions", "open questions", "escalations",
             "open questions / escalations", "risks, issues, assumptions & dependencies", "risks and issues", "next steps",
             "summary", "attendees", "agenda", "progress", "help needed"}
 

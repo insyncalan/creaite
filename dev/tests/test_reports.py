@@ -85,7 +85,7 @@ def populate(v):
         "# ABC — Example Programme\n\n## Brief\n\n- **Client / partner:** Example Client Ltd\n"
         "- **Client report rhythm:** weekly\n\n## Sensitivities\n\n- Budget overrun on phase one is being absorbed (Client-safe: no)\n\n"
         "## Current state\n\n_Rewritten weekly._\n\nBuild is two weeks behind.\n\n![Delivery plan](images/plan.png)\n")
-    src = f"{ABC}/minutes/2026-10-06 Steering.docx — Action Items"
+    src = f"{ABC}/minutes/2026-10-06 Steering.docx — Actions"
     v.propose("seed", [
         new("milestones", 1, project="ABC", name="UAT start", baseline_date="2026-10-20", forecast_date="2026-11-03",
             source="s"),

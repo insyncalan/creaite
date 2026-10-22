@@ -392,15 +392,23 @@ def rejected_reasons(con, project, days=None):
     return [{**dict(r), **texts[r["fingerprint"]]} for r in rows if r["fingerprint"] in texts]
 
 
+def _safe_resolved(rel_path, purpose):
+    """safe_path's real path and its stored form. v2.6 gate: a link swapped for a file while it is resolved raises OSError with the
+    full path on CPython 3.9.25 (its realpath); it is refused here in the relative path's words."""
+    try:
+        p = paths.resolve(rel_path).resolve()          # projects/… maps to the projects root when it is outside the vault (BL-85)
+        return p, paths.rel(p)
+    except ValueError:
+        raise Invalid(f"{purpose}: path is outside the vault ({rel_path!r})")
+    except OSError as e:
+        raise Invalid(f"{purpose}: {rel_path} changed while it was being checked ({type(e).__name__})") from None
+
+
 def safe_path(rel_path, purpose):
     """Resolve a vault-relative path and refuse anything outside the writable areas."""
     if not rel_path or Path(rel_path).is_absolute() or re.match(r"^[A-Za-z]:", rel_path):
         raise Invalid(f"{purpose}: path must be relative to the vault root ({rel_path!r})")
-    p = paths.resolve(rel_path).resolve()              # projects/… maps to the projects root when it is outside the vault (BL-85)
-    try:
-        r = paths.rel(p)
-    except ValueError:
-        raise Invalid(f"{purpose}: path is outside the vault ({rel_path!r})")
+    p, r = _safe_resolved(rel_path, purpose)
     if not any(p == base or base in p.parents for base in paths.allowed_roots()):
         raise Invalid(f"{purpose}: path is outside the vault and the projects folder ({rel_path!r})")
     if not r.startswith(WRITABLE):
@@ -1404,19 +1412,182 @@ def op_source(fop, blk):
     return src
 
 
+COPY_SOURCE_AREAS = (("inbox",), ("system", "staging", "drafts"), ("system", "staging", "uploads"),   # #269 delta: where a
+                     (paths.LOGICAL,))                     # copy may read (uploads: Current state images, BL-63; never uploads/ask)
+
+
+def _copy_bases():
+    """(the folder a stored path is built on, its real path) for the vault and, if set, the projects root; the longest first."""
+    bases = [(paths.ROOT, Path(os.path.realpath(paths.ROOT)))]
+    if paths.external():
+        bases.append((paths.projects_root(), Path(os.path.realpath(paths.projects_root()))))
+    return sorted(bases, key=lambda b: -len(b[0].parts))
+
+
+def _apfs_folded(parts):
+    """Path parts as the file system compares them on macOS (APFS: case-insensitive, normalisation-insensitive)."""
+    import unicodedata
+    return tuple(unicodedata.normalize("NFC", x).casefold() for x in parts)
+
+
+class CopySource:
+    """#269 round 2 delta (LOW 1, round 2): a copy's source, open for reading (a context manager), or Invalid. The stored path
+    is relative, with no `..` part and no NUL, in inbox/, system/staging/drafts/ or uploads/ (never uploads/ask/) or the
+    projects folder (COPY_SOURCE_AREAS). It is opened one folder at a time from the real vault or projects root with O_NOFOLLOW
+    at every step (a folder that is or becomes a link fails), and must be a regular file. check_name (on opening, and again
+    after every read) requires the name, looked up again in the folder held open, to be this very file with exactly one link
+    and unchanged since it was opened: a second hard link (perhaps to a file outside), or a name swapped away and back, is
+    refused, however the swap is timed."""
+    CHUNK = 1 << 20
+
+    def __init__(self, stored):
+        self.stored, self.fd, self.dirfd = stored, None, None
+        s = str(stored or "").replace("\\", "/")
+        if not s or "\x00" in s:
+            raise Invalid(f"copy: source not found ({stored!r})")
+        if Path(s).is_absolute() or re.match(r"^[A-Za-z]:", s) or ".." in s.split("/"):
+            raise Invalid(f"copy: the source must be a path in the vault or the projects folder, with no '..' ({stored!r})")
+        top = Path(s).parts
+        ask = _apfs_folded(top[:4]) == ("system", "staging", "uploads", "ask")
+        if ask or not any(top[:len(a)] == a and len(top) > len(a) for a in COPY_SOURCE_AREAS):
+            raise Invalid(f"copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({stored!r})")
+        p = paths.resolve(s)
+        base = next(((b, real) for b, real in _copy_bases() if b in p.parents), None)
+        if base is None:
+            raise Invalid(f"copy: the source is outside the vault and the projects folder ({stored!r})")
+        self._open(p.relative_to(base[0]).parts, base[1])
+
+    def _open(self, parts, base):
+        """Walk to the file from `base` (no link on the way), open it and check it; Invalid otherwise. A folder on the way that
+        is ask creaite's uploads/ask/ (by device and inode: any spelling of its name) is refused."""
+        try:
+            ask = os.stat(paths.ASK_UPLOADS, follow_symlinks=False)
+            ask = (ask.st_dev, ask.st_ino)
+        except OSError:
+            ask = None
+        try:
+            self.dirfd = os.open(str(base), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            for part in parts[:-1]:
+                nxt = os.open(part, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW, dir_fd=self.dirfd)
+                os.close(self.dirfd)
+                self.dirfd = nxt
+                st = os.fstat(nxt)
+                if ask and (st.st_dev, st.st_ino) == ask:
+                    self.refuse("ask creaite's chat images are never filed")
+            self.name = parts[-1]
+            self.fd = os.open(self.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0), dir_fd=self.dirfd)
+            self.st = os.fstat(self.fd)
+        except OSError as e:
+            self.close()
+            raise Invalid(f"copy: {self._why(e)} ({self.stored})") from None
+        import stat
+        if not stat.S_ISREG(self.st.st_mode):
+            self.refuse("the source is not a regular file")
+        self.check_name()
+
+    @staticmethod
+    def _why(e):
+        import errno
+        return {errno.ENOENT: "source not found", errno.ENAMETOOLONG: "a name in the source's path is too long",
+                errno.ELOOP: "the source is a link, or is under one", errno.ENOTDIR: "the source is a link, or is under one",
+                errno.ENXIO: "the source is not a regular file", errno.EOPNOTSUPP: "the source is not a regular file",
+                errno.ENODEV: "the source is not a regular file"}.get(e.errno, f"the source can't be opened ({type(e).__name__})")
+
+    def refuse(self, why):
+        """Close, and refuse the copy with `why`."""
+        self.close()
+        raise Invalid(f"copy: {why} ({self.stored}); only a plain file is filed")
+
+    def check_name(self):
+        """The name is still this file, with one link, unchanged since it was opened; else refused (and closed)."""
+        try:
+            now, st = os.stat(self.name, dir_fd=self.dirfd, follow_symlinks=False), os.fstat(self.fd)
+        except OSError:
+            return self.refuse("the source changed while it was read")
+        if (now.st_dev, now.st_ino) != (st.st_dev, st.st_ino) or st.st_nlink != 1 or now.st_nlink != 1:
+            self.refuse("the source has another hard link, or was swapped while it was read")
+        if (st.st_size, st.st_mtime_ns) != (self.st.st_size, self.st.st_mtime_ns):
+            self.refuse("the source changed while it was read")
+
+    def chunks(self):
+        """The file's bytes from the start, a chunk at a time (never the whole file in memory)."""
+        os.lseek(self.fd, 0, os.SEEK_SET)
+        while True:
+            c = os.read(self.fd, self.CHUNK)
+            if not c:
+                return
+            yield c
+
+    def close(self):
+        """Close the file and its folder (twice is harmless)."""
+        for fd in (self.fd, self.dirfd):
+            if fd is not None:
+                os.close(fd)
+        self.fd = self.dirfd = None
+
+    def __enter__(self):
+        """The open source."""
+        return self
+
+    def __exit__(self, *exc):
+        """Closed on the way out, whatever happened."""
+        self.close()
+
+
+open_copy_source = CopySource
+
+
+def _source_sha(src):
+    """The SHA-256 of an open CopySource's bytes, read from its descriptor (never the path), its name checked again after."""
+    h = hashlib.sha256()
+    for c in src.chunks():
+        h.update(c)
+    src.check_name()
+    return h.hexdigest()
+
+
+def _by_others_source_problem(src, fop, blk):
+    """#232 E1 on guard-small: why the open source of someone else's minutes can't be filed, or None: in inbox/ or a matched
+    project's minutes folder, staged with a checksum, and its bytes (read from the checked descriptor) the staged ones."""
+    rel = op_source(fop, blk)
+    why = by_others_area_problem(rel, blk, fop.get("src_sha256"))
+    if why:
+        return why
+    return None if _source_sha(src) == fop.get("src_sha256") else f"{rel}: the file changed since it was staged"
+
+
+def _check_copy(fop, blk):
+    """check_file_op for a copy: the source is a plain file where a copy may read (guard-small's open_copy_source: no link on the
+    way, one link, a regular file), and for someone else's minutes (#232 E1) in inbox/ or a matched minutes folder with the staged
+    bytes; then the destination: never a folder, never a different file, and for someone else's minutes only into a matched
+    project's minutes folder."""
+    by_others = by_others_op(fop, blk)
+    with open_copy_source(op_source(fop, blk)) as src:     # #269 delta (LOW 1): in inbox, drafts or a project, no link on the way
+        why = by_others and _by_others_source_problem(src, fop, blk)
+        if why:
+            raise Invalid(f"copy: {why}")
+        dst = safe_path(fop.get("to"), "copy")
+        if dst.is_dir():
+            raise Invalid(f"copy: {paths.rel(dst)} is a folder")
+        if dst.exists() and not _dst_is_same(dst, src, fop, blk):     # #232 E1: said now, not halfway through an apply
+            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
+    why = by_others and by_others_dest_problem(dst, blk)
+    if why:
+        raise Invalid(f"copy: {why}")
+
+
 def check_file_op(fop, blk):
     """Check one file operation of a proposal can be done safely (source exists, every path relative and in a
     writable area); raises Invalid.
     """
     op = fop.get("op")
     if op == "copy":
-        src = op_source(fop, blk)
-        if not src or not paths.resolve(src).is_file():
-            raise Invalid(f"copy: source not found ({src})")
-        if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
-            raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
-        safe_path(fop.get("to"), "copy")
+        _check_copy(fop, blk)
     elif op == "remove":
+        if by_others_op(fop, blk):
+            why = by_others_file_problem(fop.get("path"), blk, fop.get("src_sha256"))
+            if why:
+                raise Invalid(f"remove: {why}")
         safe_path(fop.get("path"), "remove")
     elif op == "mkdir":
         safe_path(fop.get("path"), "mkdir")
@@ -1503,15 +1674,18 @@ def set_status_line(docx, text):
     return True
 
 
-def stash(apply_id, src):
-    """Keep a copy of a file in system/backups/files/<apply_id>/ so undo can restore it."""
+def stash(apply_id, src, data=None):
+    """Keep a copy of a file in system/backups/files/<apply_id>/ so undo can restore it (`data`: the bytes already read and checked)."""
     dest = paths.BACKUPS / "files" / str(apply_id) / paths.rel(src)
     dest.parent.mkdir(parents=True, exist_ok=True)
     n = 1
     while dest.exists():
         dest = dest.with_name(f"{dest.stem}.{n}{dest.suffix}")
         n += 1
-    shutil.copy2(src, dest)
+    if data is None:
+        shutil.copy2(src, dest)
+    else:
+        dest.write_bytes(data)
     return paths.rel(dest)
 
 
@@ -1599,24 +1773,156 @@ def stamp_draft(draft, text, on):
 
 
 def _op_copy(apply_id, fop, blk, done):
-    src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
-    if os.path.islink(src) or not src.is_file():   # #269 round 2 (L-B): checked again here, so a swap after the check isn't filed
-        raise Invalid(f"copy: the source is a link or not a plain file ({op_source(fop, blk)}); only a plain file is filed")
-    if dst.exists():
-        if file_hash(dst) == file_hash(src):
-            return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
-        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dst)
-    done.append({"op": "copy", "to": paths.rel(dst), "hash": file_hash(dst)})
+    dst = safe_path(fop["to"], "copy")
+    if dst.is_dir():
+        raise Invalid(f"copy: {paths.rel(dst)} is a folder")
+    by_others = by_others_op(fop, blk)
+    with open_copy_source(op_source(fop, blk)) as src:   # #269 round 2 (L-B), delta LOW 1: checked again, read from what was checked
+        why = by_others and (by_others_area_problem(op_source(fop, blk), blk, fop.get("src_sha256"))
+                             or by_others_dest_problem(dst, blk))
+        if why:
+            raise Invalid(f"copy: {why}")
+        if dst.exists():
+            if by_others and _source_sha(src) != fop.get("src_sha256"):
+                raise Invalid(f"copy: {op_source(fop, blk)}: the file changed since it was staged")
+            if _dst_is_same(dst, src, fop, blk):
+                return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
+            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        digest = _copy_into(src, dst, fop.get("src_sha256") if by_others else None)   # #232 E1: only the staged bytes
+    done.append({"op": "copy", "to": paths.rel(dst), "hash": digest})
+
+
+def _copy_exclusive(tmp, dst, st):
+    """#269 delta round 3: put the temporary copy's bytes into a new dst created with O_CREAT|O_EXCL (a file that appeared in the
+    meantime is never overwritten: Invalid), mode and times by descriptor; a failure removes the dst it made."""
+    import stat
+    try:
+        out = os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    except FileExistsError:
+        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
+    try:
+        with open(tmp, "rb") as f, os.fdopen(out, "wb") as o:
+            shutil.copyfileobj(f, o, CopySource.CHUNK)
+            o.flush()
+            os.fchmod(o.fileno(), stat.S_IMODE(st.st_mode))
+            os.utime(o.fileno(), ns=(st.st_atime_ns, st.st_mtime_ns))
+    except BaseException:
+        os.unlink(dst)
+        raise
+
+
+def _copy_into(src, dst, sha=None):
+    """#269 delta: the source's bytes into a new temporary file beside dst (mode and times set on its descriptor), then put in
+    place without ever replacing a file (a hard link, or a rename after one more look); a failure leaves nothing behind."""
+    import stat
+    import tempfile
+    fd, tmp = tempfile.mkstemp(dir=dst.parent, prefix=".creaite-copy-")
+    try:
+        h = hashlib.sha256()
+        with os.fdopen(fd, "wb") as out:
+            for c in src.chunks():
+                h.update(c)
+                out.write(c)
+            out.flush()
+            src.check_name()                     # still the file that was checked: one link, unchanged
+            if sha is not None and h.hexdigest() != sha:     # #232 E1: someone else's minutes are filed only as staged
+                raise Invalid(f"copy: {src.stored}: the file changed since it was staged")
+            os.fchmod(out.fileno(), stat.S_IMODE(src.st.st_mode))
+            os.utime(out.fileno(), ns=(src.st.st_atime_ns, src.st.st_mtime_ns))
+        try:
+            os.link(tmp, dst)                    # EEXIST if a file appeared meanwhile: never overwritten
+        except FileExistsError:
+            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
+        except OSError:                          # no hard links here (FAT and the like): a new file, made only if none is there
+            _copy_exclusive(tmp, dst, src.st)
+        os.unlink(tmp)
+        return h.hexdigest()
+    except BaseException:
+        if os.path.lexists(tmp):
+            os.unlink(tmp)
+        raise
 
 
 def _op_remove(apply_id, fop, blk, done):
     p = safe_path(fop["path"], "remove")
+    if by_others_op(fop, blk):
+        return _remove_checked(apply_id, fop, blk, done)
     if p.exists():
         kept = stash(apply_id, p)
         p.unlink()
         done.append({"op": "remove", "path": paths.rel(p), "kept": kept})
+
+
+def _open_inbox_folder(rel):
+    """An open file descriptor for the folder of inbox file `rel`, reached from the vault root one folder at a time, each opened
+    without following a link: a link anywhere on the way (inbox/ itself, or a folder in it) is refused, and a rename or a link put
+    on the path afterwards changes nothing, because the descriptor is the folder that was opened. Raises Invalid."""
+    parts = rel.split("/")
+    if parts[0] != "inbox" or len(parts) < 2 or any(x in ("", ".", "..") for x in parts):
+        raise Invalid(f"remove: {rel} is not a file in inbox/")
+    flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(os.path.realpath(paths.ROOT), os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in parts[:-1]:
+            nxt = os.open(part, flags, dir_fd=fd)
+            os.close(fd)
+            fd = nxt
+    except OSError as e:
+        os.close(fd)
+        raise Invalid(f"remove: {rel}: its folder is not a plain folder ({type(e).__name__})") from None
+    return fd
+
+
+def _remove_checked(apply_id, fop, blk, done):
+    """#232 E1: remove the inbox copy of someone else's minutes through the open folder (_open_inbox_folder): the entry is opened
+    there without following a link (and without blocking on a pipe), checked (regular file, one name, the staged checksum), backed
+    up from the bytes read, moved to a private name in that folder, found to be the very file that was read (same inode), and
+    unlinked from there. So a link put in place of the file, or of inbox/ or a folder in it, or a different file of the same name
+    put there at any moment, removes nothing but the staged file; a different file caught by the move is put back."""
+    rel = fop["path"]
+    dfd = _open_inbox_folder(rel)
+    name = rel.rsplit("/", 1)[1]
+    try:
+        try:
+            st, data = _read_regular(name, dir_fd=dfd)
+        except FileNotFoundError:
+            return                                                 # already gone
+        except OSError as e:
+            raise Invalid(f"remove: {rel} is not a regular file ({type(e).__name__})") from None
+        if st.st_nlink > 1 or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):
+            raise Invalid(f"remove: {rel}: the file changed since it was staged")
+        kept = stash(apply_id, paths.resolve(rel), data)
+        _unlink_same(dfd, name, st, rel)
+        done.append({"op": "remove", "path": rel, "kept": kept})
+    finally:
+        os.close(dfd)
+
+
+def _unlink_same(dfd, name, st, rel):
+    """Unlink entry `name` of open folder `dfd` only if it is still the file `st` describes: it is first moved to a private name, so
+    nothing can swap it between the check and the unlink. A different file found there is put back WITHOUT replacing anything (a
+    hard link, then the private name unlinked), so a file that has appeared at the name in the meantime is never overwritten; if it
+    can't be put back it is left under the private name and the error says where. The private name carries no part of the original
+    name, which could push a long name over the file-name limit."""
+    import stat
+    folder = rel.rsplit("/", 1)[0]
+    private = f".creaite-removing-{os.getpid()}-{time.monotonic_ns()}"
+    try:
+        os.rename(name, private, src_dir_fd=dfd, dst_dir_fd=dfd)
+        now = os.stat(private, dir_fd=dfd, follow_symlinks=False)
+    except OSError as e:
+        raise Invalid(f"remove: {rel} changed while it was being removed ({type(e).__name__})") from None
+    if (now.st_dev, now.st_ino) == (st.st_dev, st.st_ino) and stat.S_ISREG(now.st_mode):
+        os.unlink(private, dir_fd=dfd)
+        return
+    try:
+        os.link(private, name, src_dir_fd=dfd, dst_dir_fd=dfd, follow_symlinks=False)
+    except OSError as e:
+        raise Invalid(f"remove: {rel}: a different file was put there and the name is taken again ({type(e).__name__}); "
+                      f"the different file is left in {folder}/ as {private}") from None
+    os.unlink(private, dir_fd=dfd)
+    raise Invalid(f"remove: {rel}: a different file was put there; it is left alone")
 
 
 def _op_mkdir(apply_id, fop, blk, done):
@@ -2003,7 +2309,7 @@ def in_notes_folder(rel, links=False, archived=False):
     (an engagement not in the register too; never the skeleton or _Templates). links: also a file whose other hard link is in a
     notes folder (a write changes both; a copy reads it). archived: also an engagement's _Archive/<notes folder> (deleted notes)
     and an archived engagement's notes folder (_Archive/<engagement>/<notes folder>), for a copy's source."""
-    if not isinstance(rel, str) or not rel:
+    if not isinstance(rel, str) or not rel or "\x00" in rel:     # #269 delta: a NUL is no path (os calls raise ValueError)
         return False
     try:
         p = paths.resolve(rel, archived=False)
@@ -2282,19 +2588,150 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
 
 # ── Apply ─────────────────────────────────────────────────────────────────────
 
+# ===== #232 E1: someone else's minutes (cx-minutes "as": "minutes", Find work items) are filed with their items =====
+BY_OTHERS = "minutes by others"
+
+
+def by_others_waiting(data, blk):
+    """True for a block of someone else's minutes while no item of its proposal is approved. Its minutes_decision is "approved"
+    from staging (there are no minutes to approve), so without this any apply that reached the proposal copied the file, removed
+    the inbox copy and wrote processed.txt; now the file is filed only with at least one approved item, and never when every
+    item is rejected."""
+    return (blk.get("kind") == BY_OTHERS and not blk.get("applied")
+            and not any(i.get("decision") == "approved" for i in data.get("items", [])))
+
+
+def by_others_unwritten(data, blk):
+    """True for a block of someone else's minutes when none of its proposal's approved items has been written (each approved one
+    was held, or needs a project): the file waits for the apply that writes one. Any apply counts, not only this one: an undo
+    that skipped an item ("changed since") leaves it approved and applied while the block goes back to approved, and the next apply
+    must still file the minutes. Run after the items, in the same apply."""
+    return blk.get("kind") == BY_OTHERS and not any(
+        i.get("applied") and i.get("decision") == "approved" for i in data.get("items", []))
+
+
+def by_others_op(fop, blk):
+    """Whether a file operation is one of someone else's minutes: its block says so, or it carries the checksum minutes.py stages
+    (so a hand-written proposal that drops `kind` still gets the same checks; one that drops both gets today's rules, as every
+    other block does)."""
+    return blk.get("kind") == BY_OTHERS or bool(fop.get("src_sha256"))
+
+
+def _minutes_folders(blk):
+    """The real paths of each matched project's minutes folder."""
+    out = []
+    for code in blk.get("projects") or []:
+        try:
+            out.append(os.path.realpath(paths.folder(code, "minutes")))
+        except (LookupError, OSError):
+            continue      # a project with no folder has no minutes folder to file from
+    return out
+
+
+def _minutes_areas(blk):
+    """The real paths of the folders someone else's minutes may be filed from: inbox/ and each matched project's minutes folder."""
+    return [os.path.realpath(paths.INBOX), *_minutes_folders(blk)]
+
+
+def by_others_dest_problem(dst, blk):
+    """Why a copy of someone else's minutes may not go to `dst`, or None: only into a matched project's minutes folder."""
+    real = os.path.realpath(dst)
+    if any(real.startswith(f.rstrip(os.sep) + os.sep) for f in _minutes_folders(blk)):
+        return None
+    return f"{paths.rel(dst)} is not in the matched project's minutes folder"
+
+
+class NotRegular(OSError):
+    """An entry that is not a regular file (a pipe, a device, a folder) where a file of someone else's minutes should be."""
+
+
+def _read_regular(path, dir_fd=None):
+    """(stat, bytes) of a regular file, opened without following a link and without blocking on a pipe, the type checked on the open
+    file before it is read. The one way the checks, the copy and the remove read someone else's minutes (a plain read_bytes or
+    file_hash would block for ever on a pipe put there, or follow a link). Raises NotRegular, or the OSError the open gave."""
+    import stat
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0), dir_fd=dir_fd)
+    with os.fdopen(fd, "rb") as f:
+        st = os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode):
+            raise NotRegular(0, "not a regular file")
+        return st, f.read()
+
+
+def _sha_regular(path):
+    """The SHA-256 of a regular file read through _read_regular, or None when it can't be (a pipe, a link, gone)."""
+    try:
+        return hashlib.sha256(_read_regular(path)[1]).hexdigest()
+    except OSError:
+        return None
+
+
+def _dst_is_same(dst, src, fop, blk):
+    """Whether the existing file `dst` is the file being filed: by the staged checksum for someone else's minutes, else by the
+    bytes of the open source `src` (a CopySource: its descriptor, never the path). `dst` is read without following a link or
+    blocking on a pipe."""
+    have = _sha_regular(dst)
+    if have is None:
+        return False
+    if by_others_op(fop, blk):
+        return have == fop.get("src_sha256")
+    return have == _source_sha(src)
+
+
+def by_others_area_problem(rel, blk, sha):
+    """Why someone else's minutes at `rel` are not where they may be filed from, or None: the real path in inbox/ (itself not a
+    link) or a matched project's minutes folder, and a checksum staged."""
+    p = paths.resolve(rel)
+    if os.path.islink(paths.INBOX) or not any(os.path.realpath(p).startswith(a.rstrip(os.sep) + os.sep) for a in _minutes_areas(blk)):
+        return f"{rel} is not in inbox/ or the project's minutes folder"
+    if not sha:
+        return f"{rel} was staged without a checksum"
+    return None
+
+
+def by_others_file_problem(rel, blk, sha):
+    """Why the file `rel` of a staged block of someone else's minutes can't be copied or removed, or None. It must be a regular
+    file (lstat: a link is refused, whatever it points at) with no other name, whose real path is in inbox/ (itself not a link)
+    or a matched project's minutes folder, and whose content is the one staged (`src_sha256`). safe_path resolves links, so
+    without this a link put in inbox/ after staging is filed as the minutes and its TARGET is what the remove deletes."""
+    import stat
+    p = paths.resolve(rel)
+    try:
+        st = os.lstat(p)
+    except OSError:
+        return f"{rel} is not there"
+    if not stat.S_ISREG(st.st_mode):
+        return f"{rel} is not a regular file (a link is never filed or removed)"
+    if st.st_nlink > 1:
+        return f"{rel} has another name (a hard link)"
+    why = by_others_area_problem(rel, blk, sha)
+    if why:
+        return why
+    try:
+        got = hashlib.sha256(_read_regular(p)[1]).hexdigest()
+    except NotRegular:
+        return f"{rel} is not a regular file (a link is never filed or removed)"
+    except OSError as e:
+        return f"{rel} can't be read as a regular file ({type(e).__name__})"
+    if got != sha:
+        return f"{rel}: the file changed since it was staged"
+    return None
+
+
 def decided(data):
     """(items, blocks) of a proposal decided but not yet applied."""
     items = [i for i in data.get("items", []) if not i.get("applied")
              and i.get("decision") in ("approved", "rejected")]
-    blks = [(b, f) for b, f in blocks(data) if not b.get("applied") and b.get(f) in ("approved", "rejected")]
+    blks = [(b, f) for b, f in blocks(data) if not b.get("applied") and b.get(f) in ("approved", "rejected")
+            and not by_others_waiting(data, b)]
     return items, blks
 
 
 def finished(data):
-    """Whether every item and block of a proposal has been applied."""
+    """Whether every item and block of a proposal has been applied (a waiting block of someone else's minutes never will be)."""
     if any(not i.get("applied") for i in data.get("items", [])):
         return False
-    return all(b.get("applied") for b, _ in blocks(data))
+    return all(b.get("applied") or by_others_waiting(data, b) for b, _ in blocks(data))
 
 
 # ===== BL-323: the OneDrive copy is the day's closed zip (backup.py); its retention is Tidy up's =====
@@ -2336,12 +2773,15 @@ def backup_db(tag):
 # apply, one COMMIT, or a ROLLBACK that also reverses the file operations. Messages and their order are unchanged (pinned).
 def cmd_apply(args):
     """Write the decided items and file operations of the proposals in `args` (none: every proposal in staging) to
-    tracker.db under one apply_id, after a dry run and a backup. All or nothing; a recode is applied on its own
-    (BL-111). Then moves finished proposals to applied/ and rebuilds the dashboard, Excel export and search index.
+    tracker.db under one apply_id, after a dry run and a backup, in one transaction; a recode is applied on its own (BL-111).
+    #280: an invalid item, or minutes or a report whose file to be filed has gone, is held in Review and named, and the rest is
+    written; a problem with a file block (or the other checks in _validate_work) still stops it, before anything is written.
+    Then moves finished proposals to applied/ and rebuilds the dashboard, Excel export and search index.
     """
     work = _load_work(args)
     if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
         work = _skip_card_leftovers(work)
+        work = _skip_by_others_problems(work)
     work = _hold_missing_sources(work)  # #280: a proposal whose file to be filed has gone is held in Review, never a blocker
     if not work:
         print("Nothing to apply: no decided items.")
@@ -2350,7 +2790,7 @@ def cmd_apply(args):
     if work is None:
         return 1
     con = connect()
-    blocked, held = _validate_work(con, work)     # dry run first: if any approved item is invalid, nothing is written
+    blocked, held = _validate_work(con, work)     # dry run first: an invalid item is held in Review (#280); a blocker stops it
     if blocked:
         _report_blocked(work, blocked)
         return 1
@@ -2380,6 +2820,14 @@ def cmd_apply(args):
         return 1
     _finish_apply(work, apply_id, summary)
     return 0
+
+
+def track_problems(p, data):
+    """#275: an approved item of draft minutes that Alan crossed or left with neither in their Track column is never written, by any
+    path (a stale page, a proposal edited by hand): the apply stops, the item goes back to pending, so it is in Review again, and the
+    message says how to clear it. A pending item never stops it; a record that can't be read does (minutes_record.track_apply_problems)."""
+    import minutes_record
+    return minutes_record.track_apply_problems(p.name, data)
 
 
 def _load_work(args):
@@ -2425,6 +2873,7 @@ def _validate_work(con, work):
         blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
         blocked += client_draft_problems(p, data)      # v2.5.1 (#239 step 3): a client Word draft only as its check passed
+        blocked += track_problems(p, data)             # #275: never an approved item crossed or left with neither in the minutes
     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
         blocked += _rejection_problems(con, p, data)
     return blocked, held
@@ -2485,6 +2934,40 @@ def card_move_problems(p, data):
     return out
 
 
+def by_others_problem(data, claimed):
+    """Why a staged proposal of someone else's minutes can't be filed now (a destination taken by a different file, a link or
+    changed file, a copy made by another proposal in this apply), or None. claimed: {destination: checksum} of the proposals kept."""
+    for blk, field in blocks(data):
+        if blk.get("kind") != BY_OTHERS or blk.get("applied") or by_others_waiting(data, blk):
+            continue
+        for fop in selected_ops(blk, field):
+            try:
+                check_file_op(fop, blk)
+                if fop.get("op") == "copy":
+                    to = paths.rel(safe_path(fop["to"], "copy"))
+                    same = _folded(to)            # one file on macOS whatever its case or normalisation ("Vendor call", "Vendor Call")
+                    if claimed.get(same, fop.get("src_sha256")) != fop.get("src_sha256"):
+                        raise Invalid(f"copy: {to} is taken by a different file in this apply")
+                    claimed[same] = fop.get("src_sha256")
+            except Invalid as e:
+                return str(e)
+    return None
+
+
+def _skip_by_others_problems(work):
+    """A full apply leaves in staging, with a line saying why, a proposal of someone else's minutes whose file can't be filed, so
+    one bad file never refuses the whole queue (a named apply still stops with the problem)."""
+    keep, claimed = [], {}
+    for p, data in work:
+        why = by_others_problem(data, claimed)
+        if why:
+            debuglog.warn("tracker", f"apply: left {p.name} in staging: {debuglog.rule(why)}")
+            print(f"Left in staging, not applied: {p.name}: {why}.")
+        else:
+            keep.append((p, data))
+    return keep
+
+
 def _skip_card_leftovers(work):
     """#124 F3: a full apply (no names) leaves out a proposal with a card-only move and no marker (an Approve that stopped
     before its apply finished left it in staging), so the rest still applies. A proposal named on the command line is refused
@@ -2536,7 +3019,7 @@ def _hold_missing_sources(work):
 def _file_op_problems(p, data, written):
     problems = []
     for blk, field in blocks(data):
-        if blk.get(field) in ("approved", "rejected") and not blk.get("applied"):
+        if blk.get(field) in ("approved", "rejected") and not blk.get("applied") and not by_others_waiting(data, blk):
             for fop in selected_ops(blk, field):
                 try:
                     check_file_op(fop, blk)
@@ -2736,7 +3219,8 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
     proposal file (#124 F3)."""
     processed = []
     for blk, field in blocks(data):
-        if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
+        if blk.get("applied") or blk.get(field) not in ("approved", "rejected") or by_others_waiting(data, blk) \
+                or by_others_unwritten(data, blk):
             continue
         ops = selected_ops(blk, field)
         run_file_ops(apply_id, blk, field, ops, file_records, data, prop)
@@ -2778,8 +3262,9 @@ def _finish_apply(work, apply_id, summary):
             save(p, data)
     pending = sum(1 for p in paths.STAGING.glob("proposed-*.json")
                   for i in load(p).get("items", []) if not i.get("applied"))
+    held = f"held {summary['held']}, " if summary["held"] else ""      # #280 follow-up: "held 0" said nothing was held
     print(f"Apply {apply_id}: written {summary['written']}, filed {summary['filed']}, "
-          f"rejected {summary['rejected']}, held {summary['held']}, {pending} still pending.")
+          f"rejected {summary['rejected']}, {held}{pending} still pending.")
     by_table = {}
     for _, d in work:
         for i in d.get("items", []):
@@ -2989,7 +3474,8 @@ def _return_proposals(proposals, apply_id, later, report):
         for blk, field in blocks(data):
             if blk.get("applied") == apply_id:
                 blk.pop("applied", None)
-                blk[field] = "pending"
+                # #232 E1: someone else's minutes have no minutes to approve: approved from staging, so a re-apply files them again
+                blk[field] = "approved" if blk.get("kind") == BY_OTHERS else "pending"
         save(p, data)
         if p.parent == paths.APPLIED:
             p.replace(paths.STAGING / name)
@@ -3304,7 +3790,7 @@ def migrate_workstreams(con):
         raise
     if added:
         print(f"Workstreams added from items and settings ({len(added)}): {', '.join(added)}. Leads and keywords are "
-              "yours to fill (Settings › Workstreams or cx-edit).")
+              "yours to fill (each project's settings › Workstreams, or cx-edit).")
 
 
 def cmd_migrate():

@@ -1,0 +1,125 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index e8777877..a923e885 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -669,14 +669,17 @@ def marked_sessions():
+         return set()
+ 
+ 
+-def start_run(run, mode, outside, session=None, files=None):
++def start_run(run, mode, outside, session=None, files=None, as_minutes=None):
+     """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
+-    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
++    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage. #232 E1:
++    `as_minutes`, the ones of them Alan pressed Find work items on (someone else's minutes): those are staged only as
++    "as": "minutes", and the others only as a transcript."""
+     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
+     with _RunLock():                                             # #264 round 2 (L1): never between a hook's read and its write
+         _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside,
+                                "marked": marked, "session": session,
+                                **({"files": [str(f) for f in files]} if files is not None else {}),
++                               **({"files_as_minutes": [str(f) for f in as_minutes or ()]} if files is not None else {}),
+                                **(_process_start() if mode == "process" else {})})
+ 
+ 
+@@ -2048,6 +2051,15 @@ def process_files():
+     return {f for f in data["files"] if isinstance(f, str)}
+ 
+ 
++def process_minutes_files():
++    """#232 E1: the Intake paths of this Process run that Alan pressed Find work items on (run.json "files_as_minutes": only the
++    server writes it), each also one of the run's files; none when the record isn't this hook's Process run (fail closed)."""
++    data = _process_record()
++    if not data or not isinstance(data.get("files_as_minutes"), list):
++        return set()
++    return {f for f in data["files_as_minutes"] if isinstance(f, str)} & process_files()
++
++
+ def process_reach_problem(tool, inp):
+     """Why a Process run may not read where this call reads, or None (#264 round 2, review L3): Read, Grep, Glob, LS and a
+     script's path arguments stay in the vault and the projects folder, never the home folder's other files. Fails closed."""
+@@ -2167,32 +2179,77 @@ def _runs_proposals():
+             continue
+         if isinstance(m, dict) and isinstance(m.get("transcript"), str) and m["transcript"] in files:
+             out.append((Path(os.path.realpath(p)), m))
++        elif (isinstance(m, dict) and m.get("kind") == "minutes by others" and isinstance(m.get("source_file"), str)
++              and m["source_file"] in process_minutes_files()):       # #232 E1: someone else's minutes, by their source file
++            out.append((Path(os.path.realpath(p)), m))
+     return out
+ 
+ 
+ def _process_stage_problem(words):
+     """Why `minutes.py stage` is refused in a Process run, or None: a spec in drafts for one of the run's files, no note, and a
+-    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes)."""
++    Word draft only from drafts, one this run made (never another flow's draft, which would be filed as these minutes). #232
++    E1: a spec with "as" is someone else's minutes (_process_minutes_stage_problem)."""
++    data, why = _process_stage_spec(words)
++    if why:
++        return why
++    if isinstance(data, dict) and "as" in data:          # #232 E1: someone else's minutes (Find work items)
++        return _process_minutes_stage_problem(data)
++    return _process_transcript_stage_problem(data)
++
++
++def _process_stage_spec(words):
++    """(the meeting spec `minutes.py stage` names, None) when it is a .json directly in drafts and can be read, else (None,
++    why)."""
+     spec = _in_drafts(words[1], ".json") if len(words) == 2 else None
+     if spec is None:
+-        return "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
++        return None, "Process stages only a meeting spec directly in system/staging/drafts/: `minutes.py stage <that .json>`"
+     try:
+-        data = json.loads(spec.read_text(encoding="utf-8"))
++        return json.loads(spec.read_text(encoding="utf-8")), None
+     except (OSError, ValueError):
+-        return "the meeting spec can't be read"
++        return None, "the meeting spec can't be read"
++
++
++def _process_transcript_stage_problem(data):
++    """Why a Process run's spec for a transcript is refused, or None: its "transcript" one of the run's files (never one Alan
++    pressed Find work items on, #232 E1), no note, and a Word draft only one this run filled (_process_draft_problem)."""
++    if isinstance(data, dict) and isinstance(data.get("transcript"), str) and data["transcript"] in process_minutes_files():
++        return ("Alan pressed Find work items on that file: it is someone else's minutes, staged with \"as\": \"minutes\" "
++                "and \"file\", never as a transcript")
+     if isinstance(data, dict) and not isinstance(data.get("transcript"), str):
+         return "the meeting spec's \"transcript\" must be one of the Intake files Alan pressed Process on, as a path"
+     if not isinstance(data, dict) or data.get("note") or data.get("transcript") not in process_files():
+         return ("Process stages only the Intake files Alan pressed Process on: the spec's \"transcript\" must be one of "
+                 "them, exactly as listed, and it can't stage a note")
+-    draft = data.get("draft")
+-    if draft is not None and (not isinstance(draft, str) or _in_drafts(draft, ".docx") is None):
++    return _process_draft_problem(data.get("draft"))
++
++
++def _process_draft_problem(draft):
++    """Why a spec's Word draft is refused in a Process run, or None: none, or a .docx directly in drafts that this run filled
++    (never another draft waiting in drafts, or a report)."""
++    if draft is None:
++        return None
++    if not isinstance(draft, str) or _in_drafts(draft, ".docx") is None:
+         return "a Word draft named in the spec must be a .docx directly in system/staging/drafts/ (it is filed on approval)"
+-    if draft is not None and (not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx"))):
++    if not _runs_own(_in_drafts(draft, ".docx")) or is_report_file(_in_drafts(draft, ".docx")):
+         return "a Word draft named in the spec must be one this run filled, never another draft waiting in drafts"
+     return None
+ 
+ 
++def _process_minutes_stage_problem(data):
++    """#232 E1: why a Process run's spec for someone else's minutes is refused, or None: "as" is "minutes", "file" is one of
++    the run's files Alan pressed Find work items on (exactly as listed), and none of "draft", "minutes", "transcript" or
++    "note" (a transcript is never staged this way, BL-260; minutes.py refuses the same, this is the guard's own check)."""
++    if data.get("as") != "minutes":
++        return "Process stages someone else's minutes only with \"as\": \"minutes\""
++    if any(k in data for k in ("draft", "minutes", "transcript", "note")):
++        return ("someone else's minutes are staged with \"as\": \"minutes\" and \"file\" only: no \"draft\", "
++                "\"minutes\", \"transcript\" or \"note\"")
++    if not isinstance(data.get("file"), str) or data["file"] not in process_minutes_files():
++        return ("Process stages as someone else's minutes only the Intake files Alan pressed Find work items on: the spec's "
++                "\"file\" must be one of them, exactly as listed")
++    return None
++
++
+ def _has_image(value):
+     """True when a values file asks for a picture anywhere ("image" or "images" in any entry)."""
+     if isinstance(value, dict):

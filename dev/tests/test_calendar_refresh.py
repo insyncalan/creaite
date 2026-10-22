@@ -639,6 +639,22 @@ class SweepCalendarSave(unittest.TestCase):
                 self.assertIn("The reply held no meetings; kept the saved calendar.", r.stdout)
                 self.assertEqual(self.cal.read_text(), kept)
 
+    def test_a_genuinely_empty_diary_is_saved(self):
+        """v2.6 review: a reply that names every day from today to the window's end, each empty, is a diary emptied (the
+        meetings were cancelled), so it is saved; a reply that leaves out a day with saved meetings is still refused."""
+        from datetime import timedelta
+        from test_dashboard import today
+        self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
+        kept = self.cal.read_text()
+        window = [(today() + timedelta(days=n)).isoformat() for n in range(8)]
+        r = self.save({d: [] for d in window if d != self.tomorrow})
+        self.assertEqual(r.returncode, 1, r.stdout)                      # tomorrow, which has a meeting, left out: refused
+        self.assertEqual(self.cal.read_text(), kept)
+        r = self.save({d: [] for d in window})
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("Calendar saved: 0 meetings", r.stdout)
+        self.assertEqual(self.held().get(self.tomorrow, []), [])
+
     def test_an_empty_reply_saves_when_nothing_ahead_is_saved(self):
         """L4: with no meeting today or later in the saved calendar, an empty week is saved as it is."""
         r = self.save({})
@@ -688,6 +704,23 @@ class SweepCalendarSave(unittest.TestCase):
         self.assertEqual(list(json.loads(kept)["checked"]), ["ev-ok"])
         for secret in ("passcode", "1234", "pwd", "x" * 50):
             self.assertNotIn(secret, kept)
+
+    def test_transcripts_record_takes_real_start_and_end_values(self):
+        """v2.6 review: start and end as the sweep writes them (ISO from the transcript URL or the event, or "YYYY-MM-DD HH:MM"
+        with a space) are recorded; a start or end that isn't a date or time (text, a dial-in number) is still refused."""
+        day = self.today
+        self.assertEqual(self.save({day: [self.meeting(id="ev-a", start="00:00", end="00:01"),
+                                          self.meeting(id="ev-b", start="00:02", end="00:03")]}).returncode, 0)
+        good = {"id": "ev-a", "online": True, "count": 1, "error": None,
+                "uri": f"meeting-transcript:///events/b64joinurl?start={day}T08:00:00Z&end={day}T09:00:00Z"}
+        ok = [dict(good, start=f"{day} 08:00", end=f"{day} 09:00"),
+              dict(good, id="ev-b", start=f"{day}T08:00:00.0000000", end=f"{day}T09:00:00Z")]
+        bad = [dict(good, id="ev-text", start="Join with passcode 1234"), dict(good, id="ev-dial", end="+44 20 7946 0000")]
+        facts = self.v.root / FACTS
+        facts.write_text(json.dumps({"results": [*ok, *bad]}))
+        out = json.loads(self.v.run("transcripts", "record", str(facts), script="sweep.py").stdout)
+        self.assertEqual(out["recorded"], {"ev-a": "available", "ev-b": "available"})
+        self.assertEqual(out["refused"], ["ev-text", "ev-dial"])
 
 
 if __name__ == "__main__":

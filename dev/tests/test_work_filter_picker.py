@@ -168,7 +168,7 @@ class Picker(LiveBrowserCase):
     def test_the_picker_search_the_f_key_and_keyboard(self):
         b = self.open_work()
         b.click("#v-work h1")
-        b.key("f")
+        b.key("F", 8)  # #288: Shift+F (F is Files)
         b.wait("document.getElementById('moreMenu').classList.contains('on') && document.activeElement.id==='fpq'")
         self.assertEqual(b.eval("document.getElementById('moreMenu').getAttribute('role')"), "dialog")
         self.assertEqual(b.eval("document.querySelector('#moreMenu .fplist').getAttribute('role')"), "listbox")

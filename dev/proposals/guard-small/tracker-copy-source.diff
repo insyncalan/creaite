@@ -1,0 +1,234 @@
+--- system/scripts/tracker.py
++++ system/scripts/tracker.py
+@@ -1404,6 +1404,131 @@ def op_source(fop, blk):
+     return src
+ 
+ 
++COPY_SOURCE_AREAS = (("inbox",), ("system", "staging", "drafts"), ("system", "staging", "uploads"),   # #269 delta: where a
++                     (paths.LOGICAL,))                     # copy may read (uploads: Current state images, BL-63; never uploads/ask)
++
++
++def _copy_bases():
++    """(the folder a stored path is built on, its real path) for the vault and, if set, the projects root; the longest first."""
++    bases = [(paths.ROOT, Path(os.path.realpath(paths.ROOT)))]
++    if paths.external():
++        bases.append((paths.projects_root(), Path(os.path.realpath(paths.projects_root()))))
++    return sorted(bases, key=lambda b: -len(b[0].parts))
++
++
++def _apfs_folded(parts):
++    """Path parts as the file system compares them on macOS (APFS: case-insensitive, normalisation-insensitive)."""
++    import unicodedata
++    return tuple(unicodedata.normalize("NFC", x).casefold() for x in parts)
++
++
++class CopySource:
++    """#269 round 2 delta (LOW 1, round 2): a copy's source, open for reading (a context manager), or Invalid. The stored path
++    is relative, with no `..` part and no NUL, in inbox/, system/staging/drafts/ or uploads/ (never uploads/ask/) or the
++    projects folder (COPY_SOURCE_AREAS). It is opened one folder at a time from the real vault or projects root with O_NOFOLLOW
++    at every step (a folder that is or becomes a link fails), and must be a regular file. check_name (on opening, and again
++    after every read) requires the name, looked up again in the folder held open, to be this very file with exactly one link
++    and unchanged since it was opened: a second hard link (perhaps to a file outside), or a name swapped away and back, is
++    refused, however the swap is timed."""
++    CHUNK = 1 << 20
++
++    def __init__(self, stored):
++        self.stored, self.fd, self.dirfd = stored, None, None
++        s = str(stored or "").replace("\\", "/")
++        if not s or "\x00" in s:
++            raise Invalid(f"copy: source not found ({stored!r})")
++        if Path(s).is_absolute() or re.match(r"^[A-Za-z]:", s) or ".." in s.split("/"):
++            raise Invalid(f"copy: the source must be a path in the vault or the projects folder, with no '..' ({stored!r})")
++        top = Path(s).parts
++        ask = _apfs_folded(top[:4]) == ("system", "staging", "uploads", "ask")
++        if ask or not any(top[:len(a)] == a and len(top) > len(a) for a in COPY_SOURCE_AREAS):
++            raise Invalid(f"copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({stored!r})")
++        p = paths.resolve(s)
++        base = next(((b, real) for b, real in _copy_bases() if b in p.parents), None)
++        if base is None:
++            raise Invalid(f"copy: the source is outside the vault and the projects folder ({stored!r})")
++        self._open(p.relative_to(base[0]).parts, base[1])
++
++    def _open(self, parts, base):
++        """Walk to the file from `base` (no link on the way), open it and check it; Invalid otherwise. A folder on the way that
++        is ask creaite's uploads/ask/ (by device and inode: any spelling of its name) is refused."""
++        try:
++            ask = os.stat(paths.ASK_UPLOADS, follow_symlinks=False)
++            ask = (ask.st_dev, ask.st_ino)
++        except OSError:
++            ask = None
++        try:
++            self.dirfd = os.open(str(base), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
++            for part in parts[:-1]:
++                nxt = os.open(part, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW, dir_fd=self.dirfd)
++                os.close(self.dirfd)
++                self.dirfd = nxt
++                st = os.fstat(nxt)
++                if ask and (st.st_dev, st.st_ino) == ask:
++                    self.refuse("ask creaite's chat images are never filed")
++            self.name = parts[-1]
++            self.fd = os.open(self.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0), dir_fd=self.dirfd)
++            self.st = os.fstat(self.fd)
++        except OSError as e:
++            self.close()
++            raise Invalid(f"copy: {self._why(e)} ({self.stored})") from None
++        import stat
++        if not stat.S_ISREG(self.st.st_mode):
++            self.refuse("the source is not a regular file")
++        self.check_name()
++
++    @staticmethod
++    def _why(e):
++        import errno
++        return {errno.ENOENT: "source not found", errno.ENAMETOOLONG: "a name in the source's path is too long",
++                errno.ELOOP: "the source is a link, or is under one", errno.ENOTDIR: "the source is a link, or is under one",
++                errno.ENXIO: "the source is not a regular file", errno.EOPNOTSUPP: "the source is not a regular file",
++                errno.ENODEV: "the source is not a regular file"}.get(e.errno, f"the source can't be opened ({type(e).__name__})")
++
++    def refuse(self, why):
++        """Close, and refuse the copy with `why`."""
++        self.close()
++        raise Invalid(f"copy: {why} ({self.stored}); only a plain file is filed")
++
++    def check_name(self):
++        """The name is still this file, with one link, unchanged since it was opened; else refused (and closed)."""
++        try:
++            now, st = os.stat(self.name, dir_fd=self.dirfd, follow_symlinks=False), os.fstat(self.fd)
++        except OSError:
++            return self.refuse("the source changed while it was read")
++        if (now.st_dev, now.st_ino) != (st.st_dev, st.st_ino) or st.st_nlink != 1 or now.st_nlink != 1:
++            self.refuse("the source has another hard link, or was swapped while it was read")
++        if (st.st_size, st.st_mtime_ns) != (self.st.st_size, self.st.st_mtime_ns):
++            self.refuse("the source changed while it was read")
++
++    def chunks(self):
++        """The file's bytes from the start, a chunk at a time (never the whole file in memory)."""
++        os.lseek(self.fd, 0, os.SEEK_SET)
++        while True:
++            c = os.read(self.fd, self.CHUNK)
++            if not c:
++                return
++            yield c
++
++    def close(self):
++        """Close the file and its folder (twice is harmless)."""
++        for fd in (self.fd, self.dirfd):
++            if fd is not None:
++                os.close(fd)
++        self.fd = self.dirfd = None
++
++    def __enter__(self):
++        """The open source."""
++        return self
++
++    def __exit__(self, *exc):
++        """Closed on the way out, whatever happened."""
++        self.close()
++
++
++open_copy_source = CopySource
++
++
+ def check_file_op(fop, blk):
+     """Check one file operation of a proposal can be done safely (source exists, every path relative and in a
+     writable area); raises Invalid.
+@@ -1411,10 +1536,7 @@ def check_file_op(fop, blk):
+     op = fop.get("op")
+     if op == "copy":
+         src = op_source(fop, blk)
+-        if not src or not paths.resolve(src).is_file():
+-            raise Invalid(f"copy: source not found ({src})")
+-        if os.path.islink(paths.resolve(src)):     # #269 round 2 (L-B): only a plain file is filed, never what a link points at
+-            raise Invalid(f"copy: the source is a link ({src}); only a plain file is filed")
++        open_copy_source(src).close()              # #269 delta (LOW 1): in inbox, drafts or a project, no link on the way
+         safe_path(fop.get("to"), "copy")
+     elif op == "remove":
+         safe_path(fop.get("path"), "remove")
+@@ -1599,16 +1721,68 @@ def stamp_draft(draft, text, on):
+ 
+ 
+ def _op_copy(apply_id, fop, blk, done):
+-    src, dst = paths.resolve(op_source(fop, blk)), safe_path(fop["to"], "copy")
+-    if os.path.islink(src) or not src.is_file():   # #269 round 2 (L-B): checked again here, so a swap after the check isn't filed
+-        raise Invalid(f"copy: the source is a link or not a plain file ({op_source(fop, blk)}); only a plain file is filed")
+-    if dst.exists():
+-        if file_hash(dst) == file_hash(src):
+-            return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
+-        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
+-    dst.parent.mkdir(parents=True, exist_ok=True)
+-    shutil.copy2(src, dst)
+-    done.append({"op": "copy", "to": paths.rel(dst), "hash": file_hash(dst)})
++    dst = safe_path(fop["to"], "copy")
++    with open_copy_source(op_source(fop, blk)) as src:   # #269 round 2 (L-B), delta LOW 1: checked again, read from what was checked
++        if dst.exists():
++            h = hashlib.sha256()
++            for c in src.chunks():
++                h.update(c)
++            src.check_name()
++            if file_hash(dst) == h.hexdigest():
++                return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
++            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
++        dst.parent.mkdir(parents=True, exist_ok=True)
++        digest = _copy_into(src, dst)
++    done.append({"op": "copy", "to": paths.rel(dst), "hash": digest})
++
++
++def _copy_exclusive(tmp, dst, st):
++    """#269 delta round 3: put the temporary copy's bytes into a new dst created with O_CREAT|O_EXCL (a file that appeared in the
++    meantime is never overwritten: Invalid), mode and times by descriptor; a failure removes the dst it made."""
++    import stat
++    try:
++        out = os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
++    except FileExistsError:
++        raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
++    try:
++        with open(tmp, "rb") as f, os.fdopen(out, "wb") as o:
++            shutil.copyfileobj(f, o, CopySource.CHUNK)
++            o.flush()
++            os.fchmod(o.fileno(), stat.S_IMODE(st.st_mode))
++            os.utime(o.fileno(), ns=(st.st_atime_ns, st.st_mtime_ns))
++    except BaseException:
++        os.unlink(dst)
++        raise
++
++
++def _copy_into(src, dst):
++    """#269 delta: the source's bytes into a new temporary file beside dst (mode and times set on its descriptor), then put in
++    place without ever replacing a file (a hard link, or a rename after one more look); a failure leaves nothing behind."""
++    import stat
++    import tempfile
++    fd, tmp = tempfile.mkstemp(dir=dst.parent, prefix=".creaite-copy-")
++    try:
++        h = hashlib.sha256()
++        with os.fdopen(fd, "wb") as out:
++            for c in src.chunks():
++                h.update(c)
++                out.write(c)
++            out.flush()
++            src.check_name()                     # still the file that was checked: one link, unchanged
++            os.fchmod(out.fileno(), stat.S_IMODE(src.st.st_mode))
++            os.utime(out.fileno(), ns=(src.st.st_atime_ns, src.st.st_mtime_ns))
++        try:
++            os.link(tmp, dst)                    # EEXIST if a file appeared meanwhile: never overwritten
++        except FileExistsError:
++            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten") from None
++        except OSError:                          # no hard links here (FAT and the like): a new file, made only if none is there
++            _copy_exclusive(tmp, dst, src.st)
++        os.unlink(tmp)
++        return h.hexdigest()
++    except BaseException:
++        if os.path.lexists(tmp):
++            os.unlink(tmp)
++        raise
+ 
+ 
+ def _op_remove(apply_id, fop, blk, done):
+@@ -2003,7 +2177,7 @@ def in_notes_folder(rel, links=False, archived=False):
+     (an engagement not in the register too; never the skeleton or _Templates). links: also a file whose other hard link is in a
+     notes folder (a write changes both; a copy reads it). archived: also an engagement's _Archive/<notes folder> (deleted notes)
+     and an archived engagement's notes folder (_Archive/<engagement>/<notes folder>), for a copy's source."""
+-    if not isinstance(rel, str) or not rel:
++    if not isinstance(rel, str) or not rel or "\x00" in rel:     # #269 delta: a NUL is no path (os calls raise ValueError)
+         return False
+     try:
+         p = paths.resolve(rel, archived=False)

@@ -4,22 +4,20 @@
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0122-after-bl-158-theme.js, 0123-keyboard.js */
 import { closeChat, openChat, openCk } from "../ask.js";
 import { openCapture } from "../components/notes/CaptureDrawer.jsx";
-import { REV } from "./data.js";
-import { $, $$ } from "./dom.js";
+import { $ } from "./dom.js";
 import { closeCal } from "./fields.js";
 import { go } from "./nav.js";
 import { closeHelpPanel, helpOutsidePress, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
 import { helpFocusSearch } from "../help.js";
 import { copied, MAC, START_CMD } from "./page.js";
+import { railGo } from "../rail.js";
 import { snack } from "./server.js";
 import { shared } from "./state.js";
-import { openProposal } from "../panel.js";
 import { closePanel } from "../projects.js";
-import { CHK, decide, isMin, renderReview, RHL, rjKey315, rvSyncChk, toggleGroup } from "../review.js";
 import { dayKey } from "../today.js";
-import { HL, hlClear, hlKey, openDisp, rvOnly, rvPaint } from "../work.js";
+import { HL, hlClear, hlKey, openDisp } from "../work.js";
 /* click outside closes ask creaite and the detail panel — never while editing */
-export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";   /* #121: the link form and the field's corner button sit outside the peek and must not close it */   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
+export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";   /* #121: the link form and the field's corner button sit outside the peek and must not close it */   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0122's place) */
 export function bootCopyCommand(){
 /* copy the start command */
@@ -37,6 +35,14 @@ document.addEventListener("mousedown",e=>{
     closePanel(); } },true);
 }
 /* ======================= keyboard ======================= */
+/** #288: one test for "a dialog or a popup is open", for every single-key shortcut: an open dialog element, the calendar, the ? panel,
+    an open peek (editing or not) or ask creaite, a peek's pop-up, or any menu, list, picker or dialog box that is showing (Display, the funnel, the
+    sidebar's More, a cell's list, the link form, the note drawer). */
+export const POPUPS='[role=menu],[role=listbox],[role=dialog],.ddmenu,.combo-list,.cal,.pkpop,.linkpop';
+export function popupOpen(){ if(document.querySelector("dialog[open]")||shared.CAL||shared.EDITING||shared.PKPOP||helpPanelOpen()||$("#panel")?.classList.contains("on")||$("#chat")?.classList.contains("on")) return true;   /* an open peek or ask creaite counts too (Esc closes them first) */
+  return [...document.querySelectorAll(POPUPS)].some(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden"); }
+/** #288: one key per page, no modifier: the sidebar's button for each (its data-v), opened the way the sidebar opens it. */
+export const PAGE_KEYS={t:"today",p:"projects",w:"work",i:"review",f:"files",a:"activity",s:"settings",r:"reports",e:"people"};
 export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable||!!a.closest?.('.ddmenu [role="option"]')); };   /* BL-316: an option of a filter list takes keys, as its tick box did */
 
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0123's place) */
@@ -46,21 +52,18 @@ document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }   /* #122: ⌘K is the palette, Shift or not; inside a rich editor ⌘⇧K is the link form, caught first (components/EditorBar.jsx) */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
   if(e.key==="Escape"){ if(shared.CAL){ closeCal(); return; } if(document.querySelector("dialog:modal")) return;   /* a modal dialog takes Esc itself (#cmdk, #boardDlg, #llDlg): the peek behind it stays; a calendar open inside it closes first */ if(helpPanelOpen()){ closeHelpPanel(); return; }   /* #158: the ? panel closes first, and focus goes back */ const pk=$("#panel").classList.contains("on");   /* #161: with a peek open, one Esc clears the highlight and closes the peek when the highlight is only the row the peek shows (or empty); with two or more rows highlighted the first Esc clears the selection and the peek stays */
-  if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ const one=HL.size===1&&(!shared.CUR||shared.CUR.mode!=="record"||HL.has(shared.CUR.id)); hlClear(); if(pk&&one) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&(!pk||(RHL.size<=1&&CHK.size<=1))){ RHL.clear(); CHK.clear(); renderReview(); if(pk) closePanel(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
+  if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ const one=HL.size===1&&(!shared.CUR||shared.CUR.mode!=="record"||HL.has(shared.CUR.id)); hlClear(); if(pk&&one) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
   if(e.key==="/"){ e.preventDefault(); if(shared.VIEW==="help"){ helpFocusSearch(); return; } openChat(); return; }   /* #158: in Help, / is the search box */
   if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
-  if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
+  if(e.key==="F"&&e.shiftKey&&(shared.VIEW==="work"||shared.VIEW==="mine")&&!popupOpen()){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: Shift+F opens the field picker (#288: F is Files) */
+  if(e.key==="F"&&e.shiftKey&&shared.VIEW==="people"&&!popupOpen()){ const b=$("#plFBtn"); if(b){ e.preventDefault(); b.click(); } return; }   /* #288: and People's filters, as its funnel's tip says */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
   if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
-  if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */
-  /* BL-176 (sprint-peek): no E to edit the open item: the peek is always editable. Review keeps its own E below */
-  if(shared.VIEW==="review"){ const trs=$$("#reviewBody tr[data-n]"); if(!trs.length) return; shared.RSEL=Math.max(0,Math.min(shared.RSEL,trs.length-1));   /* BL-133: a cursor past the end after a re-render */
-    if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("button,a,input,select,textarea,[role=menu]")) return;   /* a focused control does its own job */ if(e.key==="j"){ shared.RSEL=Math.min(shared.RSEL+1,trs.length-1); renderReview(); } else if(e.key==="k"){ shared.RSEL=Math.max(shared.RSEL-1,0); renderReview(); }
-    else if(e.key==="Enter"){ e.preventDefault(); const n=+trs[shared.RSEL].dataset.n; rvOnly(n); openProposal(n); rvPaint(); }
-    else if(e.key===" "){ e.preventDefault(); const n=+trs[shared.RSEL].dataset.n, r=REV.find(x=>x.n===n); if(r&&!r.done){ RHL.has(n)?(RHL.delete(n),CHK.delete(n)):(RHL.add(n),r.indiv||CHK.add(n)); rvPaint(); } }
-    else if(["a","r","x","e"].includes(e.key)){ const n=+trs[shared.RSEL].dataset.n, r=REV.find(x=>x.n===n); if(e.key==="e"){ e.preventDefault(); openProposal(n); return; } if(r.done) return; if(e.key==="a") decide(n,"approved"); if(e.key==="r"){ e.preventDefault(); rjKey315(); }   /* BL-315: R opens the reasons menu (minutes, reports and file changes are rejected as before) */ if(e.key==="x"&&isMin(r)){ toggleGroup(r,trs[shared.RSEL].dataset.g); return; } if(e.key==="x"){ RHL.has(n)?RHL.delete(n):RHL.add(n); rvSyncChk(); renderReview(); } } }   /* BL-133: X is Space: any proposed item can be selected */
+  if(!e.shiftKey&&!e.repeat&&PAGE_KEYS[e.key.toLowerCase()]&&!(shared.VIEW==="intake-review"&&/^[ar]$/i.test(e.key))&&!popupOpen()){ e.preventDefault(); if(shared.VIEW==="today"&&e.key.toLowerCase()==="t") return; go(railGo(PAGE_KEYS[e.key.toLowerCase()])); return; }   /* #288: T P W I F A S R E (T on Today is back to today, above; on Intake A and R stay its approve and reject) */
+  if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter opens (E is People since #288) */
+  /* #232-C2: the Intake page keeps its own keys (components/intakeReview/IntakeReviewPage.jsx); the old Review block is gone */
 });
 if(!MAC) $("#kK").textContent="Ctrl K";
 }

@@ -1,0 +1,13 @@
+--- a/system/scripts/live_server.py	2026-10-20 11:35:58
++++ b/system/scripts/live_server.py	2026-10-20 11:35:58
+@@ -3835,7 +3835,9 @@
+     import sweep
+     with VIP_WRITE:
+         st = sweep.vip_made_refresh()                                 # BL-296: a made item's ID once an apply wrote it
+-    return handler.send(200, {"ok": True, "alerts": [a for a in st["alerts"] if not a.get("seen")],
++    hidden = ("keys", "ids", "sigs", "seen_sig")                      # #236: kept in vip.json, server side only (build_dashboard.ALERT_HIDDEN)
++    return handler.send(200, {"ok": True, "alerts": [{k: v for k, v in a.items() if k not in hidden}
++                                                     for a in st["alerts"] if not a.get("seen")],
+                               "last_check": st["last_check"], "running": VIP_STATUS["running"],
+                               "error": VIP_STATUS["last_error"]})
+ 

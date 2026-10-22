@@ -56,14 +56,14 @@
         </div>
         <p class="calfoot" id="calFoot" hidden></p><!-- BL-270: "Calendar as read on …", at the page's foot -->
       </section>
-      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
+      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div><div id="projArchHost"></div></div></section>
       <section class="view" id="v-cockpit" hidden></section>
       <section class="view" id="v-reports" hidden aria-label="Reports"></section><!-- BL-337: Reports, every project's week (components/reporting/ReportsPage.jsx) -->
       <section class="view" id="v-reporting" hidden aria-label="Reporting"></section><!-- BL-337: one project's reporting space (components/reporting/ReportingSpace.jsx) -->
       <section class="view" id="v-psettings" hidden aria-labelledby="psTitle"></section><!-- #228: the full-page project settings (components/project/ProjectSettings.jsx) -->
       <section class="view" id="v-notes" hidden></section><!-- BL-301 B: a project's Notes tab, and the portfolio's notes -->
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
-            <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
+            <section class="view" id="v-people" hidden><div class="wrapmax"><div class="plhead"><h1>People</h1><button type="button" class="btn primary" id="plAdd" aria-haspopup="dialog">Add a person</button></div><div id="peopleRoot"></div></div></section><!-- #248: the People page v2 (components/people/PeoplePage.jsx draws #peopleRoot) -->
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
       <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
@@ -89,28 +89,7 @@
         <div class="kbdhint" id="whintList"></div>
         <div class="kbdhint" id="whintBoard" hidden></div>
       </div></section>
-      <section class="view" id="v-review" hidden><div class="wrapmax">
-        <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
-        <!-- BL-133 (sprint-work-views): search, filters, Display and Approve all routine; the bar when anything is selected; the result line -->
-        <div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off"><span class="wfilters" id="rvfilters"></span><span class="sp"></span><span class="dd rvdisp"><button class="ib bd" id="rvDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="rvDispMenu" aria-label="Display: grouping and order" data-tip="Display: grouping and order"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="rvDispMenu" role="dialog" aria-label="Review display" hidden></div></span><button class="btn" id="routineBtn" aria-haspopup="dialog"><svg data-ic="checks" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve routine</button><!-- BL-160 (sprint-icons) --></div>
-        <div class="wapplied" id="rvapplied"></div>
-        <div class="wbulk rvbar" id="rvbar" role="region" aria-label="Decide the selected proposals" hidden><span class="bkn" id="rvCount" aria-live="polite"></span><span class="rvsplit" id="rvSplit"></span><button type="button" class="linkbtn" id="rvAll"></button><span class="sp"></span><button type="button" class="btn primary" id="bulkApprove" disabled><svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve</button><button type="button" class="btn" id="bulkReject" aria-haspopup="menu" aria-expanded="false" disabled><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Reject with a reason <span class="kbd" aria-hidden="true">R</span></button><span class="rvset" id="rvSet"></span><button type="button" class="ib sm" id="rvClear" aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
-        <div class="rvresult" id="rvresult" role="status" aria-live="polite"></div>
-        <div id="reviewBody"></div>
-        <div class="kbdhint" id="rvHint"></div>
-      </div></section>
-      <section class="view" id="v-inbox" hidden><div class="wrapmax">
-        <h1>Intake</h1><p class="sub" style="margin:4px 0 14px">Transcripts and minutes waiting to be processed. Files you add are saved to the inbox folder. Processing drafts the minutes and proposed items for Review; nothing is filed until you approve.</p>
-        <!-- ===== Intake sections (BL-73) ===== -->
-        <section class="card isec" id="isecCal" aria-labelledby="isecCalH"><header class="ish"><h2 id="isecCalH">Calendar import</h2></header>
-          <p class="sub ipurpose">Pick meetings from your calendar and load their transcripts.</p><div id="isecCalBody"></div></section>
-        <section class="card isec" id="isecUp" aria-labelledby="isecUpH"><header class="ish"><h2 id="isecUpH">Upload files</h2></header>
-          <p class="sub ipurpose">Drop transcripts or minutes you already have.</p>
-        <div class="dropzone" id="inboxDrop" tabindex="0" role="button" aria-label="Add files to Intake">Drop transcripts or minutes here, or <button class="linkbtn" id="inboxPick" type="button">choose files</button><span class="sub"> · .vtt, .docx, .txt, .md or .pdf, up to 25 MB each</span><input type="file" id="inboxFile" multiple accept=".vtt,.docx,.txt,.md,.pdf" hidden></div>
-        <div class="toolbar" style="margin-top:12px"><button class="btn" id="inboxNew">Select new</button><span class="sp"></span><button class="btn primary" id="inboxGo" disabled>Process selected</button></div>
-        <div class="tbl"><table id="inboxTbl"></table></div>
-        </section>
-      </div></section>
+      <section class="view" id="v-intake-review" hidden aria-labelledby="irTitle"></section><!-- #232: Intake, one page (components/intakeReview/IntakeReviewPage.jsx) -->
       <section class="view" id="v-files" hidden><div class="wrapmax">
         <h1>Files</h1>
         <!-- ===== Search (BL-07) ===== -->
@@ -136,7 +115,7 @@
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
-        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
+        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select><p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>

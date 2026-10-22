@@ -1,0 +1,17 @@
+diff --git a/dev/proposals/280/README.md b/dev/proposals/280/README.md
+index cab891b..38491cb 100644
+--- a/dev/proposals/280/README.md
++++ b/dev/proposals/280/README.md
+@@ -121,3 +121,12 @@ writes the good action, which its undo reverses), `test_workstreams`, `test_snea
+ is written; renamed `…_is_held_in_review`), `test_debug_log_stage_b`, `test_archive_items`, `test_archive_projects`. Not guarded:
+ `review.py`'s two new stamps read the clock through its `clock()` helper (CREAITE_NOW), `test_clock_guard` passes at 5.
+ These tests need `tracker-round5.py.diff` applied.
++
++## Keep the pairs together (follow-up, Cap's 2.5.4 review)
++
++`tracker-held.py.diff` calls `review.hold_missing`, and `live_server-held.py.diff` sends `reject N --discard` and
++`approve N --without-transcript`: all three live in the 2.5.4 `review.py`, which is not guarded and reaches a line by a merge,
++while these diffs reach it by `git apply`. Never apply one without the other: a `tracker.py` that has taken
++`tracker-held.py.diff` with an older `review.py` fails every Apply with an AttributeError (the import is inside
++`_hold_missing_sources`, so nothing fails earlier). `dev/tests/test_held_pair.py` fails whenever one half is there without the
++other. Follow-ups that apply after these five are in `dev/proposals/280-followup/`.
