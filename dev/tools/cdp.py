@@ -326,12 +326,14 @@ class Browser:
             isTarget:!!(e&&(e===t||t.contains(e))), pointerEvents:cs.pointerEvents, visibility:cs.visibility, opacity:cs.opacity,
             viewport:[innerWidth,innerHeight], scroll:[scrollX,scrollY], docHeight:document.documentElement.scrollHeight}; })(%s)""" % json.dumps(selector))
 
-    def click(self, selector, button="left", count=1, modifiers=0, exact=False):
+    def click(self, selector, button="left", count=1, modifiers=0, exact=False, inset=None):
         """A real mouse click at the element's centre (not element.click()), so overlays and hit-testing count.
         modifiers is Chrome's bit mask: Alt 1, Ctrl 2, Command 4, Shift 8.
         exact (#152): wait until the element has stopped moving (two frames in a row at the same place; the page may still be laying
         out after the last action, and a centre measured before that is somewhere else afterwards), then require the point to be on
-        the element itself, not on something that merely contains it. A miss says what was there instead (hit_report)."""
+        the element itself, not on something that merely contains it. A miss says what was there instead (hit_report).
+        inset: click that many pixels in from the element's left edge instead of its centre (a wide cell whose middle holds a link,
+        such as a Work title cell, where #241 puts the ID and project beside the title)."""
         self.wait(f"!!({json.dumps(selector)} && document.querySelector({json.dumps(selector)}))", 10)
         pos = self.box(selector)
         # #202: scrolling it into view can change the layout (the report header hides on a scroll down): measure again
@@ -348,6 +350,8 @@ class Browser:
                 pos = again or pos
         if not pos:
             raise RuntimeError(f"can't click {selector}: it has no size (hidden?)")
+        if inset is not None:
+            pos = dict(pos, x=self.eval("document.querySelector(%s).getBoundingClientRect().left" % json.dumps(selector)) + inset)
         hit = self.eval("""(()=>{
           const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s);
           return !!(e&&t&&(t===e||t.contains(e)||(%s&&e.contains(t)))); })()"""
