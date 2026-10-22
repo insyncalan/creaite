@@ -1,0 +1,37 @@
+diff --git a/system/scripts/schema.sql b/system/scripts/schema.sql
+index ef61aff..41ef7dc 100644
+--- a/system/scripts/schema.sql
++++ b/system/scripts/schema.sql
+@@ -218,6 +218,32 @@ CREATE TABLE IF NOT EXISTS change_log (
+   via        TEXT NOT NULL   -- proposal file name, 'dashboard', 'excel-import', 'cx-edit', 'assistant' or 'undo'
+ );
+ 
++-- #241 D: a work item's history (item_history.py; dev/proposals/work-item-history/DESIGN.md). One row per change_log row (never
++-- updated_at) and one per rejected update to an existing item, written by tracker.py's log() in the same transaction: the route
++-- the change came by, the dashboard's place, the actor and a source reference. Before and after stay in change_log (`change`);
++-- this table holds no text of a record or a message: route, place, origin, actor and kind are words from the lists below, and
++-- src_ref is one reference (a path, a mail or chat reference, or the proposal's file). `undoes` is the event an undo reverses.
++-- Rows written before this table existed have none: item_history.py works their route out from the proposal, as before.
++CREATE TABLE IF NOT EXISTS item_events (
++  event_id   INTEGER PRIMARY KEY AUTOINCREMENT,
++  at         TEXT NOT NULL,
++  apply_id   INTEGER REFERENCES applies(apply_id),
++  item_id    TEXT NOT NULL,           -- the record's ID; a link's or label's change_log key ("from|to|kind", "item|label")
++  change     INTEGER,                 -- the change_log rowid (field, before, after); the `rejected` row for a rejection
++  kind       TEXT NOT NULL CHECK (kind IN ('change','reject')),
++  route      TEXT NOT NULL CHECK (route IN ('dashboard','review','cx-edit','note','assistant','excel','undo','activity',
++                                       'archive','migrate')),
++  place      TEXT CHECK (place IS NULL OR place IN ('peek','cell','bulk','menu','board','today','card',
++                                                    'dashboard','excel','minutes')),
++  origin     TEXT CHECK (origin IS NULL OR origin IN ('sweep','minutes','drafts','report')),
++  actor      TEXT NOT NULL CHECK (actor IN ('you','creaite')),
++  src_ref    TEXT CHECK (src_ref IS NULL OR (length(src_ref) <= 300 AND instr(src_ref, char(10)) = 0)),
++  undoes     INTEGER REFERENCES item_events(event_id)
++);
++CREATE INDEX IF NOT EXISTS item_events_item ON item_events(item_id);
++CREATE INDEX IF NOT EXISTS item_events_change ON item_events(change);
++CREATE INDEX IF NOT EXISTS change_log_item ON change_log(item_id);
++
+ -- Rejected proposals, so they are not proposed again. BL-133 stage B: the reason given and, for a duplicate, the item it repeats
+ -- (both optional; a rejection with no reason is stored as before). Extraction reads the reasons as guidance only.
+ CREATE TABLE IF NOT EXISTS rejected (
