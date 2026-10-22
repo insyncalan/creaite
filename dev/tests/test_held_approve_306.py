@@ -40,7 +40,7 @@ class Held306(base.HeldMissingSource):
         self.assertIn("Not saved because ${why}", body)
         self.assertIn("undoApply(a.apply_id)", body)
         jsx = (REPO / "system/templates/dashboard/src/components/intakeReview/proposals.jsx").read_text(encoding="utf-8")
-        self.assertIn("Not saved because {r.heldErr}", jsx)
+        self.assertIn("Not saved because {HELD_ERR.get(r.file)}", jsx)
 
 
 for _n in [n for n in dir(base.HeldMissingSource) if n.startswith("test_")]:

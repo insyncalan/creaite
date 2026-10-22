@@ -470,13 +470,15 @@ export const heldMsg=r=>`Held: ${r.held}. Approve the minutes without the transc
 export async function heldApprove(r){ if(!viaServer()){ snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r.n} --without-transcript” in Claude Code`); return; }
   /* #306: it says what happened, on the row and in a message: saved (with Undo) or not saved and why, never nothing */
   const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"approved",modes:["without-transcript"]});
-  if(!res.ok){ const why=heldWhy(res.message); r.heldErr=why; await reloadData(); snack(`Not saved because ${why}`); refreshAll(); return; }
-  r.heldErr=""; if(!S.autoApply){ await reloadData(); snack("Approved without the transcript: not saved yet"); return; }
+  if(!res.ok){ const why=heldWhy(res.message); HELD_ERR.set(r.file,why); await reloadData(); snack(`Not saved because ${why}`); refreshAll(); return; }
+  HELD_ERR.delete(r.file); if(!S.autoApply){ await reloadData(); snack("Approved without the transcript: not saved yet"); return; }
   const a=await applyNow();
-  if(!a.ok){ const why=heldWhy(a.message); r.heldErr=why; snack(`Not saved because ${why}`); refreshAll(); return; }
+  if(!a.ok){ const why=heldWhy(a.message); HELD_ERR.set(r.file,why); snack(`Not saved because ${why}`); refreshAll(); return; }
   const n=Number((String(a.message||"").match(/written (\d+)/)||[])[1]||0);
   snack(`Approved without the transcript: ${n} item${n===1?"":"s"} saved${heldWords(a.message)}`,()=>undoApply(a.apply_id)); }
 /* #306: review.py's refusal in plain words for a row (no command to say, no number prefix) */
+/** #306: why the last Approve without the transcript failed, by proposal file (the rows are rebuilt on every reload) */
+export const HELD_ERR=new Map();
 export const heldWhy=m=>{ const t=String(m||"").replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/not approved — /,"").replace(/,? or say “[^”]*”\.?/g,"").replace(/\n\s*\(say [\s\S]*\)\s*$/,"").replace(/the draft differs from the staged items:/,"these minutes don't match the suggestions waiting in Review:");
   return oneLine(t).replace(/\s*\.?\s*$/,"")||"creaite couldn't save these minutes"; };
 export async function heldDiscard(r){ if(!viaServer()){ snack(`Discarding a proposal needs the live server; or say “reject ${r.n} --discard” in Claude Code`); return; }

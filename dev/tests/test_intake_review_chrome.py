@@ -29,7 +29,7 @@ class Head(IntakeBase):
 
     def test_the_sub_line_says_when_the_calendar_was_read_and_the_icon_reads_it_again(self):
         b = self.b
-        self.assertRegex(self.sub(), r"^\d+ ready to process · \d+ proposals? to approve · Calendar read 07:00$")    # read today at 07:00: the time only
+        self.assertRegex(self.sub(), r"^\d+ ready to process · \d+ suggestions? to approve · Calendar read 07:00$")    # read today at 07:00: the time only
         self.assertEqual(b.eval("document.querySelector('#icRef').getAttribute('aria-label')"), "Refresh the calendar")
         self.assertFalse(b.eval("document.querySelector('#icRef').disabled"))
 
@@ -184,7 +184,7 @@ class Gaps(IntakeBase):
         c = b.eval("irLiveCounts()")
         self.assertEqual(b.eval("document.querySelector('[data-irv=two] .icsum').textContent"), f"Arrived {c['arrived']} → Drafted {c['drafted']} → Approved {c['approved']}")
         mid = b.eval("D.intake_review.meetings.find(m=>m.title==='ABC Steering'&&m.src==='draft').id")
-        self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{mid}\"] .irright').textContent"), "4 proposals")
+        self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{mid}\"] .irright').textContent"), "4 suggestions")
         rid = b.eval("D.intake_review.meetings.find(m=>m.title==='Weekly sync 12').id")
         self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"] .irright').textContent"), "ready")
         b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"]').click()")

@@ -4624,6 +4624,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     HD: () => HD,
     HEAD_SHIFT: () => HEAD_SHIFT,
     HEALTH_SHAPES: () => HEALTH_SHAPES,
+    HELD_ERR: () => HELD_ERR,
     HGROUPS: () => HGROUPS,
     HI: () => HI,
     HINTS: () => HINTS,
@@ -48543,13 +48544,13 @@ ${s5}`;
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "approved", modes: ["without-transcript"] });
     if (!res.ok) {
       const why = heldWhy(res.message);
-      r4.heldErr = why;
+      HELD_ERR.set(r4.file, why);
       await reloadData();
       snack(`Not saved because ${why}`);
       refreshAll();
       return;
     }
-    r4.heldErr = "";
+    HELD_ERR.delete(r4.file);
     if (!S.autoApply) {
       await reloadData();
       snack("Approved without the transcript: not saved yet");
@@ -48558,7 +48559,7 @@ ${s5}`;
     const a5 = await applyNow();
     if (!a5.ok) {
       const why = heldWhy(a5.message);
-      r4.heldErr = why;
+      HELD_ERR.set(r4.file, why);
       snack(`Not saved because ${why}`);
       refreshAll();
       return;
@@ -48566,6 +48567,7 @@ ${s5}`;
     const n4 = Number((String(a5.message || "").match(/written (\d+)/) || [])[1] || 0);
     snack(`Approved without the transcript: ${n4} item${n4 === 1 ? "" : "s"} saved${heldWords(a5.message)}`, () => undoApply(a5.apply_id));
   }
+  var HELD_ERR = /* @__PURE__ */ new Map();
   var heldWhy = (m5) => {
     const t47 = String(m5 || "").replace(/^\s*Approved \d+\.\s*/, "").replace(/^\s*\d+:\s*/, "").replace(/not approved — /, "").replace(/,? or say “[^”]*”\.?/g, "").replace(/\n\s*\(say [\s\S]*\)\s*$/, "").replace(/the draft differs from the staged items:/, "these minutes don't match the suggestions waiting in Review:");
     return oneLine(t47).replace(/\s*\.?\s*$/, "") || "creaite couldn't save these minutes";
@@ -75815,9 +75817,9 @@ ${d5.text}`);
         r4.held
       ] }),
       " · Approve the minutes without the transcript copy, or discard the suggestion",
-      r4.heldErr ? /* @__PURE__ */ u4("div", { class: "h-warn", "data-ira": "held-error", children: [
+      HELD_ERR.get(r4.file) ? /* @__PURE__ */ u4("div", { class: "h-warn", "data-ira": "held-error", children: [
         "Not saved because ",
-        r4.heldErr
+        HELD_ERR.get(r4.file)
       ] }) : null
     ] });
     if (r4.bad) return /* @__PURE__ */ u4("div", { class: "rvnote", children: [
@@ -78207,6 +78209,7 @@ ${d5.text}`);
         "GROUPS",
         "HD",
         "HEAD_SHIFT",
+        "HELD_ERR",
         "HL",
         "Health",
         "ICONS",

@@ -187,7 +187,7 @@ class Wiring(LiveBrowserCase):
         b.eval("renderToday()")
         self.assertEqual(b.eval("[...document.querySelectorAll('#tdQuiet a')].map(a=>a.dataset.tdq)"), ["meetings", "proposals"])
         self.assertEqual(b.eval("document.querySelector('#tdQuiet a[data-tdq=meetings]').textContent.trim()"), "2 meetings ready to process")
-        self.assertRegex(b.eval("document.querySelector('#tdQuiet a[data-tdq=proposals]').textContent.trim()"), r"^\d+ proposals? to approve$")
+        self.assertRegex(b.eval("document.querySelector('#tdQuiet a[data-tdq=proposals]').textContent.trim()"), r"^\d+ suggestions? to approve$")
         self.assertEqual(b.eval("document.querySelector('#tdQuiet a[data-tdq=meetings]').getAttribute('href')"), "#intake-review&stage=arrived")
         b.eval("document.querySelector('#tdQuiet a[data-tdq=meetings]').click()")
         b.wait("VIEW==='intake-review'")
