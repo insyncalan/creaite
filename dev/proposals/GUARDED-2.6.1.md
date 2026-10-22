@@ -4,6 +4,16 @@ Nothing here is applied on `v261-line2`. Each diff is Alan's (or Jarvis's, on hi
 Checked 22-10-2026: the first nine below apply one after another, in this order, with `git apply` on the assembled `v261-line2` head
 (a throwaway detached worktree, not committed). The two 283 diffs also pass `git apply --check` on top of that chain.
 
+## How the chain is committed (the test convention)
+
+Apply the nine diffs below in order and commit them as ONE commit on the 2.6.1 release commit, with the subject starting exactly
+`Guarded 2.6.1 chain:` (for example `Guarded 2.6.1 chain: tracker, update, live_server, schema`). `dev/tests/test_word_export_227.py`
+check 9 (`dev/tests/guarded_chain.py`) lets a commit with that prefix change guarded scripts only if reverse-applying the diffs listed in
+`dev/proposals/GUARDED-2.6.1.chain` (one path per line, apply order, read from that commit's own tree) to its guarded files gives back
+each file's parent content. An extra edit, a guarded file the diffs don't explain, a missing chain file or a diff that doesn't reverse
+fails the check, and so does any guarded change in an unmarked commit. If a diff joins or leaves the chain (for example 283's `reach.diff`),
+change the `.chain` file in the same step, with Alan's say. `dev/tests/test_guarded_chain.py` proves this on a throwaway repo.
+
 ## Order
 
 | # | Diff | Guarded file | What it does | Tests that depend on it |

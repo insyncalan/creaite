@@ -26,6 +26,8 @@ import client_snapshot  # noqa: E402  (v2.5.1: the Word writer as client_export 
 import docx_tools  # noqa: E402
 import launch  # noqa: E402
 import paths  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from guarded_chain import guarded_touched  # noqa: E402
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 ISO = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
@@ -399,13 +401,12 @@ class Checks(Base):
 
     def test_check_09_no_guarded_file_changed(self):
         # live_server.py is left out: Jarvis applied the approved per-route body caps to it in the v2.4.0 guarded commit (Alan, 18-10-2026);
-        # the Word writer itself never touches a guarded file
-        guarded = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py")
-        # 2.6: the HOPD's approved guarded diffs are on the candidate (origin/v260-release); anything on top of it is the Word writer's
-        r = subprocess.run(["git", "diff", "--name-only", "origin/v260-release", "HEAD"], cwd=REPO, capture_output=True, text=True)
-        if r.returncode != 0:
+        # the Word writer itself never touches a guarded file. The approved guarded chain (dev/proposals/GUARDED-2.6.1.md) is ONE commit
+        # whose subject starts with "Guarded 2.6.1 chain:" and whose guarded changes are exactly the diffs in GUARDED-2.6.1.chain
+        # (dev/tests/guarded_chain.py); anything else on top of origin/v260-release is the Word writer's and must not touch one.
+        touched = guarded_touched(REPO, "origin/v260-release", "HEAD")
+        if touched is None:
             self.skipTest("git history for origin/v260-release isn't available here: check 9 NOT run")
-        touched = [f for f in r.stdout.split() if f.startswith("system/scripts/") and Path(f).name in guarded]
         self.assertEqual(touched, [])
 
     def test_check_10_package_is_sound_and_opens_without_repair(self):
