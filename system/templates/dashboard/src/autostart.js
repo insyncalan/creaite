@@ -65,13 +65,13 @@ export function asCardHtml() {
     : !st ? '<span class="sub">Not available yet</span>'
     : !st.supported ? `<span class="sub">${st.dev ? "Not in the development copy" : "Only on a Mac"}</span>`
     : `<span class="${on ? "h-ok" : "sub"}" id="asState">${on ? "On" : "Off"}</span>`;
-  const sw = `<button type="button" class="btn" id="asSwitch" role="switch" aria-checked="${on}" aria-label="Start creaite when I sign in" ${off}>${on ? "Turn off…" : "Turn on…"}</button>`;
+  const switchBtn = `<button type="button" class="btn" id="asSwitch" role="switch" aria-checked="${on}" aria-label="Start creaite when I sign in" ${off}>${on ? "Turn off…" : "Turn on…"}</button>`;
   const ask = AS.confirm ? `<div class="sushown" id="asConfirm" role="group" aria-label="Confirm">${AS.confirm === "on"
     ? "creaite will open by itself each time you sign in to this Mac, and open again if it ever crashes. Stop still keeps it stopped until the next sign-in."
     : "creaite will no longer open by itself when you sign in. It keeps running now, and you open it from its launcher."}
     <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-ascancel>Cancel</button><button type="button" class="btn primary" id="asGo">${AS.confirm === "on" ? "Turn on" : "Turn off"}</button></span></div>` : "";
   return `<div class="card" id="asCard" data-sec="signin"><h2>Start creaite when I sign in</h2>
-   <div class="srow"><div><span id="asLab">Start creaite when I sign in</span><small>Opens creaite in the background each time you sign in to this Mac. Stop still keeps it stopped until next time</small></div><div>${state} ${st && st.supported ? sw : ""}</div></div>
+   <div class="srow"><div><span id="asLab">Start creaite when I sign in</span><small>Opens creaite in the background each time you sign in to this Mac. Stop still keeps it stopped until next time</small></div><div>${state} ${st && st.supported ? switchBtn : ""}</div></div>
    ${ask}
    <p class="sub" id="asTerm">Prefer Terminal? <a href="#help-howto-${AS_HELP_ID}" data-help="howto-${AS_HELP_ID}">Help › Fix a stopped server</a> has the commands, with your own folder filled in.</p></div>`;
 }
