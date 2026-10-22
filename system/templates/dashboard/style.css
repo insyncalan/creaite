@@ -2354,7 +2354,7 @@ svg .flk text{text-decoration:underline dotted}
 .mv-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 /* the plan line: names and dates placed so they never overlap; it scrolls sideways */
 .mv-stripbar{display:flex;gap:8px;align-items:center;margin:0 0 6px}
-.mv-stripwrap{overflow-x:auto;overflow-y:hidden;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:0 0 4px;margin:0 0 12px;min-width:0;max-width:100%}
+.mv-stripwrap{resize:vertical;min-height:120px;max-height:85vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:0 0 4px;margin:0 0 12px;min-width:0;max-width:100%}
 .mv-stripwrap:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .mv-strip{position:relative;margin:0 10px}
 .mv-strip .ax{position:absolute;left:0;right:0;top:44px;height:2px;background:var(--line)}
