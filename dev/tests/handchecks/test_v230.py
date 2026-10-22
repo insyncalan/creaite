@@ -336,9 +336,9 @@ class TodayLineChecks:
         self.assertTrue(o["last"], "the line is the last thing in Your commitments")
         self.assertEqual(o["next"], "weekSec", "Messages (hidden when empty) sits just above the Week ahead")
         href = dict(o["links"])["proposals"]
-        self.assertEqual(href, "#review")
+        self.assertEqual(href, "#intake-review&stage=drafted")
         b.click("#tdQuiet [data-tdq=proposals]")
-        b.wait("VIEW==='review'", 10)
+        b.wait("VIEW==='intake-review'", 10)
         self.sheet(4, "today", palettes=measure.themes(b)[:2], widths=(1400, 900))
         # nothing waiting: reject every proposal in Review, and the line is absent
         code, out = self.run_in_vault("review.py", "reject", "all")

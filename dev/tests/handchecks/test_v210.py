@@ -1450,7 +1450,7 @@ class MinutesView(MinutesBase):
         self.name, self.draft, self.filed, self.mday, _ = self.stage()
         self.b.reload("typeof go==='function' && LIVE")                       # so Review lists the meeting just staged
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.name)}}})")
-        self.b.wait("!!document.querySelector('#v-minutes .mnrow')", 20)
+        self.b.wait("!!document.querySelector('#v-minutes tr.mi')", 20)
         self.b.pump(0.3)
 
     def ev(self, js):
@@ -1480,17 +1480,19 @@ class MinutesView(MinutesBase):
         """36. Review shows the minutes as one row with their items nested under it (the closing update of FAL-A-004 among them);
         Open draft opens the minutes view."""
         b = self.b
-        b.eval("go('review')")
-        b.wait("!!document.querySelector('#v-review') && !document.getElementById('v-review').hidden", 15)
+        b.eval("go('review')")                                            # an alias of Intake and Review since 2.6.0 (#232)
+        b.wait("VIEW==='intake-review' && !document.getElementById('v-intake-review').hidden", 15)
+        b.eval("document.querySelector('#v-intake-review [data-ira=open]').click()")      # "Check them" opens the drafted meeting
+        b.wait("!!document.querySelector('#v-intake-review tr.irprop')", 15)
         b.pump(0.5)
-        text = b.eval("document.getElementById('v-review').innerText")
+        text = b.eval("document.getElementById('v-intake-review').innerText")
         self.assertIn("Steering committee", text)
         self.assertIn("FAL-A-004", text, "the closing update is nested under the minutes")
         self.assertIn(self.W[0], text, "the minutes' items are nested under them")
-        self.assertTrue(b.eval("""(()=>{ const tr=[...document.querySelectorAll('#v-review tr')].find(t=>/Minutes: \\[FAL\\] Steering committee/.test(t.innerText));
-          const e=tr&&tr.querySelector('[data-act=e]'); if(!e) return false; return /Open draft/.test((e.getAttribute('aria-label')||'')+(e.title||'')+e.textContent); })()"""),
-                        "the minutes row has an Open draft button")
-        b.eval("""[...document.querySelectorAll('#v-review tr')].find(t=>/Minutes: \\[FAL\\] Steering committee/.test(t.innerText)).querySelector('[data-act=e]').click()""")
+        row = "[...document.querySelectorAll('#v-intake-review tr.irprop')].find(t=>/Minutes: \\[FAL\\] Steering committee/.test(t.innerText))"
+        self.assertTrue(b.eval(f"""(()=>{{ const tr={row}; const e=tr&&tr.querySelector('[data-ira=edit]'); return !!e; }})()"""),
+                        "the minutes row has its open button (Open in the peek, which opens the minutes view for a draft)")
+        b.eval(f"{row}.querySelector('[data-ira=edit]').click()")
         b.wait("VIEW==='minutes'", 15)
         self.note(36, "one minutes row with its items nested; Open draft opened the minutes view")
 
@@ -1509,7 +1511,7 @@ class MinutesView(MinutesBase):
         b.pump(0.4)
         self.assertTrue(self.ev("!!document.querySelector('.mnturns li.on')"), "the tag's turn is highlighted")
         self.assertEqual(self.ev("document.querySelector('#v-minutes .sheet-scroll').scrollTop"), 0, "the sheet itself never moves")
-        b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes .mnrow')")
+        b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes tr.mi')")
         self.assertEqual(self.ev("VIEW"), "minutes")
         self.note(50, f"5 turns; {len(tags)} time tags; a reload kept the view")
 
@@ -1693,7 +1695,7 @@ class MinutesView(MinutesBase):
         self.assertTrue(json.loads(r.stdout.strip().splitlines()[-1])["ok"])
         self.b.eval("go('review')")
         self.b.eval(f"go('minutes',{{file:{json.dumps(self.name)}}})")
-        self.b.wait("!!document.querySelector('#v-minutes .mnrow')", 15)
+        self.b.wait("!!document.querySelector('#v-minutes tr.mi')", 15)
         return dec["cells"]["decision"], act["cells"]["action"]
 
     def menu_names(self):
@@ -1911,14 +1913,15 @@ class HubRetired(MinutesBase):
         pin_page_clock(b, f"{self.day.isoformat()} 12:00")
         tok = self.token("calendar:hc-1")
         b.eval(f"location.hash='#meeting={tok}'")
-        b.wait("VIEW==='review'", 15)
-        self.assertEqual(b.eval("location.hash"), "#review", "after the meeting, minutes waiting: Review")
+        b.wait("VIEW==='intake-review'", 15)
+        self.assertEqual(b.eval("location.hash"), "#intake-review", "after the meeting, minutes waiting: Intake and Review (2.6.0)")
         self.approve(name, self.view(name))
         b.reload("typeof go==='function' && LIVE")
         pin_page_clock(b, f"{self.day.isoformat()} 12:00")
         tok = self.token("calendar:hc-1")
         b.eval(f"location.hash='#meeting={tok}'")
         b.wait("VIEW==='minutes'", 20)
+        b.wait(f"location.hash === '#minutes=' + encodeURIComponent({json.dumps(filed)})", 15)      # the view settles the address once the filed record is read
         self.assertEqual(b.eval("location.hash"), "#minutes=" + b.eval(f"encodeURIComponent({json.dumps(filed)})"), "after approval: the filed minutes")
         b.eval("go('review')")
         b.eval("location.hash='#meeting=ffffffffff'")
@@ -1957,7 +1960,7 @@ class Seeded(MinutesBase):
             self.b.reload("typeof go==='function' && LIVE")
         hcbase.SCREENS.update({
             "client": (f"go('clientreport',{{code:'FAL',week:'{self.week}'}})", "!!document.querySelector('#v-clientreport .crhealth')"),
-            "minutes": (f"go('minutes',{{file:{json.dumps(cls.name)}}})", "!!document.querySelector('#v-minutes .mnrow')"),
+            "minutes": (f"go('minutes',{{file:{json.dumps(cls.name)}}})", "!!document.querySelector('#v-minutes tr.mi')"),
         })
         pin_page_clock(self.b, f"{self.week} 14:00")
 
