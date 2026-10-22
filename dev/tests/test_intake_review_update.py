@@ -239,7 +239,8 @@ class PureRules(unittest.TestCase):
 class ApplyPath(unittest.TestCase):
     """B3: what a proposal edited in the peek carries (panel.js updSave: `it.changes` from core/irUpdate.js irSaveChanges), applied
     by tracker.py, the one writer. Every column the peek can now write is validated by tracker.py's own rules; a value it refuses
-    makes the apply fail and writes nothing (the proposal stays for a fix)."""
+    is held in Review with its reason (#280: the apply exits 0, the item goes back to pending, flagged invalid) and nothing is
+    written (the proposal stays for a fix)."""
 
     def setUp(self):
         self.v = Vault()
@@ -260,6 +261,17 @@ class ApplyPath(unittest.TestCase):
 
     def row(self, table, ident):
         return next(r for r in self.v.rows(table) if r["id"] == ident)
+
+    def assert_held(self, r, name, why):
+        """#280: the apply exits 0 and says the item is held in Review with its reason; the item is pending again, flagged invalid."""
+        self.assertEqual(r.returncode, 0, why)
+        self.assertIn(f"Held in Review, not applied: {name} item 1: ", r.stdout, why)
+        item = json.loads((self.v.root / "system/staging" / name).read_text(encoding="utf-8"))["items"][0]
+        self.assertEqual(item["decision"], "pending", why)
+        self.assertIn("invalid", item.get("flags") or [], why)
+        self.assertTrue(item.get("invalid_reason"), why)
+        self.assertIn(item["invalid_reason"], r.stdout, why)
+        self.assertFalse(item.get("applied"), why)
 
     def test_due_date_and_latest_update_together_the_other_columns_untouched(self):
         before = self.row("actions", self.aid)
@@ -287,7 +299,7 @@ class ApplyPath(unittest.TestCase):
         before = self.row("actions", self.aid)
         for bad in ({"status": "Made"}, {"due_date": "27-10-2026"}, {"due_date": "2026-02-30"}, {"deadline": "2026-12-04"}):
             r = self.apply([self.edited("actions", self.aid, bad)], ok=False)
-            self.assertNotEqual(r.returncode, 0, bad)
+            self.assert_held(r, "proposed-peek.json", bad)
             self.assertEqual(self.row("actions", self.aid), before, bad)
             for f in (self.v.root / "system/staging").glob("proposed-peek.json"):
                 f.unlink()
@@ -305,7 +317,7 @@ class ApplyPath(unittest.TestCase):
                      "values": {"project": "ABC", "decision": "Pick the venue", "status": "Pending", "needed_by": "2026-12-01", "source": SRC}}])
         pend = next(r["id"] for r in self.v.rows("decisions") if r["decision"] == "Pick the venue")
         self.v.propose("made-no-date", [self.edited("decisions", pend, {"status": "Made"})])
-        self.assertNotEqual(self.v.run("apply", ok=False).returncode, 0)                    # Made with no date: refused, as before the peek
+        self.assert_held(self.v.run("apply", ok=False), "proposed-made-no-date.json", "Made with no date")   # refused: held in Review
         self.assertEqual(self.row("decisions", pend)["status"], "Pending")
         (self.v.root / "system/staging/proposed-made-no-date.json").unlink()
         self.v.propose("made", [self.edited("decisions", pend, {"status": "Made", "date": "2026-10-12"})])
