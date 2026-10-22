@@ -529,6 +529,13 @@ print('RC', tracker.main(['apply']))
 """
 
 
+# A swap that unlinks the staged file and writes another at its name first keeps the staged file open (a descriptor left open
+# for the rest of the driver), so the other file is given a NEW inode. Linux (ext4, tmpfs) hands a freed inode number straight to
+# the next file, so without this the "different file" has the staged file's (st_dev, st_ino) and is, by the very check under
+# test, the same file: the apply removes it and succeeds (CI: RC 0). APFS never reuses a number so soon, so macOS passed anyway.
+HOLD = "os.open(p, os.O_RDONLY); "
+
+
 class Races(Base):
     """What a local process could do between the check and the operation (the operation is wrapped, as a reviewer would)."""
 
@@ -565,7 +572,7 @@ class Races(Base):
         """X is swapped in before the move, Y is written at the name after it: the put-back must not replace Y."""
         self.decide("approved", "approved")
         name = Path(FILE).name
-        out = self.drive(DRIVER_RENAME, name=name, before="p = Path('inbox') / NAME; p.unlink(); p.write_text('INTRUDER X')",
+        out = self.drive(DRIVER_RENAME, name=name, before="p = Path('inbox') / NAME; " + HOLD + "p.unlink(); p.write_text('INTRUDER X')",
                          after="(Path('inbox') / NAME).write_text('NEW FILE Y')")
         self.assertIn("RC 1", out)
         self.assertIn("the name is taken again", out)
@@ -577,7 +584,7 @@ class Races(Base):
     def test_a_put_back_that_cannot_happen_says_where_the_file_is(self):
         self.decide("approved", "approved")
         name = Path(FILE).name
-        out = self.drive(DRIVER_RENAME, name=name, before="p = Path('inbox') / NAME; p.unlink(); p.write_text('INTRUDER X')",
+        out = self.drive(DRIVER_RENAME, name=name, before="p = Path('inbox') / NAME; " + HOLD + "p.unlink(); p.write_text('INTRUDER X')",
                          after="os.mkdir(Path('inbox') / NAME)")
         self.assertIn("RC 1", out)
         self.assertIn("is left in inbox/ as .creaite-removing-", out)
@@ -632,7 +639,7 @@ class Races(Base):
     def test_a_different_file_of_the_same_name_swapped_in_after_the_read_is_put_back_not_lost(self):
         """A hook on the backup (after the file was read and checked, before the unlink) puts a different file in its place."""
         self.decide("approved", "approved")
-        out = self.hook("stash", "p = Path('inbox') / %r; p.unlink(); p.write_text('Somebody else\\'s file\\n')" % Path(FILE).name)
+        out = self.hook("stash", ("p = Path('inbox') / %r; " + HOLD + "p.unlink(); p.write_text('Somebody else\\'s file\\n')") % Path(FILE).name)
         self.assertIn("RC 1", out)
         self.assertIn("a different file was put there; it is left alone", out)
         self.assertEqual((self.v.root / FILE).read_text(), "Somebody else's file\n")
@@ -947,7 +954,12 @@ class Probes(Base):
         r = self.v.run("apply", ok=False)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("is taken by a different file in this apply", r.stdout)
-        self.assertIn((self.v.root / FILED).read_text(), (MINUTES, "Their minutes of the same call\n"))   # the first applied
+        # The first applied. On a case-insensitive disk (APFS) both names are one file; on a case-sensitive one (Linux CI) they are
+        # two, and whichever proposal the apply took first is the one filed, under its own capitals: exactly one of the two exists.
+        mins = (self.v.root / FILED).parent
+        there = [p for p in mins.iterdir() if p.name.casefold() == Path(FILED).name.casefold()]
+        self.assertEqual(len(there), 1, [p.name for p in there])
+        self.assertIn(there[0].read_text(), (MINUTES, "Their minutes of the same call\n"))
         left = [n for n in (self.name, second) if (self.v.root / "system/staging" / n).exists()]
         self.assertEqual(len(left), 1, left)                                        # the other waits, cleanly
 
