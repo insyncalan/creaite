@@ -1,5 +1,5 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index 35e9c13d..2819521b 100644
+index 35e9c13d..88122aef 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -16,6 +16,9 @@ Commands (run from anywhere; every location comes from paths.py):
@@ -103,7 +103,7 @@ index 35e9c13d..2819521b 100644
 +        return 0
 +    out = Path(args[args.index("--out") + 1]).resolve()
 +    if out.parent != (paths.STAGING / "drafts").resolve():
-+        print("The export can only be saved directly in system/staging/drafts/.")
++        print("The export can only be saved in the drafts folder.")
 +        return 1
 +    out.write_text(text, encoding="utf-8")
 +    print(f"Saved {paths.rel(out)}.")
