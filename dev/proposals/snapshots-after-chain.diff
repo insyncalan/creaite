@@ -1,0 +1,33 @@
+diff --git a/dev/tests/snapshots/settings-health.html b/dev/tests/snapshots/settings-health.html
+index 69807657..79de193c 100644
+--- a/dev/tests/snapshots/settings-health.html
++++ b/dev/tests/snapshots/settings-health.html
+@@ -309,7 +309,8 @@
+ <small>Opens creaite in the background each time you sign in to this Mac. Stop still keeps it stopped until next time</small>
+ </div>
+ <div>
+-<span class="sub">Not available yet</span>
++<span class="sub" id="asState">Off</span>
++<button type="button" class="btn" id="asSwitch" role="switch" aria-checked="false" aria-label="Start creaite when I sign in">Turn on…</button>
+ </div>
+ </div>
+ <p class="sub" id="asTerm">Prefer Terminal? <a href="#help-howto-fix-a-stopped-server-and-other-problems" data-help="howto-fix-a-stopped-server-and-other-problems">Help › Fix a stopped server</a> has the commands, with your own folder filled in.</p>
+diff --git a/dev/tests/snapshots/today.html b/dev/tests/snapshots/today.html
+index d7105f3b..fe105207 100644
+--- a/dev/tests/snapshots/today.html
++++ b/dev/tests/snapshots/today.html
+@@ -91,6 +91,14 @@
+ </li>
+ </ol>
+ <p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>
++<div class="tb" id="asQ">
++<span class="t">Start creaite automatically when you sign in?</span>
++<p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
++<span class="rmgo">
++<button type="button" class="btn primary" data-asq="yes">Yes</button>
++<button type="button" class="btn" data-asq="no">Not now</button>
++</span>
++</div>
+ </section>
+ <!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
+ <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden="">

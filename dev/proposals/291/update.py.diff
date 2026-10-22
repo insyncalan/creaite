@@ -83,10 +83,10 @@ index 4b6219ad..0b8bd3c1 100644
          self.assertEqual((self.v.root / "CLAUDE.md").read_text(), OWN_CLAUDE)
  
 diff --git a/system/scripts/update.py b/system/scripts/update.py
-index ac5505d0..e75a7e76 100644
+index ac5505d0..7bba94ae 100644
 --- a/system/scripts/update.py
 +++ b/system/scripts/update.py
-@@ -58,6 +58,25 @@ SYNCED = re.compile(r"/(OneDrive[^/]*|iCloud Drive[^/]*|Mobile Documents|Library
+@@ -58,6 +58,28 @@ SYNCED = re.compile(r"/(OneDrive[^/]*|iCloud Drive[^/]*|Mobile Documents|Library
                      re.I)                          # local only: a vault never lives in a synced folder
  
  
@@ -94,25 +94,28 @@ index ac5505d0..e75a7e76 100644
 +TOLD = "creaite can't install this update: "
 +STRAY = TOLD + "it holds a file its list doesn't show. Download it again."
 +MISSING = TOLD + "a file its list shows is missing. Download it again."
-+UNSAFE = TOLD + "it would change things outside creaite's own files, so it was refused. Download creaite-X.Y.Z.zip again from the release page."
++UNSAFE = (TOLD + "it would change things outside creaite's own files, so it was refused. "
++          "Download creaite-X.Y.Z.zip again from the release page.")
 +WRONG_VERSION = TOLD + "its version number doesn't match its list. Download it again."
-+BAD_CHECKSUM = TOLD + "a file doesn't match its checksum, so the download is damaged or was changed. Download it again."
++BAD_CHECKSUM = TOLD + "a file doesn't match its checksum, so the download is damaged or was changed. " \
++    "Download it again."
 +
 +
 +def refuse(message, why, names=()):
 +    """Raise the plain line; record the real reason and up to five member names in the debug log (never raises)."""
 +    try:
 +        import log as debuglog
++    except ImportError:                            # a script runs without the debug log; the refusal is still raised
++        debuglog = None
++    if debuglog is not None:
 +        debuglog.warn("update", f"release refused: {why}" + (": " + ", ".join(sorted(set(names))[:5]) if names else ""))
-+    except Exception:
-+        pass
 +    raise UpdateError(message)
 +
 +
  class UpdateError(Exception):
      pass
  
-@@ -298,19 +317,19 @@ def read_release(zip_path):
+@@ -298,19 +320,19 @@ def read_release(zip_path):
          missing = [n for n in files if n not in names]
          unsafe = [n for n in names + list(files) if n not in (paths.RELEASE_MANIFEST, BOOTSTRAP) and
                    (n.startswith("/") or "\\" in n or ".." in n.split("/") or not is_engine(n))]
