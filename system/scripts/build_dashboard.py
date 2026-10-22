@@ -3041,7 +3041,8 @@ TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not trans
 
 def calendar_days(d, now):
     """{"first", "last", "today", "fetched", "days": [day]} for Today's day line (BL-293), from the collected data `d`. A day:
-    {date, date_shown, dow, short, long, today, past, weekend, week (0 this week, 1 the next…), meetings, all_day, unread (#318: not read yet)}."""
+    {date, date_shown, dow, short, long, today, past, weekend, week (0 this week, 1 the next…), meetings, all_day,
+    unread (#318: not read yet)}."""
     import sweep
     span, today = sweep.calendar_span(now.date()), now.date()
     if not span:

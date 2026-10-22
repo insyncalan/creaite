@@ -8,7 +8,6 @@ saved before `to` existed counts as read to seven days after its fetch; the brow
 Refresh calendar, never as "no meetings".
 """
 import json
-import os
 import sys
 import tempfile
 import unittest

@@ -618,7 +618,7 @@ def calendar_covered_to(data, fallback):
         try:
             return datetime.strptime(str(raw)[:10], "%Y-%m-%d").date() + timedelta(days=extra)
         except (ValueError, TypeError):
-            continue
+            continue                       # no "to", or no fetch time: try the next
     return fallback
 
 
@@ -897,7 +897,8 @@ def calendar(spec_file):
                       f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")
         return 1
     days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
-    saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days}, indent=1, ensure_ascii=False)
+    saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days},
+                       indent=1, ensure_ascii=False)
     if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
         print(CAL_REFUSED)
         debuglog.warn("sweep", f"calendar: a reply that would save {len(saved.encode('utf-8'))} bytes was refused")
