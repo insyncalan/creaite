@@ -59,14 +59,12 @@ class HistoryRoute(unittest.TestCase):
         except urllib.error.HTTPError as e:
             return e.code, None
 
-    @unittest.expectedFailure
     def test_the_route_gives_the_items_events(self):
         st, body = self.get("?id=ABC-A-001")
         self.assertEqual(st, 200, NEEDS_DIFF)
         owner = [e for e in body["events"] if e.get("field") == "owner"]
         self.assertEqual([(e["before"], e["after"], e["place"]) for e in owner], [("Alan Carter", "Omar Ali", "peek")])
 
-    @unittest.expectedFailure
     def test_bad_ids_are_refused(self):
         for q in ("", "?id=../tracker.db", "?id=ABC-A-001&id=ABC-A-002"):
             self.assertEqual(self.get(q)[0], 400, (q, NEEDS_DIFF))

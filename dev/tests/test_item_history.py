@@ -303,7 +303,6 @@ class Single(unittest.TestCase):
         (self.v.root / "system/tracker.db").unlink()
         self.assertEqual(history(self.v, A)["events"], [])
 
-    @unittest.expectedFailure
     def test_the_route_survives_losing_the_proposal(self):
         """NEEDS the diff: tracker.py stores the route, place and source on the event, so the applied proposal is not needed."""
         n = self.apply("s1", [upd(1, "actions", A, owner="Omar Ali")], source_run="dashboard", place="cell")
@@ -312,7 +311,6 @@ class Single(unittest.TestCase):
         e = of_apply(history(self.v, A)["events"], n, "owner")[0]
         self.assertEqual((e["route"], e["place"], e["exact"]), ("dashboard", "cell", True), NEEDS_DIFF.format("tracker.py"))
 
-    @unittest.expectedFailure
     def test_events_are_stored_one_per_change_with_references_only(self):
         """NEEDS the diff: the item_events table (schema.sql) and tracker.py writing a row for every change_log row."""
         n = self.apply("e1-sweep", [{**upd(1, "actions", A, owner="Omar Ali"), "decided_in": "dashboard",
@@ -325,7 +323,6 @@ class Single(unittest.TestCase):
                                 "src_ref", "undoes"})
         self.assertNotIn(SECRET, json.dumps(q(self.v, "SELECT * FROM item_events")))
 
-    @unittest.expectedFailure
     def test_an_undo_event_points_at_the_one_it_undoes(self):
         """NEEDS the diff: cmd_undo passes the original change_log rowid, stored as item_events.undoes."""
         n = self.apply("d1", [upd(1, "actions", A, owner="Omar Ali")], source_run="dashboard", place="peek")

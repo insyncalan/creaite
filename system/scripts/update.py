@@ -58,6 +58,28 @@ SYNCED = re.compile(r"/(OneDrive[^/]*|iCloud Drive[^/]*|Mobile Documents|Library
                     re.I)                          # local only: a vault never lives in a synced folder
 
 
+# #291 Tier 1: one plain line per refusal, never a file name; the member names go to the debug log (paths are allowed there)
+TOLD = "creaite can't install this update: "
+STRAY = TOLD + "it holds a file its list doesn't show. Download it again."
+MISSING = TOLD + "a file its list shows is missing. Download it again."
+UNSAFE = (TOLD + "it would change things outside creaite's own files, so it was refused. "
+          "Download creaite-X.Y.Z.zip again from the release page.")
+WRONG_VERSION = TOLD + "its version number doesn't match its list. Download it again."
+BAD_CHECKSUM = TOLD + "a file doesn't match its checksum, so the download is damaged or was changed. " \
+    "Download it again."
+
+
+def refuse(message, why, names=()):
+    """Raise the plain line; record the real reason and up to five member names in the debug log (never raises)."""
+    try:
+        import log as debuglog
+    except ImportError:                            # a script runs without the debug log; the refusal is still raised
+        debuglog = None
+    if debuglog is not None:
+        debuglog.warn("update", f"release refused: {why}" + (": " + ", ".join(sorted(set(names))[:5]) if names else ""))
+    raise UpdateError(message)
+
+
 class UpdateError(Exception):
     pass
 
@@ -298,19 +320,19 @@ def read_release(zip_path):
         missing = [n for n in files if n not in names]
         unsafe = [n for n in names + list(files) if n not in (paths.RELEASE_MANIFEST, BOOTSTRAP) and
                   (n.startswith("/") or "\\" in n or ".." in n.split("/") or not is_engine(n))]
-        if stray or missing or unsafe:
-            raise UpdateError("Refused: the zip doesn't match its manifest or reaches outside the engine ("
-                              + "; ".join(f"{label}: {', '.join(sorted(set(v))[:5])}" for label, v in
-                                          (("not listed", stray), ("missing", missing), ("outside the engine", unsafe))
-                                          if v) + ").")
+        if unsafe:
+            refuse(UNSAFE, "outside the engine", unsafe)
+        if stray:
+            refuse(STRAY, "not listed", stray)
+        if missing:
+            refuse(MISSING, "missing", missing)
         if "VERSION" not in files or z.read("VERSION").decode("utf-8").strip() != manifest["version"]:
-            raise UpdateError("Refused: the zip's VERSION file doesn't match its manifest.")
+            refuse(WRONG_VERSION, "VERSION doesn't match the manifest")
         content = {}
         for n, digest in files.items():
             data = z.read(n)
             if sha256(data) != digest:
-                raise UpdateError(f"Refused: {n} doesn't match its checksum; the zip is damaged or was changed. "
-                                  "Download it again.")
+                refuse(BAD_CHECKSUM, "checksum mismatch", [n])
             content[n] = data
     content.pop(BOOTSTRAP, None)                   # checked like the rest, but never installed
     return manifest, content

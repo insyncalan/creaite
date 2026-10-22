@@ -394,7 +394,10 @@ def rejected_reasons(con, project, days=None):
 
 def _safe_resolved(rel_path, purpose):
     """safe_path's real path and its stored form. v2.6 gate: a link swapped for a file while it is resolved raises OSError with the
-    full path on CPython 3.9.25 (its realpath); it is refused here in the relative path's words."""
+    full path on CPython 3.9.25 (its realpath); it is refused here in the relative path's words. v2.6.1 (security review L2): a NUL
+    byte is refused as that, in its own words (before v2.6.0 it escaped as a bare ValueError; v2.6.0 called it "outside the vault")."""
+    if "\0" in str(rel_path):
+        raise Invalid(f"{purpose}: path contains a NUL character")
     try:
         p = paths.resolve(rel_path).resolve()          # projects/… maps to the projects root when it is outside the vault (BL-85)
         return p, paths.rel(p)
@@ -690,12 +693,60 @@ def next_id(con, table, project):
 
 # ── Writing one item (used by validate as a dry run and by apply) ─────────────
 
-def log(con, apply_id, table, key, field, old, new, op, via):
-    """Record one field's change in change_log under `apply_id`, so undo can reverse it."""
-    con.execute("INSERT INTO change_log (at, apply_id, tbl, item_id, field, old_value, new_value, op, via) "
-                "VALUES (?,?,?,?,?,?,?,?,?)",
-                (now(), apply_id, table, key, field,
-                 None if old is None else str(old), None if new is None else str(new), op, via))
+def log(con, apply_id, table, key, field, old, new, op, via, undoes=None):
+    """Record one field's change in change_log under `apply_id`, so undo can reverse it; #241 D: and its event (undoes: the
+    change_log rowid an undo reverses)."""
+    cur = con.execute("INSERT INTO change_log (at, apply_id, tbl, item_id, field, old_value, new_value, op, via) "
+                      "VALUES (?,?,?,?,?,?,?,?,?)",
+                      (now(), apply_id, table, key, field,
+                       None if old is None else str(old), None if new is None else str(new), op, via))
+    emit_event(con, cur.lastrowid, apply_id, table, key, field, via, undoes)
+
+
+# ===== #241 D (work-item-history): one item_events row per change_log row =====
+# The route, the dashboard's place, the actor and a source reference of each change, so a work item's history (item_history.py)
+# doesn't depend on its proposal file. Never text: before and after stay in change_log. cmd_apply sets EVENT_CTX to the item
+# being written; anything else (undo, Activity's undo several, the archiving, a migration) is known by its via alone.
+EVENT_CTX = {}
+
+
+def _events_table(con):
+    """True when the database has item_events (a database not yet migrated has none: nothing is recorded)."""
+    return con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'item_events'").fetchone() is not None
+
+
+def _event_route(via):
+    """(route, place, origin, actor, src_ref) of the change being logged, from EVENT_CTX when it is this apply's item."""
+    ctx = EVENT_CTX
+    try:
+        import item_history
+    except ImportError:              # an engine copied without item_history.py: the via alone
+        return ("undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"), None, None, "you", None
+    route, place, origin, actor = item_history.derive(via, ctx.get("data"), ctx.get("item"))
+    src = None if route in ("undo", "activity") else item_history.source_of(ctx.get("item"), ctx.get("data"), ctx.get("rel"))
+    return route, place, origin, actor, item_history.one_ref(src)
+
+
+def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
+    """#241 D: the event for change_log row `rowid` (none for updated_at, or a rejection of a new item, which has no record)."""
+    if field == "updated_at" or not _events_table(con):
+        return
+    kind, item_id = "change", key
+    if table == "rejected":
+        item = EVENT_CTX.get("item") or {}
+        if not item.get("id") or EVENT_CTX.get("apply_id") != apply_id:
+            return
+        kind, item_id = "reject", item["id"]
+    route, place, origin, actor, src = _event_route(via)
+    was = con.execute("SELECT event_id FROM item_events WHERE change = ? ORDER BY event_id DESC LIMIT 1",
+                      (undoes,)).fetchone() if undoes else None
+    try:
+        con.execute("INSERT INTO item_events (at, apply_id, item_id, change, kind, route, place, origin, actor, src_ref, undoes) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (now(), apply_id, item_id, rowid, kind, route, place, origin, actor, src, was[0] if was else None))
+    except sqlite3.IntegrityError as e:        # the history's own row never stops an apply: the change stands, logged
+        debuglog.warn("tracker", f"item_events: no event for change {rowid} ({type(e).__name__})")
+# ===== end #241 D =====
 
 
 BLANKABLE = {"decisions": ("date", "needed_by", "replaces", "reasoning", "options", "revisit"),     # an empty string means "not set"
@@ -1879,13 +1930,16 @@ def _remove_checked(apply_id, fop, blk, done):
     there without following a link (and without blocking on a pipe), checked (regular file, one name, the staged checksum), backed
     up from the bytes read, moved to a private name in that folder, found to be the very file that was read (same inode), and
     unlinked from there. So a link put in place of the file, or of inbox/ or a folder in it, or a different file of the same name
-    put there at any moment, removes nothing but the staged file; a different file caught by the move is put back."""
+    put there at any moment, removes nothing but the staged file; a different file caught by the move is put back. #261: the file
+    read is held open until the unlink, so its inode number can't be given to a different file put at the name meanwhile (Linux
+    reuses a freed number at once), and the inode check stays a check of the very file that was read."""
     rel = fop["path"]
     dfd = _open_inbox_folder(rel)
     name = rel.rsplit("/", 1)[1]
+    held = []
     try:
         try:
-            st, data = _read_regular(name, dir_fd=dfd)
+            st, data = _read_regular(name, dir_fd=dfd, hold=held)
         except FileNotFoundError:
             return                                                 # already gone
         except OSError as e:
@@ -1896,6 +1950,8 @@ def _remove_checked(apply_id, fop, blk, done):
         _unlink_same(dfd, name, st, rel)
         done.append({"op": "remove", "path": rel, "kept": kept})
     finally:
+        for fd in held:
+            os.close(fd)
         os.close(dfd)
 
 
@@ -2645,16 +2701,20 @@ class NotRegular(OSError):
     """An entry that is not a regular file (a pipe, a device, a folder) where a file of someone else's minutes should be."""
 
 
-def _read_regular(path, dir_fd=None):
+def _read_regular(path, dir_fd=None, hold=None):
     """(stat, bytes) of a regular file, opened without following a link and without blocking on a pipe, the type checked on the open
     file before it is read. The one way the checks, the copy and the remove read someone else's minutes (a plain read_bytes or
-    file_hash would block for ever on a pipe put there, or follow a link). Raises NotRegular, or the OSError the open gave."""
+    file_hash would block for ever on a pipe put there, or follow a link). Raises NotRegular, or the OSError the open gave.
+    #261: given a list `hold`, a descriptor of the file is added to it once it is known to be regular, for the caller to close:
+    while it is open the file's (st_dev, st_ino) can't belong to any other file, even after its name is unlinked."""
     import stat
     fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0), dir_fd=dir_fd)
     with os.fdopen(fd, "rb") as f:
         st = os.fstat(f.fileno())
         if not stat.S_ISREG(st.st_mode):
             raise NotRegular(0, "not a regular file")
+        if hold is not None:
+            hold.append(os.dup(f.fileno()))
         return st, f.read()
 
 
@@ -2810,11 +2870,15 @@ def cmd_apply(args):
         for p, data in work:
             via = via_for(p, data)
             for item in data.get("items", []):
+                EVENT_CTX.clear()
+                EVENT_CTX.update(apply_id=apply_id, data=data, item=item, rel=paths.rel(p))    # #241 D: the item's route
                 _apply_item(con, p, data, item, held, apply_id, via, summary)
+            EVENT_CTX.clear()
             _apply_blocks(data, apply_id, summary, file_records, p)
         con.execute("UPDATE applies SET file_ops = ? WHERE apply_id = ?", (json.dumps(file_records), apply_id))
         con.execute("COMMIT")
     except Exception as e:
+        EVENT_CTX.clear()
         con.execute("ROLLBACK")
         _report_rolled_back(e, file_records, backup)
         return 1
@@ -3364,7 +3428,7 @@ def cmd_undo():
                 continue
             _reverse_item(con, table, key, changes)
             for c in changes:
-                log(con, apply_id, table, key, c["field"], c["new_value"], c["old_value"], "undo", "undo")
+                log(con, apply_id, table, key, c["field"], c["new_value"], c["old_value"], "undo", "undo", undoes=c["rowid"])
             undone.add((table, key))
         con.execute("UPDATE applies SET undone_at = ? WHERE apply_id = ?", (now(), apply_id))
         con.execute("COMMIT")
@@ -4106,7 +4170,7 @@ def cmd_read(args):
     opts = read_options(table, rest)                      # BL-252: unknown options fail
     con = connect()
     names = [table] if table else list(TABLES)
-    allowed = (*TABLES, "change_log", "rejected", "applies")
+    allowed = (*TABLES, "change_log", "rejected", "applies", "item_events")
     out = {}
     if table == "rejected" and "--project" in opts:      # BL-133 stage B: a project's reasons, with what was rejected
         print(json.dumps(rejected_reasons(con, opts["--project"], opts.get("--days")), indent=2, ensure_ascii=False))
@@ -4623,7 +4687,7 @@ RECODE_LINKS = {"actions": ("milestone",), "raid": ("milestone",), "decisions": 
                 "links": ("from_item", "to_item"), "item_labels": ("item_id",)}                    # of any project (rewritten in every row)
 RECODE_KEYED = {"links": 2, "item_labels": 1}       # change_log keys made of IDs joined by "|": links "from|to|kind", item_labels "item|label"
 RECODE_ID_FIELDS = ("id", "milestone", "replaces", "from_item", "to_item", "item_id")     # change_log fields whose values are item IDs
-RECODE_OTHER = ("applies", "change_log", "rejected", "vault_search", "labels")             # rewritten by hand below, or hold no code
+RECODE_OTHER = ("applies", "change_log", "rejected", "vault_search", "labels", "item_events")   # rewritten by hand below, or no code
 RECODE_LOOKS_LIKE = re.compile(r"^(id|code|project|source|replaces|milestone)$|_id$|_item$|^(from|to)(_|$)")
 
 
@@ -4746,6 +4810,7 @@ def rewrite_project(con, old, new, name=None, folder=None, fingerprints=None):
     _recode_rejected(con, fingerprints)
     counts["rejected"] = len(fingerprints)
     counts["history"] = _recode_history(con, old, new, fingerprints)
+    _recode_events(con, old, new)                          # #241 D: the events follow their change_log rows
     _recode_search(con, old, new)
     broken = con.execute("PRAGMA foreign_key_check").fetchall()
     if broken:
@@ -4832,6 +4897,18 @@ def _recode_history(con, old, new, fingerprints):
             con.execute("UPDATE change_log SET item_id = ?, old_value = ?, new_value = ? WHERE rowid = ?", (key, o2, n2, rowid))
             n += 1
     return n
+
+
+def _recode_events(con, old, new):
+    """#241 D: item_events under the new code: a change's key as its change_log row now has it, a rejection's item recoded."""
+    if not _events_table(con):
+        return
+    con.execute("UPDATE item_events SET item_id = (SELECT c.item_id FROM change_log c WHERE c.rowid = item_events.change) "
+                "WHERE kind = 'change' AND change IN (SELECT rowid FROM change_log)")
+    for event_id, item_id in con.execute("SELECT event_id, item_id FROM item_events WHERE kind = 'reject'").fetchall():
+        moved = recode_id(item_id, old, new)
+        if moved != item_id:
+            con.execute("UPDATE item_events SET item_id = ? WHERE event_id = ?", (moved, event_id))
 
 
 def _recode_search(con, old, new):
