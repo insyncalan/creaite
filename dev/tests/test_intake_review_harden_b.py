@@ -22,15 +22,18 @@ from test_tracker import action  # noqa: E402
 ROW = "#v-intake-review tr.irprop"
 WORDING = "Each has a project and no conflict, and none is a change you approve one by one."
 SRC = "projects/ABC Example Programme/minutes/2026-10-05 Example steering.html — Actions"
+INVALID = "unknown field(s) for decisions: raised"
 
 
 def extras():
     """Every kind the bulk rule holds back, a guessed field (routine), and an invalid item, beside the fixture's own seven."""
     return [
         S.pending({**action(8, description="Conflicting routine action", source=SRC), "flags": ["conflict"]}),
-        # genuinely invalid (a field the tracker doesn't keep): since 2.5.4's #291 fix the build checks a flagged item again
-        S.pending({**action(9, description="Invalid routine-looking action", source=SRC, bogus_field="x"), "flags": ["invalid"],
-                   "invalid_reason": "unknown field(s) for actions: bogus_field"}),
+        # really invalid, as Alan's were (#280): a new decision carrying `raised` (decisions have `date`). Since 2.5.4's #291 fix
+        # the build checks a flagged item again with the tracker's own dry run, so a flag on a valid item would be lifted
+        S.pending({"n": 9, "op": "new", "table": "decisions", "match": "strong", "flags": ["invalid"], "invalid_reason": INVALID,
+                   "values": {"project": "ABC", "decision": "Invalid routine-looking decision", "made_by": "Sara Example",
+                              "raised": "2026-10-05", "source": SRC}}),
         S.pending({**action(10, description="Action with a guessed owner", owner="Sara Example", due_date="2026-12-01", source=SRC),
                    "inferred": [{"field": "owner", "why": "the only person named near it"}]}),
         S.pending({"n": 11, "op": "update", "table": "projects", "id": "ABC", "match": "strong", "flags": [],
@@ -111,6 +114,19 @@ class Rules(Base):
         self.assertEqual(grp("guessed owner"), "routine")
         self.assertEqual(grp("Invalid routine-looking"), "needs")
         self.assertEqual(grp("Conflicting routine"), "needs")
+
+    def test_the_invalid_item_is_held_by_the_trackers_own_check(self):
+        """The real held path: the build's recheck (build_dashboard.recheck_invalid, the tracker's dry run) keeps the flag, so
+        the row carries why in words and the field the tracker doesn't keep; its Approve is off."""
+        b = self.b
+        self.show()
+        r = b.eval("(()=>{ const r=REV.find(x=>!x.done&&x.kind==='decisions'&&x.rec.t.includes('Invalid routine-looking')); "
+                   "return r&&{bad:r.bad,badf:r.badf,hold:r.hold,flags:r.flags,n:r.n}; })()")
+        self.assertTrue(r, "the invalid decision is in the list")
+        self.assertEqual((r["bad"], r["badf"], r["hold"]), ("it has a field the tracker doesn't keep (raised)", ["raised"], "invalid"))
+        self.assertIn("invalid", r["flags"])
+        self.assertTrue(b.eval(f"document.querySelector(\"{ROW}[data-irn='{r['n']}'] [data-ira=approve]\").disabled"))
+        self.assertIn("Can't be saved as it is", b.eval(f"document.querySelector(\"{ROW}[data-irn='{r['n']}']\").innerText"))
 
 
 class Row(Base):
@@ -210,8 +226,8 @@ class Decide(Base):
         b.wait("/Approved/.test(document.getElementById('snackT').textContent)", 25)
         b.pump(1)
         made = {r["description"] for r in self.v.rows("actions")}
-        for t in ("Conflicting routine action", "Invalid routine-looking action"):
-            self.assertNotIn(t, made)
+        self.assertNotIn("Conflicting routine action", made)
+        self.assertFalse(any(r["decision"].startswith("Invalid routine-looking") for r in self.v.rows("decisions")))
         self.assertIn("Action with a guessed owner", made)
         self.assertFalse(any(r["description"].startswith("Scope creep") for r in self.v.rows("raid")))
         self.assertFalse(any(r["decision"].startswith("Approve the revised") for r in self.v.rows("decisions")))
