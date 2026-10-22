@@ -660,6 +660,44 @@ pre code{background:none;padding:0}
 @media print{body{background:#fff}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0}@page{size:A4;margin:16mm}}
 """
 
+# #303 (v2.6.1): the minutes' HTML export (and the PDF Chrome prints from it) wears the Word minutes' look, from the same template
+# (system/templates/minutes-template.docx: Calibri in Charcoal, a Signal Green rule under capitalised headings, Charcoal table headers
+# in off-white, the wordmark above a title block). Local fonts only (Calibri, then Carlito, then Arial); the wordmark is the template's
+# own picture, embedded as a data address, so the file opens offline and asks nothing of anyone.
+BRAND_CSS = """
+.brand{font:14px/1.45 Calibri,Carlito,"Segoe UI",Arial,sans-serif;color:#1e1f1e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.brand .wordmark{display:block;width:130px;height:auto;margin:0 0 16px}
+.brand header.doc{display:block;border:0;margin:0 0 4px}
+.brand header.doc h1{font-size:22.5px;font-weight:700;margin:0 0 3px;color:#1e1f1e}
+.brand header.doc .subtitle{font-size:16px;font-style:italic;color:#6b6f76;margin:0 0 3px}
+.brand header.doc .status{font-size:12px;font-style:italic;color:#6b6f76;margin:0 0 10px}
+.brand header.doc .when{font-size:13.5px;font-weight:700;margin:0 0 3px}
+.brand header.doc .sub{font-size:13.5px;color:#1e1f1e}
+.brand section{margin:0 0 6px}
+.brand section h2{font-size:17px;font-weight:700;text-transform:uppercase;margin:21px 0 10px;padding-bottom:3px;
+border-bottom:2px solid #91ff01}
+.brand th{background:#1e1f1e;color:#f8f8ff;border:1px solid #1e1f1e;padding:6px 8px}
+.brand td{border:1px solid #1e1f1e;padding:6px 8px}
+.brand table{font-size:13.5px}
+.brand .figure,.brand pre,.brand code{border-color:#1e1f1e}
+.brand .ft a{color:#0563c1}
+"""
+
+
+def _wordmark_uri():
+    """The minutes template's wordmark as a data address (read from the template the Word export fills, never from the branding
+    folder), or "" when the template has no picture."""
+    import base64
+    import zipfile
+    tpl = paths.TEMPLATES / TEMPLATES["minutes"]
+    try:
+        with zipfile.ZipFile(tpl) as z:
+            name = next(n for n in z.namelist() if n.startswith("word/media/") and n.lower().endswith(".png"))
+            return "data:image/png;base64," + base64.b64encode(z.read(name)).decode("ascii")
+    except (OSError, StopIteration, KeyError, zipfile.BadZipFile):
+        return ""
+
+
 
 def esc(t):
     """Text escaped for HTML; None becomes ''."""
@@ -1164,10 +1202,29 @@ def render(doc, editing=True, keep_text=False):
     label = audience_label(doc)
     head = (f'<header class="doc"><div><h1>{esc(doc.get("title"))}</h1><div class="sub">{esc(doc.get("project_name"))}'
             f'{(" · " + esc(doc["client"])) if doc.get("client") else ""}</div></div><div class="sub">{esc(label)}</div></header>')
+    brand = doc.get("kind") == "minutes" and not editing
+    css = CSS + BRAND_CSS if brand else CSS
+    if brand:
+        head = _brand_head(doc)
     data = f'\n<script type="application/json" id="{DATA_ID}">{data_json(doc)}</script>' if editing else ""
     return (f'<!doctype html>\n<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
-            f"<title>{esc(page_title(doc))}</title><style>{CSS}</style></head>\n"
-            f'<body><main class="page">{head}{body}</main>{data}\n</body></html>\n')
+            f"<title>{esc(page_title(doc))}</title><style>{css}</style></head>\n"
+            f'<body><main class="page{" brand" if brand else ""}">{head}{body}</main>{data}\n</body></html>\n')
+
+
+def _brand_head(doc):
+    """The minutes export's title block as the Word minutes have it: the wordmark, the title, "Minutes of Meeting", the status line
+    (the audience, then Draft or Approved: the marking), the date and the project."""
+    uri = _wordmark_uri()
+    mark = f'<img class="wordmark" src="{uri}" alt="Brightwater">' if uri else ""
+    when = _front_values(doc)["MEETING_WHEN"]
+    who = esc(doc.get("project_name")) + ((" · " + esc(doc["client"])) if doc.get("client") else "")
+    return (f'<header class="doc">{mark}<h1>{esc(doc.get("title"))}</h1><div class="subtitle">Minutes of Meeting</div>'
+            f'<div class="status">{esc(_status_line(doc))}</div><div class="when">{esc(when)}</div>'
+            f'<div class="sub">{who}</div></header>')
+
+CLIENT_ONLY_THERE = ("A client report is exported only from its checked copy (the Reporting hub's Export, client_snapshot."
+                     "client_export), so nothing was exported.")
 
 
 # ── Search ───────────────────────────────────────────────────────────────────
