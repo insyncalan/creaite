@@ -40,7 +40,9 @@ export function applyProposal(r){ if(r.kind==="actions"){ const rec=Object.assig
   if(r.kind==="update"){ const x=REC("actions",r.rec.target)||REC("raid",r.rec.target); if(!x||r.rec.field!=="status") return ()=>{}; const b={...x}; x.st=r.rec.to; if(!OPENST(x.st)) x.closed=TODAY; return ()=>Object.assign(x,b); } return ()=>{}; }
 export function setDecision(data,r,v){ const bf={meeting:"minutes_decision",report:"report_decision",file_changes:"file_changes_decision"}[r.ref];
   if(bf){ if(!data[r.ref]||data[r.ref].applied) throw new Error("already applied"); data[r.ref][bf]=v; data[r.ref].decided_in="dashboard"; return; }
-  const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("already applied"); it.decision=v; it.decided_in="dashboard";
+  const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("already applied");
+  if(v!=="pending"&&it.decision&&it.decision!=="pending"&&it.decision!==v) throw new Error("already changed");   /* #307: decided the other way elsewhere */
+  it.decision=v; it.decided_in="dashboard";
   if(v==="approved"&&!r.bad&&(it.flags||[]).includes("invalid")){ it.flags=it.flags.filter(f=>f!=="invalid"); delete it.invalid_reason; }   /* #291 fix: checked again and now valid, so the stored flag goes */
   const w=RVREASON.get(r.n);
     if(v==="rejected"&&w){ it.reject_reason=w.reason; if(w.dup) it.duplicate_of=w.dup; else delete it.duplicate_of; RVREASON.delete(r.n); } else if(v!=="rejected"){ delete it.reject_reason; delete it.duplicate_of; }
@@ -61,7 +63,7 @@ export let decide = async function(n,v,written,g){
   if(viaServer()&&v==="approved"&&(r.flags||[]).includes("conflict")) return conflictChoice(r);
   if(v==="approved"&&r.kind==="draft"){ snack(`Approving a draft needs the live server, which checks and cleans it first; or say “approve ${r.rec.t.replace(/^Minutes: /,"minutes for ").replace(/^Report: /,"report for ")}” in Claude Code`); return; }   /* BL-149 */
   if(v==="approved"&&(r.flags||[]).includes("conflict")){ snack("This conflicts with a newer change: Keep current or Use this one needs the live server; or say “keep” or “override” in Claude Code (review)"); return; }   /* BL-149 */
-  if(!written){ if(!await needVault()) return; try{ await editProposal(r.file,data=>setDecision(data,r,v)); }catch(e){ snack("Not saved: "+e.message); return; } }
+  if(!written){ if(!await needVault()) return; try{ await editProposal(r.file,data=>setDecision(data,r,v)); }catch(e){ if(/already|no longer/.test(e.message)){ snack("That one was already approved or changed, so nothing was saved. The list has been refreshed."); await reloadData(); return; } snack("Not saved: "+e.message); return; } }
   if(viaServer()&&S.autoApply){ r.done=v; refreshAll(); applySoon(); return; }
   let undoRec=()=>{};
   apply(`#${n} ${v==="approved"?"approved":"rejected"}: ${r.rec.t}`,()=>{ r.done=v; if(v==="approved") undoRec=applyProposal(r); },
@@ -120,13 +122,13 @@ export async function approveTracked(r,g){ const v=await openMinutesRecord({file
    ported when Review retired): the Track column's crosses and neithers on the meeting's items first (trackApprove with approve
    false, the minutes view's changes), then the routine items, in one apply whose Undo also settles the minutes back, exactly as
    they were. The minutes, and an item approved one by one, still wait for their own Approve (the bulk rule). */
-export async function approveRoutineTracked(m){ const v=await openMinutesRecord({file:m.file});
+export async function approveRoutineTracked(m,keys,extra){ const v=await openMinutesRecord({file:m.file});
   if(!v||!v.ok){ snack(oneLine((v&&v.message)||"")||"Couldn't open the minutes"); return; }
   const item=x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done, mine=new Set(REV.filter(item).map(x=>x.ref));
   const tr=await trackApprove(v,{only:n=>mine.has(n),approve:false}), made=tr.made;
   if(made) await reloadData();
   if(!tr.ok){ snack(trackFailWords(tr,"Approve routine")); return; }
-  const ks=REV.filter(x=>item(x)&&rvBulkOK(x)), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
+  const ks=REV.filter(x=>item(x)&&rvBulkOK(x)&&(!keys||keys.has(`${x.file}|${x.ref}`))), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
   let undo=null, out=[], got=ks.length;
   /* #275 round 3: an apply that stops puts the Track column's changes back too (trackPutBack), so the minutes are as they were */
   const putBack=async why=>{ const pb=made?await trackPutBack(v.path,tr.done||[]):{ok:true,message:""}; await reloadData();
@@ -134,7 +136,7 @@ export async function approveRoutineTracked(m){ const v=await openMinutesRecord(
   if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ await putBack(out.join(" · ")); return; } }
   else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(oneLine(applyWords(res.message))); return; } }
   const tail=made?` · ${made} line${made===1?"":"s"} taken out of the minutes or kept as lines only`:"";
-  snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}`,
+  snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}${extra?" · "+extra:""}`,
     undo?async()=>{ await undo(); await openMinutesRecord({file:m.file}); await reloadData(); }:null); }
 export async function rejectMinutes(m){ await decide(m.n,"rejected"); const pend=REV.filter(x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done);
   if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay for review.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); },`Reject ${pend.length===1?"it":"them"} too`); }                                     /* a batch over this asks first (a let, so a test can lower it) */

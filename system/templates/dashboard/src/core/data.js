@@ -9,6 +9,15 @@ import { isHiddenPerson, resolver, WSD, wsTable } from "../settings.js";
 /* ======================= data (from tracker.db, system/staging/ and the vault; see build_dashboard.py) ======================= */
 export const P=D.projects, A=D.actions, R=D.raid, DEC=D.decisions, REV=D.review, FILES=D.files, REMINDERS=D.reminders;
 shared.ACT=D.activity;
+/* #307 (paths 16 to 18): a row on Intake is its proposal file plus its item ref, never its place in the current list. The model
+   (D.intake_review) and the DOM name rows by REV's number n; the quick refresh renumbers REV without the model, so n alone can
+   point at another item. SNAP remembers, for the model on the page, which file and ref each n meant when the model arrived. */
+export const SNAP={model:null,keys:new Map()};
+export const revKey=r=>r?`${r.file}|${r.ref}`:"";
+export function snapModelKeys(force){ const m=D.intake_review||0; if(!force&&SNAP.model===m) return; SNAP.model=m; SNAP.keys=new Map(REV.map(r=>[r.n,{key:revKey(r),fp:JSON.stringify([r.rec,r.p,r.kind,r.flags||null])}])); }
+/** the current REV row the model's number n meant (same file and ref); null when it is gone or the number now means another item */
+export function revForModelN(n){ snapModelKeys(false); const k=SNAP.keys.get(n); if(!k) return REV.find(r=>r.n===n)||null; return REV.find(r=>revKey(r)===k.key)||null; }
+export const modelKeyOf=n=>{ snapModelKeys(false); const k=SNAP.keys.get(n); return k?k.key:""; };
 export const pName=c=>(P.find(p=>p.code===c)||{}).name||(c==="_portfolio"?"Portfolio":c);
 /* BL-101 (v1.9.5 hand checks, plan #81): a file's project as people read it; the portfolio's files are "Portfolio", never _portfolio (Files, ⌘K) */
 export const fpName=c=>c==="_portfolio"?"Portfolio":pName(c);

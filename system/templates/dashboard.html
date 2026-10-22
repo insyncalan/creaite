@@ -4925,6 +4925,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     SKIND: () => SKIND,
     SMATCH: () => SMATCH,
     SNACKOP: () => SNACKOP,
+    SNAP: () => SNAP,
     SNEAK_CMD: () => SNEAK_CMD,
     SNEAK_HIST: () => SNEAK_HIST,
     SNEAK_ICON: () => SNEAK_ICON,
@@ -4938,6 +4939,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     SRCH: () => SRCH,
     SRCQ: () => SRCQ,
     SRN: () => SRN,
+    STALE_MSG: () => STALE_MSG,
     START_CMD: () => START_CMD,
     STOPI: () => STOPI,
     SU: () => SU,
@@ -5999,6 +6001,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irClickMeeting: () => irClickMeeting,
     irClickStage: () => irClickStage,
     irCounts: () => irCounts,
+    irCur: () => irCur,
     irDone: () => irDone,
     irDropOn: () => irDropOn,
     irEsc: () => irEsc,
@@ -6065,6 +6068,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetView: () => irSetView,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
+    irStale: () => irStale,
     irStep: () => irStep,
     irStop: () => irStop,
     irTarget: () => irTarget,
@@ -6214,6 +6218,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     menuOpenFor: () => menuOpenFor,
     mins: () => mins,
     minsOf: () => minsOf,
+    modelKeyOf: () => modelKeyOf,
     moreHasValue: () => moreHasValue,
     morePanel: () => morePanel,
     moreViewsMenu: () => moreViewsMenu,
@@ -6879,8 +6884,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     retryOffer: () => retryOffer,
     revAt: () => revAt,
     revDetail: () => revDetail,
+    revForModelN: () => revForModelN,
     revGroupTitle: () => revGroupTitle,
     revIco: () => revIco,
+    revKey: () => revKey,
     reviewSeams: () => reviewSeams,
     reviewViaServer: () => reviewViaServer,
     rewriteHtml: () => rewriteHtml,
@@ -7054,6 +7061,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     sleep: () => sleep,
     slideDown: () => slideDown,
     snack: () => snack,
+    snapModelKeys: () => snapModelKeys,
     snapshot: () => snapshot,
     sneakClose: () => sneakClose,
     sneakCommit: () => sneakCommit,
@@ -9560,7 +9568,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     /** @type {any} */
     D.intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} }
   );
-  var irRow = (n4) => REV.find((r4) => r4.n === n4) || null;
+  var irRow = (n4) => revForModelN(n4);
+  var irCur = (n4) => {
+    const r4 = irRow(n4);
+    return r4 ? r4.n : n4;
+  };
   var irDone = (n4) => {
     const r4 = irRow(n4);
     return !r4 || !!r4.done;
@@ -9573,7 +9585,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       ...(m5.meetings || []).flatMap((x5) => [...x5.groups.needs, ...x5.groups.routine]),
       ...["mail", "other"].flatMap((k5) => [...m5[k5].needs || [], ...m5[k5].routine || []])
     ]);
-    return REV.filter((r4) => !r4.done && !have.has(r4.n)).map((r4) => r4.n);
+    const haveKeys = new Set([...have].map(modelKeyOf));
+    return REV.filter((r4) => !r4.done && !haveKeys.has(revKey(r4))).map((r4) => r4.n);
   };
   var irFreshFiles = () => {
     const m5 = (
@@ -37617,6 +37630,7 @@ ${s5}`;
     }
     const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
     if (!it2 || it2.applied) throw new Error("already applied");
+    if (v5 !== "pending" && it2.decision && it2.decision !== "pending" && it2.decision !== v5) throw new Error("already changed");
     it2.decision = v5;
     it2.decided_in = "dashboard";
     if (v5 === "approved" && !r4.bad && (it2.flags || []).includes("invalid")) {
@@ -37688,6 +37702,11 @@ ${s5}`;
         try {
           await editProposal(r4.file, (data) => setDecision(data, r4, v5));
         } catch (e4) {
+          if (/already|no longer/.test(e4.message)) {
+            snack("That one was already approved or changed, so nothing was saved. The list has been refreshed.");
+            await reloadData();
+            return;
+          }
           snack("Not saved: " + e4.message);
           return;
         }
@@ -37778,7 +37797,7 @@ ${s5}`;
     } : null);
     await reloadData();
   }
-  async function approveRoutineTracked(m5) {
+  async function approveRoutineTracked(m5, keys, extra) {
     const v5 = await openMinutesRecord({ file: m5.file });
     if (!v5 || !v5.ok) {
       snack(oneLine(v5 && v5.message || "") || "Couldn't open the minutes");
@@ -37791,7 +37810,7 @@ ${s5}`;
       snack(trackFailWords(tr2, "Approve routine"));
       return;
     }
-    const ks2 = REV.filter((x5) => item(x5) && rvBulkOK(x5)), left = REV.filter((x5) => item(x5) && !rvBulkOK(x5)).length;
+    const ks2 = REV.filter((x5) => item(x5) && rvBulkOK(x5) && (!keys || keys.has(`${x5.file}|${x5.ref}`))), left = REV.filter((x5) => item(x5) && !rvBulkOK(x5)).length;
     let undo = null, out = [], got = ks2.length;
     const putBack = async (why) => {
       const pb2 = made ? await trackPutBack(v5.path, tr2.done || []) : { ok: true, message: "" };
@@ -37817,7 +37836,7 @@ ${s5}`;
     }
     const tail = made ? ` · ${made} line${made === 1 ? "" : "s"} taken out of the minutes or kept as lines only` : "";
     snack(
-      `Approved ${got} item${got === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}${out.length ? " · " + out.join(" · ") : ""}`,
+      `Approved ${got} item${got === 1 ? "" : "s"} from these minutes${tail}${left ? ` · ${left} still need approving one by one` : ""}${out.length ? " · " + out.join(" · ") : ""}${extra ? " · " + extra : ""}`,
       undo ? async () => {
         await undo();
         await openMinutesRecord({ file: m5.file });
@@ -61096,6 +61115,7 @@ ${d5.text}`);
     }
     for (const k5 of ["review_focus", "peek_staged", "activity_capped", "activity_older", "milestone_names", "latest_apply"]) if (k5 in n4) D[k5] = n4[k5];
     if (Array.isArray(n4.review)) {
+      snapModelKeys(false);
       REV.splice(0, REV.length, ...n4.review);
       D.review = REV;
     }
@@ -76848,27 +76868,56 @@ ${d5.text}`);
       order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter((t47) => ["actions", "raid", "decisions"].includes(t47.getAttribute("data-kind") || "") || t47.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t47.getAttribute("data-irn") || 0)))).map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
       step: (o5) => {
         irPeek.value = o5.n;
-        openProposal(o5.n);
+        openProposal(irCur(o5.n));
       }
     };
     irPeek.value = n4;
-    openProposal(n4);
+    openProposal(r4.n);
   }
-  var irApprove = (n4) => decide(n4, "approved");
+  var STALE_MSG = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+  async function irStale(msg) {
+    snack(msg || STALE_MSG);
+    await reloadData();
+  }
+  function irApprove(n4) {
+    const r4 = irRow(n4);
+    if (!r4) return irStale();
+    return decide(r4.n, "approved");
+  }
   function irReject(n4, anchor) {
     const r4 = irRow(n4);
-    if (!r4 || r4.done) return;
-    if (rvRejectOK(r4)) rjMenuFor([r4], anchor);
-    else if (r4.kind === "draft" && r4.ref === "meeting") rejectMinutes(r4);
-    else decide(n4, "rejected");
-  }
-  async function irApproveRoutine(groups) {
-    const min = [...groups.needs, ...groups.routine].map(irRow).find((r4) => !!r4 && !r4.done && isRecordMin(r4));
-    if (min && viaServer()) {
-      await approveRoutineTracked(min);
+    if (!r4) {
+      irStale();
       return;
     }
-    const list = irBulk(groups, irDone, irHeld).map(irRow).filter((r4) => rvBulkOK(r4));
+    if (r4.done) return;
+    if (rvRejectOK(r4)) rjMenuFor([r4], anchor);
+    else if (r4.kind === "draft" && r4.ref === "meeting") rejectMinutes(r4);
+    else decide(r4.n, "rejected");
+  }
+  async function irApproveRoutine(groups) {
+    const looked = (groups.routine || []).map((n4) => ({ key: modelKeyOf(n4), fp: (SNAP.keys.get(n4) || {}).fp })).filter((x5) => x5.key);
+    await reloadData();
+    const now = looked.map((x5) => {
+      const r4 = REV.find((y5) => revKey(y5) === x5.key);
+      return r4 && !r4.done && JSON.stringify([r4.rec, r4.p, r4.kind, r4.flags || null]) === x5.fp ? r4 : null;
+    });
+    const same2 = (
+      /** @type {any[]} */
+      now.filter(Boolean)
+    ), changed2 = looked.length - same2.length;
+    const left = changed2 ? `${changed2} changed since you looked, left for you` : "";
+    if (looked.length && !same2.length) {
+      snack(STALE_MSG);
+      return;
+    }
+    const keys = new Set(same2.map(revKey));
+    const min = same2.find((r4) => isRecordMin(r4));
+    if (min && viaServer()) {
+      await approveRoutineTracked(min, keys, left);
+      return;
+    }
+    const list = same2.filter((r4) => rvBulkOK(r4));
     if (!list.length) {
       snack("Nothing routine to approve");
       return;
@@ -76876,6 +76925,7 @@ ${d5.text}`);
     const res = await rvDecideMany(list, "approved");
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
     const out = trkLeftOut(res);
+    if (left) out.push(left);
     snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
   }
   var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the suggestion to see them" };
@@ -78010,6 +78060,7 @@ ${d5.text}`);
           RECSTAT.full++;
           Object.assign(D, n4);
           [[P4, n4.projects], [A4, n4.actions], [R3, n4.raid], [DEC, n4.decisions], [REV, n4.review], [FILES, n4.files], [REMINDERS, n4.reminders]].forEach(([a5, b5]) => a5.splice(0, a5.length, ...b5));
+          snapModelKeys(true);
           shared.ACT = n4.activity;
           R3.forEach((x5) => x5.pr = prio(x5.imp, x5.lik));
           shared.DATA_AT = n4.data_at || shared.DATA_AT;
@@ -79024,6 +79075,25 @@ ${d5.text}`);
   // core/data.js
   var P4 = D.projects, A4 = D.actions, R3 = D.raid, DEC = D.decisions, REV = D.review, FILES = D.files, REMINDERS = D.reminders;
   shared.ACT = D.activity;
+  var SNAP = { model: null, keys: /* @__PURE__ */ new Map() };
+  var revKey = (r4) => r4 ? `${r4.file}|${r4.ref}` : "";
+  function snapModelKeys(force) {
+    const m5 = D.intake_review || 0;
+    if (!force && SNAP.model === m5) return;
+    SNAP.model = m5;
+    SNAP.keys = new Map(REV.map((r4) => [r4.n, { key: revKey(r4), fp: JSON.stringify([r4.rec, r4.p, r4.kind, r4.flags || null]) }]));
+  }
+  function revForModelN(n4) {
+    snapModelKeys(false);
+    const k5 = SNAP.keys.get(n4);
+    if (!k5) return REV.find((r4) => r4.n === n4) || null;
+    return REV.find((r4) => revKey(r4) === k5.key) || null;
+  }
+  var modelKeyOf = (n4) => {
+    snapModelKeys(false);
+    const k5 = SNAP.keys.get(n4);
+    return k5 ? k5.key : "";
+  };
   var pName = (c5) => (P4.find((p6) => p6.code === c5) || {}).name || (c5 === "_portfolio" ? "Portfolio" : c5);
   var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   var LASTVISIT = store.get("creaite-lastvisit", D.data_at);
@@ -79257,6 +79327,7 @@ ${d5.text}`);
         "SETCATS",
         "SETSECTIONS",
         "SKEY",
+        "SNAP",
         "SORT",
         "START_CMD",
         "STATUSES",
@@ -79589,6 +79660,7 @@ ${d5.text}`);
         "irReady",
         "irRefreshCalendar",
         "irRefreshing",
+        "irRow",
         "irSaveChanges",
         "irSel",
         "irSetChecking",
@@ -79872,6 +79944,7 @@ ${d5.text}`);
         "resolvePerson",
         "restoreNav",
         "revDetail",
+        "revForModelN",
         "rjGuesses",
         "rkText",
         "row",
@@ -79904,6 +79977,7 @@ ${d5.text}`);
         "setChatWidth",
         "setClientLogos",
         "setClientName",
+        "setDecision",
         "setLayout",
         "setLive",
         "setMark",

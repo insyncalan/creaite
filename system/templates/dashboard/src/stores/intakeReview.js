@@ -13,14 +13,16 @@
    - irTick         bump to redraw after REV changes without new data (renderIntakeReview does it) */
 import { signal } from "@preact/signals";
 import { D, store } from "../core/page.js";
-import { REV } from "../core/data.js";
+import { modelKeyOf, REV, revForModelN, revKey } from "../core/data.js";
 import { IR_KINDS, IR_STAGES, irCounts, irFoldClick, irKeepOpen, irKindOf, irStageClick, irToggle, irViewNorm } from "../core/irFold.js";
 
 export const IR_VIEW_KEY = "creaite-ir-view";
 /** @returns {import("../core/irFold.js").IrModel} */
 export const irModel = () => /** @type {any} */ (D).intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} };
 /** @param {number} n */
-export const irRow = n => REV.find(r => r.n === n) || null;
+export const irRow = n => revForModelN(n);   /* #307: by proposal file and item ref (core/data.js SNAP), so a list renumbered behind the page never shows or acts on another item */
+/** The number REV has now for the row the model calls n (n itself when unknown). @param {number} n */
+export const irCur = n => { const r = irRow(n); return r ? r.n : n; };
 /** @param {number} n */
 export const irDone = n => { const r = irRow(n); return !r || !!r.done; };   /* gone from D.review: decided elsewhere */
 /** The open proposals Review holds that the model does not (a sweep staged them since the model was built: the quick refresh after
@@ -29,7 +31,8 @@ export const irDone = n => { const r = irRow(n); return !r || !!r.done; };   /* 
 export const irMissing = () => {
   const m = /** @type {any} */ (irModel()), have = new Set([...(m.meetings || []).flatMap((/** @type {any} */ x) => [...x.groups.needs, ...x.groups.routine]),
     ...["mail", "other"].flatMap(k => [...(m[k].needs || []), ...(m[k].routine || [])])]);
-  return REV.filter(r => !r.done && !have.has(r.n)).map(r => r.n);
+  const haveKeys = new Set([...have].map(modelKeyOf));   /* #307: by file and ref, so a renumbered REV is not taken for new proposals */
+  return REV.filter(r => !r.done && !haveKeys.has(revKey(r))).map(r => r.n);
 };
 /** The files in D.inbox that wait to be processed: new, an upload, not a loaded meeting's transcript and not set aside (those are
     listed in the model's later or not_needed, by path). `fresh` are those the model lacks (one dropped in inbox/ since it was built:

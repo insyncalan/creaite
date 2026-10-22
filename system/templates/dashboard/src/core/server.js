@@ -13,7 +13,7 @@ import { renderActivity } from "../activity.js";
 import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
 import { openChat, reattach, say } from "../ask.js";
-import { A, DEC, FILES, P, R, REMINDERS, REV } from "./data.js";
+import { A, DEC, FILES, P, R, REMINDERS, REV, snapModelKeys } from "./data.js";
 import { $, $$, esc, html, putHTML, raw } from "./dom.js";
 import { typing } from "./keys.js";
 import { mCells, mCounts } from "./motion.js";
@@ -133,7 +133,7 @@ export function openBlockersInIntake(files){ const L=REV.filter(x=>files.include
 /* fresh data after an apply or undo */
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
-  Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b));
+  Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b)); snapModelKeys(true);
   shared.ACT=n.activity; R.forEach(x=>x.pr=prio(x.imp,x.lik)); shared.DATA_AT=n.data_at||shared.DATA_AT;
   [...A,...R,...DEC,...P].forEach(o=>["t","upd","resp","cm","cmd","reason","current"].forEach(k=>{ if(typeof o[k]==="string") o[k]=(k==="current"?fdMd:fdText)(o[k]); })); shared.ACT.forEach(a=>a.what=fdText(a.what));
   ovReapply();   /* BL-304: a change still saving stays on screen */

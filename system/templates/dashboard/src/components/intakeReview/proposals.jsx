@@ -6,18 +6,18 @@
    proposal in the peek (the app's right-hand panel: Save, Save and approve, Reject, previous and next).
    The rule for "routine" is the server's (review.hold_reason, the row's `hold`); rvBulkOK reads it. Tokens and the app's own
    classes only (style.css, "#232-B"). */
-import { REV, pName } from "../../core/data.js";
+import { modelKeyOf, pName, REV, revForModelN, revKey, SNAP } from "../../core/data.js";
 import { fd, fdText } from "../../core/page.js";
 import { srcParse, weekendNote, wkLong } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
 import { irLineHead, irLineParts, irVerb } from "../../core/irUpdate.js";
 import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel, PK, pkOn } from "../../projects.js";
-import { reviewViaServer, snack, viaServer } from "../../core/server.js";
+import { reloadData, reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
 import { approveRoutineTracked, BAD_MSG, decide, draftOn, HELD_ERR, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
-import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
+import { irCur, irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
 import { ConflictBlock } from "./UpdatePeek.jsx";
@@ -122,32 +122,50 @@ export function irOpenPeek(n) {
   shared.PKSRC = {
     view: "intake-review",
     order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "") || t.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t.getAttribute("data-irn") || 0)))).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
-    step: (/** @type {any} */ o) => { irPeek.value = o.n; openProposal(o.n); },
+    step: (/** @type {any} */ o) => { irPeek.value = o.n; openProposal(irCur(o.n)); },
   };
   irPeek.value = n;
-  openProposal(n);
+  openProposal(r.n);
 }
 
 /** Approve one proposal (the app's decide: its project, conflict and draft checks all apply). @param {number} n */
-export const irApprove = n => decide(n, "approved");
+export const STALE_MSG = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+/** #307 (paths 16 to 18): the row is not what the page showed (renumbered, approved or changed elsewhere): say so, save nothing, refresh. */
+export async function irStale(msg) { snack(msg || STALE_MSG); await reloadData(); }
+export function irApprove(n) {
+  const r = irRow(n);     /* by proposal file and item ref (core/data.js SNAP), never by the place in a list that may have moved */
+  if (!r) return irStale();
+  return decide(r.n, "approved");
+}
 
 /** Reject: the reasons menu where a proposal can be rejected with one; minutes, reports and file changes on their own. @param {number} n @param {Element|null} anchor */
 export function irReject(n, anchor) {
   const r = irRow(n);
-  if (!r || r.done) return;
-  if (rvRejectOK(r)) rjMenuFor([r], anchor); else if (r.kind === "draft" && r.ref === "meeting") rejectMinutes(r); else decide(n, "rejected");
+  if (!r) { irStale(); return; }
+  if (r.done) return;
+  if (rvRejectOK(r)) rjMenuFor([r], anchor); else if (r.kind === "draft" && r.ref === "meeting") rejectMinutes(r); else decide(r.n, "rejected");
 }
 
 /** Approve routine: the routine group only, in one apply with one Undo (rvDecideMany); never the first group.
     @param {{needs: number[], routine: number[]}} groups */
 export async function irApproveRoutine(groups) {
-  const min = [...groups.needs, ...groups.routine].map(irRow).find(r => !!r && !r.done && isRecordMin(r));
-  if (min && viaServer()) { await approveRoutineTracked(min); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
-  const list = irBulk(groups, irDone, irHeld).map(irRow).filter(r => rvBulkOK(r));
+  /* #307: take the routine rows as the page showed them (file + ref + content), read the server's list again, and approve only
+     those that are still the same; the rest are counted and left for the person */
+  const looked = (groups.routine || []).map(n => ({ key: modelKeyOf(n), fp: (SNAP.keys.get(n) || {}).fp })).filter(x => x.key);
+  await reloadData();
+  const now = looked.map(x => { const r = REV.find(y => revKey(y) === x.key); return r && !r.done && JSON.stringify([r.rec, r.p, r.kind, r.flags || null]) === x.fp ? r : null; });
+  const same = /** @type {any[]} */ (now.filter(Boolean)), changed = looked.length - same.length;
+  const left = changed ? `${changed} changed since you looked, left for you` : "";
+  if (looked.length && !same.length) { snack(STALE_MSG); return; }
+  const keys = new Set(same.map(revKey));
+  const min = same.find(r => isRecordMin(r));
+  if (min && viaServer()) { await approveRoutineTracked(min, keys, left); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
+  const list = same.filter(r => rvBulkOK(r));
   if (!list.length) { snack("Nothing routine to approve"); return; }
   const res = await rvDecideMany(list, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
   const out = trkLeftOut(res);      /* #275 round 3: an apply that stopped (the batch back on Intake) and rows the Track reload left out */
+  if (left) out.push(left);
   snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
 }
 
