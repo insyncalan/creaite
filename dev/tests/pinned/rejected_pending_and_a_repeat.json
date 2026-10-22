@@ -300,7 +300,7 @@
   },
   "exit": 0,
   "stderr": "",
-  "stdout": "Apply 1: written 1, filed 0, rejected 1, held 0, 1 still pending.\n",
+  "stdout": "Apply 1: written 1, filed 0, rejected 1, 1 still pending.\n",
   "step": "decide"
  },
  {
@@ -670,7 +670,7 @@
   },
   "exit": 0,
   "stderr": "",
-  "stdout": "Apply 2: written 0, filed 0, rejected 2, held 0, 1 still pending.\n",
+  "stdout": "Apply 2: written 0, filed 0, rejected 2, 1 still pending.\n",
   "step": "again"
  },
  {

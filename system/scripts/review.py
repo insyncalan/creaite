@@ -2563,7 +2563,10 @@ def _put_back(p, was):
 def _main_with_held(argv):
     cmd, rest = (argv[0], argv[1:]) if argv else ("", [])
     keys = [a for a in rest if not a.startswith("--")]
-    if cmd == "reject" and "--discard" in rest and len(keys) == 1:
+    if cmd == "reject" and "--discard" in rest:
+        if len(keys) != 1 or not keys[0].isdigit():                     # #280 follow-up: a plain answer, never a traceback
+            print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
+            return 2
         return cmd_discard(keys[0])
     if cmd == "approve" and "--without-transcript" in rest and keys:
         mode = "sync" if "--sync" in rest else "as-staged" if "--as-staged" in rest else None

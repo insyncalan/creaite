@@ -267,7 +267,7 @@
   },
   "exit": 0,
   "stderr": "",
-  "stdout": "Held in Review, not applied: proposed-step1.json item 2: type must be one of Risk, Assumption, Issue, Dependency (got 'Wish')\nApply 1: written 1, filed 0, rejected 0, held 0, 1 still pending.\n",
+  "stdout": "Held in Review, not applied: proposed-step1.json item 2: type must be one of Risk, Assumption, Issue, Dependency (got 'Wish')\nApply 1: written 1, filed 0, rejected 0, 1 still pending.\n",
   "step": "batch"
  },
  {
