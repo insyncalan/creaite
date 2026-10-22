@@ -3615,12 +3615,17 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
 .sheet-a4 .page table.mnt th{padding:5px 8px;font-size:var(--fs-xs);position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
 .sheet-a4 .page table.mnt td{padding:7px 8px}
-.mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
+.mnt col.c-trk{width:96px} .mnt col.c-own{width:108px} .mnt col.c-by{width:120px} .mnt col.c-due{width:92px} .mnt col.c-pri{width:76px} .mnt col.c-ws{width:96px}
 .mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:var(--fs-xs)}
-.mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
-.mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
-.mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
-.mntrk button.y[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok)} .mntrk button.n[aria-pressed="true"]{background:var(--bad-soft);color:var(--bad)}
+/* #302 A, option D: three icons; the chosen one is raised and its word sits under it (Tracked green, Minutes only grey, Dropped red) */
+.mntrk{display:inline-flex;flex-direction:column;gap:2px;vertical-align:top}
+.mntrb{display:inline-flex;gap:2px;background:var(--sunk);border-radius:var(--r-md);padding:2px;align-items:center;align-self:flex-start}
+.mntrk button{width:26px;height:26px;border:0;border-radius:var(--r-sm);background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--surface)}
+.mntrk button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.mntrk button.y[aria-pressed="true"]{color:var(--ok)} .mntrk button.n[aria-pressed="true"]{color:var(--bad)}
+.mntrk button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.mntrw{font-size:var(--fs-xs);font-weight:600;color:var(--muted);padding-left:2px;white-space:nowrap} .mntrw.y{color:var(--ok)} .mntrw.n{color:var(--bad)}
 .page tr.mi[data-trk="y"] td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
 .page tr.mi[data-trk="n"]{opacity:.55} .page tr.mi[data-trk="n"] .mnit{text-decoration:line-through;color:var(--muted)}
 .page tr.mi.hl td{background:var(--accent-soft)}
@@ -3636,8 +3641,15 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:var(--lh-24)}
 .msel.mnro{cursor:default} .msel.mnro:hover{border-color:transparent;background:var(--sunk)} .msel.mnro.empty:hover{background:none;border-color:var(--line)}
 .msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
-.msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
+.msel.empty{color:var(--muted);background:none;border:1px dashed var(--line);opacity:.7} .mnt tr:hover .msel.empty,.msel.empty:hover,.msel.empty:focus{opacity:1} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
 .mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
+/* #302 A: the attention strip, the plain flags on ticked rows, the row Next moved to */
+.mnattn{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:none;background:var(--warn-soft);border-bottom:1px solid var(--line);padding:8px 14px;font-size:var(--fs-sm)} .mnattn.ok{background:var(--ok-soft)}
+.mnfchip{font:inherit;font-size:var(--fs-xs);border:1px solid var(--warn);color:var(--warn);background:var(--surface);border-radius:var(--r-pill);padding:2px 10px;cursor:pointer;min-height:24px}
+.mnfchip[aria-pressed="true"]{background:var(--warn);color:var(--surface)}
+.mnflag2{display:inline-block;font-size:var(--fs-xs);color:var(--warn);background:var(--warn-soft);border-radius:var(--r-pill);padding:1px 9px}
+.page tr.mi.nx td{background:var(--accent-soft)}
+.page tr.mi[hidden]{display:none}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -3667,7 +3679,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .mnap-filed{margin:0 0 4px} .mnap-ck{margin:12px 0 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);font-size:var(--fs-sm)} .mnap-ck ul{margin:4px 0 0}
 @media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
-  #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
+  #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9} #v-minutes .sheet-bar .sheet-status{order:8;margin-left:0} #v-minutes .sheet-bar .sheet-barr{order:5} #v-minutes .mnattn .sub{display:none}   /* #302: the longer Approve button keeps the buttons on the first row; the save line and the Track summary share the second */
   #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}
   #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-mini{flex:0 1 auto;display:block} }     /* scrolled, the slim bar stays one row: the title shortens */
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
