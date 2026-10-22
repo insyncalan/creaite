@@ -1,0 +1,13 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 35e9c13d..a65fea70 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -4623,7 +4623,7 @@ RECODE_LINKS = {"actions": ("milestone",), "raid": ("milestone",), "decisions":
+                 "links": ("from_item", "to_item"), "item_labels": ("item_id",)}                    # of any project (rewritten in every row)
+ RECODE_KEYED = {"links": 2, "item_labels": 1}       # change_log keys made of IDs joined by "|": links "from|to|kind", item_labels "item|label"
+ RECODE_ID_FIELDS = ("id", "milestone", "replaces", "from_item", "to_item", "item_id")     # change_log fields whose values are item IDs
+-RECODE_OTHER = ("applies", "change_log", "rejected", "vault_search", "labels")             # rewritten by hand below, or hold no code
++RECODE_OTHER = ("applies", "change_log", "rejected", "vault_search", "labels", "people")   # rewritten by hand below, or hold no code (F3: a person ID is not an item ID)
+ RECODE_LOOKS_LIKE = re.compile(r"^(id|code|project|source|replaces|milestone)$|_id$|_item$|^(from|to)(_|$)")
+ 
+ 

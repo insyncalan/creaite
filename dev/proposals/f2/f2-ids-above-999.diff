@@ -1,0 +1,83 @@
+diff --git a/system/scripts/schema.sql b/system/scripts/schema.sql
+index e2d3ee68..b98e59af 100644
+--- a/system/scripts/schema.sql
++++ b/system/scripts/schema.sql
+@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS projects (
+ -- state Overdue). state is one of the five states when Alan set it (state_set = 1), NULL when creaite suggests it from the dates;
+ -- state_reason is required when he sets a better state than the dates suggest; client_message when client_visible.
+ CREATE TABLE IF NOT EXISTS milestones (
+-  id            TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-M-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13 AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'),
++  id            TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-M-[0-9][0-9][0-9]*' AND substr(id, instr(id, '-M-') + 3) NOT GLOB '*[^0-9]*' AND length(substr(id, instr(id, '-M-') + 3)) BETWEEN 3 AND 5 AND substr(id, 1, instr(id, '-M-') - 1) NOT GLOB '*[^A-Z0-9]*' AND length(substr(id, 1, instr(id, '-M-') - 1)) BETWEEN 3 AND 7),
+   project       TEXT NOT NULL REFERENCES projects(code),
+   name          TEXT NOT NULL,
+   description   TEXT,
+@@ -47,8 +47,7 @@ CREATE TABLE IF NOT EXISTS milestones (
+ -- Workstreams (BL-58): part of each project's structure, like milestones. Items name their workstream
+ -- (actions.workstream, raid.workstream); tracker.py rejects one that isn't an Active workstream of the item's project.
+ CREATE TABLE IF NOT EXISTS workstreams (
+-  id         TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-W-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13
+-                                     AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'),
++  id         TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-W-[0-9][0-9][0-9]*' AND substr(id, instr(id, '-W-') + 3) NOT GLOB '*[^0-9]*' AND length(substr(id, instr(id, '-W-') + 3)) BETWEEN 3 AND 5 AND substr(id, 1, instr(id, '-W-') - 1) NOT GLOB '*[^A-Z0-9]*' AND length(substr(id, 1, instr(id, '-W-') - 1)) BETWEEN 3 AND 7),
+   project    TEXT NOT NULL REFERENCES projects(code),
+   name       TEXT NOT NULL CHECK (length(trim(name)) > 0),
+   lead       TEXT,                -- a full name from the people register (BL-55)
+@@ -64,7 +63,7 @@ CREATE TABLE IF NOT EXISTS workstreams (
+ );
+ 
+ CREATE TABLE IF NOT EXISTS actions (
+-  id           TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-A-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13 AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'),
++  id           TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-A-[0-9][0-9][0-9]*' AND substr(id, instr(id, '-A-') + 3) NOT GLOB '*[^0-9]*' AND length(substr(id, instr(id, '-A-') + 3)) BETWEEN 3 AND 5 AND substr(id, 1, instr(id, '-A-') - 1) NOT GLOB '*[^A-Z0-9]*' AND length(substr(id, 1, instr(id, '-A-') - 1)) BETWEEN 3 AND 7),
+   project      TEXT NOT NULL REFERENCES projects(code),
+   description  TEXT NOT NULL,
+   workstream   TEXT,
+@@ -86,7 +85,7 @@ CREATE TABLE IF NOT EXISTS actions (
+ -- Dates are stored YYYY-MM-DD; the dashboard, documents and messages show DD-MM-YYYY.
+ -- IDs: actions <CODE>-A-NNN, decisions <CODE>-D-NNN, RAID <CODE>-NNN (type is a field)
+ CREATE TABLE IF NOT EXISTS raid (
+-  id           TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-[0-9][0-9][0-9]' AND length(id) BETWEEN 7 AND 11 AND substr(id, 1, length(id) - 4) NOT GLOB '*[^A-Z0-9]*'),
++  id           TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-[0-9][0-9][0-9]*' AND substr(id, instr(id, '-') + 1) NOT GLOB '*[^0-9]*' AND length(substr(id, instr(id, '-') + 1)) BETWEEN 3 AND 5 AND substr(id, 1, instr(id, '-') - 1) NOT GLOB '*[^A-Z0-9]*' AND length(substr(id, 1, instr(id, '-') - 1)) BETWEEN 3 AND 7),
+   project      TEXT NOT NULL REFERENCES projects(code),
+   type         TEXT NOT NULL CHECK (type IN ('Risk','Assumption','Issue','Dependency')),
+   workstream   TEXT,
+@@ -111,7 +110,7 @@ CREATE TABLE IF NOT EXISTS raid (
+ -- Decisions (BL-53): a decision can be Pending before it is made. It keeps its D-number when it is made; `made_by` holds who
+ -- it is asked of while Pending and who made it once Made; `date` is the date it was made, empty while Pending.
+ CREATE TABLE IF NOT EXISTS decisions (
+-  id           TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-D-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13 AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'),
++  id           TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-D-[0-9][0-9][0-9]*' AND substr(id, instr(id, '-D-') + 3) NOT GLOB '*[^0-9]*' AND length(substr(id, instr(id, '-D-') + 3)) BETWEEN 3 AND 5 AND substr(id, 1, instr(id, '-D-') - 1) NOT GLOB '*[^A-Z0-9]*' AND length(substr(id, 1, instr(id, '-D-') - 1)) BETWEEN 3 AND 7),
+   project      TEXT NOT NULL REFERENCES projects(code),
+   decision     TEXT NOT NULL,
+   made_by      TEXT,
+@@ -133,7 +132,7 @@ CREATE TABLE IF NOT EXISTS decisions (
+ 
+ -- Promises (BL-50): commitments made in passing, lighter than actions (no priority or workstream)
+ CREATE TABLE IF NOT EXISTS promises (
+-  id          TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-P-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13 AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'),
++  id          TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-P-[0-9][0-9][0-9]*' AND substr(id, instr(id, '-P-') + 3) NOT GLOB '*[^0-9]*' AND length(substr(id, instr(id, '-P-') + 3)) BETWEEN 3 AND 5 AND substr(id, 1, instr(id, '-P-') - 1) NOT GLOB '*[^A-Z0-9]*' AND length(substr(id, 1, instr(id, '-P-') - 1)) BETWEEN 3 AND 7),
+   project     TEXT NOT NULL REFERENCES projects(code),
+   promised_by TEXT NOT NULL,                 -- full names from the people register (BL-55)
+   promised_to TEXT NOT NULL,
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 53ac7a4c..fd117e71 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -89,7 +89,7 @@ DATE_FIELDS = {"milestone_date", "due_date", "raised", "closed", "date", "week_e
+                "forecast_date", "created", "needed_by", "actual_date"}
+ NO_EDIT = {"id", "updated_at"}
+ ID_PREFIX = {"actions": "-A-", "decisions": "-D-", "raid": "-", "milestones": "-M-", "workstreams": "-W-", "promises": "-P-"}
+-ITEM_ID = re.compile(r"([A-Z][A-Z0-9]{2,6})-(?:([ADMWP])-)?\d{3}")
++ITEM_ID = re.compile(r"([A-Z][A-Z0-9]{2,6})-(?:([ADMWP])-)?\d{3,5}")     # F2: 3 to 5 digits (was exactly 3)
+ ITEM_TABLE = {"A": "actions", "D": "decisions", "M": "milestones", "W": "workstreams", "P": "promises", None: "raid"}
+ LINKABLE = ("actions", "raid", "milestones", "decisions", "promises")     # either end of a link
+ LABELLED = ("actions", "raid", "decisions")                               # items that carry labels (BL-94)
+@@ -680,8 +680,8 @@ def next_id(con, table, project):
+     n = 0
+     for t in tables:
+         prefix = f"{project}{ID_PREFIX[t]}"
+-        for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND length(id) = ? AND id LIKE ?",
+-                                (project, len(prefix) + 3, prefix + "%")):
++        for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND length(id) BETWEEN ? AND ? AND id LIKE ?",
++                                (project, len(prefix) + 3, len(prefix) + 5, prefix + "%")):   # F2: 3 to 5 digits
+             tail = i[len(prefix):]
+             if tail.isdigit():
+                 n = max(n, int(tail))
