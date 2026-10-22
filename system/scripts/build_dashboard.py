@@ -2868,6 +2868,19 @@ def proposal_meta():
     return out
 
 
+def _filed_row(line, folders):
+    """One processed.txt line (date | key | filed; … | n) as a #307 Done row, or None unless it is a no-calendar meeting."""
+    cells = [c.strip() for c in line.split(" | ")]
+    if len(cells) < 3 or not cells[1].startswith("fp:"):
+        return None
+    filed = next((f.strip() for f in cells[2].split(";") if f.strip().endswith(".docx")), "")
+    parts = filed.split("/")
+    day = cells[1][3:13] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", cells[1][3:13]) else cells[0]
+    title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else (cells[1].split("|") + ["Meeting"])[1].strip().capitalize()
+    return {"key": cells[1], "day": day, "title": title, "path": filed or None, "date": cells[0],
+            "p": folders.get(parts[1]) if len(parts) > 1 and parts[0] == "projects" else None}
+
+
 def processed_this_week(today):
     """#307: the minutes filed this week for a meeting with no calendar entry (a dropped transcript, someone's minutes; their
     processed.txt key starts "fp:"), as [{key, day, title, path, p}], newest first. A calendar meeting is its own Done row."""
@@ -2875,20 +2888,10 @@ def processed_this_week(today):
         lines = paths.PROCESSED.read_text(encoding="utf-8").splitlines()
     except OSError:
         return []
-    monday, out = (today - timedelta(days=today.weekday())).isoformat(), []
+    monday = (today - timedelta(days=today.weekday())).isoformat()
     folders = {v: k for k, v in paths.register_folders().items()}
-    for line in lines:
-        cells = [c.strip() for c in line.split(" | ")]
-        if len(cells) < 3 or not cells[1].startswith("fp:") or not cells[0] >= monday:
-            continue
-        filed = next((f.strip() for f in cells[2].split(";") if f.strip().endswith(".docx")), "")
-        parts = filed.split("/")
-        key_day = cells[1][3:13]
-        title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else ""
-        title = title or (cells[1].split("|")[1:2] or ["Meeting"])[0].strip().capitalize()
-        out.append({"key": cells[1], "day": key_day if re.fullmatch(r"\d{4}-\d{2}-\d{2}", key_day) else cells[0], "title": title,
-                    "path": filed or None, "p": folders.get(parts[1]) if len(parts) > 1 and parts[0] == "projects" else None})
-    return out[::-1]
+    rows = (_filed_row(line, folders) for line in lines)
+    return [r for r in reversed([r for r in rows if r]) if r["date"] >= monday]
 
 
 def intake_review(meetings, files, queue, today, meta=None, stale_after=None, aside=None):

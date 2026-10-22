@@ -4,7 +4,6 @@ The refusal is said at once with the "File without the transcript copy" button, 
 Run: python3 dev/tests/test_held_editor_307b.py      (needs Google Chrome)
 """
 import json
-import re
 import sys
 import unittest
 from pathlib import Path
