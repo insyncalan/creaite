@@ -606,6 +606,8 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 ### Using the dashboard
 
 ## Keyboard shortcuts
+**Single-key shortcuts** (every key below that is a letter or symbol pressed on its own, such as W for Work or J and K in lists) can be turned off: **Settings › Essentials › Look and help › Single-key shortcuts**. It takes effect at once and is remembered. Off, only keys held with Cmd or Ctrl do anything, plus Esc, Enter, Space, Tab and the arrows; the hints for the letter keys are hidden too. Keys inside a text field, a list or a menu are not affected.
+
 | Keys | Does |
 |---|---|
 | Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), projects, items, milestones, files, Intake and commands. On a project page it also offers that project's actions (generate or edit current state, add a milestone or image, edit health). Type a change in words ("move ABC-A-002 to fri") to see it before and after; Enter stages it, Cmd/Ctrl + Enter stages it and opens Intake |

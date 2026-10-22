@@ -1418,6 +1418,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hpn-f{display:flex;flex-direction:column;gap:6px;margin-top:8px} .hpn-f a{color:var(--accent)}
 .hfirst{max-width:720px;margin:0 0 12px;padding:7px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--accent-soft);font-size:var(--fs-md);color:var(--ink)}
 .hfirst[hidden],.hfoot[hidden]{display:none}
+html[data-single-keys="off"] .hfirst,html[data-single-keys="off"] .hfoot{display:none}   /* #298: the "Press ?" lines advertise a single key */
 .hfirst.ghost{visibility:hidden}   /* cleared: the slot stays, so nothing moves; not announced */
 .hfoot{margin:28px 0 8px;font-size:var(--fs-sm);color:var(--faint)}
 .hfoot kbd,.hfirst kbd{font:500 var(--fs-xs) var(--mono,ui-monospace,monospace);border:1px solid var(--line);border-radius:var(--r-sm);padding:1px 6px;color:var(--muted)}

@@ -9,7 +9,7 @@ import { closeCal } from "./fields.js";
 import { go } from "./nav.js";
 import { closeHelpPanel, helpOutsidePress, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
 import { helpFocusSearch } from "../help.js";
-import { copied, MAC, START_CMD } from "./page.js";
+import { copied, MAC, S, START_CMD } from "./page.js";
 import { railGo } from "../rail.js";
 import { snack } from "./server.js";
 import { shared } from "./state.js";
@@ -45,8 +45,20 @@ export function popupOpen(){ if(document.querySelector("dialog[open]")||shared.C
 export const PAGE_KEYS={t:"today",p:"projects",w:"work",i:"review",f:"files",a:"activity",s:"settings",r:"reports",e:"people"};
 export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable||!!a.closest?.('.ddmenu [role="option"]')); };   /* BL-316: an option of a filter list takes keys, as its tick box did */
 
+/** #298 (WCAG 2.1.4): the one switch for every single-key shortcut (the page keys, Work's row keys, D, N, / ?, [ ], Intake's rows). On unless
+    Settings › Look and help turns it off; read live, so a change needs no reload. Modifier keys, Esc, Enter, Space, Tab and the arrows are never covered. */
+export const singleKeysOn=()=>S.singleKeys!==false;
+/** With the switch off a printable key, pressed with nothing held, on the page itself (not in a field, and not inside a menu, list, picker, dialog or ask creaite, where
+    a letter picks an entry) is swallowed before any page handler sees it. Nothing is prevented, so the browser keeps its own behaviour. */
+export function singleKeyBlocked(e){ if(singleKeysOn()||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||!e.key||e.key.length!==1||e.key===" ") return false;
+  if(typing()) return false; const t=e.target; return !(t&&t.closest&&t.closest("dialog,#chat,#capDrawer,"+POPUPS+",[role=menuitem],[role=option]")); }
+/** The switch, on the page: a hint that advertises a single key reads data-single-keys (CSS, the tooltips); run at load and when the setting changes. */
+export function singleKeysApply(){ document.documentElement.dataset.singleKeys=singleKeysOn()?"on":"off"; }
+window.addEventListener("keydown",e=>{ if(singleKeyBlocked(e)) e.stopImmediatePropagation(); },true);   /* first on window, so ahead of sneak.js's own / handler */
+
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0123's place) */
 export function bootKeyboard(){
+singleKeysApply();
 document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="n"){ e.preventDefault(); openCapture(); return; }   /* BL-301 C: a note, from any page */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }   /* #122: ⌘K is the palette, Shift or not; inside a rich editor ⌘⇧K is the link form, caught first (components/EditorBar.jsx) */
