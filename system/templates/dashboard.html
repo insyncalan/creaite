@@ -1428,6 +1428,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hpn-f{display:flex;flex-direction:column;gap:6px;margin-top:8px} .hpn-f a{color:var(--accent)}
 .hfirst{max-width:720px;margin:0 0 12px;padding:7px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--accent-soft);font-size:var(--fs-md);color:var(--ink)}
 .hfirst[hidden],.hfoot[hidden]{display:none}
+html[data-single-keys="off"] .hfirst,html[data-single-keys="off"] .hfoot{display:none}   /* #298: the "Press ?" lines advertise a single key */
 .hfirst.ghost{visibility:hidden}   /* cleared: the slot stays, so nothing moves; not announced */
 .hfoot{margin:28px 0 8px;font-size:var(--fs-sm);color:var(--faint)}
 .hfoot kbd,.hfirst kbd{font:500 var(--fs-xs) var(--mono,ui-monospace,monospace);border:1px solid var(--line);border-radius:var(--r-sm);padding:1px 6px;color:var(--muted)}
@@ -7003,6 +7004,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     shownOf: () => shownOf,
     shownWeek: () => shownWeek,
     shrinkImage: () => shrinkImage,
+    singleKeyBlocked: () => singleKeyBlocked,
+    singleKeysApply: () => singleKeysApply,
+    singleKeysOn: () => singleKeysOn,
     sizeList: () => sizeList,
     sl: () => sl2,
     slashRank: () => slashRank,
@@ -7782,7 +7786,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TIP.show = setTimeout(() => {
       const text = el2.dataset.tip;
       if (!text || !el2.isConnected) return;
-      const t47 = tipBox(), k5 = el2.dataset.key;
+      const t47 = tipBox(), k02 = el2.dataset.key, k5 = document.documentElement.dataset.singleKeys === "off" && /^(Shift\+)?[A-Za-z0-9\/?]$/.test(k02 || "") ? "" : k02;
       putHTML(t47, html`<span>${text}</span>${k5 ? html`<kbd>${k5}</kbd>` : ""}`);
       if (TIP.el && TIP.el !== el2 && TIP.el.getAttribute("aria-describedby") === "tip") TIP.el.removeAttribute("aria-describedby");
       TIP.el = el2;
@@ -39964,7 +39968,8 @@ ${s5}`;
     ["", "drag a column edge to resize", "list"]
   ];
   function workHint(lay) {
-    return HINTS.filter((h5) => (h5[2] === "both" || h5[2] === lay) && !(h5[3] && shared.WT === "all")).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
+    const off = S.singleKeys === false;
+    return HINTS.map(([k5, t47, l6, a5]) => off && k5 ? [k5.filter((x5) => !/^(Shift\+)?[A-Z]$/.test(x5)), t47, l6, a5] : [k5, t47, l6, a5]).filter((h5) => !(off && h5[0] !== "" && !h5[0].length)).filter((h5) => (h5[2] === "both" || h5[2] === lay) && !(h5[3] && shared.WT === "all")).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
   }
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
@@ -43014,7 +43019,21 @@ ${s5}`;
     const a5 = document.activeElement;
     return a5 && (/^(INPUT|TEXTAREA|SELECT)$/.test(a5.tagName) || a5.isContentEditable || !!a5.closest?.('.ddmenu [role="option"]'));
   };
+  var singleKeysOn = () => S.singleKeys !== false;
+  function singleKeyBlocked(e4) {
+    if (singleKeysOn() || e4.isComposing || e4.metaKey || e4.ctrlKey || e4.altKey || !e4.key || e4.key.length !== 1 || e4.key === " ") return false;
+    if (typing()) return false;
+    const t47 = e4.target;
+    return !(t47 && t47.closest && t47.closest("dialog,#chat,#capDrawer," + POPUPS + ",[role=menuitem],[role=option]"));
+  }
+  function singleKeysApply() {
+    document.documentElement.dataset.singleKeys = singleKeysOn() ? "on" : "off";
+  }
+  window.addEventListener("keydown", (e4) => {
+    if (singleKeyBlocked(e4)) e4.stopImmediatePropagation();
+  }, true);
   function bootKeyboard() {
+    singleKeysApply();
     document.addEventListener("keydown", (e4) => {
       if ((e4.metaKey || e4.ctrlKey) && e4.shiftKey && !e4.altKey && e4.key.toLowerCase() === "n") {
         e4.preventDefault();
@@ -58185,7 +58204,12 @@ system/scripts/run launch.py agent ${what}`;
         W3[sig] = { ...W3[sig] || {}, [f5]: v5 };
       } else if (k5 === "search.debounce_ms") SEARCHCFG.debounce_ms = v5;
       else if (k5 === "dashboard.generate_days") S.genDays = v5;
-      else if (k5 === "dashboard.rail_labels") railLabelsOn.value = v5 !== false;
+      else if (k5 === "help.single_keys") {
+        S.singleKeys = v5 !== false;
+        singleKeysApply();
+        helpScreenSync();
+        if (shared.VIEW === "work") renderLayoutBar();
+      } else if (k5 === "dashboard.rail_labels") railLabelsOn.value = v5 !== false;
       else if (k5 === "dashboard.rail_icon_size") {
         railIconSize.value = railSizeNorm(v5);
         S.railIconSize = railIconSize.value;
@@ -79548,8 +79572,11 @@ ${d5.text}`);
         "setRhythm",
         "setRunning",
         "setSearch",
+        "setSynced",
         "setTrack",
         "shared",
+        "singleKeyBlocked",
+        "singleKeysOn",
         "sl",
         "slashRows",
         "sleep",
@@ -79616,6 +79643,7 @@ ${d5.text}`);
         "who",
         "within",
         "workChanged",
+        "workHint",
         "working",
         "writeSettings",
         "wsFor",

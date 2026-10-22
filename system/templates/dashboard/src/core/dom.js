@@ -119,7 +119,7 @@ export function tipBox(){ let t=document.getElementById("tip"); if(!t){ addHTML(
 export function tipHide(){ clearTimeout(TIP.show); clearTimeout(TIP.hide); clearInterval(TIP.watch); const t=document.getElementById("tip"); if(t) t.classList.remove("on");
   if(TIP.el&&TIP.el.getAttribute("aria-describedby")==="tip") TIP.el.removeAttribute("aria-describedby"); TIP.el=null; }
 export function tipShow(el,delay){ clearTimeout(TIP.show); clearTimeout(TIP.hide); TIP.show=setTimeout(()=>{ const text=el.dataset.tip; if(!text||!el.isConnected) return;
-    const t=tipBox(), k=el.dataset.key; putHTML(t,html`<span>${text}</span>${k?html`<kbd>${k}</kbd>`:""}`);
+    const t=tipBox(), k0=el.dataset.key, k=document.documentElement.dataset.singleKeys==="off"&&/^(Shift\+)?[A-Za-z0-9\/?]$/.test(k0||"")?"":k0;   /* #298: no letter hint while the single-key shortcuts are off */ putHTML(t,html`<span>${text}</span>${k?html`<kbd>${k}</kbd>`:""}`);
     if(TIP.el&&TIP.el!==el&&TIP.el.getAttribute("aria-describedby")==="tip") TIP.el.removeAttribute("aria-describedby");
     TIP.el=el; if(text!==el.getAttribute("aria-label")&&!el.hasAttribute("aria-describedby")) el.setAttribute("aria-describedby","tip");
     const r=el.getBoundingClientRect(), w=t.offsetWidth, h=t.offsetHeight; let x=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2)), y=r.bottom+8;

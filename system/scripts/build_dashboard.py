@@ -1708,6 +1708,7 @@ def ui_settings(s):
             "undatedGrace": g("dashboard", "undated_grace_days", d=3),      # BL-95
             "flowWeeks": flow_weeks(s),                                     # BL-91
             "weekPrios": list(g("dashboard", "week_ahead_priorities", d=None) or []),   # BL-235 (fix-small-17): empty means every priority
+            "singleKeys": bool(g("help", "single_keys", d=True)),   # #298: the single-key shortcuts, on or off
             "helpLine": bool(g("help", "first_line", d=True)),   # #158: the first-visit "Press ? for help" line
             "helpSeen": g("help", "start_seen", d=False),   # BL-84: Help › Start here shows once, on the first visit
             "port": g("live_mode", "port", d=8765), "healthSecs": g("live_mode", "health_check_seconds", d=30),

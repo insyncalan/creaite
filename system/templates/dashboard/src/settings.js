@@ -33,7 +33,9 @@ import { draftOn } from "./review.js";
 import { irTick } from "./stores/intakeReview.js";
 import { railIconSize, railLabelsOn, railSizeNorm, setRailCount } from "./stores/rail.js";
 import { personPromises, plur, projLink, renderToday, SU_LAUNCH, suCmd, tl } from "./today.js";
-import { cell, FDEFS, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
+import { singleKeysApply } from "./core/keys.js";
+import { helpScreenSync } from "./helpscreen.js";
+import { cell, FDEFS, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, renderLayoutBar, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
 /* One page: the categories on the left, the settings on the right. SETSECTIONS is the one list the page is built from.
    An entry has an id, a category, a title, search keywords (`kw`) and `render()`, which returns what goes inside the card.
@@ -213,6 +215,7 @@ export function setSynced(ch){ let reload=false, look=false;
     else if(k.startsWith("warnings.")){ const [,sig,f]=k.split("."), W=D.warn_settings||(D.warn_settings={}); W[sig]={...(W[sig]||{}),[f]:v}; }
     else if(k==="search.debounce_ms") SEARCHCFG.debounce_ms=v;
     else if(k==="dashboard.generate_days") S.genDays=v;
+    else if(k==="help.single_keys"){ S.singleKeys=v!==false; singleKeysApply(); helpScreenSync(); if(shared.VIEW==="work") renderLayoutBar(); }   /* #298: live, no reload */
     else if(k==="dashboard.rail_labels") railLabelsOn.value=v!==false;   /* #156: Labels when collapsed */
     else if(k==="dashboard.rail_icon_size"){ railIconSize.value=railSizeNorm(v); S.railIconSize=railIconSize.value; }   /* #182 */
     else if(k==="logging.level") DIAG.level=v;
