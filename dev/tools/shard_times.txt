@@ -278,8 +278,6 @@ test_report_editor.py 198
 test_report_exports.py 21
 test_reports.py 163
 test_reports_page.py 72
-test_review_age.py 30
-test_review_floating_bar.py 58
 test_review_focus.py 24
 test_review_nesting.py 10
 test_review_project.py 64
@@ -343,7 +341,6 @@ test_today_days_ui.py 118
 test_today_home.py 98
 test_tracker.py 177
 test_transcripts.py 30
-test_transcripts_ui.py 116
 test_typecheck_tool.py 0
 test_ui_sweep.py 209
 test_update.py 272

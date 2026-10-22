@@ -106,7 +106,7 @@ class FieldNames(LiveBrowserCase):
         bad = []
         for v in views:
             self.b.eval(f"go({v!r})")
-            self.b.wait(f"VIEW==={v!r}")
+            self.b.wait(f"VIEW==={({'review': 'intake-review'}).get(v, v)!r}")     # #232: the rail's "review" item opens Intake and Review (rail.js railGo)
             self.b.pump(0.3)
             bad += self.unnamed(v)
         self.b.eval("go('cockpit','ABC')")

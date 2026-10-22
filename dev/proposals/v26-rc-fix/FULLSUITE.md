@@ -27,3 +27,15 @@ A file that fails in its shard is run alone; "flake" = failed in the shard, pass
 | test_intake_review_update_peek.py | stale test (date drift) | the sample's due date follows the day it runs: read from the live row, not "25-10-2026". Note: the saved row title reads "status Open → Open; due …" (an unchanged status in words) |
 | test_project_settings_v2.py | stale test | #232 C2: go('review') / go('inbox') land on intake-review |
 | test_day_past_and_sizes.py | stale test | #232 C2 left 7 controls on the checked screens: "at least one per selector" instead of "> 10" |
+
+### Shard 3/8: 65 passed, 1 failed, 1 flake
+| File | Class | Fix |
+|---|---|---|
+| test_field_names.py | stale test | #232: the rail's "review" item opens intake-review (rail.js railGo) |
+
+Flake: test_intake_review_harden_b.py (Keys.test_arrows_and_esc_after_the_peek_was_closed_another_way: panel wait under load; passed alone in the shard and twice more alone).
+
+### Shard 4/8: 65 passed, 1 failed, 0 flakes
+| File | Class | Fix |
+|---|---|---|
+| test_run_tests_shard.py | merge artefact | dev/tools/shard_times.txt named three removed files (test_review_age, test_review_floating_bar, test_transcripts_ui): lines dropped (no effect on the split) |
