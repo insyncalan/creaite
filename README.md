@@ -1,28 +1,142 @@
-# creaite
+<p align="center">
+  <img src="docs/screenshots/banner.png" alt="creaite: Write up less. Check more. The programme manager's assistant that turns your meetings, mail and Teams into a record you can trust." width="100%">
+</p>
 
-A personal portfolio reporting system for a programme manager, run by Claude Code on a Mac. Meeting transcripts, Outlook and Teams go in; actions, decisions, risks and issues come out — proposed by Claude, approved by a person, then recorded in a local SQLite tracker with a dashboard, an Excel view and Word reports.
+<p align="center"><i>Every action, decision and risk comes with its source, and nothing is saved until you approve it.</i></p>
 
-**This repository holds the engine and fictional sample data only.** Real vault data is never committed (see `.gitignore` and `dev/hooks/pre-commit`). Current version: see [`VERSION`](VERSION).
+<p align="center">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-only-18181B?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Local-first" src="https://img.shields.io/badge/local--first-your%20data%20stays%20local-F2B544?style=flat-square&labelColor=18181B">
+  <img alt="Runs on Claude and Microsoft 365" src="https://img.shields.io/badge/runs%20on-Claude%20%2B%20Microsoft%20365-0B6E7F?style=flat-square&labelColor=18181B">
+  <img alt="Early access" src="https://img.shields.io/badge/early%20access-pilot%20users%20wanted-18181B?style=flat-square">
+</p>
+
+---
+
+## The meeting ends. The admin begins.
+
+You leave the steering committee with six new actions, a decision nobody wrote down and a risk someone mentioned in passing. By Friday you are rebuilding the same status report from memory, chasing owners, and wondering which tracker is the real one.
+
+**creaite does that part.** It reads your Teams transcripts, Outlook and Teams, drafts the minutes, and proposes the actions, decisions, risks and issues that came out of them, each with an owner, a due date and the source it came from. You check, tick and approve. creaite keeps one record and writes everything else from it: Today, the weekly report, the client report, the steering one-pager.
+
+<p align="center">
+  <img src="docs/screenshots/cockpit.png" alt="A project page: current state, health with the evidence behind it, early warnings, milestones, and the actions due or overdue" width="900"><br>
+  <sub>A project at a glance: current state, health with the evidence behind it, early warnings, milestones and what is due. Sample data.</sub>
+</p>
 
 ## How it works
+
+<p align="center">
+  <img src="docs/screenshots/how-it-works.png" alt="Capture: drop in a transcript or let creaite check Outlook and Teams. Approve: suggestions wait in Intake, each with its source; you tick, fix and approve, and every save has Undo. Report: one approved record feeds Today, the weekly report, the client report and the steering one-pager." width="100%">
+</p>
+
+## Built so you can trust it
+
+AI that writes to your record unchecked is how a status goes quietly wrong. creaite is built the other way round.
+
+| | |
+|---|---|
+| **Nothing changes until you approve it** | Suggestions wait. Routine ones can be approved together; new decisions, new risks and health changes always need your eye. |
+| **Every item has a source** | Each action, decision, risk and issue cites the meeting, email or chat it came from. In the minutes, hover a row to see the transcript line behind it. |
+| **Every change can be undone** | Every save has Undo, and changes to your files are backed up first. |
+| **It never sends anything** | No mail, no Teams messages, no reports. Microsoft 365 is read-only for creaite. Drafts are yours to send. |
+| **Status is worked out, not guessed** | Health, overdue and slipping are calculated from your own record by ordinary code, not by a model's opinion. |
+| **It tells you its limits** | It can misread an owner or a date. That is why you approve each item. |
+
+## Everything it does for you
+
+| | |
+|---|---|
+| **Minutes you can edit in place** | One clean document with a Track column: tick a line to make it a work item, cross it to remove it, leave it to keep it in the minutes only. Edit words, owners, dates and priorities in the row, hover a row to see the transcript line it came from, then approve in one click. Export as Word, PDF or HTML, or draft the follow-up email. |
+| **Today** | The meetings in your day, what is overdue or due soon, decisions waiting on you or on others, what you owe and are owed, and milestones that are slipping, with the open work behind each. |
+| **Mail and Teams check** | Follow-ups and commitments in your Outlook and Teams, offered as suggestions. What people you follow send you shows up on Today, so nothing from them is missed. |
+| **Reports without the Friday scramble** | A weekly report per project with health and the reasons, a client-safe report that shows only what you have flagged as client-visible, and a one-page steering summary. All drafted as Word documents. |
+| **Meeting prep in a minute** | The open items that matter, the latest reporting, suggested questions, and notes with sources. |
+| **Ask creaite** | Ask in plain English ("what is blocking go-live?", "make a document of open risks") and get an answer from your own record, with where it came from. |
+| **Work, People, Projects** | Actions, risks, issues and decisions across every programme; one People page for who owns what; health with its evidence. Single keys jump between pages: T Today, P Projects, W Work, I Intake, F Files, A Activity, R Reports, S Settings, E People. |
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/work.png" alt="The Work page: open actions across programmes with owner, due date and priority"><br><sub>Work: every open action across your programmes. Sample data.</sub></td>
+    <td width="50%"><img src="docs/screenshots/intake.png" alt="The Intake page: meetings and files waiting, with suggestions to approve"><br><sub>Intake: everything that arrives and waits for you. Sample data.</sub></td>
+  </tr>
+</table>
+
+## A week with creaite
+
+- **Monday to Thursday.** Meetings happen. You open Today, see what needs you, and approve the suggestions from yesterday's meetings in a few minutes.
+- **Before a meeting.** Press Prep: the open items, the latest status and questions to raise.
+- **Friday.** The weekly report is already drafted per project. Review, adjust, file.
+- **Steering committee.** One click for the one-pager, from the same record.
+
+## New in 2.6
+
+- **One Intake.** Review and Intake are now one page, with List, Board and Two panes views, and **Approve routine** for the routine suggestions.
+- **Minutes, rebuilt.** One version of the minutes, a Track column, edit in place, and one-click **Approve minutes** with Undo.
+- **People page.** The whole register in one place, with search, filters, add, edit and remove.
+- **Page keys** and a reorganised Settings.
+
+The plain-English notes for every release are in [`dev/release-notes/`](dev/release-notes/) ([2.6.0](dev/release-notes/2.6.0-plain.md)). This README is refreshed with each release.
+
+## Your data stays local
+
+**Local-first: your data lives in your own tools, on your Mac and your company's OneDrive.** creaite adds no cloud of its own.
+
+Claude reads the content it works on, under your own Claude plan. Confidential material can be kept out of reports and prep pages.
+
+## Questions you will have
+
+**Will it get things wrong?** Yes, sometimes: an owner, a date, a risk that was only mentioned. That is why nothing is saved until you approve it, why every item shows its source, and why every save can be undone.
+
+**Does it send anything on my behalf?** No. It does not send mail or Teams messages and does not publish reports.
+
+**Where does my data go?** The record stays on your Mac, backed up daily to your company OneDrive. Claude reads the content it works on, under your own Claude plan. creaite has no servers of its own.
+
+**Can I use it at work?** It runs under your own Claude plan and your own Microsoft 365 permissions. Check your company's AI policy, as you would for any AI tool.
+
+**What do I need?** A Mac, the Claude desktop app with a Claude subscription and Microsoft 365 connected, Python 3.9 or later, git, and Chrome or Edge. Set-up is guided: say "setup" and creaite checks your machine.
+
+**Is it finished?** No. It is an early product with frequent releases, and the plain-English notes for each one are in [`dev/release-notes/`](dev/release-notes/).
+
+## Be one of the first ten
+
+We are looking for a small group of programme managers to use creaite on real work and tell us what is missing. If you run one to five programmes and spend your week writing up meetings and chasing owners, [open an issue](https://github.com/insyncalan/creaite/issues/new) titled **Pilot** and tell us what you run.
+
+## Get started
+
+Step-by-step set-up, including the optional double-click launcher and the sign-in start-up agent, is in [`dev/SETUP.md`](dev/SETUP.md). To look around first, this repository includes a fictional portfolio:
+
+```sh
+git config core.hooksPath dev/hooks          # blocks commits of real data
+python3 dev/tools/demo_data.py load          # fictional demo portfolio (purge to remove)
+system/scripts/run live_server.py            # serve the dashboard on 127.0.0.1
+```
+
+> **This repository holds the creaite engine and fictional sample data only.** No real client, company or person is named here. Current version: see [`VERSION`](VERSION).
+
+---
+
+## Under the hood
+
+For developers and the curious. creaite is plain Python (standard library plus bundled libraries) and a single-file dashboard, run by Claude Code.
 
 ```
 transcripts · minutes · Outlook · Teams
               │
               ▼
    Claude skills (cx-minutes, cx-sweep)
-              │  proposals → system/staging/
+              │  suggestions → system/staging/
               ▼
-   review and approve (cx-review / dashboard)
-              │  tracker.py apply  — the only writer
+   review and approve (Intake / cx-review)
+              │  tracker.py apply: the only writer
               ▼
    system/tracker.db ──► dashboard.html · tracker-view.xlsx · Word reports
 ```
 
-- **Local only.** All project data stays on the laptop. Nothing goes to cloud storage or a published page.
-- **Approval before writes.** Nothing reaches the database until it is approved; unattended runs only write proposals.
-- **One writer.** `system/scripts/tracker.py apply` is the only path into `tracker.db`; every apply can be undone.
-- **Source on every row.** Each item cites its file, email or chat.
+- **One writer.** `system/scripts/tracker.py apply` is the only path into `tracker.db`.
+- **The schema is the rulebook.** `system/scripts/schema.sql` validates every write.
+- **Approval before writes.** Unattended runs only write proposals to `system/staging/`.
+- **Rules.** What Claude may and may not do is in [`system/creaite-rules.md`](system/creaite-rules.md).
 
 ## Skills
 
@@ -50,27 +164,15 @@ Skills live in [`.claude/skills/`](.claude/skills/). The rules Claude follows ar
 | `projects/` | Sample project (`ABC Example Programme`) and `_portfolio/` templates |
 | `dev/` | Requirements, build plan, design decisions, specs, tests and tools |
 
-## Setup on a new machine
-
-A live vault needs these and nothing else (BL-241; the three tiers are in [`system/creaite-rules.md`](system/creaite-rules.md) › Portability rules, the steps in [`dev/SETUP.md`](dev/SETUP.md)):
-
-- macOS, the only tested platform. Windows is best effort and untested; ask creaite's never list names macOS places only.
-- Python 3.9 or later. Every script runs through `system/scripts/run` (for example `system/scripts/run doctor.py`), which picks the newest one on `PATH`. No pip installs: libraries are bundled in `vendor/`.
-- The Claude desktop app and the `claude` command, signed in, with Microsoft 365 connected and Anthropic's docx skill.
-- Chrome or Edge for the dashboard; git (the command line developer tools); FileVault on; the vault in a local folder outside OneDrive and iCloud.
-
-Optional: the double-click launcher and the login agent (macOS conveniences, outside the vault), and the development tools in `dev/Brewfile` (`gh` lets "update creaite" fetch a release itself).
-
 ## Development
 
 Requirements: macOS, Python 3.9+, Claude Code, Chrome or Edge. The `.creaite-dev` file marks this as the development repository, so session-start rules and live Microsoft 365 access are switched off here.
 
 ```sh
-git config core.hooksPath dev/hooks          # blocks commits of real data
-python3 dev/tools/demo_data.py load          # fictional demo portfolio (purge to remove)
-system/scripts/run live_server.py            # serve the dashboard on 127.0.0.1
 for t in dev/tests/test_*.py; do python3 "$t" || break; done   # run the tests
 ```
+
+Design decisions, specs and the build plan are in [`dev/`](dev/).
 
 ## Releases and updates
 
