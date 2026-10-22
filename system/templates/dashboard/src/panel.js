@@ -210,8 +210,8 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
   if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (the live server isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
-  if(r.kind==="update"){ const u=updOpen(r); if(u){ shared.CUR={mode:"proposal",k:u.table,n,draft:u.draft,upd:u.upd}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); return; } }   /* #232-B: an update proposal opens the whole item in the peek; one that can't keeps the old form */
-  shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+  if(r.kind==="update"){ const u=updOpen(r); if(u){ shared.CUR={mode:"proposal",k:u.table,n,rf:r.file,fp:r.fp,draft:u.draft,upd:u.upd}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); return; } }   /* #232-B: an update proposal opens the whole item in the peek; one that can't keeps the old form */
+  shared.CUR={mode:"proposal",k:r.kind,n,rf:r.file,fp:r.fp,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
 /* ===== #232-B (release 2.6) ===== an update proposal in the peek. The item is the live tracker row (REC), with the proposal's
    changes applied to the editable columns (Status, Due, Latest update) in the draft; the other changes are read-only `was → now`.
    core/irUpdate.js holds the rules (the one list of changes, the save); components/intakeReview/UpdatePeek.jsx draws them.
@@ -249,7 +249,7 @@ export function updFeed(){ const {u,changed}=updModel(), r=pkRev(), tab=PK.tab||
   const items=[...feedLines(pkHistory(u.id),ch=>/^created\b/.test(ch)?"src":ch.toLowerCase().startsWith(pkUpdLabel(u.table)+":")?"upd":"act"),{type:"src",who:"Source",html:`<div class="pk-src">${srcHTML(r.src)}</div>`,when:""}];
   const pend=changed.length&&(tab==="all"||tab==="act")?html`<div class="pk-fe pending" data-t="act"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>If approved</b> · ${irIfApproved(changed)}</div></div>`:html``;
   putHTML($("#pkFeed"),html`${pend}${raw(feedListHtml(items,tab))}`); }
-export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=shared.CUR.draft; if(!r) return;
+export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=shared.CUR.draft; if(!r){ snack(STALE_ROW); return; }
   const plan=irSaveChanges(u.table,u.changes,u.liveDb,u.opened,toDb(u.table,x));
   if("error" in plan){ pkNote(plan.error); return; }
   if(!plan.edited.length){ closePanel(); if(approve) decide(r.n,"approved",true); else snack("Nothing was changed"); return; }   /* nothing edited: the proposal is as it was */
@@ -258,7 +258,7 @@ export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=sha
   try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
       const m=irMergeEdits(it.changes||{},plan); if("error" in m) throw new Error(m.error);   /* the file's own changes now, with only the columns edited here put right */
       const cols=Object.keys(m.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));   /* status first: the proposal's field is its first change, and the hold reads it */
-      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
+      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } },r); }catch(e){ snack(/already|no longer/.test(e.message)?STALE_ROW:"Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
   const was=r.rec.changes||[], cols=Object.keys(fin); r.rec.changes=cols.map(c=>({field:irLabel(c).toLowerCase(),col:c,from:u.liveDb[c]??null,to:fin[c]}));
   const f=r.rec.changes[0]; r.rec.field=f.col; r.rec.from=f.from; r.rec.to=f.to;
   if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${irLineParts(r.rec.changes).join("; ")}`;   /* in words ("due 20-10-2026 → 23-10-2026"), never a column name or a long text */
@@ -290,8 +290,8 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=shared.CUR.pre&&n in shared.CUR.pre?shared.CUR.pre[n]:x[n];   /* CUR.pre: "Record the decision" fills the form first (BL-53) */
     h+=`<dt>${l}${shared.EDITING?labelAdorn(shared.CUR.k,shared.CUR.mode,n):""}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
   if(shared.CUR.mode==="proposal"&&!x.p) h=`<div class="cmnote">Choose a project before saving.</div>`+h;
-  if(shared.CUR.mode==="record"||shared.CUR.mode==="proposal"){ const src=shared.CUR.mode==="record"?x.src:REV.find(r=>r.n===shared.CUR.n).src; h+=`<div class="fsec">Record</div>${shared.CUR.mode==="record"?`<dt>ID</dt><dd>${shared.CUR.id}</dd>`:""}<dt>Source</dt><dd>${srcHTML(src)}</dd>${shared.CUR.mode==="record"?`<dt>Last updated</dt><dd>${x.upd_at?fd(x.upd_at):"—"}</dd>`:""}`; }
-  if(shared.CUR.mode==="proposal"){ const sig=learnable(REV.find(r=>r.n===shared.CUR.n)); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
+  if(shared.CUR.mode==="record"||shared.CUR.mode==="proposal"){ const src=shared.CUR.mode==="record"?x.src:(pkRev()||{}).src; h+=`<div class="fsec">Record</div>${shared.CUR.mode==="record"?`<dt>ID</dt><dd>${shared.CUR.id}</dd>`:""}<dt>Source</dt><dd>${srcHTML(src)}</dd>${shared.CUR.mode==="record"?`<dt>Last updated</dt><dd>${x.upd_at?fd(x.upd_at):"—"}</dd>`:""}`; }
+  if(shared.CUR.mode==="proposal"){ const sig=learnable(pkRev()); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
   if(shared.CUR.mode==="health") h+=`<div class="evidence" id="hEvidence" aria-live="polite"></div>`;
   if(shared.CUR.k==="project") h+=`<dd class="full">${feedBlock("proj",projFeedItems(shared.CUR.code))}</dd>`;   /* BL-250 A: its history, under the fields */
   putHTML($("#pFields"),raw(h)); mountOwnerFields($("#pFields")); mountFeedTabs($("#pFields")); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
@@ -314,7 +314,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   const st=$("#f_st"), cl=$("#f_closed"); if(st&&cl) st.onchange=()=>{ if(!OPENST(st.value)&&!cl.value) cl.value=fd(TODAY); if(OPENST(st.value)) cl.value=""; };
   const cb=$("#f_client"), cm=$("#f_cm")||$("#f_cmd"); if(cb&&cm) cb.onchange=()=>{ const ok=cm.id==="f_cmd"?cmdOK(cm.value):cmOK(cm.value); if(cb.checked&&!ok){ cm.focus(); $("#pErr").textContent=cm.id==="f_cmd"?"Write client messaging (a short plain explanation) to make this client-visible.":"Complete client messaging (a few words after each heading) to make this client-visible."; } };
   if(shared.EDITING){ const f=focusField&&$("#f_"+(focusField==="imp"?"imp":focusField)); (f||$("#pFields .rted")||$("#pFields [name]"))?.focus(); } } finally{ PANELF=false; } morePanel(focusField);
-  { if(shared.CUR&&shared.CUR.mode==="proposal"){ const r=REV.find(x=>x.n===shared.CUR.n); if(r&&rvDup(r)&&!r.done)
+  { if(shared.CUR&&shared.CUR.mode==="proposal"){ const r=pkRev(); if(r&&rvDup(r)&&!r.done)
     addHTML($("#pFields"),"afterbegin",raw(llNoteHtml(r))); } }   /* BL-133 */
   depFormDraw();
   { $("#pWarn")?.remove(); const w=shared.CUR&&shared.CUR.mode==="record"?warnsOf(shared.CUR.k,shared.CUR.id):[];
@@ -392,7 +392,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
     const r=await commitRecord(k,id,f); if(r==="nochange"){ if(closeAfter) closePanel(); else { shared.EDITING=false; drawPanel(); } return; }
     if(r){ if(closeAfter){ if(shared.CUR&&shared.CUR.id===id) closePanel(); } else { shared.EDITING=false; if(shared.CUR&&shared.CUR.id===id){ drawPanel(); $("#pTitle").textContent=x.t; } } } return; }
   /* tidy-up (sprint-milestones): the Create form's branch for new work items is gone; they are the peek (BL-179), staged through newItemOf */
-  if(shared.CUR.mode==="proposal"){ const r=REV.find(x=>x.n===shared.CUR.n); const before=JSON.parse(JSON.stringify(r)); if(!await needVault()) return;
+  if(shared.CUR.mode==="proposal"){ const r=pkRev(); if(!r){ snack(STALE_ROW); return; } const before=JSON.parse(JSON.stringify(r)); if(!await needVault()) return;
     try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
       if(r.kind==="update"){ it.changes=it.changes||{}; it.changes[r.rec.field]=f.to; }
       else { /* only the fields Alan changed; required dates are never blanked */
@@ -401,7 +401,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
         const vals=toDb(r.kind,ch); ["raised","date"].forEach(k=>{ if(vals[k]===null) delete vals[k]; });
         it.values=Object.assign(it.values||{},vals); (r.badf||[]).forEach(k=>{ delete it.values[k]; });   /* #291 fix: a field the tracker doesn't keep, which no field here shows, is left out */
         if(f.p&&f.p!==r.p){ it.values.project=f.p; it.match="strong"; if(r.p){ if(it.moved_from===f.p) delete it.moved_from; else it.moved_from=it.moved_from||r.p; } /* BL-200 */ if(it.values.milestone&&!String(it.values.milestone).startsWith(f.p+"-M-")) it.values.milestone=null; } else if(f.p&&!r.p){ it.values.project=f.p; it.match="strong"; } }
-      it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
+      it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } },r); }catch(e){ snack(/already|no longer/.test(e.message)?STALE_ROW:"Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
     if("hold" in r) r.hold=irHold(r);   /* #232-B: the server's rule (review.hold_reason) again on what the edit left: an Issue made a Risk is held, a project set clears "need a project" */
@@ -869,7 +869,9 @@ if(shared.CUR&&pkOn()) drawPanel();
    minutes, files and update proposals keep their own panels. */
 export function pkCid(){ return shared.CUR&&shared.CUR.mode==="new"?shared.CUR.nid:shared.CUR?(shared.CUR.mode==="proposal"?"rv"+shared.CUR.n:shared.CUR.id):null; }
 export function pkX(k,id){ if(String(id).startsWith("nw")) return shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===id?shared.CUR.draft:null; if(String(id).startsWith("rv")) return shared.CUR&&shared.CUR.mode==="proposal"&&"rv"+shared.CUR.n===id?shared.CUR.draft:null; return REC(k,id); }
-export const pkRev=()=>shared.CUR&&shared.CUR.mode==="proposal"?REV.find(r=>r.n===shared.CUR.n):null;
+/* #307 h2: the peek names its row by file + content (fp), never the list number, which moves when anything is approved elsewhere */
+export const STALE_ROW="That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+export const pkRev=()=>{ const c=shared.CUR; if(!c||c.mode!=="proposal") return null; return c.fp?REV.find(r=>r.file===c.rf&&r.fp===c.fp)||null:REV.find(r=>r.n===c.n)||null; };
 export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#panel").classList.toggle("pkprop",on);
   const nav=!!(shared.PKSRC&&shared.PKSRC.view&&shared.PKSRC.view===shared.VIEW);   /* #232-B: Intake and Review's proposals step with Previous and Next */
   ["pkLink","pkMore","pkPrev","pkNext","pkExpand","pkCv"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"&&!(nav&&(id==="pkPrev"||id==="pkNext")); }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */

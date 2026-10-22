@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "system" / "scripts"))
-import item_fp  # noqa: E402
+import build_dashboard as item_fp  # noqa: E402
 
 VECTORS = [
     {"op": "new", "table": "actions", "values": {"description": "Send the plan", "owner": "Sara", "due_date": "2026-11-01"}},
