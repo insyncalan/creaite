@@ -201,6 +201,10 @@ export async function exportMinutes(format) {
 /** #306: the words when the transcript has gone (review.HELD_MINUTES_WORDS). */
 export const HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
 
+/** #307: the minutes were filed or moved elsewhere while this view was open (the server's "That file isn't there." or "nothing pending"). */
+export const MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
+export const isMovedMinutes = m => /isn't there|nothing pending/i.test(String(m || ""));
+
 /** #306: Approve minutes stopped because the transcript has left the inbox (the server's plain words say so). @param {string} m */
 export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));
 

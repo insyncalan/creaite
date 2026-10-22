@@ -73,5 +73,38 @@ class ApprovedThisWeek(LiveBrowserCase):
                         "a Done row")
 
 
+class StaleMinutesView(LiveBrowserCase):
+    """Path 19: the minutes were approved elsewhere; Approve minutes in an old view says plainly what happened and refreshes."""
+
+    @classmethod
+    def load(cls, v):
+        populate(v)
+        cls.proposal = me.stage_meeting(v)
+
+    def test_a_stale_view_says_the_minutes_moved_and_refreshes(self):
+        b = self.b
+        b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
+        b.wait("document.querySelector('#v-minutes tr.mi')", 15)
+        b.pump(0.5)
+        # approved elsewhere (Claude Code, another tab): the record leaves the drafts
+        b.eval(f"api('/api/minutes/approve',{{file:{json.dumps(self.proposal)},group:true,own:[]}}).then(r=>{{window.ELSEWHERE=r}})")
+        b.wait("window.ELSEWHERE", 25)
+        b.eval("document.getElementById('mnApproveBtn').click()")
+        b.pump(0.5)
+        if b.eval("!!document.getElementById('mnApproveGo')"):
+            b.eval("document.getElementById('mnApproveGo').click()")
+        b.wait("/moved or been filed/.test((document.getElementById('toastHost')||{innerText:''}).innerText)", timeout=20)
+        t = toast(b)
+        self.assertIn("These minutes have moved or been filed. The list has been refreshed.", t)
+        self.assertNotIn("isn't there", t)
+        b.pump(1.0)
+        self.assertFalse(b.eval("!!document.getElementById('mnApproveBtn') && !document.getElementById('mnApproveBtn').disabled"),
+                         "the view no longer offers Approve minutes")
+
+
+def toast(b):
+    return b.eval("(document.getElementById('toastHost')||{innerText:''}).innerText")
+
+
 if __name__ == "__main__":
     unittest.main()

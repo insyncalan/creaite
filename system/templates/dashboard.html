@@ -37269,6 +37269,8 @@ ${s5}`;
     return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
+  var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
+  var isMovedMinutes = (m5) => /isn't there|nothing pending|not found|no longer/i.test(String(m5 || ""));
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
     const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
@@ -71172,6 +71174,10 @@ ${d5.text}`);
         snack(oneLine(r4.message), () => fileWithout(v5), "File without the transcript copy");
         return;
       }
+      if (!r4.ok && !r4.made && isMovedMinutes(r4.message)) {
+        await minutesMoved();
+        return;
+      }
       if (!r4.ok) {
         snack(trackFailWords(r4, "Approve minutes"));
         return;
@@ -71188,6 +71194,12 @@ ${d5.text}`);
     } finally {
       approving.value = false;
     }
+  }
+  async function minutesMoved() {
+    snack(MOVED_MINUTES_WORDS);
+    await reloadData();
+    const v5 = minutesView.value;
+    if (v5 && v5.path) loadMinutes({ path: v5.path });
   }
   async function fileWithout(v5) {
     const r4 = await fileWithoutTranscript(v5.proposal);
@@ -76312,7 +76324,13 @@ ${d5.text}`);
       return false;
     }
     await reloadData();
-    snack(irRestoredWords(keys, r4.count));
+    const gone = keys.filter((k5) => /^inbox\//.test(k5) && !(D.inbox || []).some((f5) => f5.path === k5));
+    if (gone.length && gone.length === keys.length) {
+      snack(`That file${gone.length === 1 ? " is" : "s are"} no longer in your inbox, so nothing was restored.`);
+      return false;
+    }
+    const n4 = Math.max(0, (Number(r4.count) || 0) - gone.length);
+    snack(gone.length ? `${irRestoredWords(keys.filter((k5) => !gone.includes(k5)), n4)}; ${gone.length} no longer in your inbox` : irRestoredWords(keys, r4.count));
     return true;
   }
   function irCanCheck(m5) {

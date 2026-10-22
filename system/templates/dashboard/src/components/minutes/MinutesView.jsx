@@ -40,7 +40,7 @@ import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
 import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc,
-  fileWithoutTranscript, HELD_MINUTES_WORDS, isHeldMinutes, minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
+  fileWithoutTranscript, HELD_MINUTES_WORDS, isHeldMinutes, isMovedMinutes, MOVED_MINUTES_WORDS, minutesView, paneOpen, paneRemembered, saveMinutesPage, setPane, trackApprove, trackApprovedWords, trackFailWords } from "../../stores/minutes.js";
 import { signal } from "@preact/signals";
 
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -162,12 +162,22 @@ async function approveNow(anyway) {
       snack(oneLine(r.message), () => fileWithout(v), "File without the transcript copy");
       return;
     }
+    if (!r.ok && !r.made && isMovedMinutes(r.message)) { await minutesMoved(); return; }
     if (!r.ok) { snack(trackFailWords(r, "Approve minutes")); return; }
     snack(trackApprovedWords(r),
       r.apply_id ? async () => { await undoApply(r.apply_id); if (v.proposal) loadMinutes({ file: v.proposal }); } : null);   // Undo: the draft comes back, so does its page
     await reloadData();
     if (v.plan.files[0]) loadMinutes({ path: v.plan.files[0] });
   } finally { approving.value = false; }
+}
+
+/** #307: the minutes were filed or moved somewhere else (another tab, Claude Code): say so, refresh the lists, and leave the stale view.
+    The view reloads from the list, so it no longer offers Approve minutes. */
+async function minutesMoved() {
+  snack(MOVED_MINUTES_WORDS);
+  await reloadData();
+  const v = minutesView.value;
+  if (v && v.path) loadMinutes({ path: v.path });
 }
 
 /** #306: file the minutes without the transcript copy, then say what was saved (with Undo) or why not. @param {any} v the minutes view */

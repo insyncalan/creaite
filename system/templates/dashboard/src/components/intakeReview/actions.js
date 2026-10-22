@@ -170,7 +170,10 @@ export async function irRestore(keys) {
   const r = await api("/api/intake/clear", { op: "restore", keys });
   if (!r.ok) { snack(oneLine(r.message || "Couldn't restore")); return false; }
   await reloadData();
-  snack(irRestoredWords(keys, r.count));
+  const gone = keys.filter(k => /^inbox\//.test(k) && !(D.inbox || []).some((/** @type {any} */ f) => f.path === k));   /* #307: a file that has left the inbox has nothing to come back */
+  if (gone.length && gone.length === keys.length) { snack(`That file${gone.length === 1 ? " is" : "s are"} no longer in your inbox, so nothing was restored.`); return false; }
+  const n = Math.max(0, (Number(r.count) || 0) - gone.length);
+  snack(gone.length ? `${irRestoredWords(keys.filter(k => !gone.includes(k)), n)}; ${gone.length} no longer in your inbox` : irRestoredWords(keys, r.count));
   return true;
 }
 
