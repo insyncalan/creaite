@@ -3773,7 +3773,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
 .wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
 .wr-chg{margin-top:6px;max-width:100%} .wr-hcol .dd{display:block} .wr-hcol .btn.sm{width:100%;justify-content:center}
-.wr-hcol .btn.sm.wr-chgi{width:24px;height:24px;min-height:0;padding:0;margin:4px 0 0 auto;justify-content:center;border-color:transparent;background:none;color:var(--rp-grey);line-height:0}
+.wr-hcol .btn.sm.wr-chgi{width:24px;height:24px;min-height:0;padding:0;margin:4px 0 0 auto;justify-content:center;border-color:transparent;background:none;color:var(--rp-grey);line-height:var(--lh-1);align-items:center}
 .wr-chgi .i{width:14px;height:14px} .wrsheet .page .btn.wr-chgi{background:none;border-color:transparent} .wrsheet .page .btn.wr-chgi:hover,.wrsheet .page .btn.wr-chgi[aria-expanded="true"]{background:var(--rp-soft);color:var(--rp-ink)}
 .wrsheet .page .btn{background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule)} .wrsheet .page .btn:hover{background:var(--rp-soft)}
 .wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:var(--fs-lg);line-height:1.35;margin-bottom:6px}
@@ -6244,6 +6244,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     msAttnRow: () => msAttnRow,
     msAttnWorkWord: () => msAttnWorkWord,
     msChoices: () => msChoices,
+    msCountWords: () => msCountWords,
     msCreate: () => msCreate,
     msFind: () => msFind,
     msInfo: () => msInfo,
@@ -55242,14 +55243,28 @@ ${pre}**Current state title:** ${title}`);
     openWork(code, "all", "open", { st: ["Open"], mi: [id2] });
   }
   var msAttnWorkWord = (r4) => r4.its.length === 1 ? "Open in Work" : `Open all ${r4.its.length} in Work`;
+  function msCountWords(id2, name) {
+    const c5 = msOpenItems(id2);
+    if (!c5.n) return void 0;
+    const w6 = `${c5.n} open work item${c5.n === 1 ? "" : "s"}`;
+    return {
+      n: c5.n,
+      over: c5.over,
+      label: c5.over ? `${c5.n} open` : `${c5.n} open item${c5.n === 1 ? "" : "s"}`,
+      overLabel: c5.over ? `, ${c5.over} overdue` : "",
+      tip: `${w6} this milestone depends on`,
+      aria: `Milestone ${name}: ${w6}${c5.over ? `, ${c5.over} overdue` : ""}. Open the list`
+    };
+  }
   function msAttnRow(n4, r4) {
-    const k5 = days(r4.when), c5 = r4.its.length, items2 = `${c5} open item${c5 === 1 ? "" : "s"} must close`;
+    const k5 = days(r4.when), items2 = "its open work must close";
     const when2 = k5 < 0 ? `is overdue by ${-k5} day${k5 === -1 ? "" : "s"} (due ${longDay(r4.when)}): ${items2} before it can be achieved` : `is due ${k5 === 0 ? "today" : k5 === 1 ? "tomorrow" : longDay(r4.when)}: ${items2} for it to hold`;
     const shown2 = r4.named.slice(0, 3).map(msItemWords), more = r4.named.length > 3 ? [`and ${r4.named.length - 3} more`] : [], mineWords = r4.inMine ? [`${r4.inMine === 1 ? "1 is" : `${r4.inMine} are`} under Your commitments`] : [];
+    const cw2 = msCountWords(r4.ms, r4.name), cnt = cw2 ? `<button type="button" class="wkcnt" data-wkitems="${esc(r4.ms)}" data-p="${esc(r4.p)}" aria-label="${esc(cw2.aria)}" data-tip="${esc(cw2.tip)}">${esc(cw2.label)}${cw2.overLabel ? `<span class="warn">${esc(cw2.overLabel)}</span>` : ""}</button>` : "";
     return tl2(
       n4,
       tLink(html`data-ms="${r4.ms}"`, html`Milestone <u>${r4.name}</u> ${raw(when2)}`),
-      [...shown2, ...more, ...mineWords, projLink(r4.p), sLink(html`data-msattnwork="${r4.ms}"`, msAttnWorkWord(r4))].join(" · "),
+      [...shown2, ...more, ...mineWords, projLink(r4.p), cnt].filter(Boolean).join(" · "),
       `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r4.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
       html`data-msattn="${r4.ms}"`
     );
@@ -56722,19 +56737,8 @@ ${pre}**Current state title:** ${title}`);
       return i5.kind === "milestone" ? (further && i5.date ? `${longDay(i5.date)} · ` : "") + (i5.slip ? "at risk" : "on track") : `${w6}${d5}`;
     };
     const msItems = (i5) => {
-      const c5 = msOpenItems(i5.id);
-      if (!c5.n) return void 0;
-      const w6 = `${c5.n} open work item${c5.n === 1 ? "" : "s"}`;
-      return {
-        ms: i5.id,
-        p: i5.p,
-        n: c5.n,
-        over: c5.over,
-        label: c5.over ? `${c5.n} open` : `${c5.n} open item${c5.n === 1 ? "" : "s"}`,
-        overLabel: c5.over ? `, ${c5.over} overdue` : "",
-        tip: `${w6} this milestone depends on`,
-        aria: `Milestone ${i5.t}: ${w6}${c5.over ? `, ${c5.over} overdue` : ""}. Open the list`
-      };
+      const w6 = msCountWords(i5.id, i5.t);
+      return w6 ? { ms: i5.id, p: i5.p, ...w6 } : void 0;
     };
     const whoOf = (i5) => i5.kind === "milestone" ? "" : i5.kind === "decisions" ? isMe(i5.o) ? "yours" : i5.o ? `asked of ${who(i5.o)}` : "no one asked" : isMe(i5.o) ? "yours" : who(i5.o) || "no owner";
     const item = (i5, key2, further, undated = false) => ({
