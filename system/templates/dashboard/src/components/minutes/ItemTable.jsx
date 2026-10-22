@@ -24,6 +24,8 @@ import { SheetEditor } from "../report/SheetText.jsx";
 import { Icon } from "../Icon.jsx";
 import { CheckMark } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
+import { jumpTo } from "./TranscriptPane.jsx";
+import { shortTime } from "./TextLines.jsx";
 import { DeadlinePopover } from "./DeadlinePopover.jsx";
 import { attnFilter, attnFocus, hiddenBy } from "./Attention.jsx";
 import { needsOf, nextTrack, setTrack, trackOf, rowN } from "./track.js";
@@ -31,7 +33,7 @@ import { A, DEC, R, wsFor } from "../../core/data.js";
 import { go } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
 import { aiBar } from "../../stores/aiEdit.js";
-import { hoverTurn, minutesView } from "../../stores/minutes.js";
+import { hoverTurn, minutesView, paneTurn } from "../../stores/minutes.js";
 
 /** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
 /** @typedef {import("./track.js").TrackRow} TrackRow */
@@ -182,8 +184,10 @@ function MnRow({ r, ctx, full }) {
       <td class="mnic">
         {isNew ? <ItemText value={String(v[ROW_FIELD[sid]] || "")} label={`${ctx.section.heading}: ${label}`} n={n} onSave={x => edit({ [ROW_FIELD[sid]]: x })} />
           : <div class="mnit mnit-ro"><Linked text={String(cells[MAIN[sid]] || "")} /></div>}
-        {(held || need || own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
+        {(turn || held || need || own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
           <div class="mnrow2">
+            {turn ? <button type="button" class={`mntag mnsrc${paneTurn.value === turn ? " on" : ""}`} data-turn={turn} data-mnsrc="1"
+              aria-label={`Source: ${row.at.time || ""} in the transcript`} data-tip="Show where this was said" onClick={() => jumpTo(turn)}>{row.at.time ? shortTime(String(row.at.time)) : "Source"}</button> : null}
             {held ? <span class="mck info mnsens" data-tip={`Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`}>
               {held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}`}</span> : null}
             {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} />
