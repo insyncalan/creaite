@@ -39,6 +39,7 @@ class Brand(InternalMark):
 
     def test_word_html_and_pdf_use_the_same_tokens(self):
         import zipfile
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../system/scripts"))
         import creaite_doc
         z = zipfile.ZipFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../system/templates/minutes-template.docx"))
         xml = " ".join(z.read(n).decode("utf-8") for n in ("word/document.xml", "word/styles.xml"))
