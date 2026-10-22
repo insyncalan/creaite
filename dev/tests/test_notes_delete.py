@@ -26,6 +26,7 @@ import os
 import subprocess
 import re
 import sys
+import time
 import unittest
 import urllib.request
 from pathlib import Path
@@ -76,7 +77,17 @@ class NotesDelete(test_notes_tab.NotesServer):
         return json.loads(r.stdout.strip().splitlines()[-1])
 
     def page(self, path, body):
-        """#255: the open page's own call: its token and Chrome's same-origin marks."""
+        """#255: the open page's own call. A "busy" answer (another job, e.g. the daily backup, holds the lock: nothing moved)
+        is asked again for up to a minute; every other answer is returned as is."""
+        for _ in range(120):
+            got = self.page_once(path, body)
+            if not (isinstance(got, dict) and got.get("busy") is True):
+                return got
+            time.sleep(0.5)
+        return got
+
+    def page_once(self, path, body):
+        """One call: its token and Chrome's same-origin marks."""
         req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "X-Creaite-Token": self.token,
                                               "Origin": self.base, "Sec-Fetch-Site": "same-origin"})
