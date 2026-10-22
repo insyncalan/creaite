@@ -265,16 +265,63 @@ def behaviour_driver(case, screens):
     """BL-316's keyboard script and Undo check (dev/tests/test_shared_behaviour.py: Enter opens, ↑ ↓ move, Esc closes and
     returns focus, Tab closes a menu or list or stays in a dialog; a change from a menu or a list offers Undo), driven on
     `screens` (behaviour_screens) in `case`'s browser. Its methods are that test's own, unchanged; only the screens, going to
-    them and the Archive prompt's project (FAL, not the sample's ABC) differ."""
+    them, the Archive prompt's project (FAL, not the sample's ABC) and the Undo pick's waits for the page's requests (#297) differ."""
     import test_shared_behaviour as tsb
-    import test_shared_undo as tsu      # #89: the Undo half moved to its own file
     import test_ui_sweep as us
 
     class Drv(tsb.Driver):
         opened, arrows, escape, tab_closes, drive, cmdk = (tsb.SharedBehaviour.opened, tsb.SharedBehaviour.arrows,
                                                           tsb.SharedBehaviour.escape, tsb.SharedBehaviour.tab_closes,
                                                           tsb.SharedBehaviour.drive, tsb.SharedBehaviour.cmdk)
-        pick = tsu.SharedUndo.pick
+
+        def pick(self, i, o):
+            """test_shared_undo's pick (open, down, Enter; a saved change must offer Undo, which is pressed), with one difference
+            (#297): it waits for the page's own requests to end before it looks for the Undo, and again after pressing it. A
+            change that isn't shown at once (milestone-editor #mvOwner, review-peek #pkReject, work-decisions #newBtn) offers
+            Undo only when /api/apply has answered, and that pick's fixed 3 s was too short late in the full check on a busy
+            machine, when the server answers more slowly: the three were red in the full run and green alone. A /api/apply held
+            back 3.5 s turns #mvOwner and #pkReject red the same way. The check is the same one: the change must offer Undo once
+            it is saved, or it fails."""
+            b = self.b
+            if o["kind"] == "dialog" or any(x in o["sig"] for x in tsb.VIEW_ONLY) or not b.eval(f"SB.focus({i})"):
+                return None
+            self.idle()
+            self.press("Enter", 0.4)
+            if not self.state(i)["open"]:
+                return None
+            w0 = b.eval("SB.writes().writes")
+            self.press("ArrowDown", 0.2)
+            self.press("Enter", 1.0)
+            if b.eval("SB.writes().writes") == w0:
+                return None                              # nothing saved (a filter, a view, a page): nothing to undo
+            self.idle()                                  # the save's requests (the proposal, /api/apply, the reload) have ended
+            for _ in range(8):
+                u = b.eval("SB.undo()")
+                if u:
+                    b.eval(f"document.querySelector({u!r}).click()")         # put the vault back for the next control
+                    b.pump(1.0)
+                    self.idle(after=1.0)                 # the Undo's own requests too, and the reload the live update asks for
+                    return []
+                if b.eval(f"SB.state({i}).modal"):
+                    return None                          # it asks first: the change is the dialog's, not the menu's
+                b.pump(0.25)
+            return ["a change is saved with no Undo"]
+
+        def idle(self, after=0.0, limit=20):
+            """Wait (at most `limit` s) until no request the page made is in flight (the live-update stream, /api/events, never
+            ends and isn't counted); with `after`, wait that long more and then again until none is."""
+            b = self.b
+            b.eval("if(!window.__HCF){ window.__HCF={n:0}; const was=window.fetch.bind(window); window.fetch=(u,o)=>{ "
+                   "if(/\\/api\\/events/.test(String(u))) return was(u,o); window.__HCF.n++; "
+                   "return was(u,o).finally(()=>{ window.__HCF.n--; }); }; } true")
+            for wait in ((0.0, after) if after else (0.0,)):
+                if wait:
+                    b.pump(wait)
+                for _ in range(int(limit / 0.1)):
+                    if not b.eval("window.__HCF.n"):
+                        break
+                    b.pump(0.1)
+
         # the dialog scripts no control opens (KEYED) and their helpers, as that test has them; parch is this vault's own, below
         ndel, mnapp, crleft, rail, boardask, llcompare, searchprev, railcust = (
             tsb.SharedBehaviour.ndel, tsb.SharedBehaviour.mnapp, tsb.SharedBehaviour.crleft, tsb.SharedBehaviour.rail,

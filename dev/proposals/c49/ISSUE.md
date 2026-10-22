@@ -47,7 +47,13 @@ they depend on what earlier screens leave behind (run order), as items 3 to 8 di
 
 ## Still open for 2.6.1 (not regressions)
 
-- The 3 order-dependent Undo lines above: find the earlier screen that leaves state behind (bisect `SB_ONLY`).
+- ~~The 3 order-dependent Undo lines above~~ **Done (#297, 22-10-2026): timing in the harness, no screen leaks.** Bisected with
+  `SB_ONLY` (the first and second halves of the screens, each with the three): both green; four full runs (three on the line,
+  one on d42ee478, load 3 to 23) green too, so no earlier screen leaves state behind. The three are the changes that offer Undo
+  only once /api/apply answers (not shown at once), and the Undo pick allowed a fixed 3 s: on a busy machine late in the run
+  that was too short. Holding /api/apply back 3.5 s turns #mvOwner and #pkReject red the same way, alone. hcbase's driver now
+  waits for the page's own requests to end before it looks for the Undo (and after pressing it); the check is unchanged and
+  every screen still runs. Full c49 after it: OK (24 min).
 - `notes`, `notes-ai`, `notes-session` and `ndel` screens go to project ABC through a callable that `behaviour_screens`
   doesn't rename to FAL, so the demo never shows them ("screens the demo doesn't show"). Harness gap; same on main.
 - `minutes-deadline` times out on the demo (`.mnpop` not shown). Harness/demo gap; same on main.
