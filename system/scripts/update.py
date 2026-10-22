@@ -58,10 +58,6 @@ SYNCED = re.compile(r"/(OneDrive[^/]*|iCloud Drive[^/]*|Mobile Documents|Library
                     re.I)                          # local only: a vault never lives in a synced folder
 
 
-# #291 Tier 1: said in plain words, never a file name; "checksum" stays so a person can search for it
-DAMAGED = "creaite can't install this update: the download is damaged or was changed (a checksum doesn't match). Download it again."
-
-
 class UpdateError(Exception):
     pass
 
@@ -303,14 +299,18 @@ def read_release(zip_path):
         unsafe = [n for n in names + list(files) if n not in (paths.RELEASE_MANIFEST, BOOTSTRAP) and
                   (n.startswith("/") or "\\" in n or ".." in n.split("/") or not is_engine(n))]
         if stray or missing or unsafe:
-            raise UpdateError(DAMAGED)
+            raise UpdateError("Refused: the zip doesn't match its manifest or reaches outside the engine ("
+                              + "; ".join(f"{label}: {', '.join(sorted(set(v))[:5])}" for label, v in
+                                          (("not listed", stray), ("missing", missing), ("outside the engine", unsafe))
+                                          if v) + ").")
         if "VERSION" not in files or z.read("VERSION").decode("utf-8").strip() != manifest["version"]:
-            raise UpdateError(DAMAGED)
+            raise UpdateError("Refused: the zip's VERSION file doesn't match its manifest.")
         content = {}
         for n, digest in files.items():
             data = z.read(n)
             if sha256(data) != digest:
-                raise UpdateError(DAMAGED)
+                raise UpdateError(f"Refused: {n} doesn't match its checksum; the zip is damaged or was changed. "
+                                  "Download it again.")
             content[n] = data
     content.pop(BOOTSTRAP, None)                   # checked like the rest, but never installed
     return manifest, content
