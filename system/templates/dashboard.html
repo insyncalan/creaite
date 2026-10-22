@@ -35351,7 +35351,7 @@ ${s5}`;
     return r4 && r4.extra || {};
   }
   var followedIn = (x5) => {
-    const v5 = String(x5.VIP || "").trim();
+    const v5 = String(x5.Follow || x5.VIP || "").trim();
     return !!v5 && !NO_FOLLOW.test(v5);
   };
   function regRowOf(map, n4) {
@@ -35530,8 +35530,9 @@ ${s5}`;
   var onOf = (name) => (registerRows().find((x5) => x5.n === name) || { on: [] }).on;
   function applyFollow(r4, f5) {
     if (f5.follow === void 0) return;
-    const cur = String(r4.extra.VIP || "").trim();
-    r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+    const cur = String(r4.extra.Follow || r4.extra.VIP || "").trim();
+    r4.extra.Follow = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+    delete r4.extra.VIP;
   }
   function savePerson(name, f5) {
     const derived = derivedOf(name);
