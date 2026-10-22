@@ -35,7 +35,7 @@ export const PANE_KEY = "creaite-minutes-transcript";
 /** The transcript pane: open, the turn picked from a time tag, the words searched for. */
 export const paneOpen = signal(true);
 /** Show or hide the transcript, and remember the choice. @param {boolean} on */
-export function setPane(on) { paneOpen.value = !!on; store.set(PANE_KEY, !!on); }
+export function setPane(on) { paneOpen.value = !!on; if (!on) paneTurn.value = null; store.set(PANE_KEY, !!on); }
 /** The remembered choice, read as each minutes opens. */
 export function paneRemembered() { paneOpen.value = store.get(PANE_KEY, true) !== false; }
 /** #268: the turn lit by hovering, both ways: a row lights its turn (from "row", the pane scrolls to it), a turn lights its

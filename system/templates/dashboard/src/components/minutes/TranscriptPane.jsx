@@ -43,6 +43,12 @@ export function TranscriptPane() {
     if (top < ol.scrollTop) ol.scrollTop = top - 8;
     else if (bottom > ol.scrollTop + ol.clientHeight) ol.scrollTop = bottom - ol.clientHeight + 8;
   }, [hv]);
+  useEffect(() => {                                        // #302 B: Esc puts the lit turn out again
+    if (on == null) return undefined;
+    const k = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") paneTurn.value = null; };
+    document.addEventListener("keydown", k);
+    return () => document.removeEventListener("keydown", k);
+  }, [on]);
   if (!paneOpen.value) return null;
   const next = () => { if (!hits.length) return; const after = hits.find(t => on == null || t.n > on) || hits[0]; paneTurn.value = after.n; };
   return (

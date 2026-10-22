@@ -3567,6 +3567,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mntagw{display:inline-flex;align-items:center;margin-left:6px;vertical-align:baseline}
 .mntag{border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:var(--r-pill);font:11px/16px var(--mono,monospace);padding:2px 7px;min-height:24px;cursor:pointer}
 .mntag:hover,.mntag:focus-visible{color:var(--accent);border-color:var(--accent)}
+.mntag.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .mntagx{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;opacity:0;font-size:11px}
 .mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
 .mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}

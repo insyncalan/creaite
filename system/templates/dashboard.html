@@ -3577,6 +3577,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mntagw{display:inline-flex;align-items:center;margin-left:6px;vertical-align:baseline}
 .mntag{border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:var(--r-pill);font:11px/16px var(--mono,monospace);padding:2px 7px;min-height:24px;cursor:pointer}
 .mntag:hover,.mntag:focus-visible{color:var(--accent);border-color:var(--accent)}
+.mntag.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .mntagx{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;opacity:0;font-size:11px}
 .mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
 .mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
@@ -37081,6 +37082,7 @@ ${s5}`;
   var paneOpen = y3(true);
   function setPane(on2) {
     paneOpen.value = !!on2;
+    if (!on2) paneTurn.value = null;
     store.set(PANE_KEY, !!on2);
   }
   function paneRemembered() {
@@ -69929,6 +69931,129 @@ ${d5.text}`);
     return /* @__PURE__ */ u4("span", { children: out });
   }
 
+  // components/minutes/TranscriptPane.jsx
+  function jumpTo(turn) {
+    paneOpen.value = true;
+    paneTurn.value = null;
+    queueMicrotask(() => {
+      paneTurn.value = turn;
+    });
+  }
+  function Marked({ text, q: q5 }) {
+    if (!q5) return /* @__PURE__ */ u4("span", { children: text });
+    const out = [], low = text.toLowerCase(), k5 = q5.toLowerCase();
+    let i5 = 0, j5 = low.indexOf(k5);
+    while (j5 >= 0) {
+      out.push(text.slice(i5, j5));
+      out.push(/* @__PURE__ */ u4("mark", { children: text.slice(j5, j5 + k5.length) }, j5));
+      i5 = j5 + k5.length;
+      j5 = low.indexOf(k5, i5);
+    }
+    out.push(text.slice(i5));
+    return /* @__PURE__ */ u4("span", { children: out });
+  }
+  function TranscriptPane() {
+    const list = A2(
+      /** @type {HTMLOListElement|null} */
+      null
+    );
+    const v5 = minutesView.value, tr2 = v5 && v5.turns || { timed: false, turns: [] };
+    const q5 = paneQuery.value.trim(), on2 = paneTurn.value, hv = hoverTurn.value;
+    const hits = q5 ? tr2.turns.filter((t47) => t47.text.toLowerCase().includes(q5.toLowerCase()) || String(t47.who || "").toLowerCase().includes(q5.toLowerCase())) : [];
+    h2(() => {
+      const ol2 = list.current, li2 = ol2 && on2 != null ? (
+        /** @type {HTMLElement|null} */
+        ol2.querySelector(`[data-turn="${on2}"]`)
+      ) : null;
+      if (ol2 && li2) ol2.scrollTop = li2.offsetTop - ol2.offsetTop - ol2.clientHeight / 3;
+    }, [on2, paneOpen.value]);
+    h2(() => {
+      const ol2 = list.current, li2 = ol2 && hv && hv.from === "row" ? (
+        /** @type {HTMLElement|null} */
+        ol2.querySelector(`[data-turn="${hv.turn}"]`)
+      ) : null;
+      if (!ol2 || !li2) return;
+      const top = li2.offsetTop - ol2.offsetTop, bottom = top + li2.offsetHeight;
+      if (top < ol2.scrollTop) ol2.scrollTop = top - 8;
+      else if (bottom > ol2.scrollTop + ol2.clientHeight) ol2.scrollTop = bottom - ol2.clientHeight + 8;
+    }, [hv]);
+    h2(() => {
+      if (on2 == null) return void 0;
+      const k5 = (e4) => {
+        if (e4.key === "Escape") paneTurn.value = null;
+      };
+      document.addEventListener("keydown", k5);
+      return () => document.removeEventListener("keydown", k5);
+    }, [on2]);
+    if (!paneOpen.value) return null;
+    const next = () => {
+      if (!hits.length) return;
+      const after = hits.find((t47) => on2 == null || t47.n > on2) || hits[0];
+      paneTurn.value = after.n;
+    };
+    return /* @__PURE__ */ u4("aside", { class: "mnpane", "aria-labelledby": "mnPaneH", children: [
+      /* @__PURE__ */ u4("div", { class: "mnpane-h", children: [
+        /* @__PURE__ */ u4("h2", { id: "mnPaneH", children: "Transcript" }),
+        /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close the transcript", onClick: () => {
+          setPane(false);
+          requestAnimationFrame(() => {
+            const b5 = document.getElementById("mnTrBtn");
+            if (b5) b5.focus();
+          });
+        }, data: { mnpane: "close" } })
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "mnpane-q", children: [
+        /* @__PURE__ */ u4(
+          "input",
+          {
+            type: "search",
+            class: "pkdt",
+            id: "mnPaneQ",
+            "aria-label": "Search the transcript",
+            placeholder: "Search the transcript",
+            value: paneQuery.value,
+            onInput: (e4) => {
+              paneQuery.value = /** @type {HTMLInputElement} */
+              e4.currentTarget.value;
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                next();
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: q5 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr2.turns.length ? `${tr2.turns.length} turns` : "" })
+      ] }),
+      tr2.turns.length ? /* @__PURE__ */ u4("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr2.turns.map((t47) => /* @__PURE__ */ u4(
+        "li",
+        {
+          "data-turn": t47.n,
+          class: `${t47.n === on2 ? "on" : ""}${q5 && !hits.includes(t47) ? " dim" : ""}${hv && hv.turn === t47.n ? " hl" : ""}`,
+          "aria-current": t47.n === on2 ? "true" : void 0,
+          onMouseEnter: () => {
+            hoverTurn.value = { turn: t47.n, from: "pane" };
+          },
+          onMouseLeave: () => {
+            hoverTurn.value = null;
+          },
+          children: [
+            /* @__PURE__ */ u4("span", { class: "mnwho", children: [
+              t47.who || "Someone",
+              t47.start ? /* @__PURE__ */ u4("span", { class: "mntime", children: [
+                " · ",
+                t47.start
+              ] }) : null
+            ] }),
+            /* @__PURE__ */ u4(Marked, { text: t47.text, q: q5 })
+          ]
+        },
+        t47.n
+      )) }) : /* @__PURE__ */ u4("p", { class: "sub mnpane-none", children: "No transcript was kept with these minutes." })
+    ] });
+  }
+
   // components/minutes/DeadlinePopover.jsx
   var WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   var LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -70057,6 +70182,339 @@ ${d5.text}`);
         cells
       ] })
     ] });
+  }
+
+  // components/minutes/minutesDoc.js
+  var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
+  var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
+  function mdLines(text) {
+    const out = [];
+    for (const rawLine of String(text || "").split("\n")) {
+      const s5 = rawLine.trim();
+      if (!s5) continue;
+      const topic = /^\*\*([^*]+)\*\*$/.exec(s5);
+      if (topic) {
+        out.push({ kind: "topic", text: topic[1], flag: "" });
+        continue;
+      }
+      const b5 = /^[-*] (.*)$/.exec(s5), body2 = b5 ? b5[1] : s5;
+      const f5 = /^\*\*([A-Z ]+)\*\* (.*)$/.exec(body2);
+      const flag = f5 && FLAGS.includes(f5[1]) ? f5[1] : "";
+      out.push({ kind: b5 ? "bullet" : "para", text: unbold(flag && f5 ? f5[2] : body2), flag });
+    }
+    return out;
+  }
+  function mdUnlines(ls2) {
+    const out = [];
+    ls2.forEach((l6, i5) => {
+      if (l6.kind === "topic") {
+        if (i5) out.push("");
+        out.push(`**${l6.text}**`);
+      } else if (l6.kind === "bullet") out.push(`- ${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
+      else {
+        if (i5) out.push("");
+        out.push(`${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
+      }
+    });
+    return out.join("\n");
+  }
+  var squash = (s5) => String(s5 || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function lineTag(line, tags) {
+    const l6 = squash(line.text);
+    return (tags || []).find((t47) => t47.ref === "transcript" && t47.time && (squash(t47.text) === l6 || l6 && squash(t47.text).startsWith(l6) || l6 && l6.startsWith(squash(t47.text)))) || null;
+  }
+  var sensitive = (item) => !!item && ((item.flags || []).some((f5) => /sensitive/i.test(f5)) || ((item.values || {}).labels || []).some((l6) => /sensitive/i.test(l6)) || !!(item.values || {}).sensitive);
+  var internalOnly = (doc) => Array.isArray((doc.layout || {}).internal_only) ? doc.layout.internal_only : [];
+  var isInternal = (doc, section, what) => internalOnly(doc).some((x5) => x5.section === section && (what.ref ? x5.ref === what.ref || what.n != null && x5.ref === `@${what.n}` : x5.text === what.text));
+  function toggleInternal(doc, section, what) {
+    const was = internalOnly(doc), on2 = isInternal(doc, section, what);
+    const next = on2 ? was.filter((x5) => !(x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text))) : [...was, { section, ...what }];
+    return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
+  }
+  var heldBack = (doc, ref, held) => held && held[ref] || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
+  function distributedOf(doc, held) {
+    const sections = doc.sections.map((s5) => {
+      if (s5.type === "table") {
+        const keptRows = (s5.rows || []).filter((r4) => !(r4.ref && (heldBack(doc, r4.ref, held) || isInternal(doc, s5.id, { ref: r4.ref, n: (
+          /** @type {any} */
+          r4.n
+        ) }))));
+        return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
+      }
+      if (s5.type === "header" || !s5.text) return s5;
+      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
+      return { ...s5, text: mdUnlines(kept) || "None recorded." };
+    });
+    return { ...doc, audience: "distributed", sections };
+  }
+  function leftOut(doc, held) {
+    const out = [];
+    for (const s5 of doc.sections) {
+      for (const r4 of s5.rows || []) {
+        const why = r4.ref ? heldBack(doc, r4.ref, held) : "";
+        if (why) out.push(`${s5.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
+        else if (r4.ref && isInternal(doc, s5.id, { ref: r4.ref, n: (
+          /** @type {any} */
+          r4.n
+        ) })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
+      }
+      if (s5.type !== "table" && s5.type !== "header") {
+        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
+      }
+    }
+    return out;
+  }
+  var DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
+  var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
+  function rowChecks(doc, s5, r4, i5, turns, unknown) {
+    const out = [], it2 = (doc.items || {})[r4.ref], v5 = it2 && it2.values || {};
+    if (!it2 || it2.op !== "new") return out;
+    const n4 = it2.n, label = v5.description || v5.decision || "";
+    const owner = s5.id === "decisions" ? "" : String(v5.owner || "").trim();
+    if (s5.id !== "decisions" && owner && owner !== "TBC" && unknown(owner))
+      out.push({
+        id: `owner:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "owner",
+        quote: owner,
+        kind: "owner",
+        n: n4,
+        note: `${owner} needs details.`,
+        actions: [{ id: "details", label: "Add details" }, { id: "keep", label: "Keep mine" }]
+      });
+    else if (s5.id === "actions" && (!owner || owner === "TBC"))
+      out.push({
+        id: `owner:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "owner",
+        quote: owner || "TBC",
+        kind: "owner",
+        n: n4,
+        note: "No owner yet.",
+        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
+      });
+    const turn = r4.at && r4.at.turn ? turns.find((t47) => t47.n === r4.at.turn) : null;
+    const said2 = turn && s5.id === "actions" ? DEADLINE.exec(turn.text) : null;
+    const meant = said2 ? deadlineOf(said2[0], doc.date) : null;
+    if (said2 && meant && meant !== (v5.due_date || null))
+      out.push({
+        id: `due:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "due",
+        quote: v5.due_date ? fd(v5.due_date) : "Not set",
+        kind: "due",
+        n: n4,
+        turn: turn.n,
+        words: said2[0],
+        note: `${turn.who || "Someone"} said “${said2[0]}”: ${deadlineDay(meant)}.`,
+        last: v5.due_date ? `The row says ${deadlineDay(v5.due_date)}.` : "The row has no deadline.",
+        actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+      });
+    if (turn) {
+      for (const f5 of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f5))
+        out.push({
+          id: `fig:${r4.ref}:${f5}`,
+          section: s5.id,
+          row: i5,
+          quote: f5,
+          kind: "figure",
+          n: n4,
+          turn: turn.n,
+          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+        });
+    }
+    if ((it2.flags || []).some((f5) => f5 === "invalid" || f5 === "conflict"))
+      out.push({
+        id: `item:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        quote: "",
+        kind: "item",
+        n: n4,
+        note: "The tracker's checks refused this item as it stands: change it in Review.",
+        actions: [{ id: "keep", label: "Keep mine" }]
+      });
+    return out;
+  }
+  function lineChecks(s5, turns) {
+    const out = [];
+    mdLines(s5.text || "").forEach((l6, i5) => {
+      const t47 = lineTag(
+        l6,
+        /** @type {TimeTag[]} */
+        s5.tags || []
+      ), turn = t47 ? turns.find((x5) => x5.n === t47.turn) : null;
+      if (!turn) return;
+      for (const f5 of new Set(l6.text.match(FIGURE) || [])) if (!turn.text.includes(f5))
+        out.push({
+          id: `fig:${s5.id}:${i5}:${f5}`,
+          section: s5.id,
+          line: i5,
+          field: "text",
+          quote: f5,
+          kind: "figure",
+          turn: turn.n,
+          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+        });
+    });
+    return out;
+  }
+  function checksOf(doc, turns, unknown, kept) {
+    if (!doc || doc.state !== "draft") return [];
+    const out = [];
+    for (const s5 of doc.sections) {
+      if (s5.hidden) continue;
+      if (s5.type === "table") (s5.rows || []).forEach((r4, i5) => {
+        if (r4.ref) out.push(...rowChecks(doc, s5, r4, i5, turns || [], unknown));
+      });
+      else if (s5.type === "text") out.push(...lineChecks(s5, turns || []));
+    }
+    return out.filter((c5) => !kept.includes(c5.id));
+  }
+
+  // components/minutes/TextLines.jsx
+  var shortTime = (t47) => String(t47 || "").replace(/^00:/, "");
+  function TimeTag({ tag, onRemove }) {
+    return /* @__PURE__ */ u4("span", { class: "mntagw", children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "mntag",
+          "data-turn": tag.turn,
+          "aria-label": `Show in the transcript: ${tag.time}`,
+          onClick: () => {
+            if (tag.turn) jumpTo(tag.turn);
+          },
+          children: shortTime(tag.time || "")
+        }
+      ),
+      onRemove ? /* @__PURE__ */ u4("button", { type: "button", class: "mntagx", "aria-label": `Remove the time tag ${tag.time}`, onClick: onRemove, children: "✕" }) : null
+    ] });
+  }
+  function TextLine({ ctx, line, i: i5, li: li2, onEdit }) {
+    const m5 = x2(MinutesCtx), s5 = ctx.section, live = ctx.editing && !ctx.exported;
+    const tags = (
+      /** @type {TimeTag[]} */
+      s5.tags || []
+    ), tag = live ? lineTag(line, tags) : null;
+    const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
+    const Tag2 = li2 ? "li" : "p";
+    return /* @__PURE__ */ u4(Tag2, { class: "mnline", "data-line": i5, children: [
+      line.flag ? /* @__PURE__ */ u4("b", { class: "mnflag", children: line.flag }) : null,
+      line.flag ? " " : null,
+      live ? /* @__PURE__ */ u4("span", { class: "mntext", onClick: (e4) => {
+        if (!/** @type {HTMLElement} */
+        e4.target.closest("button")) onEdit();
+      }, children: /* @__PURE__ */ u4(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u4("span", { children: line.text }),
+      tag ? /* @__PURE__ */ u4(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null
+    ] });
+  }
+  function blocks(ls2) {
+    const out = [];
+    ls2.forEach((line, i5) => {
+      if (line.kind === "topic" || !out.length) out.push({ topic: line.kind === "topic" ? line : null, items: [] });
+      if (line.kind !== "topic") out[out.length - 1].items.push({ line, i: i5 });
+    });
+    return out;
+  }
+  function TextLines({ ctx }) {
+    const [ed3, setEd] = d2(false);
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const s5 = ctx.section, { Text: Text2 } = ctx, open2 = ctx.editing && ed3;
+    h2(() => {
+      if (!open2) return void 0;
+      const away = (e4) => {
+        const t47 = (
+          /** @type {HTMLElement|null} */
+          e4.target
+        );
+        if (t47 && box.current && !box.current.contains(t47) && !t47.closest("#aiBarBox, .aisug, .ddmenu, .snack, #snack")) setEd(false);
+      };
+      const esc2 = (e4) => {
+        if (e4.key === "Escape" && !e4.defaultPrevented && !document.querySelector("#aiBarBox, .aisug, dialog[open]")) setEd(false);
+      };
+      document.addEventListener("pointerdown", away, true);
+      document.addEventListener("keydown", esc2);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        document.removeEventListener("keydown", esc2);
+      };
+    }, [open2]);
+    if (open2) {
+      return /* @__PURE__ */ u4("div", { class: "mnedit", ref: box, children: /* @__PURE__ */ u4(Text2, { field: "text", rich: true, label: s5.heading }) });
+    }
+    const ls2 = mdLines(s5.text || "");
+    return /* @__PURE__ */ u4("div", { class: "mnlines", children: [
+      blocks(ls2).map((b5, k5) => {
+        const bullets = b5.items.some((x5) => x5.line.kind === "bullet");
+        const body2 = b5.items.map(({ line, i: i5 }) => /* @__PURE__ */ u4(TextLine, { ctx, line, i: i5, li: bullets, onEdit: () => setEd(true) }, i5));
+        return /* @__PURE__ */ u4("div", { class: "mnblock", ...b5.topic ? ctx.level(`topic:${b5.topic.text}`) : {}, children: [
+          b5.topic ? /* @__PURE__ */ u4("h3", { class: "mntopic", children: b5.topic.text }) : null,
+          bullets ? /* @__PURE__ */ u4("ul", { children: body2 }) : body2
+        ] }, k5);
+      }),
+      ctx.editing ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn mnedbtn", "aria-label": `Edit ${s5.heading}`, onClick: () => setEd(true), children: "Edit" }) : null
+    ] });
+  }
+  function SummaryText({ ctx }) {
+    const m5 = x2(MinutesCtx);
+    const s5 = ctx.section, [ver, setVer] = d2(0);
+    const start = A2(
+      /** @type {string|null} */
+      null
+    );
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    if (!ctx.editing || ctx.exported || !m5) return /* @__PURE__ */ u4(TextLines, { ctx });
+    const text = String(s5.text || "");
+    const checks = m5.checks.map((c5, n4) => ({ ...c5, n: n4 })).filter((c5) => c5.section === s5.id && c5.line == null);
+    const ai2 = { place: "minutes", project: () => m5.project, confidential: () => false, key: () => `minutes:${s5.id}` };
+    return /* @__PURE__ */ u4(
+      "div",
+      {
+        class: "mnsum-ed",
+        ref: box,
+        "data-mnsum": "",
+        onFocusIn: () => {
+          if (start.current == null) start.current = text;
+        },
+        onFocusOut: (e4) => {
+          const to2 = (
+            /** @type {Node|null} */
+            e4.relatedTarget
+          );
+          if (!to2 || !box.current || !box.current.contains(to2)) start.current = null;
+        },
+        onKeyDownCapture: (e4) => {
+          if (e4.key !== "Escape" || start.current == null) return;
+          e4.preventDefault();
+          e4.stopPropagation();
+          const was = start.current;
+          start.current = null;
+          if (was !== text) ctx.update({ text: was }, "Summary put back");
+          setVer((x5) => x5 + 1);
+          const a5 = (
+            /** @type {HTMLElement|null} */
+            document.activeElement
+          );
+          if (a5 && box.current && box.current.contains(a5)) a5.blur();
+        },
+        children: /* @__PURE__ */ u4(SheetEditor, { value: text, rich: true, label: s5.heading || "Summary", ai: ai2, checks, onText: (t47) => ctx.update({ text: t47 }, "Summary edited") }, ver)
+      }
+    );
   }
 
   // components/minutes/ItemTable.jsx
@@ -70277,7 +70735,20 @@ ${d5.text}`);
           /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, w6 === "m" ? "" : nextTrack(t47, w6)), "Track") }) }),
           /* @__PURE__ */ u4("td", { class: "mnic", children: [
             isNew ? /* @__PURE__ */ u4(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u4("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u4(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
-            held || need || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("div", { class: "mnrow2", children: [
+            turn || held || need || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("div", { class: "mnrow2", children: [
+              turn ? /* @__PURE__ */ u4(
+                "button",
+                {
+                  type: "button",
+                  class: `mntag mnsrc${paneTurn.value === turn ? " on" : ""}`,
+                  "data-turn": turn,
+                  "data-mnsrc": "1",
+                  "aria-label": `Source: ${row2.at.time || ""} in the transcript`,
+                  "data-tip": "Show where this was said",
+                  onClick: () => jumpTo(turn),
+                  children: row2.at.time ? shortTime(String(row2.at.time)) : "Source"
+                }
+              ) : null,
               held ? /* @__PURE__ */ u4("span", { class: "mck info mnsens", "data-tip": `Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`, children: held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}` }) : null,
               !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("span", { class: "mck info", children: [
                 /* @__PURE__ */ u4(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }),
@@ -70417,454 +70888,6 @@ ${d5.text}`);
         /* @__PURE__ */ u4(MnTable, { ctx, rows: these, kind: ty2 || "Update", full: true })
       ] }, many);
     }) });
-  }
-
-  // components/minutes/minutesDoc.js
-  var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
-  var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
-  function mdLines(text) {
-    const out = [];
-    for (const rawLine of String(text || "").split("\n")) {
-      const s5 = rawLine.trim();
-      if (!s5) continue;
-      const topic = /^\*\*([^*]+)\*\*$/.exec(s5);
-      if (topic) {
-        out.push({ kind: "topic", text: topic[1], flag: "" });
-        continue;
-      }
-      const b5 = /^[-*] (.*)$/.exec(s5), body2 = b5 ? b5[1] : s5;
-      const f5 = /^\*\*([A-Z ]+)\*\* (.*)$/.exec(body2);
-      const flag = f5 && FLAGS.includes(f5[1]) ? f5[1] : "";
-      out.push({ kind: b5 ? "bullet" : "para", text: unbold(flag && f5 ? f5[2] : body2), flag });
-    }
-    return out;
-  }
-  function mdUnlines(ls2) {
-    const out = [];
-    ls2.forEach((l6, i5) => {
-      if (l6.kind === "topic") {
-        if (i5) out.push("");
-        out.push(`**${l6.text}**`);
-      } else if (l6.kind === "bullet") out.push(`- ${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
-      else {
-        if (i5) out.push("");
-        out.push(`${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
-      }
-    });
-    return out.join("\n");
-  }
-  var squash = (s5) => String(s5 || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  function lineTag(line, tags) {
-    const l6 = squash(line.text);
-    return (tags || []).find((t47) => t47.ref === "transcript" && t47.time && (squash(t47.text) === l6 || l6 && squash(t47.text).startsWith(l6) || l6 && l6.startsWith(squash(t47.text)))) || null;
-  }
-  var sensitive = (item) => !!item && ((item.flags || []).some((f5) => /sensitive/i.test(f5)) || ((item.values || {}).labels || []).some((l6) => /sensitive/i.test(l6)) || !!(item.values || {}).sensitive);
-  var internalOnly = (doc) => Array.isArray((doc.layout || {}).internal_only) ? doc.layout.internal_only : [];
-  var isInternal = (doc, section, what) => internalOnly(doc).some((x5) => x5.section === section && (what.ref ? x5.ref === what.ref || what.n != null && x5.ref === `@${what.n}` : x5.text === what.text));
-  function toggleInternal(doc, section, what) {
-    const was = internalOnly(doc), on2 = isInternal(doc, section, what);
-    const next = on2 ? was.filter((x5) => !(x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text))) : [...was, { section, ...what }];
-    return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
-  }
-  var heldBack = (doc, ref, held) => held && held[ref] || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
-  function distributedOf(doc, held) {
-    const sections = doc.sections.map((s5) => {
-      if (s5.type === "table") {
-        const keptRows = (s5.rows || []).filter((r4) => !(r4.ref && (heldBack(doc, r4.ref, held) || isInternal(doc, s5.id, { ref: r4.ref, n: (
-          /** @type {any} */
-          r4.n
-        ) }))));
-        return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
-      }
-      if (s5.type === "header" || !s5.text) return s5;
-      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
-      return { ...s5, text: mdUnlines(kept) || "None recorded." };
-    });
-    return { ...doc, audience: "distributed", sections };
-  }
-  function leftOut(doc, held) {
-    const out = [];
-    for (const s5 of doc.sections) {
-      for (const r4 of s5.rows || []) {
-        const why = r4.ref ? heldBack(doc, r4.ref, held) : "";
-        if (why) out.push(`${s5.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
-        else if (r4.ref && isInternal(doc, s5.id, { ref: r4.ref, n: (
-          /** @type {any} */
-          r4.n
-        ) })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
-      }
-      if (s5.type !== "table" && s5.type !== "header") {
-        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
-      }
-    }
-    return out;
-  }
-  var DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
-  var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
-  function rowChecks(doc, s5, r4, i5, turns, unknown) {
-    const out = [], it2 = (doc.items || {})[r4.ref], v5 = it2 && it2.values || {};
-    if (!it2 || it2.op !== "new") return out;
-    const n4 = it2.n, label = v5.description || v5.decision || "";
-    const owner = s5.id === "decisions" ? "" : String(v5.owner || "").trim();
-    if (s5.id !== "decisions" && owner && owner !== "TBC" && unknown(owner))
-      out.push({
-        id: `owner:${r4.ref}`,
-        section: s5.id,
-        row: i5,
-        field: "owner",
-        quote: owner,
-        kind: "owner",
-        n: n4,
-        note: `${owner} needs details.`,
-        actions: [{ id: "details", label: "Add details" }, { id: "keep", label: "Keep mine" }]
-      });
-    else if (s5.id === "actions" && (!owner || owner === "TBC"))
-      out.push({
-        id: `owner:${r4.ref}`,
-        section: s5.id,
-        row: i5,
-        field: "owner",
-        quote: owner || "TBC",
-        kind: "owner",
-        n: n4,
-        note: "No owner yet.",
-        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
-      });
-    const turn = r4.at && r4.at.turn ? turns.find((t47) => t47.n === r4.at.turn) : null;
-    const said2 = turn && s5.id === "actions" ? DEADLINE.exec(turn.text) : null;
-    const meant = said2 ? deadlineOf(said2[0], doc.date) : null;
-    if (said2 && meant && meant !== (v5.due_date || null))
-      out.push({
-        id: `due:${r4.ref}`,
-        section: s5.id,
-        row: i5,
-        field: "due",
-        quote: v5.due_date ? fd(v5.due_date) : "Not set",
-        kind: "due",
-        n: n4,
-        turn: turn.n,
-        words: said2[0],
-        note: `${turn.who || "Someone"} said “${said2[0]}”: ${deadlineDay(meant)}.`,
-        last: v5.due_date ? `The row says ${deadlineDay(v5.due_date)}.` : "The row has no deadline.",
-        actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
-      });
-    if (turn) {
-      for (const f5 of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f5))
-        out.push({
-          id: `fig:${r4.ref}:${f5}`,
-          section: s5.id,
-          row: i5,
-          quote: f5,
-          kind: "figure",
-          n: n4,
-          turn: turn.n,
-          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
-          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
-          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
-        });
-    }
-    if ((it2.flags || []).some((f5) => f5 === "invalid" || f5 === "conflict"))
-      out.push({
-        id: `item:${r4.ref}`,
-        section: s5.id,
-        row: i5,
-        quote: "",
-        kind: "item",
-        n: n4,
-        note: "The tracker's checks refused this item as it stands: change it in Review.",
-        actions: [{ id: "keep", label: "Keep mine" }]
-      });
-    return out;
-  }
-  function lineChecks(s5, turns) {
-    const out = [];
-    mdLines(s5.text || "").forEach((l6, i5) => {
-      const t47 = lineTag(
-        l6,
-        /** @type {TimeTag[]} */
-        s5.tags || []
-      ), turn = t47 ? turns.find((x5) => x5.n === t47.turn) : null;
-      if (!turn) return;
-      for (const f5 of new Set(l6.text.match(FIGURE) || [])) if (!turn.text.includes(f5))
-        out.push({
-          id: `fig:${s5.id}:${i5}:${f5}`,
-          section: s5.id,
-          line: i5,
-          field: "text",
-          quote: f5,
-          kind: "figure",
-          turn: turn.n,
-          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
-          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
-          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
-        });
-    });
-    return out;
-  }
-  function checksOf(doc, turns, unknown, kept) {
-    if (!doc || doc.state !== "draft") return [];
-    const out = [];
-    for (const s5 of doc.sections) {
-      if (s5.hidden) continue;
-      if (s5.type === "table") (s5.rows || []).forEach((r4, i5) => {
-        if (r4.ref) out.push(...rowChecks(doc, s5, r4, i5, turns || [], unknown));
-      });
-      else if (s5.type === "text") out.push(...lineChecks(s5, turns || []));
-    }
-    return out.filter((c5) => !kept.includes(c5.id));
-  }
-
-  // components/minutes/TranscriptPane.jsx
-  function jumpTo(turn) {
-    paneOpen.value = true;
-    paneTurn.value = null;
-    queueMicrotask(() => {
-      paneTurn.value = turn;
-    });
-  }
-  function Marked({ text, q: q5 }) {
-    if (!q5) return /* @__PURE__ */ u4("span", { children: text });
-    const out = [], low = text.toLowerCase(), k5 = q5.toLowerCase();
-    let i5 = 0, j5 = low.indexOf(k5);
-    while (j5 >= 0) {
-      out.push(text.slice(i5, j5));
-      out.push(/* @__PURE__ */ u4("mark", { children: text.slice(j5, j5 + k5.length) }, j5));
-      i5 = j5 + k5.length;
-      j5 = low.indexOf(k5, i5);
-    }
-    out.push(text.slice(i5));
-    return /* @__PURE__ */ u4("span", { children: out });
-  }
-  function TranscriptPane() {
-    const list = A2(
-      /** @type {HTMLOListElement|null} */
-      null
-    );
-    const v5 = minutesView.value, tr2 = v5 && v5.turns || { timed: false, turns: [] };
-    const q5 = paneQuery.value.trim(), on2 = paneTurn.value, hv = hoverTurn.value;
-    const hits = q5 ? tr2.turns.filter((t47) => t47.text.toLowerCase().includes(q5.toLowerCase()) || String(t47.who || "").toLowerCase().includes(q5.toLowerCase())) : [];
-    h2(() => {
-      const ol2 = list.current, li2 = ol2 && on2 != null ? (
-        /** @type {HTMLElement|null} */
-        ol2.querySelector(`[data-turn="${on2}"]`)
-      ) : null;
-      if (ol2 && li2) ol2.scrollTop = li2.offsetTop - ol2.offsetTop - ol2.clientHeight / 3;
-    }, [on2, paneOpen.value]);
-    h2(() => {
-      const ol2 = list.current, li2 = ol2 && hv && hv.from === "row" ? (
-        /** @type {HTMLElement|null} */
-        ol2.querySelector(`[data-turn="${hv.turn}"]`)
-      ) : null;
-      if (!ol2 || !li2) return;
-      const top = li2.offsetTop - ol2.offsetTop, bottom = top + li2.offsetHeight;
-      if (top < ol2.scrollTop) ol2.scrollTop = top - 8;
-      else if (bottom > ol2.scrollTop + ol2.clientHeight) ol2.scrollTop = bottom - ol2.clientHeight + 8;
-    }, [hv]);
-    if (!paneOpen.value) return null;
-    const next = () => {
-      if (!hits.length) return;
-      const after = hits.find((t47) => on2 == null || t47.n > on2) || hits[0];
-      paneTurn.value = after.n;
-    };
-    return /* @__PURE__ */ u4("aside", { class: "mnpane", "aria-labelledby": "mnPaneH", children: [
-      /* @__PURE__ */ u4("div", { class: "mnpane-h", children: [
-        /* @__PURE__ */ u4("h2", { id: "mnPaneH", children: "Transcript" }),
-        /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close the transcript", onClick: () => {
-          setPane(false);
-          requestAnimationFrame(() => {
-            const b5 = document.getElementById("mnTrBtn");
-            if (b5) b5.focus();
-          });
-        }, data: { mnpane: "close" } })
-      ] }),
-      /* @__PURE__ */ u4("div", { class: "mnpane-q", children: [
-        /* @__PURE__ */ u4(
-          "input",
-          {
-            type: "search",
-            class: "pkdt",
-            id: "mnPaneQ",
-            "aria-label": "Search the transcript",
-            placeholder: "Search the transcript",
-            value: paneQuery.value,
-            onInput: (e4) => {
-              paneQuery.value = /** @type {HTMLInputElement} */
-              e4.currentTarget.value;
-            },
-            onKeyDown: (e4) => {
-              if (e4.key === "Enter") {
-                e4.preventDefault();
-                next();
-              }
-            }
-          }
-        ),
-        /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: q5 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr2.turns.length ? `${tr2.turns.length} turns` : "" })
-      ] }),
-      tr2.turns.length ? /* @__PURE__ */ u4("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr2.turns.map((t47) => /* @__PURE__ */ u4(
-        "li",
-        {
-          "data-turn": t47.n,
-          class: `${t47.n === on2 ? "on" : ""}${q5 && !hits.includes(t47) ? " dim" : ""}${hv && hv.turn === t47.n ? " hl" : ""}`,
-          "aria-current": t47.n === on2 ? "true" : void 0,
-          onMouseEnter: () => {
-            hoverTurn.value = { turn: t47.n, from: "pane" };
-          },
-          onMouseLeave: () => {
-            hoverTurn.value = null;
-          },
-          children: [
-            /* @__PURE__ */ u4("span", { class: "mnwho", children: [
-              t47.who || "Someone",
-              t47.start ? /* @__PURE__ */ u4("span", { class: "mntime", children: [
-                " · ",
-                t47.start
-              ] }) : null
-            ] }),
-            /* @__PURE__ */ u4(Marked, { text: t47.text, q: q5 })
-          ]
-        },
-        t47.n
-      )) }) : /* @__PURE__ */ u4("p", { class: "sub mnpane-none", children: "No transcript was kept with these minutes." })
-    ] });
-  }
-
-  // components/minutes/TextLines.jsx
-  var shortTime = (t47) => String(t47 || "").replace(/^00:/, "");
-  function TimeTag({ tag, onRemove }) {
-    return /* @__PURE__ */ u4("span", { class: "mntagw", children: [
-      /* @__PURE__ */ u4(
-        "button",
-        {
-          type: "button",
-          class: "mntag",
-          "data-turn": tag.turn,
-          "aria-label": `Show in the transcript: ${tag.time}`,
-          onClick: () => {
-            if (tag.turn) jumpTo(tag.turn);
-          },
-          children: shortTime(tag.time || "")
-        }
-      ),
-      onRemove ? /* @__PURE__ */ u4("button", { type: "button", class: "mntagx", "aria-label": `Remove the time tag ${tag.time}`, onClick: onRemove, children: "✕" }) : null
-    ] });
-  }
-  function TextLine({ ctx, line, i: i5, li: li2, onEdit }) {
-    const m5 = x2(MinutesCtx), s5 = ctx.section, live = ctx.editing && !ctx.exported;
-    const tags = (
-      /** @type {TimeTag[]} */
-      s5.tags || []
-    ), tag = live ? lineTag(line, tags) : null;
-    const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
-    const Tag2 = li2 ? "li" : "p";
-    return /* @__PURE__ */ u4(Tag2, { class: "mnline", "data-line": i5, children: [
-      line.flag ? /* @__PURE__ */ u4("b", { class: "mnflag", children: line.flag }) : null,
-      line.flag ? " " : null,
-      live ? /* @__PURE__ */ u4("span", { class: "mntext", onClick: (e4) => {
-        if (!/** @type {HTMLElement} */
-        e4.target.closest("button")) onEdit();
-      }, children: /* @__PURE__ */ u4(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u4("span", { children: line.text }),
-      tag ? /* @__PURE__ */ u4(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null
-    ] });
-  }
-  function blocks(ls2) {
-    const out = [];
-    ls2.forEach((line, i5) => {
-      if (line.kind === "topic" || !out.length) out.push({ topic: line.kind === "topic" ? line : null, items: [] });
-      if (line.kind !== "topic") out[out.length - 1].items.push({ line, i: i5 });
-    });
-    return out;
-  }
-  function TextLines({ ctx }) {
-    const [ed3, setEd] = d2(false);
-    const box = A2(
-      /** @type {HTMLDivElement|null} */
-      null
-    );
-    const s5 = ctx.section, { Text: Text2 } = ctx, open2 = ctx.editing && ed3;
-    h2(() => {
-      if (!open2) return void 0;
-      const away = (e4) => {
-        const t47 = (
-          /** @type {HTMLElement|null} */
-          e4.target
-        );
-        if (t47 && box.current && !box.current.contains(t47) && !t47.closest("#aiBarBox, .aisug, .ddmenu, .snack, #snack")) setEd(false);
-      };
-      const esc2 = (e4) => {
-        if (e4.key === "Escape" && !e4.defaultPrevented && !document.querySelector("#aiBarBox, .aisug, dialog[open]")) setEd(false);
-      };
-      document.addEventListener("pointerdown", away, true);
-      document.addEventListener("keydown", esc2);
-      return () => {
-        document.removeEventListener("pointerdown", away, true);
-        document.removeEventListener("keydown", esc2);
-      };
-    }, [open2]);
-    if (open2) {
-      return /* @__PURE__ */ u4("div", { class: "mnedit", ref: box, children: /* @__PURE__ */ u4(Text2, { field: "text", rich: true, label: s5.heading }) });
-    }
-    const ls2 = mdLines(s5.text || "");
-    return /* @__PURE__ */ u4("div", { class: "mnlines", children: [
-      blocks(ls2).map((b5, k5) => {
-        const bullets = b5.items.some((x5) => x5.line.kind === "bullet");
-        const body2 = b5.items.map(({ line, i: i5 }) => /* @__PURE__ */ u4(TextLine, { ctx, line, i: i5, li: bullets, onEdit: () => setEd(true) }, i5));
-        return /* @__PURE__ */ u4("div", { class: "mnblock", ...b5.topic ? ctx.level(`topic:${b5.topic.text}`) : {}, children: [
-          b5.topic ? /* @__PURE__ */ u4("h3", { class: "mntopic", children: b5.topic.text }) : null,
-          bullets ? /* @__PURE__ */ u4("ul", { children: body2 }) : body2
-        ] }, k5);
-      }),
-      ctx.editing ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn mnedbtn", "aria-label": `Edit ${s5.heading}`, onClick: () => setEd(true), children: "Edit" }) : null
-    ] });
-  }
-  function SummaryText({ ctx }) {
-    const m5 = x2(MinutesCtx);
-    const s5 = ctx.section, [ver, setVer] = d2(0);
-    const start = A2(
-      /** @type {string|null} */
-      null
-    );
-    const box = A2(
-      /** @type {HTMLDivElement|null} */
-      null
-    );
-    if (!ctx.editing || ctx.exported || !m5) return /* @__PURE__ */ u4(TextLines, { ctx });
-    const text = String(s5.text || "");
-    const checks = m5.checks.map((c5, n4) => ({ ...c5, n: n4 })).filter((c5) => c5.section === s5.id && c5.line == null);
-    const ai2 = { place: "minutes", project: () => m5.project, confidential: () => false, key: () => `minutes:${s5.id}` };
-    return /* @__PURE__ */ u4(
-      "div",
-      {
-        class: "mnsum-ed",
-        ref: box,
-        "data-mnsum": "",
-        onFocusIn: () => {
-          if (start.current == null) start.current = text;
-        },
-        onFocusOut: (e4) => {
-          const to2 = (
-            /** @type {Node|null} */
-            e4.relatedTarget
-          );
-          if (!to2 || !box.current || !box.current.contains(to2)) start.current = null;
-        },
-        onKeyDownCapture: (e4) => {
-          if (e4.key !== "Escape" || start.current == null) return;
-          e4.preventDefault();
-          e4.stopPropagation();
-          const was = start.current;
-          start.current = null;
-          if (was !== text) ctx.update({ text: was }, "Summary put back");
-          setVer((x5) => x5 + 1);
-          const a5 = (
-            /** @type {HTMLElement|null} */
-            document.activeElement
-          );
-          if (a5 && box.current && box.current.contains(a5)) a5.blur();
-        },
-        children: /* @__PURE__ */ u4(SheetEditor, { value: text, rich: true, label: s5.heading || "Summary", ai: ai2, checks, onText: (t47) => ctx.update({ text: t47 }, "Summary edited") }, ver)
-      }
-    );
   }
 
   // components/minutes/MinutesView.jsx

@@ -104,6 +104,40 @@ class MinutesA302(v2.MinutesViewV2):
         self.assertEqual(w[2], "Made by")
         self.assertGreater(w[0], 3 * w[1], f"the decision text spans the row: {w}")
 
+    # ---- piece B: Sources ----
+    def test_b01_a_time_chip_on_each_row_that_has_a_source_lights_its_turn(self):
+        chips = self.ev("[...document.querySelectorAll('#v-minutes tr.mi')].map(r=>[r.dataset.n, (r.querySelector('button.mnsrc')||{}).textContent||null, (r.querySelector('button.mnsrc')||{ getAttribute(){return null} }).getAttribute('aria-label')])")
+        by = {int(n): (t, a) for n, t, a in chips}
+        self.assertEqual(sum(1 for v in by.values() if v[0]), 4, f"4 of the 5 rows carry a source: {by}")
+        self.assertIsNone(by[3][0], "a row with neither at nor turn has no chip")
+        self.assertEqual(by[4], ("01:06", "Source: 00:01:06 in the transcript"))
+        turn = self.ev(f"document.querySelector(\"{ROW % 4} button.mnsrc\").dataset.turn")
+        self.b.click(ROW % 4 + " button.mnsrc")
+        self.b.pump(0.4)
+        self.assertEqual(self.ev("[...document.querySelectorAll('.mnturns li.on')].map(l=>l.dataset.turn)"), [turn], "the right turn is lit")
+        self.assertEqual(self.ev(f"document.querySelector(\"{ROW % 4} button.mnsrc\").classList.contains('on')"), True)
+        self.assertTrue(self.ev("(()=>{const o=document.querySelector('.mnturns'),l=o.querySelector('li.on'),a=o.getBoundingClientRect(),b=l.getBoundingClientRect(); return b.top>=a.top-1&&b.bottom<=a.bottom+1})()"), "in view")
+        self.b.key("Escape")
+        self.b.pump(0.3)
+        self.assertEqual(self.ev("document.querySelectorAll('.mnturns li.on').length"), 0, "Esc clears the highlight")
+
+    def test_b02_a_closed_pane_opens_and_closing_clears(self):
+        self.b.click("#mnTrBtn")
+        self.b.wait("!document.querySelector('.mnpane')")
+        self.b.click(ROW % 2 + " button.mnsrc")
+        self.b.wait("document.querySelector('.mnpane .mnturns li.on')")
+        self.b.click("[data-mnpane=close]")
+        self.b.wait("!document.querySelector('.mnpane')")
+        self.b.click("#mnTrBtn")
+        self.b.wait("document.querySelector('.mnpane')")
+        self.assertEqual(self.ev("document.querySelectorAll('.mnturns li.on').length"), 0, "closing the pane cleared it")
+
+    def test_b03_exports_have_no_chip(self):
+        self.assertGreaterEqual(self.ev("document.querySelectorAll('#v-minutes button.mnsrc').length"), 4)
+        self.b.click("#v-minutes .sheet-exp")
+        self.b.pump(0.5)
+        self.assertEqual(self.ev("document.querySelectorAll('#v-minutes .mnsrc, #v-minutes .mntag').length"), 0, "Show as exported has no source chips")
+
 
 for _n in [n for n in dir(v2.MinutesViewV2) if n.startswith("test_")]:
     setattr(MinutesA302, _n, None)
