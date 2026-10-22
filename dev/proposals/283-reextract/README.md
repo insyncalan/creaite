@@ -33,7 +33,7 @@ rebuilt; line2's #306 File without the transcript copy and approve fix are kept)
 1. on `v261-line2` alone (the 283 pair on its own);
 2. after the whole guarded chain of `dev/proposals/GUARDED-2.6.1.md` (low-notes tracker, inode-gap tracker, work-item-history
    schema and tracker, 291 update, 291 live_server, 300 live_server, work-item-history live_server, tests-after), applied in that
-   order, then `reach.diff` and `live_server.diff` together. `test_reextract` passes 22 of 22 there (22 now: two tests added).
+   order, then `reach.diff` and `live_server.diff` together. `test_reextract` passes 23 of 23 there (23 now: two tests added).
 Order in the chain: after the work-item-history tests-after diff; the hunks' anchors are distinct.
 
 Also checked: #306's transcript-missing hold. If the transcript has gone from the inbox, Read again refuses before anything is set
@@ -62,7 +62,7 @@ files. The server must be restarted after applying (the route table and the run 
 ## Verify after applying (one at a time; check the load first)
 
 ```
-python3 dev/tests/test_reextract.py            # 22 tests, all pass (6 are expected failures before the diffs)
+python3 dev/tests/test_reextract.py            # 23 tests, all pass (6 are expected failures before the diffs)
 python3 dev/tests/test_intake_process.py       # #264 unchanged (29)
 python3 dev/tests/test_intake_process_round2.py
 python3 dev/tests/test_intake_process_minutes.py
