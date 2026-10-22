@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from live_browser import LiveBrowserCase  # noqa: E402
-from test_dashboard import new, populate  # noqa: E402
+from test_dashboard import new, populate, today  # noqa: E402
 from test_sweep_alerts import REGISTER, record, run, vip_file, vip_vault  # noqa: E402
 from test_vip_threads import py  # noqa: E402
 from test_vip_screens import says_vip  # noqa: E402
@@ -469,8 +469,8 @@ class ConfidentialThreads(unittest.TestCase):
                     path.unlink()
 
 
-TODAY = date.today().isoformat()
-YESTERDAY = date.fromordinal(date.today().toordinal() - 1).isoformat()
+TODAY = today().isoformat()
+YESTERDAY = date.fromordinal(today().toordinal() - 1).isoformat()
 STAMP = f"{TODAY} 12:00"
 PRIVATE = {**CHAT, "conversation": "19:chat-private@thread.v2", "title": "Personal", "link": "https://teams.microsoft.com/l/chat/19:p",
            "sensitivity": "private", "last": f"{TODAY} 08:20", "summary": "SECRET WORDS", "items": [{"type": "action", "text": "SECRET ITEM"}]}
@@ -500,7 +500,7 @@ def rec_at(v, found, when=STAMP):
 def fixture(v):
     """Mia is followed. Every kind of thing the sweep records, plus two proposals and a memory note from her mail."""
     populate(v)
-    in3 = date.fromordinal(date.today().toordinal() + 3).isoformat()     # 2.5.3 (#251): a milestone due soon with open work, so
+    in3 = date.fromordinal(today().toordinal() + 3).isoformat()     # 2.5.3 (#251): a milestone due soon with open work, so
     v.propose("ms", [new("milestones", 1, project="ABC", name="Pilot go-live", baseline_date=in3,   # its row shares Needs attention
                          forecast_date=in3, status="Planned", source="Alan (cx-edit)")])
     v.run("apply")
@@ -559,9 +559,11 @@ class Page(LiveBrowserCase):
             self.assertTrue(any(x.startswith("Open in Review") for x in r["btns"]), r["btns"])
             self.assertTrue(any(x.startswith("Dismiss") for x in r["btns"]), r["btns"])
         b.click(f'#attnList li[data-al="{prop["key"][2:]}"] a.t')                        # the title goes to the proposal, highlighted
-        b.wait("!document.getElementById('v-review').hidden")
-        self.assertTrue(b.eval("RHL.size>0"))
-        self.assertTrue(b.eval("REV.filter(r=>RHL.has(r.n)).every(r=>!r.done)"))
+        # #232 C2 (2.6): Review is Intake's page (no RHL highlight); a sweep proposal has no meeting to open, so the page
+        # lands on Review with the proposal still waiting and shown
+        b.wait("VIEW==='intake-review' && !document.getElementById('v-intake-review').hidden")
+        b.wait("/Send the SOW/.test(document.getElementById('v-intake-review').textContent)")
+        self.assertTrue(b.eval("REV.some(r=>/sweep/.test(r.file)&&!r.done)"))
 
     def test_c_every_unseen_recorded_message_has_a_row(self):
         """None is silently dropped: each unseen alert in vip.json shows, as a card, a quiet line or a Replied line."""

@@ -153,7 +153,8 @@ class DecisionsNeeded(Base):
         self.assertEqual(b.eval("[DE.mode, DE.name, DE.only]"), ["update", "Omar Ali", "ABC-D-009"])
         self.assertTrue(b.eval("DE.items.length>1 && [...DE.picked].every(k=>k==='decisions:ABC-D-009')"))   # his other items offered, unticked
         b.eval("document.getElementById('deDlg').close()")
-        self.assertEqual(b.eval("SENTURLS.filter(u=>!/\\/api\\/(pulse|health|events|version|diagnostics)/.test(u))"), [])   # no save, no chase record
+        # 2.6: the Draft email asks /api/edit/ai/caps (a read: whether this server's AI bar is recipient-safe)
+        self.assertEqual(b.eval("SENTURLS.filter(u=>!/\\/api\\/(pulse|health|events|version|diagnostics|edit\\/ai\\/caps)/.test(u))"), [])   # no save, no chase record
         self.assertEqual(self.staging(), before)
         self.assertFalse((self.v.root / "system/staging/chases.json").exists())
 

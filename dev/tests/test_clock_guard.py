@@ -60,10 +60,10 @@ SCRIPTS = {
     "propose.py": 7, "quality.py": 1, "reach.py": 3, "review.py": 5, "search.py": 1, "settings_catalogue.py": 2,
     "sneak_peek.py": 1, "status_checks.py": 1, "sweep.py": 3, "tracker.py": 7, "transcripts.py": 1, "update.py": 3, "usage_log.py": 1, "usage_report.py": 1,
 }
-DASHBOARD_JS = {
+DASHBOARD_JS = {    # drafts.js 6 (2.6): the draft email's AI check reads Date.now() twice for a retry back-off timer, not a day
     "ask.js": 15, "components/notes/CaptureDrawer.jsx": 1, "components/notes/DeleteNote.jsx": 1,
     "components/peek/ChasePane.jsx": 2, "components/Menu.jsx": 2, "components/notes/NotesPage.jsx": 2, "components/report/weekly/weeklyDoc.js": 1, "core/data.js": 1, "core/dayroll.js": 1,
-    "core/motion.js": 1, "core/page.js": 2, "core/server.js": 7, "drafts.js": 4, "files.js": 1, "help.js": 2, "core/intakeApi.js": 2,
+    "core/motion.js": 1, "core/page.js": 2, "core/server.js": 7, "drafts.js": 6, "files.js": 1, "help.js": 2, "core/intakeApi.js": 2,
     "meetings.js": 2, "milestones.js": 2, "panel.js": 6, "projects.js": 3, "review.js": 1, "settings.js": 5, "sneak.js": 3,
     "stores/aiEdit.js": 3, "stores/notes.js": 3, "stores/prepPopup.js": 3, "stores/settings.js": 1, "today.js": 3,
 }

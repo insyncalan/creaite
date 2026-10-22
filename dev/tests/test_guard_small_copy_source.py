@@ -101,7 +101,7 @@ elif a["when"] == "in_open":
             swap()
         return fd
     os.open = os_open
-elif a["when"] == "link_fails":                        # a file system without hard links (FAT): the fallback
+elif a["when"] == "link_fails":                        # a file system without hard links (vfat, exFAT): the fallback
     def no_link(*x, **k):
         if a.get("appear"):
             open(a["to"], "w").write("already here\n")      # a file appears in the window before the fallback writes

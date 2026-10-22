@@ -642,10 +642,11 @@ class SweepCalendarSave(unittest.TestCase):
     def test_a_genuinely_empty_diary_is_saved(self):
         """v2.6 review: a reply that names every day from today to the window's end, each empty, is a diary emptied (the
         meetings were cancelled), so it is saved; a reply that leaves out a day with saved meetings is still refused."""
-        from datetime import date, timedelta
+        from datetime import timedelta
+        from test_dashboard import today
         self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
         kept = self.cal.read_text()
-        window = [(date.today() + timedelta(days=n)).isoformat() for n in range(8)]
+        window = [(today() + timedelta(days=n)).isoformat() for n in range(8)]
         r = self.save({d: [] for d in window if d != self.tomorrow})
         self.assertEqual(r.returncode, 1, r.stdout)                      # tomorrow, which has a meeting, left out: refused
         self.assertEqual(self.cal.read_text(), kept)
