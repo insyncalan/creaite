@@ -9,7 +9,6 @@
 
 Run: python3 dev/tests/test_minutes_a302.py      (Chrome tier; skipped without Chrome)
 """
-import json
 import sys
 import unittest
 from pathlib import Path
