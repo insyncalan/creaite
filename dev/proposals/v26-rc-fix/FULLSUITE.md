@@ -1,5 +1,10 @@
 # v26-rc full suite (2.6.0 candidate 069a4f7f + v26-rc-fix)
 
+**Head:** after the fixes on v26-rc-fix, every file that failed passes; 0 real failures left, 0 guarded diffs needed. 8 shards:
+519 files passed first time, 18 real failures (16 stale tests or merge artefacts, fixed in the tests; 1 real 2.6 product bug,
+fixed in non-guarded dashboard code; 1 clock read moved onto the shared helper at Jarvis's request), 5 flakes. The
+re-run of all 23 files that failed (one go, -j 4, Chrome cap 2): 25/25 passed once a comment that named a page global was reworded.
+
 Run: `CREAITE_BROWSER_SLOTS=2 CREAITE_CHROME_CAP=2 python3 dev/tools/run_tests.py -j 4 --shard I/8`, shards one after another.
 A file that fails in its shard is run alone; "flake" = failed in the shard, passed alone.
 
@@ -58,3 +63,16 @@ Not in the suite but stale the same way: dev/tests/handchecks/test_v260.py lines
 - test_health_suggest.py (ClientHealthRow: focus on #crWhy) and test_instant_edits.py (forced apply failure then Retry): failed in the
   shard and in its alone re-run while other Chrome runs (this fix's own probes) were loading the machine; each passed 2-3 times
   alone afterwards, and both pass on pristine origin/v26-rc. Focus/timing under load.
+
+### Shard 8/8: 66 passed, 0 failed, 1 flake
+- test_archive_items_browser.py: its live server stopped answering /health for 6631 s (the machine was very likely asleep); passed alone in 9 s.
+
+## Re-run of every file that failed (after the fixes)
+25 passed (23 named files plus test_calendar_refresh_ui and test_health_suggest_e2e, which match the names); the one failure,
+test_dashboard_split (a test comment naming `railGo` read as a page name), was reworded; it passes and check.py says `check: OK`.
+
+## Flakes (failed in the shard, passed alone)
+test_intake_review_harden_b.py (shard 3), test_health_suggest.py and test_instant_edits.py (shard 7), test_archive_items_browser.py (shard 8).
+
+## Guarded diffs needed
+None.
