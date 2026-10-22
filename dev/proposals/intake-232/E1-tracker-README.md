@@ -1,3 +1,7 @@
+> **2.6 line (after the 2.5.4 merge): apply `E1-tracker.rebased-on-280.diff` instead** (`-p0`), after the #280 stack,
+> `dev/proposals/280-followup/` and the four guard-small diffs: the same 13 hunks regenerated on that tree
+> (`E1-tracker.rebased-on-guard-small.diff` fails one hunk there). `dev/tests/test_minutes_by_others_filing.py` uses it.
+
 # Proposal E1-tracker, rebased on guard-small (v2.6): apply this one
 
 **Apply:** `dev/proposals/intake-232/E1-tracker.rebased-on-guard-small.diff`, from the vault root with `patch -p0`, on

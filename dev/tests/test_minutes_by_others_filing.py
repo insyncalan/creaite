@@ -4,8 +4,9 @@ Run: python3 dev/tests/test_minutes_by_others_filing.py                       (q
 Fail-first: E1_TRACKER_UNPATCHED=1 python3 dev/tests/test_minutes_by_others_filing.py
             (the scratch copy is left without the proposal's patch: the "fixed" tests go red, the "defect" tests stay green)
 
-`system/scripts/tracker.py` is a guarded file: the fix is the proposal dev/proposals/intake-232/E1-tracker.diff, for Jarvis to
-approve and apply (see E1-tracker-README.md). This file proves it without touching tracker.py: a throwaway vault gets a copy of
+`system/scripts/tracker.py` is a guarded file: the fix is the proposal dev/proposals/intake-232/E1-tracker.rebased-on-280.diff
+(on the #280 stack and guard-small), for Jarvis to approve and apply (see E1-tracker-README.md). This file proves it without
+touching tracker.py: a throwaway vault gets a copy of
 `system/scripts/` and the diff is applied there with `patch -p0`. After the diff is applied to the repo, the copy is already
 patched (the marker `def by_others_waiting` is found), the same tests keep guarding it, and the unpatched copy used by the
 "defect" tests is made with `patch -R`.
@@ -40,7 +41,7 @@ sys.path.insert(0, str(HERE))
 from test_tracker import ABC, Vault, action  # noqa: E402
 
 REPO = HERE.parents[1]
-DIFF = REPO / "dev" / "proposals" / "intake-232" / "E1-tracker.rebased-on-guard-small.diff"   # on top of guard-small (v2.6)
+DIFF = REPO / "dev" / "proposals" / "intake-232" / "E1-tracker.rebased-on-280.diff"   # on top of the #280 stack + guard-small (v2.6)
 BASE_DIFF = REPO / "dev" / "proposals" / "guard-small" / "tracker-copy-source.diff"           # its base: applied first
 BASE_MARKER = "class CopySource:"
 UNPATCHED = os.environ.get("E1_TRACKER_UNPATCHED") == "1"
