@@ -266,14 +266,14 @@ export async function pendingCard(){ if(!viaServer()) return; const r=await api(
    result names the item IDs, with Undo. BL-141's card for file changes is separate and unchanged. */
 /* #291 Tier 1: a file change in words (the file's name and the folder's friendly name), never its path */
 export function edFilePlain(b){
-  const nm=p=>{ const s=String(p).replace(/\/+$/,"").split("/").pop().replace(/\.[A-Za-z0-9]{1,5}$/,""), d=/^(\d{4})-(\d{2})-(\d{2}) (.+)$/.exec(s); return d?`${d[4]}, ${d[3]}-${d[2]}-${d[1]}`:s; },
+  const fnm=p=>{ const s=String(p).replace(/\/+$/,"").split("/").pop().replace(/\.[A-Za-z0-9]{1,5}$/,""), d=/^(\d{4})-(\d{2})-(\d{2}) (.+)$/.exec(s); return d?`${d[4]}, ${d[3]}-${d[2]}-${d[1]}`:s; },
     arch=p=>/(^|\/)(_Archive|99 Archive|zz Archive)(\/|$)/.test(p), at=re=>re.exec(b);
   const mf=at(/^Move file (.+) → (.+)$/), md=at(/^Move folder (.+) → (.+)$/), cf=at(/^Create folder (.+)$/), cr=at(/^Create (\S.*?) \((\d+) lines?\)$/), ch=at(/^Change (.+):$/);
-  if(mf) return `Move ${nm(mf[1])} → ${arch(mf[2])?"the project's Archive folder":"back to its project folder"}`;
-  if(md) return `Move the folder ${nm(md[1])} → ${arch(md[2])?"Archive":"its place in the projects folder"}`;
-  if(cf) return `Create the folder ${nm(cf[1])}`;
-  if(cr) return `Create ${nm(cr[1])} (${cr[2]} line${cr[2]==="1"?"":"s"})`;
-  if(ch) return `Change ${nm(ch[1])}:`;
+  if(mf) return `Move ${fnm(mf[1])} → ${arch(mf[2])?"the project's Archive folder":"back to its project folder"}`;
+  if(md) return `Move the folder ${fnm(md[1])} → ${arch(md[2])?"Archive":"its place in the projects folder"}`;
+  if(cf) return `Create the folder ${fnm(cf[1])}`;
+  if(cr) return `Create ${fnm(cr[1])} (${cr[2]} line${cr[2]==="1"?"":"s"})`;
+  if(ch) return `Change ${fnm(ch[1])}:`;
   return b; }
 export function edLine(ln){ const m=/^(\s*)(.*)$/.exec(ln), ind=m[1].length>0, body=edFilePlain(m[2]), mid=/^(\S+) · (.*)$/.exec(body);
   const field=t=>{ const f=/^([^:]+): (.*?) → (.*)$/.exec(t); return f?`<span class="edf"><span class="ckf">${esc(f[1])}</span> <span class="eddel">${esc(f[2])}</span> → <span class="edadd">${esc(f[3])}</span></span>`:esc(t); };

@@ -72650,16 +72650,16 @@ ${d5.text}`);
     changesFlow(r4.card);
   }
   function edFilePlain(b5) {
-    const nm3 = (p6) => {
+    const fnm = (p6) => {
       const s5 = String(p6).replace(/\/+$/, "").split("/").pop().replace(/\.[A-Za-z0-9]{1,5}$/, ""), d5 = /^(\d{4})-(\d{2})-(\d{2}) (.+)$/.exec(s5);
       return d5 ? `${d5[4]}, ${d5[3]}-${d5[2]}-${d5[1]}` : s5;
     }, arch = (p6) => /(^|\/)(_Archive|99 Archive|zz Archive)(\/|$)/.test(p6), at2 = (re2) => re2.exec(b5);
     const mf2 = at2(/^Move file (.+) → (.+)$/), md2 = at2(/^Move folder (.+) → (.+)$/), cf2 = at2(/^Create folder (.+)$/), cr2 = at2(/^Create (\S.*?) \((\d+) lines?\)$/), ch2 = at2(/^Change (.+):$/);
-    if (mf2) return `Move ${nm3(mf2[1])} → ${arch(mf2[2]) ? "the project's Archive folder" : "back to its project folder"}`;
-    if (md2) return `Move the folder ${nm3(md2[1])} → ${arch(md2[2]) ? "Archive" : "its place in the projects folder"}`;
-    if (cf2) return `Create the folder ${nm3(cf2[1])}`;
-    if (cr2) return `Create ${nm3(cr2[1])} (${cr2[2]} line${cr2[2] === "1" ? "" : "s"})`;
-    if (ch2) return `Change ${nm3(ch2[1])}:`;
+    if (mf2) return `Move ${fnm(mf2[1])} → ${arch(mf2[2]) ? "the project's Archive folder" : "back to its project folder"}`;
+    if (md2) return `Move the folder ${fnm(md2[1])} → ${arch(md2[2]) ? "Archive" : "its place in the projects folder"}`;
+    if (cf2) return `Create the folder ${fnm(cf2[1])}`;
+    if (cr2) return `Create ${fnm(cr2[1])} (${cr2[2]} line${cr2[2] === "1" ? "" : "s"})`;
+    if (ch2) return `Change ${fnm(ch2[1])}:`;
     return b5;
   }
   function edLine(ln2) {
