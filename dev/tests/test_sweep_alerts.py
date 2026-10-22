@@ -307,16 +307,16 @@ class VipTests(unittest.TestCase):
                 {"kind": "calendar", "from": "Ben Ito <ben@brightwater.example>", "subject": "ToDo: 1:1", "sent": "2026-10-08 09:10",
                  "link": "c1", "sensitivity": "private", "gist": "private meeting"}]
         out = record(self.v, msgs)
-        self.assertIn("VIP: 3 new alerts", out)
+        self.assertIn("Followed: 3 new alerts", out)
         alerts = vip_file(self.v)["alerts"]
         self.assertEqual([(a["who"], a["p"], a["marker"]) for a in alerts],
                          [("Mia Hale", None, None), ("Ben Ito", "ABC", "confidential"), ("Ben Ito", None, "private")])
         self.assertEqual(len(alerts[0]["gist"]), 140)
         self.assertNotIn("SECRET", (self.v.root / "system/staging/vip.json").read_text())   # no message text
-        self.assertIn("VIP: 0 new alerts", record(self.v, msgs))                             # never alerted twice
+        self.assertIn("Followed: 0 new alerts", record(self.v, msgs))                             # never alerted twice
         run(self.v, "sweep.py", "vip", "seen", alerts[0]["id"])
         self.assertEqual(len(json.loads(run(self.v, "sweep.py", "vip", "list").stdout)), 2)
-        self.assertIn("VIP: 0 new alerts", record(self.v, msgs))                             # seen stays seen
+        self.assertIn("Followed: 0 new alerts", record(self.v, msgs))                             # seen stays seen
 
     def test_ignore_rules_never_hide_a_vip(self):
         f = self.v.root / "system/staging/drafts/messages.json"

@@ -384,8 +384,10 @@ export function peopleParse(text){ const lines=text.split("\n"), t=pTable(lines)
       hidden:["yes","y","true","1"].includes((row["Hidden"]||"").trim().toLowerCase()),labels:(row["Labels"]||"").split(",").map(a=>a.trim()).filter(Boolean),extra}); }
   return out; }
 export function peopleText(text,people){ const lines=text.split("\n"); if(lines[lines.length-1]==="") lines.pop(); const t=pTable(lines);
-  let cols=t?pSplit(lines[t.head]):[]; cols=[...cols,...PCOLS.filter(c=>!cols.includes(c))]; people.forEach(p=>Object.keys(p.extra||{}).forEach(c=>{ if(!cols.includes(c)) cols.push(c); })); cols=[...new Set(cols)];
-  const cell=(p,c)=>{ const f=PFIELD[c]; return f==="aliases"||f==="labels"?pCell((p[f]||[]).join(", ")):f==="hidden"?(p.hidden?"yes":""):pCell(f?p[f]:(p.extra||{})[c]); };
+  let cols=t?pSplit(lines[t.head]):[]; cols=[...cols,...PCOLS.filter(c=>!cols.includes(c))];
+  const mig=cols.includes("VIP")&&!cols.includes("Follow"); if(mig) cols=cols.map(c=>c==="VIP"?"Follow":c);   /* an older register's VIP column is renamed Follow on this save */
+  people.forEach(p=>Object.keys(p.extra||{}).forEach(c=>{ if(!cols.includes(c)&&!(mig&&c==="VIP")) cols.push(c); })); cols=[...new Set(cols)];
+  const cell=(p,c)=>{ const f=PFIELD[c], x=p.extra||{}; return f==="aliases"||f==="labels"?pCell((p[f]||[]).join(", ")):f==="hidden"?(p.hidden?"yes":""):pCell(f?p[f]:c==="Follow"&&!("Follow" in x)?x.VIP:x[c]); };
   const row=a=>"| "+a.join(" | ")+" |", table=[row(cols),"|"+cols.map(c=>"-".repeat(c.length+2)).join("|")+"|",...people.map(p=>row(cols.map(c=>cell(p,c))))];
   if(t){ const end=(t.rows.length?t.rows[t.rows.length-1]:t.head+1)+1; lines.splice(t.head,end-t.head,...table); }
   else if(lines.includes("## People")){ lines.splice(lines.indexOf("## People")+1,0,"",...table); }
