@@ -33,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hcbase
 import measure
-from hcbase import NOTES, SCREENS, HandcheckCase
+from hcbase import NOTES, SCREENS, HandcheckCase, phase2
 from live_browser import pin_page_clock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "system" / "scripts"))
@@ -1515,6 +1515,7 @@ class MinutesView(MinutesBase):
         self.assertEqual(self.ev("VIEW"), "minutes")
         self.note(50, f"5 turns; {len(tags)} time tags; a reload kept the view")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c51_side_by_side_levelled(self):
         """51. Choose Internal + distributed, mark a summary line Internal only, then Side by side → the matching section and topic
         headings are at the same height on both pages, at the top and after scrolling; the Distributed page alone does not hold
@@ -1545,6 +1546,7 @@ class MinutesView(MinutesBase):
         self.assertNotIn("The committee reviewed", self.ev("document.querySelector('#v-minutes .page').textContent"))
         self.note(51, f"{len(tops)} headings compared; the largest difference {worst}px")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c52_popups_close(self):
         """52. The deadline popover, the owner picker, a check, the Remove menu, Deal with it… and the approve popup (784 px
         wide) each close on Esc and on a click outside, with focus back on the button that opened them; Esc goes no further."""
@@ -1593,6 +1595,7 @@ class MinutesView(MinutesBase):
                 self.assertEqual(self.ev("document.activeElement.id"), "mnApproveBtn")
         self.note(52, "six popups closed on Esc and on a click outside; the approve popup is 784px wide")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c53_remove_undo_keep_line(self):
         """53. ✕ Remove on a row takes the item and its line out of the minutes (the item is rejected, "Removed in the minutes");
         Undo on the toast brings it back; Keep the line only keeps the words with no item."""
@@ -1616,6 +1619,7 @@ class MinutesView(MinutesBase):
         self.assertEqual(self.staged(2)["decision"], "rejected")
         self.note(53, "removed, undone from the toast, then kept as a line with no item")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c54_deadline_popover(self):
         """54. The deadline popover on an action with no date: its quick picks (Friday, next week, next Wednesday, end of month)
         show their dates worked out from the meeting's day; words typed (“in 2 weeks”) show their date before they are set; a
@@ -1660,6 +1664,7 @@ class MinutesView(MinutesBase):
         self.assertIn("read", self.ev("document.getElementById('mnDlSaid').textContent"))
         self.note(54, f"quick picks and typed words worked out from {day}; the row and its staged item moved together")
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c55_checks_coverage_and_the_approve_popup(self):
         """55. The checks on a row say what is wrong (Pat Unknown isn't in the people register); Deal with it… on a point not
         discussed carries it to the series' next meeting, with a line in the minutes; the approve popup has the group's tick
@@ -1708,6 +1713,7 @@ class MinutesView(MinutesBase):
         self.b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         self.b.pump(0.4)
 
+    @phase2('removed by #268, covered by test_minutes_view_v2 / test_v260')
     def test_c56_follow_up_email(self):
         """56. Export › Draft the follow-up email follows the version shown. The Internal draft is marked "[Internal]" and says
         "Internal: not for distribution." and keeps everything. The Distributed draft holds no Internal-only line or row and no
