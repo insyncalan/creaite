@@ -30,7 +30,7 @@
       <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
-    <div class="livealert" id="liveAlert" role="alert"><b>creaite has stopped.</b> Reopen the creaite app. Your changes are kept and saved when it's back. <code id="alertCmd" hidden></code> <button class="mini" id="checkLive">Check again</button></div>
+    <div class="livealert" id="liveAlert" role="alert"><b>creaite has stopped.</b> Reopen the creaite app, or paste this into Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> Your changes are kept and saved when it's back. <button class="mini" id="checkLive">Check again</button></div>
     <div class="livealert stalealert" id="staleAlert" role="alert" hidden><b>This page is out of date.</b> <span id="staleMsg"></span> <button class="mini" id="staleReload">Reload</button></div><!-- BL-174 -->
     <div class="errbanner" id="errBanner" role="status" aria-live="polite" hidden></div><!-- BL-180: under the other page banners, errors last -->
     <div class="content">

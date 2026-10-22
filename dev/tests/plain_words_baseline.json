@@ -94,9 +94,9 @@
    "count": 1,
    "text": "Applied"
   },
-  "ask.js | apply | cb300d77ee58": {
+  "ask.js | apply | fa1fe9777e86": {
    "count": 1,
-   "text": "Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
+   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anythin"
   },
   "ask.js | live server | 0067b4023192": {
    "count": 1,
@@ -254,9 +254,9 @@
    "count": 1,
    "text": "Search the vault for “{}”…"
   },
-  "ask.js | vault | cb300d77ee58": {
+  "ask.js | vault | fa1fe9777e86": {
    "count": 1,
-   "text": "Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
+   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anythin"
   },
   "build_dashboard.py | sweep | 7baa85f2636f": {
    "count": 1,
@@ -946,10 +946,6 @@
    "count": 1,
    "text": "- **Decisions needed:** each pending decision with a decision maker and a needed-by date. Yours come"
   },
-  "help.md | apply | 2ecab59873b8": {
-   "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
-  },
   "help.md | apply | 2ff1a4d0ec96": {
    "count": 1,
    "text": "- With the live server running, saves are applied straight away. Without it they wait, and the top b"
@@ -1065,6 +1061,10 @@
   "help.md | apply | aefce3df4a6f": {
    "count": 1,
    "text": "2. Later on, **Activity** lists every change: Undo there reverses the latest apply, and ticking olde"
+  },
+  "help.md | apply | bb967800c16b": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
   "help.md | apply | bd5f20b649ab": {
    "count": 1,
@@ -1558,10 +1558,6 @@
    "count": 1,
    "text": "- **Messages:** above Week ahead, only when there are any: messages from people you follow, as cards"
   },
-  "help.md | proposal | 2ecab59873b8": {
-   "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
-  },
   "help.md | proposal | 313aca0a7c32": {
    "count": 1,
    "text": "- **Process** on a ready meeting (or **Make minutes** for a transcript file) loads the transcript an"
@@ -1709,6 +1705,10 @@
   "help.md | proposal | baa229b243b0": {
    "count": 1,
    "text": "4. **Client wording:** on a client-visible item, **Draft** under **Client messaging** (in **Details*"
+  },
+  "help.md | proposal | bb967800c16b": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
   "help.md | proposal | c1fbcbb0072f": {
    "count": 1,
@@ -1882,10 +1882,6 @@
    "count": 1,
    "text": "3. To move the agreed date, press **Rebaseline…**: on **Movement**, choose the new date, who agreed "
   },
-  "help.md | stage | 2ecab59873b8": {
-   "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
-  },
   "help.md | stage | 3909de176248": {
    "count": 1,
    "text": "- **Where each sentence came from:** a Current state drafted by Generate or Make it executive shows "
@@ -1986,6 +1982,10 @@
    "count": 1,
    "text": "4. **Client wording:** on a client-visible item, **Draft** under **Client messaging** (in **Details*"
   },
+  "help.md | stage | bb967800c16b": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+  },
   "help.md | stage | be82c21b8ba9": {
    "count": 1,
    "text": "8. **A reload doesn't lose a change.** Staged changes stay staged, and the bar comes back, in every "
@@ -2073,10 +2073,6 @@
   "help.md | sweep | 2e4054b1a530": {
    "count": 1,
    "text": "- **Addresses:** each tab (`#settings/essentials`, `#settings/work`, `#settings/advanced`, `#setting"
-  },
-  "help.md | sweep | 2ecab59873b8": {
-   "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
   "help.md | sweep | 2eced6d293f9": {
    "count": 1,
@@ -2213,6 +2209,10 @@
   "help.md | sweep | b5583d4f84d4": {
    "count": 1,
    "text": "- **New items arrive on their own.** A sweep rebuilds the dashboard when it finishes, and an open da"
+  },
+  "help.md | sweep | bb967800c16b": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
   "help.md | sweep | bed1b2823789": {
    "count": 1,

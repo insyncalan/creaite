@@ -790,7 +790,7 @@ $("#helpIdx").addEventListener("click",e=>{ const a=e.target.closest("[data-hjum
 $("#helpQ").addEventListener("input",()=>{ const q=$("#helpQ").value.toLowerCase(); $$(".hsec").forEach(s=>s.classList.toggle("hidden",!!q&&!s.textContent.toLowerCase().includes(q))); });
 /* ======================= Ask creaite ======================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)); let BUSY=false;
-function openChat(){ $("#chat").classList.add("on"); if(!$("#chLog").children.length) say("Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first."); setTimeout(()=>$("#chIn").focus(),40); }
+function openChat(){ $("#chat").classList.add("on"); if(!$("#chLog").children.length) say("Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first."); setTimeout(()=>$("#chIn").focus(),40); }
 function closeChat(){ $("#chat").classList.remove("on"); if($("#chat").contains(document.activeElement)) document.activeElement.blur(); }
 $("#askBtn").onclick=openChat; $("#chatClose").onclick=closeChat;
 function addEl(cls,html){ const d=document.createElement("div"); d.className=cls; d.innerHTML=html; $("#chLog").appendChild(d); $("#chLog").scrollTop=1e9; return d; }
