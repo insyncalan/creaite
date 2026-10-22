@@ -37,6 +37,21 @@ class Brand(InternalMark):
         self.assertIn("Distributed", page)
         self.assertNotIn("Internal", re.sub(r"<style>.*?</style>", "", page, flags=re.S))
 
+    def test_word_html_and_pdf_use_the_same_tokens(self):
+        import zipfile
+        import creaite_doc
+        z = zipfile.ZipFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../system/templates/minutes-template.docx"))
+        xml = " ".join(z.read(n).decode("utf-8") for n in ("word/document.xml", "word/styles.xml"))
+        page = self.html()
+        for name, value in creaite_doc.BRAND.items():
+            if name == "LINK":
+                continue
+            with self.subTest(token=name):
+                self.assertTrue(re.search(value, xml, re.I), "Word template lacks " + value)
+                self.assertTrue(re.search(value, page, re.I), "HTML lacks " + value)
+        self.assertEqual(creaite_doc.BRAND["LINK"], "0563C1")
+        self.assertIn("0563C1", xml)
+
     def test_word_is_unchanged(self):
         self.approved("actions", "y")
         text = word_text(self.export(FILED, "docx"))

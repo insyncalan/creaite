@@ -664,24 +664,29 @@ pre code{background:none;padding:0}
 # (system/templates/minutes-template.docx: Calibri in Charcoal, a Signal Green rule under capitalised headings, Charcoal table headers
 # in off-white, the wordmark above a title block). Local fonts only (Calibri, then Carlito, then Arial); the wordmark is the template's
 # own picture, embedded as a data address, so the file opens offline and asks nothing of anyone.
-BRAND_CSS = """
-.brand{font:14px/1.45 Calibri,Carlito,"Segoe UI",Arial,sans-serif;color:#1e1f1e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+# The minutes template's look, once (a test reads the Word template and checks every token here is in it, and in the HTML and PDF).
+BRAND = {"CHARCOAL": "1E1F1E", "GREEN": "91FF01", "GREY": "6B6F76", "OFFWHITE": "F8F8FF", "LINK": "0563C1", "FONT": "Calibri"}
+_BRAND_CSS = """
+.brand{font:14px/1.45 @FONT@,Carlito,"Segoe UI",Arial,sans-serif;color:@CHARCOAL@;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .brand .wordmark{display:block;width:130px;height:auto;margin:0 0 16px}
 .brand header.doc{display:block;border:0;margin:0 0 4px}
-.brand header.doc h1{font-size:22.5px;font-weight:700;margin:0 0 3px;color:#1e1f1e}
-.brand header.doc .subtitle{font-size:16px;font-style:italic;color:#6b6f76;margin:0 0 3px}
-.brand header.doc .status{font-size:12px;font-style:italic;color:#6b6f76;margin:0 0 10px}
+.brand header.doc h1{font-size:22.5px;font-weight:700;margin:0 0 3px;color:@CHARCOAL@}
+.brand header.doc .subtitle{font-size:16px;font-style:italic;color:@GREY@;margin:0 0 3px}
+.brand header.doc .status{font-size:12px;font-style:italic;color:@GREY@;margin:0 0 10px}
 .brand header.doc .when{font-size:13.5px;font-weight:700;margin:0 0 3px}
-.brand header.doc .sub{font-size:13.5px;color:#1e1f1e}
+.brand header.doc .sub{font-size:13.5px;color:@CHARCOAL@}
 .brand section{margin:0 0 6px}
 .brand section h2{font-size:17px;font-weight:700;text-transform:uppercase;margin:21px 0 10px;padding-bottom:3px;
-border-bottom:2px solid #91ff01}
-.brand th{background:#1e1f1e;color:#f8f8ff;border:1px solid #1e1f1e;padding:6px 8px}
-.brand td{border:1px solid #1e1f1e;padding:6px 8px}
+border-bottom:2px solid @GREEN@}
+.brand th{background:@CHARCOAL@;color:@OFFWHITE@;border:1px solid @CHARCOAL@;padding:6px 8px}
+.brand td{border:1px solid @CHARCOAL@;padding:6px 8px}
 .brand table{font-size:13.5px}
-.brand .figure,.brand pre,.brand code{border-color:#1e1f1e}
-.brand .ft a{color:#0563c1}
+.brand .figure,.brand pre,.brand code{border-color:@CHARCOAL@}
+.brand .ft a{color:@LINK@}
 """
+BRAND_CSS = _BRAND_CSS
+for _k, _v in BRAND.items():
+    BRAND_CSS = BRAND_CSS.replace(f"@{_k}@", _v if _k == "FONT" else "#" + _v.lower())
 
 
 def _wordmark_uri():
