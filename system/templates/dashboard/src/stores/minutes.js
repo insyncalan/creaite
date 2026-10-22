@@ -9,7 +9,7 @@
 import { signal } from "@preact/signals";
 import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
-import { api, oneLine, viaServer } from "../core/server.js";
+import { api, applyNow, oneLine, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{n: number, who: string|null, start: string|null, end: string|null, text: string}} Turn */
@@ -196,4 +196,18 @@ export async function exportMinutes(format) {
   const v = minutesView.value;
   if (!v || !v.ok || !v.path) return { ok: false, message: "The minutes aren't open." };
   return (await api("/api/minutes/export", { path: v.path, format, file_beside: true })) || { ok: false, message: "Not exported." };
+}
+
+/** #306: Approve minutes stopped because the transcript has left the inbox (the server's plain words say so). @param {string} m */
+export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));
+
+/** #306: file held minutes without the transcript copy, in place: the minutes and their ticked items in one go.
+    @param {string} proposal the minutes' proposal file @returns {Promise<{ok: boolean, message: string, n?: number, apply_id?: number|null}>} */
+export async function fileWithoutTranscript(proposal) {
+  const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
+  if (!res || !res.ok) return { ok: false, message: oneLine((res && res.message) || "creaite couldn't file these minutes").replace(/^\d+:\s*/, "").replace(/not approved — /, "") };
+  const a = await applyNow();
+  if (!a.ok) return { ok: false, message: oneLine(a.message || "creaite couldn't file these minutes") };
+  const n = Number((String(a.message || "").match(/written (\d+)/) || [])[1] || 0);
+  return { ok: true, message: "", n, apply_id: a.apply_id };
 }

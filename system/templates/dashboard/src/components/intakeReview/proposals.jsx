@@ -16,7 +16,7 @@ import { closePanel, PK, pkOn } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
-import { approveRoutineTracked, BAD_MSG, decide, draftOn, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
+import { approveRoutineTracked, BAD_MSG, decide, draftOn, HELD_ERR, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
 import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
@@ -109,7 +109,7 @@ function HeldChoices({ r }) {
 /** #280, #291: why a held or invalid proposal waits, on its row (not only in the tip). @param {{r: any}} props */
 function HeldNote({ r }) {
   if (r.done) return null;
-  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the suggestion</div>;
+  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the suggestion{HELD_ERR.get(r.file) ? <div class="h-warn" data-ira="held-error">Not saved because {HELD_ERR.get(r.file)}</div> : null}</div>;
   if (r.bad) return <div class="rvnote"><span class="h-warn">Can't be saved as it is: {r.bad}</span> · Edit it or reject it</div>;
   return null;
 }
