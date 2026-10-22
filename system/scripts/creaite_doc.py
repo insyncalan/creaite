@@ -1148,13 +1148,20 @@ def page_title(doc):
     return f"{doc.get('title') or ''}{' - ' + who if who else ''}{extra}, {shown}"
 
 
+def audience_label(doc):
+    """The audience as a document's title block and page say it (v2.6.1): an internal one says it is not for distribution, so an
+    exported Word, PDF or HTML file is never mistaken for something to send; the distributed and client ones say what they are."""
+    names = {"internal": "Internal, not for distribution", "client": "Client", "distributed": "Distributed"}
+    return names[doc.get("audience") or "internal"]
+
+
 def render(doc, editing=True, keep_text=False):
     """The page for the document; with `editing` the data block is included (the filed file), without it not (the HTML export).
     Hidden content is never rendered; source tags never are."""
     doc = clean(doc, keep_text)
     items = doc.get("items") or {}
     body = "".join(section_html(s, items, doc) for s in without_blank_rows(doc)["sections"] if not s.get("hidden"))
-    label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
+    label = audience_label(doc)
     head = (f'<header class="doc"><div><h1>{esc(doc.get("title"))}</h1><div class="sub">{esc(doc.get("project_name"))}'
             f'{(" · " + esc(doc["client"])) if doc.get("client") else ""}</div></div><div class="sub">{esc(label)}</div></header>')
     data = f'\n<script type="application/json" id="{DATA_ID}">{data_json(doc)}</script>' if editing else ""
@@ -2183,7 +2190,7 @@ def _colour_table(tbl, styler):
 def _status_line(doc):
     """The title block's status: the audience, then Draft and its version, or Approved and when."""
     import tracker
-    label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
+    label = audience_label(doc)
     if doc.get("state") != "approved":
         return f"{label} · Draft, version {doc.get('version') or 0}"
     when = tracker.long_date(str(doc["approved_at"])[:10]) if doc.get("approved_at") else ""
