@@ -1,0 +1,18 @@
+--- a/.github/workflows/tests.yml
++++ b/.github/workflows/tests.yml
+@@ -66,6 +66,7 @@
+       - uses: actions/checkout@v5
+         with:
+           persist-credentials: false
++          fetch-depth: 0   # check 9 (test_word_export_227) diffs against the v260 release commit; a shallow clone has no history
+ 
+       - uses: actions/setup-python@v5
+         with:
+@@ -120,6 +121,7 @@
+       - uses: actions/checkout@v5
+         with:
+           persist-credentials: false
++          fetch-depth: 0   # check 9 (test_word_export_227) diffs against the v260 release commit; a shallow clone has no history
+ 
+       - uses: actions/setup-python@v5
+         with:

@@ -404,9 +404,9 @@ class Checks(Base):
         # the Word writer itself never touches a guarded file. The approved guarded chain (dev/proposals/GUARDED-2.6.1.md) is ONE commit
         # whose subject starts with "Guarded 2.6.1 chain:" and whose guarded changes are exactly the diffs in GUARDED-2.6.1.chain
         # (dev/tests/guarded_chain.py); anything else on top of origin/v260-release is the Word writer's and must not touch one.
-        touched = guarded_touched(REPO, "origin/v260-release", "HEAD")
+        touched = guarded_touched(REPO)
         if touched is None:
-            self.skipTest("git history for origin/v260-release isn't available here: check 9 NOT run")
+            self.skipTest("git history for the v260 release commit isn't available here: check 9 NOT run (in CI this fails instead)")
         self.assertEqual(touched, [])
 
     def test_check_10_package_is_sound_and_opens_without_repair(self):

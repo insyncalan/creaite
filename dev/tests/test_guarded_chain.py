@@ -8,7 +8,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from guarded_chain import CHAIN_FILE, CHAIN_MARKER, guarded_touched  # noqa: E402
+import guarded_chain  # noqa: E402
+from guarded_chain import CHAIN_FILE, CHAIN_MARKER, HistoryMissing, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
 DIFF_T, DIFF_U = "dev/proposals/x/tracker.diff", "dev/proposals/x/update.diff"
@@ -47,16 +48,22 @@ class Repo:
         return out
 
     def chain(self, with_file=True):
+        """Commit the chain (diffs and list) as an ordinary earlier commit, then apply the diffs, uncommitted: the next commit is the chain commit."""
         dt, du = self.diff_of(TRK, "a\nB\nc\n"), self.diff_of(UPD, "u1\nU2\n")
         self.write(DIFF_T, dt)
         self.write(DIFF_U, du)
         if with_file:
             self.write(CHAIN_FILE, f"# chain\n{DIFF_T}\n{DIFF_U}\n")
+        self.commit("add the chain files")
+        self.pin = chain_digest(self.d, "HEAD")
         run(self.d, "apply", DIFF_T)
         run(self.d, "apply", DIFF_U)
 
-    def touched(self):
-        return guarded_touched(self.d, "base", "HEAD")
+    pin = "none"
+
+    def touched(self, **kw):
+        kw.setdefault("pin", self.pin)
+        return guarded_touched(self.d, "base", "HEAD", **kw)
 
 
 class GuardedChain(unittest.TestCase):
@@ -110,8 +117,48 @@ class GuardedChain(unittest.TestCase):
         self.r.commit("put back")
         self.assertEqual(self.r.touched(), [])
 
-    def test_missing_base_gives_none(self):
-        self.assertIsNone(guarded_touched(self.r.d, "origin/nope", "HEAD"))
+    def test_forgery_a_a_marked_commit_adds_its_own_diff_and_lists_it(self):
+        self.r.chain()
+        self.r.write(REA, "r1\nr2\nevil\n")
+        evil = self.r.diff_of(REA, "r1\nr2\nevil\n")
+        run(self.r.d, "checkout", "--", REA)
+        self.r.write(REA, "r1\nr2\nevil\n")
+        self.r.write("dev/proposals/x/evil.diff", evil)
+        self.r.write(CHAIN_FILE, f"{DIFF_T}\n{DIFF_U}\ndev/proposals/x/evil.diff\n")
+        self.r.commit(CHAIN_MARKER + " tracker and update")
+        self.assertIn(REA, self.r.touched())
+        self.assertIn(REA, self.r.touched(pin=chain_digest(self.r.d, "HEAD")))      # not even with the new list's own digest
+
+    def test_forgery_b_an_empty_marked_commit_adds_the_diff_for_an_earlier_edit(self):
+        self.r.write(TRK, "a\nB\nc\n")
+        self.r.commit("sneaky unmarked edit")
+        self.r.write(DIFF_T, subprocess.run(["git", "diff", "base", "HEAD", "--", TRK], cwd=self.r.d, capture_output=True, text=True).stdout)
+        self.r.write(CHAIN_FILE, f"{DIFF_T}\n")
+        self.r.commit(CHAIN_MARKER + " nothing guarded in here")
+        self.assertEqual(self.r.touched(pin=chain_digest(self.r.d, "HEAD")), [TRK])
+
+    def test_forgery_c_the_chain_is_there_and_the_edit_made_earlier_unmarked(self):
+        self.r.chain()                                  # chain files committed, diffs applied in the work tree
+        self.r.commit("the chain's edits, unmarked")
+        run(self.r.d, "commit", "-q", "--allow-empty", "-m", CHAIN_MARKER + " empty")
+        self.assertEqual(sorted(self.r.touched()), [TRK, UPD])
+
+    def test_a_chain_that_does_not_match_the_pin_fails(self):
+        self.r.chain()
+        self.r.commit(CHAIN_MARKER + " tracker and update")
+        self.assertEqual(sorted(self.r.touched(pin="0" * 64)), [TRK, UPD])
+
+    def test_missing_base_gives_none_outside_ci(self):
+        self.assertIsNone(guarded_touched(self.r.d, "origin/nope", "HEAD", ci=""))
+
+    def test_missing_base_fails_in_ci(self):
+        with self.assertRaises(HistoryMissing):
+            guarded_touched(self.r.d, "origin/nope", "HEAD", ci="true")
+
+    def test_the_live_pin_matches_the_live_chain_files(self):
+        repo = Path(__file__).resolve().parents[2]
+        self.assertEqual(chain_digest(repo, "HEAD"), guarded_chain.CHAIN_SHA256,
+                         "the chain list or a listed diff changed: update CHAIN_SHA256 only with Alan's say (python3 dev/tests/guarded_chain.py)")
 
 
 if __name__ == "__main__":
