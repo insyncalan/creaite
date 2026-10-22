@@ -78,10 +78,6 @@
    "count": 1,
    "text": "; press Apply to write it"
   },
-  "ask.js | apply | 47ce6f50b1df": {
-   "count": 1,
-   "text": "It has problems, so it can't be applied: ask creaite to fix it."
-  },
   "ask.js | apply | 4d9bfd544ebb": {
    "count": 1,
    "text": "Saved, waiting for Apply"
@@ -170,6 +166,10 @@
    "count": 1,
    "text": "ask creaite asked for {}{}, which creaite won't add: {}. If you do want it, edit .claude/settings.js"
   },
+  "ask.js | proposal | 25459bfce809": {
+   "count": 1,
+   "text": "review inbox proposals approve"
+  },
   "ask.js | refused | 96fc7cb350bd": {
    "count": 1,
    "text": "Nothing to add: {}{} is already allowed by {}. The request was refused for another reason"
@@ -206,13 +206,9 @@
    "count": 1,
    "text": "Pick one from the list, then press Enter to stage."
   },
-  "ask.js | stage | 83a3f27b761b": {
+  "ask.js | stage | c698226babad": {
    "count": 1,
-   "text": "stage and open Review ·"
-  },
-  "ask.js | stage | 9f0fc9c60684": {
-   "count": 1,
-   "text": "{} already {} a change waiting in Review, so this one can only be staged for review."
+   "text": "stage and open Intake ·"
   },
   "ask.js | stage | f45f0885348a": {
    "count": 1,
@@ -225,10 +221,6 @@
   "ask.js | sweep | f6fc490e6d98": {
    "count": 1,
    "text": "Sweeping mail and Teams"
-  },
-  "ask.js | tracker | 0cce6dd90733": {
-   "count": 1,
-   "text": "Approve writes {} to the tracker at once; Reject discards {}."
   },
   "ask.js | tracker | 1343068896aa": {
    "count": 1,
@@ -298,14 +290,6 @@
    "count": 1,
    "text": "Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the trac"
   },
-  "components/closeday/CloseDay.jsx | apply | 63de6398b876": {
-   "count": 1,
-   "text": "It runs while you read on. It only proposes items for Review; nothing is applied, and nothing change"
-  },
-  "components/closeday/CloseDay.jsx | apply | faae80dec224": {
-   "count": 1,
-   "text": "Nothing was applied today."
-  },
   "components/closeday/CloseDay.jsx | live server | 6b0735ad6d40": {
    "count": 1,
    "text": "Close the day needs the live server: start it, then try again."
@@ -317,54 +301,6 @@
   "components/closeday/CloseDay.jsx | proposal | 5b9d88aaf7f4": {
    "count": 1,
    "text": "Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the trac"
-  },
-  "components/closeday/CloseDay.jsx | sweep | 0664508b2658": {
-   "count": 1,
-   "text": "The sweep's finds are added as it ends."
-  },
-  "components/closeday/CloseDay.jsx | sweep | 3962d585fd66": {
-   "count": 1,
-   "text": "Skipped. The next sweep picks up anything new."
-  },
-  "components/closeday/CloseDay.jsx | sweep | 69d7d2607905": {
-   "count": 1,
-   "text": "Sweep now"
-  },
-  "components/closeday/CloseDay.jsx | sweep | 6e6698dbc56a": {
-   "count": 1,
-   "text": "Sweep again"
-  },
-  "components/closeday/CloseDay.jsx | sweep | 79b7f6e54cc0": {
-   "count": 1,
-   "text": "The catch-up sweep didn't run. The next sweep picks up anything new."
-  },
-  "components/closeday/CloseDay.jsx | sweep | 980c1701a13f": {
-   "count": 1,
-   "text": "Nothing is open yet; anything the sweep finds is added here."
-  },
-  "components/closeday/CloseDay.jsx | sweep | 9c79d34c06be": {
-   "count": 1,
-   "text": "The sweep only proposes; closing now closes when it finishes."
-  },
-  "components/closeday/CloseDay.jsx | sweep | 9eb26d97a898": {
-   "count": 1,
-   "text": "No catch-up sweep tonight."
-  },
-  "components/closeday/CloseDay.jsx | sweep | aec08e34a31e": {
-   "count": 1,
-   "text": "Stopped. What it had read so far is in Review; the next sweep does the rest."
-  },
-  "components/closeday/CloseDay.jsx | sweep | b396afdbaedb": {
-   "count": 1,
-   "text": "The catch-up sweep couldn't start."
-  },
-  "components/closeday/CloseDay.jsx | sweep | d4c1c9fe2226": {
-   "count": 2,
-   "text": "Closing when the sweep finishes"
-  },
-  "components/closeday/CloseDay.jsx | sweep | df85ed28da6f": {
-   "count": 1,
-   "text": "Reading mail and Teams since the last sweep"
   },
   "components/closeday/CloseDay.jsx | tracker | 5b9d88aaf7f4": {
    "count": 1,
@@ -378,17 +314,69 @@
    "count": 1,
    "text": "Proposed"
   },
-  "components/minutes/ApprovePopup.jsx | apply | 0d4ad046bee6": {
+  "components/intakeReview/UpdatePeek.jsx | proposal | a1461b9a5277": {
    "count": 1,
-   "text": "The apply didn't run; nothing was changed."
+   "text": "Changed in the tracker after this was proposed."
   },
-  "components/minutes/ApprovePopup.jsx | apply | 3b4d7c700762": {
+  "components/intakeReview/UpdatePeek.jsx | tracker | a1461b9a5277": {
    "count": 1,
-   "text": "The minutes and what you tick are applied together, in one apply you can undo. Nothing is sent."
+   "text": "Changed in the tracker after this was proposed."
   },
-  "components/minutes/ItemRow.jsx | stage | 00b60dca8ab7": {
+  "components/intakeReview/actions.js | live server | 35355cd61a48": {
    "count": 1,
-   "text": "Open the staged item: {}"
+   "text": "Checking needs the live server"
+  },
+  "components/intakeReview/actions.js | live server | 355164ff6c3e": {
+   "count": 1,
+   "text": "This needs the live server"
+  },
+  "components/intakeReview/actions.js | live server | 3766246c27a6": {
+   "count": 2,
+   "text": "Processing needs the live server"
+  },
+  "components/intakeReview/actions.js | live server | 3afce8e28722": {
+   "count": 1,
+   "text": "Removing needs the live server"
+  },
+  "components/intakeReview/actions.js | live server | 87c525dcb4d2": {
+   "count": 1,
+   "text": "Refreshing needs the live server"
+  },
+  "components/intakeReview/actions.js | live server | b3afd04168db": {
+   "count": 1,
+   "text": "Adding files needs the live server"
+  },
+  "components/intakeReview/actions.js | stage | 5a219deadfa7": {
+   "count": 1,
+   "text": "Process didn't stage it. Why not, and what should I do?"
+  },
+  "components/intakeReview/proposals.jsx | proposal | 929017ada05a": {
+   "count": 1,
+   "text": "Proposal"
+  },
+  "components/intakeReview/rows.jsx | proposal | 929017ada05a": {
+   "count": 1,
+   "text": "Proposal"
+  },
+  "components/intakeReview/rows.jsx | stage | d44e2d2c09ea": {
+   "count": 1,
+   "text": "Stage: {}"
+  },
+  "components/minutes/ItemTable.jsx | stage | 232be7b4edab": {
+   "count": 1,
+   "text": "Open the staged update in Review"
+  },
+  "components/minutes/MinutesView.jsx | extract | 1390ab0f655a": {
+   "count": 2,
+   "text": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"
+  },
+  "components/minutes/MinutesView.jsx | extract | 4ca6970a8005": {
+   "count": 1,
+   "text": "re-extract the minutes of “{}” ({}) from the transcript"
+  },
+  "components/minutes/MinutesView.jsx | extract | 4f9766323da2": {
+   "count": 1,
+   "text": "ask creaite has words you haven't sent: send or clear them, then press Re-extract again"
   },
   "components/minutes/minutesDoc.js | refused | 78bc250ea494": {
    "count": 1,
@@ -466,6 +454,10 @@
    "count": 1,
    "text": "Sneak peek needs the live server: start it, then try again."
   },
+  "components/prep/PrepPage.jsx | live server | 5b3b99f66c48": {
+   "count": 1,
+   "text": "Choosing the project needs the live server"
+  },
   "components/prep/PrepPage.jsx | live server | c4a1effed701": {
    "count": 1,
    "text": "Refreshing the research needs the live server"
@@ -478,10 +470,6 @@
    "count": 1,
    "text": "The peek needs the live server."
   },
-  "components/prep/PrepPopup.jsx | live server | b09e28aee25b": {
-   "count": 1,
-   "text": "Needs the live server"
-  },
   "components/prep/PrepShape.jsx | live server | aeaec205821c": {
    "count": 2,
    "text": "Shaping needs the live server."
@@ -493,10 +481,6 @@
   "components/prep/PrepToolbar.jsx | live server | 50754708208c": {
    "count": 1,
    "text": "The Prep page needs the live server"
-  },
-  "components/prep/PrepToolbar.jsx | live server | b09e28aee25b": {
-   "count": 1,
-   "text": "Needs the live server"
   },
   "components/project/ProjectSettings.jsx | sweep | a12232e45c81": {
    "count": 1,
@@ -582,41 +566,9 @@
    "count": 1,
    "text": "The Essentials need the live server: open creaite from it."
   },
-  "components/settings/Health.jsx | live server | 247a0819aa3a": {
-   "count": 1,
-   "text": "Restarts the live server on the new version, and runs the health check"
-  },
-  "components/settings/Health.jsx | live server | e7f113278778": {
-   "count": 1,
-   "text": "The health check needs the live server."
-  },
-  "components/settings/Health.jsx | stage | c125f850278d": {
-   "count": 1,
-   "text": "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The c"
-  },
-  "components/settings/Health.jsx | stage | f674688ac15b": {
-   "count": 1,
-   "text": "Each day a closed zip of the database backup, your settings, staging and the vault's history goes to"
-  },
-  "components/settings/Health.jsx | vault | 1c8ea32bd203": {
-   "count": 1,
-   "text": "Makes this vault's launcher again"
-  },
-  "components/settings/Health.jsx | vault | c125f850278d": {
-   "count": 1,
-   "text": "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The c"
-  },
-  "components/settings/Health.jsx | vault | f674688ac15b": {
-   "count": 1,
-   "text": "Each day a closed zip of the database backup, your settings, staging and the vault's history goes to"
-  },
   "components/today/DayMeetings.jsx | cx- name | 1318c80312fd": {
    "count": 1,
    "text": "Draft minutes and proposed items from it (cx-minutes)"
-  },
-  "components/today/DayMeetings.jsx | live server | b09e28aee25b": {
-   "count": 2,
-   "text": "Needs the live server"
   },
   "components/today/DayMeetings.jsx | proposal | 1318c80312fd": {
    "count": 1,
@@ -658,6 +610,30 @@
    "count": 1,
    "text": "Proposal moved to {}: still waiting for review"
   },
+  "core/intakeApi.js | live server | 33ee652abd0b": {
+   "count": 1,
+   "text": "It couldn't start: check the live server."
+  },
+  "core/intakeApi.js | live server | 35355cd61a48": {
+   "count": 1,
+   "text": "Checking needs the live server"
+  },
+  "core/intakeApi.js | live server | 3afce8e28722": {
+   "count": 1,
+   "text": "Removing needs the live server"
+  },
+  "core/intakeApi.js | live server | c264629e880e": {
+   "count": 1,
+   "text": "The live server stopped."
+  },
+  "core/intakeApi.js | live server | e990465954de": {
+   "count": 1,
+   "text": "Previewing needs the live server"
+  },
+  "core/intakeApi.js | path | aa61a75091c0": {
+   "count": 1,
+   "text": "{}: only .vtt, .docx, .txt, .md or .pdf"
+  },
   "core/itemLink.js | tracker | 4d40a158a573": {
    "count": 1,
    "text": "not in the tracker"
@@ -674,17 +650,13 @@
    "count": 1,
    "text": "cd {} && python3 system/scripts/live_server.py"
   },
-  "core/server.js | apply | 3f18262ca997": {
+  "core/server.js | apply | 1b0f365dfc4f": {
    "count": 1,
-   "text": "to save and apply directly."
+   "text": "(the rest was applied: undo it in Activity)"
   },
   "core/server.js | apply | 50f824128a1e": {
    "count": 1,
    "text": "Say “apply” in Claude Code, or start the live server"
-  },
-  "core/server.js | apply | 6c643269c36a": {
-   "count": 2,
-   "text": "Apply stopped:"
   },
   "core/server.js | apply | 75a67b76590b": {
    "count": 1,
@@ -694,6 +666,10 @@
    "count": 1,
    "text": "Live server back — applied {} held change{}"
   },
+  "core/server.js | apply | 92b85d19e9ba": {
+   "count": 1,
+   "text": "Held in Review, not applied:"
+  },
   "core/server.js | apply | b6fce0bf5ca0": {
    "count": 4,
    "text": "{} — saved and applied"
@@ -702,10 +678,6 @@
    "count": 1,
    "text": "Already applied: use “undo last apply” in Claude Code"
   },
-  "core/server.js | apply | de5a4d5b16ed": {
-   "count": 1,
-   "text": "Applied {} decision{}"
-  },
   "core/server.js | apply | e8dcf7cfc737": {
    "count": 1,
    "text": "{} — saved; press Apply to write it"
@@ -713,6 +685,10 @@
   "core/server.js | apply | ed5f7918eb13": {
    "count": 1,
    "text": "Already applied: undo it in Activity"
+  },
+  "core/server.js | apply | f0ac1a83cc5f": {
+   "count": 1,
+   "text": "Applied {} decision{}{}"
   },
   "core/server.js | apply | f5732392a182": {
    "count": 1,
@@ -730,10 +706,6 @@
    "count": 1,
    "text": "Looking for the live server…"
   },
-  "core/server.js | live server | 4ffab8b50a03": {
-   "count": 1,
-   "text": "Live server not running — commands will be copied instead"
-  },
   "core/server.js | live server | 50f824128a1e": {
    "count": 1,
    "text": "Say “apply” in Claude Code, or start the live server"
@@ -741,10 +713,6 @@
   "core/server.js | live server | 90d2481c9e0f": {
    "count": 1,
    "text": "Live server back — applied {} held change{}"
-  },
-  "core/server.js | live server | aa234b1092f7": {
-   "count": 1,
-   "text": "The live server is running."
   },
   "core/server.js | live server | c3d3cb7a42c8": {
    "count": 1,
@@ -778,29 +746,13 @@
    "count": 1,
    "text": "The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Te"
   },
-  "core/server.js | stage | 48cd2a99b0ca": {
-   "count": 1,
-   "text": "Keep the items as staged"
-  },
-  "core/server.js | stage | c6d1c5541a69": {
-   "count": 1,
-   "text": "{} changed after this item was staged, so nothing was written. Stage it again from the current file,"
-  },
   "core/server.js | vault | 1520bbaa12a6": {
    "count": 1,
    "text": "Vault connected"
   },
-  "core/server.js | vault | 548960b8970e": {
-   "count": 1,
-   "text": "Connect vault"
-  },
   "core/server.js | vault | 619a5fe7f7a5": {
    "count": 1,
    "text": "Vault reconnected"
-  },
-  "core/server.js | vault | 992a85c03324": {
-   "count": 1,
-   "text": "Reconnect vault"
   },
   "core/server.js | vault | cb42433219b1": {
    "count": 1,
@@ -809,10 +761,6 @@
   "core/server.js | vault | f4bf6ae8ffd9": {
    "count": 1,
    "text": "Couldn't connect the vault:"
-  },
-  "core/server.js | vault | fc595dc5bebf": {
-   "count": 1,
-   "text": "Claude Code on this laptop, working in your vault"
   },
   "creaite_doc.py | tracker | 40e9438b14b3": {
    "count": 1,
@@ -838,10 +786,6 @@
    "count": 1,
    "text": "Drafting needs the live server"
   },
-  "drafts.js | live server | 6013774b2d47": {
-   "count": 1,
-   "text": "A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to ed"
-  },
   "drafts.js | live server | 6f887603019b": {
    "count": 1,
    "text": "Recording a chase needs the live server"
@@ -862,25 +806,9 @@
    "count": 1,
    "text": "The live server isn't reachable"
   },
-  "drafts.js | proposal | 2a807dca7cb3": {
-   "count": 1,
-   "text": "Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review"
-  },
-  "drafts.js | proposal | 6013774b2d47": {
-   "count": 1,
-   "text": "A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to ed"
-  },
   "drafts.js | stage | d4579611bbc1": {
    "count": 1,
    "text": "The title is vague ({}): write what is to be done, or stage it and Sharpen it in the item."
-  },
-  "drafts.js | sweep | 55c9f2ffe79a": {
-   "count": 1,
-   "text": "The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it f"
-  },
-  "drafts.js | tracker | 2a807dca7cb3": {
-   "count": 1,
-   "text": "Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review"
   },
   "drafts.js | tracker | f9f2ff94a4df": {
    "count": 1,
@@ -982,21 +910,21 @@
    "count": 1,
    "text": "Or say: `review` `approve minutes for the ABC steering` `9 is DEF` `minutes 3 is DEF` `reject 4 as a"
   },
-  "help.md | apply | 07c0ecc1b670": {
-   "count": 1,
-   "text": "4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Un"
-  },
   "help.md | apply | 0842336705cd": {
    "count": 1,
    "text": "| `mark ABC-A-003 done` | Any change in plain words, shown before → after, then applied. |"
   },
+  "help.md | apply | 090cfb1b39b1": {
+   "count": 1,
+   "text": "- **Approve minutes** is one click: the minutes are filed and every ticked line becomes a work item,"
+  },
+  "help.md | apply | 192190629271": {
+   "count": 1,
+   "text": "- **Apply n changes** writes the ticked rows to the tracker as one change, and **Undo** in the messa"
+  },
   "help.md | apply | 1c3039c19fbb": {
    "count": 1,
    "text": "In ask creaite or Claude Code: `sweep`, `process new minutes`, `review`, `apply`, `undo last apply`,"
-  },
-  "help.md | apply | 1ccd057c343d": {
-   "count": 1,
-   "text": "- **Change the project** of a proposed item with **Project** on its row, its open view or its right-"
   },
   "help.md | apply | 1cd9bbb1d0fd": {
    "count": 1,
@@ -1014,17 +942,13 @@
    "count": 1,
    "text": "- Undo in the message removes a change that hasn't been applied yet. For an applied change, use **un"
   },
-  "help.md | apply | 24b862898dea": {
-   "count": 1,
-   "text": "2. **Catch up.** If the last sweep is more than 30 minutes old, a catch-up sweep of your Inbox, Sent"
-  },
-  "help.md | apply | 25b346f819a7": {
-   "count": 1,
-   "text": "- **Approve minutes** shows what will be applied before it is: the minutes and the ticked items, in "
-  },
   "help.md | apply | 2d347c656743": {
    "count": 1,
    "text": "- **Decisions needed:** each pending decision with a decision maker and a needed-by date. Yours come"
+  },
+  "help.md | apply | 2ecab59873b8": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
   "help.md | apply | 2ff1a4d0ec96": {
    "count": 1,
@@ -1046,13 +970,17 @@
    "count": 1,
    "text": "- **Whenever it suits**: **Review and apply.** Clear Review in minutes. Then check Today for what's "
   },
+  "help.md | apply | 465a97ae21e4": {
+   "count": 1,
+   "text": "- **Make a work item** (the +) opens a new item beside it, filled from the message: the subject as t"
+  },
   "help.md | apply | 478c5b15ccca": {
    "count": 1,
    "text": "- **An open item** slides over the page at half the window (beside ask creaite when its chat is open"
   },
-  "help.md | apply | 4ef00a14fb69": {
+  "help.md | apply | 4d85fd72b20c": {
    "count": 1,
-   "text": "- **Update an existing item instead:** on any proposed new action, RAID item or decision with a proj"
+   "text": "- **Change the project** of a proposed item with its **Project** chip in the open proposal. Updates "
   },
   "help.md | apply | 560d4e4759c1": {
    "count": 1,
@@ -1062,14 +990,6 @@
    "count": 1,
    "text": "1. **New:** in Work, press the **+** tile at the right end of the toolbar; it shows its name as you "
   },
-  "help.md | apply | 58aba9d71a21": {
-   "count": 1,
-   "text": "4. Press **Apply n changes**: the ticked rows are written to the tracker as one change, and **Undo**"
-  },
-  "help.md | apply | 5ab9964c84b9": {
-   "count": 1,
-   "text": "- **Make a work item** (the +) opens a new item beside it, filled from the message: the subject as t"
-  },
   "help.md | apply | 5bacf039a09c": {
    "count": 1,
    "text": "- If the server stops, a red alert appears at the top; saves are held and applied when it's back."
@@ -1077,6 +997,10 @@
   "help.md | apply | 60ba92e12cbb": {
    "count": 1,
    "text": "2. **Record it:** open the pending decision and set its **Status** to **Made** (or choose **Mark as "
+  },
+  "help.md | apply | 675ac361f6c0": {
+   "count": 1,
+   "text": "4. Press **Apply n changes**: the ticked rows are written to the tracker as one change, and **Undo**"
   },
   "help.md | apply | 68cb9289f2af": {
    "count": 1,
@@ -1102,17 +1026,17 @@
    "count": 1,
    "text": "1. Under **Ignore rules**, press **Add a rule**: give it a name, choose where it applies (mail, Team"
   },
-  "help.md | apply | 7809a7961e31": {
-   "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
-  },
   "help.md | apply | 7ad5caca7760": {
    "count": 1,
    "text": "- Every change, newest first: when, what changed and by whom. Undo reverses a change not yet applied"
   },
-  "help.md | apply | 85d427ae2ed8": {
+  "help.md | apply | 7c61c5ccb178": {
    "count": 1,
-   "text": "- **Old backups tidy themselves away** once a day: every daily backup for 30 days, then the Monday's"
+   "text": "- **Update an existing item instead:** in the open view of any proposed new action, RAID item or dec"
+  },
+  "help.md | apply | 875c6da7eaa1": {
+   "count": 1,
+   "text": "2. **Catch up.** If the last sweep is more than 30 minutes old, a catch-up sweep of your Inbox, Sent"
   },
   "help.md | apply | 942fc97d73df": {
    "count": 1,
@@ -1121,10 +1045,6 @@
   "help.md | apply | 979cf54596e2": {
    "count": 1,
    "text": "Or say: `undo last apply`"
-  },
-  "help.md | apply | 9a6ccca57b2b": {
-   "count": 1,
-   "text": "- **Apply n changes** writes the ticked rows to the tracker as one change, and **Undo** in the messa"
   },
   "help.md | apply | a17355e9e015": {
    "count": 1,
@@ -1146,13 +1066,17 @@
    "count": 1,
    "text": "2. Later on, **Activity** lists every change: Undo there reverses the latest apply, and ticking olde"
   },
+  "help.md | apply | bd5f20b649ab": {
+   "count": 1,
+   "text": "- **Project documents are set aside**: not listed, and not scanned (that is most of a large engageme"
+  },
+  "help.md | apply | be157c381b04": {
+   "count": 1,
+   "text": "- **Old backups tidy themselves away** once a day: every daily backup for 30 days, then the Monday's"
+  },
   "help.md | apply | be82c21b8ba9": {
    "count": 1,
    "text": "8. **A reload doesn't lose a change.** Staged changes stay staged, and the bar comes back, in every "
-  },
-  "help.md | apply | c14e226dd41a": {
-   "count": 1,
-   "text": "- **Project documents are set aside**: not listed, and not scanned (that is most of a large engageme"
   },
   "help.md | apply | c94c99155775": {
    "count": 1,
@@ -1170,9 +1094,17 @@
    "count": 1,
    "text": "Every edit you make on the dashboard is written as a proposal and applied at once, with Undo."
   },
+  "help.md | apply | e3f54ca422b9": {
+   "count": 1,
+   "text": "4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Un"
+  },
   "help.md | apply | e8db2c33ea28": {
    "count": 1,
    "text": "- Something changed by mistake: Undo in the message, or **undo last apply**."
+  },
+  "help.md | apply | e996c2558170": {
+   "count": 1,
+   "text": "- Approve routine never covers draft minutes, reports, health changes, new decisions, a decision bei"
   },
   "help.md | apply | eae727e129ce": {
    "count": 1,
@@ -1202,9 +1134,9 @@
    "count": 1,
    "text": "- **A change shows at once.** Edit a value in the list, move a card, change an open item or use ⌘K a"
   },
-  "help.md | cx- name | 2dfcb79de471": {
+  "help.md | cx- name | 2eced6d293f9": {
    "count": 1,
-   "text": "- Tick files (or **Select new**) and **Process selected**: ask creaite runs cx-minutes on them, and "
+   "text": "- Promises come from meetings (cx-minutes proposes them; you approve them on Intake) and from you (\""
   },
   "help.md | cx- name | 32aeb1ac426a": {
    "count": 1,
@@ -1218,17 +1150,9 @@
    "count": 1,
    "text": "- It never changes an owner, title or project (use Review or cx-edit), and never proposes an open it"
   },
-  "help.md | cx- name | 7573e46ccb14": {
-   "count": 1,
-   "text": "- Tick meetings (or **Select new**: everything not yet processed; private meetings aren't listed, as"
-  },
   "help.md | cx- name | 94e58e937bb8": {
    "count": 1,
    "text": "- **Coverage:** when the meeting had an agenda (a file in the project's Agendas folder for that day,"
-  },
-  "help.md | cx- name | 9dc3b881f443": {
-   "count": 1,
-   "text": "- Promises come from meetings (cx-minutes proposes them; you approve them in Review) and from you (\""
   },
   "help.md | cx- name | b98f11c039b3": {
    "count": 1,
@@ -1246,13 +1170,17 @@
    "count": 1,
    "text": "- **Project files:** reading is not extracting. Never read: `99 Archive`, `_Templates`, `99 System`,"
   },
-  "help.md | extract | 6d594733522b": {
+  "help.md | extract | 0e55e8a7038f": {
    "count": 1,
-   "text": "- **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**"
+   "text": "- Items extracted from draft minutes sit under their meeting. Rejecting the minutes leaves their ite"
   },
-  "help.md | extract | 9d05d30c14a8": {
+  "help.md | extract | 7aa8b6e9eb08": {
    "count": 1,
-   "text": "- Items extracted from draft minutes sit indented under them (▾ shows or hides them). the plain **Ap"
+   "text": "12. **Looks done:** when a mail you sent, a reply, a Teams message or a meeting shows an open item i"
+  },
+  "help.md | extract | c33b17083daa": {
+   "count": 1,
+   "text": "- **The bar** is one row of icons (two on a narrow window): **Zoom** (the minutes open fitted to the"
   },
   "help.md | extract | d6e7c8e112ea": {
    "count": 1,
@@ -1266,13 +1194,13 @@
    "count": 1,
    "text": "- **Quality** (the second tab): what you approved as proposed, approved after an edit and rejected o"
   },
-  "help.md | extract | fdb2951c1010": {
+  "help.md | extract | f50badac7b8e": {
    "count": 1,
-   "text": "14. **Looks done:** when a mail you sent, a reply, a Teams message or a meeting shows an open item i"
+   "text": "- **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**"
   },
-  "help.md | live server | 07b30f1fe898": {
+  "help.md | live server | 08a952ce3c26": {
    "count": 1,
-   "text": "- **Four places:** **Essentials** (opens first: the settings that change your day, each with one lin"
+   "text": "- **Open draft** on a meeting's minutes in Intake opens them as a page under Intake (it needs the li"
   },
   "help.md | live server | 0a5baa0787b6": {
    "count": 1,
@@ -1290,13 +1218,13 @@
    "count": 1,
    "text": "## Live server and backups"
   },
+  "help.md | live server | 192190629271": {
+   "count": 1,
+   "text": "- **Apply n changes** writes the ticked rows to the tracker as one change, and **Undo** in the messa"
+  },
   "help.md | live server | 2d766dc0ad1f": {
    "count": 1,
    "text": "- **The approval card:** some changes wait for you, shown on **one card** with why and the change it"
-  },
-  "help.md | live server | 2dfcb79de471": {
-   "count": 1,
-   "text": "- Tick files (or **Select new**) and **Process selected**: ask creaite runs cx-minutes on them, and "
   },
   "help.md | live server | 2ff1a4d0ec96": {
    "count": 1,
@@ -1306,13 +1234,13 @@
    "count": 1,
    "text": "1. **A hollow red dot under Settings, or a red alert:** the live server isn't running. Start it agai"
   },
-  "help.md | live server | 364fa40583c0": {
-   "count": 1,
-   "text": "11. **Update an existing item instead:** when a new action, risk, issue or decision is really news a"
-  },
   "help.md | live server | 41a5270f198b": {
    "count": 1,
    "text": "4. To run the meeting around one thing, press **Shape this meeting** (the prep page, below, has the "
+  },
+  "help.md | live server | 467a96164ae5": {
+   "count": 1,
+   "text": "- **Tabs:** **Essentials** (opens first: the settings that change your day, each with one line on wh"
   },
   "help.md | live server | 4e02b7c11cd9": {
    "count": 1,
@@ -1322,10 +1250,6 @@
    "count": 1,
    "text": "- It reads what creaite already holds, so it shows without the live server; nothing on it is sent."
   },
-  "help.md | live server | 5ab73a136a65": {
-   "count": 1,
-   "text": "- **New items arrive on their own.** A sweep rebuilds the dashboard when it finishes, and an open da"
-  },
   "help.md | live server | 5d9f0f5e3c6a": {
    "count": 1,
    "text": "- Red alert at the top (and a hollow red dot under Settings): start the live server (see Live server"
@@ -1333,10 +1257,6 @@
   "help.md | live server | 5dcc1a270a40": {
    "count": 1,
    "text": "The dashboard runs from the live server on this Mac. Start it in Terminal with:"
-  },
-  "help.md | live server | 610abebf956b": {
-   "count": 1,
-   "text": "10. **Turn any of them off** in Settings › Advanced › **AI drafts** (or all of them at once in Essen"
   },
   "help.md | live server | 64027f0042d9": {
    "count": 1,
@@ -1346,9 +1266,9 @@
    "count": 1,
    "text": "- If the server is stopped when you open the app, it shows “The live server isn't running” with a **"
   },
-  "help.md | live server | 7573e46ccb14": {
+  "help.md | live server | 762c75a299f7": {
    "count": 1,
-   "text": "- Tick meetings (or **Select new**: everything not yet processed; private meetings aren't listed, as"
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
   "help.md | live server | 76e8bd9137a5": {
    "count": 1,
@@ -1357,6 +1277,10 @@
   "help.md | live server | 78e61daaf10c": {
    "count": 1,
    "text": "- **Prep page:** in the brief, **Prep page** researches the meeting with Claude (read-only; progress"
+  },
+  "help.md | live server | 80ca72e92bd8": {
+   "count": 1,
+   "text": "10. **Turn any of them off** in Settings › **AI drafts** (or all of them at once in Essentials), whi"
   },
   "help.md | live server | 85d1c9db0059": {
    "count": 1,
@@ -1370,10 +1294,6 @@
    "count": 1,
    "text": "- **Coverage:** when the meeting had an agenda (a file in the project's Agendas folder for that day,"
   },
-  "help.md | live server | 9a6ccca57b2b": {
-   "count": 1,
-   "text": "- **Apply n changes** writes the ticked rows to the tracker as one change, and **Undo** in the messa"
-  },
   "help.md | live server | 9db450b2eb33": {
    "count": 1,
    "text": "- **Search the vault** at the top of Files finds anything: tracker items (actions, risks, issues, de"
@@ -1381,10 +1301,6 @@
   "help.md | live server | 9e1e42e01e99": {
    "count": 1,
    "text": "- Double-click the **creaite** launcher: it starts the live server and opens the dashboard in its ow"
-  },
-  "help.md | live server | 9eebb3efdb84": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
   "help.md | live server | a17355e9e015": {
    "count": 1,
@@ -1402,9 +1318,9 @@
    "count": 1,
    "text": "- **Focus on a note:** the expand icon at the left of the title (or [[⌘⇧F]]) lifts the open note ove"
   },
-  "help.md | live server | b12ccf241e65": {
+  "help.md | live server | b5583d4f84d4": {
    "count": 1,
-   "text": "- **Open draft** on a meeting's minutes in Review opens them as a page under Review (it needs the li"
+   "text": "- **New items arrive on their own.** A sweep rebuilds the dashboard when it finishes, and an open da"
   },
   "help.md | live server | b63d28073f02": {
    "count": 1,
@@ -1426,21 +1342,17 @@
    "count": 1,
    "text": "1. In a project's note, press **✦ Find updates** (it needs the live server; an Unfiled note asks you"
   },
-  "help.md | live server | d88675e53124": {
-   "count": 1,
-   "text": "- **Load into inbox** saves each ticked meeting's transcript as `YYYY-MM-DD Title.vtt` (cues in orde"
-  },
   "help.md | live server | d8a625725aa0": {
    "count": 1,
    "text": "1. From Friday 12:00, Today reminds you, and the reminder's link opens that project's **Reporting** "
   },
-  "help.md | live server | d9a7e72b0c31": {
-   "count": 1,
-   "text": "6. Draft minutes are approved with **Approve** on their row (it needs the live server). Minutes are "
-  },
   "help.md | live server | e09747e0034a": {
    "count": 1,
    "text": "- A report reminder has its own button, **Draft weekly report** or **Draft client report** (the **…*"
+  },
+  "help.md | live server | e371ac0f8f58": {
+   "count": 1,
+   "text": "9. **Update an existing item instead:** when a new action, risk, issue or decision is really news ab"
   },
   "help.md | live server | e37d8b63e206": {
    "count": 1,
@@ -1462,17 +1374,21 @@
    "count": 1,
    "text": "3. Restart the live server. Your data and your `CLAUDE.md` are never touched, and ``undo update`` go"
   },
+  "help.md | live server | fad3591be1ab": {
+   "count": 1,
+   "text": "6. Draft minutes are approved with **Approve** on their row (it needs the live server). Minutes are "
+  },
   "help.md | live server | fdea85913717": {
    "count": 1,
    "text": "- **Usage** (the third tab): what each Claude run costs and what every run loads before it starts, o"
   },
-  "help.md | path | 07b30f1fe898": {
-   "count": 1,
-   "text": "- **Four places:** **Essentials** (opens first: the settings that change your day, each with one lin"
-  },
   "help.md | path | 0a5baa0787b6": {
    "count": 1,
    "text": "3. **Something failed or looks wrong:** when there were errors in the last day, a quiet banner under"
+  },
+  "help.md | path | 1b51b36130b5": {
+   "count": 1,
+   "text": "- **Shape the meeting** (BL-286): in the prep brief, your focus and aim in your own words, read back"
   },
   "help.md | path | 289605bb69b3": {
    "count": 1,
@@ -1482,9 +1398,9 @@
    "count": 1,
    "text": "- **The approval card:** some changes wait for you, shown on **one card** with why and the change it"
   },
-  "help.md | path | 3605280aeaf2": {
+  "help.md | path | 2eced6d293f9": {
    "count": 1,
-   "text": "- **Counted, never read:** `system/staging/draft-stats.json` keeps, for each kind, how many drafts w"
+   "text": "- Promises come from meetings (cx-minutes proposes them; you approve them on Intake) and from you (\""
   },
   "help.md | path | 3909de176248": {
    "count": 1,
@@ -1506,6 +1422,14 @@
    "count": 1,
    "text": "- **Saved as you type:** the text is kept in `system/staging/drafts/notes/` a moment after each paus"
   },
+  "help.md | path | 467a96164ae5": {
+   "count": 1,
+   "text": "- **Tabs:** **Essentials** (opens first: the settings that change your day, each with one line on wh"
+  },
+  "help.md | path | 4d139d5a2442": {
+   "count": 1,
+   "text": "- **Add files:** press the upload icon or drop transcripts or minutes anywhere on the page (.vtt, .d"
+  },
   "help.md | path | 4d979dbe8d9e": {
    "count": 1,
    "text": "- **What the calendar keeps:** times are shown in your laptop's time zone (creaite converts them fro"
@@ -1522,6 +1446,10 @@
    "count": 1,
    "text": "Everything in creaite, by feature. For the short version see [Start here](#start-here); for a job st"
   },
+  "help.md | path | 762c75a299f7": {
+   "count": 1,
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
+  },
   "help.md | path | 76e8bd9137a5": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"
@@ -1529,14 +1457,6 @@
   "help.md | path | 78e61daaf10c": {
    "count": 1,
    "text": "- **Prep page:** in the brief, **Prep page** researches the meeting with Claude (read-only; progress"
-  },
-  "help.md | path | 7b6d94e785fa": {
-   "count": 1,
-   "text": "- **Shape the meeting** (BL-286): in the prep brief, your focus and aim in your own words, read back"
-  },
-  "help.md | path | 85d427ae2ed8": {
-   "count": 1,
-   "text": "- **Old backups tidy themselves away** once a day: every daily backup for 30 days, then the Monday's"
   },
   "help.md | path | 89f2b2c9185c": {
    "count": 1,
@@ -1546,13 +1466,9 @@
    "count": 1,
    "text": "- Something failed: **Settings › Health › Diagnostics** lists the latest errors and has **Copy diagn"
   },
-  "help.md | path | 9dc3b881f443": {
+  "help.md | path | a4935306c299": {
    "count": 1,
-   "text": "- Promises come from meetings (cx-minutes proposes them; you approve them in Review) and from you (\""
-  },
-  "help.md | path | 9eebb3efdb84": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
+   "text": "- **Counted, never read:** `system/staging/draft-stats.json` keeps, for each kind, how many drafts w"
   },
   "help.md | path | a8c8daeb967a": {
    "count": 1,
@@ -1562,17 +1478,9 @@
    "count": 1,
    "text": "2. It shows what changes and waits for your yes. With a zip already in `system/releases/`, **Review*"
   },
-  "help.md | path | abee1b76abac": {
-   "count": 1,
-   "text": "- **Preview** (the eye icon) shows a file's text before you process it (Word files' text; a PDF open"
-  },
   "help.md | path | ad83eb361589": {
    "count": 1,
    "text": "6. Press **Close the day**. It ends on \"Day closed at 18:04. Everything has a place.\" with the count"
-  },
-  "help.md | path | ad9a5cd1b6a2": {
-   "count": 1,
-   "text": "- Drop transcripts or minutes onto Intake (or choose files). They are saved to the inbox folder: .vt"
   },
   "help.md | path | b114e9ed8166": {
    "count": 1,
@@ -1586,13 +1494,13 @@
    "count": 1,
    "text": "- **Make the launcher:** ask in Claude Code (`setup`); it offers a small **creaite** app in your App"
   },
+  "help.md | path | be157c381b04": {
+   "count": 1,
+   "text": "- **Old backups tidy themselves away** once a day: every daily backup for 30 days, then the Monday's"
+  },
   "help.md | path | c6a7baafa159": {
    "count": 1,
    "text": "- **An executive status:** before writing, creaite works out a short ranked sheet of facts (the posi"
-  },
-  "help.md | path | c9a93633e076": {
-   "count": 1,
-   "text": "2. **From a file:** drop the transcript or minutes on **Upload files** (.vtt, .docx, .txt, .md or .p"
   },
   "help.md | path | cf028328be36": {
    "count": 1,
@@ -1602,10 +1510,6 @@
    "count": 1,
    "text": "- **Close the day:** the door icon at the bottom right of the header opens a guided shutdown in four"
   },
-  "help.md | path | d88675e53124": {
-   "count": 1,
-   "text": "- **Load into inbox** saves each ticked meeting's transcript as `YYYY-MM-DD Title.vtt` (cues in orde"
-  },
   "help.md | path | e37d8b63e206": {
    "count": 1,
    "text": "1. Open creaite: double-click the **creaite** launcher (it starts the live server). Without it: `sys"
@@ -1613,6 +1517,10 @@
   "help.md | path | e3db93f094a2": {
    "count": 1,
    "text": "- Each item's source is the note and its line (`…/08 Notes/<title>.md#p4`): its source link opens th"
+  },
+  "help.md | path | f136e7beb0c8": {
+   "count": 1,
+   "text": "2. **From a file:** press **Add files** (the upload icon) or drop the transcript or minutes anywhere"
   },
   "help.md | path | f42cd5e2bcce": {
    "count": 1,
@@ -1634,113 +1542,145 @@
    "count": 1,
    "text": "- Settings are saved straight to `system/config/settings.json`, with a backup and a log line each ti"
   },
-  "help.md | proposal | 066f0fb306be": {
+  "help.md | proposal | 012250ffecd2": {
    "count": 1,
-   "text": "- **After a meeting**: **Bring it in.** On Intake, pick the meeting in Calendar import or drop its t"
+   "text": "- **Looks like:** a proposal that repeats an item in the tracker says **Looks like ABC-A-009 (same p"
+  },
+  "help.md | proposal | 02b5babf57dd": {
+   "count": 1,
+   "text": "- **One page, one entry.** **Intake** in the left bar is where a meeting arrives, is turned into pro"
   },
   "help.md | proposal | 0db682e304f8": {
    "count": 1,
    "text": "1. Open an open action, risk, issue or decision and press the envelope in its top bar, left of **Cop"
   },
-  "help.md | proposal | 1ccd057c343d": {
+  "help.md | proposal | 1462a3243df4": {
    "count": 1,
-   "text": "- **Change the project** of a proposed item with **Project** on its row, its open view or its right-"
+   "text": "- **Messages:** above Week ahead, only when there are any: messages from people you follow, as cards"
   },
-  "help.md | proposal | 1d5f25a28c6f": {
+  "help.md | proposal | 2ecab59873b8": {
    "count": 1,
-   "text": "3. **Review** (You) {you: The only gate}: In Review, approve, edit or reject each proposal. Routine "
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
-  "help.md | proposal | 2dfcb79de471": {
+  "help.md | proposal | 313aca0a7c32": {
    "count": 1,
-   "text": "- Tick files (or **Select new**) and **Process selected**: ask creaite runs cx-minutes on them, and "
+   "text": "- **Process** on a ready meeting (or **Make minutes** for a transcript file) loads the transcript an"
   },
   "help.md | proposal | 35ba995b2a06": {
    "count": 1,
    "text": "- **Ticking a row is your approval.** Routine rows (a new action, a due date, done, an owner) start "
   },
-  "help.md | proposal | 364fa40583c0": {
+  "help.md | proposal | 35dd4b6e6cbb": {
    "count": 1,
-   "text": "11. **Update an existing item instead:** when a new action, risk, issue or decision is really news a"
+   "text": "4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Intak"
   },
   "help.md | proposal | 3c4118ea82fa": {
    "count": 1,
    "text": "5. **A weekend due date is pointed out.** The calendars show Saturdays and Sundays muted. Choose one"
   },
+  "help.md | proposal | 43dbaafc4553": {
+   "count": 1,
+   "text": "| ↑ / ↓, Enter, A, R | Intake, on a proposal row: move between proposals, open one, approve, reject "
+  },
   "help.md | proposal | 4505642be71c": {
    "count": 1,
    "text": "## Review and approve proposals"
   },
-  "help.md | proposal | 4c1b127842f5": {
+  "help.md | proposal | 4697fcfcc1b7": {
    "count": 1,
-   "text": "| Cmd/Ctrl + A | Review: select every proposal the filters show |"
+   "text": "- **What the sweep pulls out of their messages:** the proposals the sweep stages from their mail or "
   },
-  "help.md | proposal | 4d6593744839": {
+  "help.md | proposal | 47ab59f2ec42": {
    "count": 1,
-   "text": "- **Review**: Proposals grouped by project, nested under their minutes"
+   "text": "- **A meeting opens in place.** One click on a meeting that has proposals opens it, with its proposa"
   },
-  "help.md | proposal | 4ef00a14fb69": {
+  "help.md | proposal | 4afa1902a17d": {
    "count": 1,
-   "text": "- **Update an existing item instead:** on any proposed new action, RAID item or decision with a proj"
+   "text": "4. Approve them in [Review and approve proposals](#review-and-approve-proposals). Nothing is filed u"
+  },
+  "help.md | proposal | 4d85fd72b20c": {
+   "count": 1,
+   "text": "- **Change the project** of a proposed item with its **Project** chip in the open proposal. Updates "
+  },
+  "help.md | proposal | 4ee1fd19a0f9": {
+   "count": 1,
+   "text": "- **Needs attention:** first, one row for each milestone due within the **Due soon** window (or alre"
   },
   "help.md | proposal | 5225d9fbd280": {
    "count": 1,
    "text": "- Each day creaite also makes a closed **backup zip** of what rebuilds the vault: the day's database"
   },
-  "help.md | proposal | 54f0ad7fef2f": {
-   "count": 1,
-   "text": "- **Reject with a reason:** a row's ✕ or ▾, the bar's **Reject with a reason**, **R** (or Shift+R), "
-  },
   "help.md | proposal | 560d4e4759c1": {
    "count": 1,
    "text": "3. For each project, check the proposed health, its reasons and the current state, then approve. The"
-  },
-  "help.md | proposal | 59e15daef3e2": {
-   "count": 1,
-   "text": "- **The Intake line:** at the foot of **Your commitments**, one quiet line, such as \"Intake: 1 meeti"
   },
   "help.md | proposal | 62574f031d0a": {
    "count": 1,
    "text": "2. **Claude drafts** (Propose): Draft minutes, plus proposed new items and updates to open ones, eac"
   },
+  "help.md | proposal | 6277edc2da35": {
+   "count": 1,
+   "text": "- **The badge** is one number: meetings and files ready to process plus proposals to approve. Today'"
+  },
+  "help.md | proposal | 66557187b5e0": {
+   "count": 1,
+   "text": "| R (or Shift + R) | Reject the focused proposal with a reason. In the menu 1 to 7 choose a reason, "
+  },
+  "help.md | proposal | 66d895ffaa16": {
+   "count": 1,
+   "text": "- **Reject with a reason:** a row's ✕, **R** (or Shift+R) on a focused row or the open proposal's **"
+  },
+  "help.md | proposal | 67c8cb57c302": {
+   "count": 1,
+   "text": "3. **Review** (You) {you: The only gate}: On Intake, approve, edit or reject each proposal. Routine "
+  },
+  "help.md | proposal | 6a12095854ba": {
+   "count": 1,
+   "text": "- **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal on Intake"
+  },
+  "help.md | proposal | 6a3064340f3e": {
+   "count": 1,
+   "text": "3. **Several at once:** highlight actions in Work and press **Draft updates** on the bar, or press i"
+  },
   "help.md | proposal | 6b0306628091": {
    "count": 1,
    "text": "4. creaite refuses while other proposals still mention the old code: apply or reject them first. It "
   },
-  "help.md | proposal | 6bf54389548b": {
+  "help.md | proposal | 7c61c5ccb178": {
    "count": 1,
-   "text": "- **Settings › People and projects › Workstreams** lists them by project: **Add…** (creaite suggests"
+   "text": "- **Update an existing item instead:** in the open view of any proposed new action, RAID item or dec"
   },
-  "help.md | proposal | 6d594733522b": {
+  "help.md | proposal | 7db133eff37e": {
    "count": 1,
-   "text": "- **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**"
+   "text": "- **The Intake line:** at the foot of **Your commitments**, one quiet line, such as \"Intake: 1 meeti"
   },
-  "help.md | proposal | 6fc858faa54b": {
+  "help.md | proposal | 82c0b5732618": {
    "count": 1,
-   "text": "3. **Several at once:** highlight actions in Work and press **Draft updates** on the bar, or press i"
+   "text": "10. **Reject with a reason:** one menu from a row's ✕, [[R]] or the open proposal's **Reject**: **Re"
   },
-  "help.md | proposal | 7809a7961e31": {
+  "help.md | proposal | 86bf11312d66": {
    "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+   "text": "Keys: [[⌘K]] search or jump anywhere · [[⌘J]] ask creaite, the assistant · [[J]]/[[K]], [[A]], [[R]]"
   },
-  "help.md | proposal | 7a370fb03cff": {
+  "help.md | proposal | 8d76806ef64f": {
    "count": 1,
-   "text": "What they ask for is also proposed as usual, first in **Review**, with no label. In **Work**, the fu"
-  },
-  "help.md | proposal | 7a57c7451c55": {
-   "count": 1,
-   "text": "- Each row shows how long it has waited as quiet text on the right (\"today\", \"1 day\", \"12 days\"). Wh"
+   "text": "What they ask for is also proposed as usual, first on **Intake**, with no label. In **Work**, the fu"
   },
   "help.md | proposal | 8d9380fd6a48": {
    "count": 1,
    "text": "- [Review and approve proposals](#review-and-approve-proposals): Decide what creaite found."
   },
-  "help.md | proposal | 8f423e6d84b6": {
+  "help.md | proposal | 8e87b0c092a4": {
    "count": 1,
-   "text": "- Claude's proposals wait here until you decide. An action, RAID item or decision opens over the pag"
+   "text": "- **After a meeting**: **Bring it in.** On Intake, press **Process** on the meeting (or **Add files*"
   },
-  "help.md | proposal | 972d9180764a": {
+  "help.md | proposal | 946bb37b304b": {
    "count": 1,
-   "text": "4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Revie"
+   "text": "- **Three stages** run across the top as counts you can click: **Arrived** (a meeting or an uploaded"
+  },
+  "help.md | proposal | 9ae6111996a7": {
+   "count": 1,
+   "text": "5. A proposal that needs a project says so; choose it with the **Project** chip in the open proposal"
   },
   "help.md | proposal | a17355e9e015": {
    "count": 1,
@@ -1750,77 +1690,101 @@
    "count": 1,
    "text": "- Every save, new item, health change, current-state edit and Approve or Reject is written as a prop"
   },
-  "help.md | proposal | a8f6320fc4e7": {
+  "help.md | proposal | ac5dccf72d27": {
    "count": 1,
-   "text": "- **Select several** and a bar appears: how many are selected, how many can be approved together and"
+   "text": "- **The sidebar:** **Today**, **Work**, **Intake**, **Projects** and **People** are at the top; **Mo"
+  },
+  "help.md | proposal | ad7ac95d0855": {
+   "count": 1,
+   "text": "4. **Approve routine** (in the Routine group's heading) approves every routine proposal in that grou"
+  },
+  "help.md | proposal | ae9930cdcf08": {
+   "count": 1,
+   "text": "3. Press **Approve** or **✕** on the row, or click the row to open it over the page like a work item"
   },
   "help.md | proposal | b3dc2c7e885e": {
    "count": 1,
    "text": "- **Looks done:** a closing update the sweep or the minutes proposed from a sent mail, a reply, a Te"
   },
-  "help.md | proposal | b4d3e68ca8c0": {
-   "count": 1,
-   "text": "9. **One at a time:** press **One at a time** in Review's toolbar to decide proposals one by one, wi"
-  },
-  "help.md | proposal | b8d38e592b89": {
-   "count": 1,
-   "text": "4. Approve in [Review](#review-and-approve-proposals). Nothing is filed until you do."
-  },
   "help.md | proposal | baa229b243b0": {
    "count": 1,
    "text": "4. **Client wording:** on a client-visible item, **Draft** under **Client messaging** (in **Details*"
   },
-  "help.md | proposal | c0dda4e605f1": {
+  "help.md | proposal | c1fbcbb0072f": {
    "count": 1,
-   "text": "- **One at a time** (in the toolbar) shows one proposal at a time, with its source beside it (\"n of "
+   "text": "- A minutes file from someone else is copied to the project's minutes folder when you approve its pr"
   },
-  "help.md | proposal | c579c13696c9": {
+  "help.md | proposal | d31fcce40af6": {
    "count": 1,
-   "text": "- **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal in Review"
-  },
-  "help.md | proposal | c5a2a14d5fa1": {
-   "count": 1,
-   "text": "8. **Right-click** a proposal (or [[Shift]]+[[F10]]) for **Approve**, **Reject with a reason…**, **O"
-  },
-  "help.md | proposal | c9865f69feb2": {
-   "count": 1,
-   "text": "| `process new minutes` | Transcripts become draft minutes and proposed items in Review. |"
+   "text": "7. **Wrong project?** Open the proposal and choose another in its **Project** chip, beside Owner and"
   },
   "help.md | proposal | d6e7c8e112ea": {
    "count": 1,
    "text": "8. **Sharpen a vague action:** as you type a new action's title, **chips** under it suggest an **Own"
   },
-  "help.md | proposal | daa1456f966d": {
+  "help.md | proposal | db5335aafc9d": {
    "count": 1,
-   "text": "10. **Looks like an item you already have:** a proposal that repeats an action, risk or decision in "
+   "text": "2. Each proposal is one row: what it is (Action, Risk, Decision, Update, Minutes), what changes, whe"
+  },
+  "help.md | proposal | dbf24ba1bf2e": {
+   "count": 1,
+   "text": "## Approving proposals"
   },
   "help.md | proposal | dc893bce67b8": {
    "count": 1,
    "text": "Every edit you make on the dashboard is written as a proposal and applied at once, with Undo."
   },
+  "help.md | proposal | e35dbf8d9a6c": {
+   "count": 1,
+   "text": "8. **Looks like an item you already have:** a proposal that repeats an action, risk or decision in t"
+  },
+  "help.md | proposal | e371ac0f8f58": {
+   "count": 1,
+   "text": "9. **Update an existing item instead:** when a new action, risk, issue or decision is really news ab"
+  },
+  "help.md | proposal | e5e2be1a29eb": {
+   "count": 1,
+   "text": "- Details of each part are under **Meetings and files** and **Approving proposals** below."
+  },
+  "help.md | proposal | e96eb03a6d80": {
+   "count": 1,
+   "text": "- Proposals wait on Intake until you decide. Click a proposal's row (or its pencil) to open it over "
+  },
   "help.md | proposal | eb8deeecd08e": {
    "count": 1,
    "text": "- **With an item open, a single click on another proposal** shows it in the same place; one with uns"
   },
-  "help.md | proposal | ee33df5e2bd3": {
+  "help.md | proposal | eb9e29f1b024": {
    "count": 1,
-   "text": "13. **Every reject can be changed:** one message for the batch, with **Undo** (every row back in Rev"
+   "text": "- Each project's settings page lists its own under **Workstreams** (`#settings/workstreams` opens it"
   },
-  "help.md | proposal | ef325225e798": {
+  "help.md | proposal | ef131197e0df": {
    "count": 1,
-   "text": "- **Looks like:** a proposal that repeats an item in the tracker says **Looks like ABC-A-009 (same p"
+   "text": "| Enter, N, H | Intake, on a meeting row: process it (or open it when it has proposals), ask why it "
   },
-  "help.md | proposal | f260fd16e5b1": {
+  "help.md | proposal | f136e7beb0c8": {
    "count": 1,
-   "text": "1. Open **Review**. Proposals are grouped by project, with items from minutes nested under them. **D"
+   "text": "2. **From a file:** press **Add files** (the upload icon) or drop the transcript or minutes anywhere"
   },
   "help.md | proposal | f4d8a8563877": {
    "count": 1,
    "text": "- **Quality** (the second tab): what you approved as proposed, approved after an edit and rejected o"
   },
+  "help.md | proposal | f50badac7b8e": {
+   "count": 1,
+   "text": "- **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**"
+  },
   "help.md | proposal | f54b112659c4": {
    "count": 1,
    "text": "| `sweep` | Outlook and Teams since the last sweep become proposals. From 07:00, until it has run th"
+  },
+  "help.md | proposal | fc05e696c3f6": {
+   "count": 1,
+   "text": "1. Open **Intake**. A meeting with proposals opens in place, with its proposals under it in two grou"
+  },
+  "help.md | proposal | fc1807a2bbc0": {
+   "count": 1,
+   "text": "| `process new minutes` | Transcripts become draft minutes and proposed items on Intake. |"
   },
   "help.md | proposal | fd96da1c7032": {
    "count": 1,
@@ -1850,10 +1814,6 @@
    "count": 1,
    "text": "- **A plain \"I can't\":** some things can never be done, whatever you confirm: send, forward or reply"
   },
-  "help.md | refused | a8f6320fc4e7": {
-   "count": 1,
-   "text": "- **Select several** and a bar appears: how many are selected, how many can be approved together and"
-  },
   "help.md | refused | aa3aa19e66b2": {
    "count": 1,
    "text": "3. Link as you type: two square brackets link another note, `@` a person, `#` a work item (a chip wi"
@@ -1874,17 +1834,21 @@
    "count": 1,
    "text": "- **Saved as you type:** the text is kept in `system/staging/drafts/notes/` a moment after each paus"
   },
+  "help.md | script | 762c75a299f7": {
+   "count": 1,
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
+  },
   "help.md | script | 76e8bd9137a5": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"
   },
-  "help.md | script | 9eebb3efdb84": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
-  },
   "help.md | script | b8d9ffdb6072": {
    "count": 1,
    "text": "- **Make the launcher:** ask in Claude Code (`setup`); it offers a small **creaite** app in your App"
+  },
+  "help.md | script | c49e49251e14": {
+   "count": 1,
+   "text": "- **Approving on Intake does the same.** **Approve** on the minutes' row on Intake (its tip says so)"
   },
   "help.md | script | cf028328be36": {
    "count": 1,
@@ -1902,17 +1866,25 @@
    "count": 1,
    "text": "- **Usage** (the third tab): what each Claude run costs and what every run loads before it starts, o"
   },
-  "help.md | stage | 07c0ecc1b670": {
+  "help.md | stage | 02b5babf57dd": {
    "count": 1,
-   "text": "4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Un"
+   "text": "- **One page, one entry.** **Intake** in the left bar is where a meeting arrives, is turned into pro"
+  },
+  "help.md | stage | 1b51b36130b5": {
+   "count": 1,
+   "text": "- **Shape the meeting** (BL-286): in the prep brief, your focus and aim in your own words, read back"
   },
   "help.md | stage | 1cd9bbb1d0fd": {
    "count": 1,
    "text": "2. Each line opens its item in the full peek, over the popup, so you can update it on the spot: edit"
   },
-  "help.md | stage | 3605280aeaf2": {
+  "help.md | stage | 24778fe5adc1": {
    "count": 1,
-   "text": "- **Counted, never read:** `system/staging/draft-stats.json` keeps, for each kind, how many drafts w"
+   "text": "3. To move the agreed date, press **Rebaseline…**: on **Movement**, choose the new date, who agreed "
+  },
+  "help.md | stage | 2ecab59873b8": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
   },
   "help.md | stage | 3909de176248": {
    "count": 1,
@@ -1922,21 +1894,25 @@
    "count": 1,
    "text": "- **One-off Word documents:** ask for one (\"make a Word document of open actions for ABC\"). It reads"
   },
+  "help.md | stage | 3c2fa878ffee": {
+   "count": 1,
+   "text": "- **Any other change on one card:** for a change the item fields don't cover (\"add a risk for ABC…\","
+  },
   "help.md | stage | 3c4b2068c82a": {
    "count": 1,
    "text": "- **Saved as you type:** the text is kept in `system/staging/drafts/notes/` a moment after each paus"
   },
+  "help.md | stage | 465a97ae21e4": {
+   "count": 1,
+   "text": "- **Make a work item** (the +) opens a new item beside it, filled from the message: the subject as t"
+  },
+  "help.md | stage | 4697fcfcc1b7": {
+   "count": 1,
+   "text": "- **What the sweep pulls out of their messages:** the proposals the sweep stages from their mail or "
+  },
   "help.md | stage | 478c5b15ccca": {
    "count": 1,
    "text": "- **An open item** slides over the page at half the window (beside ask creaite when its chat is open"
-  },
-  "help.md | stage | 4b691252e865": {
-   "count": 1,
-   "text": "- **Looks done:** when the thread shows the work item it matches is finished (you sent what it asked"
-  },
-  "help.md | stage | 4d2a22e9726d": {
-   "count": 1,
-   "text": "- **Your promises:** when your own message in the thread makes a commitment in passing (\"I'll send t"
   },
   "help.md | stage | 4d979dbe8d9e": {
    "count": 1,
@@ -1946,45 +1922,33 @@
    "count": 1,
    "text": "- Each day creaite also makes a closed **backup zip** of what rebuilds the vault: the day's database"
   },
-  "help.md | stage | 53b446606a16": {
-   "count": 1,
-   "text": "- Each candidate item has its own **Create work item** (the +, filled from the item: its words, owne"
-  },
   "help.md | stage | 575db2ac55bc": {
    "count": 1,
    "text": "1. **New:** in Work, press the **+** tile at the right end of the toolbar; it shows its name as you "
   },
-  "help.md | stage | 5ab9964c84b9": {
+  "help.md | stage | 59efe919402e": {
    "count": 1,
-   "text": "- **Make a work item** (the +) opens a new item beside it, filled from the message: the subject as t"
+   "text": "- **Your promises:** when your own message in the thread makes a commitment in passing (\"I'll send t"
   },
   "help.md | stage | 5c660d055754": {
    "count": 1,
    "text": "- **Summaries and tags:** when cx-minutes processes a meeting, and when a weekly or client report is"
   },
+  "help.md | stage | 635f892471fe": {
+   "count": 1,
+   "text": "- **Three views**, chosen by you and remembered in this browser: **List**, **Board** (a column per s"
+  },
   "help.md | stage | 68cb9289f2af": {
    "count": 1,
    "text": "- **Your commitments:** your overdue and due-soon actions, each with **Mark done** and **Move the da"
   },
-  "help.md | stage | 73bf169c662d": {
+  "help.md | stage | 778f471584d2": {
    "count": 1,
-   "text": "- **Decide what to do:** **Hold** (a one-line reason, recorded as a decision), **Rebaseline** (a new"
+   "text": "- Each candidate item has its own **Create work item** (the +, filled from the item: its words, owne"
   },
-  "help.md | stage | 7809a7961e31": {
+  "help.md | stage | 7db133eff37e": {
    "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
-  },
-  "help.md | stage | 789886e257e1": {
-   "count": 1,
-   "text": "| Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), proje"
-  },
-  "help.md | stage | 7b6d94e785fa": {
-   "count": 1,
-   "text": "- **Shape the meeting** (BL-286): in the prep brief, your focus and aim in your own words, read back"
-  },
-  "help.md | stage | 7c81fced2252": {
-   "count": 1,
-   "text": "3. To move the agreed date, press **Rebaseline…**: on **Movement**, choose the new date, who agreed "
+   "text": "- **The Intake line:** at the foot of **Your commitments**, one quiet line, such as \"Intake: 1 meeti"
   },
   "help.md | stage | 7fcedaa91104": {
    "count": 1,
@@ -1998,6 +1962,14 @@
    "count": 1,
    "text": "6. After you send it, press **I sent it**: creaite adds a dated line to the item's Latest update (wh"
   },
+  "help.md | stage | 946bb37b304b": {
+   "count": 1,
+   "text": "- **Three stages** run across the top as counts you can click: **Arrived** (a meeting or an uploaded"
+  },
+  "help.md | stage | a4935306c299": {
+   "count": 1,
+   "text": "- **Counted, never read:** `system/staging/draft-stats.json` keeps, for each kind, how many drafts w"
+  },
   "help.md | stage | a8c8daeb967a": {
    "count": 1,
    "text": "- Every save, new item, health change, current-state edit and Approve or Reject is written as a prop"
@@ -2005,6 +1977,10 @@
   "help.md | stage | ad83eb361589": {
    "count": 1,
    "text": "6. Press **Close the day**. It ends on \"Day closed at 18:04. Everything has a place.\" with the count"
+  },
+  "help.md | stage | b7b284b9ac24": {
+   "count": 1,
+   "text": "| Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), proje"
   },
   "help.md | stage | baa229b243b0": {
    "count": 1,
@@ -2030,13 +2006,21 @@
    "count": 1,
    "text": "- **Close the day:** the door icon at the bottom right of the header opens a guided shutdown in four"
   },
+  "help.md | stage | d142d6cfecc9": {
+   "count": 1,
+   "text": "- **Looks done:** when the thread shows the work item it matches is finished (you sent what it asked"
+  },
   "help.md | stage | e3db93f094a2": {
    "count": 1,
    "text": "- Each item's source is the note and its line (`…/08 Notes/<title>.md#p4`): its source link opens th"
   },
-  "help.md | stage | e3e62fc64c0f": {
+  "help.md | stage | e3f54ca422b9": {
    "count": 1,
-   "text": "- **Any other change on one card:** for a change the item fields don't cover (\"add a risk for ABC…\","
+   "text": "4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Un"
+  },
+  "help.md | stage | e867e3d03261": {
+   "count": 1,
+   "text": "- **Decide what to do:** **Hold** (a one-line reason, recorded as a decision), **Rebaseline** (a new"
   },
   "help.md | stage | ebc3993ed8a5": {
    "count": 1,
@@ -2066,13 +2050,13 @@
    "count": 1,
    "text": "- **Where:** each project page has two tabs, **Overview** and **Notes**. Notes that cover several pr"
   },
-  "help.md | sweep | 05f26a876ca7": {
-   "count": 1,
-   "text": "- **Left out:** calendar entries beginning \"ToDo\", \"Info:\" or \"FYI:\", and anything the sweep's ignor"
-  },
   "help.md | sweep | 0fecc6e5b95d": {
    "count": 1,
    "text": "Or say: `sweep` to run the sweep again at any time."
+  },
+  "help.md | sweep | 1462a3243df4": {
+   "count": 1,
+   "text": "- **Messages:** above Week ahead, only when there are any: messages from people you follow, as cards"
   },
   "help.md | sweep | 1813b41cd31d": {
    "count": 1,
@@ -2082,25 +2066,49 @@
    "count": 1,
    "text": "In ask creaite or Claude Code: `sweep`, `process new minutes`, `review`, `apply`, `undo last apply`,"
   },
-  "help.md | sweep | 24b862898dea": {
+  "help.md | sweep | 2209191f755a": {
    "count": 1,
-   "text": "2. **Catch up.** If the last sweep is more than 30 minutes old, a catch-up sweep of your Inbox, Sent"
+   "text": "11. **Every reject can be changed:** the message has **Undo**, which puts the row back on Intake. **"
   },
-  "help.md | sweep | 2b75a7a0927e": {
+  "help.md | sweep | 2e4054b1a530": {
    "count": 1,
-   "text": "4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sw"
+   "text": "- **Addresses:** each tab (`#settings/essentials`, `#settings/work`, `#settings/advanced`, `#setting"
+  },
+  "help.md | sweep | 2ecab59873b8": {
+   "count": 1,
+   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+  },
+  "help.md | sweep | 2eced6d293f9": {
+   "count": 1,
+   "text": "- Promises come from meetings (cx-minutes proposes them; you approve them on Intake) and from you (\""
   },
   "help.md | sweep | 2ff1a4d0ec96": {
    "count": 1,
    "text": "- With the live server running, saves are applied straight away. Without it they wait, and the top b"
   },
-  "help.md | sweep | 30240a6d30fb": {
+  "help.md | sweep | 35dd4b6e6cbb": {
+   "count": 1,
+   "text": "4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Intak"
+  },
+  "help.md | sweep | 38f08615d24e": {
+   "count": 1,
+   "text": "- Intake lists every meeting from Monday of this week to now (from the calendar the sweep saves, new"
+  },
+  "help.md | sweep | 398091b65b04": {
    "count": 1,
    "text": "- **The running and finished badge:** while ask creaite works on anything (a chat message, **Process"
   },
-  "help.md | sweep | 37fa6dd20367": {
+  "help.md | sweep | 467a96164ae5": {
    "count": 1,
-   "text": "Where: Settings › Advanced › Sweep"
+   "text": "- **Tabs:** **Essentials** (opens first: the settings that change your day, each with one line on wh"
+  },
+  "help.md | sweep | 4697fcfcc1b7": {
+   "count": 1,
+   "text": "- **What the sweep pulls out of their messages:** the proposals the sweep stages from their mail or "
+  },
+  "help.md | sweep | 47acf837adaa": {
+   "count": 1,
+   "text": "- **Probably done:** a meeting passage (and, from the sweep, a mail you sent, a reply or a Teams mes"
   },
   "help.md | sweep | 494ab27849d4": {
    "count": 1,
@@ -2110,61 +2118,57 @@
    "count": 1,
    "text": "- **What the calendar keeps:** times are shown in your laptop's time zone (creaite converts them fro"
   },
-  "help.md | sweep | 53b446606a16": {
+  "help.md | sweep | 4ee1fd19a0f9": {
    "count": 1,
-   "text": "- Each candidate item has its own **Create work item** (the +, filled from the item: its words, owne"
+   "text": "- **Needs attention:** first, one row for each milestone due within the **Due soon** window (or alre"
   },
-  "help.md | sweep | 54f0ad7fef2f": {
+  "help.md | sweep | 4f60806e7577": {
    "count": 1,
-   "text": "- **Reject with a reason:** a row's ✕ or ▾, the bar's **Reject with a reason**, **R** (or Shift+R), "
+   "text": "- **Transcripts:** the daily sweep looks up each meeting in the window (new ones, and any still *Not"
   },
-  "help.md | sweep | 5ab73a136a65": {
+  "help.md | sweep | 576272fb72d1": {
    "count": 1,
-   "text": "- **New items arrive on their own.** A sweep rebuilds the dashboard when it finishes, and an open da"
-  },
-  "help.md | sweep | 610abebf956b": {
-   "count": 1,
-   "text": "10. **Turn any of them off** in Settings › Advanced › **AI drafts** (or all of them at once in Essen"
+   "text": "- **The sweep reads the calendar from today:** it refreshes today and the days ahead and does not re"
   },
   "help.md | sweep | 616b7824b84d": {
    "count": 1,
    "text": "- Claude sees only the note's new lines, the project's open item IDs and titles, its milestones and "
   },
-  "help.md | sweep | 649947608b81": {
+  "help.md | sweep | 61c83708da3e": {
    "count": 1,
-   "text": "- **Meetings**, at the top, lists your meetings from Monday of this week to now (from the calendar t"
+   "text": "- **Meeting series projects** (Sweep and Intake › Meeting prep and Intake): the project creaite reme"
   },
   "help.md | sweep | 659e0a5ce17e": {
    "count": 1,
    "text": "- On the right: **When and who**, the latest reporting (dated, with its health), this series' earlie"
   },
-  "help.md | sweep | 68c419ac105f": {
+  "help.md | sweep | 66d895ffaa16": {
    "count": 1,
-   "text": "- When the queue is empty, it says what you did this session, with Undo for the last batch, Activity"
+   "text": "- **Reject with a reason:** a row's ✕, **R** (or Shift+R) on a focused row or the open proposal's **"
   },
-  "help.md | sweep | 6d594733522b": {
+  "help.md | sweep | 698d036a3f2e": {
    "count": 1,
-   "text": "- **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**"
+   "text": "Where: Settings › Sweep and Intake › Sweep"
   },
   "help.md | sweep | 72cecfdcba4a": {
    "count": 1,
    "text": "Or say: `ignore calendar invites starting with ToDo in the sweep` `stop ignoring humancapital`"
   },
-  "help.md | sweep | 754c1d036a64": {
+  "help.md | sweep | 762c75a299f7": {
    "count": 1,
-   "text": "- **Probably done:** a meeting passage (and, from the sweep, a mail you sent, a reply or a Teams mes"
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
-  "help.md | sweep | 7573e46ccb14": {
+  "help.md | sweep | 778f471584d2": {
    "count": 1,
-   "text": "- Tick meetings (or **Select new**: everything not yet processed; private meetings aren't listed, as"
+   "text": "- Each candidate item has its own **Create work item** (the +, filled from the item: its words, owne"
   },
-  "help.md | sweep | 7809a7961e31": {
+  "help.md | sweep | 79985afbe58f": {
    "count": 1,
-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+   "text": "- **Sweep and Intake › Sweep › Ignore rules:** mail, Teams messages and calendar entries the sweep s"
   },
-  "help.md | sweep | 7acc99269b46": {
+  "help.md | sweep | 7aa8b6e9eb08": {
    "count": 1,
-   "text": "- **The sweep reads the calendar from today:** it refreshes today and the days ahead and does not re"
+   "text": "12. **Looks done:** when a mail you sent, a reply, a Teams message or a meeting shows an open item i"
   },
   "help.md | sweep | 7c3cedbe9e4f": {
    "count": 1,
@@ -2174,29 +2178,21 @@
    "count": 1,
    "text": "- **Settings** (the gear): Sweep time, reminders, health rules, registers, themes"
   },
+  "help.md | sweep | 80ca72e92bd8": {
+   "count": 1,
+   "text": "10. **Turn any of them off** in Settings › **AI drafts** (or all of them at once in Essentials), whi"
+  },
+  "help.md | sweep | 875c6da7eaa1": {
+   "count": 1,
+   "text": "2. **Catch up.** If the last sweep is more than 30 minutes old, a catch-up sweep of your Inbox, Sent"
+  },
   "help.md | sweep | 8f6aaf05468b": {
    "count": 1,
    "text": "3. After each sweep, the summary counts what each rule skipped (\"Ignored 14: ToDo invites 9, humanca"
   },
-  "help.md | sweep | 96aaacdaee00": {
+  "help.md | sweep | ab54216e840a": {
    "count": 1,
-   "text": "- **Advanced › Sweep › Ignore rules:** mail, Teams messages and calendar entries the sweep skips, ev"
-  },
-  "help.md | sweep | 972d9180764a": {
-   "count": 1,
-   "text": "4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Revie"
-  },
-  "help.md | sweep | 99db6c1ca32b": {
-   "count": 1,
-   "text": "- **Addresses:** `#settings/essentials`, `#settings/advanced`, `#settings/health`, and each section "
-  },
-  "help.md | sweep | 9dc3b881f443": {
-   "count": 1,
-   "text": "- Promises come from meetings (cx-minutes proposes them; you approve them in Review) and from you (\""
-  },
-  "help.md | sweep | 9eebb3efdb84": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
+   "text": "4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sw"
   },
   "help.md | sweep | ad83eb361589": {
    "count": 1,
@@ -2206,9 +2202,17 @@
    "count": 1,
    "text": "7. **From mail and chat:** when a sweep finds a message that makes or withdraws a pending decision, "
   },
+  "help.md | sweep | b077f3eaa21b": {
+   "count": 1,
+   "text": "1. **From the calendar:** a meeting whose transcript is ready says **Process** (the sweep looks tran"
+  },
   "help.md | sweep | b3dc2c7e885e": {
    "count": 1,
    "text": "- **Looks done:** a closing update the sweep or the minutes proposed from a sent mail, a reply, a Te"
+  },
+  "help.md | sweep | b5583d4f84d4": {
+   "count": 1,
+   "text": "- **New items arrive on their own.** A sweep rebuilds the dashboard when it finishes, and an open da"
   },
   "help.md | sweep | bed1b2823789": {
    "count": 1,
@@ -2217,10 +2221,6 @@
   "help.md | sweep | c579a6a1b71f": {
    "count": 1,
    "text": "Dates are shown DD-MM-YYYY. Keep the live server running while you use the dashboard. If it stops, a"
-  },
-  "help.md | sweep | c5f250d6b495": {
-   "count": 1,
-   "text": "- **Transcripts in Calendar import:** the daily sweep looks up each meeting in the window (new ones,"
   },
   "help.md | sweep | c74c05166786": {
    "count": 1,
@@ -2242,25 +2242,25 @@
    "count": 1,
    "text": "- **The signals:** an action re-dated 3 or more times; a risk raised in 3 or more meetings or sweeps"
   },
-  "help.md | sweep | f260fd16e5b1": {
+  "help.md | sweep | e8570b9ebc23": {
    "count": 1,
-   "text": "1. Open **Review**. Proposals are grouped by project, with items from minutes nested under them. **D"
+   "text": "- **Left out:** calendar entries beginning \"ToDo\", \"Info:\" or \"FYI:\", and anything the sweep's ignor"
   },
   "help.md | sweep | f4d8a8563877": {
    "count": 1,
    "text": "- **Quality** (the second tab): what you approved as proposed, approved after an edit and rejected o"
   },
+  "help.md | sweep | f50badac7b8e": {
+   "count": 1,
+   "text": "- **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**"
+  },
   "help.md | sweep | f54b112659c4": {
    "count": 1,
    "text": "| `sweep` | Outlook and Teams since the last sweep become proposals. From 07:00, until it has run th"
   },
-  "help.md | sweep | fdb2951c1010": {
+  "help.md | tracker | 012250ffecd2": {
    "count": 1,
-   "text": "14. **Looks done:** when a mail you sent, a reply, a Teams message or a meeting shows an open item i"
-  },
-  "help.md | tracker | 07c0ecc1b670": {
-   "count": 1,
-   "text": "4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Un"
+   "text": "- **Looks like:** a proposal that repeats an item in the tracker says **Looks like ABC-A-009 (same p"
   },
   "help.md | tracker | 0f42354c7166": {
    "count": 1,
@@ -2270,9 +2270,13 @@
    "count": 1,
    "text": "creaite reads your meetings, mail and Teams, proposes the actions, decisions, risks and issues it fi"
   },
-  "help.md | tracker | 1ccd057c343d": {
+  "help.md | tracker | 192190629271": {
    "count": 1,
-   "text": "- **Change the project** of a proposed item with **Project** on its row, its open view or its right-"
+   "text": "- **Apply n changes** writes the ticked rows to the tracker as one change, and **Undo** in the messa"
+  },
+  "help.md | tracker | 1b51b36130b5": {
+   "count": 1,
+   "text": "- **Shape the meeting** (BL-286): in the prep brief, your focus and aim in your own words, read back"
   },
   "help.md | tracker | 20d875d77975": {
    "count": 1,
@@ -2289,6 +2293,10 @@
   "help.md | tracker | 34c46a8835be": {
    "count": 1,
    "text": "- **Changing an item's fields:** ask for changes to existing actions, risks, issues or decisions (\"m"
+  },
+  "help.md | tracker | 363d83d6cb62": {
+   "count": 1,
+   "text": "9. **AI on selected text:** in a note on its Notes tab, in Current state, in an open item's title an"
   },
   "help.md | tracker | 3909de176248": {
    "count": 1,
@@ -2310,9 +2318,9 @@
    "count": 1,
    "text": "- **Turning lines into work:** notes are passive. Nothing reads them for the tracker until you press"
   },
-  "help.md | tracker | 4ef00a14fb69": {
+  "help.md | tracker | 4d85fd72b20c": {
    "count": 1,
-   "text": "- **Update an existing item instead:** on any proposed new action, RAID item or decision with a proj"
+   "text": "- **Change the project** of a proposed item with its **Project** chip in the open proposal. Updates "
   },
   "help.md | tracker | 4efaafd686eb": {
    "count": 1,
@@ -2326,9 +2334,13 @@
    "count": 1,
    "text": "Nothing reaches the tracker until you approve it, and all project data stays in the vault folder on "
   },
-  "help.md | tracker | 58aba9d71a21": {
+  "help.md | tracker | 675ac361f6c0": {
    "count": 1,
    "text": "4. Press **Apply n changes**: the ticked rows are written to the tracker as one change, and **Undo**"
+  },
+  "help.md | tracker | 6a12095854ba": {
+   "count": 1,
+   "text": "- **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal on Intake"
   },
   "help.md | tracker | 6ae68ff04d5d": {
    "count": 1,
@@ -2338,17 +2350,13 @@
    "count": 1,
    "text": "4. **Apply** (Record): Apply writes what you approved to the tracker and files the minutes in the pr"
   },
-  "help.md | tracker | 7573e46ccb14": {
-   "count": 1,
-   "text": "- Tick meetings (or **Select new**: everything not yet processed; private meetings aren't listed, as"
-  },
-  "help.md | tracker | 7b6d94e785fa": {
-   "count": 1,
-   "text": "- **Shape the meeting** (BL-286): in the prep brief, your focus and aim in your own words, read back"
-  },
   "help.md | tracker | 7c3cedbe9e4f": {
    "count": 1,
    "text": "- **Generate** (the sparkle beside Edit) drafts the current state with Claude from the last 7, 14 or"
+  },
+  "help.md | tracker | 7c61c5ccb178": {
+   "count": 1,
+   "text": "- **Update an existing item instead:** in the open view of any proposed new action, RAID item or dec"
   },
   "help.md | tracker | 902645307df3": {
    "count": 1,
@@ -2361,10 +2369,6 @@
   "help.md | tracker | 9775fd60470f": {
    "count": 1,
    "text": "2. **Check where each sentence came from:** in a drafted status every sentence is underlined. Click "
-  },
-  "help.md | tracker | 9a6ccca57b2b": {
-   "count": 1,
-   "text": "- **Apply n changes** writes the ticked rows to the tracker as one change, and **Undo** in the messa"
   },
   "help.md | tracker | 9db450b2eb33": {
    "count": 1,
@@ -2394,9 +2398,9 @@
    "count": 1,
    "text": "2. Open the vault in Claude Code. The first session after 07:00 backs up the tracker, runs the mail "
   },
-  "help.md | tracker | c579c13696c9": {
+  "help.md | tracker | c62af65bd80f": {
    "count": 1,
-   "text": "- **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal in Review"
+   "text": "- **AI on the minutes:** the AI bar and the ✦ on a section work with all of the project's facts, but"
   },
   "help.md | tracker | c74c05166786": {
    "count": 1,
@@ -2418,21 +2422,29 @@
    "count": 1,
    "text": "5. **See and report** (Out): The dashboard updates at once. Weekly and client reports are drafted fr"
   },
-  "help.md | tracker | d384be2aae7c": {
+  "help.md | tracker | d31fcce40af6": {
    "count": 1,
-   "text": "7. **Wrong project?** Press **Project** on the item's row (it shows on the highlighted row, beside E"
+   "text": "7. **Wrong project?** Open the proposal and choose another in its **Project** chip, beside Owner and"
   },
   "help.md | tracker | d6fb4f214d8d": {
    "count": 1,
    "text": "- **First session after 07:00**: **It catches up.** creaite backs up the tracker, runs the mail and "
   },
-  "help.md | tracker | daa1456f966d": {
-   "count": 1,
-   "text": "10. **Looks like an item you already have:** a proposal that repeats an action, risk or decision in "
-  },
   "help.md | tracker | df5620df0d9e": {
    "count": 1,
    "text": "| `how is ABC going?` | An answer from the project's memory, the tracker and the files, with sources"
+  },
+  "help.md | tracker | e35dbf8d9a6c": {
+   "count": 1,
+   "text": "8. **Looks like an item you already have:** a proposal that repeats an action, risk or decision in t"
+  },
+  "help.md | tracker | e3f54ca422b9": {
+   "count": 1,
+   "text": "4. Press Enter to **stage** it: nothing reaches the tracker until you apply, and the bar offers **Un"
+  },
+  "help.md | tracker | e96eb03a6d80": {
+   "count": 1,
+   "text": "- Proposals wait on Intake until you decide. Click a proposal's row (or its pencil) to open it over "
   },
   "help.md | tracker | e9ff2a75861d": {
    "count": 1,
@@ -2446,17 +2458,13 @@
    "count": 1,
    "text": "6. **In an open item, each change is staged on its own** as you pick a value, press Enter or leave t"
   },
-  "help.md | tracker | ef325225e798": {
-   "count": 1,
-   "text": "- **Looks like:** a proposal that repeats an item in the tracker says **Looks like ABC-A-009 (same p"
-  },
-  "help.md | tracker | f2199aadad6e": {
-   "count": 1,
-   "text": "9. **AI on selected text:** in a note on its Notes tab, in Current state, in an open item's title an"
-  },
   "help.md | tracker | f9a700ea3d97": {
    "count": 1,
    "text": "| `actions register for ABC` | A one-off branded Word document from the tracker. |"
+  },
+  "help.md | tracker | fb26abd04e09": {
+   "count": 1,
+   "text": "- **Track** (the first column of every table; hover its heading for a reminder): **tick** registers "
   },
   "help.md | vault | 2d766dc0ad1f": {
    "count": 1,
@@ -2474,13 +2482,17 @@
    "count": 1,
    "text": "- Each day creaite also makes a closed **backup zip** of what rebuilds the vault: the day's database"
   },
+  "help.md | vault | 576272fb72d1": {
+   "count": 1,
+   "text": "- **The sweep reads the calendar from today:** it refreshes today and the days ahead and does not re"
+  },
+  "help.md | vault | 6a12095854ba": {
+   "count": 1,
+   "text": "- **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal on Intake"
+  },
   "help.md | vault | 76e8bd9137a5": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"
-  },
-  "help.md | vault | 7acc99269b46": {
-   "count": 1,
-   "text": "- **The sweep reads the calendar from today:** it refreshes today and the days ahead and does not re"
   },
   "help.md | vault | 7c3cedbe9e4f": {
    "count": 1,
@@ -2518,6 +2530,10 @@
    "count": 1,
    "text": "- **Make the launcher:** ask in Claude Code (`setup`); it offers a small **creaite** app in your App"
   },
+  "help.md | vault | bd5f20b649ab": {
+   "count": 1,
+   "text": "- **Project documents are set aside**: not listed, and not scanned (that is most of a large engageme"
+  },
   "help.md | vault | be82c21b8ba9": {
    "count": 1,
    "text": "8. **A reload doesn't lose a change.** Staged changes stay staged, and the bar comes back, in every "
@@ -2529,14 +2545,6 @@
   "help.md | vault | bfbeeaa86214": {
    "count": 1,
    "text": "- **Reconnect vault** in the top bar: you've opened the dashboard as a file. Open it from the live s"
-  },
-  "help.md | vault | c14e226dd41a": {
-   "count": 1,
-   "text": "- **Project documents are set aside**: not listed, and not scanned (that is most of a large engageme"
-  },
-  "help.md | vault | c579c13696c9": {
-   "count": 1,
-   "text": "- **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal in Review"
   },
   "help.md | vault | cf028328be36": {
    "count": 1,
@@ -2558,77 +2566,13 @@
    "count": 1,
    "text": "- **Local only**: All project data stays in the vault folder on your laptop. Never cloud folders, ne"
   },
-  "intake.js | live server | 1cb7005e69ac": {
-   "count": 1,
-   "text": "Process couldn't start: check the live server."
-  },
-  "intake.js | live server | 35355cd61a48": {
-   "count": 1,
-   "text": "Checking needs the live server"
-  },
-  "intake.js | live server | 3766246c27a6": {
-   "count": 2,
-   "text": "Processing needs the live server"
-  },
-  "intake.js | live server | 3afce8e28722": {
-   "count": 2,
-   "text": "Removing needs the live server"
-  },
-  "intake.js | live server | 6dfeed859ab3": {
-   "count": 1,
-   "text": "Loading needs the live server"
-  },
-  "intake.js | live server | 87c525dcb4d2": {
-   "count": 1,
-   "text": "Refreshing needs the live server"
-  },
-  "intake.js | live server | 9fbbfa50dba9": {
-   "count": 1,
-   "text": "Refresh couldn't start: check the live server."
-  },
-  "intake.js | live server | aa1bd0670854": {
-   "count": 1,
-   "text": "Clearing needs the live server"
-  },
-  "intake.js | live server | b09e28aee25b": {
-   "count": 5,
-   "text": "Needs the live server"
-  },
-  "intake.js | live server | b3afd04168db": {
-   "count": 1,
-   "text": "Adding files needs the live server"
-  },
-  "intake.js | live server | c264629e880e": {
-   "count": 2,
-   "text": "The live server stopped."
-  },
-  "intake.js | live server | e990465954de": {
-   "count": 1,
-   "text": "Previewing needs the live server"
-  },
-  "intake.js | path | aa61a75091c0": {
-   "count": 1,
-   "text": "{}: only .vtt, .docx, .txt, .md or .pdf"
-  },
-  "intake.js | stage | 1f22e07160cd": {
-   "count": 1,
-   "text": "Not staged"
-  },
-  "intake.js | stage | 5a219deadfa7": {
-   "count": 1,
-   "text": "Process didn't stage it. Why not, and what should I do?"
-  },
-  "intake.js | stage | fe07f77eea7d": {
-   "count": 1,
-   "text": "Stopped: nothing more was staged"
-  },
-  "intake.js | sweep | 2bdbf6e0127f": {
-   "count": 1,
-   "text": "No calendar yet: it comes in with the sweep. Refresh reads it now. {}"
-  },
   "live_server.py | apply | 012b122af3a3": {
    "count": 1,
    "text": "Not applied: {}"
+  },
+  "live_server.py | apply | 232f489d7c93": {
+   "count": 1,
+   "text": "That save is no longer in staging, so nothing was applied."
   },
   "live_server.py | apply | 259e0d1d40c0": {
    "count": 1,
@@ -2721,6 +2665,10 @@
   "live_server.py | stage | 1f4ec832f2d6": {
    "count": 1,
    "text": "Staged a close of {} for Review."
+  },
+  "live_server.py | stage | 232f489d7c93": {
+   "count": 1,
+   "text": "That save is no longer in staging, so nothing was applied."
   },
   "live_server.py | stage | 5010ad5b015b": {
    "count": 1,
@@ -2863,7 +2811,7 @@
    "text": "Staged · created when you apply"
   },
   "panel.js | apply | 043583a00a66": {
-   "count": 1,
+   "count": 2,
    "text": "that proposal has already been applied"
   },
   "panel.js | apply | 0af16cb7b384": {
@@ -2893,10 +2841,6 @@
   "panel.js | apply | 68d1e1222698": {
    "count": 1,
    "text": "Not applied"
-  },
-  "panel.js | apply | 6c643269c36a": {
-   "count": 1,
-   "text": "Apply stopped:"
   },
   "panel.js | apply | 7b4691da362a": {
    "count": 1,
@@ -2967,8 +2911,12 @@
    "text": "proposed-{}-{}{}-dashboard.json"
   },
   "panel.js | proposal | 043583a00a66": {
-   "count": 1,
+   "count": 2,
    "text": "that proposal has already been applied"
+  },
+  "panel.js | proposal | 16e13eaa98ef": {
+   "count": 1,
+   "text": "Update proposal"
   },
   "panel.js | proposal | 1c4d995cc1d3": {
    "count": 1,
@@ -2978,20 +2926,20 @@
    "count": 2,
    "text": "Editing a proposal — nothing reaches the tracker until it's approved"
   },
-  "panel.js | proposal | a0b1b821de08": {
-   "count": 1,
-   "text": "Save or cancel this proposal first: its changes aren't saved yet."
-  },
   "panel.js | proposal | abfe1d94c710": {
    "count": 1,
    "text": "proposed-{}-{}{}-dashboard.json"
+  },
+  "panel.js | proposal | bb23246fadd5": {
+   "count": 1,
+   "text": "Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted"
   },
   "panel.js | proposal | d4e07e769c72": {
    "count": 1,
    "text": "Proposal: {}"
   },
   "panel.js | proposal | e7d9c9967f4e": {
-   "count": 1,
+   "count": 3,
    "text": "Proposal updated — still waiting for review"
   },
   "panel.js | stage | 0078a90daa74": {
@@ -3066,6 +3014,10 @@
    "count": 1,
    "text": "sweep runs failed"
   },
+  "panel.js | tracker | 2bb4284a1505": {
+   "count": 1,
+   "text": "{} is no longer in the tracker: its change is shown in the old form"
+  },
   "panel.js | tracker | 496b91f50062": {
    "count": 2,
    "text": "Editing a proposal — nothing reaches the tracker until it's approved"
@@ -3077,6 +3029,10 @@
   "panel.js | tracker | 9781bddc1540": {
    "count": 1,
    "text": "Nothing reaches the tracker until you apply"
+  },
+  "panel.js | tracker | bb23246fadd5": {
+   "count": 1,
+   "text": "Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted"
   },
   "paths.py | path | 95a91a774a9a": {
    "count": 1,
@@ -3190,10 +3146,6 @@
    "count": 1,
    "text": "Mail and Teams items already swept"
   },
-  "projects.js | sweep | 825e3b309ccf": {
-   "count": 1,
-   "text": "Raised in at least (meetings or sweeps)"
-  },
   "projects.js | sweep | 9d4d6cd4a726": {
    "count": 1,
    "text": "swept mail and Teams"
@@ -3286,16 +3238,16 @@
    "count": 1,
    "text": "{} isn't in the tracker."
   },
+  "review.js | apply | 0d5206d285b6": {
+   "count": 1,
+   "text": "apply stopped, all back on Intake: {}"
+  },
   "review.js | apply | 2f971dc2c83d": {
    "count": 1,
    "text": "· not applied: {}"
   },
-  "review.js | apply | 4204e299b087": {
-   "count": 1,
-   "text": "{} Applied at once; Undo reverses the batch."
-  },
   "review.js | apply | 67a592edc610": {
-   "count": 4,
+   "count": 3,
    "text": "already applied"
   },
   "review.js | apply | cc249626f107": {
@@ -3310,21 +3262,17 @@
    "count": 1,
    "text": "Already applied: undo it in Activity"
   },
-  "review.js | extract | a674b0fbbeeb": {
+  "review.js | live server | 167ffb3b915b": {
    "count": 1,
-   "text": "Spot-check: a routine item, shown so you can check the extraction"
-  },
-  "review.js | live server | 4d4cd4c336d2": {
-   "count": 1,
-   "text": "Moving minutes needs the live server, which refiles them; or say “minutes {} is DEF” in Claude Code"
+   "text": "Discarding a proposal needs the live server; or say “reject {} --discard” in Claude Code"
   },
   "review.js | live server | 6351caf065e6": {
    "count": 1,
    "text": "This conflicts with a newer change: Keep current or Use this one needs the live server; or say “keep"
   },
-  "review.js | live server | 8422c23992de": {
-   "count": 2,
-   "text": "disabled title=\"Needs the live server\""
+  "review.js | live server | 6601f93704c1": {
+   "count": 1,
+   "text": "Approving these minutes without the transcript needs the live server; or say “approve {} --without-t"
   },
   "review.js | live server | a9ae3d7ed829": {
    "count": 1,
@@ -3342,113 +3290,45 @@
    "count": 1,
    "text": "{} needs the live server; or say “review” in Claude Code"
   },
-  "review.js | proposal | 09df95676efb": {
+  "review.js | proposal | 167ffb3b915b": {
    "count": 1,
-   "text": "One proposal at a time"
+   "text": "Discarding a proposal needs the live server; or say “reject {} --discard” in Claude Code"
   },
-  "review.js | proposal | 0d7bd33d39be": {
+  "review.js | proposal | 5e6b547b4d7a": {
    "count": 1,
-   "text": "Only proposed actions, risks, issues and decisions can be changed here"
-  },
-  "review.js | proposal | 10fe95035e3c": {
-   "count": 1,
-   "text": "Set the due date of {} proposals"
-  },
-  "review.js | proposal | 12dbc7bfa644": {
-   "count": 1,
-   "text": "As proposed"
-  },
-  "review.js | proposal | 21a8f0f6f4f8": {
-   "count": 1,
-   "text": "Approve {} routine proposal{}?"
-  },
-  "review.js | proposal | 23518fd9f1a2": {
-   "count": 1,
-   "text": "Every undecided proposal the filters show, in collapsed minutes too"
-  },
-  "review.js | proposal | 5a40e775fc47": {
-   "count": 1,
-   "text": "that proposal can't be moved"
-  },
-  "review.js | proposal | 5ff80988fe6f": {
-   "count": 1,
-   "text": "Filter the proposals"
+   "text": "Approve the minutes without the transcript copy, or discard the proposal"
   },
   "review.js | proposal | 685d70322990": {
    "count": 1,
    "text": "Back to a new item, as it was proposed"
   },
-  "review.js | proposal | 7984b433ffee": {
-   "count": 2,
-   "text": "Rejected proposal"
-  },
   "review.js | proposal | 7c0b7b404623": {
-   "count": 2,
+   "count": 1,
    "text": "Reject {} proposals?"
   },
-  "review.js | proposal | 865338fe9cbf": {
+  "review.js | proposal | 823dc1a05951": {
    "count": 1,
-   "text": "{} set to {} on {} proposal{}{}"
+   "text": "{} proposal{} held in Intake: a file to be filed has gone"
   },
-  "review.js | proposal | 8ce739a3a362": {
+  "review.js | proposal | 91345817da3c": {
    "count": 1,
-   "text": "Decide one proposal at a time, with its source beside it"
-  },
-  "review.js | proposal | 929017ada05a": {
-   "count": 1,
-   "text": "Proposal"
-  },
-  "review.js | proposal | a3653a93cdf1": {
-   "count": 1,
-   "text": "Approves the routine proposals the filters show, after a preview."
-  },
-  "review.js | proposal | b581cb260ae1": {
-   "count": 1,
-   "text": "Claude's proposals. {} waiting"
-  },
-  "review.js | proposal | badaa84c6be7": {
-   "count": 1,
-   "text": "{} proposal{} waiting outside them."
-  },
-  "review.js | proposal | e225a43f6a58": {
-   "count": 1,
-   "text": "Approves every routine proposal, after a preview."
-  },
-  "review.js | proposal | fa3852d02836": {
-   "count": 1,
-   "text": "Only proposed actions and RAID items have this"
-  },
-  "review.js | sweep | 69d7d2607905": {
-   "count": 1,
-   "text": "Sweep now"
-  },
-  "review.js | sweep | 9a1e5f67c787": {
-   "count": 1,
-   "text": "The last sweep was {}."
-  },
-  "review.js | sweep | a0f0bccda725": {
-   "count": 1,
-   "text": "Mail and Teams have not been swept yet."
-  },
-  "review.js | sweep | e74ad8d4660c": {
-   "count": 1,
-   "text": "Source (each meeting or sweep)"
-  },
-  "review.js | tracker | 29ab9bc59163": {
-   "count": 1,
-   "text": "The minutes and transcript will be filed in {}'s folders when the minutes are approved. Nothing chan"
-  },
-  "review.js | tracker | 8a2fba623741": {
-   "count": 1,
-   "text": "{} {} to {} already in the tracker, so {} with {}."
+   "text": "Held: {}. Approve the minutes without the transcript copy, or discard the proposal"
   },
   "review.js | tracker | fc62f580e27a": {
-   "count": 2,
+   "count": 1,
    "text": "Rejecting writes nothing to the tracker; Undo brings them back"
   },
   "review.py | extract | c455bdd8f621": {
    "count": 1,
    "text": "say \"re-extract\" (minutes.py refresh) to rebuild the staged items from the draft, or \"approve {} --a"
+  },
+  "review.py | proposal | 509d508df59d": {
+   "count": 1,
+   "text": "approve the minutes without the transcript copy, or discard the proposal"
+  },
+  "review.py | proposal | 50a2cef80503": {
+   "count": 1,
+   "text": "discard the proposal, or put the file back"
   },
   "review.py | proposal | fc64089924e4": {
    "count": 1,
@@ -3462,18 +3342,6 @@
    "count": 1,
    "text": "say \"approve {} --sync\" to update the staged items to match the draft, or \"approve {} --as-staged\" t"
   },
-  "review.py | stage | 38897651d232": {
-   "count": 1,
-   "text": "Staged action not in the draft: {}"
-  },
-  "review.py | stage | 6e3e8769828e": {
-   "count": 1,
-   "text": "Action {} {}: draft says {}; staged {}"
-  },
-  "review.py | stage | 7770338ecba8": {
-   "count": 1,
-   "text": "Draft has a {} that isn't staged: {}"
-  },
   "review.py | stage | 9647f7b78798": {
    "count": 1,
    "text": "{}: draft says “{}”; staged “{}”"
@@ -3485,14 +3353,6 @@
   "review.py | stage | c455bdd8f621": {
    "count": 1,
    "text": "say \"re-extract\" (minutes.py refresh) to rebuild the staged items from the draft, or \"approve {} --a"
-  },
-  "review.py | stage | dde556290bc0": {
-   "count": 1,
-   "text": "Staged {} not in the draft: {}"
-  },
-  "review.py | stage | eeb824816af9": {
-   "count": 1,
-   "text": "Action {} is in the draft but not staged: {}"
   },
   "search.py | path | 7c25242797d7": {
    "count": 1,
@@ -3514,17 +3374,13 @@
    "count": 1,
    "text": "that proposal has already been applied"
   },
-  "settings.js | apply | 960f1a506fef": {
-   "count": 1,
-   "text": "Rename or merge to fix spellings across every item (applied with Undo). Removing hides a name from t"
-  },
   "settings.js | apply | bc20a71ac629": {
    "count": 1,
    "text": "Choose where it applies"
   },
-  "settings.js | live server | 103ed1e65490": {
+  "settings.js | live server | 0d4a504701d6": {
    "count": 1,
-   "text": "Live server and backups"
+   "text": "Seen needs the live server"
   },
   "settings.js | live server | 201907cd4712": {
    "count": 1,
@@ -3542,25 +3398,13 @@
    "count": 1,
    "text": "Dismiss needs the live server"
   },
-  "settings.js | live server | 7c16dfa016f2": {
-   "count": 2,
-   "text": "Stop the live server"
-  },
   "settings.js | live server | 86d35cbc8055": {
    "count": 1,
    "text": "Live server stopped"
   },
-  "settings.js | live server | 9d0533a77fa5": {
-   "count": 1,
-   "text": "Start the live server"
-  },
   "settings.js | live server | b3f05c1d68e8": {
    "count": 1,
    "text": "The live server isn't running"
-  },
-  "settings.js | live server | bc302688801d": {
-   "count": 1,
-   "text": "Stops the live server; open creaite again from its launcher or Terminal"
   },
   "settings.js | live server | d0cfc256c7e8": {
    "count": 1,
@@ -3586,18 +3430,6 @@
    "count": 1,
    "text": "creaite {} installed; restart the live server"
   },
-  "settings.js | live server | fac693ba9219": {
-   "count": 1,
-   "text": "Needs the live server."
-  },
-  "settings.js | path | 36d6a9352a41": {
-   "count": 1,
-   "text": "Save a creaite-X.Y.Z.zip from GitHub in system/releases"
-  },
-  "settings.js | path | 4f6f908bb520": {
-   "count": 1,
-   "text": "{} name{} still in settings.json"
-  },
   "settings.js | path | 53d4f252fddf": {
    "count": 1,
    "text": "Copying to system/releases…"
@@ -3606,25 +3438,9 @@
    "count": 2,
    "text": "Saved to settings.json"
   },
-  "settings.js | proposal | 01658523d482": {
-   "count": 1,
-   "text": "Each project's own workstreams. A lead, keywords and aliases (e.g. UAT for Testing) help creaite mat"
-  },
   "settings.js | proposal | 043583a00a66": {
    "count": 1,
    "text": "that proposal has already been applied"
-  },
-  "settings.js | proposal | 33f68ba90209": {
-   "count": 1,
-   "text": "0.6 by default: the share of words a proposal has in common with an open item of the same type in th"
-  },
-  "settings.js | proposal | 8be94e337115": {
-   "count": 1,
-   "text": "Review: move to the next proposal after a decision"
-  },
-  "settings.js | proposal | fc4aafe4d588": {
-   "count": 1,
-   "text": "Everyone who owns an item, with one full name each. Aliases and email addresses map to that name whe"
   },
   "settings.js | stage | 1f22e07160cd": {
    "count": 3,
@@ -3646,89 +3462,25 @@
    "count": 3,
    "text": "Staged for Review"
   },
-  "settings.js | sweep | 2fc14adb392a": {
-   "count": 1,
-   "text": "A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches u"
-  },
-  "settings.js | sweep | 37a913593c22": {
-   "count": 1,
-   "text": "When the sweep runs and what it reads are in Essentials › Your day"
-  },
-  "settings.js | sweep | 578234eea309": {
-   "count": 1,
-   "text": "Mail and Teams last swept {}"
-  },
-  "settings.js | sweep | 89179b8a1d2a": {
-   "count": 1,
-   "text": "The sweep skips what these match, even when it names a project, and the summary counts what was skip"
-  },
-  "settings.js | sweep | 94f0d128408b": {
-   "count": 1,
-   "text": "Mail and Teams never swept"
-  },
-  "settings.js | sweep | d3545e6e4ca6": {
-   "count": 1,
-   "text": "Catch up when the last sweep is older than (minutes)"
-  },
-  "settings.js | sweep | dfdd7fcf67ed": {
-   "count": 1,
-   "text": "Sweep"
-  },
-  "settings.js | vault | 44a294cb3dd9": {
-   "count": 1,
-   "text": "The creaite app belongs to this port: if you change it, install the app again and reconnect the vaul"
-  },
   "shell.html | apply | 8a2baa2304f2": {
    "count": 1,
    "text": "Editing — changes apply when you save"
-  },
-  "shell.html | apply | d25029ffbd2d": {
-   "count": 1,
-   "text": "Saves are held and applied when it's back. Start it in Terminal:"
   },
   "shell.html | extract | 51e06808f0c6": {
    "count": 1,
    "text": "Each figure is a count out of its total. Nothing is rated until a group has 10. These count extracti"
   },
-  "shell.html | live server | d28b6fb7717c": {
-   "count": 1,
-   "text": "Live server isn't running."
-  },
-  "shell.html | path | e539b4259216": {
-   "count": 1,
-   "text": "· .vtt, .docx, .txt, .md or .pdf, up to 25 MB each"
-  },
-  "shell.html | proposal | 3814d9e9537a": {
-   "count": 1,
-   "text": "Decide the selected proposals"
-  },
   "shell.html | proposal | 5f6ccf3466ce": {
    "count": 1,
    "text": "Edited proposals"
-  },
-  "shell.html | proposal | 6c8265fe30c2": {
-   "count": 1,
-   "text": "Claude's proposals."
   },
   "shell.html | proposal | d2f2a84108c8": {
    "count": 1,
    "text": "Why proposals were rejected"
   },
-  "shell.html | proposal | d6c39101ab14": {
-   "count": 1,
-   "text": "Transcripts and minutes waiting to be processed. Files you add are saved to the inbox folder. Proces"
-  },
   "shell.html | proposal | edf6ccf053a5": {
    "count": 2,
    "text": "Approved as proposed"
-  },
-  "shell.html | proposal | f8f81cb080d5": {
-   "count": 2,
-   "text": "Search proposals"
-  },
-  "shell.html | sweep | dfdd7fcf67ed": {
-   "count": 1,
-   "text": "Sweep"
   },
   "shell.html | vault | e29a5c46a520": {
    "count": 2,
@@ -3798,6 +3550,10 @@
    "count": 1,
    "text": "The apply didn't run; nothing was changed."
   },
+  "stores/minutes.js | apply | f1c499ab377e": {
+   "count": 1,
+   "text": "The minutes weren't approved; nothing was applied."
+  },
   "stores/minutes.js | live server | da60a01b8a86": {
    "count": 1,
    "text": "The minutes view needs the live server."
@@ -3854,6 +3610,10 @@
    "count": 1,
    "text": "Sweep: {} item{} ({} possible), {} transcript(s) to Intake (inbox/), {} document(s) to file"
   },
+  "sweep.py | proposal | 8c13d91781f5": {
+   "count": 1,
+   "text": "That is a proposal already in Review; open it there."
+  },
   "sweep.py | stage | 24308bb4c80b": {
    "count": 1,
    "text": "It's staged for Review: Undo that first."
@@ -3902,29 +3662,9 @@
    "count": 1,
    "text": "{} marked done. Staged: nothing reaches the tracker until you apply"
   },
-  "today.js | live server | 35355cd61a48": {
-   "count": 1,
-   "text": "Checking needs the live server"
-  },
-  "today.js | live server | 7435a348e945": {
-   "count": 1,
-   "text": "A small app that opens creaite in its own window and starts the live server. It goes outside the vau"
-  },
-  "today.js | live server | 8422c23992de": {
-   "count": 4,
-   "text": "disabled title=\"Needs the live server\""
-  },
   "today.js | live server | 8d13650096be": {
    "count": 1,
    "text": "It needs the live server; or say"
-  },
-  "today.js | live server | a21ac51742bf": {
-   "count": 1,
-   "text": "Needs the live server: start it in Terminal, then run the sweep."
-  },
-  "today.js | live server | b09e28aee25b": {
-   "count": 4,
-   "text": "Needs the live server"
   },
   "today.js | path | 3efb5abde950": {
    "count": 1,
@@ -3934,17 +3674,9 @@
    "count": 1,
    "text": "cd {} && python3 system/scripts/launch.py make-launcher"
   },
-  "today.js | proposal | 6df08b5e9bba": {
-   "count": 1,
-   "text": "{} proposal{} to approve"
-  },
   "today.js | proposal | 76974187aab3": {
    "count": 1,
    "text": "Draft an update for each from what has happened since, as proposals in Review"
-  },
-  "today.js | proposal | 817eca367ae1": {
-   "count": 1,
-   "text": "Review the proposals from {}"
   },
   "today.js | proposal | 929017ada05a": {
    "count": 1,
@@ -3958,10 +3690,6 @@
    "count": 1,
    "text": "cd {} && python3 system/scripts/launch.py make-launcher"
   },
-  "today.js | script | 9958d261997f": {
-   "count": 1,
-   "text": "The same checks as “health check” in Claude Code (doctor.py): it only reads"
-  },
   "today.js | stage | 2164335b4450": {
    "count": 1,
    "text": "{} moved to {}. Staged until you apply"
@@ -3974,89 +3702,13 @@
    "count": 1,
    "text": ", staged for Review"
   },
-  "today.js | sweep | 0cbeb0bd6d3f": {
-   "count": 1,
-   "text": "Last swept {}."
-  },
-  "today.js | sweep | 3cf048441a05": {
-   "count": 2,
-   "text": "Run the first sweep"
-  },
-  "today.js | sweep | 702d3b0f92b9": {
-   "count": 1,
-   "text": "No sweep yet."
-  },
-  "today.js | sweep | 734c1e4395a6": {
-   "count": 2,
-   "text": "Dismiss until the next sweep is due"
-  },
-  "today.js | sweep | 89e064d64db8": {
-   "count": 1,
-   "text": "Microsoft 365 is connected: the sweep last read your mail {}"
-  },
-  "today.js | sweep | 96c61765bfe9": {
-   "count": 1,
-   "text": "Review the sweep of {}"
-  },
-  "today.js | sweep | 99eb14199f62": {
-   "count": 1,
-   "text": "The sweep last read your mail {}"
-  },
-  "today.js | sweep | a21ac51742bf": {
-   "count": 1,
-   "text": "Needs the live server: start it in Terminal, then run the sweep."
-  },
-  "today.js | sweep | a81dda2f2a8b": {
-   "count": 1,
-   "text": "Run sweep"
-  },
-  "today.js | sweep | a8d571f40139": {
-   "count": 1,
-   "text": "Sweep due since {}."
-  },
-  "today.js | sweep | b24be86262dc": {
-   "count": 1,
-   "text": "Connected: the sweep has read your mail"
-  },
-  "today.js | sweep | d70823317dbe": {
-   "count": 1,
-   "text": "Connected in Claude itself, so the page can’t: connect it there, then say “{}” in Claude Code. The f"
-  },
-  "today.js | sweep | ddbbb77b6785": {
-   "count": 1,
-   "text": "Not confirmed yet: the first sweep confirms it, as it reads your mail"
-  },
-  "today.js | sweep | f05489860db6": {
-   "count": 1,
-   "text": "Last swept {}"
-  },
-  "today.js | sweep | feddabdb62d9": {
-   "count": 1,
-   "text": "Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connect"
-  },
   "today.js | tracker | 4791054850e7": {
    "count": 1,
    "text": "{} marked done. Staged: nothing reaches the tracker until you apply"
   },
-  "today.js | tracker | 664994760b33": {
-   "count": 1,
-   "text": "From the tracker; nothing in the tracker changes"
-  },
-  "today.js | tracker | 9e864e4a20ea": {
-   "count": 1,
-   "text": "from the tracker. If the workbook has edits you haven’t imported, it is left as it is."
-  },
   "today.js | tracker | a1461b9a5277": {
    "count": 1,
    "text": "Changed in the tracker after this was proposed."
-  },
-  "today.js | tracker | d6b730340919": {
-   "count": 1,
-   "text": "Approve what's right; nothing reaches the tracker until you do"
-  },
-  "today.js | vault | 7435a348e945": {
-   "count": 1,
-   "text": "A small app that opens creaite in its own window and starts the live server. It goes outside the vau"
   },
   "tracker.py | apply | 05dd21773efe": {
    "count": 1,
@@ -4074,6 +3726,10 @@
    "count": 1,
    "text": "Apply failed; nothing was written. {}: {}"
   },
+  "tracker.py | apply | 4ac7ed23bd99": {
+   "count": 1,
+   "text": "Apply {}: written {}, filed {}, rejected {}, {}{} still pending."
+  },
   "tracker.py | apply | 53e9d023330b": {
    "count": 1,
    "text": "Nothing to apply: no decided items."
@@ -4081,6 +3737,14 @@
   "tracker.py | apply | 5987ca46b1d2": {
    "count": 1,
    "text": "Left in staging, not applied: {}. Delete note or Move back again, or remove {}."
+  },
+  "tracker.py | apply | 8268275a6f44": {
+   "count": 1,
+   "text": "Held in Review, not applied: {} item {}: {}"
+  },
+  "tracker.py | apply | 87a3737e90a7": {
+   "count": 1,
+   "text": "Held in Review, not applied: {} {}"
   },
   "tracker.py | apply | 88ea4fe2f7d5": {
    "count": 1,
@@ -4090,6 +3754,10 @@
    "count": 1,
    "text": "Missed is retired: {} milestone(s) ({}) are now Planned with the state Overdue (apply {}, in Activit"
   },
+  "tracker.py | apply | ab216211262f": {
+   "count": 1,
+   "text": "Nothing applied: every decided item is held in Review."
+  },
   "tracker.py | apply | bde9eabc503c": {
    "count": 1,
    "text": "Apply {} is the 1.5.0 migration that retired Missed (those milestones are now Overdue). It can't be "
@@ -4098,21 +3766,25 @@
    "count": 1,
    "text": "Undid apply {}: {} item(s) reversed."
   },
-  "tracker.py | apply | e8f937c97cd5": {
+  "tracker.py | apply | ed8faf5eeb31": {
    "count": 1,
-   "text": "Apply {}: written {}, filed {}, rejected {}, held {}, {} still pending."
+   "text": "copy: {} is taken by a different file in this apply"
   },
   "tracker.py | apply | f0e473ca609c": {
    "count": 1,
    "text": "(The database backup from before the apply is {}.)"
   },
-  "tracker.py | cx- name | ce0c03655a21": {
+  "tracker.py | apply | fd6b6ac87f80": {
    "count": 1,
-   "text": "Workstreams added from items and settings ({}): {}. Leads and keywords are yours to fill (Settings ›"
+   "text": "Left in staging, not applied: {}: {}."
   },
   "tracker.py | cx- name | e301e6d45fe7": {
    "count": 1,
    "text": "unknown label {} (labels: {}); add it in Settings or with cx-edit first"
+  },
+  "tracker.py | cx- name | fcd4283cc529": {
+   "count": 1,
+   "text": "Workstreams added from items and settings ({}): {}. Leads and keywords are yours to fill (each proje"
   },
   "tracker.py | path | 21ef5d43f88d": {
    "count": 1,
@@ -4121,6 +3793,14 @@
   "tracker.py | path | 4e21da393591": {
    "count": 1,
    "text": "move: path must be a stored projects/ path ({})"
+  },
+  "tracker.py | path | 714bea0093ff": {
+   "count": 1,
+   "text": "remove: {} is not a file in inbox/"
+  },
+  "tracker.py | path | 93e6d4d04676": {
+   "count": 1,
+   "text": "copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({})"
   },
   "tracker.py | path | f20557cc81e7": {
    "count": 1,
@@ -4166,9 +3846,21 @@
    "count": 1,
    "text": "Item {}: Raised set to {} (source or staging date)"
   },
+  "tracker.py | stage | 3f59e10c28ab": {
+   "count": 1,
+   "text": "remove: {}: the file changed since it was staged"
+  },
+  "tracker.py | stage | 4ddabcb55c45": {
+   "count": 2,
+   "text": "copy: {}: the file changed since it was staged"
+  },
   "tracker.py | stage | 5987ca46b1d2": {
    "count": 1,
    "text": "Left in staging, not applied: {}. Delete note or Move back again, or remove {}."
+  },
+  "tracker.py | stage | 93e6d4d04676": {
+   "count": 1,
+   "text": "copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({})"
   },
   "tracker.py | stage | e02d54f8c2ae": {
    "count": 1,
@@ -4177,6 +3869,10 @@
   "tracker.py | stage | f20557cc81e7": {
    "count": 1,
    "text": "{}: {} is not in projects/, inbox/, system/staging/ or system/search/"
+  },
+  "tracker.py | stage | fd6b6ac87f80": {
+   "count": 1,
+   "text": "Left in staging, not applied: {}: {}."
   },
   "tracker.py | tracker | 019d43d339b6": {
    "count": 1,
@@ -4234,21 +3930,17 @@
    "count": 1,
    "text": "{}: path must be relative to the vault root ({})"
   },
+  "tracker.py | vault | a1a55305f487": {
+   "count": 1,
+   "text": "copy: the source must be a path in the vault or the projects folder, with no '..' ({})"
+  },
+  "tracker.py | vault | a4a613ff0dff": {
+   "count": 1,
+   "text": "copy: the source is outside the vault and the projects folder ({})"
+  },
   "update.py | path | df5aa8d53c57": {
    "count": 1,
    "text": "system/releases/{} is already there and differs from the published one. Remove it, or check where it"
-  },
-  "update.py | refused | 4f8ca1c046f9": {
-   "count": 1,
-   "text": "Refused: the zip's VERSION file doesn't match its manifest."
-  },
-  "update.py | refused | acfdee154faf": {
-   "count": 1,
-   "text": "Refused: {} doesn't match its checksum; the zip is damaged or was changed. Download it again."
-  },
-  "update.py | refused | b0ba77c1e949": {
-   "count": 1,
-   "text": "Refused: the zip doesn't match its manifest or reaches outside the engine ({})."
   },
   "update.py | script | 10f4aa5204ce": {
    "count": 1,
@@ -4286,6 +3978,14 @@
    "count": 1,
    "text": "- **Review and apply.** Proposals are grouped by project, bulk approval covers routine items only, a"
   },
+  "whats-new.md | extract | 06c83ace2965": {
+   "count": 1,
+   "text": "- Not in 2.6.0: Re-extract on the chat as \"Read again\" (2.6.1), Plain words (2.6.1), the avatar menu"
+  },
+  "whats-new.md | extract | 773a1c51ddb4": {
+   "count": 1,
+   "text": "- Single-key page shortcuts are planned for 2.6.0, and Re-extract on the chat for 2.6.1."
+  },
   "whats-new.md | live server | 2adc7b1874ad": {
    "count": 1,
    "text": "- **Updates finish themselves.** From the next update, creaite remakes the launcher, refreshes the a"
@@ -4297,6 +3997,10 @@
   "whats-new.md | proposal | 0338a516c166": {
    "count": 1,
    "text": "- **Activity › Quality** shows what you approve as proposed, approve after an edit and reject, by so"
+  },
+  "whats-new.md | proposal | 11cfa107c9be": {
+   "count": 1,
+   "text": "- Some words you will still see are being replaced in 2.6.1 (\"Review\" on labels that now point at In"
   },
   "whats-new.md | proposal | 46271f67a19e": {
    "count": 1,
@@ -4314,6 +4018,14 @@
    "count": 1,
    "text": "- **Review one at a time,** with the source beside each proposal, and a way to move a proposal, or a"
   },
+  "whats-new.md | proposal | fba59cfed8a1": {
+   "count": 1,
+   "text": "2.6.0 contains all of 2.5.4; those items are not repeated here. Old words (\"Review\", \"proposal\", \"st"
+  },
+  "whats-new.md | refused | 03439ed85146": {
+   "count": 1,
+   "text": "- **A document with a list as its project code no longer breaks the match check.** It is refused wit"
+  },
   "whats-new.md | refused | 05d1b89bb76a": {
    "count": 1,
    "text": "- **Safer settings and exports.** Settings that change a project's memory file refuse a file that ch"
@@ -4330,6 +4042,14 @@
    "count": 1,
    "text": "- With a project's client report switched off, creaite now refuses to create, save, export or approv"
   },
+  "whats-new.md | refused | af7816412ea0": {
+   "count": 1,
+   "text": "- Removing someone is refused, with the reason, while they still own items or are named as a stakeho"
+  },
+  "whats-new.md | stage | 11cfa107c9be": {
+   "count": 1,
+   "text": "- Some words you will still see are being replaced in 2.6.1 (\"Review\" on labels that now point at In"
+  },
   "whats-new.md | stage | 2f0b63ba00a2": {
    "count": 1,
    "text": "- **Process in Intake runs as its own job.** Pressing Process no longer ends with \"I've drafted the "
@@ -4341,6 +4061,14 @@
   "whats-new.md | stage | 5dc953f6108e": {
    "count": 1,
    "text": "- **Minutes are staged for the right project.** A meeting file in another project's folder is staged"
+  },
+  "whats-new.md | stage | 6bc4b56644cb": {
+   "count": 1,
+   "text": "- Three views, remembered in this browser: List, Board and Two panes. Stage boxes across the top (Ar"
+  },
+  "whats-new.md | stage | fba59cfed8a1": {
+   "count": 1,
+   "text": "2.6.0 contains all of 2.5.4; those items are not repeated here. Old words (\"Review\", \"proposal\", \"st"
   },
   "whats-new.md | sweep | 0d8356f0bc99": {
    "count": 1,
@@ -4378,6 +4106,10 @@
    "count": 1,
    "text": "- **A daily sweep** of Outlook and Teams proposes items from your mail and chats."
   },
+  "whats-new.md | sweep | fba59cfed8a1": {
+   "count": 1,
+   "text": "2.6.0 contains all of 2.5.4; those items are not repeated here. Old words (\"Review\", \"proposal\", \"st"
+  },
   "whats-new.md | tracker | 0b48ff294b38": {
    "count": 1,
    "text": "- **Health with a ✦.** The sparkle beside a project's health, on its page and on the weekly report's"
@@ -4401,6 +4133,14 @@
   "whats-new.md | tracker | a238640a1989": {
    "count": 1,
    "text": "- **One-off Word documents** from the tracker, such as an actions register or a decision log."
+  },
+  "whats-new.md | unknown field | 1958a0182a04": {
+   "count": 1,
+   "text": "Nothing is required. Any minutes that were stuck before this release (they failed with \"unknown fiel"
+  },
+  "whats-new.md | unknown field | 6078e175f422": {
+   "count": 1,
+   "text": "- **One stuck item no longer stops everything else from saving.** Saving a work item or approving it"
   },
   "whats-new.md | vault | 0a51c12c5eed": {
    "count": 1,
