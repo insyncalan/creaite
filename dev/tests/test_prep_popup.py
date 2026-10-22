@@ -144,7 +144,22 @@ class PrepPopup(LiveBrowserCase):
         got = b.eval("[...document.querySelectorAll('#dayMeets .dmpop button')].map(x=>x.textContent)")
         self.assertEqual(got, ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", b.eval("document.querySelector('#dayMeets .dmpop .agsaved').textContent"))
-        b.click_until("#dayMeets .dmpop [data-prepgo]", "location.hash.startsWith('#prep=')")   # a redraw between press and release loses a click (#152)
+        # the peek reads /api/prep/view as it opens and redraws when the answer lands, moving the button: on a slow runner that came
+        # between the mouse's move and its press, the press hit the page, focus left the peek and it closed. Wait for the read first.
+        # A press lost to a redraw (#152) can also take focus out of the peek, which then closes: so each try opens it again from
+        # the title's focus, as Alan would, rather than pressing a button that has gone.
+        for i in range(3):
+            if not b.eval("!!document.querySelector('#dayMeets .dmpop')"):
+                b.eval("document.activeElement.blur(); document.querySelector('#dayMeets .dmti').focus()")
+            b.wait("document.querySelector('#dayMeets .dmpop [data-prepgo]') && !document.querySelector('#dayMeets .dmpop [role=status]')", 15)
+            b.pump(0.1)
+            b.click("#dayMeets .dmpop [data-prepgo]")
+            try:
+                b.wait("location.hash.startsWith('#prep=')", 3)
+                break
+            except TimeoutError:
+                if i == 2:
+                    raise
         self.assertFalse(b.eval(f"!!{DLG} && {DLG}.open"))                                           # the old popup never opened
 
     def test_111_the_peek_shows_the_aim_what_to_raise_and_the_ask_from_the_stored_focus(self):

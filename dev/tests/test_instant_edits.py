@@ -83,9 +83,7 @@ class InstantEdits(LiveBrowserCase):
         self.assertTrue(r["saving"], "the row carries the saving dot while it saves")
         self.assertLess(r["ms"], 500)   # one frame; generous for a loaded runner (the value check is the frame)
         self.wait_snack("saved and applied")
-        print("PROBE snack", self.snack())
         self.settle()
-        print("PROBE after settle", self.snack(), self.row("ABC-A-002")["priority"], b.eval("REC('actions','ABC-A-002').pr"), self.staged())
         self.assertEqual(self.row("ABC-A-002")["priority"], "Urgent")
         self.assertEqual(len(self.v.rows("applies")), before + 1)
         self.assertFalse(b.eval("!!document.querySelector('#workTbl tr[data-row=\"ABC-A-002\"] .pkdot')"), "the mark clears")
@@ -167,9 +165,7 @@ class InstantEdits(LiveBrowserCase):
         b.eval("document.getElementById('snackU').click()")
         b.wait("REC('actions','ABC-A-002').pr==='Urgent'", 2)              # Retry: on screen again at once
         self.wait_snack("saved and applied")
-        print("PROBE snack", self.snack())
         self.settle()
-        print("PROBE after settle", self.snack(), self.row("ABC-A-002")["priority"], b.eval("REC('actions','ABC-A-002').pr"), self.staged())
         self.assertEqual(self.row("ABC-A-002")["priority"], "Urgent")
         self.assertEqual(self.counts()["data"], 0)
 

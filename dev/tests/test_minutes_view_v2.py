@@ -378,8 +378,11 @@ class MinutesViewV2(LiveBrowserCase):
         b = self.b
         label = lambda: self.ev("document.querySelector('#v-minutes .sheet-zv').textContent")   # noqa: E731
         real = lambda: self.ev("Math.round(+document.querySelector('#v-minutes .sheet-fit').dataset.scale*100)+'%'")   # noqa: E731
-        room = lambda: self.ev("""(()=>{ const s=document.querySelector('#v-minutes .sheet-scroll').getBoundingClientRect(), f=document.querySelector('#v-minutes .sheet-fit').getBoundingClientRect();
-          return {w: f.width, left: f.left-s.left, right: s.right-f.right, room: s.width-32}; })()""")   # noqa: E731
+        # left and right are measured inside the scroller's client box: a classic scrollbar (15 px in Linux Chrome, none with
+        # the Mac's overlay scrollbars) takes room on the right that the page is rightly not centred over
+        room = lambda: self.ev("""(()=>{ const el=document.querySelector('#v-minutes .sheet-scroll'), s=el.getBoundingClientRect(), f=document.querySelector('#v-minutes .sheet-fit').getBoundingClientRect();
+          const inL=s.left+el.clientLeft, inR=inL+el.clientWidth;
+          return {w: f.width, left: f.left-inL, right: inR-f.right, room: s.width-32, bar: el.offsetWidth-el.clientWidth-2*el.clientLeft}; })()""")   # noqa: E731
         b.click("#mnTrBtn")                                     # the transcript hidden: room for more than the real size at 1400
         b.wait("!document.querySelector('.mnpane')")
         b.pump(0.4)
