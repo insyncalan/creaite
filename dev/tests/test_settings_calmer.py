@@ -176,7 +176,7 @@ class SettingsReading(LiveBrowserCase):
         self.assertEqual(b.eval("JSON.parse(localStorage.getItem('creaite-health-count')).n"), 2)
         # the cards that were in System follow Health
         self.assertEqual(b.eval("[...document.querySelectorAll('#settingsBody [data-sec]')].map(c=>c.dataset.sec)"),
-                         ["health", "more-health", "live", "setup", "diag", "version", "danger"])   # v2.6 (#246): Health check's Reset, under Health
+                         ["health", "more-health", "live", "setup", "diag", "version", "signin", "danger"])   # v2.6 (#246): Health check's Reset, under Health
 
     def test_a_built_fix_says_what_it_does_and_posts_its_own_route_with_nothing_else(self):
         ans = json.loads(json.dumps(HEALTH))

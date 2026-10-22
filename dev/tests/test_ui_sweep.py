@@ -127,6 +127,7 @@ class UiSweepCase(ts.Snapshots):
                "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
                "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; document.getElementById('mnApprove') && document.getElementById('mnApprove').open && document.getElementById('mnApprove').close(); go('today')")
         go(b) if callable(go) else b.eval(go)
+        b.eval("typeof tipHide==='function' && tipHide()")   # a tooltip left by the pointer resting where the last screen put it is not part of this screen
         b.wait(ready, 15)
         last = None
         for _ in range(12):
@@ -135,6 +136,7 @@ class UiSweepCase(ts.Snapshots):
             if html == last:
                 break
             last = html
+        b.eval("typeof tipHide==='function' && tipHide()")
         b.eval(PROBE + ";true")
         return region
 
