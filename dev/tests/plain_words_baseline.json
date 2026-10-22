@@ -1267,10 +1267,6 @@
    "count": 1,
    "text": "- If the server is stopped when you open the app, it shows “The live server isn't running” with a **"
   },
-  "help.md | live server | 762c75a299f7": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
-  },
   "help.md | live server | 76e8bd9137a5": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"
@@ -1310,6 +1306,10 @@
   "help.md | live server | a1cca51f5497": {
    "count": 1,
    "text": "- **A plain \"I can't\":** some things can never be done, whatever you confirm: send, forward or reply"
+  },
+  "help.md | live server | a2024d8715e3": {
+   "count": 1,
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
   "help.md | live server | a9e8900f0251": {
    "count": 1,
@@ -1447,10 +1447,6 @@
    "count": 1,
    "text": "Everything in creaite, by feature. For the short version see [Start here](#start-here); for a job st"
   },
-  "help.md | path | 762c75a299f7": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
-  },
   "help.md | path | 76e8bd9137a5": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"
@@ -1466,6 +1462,10 @@
   "help.md | path | 98a1a1423dd5": {
    "count": 1,
    "text": "- Something failed: **Settings › Health › Diagnostics** lists the latest errors and has **Copy diagn"
+  },
+  "help.md | path | a2024d8715e3": {
+   "count": 1,
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
   "help.md | path | a4935306c299": {
    "count": 1,
@@ -1687,10 +1687,6 @@
    "count": 1,
    "text": "- Every save, new item, health change, current-state edit and Approve or Reject is written as a prop"
   },
-  "help.md | proposal | ac5dccf72d27": {
-   "count": 1,
-   "text": "- **The sidebar:** **Today**, **Work**, **Intake**, **Projects** and **People** are at the top; **Mo"
-  },
   "help.md | proposal | ad7ac95d0855": {
    "count": 1,
    "text": "4. **Approve routine** (in the Routine group's heading) approves every routine proposal in that grou"
@@ -1835,13 +1831,13 @@
    "count": 1,
    "text": "- **Saved as you type:** the text is kept in `system/staging/drafts/notes/` a moment after each paus"
   },
-  "help.md | script | 762c75a299f7": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
-  },
   "help.md | script | 76e8bd9137a5": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"
+  },
+  "help.md | script | a2024d8715e3": {
+   "count": 1,
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
   "help.md | script | b8d9ffdb6072": {
    "count": 1,
@@ -2151,10 +2147,6 @@
    "count": 1,
    "text": "Or say: `ignore calendar invites starting with ToDo in the sweep` `stop ignoring humancapital`"
   },
-  "help.md | sweep | 762c75a299f7": {
-   "count": 1,
-   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
-  },
   "help.md | sweep | 778f471584d2": {
    "count": 1,
    "text": "- Each candidate item has its own **Create work item** (the +, filled from the item: its words, owne"
@@ -2186,6 +2178,10 @@
   "help.md | sweep | 8f6aaf05468b": {
    "count": 1,
    "text": "3. After each sweep, the summary counts what each rule skipped (\"Ignored 14: ToDo invites 9, humanca"
+  },
+  "help.md | sweep | a2024d8715e3": {
+   "count": 1,
+   "text": "- **Health:** checks run when you open it (**Check again** reruns them) and list only what needs you"
   },
   "help.md | sweep | ab54216e840a": {
    "count": 1,
