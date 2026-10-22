@@ -22,6 +22,18 @@ They work today without these diffs; the diffs make the route exact and durable,
 The brief asks for "who, via where, what, when" and for each undo to strike the original. Storing the route with each change
 makes that exact for good, at the moment it is written.
 
+## Apply order and verified base (22-10-2026)
+
+Base: `origin/v261-241` at `7f254b76` (the 2.6.1 line head plus #241). `live_server.diff` was regenerated with
+shorter context (`git diff -U1`) because its route-table hunk no longer applied once `files_get` gained a trailing comment.
+`schema.diff`, `tracker.diff` and `tests-after.diff` are unchanged.
+
+Each of the four applies and reverses (`git apply --check`, then `-R --check`) on that base on its own. All four also
+apply and reverse together with `291/update.py.diff`, `291/live_server.py.diff`, `300/live_server.diff`,
+`261-inode-gap/tracker-inode.py.diff` and `261-low-notes/tracker-resolve-einval.diff`, in both orders tried:
+the work-item-history diffs first, and the others first. No order dependence was found, because the hunks have distinct anchors.
+Recommended: `schema`, `tracker`, `live_server`, `tests-after` in that order (tests-after last, as it needs the other three).
+
 ## Risk
 
 - **Low; additive.** It adds a new table, so no existing row or rowid changes. `migrate` creates the table with the schema
@@ -54,7 +66,7 @@ python3 dev/tests/test_history_feed.py; python3 dev/tests/test_live_server.py
 ```
 
 All of these were run on 19-10-2026 against a copy of this branch with the four diffs applied, and all passed.
-`git apply --check` passes on this branch and on `origin/main` at f92f440a. On a live vault the table appears at the next
+`git apply --check` passed on this branch and on `origin/main` at f92f440a (19-10-2026); see above for the 2.6.1 line. On a live vault the table appears at the next
 `tracker.py migrate` (every update runs it). Older history keeps showing, worked out as before (`exact: false`).
 
 ## Not in these diffs
