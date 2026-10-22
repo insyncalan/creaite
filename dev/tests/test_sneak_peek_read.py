@@ -379,7 +379,7 @@ class Tasks(SneakCase):
         self.v.run("apply", q.name)
         p.unlink()
 
-    def test_a_bad_sibling_reference_after_undo_stops_the_apply(self):
+    def test_a_bad_sibling_reference_after_undo_is_held_in_review(self):
         out = self.read(self.A, "add an action for Leo to check the lab, due Friday")
         p = self.v.propose("sneak-bad", [dict(it, n=i + 1, match="strong", flags=[], decision="approved")
                                          for i, it in enumerate(out["stage"]["items"])], source_run="dashboard")
@@ -393,7 +393,11 @@ class Tasks(SneakCase):
         before = self.v.rows("links")
         r = self.v.run("apply", p.name, ok=False)
         self.assertIn("isn't a new item written before it", r.stdout)
+        self.assertIn(f"Held in Review, not applied: {p.name} item 2:", r.stdout)     # #280: the bad link is held, never written
         self.assertEqual(self.v.rows("links"), before)
+        link = json.loads(p.read_text())["items"][1]
+        self.assertEqual((link["decision"], "invalid" in link["flags"]), ("pending", True))
+        self.v.run("undo")                                                    # the action #280 let through: the vault as it was
         self.assertFalse(any(a["description"] == "Check the lab" for a in self.v.rows("actions")))
         p.unlink()
 

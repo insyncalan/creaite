@@ -103,7 +103,11 @@ class TrackerTests(unittest.TestCase):
         out = v.run("validate", str(bad), ok=False).stdout
         self.assertIn("“Commercial” isn't an active workstream of ABC", out)
         self.assertIn("“Testing” isn't an active workstream of DEF", out)              # ABC's Testing doesn't count for DEF
-        self.assertIn("Nothing was written", v.run("apply", ok=False).stdout)          # one bad item stops the apply
+        out = v.run("apply", ok=False).stdout                                          # #280: each bad item is held in Review
+        self.assertIn("Held in Review, not applied: proposed-bad.json item 1:", out)
+        self.assertIn("Held in Review, not applied: proposed-bad.json item 2:", out)
+        self.assertIn("Nothing applied", out)
+        self.assertEqual(v.rows("actions"), [])
         bad.unlink()
         v.propose("good", [action(1, description="Any case", workstream="data"), action(2, description="Blank", workstream="")])
         v.run("apply")
