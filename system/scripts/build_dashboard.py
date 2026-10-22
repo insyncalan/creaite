@@ -4274,10 +4274,12 @@ def _fp_short(x):
 
 
 def item_fp(it):
+    """A staged item's content fingerprint (12 hex): op, table, id, changes and values; never its number or decision."""
     return _fp_short([it.get("op"), it.get("table"), it.get("id"), it.get("changes"), it.get("values")])
 
 
 def block_fp(b):
+    """A minutes, report or file-changes block's content fingerprint."""
     return _fp_short([b.get("key"), b.get("title"), b.get("draft"), b.get("project"), b.get("projects")])
 # ===== end #307 h2 =====
 

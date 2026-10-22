@@ -35354,13 +35354,13 @@ ${s5}`;
     return x5.it[c5];
   }
   function registerRows() {
-    const rs2 = resolver(), canon2 = (n4) => (rs2(n4) || {}).name || n4, map = /* @__PURE__ */ new Map();
+    const rs2 = resolver(), canon = (n4) => (rs2(n4) || {}).name || n4, map = /* @__PURE__ */ new Map();
     regList().forEach((p6) => {
       if (!p6.hidden) regRowOf(map, p6.name);
     });
     const own = (i5, owner, k5) => {
       if (!owner || owner === "TBC") return null;
-      const x5 = regRowOf(map, canon2(owner));
+      const x5 = regRowOf(map, canon(owner));
       countsOf(x5, i5.p)[k5]++;
       x5.items.push(i5);
       return x5;
@@ -35380,7 +35380,7 @@ ${s5}`;
     });
     const st2 = D.stakeholders || {};
     Object.keys(st2).forEach((c5) => (st2[c5] || []).forEach((s5) => {
-      if (s5 && s5 !== "TBC") countsOf(regRowOf(map, canon2(s5)), c5).st = true;
+      if (s5 && s5 !== "TBC") countsOf(regRowOf(map, canon(s5)), c5).st = true;
     }));
     const codes = new Set(P4.map((p6) => p6.code));
     return [...map.values()].filter((x5) => !isHiddenPerson(x5.n)).map((x5) => finish(x5, codes)).sort((a5, b5) => a5.n.localeCompare(b5.n));
@@ -77948,7 +77948,7 @@ ${d5.text}`);
   }
 
   // core/identity.js
-  function canon(x5) {
+  function fpCanon(x5) {
     if (x5 === null || x5 === void 0) return "null";
     if (typeof x5 === "boolean") return x5 ? "true" : "false";
     if (typeof x5 === "number") {
@@ -77957,8 +77957,8 @@ ${d5.text}`);
       return `{"f":${Math.floor(x5 * 1e6 + 0.5)}}`;
     }
     if (typeof x5 === "string") return JSON.stringify(x5.normalize("NFC"));
-    if (Array.isArray(x5)) return "[" + x5.map(canon).join(",") + "]";
-    return "{" + Object.keys(x5).sort((a5, b5) => cmp(a5.normalize("NFC"), b5.normalize("NFC"))).map((k5) => JSON.stringify(k5.normalize("NFC")) + ":" + canon(x5[k5])).join(",") + "}";
+    if (Array.isArray(x5)) return "[" + x5.map(fpCanon).join(",") + "]";
+    return "{" + Object.keys(x5).sort((a5, b5) => cmp(a5.normalize("NFC"), b5.normalize("NFC"))).map((k5) => JSON.stringify(k5.normalize("NFC")) + ":" + fpCanon(x5[k5])).join(",") + "}";
   }
   var cmp = (a5, b5) => {
     const x5 = Array.from(a5), y5 = Array.from(b5);
@@ -77968,7 +77968,7 @@ ${d5.text}`);
     }
     return x5.length - y5.length;
   };
-  function sha256(s5) {
+  function fpSha256(s5) {
     const K2 = new Uint32Array(64);
     {
       let n4 = 2, i5 = 0;
@@ -78035,31 +78035,31 @@ ${d5.text}`);
     }
     return Array.from(H4, (x5) => x5.toString(16).padStart(8, "0")).join("");
   }
-  var short = (x5) => sha256(canon(x5)).slice(0, 12);
+  var short = (x5) => fpSha256(fpCanon(x5)).slice(0, 12);
   var itemFp = (it2) => short([it2.op, it2.table, it2.id, it2.changes, it2.values]);
   var blockFp = (b5) => short([b5.key, b5.title, b5.draft, b5.project, b5.projects]);
   var BLOCKS = ["meeting", "report", "file_changes"];
-  var itemGuard = (row2) => ({ file: row2.file, ref: row2.ref, fp: row2.fp || null, row: row2 });
-  function findGuarded(data, row2) {
-    if (BLOCKS.includes(row2.ref)) {
-      const b5 = data[row2.ref];
-      return b5 && (!row2.fp || blockFp(b5) === row2.fp) ? b5 : null;
+  var itemGuard = (rw2) => ({ file: rw2.file, ref: rw2.ref, fp: rw2.fp || null, rw: rw2 });
+  function findGuarded(data, rw2) {
+    if (BLOCKS.includes(rw2.ref)) {
+      const b5 = data[rw2.ref];
+      return b5 && (!rw2.fp || blockFp(b5) === rw2.fp) ? b5 : null;
     }
-    const items2 = (data.items || []).filter((i5) => i5 && typeof i5 === "object");
-    const at2 = items2.find((i5) => i5.n === row2.ref);
-    if (!row2.fp) return at2 || null;
-    if (at2 && itemFp(at2) === row2.fp) return at2;
-    const same2 = items2.filter((i5) => itemFp(i5) === row2.fp);
+    const its = (data.its || []).filter((i5) => i5 && typeof i5 === "object");
+    const at2 = its.find((i5) => i5.n === rw2.ref);
+    if (!rw2.fp) return at2 || null;
+    if (at2 && itemFp(at2) === rw2.fp) return at2;
+    const same2 = its.filter((i5) => itemFp(i5) === rw2.fp);
     if (same2.length === 1) {
-      row2.ref = same2[0].n;
+      rw2.ref = same2[0].n;
       return same2[0];
     }
     return null;
   }
-  function refreshGuard(data, row2) {
-    if (!row2 || !row2.fp) return;
-    const it2 = BLOCKS.includes(row2.ref) ? data[row2.ref] : (data.items || []).find((i5) => i5 && i5.n === row2.ref);
-    if (it2) row2.fp = BLOCKS.includes(row2.ref) ? blockFp(it2) : itemFp(it2);
+  function refreshGuard(data, rw2) {
+    if (!rw2 || !rw2.fp) return;
+    const it2 = BLOCKS.includes(rw2.ref) ? data[rw2.ref] : (data.its || []).find((i5) => i5 && i5.n === rw2.ref);
+    if (it2) rw2.fp = BLOCKS.includes(rw2.ref) ? blockFp(it2) : itemFp(it2);
   }
 
   // core/server.js
@@ -78516,7 +78516,7 @@ ${d5.text}`);
       return name;
     });
   }
-  var editProposal = function(file, mut, rows2) {
+  var editProposal = function(file, mut, rws) {
     return vq(async () => {
       const path = "system/staging/" + file;
       let text, data;
@@ -78526,7 +78526,7 @@ ${d5.text}`);
       } catch (e4) {
         throw new Error("that proposal has already been applied or removed");
       }
-      const guarded = rows2 ? [].concat(rows2) : [];
+      const guarded = rws ? [].concat(rws) : [];
       for (const r4 of guarded) if (!findGuarded(data, r4)) throw new Error("already approved or changed");
       const apWas = apSnap(data);
       mut(data);
@@ -78541,9 +78541,9 @@ ${d5.text}`);
     });
   };
   var STALE_ROW_MSG = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
-  async function guardFresh(rows2) {
+  async function guardFresh(rws) {
     const out = [], cache = /* @__PURE__ */ new Map();
-    for (const r4 of rows2) {
+    for (const r4 of rws) {
       if (!r4.fp) {
         out.push(r4);
         continue;
@@ -79761,7 +79761,6 @@ ${d5.text}`);
         "calFoot",
         "calendarLive",
         "canHover",
-        "canon",
         "cantGo",
         "capped",
         "cardGroup",
@@ -79887,6 +79886,8 @@ ${d5.text}`);
         "fitFilterBar",
         "flip",
         "flowCard",
+        "fpCanon",
+        "fpSha256",
         "fuApply",
         "fuFind",
         "fuMsg",
@@ -80335,7 +80336,6 @@ ${d5.text}`);
         "setSearch",
         "setSynced",
         "setTrack",
-        "sha256",
         "shared",
         "singleKeyBlocked",
         "singleKeysOn",

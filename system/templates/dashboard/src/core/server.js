@@ -205,22 +205,22 @@ export function writeProposal(items,extra){ return vq(async()=>{ let name=`propo
   while(await shared.VW.exists("system/staging/"+name)) name=`proposed-${stampFile()}-dashboard-${i++}.json`;
   const data=Object.assign({created:stampFull().replace(" ","T"),source_run:"dashboard",files:[],items:items.map((it,j)=>Object.assign({n:j+1,match:"strong",flags:[],decision:"approved"},it))},extra||{});
   await shared.VW.write("system/staging/"+name,JSON.stringify(data,null,2)+"\n"); return name; }); }
-/* #307 h2: the one place a page edit of a proposal is read, checked and written. `rows` (a row, or a list of them) are the Intake rows the
+/* #307 h2: the one place a page edit of a proposal is read, checked and written. `rws` (a row, or a list of them) are the Intake rows the
    edit acts on: each is found in the freshly read file by its content (core/identity.js findGuarded), never by its number, and its ref
    is set to the item's number in that file, so the callers' `i.n===r.ref` finds the right one; none found (renumbered and changed, the
    file deleted and written again, approved elsewhere) refuses with "already ... changed". The write carries expect_text (/api/fs), so a
    file that changed between the read and the write (a second tab, an apply, a sweep) is never written over. */
-export let editProposal = function(file,mut,rows){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
-  const guarded=rows?[].concat(rows):[]; for(const r of guarded) if(!findGuarded(data,r)) throw new Error("already approved or changed");
+export let editProposal = function(file,mut,rws){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
+  const guarded=rws?[].concat(rws):[]; for(const r of guarded) if(!findGuarded(data,r)) throw new Error("already approved or changed");
   const apWas=apSnap(data); mut(data); apStamp(data,apWas); try{ await shared.VW.write(path,JSON.stringify(data,null,2)+"\n",text); }catch(e){ if(/changed since it was read/.test(e.message)) throw new Error("already approved or changed"); throw e; }
   guarded.forEach(r=>refreshGuard(data,r)); }); };
 export const STALE_ROW_MSG="That one was already approved or changed, so nothing was saved. The list has been refreshed.";
 /** #307 h2: for the routes that act by file and ref on the server (review.py: drafts, conflicts, Reject with a reason, repeats): read each
     row's file just now and keep only the rows whose content is still in it (their refs are set to the number now). The check and the
     server's act are two steps, so a change between them is possible but one request wide; the edits themselves are atomic (editProposal).
-    @param {any[]} rows @returns {Promise<any[]>} */
-export async function guardFresh(rows){ const out=[], cache=new Map();
-  for(const r of rows){ if(!r.fp){ out.push(r); continue; } let data=cache.get(r.file);
+    @param {any[]} rws @returns {Promise<any[]>} */
+export async function guardFresh(rws){ const out=[], cache=new Map();
+  for(const r of rws){ if(!r.fp){ out.push(r); continue; } let data=cache.get(r.file);
     if(data===undefined){ try{ data=JSON.parse(await shared.VW.read("system/staging/"+r.file)); }catch(e){ data=null; } cache.set(r.file,data); }
     if(data&&findGuarded(data,r)) out.push(r); }
   return out; }
