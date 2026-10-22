@@ -150,7 +150,7 @@ class WorkToolbar(LiveBrowserCase):
         b.eval("OWN.clear(); PROJF.clear(); PRIF.clear(); Object.values(FX).forEach(x=>x&&x.clear&&x.clear()); renderWork()")
         self.assertFalse(b.eval("!!document.querySelector('#moreBtn .fcount')"))
         self.assertEqual(b.eval("$('#moreBtn').dataset.tip"), "Add a filter")
-        self.assertEqual(b.eval("$('#moreBtn').dataset.key"), "F")
+        self.assertEqual(b.eval("$('#moreBtn').dataset.key"), "Shift+F")   # #288: F is now a page shortcut; the field picker moved to Shift+F
         b.click("#moreBtn")
         b.wait("$('#moreMenu').classList.contains('on')")
         b.key("Escape")

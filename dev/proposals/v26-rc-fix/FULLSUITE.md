@@ -39,3 +39,8 @@ Flake: test_intake_review_harden_b.py (Keys.test_arrows_and_esc_after_the_peek_w
 | File | Class | Fix |
 |---|---|---|
 | test_run_tests_shard.py | merge artefact | dev/tools/shard_times.txt named three removed files (test_review_age, test_review_floating_bar, test_transcripts_ui): lines dropped (no effect on the split) |
+
+### Shard 5/8: 66 passed, 1 failed, 0 flakes
+| File | Class | Fix |
+|---|---|---|
+| test_icons.py | stale test | #288 moved the Work field picker's shortcut to Shift+F |
