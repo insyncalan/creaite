@@ -12,6 +12,7 @@ import guarded_chain  # noqa: E402
 from guarded_chain import CHAIN_FILE, CHAIN_MARKER, HistoryMissing, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
+LIVE, LEAK, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "dev/tests/snapshots/golden.txt"
 DIFF_T, DIFF_U = "dev/proposals/x/tracker.diff", "dev/proposals/x/update.diff"
 
 
@@ -28,6 +29,9 @@ class Repo:
         self.write(TRK, "a\nb\nc\n")
         self.write(UPD, "u1\nu2\n")
         self.write(REA, "r1\nr2\n")
+        self.write(LIVE, "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n")
+        self.write(LEAK, "k1\nk2\n")
+        self.write(GOLD, "g1\ng2\n")
         self.commit("base")
         run(self.d, "tag", "base")
 
@@ -58,6 +62,28 @@ class Repo:
         self.pin = chain_digest(self.d, "HEAD")
         run(self.d, "apply", DIFF_T)
         run(self.d, "apply", DIFF_U)
+
+    def multi_chain(self):
+        """A bigger chain: three diffs to live_server.py (different places), one to tracker.py, one to a non-guarded golden file."""
+        d = self.d
+        steps = [(LIVE, "l1\nL2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n"), (TRK, "a\nB\nc\n"),
+                 (LIVE, "l1\nL2\nl3\nl4\nl5\nl6\nl7\nl8\nL9\n"), (GOLD, "g1\nG2\n"),
+                 (LIVE, "l1\nL2\nl3\nl4\nL5\nl6\nl7\nl8\nL9\n")]
+        names = []
+        for i, (f, text) in enumerate(steps):
+            name = f"dev/proposals/x/d{i}.diff"
+            self.write(name, self.diff_of(f, text))
+            self.write(f, text)                        # later diffs build on earlier ones (staged, so each diff is one step)
+            run(d, "add", f)
+            names.append(name)
+        run(d, "reset", "-q")
+        for f in (LIVE, TRK, GOLD):
+            run(d, "checkout", "--", f)
+        self.write(CHAIN_FILE, "\n".join(names) + "\n")
+        self.commit("add the chain files")
+        self.pin = chain_digest(d, "HEAD")
+        for n in names:
+            run(d, "apply", n)
 
     pin = "none"
 
@@ -115,6 +141,37 @@ class GuardedChain(unittest.TestCase):
         self.r.commit("tweak")
         self.r.write(TRK, "a\nb\nc\n")
         self.r.commit("put back")
+        self.assertEqual(self.r.touched(), [])
+
+    def test_multi_diff_chain_with_live_server_and_a_non_guarded_diff_passes(self):
+        self.r.multi_chain()
+        self.r.commit(CHAIN_MARKER + " many")
+        self.assertEqual(self.r.touched(), [])
+
+    def test_multi_chain_unmarked_fails(self):
+        self.r.multi_chain()
+        self.r.commit("many")
+        self.assertEqual(sorted(self.r.touched()), [LIVE, TRK])
+
+    def test_marked_commit_with_an_extra_live_server_edit_fails(self):
+        self.r.multi_chain()
+        self.r.write(LIVE, (self.r.d / LIVE).read_text() + "extra\n")
+        self.r.commit(CHAIN_MARKER + " many")
+        self.assertIn(LIVE, self.r.touched())
+
+    def test_an_unmarked_live_server_edit_fails(self):
+        self.r.write(LIVE, "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\nl10\n")
+        self.r.commit("tweak")
+        self.assertEqual(self.r.touched(), [LIVE])
+
+    def test_an_unmarked_client_leak_edit_fails(self):
+        self.r.write(LEAK, "k1\nk2\nk3\n")
+        self.r.commit("tweak")
+        self.assertEqual(self.r.touched(), [LEAK])
+
+    def test_a_golden_only_change_is_not_guarded(self):
+        self.r.write(GOLD, "g1\nother\n")
+        self.r.commit("golden")
         self.assertEqual(self.r.touched(), [])
 
     def test_forgery_a_a_marked_commit_adds_its_own_diff_and_lists_it(self):
