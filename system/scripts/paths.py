@@ -5,6 +5,7 @@ found from this file's own location, so creaite works wherever the folder is cop
 To reorganise folders, change this file (and the path table in CLAUDE.md), nothing else.
 """
 from pathlib import Path
+import errno
 import json
 import os
 import re
@@ -85,11 +86,6 @@ def load_settings() -> dict:
     """Read system/config/settings.json (the only place tunable values live)."""
     import json
     return json.loads(SETTINGS.read_text(encoding="utf-8"))
-
-
-def rel(p: Path) -> str:
-    """Path as stored anywhere (database, proposals, links): relative to ROOT, forward slashes."""
-    return Path(p).resolve().relative_to(ROOT).as_posix()
 
 
 # ===== BL-266 (fix-backup-names) =====
@@ -210,11 +206,16 @@ def portfolio_dir() -> Path:
 def _resolved(p) -> Path:
     """Path(p).resolve(), the same on every Python: CPython 3.9.25's realpath raises OSError (EINVAL, with the full path) when a link
     at the last part is swapped for a file between its lstat and its readlink, where later versions keep that part as it is. So
-    does this: the folder is resolved and the name kept (v2.6 gate: the E1 flip test on Python 3.9)."""
+    does this: the folder is resolved and the name kept (v2.6 gate: the E1 flip test on Python 3.9). v2.6.1 (security review L1):
+    only for EINVAL, and never when the last part is `.`, `..` or empty, where keeping the name would hand back a path that was
+    not normalised; any other OSError, and that case, is raised as before."""
     try:
         return Path(p).resolve()
-    except OSError:
-        return Path(p).parent.resolve() / Path(p).name
+    except OSError as e:
+        name = Path(p).name
+        if e.errno != errno.EINVAL or name in ("", ".", ".."):
+            raise
+        return Path(p).parent.resolve() / name
 
 
 def rel(p: Path) -> str:
