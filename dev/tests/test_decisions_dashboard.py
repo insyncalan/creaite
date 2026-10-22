@@ -187,8 +187,12 @@ class ReadingTests(DecisionCase):
         text = self.b.eval("[...document.querySelectorAll('#attnList li')].map(l=>l.textContent)")
         line = next(t for t in text if "waiting on others" in t)
         self.assertIn("2 decisions waiting on others, 1 for you, 1 late", line)
-        self.assertIn("Extend the pilot by two weeks", line)
-        self.assertIn("3 days late", line)
+        self.assertNotIn("Extend the pilot by two weeks", line)       # #313: a decision under Decisions needed is counted here, not named again
+        self.assertIn("2 are listed under Decisions needed.", line)
+        self.assertIn("Approve the pilot budget", line)               # one with no needed-by date is named here
+        dn = self.b.eval("document.getElementById('dnList').textContent")
+        self.assertIn("Extend the pilot by two weeks", dn)
+        self.assertIn("3 days late", dn)
 
     def test_a_revisit_date_that_has_come_is_a_reminder(self):
         self.b.eval("go('today')")

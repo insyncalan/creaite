@@ -63,15 +63,15 @@ class Seeded(LiveBrowserCase):
         cls.MS = ms
         a = lambda n, ms_name, desc, **kw: action(n, milestone=ms[ms_name], description=desc, source=SRC, **kw)  # noqa: E731
         v.propose("items251", [
-            a(1, "Pilot go-live", "Confirm licence count with procurement", project="DEF", due_date=d(-1)),
-            a(2, "Pilot go-live", "Schedule training sessions", project="DEF", due_date=d(3)),
-            a(3, "Pilot go-live", "Order pilot laptops", project="DEF", due_date=d(2), status="Delayed"),
+            a(1, "Pilot go-live", "Confirm licence count with procurement", project="DEF", owner="Omar Ali", due_date=d(-1)),
+            a(2, "Pilot go-live", "Schedule training sessions", project="DEF", owner="Omar Ali", due_date=d(3)),
+            a(3, "Pilot go-live", "Order pilot laptops", project="DEF", owner="Omar Ali", due_date=d(2), status="Delayed"),
             a(4, "Pilot go-live", "Print pilot guides", project="DEF", due_date=d(1), status="Closed", closed=d(-1)),
             new("raid", 5, project="DEF", type="Issue", description="Training room not booked", impact="Medium",
                 likelihood="High", raised=d(-2), milestone=ms["Pilot go-live"], source=SRC),
             new("raid", 6, project="DEF", type="Risk", description="Pilot users unavailable", impact="High",
                 likelihood="Medium", raised=d(-2), milestone=ms["Pilot go-live"], source=SRC),
-            a(7, "Build review", "Review vendor security answers", due_date=d(0)),
+            a(7, "Build review", "Review vendor security answers", owner="Omar Ali", due_date=d(0)),
             new("raid", 8, project="ABC", type="Risk", description="Reviewer on leave", impact="Low", likelihood="Low",
                 raised=d(-1), milestone=ms["Build review"], source=SRC),
             a(9, "Design sign-off", "Circulate the design pack", due_date=d(5)),
