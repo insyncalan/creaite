@@ -19,3 +19,5 @@ To test, with a real Teams meeting that has ended and has no transcript yet:
 Cap could not prove the native file picker draws in the app window (`launch.py --app=`). In the app window press the arrow beside
 Process all ready: the Finder-style picker should open. Then choose one good file and one .xlsx: the page should add the good one,
 show the toast, and keep a note under the toolbar that names the .xlsx and says why, until you press Dismiss.
+
+- Discard has no Undo: needs a guarded server route to restore a discarded proposal: 2.6.2 list (Jarvis adds to #314).
