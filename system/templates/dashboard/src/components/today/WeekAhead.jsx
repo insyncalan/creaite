@@ -21,7 +21,7 @@ import { PrepPeek, usePeek } from "../prep/PrepPopup.jsx";
     where?: string, pname?: string, pageWhen?: string, page?: string | null}} WkChip
     The Prep chip: it opens the Prep peek on pointer rest or focus (#111) and goes to the prep page when pressed. */
 /** @typedef {{key: string, kind: string, type?: string, dot?: string, t: string, time?: string, open?: Record<string, string>, who?: string,
-    p?: string, pname?: string, why: string, whyTone?: string, acts: WkAct[], chip?: WkChip,
+    p?: string, pname?: string, items?: {ms: string, p: string, n: number, over: number, label: string, overLabel: string, tip: string, aria: string}, why: string, whyTone?: string, acts: WkAct[], chip?: WkChip,
 }} WkRow
     `type`: a RAID item's type (Risk, Issue, Assumption, Dependency); `dot`: "u" (Urgent) or "h" (High); `time`: a meeting's start; `chip`: a meeting's Prep chip (`made`: the saved page's, which goes to it). */
 /** @typedef {{key: string, title: string, note?: string, rows: WkRow[], cap: number, open: boolean}} WkGroup */
@@ -73,6 +73,7 @@ function WkLine({ r, hidden, p }) {
         {r.open ? <a class="t" href="#" {...dataOf(r.open)}>{r.t}</a> : <span class="t">{r.t}</span>}
         {r.who || r.p ? <span class="wkwho">{r.who || ""}{r.who && r.p ? " · " : ""}{r.p ? <a class="s" href="#" data-cock={r.p}>{r.pname || r.p}</a> : null}</span> : null}
       </div>
+      {r.items ? <button type="button" class="wkcnt" data-wkitems={r.items.ms} data-p={r.items.p} aria-label={r.items.aria} data-tip={r.items.tip}>{r.items.label}{r.items.overLabel ? <span class="warn">{r.items.overLabel}</span> : null}</button> : null}
       {r.chip ? <PrepChip c={r.chip} openFile={p.openFile} /> : null}
       {r.why ? <span class={`wkwhy${r.whyTone ? " " + r.whyTone : ""}`}>{r.why}</span> : null}
       <span class="tacts">

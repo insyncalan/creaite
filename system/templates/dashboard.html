@@ -4019,6 +4019,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .wkchip{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 9px;border:1px solid var(--accent);border-radius:var(--r-pill);background:none;color:var(--accent);font:500 var(--fs-xs)/1 var(--font);cursor:pointer}
 .wkchip:hover,.wkchip:focus-visible{background:var(--accent-soft)} .wkchip:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .wkchip.made{border-color:var(--line);color:var(--muted)} .wkchip[aria-disabled="true"]{opacity:.55;cursor:default}
+.wkcnt{flex:none;align-self:center;border:0;background:none;padding:0;margin:0;font:inherit;font-size:var(--fs-xs);line-height:var(--lh-16);color:var(--accent);cursor:pointer;white-space:nowrap}
+.wkcnt:hover{text-decoration:underline} .wkcnt:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px} .wkcnt .warn{color:var(--warn)}
 #tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1);margin-left:0;align-self:center}
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
@@ -6160,10 +6162,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     msFind: () => msFind,
     msInfo: () => msInfo,
     msItemWords: () => msItemWords,
+    msItemsOpenWork: () => msItemsOpenWork,
     msLabel: () => msLabel,
     msLinked: () => msLinked,
     msName: () => msName,
     msNextId: () => msNextId,
+    msOpenItems: () => msOpenItems,
     msOpts: () => msOpts,
     msPanelSave: () => msPanelSave,
     msRemove: () => msRemove,
@@ -46519,6 +46523,10 @@ ${s5}`;
           r4.p ? /* @__PURE__ */ u4("a", { class: "s", href: "#", "data-cock": r4.p, children: r4.pname || r4.p }) : null
         ] }) : null
       ] }),
+      r4.items ? /* @__PURE__ */ u4("button", { type: "button", class: "wkcnt", "data-wkitems": r4.items.ms, "data-p": r4.items.p, "aria-label": r4.items.aria, "data-tip": r4.items.tip, children: [
+        r4.items.label,
+        r4.items.overLabel ? /* @__PURE__ */ u4("span", { class: "warn", children: r4.items.overLabel }) : null
+      ] }) : null,
       r4.chip ? /* @__PURE__ */ u4(PrepChip, { c: r4.chip, openFile: p6.openFile }) : null,
       r4.why ? /* @__PURE__ */ u4("span", { class: `wkwhy${r4.whyTone ? " " + r4.whyTone : ""}`, children: r4.why }) : null,
       /* @__PURE__ */ u4("span", { class: "tacts", children: r4.acts.map((a5) => /* @__PURE__ */ u4(
@@ -48652,6 +48660,13 @@ ${s5}`;
     if (!r4) return;
     openWork(r4.p, "all", "open", { st: ["Open"], ty: ["Action", "Issue"], mi: [r4.ms] });
   }
+  function msOpenItems(id2) {
+    const its = [...A4.filter((a5) => a5.ms === id2 && open(a5) && !a5.ar), ...R3.filter((r4) => r4.ms === id2 && r4.st === "Open" && !r4.ar)];
+    return { n: its.length, over: its.filter((x5) => !!x5.due && x5.due < TODAY).length };
+  }
+  function msItemsOpenWork(id2, code) {
+    openWork(code, "all", "open", { st: ["Open"], mi: [id2] });
+  }
   var msAttnWorkWord = (r4) => r4.its.length === 1 ? "Open in Work" : `Open all ${r4.its.length} in Work`;
   function msAttnRow(n4, r4) {
     const k5 = days(r4.when), c5 = r4.its.length, items2 = `${c5} open item${c5 === 1 ? "" : "s"} must close`;
@@ -49317,6 +49332,14 @@ ${s5}`;
         return;
       }
       if (b5.dataset.d) remPick(n4.dataset.id, b5.dataset.d);
+    });
+    document.addEventListener("click", (e4) => {
+      const b5 = e4.target.closest && e4.target.closest("[data-wkitems]");
+      if (b5) {
+        e4.preventDefault();
+        msItemsOpenWork(b5.dataset.wkitems, b5.dataset.p || "");
+        return;
+      }
     });
     document.addEventListener("click", (e4) => {
       if (e4.target.closest && e4.target.closest(".colrz")) return;
@@ -50106,6 +50129,21 @@ ${s5}`;
       const d5 = further && i5.date ? ` ${longDay(i5.date)}` : "";
       return i5.kind === "milestone" ? (further && i5.date ? `${longDay(i5.date)} · ` : "") + (i5.slip ? "at risk" : "on track") : `${w6}${d5}`;
     };
+    const msItems = (i5) => {
+      const c5 = msOpenItems(i5.id);
+      if (!c5.n) return void 0;
+      const w6 = `${c5.n} open work item${c5.n === 1 ? "" : "s"}`;
+      return {
+        ms: i5.id,
+        p: i5.p,
+        n: c5.n,
+        over: c5.over,
+        label: c5.over ? `${c5.n} open` : `${c5.n} open item${c5.n === 1 ? "" : "s"}`,
+        overLabel: c5.over ? `, ${c5.over} overdue` : "",
+        tip: `${w6} this milestone depends on`,
+        aria: `Milestone ${i5.t}: ${w6}${c5.over ? `, ${c5.over} overdue` : ""}. Open the list`
+      };
+    };
     const whoOf = (i5) => i5.kind === "milestone" ? "" : i5.kind === "decisions" ? isMe(i5.o) ? "yours" : i5.o ? `asked of ${who(i5.o)}` : "no one asked" : isMe(i5.o) ? "yours" : who(i5.o) || "no owner";
     const item = (i5, key2, further, undated = false) => ({
       key: key2,
@@ -50113,12 +50151,13 @@ ${s5}`;
       type: i5.type || "",
       dot: dotOf(i5),
       t: i5.t || i5.id,
-      open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
+      open: i5.kind === "milestone" ? { ms: i5.id } : { open: `${i5.kind}:${i5.id}` },
       who: whoOf(i5),
       p: i5.p || "",
       pname: i5.p ? pName(i5.p) : "",
       why: whyOf(i5, further, undated),
       whyTone: i5.kind === "milestone" && i5.slip ? "warn" : "",
+      items: i5.kind === "milestone" ? msItems(i5) : void 0,
       acts: workActs(i5.kind, i5).map((a5) => ({ ...a5, data: { k: i5.kind, id: i5.id, ...i5.kind === "milestone" ? { p: i5.p } : {} } }))
     });
     const meeting = (e4, day) => {

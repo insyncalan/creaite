@@ -4009,6 +4009,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .wkchip{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 9px;border:1px solid var(--accent);border-radius:var(--r-pill);background:none;color:var(--accent);font:500 var(--fs-xs)/1 var(--font);cursor:pointer}
 .wkchip:hover,.wkchip:focus-visible{background:var(--accent-soft)} .wkchip:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .wkchip.made{border-color:var(--line);color:var(--muted)} .wkchip[aria-disabled="true"]{opacity:.55;cursor:default}
+.wkcnt{flex:none;align-self:center;border:0;background:none;padding:0;margin:0;font:inherit;font-size:var(--fs-xs);line-height:var(--lh-16);color:var(--accent);cursor:pointer;white-space:nowrap}
+.wkcnt:hover{text-decoration:underline} .wkcnt:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px} .wkcnt .warn{color:var(--warn)}
 #tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1);margin-left:0;align-self:center}
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
