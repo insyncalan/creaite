@@ -30,6 +30,11 @@ SRC = ROOT / "system/templates/dashboard/src"
 PROPOSAL = ROOT / "dev/proposals/300/live_server.diff"
 
 
+def routes_exist():
+    """True once the guarded diff is applied (the live server has the autostart routes)."""
+    return "/api/autostart/status" in (ROOT / "system/scripts/live_server.py").read_text()
+
+
 class LauncherState(unittest.TestCase):
     def setUp(self):
         self.v = Vault()
@@ -102,6 +107,7 @@ class LauncherState(unittest.TestCase):
 
 
 class Proposal(unittest.TestCase):
+    @unittest.skipIf(routes_exist(), "the guarded diff is already applied; it is covered by its own routes now")
     def test_it_applies_and_reverses_cleanly_and_its_routes_answer(self):
         v = Vault()
         d = v.root
@@ -201,10 +207,13 @@ class AutostartPage(LiveBrowserCase):
         b.eval("try{localStorage.removeItem('creaite-autostart-asked')}catch(e){}")
         if stub:
             b.eval(STUB)
+            b.eval("asStatus(true)")                              # the stub's answer, not one cached from real routes
+            b.pump(0.5)
         b.eval("go('settings','health')")
         b.wait("!!document.querySelector('#asCard')", 20)
         b.pump(0.5)
 
+    @unittest.skipIf(routes_exist(), "the live server has the routes, so there is nothing to degrade")
     def test_without_the_routes_the_card_degrades_cleanly(self):
         self.settings(False)
         b = self.b
