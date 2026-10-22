@@ -47,9 +47,10 @@ a = json.loads(sys.stdin.read())
 reach.start_run(a["record_run"], "process", {}, None, files=a["files"])
 d = json.loads(reach.RUN_FILE.read_text())
 d["made"] = [os.path.realpath("system/staging/drafts/" + n) for n in a["own"]]
+d["prints"] = {m: reach._print(m) for m in d["made"] if os.path.exists(m)}    # the run made them earlier: their tools returned
 d["before"] = [n for n in d["before"] if n not in a["staged"]]
 reach.RUN_FILE.write_text(json.dumps(d))
-out = []
+out, last = [], None
 for step in a["steps"]:
     if "write" in step:
         p = "system/staging/drafts/" + step["write"]
@@ -59,8 +60,11 @@ for step in a["steps"]:
         out.append(None)
     elif "make" in step:
         open("system/staging/drafts/" + step["make"], "w").write(step["data"])   # the run's own tool, after the hook allowed it
+        if hasattr(reach, "post_tool"):                     # #264 round 3: and its PostToolUse, as Claude Code runs it
+            reach.post_tool(last["tool"], last["inp"], a["hook_run"])
         out.append(None)
     else:
+        last = step
         out.append(reach.decide(step["tool"], step["inp"], "process", a["hook_run"], True)[0])
 d = json.loads(reach.RUN_FILE.read_text())
 print(json.dumps({"ok": out, "made": sorted(os.path.basename(m) for m in d.get("made", []))}))
