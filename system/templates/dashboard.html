@@ -2364,7 +2364,7 @@ svg .flk text{text-decoration:underline dotted}
 .mv-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 /* the plan line: names and dates placed so they never overlap; it scrolls sideways */
 .mv-stripbar{display:flex;gap:8px;align-items:center;margin:0 0 6px}
-.mv-stripwrap{overflow-x:auto;overflow-y:hidden;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:0 0 4px;margin:0 0 12px;min-width:0;max-width:100%}
+.mv-stripwrap{resize:vertical;min-height:120px;max-height:85vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:0 0 4px;margin:0 0 12px;min-width:0;max-width:100%}
 .mv-stripwrap:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .mv-strip{position:relative;margin:0 10px}
 .mv-strip .ax{position:absolute;left:0;right:0;top:44px;height:2px;background:var(--line)}
@@ -4706,6 +4706,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     MVDET: () => MVDET,
     MVDETKEY: () => MVDETKEY,
     MVDPH: () => MVDPH,
+    MVHKEY: () => MVHKEY,
+    MVHMIN: () => MVHMIN,
     MVJUST: () => MVJUST,
     MVKEY: () => MVKEY,
     MVMN: () => MVMN,
@@ -6207,6 +6209,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvAll: () => mvAll,
     mvAnswer: () => mvAnswer,
     mvAxis: () => mvAxis,
+    mvBindResize: () => mvBindResize,
     mvBindScroll: () => mvBindScroll,
     mvCalClose: () => mvCalClose,
     mvCalDraw: () => mvCalDraw,
@@ -6225,6 +6228,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvEdDraw: () => mvEdDraw,
     mvEdOpen: () => mvEdOpen,
     mvFeedItems: () => mvFeedItems,
+    mvFit: () => mvFit,
     mvGet: () => mvGet,
     mvMismatch: () => mvMismatch,
     mvMovement: () => mvMovement,
@@ -41702,24 +41706,24 @@ ${s5}`;
       while (levels[lv] !== void 0 && left < levels[lv] + 8) lv++;
       levels[lv] = left + text;
       const top = base + lv * LH, nm3 = m5.n.length > 26 ? m5.n.slice(0, 25) + "…" : m5.n;
-      h5 += `<div class="mv-lead" style="left:${x5}px;top:56px;height:${top - 56}px"></div>`;
+      h5 += `<div class="mv-lead" data-lv="${lv}" style="left:${x5}px;top:56px;height:${top - 56}px"></div>`;
       if (it2.g) {
         const ax2 = px2(mvT(m5.agr));
         h5 += `<div class="mv-gconn" style="left:${ax2}px;width:${x5 - ax2}px"></div><div class="mv-ghost" style="left:${x5}px" role="img" aria-label="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}" data-tip="${MSW}: ${esc(m5.n)} now expected ${fd(m5.fc)}"></div>`;
-        h5 += `<button type="button" class="mv-lab gl" data-mvedit="${m5.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m5.n)} now expected ${fd(m5.fc)}"><b>Expected ${fd(m5.fc)}</b><span>${esc(m5.n.length > 20 ? m5.n.slice(0, 19) + "…" : m5.n)}</span></button>`;
+        h5 += `<button type="button" class="mv-lab gl" data-lv="${lv}" data-mvedit="${m5.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m5.n)} now expected ${fd(m5.fc)}"><b>Expected ${fd(m5.fc)}</b><span>${esc(m5.n.length > 20 ? m5.n.slice(0, 19) + "…" : m5.n)}</span></button>`;
       } else {
         h5 += `${((w6) => `<button type="button" class="mv-mk ${st2}" data-mvedit="${m5.id}" style="left:${x5}px" aria-label="${w6}" data-tip="${w6}">${mvShape(st2, 20)}</button>`)(`${MSW}: ${esc(m5.n)}, ${(cli ? MVCWORD : MVWORD)[st2]}, ${ach ? "achieved " + fd(m5.actual || m5.fc) : "agreed " + fd(m5.agr || m5.fc)}`)}`;
-        h5 += `<button type="button" class="mv-lab${st2 === "overdue" ? " late" : ""}${ach ? " ok" : ""}" data-mvedit="${m5.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m5.n)}"><b>${esc(nm3)}</b><span>${fd(mvWhen(m5))}</span></button>`;
+        h5 += `<button type="button" class="mv-lab${st2 === "overdue" ? " late" : ""}${ach ? " ok" : ""}" data-lv="${lv}" data-mvedit="${m5.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m5.n)}"><b>${esc(nm3)}</b><span>${fd(mvWhen(m5))}</span></button>`;
       }
     });
     h5 += `<div class="tday" style="left:${px2(mvT(TODAY))}px;height:${base - 6}px"><span>Today</span></div>`;
     const first = new Date(A02), last = new Date(A12 - 864e5);
-    return { html: h5, w: W3, h: base + Math.max(1, levels.length) * LH + 4, range: `${MVMN[first.getUTCMonth()]} ${first.getUTCFullYear()} to ${MVMN[last.getUTCMonth()]} ${last.getUTCFullYear()}`, today: px2(mvT(TODAY)) };
+    return { html: h5, w: W3, lv: Math.max(1, levels.length), h: base + Math.max(1, levels.length) * LH + 4, range: `${MVMN[first.getUTCMonth()]} ${first.getUTCFullYear()} to ${MVMN[last.getUTCMonth()]} ${last.getUTCFullYear()}`, today: px2(mvT(TODAY)) };
   }
   function mvPlan(code, cli, host2) {
     const list = mvVis(code, cli, false).sort((a5, b5) => (mvWhen(a5) || "9").localeCompare(mvWhen(b5) || "9")), s5 = mvStrip(list, cli);
     let h5 = `<div class="mv-stripbar">${ibtn("chevleft", "Scroll the plan line left", 'data-mvact="sl"', "mv-ib")}${ibtn("chevright", "Scroll the plan line right", 'data-mvact="sr"', "mv-ib")}<button type="button" class="mv-btn sm" data-mvact="st">Today</button><span class="mv-hint">${s5.range}</span></div>
-    <div class="mv-stripwrap" tabindex="0" data-mvscroll="${host2}" data-today="${Math.round(s5.today)}" aria-label="Milestone plan line, scrolls sideways"><div class="mv-strip" style="width:${s5.w}px;height:${s5.h}px">${s5.html}</div></div>
+    <div class="mv-stripwrap" tabindex="0" data-mvscroll="${host2}" data-today="${Math.round(s5.today)}" aria-label="Milestone plan line, scrolls sideways"><div class="mv-strip" data-lvls="${s5.lv}" style="width:${s5.w}px;height:${s5.h}px">${s5.html}</div></div>
     <div class="mv-detog"><button type="button" data-mvact="det" aria-expanded="${MVDET}" aria-controls="mvRows-${host2}"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>${MVDET ? "Hide milestone details" : "Show milestone details"}</button></div>
     <div class="mv-rows" id="mvRows-${host2}"${MVDET ? "" : " hidden"}>`;
     list.forEach((m5) => {
@@ -41733,8 +41737,55 @@ ${s5}`;
     });
     return h5 + "</div>";
   }
+  var MVHKEY = "creaite.mvStripH", MVHMIN = 120;
+  function mvFit(sw3) {
+    const st2 = sw3.querySelector(".mv-strip");
+    if (!st2) return;
+    const n4 = +st2.dataset.lvls || 1, base = 62, own = !!sw3.style.height;
+    const lh2 = own ? Math.max(42, Math.min(72, Math.floor((sw3.clientHeight - base - 12) / n4))) : 42, hh2 = base + n4 * lh2 + 4;
+    st2.style.height = hh2 + "px";
+    st2.querySelectorAll("[data-lv]").forEach((e4) => {
+      const top = base + +e4.dataset.lv * lh2;
+      if (e4.classList.contains("mv-lead")) e4.style.height = top - 56 + "px";
+      else e4.style.top = top + "px";
+    });
+  }
+  function mvBindResize(sw3) {
+    if (sw3.dataset.mvh) return;
+    sw3.dataset.mvh = "1";
+    const clamp = (h5) => Math.max(MVHMIN, Math.min(h5, Math.round(innerHeight * 0.85)));
+    try {
+      const v5 = +localStorage.getItem(MVHKEY);
+      if (v5 >= MVHMIN) sw3.style.height = clamp(v5) + "px";
+    } catch (e4) {
+    }
+    let last = sw3.clientHeight;
+    if (typeof ResizeObserver === "function") new ResizeObserver(() => {
+      if (!sw3.isConnected || sw3.clientHeight < MVHMIN - 8 || sw3.clientHeight === last) return;
+      last = sw3.clientHeight;
+      if (sw3.style.height) {
+        mvFit(sw3);
+        try {
+          localStorage.setItem(MVHKEY, String(Math.round(sw3.getBoundingClientRect().height)));
+        } catch (e4) {
+        }
+      }
+    }).observe(sw3);
+    sw3.addEventListener("dblclick", (e4) => {
+      const r4 = sw3.getBoundingClientRect();
+      if (e4.clientX < r4.right - 22 || e4.clientY < r4.bottom - 22) return;
+      sw3.style.height = "";
+      try {
+        localStorage.removeItem(MVHKEY);
+      } catch (x5) {
+      }
+      mvFit(sw3);
+    });
+    mvFit(sw3);
+  }
   function mvBindScroll(root2) {
     (root2 || document).querySelectorAll("[data-mvscroll]").forEach((sw3) => {
+      mvBindResize(sw3);
       const k5 = sw3.dataset.mvscroll;
       if (shared.MV.scroll[k5] === void 0) shared.MV.scroll[k5] = Math.max(0, (+sw3.dataset.today || 0) - sw3.clientWidth / 3);
       sw3.scrollLeft = shared.MV.scroll[k5];
