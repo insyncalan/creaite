@@ -813,13 +813,13 @@ def client_data(code, since=None):
     p, folder, mem = project(con, code)
     client = mem["client"] or ""
     last, start = _client_period(code, since)
-    needs = []
-    theirs, ours = _client_actions(con, code, client, start, needs)
-    decisions = _client_decisions(con, code, start, needs)
-    risks = _client_risks(con, code, needs)
-    excluded = [f"{r['id']} {r['type']}: {r['description']} ({r['priority']})" for r in
+    needs, held = [], _held_ids(con)
+    theirs, ours = _client_actions(con, code, client, start, needs, held)
+    decisions = _client_decisions(con, code, start, needs, held)
+    risks = _client_risks(con, code, needs, held)
+    excluded = [f"{r['id']} {r['type']} ({r['priority']})" for r in            # v2.6.1: an ID, kind and priority; never its words
                 rows(con, "SELECT * FROM raid WHERE project = ? AND client_visible = 0 AND status = 'Open' AND "
-                          "priority IN ('Urgent', 'High')", code)]
+                          "priority IN ('Urgent', 'High')", code) if r["id"] not in held]
     memory_text = (folder / "CLAUDE.md").read_text(encoding="utf-8") if (folder / "CLAUDE.md").exists() else ""
     return {
         "code": code, "name": p["name"], "client": client, "last_client_report": last,
@@ -832,6 +832,14 @@ def client_data(code, since=None):
         "needs_client_messaging": needs, "excluded_high_risks": excluded,
         "client_safe_no": [ln.strip() for ln in memory_text.splitlines() if "Client-safe: no" in ln],
     }
+
+
+def _held_ids(con):
+    """v2.6.1: the IDs of items whose labels keep them out of anything a client sees (Sensitive, partner-only, an excluding label:
+    client_leak.blocking_labels), even when flagged client-visible. Their wording never reaches the model drafting the report."""
+    import client_leak
+    blocking = client_leak.blocking_labels(con)
+    return {i for i, lab in con.execute("SELECT item_id, label FROM item_labels") if str(lab or "").strip().lower() in blocking}
 
 
 def _client_period(code, since):
@@ -852,11 +860,11 @@ def _is_client_owner(owner, client):
 _CLIENT_STATUS = {"Open": "In progress", "Delayed": "Delayed", "Closed": "Complete", "Cancelled": "Cancelled"}
 
 
-def _client_actions(con, code, client, start, needs):
+def _client_actions(con, code, client, start, needs, held=()):
     """(the client's actions, our commitments): client-visible, complete messaging; the rest join `needs`."""
     theirs, ours = [], []
     for a in rows(con, "SELECT * FROM actions WHERE project = ? AND client_visible = 1", code):
-        if a["status"] == "Cancelled" or (a["status"] == "Closed" and start and (a["closed"] or "") < start):
+        if a["id"] in held or a["status"] == "Cancelled" or (a["status"] == "Closed" and start and (a["closed"] or "") < start):
             continue
         if not tracker.message_complete("actions", a["client_message"]):
             needs.append(f"{a['id']} {a['description']}")
@@ -867,12 +875,12 @@ def _client_actions(con, code, client, start, needs):
     return theirs, ours
 
 
-def _client_decisions(con, code, start, needs):
+def _client_decisions(con, code, start, needs, held=()):
     """Client-visible decisions made in the period, and pending ones (BL-53)."""
     out = []
     for d in rows(con, "SELECT * FROM decisions WHERE project = ? AND client_visible = 1 AND status IN ('Made', 'Pending') "
                        "ORDER BY COALESCE(date, needed_by, '9999'), id", code):         # BL-53: a pending one shows only if client-visible
-        if start and d["status"] == "Made" and d["date"] < start:
+        if d["id"] in held or (start and d["status"] == "Made" and d["date"] < start):
             continue
         if tracker.message_complete("decisions", d["client_message"]):
             out.append({"id": d["id"], "text": d["client_message"].strip(), "date": d["date"], "status": d["status"],
@@ -882,9 +890,11 @@ def _client_decisions(con, code, start, needs):
     return out
 
 
-def _client_risks(con, code, needs):
+def _client_risks(con, code, needs, held=()):
     out = []
     for r in rows(con, "SELECT * FROM raid WHERE project = ? AND client_visible = 1 AND status = 'Open'", code):
+        if r["id"] in held:
+            continue
         if tracker.message_complete("raid", r["client_message"]):
             out.append({"id": r["id"], "type": r["type"], "text": client_text(r["client_message"])})
         else:
