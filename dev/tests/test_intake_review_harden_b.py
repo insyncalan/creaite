@@ -28,7 +28,9 @@ def extras():
     """Every kind the bulk rule holds back, a guessed field (routine), and an invalid item, beside the fixture's own seven."""
     return [
         S.pending({**action(8, description="Conflicting routine action", source=SRC), "flags": ["conflict"]}),
-        S.pending({**action(9, description="Invalid routine-looking action", source=SRC), "flags": ["invalid"]}),
+        # genuinely invalid (a field the tracker doesn't keep): since 2.5.4's #291 fix the build checks a flagged item again
+        S.pending({**action(9, description="Invalid routine-looking action", source=SRC, bogus_field="x"), "flags": ["invalid"],
+                   "invalid_reason": "unknown field(s) for actions: bogus_field"}),
         S.pending({**action(10, description="Action with a guessed owner", owner="Sara Example", due_date="2026-12-01", source=SRC),
                    "inferred": [{"field": "owner", "why": "the only person named near it"}]}),
         S.pending({"n": 11, "op": "update", "table": "projects", "id": "ABC", "match": "strong", "flags": [],
