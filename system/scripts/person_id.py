@@ -8,6 +8,11 @@ equal an email ID, which is all hex), and is flagged so Alan can add an address.
 """
 import hashlib
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402,F401  (doctor's rule: every script imports paths; this one reads no location)
 
 ID_LENGTH = 16
 FALLBACK_PREFIX = "n"

@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402
 import person_id as pid_mod  # noqa: E402
 
 SHARED_COLUMNS = ("Full name", "Email", "Aliases", "Organisation", "Role", "Labels")
@@ -27,7 +28,7 @@ TEXT_FIELDS = ("name", "org", "role")
 LIST_FIELDS = ("emails", "aliases", "labels")
 MARK = "<!-- people-table: generated from the people table -->"
 INTRO = ("# People register\n\n" + MARK + "\n\nThis copy is made from creaite's people table after each save, so Claude can read it. Change people "
-         "on the People page or with cx-edit, not in this file. VIP and Hidden are not kept here: each laptop keeps its own.\n")
+         "on the People page or with cx-edit, not in this file. Personal settings for each person are not kept here: each laptop keeps its own.\n")
 
 
 def _cells(line):
@@ -194,9 +195,9 @@ def same_people(a, b):
 
 # ── The laptop's private file: VIP and Hidden, never shared ──────────────────────────────────────────────────────────
 
-def private_path(root):
-    """Where this laptop keeps VIP and Hidden, under the vault root."""
-    return Path(root) / PRIVATE_FILE
+def private_path(root=None):
+    """Where this laptop keeps VIP and Hidden, under the vault root (default: this vault)."""
+    return Path(root or paths.ROOT) / PRIVATE_FILE
 
 
 def load_private(path):
