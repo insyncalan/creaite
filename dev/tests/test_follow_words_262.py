@@ -7,7 +7,6 @@ Run: python3 dev/tests/test_follow_words_262.py     (quick tier: no Chrome, no v
 """
 import json
 import re
-import sys
 import unittest
 from pathlib import Path
 
