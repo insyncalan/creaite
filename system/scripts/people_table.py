@@ -27,8 +27,9 @@ PRIVATE_FILE = "system/staging/people-private.json"
 TEXT_FIELDS = ("name", "org", "role")
 LIST_FIELDS = ("emails", "aliases", "labels")
 MARK = "<!-- people-table: generated from the people table -->"
-INTRO = ("# People register\n\n" + MARK + "\n\nThis copy is made from creaite's people table after each save, so Claude can read it. Change people "
-         "on the People page or with cx-edit, not in this file. Personal settings for each person are not kept here: each laptop keeps its own.\n")
+INTRO = ("# People register\n\n" + MARK + "\n\nThis copy is made from creaite's people table after each save, so Claude can read it. "
+         "Change people on the People page or with cx-edit, not in this file. "
+         "Personal settings for each person are not kept here: each laptop keeps its own.\n")
 
 
 def _cells(line):
@@ -193,7 +194,7 @@ def same_people(a, b):
     return [_shared(p) for p in a] == [_shared(p) for p in b]
 
 
-# ── The laptop's private file: VIP and Hidden, never shared ──────────────────────────────────────────────────────────
+# ── The laptop's private file: VIP and Hidden, never shared ─────────────────────────
 
 def private_path(root=None):
     """Where this laptop keeps VIP and Hidden, under the vault root (default: this vault)."""

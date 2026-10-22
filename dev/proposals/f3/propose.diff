@@ -1,0 +1,52 @@
+diff --git a/system/scripts/propose.py b/system/scripts/propose.py
+index 944e2f7f..7ce7ff89 100644
+--- a/system/scripts/propose.py
++++ b/system/scripts/propose.py
+@@ -57,6 +57,8 @@ from pathlib import Path
+ 
+ sys.path.insert(0, str(Path(__file__).resolve().parent))
+ import paths  # noqa: E402
++import people_table as ptable  # noqa: E402  (propose has its own people_table function)
++import person_id  # noqa: E402
+ import tracker  # noqa: E402
+ 
+ LABELS = {"due_date": "Due", "client_visible": "Client-visible", "client_message": "Client messaging",
+@@ -736,6 +738,7 @@ def cmd_close_project(code, out=None):
+ # a likely match is only ever offered, never used.
+ 
+ PEOPLE_COLUMNS = ("Full name", "Email", "Aliases", "Organisation", "Role", "Hidden", "Labels")
++PRIVATE_COLUMNS = ("Hidden", "VIP")      # F3: not written to a generated register (ptable.is_generated); kept on each laptop
+ PEOPLE_SECTION = "## People"
+ PEOPLE_FIELDS = {"Full name": "name", "Email": "email", "Aliases": "aliases", "Organisation": "org", "Role": "role",
+                  "Hidden": "hidden", "Labels": "labels"}      # Labels (BL-94): e.g. Client principal, Executive sponsor; comma-separated
+@@ -791,6 +794,12 @@ def people_parse(text):
+                     "hidden": row.get("Hidden", "").strip().lower() in ("yes", "y", "true", "1"),
+                     "labels": tracker.label_names(row.get("Labels", "")),
+                     "extra": {c: row[c] for c in cols if c not in PEOPLE_FIELDS}})
++    private = ptable.load_private(ptable.private_path(paths.ROOT))    # F3: VIP and Hidden live on this laptop
++    for p in out:
++        p["id"], p["id_source"] = person_id.id_for(p["name"], (person_emails(p) or [""])[0])
++        mine = private.get(p["id"], {})
++        p["hidden"] = p["hidden"] or bool(mine.get("hidden"))
++        p["vip"] = mine.get("vip", "")
+     return out
+ 
+ 
+@@ -803,6 +812,8 @@ def people_text(text, people):
+     cols += [c for c in PEOPLE_COLUMNS if c not in cols]
+     cols += [c for p in people for c in (p.get("extra") or {}) if c not in cols]
+     cols = list(dict.fromkeys(cols))
++    if ptable.is_generated(text):                                # F3: a generated register has no Hidden or VIP column
++        cols = [c for c in cols if c not in PRIVATE_COLUMNS]
+ 
+     def cell(p, c):
+         """One person's value for register column `c`."""
+@@ -837,7 +848,7 @@ def person_emails(p):
+ 
+ def person_vip(p):
+     """The person's VIP kind ("management", "client", "yes"…), or "" when they aren't one."""
+-    v = str((p.get("extra") or {}).get("VIP") or "").strip()
++    v = str(p.get("vip") or (p.get("extra") or {}).get("VIP") or "").strip()        # F3: this laptop's private value first
+     return "" if v.lower() in ("", "no", "n", "false", "0", "-") else v
+ 
+ 

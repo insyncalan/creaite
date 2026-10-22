@@ -1,0 +1,30 @@
+diff --git a/system/scripts/schema.sql b/system/scripts/schema.sql
+index ef61aff5..bcba9c6d 100644
+--- a/system/scripts/schema.sql
++++ b/system/scripts/schema.sql
+@@ -228,6 +228,25 @@ CREATE TABLE IF NOT EXISTS rejected (
+   duplicate_of TEXT               -- the item this one repeats (an action, RAID item or decision ID), when the reason is Duplicate
+ );
+ 
++-- F3 (2.6.4): the people table. One row per person, keyed by a stable ID made from the primary email (person_id.py: the first
++-- 16 hex characters of the SHA-256 of the trimmed, lower-case address) or, with no email, by the name (a leading "n", flagged
++-- in id_source). Additive: nothing else refers to it yet (items still name their owner). VIP and Hidden are NOT columns here:
++-- they are private to each laptop (system/staging/people-private.json). The list columns hold JSON text; extra holds the
++-- register's other columns as a JSON object.
++CREATE TABLE IF NOT EXISTS people (
++  person_id  TEXT PRIMARY KEY CHECK (length(person_id) = 16),
++  id_source  TEXT NOT NULL DEFAULT 'email' CHECK (id_source IN ('email','name')),
++  name       TEXT NOT NULL CHECK (length(trim(name)) > 0),
++  emails     TEXT NOT NULL DEFAULT '[]',   -- JSON list; the first address sets person_id
++  aliases    TEXT NOT NULL DEFAULT '[]',   -- JSON list
++  org        TEXT NOT NULL DEFAULT '',
++  role       TEXT NOT NULL DEFAULT '',
++  labels     TEXT NOT NULL DEFAULT '[]',   -- JSON list of label names
++  extra      TEXT NOT NULL DEFAULT '{}',   -- JSON object: any other register column, kept as it was
++  position   INTEGER NOT NULL DEFAULT 0,   -- the order of the register
++  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
++);
++
+ -- Full-text search across minutes, transcripts, reports and reference files (a derived index, rebuilt in full by
+ -- `tracker.py index`; porter stems words so "slip" finds "slipped")
+ CREATE VIRTUAL TABLE IF NOT EXISTS vault_search USING fts5(path, project, kind, date, content, tokenize = 'porter unicode61');

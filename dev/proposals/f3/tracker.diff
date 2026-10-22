@@ -1,0 +1,115 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 35e9c13d..2819521b 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -16,6 +16,9 @@ Commands (run from anywhere; every location comes from paths.py):
+                                 change gave them, as one new apply (via "revert:<rowids>") that "undo" can reverse (BL-164)
+   migrate                       bring an existing tracker.db up to schema.sql, keeping every row
+   (a proposal item with op "recode" changes a project's code and name everywhere; see recode_project)
++  people-import [--file F] [--dry-run]   F3: read the people register (or F) into the people table, with stable IDs; VIP and Hidden
++                                go to this laptop's private file, never the table; prints what it did and who needs an email
++  people-export [--out F]       F3: the people table as the Markdown register (stdout, or F inside system/staging/drafts/)
+   index                         rebuild the vault_search full-text index (minutes, transcripts, reports, documents);
+                                 runs by itself after every apply and undo
+   query "<text>" [--project X]  full-text search; prints paths and snippets as JSON
+@@ -4593,6 +4596,10 @@ def main(argv):
+         return cmd_undo_changes(args)          # BL-164 (sprint-rail)
+     if cmd == "migrate":
+         return cmd_migrate()
++    if cmd == "people-import":
++        return cmd_people_import(args)
++    if cmd == "people-export":
++        return cmd_people_export(args)
+     if cmd == "index":
+         return cmd_index()
+     if cmd == "query":
+@@ -4601,6 +4608,89 @@ def main(argv):
+     return 2
+ 
+ 
++# ===== The people table (F3, 2.6.4) =====
++# The table is filled from the people register by `people-import`. The pure parts (IDs, parsing, the Markdown copy, the plan) are in
++# people_table.py and person_id.py. This is the only code that writes the table. The old register is not changed.
++
++def people_rows(con):
++    """The people table as people (the shape people_table uses), in register order."""
++    out = []
++    for r in con.execute("SELECT * FROM people ORDER BY position, name"):
++        out.append({"id": r["person_id"], "id_source": r["id_source"], "name": r["name"], "emails": json.loads(r["emails"]),
++                    "aliases": json.loads(r["aliases"]), "org": r["org"], "role": r["role"], "labels": json.loads(r["labels"]),
++                    "extra": json.loads(r["extra"])})
++    return out
++
++
++def people_write(con, plan, incoming):
++    """Apply an import plan inside one transaction (all or nothing); the order of `incoming` becomes the register order."""
++    con.execute("BEGIN IMMEDIATE")
++    try:
++        for pid in plan["remove"]:
++            con.execute("DELETE FROM people WHERE person_id = ?", (pid,))
++        for pos, p in enumerate(incoming):
++            con.execute("INSERT INTO people (person_id, id_source, name, emails, aliases, org, role, labels, extra, position, updated_at) "
++                        "VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(person_id) DO UPDATE SET id_source = excluded.id_source, "
++                        "name = excluded.name, emails = excluded.emails, aliases = excluded.aliases, org = excluded.org, "
++                        "role = excluded.role, labels = excluded.labels, extra = excluded.extra, position = excluded.position, "
++                        "updated_at = excluded.updated_at",
++                        (p["id"], p["id_source"], p["name"], json.dumps(p["emails"]), json.dumps(p["aliases"]), p["org"], p["role"],
++                         json.dumps(p["labels"]), json.dumps(p["extra"], sort_keys=True), pos, now()))
++        con.execute("COMMIT")
++    except Exception:
++        con.execute("ROLLBACK")
++        raise
++
++
++def cmd_people_import(args):
++    """Read the people register into the people table. A copy of the database is taken first. Nothing in the register changes;
++    VIP and Hidden found in an older register are added to this laptop's private file (what is already there wins)."""
++    import people_table
++    dry = "--dry-run" in args
++    src = Path(args[args.index("--file") + 1]) if "--file" in args else paths.PEOPLE_REGISTER
++    if not src.is_file():
++        print(f"There is no people register at {paths.rel(src)}.")
++        return 1
++    people, found, flags = people_table.parse_register(src.read_text(encoding="utf-8"))
++    con = connect()
++    plan = people_table.plan_import(people_rows(con), people)
++    print(f"{len(people)} people: {len(plan['insert'])} new, {len(plan['update'])} changed, {len(plan['remove'])} removed, "
++          f"{plan['same']} the same; {len(plan['rekeyed'])} gained an email.")
++    for f in flags:
++        print(f"  needs a look: {f['name']}: {f['reason']}")
++    if dry:
++        print("Dry run: nothing was written.")
++        return 0
++    backup = backup_db("migrate")
++    people_write(con, plan, people)
++    pfile = people_table.private_path(paths.ROOT)
++    mine = people_table.load_private(pfile)
++    merged = people_table.merge_private(mine, found)
++    if merged != mine:
++        people_table.save_private(pfile, merged)
++    debuglog.info("tracker", f"people import: {len(people)} people, {len(flags)} flagged; backup {paths.rel(backup)}")
++    print(f"Done. Backup from before: {paths.rel(backup)}")
++    return 0
++
++
++def cmd_people_export(args):
++    """Print the people table as the Markdown register, or save it to a file inside system/staging/drafts/."""
++    import people_table
++    people = people_rows(connect())
++    base = paths.PEOPLE_REGISTER.read_text(encoding="utf-8") if paths.PEOPLE_REGISTER.is_file() else None
++    text = people_table.render_register(people, base if base and people_table.is_generated(base) else None)
++    if "--out" not in args:
++        sys.stdout.write(text)
++        return 0
++    out = Path(args[args.index("--out") + 1]).resolve()
++    if out.parent != (paths.STAGING / "drafts").resolve():
++        print("The export can only be saved directly in system/staging/drafts/.")
++        return 1
++    out.write_text(text, encoding="utf-8")
++    print(f"Saved {paths.rel(out)}.")
++    return 0
++
++
+ # ===== Recode a project (BL-111) =====
+ # A proposal item {"op": "recode", "table": "projects", "id": OLD, "changes": {"code": NEW, "name": …}, "folder": {"from": …, "to": …}}
+ # changes a project's code (and optionally its name and folder) everywhere in one apply, and undo restores it exactly. Built by

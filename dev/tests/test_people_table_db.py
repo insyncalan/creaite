@@ -82,6 +82,29 @@ class PeopleTableDb(unittest.TestCase):
         self.assertNotIn("VIP", head)
         self.assertNotIn("Hidden", head)
 
+    def test_migrate_adds_the_table_to_an_older_database_and_keeps_the_rows(self):
+        import sqlite3
+        db = self.v.root / "system" / "tracker.db"
+        con = sqlite3.connect(db)
+        con.execute("DROP TABLE people")
+        con.commit()
+        con.close()
+        before = self.v.rows("projects")
+        self.v.run("migrate")
+        self.assertEqual(self.v.rows("people"), [])
+        self.assertEqual(self.v.rows("projects"), before)
+        self.assertIn("6 people: 6 new", self.v.run("people-import").stdout)
+
+    def test_a_thousand_people_import_is_quick(self):
+        import time
+        rows = ["| Full name | Email | Aliases | Organisation | Role | Hidden | VIP | Labels |", "|---|---|---|---|---|---|---|---|"]
+        rows += [f"| Person {i} Example | p{i}@brightwater.example | P{i} | Org | Role | {'yes' if i % 50 == 0 else ''} | | |" for i in range(1000)]
+        (self.v.root / REG).write_text("# People register\n\n## People\n\n" + "\n".join(rows) + "\n", encoding="utf-8")
+        t0 = time.perf_counter()
+        self.assertIn("1000 people: 1000 new", self.v.run("people-import").stdout)
+        self.assertIn("1000 the same", self.v.run("people-import").stdout)
+        self.assertLess(time.perf_counter() - t0, 10.0)             # two runs, each a fresh process, a backup and a transaction
+
 
 if __name__ == "__main__":
     unittest.main()
