@@ -1,0 +1,71 @@
+diff --git a/system/scripts/propose.py b/system/scripts/propose.py
+index 944e2f7f..4ce84b2c 100644
+--- a/system/scripts/propose.py
++++ b/system/scripts/propose.py
+@@ -1080,7 +1080,7 @@ def owner_items(old):
+     con = tracker.connect()
+     out = {}
+     for table, col in OWNER_COLUMNS:
+-        for r in con.execute(f"SELECT id FROM {table} WHERE {col} = ? ORDER BY id", (old,)):
++        for r in con.execute(f"SELECT id FROM {table} WHERE {col} = ? ORDER BY project, length(id), id", (old,)):
+             out.setdefault(r[0], {"op": "update", "table": table, "id": r[0], "changes": {}})["changes"][col] = None
+     return list(out.values())
+ 
+@@ -1478,7 +1478,7 @@ def recode_lines(con, item):
+     if f.get("from") and f.get("to"):
+         out.append(f"    Folder: {f['from']} → {f['to']} (the item sources follow)")
+     for t in tracker.RECODE_ID_TABLES:
+-        ids = [r[0] for r in con.execute(f"SELECT id FROM {t} WHERE project = ? ORDER BY id", (old,))]
++        ids = [r[0] for r in con.execute(f"SELECT id FROM {t} WHERE project = ? ORDER BY project, length(id), id", (old,))]
+         if ids:
+             out.append(f"    {t}: {len(ids)} (e.g. {ids[0]} → {tracker.recode_id(ids[0], old, new)})")
+     n = con.execute("SELECT count(*) FROM updates WHERE project = ?", (old,)).fetchone()[0]
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index fd117e71..d832d811 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -1994,7 +1994,7 @@ def open_items(con, code):
+     """[(table, id)] of a project's items that are still open (an archived project has none)."""
+     out = []
+     for t, statuses in ARCHIVE_OPEN.items():
+-        q = f"SELECT id FROM {t} WHERE project = ? AND status IN ({','.join('?' * len(statuses))}) ORDER BY id"
++        q = f"SELECT id FROM {t} WHERE project = ? AND status IN ({','.join('?' * len(statuses))}) ORDER BY project, length(id), id"
+         out += [(t, r[0]) for r in con.execute(q, (code, *statuses))]
+     return out
+ 
+@@ -2014,7 +2014,7 @@ def archive_project(con, item, apply_id, via):
+     flags, active = _archive_target(con, item, row)
+     keep = set() if flags else age_archived_before(con, code)       # BL-10: a restore leaves items archived for their age alone
+     for t in ARCHIVABLE:
+-        for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND archived = ? ORDER BY id", (code, 1 - flags)).fetchall():
++        for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND archived = ? ORDER BY project, length(id), id", (code, 1 - flags)).fetchall():
+             if (t, i) in keep:
+                 continue
+             con.execute(f"UPDATE {t} SET archived = ? WHERE id = ?", (flags, i))
+@@ -2177,7 +2177,7 @@ def due_for_age_archive(con, on=None, settings=None):
+             continue
+         cutoff = months_before(on or clock_day(), months).isoformat()
+         q = (f"SELECT * FROM main.{t} WHERE archived = 0 AND closed IS NOT NULL AND closed <= ? "
+-             f"AND status IN ({','.join('?' * len(CLOSING[t]))}) ORDER BY id")
++             f"AND status IN ({','.join('?' * len(CLOSING[t]))}) ORDER BY project, length(id), id")
+         for r in con.execute(q, (cutoff, *CLOSING[t])).fetchall():
+             if age_archive_problem(con, t, dict(r), on, settings) is None:
+                 out.append((t, r["id"]))
+@@ -3769,7 +3769,7 @@ def seed_workstreams(con):
+     wanted = {}                      # (project, name in lower case) → [name, status, source]
+     for table in ("actions", "raid"):
+         for project, name in con.execute(f"SELECT project, trim(workstream) FROM {table} "
+-                                         "WHERE trim(COALESCE(workstream, '')) <> '' ORDER BY id"):
++                                         "WHERE trim(COALESCE(workstream, '')) <> '' ORDER BY project, length(id), id"):
+             wanted.setdefault((project, name.lower()), [name, "Active", "tracker.py migrate (from items)"])
+     kept = paths.load_settings().get("workstreams") or {}
+     for key in kept.get("added") or []:
+@@ -3851,7 +3851,7 @@ def migrate_schema():
+         for t in todo:
+             old_cols = columns(con, t)
+             if t == "milestones" and "state" not in old_cols:      # BL-186: Missed is retired; see retire_missed
+-                missed = [dict(r) for r in con.execute("SELECT id, updated_at FROM milestones WHERE status = 'Missed' ORDER BY id")]
++                missed = [dict(r) for r in con.execute("SELECT id, updated_at FROM milestones WHERE status = 'Missed' ORDER BY project, length(id), id")]
+                 con.execute("UPDATE milestones SET status = 'Planned' WHERE status = 'Missed'")
+             con.execute(creates[t].replace(f"CREATE TABLE IF NOT EXISTS {t} (", f"CREATE TABLE {t}__new (", 1))
+             keep = [c for c in columns(con, f"{t}__new") if c in old_cols]

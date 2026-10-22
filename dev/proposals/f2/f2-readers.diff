@@ -1,0 +1,367 @@
+diff --git a/system/scripts/build_dashboard.py b/system/scripts/build_dashboard.py
+index 50cae6a0..d52ca080 100644
+--- a/system/scripts/build_dashboard.py
++++ b/system/scripts/build_dashboard.py
+@@ -350,7 +350,7 @@ def milestone_detail(con, m, events, today):
+             continue
+         if "baseline_date" in f and f["baseline_date"]["old"]:
+             o, n = f["baseline_date"]["old"], f["baseline_date"]["new"]
+-            dm = re.search(r"\b[A-Z][A-Z0-9]{2,6}-D-\d{3}\b", note)
++            dm = re.search(r"\b[A-Z][A-Z0-9]{2,6}-D-\d{3,5}\b", note)
+             rb = {"date": d, "from": orig or o, "decision": dm.group(0) if dm else ""}
+             fcn = (f.get("forecast_date") or {}).get("new")
+             log.append({"d": d, "c": f"Rebaselined: agreed date {shown(o)} to {shown(n)}" + (f", forecast {shown(fcn)}" if fcn and fcn != n else ""),
+@@ -1073,7 +1073,7 @@ def activity_kind(tbl, key, raid_type=None):
+     if tbl in ("links", "item_labels"):                     # a link or a label belongs to its (first) item
+         item = str(key).split("|")[0]
+         k = next((k for m, k in ITEM_KINDS if m in item), None)
+-        return k or ("Risk" if re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-\d{3}", item) else "label")
++        return k or ("Risk" if re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-\d{3,5}", item) else "label")
+     return {"actions": "action", "decisions": "decision", "milestones": "milestone", "projects": "project",
+             "updates": "update", "workstreams": "workstream", "promises": "promise", "labels": "label",
+             "raid": raid_type or "Risk"}.get(tbl, "project")
+@@ -1945,7 +1945,7 @@ def collect(now=None, timings=None):
+                          "crlogos": mem["logos"], "partners": mem["partners"], "ms": ms, "current": mem["current"], "images": mem["images"],
+                          "sponsor": p["sponsor"] or "", "phase": p["phase"] or "",
+                          "undated": undated_counts(actions, raid, p["code"]),       # BL-95
+-                         "seq": int(tracker.next_id(con, "promises", p["code"])[-3:]) - 1,   # shared numbering
++                         "seq": int(tracker.next_id(con, "promises", p["code"]).rsplit("-", 1)[-1]) - 1,   # shared numbering
+                          "ev": saved_evidence(p["code"])})                                   # BL-207
+ 
+     took["tracker"] = time.monotonic() - started                 # the rows and each project's memory
+diff --git a/system/scripts/claims.py b/system/scripts/claims.py
+index ac20393c..57259f32 100644
+--- a/system/scripts/claims.py
++++ b/system/scripts/claims.py
+@@ -22,7 +22,7 @@ from pathlib import Path
+ sys.path.insert(0, str(Path(__file__).resolve().parent))
+ import paths  # noqa: E402,F401  (the vault's locations, for tracker.py)
+ 
+-ID = re.compile(r"(?<![A-Za-z0-9-])([A-Z][A-Z0-9]{2,6})-(?:([ADMWP])-)?(\d{3})(?![0-9A-Za-z])")
++ID = re.compile(r"(?<![A-Za-z0-9-])([A-Z][A-Z0-9]{2,6})-(?:([ADMWP])-)?(\d{3,5})(?![0-9A-Za-z])")
+ TITLE_FIELD = {"actions": "description", "raid": "description", "decisions": "decision", "milestones": "name",
+                "promises": "description"}
+ OWNER_FIELD = {"actions": "owner", "raid": "owner", "decisions": "made_by", "milestones": "owner", "promises": "promised_by"}
+diff --git a/system/scripts/creaite_doc.py b/system/scripts/creaite_doc.py
+index 50636b42..5c1114a3 100644
+--- a/system/scripts/creaite_doc.py
++++ b/system/scripts/creaite_doc.py
+@@ -505,7 +505,7 @@ def _layout_known(doc):
+         logos = set(report_doc.logo_kinds(code)) | {"partner"}
+     except Exception:  # noqa: BLE001  a project whose partners can't be read: the static kinds only
+         logos = set(report_doc.LOGO_KINDS)
+-    item = re.compile(rf"{re.escape(code)}-(?:[A-Z]-)?\d{{3}}\Z") if report_doc.CODE.match(code) else None
++    item = re.compile(rf"{re.escape(code)}-(?:[A-Z]-)?\d{{3,5}}\Z") if report_doc.CODE.match(code) else None
+     return {"order": ids.__contains__, "hidden": ids.__contains__, "glance": set(report_doc.GLANCE["client"]).__contains__,
+             "logos": logos.__contains__, "milestones": (lambda x: bool(item and item.match(x)))}
+ 
+diff --git a/system/scripts/drafts.py b/system/scripts/drafts.py
+index 28d885bf..8f94046a 100644
+--- a/system/scripts/drafts.py
++++ b/system/scripts/drafts.py
+@@ -85,7 +85,7 @@ FEATURES = {
+ COUNTED = {"promise": "Promises from your own messages"}
+ # BL-286 (sprint-prep-server): the kind "shape" counts under the feature "shape" (draft-stats.json takes any lower-case feature
+ # name) and is on unless settings.json `drafting.shape` is false. Its Settings switch is in FEATURES above (sprint-prep-shape).
+-ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
++ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b")
+ SECRET_WORDS = re.compile(r"\b(confidential|restricted)\b", re.I)
+ STOP = set("the a an and or of to for in on at by with from is are was were be been it this that these those as into not no "
+            "will shall can could should would has have had do does did our we you they their them its".split())
+diff --git a/system/scripts/edit_ai.py b/system/scripts/edit_ai.py
+index 1c108e5d..8ec78b8b 100644
+--- a/system/scripts/edit_ai.py
++++ b/system/scripts/edit_ai.py
+@@ -50,7 +50,7 @@ MAX_TEXT = 12000            # characters of selected text
+ MAX_INSTRUCTION = 400       # "Or say what you want…"
+ MAX_IDS, MAX_PEOPLE = 60, 40
+ OPEN = (("actions", "('Open','Delayed')"), ("raid", "('Open')"), ("decisions", "('Pending')"), ("milestones", "('Planned')"))
+-ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
++ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b")
+ CODE_RE = re.compile(r"[A-Z][A-Z0-9]{2,6}")
+ 
+ # id: (the menu's name, what it does, the instruction Claude is given)
+@@ -380,7 +380,7 @@ def loose_ids(con, text):
+     out = set(ID_RE.findall(t))
+     up, sep = t.upper(), r"[\s_.\-/:()\\]*"         # #127 round 5: a Markdown backslash escape ("ABC\-A\-004") too
+     for (c,) in con.execute("SELECT code FROM projects"):
+-        for m in re.finditer(rf"{re.escape(c)}{sep}(?:([A-NP-Z]){sep}([0-9O]{{1,3}})|([0-9O]{{3}}))(?![0-9O]|[/:.]\d)", up):
++        for m in re.finditer(rf"{re.escape(c)}{sep}(?:([A-NP-Z]){sep}([0-9O]{{1,5}})|([0-9O]{{3,5}}))(?![0-9O]|[/:.]\d)", up):
+             num = (m.group(2) or m.group(3)).replace("O", "0").zfill(3)
+             ref = f"{c}-{m.group(1)}-{num}" if m.group(1) else f"{c}-{num}"
+             if ref not in out and in_tracker(con, ref):
+diff --git a/system/scripts/extraction.py b/system/scripts/extraction.py
+index fd61a769..8f6c65ae 100644
+--- a/system/scripts/extraction.py
++++ b/system/scripts/extraction.py
+@@ -219,7 +219,7 @@ COMPLETE = re.compile(r"\b(done|completed?|finished|sent|attached|here(?:'s| is|
+                       r"shared|uploaded|resolved|fixed|closed|booked|confirmed|agreed|published|merged|released|live)\b", re.I)
+ MOVED = re.compile(r"\b(delay(?:ed)?|postpone[ds]?|pushed|slipp(?:ed|ing)|moved to|not yet|still waiting|next week|reschedul\w*)\b", re.I)
+ STRENGTHS = ("Looks done", "Maybe done", "Not done")
+-ITEM_ID = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
++ITEM_ID = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b")
+ 
+ 
+ def open_items(con, project=None, promises=True):
+diff --git a/system/scripts/item_history.py b/system/scripts/item_history.py
+index d726494d..fbf165b7 100644
+--- a/system/scripts/item_history.py
++++ b/system/scripts/item_history.py
+@@ -25,7 +25,7 @@ from pathlib import Path
+ 
+ import paths
+ 
+-ITEM_RE = re.compile(r"[A-Z][A-Z0-9]{2,6}-(?:[ADMPW]-)?\d{3}")
++ITEM_RE = re.compile(r"[A-Z][A-Z0-9]{2,6}-(?:[ADMPW]-)?\d{3,5}")
+ ITEM_TABLES = ("actions", "raid", "decisions", "milestones", "promises", "workstreams")
+ JOINED = {"links": ("from_item", "links"), "item_labels": ("item_id", "labels")}   # table: (the anchor field, the event's field)
+ REMOVED = "(removed)"                       # as tracker.REMOVED
+diff --git a/system/scripts/prep_shape.py b/system/scripts/prep_shape.py
+index e310f2b8..f4212e1c 100644
+--- a/system/scripts/prep_shape.py
++++ b/system/scripts/prep_shape.py
+@@ -29,7 +29,7 @@ FOCUS = paths.STAGING / "prep-focus.json"
+ SECTIONS = ("objective", "talking_points", "ask", "carried_over")
+ HEADS = {"objective": "OBJECTIVE", "talking_points": "TALKING POINTS", "ask": "ASK", "carried_over": "CARRIED OVER"}
+ SHOW = ("focus-only", "focus-first")
+-ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
++ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b")
+ MAX_SOURCES = 30
+ MAX_CHIPS = 6
+ LIMITS = {"instruction": 4000, "aim": 600, "line": 600, "lines": 12, "focus": 12, "excluded": 200, "questions": 12}
+@@ -222,7 +222,7 @@ def focus_filter(con, codes, focus_ids, excluded=(), confidential=False):
+     rows = _rows(con, codes)
+     focus_ids = [i for i in focus_ids if i]
+     focus_rows = [x for x in rows if x["id"] in focus_ids]
+-    milestones = [i for i in focus_ids if re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-M-\d{3}", i)]
++    milestones = [i for i in focus_ids if re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-M-\d{3,5}", i)]
+     focus_rows += [{"id": m, "project": codes[0], "milestone": m, "source": ""} for m in milestones]
+     linked, ms_names = _links(con, focus_ids), _milestone_names(con, codes)
+     items = []
+diff --git a/system/scripts/prep_view.py b/system/scripts/prep_view.py
+index 78387001..2650826a 100644
+--- a/system/scripts/prep_view.py
++++ b/system/scripts/prep_view.py
+@@ -28,7 +28,7 @@ import prep_page  # noqa: E402
+ import prep_shape  # noqa: E402
+ 
+ CONTENT = paths.STAGING / "prep"
+-ID_RE = re.compile(r"[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}")
++ID_RE = re.compile(r"[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}")
+ OPENABLE = re.compile(r"(projects|inbox|system/staging/drafts)/.+")
+ WEB = re.compile(r"https://[^\s<>\"']+")
+ ORDINAL = {1: "st", 2: "nd", 3: "rd"}
+@@ -533,7 +533,7 @@ td.why ul{margin:0;padding-left:16px} .open{font-size:12px}
+ 
+ def item_href(item_id, port):
+     """The dashboard address that opens a tracker item in Work (its table from the ID's letter, its project from the prefix)."""
+-    m = re.fullmatch(r"([A-Z][A-Z0-9]{2,6})-(?:([A-Z])-)?\d{3}", item_id)
++    m = re.fullmatch(r"([A-Z][A-Z0-9]{2,6})-(?:([A-Z])-)?\d{3,5}", item_id)
+     table = {"A": "actions", "D": "decisions", "M": "milestones", "P": "promises"}.get(m.group(2) or "", "raid") if m else "actions"
+     return f"http://127.0.0.1:{port}/#work={table}&p={m.group(1) if m else ''}&item={item_id}"
+ 
+diff --git a/system/scripts/review.py b/system/scripts/review.py
+index edfbf73a..aeed1921 100644
+--- a/system/scripts/review.py
++++ b/system/scripts/review.py
+@@ -1987,7 +1987,7 @@ def retarget_refusal(ref, item, target):
+         return "it has already been decided; undo the decision first"
+     if not (item.get("values") or {}).get("project") or needs_project(item):
+         return "choose its project first"
+-    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-(?:[AD]-)?\d{3}", target):
++    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-(?:[AD]-)?\d{3,5}", target):
+         return f"{target or '(no ID)'} isn't an item ID"
+     return None
+ 
+diff --git a/system/scripts/sneak_peek.py b/system/scripts/sneak_peek.py
+index 664b5a48..2869febb 100644
+--- a/system/scripts/sneak_peek.py
++++ b/system/scripts/sneak_peek.py
+@@ -556,7 +556,7 @@ def _risk_from_action(r, raw, t, low, s0):
+ def _link(r, raw, t, low, s0):
+     """"blocked by ABC-012", "this blocks ABC-M-003": a new link; both ends must exist."""
+     m = re.match(r"^(?:this\s+|it\s+)?(?:is\s+|'s\s+)?(blocked by|blocks|is blocking|blocking|depends on|waits on|waiting on|"
+-                 r"waiting for)\s+([A-Za-z][A-Za-z0-9]{2,6}-(?:[A-Za-z]-)?\d{3})$", low)
++                 r"waiting for)\s+([A-Za-z][A-Za-z0-9]{2,6}-(?:[A-Za-z]-)?\d{3,5})$", low)
+     if not m:
+         return False
+     other = m.group(2).upper()
+diff --git a/system/scripts/status_checks.py b/system/scripts/status_checks.py
+index 4e40e6ec..c80618b7 100644
+--- a/system/scripts/status_checks.py
++++ b/system/scripts/status_checks.py
+@@ -123,7 +123,7 @@ def client_wording(draft, item_text, people=()):
+     added = figures(draft) - figures(src)
+     if added:
+         notes.append({"id": "number", "note": f"{', '.join(sorted(added)[:5])} isn't in the item's text: check it."})
+-    codes = set(re.findall(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b|\b[A-Z]{3,7}\b", draft or "")) - COMMON_CAPS
++    codes = set(re.findall(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b|\b[A-Z]{3,7}\b", draft or "")) - COMMON_CAPS
+     if codes:
+         notes.append({"id": "code", "note": f"{', '.join(sorted(codes)[:5])} looks like an internal code."})
+     names = [n for n in people if len(n) > 2 and re.search(rf"\b{re.escape(n.lower())}\b", low)]
+@@ -304,7 +304,7 @@ def sources(src, text=""):
+                 continue
+             if s.startswith("projects/"):
+                 files.append(quote(s, text) or {"path": s, "line": 0, "text": ""})
+-            elif status_facts.ID_RE.fullmatch(s) or re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-M-\d{3}", s):
++            elif status_facts.ID_RE.fullmatch(s) or re.fullmatch(r"[A-Z][A-Z0-9]{2,6}-M-\d{3,5}", s):
+                 r = item_row(con, s)
+                 if r:
+                     rows.append(r)
+diff --git a/system/scripts/status_facts.py b/system/scripts/status_facts.py
+index 90af7b27..f0cf96c9 100644
+--- a/system/scripts/status_facts.py
++++ b/system/scripts/status_facts.py
+@@ -33,7 +33,7 @@ import report  # noqa: E402
+ import build_dashboard  # noqa: E402
+ import docx_tools  # noqa: E402
+ 
+-ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
++ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b")
+ RANK = {"Urgent": 0, "High": 1, "Medium": 2, "Low": 3, None: 4, "": 4}
+ DEFAULTS = {"headline_max_words": 30, "max_risks": 2, "max_overdue_named": 3, "max_named_changes": 3, "max_asks": 3,
+             "length_words": {"short": 40, "standard": 150, "fuller": 250}}
+diff --git a/system/templates/dashboard/src/activity.js b/system/templates/dashboard/src/activity.js
+index 801a4632..426e977f 100644
+--- a/system/templates/dashboard/src/activity.js
++++ b/system/templates/dashboard/src/activity.js
+@@ -25,7 +25,7 @@ import { rjApproveInstead, rjLoadRecent, rjReasonFor, rjUnreject } from "./revie
+ /* ======================= Activity ======================= */
+ /* BL-43: each line names the item: the ID (a link to it), its text cut to about 80 characters (full text on hover),
+    then the change. Lines the dashboard adds before a reload are shown the same way, from the item's current text. */
+-export const ID_RE=/^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
++export const ID_RE=/^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3,5}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
+ export function itemText(id){ const x=A.find(a=>a.id===id)||R.find(r=>r.id===id)||DEC.find(d=>d.id===id); if(x) return x.t;
+   const m=(D.milestone_names||{})[id]; if(m) return m[0]; const p=P.find(p=>p.code===id); return p?p.name:""; }
+ /* BL-144: the link's own address, for Cmd-click or a middle click: an item opens in Work (#work=actions&p=ABC&item=ABC-A-003),
+@@ -35,7 +35,7 @@ export function actHref(kind,id){ if(kind==="ms"){ const f=msFind(id); return f&
+ export function actLine(a){ let id=a.id, text=a.item, change=a.change;
+   if(!id){ const m=String(a.what).match(ID_RE); if(!m) return html`${String(a.what??"")}`; id=m[1]; text=itemText(id); change=a.what.slice(id.length).replace(/^[\s·:]+/,""); }
+   if(!text) return html`${String(a.what??"")}`;
+-  const short=text.length>80?text.slice(0,79)+"…":text, kind=/-A-/.test(id)?"actions":/-D-/.test(id)?"decisions":/-M-/.test(id)?"ms":/-\d{3}$/.test(id)?"raid":/^[A-Z][A-Z0-9]{2,6}$/.test(id)?"proj":"";
++  const short=text.length>80?text.slice(0,79)+"…":text, kind=/-A-/.test(id)?"actions":/-D-/.test(id)?"decisions":/-M-/.test(id)?"ms":/-\d{3,5}$/.test(id)?"raid":/^[A-Z][A-Z0-9]{2,6}$/.test(id)?"proj":"";
+   const ch=String(change??"");
+   if(kind==="proj") return html`<a href="#" class="hlink" data-proj="${id}">${pName(id)}</a> — ${ch}`;     /* BL-101: a project is its name */
+   const upd=id.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/); if(upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch}`;
+@@ -53,8 +53,8 @@ export const ACTKINDS=[["action","Action","action"],["Risk","Risk","risk"],["Iss
+ export const actKindOf=k=>ACTKINDS.find(x=>x[0]===k);
+ export const actId=a=>a.id||(String(a.what||"").match(ID_RE)||[])[1]||"";
+ export function actKind(a){ if(a.kind) return a.kind; const id=actId(a);
+-  if(/-A-\d{3}$/.test(id)) return "action"; if(/-D-\d{3}$/.test(id)) return "decision"; if(/-M-\d{3}$/.test(id)) return "milestone";
+-  if(/^[A-Z][A-Z0-9]{2,6}-\d{3}$/.test(id)){ const r=R.find(x=>x.id===id); return (r&&r.type)||"Risk"; }
++  if(/-A-\d{3,5}$/.test(id)) return "action"; if(/-D-\d{3,5}$/.test(id)) return "decision"; if(/-M-\d{3,5}$/.test(id)) return "milestone";
++  if(/^[A-Z][A-Z0-9]{2,6}-\d{3,5}$/.test(id)){ const r=R.find(x=>x.id===id); return (r&&r.type)||"Risk"; }
+   if(/^\d{4}-\d{2}-\d{2}\|/.test(id)) return "update"; if(/^[A-Z][A-Z0-9]{2,6}$/.test(id)) return "project";
+   return /^setting/i.test(String(a.what||""))?"setting":""; }
+ export const actIcon=a=>{ const k=actKindOf(actKind(a)); return k?html`<span class="acticon" role="img" aria-label="${k[1]}" data-tip="${k[1]}">${raw(ic(k[2]))}</span>`:""; };
+diff --git a/system/templates/dashboard/src/ask.js b/system/templates/dashboard/src/ask.js
+index 92858d0d..4be1a801 100644
+--- a/system/templates/dashboard/src/ask.js
++++ b/system/templates/dashboard/src/ask.js
+@@ -101,7 +101,7 @@ export function searchCkItems(){ const q=$("#cmdkIn").value.trim(); if(q.length<
+ export const QWORDS=/^\s*(what|why|how|when|who|did|has|is)\b/i, questionLike=q=>/\?\s*$/.test(q)||QWORDS.test(q);
+ shared.ASKQ={run:null};
+ export const decodeHtml=s=>{ const t=document.createElement("textarea"); putHTML(t,raw(s)); return t.value; };
+-export const ITEMID=/^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/;
++export const ITEMID=/^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3,5}$/;
+ export const itemTable=id=>A.some(a=>a.id===id)?"actions":R.some(r=>r.id===id)?"raid":DEC.some(d=>d.id===id)?"decisions":P.some(p=>(p.ms||[]).some(m=>m[3]===id))?"milestones":null;
+ export function citeFind(name){ const n=name.trim().toLowerCase(), stem=x=>x.replace(/\.[^.]+$/,"").toLowerCase();
+   const s=(shared.ASKQ.sources||[]).find(x=>x.kind!=="item"&&(x.name.toLowerCase()===n||(x.stem||"").toLowerCase()===n)); if(s) return s;
+@@ -430,7 +430,7 @@ export function bootAsk0095(){
+    mailto only, and only an address core/linkUrl.js accepts (no name and password, one mailbox, no cc or bcc), drawn by
+    linkAnchor (new tab, rel="noopener noreferrer"). Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
+    Current state keeps mdHtml. Placeholders (\u0001n\u0001) hold finished HTML while the rest is processed. */
+-export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
++export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3,5}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
+   FENCE:/^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.-]*)[ \t]*$/, HEAD:/^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, HR:/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/,
+   QUOTE:/^ {0,3}&gt; ?/, LI:/^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/, SEP:/^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/};
+ export let MDPATHS=null;
+@@ -448,7 +448,7 @@ export function chatMdInline(s,st,noLinks){
+   return s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g,"$1<strong>$2</strong>")
+     .replace(/~~(?=\S)([\s\S]*?\S)~~/g,"<del>$1</del>")
+     .replace(/(^|[^\w*\u0001])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?!\*)/g,"$1<em>$2</em>").replace(/(^|[^\w])_(?=[^\s_])([^_\n]*?[^\s_])_(?!\w)/g,"$1<em>$2</em>"); }
+-export const ITEMCODE=c=>/^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/.test(c.trim())&&!!itemTable(c.trim());
++export const ITEMCODE=c=>/^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3,5}$/.test(c.trim())&&!!itemTable(c.trim());
+ export function chatMdBlocks(lines,st,depth){
+   const out=[], n=lines.length, blank=l=>/^\s*$/.test(l), inl=t=>chatMdInline(t,st);
+   const cells=l=>l.trim().replace(/^\|/,"").replace(/\|$/,"").split(/(?<!\\)\|/).map(c=>c.trim().replace(/\\\|/g,"|"));
+@@ -1074,12 +1074,12 @@ $("#themeBtn").onclick=()=>{ const dark=document.documentElement.dataset.theme?d
+ export const CKVERB=/^(move|push|pull|bring|set|mark|close|complete|finish|reopen|assign|give|make|change|update|add|new|log|raise|record|reschedule|delay)\b|\b(owns|is done|is closed|due)\b/i;
+ shared.CKPICK={};            /* what the pick list chose: {target: [k,id] | ms id, owner: name} for the text it was chosen for */
+ export const ckWords=t=>String(t||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(w=>w.length>2&&!["the","for","and","action","risk","item","decision","milestone","task","this","that","with","from"].includes(w));
+-export const ckKind=id=>/-A-\d{3}$/.test(id)?"actions":/-D-\d{3}$/.test(id)?"decisions":/-M-\d{3}$/.test(id)?"milestones":/^[A-Z][A-Z0-9]{2,6}-\d{3}$/.test(id)?"raid":null;
++export const ckKind=id=>/-A-\d{3,5}$/.test(id)?"actions":/-D-\d{3,5}$/.test(id)?"decisions":/-M-\d{3,5}$/.test(id)?"milestones":/^[A-Z][A-Z0-9]{2,6}-\d{3,5}$/.test(id)?"raid":null;
+ export function ckMilestones(){ const out=[]; P.forEach(p=>(p.ms||[]).forEach(m=>{ if(m[3]) out.push({id:m[3],p:p.code,t:m[0],due:m[8]||m[1]||"",base:m[4]||"",done:m[2]==="done"}); })); return out; }
+ export const ckMs=id=>ckMilestones().find(m=>m.id===id);
+ /* the item a phrase names: an ID, or the open items (and milestones) whose title shares the most words, in the project it names */
+ export function ckTarget(phrase,{ms=true,kinds=["actions","raid","decisions"]}={}){ const raw=String(phrase||"").trim(); if(!raw) return {none:true};
+-  const idm=raw.toUpperCase().match(/\b[A-Z][A-Z0-9]{2,6}-(?:[AD]-|M-)?\d{3}\b/); if(idm){ const id=idm[0], k=ckKind(id);
++  const idm=raw.toUpperCase().match(/\b[A-Z][A-Z0-9]{2,6}-(?:[AD]-|M-)?\d{3,5}\b/); if(idm){ const id=idm[0], k=ckKind(id);
+     if(k==="milestones") return ckMs(id)?{k,id}:{none:true,why:`${id} isn't a milestone creaite knows`}; return k&&REC(k,id)?{k,id}:{none:true,why:`${id} isn't in the tracker`}; }
+   if(shared.CKPICK.target&&shared.CKPICK.for===raw) return shared.CKPICK.target;
+   const words=ckWords(raw), proj=P.find(p=>words.includes(p.code.toLowerCase())||p.name.toLowerCase().split(/\s+/).some(w=>w.length>3&&words.includes(w)));
+diff --git a/system/templates/dashboard/src/components/prep/PrepShape.jsx b/system/templates/dashboard/src/components/prep/PrepShape.jsx
+index c150a144..6bcd719d 100644
+--- a/system/templates/dashboard/src/components/prep/PrepShape.jsx
++++ b/system/templates/dashboard/src/components/prep/PrepShape.jsx
+@@ -27,7 +27,7 @@ import { acceptShape, addChip, closeShape, discardShape, editedSections, giveBac
+   shapeFilter, shapeInstruction, shapeKey, shapeMsg, shapeProposal, shapeReading, shapeSourcesN, shapeSteps, shapeText, shapeUsed,
+   discardProposal, shapeOnPage, sourceHref, toggleExcluded, useProposal } from "../../stores/prepShape.js";
+ 
+-const SHAPE_ID_RE = /\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b/;
++const SHAPE_ID_RE = /\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}\b/;
+ const shPlural = (/** @type {number} */ n, /** @type {string} */ one) => `${n} ${one}${n === 1 ? "" : "s"}`;
+ /** "2026-10-13 09:30" → "13-10-2026 09:30". @param {string} s */
+ const stamp = s => s ? `${fd(s.slice(0, 10))}${s.length > 10 ? s.slice(10) : ""}` : "";
+diff --git a/system/templates/dashboard/src/components/report/Sheet.jsx b/system/templates/dashboard/src/components/report/Sheet.jsx
+index b4b93f39..772996f5 100644
+--- a/system/templates/dashboard/src/components/report/Sheet.jsx
++++ b/system/templates/dashboard/src/components/report/Sheet.jsx
+@@ -510,7 +510,7 @@ export function Sheet(props) {
+       {found ? <div class="sheet-found" role="dialog" aria-label="Find the source" style={{ left: `${found.x}px`, top: `${found.y}px` }}>
+         {found.message ? <p>{found.message}</p> : null}
+         {(found.items || []).length ? <ul>{(found.items || []).map((it, k) => <li key={k}><button type="button" class="linkbtn" onClick={() => {
+-          onEvent({ type: "source", ref: it.ref }); if (/^[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}$/.test(it.ref)) openSheetRef(it.ref, props.onOpenItem); setFound(null); }}>{it.label || it.ref}</button>
++          onEvent({ type: "source", ref: it.ref }); if (/^[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3,5}$/.test(it.ref)) openSheetRef(it.ref, props.onOpenItem); setFound(null); }}>{it.label || it.ref}</button>
+           {it.quote ? <span class="sub"> “{it.quote}”</span> : null}</li>)}</ul> : null}
+         <button type="button" class="btn sm" onClick={() => setFound(null)}>Close</button>
+       </div> : null}
+diff --git a/system/templates/dashboard/src/milestones.js b/system/templates/dashboard/src/milestones.js
+index 01a2a27d..3bc121e2 100644
+--- a/system/templates/dashboard/src/milestones.js
++++ b/system/templates/dashboard/src/milestones.js
+@@ -27,7 +27,7 @@ export const msLinked=id=>[...A.filter(a=>a.ms===id).map(a=>["actions",a]),...R.
+ /* BL-231 step 2b: the final versions, folded in from after-bl-245 (0190), which replaced the panel's at load */
+ export function openMilestone(id){ const {p}=msFind(id); if(!p) return; mvOpenPage(p.code,"plan",id); }
+ export function openNewMilestone(code){ mvOpenPage(code,"plan",null,{add:true}); }
+-export function msNextId(code){ const p=P.find(x=>x.code===code); const n=Math.max(0,...p.ms.filter(m=>m[3]&&/-M-\d{3}$/.test(m[3])).map(m=>+m[3].slice(-3)))+1; return `${code}-M-${String(n).padStart(3,"0")}`; }
++export function msNextId(code){ const p=P.find(x=>x.code===code); const n=Math.max(0,...p.ms.filter(m=>m[3]&&/-M-\d{3,5}$/.test(m[3])).map(m=>+m[3].slice(`${code}-M-`.length)))+1; return `${code}-M-${String(n).padStart(3,"0")}`; }
+ export function msState(m){ m[1]=m[8]||m[4]||""; m[2]=m[6]==="Done"?"done":((m[14]&&["Slipped","Overdue"].includes(m[14].st))||(m[4]&&m[8]&&m[8]>m[4]))?"slip":""; }   /* BL-186: Missed is retired */
+ export async function msPanelSave(){ const f=readForm(); $$("#pFields .bad").forEach(e=>e.classList.remove("bad")); const bad=(n,msg)=>{ $("#f_"+n)?.classList.add("bad"); $("#pErr").textContent=msg; };
+   if(f.fc&&!DATE.test(f.fc)) return bad("fc","Not a date creaite knows. "+DATE_HELP);
+diff --git a/system/templates/dashboard/src/panel.js b/system/templates/dashboard/src/panel.js
+index ed2d56cd..ff25f2f8 100644
+--- a/system/templates/dashboard/src/panel.js
++++ b/system/templates/dashboard/src/panel.js
+@@ -372,7 +372,7 @@ export function norm(k,f){ if("o" in f) f.o=f.o||"TBC";
+   if("st" in f&&k!=="decisions"){ if(!OPENST(f.st)&&!f.closed) f.closed=TODAY; if(OPENST(f.st)) f.closed=null; } ["due","closed"].forEach(n=>{ if(n in f&&!f[n]) f[n]=null; });
+   if(k==="decisions"&&f.st==="Pending") f.date="";   /* BL-53: no date until it is made */
+   if(k==="raid") f.pr=prio(f.imp,f.lik); return f; }
+-export function nextId(k,p){ const pre=k==="actions"?`${p}-A-`:k==="raid"?`${p}-`:`${p}-D-`; /* one number sequence per project across actions, RAID, decisions and promises, as tracker.next_id: promises aren't on the page, so the build gives the highest number at build time (seq) */ const pr=P.find(x=>x.code===p), n=Math.max(0,+(pr&&pr.seq)||0,...[[A,`${p}-A-`],[R,`${p}-`],[DEC,`${p}-D-`]].flatMap(([arr,q])=>arr.filter(x=>x.id.startsWith(q)&&x.id.length===q.length+3&&/^\d{3}$/.test(x.id.slice(-3))).map(x=>+x.id.slice(-3))))+1; return pre+String(n).padStart(3,"0"); }
++export function nextId(k,p){ const pre=k==="actions"?`${p}-A-`:k==="raid"?`${p}-`:`${p}-D-`; /* one number sequence per project across actions, RAID, decisions and promises, as tracker.next_id: promises aren't on the page, so the build gives the highest number at build time (seq) */ const pr=P.find(x=>x.code===p), n=Math.max(0,+(pr&&pr.seq)||0,...[[A,`${p}-A-`],[R,`${p}-`],[DEC,`${p}-D-`]].flatMap(([arr,q])=>arr.filter(x=>x.id.startsWith(q)&&x.id.length>=q.length+3&&x.id.length<=q.length+5&&/^\d+$/.test(x.id.slice(q.length))).map(x=>+x.id.slice(q.length))))+1; return pre+String(n).padStart(3,"0"); }
+ /* The save of one existing item, shared by the panel's Save and the Work board's moves (BL-103): the fields that changed become one
+    proposal (with Undo), applied at once when auto-apply is on. Returns "nochange", or whether it was saved. `label` overrides the message. */
+ export async function commitRecord(k,id,f,label){ const x=REC(k,id), before={...x}; const same=(a,b)=>String(a??"").trim()===String(b??"").trim();   /* the form trims; stored text may keep a trailing space */
+diff --git a/system/templates/dashboard/src/projects.js b/system/templates/dashboard/src/projects.js
+index 46e449d2..7310c37a 100644
+--- a/system/templates/dashboard/src/projects.js
++++ b/system/templates/dashboard/src/projects.js
+@@ -661,7 +661,7 @@ export function readClaims(code){ shared.CURRD=null; const ev=evSaved(code), roo
+ export const SRCQ={};
+ export function savedFactsHtml(c){ return (c.saved.facts||[]).map((f,i)=>{ const key=claimHash(f.text+"|"+(f.src||[]).join(",")), got=SRCQ[key];
+   if(!got&&viaServer()){ SRCQ[key]="…"; api("/api/current/sources",{src:f.src||[],text:f.text}).then(r=>{ SRCQ[key]=r.ok?r:{rows:null,files:[]}; evRefresh(); }); }
+-  const local=(f.src||[]).filter(s=>!s.startsWith("projects/")).map(id=>{ const k=/-A-\d{3}$/.test(id)?"actions":/-D-\d{3}$/.test(id)?"decisions":/-M-\d{3}$/.test(id)?"milestones":"raid", x=k==="milestones"?null:REC(k,id);
++  const local=(f.src||[]).filter(s=>!s.startsWith("projects/")).map(id=>{ const k=/-A-\d{3,5}$/.test(id)?"actions":/-D-\d{3,5}$/.test(id)?"decisions":/-M-\d{3,5}$/.test(id)?"milestones":"raid", x=k==="milestones"?null:REC(k,id);
+     return x?{id,kind:k,title:x.t,status:x.st,owner:x.o||x.by,due:x.due,closed:x.closed}:{id,kind:k,title:k==="milestones"?(((D.milestone_names||{})[id]||[])[0]||""):"",status:""}; });
+   const rows=got&&got!=="…"&&got.rows?got.rows:local, files=got&&got!=="…"?got.files||[]:(f.src||[]).filter(s=>s.startsWith("projects/")).map(p=>({path:p,line:0,text:""}));
+   return `<div class="evfact"><div class="evpart">${esc(f.part||"Fact")}</div><div>${esc(f.text)}</div>${rows.map(evRowHtml).join("")}${files.map(q=>`<div class="evrow">${evQuote(q)||`<div class="evqsrc">${esc(String(q.path).split("/").pop())}</div>`}</div>`).join("")}${!viaServer()&&(f.src||[]).length?'<div class="evqsrc">The quoted lines need the live server.</div>':""}</div>`; }).join(""); }

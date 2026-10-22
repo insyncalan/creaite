@@ -1,0 +1,22 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 5e5018d3..bf50c00a 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -4965,7 +4965,7 @@ ADMIN_ROUTES = {"/api/changes/list": changes_list_route, "/api/changes/undo": ch
+ EDITS = {}
+ EDIT_LIMIT = 1024 * 1024
+ EDIT_LINE = r"^CHANGE:\s*`?([^\s|`]+)`?\s*\|\s*(.+)$"
+-ITEM_ID = r"\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b"
++ITEM_ID = r"\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3,5}\b"
+ 
+ 
+ def edit_spec_file(rel):
+@@ -5369,7 +5369,7 @@ ADMIN_ROUTES.update({"/api/edit/approve": lambda h, r: edit_answer(h, r, "approv
+ # Undo); Cancel does nothing. The model gains no command: it writes a line in its reply, and nothing is written until Alan
+ # presses Go ahead on the page. BL-141's guard, the hook and BL-267's record gate are untouched. The CHANGE card (BL-258)
+ # stays, unchanged, for what the dashboard's item edit doesn't do (a new item, a project, memory, the register, over ten changes).
+-FIELD_LINE = re.compile(r"^EDIT:\s*`?([A-Z][A-Z0-9]{2,6}-(?:[AD]-)?\d{3})`?\s*\|\s*([^|]+?)\s*\|\s*(.*?)\s*$", re.M)
++FIELD_LINE = re.compile(r"^EDIT:\s*`?([A-Z][A-Z0-9]{2,6}-(?:[AD]-)?\d{3,5})`?\s*\|\s*([^|]+?)\s*\|\s*(.*?)\s*$", re.M)
+ FIELD_LIMIT = 10
+ # table → the dashboard's field key → (tracker column, label, kind); the fields the peek and the Work cells edit on an item
+ FIELD_EDIT = {

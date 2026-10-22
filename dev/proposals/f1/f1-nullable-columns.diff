@@ -1,0 +1,83 @@
+diff --git a/system/scripts/schema.sql b/system/scripts/schema.sql
+index ef61aff5..e2d3ee68 100644
+--- a/system/scripts/schema.sql
++++ b/system/scripts/schema.sql
+@@ -203,7 +203,12 @@ CREATE TABLE IF NOT EXISTS applies (
+   at          TEXT NOT NULL DEFAULT (datetime('now')),
+   proposals   TEXT NOT NULL,            -- JSON list of proposal files
+   file_ops    TEXT,                     -- JSON list of file operations performed
+-  undone_at   TEXT                      -- set when undone
++  undone_at   TEXT,                     -- set when undone
++  -- F1 (semi-shared foundation): all nullable, written by nothing yet except engine_version; nothing reads them
++  author         TEXT,                  -- the person who made the apply (their person ID, from F3)
++  origin         TEXT,                  -- the laptop or channel it came from
++  sequence       INTEGER,               -- per-origin sequence number
++  engine_version TEXT                   -- the creaite version that wrote it (tracker.py stamps this)
+ );
+ 
+ CREATE TABLE IF NOT EXISTS change_log (
+@@ -215,7 +220,13 @@ CREATE TABLE IF NOT EXISTS change_log (
+   old_value  TEXT,
+   new_value  TEXT,
+   op         TEXT NOT NULL DEFAULT 'update' CHECK (op IN ('insert','update','undo')),
+-  via        TEXT NOT NULL   -- proposal file name, 'dashboard', 'excel-import', 'cx-edit', 'assistant' or 'undo'
++  via        TEXT NOT NULL,  -- proposal file name, 'dashboard', 'excel-import', 'cx-edit', 'assistant' or 'undo'
++  -- F1 (semi-shared foundation): all nullable and unused until a later release
++  author         TEXT,
++  origin         TEXT,
++  sequence       INTEGER,
++  base_version   INTEGER,        -- the row version the change was made against
++  engine_version TEXT
+ );
+ 
+ -- Rejected proposals, so they are not proposed again. BL-133 stage B: the reason given and, for a duplicate, the item it repeats
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 35e9c13d..f4f93564 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -698,6 +698,21 @@ def log(con, apply_id, table, key, field, old, new, op, via):
+                  None if old is None else str(old), None if new is None else str(new), op, via))
+ 
+ 
++def engine_version():
++    """F1: the installed creaite version (VERSION in the vault root), or None when it can't be read."""
++    try:
++        return (paths.ROOT / "VERSION").read_text(encoding="utf-8").strip() or None
++    except OSError:
++        return None
++
++
++def stamp_apply(con, apply_id):
++    """F1: record the engine version on an apply row. Does nothing on a database that has not been migrated yet
++    (the column is missing), so an older database keeps working until `tracker.py migrate` runs."""
++    if "engine_version" in columns(con, "applies"):
++        con.execute("UPDATE applies SET engine_version = ? WHERE apply_id = ?", (engine_version(), apply_id))
++
++
+ BLANKABLE = {"decisions": ("date", "needed_by", "replaces", "reasoning", "options", "revisit"),     # an empty string means "not set"
+              "milestones": ("state", "state_reason", "owner", "actual_date", "client_message", "description", "internal_note")}   # BL-186
+ 
+@@ -2807,6 +2822,7 @@ def cmd_apply(args):
+         cur = con.execute("INSERT INTO applies (at, proposals, file_ops) VALUES (?, ?, ?)",
+                           (now(), json.dumps([paths.rel(p) for p, _ in work]), "[]"))
+         apply_id = cur.lastrowid
++        stamp_apply(con, apply_id)
+         for p, data in work:
+             via = via_for(p, data)
+             for item in data.get("items", []):
+@@ -3672,6 +3688,7 @@ def cmd_undo_changes(args):
+     try:
+         cur = con.execute("INSERT INTO applies (at, proposals, file_ops) VALUES (?, ?, ?)", (now(), "[]", "[]"))
+         apply_id = cur.lastrowid
++        stamp_apply(con, apply_id)
+         done, skipped = revert_plan(con, rowids, apply_id, REVERT_VIA + "pending")
+         via = REVERT_VIA + ",".join(str(d["rowid"]) for d in sorted(done, key=lambda d: d["rowid"]))
+         con.execute("UPDATE change_log SET via = ? WHERE apply_id = ?", (via, apply_id))
+@@ -3884,6 +3901,7 @@ def retire_missed(con, missed):
+     at = now()
+     apply_id = con.execute("INSERT INTO applies (at, proposals, file_ops) VALUES (?, ?, ?)",
+                            (at, json.dumps([]), "[]")).lastrowid
++    stamp_apply(con, apply_id)
+     for m in missed:
+         con.execute("UPDATE milestones SET state = 'Overdue', state_set = 1, updated_at = ? WHERE id = ?", (at, m["id"]))
+         for f, old, new in (("status", "Missed", "Planned"), ("state", None, "Overdue"), ("state_set", 0, 1),

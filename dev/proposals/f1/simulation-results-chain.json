@@ -1,0 +1,602 @@
+{
+ "baseline_counts": {
+  "actions": 700,
+  "applies": 2,
+  "change_log": 11348,
+  "decisions": 90,
+  "item_events": 10340,
+  "item_labels": 0,
+  "labels": 1,
+  "links": 0,
+  "milestones": 0,
+  "projects": 1,
+  "promises": 50,
+  "raid": 150,
+  "rejected": 0,
+  "updates": 0,
+  "workstreams": 0
+ },
+ "baseline_round_trip": {
+  "apply_exit": 0,
+  "apply_secs": 0.7,
+  "apply_delta": {
+   "actions": 1,
+   "applies": 1,
+   "change_log": 37,
+   "decisions": 1,
+   "item_events": 33,
+   "raid": 1
+  },
+  "new_top_ids": {
+   "actions": 991,
+   "raid": 992,
+   "decisions": 993,
+   "promises": 990,
+   "text_sort_max_action": "ABC-A-991"
+  },
+  "undo_exit": 0,
+  "undo_secs": 0.7,
+  "undo_restores_counts": true,
+  "undo_priority_back": true,
+  "recode_stage_exit": 0,
+  "recode_apply_exit": 0,
+  "recode_apply_secs": 0.9,
+  "recode_ids_ok": true,
+  "recode_top_action": "XPL-A-700",
+  "recode_counts_same": true,
+  "recode_undo_exit": 0,
+  "recode_undone_ids_ok": true,
+  "final_counts_equal_start": true,
+  "tails": {
+   "apply": [
+    "Apply 3: written 4, filed 0, rejected 0, 0 still pending."
+   ],
+   "recode": [
+    "Apply 4: written 1, filed 1, rejected 0, 0 still pending."
+   ],
+   "recode_stage": [
+    "Check: Mail and meetings may still say ABC or \u201cExample Programme\u201d: after the apply, teach the new project the old name with `propose.py learn XPL alias \"Example Programme\"`."
+   ]
+  }
+ },
+ "steps": [
+  {
+   "step": "F1",
+   "dated_backup": "tracker-2026-10-23-024534-pre-F1.db",
+   "counts_before": {
+    "actions": 700,
+    "applies": 4,
+    "change_log": 11428,
+    "decisions": 90,
+    "item_events": 10412,
+    "item_labels": 0,
+    "labels": 1,
+    "links": 0,
+    "milestones": 0,
+    "projects": 1,
+    "promises": 50,
+    "raid": 150,
+    "rejected": 0,
+    "updates": 0,
+    "workstreams": 0
+   },
+   "migrate_exit": 0,
+   "migrate_secs": 0.17,
+   "migrate_tail": [
+    "Migrated applies (4 rows), change_log (11428 rows). Backup from before: system/backups/tracker-2026-10-23-024535-migrate.db"
+   ],
+   "counts_after": {
+    "actions": 700,
+    "applies": 4,
+    "change_log": 11428,
+    "decisions": 90,
+    "item_events": 10412,
+    "item_labels": 0,
+    "labels": 1,
+    "links": 0,
+    "milestones": 0,
+    "projects": 1,
+    "promises": 50,
+    "raid": 150,
+    "rejected": 0,
+    "updates": 0,
+    "workstreams": 0
+   },
+   "tables_rebuilt_or_changed": [
+    "applies",
+    "change_log"
+   ],
+   "row_count_changes": {},
+   "integrity": [
+    "ok"
+   ],
+   "fk_problems": 0,
+   "applies_engine_version_stamped": 0,
+   "second_migrate_is_noop": true,
+   "doctor_exit": 0,
+   "doctor_schema_lines": [
+    "PASS  tracker.db integrity \u2014 integrity ok, schema up to date"
+   ],
+   "round_trip": {
+    "apply_exit": 0,
+    "apply_secs": 0.7,
+    "apply_delta": {
+     "actions": 1,
+     "applies": 1,
+     "change_log": 37,
+     "decisions": 1,
+     "item_events": 33,
+     "raid": 1
+    },
+    "new_top_ids": {
+     "actions": 991,
+     "raid": 992,
+     "decisions": 993,
+     "promises": 990,
+     "text_sort_max_action": "ABC-A-991"
+    },
+    "undo_exit": 0,
+    "undo_secs": 0.7,
+    "undo_restores_counts": true,
+    "undo_priority_back": true,
+    "recode_stage_exit": 0,
+    "recode_apply_exit": 0,
+    "recode_apply_secs": 0.8,
+    "recode_ids_ok": true,
+    "recode_top_action": "XPL-A-700",
+    "recode_counts_same": true,
+    "recode_undo_exit": 0,
+    "recode_undone_ids_ok": true,
+    "final_counts_equal_start": true,
+    "tails": {
+     "apply": [
+      "Apply 5: written 4, filed 0, rejected 0, 0 still pending."
+     ],
+     "recode": [
+      "Apply 6: written 1, filed 1, rejected 0, 0 still pending."
+     ],
+     "recode_stage": [
+      "Check: Mail and meetings may still say ABC or \u201cExample Programme\u201d: after the apply, teach the new project the old name with `propose.py learn XPL alias \"Example Programme\"`."
+     ]
+    }
+   },
+   "integrity_after_round_trip": [
+    "ok"
+   ],
+   "fk_after_round_trip": 0,
+   "reader_probe": {
+    "tracker.ITEM_ID": [
+     "ABC-A-100",
+     "ABC-100",
+     "ABC-D-100",
+     "ABC-A-999"
+    ],
+    "claims.ID": [
+     "ABC-A-999"
+    ],
+    "item_history.ITEM_RE": [
+     "ABC-A-100",
+     "ABC-100",
+     "ABC-D-100",
+     "ABC-A-999"
+    ],
+    "status_facts.ID_RE": [
+     "ABC-A-999"
+    ],
+    "prep_view.ID_RE": [
+     "ABC-A-100",
+     "ABC-100",
+     "ABC-D-100",
+     "ABC-A-999"
+    ],
+    "extraction.ITEM_ID": [
+     "ABC-A-999"
+    ],
+    "drafts.ID_RE": [
+     "ABC-A-999"
+    ],
+    "edit_ai.ID_RE": [
+     "ABC-A-999"
+    ],
+    "prep_shape.ID_RE": [
+     "ABC-A-999"
+    ],
+    "notes_find.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ]
+   },
+   "rollback": {
+    "integrity": [
+     "ok"
+    ],
+    "fk_problems": 0,
+    "old_engine_migrate": "Schema is up to date.",
+    "counts": {
+     "actions": 700,
+     "applies": 4,
+     "change_log": 11428,
+     "decisions": 90,
+     "item_events": 10412,
+     "item_labels": 0,
+     "labels": 1,
+     "links": 0,
+     "milestones": 0,
+     "projects": 1,
+     "promises": 50,
+     "raid": 150,
+     "rejected": 0,
+     "updates": 0,
+     "workstreams": 0
+    },
+    "round_trip": {
+     "apply_exit": 0,
+     "apply_secs": 1.0,
+     "apply_delta": {
+      "actions": 1,
+      "applies": 1,
+      "change_log": 37,
+      "decisions": 1,
+      "item_events": 33,
+      "raid": 1
+     },
+     "new_top_ids": {
+      "actions": 991,
+      "raid": 992,
+      "decisions": 993,
+      "promises": 990,
+      "text_sort_max_action": "ABC-A-991"
+     },
+     "undo_exit": 0,
+     "undo_secs": 0.7,
+     "undo_restores_counts": true,
+     "undo_priority_back": true,
+     "recode_stage_exit": 0,
+     "recode_apply_exit": 0,
+     "recode_apply_secs": 0.8,
+     "recode_ids_ok": true,
+     "recode_top_action": "XPL-A-700",
+     "recode_counts_same": true,
+     "recode_undo_exit": 0,
+     "recode_undone_ids_ok": true,
+     "final_counts_equal_start": true,
+     "tails": {
+      "apply": [
+       "Apply 5: written 4, filed 0, rejected 0, 0 still pending."
+      ],
+      "recode": [
+       "Apply 6: written 1, filed 1, rejected 0, 0 still pending."
+      ],
+      "recode_stage": [
+       "Check: Mail and meetings may still say ABC or \u201cExample Programme\u201d: after the apply, teach the new project the old name with `propose.py learn XPL alias \"Example Programme\"`."
+      ]
+     }
+    },
+    "integrity_after": [
+     "ok"
+    ],
+    "fk_after": 0
+   },
+   "downgrade_without_restore": {
+    "old_engine_apply_on_new_db": {
+     "exit": 0,
+     "tail": [
+      "Apply 7: written 1, filed 0, rejected 0, 0 still pending."
+     ]
+    },
+    "old_engine_migrate_on_new_db": {
+     "exit": 0,
+     "tail": [
+      "Migrated applies (7 rows), change_log (11519 rows). Backup from before: system/backups/tracker-2026-10-23-024545-migrate.db"
+     ]
+    },
+    "counts_after_old_migrate": {
+     "actions": 701,
+     "raid": 150,
+     "decisions": 90,
+     "promises": 50
+    },
+    "old_engine_undo_on_new_db": {
+     "exit": 0,
+     "tail": [
+      "Undid apply 7: 1 item(s) reversed."
+     ]
+    },
+    "integrity": [
+     "ok"
+    ],
+    "fk_problems": 0
+   }
+  },
+  {
+   "step": "F2",
+   "dated_backup": "tracker-2026-10-23-024546-pre-F2.db",
+   "counts_before": {
+    "actions": 700,
+    "applies": 6,
+    "change_log": 11508,
+    "decisions": 90,
+    "item_events": 10484,
+    "item_labels": 0,
+    "labels": 1,
+    "links": 0,
+    "milestones": 0,
+    "projects": 1,
+    "promises": 50,
+    "raid": 150,
+    "rejected": 0,
+    "updates": 0,
+    "workstreams": 0
+   },
+   "migrate_exit": 0,
+   "migrate_secs": 0.16,
+   "migrate_tail": [
+    "Migrated milestones (0 rows), workstreams (0 rows), actions (700 rows), raid (150 rows), decisions (90 rows), promises (50 rows). Backup from before: system/backups/tracker-2026-10-23-024546-migrate.db"
+   ],
+   "counts_after": {
+    "actions": 700,
+    "applies": 6,
+    "change_log": 11508,
+    "decisions": 90,
+    "item_events": 10484,
+    "item_labels": 0,
+    "labels": 1,
+    "links": 0,
+    "milestones": 0,
+    "projects": 1,
+    "promises": 50,
+    "raid": 150,
+    "rejected": 0,
+    "updates": 0,
+    "workstreams": 0
+   },
+   "tables_rebuilt_or_changed": [
+    "actions",
+    "decisions",
+    "milestones",
+    "promises",
+    "raid",
+    "workstreams"
+   ],
+   "row_count_changes": {},
+   "integrity": [
+    "ok"
+   ],
+   "fk_problems": 0,
+   "applies_engine_version_stamped": 2,
+   "second_migrate_is_noop": true,
+   "doctor_exit": 0,
+   "doctor_schema_lines": [
+    "PASS  tracker.db integrity \u2014 integrity ok, schema up to date"
+   ],
+   "seed_after": [
+    0,
+    "Apply 7: written 201, filed 0, rejected 0, 1 still pending.",
+    1.091459035873413
+   ],
+   "staging_leftovers": [
+    "proposed-2026-10-23-024537-edit.json"
+   ],
+   "top_ids_after_seed": {
+    "actions": 1140,
+    "raid": 1170,
+    "decisions": 1185,
+    "promises": 1191,
+    "text_sort_max_action": "ABC-A-999"
+   },
+   "round_trip": {
+    "apply_exit": 0,
+    "apply_secs": 0.7,
+    "apply_delta": {
+     "actions": 1,
+     "applies": 1,
+     "change_log": 37,
+     "decisions": 1,
+     "item_events": 33,
+     "raid": 1
+    },
+    "new_top_ids": {
+     "actions": 1192,
+     "raid": 1193,
+     "decisions": 1194,
+     "promises": 1191,
+     "text_sort_max_action": "ABC-A-999"
+    },
+    "undo_exit": 0,
+    "undo_secs": 0.9,
+    "undo_restores_counts": true,
+    "undo_priority_back": true,
+    "recode_stage_exit": 0,
+    "recode_apply_exit": 0,
+    "recode_apply_secs": 0.9,
+    "recode_ids_ok": true,
+    "recode_top_action": "XPL-A-999",
+    "recode_counts_same": true,
+    "recode_undo_exit": 0,
+    "recode_undone_ids_ok": true,
+    "final_counts_equal_start": true,
+    "tails": {
+     "apply": [
+      "Apply 8: written 4, filed 0, rejected 0, 0 still pending."
+     ],
+     "recode": [
+      "Apply 9: written 1, filed 1, rejected 0, 0 still pending."
+     ],
+     "recode_stage": [
+      "Check: Mail and meetings may still say ABC or \u201cExample Programme\u201d: after the apply, teach the new project the old name with `propose.py learn XPL alias \"Example Programme\"`."
+     ]
+    }
+   },
+   "integrity_after_round_trip": [
+    "ok"
+   ],
+   "fk_after_round_trip": 0,
+   "reader_probe": {
+    "tracker.ITEM_ID": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "claims.ID": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "item_history.ITEM_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "status_facts.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "prep_view.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "extraction.ITEM_ID": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "drafts.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "edit_ai.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "prep_shape.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ],
+    "notes_find.ID_RE": [
+     "ABC-A-1000",
+     "ABC-1001",
+     "ABC-D-1002",
+     "ABC-A-999"
+    ]
+   },
+   "rollback": {
+    "integrity": [
+     "ok"
+    ],
+    "fk_problems": 0,
+    "old_engine_migrate": "Schema is up to date.",
+    "counts": {
+     "actions": 700,
+     "applies": 6,
+     "change_log": 11508,
+     "decisions": 90,
+     "item_events": 10484,
+     "item_labels": 0,
+     "labels": 1,
+     "links": 0,
+     "milestones": 0,
+     "projects": 1,
+     "promises": 50,
+     "raid": 150,
+     "rejected": 0,
+     "updates": 0,
+     "workstreams": 0
+    },
+    "round_trip": {
+     "apply_exit": 0,
+     "apply_secs": 1.0,
+     "apply_delta": {
+      "actions": 1,
+      "applies": 1,
+      "change_log": 37,
+      "decisions": 1,
+      "item_events": 33,
+      "raid": 1
+     },
+     "new_top_ids": {
+      "actions": 991,
+      "raid": 992,
+      "decisions": 993,
+      "promises": 990,
+      "text_sort_max_action": "ABC-A-991"
+     },
+     "undo_exit": 0,
+     "undo_secs": 0.7,
+     "undo_restores_counts": true,
+     "undo_priority_back": true,
+     "recode_stage_exit": 0,
+     "recode_apply_exit": 0,
+     "recode_apply_secs": 0.8,
+     "recode_ids_ok": true,
+     "recode_top_action": "XPL-A-700",
+     "recode_counts_same": true,
+     "recode_undo_exit": 0,
+     "recode_undone_ids_ok": true,
+     "final_counts_equal_start": true,
+     "tails": {
+      "apply": [
+       "Apply 7: written 4, filed 0, rejected 0, 0 still pending."
+      ],
+      "recode": [
+       "Apply 8: written 1, filed 1, rejected 0, 0 still pending."
+      ],
+      "recode_stage": [
+       "Check: Mail and meetings may still say ABC or \u201cExample Programme\u201d: after the apply, teach the new project the old name with `propose.py learn XPL alias \"Example Programme\"`."
+      ]
+     }
+    },
+    "integrity_after": [
+     "ok"
+    ],
+    "fk_after": 0
+   },
+   "downgrade_without_restore": {
+    "old_engine_apply_on_new_db": {
+     "exit": 0,
+     "tail": [
+      "Held in Review, not applied: proposed-dg.json item 1: actions already has ABC-A-1000",
+      "Nothing applied: every decided item is held in Review."
+     ]
+    },
+    "old_engine_migrate_on_new_db": {
+     "exit": 1,
+     "tail": [
+      "Migration failed; nothing was changed. IntegrityError: CHECK constraint failed: id GLOB '[A-Z]*-A-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13 AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'"
+     ]
+    },
+    "counts_after_old_migrate": {
+     "actions": 850,
+     "raid": 180,
+     "decisions": 105,
+     "promises": 56
+    },
+    "old_engine_undo_on_new_db": {
+     "exit": 0,
+     "tail": [
+      "  proposal proposed-seed-after-F2.json not found; items not returned to pending"
+     ]
+    },
+    "integrity": [
+     "ok"
+    ],
+    "fk_problems": 0
+   }
+  }
+ ]
+}

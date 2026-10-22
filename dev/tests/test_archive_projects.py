@@ -474,7 +474,8 @@ class Migration(unittest.TestCase):
         after = self.dump(db)
         self.assertEqual(sorted(after), sorted(before))
         for t in before:
-            got = [{k: x for k, x in r.items() if not (k == "archived" and t in self.FLAGGED)} for r in after[t]]
+            F1 = ("author", "origin", "sequence", "base_version", "engine_version")      # F1: nullable columns added by the migration
+            got = [{k: x for k, x in r.items() if not (k == "archived" and t in self.FLAGGED) and k not in F1} for r in after[t]]
             self.assertEqual(got, before[t], t)                                       # every row, every value kept
         for t in self.FLAGGED:
             self.assertTrue(after[t] and all(r["archived"] == 0 for r in after[t]), t)

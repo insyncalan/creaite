@@ -1,0 +1,472 @@
+diff --git a/system/scripts/build_dashboard.py b/system/scripts/build_dashboard.py
+index d9dfe913..26be139f 100644
+--- a/system/scripts/build_dashboard.py
++++ b/system/scripts/build_dashboard.py
+@@ -1797,7 +1797,7 @@ def raid_row(r):
+ 
+ def replaced_by_map(con):
+     """{decision ID: the ID of the decision that replaces it}."""
+-    return {r["replaces"]: r["id"] for r in rows(con, "SELECT id, replaces FROM decisions WHERE replaces IS NOT NULL ORDER BY id")}
++    return {r["replaces"]: r["id"] for r in rows(con, "SELECT id, replaces FROM decisions WHERE replaces IS NOT NULL ORDER BY project, length(id), id")}
+ 
+ 
+ def decision_row(d, replaced_by):
+@@ -1819,11 +1819,11 @@ def records_of(con, ids):
+     if not ids:
+         return out, []
+     marks = ",".join("?" * len(ids))
+-    out["actions"] = mark_held(con, [action_row(a) for a in rows(con, f"SELECT * FROM actions WHERE id IN ({marks}) ORDER BY id", *ids)])
+-    out["raid"] = mark_held(con, [raid_row(r) for r in rows(con, f"SELECT * FROM raid WHERE id IN ({marks}) ORDER BY id", *ids)])
++    out["actions"] = mark_held(con, [action_row(a) for a in rows(con, f"SELECT * FROM actions WHERE id IN ({marks}) ORDER BY project, length(id), id", *ids)])
++    out["raid"] = mark_held(con, [raid_row(r) for r in rows(con, f"SELECT * FROM raid WHERE id IN ({marks}) ORDER BY project, length(id), id", *ids)])
+     rby = replaced_by_map(con)
+     out["decisions"] = decision_waits(con, [decision_row(d, rby) for d in
+-                                            rows(con, f"SELECT * FROM decisions WHERE id IN ({marks}) ORDER BY id", *ids)])
++                                            rows(con, f"SELECT * FROM decisions WHERE id IN ({marks}) ORDER BY project, length(id), id", *ids)])
+     mark_held(con, out["decisions"])
+     found = {x["id"] for t in RECORD_TABLES for x in out[t]}
+     return out, [i for i in ids if i not in found]
+@@ -1839,7 +1839,7 @@ def aged_records(con, ids):
+     live = "project NOT IN (SELECT code FROM main.projects WHERE archived = 1)"
+     for t, make in (("actions", action_row), ("raid", raid_row)):
+         out[t] = [make(r) for r in rows(con, f"SELECT * FROM main.{t} WHERE archived = 1 AND {live} AND id IN ({marks}) "
+-                                             "ORDER BY id", *ids)]
++                                             "ORDER BY project, length(id), id", *ids)]
+     return out
+ 
+ 
+@@ -1935,10 +1935,10 @@ def collect(now=None, timings=None):
+         except LookupError:  # BL-228: a project without a folder simply has no files to list
+             pass
+ 
+-    actions = mark_held(con, [action_row(a) for a in rows(con, "SELECT * FROM actions ORDER BY id")])
+-    raid = mark_held(con, [raid_row(r) for r in rows(con, "SELECT * FROM raid ORDER BY id")])
++    actions = mark_held(con, [action_row(a) for a in rows(con, "SELECT * FROM actions ORDER BY project, length(id), id")])
++    raid = mark_held(con, [raid_row(r) for r in rows(con, "SELECT * FROM raid ORDER BY project, length(id), id")])
+     replaced_by = replaced_by_map(con)
+-    decisions = mark_held(con, [decision_row(d, replaced_by) for d in rows(con, "SELECT * FROM decisions ORDER BY date DESC, id DESC")])
++    decisions = mark_held(con, [decision_row(d, replaced_by) for d in rows(con, "SELECT * FROM decisions ORDER BY date DESC, project DESC, length(id) DESC, id DESC")])
+ 
+     import tracker      # the highest number used across actions, RAID, decisions and promises
+     projects = []
+@@ -2655,7 +2655,7 @@ def decision_revisit_reminders(today):
+     con = ro_db()
+     try:
+         found = con.execute("SELECT id, decision, revisit FROM decisions WHERE status = 'Made' AND revisit GLOB "
+-                            "'[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND revisit <= ? ORDER BY revisit, id",
++                            "'[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND revisit <= ? ORDER BY revisit, project, length(id), id",
+                             (today.isoformat(),)).fetchall()
+     except sqlite3.Error:
+         return []
+@@ -4152,7 +4152,7 @@ def promises_data(con, project_rows, today):
+     people is left out (BL-125 A: only promises made by Alan or to him are his to track)."""
+     import tracker
+     codes = {p["code"] for p in project_rows}
+-    open_rows = [r for r in rows(con, "SELECT * FROM promises WHERE status = 'Open' ORDER BY id") if r["project"] in codes]
++    open_rows = [r for r in rows(con, "SELECT * FROM promises WHERE status = 'Open' ORDER BY project, length(id), id") if r["project"] in codes]
+     lists = tracker.promise_lists(open_rows, today, con)
+     owe, waiting = {r["id"] for r in lists["you_owe"]}, {r["id"] for r in lists["waiting_on"]}
+     mine, heard = tracker.my_names(), tracker.last_touched(con)
+diff --git a/system/scripts/client_check.py b/system/scripts/client_check.py
+index e9a688cc..4ad92ab9 100644
+--- a/system/scripts/client_check.py
++++ b/system/scripts/client_check.py
+@@ -45,14 +45,14 @@ def universe(con, code, fri):
+     overdue actions, decisions made or pending, milestones not cancelled."""
+     out = []
+     for r in con.execute("SELECT id, description FROM raid WHERE project = ? AND status = 'Open' AND type IN ('Risk', 'Issue') "
+-                         "ORDER BY id", (code,)):
++                         "ORDER BY project, length(id), id", (code,)):
+         out.append(("risks", "raid", r[0], r[1]))
+     for r in con.execute("SELECT id, description FROM actions WHERE project = ? AND status IN ('Open', 'Delayed') "
+-                         "AND due_date IS NOT NULL AND due_date < ? ORDER BY id", (code, fri)):
++                         "AND due_date IS NOT NULL AND due_date < ? ORDER BY project, length(id), id", (code, fri)):
+         out.append(("overdue", "actions", r[0], r[1]))
+-    for r in con.execute("SELECT id, decision FROM decisions WHERE project = ? AND status IN ('Made', 'Pending') ORDER BY id", (code,)):
++    for r in con.execute("SELECT id, decision FROM decisions WHERE project = ? AND status IN ('Made', 'Pending') ORDER BY project, length(id), id", (code,)):
+         out.append(("decisions", "decisions", r[0], r[1]))
+-    for r in con.execute("SELECT id, name FROM milestones WHERE project = ? AND status != 'Cancelled' ORDER BY id", (code,)):
++    for r in con.execute("SELECT id, name FROM milestones WHERE project = ? AND status != 'Cancelled' ORDER BY project, length(id), id", (code,)):
+         out.append(("milestones", "milestones", r[0], r[1]))
+     return out
+ 
+diff --git a/system/scripts/drafts.py b/system/scripts/drafts.py
+index 8f94046a..54c58f46 100644
+--- a/system/scripts/drafts.py
++++ b/system/scripts/drafts.py
+@@ -830,7 +830,7 @@ def _confidential(row):
+ def _facts_overdue(con, code, client, t):
+     """(id, kind, text) for each overdue action: the client's wording for a client suggestion, else the action as written."""
+     for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') AND due_date < ? "
+-                         "AND archived = 0 ORDER BY due_date, id", (code, t)):
++                         "AND archived = 0 ORDER BY due_date, project, length(id), id", (code, t)):
+         days = _plural_days((date.fromisoformat(t) - date.fromisoformat(r["due_date"])).days)
+         words = _client_words(r) if client else short(r["description"], 120)
+         if words and not _confidential(r):
+@@ -853,7 +853,7 @@ def _facts_milestones(con, code, t):
+ def _facts_raid(con, code, client):
+     """(id, kind, text) for each open risk and issue, Urgent first."""
+     for r in con.execute("SELECT * FROM raid WHERE project = ? AND status = 'Open' AND archived = 0 "
+-                         "ORDER BY priority = 'Urgent' DESC, id", (code,)):
++                         "ORDER BY priority = 'Urgent' DESC, project, length(id), id", (code,)):
+         words = _client_words(r) if client else short(r["description"], 140)
+         if words and not _confidential(r):
+             tag = f" ({r['priority']})" if r["priority"] and not client else ""
+@@ -879,11 +879,11 @@ def _facts_movement(con, code):
+         return
+     yield code, "movement", f"Health was last set on {tracker.shown(since)}" + (f" to {then}" if then else "")
+     for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Complete','Closed') AND closed >= ? "
+-                         "AND archived = 0 ORDER BY closed DESC, id LIMIT 3", (code, since)):
++                         "AND archived = 0 ORDER BY closed DESC, project, length(id), id LIMIT 3", (code, since)):
+         if not _confidential(r):
+             yield r["id"], "movement", f"Action closed since: {short(r['description'], 120)}"
+     for r in con.execute("SELECT * FROM raid WHERE project = ? AND raised >= ? AND archived = 0 "
+-                         "ORDER BY raised DESC, id LIMIT 3", (code, since)):
++                         "ORDER BY raised DESC, project, length(id), id LIMIT 3", (code, since)):
+         if not _confidential(r):
+             yield r["id"], "movement", f"{r['type']} raised since: {short(r['description'], 120)}"
+ 
+diff --git a/system/scripts/edit_ai.py b/system/scripts/edit_ai.py
+index 8ec78b8b..589d925c 100644
+--- a/system/scripts/edit_ai.py
++++ b/system/scripts/edit_ai.py
+@@ -270,7 +270,7 @@ def project_facts(code, client=False):
+             for table, open_ in OPEN:
+                 cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+                 owner = "owner" if "owner" in cols else "NULL"
+-                for i, o in con.execute(f"SELECT id, {owner} FROM {table} WHERE project = ? AND status IN {open_} ORDER BY id",
++                for i, o in con.execute(f"SELECT id, {owner} FROM {table} WHERE project = ? AND status IN {open_} ORDER BY project, length(id), id",
+                                         (code,)):
+                     ids.append(i)
+                     if o and o != "TBC" and o not in people:
+@@ -288,7 +288,7 @@ def client_ids(con, code):
+     blocking = client_leak.blocking_labels(con)
+     out = []
+     for table, open_ in OPEN:
+-        sql = f"SELECT id FROM {table} WHERE project = ? AND status IN {open_} AND client_visible = 1 ORDER BY id"
++        sql = f"SELECT id FROM {table} WHERE project = ? AND status IN {open_} AND client_visible = 1 ORDER BY project, length(id), id"
+         for (i,) in con.execute(sql, (code,)):
+             if not client_leak.item_problem(con, i, blocking):
+                 out.append(i)
+diff --git a/system/scripts/excel_sync.py b/system/scripts/excel_sync.py
+index 2cb93e57..d5d50c71 100644
+--- a/system/scripts/excel_sync.py
++++ b/system/scripts/excel_sync.py
+@@ -395,7 +395,7 @@ def cmd_export():
+         return 3
+     con = db()
+     projects = [r["code"] for r in con.execute("SELECT code FROM projects ORDER BY code")]
+-    milestones = [r["id"] for r in con.execute("SELECT id FROM milestones ORDER BY id")]
++    milestones = [r["id"] for r in con.execute("SELECT id FROM milestones ORDER BY project, length(id), id")]
+     wb = Workbook()
+     wb.remove(wb.active)
+     snapshot = {}
+diff --git a/system/scripts/minutes.py b/system/scripts/minutes.py
+index 2b370c4c..686b569f 100644
+--- a/system/scripts/minutes.py
++++ b/system/scripts/minutes.py
+@@ -1350,7 +1350,7 @@ def open_promises(con, code):
+     """A project's open promises, soonest due first (BL-125 A): a meeting may say one was kept, dropped or re-dated."""
+     cols = ("id", "description", "promised_by", "promised_to", "due_date", "status", "updated_at")
+     return [{c: r[c] for c in cols} for r in con.execute(
+-        "SELECT * FROM promises WHERE project = ? AND status = 'Open' ORDER BY COALESCE(due_date, '9999'), id", (code,))]
++        "SELECT * FROM promises WHERE project = ? AND status = 'Open' ORDER BY COALESCE(due_date, '9999'), project, length(id), id", (code,))]
+ 
+ 
+ def expected_items(code, title="", day=None):
+@@ -1375,17 +1375,17 @@ def expected_items(code, title="", day=None):
+     pick = lambda r, cols: {c: r[c] for c in cols}      # noqa: E731
+     acts = [pick(r, ("id", "description", "owner", "workstream", "priority", "due_date", "status", "latest_update", "updated_at"))
+             for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') "
+-                                 "ORDER BY COALESCE(due_date, '9999'), id", (code,))]
++                                 "ORDER BY COALESCE(due_date, '9999'), project, length(id), id", (code,))]
+     raid_cols = ("id", "type", "description", "owner", "priority", "due_date", "status", "response_action", "updated_at")
+     risks = [pick(r, raid_cols) for r in con.execute(
+         "SELECT * FROM raid WHERE project = ? AND status = 'Open' AND type IN ('Risk','Issue') AND "
+-        "COALESCE(trim(response_action), '') = '' ORDER BY id", (code,))]
++        "COALESCE(trim(response_action), '') = '' ORDER BY project, length(id), id", (code,))]
+     answered = [pick(r, raid_cols) for r in con.execute(
+         "SELECT * FROM raid WHERE project = ? AND status = 'Open' AND NOT (type IN ('Risk','Issue') AND "
+-        "COALESCE(trim(response_action), '') = '') ORDER BY id", (code,))]
++        "COALESCE(trim(response_action), '') = '') ORDER BY project, length(id), id", (code,))]
+     pending = [pick(r, ("id", "decision", "made_by", "needed_by", "status", "reasoning", "options", "revisit", "updated_at"))
+                for r in con.execute("SELECT * FROM decisions WHERE project = ? AND status = 'Pending' "
+-                                    "ORDER BY COALESCE(needed_by, '9999'), id", (code,))]
++                                    "ORDER BY COALESCE(needed_by, '9999'), project, length(id), id", (code,))]
+     promises = open_promises(con, code)                                                                    # BL-125 A
+     return {"project": code, "name": project["name"], "meeting": title, "date": day.isoformat(), "series": series,
+             "series_project": {"p": matched, "how": how}, "last_meeting": last,
+diff --git a/system/scripts/notes_find.py b/system/scripts/notes_find.py
+index 78eb72d3..f239c34d 100644
+--- a/system/scripts/notes_find.py
++++ b/system/scripts/notes_find.py
+@@ -149,7 +149,7 @@ def project_context(con, code):
+     import extraction
+     out = ["Open items (ID · title · owner · due):"] + open_lines(con, code) + ["Milestones (ID · name · forecast):"]
+     ms = con.execute("SELECT id, name, forecast_date, baseline_date FROM milestones WHERE project = ? AND status = 'Planned' "
+-                     "ORDER BY sort_order, id", (code,)).fetchall()
++                     "ORDER BY sort_order, project, length(id), id", (code,)).fetchall()
+     out += [f"- {m['id']} · {m['name']} · {m['forecast_date'] or m['baseline_date'] or 'no date'}" for m in ms] or ["- none"]
+     p = dict(con.execute("SELECT health, sponsor, phase FROM projects WHERE code = ?", (code,)).fetchone())
+     out.append(" ".join(f"{k.capitalize()}: {p[k] or 'not set'}." for k in ("health", "sponsor", "phase")))
+diff --git a/system/scripts/report.py b/system/scripts/report.py
+index 6b971e32..566df4a5 100644
+--- a/system/scripts/report.py
++++ b/system/scripts/report.py
+@@ -451,7 +451,7 @@ def decisions_needed(con, code, as_of):
+     """A project's pending decisions, soonest needed first: {id, text, by, needed_by, overdue_days} (a decision needed from nobody
+     yet has by None; one with no needed-by date has needed_by None and is never overdue)."""
+     out = []
+-    for d in rows(con, "SELECT * FROM decisions WHERE project = ? AND status = 'Pending' ORDER BY COALESCE(needed_by, '9999'), id", code):
++    for d in rows(con, "SELECT * FROM decisions WHERE project = ? AND status = 'Pending' ORDER BY COALESCE(needed_by, '9999'), project, length(id), id", code):
+         late = (as_of - date.fromisoformat(d["needed_by"][:10])).days if d["needed_by"] else 0
+         out.append({"id": d["id"], "text": d["decision"], "by": d["made_by"], "needed_by": d["needed_by"],
+                     "overdue_days": late if late > 0 else 0})
+@@ -879,7 +879,7 @@ def _client_decisions(con, code, start, needs, held=()):
+     """Client-visible decisions made in the period, and pending ones (BL-53)."""
+     out = []
+     for d in rows(con, "SELECT * FROM decisions WHERE project = ? AND client_visible = 1 AND status IN ('Made', 'Pending') "
+-                       "ORDER BY COALESCE(date, needed_by, '9999'), id", code):         # BL-53: a pending one shows only if client-visible
++                       "ORDER BY COALESCE(date, needed_by, '9999'), project, length(id), id", code):         # BL-53: a pending one shows only if client-visible
+         if d["id"] in held or (start and d["status"] == "Made" and d["date"] < start):
+             continue
+         if tracker.message_complete("decisions", d["client_message"]):
+@@ -1323,15 +1323,15 @@ def _steer_changes(st):
+         if m["item_id"] not in st.names:               # BL-186: a cancelled, or (client-safe) a hidden, milestone
+             continue
+         changes.append(f"Milestone moved: {st.names.get(m['item_id'], m['item_id'])}, {tracker.shown(m['old_value'])} → {tracker.shown(m['new_value'])}")
+-    for r in rows(con, "SELECT * FROM raid WHERE project = ? AND type IN ('Risk', 'Issue') AND raised >= ? ORDER BY raised, id", code, start):
++    for r in rows(con, "SELECT * FROM raid WHERE project = ? AND type IN ('Risk', 'Issue') AND raised >= ? ORDER BY raised, project, length(id), id", code, start):
+         if st.usable("raid", r):
+             changes.append(f"New {r['type'].lower()}: {st.see(r['id']) + ' ' if not client else ''}{st.text('raid', r, 'description')}{st.tag(r['id'])}")
+-    for d in rows(con, "SELECT * FROM decisions WHERE project = ? AND status = 'Made' AND date >= ? ORDER BY date, id", code, start):
++    for d in rows(con, "SELECT * FROM decisions WHERE project = ? AND status = 'Made' AND date >= ? ORDER BY date, project, length(id), id", code, start):
+         if st.usable("decisions", d):
+             changes.append(f"Decided: {st.text('decisions', d, 'decision')}{st.tag(d['id'])}" + (f" ({d['made_by']})" if d["made_by"] and not client else ""))
+             st.see(d["id"])
+     for table, label in (("actions", "Closed"), ("raid", "Resolved")):
+-        for r in rows(con, f"SELECT * FROM {table} WHERE project = ? AND status = 'Closed' AND closed >= ? ORDER BY closed, id", code, start):
++        for r in rows(con, f"SELECT * FROM {table} WHERE project = ? AND status = 'Closed' AND closed >= ? ORDER BY closed, project, length(id), id", code, start):
+             if table == "raid" and r["type"] not in ("Risk", "Issue", "Dependency"):
+                 continue
+             if st.usable(table, r):
+@@ -1377,7 +1377,7 @@ def _steer_risks(st):
+ def _steer_needed(st):
+     """Decisions needed (BL-53), from the committee and from Alan."""
+     needed = []
+-    for d in rows(st.con, "SELECT * FROM decisions WHERE project = ? AND status = 'Pending' ORDER BY COALESCE(needed_by, '9999'), id", st.code):
++    for d in rows(st.con, "SELECT * FROM decisions WHERE project = ? AND status = 'Pending' ORDER BY COALESCE(needed_by, '9999'), project, length(id), id", st.code):
+         if not st.usable("decisions", d):
+             continue
+         late = (st.on - date.fromisoformat(d["needed_by"])).days if d["needed_by"] else 0
+@@ -1395,7 +1395,7 @@ def _steer_dependencies(st):
+     """Blockers (BL-90), part one: open dependencies attached to a milestone."""
+     out = []
+     warn = {w["id"]: w["text"] for w in build_dashboard.early_warnings(paths.load_settings(), st.on) if w.get("sig") == "dependency"}
+-    for r in rows(st.con, "SELECT * FROM raid WHERE project = ? AND type = 'Dependency' AND status = 'Open' AND milestone IS NOT NULL ORDER BY due_date, id", st.code):
++    for r in rows(st.con, "SELECT * FROM raid WHERE project = ? AND type = 'Dependency' AND status = 'Open' AND milestone IS NOT NULL ORDER BY due_date, project, length(id), id", st.code):
+         if not st.usable("raid", r):
+             continue
+         what = st.names.get(r["milestone"]) or ("a milestone" if st.client else r["milestone"])   # BL-186: never a hidden milestone's ID
+@@ -1439,7 +1439,7 @@ def _steer_next(st):
+     limit = (st.on + timedelta(days=STEERCO_WINDOW_DAYS)).isoformat()
+     nxt = []
+     for a in rows(st.con, "SELECT * FROM actions WHERE project = ? AND status IN ('Open', 'Delayed') AND due_date IS NOT NULL AND due_date <= ? "
+-                          "ORDER BY due_date, id", st.code, limit):
++                          "ORDER BY due_date, project, length(id), id", st.code, limit):
+         if not st.usable("actions", a):
+             continue
+         late = a["due_date"] < st.on.isoformat()
+diff --git a/system/scripts/report_doc.py b/system/scripts/report_doc.py
+index 22075a7c..618cf18f 100644
+--- a/system/scripts/report_doc.py
++++ b/system/scripts/report_doc.py
+@@ -538,11 +538,11 @@ def _client_facts(con, code):
+     p, _folder, mem = report.project(con, code)
+     client = mem.get("client") or ""
+     blocking = client_leak.blocking_labels(con)
+-    sql = {"actions": "SELECT * FROM actions WHERE project = ? AND client_visible = 1 AND status != 'Cancelled' ORDER BY id",
++    sql = {"actions": "SELECT * FROM actions WHERE project = ? AND client_visible = 1 AND status != 'Cancelled' ORDER BY project, length(id), id",
+            "decisions": "SELECT * FROM decisions WHERE project = ? AND client_visible = 1 AND status IN ('Made', 'Pending') "
+-                        "ORDER BY COALESCE(date, needed_by, '9999'), id",
++                        "ORDER BY COALESCE(date, needed_by, '9999'), project, length(id), id",
+            "raid": "SELECT * FROM raid WHERE project = ? AND client_visible = 1 AND status = 'Open' AND type IN ('Risk', 'Issue') "
+-                   "ORDER BY id"}
++                   "ORDER BY project, length(id), id"}
+     out = {"on": report.today().isoformat(), "client": client, "health": p["health"]}
+     for table, q in sql.items():
+         rows = [dict(r) for r in con.execute(q, (code,))]
+@@ -608,13 +608,13 @@ def _pick_weekly(code):
+             out["risks"].append(_cand(r["id"], text, _meta(r["priority"], r["owner"]), item(con, r["id"]),
+                                       {"id": r["id"], "risk": text, "priority": r["priority"] or "", "owner": r["owner"]}))
+         for a in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open', 'Delayed') "
+-                             "ORDER BY COALESCE(due_date, '9999'), id", (code,)):
++                             "ORDER BY COALESCE(due_date, '9999'), project, length(id), id", (code,)):
+             a = dict(a)
+             due = shown(a["due_date"])
+             out["overdue"].append(_cand(a["id"], a["description"], _meta(a["owner"], due), item(con, a["id"]),
+                                         {"id": a["id"], "action": a["description"], "owner": a["owner"], "due": due or "not due yet"}))
+         for d in con.execute("SELECT * FROM decisions WHERE project = ? AND status IN ('Made', 'Pending') "
+-                             "ORDER BY COALESCE(date, needed_by, '0') DESC, id DESC", (code,)):
++                             "ORDER BY COALESCE(date, needed_by, '0') DESC, project DESC, length(id) DESC, id DESC", (code,)):
+             d = dict(d)
+             it = item(con, d["id"])
+             cells = {"decision": d["decision"], "by": d["made_by"] or "Not recorded", "date": shown(d["date"]),
+diff --git a/system/templates/dashboard/src/components/project/ProjectSettings.jsx b/system/templates/dashboard/src/components/project/ProjectSettings.jsx
+index 01033afc..63bd0f81 100644
+--- a/system/templates/dashboard/src/components/project/ProjectSettings.jsx
++++ b/system/templates/dashboard/src/components/project/ProjectSettings.jsx
+@@ -6,6 +6,7 @@
+    same stores and logo controls, components/report/hub/LogoTile.jsx) and, last and set apart, Archive and close.
+    Every change saves on its own with Undo, through the flow that already saves it (stores/projectSettings.js, stores/reportingSettings.js,
+    stores/peopleRegister.js, stores/workstreams.js, the milestones page, the archive card); this page holds no write of its own. */
++import { idCmp } from "../../core/idsort.js";
+ import { render } from "preact";
+ import { createContext } from "preact";
+ import { useContext, useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+@@ -271,7 +272,7 @@ function Reporting({ code }) {
+ 
+ /** @param {{code: string}} props */
+ function Milestones({ code }) {
+-  const list = mvAll(code).slice().sort((a, b) => a.id.localeCompare(b.id));
++  const list = mvAll(code).slice().sort((a, b) => idCmp(a.id,b.id));
+   return (
+     <div class="card" data-pscard data-cat="miles"><h2>Milestones</h2>
+       <div class="tbl"><table class="pstbl" id="psMiles" aria-label="Milestones"><thead><tr><th scope="col">ID</th><th scope="col">Milestone</th><th scope="col">Agreed</th><th scope="col">Expected</th><th scope="col">State</th><th scope="col"><span class="vh">Actions</span></th></tr></thead>
+diff --git a/system/templates/dashboard/src/core/idsort.js b/system/templates/dashboard/src/core/idsort.js
+new file mode 100644
+index 00000000..94095055
+--- /dev/null
++++ b/system/templates/dashboard/src/core/idsort.js
+@@ -0,0 +1,6 @@
++// @ts-check
++/* F2: compare two item IDs by their prefix, then by their NUMBER, so ABC-A-999 sorts before ABC-A-1000 (a text compare puts it after). */
++/** @param {string} s @returns {[string, number]} */
++const idKey = s => { const m = /^(.*?)(\d+)$/.exec(String(s || "")); return m ? [m[1], +m[2]] : [String(s || ""), 0]; };
++/** @param {string} a @param {string} b */
++export const idCmp = (a, b) => { const x = idKey(a), y = idKey(b); return x[0].localeCompare(y[0]) || x[1] - y[1] || String(a).localeCompare(String(b)); };
+diff --git a/system/templates/dashboard/src/meetings.js b/system/templates/dashboard/src/meetings.js
+index f1e7ccf0..86e6b542 100644
+--- a/system/templates/dashboard/src/meetings.js
++++ b/system/templates/dashboard/src/meetings.js
+@@ -2,6 +2,7 @@
+ /* meetings.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0084-prep-updates-bl-65.js, 0125-bl-126-sprint-prep-files.js, 0126-after-bl-126.js, 0143-decisions-and-schema-bl-53-sprint-5.js, 0144-bl-210-sprint-decisions-needed.js, 0145-steering-one-pager-bl-92-sprint-5.js, 0146-decisions-in-meeting-prep-bl-113.js, 0201-bl-223-sprint-drafts-writing.js, 0206-bl-209-sprint-insight.js.
+    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
+    boot…() functions that src/main.js calls in today's order. */
++import { idCmp } from "./core/idsort.js";
+ import { askLive, openChat, rbEnd, rbStart } from "./ask.js";
+ import { DEC, P, pName } from "./core/data.js";
+ import { $, $$, esc, html, ibtn, ic, putHTML, raw, writeDoc } from "./core/dom.js";
+@@ -118,7 +119,7 @@ document.addEventListener("click",e=>{ if(e.target.closest("#prepDlg [data-nav],
+ export const decPending=()=>DEC.filter(d=>d.st==="Pending");
+ export const decLate=d=>d.st==="Pending"&&!!d.due&&d.due<TODAY;
+ // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late decisions rank first)
+-export const decRank=(a,b)=>(decLate(b)-decLate(a))||(a.due||"9999").localeCompare(b.due||"9999")||a.id.localeCompare(b.id);
++export const decRank=(a,b)=>(decLate(b)-decLate(a))||(a.due||"9999").localeCompare(b.due||"9999")||idCmp(a.id,b.id);
+ export const decRevisit=()=>DEC.filter(d=>d.st==="Made"&&/^\d{4}-\d{2}-\d{2}$/.test(d.revisit||"")&&d.revisit<=TODAY);
+ export const decShort=(t,n)=>t.length>n?t.slice(0,n-1)+"…":t;
+ export const decLateWords=d=>`${-days(d.due)} day${-days(d.due)===1?"":"s"} late`;
+@@ -159,7 +160,7 @@ WSIG.push(["decision_overdue","Pending decision past its needed-by date","days",
+    once it is late, the update request before), with only this decision ticked; nothing is sent. Internal; reads only. */
+ export const dnOk=d=>d.st==="Pending"&&!!d.by&&!!d.due;
+ // @ts-expect-error TS2362: true and false subtract as 1 and 0 (Alan's decisions sort first)
+-export const dnSort=(a,b)=>(isMe(b.by)-isMe(a.by))||a.due.localeCompare(b.due)||a.id.localeCompare(b.id);
++export const dnSort=(a,b)=>(isMe(b.by)-isMe(a.by))||a.due.localeCompare(b.due)||idCmp(a.id,b.id);
+ export const dnList=f=>DEC.filter(d=>dnOk(d)&&(!f||f(d))).sort(dnSort);
+ export const dnShut=st=>/^(Closed|Cancelled|Made|Withdrawn|Done)$/.test(st||"");
+ /* what slips: the open items it blocks, then the milestones those belong to (a milestone it blocks itself is listed once) */
+diff --git a/system/templates/dashboard/src/projects.js b/system/templates/dashboard/src/projects.js
+index 7310c37a..f8cd1b12 100644
+--- a/system/templates/dashboard/src/projects.js
++++ b/system/templates/dashboard/src/projects.js
+@@ -2,6 +2,7 @@
+ /* projects.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0029-projects-cockpit.js, 0054-generate-current-state-with-claude-bl-46.js, 0055-executive-current-state-bl-106.js, 0056-current-state-edited-in-place-bl-47.js, 0058-bl-162-sprint-rail.js, 0059-bl-207-sprint-insight.js, 0081-dashboard-pages-bl-87-to-bl-95.js, 0082-bl-190-sprint-links.js, 0083-after-bl-190-flow.js, 0124-insight-bl-51-bl-49-bl-54.js.
+    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
+    boot…() functions that src/main.js calls in today's order. */
++import { idCmp } from "./core/idsort.js";
+ import { howLink } from "./helpscreen.js";
+ import { openSpace } from "./components/reporting/ReportingSpace.jsx";
+ import { openDialog } from "./components/Dialog.jsx";
+@@ -816,7 +817,7 @@ export const isNewUndated=x=>!!x.raised&&-days(x.raised)<=(S.undatedGrace??3);
+ export function undatedCard(code){ const L=undatedWork(code); if(!L.length) return "";
+   const na=L.filter(([k])=>k==="actions").length, nr=L.length-na, pri=x=>PRIOS.indexOf(x.pr)<0?9:PRIOS.indexOf(x.pr);
+   // @ts-expect-error TS2362: true and false subtract as 1 and 0 (undated new items sort first)
+-  L.sort((a,b)=>(isNewUndated(a[1])-isNewUndated(b[1]))||(pri(a[1])-pri(b[1]))||a[1].id.localeCompare(b[1].id));
++  L.sort((a,b)=>(isNewUndated(a[1])-isNewUndated(b[1]))||(pri(a[1])-pri(b[1]))||idCmp(a[1].id,b[1].id));
+   return `<div class="card" id="undatedCard"><h2>No due date <span class="sub">· ${L.length}</span></h2>
+     <div class="mini-list">${L.map(([k,x])=>`<div class="undrow${isNewUndated(x)?" dim":""}" data-open="${k}:${x.id}" style="cursor:pointer"><span class="sub undid">${esc(x.id)}</span>${ico(k==="actions"?"action":kindOf("raid",x))}<span class="undt">${esc(x.t)}${isNewUndated(x)?' <span class="tag">new</span>':""}</span><span class="sub">— ${esc(who(x.o))}${x.pr?" · "+esc(x.pr):""}</span><span class="dwrap undset"><input type="text" id="und-${esc(x.id)}" data-pick="1" data-date="1" data-und="${k}:${x.id}" placeholder="Set date" autocomplete="off" aria-label="Set the due date of ${esc(x.id)}" title="Set the due date of ${esc(x.id)} here: type DD-MM-YYYY or choose from the calendar"><button type="button" class="dbtn" data-cal="und-${esc(x.id)}" aria-label="Choose the due date of ${esc(x.id)}">${CALI}</button></span></div>`).join("")}</div>
+     ${na?seeAll(na,`${pName(code)} undated action`,"actions:undated:"+code)+" ":""}${nr?seeAll(nr,`${pName(code)} undated RAID item`,"raid:undated:"+code):""}</div>`; }
+diff --git a/system/templates/dashboard/src/settings.js b/system/templates/dashboard/src/settings.js
+index 3533e165..3ecb1188 100644
+--- a/system/templates/dashboard/src/settings.js
++++ b/system/templates/dashboard/src/settings.js
+@@ -2,6 +2,7 @@
+ /* settings.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0073-settings-page-bl-115-sprint-settings.js, 0074-bl-214-sprint-ui-audit.js, 0075-after-bl-214.js, 0076-bl-235-fix-small-17.js, 0078-after-bl-163-settings-row.js, 0079-people-bl-55-bl-56.js, 0127-workstreams-bl-58-bl-56.js, 0138-sweep-and-alerts-bl-97-bl-99-bl-98.js, 0140-after-bl-152.js, 0153-bl-252-fix-small-17.js, 0154-bl-263-fix-doctor-errors.js, 0155-after-bl-263.js, 0163-bl-165-sprint-polish-2.js.
+    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
+    boot…() functions that src/main.js calls in today's order. */
++import { idCmp } from "./core/idsort.js";
+ import { closeDialog, openDialog } from "./components/Dialog.jsx";
+ import { makeArchiveAskDialog } from "./components/dialogs/PageDialogs.jsx";
+ 
+@@ -496,7 +497,7 @@ export function PERS(){ const rs=resolver(), map=new Map(), get=n=>{ if(!map.has
+   return [...map.values()].filter(x=>x.A.length||x.R.length||x.D.length||(x.p&&!x.p.hidden)).map(x=>{ const oa=x.A.filter(open), oo=x.A.filter(openOnly), or=x.R.filter(open); return Object.assign(x,{oa,oo,or,late:[...oa,...or].filter(i=>i.due&&i.due<TODAY).length,codes:[...new Set([...x.A,...x.R,...x.D].map(i=>i.p))].sort()}); }); }
+ shared.PSORT={col:"late",dir:"desc"};
+ export const PSORTS={name:x=>x.name.toLowerCase(),org:x=>(x.p?x.p.org:"").toLowerCase(),role:x=>(x.p?x.p.role:"").toLowerCase(),oa:x=>x.oo.length,or:x=>x.or.length,late:x=>x.late};
+-export const dueSort=(a,b)=>{ const la=a.due&&a.due<TODAY, lb=b.due&&b.due<TODAY; return la!==lb?(la?-1:1):(a.due||"9999").localeCompare(b.due||"9999")||a.id.localeCompare(b.id); };
++export const dueSort=(a,b)=>{ const la=a.due&&a.due<TODAY, lb=b.due&&b.due<TODAY; return la!==lb?(la?-1:1):(a.due||"9999").localeCompare(b.due||"9999")||idCmp(a.id,b.id); };
+ export const mKind=id=>A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":"decisions";   /* declared before renderPerson, which runs at load */
+ shared.MCREATED=null; shared.MCREATEDOF=null;   /* declared before renderPerson, which runs at load */
+ shared.PKS=[]; shared.PKDONE=[]; shared.PKSEQ=0; export const PKAPPLIED=new Set();   /* declared before renderPerson, which runs at load */
+diff --git a/system/templates/dashboard/src/today.js b/system/templates/dashboard/src/today.js
+index e8a195b1..374aa7fc 100644
+--- a/system/templates/dashboard/src/today.js
++++ b/system/templates/dashboard/src/today.js
+@@ -2,6 +2,7 @@
+ /* today.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0025-today.js, 0026-today-brief-bl-72.js, 0027-bl-149-sprint-ux.js, 0028-after-bl-149.js, 0159-bl-156-sprint-ux.js, 0164-bl-166-sprint-polish-2.js.
+    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
+    boot…() functions that src/main.js calls in today's order. */
++import { idCmp } from "./core/idsort.js";
+ import { dcIcon, openChat, say, send } from "./ask.js";
+ import { linkWords as lw } from "./core/linkText.js";
+ import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+@@ -110,7 +111,7 @@ export function msAttention(){ const out=[];
+     const its=[...A.filter(a=>a.ms===id&&open(a)),...R.filter(r=>r.ms===id&&r.type==="Issue"&&r.st==="Open")];
+     if(!its.length) continue;
+     // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items first)
+-    its.sort((a,b)=>(msLate(b)-msLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id));
++    its.sort((a,b)=>(msLate(b)-msLate(a))||(a.due||"9").localeCompare(b.due||"9")||idCmp(a.id,b.id));
+     const mineIds=todayMineIds(), named=its.filter(x=>!mineIds.has(x.id));   /* #313: Alan's own are rows under Your commitments, counted here */
+     out.push({ms:id,p:p.code,name:m[0],when,its,named,inMine:its.length-named.length}); }
+   return out.sort((a,b)=>a.when.localeCompare(b.when)||pName(a.p).localeCompare(pName(b.p))||a.name.localeCompare(b.name)); }
+@@ -842,8 +843,8 @@ export const promWho=(/** @type {string} */n)=>sLink(String(html`data-person="${
+ export const promDue=(/** @type {PromiseRow} */x)=>x.due?dueWords(x.due):"no date given";
+ export const promQuiet=(/** @type {PromiseRow} */x)=>x.quiet?`, quiet for ${plur(x.quiet,"day")}`:"";
+ /** You owe soonest due first (undated last); Waiting on most overdue first */
+-export const promOwe=()=>PROMS().filter(x=>x.list==="owe").sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999")||a.id.localeCompare(b.id));
+-export const promWaiting=()=>PROMS().filter(x=>x.list==="waiting").sort((a,b)=>b.od-a.od||a.id.localeCompare(b.id));
++export const promOwe=()=>PROMS().filter(x=>x.list==="owe").sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999")||idCmp(a.id,b.id));
++export const promWaiting=()=>PROMS().filter(x=>x.list==="waiting").sort((a,b)=>b.od-a.od||idCmp(a.id,b.id));
+ /** one promise as a Today line: the promise in bold, then who, where and when */
+ export function promLi(/** @type {PromiseRow} */x,/** @type {number} */n,/** @type {boolean} */waiting){
+   const title=String(html`<span class="t pt" data-promise="${x.id}">${x.t??""}</span>`);
+diff --git a/system/templates/dashboard/src/work.js b/system/templates/dashboard/src/work.js
+index 4d5c802d..98cb8073 100644
+--- a/system/templates/dashboard/src/work.js
++++ b/system/templates/dashboard/src/work.js
+@@ -3,6 +3,7 @@
+    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
+    boot…() functions that src/main.js calls in today's order. */
+ import { drawPeoplePage, savedPeopleTab, setPeopleTab } from "./components/people/PeoplePage.jsx";   /* #248 */
++import { idCmp } from "./core/idsort.js";
+ import { howLink } from "./helpscreen.js";
+ import { openDialog } from "./components/Dialog.jsx";
+ import { linkHtml, linkWords } from "./core/linkText.js";
+@@ -1239,7 +1240,7 @@ FDEFS.all=[["st","Status",()=>ALL_ST.map(v=>[v,v]),x=>x.st],
+   ["mi","Milestone",()=>P.flatMap(p=>(p.ms||[]).filter(m=>m[3]).map(m=>[m[3],P.length>1?`${m[0]} (${p.name})`:m[0]])),x=>x.ms||"",1]];   /* #251: Today's milestone rows open the items attached to one milestone */
+ /* the default order: overdue first, then due soonest, undated last (a made decision by its date) */
+ // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items sort first)
+-DEFSORT.all=(a,b)=>(allLate(b)-allLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id);
++DEFSORT.all=(a,b)=>(allLate(b)-allLate(a))||(a.due||"9").localeCompare(b.due||"9")||idCmp(a.id,b.id);
+ CLOSEDST.all=["Closed","Cancelled"];
+ { const pk=SORTKEY.pr; SORTKEY.pr=x=>{ const i=pk(x); return i<0?PRIOS.length:i; }; }
+ SORTKEY.p=x=>pName(x.p).toLowerCase();
