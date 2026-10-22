@@ -1028,7 +1028,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
     add("Actions",`Add milestone: ${c}`,"",()=>openNewMilestone(c)); add("Actions",`Add image: ${c}`,"",()=>{ go("cockpit",c); startCurEdit(c); pickImage(); }); add("Actions",`Edit health: ${c}`,"",()=>openProject(c,"health")); }
   add("Actions","ask creaite","/",openChat); add("Actions","Switch light or dark","",()=>$("#themeBtn").click());
   THEMES.forEach(t=>add("Actions",`Theme: ${t.id}`,themeOf(S.palette)===t?"current":"",()=>setPalette(t.id)));
-  add("Actions","Customise the rail","right-click the rail",()=>railPopOpen());   /* BL-191: the rail's control has no button of its own now */
+  add("Actions","Customise the rail","right-click the rail, or the menu under your name",()=>railPopOpen());   /* BL-191; #295: also in the menu under your name */
   if(q.length>1){ P.forEach(p=>(p.ms||[]).filter(m=>m[3]).forEach(m=>add("Milestones",`${m[3]} · ${m[0]}`,m[1]?fd(m[1]):"",()=>openMilestone(m[3]))));
     (D.inbox||[]).forEach(f=>add("Intake",f.name,"preview",()=>{ go("intake-review"); previewInbox(f.path); }));
     FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[fpName(f.p),f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path),f.p)); }   /* BL-101: the name shown, the code still finds it */

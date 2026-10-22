@@ -6,7 +6,8 @@
    - query: the page's search text. settings.js sets it; the components
      filter their own rows by it (old code never writes into a mounted container).
    - health: /api/health's answer (problems, fine, stopped, checked), its busy flag and its error; healthCount is what the
-     rail shows on Settings (BL-320 §4), kept with its time in this browser so a new page has it without a check.
+     rail shows on Settings (BL-320 §4), kept with its time in this browser so a new page has it without a check; healthFirst
+     (#295) is the first problem's title, kept beside it, for the avatar's second line.
    Saving is the page's own: writeSettings (a backup and a log line). After a save or a Reset each listener in SAVED is told
    the dotted keys and their new values, so settings.js can bring the page's copies (S, the VIP and draft settings) up to date. */
 import { computed, effect, signal } from "@preact/signals";
@@ -46,6 +47,10 @@ export const markCardWaiting = id => { if (id && !healthCardWaiting.value.includ
 const COUNT_KEY = "creaite-health-count";
 /** The count the rail shows: the last check's problems, from this page or (until it checks) the last one in this browser. */
 export const healthCount = signal(0);
+/** #295: the first of those problems in plain words (its title), for the avatar's second line; "" when none or not known. */
+export const healthFirst = signal("");
+/** @param {Problem[]} problems */
+const firstOf = problems => (problems[0] && problems[0].title) || "";
 export const healthCheckedAt = computed(() => healthResult.value ? healthResult.value.checked : "");
 
 /** @type {((changes: Record<string, any>) => void)[]} */
@@ -98,10 +103,10 @@ export async function checkHealth() {
     const r = await api("/api/health", {});
     if (r.ok) {
       healthResult.value = /** @type {HealthResult} */ (r);
-      healthCount.value = (r.problems || []).length;
+      healthCount.value = (r.problems || []).length; healthFirst.value = firstOf(r.problems || []);
       const still = (r.problems || []).map((/** @type {Problem} */ p) => p.fix && p.fix.id);   /* a card fix stops waiting once its problem is gone */
       healthCardWaiting.value = healthCardWaiting.value.filter(id => still.includes(id));
-      store.set(COUNT_KEY, { n: healthCount.value, at: Date.now() });
+      store.set(COUNT_KEY, { n: healthCount.value, at: Date.now(), first: healthFirst.value });
     } else healthError.value = r.message || "The health check didn't run";
   } finally { healthBusy.value = false; }
 }
@@ -121,8 +126,8 @@ async function saveDismissed(problems, gone) {
   const res = healthResult.value;
   if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
   healthResult.value = { ...res, problems, dismissed: gone };
-  healthCount.value = problems.length;
-  store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() });   /* a dismissal is not a check: the last check's time stays (#178: no new clock read) */
+  healthCount.value = problems.length; healthFirst.value = firstOf(problems);
+  store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt(), first: healthFirst.value });   /* a dismissal is not a check: the last check's time stays (#178: no new clock read) */
   return true;
 }
 /** Dismiss one problem, with an optional one-line reason and today's date. @param {Problem} p @param {string} reason */
@@ -152,6 +157,6 @@ export function showHealthCount(n) { void n; }
 /** At start-up (settings.js calls it): the last count this browser saw, and the rail kept in step with it from then on. */
 export function startSettingsStore() {
   const c = store.get(COUNT_KEY, null);
-  if (c && typeof c.n === "number") healthCount.value = c.n;
+  if (c && typeof c.n === "number") { healthCount.value = c.n; healthFirst.value = typeof c.first === "string" ? c.first : ""; }
   effect(() => showHealthCount(healthCount.value));
 }

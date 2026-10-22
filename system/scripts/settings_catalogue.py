@@ -217,8 +217,9 @@ CATALOGUE = {
     "dashboard.rail.order": ("Look and layout", "Rail order", "The order of the pages on the left-hand rail.",
                              "The day's order: Today first, Settings last."),
     "dashboard.rail.hidden": ("Look and layout", "Hidden rail pages", "Pages taken off the rail.", "None: everything is reachable."),
-    "dashboard.rail.more": ("Look and layout", "Pages in More", "The pages kept in More, at the bottom of the sidebar.",   # BL-319
-                            "Intake, Files, Activity and Settings: the pages of every day stay in view."),
+    "dashboard.rail.more": ("Look and layout", "Pages in the menu under your name",                                    # BL-319; #295
+                            "The pages kept in the menu under your name, at the foot of the sidebar.",
+                            "Files, Activity and Settings: the pages of every day stay in view."),
     "dashboard.rail.display": ("Look and layout", "Rail shows", "Titles beside the icons, or icons only.",
                                "Titles: plainer for a new user; icons only is there when you know them."),
     # ── Current state

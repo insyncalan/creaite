@@ -31,7 +31,7 @@ import { drawPanel, ebMarkSeen, errBanner, openNew, markStagedRows, pkDraw, PKDR
 import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG } from "./projects.js";
 import { draftOn } from "./review.js";
 import { irTick } from "./stores/intakeReview.js";
-import { railIconSize, railLabelsOn, railSizeNorm, setRailCount } from "./stores/rail.js";
+import { railIconSize, railLabelsOn, railName, railSizeNorm, setRailCount } from "./stores/rail.js";
 import { personPromises, plur, projLink, renderToday, SU_LAUNCH, suCmd, tl } from "./today.js";
 import { cell, FDEFS, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
@@ -213,6 +213,7 @@ export function setSynced(ch){ let reload=false, look=false;
     else if(k.startsWith("warnings.")){ const [,sig,f]=k.split("."), W=D.warn_settings||(D.warn_settings={}); W[sig]={...(W[sig]||{}),[f]:v}; }
     else if(k==="search.debounce_ms") SEARCHCFG.debounce_ms=v;
     else if(k==="dashboard.generate_days") S.genDays=v;
+    else if(k==="identity.name"){ S.meSet=!!String(v||"").trim(); railName.value=String(v||"").trim(); }   /* #295: the avatar follows at once */
     else if(k==="dashboard.rail_labels") railLabelsOn.value=v!==false;   /* #156: Labels when collapsed */
     else if(k==="dashboard.rail_icon_size"){ railIconSize.value=railSizeNorm(v); S.railIconSize=railIconSize.value; }   /* #182 */
     else if(k==="logging.level") DIAG.level=v;
