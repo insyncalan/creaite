@@ -286,5 +286,76 @@ class UpdatePeekSaves(LiveBrowserCase, Fixture):
         b.wait("document.getElementById('panel').classList.contains('pkprop')")
         self.assertFalse(b.eval("document.getElementById('pkPSaveA').hidden"))                        # the next peek has it again
 
+
+class HeldInThePeek(LiveBrowserCase):
+    """#291 fix (2.5.4) on the 2.6 Update peek: an update the tracker can't save as it is (a status it doesn't know) is approved
+    by Save and approve only once the re-checked item passes; still invalid, it is saved, not approved, and the snack offers Edit.
+    Fail-first: without updSave's `!r.bad` guard the file is marked approved while the item is still invalid."""
+    width, height = 1400, 1100
+    BADSTATUS = "status must be one of Open, Delayed, Closed, Cancelled (got 'Finished')"
+
+    @classmethod
+    def load(cls, v):
+        S.load(v)
+        cls.uat = next(r["id"] for r in v.rows("actions") if r["description"] == UAT)
+        cls.due = next(r["due_date"] for r in v.rows("actions") if r["id"] == cls.uat)
+        v.propose("2026-10-09-1000-sweep", [upd(1, cls.uat, {"status": "Finished", "due_date": "2026-12-01"}, flags=["invalid"],
+                                                invalid_reason=cls.BADSTATUS)])
+
+    def staged(self):
+        f = next((self.v.root / "system/staging").glob("proposed-2026-10-09-1000-sweep.json"), None)
+        return json.loads(f.read_text())["items"][0] if f else None
+
+    def open_held(self):
+        b = self.b
+        S.open_page(b)
+        b.wait(f"REV.some(r=>r.kind==='update'&&r.rec.target==={self.uat!r}&&!!r.bad)", 15)
+        n = b.eval(f"REV.find(r=>r.kind==='update'&&r.rec.target==={self.uat!r}).n")
+        b.eval(f"openProposal({n})")
+        b.wait("!!document.querySelector('#pkUpdNote')", 15)
+        return n
+
+    def test_the_peek_says_why_it_is_held(self):
+        self.open_held()
+        self.b.wait("!!document.querySelector('#pkPropTop .pk-bad')", 10)
+        self.assertIn("Can't be saved as it is: status must be one of", self.b.eval("document.querySelector('#pkPropTop').innerText"))
+
+    def test_save_and_approve_while_still_invalid_saves_and_does_not_approve(self):
+        b = self.b
+        n = self.open_held()
+        b.eval(f"pkCommit('actions','rv{n}',{{due:'2026-12-04'}},'Due date','x','y')")     # an edit that leaves the bad status
+        b.wait("document.querySelector('#pkProps [data-pkp=due]').textContent.includes('04-12-2026')")
+        b.click("#pkPSaveA")
+        end, it = time.time() + 25, None
+        while time.time() < end:
+            it = self.staged()
+            if it and it.get("edited_in") == "dashboard":
+                break
+            time.sleep(0.2)
+        self.assertEqual(it["changes"], {"status": "Finished", "due_date": "2026-12-04"}, "the edit is saved")
+        self.assertNotEqual(it.get("decision"), "approved", "never approved while the tracker can't save it")
+        self.assertIn("invalid", it.get("flags") or [])
+        b.wait("/still can't be saved as it is/.test(document.getElementById('snackT').textContent)", 25)
+        self.assertEqual(b.eval("document.getElementById('snackU').textContent.trim()"), "Edit")
+        row = next(r for r in self.v.rows("actions") if r["id"] == self.uat)
+        self.assertEqual(row["due_date"], self.due, "nothing reached the tracker")
+        self.assertEqual(b.errors, [])
+
+    def test_save_and_approve_once_fixed_approves_and_writes_it(self):
+        b = self.b
+        n = self.open_held()
+        b.eval(f"pkSetStatus('actions','rv{n}','Delayed')")                                  # the field put right
+        b.wait("document.querySelector('#pkProps [data-pkp=st]').getAttribute('aria-label').includes('now Delayed')")
+        b.click("#pkPSaveA")
+        end, row = time.time() + 30, None
+        while time.time() < end:
+            row = next(r for r in self.v.rows("actions") if r["id"] == self.uat)
+            if row["status"] == "Delayed":
+                break
+            time.sleep(0.3)
+        self.assertEqual((row["status"], row["due_date"]), ("Delayed", "2026-12-01"), "checked again, passed, approved and written")
+        self.assertEqual(b.errors, [])
+
+
 if __name__ == "__main__":
     unittest.main()

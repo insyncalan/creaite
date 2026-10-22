@@ -60780,7 +60780,7 @@ ${d5.text}`);
   function updDraw(x5, k5, r4) {
     const { u: u5, now, list } = updModel(), t47 = u5.table;
     putHTML($("#pkId"), html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u5.id}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}`);
-    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>`);
+    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>${r4.bad && !r4.done ? html`<div class="cmnote pk-bad">Can't be saved as it is: ${r4.bad}. Change it here and save: it's checked again.</div>` : ""}`);
     $("#pkPropEnd").textContent = "";
     const show = (col, v5) => col === "project" ? v5 ? pName(v5) || v5 : "—" : col === "owner" || col === "made_by" ? pkWho(v5) || "—" : col === "milestone" ? v5 ? msName(v5) : "—" : irWord(col, v5);
     const { row1, row2 } = updateChips(t47, list, now, show);
@@ -60829,7 +60829,7 @@ ${d5.text}`);
         fin = Object.fromEntries(cols2.map((c5) => [c5, m5.changes[c5]]));
         it2.changes = fin;
         it2.edited_in = "dashboard";
-        if (approve) {
+        if (approve && !r4.bad) {
           it2.decision = "approved";
           it2.decided_in = "dashboard";
         }
@@ -60847,6 +60847,7 @@ ${d5.text}`);
     if (was.length && String(r4.rec.t || "").startsWith(u5.id + ":") && !("why" in r4.rec)) r4.rec.t = `${u5.id}: ${irLineParts(r4.rec.changes).join("; ")}`;
     r4.edited = true;
     if ("hold" in r4) r4.hold = irHold(r4);
+    if (r4.bad) return badSaved(r4, approve);
     closePanel();
     if (approve) decide(r4.n, "approved", true);
     else {

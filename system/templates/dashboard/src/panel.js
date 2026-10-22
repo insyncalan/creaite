@@ -237,7 +237,7 @@ export function pkUpdReset(on){ if(on) pkUpdMount(); const t=$("#pkTitle"), ed=t
   if(!on&&$("#pkUpd")){ drawUpdateBody($("#pkUpd"),null); drawLatestWas($("#pkUpdWas"),null); drawLast($("#pkUpdLast"),null); } }
 export function updDraw(x,k,r){ const {u,now,list}=updModel(), t=u.table;
   putHTML($("#pkId"),html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u.id}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}`);
-  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>`); $("#pkPropEnd").textContent="";
+  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. Change it here and save: it's checked again.</div>`:""}`); $("#pkPropEnd").textContent="";   /* #291 fix */
   const show=(col,v)=>col==="project"?(v?pName(v)||v:"—"):col==="owner"||col==="made_by"?(pkWho(v)||"—"):col==="milestone"?(v?msName(v):"—"):irWord(col,v);
   const {row1,row2}=updateChips(t,list,now,show); $("#pkProps").replaceChildren(...updateChipNodes(row1)); $("#pkProps2").replaceChildren(...updateChipNodes(row2));
   drawUpdateBody($("#pkUpd"),{id:u.id,title:u.live.t||"",table:t,list,rec:r.rec,conflict:isConflict(r),current:u.liveDb});
@@ -258,11 +258,12 @@ export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=sha
   try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
       const m=irMergeEdits(it.changes||{},plan); if("error" in m) throw new Error(m.error);   /* the file's own changes now, with only the columns edited here put right */
       const cols=Object.keys(m.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));   /* status first: the proposal's field is its first change, and the hold reads it */
-      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }
+      fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
   const was=r.rec.changes||[], cols=Object.keys(fin); r.rec.changes=cols.map(c=>({field:irLabel(c).toLowerCase(),col:c,from:u.liveDb[c]??null,to:fin[c]}));
   const f=r.rec.changes[0]; r.rec.field=f.col; r.rec.from=f.from; r.rec.to=f.to;
   if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${irLineParts(r.rec.changes).join("; ")}`;   /* in words ("due 20-10-2026 → 23-10-2026"), never a column name or a long text */
   r.edited=true; if("hold" in r) r.hold=irHold(r);
+  if(r.bad) return badSaved(r,approve);   /* #291 fix, as savePanel: checked again, approved only once it passes, else Edit */
   closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } }
 /* ===== end #232-B ===== */
 export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; HSUSED=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
