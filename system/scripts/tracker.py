@@ -2354,6 +2354,10 @@ def cmd_apply(args):
     if blocked:
         _report_blocked(work, blocked)
         return 1
+    work = _drop_all_held(work)        # #280 round 5: nothing left to write records no apply, so an undo still takes the last real one
+    if not work:
+        print("Nothing applied: every decided item is held in Review.")
+        return 0
     backup = backup_db("apply")
     debuglog.info("tracker", f"apply: backup {paths.rel(backup)}; proposals {', '.join(p.name for p, _ in work)}")
     file_records = []
@@ -2405,7 +2409,8 @@ def _validate_work(con, work):
         for n, (kind, reason) in all_problems[p].items():
             if kind == "invalid":
                 item = next((i for i in data["items"] if i.get("n") == n), None)
-                debuglog.warn("tracker", f"invalid {p.name} item {n} ({item.get('table') if item else '?'}): {debuglog.rule(reason)}")
+                where = f"{item.get('table')} {item.get('id') or 'new'}" if item else "?"
+                debuglog.warn("tracker", f"invalid {p.name} item {n} ({where}): {debuglog.rule(reason)}")
                 if item is None:                                       # not an item (a file block): it still stops the apply
                     blocked.append(f"{p.name} item {n}: {reason}")
                     continue
@@ -2492,6 +2497,22 @@ def _skip_card_leftovers(work):
             print(f"Left in staging, not applied: {why[0]}. Delete note or Move back again, or remove {p.name}.")
         else:
             keep.append((p, data))
+    return keep
+
+
+def _drop_all_held(work):
+    """#280 round 5: after the dry run, a proposal whose decided items all went back to Review (invalid, held) is saved, with
+    each reason, and left out of the apply; when none is left the apply writes nothing and records nothing (no backup, no
+    applies row), so "undo last apply" still undoes the last apply that wrote something."""
+    keep = []
+    for p, data in work:
+        items, blks = decided(data)
+        if items or blks:
+            keep.append((p, data))
+        else:
+            save(p, data)
+    if not keep:
+        debuglog.warn("tracker", f"apply: nothing applied, every decided item held in Review ({len(work)} proposal(s))")
     return keep
 
 
