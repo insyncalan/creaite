@@ -144,6 +144,16 @@ class OnceOnToday(Seeded):
         self.assertNotIn("Schedule training sessions", row)
         self.assertRegex(row, r"\d+ (is|are) under Your commitments")
 
+    def test_the_milestone_count_adds_no_second_row(self):
+        """#310 with #313: the open-items count button is on the milestone's one row, never a row of its own."""
+        rows = self.audit()
+        ms = self.MS["Pilot go-live"]
+        self.assertEqual(sum(r.count(ms) for r in rows.values()), 1, "the milestone is listed once across Today")
+        self.assertEqual(self.b.eval("document.querySelectorAll('#attnList li[data-msattn] .wkcnt').length"),
+                         self.b.eval("document.querySelectorAll('#attnList li[data-msattn]').length"),
+                         "one count button per Needs attention milestone row")
+        self.assertEqual(duplicates(rows), {})
+
     def test_the_week_ahead_counts_how_many_are_listed_above(self):
         self.audit()
         note = self.b.eval("document.getElementById('weekTo').textContent")

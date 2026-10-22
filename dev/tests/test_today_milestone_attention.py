@@ -102,9 +102,9 @@ class MilestoneRows(Seeded):
         self.assertEqual([x["id"] for x in r], [ms["Data ready"], ms["Build review"], ms["Pilot go-live"]])
         self.assertEqual([x["pos"] for x in r], [0, 1, 2], "milestone rows sit first in Needs attention")
         self.assertEqual(r[0]["title"], f"Milestone Data ready is overdue by 2 days (due {long_day(-2)}): "
-                                        "1 open item must close before it can be achieved")
-        self.assertEqual(r[1]["title"], "Milestone Build review is due tomorrow: 1 open item must close for it to hold")
-        self.assertEqual(r[2]["title"], f"Milestone Pilot go-live is due {long_day(3)}: 4 open items must close for it to hold")
+                                        "its open work must close before it can be achieved")
+        self.assertEqual(r[1]["title"], "Milestone Build review is due tomorrow: its open work must close for it to hold")
+        self.assertEqual(r[2]["title"], f"Milestone Pilot go-live is due {long_day(3)}: its open work must close for it to hold")
         self.assertEqual([x["u"] for x in r], ["Data ready", "Build review", "Pilot go-live"], "the name is the underlined link")
         self.assertEqual([x["ms"] for x in r], [x["id"] for x in r], "the title opens the milestone")
 
@@ -118,9 +118,9 @@ class MilestoneRows(Seeded):
         self.assertTrue(parts[0].endswith("Confirm licence count with procurement, 1 day late"), parts)
         self.assertTrue(parts[1].endswith(f"Order pilot laptops, due {weekday(2)}"), parts)
         self.assertTrue(parts[2].endswith(f"Schedule training sessions, due {weekday(3)}"), parts)
-        self.assertEqual(parts[3:], ["and 1 more", "Digital Enablement", "Open all 4 in Work"])
+        self.assertEqual(parts[3:], ["and 1 more", "Digital Enablement", "5 open, 1 overdue"])  # the count is #310's: open actions and RAID items, risks included
         build = self.rows()[1]
-        self.assertEqual(build["body"].split(" · ")[1:], ["Example Programme", "Open in Work"])
+        self.assertEqual(build["body"].split(" · ")[1:], ["Example Programme", "2 open items"])
         self.assertTrue(build["body"].split(" · ")[0].endswith("Review vendor security answers, due today"))
         self.assertNotIn("Reviewer on leave", build["body"], "risks are left out")
         late_colour = self.b.eval("""(()=>{ const s=document.querySelector('#attnList li[data-msattn] .tb p .late');
@@ -150,15 +150,15 @@ class MilestoneRows(Seeded):
         self.b.click(f'#attnList li[data-msattn="{ms}"] a.t')
         self.b.wait("VIEW==='milestones' && MSCODE==='DEF'")
 
-    def test_open_all_in_work_lists_exactly_the_counted_items(self):
+    def test_the_count_opens_work_listing_exactly_the_counted_items(self):
         self.today()
         ms = self.MS["Pilot go-live"]
-        self.b.eval(f"""[...document.querySelectorAll('#attnList li[data-msattn="{ms}"] .tb p a.s')].find(a=>/^Open all/.test(a.textContent)).click()""")
+        self.b.eval(f"""document.querySelector('#attnList li[data-msattn="{ms}"] .tb p button.wkcnt').click()""")
         self.b.wait("VIEW==='work' && WT==='all'")
         got = self.b.eval("items().filter(x=>passes(x)).map(x=>x.t).sort()")
         self.assertEqual(self.b.eval("[[...FX.mi],WQ]"), [[ms], ""], "the Milestone filter, not a search")
         self.assertEqual(got, sorted(["Confirm licence count with procurement", "Schedule training sessions",
-                                      "Order pilot laptops", "Training room not booked"]))
+                                      "Order pilot laptops", "Training room not booked", "Pilot users unavailable"]))
 
     def test_the_menu_has_no_dismiss(self):
         self.today()

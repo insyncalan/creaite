@@ -130,12 +130,18 @@ export function msOpenItems(id){ const its=[...A.filter(a=>a.ms===id&&open(a)&&!
   return {n:its.length,over:its.filter(x=>!!x.due&&x.due<TODAY).length}; }
 export function msItemsOpenWork(id,code){ openWork(code,"all","open",{st:["Open"],mi:[id]}); }
 export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its.length} in Work`;
-export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
+/* #310 + #313 (2.6.1): a milestone is ONE row on Today, in Needs attention if it qualifies there, else in the Week ahead, and the
+   open-items count button is on whichever row it has. One source for its words, so the two rows say the same thing. */
+export function msCountWords(id,name){ const c=msOpenItems(id); if(!c.n) return undefined; const w=`${c.n} open work item${c.n===1?"":"s"}`;
+  return {n:c.n,over:c.over,label:c.over?`${c.n} open`:`${c.n} open item${c.n===1?"":"s"}`,overLabel:c.over?`, ${c.over} overdue`:"",
+    tip:`${w} this milestone depends on`,aria:`Milestone ${name}: ${w}${c.over?`, ${c.over} overdue`:""}. Open the list`}; }
+export function msAttnRow(n,r){ const k=days(r.when), items="its open work must close";
   const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`
     :`is due ${k===0?"today":k===1?"tomorrow":longDay(r.when)}: ${items} for it to hold`;
   const shown=r.named.slice(0,3).map(msItemWords), more=r.named.length>3?[`and ${r.named.length-3} more`]:[], mineWords=r.inMine?[`${r.inMine===1?"1 is":`${r.inMine} are`} under Your commitments`]:[];
+  const cw=msCountWords(r.ms,r.name), cnt=cw?`<button type="button" class="wkcnt" data-wkitems="${esc(r.ms)}" data-p="${esc(r.p)}" aria-label="${esc(cw.aria)}" data-tip="${esc(cw.tip)}">${esc(cw.label)}${cw.overLabel?`<span class="warn">${esc(cw.overLabel)}</span>`:""}</button>`:"";
   return tl(n,tLink(html`data-ms="${r.ms}"`,html`Milestone <u>${r.name}</u> ${raw(when)}`),
-    [...shown,...more,...mineWords,projLink(r.p),sLink(html`data-msattnwork="${r.ms}"`,msAttnWorkWord(r))].join(" · "),
+    [...shown,...more,...mineWords,projLink(r.p),cnt].filter(Boolean).join(" · "),
     `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
     html`data-msattn="${r.ms}"`); }
 export function msAttnMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=msAttention().find(x=>x.ms===id); if(!r) return;
@@ -780,9 +786,7 @@ export function weekGroups(){ const W=D.week; if(!W) return Object.assign(/** @t
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
     const d=further&&i.date?` ${longDay(i.date)}`:"";
     return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
-  const msItems=i=>{ const c=msOpenItems(i.id); if(!c.n) return undefined; const w=`${c.n} open work item${c.n===1?"":"s"}`;
-    return {ms:i.id,p:i.p,n:c.n,over:c.over,label:c.over?`${c.n} open`:`${c.n} open item${c.n===1?"":"s"}`,overLabel:c.over?`, ${c.over} overdue`:"",
-      tip:`${w} this milestone depends on`,aria:`Milestone ${i.t}: ${w}${c.over?`, ${c.over} overdue`:""}. Open the list`}; };
+  const msItems=i=>{ const w=msCountWords(i.id,i.t); return w?{ms:i.id,p:i.p,...w}:undefined; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
   const item=(i,key,further,undated=false)=>({key,kind:i.kind,type:i.type||"",dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{ms:i.id}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
