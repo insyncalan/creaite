@@ -356,7 +356,7 @@ class Migration(unittest.TestCase):
     def counts_now(self, con):
         tables = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'vault_search%' "
                                             "AND name NOT LIKE 'sqlite_%'")]
-        return {t: con.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in tables if t not in ("change_log", "applies")}
+        return {t: con.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in tables if t not in ("change_log", "applies", "item_events")}   # item_events: the work-item-history table, new with that schema, not touched by this migration
 
     def test_missed_becomes_overdue_rows_are_kept_and_a_second_run_does_nothing(self):
         out = self.v.run("migrate").stdout

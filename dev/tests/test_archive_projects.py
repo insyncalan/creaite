@@ -422,6 +422,9 @@ class ArchiveInOneDrive(OneDriveCase):
         self.assertEqual((reg.read_text(encoding="utf-8"), sorted(str(p) for p in self.eng("ABC").rglob("*"))), before)
 
 
+NEW_TABLES = ("item_events",)     # the work-item-history table: present only when that schema is installed
+
+
 class Migration(unittest.TestCase):
     """What runs on Alan's vault at the update: tracker.py migrate on a database made with the schema before BL-09 (dev/tests/pinned/schema-before-bl09.sql),
     with sample rows in every table, adds `archived` (0) to projects and the six item tables, keeps every row, and the projects
@@ -472,7 +475,7 @@ class Migration(unittest.TestCase):
         schema.write_text(new, encoding="utf-8")                                      # the update brings the new schema
         self.assertIn("Migrated", v.run("migrate").stdout)
         after = self.dump(db)
-        self.assertEqual(sorted(after), sorted(before))
+        self.assertEqual(sorted(t for t in after if t not in NEW_TABLES or t in before), sorted(before))   # NEW_TABLES: made by a later schema, not by BL-09
         for t in before:
             got = [{k: x for k, x in r.items() if not (k == "archived" and t in self.FLAGGED)} for r in after[t]]
             self.assertEqual(got, before[t], t)                                       # every row, every value kept
