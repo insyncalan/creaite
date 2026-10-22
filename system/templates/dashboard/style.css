@@ -1235,6 +1235,9 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .deinc .it .sub{margin-left:auto;white-space:nowrap} .deopts{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0;font-size:var(--fs-sm)} .deopts .dwrap{width:150px}
 #dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;overflow:auto}
 .deacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .deacts .sp{flex:1} .denote{background:var(--sunk);border-radius:var(--r-md);padding:8px 12px;margin:8px 0;font-size:var(--fs-sm)}
+/* #183: Draft email delivery: the Outlook draft's outcome above the buttons, the no-address To line, Settings' Outlook access row */
+.ddstat.ok{background:var(--ok-soft);color:var(--ink)} .ddstat.bad{background:var(--bad-soft);box-shadow:inset 0 0 0 1px var(--bad)} .ddstat a{margin-left:6px}
+.deto-no{color:var(--muted)} .ddacc.dim{opacity:.55} #deMade .i{margin-right:4px}
 .prepbody{padding:10px 16px 16px;overflow:auto;max-height:calc(84vh - 72px)} .prepbody>p.sub{margin:8px 0 0}
 .preppick select{margin-left:6px}
 .prepsec h3{font:600 var(--fs-sm)/18px var(--font);margin:16px 0 4px}

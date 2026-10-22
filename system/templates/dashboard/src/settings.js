@@ -209,6 +209,7 @@ export function setSynced(ch){ let reload=false, look=false;
     if(k==="dashboard.theme"||k==="dashboard.palette"||k==="dashboard.motion") look=true;
     else if(k==="dashboard.week_ahead_priorities"){ S.weekPrios=v; reload=true; }
     else if(k.startsWith("drafting.")) S.drafting={...(S.drafting||{}),[k.slice(9)]:v};
+    else if(k==="draft_email.outlook_drafts") S.outlookDrafts=v===true;   /* #183: the Draft email popup's Create draft in Outlook */
     else if(k.startsWith("vip.")) VIPD()[k.slice(4)]=v;
     else if(k.startsWith("warnings.")){ const [,sig,f]=k.split("."), W=D.warn_settings||(D.warn_settings={}); W[sig]={...(W[sig]||{}),[f]:v}; }
     else if(k==="search.debounce_ms") SEARCHCFG.debounce_ms=v;

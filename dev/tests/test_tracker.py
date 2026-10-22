@@ -60,6 +60,7 @@ def make_vault():
               "report.py", "update.py", "search.py", "permissions.py", "locations.py", "filechange.py", "reach.py", "launch.py", "log.py", "transcripts.py",
               "prep_page.py", "prep_shape.py", "prep_view.py", "status_facts.py", "status_checks.py", "status_prompt.py", "forecast.py",
               "drafts.py",   # AI drafts (sprint-drafts-fields)
+              "draft_delivery.py",                                  # #183: the Outlook draft, never a send
               "close_day.py",                                       # BL-295
               "health_fixes.py",                                    # BL-320: Health's Fix it
               "backup.py",                                          # BL-323: the daily zip, retention, Tidy up, restore

@@ -1245,6 +1245,9 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .deinc .it .sub{margin-left:auto;white-space:nowrap} .deopts{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0;font-size:var(--fs-sm)} .deopts .dwrap{width:150px}
 #dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;overflow:auto}
 .deacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .deacts .sp{flex:1} .denote{background:var(--sunk);border-radius:var(--r-md);padding:8px 12px;margin:8px 0;font-size:var(--fs-sm)}
+/* #183: Draft email delivery: the Outlook draft's outcome above the buttons, the no-address To line, Settings' Outlook access row */
+.ddstat.ok{background:var(--ok-soft);color:var(--ink)} .ddstat.bad{background:var(--bad-soft);box-shadow:inset 0 0 0 1px var(--bad)} .ddstat a{margin-left:6px}
+.deto-no{color:var(--muted)} .ddacc.dim{opacity:.55} #deMade .i{margin-right:4px}
 .prepbody{padding:10px 16px 16px;overflow:auto;max-height:calc(84vh - 72px)} .prepbody>p.sub{margin:8px 0 0}
 .preppick select{margin-left:6px}
 .prepsec h3{font:600 var(--fs-sm)/18px var(--font);margin:16px 0 4px}
@@ -4594,6 +4597,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     DAYRUN: () => DAYRUN,
     DC: () => DC,
     DDATE: () => DDATE,
+    DD_STEPS: () => DD_STEPS,
+    DD_SUB: () => DD_SUB,
     DEC: () => DEC,
     DEC_NOBACK: () => DEC_NOBACK,
     DEFCOLS: () => DEFCOLS,
@@ -5562,6 +5567,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     days: () => days,
     dcIcon: () => dcIcon,
     dcText: () => dcText,
+    deActsDraw: () => deActsDraw,
+    deActsHtml: () => deActsHtml,
     deAiCheck: () => deAiCheck,
     deAiSafe: () => deAiSafe,
     deBarred: () => deBarred,
@@ -5574,11 +5581,13 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     deChaseText: () => deChaseText,
     deChasedWords: () => deChasedWords,
     deClose: () => deClose,
+    deCopiedNote: () => deCopiedNote,
     deCopyEmail: () => deCopyEmail,
     deCopyText: () => deCopyText,
     deCover: () => deCover,
     deDefaults: () => deDefaults,
     deDlgEl: () => deDlgEl,
+    deDraftBody: () => deDraftBody,
     deDue: () => deDue,
     deExtraHtml: () => deExtraHtml,
     deFollowFacts: () => deFollowFacts,
@@ -5590,10 +5599,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     deIsoDays: () => deIsoDays,
     deItem: () => deItem,
     deItems: () => deItems,
+    deLink: () => deLink,
     deLinks: () => deLinks,
+    deMadeHtml: () => deMadeHtml,
+    deMakeDraft: () => deMakeDraft,
     deMe: () => deMe,
     deModesHtml: () => deModesHtml,
+    deMuted: () => deMuted,
+    deNoAddress: () => deNoAddress,
     deOptionsChanged: () => deOptionsChanged,
+    deOutlookOn: () => deOutlookOn,
     deOutside: () => deOutside,
     deOutsideAll: () => deOutsideAll,
     deOverdue: () => deOverdue,
@@ -5607,6 +5622,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     dePrevPut: () => dePrevPut,
     deRank: () => deRank,
     deRecipients: () => deRecipients,
+    deRefusedHtml: () => deRefusedHtml,
     deReplyBy: () => deReplyBy,
     deRowHtml: () => deRowHtml,
     deSay: () => deSay,
@@ -5614,12 +5630,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     deSent: () => deSent,
     deShow: () => deShow,
     deSort: () => deSort,
+    deStatShow: () => deStatShow,
+    deSubDraw: () => deSubDraw,
     deSubject: () => deSubject,
     deTableHtml: () => deTableHtml,
     deTd: () => deTd,
     deTextRows: () => deTextRows,
     deTh: () => deTh,
     deTimes: () => deTimes,
+    deToAddr: () => deToAddr,
     deToHtml: () => deToHtml,
     decAsked: () => decAsked,
     decBoardDrop: () => decBoardDrop,
@@ -10556,7 +10575,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       /* @__PURE__ */ u4(Dialog, { cmdEnter: false, id: "deDlg", class: "prepdlg", labelledBy: "deTitle", children: [
         /* @__PURE__ */ u4("div", { class: "prephead", children: [
           /* @__PURE__ */ u4("div", { style: "flex:1", children: [
-            /* @__PURE__ */ u4("div", { class: "sub", children: "Nothing is sent: copy it and paste it into Outlook" }),
+            /* @__PURE__ */ u4("div", { class: "sub", id: "deSub", children: "Nothing is sent: copy it and paste it into Outlook" }),
             /* @__PURE__ */ u4("h2", { id: "deTitle" })
           ] }),
           /* @__PURE__ */ u4("button", { class: "iconbtn", id: "deClose", "aria-label": "Close", children: /* @__PURE__ */ u4(Icon, { name: "x" }) })
@@ -27257,17 +27276,21 @@ ${s5}`;
       }];
     }
   });
+  var emailRunStyle = (s5) => /font-style\s*:/i.test(s5) ? s5 : `font-style:normal;${s5}`;
   var EmailSpan = de.create({
     name: "emailSpan",
     inclusive: false,
     addAttributes() {
-      return { style: { default: null, parseHTML: (el2) => el2.getAttribute("style"), renderHTML: (a5) => a5.style ? { style: a5.style, "data-cx-style": a5.style } : {} } };
+      return { style: { default: null, parseHTML: (el2) => el2.getAttribute("style"), renderHTML: (a5) => a5.style ? { style: emailRunStyle(a5.style), "data-cx-style": emailRunStyle(a5.style) } : {} } };
     },
     parseHTML() {
-      return [{ tag: "span[style]" }];
+      return [{ tag: "i[style]", getAttrs: (el2) => (
+        /** @type {HTMLElement} */
+        el2.style.fontStyle === "normal" ? null : false
+      ) }, { tag: "span[style]" }];
     },
     renderHTML({ HTMLAttributes }) {
-      return ["span", HTMLAttributes, 0];
+      return ["i", HTMLAttributes, 0];
     }
   });
   var emailSet = (list) => list.filter((x5) => x5 && ["starterKit", "bold", "italic", "hardBreak", "tableKit", "table"].includes(x5.name)).map((x5) => x5.name === "starterKit" ? x5.configure({
@@ -57328,11 +57351,14 @@ system/scripts/run launch.py agent ${what}`;
       case "drafting.update":
         control = /* @__PURE__ */ u4(AllSwitch, { keys, named, save: save2 });
         break;
+      case "draft_email.outlook_drafts":
+        control = sw3();
+        break;
       default:
         control = sw3();
     }
     const pending = k5 === "dashboard.auto_apply" && val(k5) === false && shared.PENDING && shared.PENDING.length;
-    return /* @__PURE__ */ u4(
+    const settingRow = /* @__PURE__ */ u4(
       SettingRow,
       {
         id: id2,
@@ -57355,6 +57381,43 @@ system/scripts/run launch.py agent ${what}`;
         ]
       }
     );
+    return k5 === "draft_email.outlook_drafts" ? /* @__PURE__ */ u4(S2, { children: [
+      settingRow,
+      /* @__PURE__ */ u4(OutlookAccess, { on: !!val(k5), save: save2 })
+    ] }) : settingRow;
+  }
+  var ACCESS_OK = (at2) => `You can create drafts in Outlook (checked ${at2}).`;
+  var ACCESS_NO = "Outlook says you can't write here, so drafts stay copy and paste.";
+  function OutlookAccess({ on: on2, save: save2 }) {
+    const [id2] = d2(rowId);
+    const [said2, setSaid] = d2("");
+    const [busy2, setBusy] = d2(false);
+    const check = async () => {
+      setBusy(true);
+      setSaid("Asking Outlook…");
+      const r4 = await api("/api/email/outlook-access", {});
+      setBusy(false);
+      if (!r4.ok || r4.can === null || r4.can === void 0) {
+        setSaid(r4.message || "Outlook couldn't be asked just now: try again in a minute.");
+        return;
+      }
+      if (r4.can) {
+        setSaid(ACCESS_OK(r4.at || ""));
+        return;
+      }
+      setSaid(ACCESS_NO);
+      if (on2) await save2({ "draft_email.outlook_drafts": false });
+    };
+    return /* @__PURE__ */ u4("div", { class: `srow ddacc${on2 ? "" : " dim"}`, id: "ddAcc", children: [
+      /* @__PURE__ */ u4("div", { children: [
+        /* @__PURE__ */ u4("span", { id: id2, children: "Outlook access" }),
+        /* @__PURE__ */ u4("small", { id: id2 + "h", children: "Whether you may create drafts in your own mailbox." })
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "setctl", children: [
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "ddCheck", "aria-describedby": id2 + "h", disabled: busy2, onClick: check, children: "Check" }),
+        /* @__PURE__ */ u4("span", { class: "sub", id: "ddRes", "aria-live": "polite", children: said2 })
+      ] })
+    ] });
   }
   function AllSwitch({ keys, named, save: save2 }) {
     const on2 = keys.filter((x5) => val(x5) !== false).length, all = on2 === keys.length, mixed = on2 > 0 && !all;
@@ -58270,6 +58333,7 @@ system/scripts/run launch.py agent ${what}`;
         S.weekPrios = v5;
         reload = true;
       } else if (k5.startsWith("drafting.")) S.drafting = { ...S.drafting || {}, [k5.slice(9)]: v5 };
+      else if (k5 === "draft_email.outlook_drafts") S.outlookDrafts = v5 === true;
       else if (k5.startsWith("vip.")) VIPD()[k5.slice(4)] = v5;
       else if (k5.startsWith("warnings.")) {
         const [, sig, f5] = k5.split("."), W3 = D.warn_settings || (D.warn_settings = {});
@@ -64459,20 +64523,21 @@ ${d5.text}`);
     const over = items2.filter((i5) => i5.due && i5.due < today).length;
     return `${codes.join(" / ")} · Update request: ${items2.length} open items${over ? ` (${over} overdue)` : ""}`;
   }
-  var deTd = (inner, extra = "") => `<td style="${DE_FONT}color:${DE_COLOURS.ink};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;vertical-align:top;${extra}">${inner}</td>`;
+  var deTd = (inner, extra = "", colour = DE_COLOURS.ink) => `<td style="${DE_FONT}color:${colour};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;vertical-align:top;${extra}">${inner}</td>`;
   var deTh = (t47, w6) => `<th align="left" style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.head};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;text-align:left;font-weight:bold;${w6 ? `width:${w6};` : ""}">${t47}</th>`;
   var deP = (inner, extra = "") => `<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:0 0 12px 0;${extra}">${inner}</p>`;
   var deHead = (t47) => `<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:16px 0 6px 0;"><b style="font-weight:bold;">${esc(t47)}</b></p>`;
+  var deMuted = (inner) => `<i style="font-style:normal;color:${DE_COLOURS.muted};">${inner}</i>`;
   var deTimes = (n4) => n4 === 1 ? "once" : n4 === 2 ? "twice" : `${n4} times`;
   var deChasedWords = (c5) => `Chased ${fd(c5.last)}, ${deTimes(c5.n)}`;
   var deReplyBy = (r4) => r4 ? ` It would be helpful to hear back by ${(/* @__PURE__ */ new Date(r4 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(r4)}.` : "";
-  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
-    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${sentStrip(i5.resp).trim() ? deLinks(sentStrip(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
-    const upd = o5.includeUpdate && sentStrip(i5.upd).trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(sentStrip(i5.upd))}</span>` : "";
-    const ch2 = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C5.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
-    return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
+    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br>${deMuted(`Response: ${sentStrip(i5.resp).trim() ? deLinks(sentStrip(i5.resp).trim()) : "none recorded yet"}`)}` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
+    const upd = o5.includeUpdate && sentStrip(i5.upd).trim() ? `<br>${deMuted(`Latest update: ${deLinks(sentStrip(i5.upd))}`)}` : "";
+    const ch2 = o5.chased && o5.chased[i5.id] ? `<br>${deMuted(e4(deChasedWords(o5.chased[i5.id])))}` : "";
+    return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`${e4(d5.date)}${d5.words ? `<br>${e4(d5.words)}` : ""}`, `white-space:nowrap;${strong}`, colour)}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
   function deTableHtml(list, o5) {
     return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID", "9%")}${deTh("Item")}${deTh("Due", "18%")}${deTh("Priority", "10%")}</tr>${list.map((i5) => deRowHtml(i5, o5)).join("")}</table>`;
@@ -64535,7 +64600,7 @@ ${d5.text}`);
     const when2 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when2}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask2 = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` ${deMuted(`(${e4(d5.by)})`)}` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
     const lines2 = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
     if (o5.summary) lines2.push("Summary", o5.summary, "");
     if (decs.length) lines2.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
@@ -64730,11 +64795,11 @@ ${d5.text}`);
     return `<div class="demodes" role="group" aria-label="Kind of email"><button type="button" class="vchip" data-demode="update" aria-pressed="${shared.DE.mode === "update"}">Update request</button><button type="button" class="vchip" data-demode="chase" aria-pressed="${shared.DE.mode === "chase"}" ${shared.DE.canChase ? "" : 'disabled data-tip="Nothing of theirs is overdue"'}>Chase overdue items</button></div>`;
   }
   function deToHtml() {
-    if (shared.DE.mode !== "followup") return `<span id="deTo">${shared.DE.email ? esc(shared.DE.email) : '<span class="sub">No email recorded</span>'}</span>${shared.DE.email ? '<button class="mini" id="deCopyTo">Copy</button>' : ""}`;
+    if (shared.DE.mode !== "followup") return `<span id="deTo">${shared.DE.email ? esc(shared.DE.email) : `<span class="deto-no">${esc(deNoAddress(shared.DE.name))}</span>`}</span>${shared.DE.email ? '<button class="mini" id="deCopyTo">Copy</button>' : ""}`;
     const L3 = shared.DE.attendees;
     return `<span id="deTo">${L3.length ? L3.map((a5) => `${esc(a5.name)}${a5.email ? ` &lt;${esc(a5.email)}&gt;` : ' <span class="sub">(no address)</span>'}`).join("; ") : '<span class="sub">No attendees on record</span>'}</span>${L3.some((a5) => a5.email) ? '<button class="mini" id="deCopyTo">Copy</button>' : ""}`;
   }
-  var deChaseText = (lv) => `${["A first reminder", "A second reminder", "A firmer reminder"][lv.level]}${lv.n ? `: chased ${fd(lv.last)}, ${deTimes(lv.n)}` : ": not chased before"}. Press I sent it after you send it, so the next one knows.`;
+  var deChaseText = (lv) => `${["A first reminder", "A second reminder", "A firmer reminder"][lv.level]}${lv.n ? `: chased ${fd(lv.last)}, ${deTimes(lv.n)}` : ": not chased before"}. ${deOutlookOn() ? DD_STEPS : "Press I sent it after you send it, so the next one knows."}`;
   function deChaseLine() {
     const el2 = $("#deChase");
     if (!el2) return;
@@ -64772,7 +64837,8 @@ ${d5.text}`);
       <div class="deopts">${shared.DE.mode === "followup" ? "" : '<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
       ${dePolishHtml()}<div id="deNote" class="denote" hidden></div>
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
-      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode === "chase" || shared.DE.mode === "update" ? `<button class="btn" id="deSent" ${viaServer() ? "" : "disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>` : ""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
+      <div id="deStat" class="denote ddstat" role="status" hidden></div><div class="deacts" id="deActs">${deActsHtml()}</div>`);
+      deSubDraw();
       $("#deDone").onclick = () => $("#deDlg").close();
       if (shared.DE.includeUpdate && $("#deUpd")) $("#deUpd").checked = true;
       if (shared.DE.replyBy) $("#deReply").value = fd(shared.DE.replyBy);
@@ -64826,6 +64892,75 @@ ${d5.text}`);
     putHtml(t47, shared.DE.built || "");
     return t47.innerHTML;
   }
+  var deOutlookOn = () => S.outlookDrafts === true;
+  var DD_STEPS = "The reminder steps up when the draft is created (or when the next check finds the sent email, if you copy it instead).";
+  var DD_SUB = { off: "Nothing is sent: copy it and paste it into Outlook", on: "Nothing is sent: creaite puts a draft in your Outlook Drafts folder, for you to check and send" };
+  var deNoAddress = (name) => `No email address on record for ${name || "them"}. ${deOutlookOn() ? "The draft is still created, with nothing in To: add the address in Outlook." : "Add the address when you paste it into Outlook."}`;
+  function deSubDraw() {
+    const el2 = $("#deSub");
+    if (el2) el2.textContent = deOutlookOn() ? DD_SUB.on : DD_SUB.off;
+  }
+  function deActsHtml() {
+    const de2 = shared.DE, tail = '<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button>';
+    if (!deOutlookOn()) return `<button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${de2.mode === "chase" || de2.mode === "update" ? `<button class="btn" id="deSent" ${viaServer() ? "" : "disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>` : ""}${tail}`;
+    const make = de2.drafted ? `<button class="btn" id="deMade" disabled>${ic("check")}Draft created</button>` : '<button class="btn primary" id="deMake">Create draft in Outlook</button>';
+    return `${make}<button class="btn" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${tail}`;
+  }
+  function deActsDraw() {
+    const a5 = $("#deActs");
+    if (!a5) return;
+    putHtml(a5, deActsHtml());
+    $("#deDone").onclick = () => $("#deDlg").close();
+  }
+  var deToAddr = () => shared.DE.mode === "followup" ? (shared.DE.attendees || []).map((a5) => a5.email).filter(Boolean).join("; ") : shared.DE.email || "";
+  function deDraftBody() {
+    const de2 = shared.DE, ids = de2.items.filter((i5) => de2.picked.has(i5.k + ":" + i5.id) && !i5.noid).map((i5) => i5.id);
+    return { to: deToAddr(), subject: $("#deSubj").value, html: deHtml(), ids, mode: de2.mode, name: de2.name || "" };
+  }
+  function deStatShow(kind, h5) {
+    const el2 = $("#deStat");
+    if (!el2) return;
+    el2.hidden = false;
+    el2.className = `denote ddstat ${kind}`;
+    putHtml(el2, h5);
+  }
+  var deLink = (l6) => /^https:\/\/outlook\.(office|office365|live)\.com\//.test(String(l6 || "")) ? ` <a href="${esc(l6)}" target="_blank" rel="noopener">Open in Outlook</a>` : "";
+  function deMadeHtml(d5) {
+    const n4 = d5.chased || 0;
+    return `<b>Draft created in Outlook</b> (your Drafts folder). ${d5.noTo ? "It has no recipient yet: add the address in Outlook. " : ""}Open it there to check and send.${deLink(d5.link)}` + (n4 ? `<br><span class="sub">Chase recorded: drafted today, ${plur(n4, "item")}. It will show as sent once the next check sees it in Sent Items.</span>` : "");
+  }
+  var deRefusedHtml = (why) => `<b>Outlook would not create the draft</b> (${esc(why)}). Nothing was sent and nothing was recorded. The email is still here: <button class="mini" id="deFallback">Copy it instead</button> or turn the setting off in Settings › Essentials › Draft email.`;
+  async function deMakeDraft(btn) {
+    const de2 = shared.DE;
+    if (!de2 || btn.disabled) return;
+    if (!viaServer()) {
+      deStatShow("bad", deRefusedHtml("creaite isn't running"));
+      return;
+    }
+    btn.disabled = true;
+    $("#deMsg").textContent = "Creating the draft in Outlook…";
+    const r4 = await api("/api/email/draft", { action: "create", ...deDraftBody() });
+    if (shared.DE !== de2) return;
+    $("#deMsg").textContent = "";
+    if (!r4.ok) {
+      btn.disabled = false;
+      deStatShow("bad", deRefusedHtml(oneLine(r4.reason || r4.message || "") || "no reason given"));
+      return;
+    }
+    if (r4.chases) SA().chases = r4.chases;
+    de2.drafted = { link: r4.web_link || "", noTo: !!r4.no_recipient, chased: (r4.chased || []).length };
+    deActsDraw();
+    deStatShow("ok", deMadeHtml(de2.drafted));
+    if (de2.mode === "chase") deChaseLine();
+  }
+  function deCopiedNote() {
+    const de2 = shared.DE;
+    if (!deOutlookOn() || !de2 || de2.drafted || de2.copiedNoted || !viaServer()) return;
+    de2.copiedNoted = true;
+    api("/api/email/draft", { action: "copied", ...deDraftBody() }).then((r4) => {
+      if (!r4.ok && shared.DE === de2) de2.copiedNoted = false;
+    });
+  }
   function deOptionsChanged() {
     if (!shared.DE.edited) {
       const em2 = deBuild();
@@ -64875,6 +65010,7 @@ ${d5.text}`);
         await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html2], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
       } else await navigator.clipboard.writeText(text);
       shared.SENTVIA = withHtml ? "email" : "message";
+      deCopiedNote();
       deSay(btn, withHtml ? "Copied: paste it into Outlook" : "Copied as plain text", true);
     } catch (err) {
       deSelect("dePrev");
@@ -65107,6 +65243,14 @@ ${d5.text}`);
       }
       if (t47.closest("#deSent")) {
         deSent(t47.closest("#deSent"));
+        return;
+      }
+      if (t47.closest("#deMake")) {
+        deMakeDraft(t47.closest("#deMake"));
+        return;
+      }
+      if (t47.closest("#deFallback")) {
+        deCopyEmail(true, t47.closest("#deFallback"));
         return;
       }
       if (t47.closest("#deCopyTo")) deCopyText(shared.DE.mode === "followup" ? shared.DE.attendees.map((a5) => a5.email).filter(Boolean).join("; ") : shared.DE.email, $("#deCopyTo"), "deTo");
@@ -79019,6 +79163,7 @@ ${d5.text}`);
         "PARTNERS_MAX",
         "PARTNER_NAME_MAX",
         "PEOPLE",
+        "PERS",
         "PK",
         "PKPROP",
         "PRIF",
@@ -79224,6 +79369,7 @@ ${d5.text}`);
         "deBarred",
         "deBuild",
         "deCopyText",
+        "deHtml",
         "dePolish",
         "deRowHtml",
         "deSent",

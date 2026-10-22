@@ -3667,6 +3667,19 @@ def _ui_settings_with_writing(s):
 
 
 ui_settings = _ui_settings_with_writing
+_ui_settings_before_delivery = ui_settings
+
+
+def _ui_settings_with_delivery(s):
+    """#183: whether the Draft email popup offers Create draft in Outlook (settings.json draft_email.outlook_drafts, off)."""
+    try:
+        import draft_delivery
+    except ImportError:
+        return _ui_settings_before_delivery(s)       # an engine without #183: copy and paste only
+    return {**_ui_settings_before_delivery(s), "outlookDrafts": draft_delivery.enabled(s)}
+
+
+ui_settings = _ui_settings_with_delivery
 _sweep_alerts_before_writing = sweep_alerts
 
 

@@ -77,7 +77,7 @@ class Catalogue(unittest.TestCase):
                 want = "AI drafts" if k.startswith(sc.SHORTCUT_PREFIX) else section
                 self.assertEqual(sc.CATALOGUE[k][0], want, f"{k} sits in its Essentials row's section")
                 self.assertNotIn(k, sc.FIXED, k)
-        self.assertEqual(list(dict.fromkeys(sections)), ["You", "Your day", "Saving and review", "People I follow",
+        self.assertEqual(list(dict.fromkeys(sections)), ["You", "Draft email", "Your day", "Saving and review", "People I follow",
                                                          "Look and help", "Safety"])
         self.assertTrue({"sweep.due_from", "dashboard.theme", "backups.daily", "vip.check_minutes"} <=
                         {k for r in sc.ESSENTIAL_ROWS for k in r[3]})
