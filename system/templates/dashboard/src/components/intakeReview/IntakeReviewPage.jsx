@@ -16,7 +16,7 @@ import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
@@ -72,15 +72,11 @@ function ProcessAll({ n, left }) {
     title={blocked ? "ask creaite is busy; try again when it's finished" : n ? lefts : lefts || "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
 
-/** Add files: an icon button (choose them here), or drop them anywhere on the page. */
+/** Add files: an icon button (choose them here), or drop them anywhere on the page. The chooser is the one irPickFiles opens (an input
+    made at the click and removed after), not a hidden input kept in the page, so nothing in the page can leave it without a chooser. */
 function UploadFiles() {
-  const pick = useRef(/** @type {HTMLInputElement | null} */ (null));
   const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
-  return <>
-    <button type="button" class="ib" data-irpick="1" aria-label={tip} data-tip={tip} onClick={() => pick.current && pick.current.click()}><IrIcon name="upload" /></button>
-    <input type="file" ref={pick} multiple hidden accept={IR_UPLOAD_TYPES.join(",")} aria-label="Choose transcripts or minutes to add"
-      onChange={e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget); irAddFiles([...(el.files || [])]); el.value = ""; }} />
-  </>;
+  return <button type="button" class="ib" data-irpick="1" aria-label={tip} data-tip={tip} onClick={() => irPickFiles()}><IrIcon name="upload" /></button>;
 }
 
 /** The overlay while files are dragged over the page. It takes no pointer events, so a drop on ask creaite's panel still reaches it. */
