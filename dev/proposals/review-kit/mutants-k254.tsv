@@ -1,0 +1,7 @@
+docproject_check_off	system/scripts/creaite_doc.py	k254-a-docproject	v254-release
+actions_filter_dropped	system/scripts/minutes_record.py	k254-b-actions	v254-release
+prep_internal_off	system/scripts/prep_view.py	k254-c-prepnoproject	v254-release
+prep_stale_off	system/scripts/prep_view.py	k254-c-prepnoproject	v254-release
+prep_samemeeting_off	system/scripts/prep_page.py	k254-c-prepnoproject	v254-release
+held_reason_logged	system/scripts/tracker.py	k254-d-heldreason	v254-release
+only_prefix_dropped	system/scripts/live_server.py	k254-e-onlyname	v254-release

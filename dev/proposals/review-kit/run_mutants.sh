@@ -1,7 +1,7 @@
 #!/bin/sh
 # Mutants for the review kit: proves a REAL leak still shows as LEAK (the classifier's refusal rule must never hide one).
 #   run_mutants.sh <clean-checkout> [scratch-dir]      (the checkout should be one the probes pass on, e.g. v253-client-k with client_leak.diff)
-#   KIT_MUTANTS=k26 KIT_TREES=<dir of trees> run_mutants.sh <any-checkout> [scratch-dir]
+#   KIT_MUTANTS=k26|k254 KIT_TREES=<dir of trees> run_mutants.sh <any-checkout> [scratch-dir]
 #       the 2.6 mutants (mutants-k26.tsv): each line names its own clean base tree (a folder of that name in $KIT_TREES, e.g. a git archive of
 #       origin/v26-186), the file to break, the probe and the base; <any-checkout> is only used for the lines that name no base
 # For each line of mutants.tsv (name, file, probe) the checkout is copied (without .git) to <scratch>/<name>, mutants/<name>.py is appended
@@ -13,7 +13,7 @@ CK=${1:-}; [ -d "$CK/dev/tests" ] || { sed -n 2,7p "$0"; exit 2; }
 SCR=${2:-$KIT/work/mutants}
 TAB=$(printf '\t'); bad=0
 python3 "$KIT/selftest_classify.py" || bad=1
-LIST=$KIT/mutants.tsv; [ "${KIT_MUTANTS:-}" = k26 ] && LIST=$KIT/mutants-k26.tsv
+LIST=$KIT/mutants.tsv; case "${KIT_MUTANTS:-}" in k26|k254) LIST=$KIT/mutants-${KIT_MUTANTS}.tsv;; esac
 while IFS=$TAB read -r name file probe base; do
   [ -n "$name" ] || continue
   CKM=$CK; if [ -n "${base:-}" ]; then CKM=${KIT_TREES:-}/$base; [ -d "$CKM/dev/tests" ] || { echo "mutant $name: base tree $CKM not found (set KIT_TREES)"; bad=1; continue; }; fi

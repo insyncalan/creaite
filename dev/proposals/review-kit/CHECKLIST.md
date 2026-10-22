@@ -130,3 +130,22 @@ check claims (`k26-a-names`); `review.py bulk` approves a promise from a draft m
 
 Run the whole group on the assembled line: `KIT_OUT=<scratch> sh dev/proposals/review-kit/run_all.sh <checkout of the line> k26`; expect `PASS=19 LEAK=5` on `e9911257` (the five above) until the regression in `invite_clean.scrub` is fixed and
 the two guarded diffs are in; after that all of `scrub`, `save`, `api` and `apply` should be PASS and only `k26-b-bare` stays red.
+
+## H. The 2.5.4 classes (group `k254`, run of 22-10-2026 on `v254-release` 28a3edb7, `v26-line-4` 7b12ab33, main cfe9b56c and af54e733)
+
+Five scripts (`src/k254/`), 5 probes, for the merged 2.6 head. A protection that is missing shows LEAK (judged on behaviour); SKIP only where the feature cannot
+be exercised. "Needs" is what the merged head must carry.
+
+| # | Class (invariant) | Probe | Needs | Today |
+|---|-------------------|-------|-------|-------|
+| H1 | **A creaite document's project is one code** (#277): a list, number, object, boolean (and by a direct call a tuple, bytes, set) is refused by `creaite_doc.check` and by the six report routes with a plain sentence at HTTP 200, never a fault, never the text echoed, nothing written | `k254-a-docproject` | `creaite_doc.check` with the #277 line | PASS on 2.5.4; **LEAK on `v26-line-4` and cfe9b56c** (`match-check` HTTP 500; `check` accepts) until 2.5.4 is merged |
+| H2 | **Wording never opens a filter** (#282): the Actions heading is changed after `distributed_of`; no Internal-only line or row reaches a distributed HTML or Word file; the exports differ from the wording-off export in the heading word only | `k254-b-actions` | `minutes_record.actions_wording` | PASS everywhere (heading cases SKIP before #282) |
+| H3 | **A prep page with no project is Internal and stays in its place** (#279): "Internal", "not for the client", "never sent"; filed in the portfolio's Agendas folder only; another project's stored research never shown, regenerated or filed again; a file creaite did not write, or Alan edited, never overwritten; same-title meetings keep their own pages | `k254-c-prepnoproject` | #279 | PASS on 2.5.4; SKIP before #279 |
+| H4 | **A held proposal's words go to three places** (#280): the reason, the transcript path and the meeting title are on the dashboard row, in the proposal file and in review.py (and apply's answer); not in the debug log (a path is allowed there, the reason is not), Excel, the database, any client or export output, the search index | `k254-d-heldreason` | `review.hold_missing`, `tracker._hold_missing_sources` (the five guarded diffs in `patch/280/`) | PASS on 2.5.4 and af54e733; PASS with the held flow SKIP on `v26-line-4` and cfe9b56c |
+| H5 | **`{only}` names one staged proposal and nothing else** (#280): 40 hostile values write nothing, a root file of the same name is never applied, the exact name applies alone | `k254-e-onlyname` | `live_server.py` `{only}` and the `system/staging/` prefix (`live_server.py.diff`) | PASS everywhere (the diff is applied to the vault's copy where it is missing) |
+
+Information, not judged: the validation rule of an invalid item ("unknown field(s) for decisions: raised ...") is named by the debug log and Excel's Review sheet by
+design; an older proposal's meeting title is on its Excel Review row.
+
+Run the group on the merged head: `KIT_OUT=<scratch> sh dev/proposals/review-kit/run_all.sh <checkout of the head> k254`; expect `PASS=5`. Mutants:
+`KIT_MUTANTS=k254 KIT_TREES=<dir holding v254-release> sh dev/proposals/review-kit/run_mutants.sh <checkout> <scratch>`: seven lines, all LEAK.

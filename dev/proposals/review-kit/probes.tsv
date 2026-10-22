@@ -95,3 +95,8 @@ k26-d-server	k26,e2e	script	k26/d275.py	{CK} server	-	cases	review.py-approve-mi
 k26-d-items	k26,e2e	script	k26/d275.py	{CK} items	-	cases	review.py-approve-<crossed/neither-item>,-bulk,-approve_minutes-own-tick
 k26-d-apply	k26,e2e	script	k26/d275.py	{CK} apply	-	cases	crossed-item-approved-by-hand-then-tracker.py-apply-(needs-tracker-track-problems.diff)
 k26-d-promise	k26,e2e	script	k26/d275.py	{CK} promise	-	cases	rowless-promise-never-registered-by-Approve-minutes-or-bulk
+k254-a-docproject	k254,e2e	script	k254/a277.py	{CK} all	-	cases	non-string-project-refused-by-creaite_doc.check-and-the-six-report-routes-(200-ok:false,-no-500,-no-echo,-nothing-written)
+k254-b-actions	k254,e2e	script	k254/b282.py	{CK} all	-	cases	Actions-heading-wording-never-lets-Internal-only-text-into-a-distributed-HTML-or-Word-export
+k254-c-prepnoproject	k254	script	k254/c279.py	{CK} all	-	cases	prep-page-with-no-project:-Internal-and-never-sent,-portfolio-Agendas-only,-no-stale-research,-no-overwrite,-same-title-meetings
+k254-d-heldreason	k254,e2e	script	k254/d280.py	{CK} outputs	-	cases	held-proposal-texts-(reason,-path,-meeting-title)-only-on-the-dashboard-row,-the-proposal-file-and-review.py:-log,-Excel,-reports,-exports,-search
+k254-e-onlyname	k254,e2e	script	k254/e280.py	{CK} only	-	cases	/api/apply-{only}:-40-hostile-values-write-nothing-and-never-the-root-namesake;-the-exact-name-applies-alone

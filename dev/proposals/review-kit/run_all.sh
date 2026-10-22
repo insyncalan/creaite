@@ -3,7 +3,7 @@
 #
 #   run_all.sh <checkout-path> [group[,group...]|all|list]
 #
-# groups: images audience header race page rename picture logos svg matchgate e2e k259 k26   (default: all; "list" prints the probes)
+# groups: images audience header race page rename picture logos svg matchgate e2e k259 k26 k254   (default: all; "list" prints the probes)
 # env:    KIT_TIMEOUT   seconds per probe (default 600)        KIT_MAXLOAD  wait while the 1-minute load is above this (default 40)
 #         KIT_PYTHON    python to use (default python3)         KIT_PDF      0 = skip the PDF export in the msweep1 probes (default 1)
 #         KIT_OUT       output root (default <kit>/out)         KIT_ONLY     run only the probe ids named here (comma list)
@@ -40,6 +40,7 @@ mkdir -p "$OUT" "$WORK"
 export CREAITE_BROWSER_SLOTS=4
 export PYTHONDONTWRITEBYTECODE=1
 export KIT_CK="$CK"
+export KIT_DIR="$KIT"
 export KIT_PDF=${KIT_PDF:-1}
 SUMMARY=$OUT/SUMMARY.tsv
 DETAIL=$OUT/DETAIL.tsv

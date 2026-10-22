@@ -48,3 +48,38 @@ def safe_css(export_page, value):
     except export_page.PageRefused:
         return False
     return True
+
+
+# ── the 2.5.4 guarded diffs (#280): applied to the VAULT'S copy of a tree that lacks them, never to the checkout ─────────────────────────
+DIFFS_280 = {"tracker": ("tracker.py.diff", "tracker-held.py.diff", "tracker-round5.py.diff"),
+             "live_server": ("live_server.py.diff", "live_server-held.py.diff"),
+             "live_server_only": ("live_server.py.diff",)}      # just the {only} on /api/apply (the -held diff needs review.py's hold)
+
+
+def kit_dir():
+    """The kit's folder: KIT_DIR (set by run_all.sh), else three levels above the work folder the runner copies a probe into."""
+    import os
+    from pathlib import Path
+    return Path(os.environ.get("KIT_DIR") or Path(__file__).resolve().parents[3])
+
+
+def find_280_diff(ck, name):
+    """The #280 diff `name`: the tree's own dev/proposals/280 (a 2.5.4 tree has them) else the kit's copy (patch/280)."""
+    from pathlib import Path
+    for d in (Path(ck) / "dev" / "proposals" / "280", kit_dir() / "patch" / "280"):
+        if (d / name).is_file():
+            return d / name
+    return None
+
+
+def apply_280(vault_root, ck, which):
+    """Apply the #280 diffs of `which` ("tracker", "live_server") to the vault's copy, in order. (True, "") or (False, why)."""
+    import subprocess
+    for name in DIFFS_280[which]:
+        diff = find_280_diff(ck, name)
+        if diff is None:
+            return False, f"{name} not found"
+        p = subprocess.run(["patch", "-p1", "-s", "-d", str(vault_root), "-i", str(diff)], capture_output=True, text=True)
+        if p.returncode:
+            return False, f"{name} does not apply: " + (p.stdout + p.stderr)[:120]
+    return True, ""
