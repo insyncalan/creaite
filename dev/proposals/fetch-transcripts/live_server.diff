@@ -1,8 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index ded1d52c..010fed56 100644
+index 5e5018d3..ab3db80e 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -2277,6 +2277,9 @@ class Run:
+@@ -2473,6 +2473,9 @@ class Run:
          cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
          self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
          self.sweep = bool(sweep)                                # BL-309
@@ -12,16 +12,23 @@ index ded1d52c..010fed56 100644
          self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
          self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
          self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
-@@ -2447,6 +2450,12 @@ class Run:
-     def _on_tool_result(self, part):
-         if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
-             self.job_observe(part)   # BL-228 (sprint-debt-safety)
-+        if getattr(self, "fetch", None) and part.get("tool_use_id") in self.tooluse:    # #250: the sweep's fetch, read only
+@@ -2640,9 +2643,19 @@ class Run:
+             return True
+         return False
+ 
++    def _fetch_observe(self, part):
++        """#250: hand a sweep run's tool result to its fetch (read only; a fetch never stops the sweep, logged by name only)."""
++        if getattr(self, "fetch", None) and part.get("tool_use_id") in self.tooluse:
 +            try:
 +                self.fetch.observe(*self.tooluse[part["tool_use_id"]], vault_transcripts.result_text(part.get("content")),
 +                                   bool(part.get("is_error")))
 +            except Exception as e:  # noqa: BLE001  a fetch never stops the sweep; logged by name only
 +                swallowed("fetch", e)
++
+     def _on_tool_result(self, part):
+         if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
+             self.job_observe(part)   # BL-228 (sprint-debt-safety)
++        self._fetch_observe(part)                                       # #250: the sweep's fetch, read only
          # ===== BL-248 (sprint-portability): a creaite script that failed before it started is creaite's fault =====
          name, given = self.tooluse.get(part.get("tool_use_id"), ("", {}))
          if name == "Bash" and "system/scripts/" in str(given.get("command", "")) and not getattr(self, "fault", None):

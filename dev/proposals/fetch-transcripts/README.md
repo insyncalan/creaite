@@ -1,5 +1,16 @@
 # Proposal: fetch transcripts as they appear (#250, #181 C2) — guarded parts
 
+**Option 2 chosen by Jarvis/Alan 23-10-2026; Alan can overrule.** The live server's observer (`transcripts.SweepFetch`, fed by
+`live_server.diff`) is the only path that fetches. `fetch_after_record`, the saved-result-file reader and the tie rules are gone:
+`transcripts record` only records statuses, a `result_file` in a fact is refused as an unknown field, and no script path can write
+`inbox/` (tests: `test_record_never_fetches_stamps_or_follows_a_result_file`,
+`test_no_script_command_writes_into_the_inbox_even_with_the_setting_on`). A sweep run from Claude Code therefore never fetches; the
+meeting is fetched on Process, as today. Rebased on `v261-line2` (v264-250, off v262-183).
+
+**Apply order for the rules:** `draft-delivery/rules-and-skill.diff` (#183) first, then `creaite-rules.diff` here; if the VIP-follow
+rules diff lands first, use `creaite-rules.after-vip.diff` instead. `live_server.diff` applies to line2 on its own and `check.py` is OK
+with it (the fetch call sits in a small `_fetch_observe` helper, so `_on_tool_result` stays within its complexity limit).
+
 Branch `v26-fetch-transcripts`. The unguarded parts are built (setting, `transcripts.py` fetch step, `sweep.py done`, cx-sweep text,
 Settings card, tests in `dev/tests/test_fetch_transcripts.py`). Two guarded files need Jarvis.
 
@@ -18,7 +29,7 @@ swallowed and logged by name only, so a fetch never stops a sweep.
 
 Both are already in `permissions.M365_READ`, so already in `READ_TOOLS` and `KIND_TOOLS["sweep"]` and in `.claude/settings.json`.
 **No write tool is added**: no Microsoft 365 action, no `Write`/`Edit` outside `system/staging/drafts/`, no new Bash rule
-(`sweep.py *` already covers `sweep.py transcripts record`). `permissions.py` and `reach.py` need **no change**.
+(`sweep.py *` already covers `sweep.py transcripts record`, which cannot write `inbox/`). `permissions.py` and `reach.py` need **no change**.
 `Guard.test_the_sweep_runs_tool_list_has_no_write_tool` asserts this against the live lists.
 
 ## 2. `system/creaite-rules.md` — `creaite-rules.diff` (regenerated on main 4e564fcf after #238/#239 changed the staging row; `git apply --check` passes)
@@ -31,16 +42,7 @@ fail-closed sensitivity and the result-file tie.
 
 - **In the live server** the observer ties each transcript read to its event by the URL the event read returned (`SweepFetch.uris`),
   and holds back any event whose own read says its sensitivity isn't `normal`.
-- **Claude Code sessions (no live server):** nothing records which read a saved file came from, so `transcripts record` reads the
-  file Claude Code saved a large result to (`result_file`) only when the file itself ties it to that meeting
-  (`transcripts.tie`): every transcript began inside that meeting's own times (from 10 minutes before), the subject it names, if
-  any, is that meeting's, and no other meeting in the saved calendar (confidential and private ones included) fits those times;
-  otherwise `not tied`, stamped `left`, and fetched on Process. The file must resolve (symlinks followed) into a `tool-results`
-  folder under `~/.claude`, be at most 25 MB and UTF-8; its text is parsed directly and a path inside it is never followed. An
-  inline result is never re-typed. The path sits in a drafts JSON file, not a Bash argument, so the hook doesn't see it; the
-  script's own checks are the guard. Residual: a confidential meeting the saved calendar doesn't hold at all (dropped by an ignore
-  rule) at the same time as an eligible one with the same subject can't be told apart. Jarvis: confirm that's acceptable, or have
-  the fetch run only from the live server (drop `fetch_after_record` from `record`).
+- **Claude Code sessions (no live server):** nothing is fetched (option 2). `transcripts record` takes the same facts as before, minus `result_file`.
 - **Sensitivity fails closed:** only `normal` is fetched; a missing or unknown value counts as confidential (the sweep writes the
   key for every row that isn't private).
 - **What is skipped:** confidential (the brief's only content rule), plus what can't be Processed anyway: private, not ended, outside
