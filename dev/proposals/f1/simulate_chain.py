@@ -332,12 +332,13 @@ def main():
     ap.add_argument("--f3", action="append", help="F3 diff(s), in order")
     ap.add_argument("--f3-cmd", action="append", default=[], help="a creaite command to run after F3's migrate, e.g. 'propose.py people migrate'")
     ap.add_argument("--f3-copy", action="append", default=[], help="a new file F3 adds (no diff), copied into system/scripts/ of the copy")
+    ap.add_argument("--f3-fixture", help="a people register (demo data): copied into the copy as system/staging/drafts/people-fixture.md; a generated 1,000-person register is added as people-1000.md")
     ap.add_argument("--work")
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--json", help="write the results here")
     a = ap.parse_args()
     base = Path(a.base).resolve()
-    default_f2 = [str(HERE.parent / "f2" / n) for n in ("f2-ids-above-999.diff", "f2-readers.diff", "f2-readers-guarded-live_server.diff")]
+    default_f2 = [str(HERE.parent / "f2" / n) for n in ("f2-ids-above-999.diff", "f2-readers.diff", "f2-readers-guarded-live_server.diff", "f2-sortkey.diff", "f2-sortkey-guarded.diff")]
     work = Path(a.work) if a.work else Path(tempfile.mkdtemp(prefix="creaite-sim-"))
     work.mkdir(parents=True, exist_ok=True)
     vault = work / "vault"
@@ -361,6 +362,15 @@ def main():
     step_run(vault, work, base, "F1", [Path(a.f1)], [])
     # F2: after the rebuild the same project grows past 999 through the real engine (201 more numbers: 1000 .. 1200)
     step_run(vault, work, base, "F2", [Path(p) for p in (a.f2 or default_f2)], [], seed_after=[("actions", 150), ("raid", 30), ("decisions", 15), ("promises", 6)])
+    if a.f3 and a.f3_fixture:
+        drafts = vault / "system/staging/drafts"
+        shutil.copy2(a.f3_fixture, drafts / "people-fixture.md")
+        rows = ["# People register", "", "## People", "", "| Full name | Email | Aliases | Organisation | Role | Hidden | VIP | Labels |", "|---|---|---|---|---|---|---|---|"]
+        for i in range(1000):
+            em = f"person{i:04d}@org{i % 40}.example" if i % 25 else ""
+            rows.append(f"| Person Number{i:04d} | {em} | P{i} | Org {i % 40} | Role {i % 9} | {'yes' if i % 97 == 0 else ''} | "
+                        f"{'management' if i % 131 == 0 else ''} | {'Label A' if i % 7 == 0 else ''} |")
+        (drafts / "people-1000.md").write_text("\n".join(rows) + "\n", encoding="utf-8")
     if a.f3:
         step_run(vault, work, base, "F3", [Path(p) for p in a.f3], a.f3_cmd, copy_files=a.f3_copy)
     else:
