@@ -34,6 +34,7 @@ import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn } from "./review.js";
+import { asQuestionHtml } from "./autostart.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, syncView } from "./work.js";
 /* ======================= Today ======================= */
@@ -419,7 +420,9 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
   putHTML(box,html`<h2 class="th" id="hSetup">Getting started <span class="cnt">${raw(done)} of ${st.length}</span><button type="button" class="linkbtn setupx" data-setup="dismiss">Dismiss</button></h2><ol class="bl setupbl">${raw(st.map(([k,t,ok,btn,act,note],i)=>`<li class="${ok?"done":""}"><span class="n" aria-hidden="true">${ok?"✓":i+1}</span><div class="tb"><span class="t">${esc(t)}</span>${ok?' <span class="vh">(done)</span>':""}<p>${note}</p></div>${ok?"":`<span class="rmgo"><button type="button" class="btn ${i===st.findIndex(x=>!x[2])?"primary":""}" data-setup="${act}" ${act==="sweep"&&!viaServer()?'disabled title="creaite isn’t running"':""}>${esc(btn)}</button></span>`}</li>`).join(""))}</ol>`); 
   { const b=$('#setupList [data-setup="help"]'), li=b&&b.closest("li");
     if(li&&!li.classList.contains("done")){ const go=li.querySelector(".rmgo"); putHTML(go,html`<button type="button" class="mini" data-sucheck="m365" ${viaServer()?"":html`disabled title="creaite isn’t running"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`); }
-    if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */ }
+    if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */
+  /* #300: the one question about starting creaite at sign-in (autostart.js; shown only where the server can do it) */
+  { const q=asQuestionHtml(), box=$("#setupList"), cur=$("#asQ"); if(cur) cur.remove(); if(q&&box) addHTML(box,"beforeend",raw(q)); } }
 /* ===== end BL-156 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 /* #200: "Sweep due since 07:00" with Run sweep, above Today's sections. Shown only when the build says the daily sweep is due, not in the

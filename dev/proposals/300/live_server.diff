@@ -1,0 +1,72 @@
+--- a/system/scripts/live_server.py	2026-10-22 20:41:58
++++ b/system/scripts/live_server.py	2026-10-22 20:42:11
+@@ -141,6 +141,8 @@
+ - POST /api/edit/approve, /reject, /stage {card}; /api/edit/pending: ask creaite's change card for the record (BL-258):
+                          Approve applies it at once through tracker.py, Stage leaves it in Review, Reject drops it
+ - POST /api/setup/status  what the set-up checklist needs, read only; /api/setup/run {step} a step the allow list permits (BL-166)
++- POST /api/autostart/status  whether creaite starts when you sign in (launch.py agent status --json; read only); POST /api/autostart/set {on}
++                         turns the login agent on or off (the user's own click in the app; never an ask creaite run) (#300)
+ - POST /api/health/fixes  Health's Fix its, each with what it does and its one command (read only); POST /api/health/fix/<id> with
+                          an empty body runs that one fixed command under the job lock and logs it (BL-320). SIGUSR1 (launch.py
+                          restart, after an update) restarts the server in place once no job is running
+@@ -5723,6 +5725,60 @@
+ 
+ SETUP_ROUTES = {"/api/setup/status": setup_status_route, "/api/setup/run": setup_run_route}
+ # ===== end BL-166 =====
++# ===== #300: start creaite when I sign in =====
++# POST /api/autostart/status {}        the login agent's real state: {ok, supported, installed, loaded, on, dev, folder}, from
++#                                      launch.py agent status --json (read only). `supported` is false off macOS and in the
++#                                      development repository.
++# POST /api/autostart/set {on: bool}   installs (`launch.py agent install`) or removes (`agent remove`) this vault's login agent,
++#                                      under the job lock. Token-checked like every POST. It is the user's own click in the app:
++#                                      ~/Library/LaunchAgents is on reach.py's never list, so ask creaite can't write it, and
++#                                      launch.py stays RECORD (never run by the panel). The page asks first; the reply is words,
++#                                      never the script's own text. Nothing here is a new permission and no allow-list rule changes.
++def autostart_state():
++    """The login agent's state from launch.py (a dict), or None when it can't be read."""
++    code, out = run("launch.py", "agent", "status", "--json")
++    for line in reversed(out.splitlines()):
++        if line.startswith("{"):
++            try:
++                st = json.loads(line)
++            except ValueError:
++                return None
++            return st if code == 0 and isinstance(st, dict) else None
++    return None
++
++
++def autostart_status_route(handler, req):
++    """POST /api/autostart/status: the agent's state for the Settings switch, Today's question and Health (read only)."""
++    st = autostart_state()
++    if st is None:
++        return handler.send(200, {"ok": False, "message": "creaite couldn't tell whether it starts when you sign in."})
++    return handler.send(200, dict(st, ok=True))
++
++
++def autostart_set_route(handler, req):
++    """POST /api/autostart/set {on}: turn the login agent on or off (the user's own click), then say the new state."""
++    on = req.get("on")
++    if not isinstance(on, bool):
++        return handler.send(400, {"ok": False, "message": "Say whether to turn it on or off."})
++    st = autostart_state()
++    if st is None or not st.get("supported"):
++        why = "This is the development copy, so creaite doesn't start by itself here." if st and st.get("dev") else \
++            "Starting creaite when you sign in works only on a Mac."
++        return handler.send(200, {"ok": False, "message": why})
++    with LOCK:
++        code, out = run("launch.py", "agent", "install" if on else "remove")
++    after = autostart_state() or {}
++    if code != 0 or bool(after.get("on")) != on:
++        return handler.send(200, {"ok": False, "message": "That didn't change. Your set-up is as it was; Settings › Diagnostics has the details."})
++    if debuglog is not None:
++        debuglog.info("server", "autostart on" if on else "autostart off")
++    return handler.send(200, dict(after, ok=True, message="creaite will start when you sign in." if on
++                                  else "creaite won't start when you sign in."))
++
++
++AUTOSTART_ROUTES = {"/api/autostart/status": autostart_status_route, "/api/autostart/set": autostart_set_route}
++SETUP_ROUTES.update(AUTOSTART_ROUTES)
++# ===== end #300 =====
+ # ===== BL-320 (v192-settings-server): the settings catalogue, Reset and Health =====
+ # /api/settings/catalogue reads; /api/settings/reset writes settings.json through settings_catalogue.save, the same steps as the
+ # page's writeSettings (backup, whole file, one log line a key); /api/health runs doctor read only. No Fix it runs here: each

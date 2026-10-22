@@ -8,6 +8,7 @@ import { makeArchiveAskDialog } from "./components/dialogs/PageDialogs.jsx";
 import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
 import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, SWEPT, wsKey } from "./core/data.js";
 import { effect } from "@preact/signals";
+import { asCardHtml, asRedraw, asStatus, asWire } from "./autostart.js";
 import { h, render } from "preact";
 import { essText, Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
@@ -168,6 +169,8 @@ export const SETSECTIONS=[
    +`<div class="srow" style="display:block"><div>If creaite stops<small>Reopen the creaite app. Its set-up steps are in Diagnostics</small></div></div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
  {id:"diag",cat:"health",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
  {id:"version",cat:"health",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
+ {id:"signin",cat:"health",title:"Start creaite when I sign in",raw:true,kw:"start sign in login automatically restart boot agent terminal copy",render:()=>asCardHtml(),
+  after:()=>{ asWire(asRedraw); asStatus().then(()=>{ if(shared.VIEW==="settings") asRedraw(); }); }},   /* #300: beside Stop */
  {id:"danger",cat:"health",title:"Stop creaite",elid:"dangerCard",kw:"stop live server quit",
   render:()=>row("Stop creaite",'<button class="btn danger" id="liveStop" title="Stops creaite; open it again from its launcher">Stop</button>',"Open creaite again from its launcher. Edits wait until it is running again")}];
 /** The catalogue groups a hand-made card holds (drawn inside it, never as their own card). */
