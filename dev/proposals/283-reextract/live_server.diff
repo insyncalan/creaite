@@ -1,8 +1,17 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 88873bdd..7b03cc8a 100644
+index 5e5018d3..dd60c5de 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -1262,7 +1262,9 @@ class Handler(BaseHTTPRequestHandler):
+@@ -401,7 +401,7 @@ def guard_settings(run_id, mode, held=False):
+     cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode,     # BL-237
+                                             *(("--held", "1") if held else ())))
+     hooks = {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}
+-    if mode == "process":       # #264 round 3: what the run's own tool made is recorded when it returns (reach.post_tool)
++    if mode in reach.PROCESS_MODES:     # #264 round 3; #283 Read again too: what the run's tool made is recorded when it returns
+         hooks["PostToolUse"] = [{"matcher": "*", "hooks": [{"type": "command", "command": cmd + " --event post", "timeout": 30}]}]
+     return json.dumps({"disableAllHooks": False, "hooks": hooks})
+ 
+@@ -1266,7 +1266,9 @@ class Handler(BaseHTTPRequestHandler):
          # ── Sprint 4a routes (BL-104 Clear day) ──
          route = route or {"/api/intake/clear": self.intake_clear,
                            "/api/intake/process": self.intake_process,                     # #264: Intake's Process, its own run
@@ -13,7 +22,7 @@ index 88873bdd..7b03cc8a 100644
          # ── Sprint 4b routes (BL-42 phase 3: transcripts) ──
          route = route or {"/api/transcripts/check": lambda r: self.transcript_run(r, "check"),
                            "/api/transcripts/load": lambda r: self.transcript_run(r, "load")}.get(self.path)
-@@ -1804,6 +1806,53 @@ class Handler(BaseHTTPRequestHandler):
+@@ -1832,6 +1834,54 @@ class Handler(BaseHTTPRequestHandler):
                  return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
          return self.follow(task, numbered=self.numbered())
  
@@ -46,9 +55,10 @@ index 88873bdd..7b03cc8a 100644
 +            try:
 +                task = Run(run_id, reextract.build_prompt(ctx), None, None, None, kind="reextract", files=[ctx["transcript"]],
 +                           label=reextract.label(ctx), closer=reextract.closer(run_id), lines=reextract.lines(run_id))
-+            except OSError as e:
++            except Exception as e:  # noqa: BLE001  #283 review L1: any fault starting it puts the earlier draft back
 +                reextract.put_back(run_id, reextract.FAILED, state="failed")
-+                return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
++                why = e if isinstance(e, OSError) else type(e).__name__
++                return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({why})."})
 +        return self.follow(task, numbered=self.numbered())
 +
 +    def minutes_reextract_undo(self, req):
@@ -67,7 +77,7 @@ index 88873bdd..7b03cc8a 100644
      # ===== Sprint 4a: Clear day (BL-104) =====
      def intake_clear(self, req):
          """Set meetings aside in Intake's Calendar import, or bring them back. {op: "clear", items: [{key, day, start,
-@@ -2264,6 +2313,32 @@ for _k in ("prep", "generate", "check", "load"):
+@@ -2292,6 +2342,32 @@ for _k in ("prep", "generate", "check", "load"):
      KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
  for _k in ("shape-closed", "notes-find"):
      KIND_ARGS[_k] = NO_BUILTINS + ["--strict-mcp-config"]      # #126 review: no MCP server at all, like edit-ai
@@ -100,7 +110,7 @@ index 88873bdd..7b03cc8a 100644
  # Belt and braces, in every run's --disallowedTools: F3's permissions.run_deny_extras() (the other connectors, whole server, and
  # the acting and writing built-ins no allow rule may grant) and every known built-in the run's own --tools doesn't name
  # (permissions.KNOWN_BUILTINS minus the kind's set), so a --tools list that drifts, or a CLI that ignores it, still can't reach
-@@ -2346,7 +2421,7 @@ def run_prompt(kind, confirmed):
+@@ -2374,7 +2450,7 @@ def run_prompt(kind, confirmed):
  
  def guard_mode(kind, confirmed):
      """The guard hook's mode for a guarded run: "sweep" for Close the day's catch-up (BL-295), else confirmed or ask."""
@@ -109,17 +119,17 @@ index 88873bdd..7b03cc8a 100644
          return kind
      return "sweep" if kind == "sweep" else "confirmed" if confirmed else "ask"
  
-@@ -2403,7 +2478,8 @@ def guard_args(run_id, mode, held, session, files=None):
-     run's checked Intake files go in the run record, the only ones its hook lets it stage."""
+@@ -2432,7 +2508,8 @@ def guard_args(run_id, mode, held, session, files=None, as_minutes=None):
+     Find work items on (`as_minutes`), staged only as someone else's minutes."""
      if mode:
          settings = guard_settings(run_id, mode, held)
--        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session, files=list(files or []) if mode == "process" else None)
+-        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session, files=list(files or []) if mode == "process" else None,
 +        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session,
-+                        files=list(files or []) if mode in ("process", "reextract") else None)     # #283: its one transcript
++                        files=list(files or []) if mode in ("process", "reextract") else None,     # #283: its one transcript
+                         as_minutes=list(as_minutes or []) if mode == "process" else None)
          return ["--settings", settings]
      return ["--settings", guard_settings(run_id, "held")] if held else []   # #60: the hook refuses a confidential note
- 
-@@ -2413,7 +2489,7 @@ def run_dirs(policy, guarded):
+@@ -2443,7 +2520,7 @@ def run_dirs(policy, guarded):
      projects folder only otherwise (#264: a Process run too)."""
      if policy in TOOLLESS_KINDS or policy == "calendar":       # #265: the calendar refresh reads no project file
          return []
@@ -128,7 +138,7 @@ index 88873bdd..7b03cc8a 100644
  
  
  class Run:
-@@ -2753,6 +2829,7 @@ class Run:
+@@ -2783,6 +2860,7 @@ class Run:
          """The closure: Stop and a failure in plain words; else what the run's closer made (a Prep page saved), what its job set
          (a draft that couldn't be read, a transcript's outcome) or the kind's own done line, with its link."""
          lines = getattr(self, "lines", None) or {}
@@ -136,7 +146,7 @@ index 88873bdd..7b03cc8a 100644
          if self.stop:
              return {"ok": False, "stopped": True,
                      "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else self._stopped_line(lines)}
-@@ -2772,6 +2849,17 @@ class Run:
+@@ -2802,6 +2880,17 @@ class Run:
              done.update(href=lines["href"], link=lines.get("link") or "Open")
          return done
  
@@ -154,7 +164,7 @@ index 88873bdd..7b03cc8a 100644
      def _stopped_line(self, lines):
          """The Stop line: the kind's own, or the plain one. #265 review L3: it may be a function of the run (was the calendar
          saved before Stop?); a fault there gives the plain line."""
-@@ -2919,7 +3007,7 @@ class Run:
+@@ -2949,7 +3038,7 @@ class Run:
  # engine's kind or the draft's kind: fixed words, never the text of a prompt, a reply or a name. A failure never touches the run.
  USAGE_KIND = {"ask": "ask", "search": "ask", "sweep": "sweep", "prep": "prep", "check": "check", "load": "load",
                "generate": "generate", "edit-ai": "draft", "shape-closed": "draft", "notes-find": "draft", "process": "process",
@@ -163,7 +173,7 @@ index 88873bdd..7b03cc8a 100644
  
  
  def usage_kind(run):
-@@ -3279,7 +3367,7 @@ def describe_tool(name, inp):
+@@ -3309,7 +3398,7 @@ def describe_tool(name, inp):
  PLAIN_ASK = {"prep": "Make a prep page", "generate": "Draft with Claude", "shape-closed": "Shape the meeting",
               "check": "Check a meeting's transcript", "load": "Load a meeting's transcript",
               "sweep": "Sweep mail and Teams since the last sweep", "process": "Process Intake files",
@@ -172,7 +182,7 @@ index 88873bdd..7b03cc8a 100644
  PLAIN_ASK_ANY = "A run creaite started"
  PLAIN_DONE = "Finished."
  PLAIN_STOPPED = "Stopped: nothing was saved. Start it again when you're ready."
-@@ -3542,6 +3630,20 @@ class LocalServer(ThreadingHTTPServer):
+@@ -3572,6 +3661,20 @@ class LocalServer(ThreadingHTTPServer):
          self.server_port = port
  
  
@@ -193,7 +203,7 @@ index 88873bdd..7b03cc8a 100644
  def main():
      """Start the live server on 127.0.0.1 (live_mode.port, or CREAITE_PORT) and serve until stopped; ends any run on the
      way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
-@@ -3576,6 +3678,7 @@ def main():
+@@ -3606,6 +3709,7 @@ def main():
      mark_interrupted()
      vault_permissions.recover()                          # BL-96: deny entries left lifted by a run that never finished
      reach.RUN_FILE.unlink(missing_ok=True)                # BL-141: no run is in progress at start; old requests make no card

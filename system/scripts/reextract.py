@@ -77,6 +77,7 @@ STOPPED = "Stopped: your earlier minutes are back as they were."
 FAILED = ("Couldn't finish: your earlier minutes are back as they were. Try again; if it happens again, Settings › Diagnostics "
           "has the details.")
 NOTHING = "Nothing new came back from the transcript: your earlier minutes are back as they were."
+BACK = "Your earlier minutes are back as they were."
 
 
 def hold_root():
@@ -254,7 +255,7 @@ def _prune():
     ended = []
     for d in root.iterdir():
         h = _read_json(d / "hold.json") if d.is_dir() and not d.is_symlink() and RUN.fullmatch(d.name) else None
-        if h and h.get("state") != "held":
+        if h and h.get("state") not in ("held", "kept_aside"):    # review L4: kept aside still holds the earlier minutes
             ended.append((h.get("at") or 0, d))
     for _, d in sorted(ended, key=lambda x: x[0], reverse=True)[KEEP:]:
         shutil.rmtree(d, ignore_errors=True)
@@ -335,6 +336,33 @@ def _set_aside(d, p, data):
         os.replace(rp, u / rp.name)
 
 
+def _shape_differs(h, data):
+    """#283 review M1: which of the new draft's project, date or title differs from the earlier draft's ("" when none), or
+    "record" when its minutes aren't a record directly in drafts. The earlier draft's values hold: a transcript's text, or a
+    slip, never moves the minutes to another project, day or title (its file steps would copy them there on approval)."""
+    import minutes_record
+    m = (data or {}).get("meeting") or {}
+    rec = m.get("draft")
+    rp = paths.resolve(rec) if isinstance(rec, str) and minutes_record.is_record(rec) else None
+    if rp is None or rp.parent != paths.DRAFTS or not _plain_file(rp):
+        return "record"
+    projects = m.get("projects")
+    if not isinstance(projects, list) or sorted(map(str, projects)) != sorted(h.get("projects") or []):
+        return "project"
+    if m.get("date") != h.get("date"):
+        return "date"
+    if not isinstance(m.get("title"), str) or plain(m["title"]).strip()[:200] != h.get("title"):
+        return "title"
+    return ""
+
+
+def differs_line(what):
+    """The closure line for a new draft that didn't keep the earlier one's project, date or title (plain words)."""
+    if what == "record":
+        return f"The new draft couldn't be opened, so it wasn't used. {BACK}"
+    return f"Not used: the new draft names a different {what} from your earlier minutes. {BACK}"
+
+
 def put_back(run_id, line=None, state="put_back", question=None):
     """The earlier proposal back in Review as it was; the manifest ended with `state`. The outcome."""
     d, h = hold_dir(run_id), _manifest(run_id)
@@ -343,6 +371,9 @@ def put_back(run_id, line=None, state="put_back", question=None):
     if h.get("state") != "held":
         return h.get("outcome") or {"state": h.get("state")}
     back = _move_back(d, h)
+    rec = paths.resolve(h["draft"])
+    if back and (d / "record.html").is_file() and not os.path.lexists(rec):
+        os.replace(d / "record.html", rec)                 # review L2: a settle that failed half way gives the record back too
     out = {"run": run_id, "state": state if back else "kept_aside", "proposal": h["proposal"], "path": h["draft"],
            "line": (line or NOTHING) if back else
            "Your earlier minutes couldn't go back: another draft has their place. Settings › Diagnostics has the details.",
@@ -487,12 +518,16 @@ def finish(run_id, started, said=(), how="done"):
     if h.get("state") != "held":
         return h.get("outcome") or {"state": h.get("state")}
     new = _new_ones(h, started)
-    if how == "done" and new:
+    differs = _shape_differs(h, new[0][1]) if how == "done" and new else ""
+    if how == "done" and new and not differs:
         for p, data in new[1:]:
             _set_aside(d, p, data)
         return _replace(run_id, d, h, *new[0])
     for p, data in new:
         _set_aside(d, p, data)
+    if differs:                                            # review M1: refused, and the earlier minutes back
+        debuglog.warn("reextract", f"{run_id} new draft not used: a different {differs}")
+        return put_back(run_id, differs_line(differs))
     q = questions(said, h["transcript"]) if how == "done" else None
     if q:
         return put_back(run_id, f"Needs you: {q} Your earlier minutes are back as they were.", state="needs", question=q)
@@ -507,8 +542,13 @@ def public(res):
 def closer(run_id):
     """The run's closer (live_server.Run(closer=...)): settle, emit the "reextract" event, return the closure."""
     def close(run):
-        """Settle a finished run and say how it ended."""
-        res = finish(run_id, run.started, getattr(run, "said", []), "done")
+        """Settle a finished run and say how it ended. Review L2: a fault while settling settles it as failed (the earlier
+        minutes back), never leaving them held until the server restarts."""
+        try:
+            res = finish(run_id, run.started, getattr(run, "said", []), "done")
+        except Exception as e:  # noqa: BLE001  settle it as failed instead
+            debuglog.warn("reextract", f"{run_id} couldn't settle: {type(e).__name__}")
+            res = finish(run_id, run.started, (), "failed")
         run.emit("reextract", **public(res))
         ok = res.get("state") in ("replaced", "needs")
         href = f"#minutes={res['path']}" if res.get("path") and res.get("state") != "gone" else "#review"

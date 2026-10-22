@@ -1,30 +1,32 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index dae2a45a..32fd8fc4 100644
+index be8f4164..292ff161 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
-@@ -677,13 +677,14 @@ def marked_sessions():
- 
- def start_run(run, mode, outside, session=None, files=None):
+@@ -679,14 +679,15 @@ def start_run(run, mode, outside, session=None, files=None, as_minutes=None):
      """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
--    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
-+    Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage. #283: a Read again
-+    run (mode "reextract") is given its one transcript the same way."""
+     Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage. #232 E1:
+     `as_minutes`, the ones of them Alan pressed Find work items on (someone else's minutes): those are staged only as
+-    "as": "minutes", and the others only as a transcript."""
++    "as": "minutes", and the others only as a transcript. #283: a Read again run (mode "reextract") is given its one
++    transcript the same way."""
      marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
      with _RunLock():                                             # #264 round 2 (L1): never between a hook's read and its write
          _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside,
                                 "marked": marked, "session": session,
                                 **({"files": [str(f) for f in files]} if files is not None else {}),
+                                **({"files_as_minutes": [str(f) for f in as_minutes or ()]} if files is not None else {}),
 -                               **(_process_start() if mode == "process" else {})})
 +                               **(_process_start() if mode in PROCESS_MODES else {})})
  
  
  def _process_start():
-@@ -1535,15 +1536,15 @@ def decide(tool, inp, mode, run, held=False):
-     other call by hook_decision, unchanged."""
+@@ -1538,16 +1539,16 @@ def decide(tool, inp, mode, run, held=False, use_id=None):
+     other call by hook_decision, unchanged. `use_id` (Claude Code's tool_use_id) ties a Process call to its PostToolUse."""
      if mode in HELD_MODES:
          return prep_decision(tool, inp)
--    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set())   # #264 round 2 (L4, M2)
-+    _HOOK.update(run=run if mode in PROCESS_MODES else None, mode=mode, claims=set(), seen={}, writes=set())   # #264 r2; #283
+-    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set(),   # #264 round 2 (L4, M2)
++    _HOOK.update(run=run if mode in PROCESS_MODES else None, mode=mode, claims=set(), seen={}, writes=set(),   # #264 r2; #283
+                  call=(use_id, _call_key(tool, inp)))
      try:
          why = confidential_reason(tool, inp) if held else None
          ok, why = (False, why) if why else hook_decision(tool, inp, mode, run)
@@ -33,12 +35,12 @@ index dae2a45a..32fd8fc4 100644
              ok, why = False, "the guard couldn't record this run's own files, so it can't let it write one (fail closed)"
          return ok, why
      finally:
--        _HOOK.update(run=None, claims=set(), seen={}, writes=set())
-+        _HOOK.update(run=None, mode=None, claims=set(), seen={}, writes=set())
+-        _HOOK.update(run=None, claims=set(), seen={}, writes=set(), call=None)
++        _HOOK.update(run=None, mode=None, claims=set(), seen={}, writes=set(), call=None)
  # ===== end #60 option (a) =====
  
  
-@@ -1735,7 +1736,7 @@ def _direct_write_refusal(inp, mode):
+@@ -1739,7 +1740,7 @@ def _direct_write_refusal(inp, mode):
      outside the run's direct-write folder. #264: a Process run writes only its own .json input files in drafts."""
      p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
      rp = real(p)
@@ -47,7 +49,7 @@ index dae2a45a..32fd8fc4 100644
          why = process_write_problem(rp)
          if why:
              return f"{p}: {why}"
-@@ -1766,7 +1767,7 @@ def hook_decision(tool, inp, mode, run):
+@@ -1770,7 +1771,7 @@ def hook_decision(tool, inp, mode, run):
          kind, why = classify(p, "read")
          if kind == "never":
              return False, f"{p}: {why}"
@@ -56,7 +58,7 @@ index dae2a45a..32fd8fc4 100644
          why = process_reach_problem(tool, inp)
          if why:
              return False, why
-@@ -1999,7 +2000,7 @@ def record_gate(command, mode):
+@@ -2003,7 +2004,7 @@ def record_gate(command, mode):
      """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
      an Intake Process run (#264) runs only its read and minutes steps (process_gate); a calendar refresh (#265) only the sweep's
      calendar steps (calendar_gate)."""
@@ -65,7 +67,7 @@ index dae2a45a..32fd8fc4 100644
          return process_gate(command)
      if mode == "calendar":
          return calendar_gate(command)
-@@ -2028,20 +2029,27 @@ def sweep_maps_draft(command):
+@@ -2032,20 +2033,27 @@ def sweep_maps_draft(command):
  # minutes.py refresh and carry, report.py, tracker.py apply and undo, review.py approve and reject...). Direct Edit and Write stay
  # in system/staging/drafts/ (direct_write_area), and every check a plain chat has still runs first (bash_refusal and the rest).
  PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
@@ -80,8 +82,8 @@ index dae2a45a..32fd8fc4 100644
  # #264 round 2 (Team Cap's review of R1): the hook's own state for the one call it is deciding (decide() sets and clears it).
  # "run" is the hook's --run, so the record is read only when it is that run's (L4); "claims", "seen" and "writes" are what the
  # call would add to the record, written only once every check has passed (M2: a refused call claims nothing).
--_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set()}
-+_HOOK = {"run": None, "mode": None, "claims": set(), "seen": {}, "writes": set()}
+-_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set(), "call": None}
++_HOOK = {"run": None, "mode": None, "claims": set(), "seen": {}, "writes": set(), "call": None}
  
  
  def _process_record():
@@ -96,7 +98,33 @@ index dae2a45a..32fd8fc4 100644
      return data
  
  
-@@ -2252,8 +2260,31 @@ def _process_validate_problem(words):
+@@ -2193,12 +2201,13 @@ def _call_key(tool, inp):
+     return hashlib.sha256(json.dumps([str(tool), inp], sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()
+ 
+ 
+-def post_tool(tool, inp, run, use_id=None):
++def post_tool(tool, inp, run, use_id=None, mode=None):
+     """#264 round 3: the PostToolUse hook of a Process run (`reach.py hook --event post`), once the run's own tool has returned.
+     The files the PreToolUse let that call write (its "pending" entry, by tool_use_id or else by the call's fingerprint) get
+     their print now: what the run's tool made. A call that never returns (its tool failed) leaves its files without a print,
+-    so they are never the run's; a Post that matches no pending call records nothing. True when something was recorded."""
+-    _HOOK.update(run=run)
++    so they are never the run's; a Post that matches no pending call records nothing. True when something was recorded.
++    #283: `mode` is the hook's own (process or reextract), so a Post records only on a run of its own mode."""
++    _HOOK.update(run=run, mode=mode)
+     try:
+         key = _call_key(tool, inp)
+         with _RunLock():
+@@ -2218,7 +2227,7 @@ def post_tool(tool, inp, run, use_id=None):
+     except (OSError, ValueError, TypeError):     # nothing recorded: the files stay not the run's (fail closed)
+         return False
+     finally:
+-        _HOOK.update(run=None)
++        _HOOK.update(run=None, mode=None)
+ 
+ 
+ def _runs_proposals():
+@@ -2361,8 +2370,31 @@ def _process_validate_problem(words):
          "Process validates only a proposal it staged itself"
  
  
@@ -128,7 +156,7 @@ index dae2a45a..32fd8fc4 100644
      if name == "minutes.py stage":
          return _process_stage_problem(words)
      if name == "propose.py people map":
-@@ -2388,8 +2419,8 @@ def vault_relative(command):
+@@ -2497,8 +2529,8 @@ def vault_relative(command):
  
  
  def hook_main(argv):
@@ -139,3 +167,14 @@ index dae2a45a..32fd8fc4 100644
      on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
      error refuses: the guard fails closed."""
      try:
+@@ -2506,8 +2538,8 @@ def hook_main(argv):
+         call = json.loads(sys.stdin.read() or "{}")
+         tool, inp = str(call.get("tool_name") or ""), call.get("tool_input") or {}
+         if opts.get("--event") == "post":            # #264 round 3: a Process run's PostToolUse; it never blocks (exit 0)
+-            if opts.get("--mode") == "process":
+-                post_tool(tool, inp, opts.get("--run", ""), call.get("tool_use_id"))
++            if opts.get("--mode") in PROCESS_MODES:  # #283: Read again's own files get their print the same way
++                post_tool(tool, inp, opts.get("--run", ""), call.get("tool_use_id"), opts.get("--mode"))
+             return 0
+         ok, why = decide(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""), opts.get("--held") == "1",   # #60
+                          call.get("tool_use_id"))

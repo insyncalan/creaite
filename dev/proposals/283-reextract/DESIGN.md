@@ -57,7 +57,7 @@ has taken the place.
 | Route | `POST /api/intake/process` | `POST /api/minutes/reextract`, `POST /api/minutes/reextract/undo` |
 | Kind / hook mode / usage kind | `process` | `reextract` (reach `PROCESS_MODES = ("process", "reextract")`) |
 | Files in `run.json` | 1–20 checked Intake files | exactly the one transcript of the pending record (server-chosen) |
-| R1 record | `before`, `made`, `prints` | the same (shared code) |
+| R1 record | `before`, `made`, `prints`, `pending` (round 3: a print only from the PostToolUse) | the same (shared code; the PostToolUse is registered for both modes) |
 | `--tools` | Read, Grep, Glob, Bash, Write, Edit, Skill; `--strict-mcp-config` | the same |
 | `--add-dir` | the projects folder only | the same (never the home folder) |
 | Prompt | KIND_PROMPTS["process"] | KIND_PROMPTS["reextract"]: one transcript, record only, skip enrich |
@@ -82,13 +82,16 @@ hook never takes another mode's `run.json` as its own (`_process_record` compare
 
 ## What is recorded
 
-- `system/guard/run.json` (server and hook only): `run`, `mode: "reextract"`, `files: [transcript]`, `before`, `made`, `prints`
-  (R1, unchanged code).
+- `system/guard/run.json` (server and hook only): `run`, `mode: "reextract"`, `files: [transcript]`, `before`, `made`, `prints`,
+  `pending` (R1 and #264 round 3, shared code: the PostToolUse hook, `reach.py hook --mode reextract --event post`, records a
+  print for the run's own file once its tool has returned; `post_tool` takes the hook's mode, so it records only on a run of
+  its own mode).
 - `system/staging/reextract/<run>/hold.json` (reextract.py only): run, state (`held` → `replaced` | `put_back` | `needs` |
   `failed` | `kept_aside` → `undone`), the earlier proposal's name, its record's stored path, the transcript, date, title,
   projects, times, and once settled the new proposal and record, the counts and the closure line. Beside it: the earlier
   proposal while held (and after a replace), `record.html` (the earlier record after a replace) and `unused/` (a draft the run
-  made that didn't take the place). The newest 20 ended holds are kept; nothing is ever deleted otherwise.
+  made that didn't take the place). The newest 20 ended holds are kept, never one `kept_aside` (it still holds the earlier
+  proposal); nothing is ever deleted otherwise.
 - `system/staging/run-usage.jsonl`: kind `reextract` (counts only).
 - Debug log: `reextract` lines with run IDs and proposal names, never text.
 - Runs creaite started (BL-326 history chat): the plain ask "Read a meeting's transcript again" and the closure line.
@@ -100,12 +103,14 @@ hook never takes another mode's `run.json` as its own (`_process_record` compare
 | The request fails a check | 400 with one plain line; nothing moved |
 | Another run is going | 409 busy; nothing moved |
 | The proposal can't be moved | 200 `ok: false` "couldn't be set aside"; nothing moved |
-| Claude Code can't start | put back at once (`state: failed`) |
+| Claude Code can't start (any fault, review L1) | put back at once (`state: failed`) |
 | Stop, the unwatched timeout | `_ended` → `finish("stopped")`: anything the run staged set aside in `unused/`, the earlier one back |
 | The run fails | the same, `finish("failed")` |
 | Finished, nothing staged | earlier one back: "Nothing new came back from the transcript…" |
 | Finished with `QUESTION:` for its transcript | earlier one back; "Needs you: <question>…" |
 | Finished, staged | the newest new draft takes the place; any other set aside; Track carried; earlier record into the hold |
+| Finished, but the new draft names another project, date or title, or its record isn't in drafts (review M1) | refused: every new draft set aside in `unused/`, the earlier one back; "Not used: the new draft names a different project from your earlier minutes. Your earlier minutes are back as they were." |
+| A fault while settling a finished run (review L2) | settled as failed: the earlier one back (and its record, if it had moved) |
 | Undo | only while none of the new draft's items is saved or approved and the earlier names are free: the new draft (and its record) into `unused/`, the earlier record and proposal back |
 | The server dies mid-run | at the next start `recover_reextract()` settles every `held` hold as failed (earlier one back) |
 | The earlier name is taken at put back | `kept_aside`: the earlier proposal stays in the hold; the line says so (Settings › Diagnostics) |
@@ -134,12 +139,14 @@ milestone notes. The earlier record is kept whole in the hold, and Undo brings i
 
 ## Tests
 
-- `dev/tests/test_reextract.py` (quick tier, 18 tests; 6 are expected failures until the guarded diffs are applied, all pass with
+- `dev/tests/test_reextract.py` (quick tier, 21 tests; 6 are expected failures until the guarded diffs are applied, all pass with
   them):
   - **Helpers** (plain code, unguarded): the request checks and plain words; what stops a read again; the fixed prompt and label;
     hold then nothing back puts it back (settled once); the new draft takes the place with the Track choices (counts, line,
     record, hold contents) and Undo (once; the new one kept aside); Undo waits when the new one is approved; Stop sets the new
-    one aside and puts the earlier one back (the event carries no words); a question; recovery at start; the usage kind.
+    one aside and puts the earlier one back (the event carries no words); a question; recovery at start; the usage kind; a new
+    draft naming another project, date or title is refused and the earlier one comes back (review M1); a fault in the closer
+    settles as failed (L2); a `kept_aside` hold is never pruned (L4).
   - **ThePage** (static): the button calls `reLive`, never `ckAsk` or the chat box; its words are plain; the page is rebuilt.
   - **Fence** (needs the diffs): the steps pass; everything else refused (Word-draft spec, no-record spec, another file, fill,
     enrich, refresh, apply, undo, approve, reject, propose stage, filechange, writing a proposal, the hold, the record, another
@@ -147,8 +154,11 @@ milestone notes. The earlier record is kept whole in the hold, and Undo brings i
     unchanged and a `reextract` hook never takes a Process record as its own.
   - **ThroughTheServer** (needs the diffs): the real route with a stand-in Claude and the real `minutes.py stage`: replaced, the
     closure and link, nothing applied, the run's own hook refuses apply/fill/refresh, its arguments (mode, `--strict-mcp-config`,
-    the deny and allow lists, no home folder), usage kind, Undo; 403 for a forged token, Host or Origin (both routes); 400 for a
+    the deny and allow lists, no home folder), the PostToolUse in mode `reextract` and Edit of its own spec allowed once its
+    print is recorded (round 3, H1), usage kind, Undo; 403 for a forged token, Host or Origin (both routes); 400 for a
     bad proposal; one run at a time (409 Undo while running) and Stop puts it back.
+- `dev/tests/test_minutes_stage_client_flags.py` (review M2, unguarded `minutes.py`): a spec never stages `client_visible` or
+  `client_message` on a new item; both are Alan's alone.
 - `dev/tests/test_minutes_view_v2.py` (Chrome tier): the icon's label; the ask and Cancel never touch ask creaite; the run on
   the bar (step, Stop, Approve waits), the new draft opened and Undo through the seams.
 - Regression with the diffs applied (one at a time, all OK): intake_process 29, intake_process_round2 8, intake_process_minutes

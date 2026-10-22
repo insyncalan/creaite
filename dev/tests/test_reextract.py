@@ -77,6 +77,11 @@ def staged(v):
     return out
 
 
+def r_keep():
+    """reextract.KEEP, read from the module's text (the test process never imports the vault's scripts)."""
+    return int(re.search(r"^KEEP = (\d+)", (REPO / "system/scripts/reextract.py").read_text(encoding="utf-8"), re.M).group(1))
+
+
 def staged_names(v):
     return sorted(staged(v))
 
@@ -249,6 +254,64 @@ class Helpers(Fixture, unittest.TestCase):
         self.assertEqual(closure["href"], f"#minutes={self.draft}")
         self.assertEqual(staged_names(self.v), [self.proposal])
 
+    def test_a_new_draft_naming_another_project_date_or_title_is_refused(self):
+        """#283 review M1: the transcript's text (or a slip) could name another project, date or title in the new draft; its file
+        steps would then copy the minutes into that project's folders on approval. The earlier draft's values hold: such a draft
+        is set aside, never takes the place, and the earlier minutes come back."""
+        for n, (change, words) in enumerate(((lambda s: s.update(projects=["ABC", "DEF"]), "project"),
+                                             (lambda s: s.update(date="2026-09-30"), "date"),
+                                             (lambda s: s.update(title="Budget review"), "title"))):
+            with self.subTest(words):
+                run = f"x-m1-{n}"
+                started = in_vault(self.v, "import reextract as r; c, _ = r.validate_request({'proposal': json.loads(sys.stdin.read())}); "
+                                           f"r.hold(c, '{run}'); print(time.time())", self.proposal)
+                spec = again_spec()
+                change(spec)
+                f = self.v.root / "system/staging/drafts/again.json"
+                f.write_text(json.dumps(spec), encoding="utf-8")
+                self.v.run("stage", str(f), script="minutes.py")
+                self.assertEqual(len(staged(self.v)), 1, "the run staged its draft")
+                out = in_vault(self.v, "import reextract as r; a = json.loads(sys.stdin.read()); "
+                                       "print(json.dumps(r.finish(a[0], a[1], [], 'done')))", [run, started])
+                self.assertEqual(out["state"], "put_back", out)
+                self.assertIn(f"the new draft names a different {words}", out["line"])
+                self.assertTrue(out["line"].endswith("Your earlier minutes are back as they were."), out["line"])
+                for banned in ("re-extract", "proposal", "stage", "sweep", "system/", ".json"):
+                    self.assertNotIn(banned, out["line"].lower())                   # dev/PLAIN-WORDS.md
+                self.assertEqual(staged(self.v), {self.proposal: self.draft}, "the earlier minutes back, as they were")
+                self.assertTrue((self.v.root / self.draft).is_file())
+                self.assertEqual(len(list((self.v.root / f"system/staging/reextract/{run}/unused").glob("proposed-*.json"))), 1,
+                                 "the new draft kept aside, never deleted")
+
+    def test_the_closer_settles_a_fault_as_failed(self):
+        """#283 review L2: a fault while settling a finished run still puts the earlier minutes back (never left held until the
+        server restarts)."""
+        code = ("import reextract as r; a = json.loads(sys.stdin.read()); c, _ = r.validate_request({'proposal': a}); "
+                "r.hold(c, 'x-l2-1'); ev = []\n"
+                "class R: started = time.time(); said = []\n"
+                "R.emit = staticmethod(lambda k, **d: ev.append(d))\n"
+                "real = r._new_ones\n"
+                "r._new_ones = lambda *x: (_ for _ in ()).throw(OSError('boom')) if not ev and not getattr(r, '_t', 0) "
+                "and not setattr(r, '_t', 1) else real(*x)\n"
+                "print(json.dumps([r.closer('x-l2-1')(R()), ev]))")
+        closure, ev = in_vault(self.v, code, self.proposal)
+        self.assertFalse(closure["ok"])
+        self.assertTrue(closure["line"].startswith("Couldn't finish: your earlier minutes are back"), closure)
+        self.assertEqual(ev[-1]["state"], "put_back")
+        self.assertEqual(staged_names(self.v), [self.proposal])
+
+    def test_old_holds_are_pruned_but_never_one_still_holding_earlier_minutes(self):
+        """#283 review L4: a hold "kept_aside" still holds Alan's earlier minutes (their name was taken): never removed."""
+        code = ("import reextract as r, paths, json as j; root = r.hold_root(); root.mkdir(parents=True, exist_ok=True)\n"
+                "for i in range(r.KEEP + 3):\n"
+                "    d = root / f'x-old-{i:03d}'; d.mkdir()\n"
+                "    st = 'kept_aside' if i == 0 else 'put_back'\n"
+                "    (d / 'hold.json').write_text(j.dumps({'run': d.name, 'state': st, 'at': i}))\n"
+                "r._prune(); print(json.dumps(sorted(p.name for p in root.iterdir())))")
+        left = in_vault(self.v, code)
+        self.assertIn("x-old-000", left, "a hold still holding the earlier minutes is never removed")
+        self.assertEqual(len(left), r_keep() + 1, left)
+
     def test_recover_puts_back_a_hold_left_by_a_run_that_never_finished(self):
         in_vault(self.v, "import reextract as r; c, _ = r.validate_request({'proposal': json.loads(sys.stdin.read())}); r.hold(c, 'x-test-6'); "
                          "print(1)", self.proposal)
@@ -359,6 +422,7 @@ class Fence(Fixture, unittest.TestCase):
                 "    run = 'x-w-' + mode; reach.start_run(run, mode, {}, None, files=[a])\n"
                 "    f = paths.DRAFTS / f'values-{mode}.json'\n"
                 "    ok = reach.decide('Write', {'file_path': str(f)}, mode, run)[0]; f.write_text('{}')\n"
+                "    reach.post_tool('Write', {'file_path': str(f)}, run, None, mode)\n"      # round 3: the run's tool has returned
                 "    c = f'system/scripts/run docx_tools.py fill system/templates/minutes-template.docx {paths.rel(f)} system/staging/drafts/w-{mode}.docx'\n"
                 "    out[mode] = [ok, reach.decide('Bash', {'command': c}, mode, run)]\n"
                 "print(json.dumps(out))")
@@ -408,6 +472,11 @@ if "--mode reextract" in settings:
     f = root / "system/staging/drafts/again-spec.json"
     if hook("Write", {"file_path": str(f)}) == 0:
         f.write_text(json.dumps(spec))
+        post = json.loads(settings)["hooks"].get("PostToolUse")    # #264 round 3: Claude Code runs it once the tool returns
+        if post:
+            subprocess.run(post[0]["hooks"][0]["command"], shell=True, cwd=root, capture_output=True, timeout=60,
+                           input=json.dumps({"tool_name": "Write", "tool_input": {"file_path": str(f)}}), text=True)
+        verdicts["edit_own_spec"] = hook("Edit", {"file_path": str(f)})       # its own file once its print is recorded
         cmd = "system/scripts/run minutes.py stage system/staging/drafts/again-spec.json"
         out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": cmd}}]}})
         if hook("Bash", {"command": cmd}) == 0:
@@ -508,7 +577,10 @@ class ThroughTheServer(Fixture, unittest.TestCase):
         c = [json.loads(x) for x in (self.v.root / "fake-calls.jsonl").read_text().splitlines()][-1]
         a = c["args"]
         self.assertIn("--mode reextract", a[a.index("--settings") + 1])
-        self.assertEqual(c["verdicts"], {"apply": 2, "fill": 2, "refresh": 2})
+        self.assertEqual(c["verdicts"], {"apply": 2, "fill": 2, "refresh": 2, "edit_own_spec": 0})
+        hooks = json.loads(a[a.index("--settings") + 1])["hooks"]
+        post = hooks["PostToolUse"][0]["hooks"][0]["command"]                       # H1: round 3's Post, in its own mode
+        self.assertTrue("--mode reextract" in post and post.endswith("--event post"), post)
         self.assertEqual(c["results"], [0])
         self.assertIn("--strict-mcp-config", a)                                 # no MCP server at all
         denied = a[a.index("--disallowedTools") + 1]
