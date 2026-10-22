@@ -13,7 +13,6 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_minutes_approve import DRAFT  # noqa: E402
 from test_minutes_track_ops import RunsTrackJs, Base  # noqa: E402
 
 
