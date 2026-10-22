@@ -4294,7 +4294,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
-    <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
+    <div class="livealert" id="liveAlert" role="alert"><b>creaite has stopped.</b> Reopen the creaite app. Your changes are kept and saved when it's back. <code id="alertCmd" hidden></code> <button class="mini" id="checkLive">Check again</button></div>
     <div class="livealert stalealert" id="staleAlert" role="alert" hidden><b>This page is out of date.</b> <span id="staleMsg"></span> <button class="mini" id="staleReload">Reload</button></div><!-- BL-174 -->
     <div class="errbanner" id="errBanner" role="status" aria-live="polite" hidden></div><!-- BL-180: under the other page banners, errors last -->
     <div class="content">
@@ -4382,7 +4382,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select><p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
-        <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+        <p class="sub">Settings save instantly, with a backup and a log entry.</p>
       </div></section>
       <section class="view" id="v-help" hidden><div class="hp-shell"><div class="hp-search" id="helpSearch" role="search"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><input id="helpQ" type="search" placeholder="Search Help: a job, a button, a word" aria-label="Search Help" autocomplete="off"><kbd>/</kbd></div><div class="tabhost" id="helpTabsHost"></div><div id="helpResults" class="hp-results" hidden></div><div id="helpPane" role="tabpanel"></div></div></section>
       <aside class="panel" id="panel" aria-label="Details"><div class="pin">
@@ -4398,7 +4398,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <aside id="chat" aria-label="ask creaite"><div class="chgrip" id="chGrip" role="separator" aria-orientation="vertical" aria-label="Resize ask creaite" tabindex="0" title="Drag to resize; double-click to reset"></div>
   <div class="chh"><h2>ask creaite</h2><button class="iconbtn chbtn" id="chNew" title="New chat" aria-label="New chat"><svg data-ic="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button><span class="dd"><button class="iconbtn chbtn" id="chHist" title="History" aria-label="History" aria-haspopup="menu" aria-expanded="false"><svg data-ic="history" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button></span><button class="iconbtn" id="chatClose" aria-label="Close" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
   <div class="chs" id="chSub"></div>
-  <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Sweep</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
+  <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
   <div class="chthumbs" id="chThumbs" hidden></div>
@@ -5064,6 +5064,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     applyProposal: () => applyProposal,
     applySoon: () => applySoon,
     applyTheme: () => applyTheme,
+    applyTitle: () => applyTitle,
     applyView: () => applyView,
     applyWords: () => applyWords,
     approveRoutineTracked: () => approveRoutineTracked,
@@ -5661,6 +5662,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     edActs: () => edActs,
     edClaim: () => edClaim,
     edEmailHtml: () => edEmailHtml,
+    edFilePlain: () => edFilePlain,
     edLine: () => edLine,
     edOf: () => edOf,
     edRange: () => edRange,
@@ -6267,6 +6269,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     nextFriday: () => nextFriday,
     nextId: () => nextId,
     nm: () => nm2,
+    noPath: () => noPath,
     norm: () => norm,
     noteBodyFrom: () => noteBodyFrom,
     noteCodeOf: () => noteCodeOf,
@@ -33146,7 +33149,7 @@ ${s5}`;
     };
     return /* @__PURE__ */ u4("div", { class: "hrestore", id: "backupRestore", children: [
       /* @__PURE__ */ u4("h3", { class: "hsub", children: "Restore from a backup" }),
-      /* @__PURE__ */ u4("p", { class: "sub", children: "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched." }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "Puts creaite back as it was in a daily backup: your project record, settings, items waiting in Review and history. The current database and every file it replaces are kept first. Project files are never touched." }),
       !zips && /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "backupList", disabled: busy2 || !viaServer(), onClick: list, children: "Choose a backup…" }),
       zips && !plan && (zips.length ? /* @__PURE__ */ u4("ul", { class: "hlist", "aria-label": "Backups", children: zips.map((z4) => /* @__PURE__ */ u4("li", { class: "hrow", "data-zip": z4.name, children: [
         /* @__PURE__ */ u4("span", { class: "hico", "aria-hidden": "true" }),
@@ -33316,7 +33319,7 @@ ${s5}`;
         /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: busy2 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy2 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
       ] }),
-      !viaServer() && !res && /* @__PURE__ */ u4("p", { class: "sub", children: "The health check needs the live server." }),
+      !viaServer() && !res && /* @__PURE__ */ u4("p", { class: "sub", children: "The health check needs creaite running." }),
       err && /* @__PURE__ */ u4("p", { class: "sub hbad", role: "alert", children: err }),
       res && /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("p", { class: "sub hsum", children: n4 ? `${n4} thing${n4 === 1 ? "" : "s"} need${n4 === 1 ? "s" : ""} you.` : "Nothing needs you." }),
@@ -33370,16 +33373,16 @@ ${s5}`;
       ] }),
       res && res.backups && res.backups.length > 0 && /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("h3", { class: "hsub", children: "Backups" }),
-        /* @__PURE__ */ u4("p", { class: "sub", children: "Each day a closed zip of the database backup, your settings, staging and the vault's history goes to your OneDrive backup folder. ask creaite's chats, the people you follow, the engine and the live database never leave the laptop." }),
+        /* @__PURE__ */ u4("p", { class: "sub", children: "Each day a closed zip of the database backup, your settings, the items waiting in Review and creaite's history goes to your OneDrive backup folder. ask creaite's chats, the people you follow, the engine and the live database never leave the laptop." }),
         /* @__PURE__ */ u4("ul", { class: "hsteps", children: res.backups.map((b5) => /* @__PURE__ */ u4("li", { children: b5 })) })
       ] }),
       /* @__PURE__ */ u4(RestoreBackup, {}),
       /* @__PURE__ */ u4("h3", { class: "hsub", children: "After every update, creaite does this for you" }),
       /* @__PURE__ */ u4("ul", { class: "hsteps", children: [
         /* @__PURE__ */ u4("li", { children: "Backs up first, and rolls back if a step fails" }),
-        /* @__PURE__ */ u4("li", { children: "Makes this vault's launcher again" }),
+        /* @__PURE__ */ u4("li", { children: "Makes creaite's launcher again" }),
         /* @__PURE__ */ u4("li", { children: "Asks Chrome to refresh its copy of the app's icon" }),
-        /* @__PURE__ */ u4("li", { children: "Restarts the live server on the new version, and runs the health check" })
+        /* @__PURE__ */ u4("li", { children: "Restarts creaite on the new version, and runs the health check" })
       ] })
     ] });
   }
@@ -45868,7 +45871,7 @@ ${s5}`;
     if (!e4) return null;
     const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential), page = prepPageOf(e4, day);
     const live = viaServer(), shape = prepShape.value;
-    const openWhy = !code ? "Choose the project first" : !live ? "Needs the live server" : "";
+    const openWhy = !code ? "Choose the project first" : !live ? "creaite isn’t running" : "";
     const openTip = openWhy || (page ? `Open the prep page (saved ${page.when})` : "Research the meeting and open its prep page in creaite");
     const why = draftWhyNot("agenda"), style = agendaStyle(), withInv = agendaInvited();
     return /* @__PURE__ */ u4("div", { class: "preptb", role: "toolbar", "aria-label": "Meeting prep", children: [
@@ -46018,7 +46021,7 @@ ${s5}`;
     h2(() => {
       loadPeek(dated);
     }, [dated]);
-    const pk2 = peeks.value[dated], L3 = pk2 && pk2.lines, off = live ? void 0 : "Needs the live server";
+    const pk2 = peeks.value[dated], L3 = pk2 && pk2.lines, off = live ? void 0 : "creaite isn’t running";
     return /* @__PURE__ */ u4(
       "div",
       {
@@ -46098,7 +46101,7 @@ ${s5}`;
     return /* @__PURE__ */ u4("span", { class: "pcode plink", "data-proj": code, role: "link", tabIndex: 0, title: `Open ${n4}`, children: n4 });
   }
   function FollowUp({ m: m5, live, acts: acts2 }) {
-    const f5 = m5.follow, off = live ? void 0 : "Needs the live server";
+    const f5 = m5.follow, off = live ? void 0 : "creaite isn’t running";
     if (!f5) return null;
     if (m5.running) return /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: m5.running });
     if (f5.state === "minutes") return f5.draft ? /* @__PURE__ */ u4(S2, { children: [
@@ -46173,7 +46176,7 @@ ${s5}`;
     const ref = wheelRef(onWheel);
     if (mode === "none") return /* @__PURE__ */ u4("div", { class: "daynone", ref, children: [
       /* @__PURE__ */ u4("span", { children: calendar ? "No calendar for today yet" : "No calendar yet" }),
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-refcal": "", disabled: !live, title: live ? void 0 : "Needs the live server", children: "Refresh calendar" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-refcal": "", disabled: !live, title: live ? void 0 : "creaite isn’t running", children: "Refresh calendar" }),
       lastRead ? /* @__PURE__ */ u4("span", { class: "sub", children: [
         "Last read ",
         lastRead
@@ -47816,7 +47819,7 @@ ${s5}`;
       const res = await applyNow();
       if (res.ok) undo = () => undoApply(res.apply_id);
       else {
-        await putBack(`apply stopped: ${oneLine(res.message)}`);
+        await putBack(oneLine(res.message));
         return;
       }
     }
@@ -48573,10 +48576,10 @@ ${s5}`;
       const nm3 = esc(d5.rec.t.replace(/^[^:]*:\s*/, ""));
       return d5.ref === "meeting" ? `Review the ${nm3} minutes` : `Review the ${esc(d5.rec.t.split(":")[0].toLowerCase())}: ${nm3}`;
     }
-    if (/-sweep(-\d+)?\.json$/.test(file)) return `Review the sweep of ${when2}`;
+    if (/-sweep(-\d+)?\.json$/.test(file)) return `Review the mail and Teams check of ${when2}`;
     if (/-(dashboard|edit)(-\d+)?\.json$/.test(file)) return "Review your pending edits";
     if (/-excel(-\d+)?\.json$/.test(file)) return "Review the Excel import";
-    return `Review the proposals from ${when2}`;
+    return `Review the suggestions from ${when2}`;
   }
   function attentionItems() {
     const out = (
@@ -48691,7 +48694,7 @@ ${s5}`;
     const pg2 = prepPageOf(e4, day);
     if (!pg2) return "";
     const live = viaServer();
-    return String(html`<button type="button" class="ib prepgo" data-prepgo="${pg2.key}" data-prepgoday="${day}" aria-label="Open the prep page for ${e4.title ?? ""}" data-tip="${live ? `Prep page saved ${pg2.when}` : "Needs the live server"}"${raw(live ? "" : ' aria-disabled="true"')}>${raw(ic("external"))}</button><span class="tag ok prepmade">Prep page made</span>`);
+    return String(html`<button type="button" class="ib prepgo" data-prepgo="${pg2.key}" data-prepgoday="${day}" aria-label="Open the prep page for ${e4.title ?? ""}" data-tip="${live ? `Prep page saved ${pg2.when}` : "creaite isn’t running"}"${raw(live ? "" : ' aria-disabled="true"')}>${raw(ic("external"))}</button><span class="tag ok prepmade">Prep page made</span>`);
   }
   var longDay = (iso2) => {
     if (!iso2 || !DATE.test(iso2.slice(0, 10))) return iso2 || "";
@@ -48716,7 +48719,7 @@ ${s5}`;
   function renderToday() {
     renderDay();
     const pend = REV.filter((r4) => !r4.done), mineOver = A4.filter((x5) => isMe(x5.o) && overdue(x5)), mineSoon = A4.filter((x5) => isMe(x5.o) && soon(x5)), off = P4.filter((p6) => p6.health === "Off track");
-    putHTML($("#briefText"), html`<b>${pend.length} proposal${pend.length === 1 ? "" : "s"}</b> need${pend.length === 1 ? "s" : ""} your decision, ${raw(countLink(`${plur(mineOver.length, "overdue action")} of yours`, mineOver.length, "actions:overdue:", { o: ["@me"] }, `<b>${mineOver.length} of your actions</b>`))} ${mineOver.length === 1 ? "is" : "are"} overdue${off.length ? html`, and <b>${andList(off.map((p6) => p6.name))}</b> ${off.length === 1 ? "is" : "are"} off track` : ""}.`);
+    putHTML($("#briefText"), html`<b>${pend.length} suggestion${pend.length === 1 ? "" : "s"}</b> need${pend.length === 1 ? "s" : ""} your decision, ${raw(countLink(`${plur(mineOver.length, "overdue action")} of yours`, mineOver.length, "actions:overdue:", { o: ["@me"] }, `<b>${mineOver.length} of your actions</b>`))} ${mineOver.length === 1 ? "is" : "are"} overdue${off.length ? html`, and <b>${andList(off.map((p6) => p6.name))}</b> ${off.length === 1 ? "is" : "are"} off track` : ""}.`);
     renderDn();
     const att = attentionItems(), ac2 = capped(att.map((x5, i5) => x5.html(i5 + 1)), 5, "attn");
     $("#nAttn").textContent = att.length ? String(att.length) : "";
@@ -49088,7 +49091,7 @@ ${s5}`;
   }
   function remBtn(r4) {
     if (!r4.cmd) return "";
-    const run = RUNNING.has(r4.id), live = viaServer(), why = run ? "Already running" : live ? "" : "Needs the live server";
+    const run = RUNNING.has(r4.id), live = viaServer(), why = run ? "Already running" : live ? "" : "creaite isn’t running";
     return `<span class="rmgo tacts">${tib("filetext", run ? "Running…" : remLabel(r4), `${remLabel(r4)}: ${r4.text}`, `data-d="run"${why ? ` data-why="${esc(why)}"` : ""}`, true, why)}</span>`;
   }
   var isConflict = (r4) => !!r4 && !r4.done && (r4.flags || []).includes("conflict");
@@ -49257,7 +49260,7 @@ ${s5}`;
     }
     const r4 = REMINDERS.find((x5) => x5.id === id2);
     if (!r4) return;
-    const why = RUNNING.has(id2) ? "Already running" : viaServer() ? "" : "Needs the live server";
+    const why = RUNNING.has(id2) ? "Already running" : viaServer() ? "" : "creaite isn’t running";
     openMenu(b5, {
       label: `Options: ${r4.text}`,
       id: "remMenu",
@@ -49324,11 +49327,11 @@ ${s5}`;
   function setupSteps() {
     const seen = store.get(SETUPK, {});
     return [
-      ["m365", "Connect Microsoft 365", swept(), "Show me how", "help", swept() ? "Connected: the sweep has read your mail" : `Connected in Claude itself, so the page can’t: connect it there, then say “${esc(SU_M365)}” in Claude Code. The first sweep confirms it`],
+      ["m365", "Connect Microsoft 365", swept(), "Show me how", "help", swept() ? "Connected: the mail and Teams check has read your mail" : `Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it`],
       ["proj", "Add a project", P4.length > 0, "Add a project", "proj", `${P4.length} project${P4.length === 1 ? "" : "s"}`],
       ["people", "Add people", shared.REG.length > 0, "Add people", "people", `${shared.REG.length} in the people register`],
-      ["sweep", "Run the first sweep", swept(), "Run the first sweep", "sweep", swept() ? `Last swept ${esc(String(D.last_sweep))}` : "Reads mail, Teams and the calendar since the look-back days"],
-      ["review", "Open Intake", !!seen.review, "Open Intake", "review", "Approve what's right; nothing reaches the tracker until you do"]
+      ["sweep", "Run the first check", swept(), "Run the first check", "sweep", swept() ? `Last checked ${esc(fd(String(D.last_sweep)))}` : "Reads mail, Teams and the calendar since the look-back days"],
+      ["review", "Open Intake", !!seen.review, "Open Intake", "review", "Approve what's right; nothing reaches your project record until you do"]
     ];
   }
   function setupShown() {
@@ -49356,12 +49359,12 @@ ${s5}`;
       box = $("#setupList");
     }
     const st2 = setupSteps(), done = st2.filter((x5) => x5[2]).length;
-    putHTML(box, html`<h2 class="th" id="hSetup">Getting started <span class="cnt">${raw(done)} of ${st2.length}</span><button type="button" class="linkbtn setupx" data-setup="dismiss">Dismiss</button></h2><ol class="bl setupbl">${raw(st2.map(([k5, t47, ok2, btn, act, note], i5) => `<li class="${ok2 ? "done" : ""}"><span class="n" aria-hidden="true">${ok2 ? "✓" : i5 + 1}</span><div class="tb"><span class="t">${esc(t47)}</span>${ok2 ? ' <span class="vh">(done)</span>' : ""}<p>${note}</p></div>${ok2 ? "" : `<span class="rmgo"><button type="button" class="btn ${i5 === st2.findIndex((x5) => !x5[2]) ? "primary" : ""}" data-setup="${act}" ${act === "sweep" && !viaServer() ? 'disabled title="Needs the live server"' : ""}>${esc(btn)}</button></span>`}</li>`).join(""))}</ol>`);
+    putHTML(box, html`<h2 class="th" id="hSetup">Getting started <span class="cnt">${raw(done)} of ${st2.length}</span><button type="button" class="linkbtn setupx" data-setup="dismiss">Dismiss</button></h2><ol class="bl setupbl">${raw(st2.map(([k5, t47, ok2, btn, act, note], i5) => `<li class="${ok2 ? "done" : ""}"><span class="n" aria-hidden="true">${ok2 ? "✓" : i5 + 1}</span><div class="tb"><span class="t">${esc(t47)}</span>${ok2 ? ' <span class="vh">(done)</span>' : ""}<p>${note}</p></div>${ok2 ? "" : `<span class="rmgo"><button type="button" class="btn ${i5 === st2.findIndex((x5) => !x5[2]) ? "primary" : ""}" data-setup="${act}" ${act === "sweep" && !viaServer() ? 'disabled title="creaite isn’t running"' : ""}>${esc(btn)}</button></span>`}</li>`).join(""))}</ol>`);
     {
       const b5 = $('#setupList [data-setup="help"]'), li2 = b5 && b5.closest("li");
       if (li2 && !li2.classList.contains("done")) {
         const go3 = li2.querySelector(".rmgo");
-        putHTML(go3, html`<button type="button" class="mini" data-sucopy="m365">Copy</button> <button type="button" class="mini" data-sucheck="m365" ${viaServer() ? "" : html`disabled title="Needs the live server"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`);
+        putHTML(go3, html`<button type="button" class="mini" data-sucheck="m365" ${viaServer() ? "" : html`disabled title="creaite isn’t running"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`);
       }
       if ($("#setupList") && !$("#suMore")) addHTML($("#setupList"), "beforeend", html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`);
     }
@@ -49386,7 +49389,7 @@ ${s5}`;
       putHTML(box, html``);
       return;
     }
-    putHTML(box, html`<b>Sweep due since ${D.sweep_due.due_from || "07:00"}.</b> <span class="sd-last">${D.sweep_due.last ? `Last swept ${D.sweep_due.last}.` : "No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next sweep is due" data-tip="Dismiss until the next sweep is due">${raw(ic("x"))}</button>`);
+    putHTML(box, html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last ? `Last checked ${fd(String(D.sweep_due.last))}.` : "Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`);
   }
   document.addEventListener("click", (e4) => {
     if (!e4.target.closest("#sweepX")) return;
@@ -49408,7 +49411,7 @@ ${s5}`;
     if (!e4.target.closest("#sweepRun")) return;
     e4.preventDefault();
     if (!viaServer()) {
-      snack("Needs the live server");
+      snack("creaite isn't running");
       return;
     }
     if (shared.BUSY) {
@@ -49499,7 +49502,7 @@ ${s5}`;
       prompt("Copy this:", text);
     }
   }
-  var suCmd = (text, id2, check) => `<div class="sucmd"><code>${esc(text)}</code><button type="button" class="mini" data-sucopy="${id2}">Copy</button>${check ? `<button type="button" class="mini" data-sucheck="${id2}" ${viaServer() ? "" : 'disabled title="Needs the live server"'}>Check again</button>` : ""}</div>`;
+  var suCmd = (text, id2, check) => `<div class="sucmd"><code>${esc(text)}</code><button type="button" class="mini" data-sucopy="${id2}">Copy</button>${check ? `<button type="button" class="mini" data-sucheck="${id2}" ${viaServer() ? "" : 'disabled title="creaite isn’t running"'}>Check again</button>` : ""}</div>`;
   var suText = (id2) => id2 === "m365" ? SU_M365 : id2 === "launch" ? SU_LAUNCH() : SU_SETUP;
   function suHealthHtml() {
     const h5 = SU.health;
@@ -49512,18 +49515,18 @@ ${s5}`;
     return `<div class="sub" role="status">${esc(h5.lines[h5.lines.length - 1] || "")}</div>${bad.length ? `<ul class="sures" aria-label="Needs attention">${bad.map(li2).join("")}</ul>` : ""}<details class="sures"><summary>${ok2.length} passed</summary><ul class="sures">${ok2.map(li2).join("")}</ul></details>`;
   }
   function suCardHtml() {
-    const st2 = SU.status || {}, live = viaServer(), off = live ? "" : 'disabled title="Needs the live server"';
+    const st2 = SU.status || {}, live = viaServer(), off = live ? "" : 'disabled title="creaite isn’t running"';
     const swept2 = st2.swept || (D.last_sweep && D.last_sweep !== "never" ? D.last_sweep : null);
     return `<div class="card" id="suCard" data-sec="setup"><h2>Set-up</h2><p class="sub">The set-up steps the page can do, and the two it can’t. Each runs on your click; nothing here is a new permission.</p>
-   ${row("Health check", `<button type="button" class="btn" id="suHealth" ${off}>${SU.busy === "health" ? "Checking…" : "Run the health check"}</button>`, "The same checks as “health check” in Claude Code (doctor.py): it only reads")}
+   ${row("Health check", `<button type="button" class="btn" id="suHealth" ${off}>${SU.busy === "health" ? "Checking…" : "Run the health check"}</button>`, "Checks creaite's set-up; it only reads")}
    ${suHealthHtml() ? `<div id="suHealthOut">${suHealthHtml()}</div>` : ""}
-   ${row("Rebuild the dashboard and Excel view", `<button type="button" class="btn" id="suRebuild" ${off}>${SU.busy === "rebuild" ? "Rebuilding…" : "Rebuild…"}</button>`, "From the tracker; nothing in the tracker changes")}
-   ${SU.confirm ? `<div class="sushown" id="suConfirm">This rewrites <code>dashboard.html</code> and <code>tracker-view.xlsx</code> from the tracker. If the workbook has edits you haven’t imported, it is left as it is. <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-sucancel>Cancel</button><button type="button" class="btn primary" id="suRebuildGo">Rebuild now</button></span></div>` : ""}
-   ${row("Microsoft 365", swept2 ? `<span class="h-ok">Connected</span>` : `<span class="sub">Not confirmed yet</span>`, swept2 ? `The sweep last read your mail ${esc(fd(String(swept2).slice(0, 10)))}` : "Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then say this in Claude Code. The first sweep confirms it")}
-   ${swept2 ? "" : suCmd(SU_M365, "m365", true)}
-   ${row("Launcher", st2.launcher ? `<span class="h-ok">Made</span>` : `<span class="sub">Not made yet</span>`, st2.launcher ? `${esc(st2.launcher)}: double-click it to open creaite` : "A small app that opens creaite in its own window and starts the live server. It goes outside the vault, so the page can’t make it: paste this into Terminal")}
-   ${st2.launcher ? "" : suCmd(SU_LAUNCH(), "launch", true)}
-   ${row("The rest of set-up", "", "Your name and role, the projects folder, git and the optional schedules are a conversation: in Claude Code say")}${suCmd(SU_SETUP, "setup")}</div>`;
+   ${row("Rebuild the dashboard and Excel view", `<button type="button" class="btn" id="suRebuild" ${off}>${SU.busy === "rebuild" ? "Rebuilding…" : "Rebuild…"}</button>`, "From your project record; nothing in it changes")}
+   ${SU.confirm ? `<div class="sushown" id="suConfirm">This rebuilds the dashboard and the Excel view from your project record. If the workbook has edits you haven’t imported, it is left as it is. <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-sucancel>Cancel</button><button type="button" class="btn primary" id="suRebuildGo">Rebuild now</button></span></div>` : ""}
+   ${row("Microsoft 365", swept2 ? `<span class="h-ok">Connected</span>` : `<span class="sub">Not confirmed yet</span>`, swept2 ? `The mail and Teams check last read your mail ${esc(fd(String(swept2).slice(0, 10)))}` : "Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then ask Claude to check it. The first mail and Teams check confirms it")}
+   ${swept2 ? "" : `<div class="sucmd"><button type="button" class="mini" data-sucheck="m365" ${viaServer() ? "" : `disabled title="creaite isn't running"`}>Check again</button></div>`}
+   ${row("Launcher", st2.launcher ? `<span class="h-ok">Made</span>` : `<span class="sub">Not made yet</span>`, st2.launcher ? `${esc(st2.launcher)}: double-click it to open creaite` : "A small app that opens creaite in its own window and starts creaite. It goes outside your creaite folder, so the page can’t make it: Settings › Health › Diagnostics has the one step")}
+   ${st2.launcher ? "" : `<div class="sucmd"><button type="button" class="mini" data-sucheck="launch" ${viaServer() ? "" : `disabled title="creaite isn't running"`}>Check again</button></div>`}
+   ${row("The rest of set-up", "", "Your name and role are in Settings › Essentials. The projects folder, git and the optional schedules are a conversation: ask Claude to set creaite up.")}</div>`;
   }
   function suRedraw() {
     const c5 = $("#suCard");
@@ -49534,11 +49537,11 @@ ${s5}`;
     const r4 = await suStatus(true);
     if (btn && btn.isConnected) btn.disabled = false;
     if (!r4) {
-      snack("Checking needs the live server");
+      snack("Checking needs creaite running");
       return;
     }
-    if (what === "m365") snack(r4.swept ? `Microsoft 365 is connected: the sweep last read your mail ${fd(String(r4.swept).slice(0, 10))}` : "Not confirmed yet: the first sweep confirms it, as it reads your mail");
-    else snack(r4.launcher ? `The launcher is made: ${r4.launcher}` : "No launcher yet: paste the command into Terminal, then check again");
+    if (what === "m365") snack(r4.swept ? `Microsoft 365 is connected: the mail and Teams check last read your mail ${fd(String(r4.swept).slice(0, 10))}` : "Not confirmed yet: the first mail and Teams check confirms it, as it reads your mail");
+    else snack(r4.launcher ? `The launcher is made: ${r4.launcher}` : "No launcher yet: Settings › Health › Diagnostics has the one step, then check again");
     suRedraw();
     if (shared.VIEW === "today") renderSetup();
   }
@@ -49710,7 +49713,7 @@ ${s5}`;
       return tl2(n4, ext || (first.file ? tLink(rvAttr(first), esc(t47)) : `<span class="t">${esc(t47)}</span>`), when2 ? `updated ${esc(whenWords(when2))}` : "", `<span class="tacts">${dis(`Dismiss: ${t47}`)}</span>`, attrs);
     }
     const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), cnt = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
-    const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, staged: written at the next apply` : `${cnt} proposal${cnt === 1 ? "" : "s"} in Review`;
+    const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, waiting: saved at the next save` : `${cnt} suggestion${cnt === 1 ? "" : "s"} in Review`;
     const lines2 = a5.marker === "confidential" ? [] : refs.map((r4) => {
       const x5 = refReview(r4.file, r4.ref);
       return x5 ? `${esc(r4.tag ? r4.tag[0].toUpperCase() + r4.tag.slice(1) : "Item")}: ${sLink(rvAttr(r4), esc(String(x5.rec && x5.rec.t || "")))}` : "";
@@ -49906,7 +49909,7 @@ ${s5}`;
   function intakeParts() {
     const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(txReady).length, fl2 = irFreshFiles().ready.length, L3 = [];
     if (nTr) L3.push({ key: "meetings", n: nTr, text: `${nTr} meeting${nTr === 1 ? "" : "s"} ready to process`, go: intakeTarget("meetings") });
-    if (pr2) L3.push({ key: "proposals", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} to approve`, go: intakeTarget("proposals") });
+    if (pr2) L3.push({ key: "proposals", n: pr2, text: `${pr2} suggestion${pr2 === 1 ? "" : "s"} to approve`, go: intakeTarget("proposals") });
     if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} to process`, go: intakeTarget("files") });
     return L3;
   }
@@ -53510,7 +53513,7 @@ ${pre}**Current state title:** ${title}`);
   }
   var WSIG = [
     ["redated", "Action re-dated again and again", "times", "Re-dated at least (times)"],
-    ["repeat_risk", "Risk raised repeatedly, no response", "mentions", "Raised in at least (meetings or sweeps)"],
+    ["repeat_risk", "Risk raised repeatedly, no response", "mentions", "Raised in at least (meetings or checks)"],
     ["milestone_slip", "Milestone slipping week after week", "weeks", "Forecast later this many weeks running"],
     ["long_open", "Action open far longer than usual", "factor", "Longer than the project's usual by (times)"],
     ["key_person", "One person owns most of a project's open items", "share", "More than (% of the project's open items)"],
@@ -57067,7 +57070,7 @@ ${pre}**Current state title:** ${title}`);
   var SETCATS = [
     ["essentials", "Essentials"],
     ["work", "Work and reports"],
-    ["sweep", "Sweep and Intake"],
+    ["sweep", "Mail, Teams and Intake"],
     ["reports", "Reports and minutes"],
     ["ai", "AI drafts"],
     ["look", "Look and help"],
@@ -57242,10 +57245,10 @@ ${pre}**Current state title:** ${title}`);
     {
       id: "sweep",
       cat: "sweep",
-      title: "Sweep",
-      groups: ["Sweep"],
-      kw: "sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from promises",
-      render: () => row("First-run look-back (days)", nm2("lookback"), "When the sweep runs and what it reads are in Essentials › Your day") + row("Show possible matches", sw2("possible")) + '<div id="ignMgr"></div>',
+      title: "Checking mail and Teams",
+      groups: ["Checking mail and Teams"],
+      kw: "sweep check mail teams inbox sent items chats channels calendar look-back possible matches ignore rules what creaite skips due from promises",
+      render: () => row("First-run look-back (days)", nm2("lookback"), "When the check runs and what it reads are in Essentials › Your day") + row("Show possible matches", sw2("possible")) + '<div id="ignMgr"></div>',
       after: () => renderIgnore()
     },
     moreSection("sweep"),
@@ -57256,7 +57259,7 @@ ${pre}**Current state title:** ${title}`);
       groups: ["Close the day"],
       kw: "close the day evening catch up catch-up sweep before closing minutes shutdown",
       /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
-      render: () => row("Catch up when the last sweep is older than (minutes)", nm2("catchupAfter"), "A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")
+      render: () => row("Catch up when the last check is older than (minutes)", nm2("catchupAfter"), "A check more recent than this says “Caught up” instead, with Check again. Whether the card catches up is in Essentials › Your day")
     },
     moreSection("reports"),
     {
@@ -57294,7 +57297,7 @@ ${pre}**Current state title:** ${title}`);
       title: "Review and health",
       groups: ["Review", "Health thresholds"],
       kw: "stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
-      render: () => row("Stale after (days)", nm2("staleDays")) + row("Review: move to the next proposal after a decision", sw2("rvAdvance"), "After Approve or Reject, the next undecided row is ready for the keyboard") + row("Review: possible duplicate when words overlap at least", `<input type="number" data-k="dupOverlap" value="${S.dupOverlap ?? 0.6}" min="0.1" max="1" step="0.05" style="width:80px">`, "0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project") + row("Due soon means within (days)", nm2("dueSoon")) + row("At risk: action overdue more than (days)", nm2("overdueDays")) + row("At risk: milestone slip up to (weeks)", nm2("slipAtRisk")) + row("Off track: slip more than (weeks)", nm2("slipOff")) + row("Off track: Urgent risks at least", nm2("urgentOff"))
+      render: () => row("Stale after (days)", nm2("staleDays")) + row("Review: move to the next suggestion after a decision", sw2("rvAdvance"), "After Approve or Reject, the next undecided row is ready for the keyboard") + row("Review: possible duplicate when words overlap at least", `<input type="number" data-k="dupOverlap" value="${S.dupOverlap ?? 0.6}" min="0.1" max="1" step="0.05" style="width:80px">`, "0.6 by default: the share of words a suggestion has in common with an open item of the same type in the same project") + row("Due soon means within (days)", nm2("dueSoon")) + row("At risk: action overdue more than (days)", nm2("overdueDays")) + row("At risk: milestone slip up to (weeks)", nm2("slipAtRisk")) + row("Off track: slip more than (weeks)", nm2("slipOff")) + row("Off track: Urgent risks at least", nm2("urgentOff"))
     },
     { id: "warnings", cat: "advanced", sub: "review", title: "Early warnings", groups: ["Early warnings"], elid: "warnSettings", kw: "early warnings signals re-dated repeat risk milestone slip long open key person vip dependency", render: () => warnSectionHtml() },
     moreSection("advanced", "review"),
@@ -57315,10 +57318,10 @@ ${pre}**Current state title:** ${title}`);
     {
       id: "live",
       cat: "health",
-      title: "Live server and backups",
+      title: "creaite and backups",
       elid: "liveCard",
       kw: "live server backups port daily database backup status start terminal",
-      render: () => row("Status", shared.LIVE ? '<span class="h-ok">Running</span>' : '<span class="h-bad">Stopped</span>', "127.0.0.1, required") + row("Mail, Teams and data", esc(`${SWEPT === "never" ? "Mail and Teams never swept" : `Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0, 16)}`)) + row("Port", nm2("port"), "The creaite app belongs to this port: if you change it, install the app again and reconnect the vault") + `<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh", "Check now", 'id="liveCheck"', "bd")}</div>`
+      render: () => row("Status", shared.LIVE ? '<span class="h-ok">Running</span>' : '<span class="h-bad">Stopped</span>', "On this computer, required") + row("Mail, Teams and data", esc(`${SWEPT === "never" ? "Mail and Teams never checked" : `Mail and Teams last checked ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0, 16)}`)) + row("Port", nm2("port"), "The creaite app belongs to this port: if you change it, install the app again and reconnect your creaite folder") + `<div class="srow" style="display:block"><div>If creaite stops<small>Reopen the creaite app. Its set-up steps are in Diagnostics</small></div></div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh", "Check now", 'id="liveCheck"', "bd")}</div>`
     },
     { id: "diag", cat: "health", title: "Diagnostics", raw: true, kw: "diagnostics log level errors debug copy report folder", render: () => diagCardHtml(), after: () => {
       if (SERVED) diagLoad().then(() => {
@@ -57330,10 +57333,10 @@ ${pre}**Current state title:** ${title}`);
     {
       id: "danger",
       cat: "health",
-      title: "Stop the live server",
+      title: "Stop creaite",
       elid: "dangerCard",
       kw: "stop live server quit",
-      render: () => row("Stop the live server", '<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>', "Open creaite again from its launcher or Terminal. Edits wait until it is running again")
+      render: () => row("Stop creaite", '<button class="btn danger" id="liveStop" title="Stops creaite; open it again from its launcher">Stop</button>', "Open creaite again from its launcher. Edits wait until it is running again")
     }
   ];
   var EMBEDDED = () => SETSECTIONS.flatMap((s5) => s5.groups || []);
@@ -57625,7 +57628,7 @@ ${pre}**Current state title:** ${title}`);
     const c5 = document.getElementById("updCard");
     if (!c5) return;
     if (!viaServer()) {
-      putHTML(c5, html`<h2>creaite version</h2><p class="sub">Needs the live server.</p>`);
+      putHTML(c5, html`<h2>creaite version</h2><p class="sub">creaite isn’t running.</p>`);
       return;
     }
     const r4 = await updStatus(force);
@@ -57636,8 +57639,7 @@ ${pre}**Current state title:** ${title}`);
     }
     const src = r4.releases && (!r4.downloads || vnum(r4.releases.version) >= vnum(r4.downloads.version)) ? "releases" : r4.downloads ? "downloads" : null;
     const z4 = src && r4[src], newer = !!z4 && vnum(z4.version) > vnum(r4.installed);
-    const where2 = src === "releases" ? "system/releases" : "Downloads";
-    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z4.name)} in ${where2}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
+    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `creaite ${esc(z4.version)} is ready to install` : "Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
     const b5 = (id2) => document.getElementById(id2);
     if (b5("updReview")) b5("updReview").onclick = () => updReview(src, false);
     if (b5("updFile")) b5("updFile").onclick = () => b5("updPick").click();
@@ -58423,7 +58425,7 @@ ${pre}**Current state title:** ${title}`);
     const el2 = $("#ignMgr");
     if (!el2) return;
     const L3 = SA().ignore || [];
-    putHTML(el2, html`<div class="srow" style="display:block"><div>Ignore rules<small>The sweep skips what these match, even when it names a project, and the summary counts what was skipped. A message from someone you follow always comes through, and a thread or meeting you name yourself is never skipped. Matching ignores case.</small></div>
+    putHTML(el2, html`<div class="srow" style="display:block"><div>What creaite skips<small>The check skips what these match, even when it names a project, and the summary counts what was skipped. A message from someone you follow always comes through, and a thread or meeting you name yourself is never skipped. Matching ignores case.</small></div>
    <div class="iglist">${L3.map((r4, i5) => IGEDIT === i5 ? raw(igForm(r4)) : html`<div class="igrow"><input type="checkbox" class="switch" data-igon="${raw(i5)}" ${r4.on !== false ? "checked" : ""} aria-label="Use the rule ${r4.name}"><div class="igtxt"><b>${r4.name}</b>${r4.builtin ? html` <span class="tag">built in</span>` : ""}<small>${igText(r4)}</small></div>${r4.builtin ? "" : html`<button class="mini" data-ig="edit" data-i="${raw(i5)}">Edit</button><button class="mini" data-ig="del" data-i="${raw(i5)}">Delete</button>`}</div>`)}
    ${IGEDIT === -1 ? raw(igForm({ name: "", where: ["mail"], field: "subject", how: "begins", text: "", on: true })) : ""}</div>
    ${IGEDIT === null ? html`<button class="btn" data-ig="add" style="margin-top:8px">Add a rule</button>` : ""}</div>`);
@@ -59007,6 +59009,8 @@ ${pre}**Current state title:** ${title}`);
    ${row("Log level", `<select id="diagLevel" ${off}><option value="info" ${DIAG.level === "info" ? "selected" : ""}>info</option><option value="debug" ${DIAG.level === "debug" ? "selected" : ""}>debug</option></select>`, "info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault")}
    ${row("Log folder", `<button class="btn" id="diagOpen" ${off}>Open the folder</button>`, `${DIAG.days} day${DIAG.days === 1 ? "" : "s"} of log, in system/logs`)}
    ${row("Report", `<button class="btn" id="diagCopy" ${off}>Copy diagnostics</button>`, "The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths")}
+   <div class="srow" style="display:block"><div>Restart creaite<small>Only if the creaite app can’t be reopened: paste into Terminal</small></div>${cmdBox()}</div>
+   <div class="srow" style="display:block"><div>Make the launcher<small>A small app that opens creaite in its own window: paste into Terminal</small></div>${suCmd(SU_LAUNCH(), "launch", false)}</div>
    ${diagRefusals()}${diagRepeats()}
    <div class="pph" style="margin-top:10px">Latest errors <span class="sub">· last 7 days</span> <button class="mini" id="diagRefresh" ${off}>Refresh</button></div>
    <div id="diagList">${DIAG.errors.length ? DIAG.errors.map(diagErr).join("") : '<div class="sub">No errors in the last 7 days.</div>'}</div><div id="diagOut"></div></div>`;
@@ -60122,7 +60126,7 @@ ${d5.text}`);
     const cm2 = changed2.some((c5) => c5.col === "client_message");
     return /* @__PURE__ */ u4(S2, { children: [
       conflict ? /* @__PURE__ */ u4(S2, { children: [
-        /* @__PURE__ */ u4("div", { class: "pk-dl", children: "This proposal and the tracker disagree" }),
+        /* @__PURE__ */ u4("div", { class: "pk-dl", children: "This suggestion and your project record disagree" }),
         /* @__PURE__ */ u4(ConflictBlock, { rec })
       ] }) : null,
       diffs.map((c5) => /* @__PURE__ */ u4(TextDiff, { label: irLabel(c5.col), was: c5.was, now: c5.now }, c5.col)),
@@ -62012,7 +62016,7 @@ ${d5.text}`);
       await pkReconcile();
       if (!r4.ok) {
         pkSaving("fail", "Not applied");
-        snack("Apply stopped: " + oneLine(r4.message));
+        snack(oneLine(r4.message));
         return -1;
       }
       const done = n4 - shared.PKS.length;
@@ -64355,9 +64359,9 @@ ${d5.text}`);
     ["client", "Draft client wording", "Plain client messaging from the item's own text, with what was taken out"],
     ["thinking", "Suggest the thinking fields", "A decision's options and reasoning; a risk's response, impact and likelihood"],
     ["reason", "Draft the reason for a health or forecast change", "One sentence from the evidence creaite already holds"],
-    ["repeat", "Spot repeats of existing items", "Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review"],
+    ["repeat", "Spot repeats of existing items", "Marks a suggestion that looks like an item already in your project record; Merge, Keep or Reject in Review"],
     /* BL-221 (sprint-drafts-extraction) */
-    ["done", "Spot items that are probably done", "The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished"],
+    ["done", "Spot items that are probably done", "The mail and Teams check and the minutes suggest closing an open item when a sent mail, reply or meeting shows it finished"],
     /* BL-218 */
     ["sharpen", "Sharpen a vague action", "A clear, verb-first title for a vague action, beside the original; you pick one"]
   ];
@@ -64516,7 +64520,7 @@ ${d5.text}`);
       groups: ["AI drafts"],
       /* v2.6 (#246): its own tab; the agenda style joins it */
       kw: "ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
-      render: () => `<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>` + DRAFTFEATURES.map(([f5, l6, h5]) => row(l6, `<input type="checkbox" class="switch" data-drsw="${f5}" ${draftOn(f5) ? "checked" : ""} aria-label="${esc(l6)}">`, h5)).join("") + `<div class="drstats" id="drStats">${viaServer() ? "" : "How often each kind of draft is used shows here while the live server runs."}</div>`,
+      render: () => `<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a suggestion in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs creaite running.</p>` + DRAFTFEATURES.map(([f5, l6, h5]) => row(l6, `<input type="checkbox" class="switch" data-drsw="${f5}" ${draftOn(f5) ? "checked" : ""} aria-label="${esc(l6)}">`, h5)).join("") + `<div class="drstats" id="drStats">${viaServer() ? "" : "How often each kind of draft is used shows here while the live server runs."}</div>`,
       after: () => drStatsLoad()
     });
     $("#settingsBody").addEventListener("change", async (e4) => {
@@ -71264,13 +71268,13 @@ ${d5.text}`);
           /* @__PURE__ */ u4("div", { class: "grow", children: [
             /* @__PURE__ */ u4("b", { children: waiting ? "Waiting to catch up" : "Catching up…" }),
             " ",
-            /* @__PURE__ */ u4("span", { class: "sub", children: waiting ? cu2.message : cu2.label || "Reading mail and Teams since the last sweep" })
+            /* @__PURE__ */ u4("span", { class: "sub", children: waiting ? cu2.message : cu2.label || "Reading mail and Teams since the last check" })
           ] }),
           running ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-cdstop": "1", onClick: onStop, children: "Stop" }) : null,
           /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-cdskip": "1", onClick: onSkip, children: "Skip" })
         ] }),
         running ? /* @__PURE__ */ u4("ol", { class: "cdsrc", "aria-label": "Sources", children: SOURCES.map((s5, i5) => /* @__PURE__ */ u4("li", { class: i5 < cu2.reached ? "done" : i5 === cu2.reached ? "now" : "", children: s5 })) }) : null,
-        /* @__PURE__ */ u4("p", { class: "sub", children: "It runs while you read on. It only proposes items for Review; nothing is applied, and nothing changes in Microsoft 365." })
+        /* @__PURE__ */ u4("p", { class: "sub", children: "It runs while you read on. It only adds suggestions to Review; nothing is saved, and nothing changes in Microsoft 365." })
       ] });
     }
     if (st2 === "done") {
@@ -71297,7 +71301,7 @@ ${d5.text}`);
         ] }) : null
       ] });
     }
-    const words = st2 === "stopped" ? "Stopped. What it had read so far is in Review; the next sweep does the rest." : st2 === "skipped" ? "Skipped. The next sweep picks up anything new." : st2 === "failed" || st2 === "gave_up" ? "The catch-up sweep didn't run. The next sweep picks up anything new." : cu2.message;
+    const words = st2 === "stopped" ? "Stopped. What it had read so far is in Review; the next check does the rest." : st2 === "skipped" ? "Skipped. The next check picks up anything new." : st2 === "failed" || st2 === "gave_up" ? "The last check of mail and Teams didn't run. The next check picks up anything new." : cu2.message;
     const offer = cu2.status === "offer" || st2 === "stopped" || st2 === "skipped" || st2 === "failed" || st2 === "gave_up";
     const again = cu2.status === "recent";
     return /* @__PURE__ */ u4("div", { class: "cdsweep", children: /* @__PURE__ */ u4("div", { class: "row", children: [
@@ -71306,8 +71310,8 @@ ${d5.text}`);
         " ",
         /* @__PURE__ */ u4("span", { class: cu2.status === "offer" ? "sub" : "", children: words })
       ] }),
-      offer ? /* @__PURE__ */ u4("button", { type: "button", class: cu2.status === "offer" ? "btn primary" : "mini", "data-cdsweep": "1", onClick: onAgain, children: "Sweep now" }) : null,
-      again ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-cdsweep": "1", onClick: onAgain, children: "Sweep again" }) : null
+      offer ? /* @__PURE__ */ u4("button", { type: "button", class: cu2.status === "offer" ? "btn primary" : "mini", "data-cdsweep": "1", onClick: onAgain, children: "Check now" }) : null,
+      again ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-cdsweep": "1", onClick: onAgain, children: "Check again" }) : null
     ] }) });
   }
   function Today({ day, onAdd }) {
@@ -71320,7 +71324,7 @@ ${d5.text}`);
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("section", { children: [
         /* @__PURE__ */ u4("h4", { children: "Moved today" }),
-        /* @__PURE__ */ u4("p", { children: mov.length ? mov.join(" · ") : "Nothing was applied today." })
+        /* @__PURE__ */ u4("p", { children: mov.length ? mov.join(" · ") : "Nothing was saved today." })
       ] }),
       /* @__PURE__ */ u4("section", { children: [
         /* @__PURE__ */ u4("h4", { children: "You promised today" }),
@@ -71376,7 +71380,7 @@ ${d5.text}`);
     ] });
   }
   function LooseEnds({ loose, places, all, onPick, onAll, onMore, sweeping }) {
-    if (!loose.length) return /* @__PURE__ */ u4("p", { class: "sub", children: sweeping ? "Nothing is open yet; anything the sweep finds is added here." : "Nothing is left open. Everything has a place." });
+    if (!loose.length) return /* @__PURE__ */ u4("p", { class: "sub", children: sweeping ? "Nothing is open yet; anything the check finds is added here." : "Nothing is left open. Everything has a place." });
     const shown2 = all ? loose : loose.slice(0, SHOWN), common = loose.every((x5) => places[x5.ref] === places[loose[0].ref]) ? places[loose[0].ref] : "";
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("section", { children: [
@@ -71397,7 +71401,7 @@ ${d5.text}`);
       ] }),
       /* @__PURE__ */ u4("p", { class: "sub", children: [
         "Nothing is approved here. Review now opens Intake (or Work) after you close; First thing tomorrow puts it at the top of tomorrow's Today.",
-        sweeping ? " The sweep's finds are added as it ends." : ""
+        sweeping ? " What the check finds is added as it ends." : ""
       ] })
     ] });
   }
@@ -71623,7 +71627,7 @@ ${d5.text}`);
     const catchup = async (force) => {
       const r4 = await api("/api/day/catchup", force ? { force: true } : {});
       if (!r4.ok) {
-        setCu((u5) => ({ ...u5, status: "cant", message: oneLine(r4.message) || "The catch-up sweep couldn't start." }));
+        setCu((u5) => ({ ...u5, status: "cant", message: oneLine(r4.message) || "The last check of mail and Teams couldn't start." }));
         return;
       }
       const pub = r4.catchup || {}, run = r4.run && r4.run.id || pub.run && pub.run.id || null;
@@ -71789,7 +71793,7 @@ ${d5.text}`);
           " · about three minutes"
         ] })
       ] }),
-      /* @__PURE__ */ u4("div", { class: "vh", role: "status", "aria-live": "polite", children: closed ? `Day closed at ${closed.at}` : pending ? "Closing when the sweep finishes" : said2 }),
+      /* @__PURE__ */ u4("div", { class: "vh", role: "status", "aria-live": "polite", children: closed ? `Day closed at ${closed.at}` : pending ? "Closing when the check finishes" : said2 }),
       closed ? /* @__PURE__ */ u4("div", { class: "cddone", children: [
         /* @__PURE__ */ u4("div", { class: "cdseal", "aria-hidden": "true", children: /* @__PURE__ */ u4(Tick, {}) }),
         /* @__PURE__ */ u4("h3", { children: [
@@ -71807,7 +71811,7 @@ ${d5.text}`);
         ] })
       ] }) : pending ? /* @__PURE__ */ u4("div", { class: "cddone", children: [
         /* @__PURE__ */ u4("span", { class: "spin", "aria-hidden": "true" }),
-        /* @__PURE__ */ u4("h3", { children: "Closing when the sweep finishes" }),
+        /* @__PURE__ */ u4("h3", { children: "Closing when the check finishes" }),
         /* @__PURE__ */ u4("p", { class: "sub", children: "You can walk away: what it finds and you haven't placed goes to First thing tomorrow." }),
         /* @__PURE__ */ u4("div", { class: "cdacts", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: notYet, children: "Hide" }) })
       ] }) : /* @__PURE__ */ u4(S2, { children: [
@@ -71823,7 +71827,7 @@ ${d5.text}`);
               onSkip: () => api("/api/day/catchup/skip", {}).then((r4) => setCu((u5) => ({ ...u5, state: r4 && r4.state || "skipped" }))),
               onAgain: () => catchup(true)
             }
-          ) : /* @__PURE__ */ u4("p", { class: "sub", children: cu2.message || "No catch-up sweep tonight." }) : null,
+          ) : /* @__PURE__ */ u4("p", { class: "sub", children: cu2.message || "No last check of mail and Teams tonight." }) : null,
           step2 === 1 ? /* @__PURE__ */ u4(Today, { day, onAdd: async (i5) => {
             const x5 = (day.promised || [])[i5], r4 = x5 && REV.find((q5) => q5.file === x5.file && q5.ref === x5.n);
             if (r4) {
@@ -71865,7 +71869,7 @@ ${d5.text}`);
           ) : null
         ] }),
         /* @__PURE__ */ u4("footer", { class: "cdfoot", children: [
-          /* @__PURE__ */ u4("span", { class: "left", children: sweeping ? "The sweep only proposes; closing now closes when it finishes." : `${step2 + 1} of 4` }),
+          /* @__PURE__ */ u4("span", { class: "left", children: sweeping ? "The check only suggests; closing now closes when it finishes." : `${step2 + 1} of 4` }),
           step2 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-cdback": "1", onClick: () => move(-1), children: "Back" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-dcnot": "1", onClick: notYet, children: "Not yet" }),
           step2 < 3 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
         ] })
@@ -72456,8 +72460,21 @@ ${d5.text}`);
     openChat();
     changesFlow(r4.card);
   }
+  function edFilePlain(b5) {
+    const nm3 = (p6) => {
+      const s5 = String(p6).replace(/\/+$/, "").split("/").pop().replace(/\.[A-Za-z0-9]{1,5}$/, ""), d5 = /^(\d{4})-(\d{2})-(\d{2}) (.+)$/.exec(s5);
+      return d5 ? `${d5[4]}, ${d5[3]}-${d5[2]}-${d5[1]}` : s5;
+    }, arch = (p6) => /(^|\/)(_Archive|99 Archive|zz Archive)(\/|$)/.test(p6), at2 = (re2) => re2.exec(b5);
+    const mf2 = at2(/^Move file (.+) → (.+)$/), md2 = at2(/^Move folder (.+) → (.+)$/), cf2 = at2(/^Create folder (.+)$/), cr2 = at2(/^Create (\S.*?) \((\d+) lines?\)$/), ch2 = at2(/^Change (.+):$/);
+    if (mf2) return `Move ${nm3(mf2[1])} → ${arch(mf2[2]) ? "the project's Archive folder" : "back to its project folder"}`;
+    if (md2) return `Move the folder ${nm3(md2[1])} → ${arch(md2[2]) ? "Archive" : "its place in the projects folder"}`;
+    if (cf2) return `Create the folder ${nm3(cf2[1])}`;
+    if (cr2) return `Create ${nm3(cr2[1])} (${cr2[2]} line${cr2[2] === "1" ? "" : "s"})`;
+    if (ch2) return `Change ${nm3(ch2[1])}:`;
+    return b5;
+  }
   function edLine(ln2) {
-    const m5 = /^(\s*)(.*)$/.exec(ln2), ind = m5[1].length > 0, body2 = m5[2], mid = /^(\S+) · (.*)$/.exec(body2);
+    const m5 = /^(\s*)(.*)$/.exec(ln2), ind = m5[1].length > 0, body2 = edFilePlain(m5[2]), mid = /^(\S+) · (.*)$/.exec(body2);
     const field = (t47) => {
       const f5 = /^([^:]+): (.*?) → (.*)$/.exec(t47);
       return f5 ? `<span class="edf"><span class="ckf">${esc(f5[1])}</span> <span class="eddel">${esc(f5[2])}</span> → <span class="edadd">${esc(f5[3])}</span></span>` : esc(t47);
@@ -72467,7 +72484,7 @@ ${d5.text}`);
   }
   function editCardHtml(c5) {
     const n4 = c5.lines.filter((l6) => !/^\s/.test(l6)).length;
-    return `<div class="confirm edcard" role="group" aria-label="A change waiting for your approval" data-ecard="${esc(c5.card)}"><b>${esc(c5.title)}</b><span class="sub">Nothing has been written yet. ${c5.valid ? `Approve writes ${n4 === 1 ? "this change" : `all ${n4} changes`} to the tracker at once; Reject discards ${n4 === 1 ? "it" : "them"}.` : "It has problems, so it can't be applied: ask creaite to fix it."}</span><ul class="edlines">${c5.lines.map(edLine).join("")}</ul>${(c5.problems || []).length ? `<div class="sub edprob">${c5.problems.map(esc).join("<br>")}</div>` : ""}${(c5.clash || []).length ? `<div class="sub">${esc(c5.clash.join(", "))} already ${c5.clash.length === 1 ? "has" : "have"} a change waiting in Review, so this one can only be staged for review.</div>` : ""}<div class="acts"></div></div>`;
+    return `<div class="confirm edcard" role="group" aria-label="A change waiting for your approval" data-ecard="${esc(c5.card)}"><b>${esc(c5.title)}</b><span class="sub">Nothing has been saved yet. ${c5.valid ? `Approve saves ${n4 === 1 ? "this change" : `all ${n4} changes`} to your project record at once; Reject discards ${n4 === 1 ? "it" : "them"}.` : "It has problems, so it can't be saved: ask creaite to fix it."}</span><ul class="edlines">${c5.lines.map(edLine).join("")}</ul>${(c5.problems || []).length ? `<div class="sub edprob">${c5.problems.map(esc).join("<br>")}</div>` : ""}${(c5.clash || []).length ? `<div class="sub">${esc(c5.clash.join(", "))} already ${c5.clash.length === 1 ? "has" : "have"} a change waiting in Review, so this one can only wait in Review.</div>` : ""}<div class="acts"></div></div>`;
   }
   function edActs(acts2, kinds) {
     const word = { reject: "Reject", stage: "Stage for review", approve: "Approve" };
@@ -75125,8 +75142,8 @@ ${d5.text}`);
       const o5 = r4 && (r4.files || []).find((f5) => f5.path === file);
       if (!done && o5 && (o5.state === "needs" || o5.state === "not_staged")) {
         irSetAskQ(m5.id, { state: o5.state, question: oneLine(o5.question || "") });
-        irNote(m5.id, o5.state === "needs" ? `Needs you: ${oneLine(o5.question || "")}` : "Not staged: process it again, or ask creaite");
-      } else if (!done) irNote(m5.id, r4 && r4.stopped ? "Stopped: nothing was staged" : `Couldn't: ${oneLine(r4 && r4.message || "no draft came back")}`);
+        irNote(m5.id, o5.state === "needs" ? `Needs you: ${oneLine(o5.question || "")}` : "Not in Review yet: process it again, or ask creaite");
+      } else if (!done) irNote(m5.id, r4 && r4.stopped ? "Stopped: nothing was added to Review" : `Couldn't: ${oneLine(r4 && r4.message || "no draft came back")}`);
       if (r4 && r4.closure && r4.closure.line) snack(oneLine(r4.closure.line));
       return done;
     } finally {
@@ -75409,7 +75426,7 @@ ${d5.text}`);
 
   // components/intakeReview/rows.jsx
   var IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
-  var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
+  var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "suggestions to check", done: "Done", running: "Drafting in the background" };
   var IR_GROUP_HEAD = {
     needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes."],
     routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one."]
@@ -75421,7 +75438,10 @@ ${d5.text}`);
   ] || "Proposal";
   var ageWords = (d5) => d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
   var irSize = (n4) => n4 > 1048576 ? `${(n4 / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round((n4 || 0) / 1024))} KB`;
-  var irFileFacts = (m5) => `.${m5.ext || String(m5.title || "").split(".").pop()} · ${irSize(m5.size)}`;
+  var irFileFacts = (m5) => {
+    const x5 = String(m5.ext || String(m5.title || "").split(".").pop()).toLowerCase(), kind = { vtt: "Teams transcript", srt: "Teams transcript", docx: "Word document", doc: "Word document", txt: "Text file", pdf: "PDF" }[x5];
+    return `${kind ? kind + " · " : ""}${irSize(m5.size)}`;
+  };
   var irRunningWords = (m5) => irFileKind(m5) === "minutes" && m5.src === "upload" ? "Reading for work items" : IR_STATE_WORDS.running;
   function irStateWords(m5, n4) {
     const state = irBusy.value.includes(m5.id) ? "running" : m5.state;
@@ -75437,7 +75457,7 @@ ${d5.text}`);
       /** @type {keyof IR_TX_WORDS} */
       m5.tx
     ]}` : "";
-    const base = state === "proposals" ? `${n4} ${IR_STATE_WORDS.proposals}` : `${IR_STATE_WORDS[
+    const base = state === "proposals" ? n4 === 1 ? "1 suggestion to check" : `${n4} ${IR_STATE_WORDS.proposals}` : `${IR_STATE_WORDS[
       /** @type {keyof IR_STATE_WORDS} */
       state
     ] || ""}${tx3}`;
@@ -75699,13 +75719,13 @@ ${d5.text}`);
       reviewViaServer(r4, how, []);
     };
     return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-act": "ck", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: (e4) => pick(e4, "keep"), children: "Keep current" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-act": "ck", disabled: !live, title: live ? void 0 : "creaite isn’t running", onClick: (e4) => pick(e4, "keep"), children: "Keep current" }),
       " ",
-      /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-act": "co", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: (e4) => pick(e4, "override"), children: "Use this one" })
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-act": "co", disabled: !live, title: live ? void 0 : "creaite isn’t running", onClick: (e4) => pick(e4, "override"), children: "Use this one" })
     ] });
   }
   function HeldChoices({ r: r4 }) {
-    const live = viaServer(), off = live ? void 0 : "Needs the live server";
+    const live = viaServer(), off = live ? void 0 : "creaite isn’t running";
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("button", { type: "button", class: "mini ok", "data-ira": "held-approve", "data-act": "hw", disabled: !live, title: off || heldMsg(r4), onClick: () => heldApprove(r4), children: "Approve without the transcript" }),
       " ",
@@ -75719,7 +75739,7 @@ ${d5.text}`);
         "Held: ",
         r4.held
       ] }),
-      " · Approve the minutes without the transcript copy, or discard the proposal"
+      " · Approve the minutes without the transcript copy, or discard the suggestion"
     ] });
     if (r4.bad) return /* @__PURE__ */ u4("div", { class: "rvnote", children: [
       /* @__PURE__ */ u4("span", { class: "h-warn", children: [
@@ -75734,7 +75754,7 @@ ${d5.text}`);
     const r4 = irRow(n4);
     if (!r4 || r4.done || !PEEKABLE.includes(r4.kind) && r4.kind !== "draft") return;
     if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n4 && PK.dirty && pkOn()) {
-      pkNote("Save or cancel this proposal first: its changes aren't saved yet.");
+      pkNote("Save or cancel this suggestion first: its changes aren't saved yet.");
       return;
     }
     shared.PKSRC = {
@@ -75772,7 +75792,7 @@ ${d5.text}`);
     const out = trkLeftOut(res);
     snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
   }
-  var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
+  var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the suggestion to see them" };
   var canDraftResponse = (r4) => !!r4 && !r4.done && r4.kind === "raid" && !String(r4.rec && r4.rec.resp || "").trim() && !(r4.rec.type && r4.rec.type !== "Risk") && draftOn("thinking");
   function ProposalLine({ n: n4, child }) {
     const tick2 = irTick.value;
@@ -75904,7 +75924,7 @@ ${d5.text}`);
             type: "button",
             class: "mini ok",
             "data-ira": "routine",
-            title: "Approves every routine proposal here; the ones above stay for you",
+            title: "Approves every routine suggestion here; the ones above stay for you",
             onClick: () => irApproveRoutine(groups),
             children: [
               "Approve routine (",
@@ -75980,14 +76000,14 @@ ${d5.text}`);
         "From mail and Teams ",
         /* @__PURE__ */ u4("span", { class: "sub rgc", children: [
           nm3,
-          " proposal",
+          " suggestion",
           nm3 === 1 ? "" : "s"
         ] })
       ] }) }),
       nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: model.mail }) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve." }),
       no2 ? /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "other", children: /* @__PURE__ */ u4("h2", { children: [
-          "Other proposals ",
+          "Other suggestions ",
           /* @__PURE__ */ u4("span", { class: "sub rgc", children: no2 })
         ] }) }),
         /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: model.other }) }) }) })
@@ -76057,7 +76077,7 @@ ${d5.text}`);
     const hidden = (m5) => m5.private || m5.confidential;
     const right = (m5) => {
       const n4 = m5.groups.needs.length + m5.groups.routine.length;
-      return n4 ? `${n4} proposal${n4 === 1 ? "" : "s"}` : m5.stage === "arrived" && m5.state === "ready" ? "ready" : "";
+      return n4 ? `${n4} suggestion${n4 === 1 ? "" : "s"}` : m5.stage === "arrived" && m5.state === "ready" ? "ready" : "";
     };
     return /* @__PURE__ */ u4("div", { "data-irv": "two", children: [
       /* @__PURE__ */ u4("div", { class: "icsplit", children: [
@@ -76121,7 +76141,7 @@ ${d5.text}`);
   };
   var irPlural = (n4, w6) => `${n4} ${w6}${n4 === 1 ? "" : "s"}`;
   function StagePipe({ c: c5 }) {
-    const sub = { arrived: `${c5.ready} ready to process${c5.need_type ? ` · ${c5.need_type} need a type` : ""}`, drafted: `${irPlural(c5.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+    const sub = { arrived: `${c5.ready} ready to process${c5.need_type ? ` · ${c5.need_type} need a type` : ""}`, drafted: `${irPlural(c5.to_approve, "suggestion")} to check`, approved: "this week", all: "meetings and files" };
     const word = { ...IR_STAGE_NAMES, all: "Show all" };
     const box = (g5) => /* @__PURE__ */ u4(
       "div",
@@ -76148,7 +76168,7 @@ ${d5.text}`);
         ]
       }
     );
-    return /* @__PURE__ */ u4("div", { class: "icpipe", role: "group", "aria-label": "Stages", children: [
+    return /* @__PURE__ */ u4("div", { class: "icpipe", role: "group", "aria-label": "Steps", children: [
       box("arrived"),
       /* @__PURE__ */ u4("span", { class: "ar", "aria-hidden": "true", children: "→" }),
       box("drafted"),
@@ -76307,7 +76327,7 @@ ${d5.text}`);
       /* @__PURE__ */ u4("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
         c5.ready,
         " ready to process · ",
-        irPlural(c5.to_approve, "proposal"),
+        irPlural(c5.to_approve, "suggestion"),
         " to approve · ",
         /* @__PURE__ */ u4(CalendarRead, { text: irCalendarRead(D.meetings && D.meetings.fetched, TODAY) })
       ] }),
@@ -76851,11 +76871,29 @@ ${d5.text}`);
     append: (...a5) => (viaServer() ? SVW : FVW).append(...a5),
     upload: (...a5) => (viaServer() ? SVW : FVW).upload(...a5)
   };
-  var oneLine = (m5) => String(m5 || "").split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
+  var noPath = (m5) => String(m5 || "").replace(/^can't open \S.*$/m, "That file isn't in the project folder any more, so it can't be opened.");
+  var oneLine = (m5) => noPath(m5).split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
+  var applyTitle = (file, ref) => {
+    const L3 = typeof REV !== "undefined" ? REV.filter((x5) => x5.file === file) : [], row2 = L3.find((x5) => ref != null && String(x5.ref) === String(ref)) || L3.find((x5) => x5.kind === "draft") || L3[0], r4 = row2 && row2.rec || {};
+    return String(r4.t || r4.title || r4.decision || "").replace(/^[A-Z][A-Za-z ]{0,20}: /, "").trim();
+  };
   var applyWords = (m5) => {
     const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
-    if (f5) return `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`;
-    if (!/in the minutes' Track column|the minutes record can't be read/.test(t47)) return t47;
+    if (f5) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Review.";
+    if (!/in the minutes' Track column|the minutes record can't be read/.test(t47)) {
+      const miss = t47.match(/(proposed-[^\s\/\\:]+\.json) \w+: copy: source not found/);
+      if (miss) {
+        const n4 = applyTitle(miss[1]);
+        return `The minutes${n4 ? ` for ${n4}` : ""} couldn't be filed: the transcript isn't in your inbox any more. Nothing was saved.`;
+      }
+      const bad = [...t47.matchAll(/(proposed-[^\s\/\\:]+\.json) item (\d+): /g)];
+      if (bad.length) {
+        const one = bad.length === 1, n4 = applyTitle(bad[0][1], bad[0][2]);
+        return `${one ? "One suggestion" : bad.length + " suggestions"}${one && n4 ? ` (${n4})` : ""} couldn't be saved. ${one ? "It needs" : "They need"} fixing in Review. Nothing was saved.`;
+      }
+      if (/Apply (stopped|failed)|proposed-\S+\.json/.test(t47)) return "Nothing was saved. Something in the suggestions needs fixing in Review.";
+      return t47;
+    }
     return t47.split("\n").map((x5) => x5.trim()).filter((x5) => x5 && !/^Apply stopped\. Nothing was written\.$/.test(x5)).map((x5) => x5.replace(/^proposed-\S+\.json (item \d+|minutes): /, (a5, w6) => w6 === "minutes" ? "" : "an item was ")).join("\n");
   };
   function ownHeld(msg, own) {
@@ -76882,12 +76920,12 @@ ${d5.text}`);
     }
     const b5 = data && (data.meeting || data.report), title = b5 && b5.title ? String(b5.title) : "", made = b5 && b5.date || data && data.created || (file.match(/\d{4}-\d{2}-\d{2}/) || [""])[0];
     const when2 = fd(String(made).slice(0, 10));
-    return title ? `${title}${when2 ? " (" + when2 + ")" : ""}` : `a proposal staged ${when2 || "earlier"}`;
+    return title ? `${title}${when2 ? " (" + when2 + ")" : ""}` : `a suggestion from ${when2 || "earlier"}`;
   }
   async function blockerWords(list) {
     const parts = [];
-    for (const b5 of list) parts.push(`${await proposalLabel(b5.file)}: ${b5.why.join("; ")}`);
-    return `Not saved, and not because of your edit: ${list.length > 1 ? `${list.length} older staged proposals are` : "an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length > 1 ? "those items" : "that item"} in Intake, then save again.`;
+    for (const b5 of list) parts.push(await proposalLabel(b5.file));
+    return `Not saved, and not because of your edit: ${list.length > 1 ? `${list.length} older suggestions are` : "an older suggestion is"} stopping the save. ${parts.join(" · ")}. Fix or reject ${list.length > 1 ? "those items" : "that item"} in Intake, then save again.`;
   }
   function openBlockersInIntake(files) {
     const L3 = REV.filter((x5) => files.includes(x5.file) && !x5.done), first = L3.find((x5) => !["draft", "files"].includes(x5.kind)) || L3[0];
@@ -76974,7 +77012,7 @@ ${d5.text}`);
       APPLYN = 0;
       const r4 = await applyNow();
       const held = r4.ok ? heldWords(r4.message) : "";
-      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}${held}` : "Apply stopped: " + oneLine(r4.message), r4.ok ? () => undoApply(r4.apply_id) : null);
+      snack(r4.ok ? `Applied ${n4} decision${n4 === 1 ? "" : "s"}${held}` : oneLine(applyWords(r4.message)), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
@@ -76989,8 +77027,8 @@ ${d5.text}`);
     const m5 = res.message || "";
     let acts2 = "";
     if (/possible internal content/.test(m5)) acts2 = `<button class="mini" data-rv="retry">I've edited the draft: check again</button><button class="mini" data-rv="as-staged">File it anyway</button>`;
-    else if (/differs from the staged items/.test(m5)) acts2 = (/--sync/.test(m5) ? `<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>` : "") + (r4.ref === "meeting" ? `<button class="mini" data-rv="refresh">Rebuild the items from the draft</button>` : "") + `<button class="mini" data-rv="as-staged">Keep the items as staged</button>`;
-    await say(m5.replace(/^\s*Approved \d+\.\s*/, "").replace(/^\s*\d+:\s*/, "").replace(/,? or say “[^”]*”\.?/g, ".").replace(/\n\s*\(say [^)]*\)/g, "").trim(), acts2);
+    else if (/differs from the staged items/.test(m5)) acts2 = (/--sync/.test(m5) ? `<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>` : "") + (r4.ref === "meeting" ? `<button class="mini" data-rv="refresh">Rebuild from the minutes</button>` : "") + `<button class="mini" data-rv="as-staged">Keep the items as they are</button>`;
+    await say(m5.replace(/^\s*Approved \d+\.\s*/, "").replace(/^\s*\d+:\s*/, "").replace(/,? or say “[^”]*”\.?/g, ".").replace(/\n\s*\(say [\s\S]*\)\s*$/, "").replace(/not approved — the draft differs from the staged items:/, "these minutes don't match the items waiting in Review:").trim(), acts2);
     $$("#chLog [data-rv]").forEach((b5) => b5.onclick = () => {
       $$("#chLog [data-rv]").forEach((x5) => x5.disabled = true);
       if (b5.dataset.rv === "refresh") {
@@ -77509,14 +77547,14 @@ ${d5.text}`);
   }
   var DIAG = { level: "info", days: 0, errors: [], last24: 0, loaded: false };
   function status() {
-    putHTML($("#status"), html`${viaServer() || shared.VSTATE === "ok" ? "" : html`<button class="mini" id="vaultBtn">${shared.VSTATE === "prompt" ? "Reconnect vault" : shared.VSTATE === "unsupported" ? "Read-only: use Chrome" : "Connect vault"}</button>`}${shared.HELD.length ? html`<span class="pend">${shared.HELD.length} held</span>` : ""}`);
+    putHTML($("#status"), html`${viaServer() || shared.VSTATE === "ok" ? "" : html`<button class="mini" id="vaultBtn">${shared.VSTATE === "prompt" ? "Reconnect your creaite folder" : shared.VSTATE === "unsupported" ? "Read-only: use Chrome" : "Connect your creaite folder"}</button>`}${shared.HELD.length ? html`<span class="pend">${shared.HELD.length} held</span>` : ""}`);
     $("#liveAlert").classList.toggle("on", !shared.LIVE);
     $("#liveAlert").classList.toggle("found", shared.LIVELINK);
     if (ALERT0 === null) ALERT0 = $("#liveAlert").innerHTML;
     if (!(shared.LIVELINK && !SERVED)) {
       if ($("#liveAlert").innerHTML !== ALERT0) putHTML($("#liveAlert"), raw(ALERT0));
-    } else putHTML($("#liveAlert"), html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save and apply directly.`);
-    drawStatusDot($("#chSub"), shared.LIVE ? { status: "ok", word: "Claude Code on this laptop, working in your vault" } : { status: "off", word: "Live server not running — commands will be copied instead" });
+    } else putHTML($("#liveAlert"), html`<b>creaite is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save directly.`);
+    drawStatusDot($("#chSub"), shared.LIVE ? { status: "ok", word: "Claude, working in your creaite folder" } : { status: "off", word: "creaite isn’t running" });
     if (!shared.LOADING) errBanner();
   }
   function setLive(on2) {
@@ -77570,7 +77608,7 @@ ${d5.text}`);
       const r4 = await applyNow();
       shared.PENDING = [];
       refreshAll();
-      snack(r4.ok ? oneLine(r4.message) : "Apply stopped: " + oneLine(r4.message), r4.ok ? () => undoApply(r4.apply_id) : null);
+      snack(r4.ok ? oneLine(r4.message) : oneLine(applyWords(r4.message)), r4.ok ? () => undoApply(r4.apply_id) : null);
       return;
     }
     snack("Say “apply” in Claude Code, or start the live server");
@@ -77923,7 +77961,7 @@ ${d5.text}`);
   // core/data.js
   var P4 = D.projects, A4 = D.actions, R3 = D.raid, DEC = D.decisions, REV = D.review, FILES = D.files, REMINDERS = D.reminders;
   shared.ACT = D.activity;
-  var pName = (c5) => (P4.find((p6) => p6.code === c5) || {}).name || c5;
+  var pName = (c5) => (P4.find((p6) => p6.code === c5) || {}).name || (c5 === "_portfolio" ? "Portfolio" : c5);
   var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   var LASTVISIT = store.get("creaite-lastvisit", D.data_at);
   var SWEPT = D.last_sweep || "never";
@@ -78219,6 +78257,7 @@ ${d5.text}`);
         "applyMotion",
         "applyNow",
         "applyTheme",
+        "applyTitle",
         "applyView",
         "applyWords",
         "approveArgs",
@@ -78324,6 +78363,7 @@ ${d5.text}`);
         "defaultTrack",
         "defs",
         "designation",
+        "diagCardHtml",
         "diagHook",
         "dispOpen",
         "dispReset",

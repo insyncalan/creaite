@@ -321,7 +321,7 @@ class SettingsPage(LiveBrowserCase):
         self.type_query("sweep")
         self.assertIn("sweep", self.sections())
         self.assertEqual(self.b.eval("document.querySelectorAll('#setcats [aria-selected=true]').length"), 0)
-        self.assertEqual(self.b.eval("document.querySelector('[data-sec=sweep]').previousElementSibling.textContent"), "Sweep and Intake › Sweep")
+        self.assertEqual(self.b.eval("document.querySelector('[data-sec=sweep]').previousElementSibling.textContent"), "Mail, Teams and Intake › Checking mail and Teams")
         own = "[...document.querySelectorAll('[data-sec=sweep] .srow:not([hidden])')].filter(r=>!r.closest('.setembed'))"
         self.assertEqual(self.b.eval(f"{own}.length"), 3)
         self.b.wait("document.querySelectorAll('[data-sec=sweep] .setembed .srow').length>=2")   # the Sweep group's rows, one card
@@ -343,7 +343,7 @@ class SettingsPage(LiveBrowserCase):
         self.type_query("people i follow")        # the follow section, in Essentials, matches by its title: every row shows
         self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===5")   # #97: and the two quiet-hours rows
         self.assertIn("essentials", self.sections())
-        self.type_query("ignore rules")           # the Ignore rules row matches: it shows, with its rules; the sweep's other rows don't
+        self.type_query("what creaite skips")    # the What creaite skips row matches: it shows, with its rules; the sweep's other rows don't
         self.assertIn("sweep", self.sections())
         self.assertTrue(self.b.eval("document.querySelectorAll('[data-sec=sweep] .igrow').length > 0 && ![...document.querySelectorAll('[data-sec=sweep] .igrow')].some(r=>r.offsetParent===null)"))
         self.assertEqual(self.b.eval("[...document.querySelectorAll('[data-sec=sweep] .srow')].filter(r=>r.hidden&&!r.closest('.setembed')).length"), 2)

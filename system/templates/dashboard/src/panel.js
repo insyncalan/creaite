@@ -696,7 +696,7 @@ export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.P
   if(!viaServer()){ snack("Applying needs the live server: start it, or say “apply” in Claude Code"); return -1; }
   $("#pkApply").disabled=true; pkSaving("busy","Applying…");
   try{ const r=await applyNow({peek:true}); await pkReconcile();
-    if(!r.ok){ pkSaving("fail","Not applied"); snack("Apply stopped: "+oneLine(r.message)); return -1; }
+    if(!r.ok){ pkSaving("fail","Not applied"); snack(oneLine(r.message)); return -1; }
     const done=n-shared.PKS.length; if(shared.CUR&&pkOn()) pkDraw();
     snack(done?`Applied ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still staged (changed elsewhere since)`:""}. A backup was taken first`:"Nothing applied: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }

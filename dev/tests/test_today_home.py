@@ -355,7 +355,7 @@ class NoFileNames(Home):
         self.today()
         b.eval("EXPAND.add('td'); EXPAND.add('attn'); renderToday(); document.getElementById('resFold').open=true")
         text = b.eval("document.getElementById('v-today').innerText")
-        self.assertIn("proposals to approve", text)                    # #245 (was #208, "in Review"): a count, never a title or a file name
+        self.assertIn("suggestions to approve", text)                    # #245 (was #208, "in Review"): a count, never a title or a file name
         self.assertNotIn("proposed-", text)
         self.assertNotIn(".json", text)
 

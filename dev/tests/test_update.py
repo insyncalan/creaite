@@ -251,12 +251,13 @@ class TestInstall(unittest.TestCase):
 
     def test_refuses_bad_zips(self):
         t = self.v.tmp
+        PLAIN = "creaite can't install this update: the download is damaged or was changed"   # #291 Tier 1: no file names
         cases = {
             "no manifest": (t / "source.zip", "Source code (zip)"),
-            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), "outside the engine"),
-            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), "not listed"),
-            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), "checksum"),
-            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), "outside the engine"),
+            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), PLAIN),
+            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), PLAIN),
+            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), PLAIN),
+            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), PLAIN),
         }
         with zipfile.ZipFile(t / "source.zip", "w") as z:
             z.writestr("creaite-main/VERSION", "9.9.9")

@@ -287,7 +287,7 @@ class ThroughTheServer(unittest.TestCase):
         due = next(r for r in card["loose"] if r["t"] == "Send the cutover checklist")
         self.assertEqual((due["type"], due["place"]), ("Action due today", "first"))
         self.assertIn("t:e1", refs)
-        self.assertTrue(any(r["type"] == "File in Intake" and r["t"] == "Recording 2026-10-13.vtt" for r in card["loose"]))
+        self.assertTrue(any(r["type"] == "File in Intake" and r["t"] == "Recording 2026-10-13" for r in card["loose"]))
         self.assertTrue(any(r["t"] == "Draft the pilot charter" and r["project"] == "Digital Enablement" for r in card["loose"]))
         tm = card["tomorrow"]
         self.assertEqual((tm["day"], tm["day_shown"], tm["long"]), ("2026-10-14", "14-10-2026", "Wednesday 14th October"))

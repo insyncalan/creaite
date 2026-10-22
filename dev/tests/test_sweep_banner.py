@@ -1,4 +1,4 @@
-"""#200 (option 2): Today's "Sweep due since 07:00" banner with a Run sweep button. The build says whether the daily sweep is due
+"""#200 (option 2): Today's "Mail and Teams not checked yet today" banner with a Run sweep button. The build says whether the daily sweep is due
 (sweep.due_info(): the last success before today's sweep.due_from, and now after it); the page shows a calm banner under the day band,
 the button sends "sweep" to ask creaite as a typed sweep does, and the banner is hidden when the sweep isn't due, before 07:00, while a
 run is going, and in the development repository; without the live server the button gives way to the restart hint. Real Chrome, the
@@ -42,12 +42,12 @@ class SweepDue(DueCase):
         self.today()
         self.assertEqual(b.eval("D.sweep_due.due"), True)
         self.assertTrue(b.eval(VISIBLE))
-        self.assertIn("Sweep due since 07:00", b.eval("document.getElementById('sweepDue').textContent"))
+        self.assertIn("Mail and Teams not checked yet today", b.eval("document.getElementById('sweepDue').textContent"))
         self.assertEqual(b.eval("document.getElementById('sweepDue').getAttribute('role')"), "status")
-        self.assertEqual(b.eval("document.getElementById('sweepRun').textContent"), "Run sweep")
+        self.assertEqual(b.eval("document.getElementById('sweepRun').textContent"), "Check now")
         self.assertEqual(b.eval("document.getElementById('sweepDue').nextElementSibling.id"), "tBrief")      # between the day band and the sections
         self.assertTrue(b.eval("!!document.querySelector('#v-today > .dayband ~ #sweepDue')"))
-        self.assertEqual(b.eval("document.getElementById('sweepX').getAttribute('aria-label')"), "Dismiss until the next sweep is due")   # #243
+        self.assertEqual(b.eval("document.getElementById('sweepX').getAttribute('aria-label')"), "Dismiss until the next check is due")   # #243
 
     def test_the_button_sends_sweep_like_a_typed_one(self):
         b = self.b
@@ -81,7 +81,7 @@ class SweepDue(DueCase):
         b.eval("document.getElementById('liveAlert').classList.add('on')")    # what the page does when the server isn't reachable
         b.pump(0.1)
         self.assertFalse(b.eval("getComputedStyle(document.getElementById('sweepRun')).display!=='none'"))
-        self.assertIn("Needs the live server", b.eval("document.querySelector('#sweepDue .sd-off').innerText"))
+        self.assertIn("creaite isn't running", b.eval("document.querySelector('#sweepDue .sd-off').innerText"))
 
     def test_hidden_in_the_development_repository(self):
         b = self.b
@@ -107,7 +107,7 @@ class SweepDismiss(DueCase):
         b = self.b
         self.today()
         self.assertTrue(b.eval("document.getElementById('sweepX').classList.contains('ib')"))
-        self.assertEqual(b.eval("document.getElementById('sweepX').dataset.tip"), "Dismiss until the next sweep is due")
+        self.assertEqual(b.eval("document.getElementById('sweepX').dataset.tip"), "Dismiss until the next check is due")
         self.assertTrue(b.eval("!!document.querySelector('#sweepX svg')"))
         self.assertEqual(b.eval("getComputedStyle(document.getElementById('sweepX')).borderTopColor"), "rgba(0, 0, 0, 0)")
         self.assertTrue(b.eval("(()=>{const x=document.getElementById('sweepX').getBoundingClientRect(), r=document.getElementById('sweepRun').getBoundingClientRect(), box=document.getElementById('sweepDue').getBoundingClientRect(); return x.left>r.right && box.right-x.right<40;})()"))
@@ -158,7 +158,7 @@ class SweepDismiss(DueCase):
         b.click("#sweepRun")
         b.pump(0.2)
         self.assertEqual(b.eval("window.SENT"), "sweep")
-        self.assertTrue(b.eval("!!document.getElementById('sweepX')"))        # the x doesn't get in Run sweep's way
+        self.assertTrue(b.eval("!!document.getElementById('sweepX')"))        # the x doesn't get in Check now's way
 
     def test_storage_failing_is_harmless(self):
         b = self.b

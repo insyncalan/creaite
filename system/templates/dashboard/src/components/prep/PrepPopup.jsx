@@ -67,7 +67,7 @@ export function PrepPeek(p) {
   const { mkey: key, day, title, bits, plan, page, pageWhen, live, id } = p;
   const dated = /^\d{4}-\d{2}-\d{2}\|/.test(key) ? key : `${day}|${key}`;
   useEffect(() => { loadPeek(dated); }, [dated]);
-  const pk = peeks.value[dated], L = pk && pk.lines, off = live ? undefined : "Needs the live server";
+  const pk = peeks.value[dated], L = pk && pk.lines, off = live ? undefined : "creaite isn’t running";
   return (
     <div class="dmpop prpeek" role="dialog" id={id} ref={/** @type {any} */ (p.panel)} aria-label={`Prep peek for ${title}`}
       onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); p.onEsc(); } }}>

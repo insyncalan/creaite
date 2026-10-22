@@ -117,7 +117,7 @@ class CloseDayCard(LiveBrowserCase):
             b.click("#closeDlg [data-cdmore]")
             b.wait("!document.querySelector('#closeDlg [data-cdmore]')")
         t = self.text()
-        for want in ("Tom to share the UAT plan", "New", "Send the cutover checklist", "Action due today", "Recording 2026-10-13.vtt",
+        for want in ("Tom to share the UAT plan", "New", "Send the cutover checklist", "Action due today", "Recording 2026-10-13",
                      "Transcript ready", "Draft the pilot charter"):
             self.assertIn(want, t)
         first = b.eval("document.querySelector('#closeDlg .cdloose li').dataset.ref")
@@ -205,7 +205,7 @@ class CloseDayCard(LiveBrowserCase):
         self.to_step("Tomorrow")
         self.assertIn("closing now closes when it finishes", self.text())
         b.click("#closeDlg [data-dcdone]")
-        b.wait(f"/Closing when the sweep finishes/.test({CARD}.textContent)", 10)
+        b.wait(f"/Closing when the check finishes/.test({CARD}.textContent)", 10)
         self.assertFalse((self.v.root / "system/staging/day-closed.json").exists())
         b.wait(f"/Day closed at 17:30/.test({CARD}.textContent)", 30)
         b.wait("/Day closed at/.test(document.getElementById('dayClose').getAttribute('aria-label'))", 45)

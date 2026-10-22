@@ -82,13 +82,26 @@ export const SVW={ async read(p){ const r=await api("/api/fs",{op:"read",path:p}
 export const viaServer=()=>SERVED&&shared.LIVE;
 shared.VW={ read:(...a)=>(viaServer()?SVW:FVW).read(...a), write:(...a)=>(viaServer()?SVW:FVW).write(...a), remove:(...a)=>(viaServer()?SVW:FVW).remove(...a),
   exists:(...a)=>(viaServer()?SVW:FVW).exists(...a), append:(...a)=>(viaServer()?SVW:FVW).append(...a), upload:(...a)=>(viaServer()?SVW:FVW).upload(...a) };
-export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
+/* #291 Tier 1: the server's "can't open <path>" in words (the path is never shown; the server message is unchanged) */
+export const noPath=m=>String(m||"").replace(/^can't open \S.*$/m,"That file isn't in the project folder any more, so it can't be opened.");
+export const oneLine=m=>noPath(m).split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
 /* #92: tracker.py refuses an apply when a file changed after the item was staged ("write: <path> changed since this proposal was
    made"); said in plain words, with what to do. Only the page's wording: tracker.py's refusal is unchanged. */
+/* #291 Tier 1: the meeting or item an apply error names, from Review's own rows (never the proposal's file name) */
+export const applyTitle=(file,ref)=>{ const L=typeof REV!=="undefined"?REV.filter(x=>x.file===file):[], row=L.find(x=>ref!=null&&String(x.ref)===String(ref))||L.find(x=>x.kind==="draft")||L[0], r=(row&&row.rec)||{};
+  return String(r.t||r.title||r.decision||"").replace(/^[A-Z][A-Za-z ]{0,20}: /,"").trim(); };
 export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
-  if(f) return `${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`;
-  /* #275 round 3: the Track check's refusal, without tracker.py's header (the page says "Apply stopped" itself) or the proposal's file */
-  if(!/in the minutes' Track column|the minutes record can't be read/.test(t)) return t;
+  if(f) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Review.";
+  /* #275 round 3: the Track check's refusal, without tracker.py's header or the proposal's file */
+  if(!/in the minutes' Track column|the minutes record can't be read/.test(t)){
+    /* #291 Tier 1: a stop in plain words: which suggestion, never the file, the field list or the script's header */
+    const miss=t.match(/(proposed-[^\s\/\\:]+\.json) \w+: copy: source not found/);
+    if(miss){ const n=applyTitle(miss[1]); return `The minutes${n?` for ${n}`:""} couldn't be filed: the transcript isn't in your inbox any more. Nothing was saved.`; }
+    const bad=[...t.matchAll(/(proposed-[^\s\/\\:]+\.json) item (\d+): /g)];
+    if(bad.length){ const one=bad.length===1, n=applyTitle(bad[0][1],bad[0][2]);
+      return `${one?"One suggestion":bad.length+" suggestions"}${one&&n?` (${n})`:""} couldn't be saved. ${one?"It needs":"They need"} fixing in Review. Nothing was saved.`; }
+    if(/Apply (stopped|failed)|proposed-\S+\.json/.test(t)) return "Nothing was saved. Something in the suggestions needs fixing in Review.";
+    return t; }
   return t.split("\n").map(x=>x.trim()).filter(x=>x&&!/^Apply stopped\. Nothing was written\.$/.test(x))
     .map(x=>x.replace(/^proposed-\S+\.json (item \d+|minutes): /,(a,w)=>w==="minutes"?"":"an item was ")).join("\n"); };
 /* #280: an apply that stopped because of other, older staged proposals (an older server applied everything staged with a save).
@@ -105,11 +118,11 @@ export function applyBlockers(msg,own){ const t=String(msg||""); if(!/Apply stop
 export async function proposalLabel(file){ let data=null; try{ data=JSON.parse(await shared.VW.read("system/staging/"+file)); }catch(e){ data=null; }
   const b=data&&(data.meeting||data.report), title=b&&b.title?String(b.title):"", made=(b&&b.date)||(data&&data.created)||(file.match(/\d{4}-\d{2}-\d{2}/)||[""])[0];
   const when=fd(String(made).slice(0,10));
-  return title?`${title}${when?" ("+when+")":""}`:`a proposal staged ${when||"earlier"}`; }
+  return title?`${title}${when?" ("+when+")":""}`:`a suggestion from ${when||"earlier"}`; }
 /* #280: the words: an older proposal is stopping it, not his edit; every blocking file named; Intake offered */
 export async function blockerWords(list){ const parts=[];
-  for(const b of list) parts.push(`${await proposalLabel(b.file)}: ${b.why.join("; ")}`);
-  return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older staged proposals are`:"an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Intake, then save again.`; }
+  for(const b of list) parts.push(await proposalLabel(b.file));
+  return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older suggestions are`:"an older suggestion is"} stopping the save. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Intake, then save again.`; }
 /* Intake (the one page for Review since #232), with the blocking proposals' meeting open and the first blocking item in the peek
    (an item, not its minutes: the refusal names items, and minutes open in their own view) */
 export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done), first=L.find(x=>!["draft","files"].includes(x.kind))||L[0];
@@ -142,15 +155,15 @@ export async function refreshRecords(ids){ if(!SERVED) return false; return awai
 export let APPLYT=null, APPLYN=0;
 export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
   const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
-  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:oneLine(applyWords(r.message)),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
   if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }
   openChat(); const m=res.message||""; let acts="";
   if(/possible internal content/.test(m)) acts=`<button class="mini" data-rv="retry">I've edited the draft: check again</button><button class="mini" data-rv="as-staged">File it anyway</button>`;
-  else if(/differs from the staged items/.test(m)) acts=(/--sync/.test(m)?`<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>`:"")+(r.ref==="meeting"?`<button class="mini" data-rv="refresh">Rebuild the items from the draft</button>`:"")+`<button class="mini" data-rv="as-staged">Keep the items as staged</button>`;
+  else if(/differs from the staged items/.test(m)) acts=(/--sync/.test(m)?`<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>`:"")+(r.ref==="meeting"?`<button class="mini" data-rv="refresh">Rebuild from the minutes</button>`:"")+`<button class="mini" data-rv="as-staged">Keep the items as they are</button>`;
   /* review.py speaks to Claude Code ("2: …, or say “approve 2 --as-staged”"); here the buttons do that */
-  await say(m.replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/,? or say “[^”]*”\.?/g,".").replace(/\n\s*\(say [^)]*\)/g,"").trim(),acts);
+  await say(m.replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/,? or say “[^”]*”\.?/g,".").replace(/\n\s*\(say [\s\S]*\)\s*$/,"").replace(/not approved — the draft differs from the staged items:/,"these minutes don't match the items waiting in Review:").trim(),acts);
   $$("#chLog [data-rv]").forEach(b=>b.onclick=()=>{ $$("#chLog [data-rv]").forEach(x=>x.disabled=true); if(b.dataset.rv==="refresh"){ refreshItems(r); return; } reviewViaServer(r,decision,b.dataset.rv==="retry"?modes:[...(modes||[]),b.dataset.rv]); }); }
 /* re-extract: rebuild a meeting's proposed items from its edited draft */
 export async function refreshItems(r){ const res=await api("/api/refresh",{file:r.file}); await reloadData();
@@ -365,11 +378,11 @@ document.addEventListener("keydown",e=>{ if(shared.VIEW!=="work"||!(e.metaKey||e
   e.preventDefault(); if(!shared.UNDO){ snack("Nothing to undo"); return; } const u=shared.UNDO; shared.UNDO=null; hideSnack(); u(); });
 }
 export const DIAG={level:"info",days:0,errors:[],last24:0,loaded:false};   /* declared before status, which runs at load */
-export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE==="ok"?"":html`<button class="mini" id="vaultBtn">${shared.VSTATE==="prompt"?"Reconnect vault":shared.VSTATE==="unsupported"?"Read-only: use Chrome":"Connect vault"}</button>`}${shared.HELD.length?html`<span class="pend">${shared.HELD.length} held</span>`:""}`);   /* BL-71: only what needs an action; Live moved to the rail */
+export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE==="ok"?"":html`<button class="mini" id="vaultBtn">${shared.VSTATE==="prompt"?"Reconnect your creaite folder":shared.VSTATE==="unsupported"?"Read-only: use Chrome":"Connect your creaite folder"}</button>`}${shared.HELD.length?html`<span class="pend">${shared.HELD.length} held</span>`:""}`);   /* BL-71: only what needs an action; Live moved to the rail */
   $("#liveAlert").classList.toggle("on",!shared.LIVE); $("#liveAlert").classList.toggle("found",shared.LIVELINK);
   if(ALERT0===null) ALERT0=$("#liveAlert").innerHTML;
   if(!(shared.LIVELINK&&!SERVED)){ if($("#liveAlert").innerHTML!==ALERT0) putHTML($("#liveAlert"),raw(ALERT0)); }
-  else putHTML($("#liveAlert"),html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save and apply directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude Code on this laptop, working in your vault"}:{status:"off",word:"Live server not running — commands will be copied instead"});   /* BL-316: the StatusDot block */ 
+  else putHTML($("#liveAlert"),html`<b>creaite is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude, working in your creaite folder"}:{status:"off",word:"creaite isn’t running"});   /* BL-316: the StatusDot block */ 
   if(!shared.LOADING) errBanner(); }
 /* BL-86: the installed app. The service worker shows an offline page when the server is stopped; the page says "still here"
    every 10 seconds, so a server the launcher started can stop itself when the last window closes. */
@@ -383,7 +396,7 @@ export function apply(what,doIt,undoIt,by="You, in the dashboard",ids=[]){
   refreshAll(); snack(shared.LIVE?`${what} — saved and applied`:`${what} — saved; applies when the server is back`,()=>{ undoIt(); const i=shared.ACT.indexOf(entry); if(i>=0) shared.ACT.splice(i,1); refreshAll(); });
 }
 shared.PENDING=[];
-export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); return; }
+export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):oneLine(applyWords(r.message)),r.ok?()=>undoApply(r.apply_id):null); return; }
   snack("Say “apply” in Claude Code, or start the live server"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */

@@ -116,7 +116,7 @@ class Page(LiveBrowserCase):
         self.open_setup()
         before = (self.v.root / "dashboard.html").stat().st_mtime if (self.v.root / "dashboard.html").exists() else 0
         b.click("#suRebuild")
-        self.assertIn("tracker-view.xlsx", b.eval("document.getElementById('suConfirm').textContent"))
+        self.assertIn("Excel view", b.eval("document.getElementById('suConfirm').textContent"))
         b.click("[data-sucancel]")
         self.assertFalse(b.eval("!!document.getElementById('suConfirm')"))
         b.click("#suRebuild")
@@ -127,10 +127,7 @@ class Page(LiveBrowserCase):
     def test_microsoft_365_copy_and_check_again(self):
         b = self.b
         self.open_setup()
-        self.clip()
-        b.click('#suCard [data-sucopy="m365"]')
-        b.wait("CLIP.length")
-        self.assertEqual(b.eval("CLIP[0]"), "setup: check Microsoft 365")
+        self.assertFalse(b.eval("!!document.querySelector('#suCard [data-sucopy=\"m365\"]')"), "#291: no typed command on the page")
         b.click('#suCard [data-sucheck="m365"]')
         b.wait("/Not confirmed yet/.test(document.getElementById('snackT').textContent)", 10)
         (self.v.root / "system/staging/last-sweep.txt").write_text("2026-10-10 07:05\n", encoding="utf-8")   # the first sweep has run
@@ -143,7 +140,7 @@ class Page(LiveBrowserCase):
         b = self.b
         self.open_setup()
         self.clip()
-        b.click('#suCard [data-sucopy="launch"]')
+        b.click('#diagCard [data-sucopy="launch"]')           # #291 Tier 1: the one step to type lives in Diagnostics
         b.wait("CLIP.length")
         self.assertTrue(b.eval("CLIP[0]").endswith("&& python3 system/scripts/launch.py make-launcher"))
         self.assertIn(str(self.v.root.resolve()).replace("/private", ""), b.eval("CLIP[0]").replace("/private", ""))
@@ -158,10 +155,7 @@ class Page(LiveBrowserCase):
         b = self.b
         b.eval("go('today')")
         b.wait("document.querySelector('#setupList [data-sucheck=\"m365\"]')")
-        self.clip()
-        b.click('#setupList [data-sucopy="m365"]')
-        b.wait("CLIP.length")
-        self.assertEqual(b.eval("CLIP[0]"), "setup: check Microsoft 365")
+        self.assertFalse(b.eval("!!document.querySelector('#setupList [data-sucopy]')"), "#291: no typed command on Today")
         self.assertIn("can’t", b.eval("document.querySelector('#setupList li').textContent"))
         (self.v.root / "system/staging/last-sweep.txt").write_text("2026-10-10 07:05\n", encoding="utf-8")
         b.click('#setupList [data-sucheck="m365"]')

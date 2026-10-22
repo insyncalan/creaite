@@ -12,7 +12,7 @@ import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
 export const IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
-export const IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
+export const IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "suggestions to check", done: "Done", running: "Drafting in the background" };
 export const IR_GROUP_HEAD = {
   needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes."],
   routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one."],
@@ -24,8 +24,10 @@ const ageWords = (/** @type {number} */ d) => (d === 0 ? "today" : d === 1 ? "1 
 
 /** A file's size in words (the Intake file list's). @param {number} n bytes */
 export const irSize = n => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round((n || 0) / 1024))} KB`);
-/** ".vtt · 1 KB". @param {any} m */
-export const irFileFacts = m => `.${m.ext || String(m.title || "").split(".").pop()} · ${irSize(m.size)}`;
+/** "Teams transcript · 1 KB": the kind of file in words, never its extension. @param {any} m */
+export const irFileFacts = m => { const x = String(m.ext || String(m.title || "").split(".").pop()).toLowerCase(),
+    kind = { vtt: "Teams transcript", srt: "Teams transcript", docx: "Word document", doc: "Word document", txt: "Text file", pdf: "PDF" }[x];
+  return `${kind ? kind + " · " : ""}${irSize(m.size)}`; };
 /** What running a row says: someone else's minutes are read for work items; anything else is drafted. @param {any} m */
 export const irRunningWords = m => (irFileKind(m) === "minutes" && m.src === "upload" ? "Reading for work items" : IR_STATE_WORDS.running);
 
@@ -38,7 +40,7 @@ export function irStateWords(m, n) {
     if (state === "done") return m.already ? "Already processed" : IR_STATE_WORDS.done;
   }
   const tx = state === "waiting" && IR_TX_WORDS[/** @type {keyof IR_TX_WORDS} */ (m.tx)] ? ` · ${IR_TX_WORDS[/** @type {keyof IR_TX_WORDS} */ (m.tx)]}` : "";
-  const base = state === "proposals" ? `${n} ${IR_STATE_WORDS.proposals}` : `${IR_STATE_WORDS[/** @type {keyof IR_STATE_WORDS} */ (state)] || ""}${tx}`;
+  const base = state === "proposals" ? (n === 1 ? "1 suggestion to check" : `${n} ${IR_STATE_WORDS.proposals}`) : `${IR_STATE_WORDS[/** @type {keyof IR_STATE_WORDS} */ (state)] || ""}${tx}`;
   const age = state === "ready" || state === "proposals" ? ` · ${ageWords(m.age)}` : "";
   return `${base}${age}${m.later_back ? " · back from Later" : ""}`;
 }

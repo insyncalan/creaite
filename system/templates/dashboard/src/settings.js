@@ -31,7 +31,7 @@ import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG }
 import { draftOn } from "./review.js";
 import { irTick } from "./stores/intakeReview.js";
 import { railIconSize, railLabelsOn, railSizeNorm, setRailCount } from "./stores/rail.js";
-import { personPromises, plur, projLink, renderToday, tl } from "./today.js";
+import { personPromises, plur, projLink, renderToday, SU_LAUNCH, suCmd, tl } from "./today.js";
 import { cell, FDEFS, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
 /* One page: the categories on the left, the settings on the right. SETSECTIONS is the one list the page is built from.
@@ -49,7 +49,7 @@ import { cell, FDEFS, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, pers
    left Settings (v2.6, the Settings line): People is the People page (#248), Workstreams and Archive are on each project's
    settings page (#247), and Show archived is on the Projects page (and in Work and reports › Opening views). Their old
    addresses (#settings/people, admin, projects, workstreams) open the new places (SETMOVED, settingsMoved). */
-export const SETCATS=[["essentials","Essentials"],["work","Work and reports"],["sweep","Sweep and Intake"],["reports","Reports and minutes"],
+export const SETCATS=[["essentials","Essentials"],["work","Work and reports"],["sweep","Mail, Teams and Intake"],["reports","Reports and minutes"],
   ["ai","AI drafts"],["look","Look and help"],["advanced","Advanced"],["health","Health"]];
 export const ADVSUBS=[["review","Review and warnings"],["state","Current state"],["arch","Archiving and backups"],["folders","Folders and OneDrive"],["server","Server, search and logs"]];
 /** The old Settings addresses whose sections moved out (v2.6): where each one opens now. "ws" is a project's settings page at
@@ -135,13 +135,13 @@ export const SETSECTIONS=[
  {id:"files",cat:"work",title:"Files",groups:["Files"],kw:"files page documents project minutes transcripts reports search intake portfolio excel export",
   render:()=>row("Show project documents",sw("filesDocs"),"Off by default: the Files page lists minutes, transcripts and reports (Weekly, Adhoc and Steerco), and skips the rest of a large engagement folder. Search still reads documents. Steerco is only read; creaite files nothing there.")},
  moreSection("work"),
- {id:"sweep",cat:"sweep",title:"Sweep",groups:["Sweep"],kw:"sweep mail teams inbox sent items chats channels calendar look-back possible matches ignore rules due from promises",
-  render:()=>row("First-run look-back (days)",nm("lookback"),"When the sweep runs and what it reads are in Essentials › Your day")
+ {id:"sweep",cat:"sweep",title:"Checking mail and Teams",groups:["Checking mail and Teams"],kw:"sweep check mail teams inbox sent items chats channels calendar look-back possible matches ignore rules what creaite skips due from promises",
+  render:()=>row("First-run look-back (days)",nm("lookback"),"When the check runs and what it reads are in Essentials › Your day")
    +row("Show possible matches",sw("possible"))+'<div id="ignMgr"></div>',
   after:()=>renderIgnore()},
  moreSection("sweep"),
  {id:"closeday",cat:"sweep",title:"Close the day",groups:["Close the day"],kw:"close the day evening catch up catch-up sweep before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
-  render:()=>row("Catch up when the last sweep is older than (minutes)",nm("catchupAfter"),"A sweep more recent than this says “Caught up” instead, with Sweep again. Whether the card catches up is in Essentials › Your day")},
+  render:()=>row("Catch up when the last check is older than (minutes)",nm("catchupAfter"),"A check more recent than this says “Caught up” instead, with Check again. Whether the card catches up is in Essentials › Your day")},
  moreSection("reports"),
  {id:"reminders",cat:"reports",title:"Reminders",groups:["Reminders"],kw:"reminders weekly report day dismissed restore",   /* v2.6 (#246): each project's client report rhythm is in that project's settings */
   render:()=>row("Reminders on",sw("remindersOn"),"The weekly report's day and time are in Essentials › Your day; each project's client report rhythm is in that project's settings")
@@ -153,23 +153,23 @@ export const SETSECTIONS=[
   render:()=>row("Show the first-run help again",'<button type="button" class="btn" id="helpAgain" data-setkey="help.start_seen">Show it again</button>',"Help › Start here opens by itself the next time creaite starts, as it did the first time")},
  moreSection("look"),
  {id:"thresholds",cat:"advanced",sub:"review",title:"Review and health",groups:["Review","Health thresholds"],kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
-  render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next proposal after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
-   +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a proposal has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
+  render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next suggestion after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
+   +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a suggestion has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
    +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
  {id:"warnings",cat:"advanced",sub:"review",title:"Early warnings",groups:["Early warnings"],elid:"warnSettings",kw:"early warnings signals re-dated repeat risk milestone slip long open key person vip dependency",render:()=>warnSectionHtml()},
  moreSection("advanced","review"),moreSection("advanced","state"),moreSection("advanced","arch"),moreSection("advanced","folders"),moreSection("advanced","server"),
  {id:"health",cat:"health",title:"Health",kw:"health check problems fix",
   mount:el=>render(h(Health,null),el),match:()=>false},
  moreSection("health"),                                         /* Health check: the dismissed problems' Reset; Stop stays last */
- {id:"live",cat:"health",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
-  render:()=>row("Status",shared.LIVE?'<span class="h-ok">Running</span>':'<span class="h-bad">Stopped</span>',"127.0.0.1, required")
-   +row("Mail, Teams and data",esc(`${SWEPT==="never"?"Mail and Teams never swept":`Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0,16)}`))
-   +row("Port",nm("port"),"The creaite app belongs to this port: if you change it, install the app again and reconnect the vault")
-   +`<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
+ {id:"live",cat:"health",title:"creaite and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
+  render:()=>row("Status",shared.LIVE?'<span class="h-ok">Running</span>':'<span class="h-bad">Stopped</span>',"On this computer, required")
+   +row("Mail, Teams and data",esc(`${SWEPT==="never"?"Mail and Teams never checked":`Mail and Teams last checked ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0,16)}`))
+   +row("Port",nm("port"),"The creaite app belongs to this port: if you change it, install the app again and reconnect your creaite folder")
+   +`<div class="srow" style="display:block"><div>If creaite stops<small>Reopen the creaite app. Its set-up steps are in Diagnostics</small></div></div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
  {id:"diag",cat:"health",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
  {id:"version",cat:"health",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
- {id:"danger",cat:"health",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
-  render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")}];
+ {id:"danger",cat:"health",title:"Stop creaite",elid:"dangerCard",kw:"stop live server quit",
+  render:()=>row("Stop creaite",'<button class="btn danger" id="liveStop" title="Stops creaite; open it again from its launcher">Stop</button>',"Open creaite again from its launcher. Edits wait until it is running again")}];
 /** The catalogue groups a hand-made card holds (drawn inside it, never as their own card). */
 export const EMBEDDED=()=>SETSECTIONS.flatMap(s=>s.groups||[]);
 /* ===== BL-320 (v1.9.2): Settings, calmer, with Health inside =====
@@ -309,14 +309,13 @@ export const vnum=v=>String(v||"0.0.0").split(".").reduce((a,x)=>a*1000+Number(x
 export const fdt=at=>at?`${fd(at.slice(0,10))} ${at.slice(11,16)}`:"";
 const updStatus=onceFor(2000,()=>api("/api/update/status"));   /* #96 */
 export async function drawUpdates(force){ const c=document.getElementById("updCard"); if(!c) return;
-  if(!viaServer()){ putHTML(c,html`<h2>creaite version</h2><p class="sub">Needs the live server.</p>`); return; }
+  if(!viaServer()){ putHTML(c,html`<h2>creaite version</h2><p class="sub">creaite isn’t running.</p>`); return; }
   const r=await updStatus(force); if(!document.getElementById("updCard")) return;
   if(!r.ok){ putHTML(c,html`<h2>creaite version</h2><p class="sub">${(r.message||"Couldn't read the version.")}</p>`); return; }
   const src=r.releases&&(!r.downloads||vnum(r.releases.version)>=vnum(r.downloads.version))?"releases":(r.downloads?"downloads":null);
   const z=src&&r[src], newer=!!z&&vnum(z.version)>vnum(r.installed);
-  const where=src==="releases"?"system/releases":"Downloads";
   putHTML(c,html`<h2>creaite version</h2>${raw(row("Installed",esc(r.installed==="0.0.0"?"Not set":r.installed)))}${r.dev
-    ?html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>`:html`${raw(row("Update",newer?`<button class="btn primary" id="updReview">Review ${esc(z.version)}</button>`:'<span class="sub">Up to date</span>',newer?`${esc(z.name)} in ${where}`:"Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file",`<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`,"The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r.last?raw(row(`Last update: ${esc(r.last.from)} → ${esc(r.last.to)}`,'<button class="btn" id="updUndo">Undo update</button>',fdt(r.last.at))):""}`}<div id="updPlan"></div>`);
+    ?html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>`:html`${raw(row("Update",newer?`<button class="btn primary" id="updReview">Review ${esc(z.version)}</button>`:'<span class="sub">Up to date</span>',newer?`creaite ${esc(z.version)} is ready to install`:"Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file",`<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`,"The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r.last?raw(row(`Last update: ${esc(r.last.from)} → ${esc(r.last.to)}`,'<button class="btn" id="updUndo">Undo update</button>',fdt(r.last.at))):""}`}<div id="updPlan"></div>`);
   const b=id=>document.getElementById(id);
   if(b("updReview")) b("updReview").onclick=()=>updReview(src,false);
   if(b("updFile")) b("updFile").onclick=()=>b("updPick").click();
@@ -620,7 +619,7 @@ export function igForm(r){ return `<div class="igform" id="igForm"><label for="i
    <label for="igText">Text</label><input type="text" id="igText" value="${esc(r.text||"")}" placeholder="todo, someone@example.com or example.com">
    <div class="igbtns"><button class="btn primary" data-ig="save">Save rule</button><button class="btn" data-ig="cancel">Cancel</button></div></div>`; }
 export function renderIgnore(){ const el=$("#ignMgr"); if(!el) return; const L=SA().ignore||[];
-  putHTML(el,html`<div class="srow" style="display:block"><div>Ignore rules<small>The sweep skips what these match, even when it names a project, and the summary counts what was skipped. A message from someone you follow always comes through, and a thread or meeting you name yourself is never skipped. Matching ignores case.</small></div>
+  putHTML(el,html`<div class="srow" style="display:block"><div>What creaite skips<small>The check skips what these match, even when it names a project, and the summary counts what was skipped. A message from someone you follow always comes through, and a thread or meeting you name yourself is never skipped. Matching ignores case.</small></div>
    <div class="iglist">${L.map((r,i)=>IGEDIT===i?raw(igForm(r)):html`<div class="igrow"><input type="checkbox" class="switch" data-igon="${raw(i)}" ${r.on!==false?"checked":""} aria-label="Use the rule ${r.name}"><div class="igtxt"><b>${r.name}</b>${r.builtin?html` <span class="tag">built in</span>`:""}<small>${igText(r)}</small></div>${r.builtin?"":html`<button class="mini" data-ig="edit" data-i="${raw(i)}">Edit</button><button class="mini" data-ig="del" data-i="${raw(i)}">Delete</button>`}</div>`)}
    ${IGEDIT===-1?raw(igForm({name:"",where:["mail"],field:"subject",how:"begins",text:"",on:true})):""}</div>
    ${IGEDIT===null?html`<button class="btn" data-ig="add" style="margin-top:8px">Add a rule</button>`:""}</div>`);
@@ -841,6 +840,8 @@ export function diagCardHtml(){ const off=SERVED?"":"disabled";
    ${row("Log level",`<select id="diagLevel" ${off}><option value="info" ${DIAG.level==="info"?"selected":""}>info</option><option value="debug" ${DIAG.level==="debug"?"selected":""}>debug</option></select>`,"info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault")}
    ${row("Log folder",`<button class="btn" id="diagOpen" ${off}>Open the folder</button>`,`${DIAG.days} day${DIAG.days===1?"":"s"} of log, in system/logs`)}
    ${row("Report",`<button class="btn" id="diagCopy" ${off}>Copy diagnostics</button>`,"The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths")}
+   <div class="srow" style="display:block"><div>Restart creaite<small>Only if the creaite app can’t be reopened: paste into Terminal</small></div>${cmdBox()}</div>
+   <div class="srow" style="display:block"><div>Make the launcher<small>A small app that opens creaite in its own window: paste into Terminal</small></div>${suCmd(SU_LAUNCH(),"launch",false)}</div>
    ${diagRefusals()}${diagRepeats()}
    <div class="pph" style="margin-top:10px">Latest errors <span class="sub">· last 7 days</span> <button class="mini" id="diagRefresh" ${off}>Refresh</button></div>
    <div id="diagList">${DIAG.errors.length?DIAG.errors.map(diagErr).join(""):'<div class="sub">No errors in the last 7 days.</div>'}</div><div id="diagOut"></div></div>`;

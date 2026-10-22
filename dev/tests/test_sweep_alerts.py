@@ -392,7 +392,7 @@ class VipPageTests(unittest.TestCase):
         self.assertIn("found on start-up, received today 07:12", o["first"][1])
         self.assertIn("Asks to confirm the go-live date.", o["first"][1])
         self.assertTrue(o["order"] & 4)                                                        # Your commitments (and the Intake line at its foot) come before the message card
-        self.assertRegex(o["second"], r"^Intake: .*\d+ proposals? to approve")                  # #245: (the proposals' own order is Review's)
+        self.assertRegex(o["second"], r"^Intake: .*\d+ suggestions? to approve")                  # #245: (the proposals' own order is Review's)
         self.assertIn("to approve", o["second"])                                               # #245: the proposals are counted in the quiet Intake line under Your commitments
         self.assertEqual(o["badge"], "2")                                                      # #236: the message and the proposal row from the same person
         self.assertTrue(o["title"].startswith("(2) "), o["title"])                          # BL-288: a plain count
@@ -774,8 +774,8 @@ class PrepPageStaticTests(unittest.TestCase):
               window.OUT={title, opened, fetched, said:document.body.textContent.includes("The Prep page needs the live server"),
                 go:[g.getAttribute('aria-disabled'), g.dataset.tip, location.hash.startsWith('#prep=')]};""", "prep-static")
             self.assertEqual(errors, [])
-            self.assertEqual(out, {"title": "Needs the live server", "opened": 0, "fetched": 0, "said": True,
-                                   "go": ["true", "Needs the live server", False]})
+            self.assertEqual(out, {"title": "creaite isn’t running", "opened": 0, "fetched": 0, "said": True,
+                                   "go": ["true", "creaite isn’t running", False]})
         finally:
             v.cleanup()
 

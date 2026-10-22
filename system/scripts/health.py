@@ -33,16 +33,16 @@ TIMEOUT = 90
 # The Fix it each kind of problem would offer: (button, what it would run, why it waits for a guard decision, how to do it now).
 FIXES = {
     "launcher": ("Fix it", "system/scripts/run launch.py make-launcher --replace", "runs a command that writes outside the vault "
-                 "(~/Applications); launch.py is on no allow list", "In Terminal: system/scripts/run launch.py make-launcher --replace"),
+                 "(~/Applications); launch.py is on no allow list", "Settings › Health › Diagnostics has the one step to type"),
     "migrate": ("Fix it", "system/scripts/run tracker.py migrate", "changes the record (a RECORD command, BL-267)",
-                "Say \"repair creaite\" in Claude Code, or run system/scripts/run tracker.py migrate"),
+                "Ask Claude to repair creaite"),
     "reinstall": ("Fix it", "system/scripts/run update.py install (the installed release again)", "replaces the engine",
-                  "Settings › Health › creaite version › Reinstall, or say \"update creaite\""),
+                  "Settings › Health › creaite version › Reinstall, or ask Claude to update creaite"),
     "permissions": ("Review", "an edit to .claude/settings.json (permissions.py)", "changes a permission file",
-                    "Say \"setup\" in Claude Code; it shows each rule before changing it"),
+                    "Ask Claude to set creaite up; it shows each rule before changing it"),
     "offsite": ("Make it now", "session.py backup: today's backup and zip, then the newest zip copied into the OneDrive folder",
                 "writes outside the vault", "It is made after the next daily backup, at the first session of the day"),
-    "setup": ("Open set-up", "the cx-setup skill", "runs set-up steps that change files", "Say \"setup\" in Claude Code"),
+    "setup": ("Open set-up", "the cx-setup skill", "runs set-up steps that change files", "Ask Claude to set creaite up"),
     "manual": ("How to fix", "nothing: a step only you can take", "", ""),
 }
 # doctor check id -> (plain words for the line, the fix kind)

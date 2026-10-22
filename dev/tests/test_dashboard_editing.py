@@ -353,7 +353,7 @@ class DashboardEditingTests(unittest.TestCase):
 
     def test_reminder_run_report_now(self):
         menu = self.result["remMenu"]
-        self.assertEqual(menu[0], ["Run report now", True, "Needs the live server"])
+        self.assertEqual(menu[0], ["Run report now", True, "creaite isn’t running"])
         self.assertEqual([m[0] for m in menu[1:]], ["Dismiss for this session", "Dismiss forever"])
 
     def test_workstreams_within_their_project(self):

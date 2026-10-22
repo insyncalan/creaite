@@ -384,8 +384,8 @@ export const DRAFTFEATURES=[["update","Draft the latest update","An action's lat
   ["client","Draft client wording","Plain client messaging from the item's own text, with what was taken out"],
   ["thinking","Suggest the thinking fields","A decision's options and reasoning; a risk's response, impact and likelihood"],
   ["reason","Draft the reason for a health or forecast change","One sentence from the evidence creaite already holds"],
-  ["repeat","Spot repeats of existing items","Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review"],   /* BL-221 (sprint-drafts-extraction) */
-  ["done","Spot items that are probably done","The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished"],   /* BL-218 */
+  ["repeat","Spot repeats of existing items","Marks a suggestion that looks like an item already in your project record; Merge, Keep or Reject in Review"],   /* BL-221 (sprint-drafts-extraction) */
+  ["done","Spot items that are probably done","The mail and Teams check and the minutes suggest closing an open item when a sent mail, reply or meeting shows it finished"],   /* BL-218 */
   ["sharpen","Sharpen a vague action","A clear, verb-first title for a vague action, beside the original; you pick one"]];   /* BL-220 */
 export let DRRUN=null;
 export function draftWhyNot(kind){ const f=DRAFTKIND[kind]||kind, name=(DRAFTFEATURES.find(x=>x[0]===f)||[])[1]||"Drafting";
@@ -443,7 +443,7 @@ document.addEventListener("click",async e=>{ const a=e.target.closest("[data-dro
 /* Settings › AI drafts: a switch per feature, and what Alan has done with each kind of draft (from draft-stats.json) */
 SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="more-ai"),0,{id:"drafts",cat:"ai",title:"AI drafts",groups:["AI drafts"],   /* v2.6 (#246): its own tab; the agenda style joins it */
   kw:"ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
-  render:()=>`<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>`
+  render:()=>`<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a suggestion in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs creaite running.</p>`
     +DRAFTFEATURES.map(([f,l,h])=>row(l,`<input type="checkbox" class="switch" data-drsw="${f}" ${draftOn(f)?"checked":""} aria-label="${esc(l)}">`,h)).join("")
     +`<div class="drstats" id="drStats">${viaServer()?"":"How often each kind of draft is used shows here while the live server runs."}</div>`,
   after:()=>drStatsLoad()});

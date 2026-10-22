@@ -53,7 +53,7 @@ class FileRows(IntakeBase):
     def test_a_transcript_file_row(self):
         t = self.text(VTT)
         self.assertIn("Added today · Likely project: Example Programme", t)              # the project by its name
-        self.assertIn("File ready · .vtt · 1 KB", t)
+        self.assertIn("File ready · Teams transcript · 1 KB", t)
         self.assertIn("Transcript · It will be turned into minutes, then checked for work items.", t)
         self.assertEqual(self.buttons(VTT)[0], "process:Make minutes")
         self.assertNotIn("It is minutes", t)                                               # a .vtt is always a transcript: no switch
@@ -63,7 +63,7 @@ class FileRows(IntakeBase):
 
     def test_a_minutes_file_row(self):
         t = self.text(MIN)
-        self.assertIn(".docx · 1 KB", t)
+        self.assertIn("Word document · 1 KB", t)
         self.assertIn("Minutes · Written by someone else: it will be checked for work items, and no new minutes are drafted.", t)
         self.assertIn("It is a transcript", t)
         self.assertEqual(self.buttons(MIN)[0], "process:Find work items")
@@ -170,7 +170,7 @@ class FileRows(IntakeBase):
         b.wait(f"!!document.querySelector('[data-ircol=arrived] [data-irm=\"' + D.intake_review.meetings.find(m=>m.title==='{VTT}').id + '\"]')")
         card = lambda title: b.eval(f"document.querySelector('[data-ircol=arrived] [data-irm=\"' + D.intake_review.meetings.find(m=>m.title==={json.dumps(title)}).id + '\"]').innerText")  # noqa: E731
         t = card(VTT)
-        for words in ("Added today · Likely project: Example Programme", "File ready · .vtt · 1 KB", "Transcript · It will be turned into minutes", "Make minutes"):
+        for words in ("Added today · Likely project: Example Programme", "File ready · Teams transcript · 1 KB", "Transcript · It will be turned into minutes", "Make minutes"):
             self.assertIn(words, t)
         n = card(NOT)
         self.assertIn("Not sure · Is this a transcript or minutes?", n)
@@ -182,7 +182,7 @@ class FileRows(IntakeBase):
         b.eval(f"document.querySelector('[data-irm=\"{mid}\"]').click()")
         b.wait(f"document.querySelector('[data-irdet]').dataset.irdet==={json.dumps(mid)}")
         d = b.eval("document.querySelector('[data-irdet]').innerText")
-        for words in ("Added today · Likely project: Not sure", "File ready · .docx · 1 KB", "Minutes · Written by someone else", "Find work items"):
+        for words in ("Added today · Likely project: Not sure", "File ready · Word document · 1 KB", "Minutes · Written by someone else", "Find work items"):
             self.assertIn(words, d)
         b.eval("document.querySelector('[data-irview=list]').click()")
 

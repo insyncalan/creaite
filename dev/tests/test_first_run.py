@@ -1,5 +1,5 @@
 """BL-156: first run. On a vault that hasn't finished set-up, Today shows a short checklist (Connect Microsoft 365, Add a
-project, Add people, Run the first sweep, Open Intake), each with a button that does it or opens where it is done, ticked as it
+project, Add people, Run the first check, Open Intake), each with a button that does it or opens where it is done, ticked as it
 is done; it goes when all are ticked or when dismissed (Settings › Reminders › Restore brings it back). Help and the first-day
 guide offer the launcher first. A real browser against the real live server.
 
@@ -23,9 +23,9 @@ class FirstRun(LiveBrowserCase):
         b.eval("go('today')")
         b.pump(0.3)
         steps = json.loads(b.eval(STEPS))
-        self.assertEqual([s[0] for s in steps], ["Connect Microsoft 365", "Add a project", "Add people", "Run the first sweep", "Open Intake"])
+        self.assertEqual([s[0] for s in steps], ["Connect Microsoft 365", "Add a project", "Add people", "Run the first check", "Open Intake"])
         done = {s[0]: s[1] for s in steps}
-        self.assertFalse(done["Run the first sweep"])                          # no sweep yet in a new vault
+        self.assertFalse(done["Run the first check"])                          # no sweep yet in a new vault
         self.assertFalse(done["Connect Microsoft 365"])
         self.assertTrue(done["Add a project"])                                 # the sample vault has projects
         self.assertEqual(b.eval("document.querySelector('#tBrief').firstElementChild.id"), "setupList")

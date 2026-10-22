@@ -557,7 +557,7 @@ def minutes_differences(data, block):
     for k, row in enumerate(parsed["actions"], start=1):
         hit = best(row["text"], actions, 0.75)
         if not hit:
-            diffs.append({"msg": f"Action {k} is in the draft but not staged: {row['text']}"})
+            diffs.append({"msg": f"Action {k} is in the draft but not in Review: {row['text']}"})
             continue
         item = hit[1]
         matched.add(id(item))
@@ -573,10 +573,10 @@ def minutes_differences(data, block):
                 shown_staged = tracker.shown(v.get(field)) if field == "due_date" else v.get(field, "TBC")
                 diffs.append({"item": item, "field": field, "value": draft_value,
                               "msg": f"Action {k} {label}: draft says {shown_draft or 'none'}; "
-                                     f"staged {shown_staged or 'none'}"})
+                                     f"in Review {shown_staged or 'none'}"})
     for text, item in actions:
         if id(item) not in matched:
-            diffs.append({"msg": f"Staged action not in the draft: {text}"})
+            diffs.append({"msg": f"An action in Review isn't in the draft: {text}"})
     for kind, table, drafted in (("decision", "decisions", parsed["decisions"]),
                                  ("RAID item", "raid", [f"{d['type'] or 'Risk'}: {d['text']}" for d in parsed["raid"]])):
         staged = [((f"{i['values'].get('type')}: " if table == "raid" else "") +
@@ -584,10 +584,10 @@ def minutes_differences(data, block):
                   for i in live if i["table"] == table]
         for text in drafted:
             if not best(text, staged, 0.6):
-                diffs.append({"msg": f"Draft has a {kind} that isn't staged: {text}"})
+                diffs.append({"msg": f"Draft has a {kind} that isn't in Review: {text}"})
         for text, _ in staged:
             if not best(text, [(t, None) for t in drafted], 0.6):
-                diffs.append({"msg": f"Staged {kind} not in the draft: {text}"})
+                diffs.append({"msg": f"A {kind} in Review isn't in the draft: {text}"})
     return diffs
 
 

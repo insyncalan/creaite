@@ -517,12 +517,12 @@ def new_vault():
     if not tracker.register_projects():
         gaps.append("no projects in the project register")
     if not (paths.load_settings().get("identity") or {}).get("name"):
-        gaps.append("your name isn't set (identity in settings)")
+        gaps.append("your name isn't set")
     claude = paths.ROOT / "CLAUDE.md"
     if claude.exists() and re.search(r"^- Role:\s*$", claude.read_text(encoding="utf-8"), re.M):
-        gaps.append("CLAUDE.md doesn't say your role yet")
+        gaps.append("your role isn't set")
     if gaps:
-        return None, "; ".join(gaps) + ". Say \"setup\" to fill them in"
+        return None, "; ".join(gaps) + ". Add them in Settings › Essentials"
     return True, "projects, name and role set"
 
 
@@ -564,7 +564,7 @@ def offsite_backup():
     import tracker
     d = tracker.offsite_dir()
     if d is None:
-        return True, "not used (the projects are in the vault)"
+        return True, "not used (your projects are in the creaite folder)"
     problem = offsite_unwritable(d)
     if problem:
         return None, problem
@@ -612,7 +612,7 @@ def backup_check():
     age = (backup.today() - date.fromisoformat(day)).days
     if age > backup.VERIFY_EVERY_DAYS + 1:
         return None, f"last passed {backup.shown(day)}, {age} days ago: it runs with the daily backup at the first session of the day"
-    return True, f"passed {backup.shown(day)} ({', '.join(v.get('checked') or []) or 'nothing to check yet'})"
+    return True, f"passed {backup.shown(day)}"
 
 
 def tidy_up():

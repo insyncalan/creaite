@@ -132,7 +132,7 @@ export async function approveRoutineTracked(m){ const v=await openMinutesRecord(
   const putBack=async why=>{ const pb=made?await trackPutBack(v.path,tr.done||[]):{ok:true,message:""}; await reloadData();
     snack(`Approved 0 items from these minutes · ${why}${made?(pb.ok?" · the minutes are as they were":` · the minutes couldn't be put back (${pb.message||"try again"}): open them to check`):""}`); };
   if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ await putBack(out.join(" · ")); return; } }
-  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(`apply stopped: ${oneLine(res.message)}`); return; } }
+  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(oneLine(res.message)); return; } }
   const tail=made?` · ${made} line${made===1?"":"s"} taken out of the minutes or kept as lines only`:"";
   snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}`,
     undo?async()=>{ await undo(); await openMinutesRecord({file:m.file}); await reloadData(); }:null); }

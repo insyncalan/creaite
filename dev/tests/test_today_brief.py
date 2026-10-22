@@ -101,10 +101,11 @@ class LiveIndicatorTests(PageTests):
           LIVELINK=false; setLive(true);
           window.OUT={running,stopped,fileCopy};""")
         self.assertFalse(o["running"]["on"])
-        self.assertTrue(o["stopped"]["on"] and o["stopped"]["copy"] and o["stopped"]["check"])
-        self.assertIn("Live server isn't running", o["stopped"]["text"])
+        self.assertTrue(o["stopped"]["on"] and o["stopped"]["check"])
+        self.assertFalse(o["stopped"]["copy"], "#291 Tier 1: no typed command on the alert")
+        self.assertIn("creaite has stopped", o["stopped"]["text"])
         self.assertTrue(o["fileCopy"]["on"] and o["fileCopy"]["found"])
-        self.assertIn("The live server is running. This copy of the dashboard is the file version", o["fileCopy"]["text"])
+        self.assertIn("creaite is running. This copy of the dashboard is the file version", o["fileCopy"]["text"])
 
     def test_the_top_strip_stays_quiet_and_shows_only_what_needs_an_action(self):
         o = self.probe("""
@@ -112,7 +113,7 @@ class LiveIndicatorTests(PageTests):
           VSTATE="ok"; status(); const quiet=document.getElementById("status");
           window.OUT={held,vault,quiet:[quiet.textContent.trim(),getComputedStyle(quiet).display]};""")
         self.assertEqual(o["held"], "2 held")
-        self.assertEqual(o["vault"], "Reconnect vault")
+        self.assertEqual(o["vault"], "Reconnect your creaite folder")
         self.assertEqual(o["quiet"], ["", "none"])
 
     def test_the_live_server_card_says_when_mail_and_teams_were_swept(self):
@@ -120,7 +121,7 @@ class LiveIndicatorTests(PageTests):
           go("settings","live"); const card=document.getElementById("liveCard");
           window.OUT={text:card.textContent.replace(/\\s+/g," "), swept:SWEPT, data:DATA_AT, fdSwept:fd(SWEPT), fdData:fd(DATA_AT).slice(0,16)};""")
         self.assertIn("Mail, Teams and data", o["text"])
-        self.assertRegex(o["text"], r"Mail and Teams (last swept \d\d-\d\d-\d{4}|never swept) · data as of ")
+        self.assertRegex(o["text"], r"Mail and Teams (last checked \d\d-\d\d-\d{4}|never checked) · data as of ")
         self.assertIn(f"data as of {o['fdData']}", o["text"])
 
 
@@ -346,7 +347,7 @@ class TodayBriefTests(PageTests):
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertIn("4 proposals to approve", o["td"])                                # #245: every proposal is counted in Intake's one quiet line, not listed
+        self.assertIn("4 suggestions to approve", o["td"])                                # #245: every proposal is counted in Intake's one quiet line, not listed
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """

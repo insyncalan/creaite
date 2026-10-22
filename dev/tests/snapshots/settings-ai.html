@@ -8,7 +8,7 @@
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Mail, Teams and Intake</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
 <button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="ai" data-scat="ai">AI drafts</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
@@ -20,7 +20,7 @@
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
 <option value="work">Work and reports</option>
-<option value="sweep">Sweep and Intake</option>
+<option value="sweep">Mail, Teams and Intake</option>
 <option value="reports">Reports and minutes</option>
 <option value="ai" selected="">AI drafts</option>
 <option value="look">Look and help</option>
@@ -33,7 +33,7 @@
 <div class="setstack">
 <div class="card" id="set-drafts" data-sec="drafts">
 <h2>AI drafts</h2>
-<p class="sub" style="margin:0 0 #px">A draft is a suggestion, never a save: it fills a field, a proposal in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs the live server.</p>
+<p class="sub" style="margin:0 0 #px">A draft is a suggestion, never a save: it fills a field, a suggestion in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs creaite running.</p>
 <div class="srow">
 <div>
 <span id="sr#1">Draft the latest update</span>
@@ -73,7 +73,7 @@
 <div class="srow">
 <div>
 <span id="sr#5">Spot repeats of existing items</span>
-<small id="sr#5h">Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review</small>
+<small id="sr#5h">Marks a suggestion that looks like an item already in your project record; Merge, Keep or Reject in Review</small>
 </div>
 <div>
 <input type="checkbox" class="switch" data-drsw="repeat" checked="" aria-label="Spot repeats of existing items">
@@ -82,7 +82,7 @@
 <div class="srow">
 <div>
 <span id="sr#6">Spot items that are probably done</span>
-<small id="sr#6h">The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished</small>
+<small id="sr#6h">The mail and Teams check and the minutes suggest closing an open item when a sent mail, reply or meeting shows it finished</small>
 </div>
 <div>
 <input type="checkbox" class="switch" data-drsw="done" checked="" aria-label="Spot items that are probably done">
@@ -177,6 +177,6 @@
 </div>
 <button class="btn" data-go="help">Open help</button>
 </div>
-<p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+<p class="sub">Settings save instantly, with a backup and a log entry.</p>
 </div>
 </section>
