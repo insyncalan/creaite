@@ -46,4 +46,4 @@ The same two files are on the branch `v261-chainfix` in their own commit ("Golde
 | 11 | `dev/proposals/283-reextract/reach.diff`, then 12 `dev/proposals/283-reextract/live_server.diff` | `reach.py`, `live_server.py` | The `reextract` mode and the Read again routes and run kind | `test_reextract` (six expected failures until applied) |
 
 Apply the pair together, in one command (its README says so), after steps 1 to 10. Both passed `git apply --check` on the chain on 22-10-2026,
-before the 291 and 300 rework; recheck on the final head. Until they are applied, Read again says it couldn't start.
+and again on 23-10-2026 on head 938f500e with steps 1 to 10 applied (test_reextract then has no expected failures; plain-words total 1,079). Until they are applied, Read again says it couldn't start.
