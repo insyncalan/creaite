@@ -53,6 +53,13 @@ class Brand(InternalMark):
         self.assertEqual(creaite_doc.BRAND["LINK"], "0563C1")
         self.assertIn("0563C1", xml)
 
+    def test_the_sizes_and_margins_follow_the_word_template(self):
+        # Word: 10pt body and table text (13.33px), tables 9350 of 9906 twips wide (94.4%), margins 1000 twips side / 900 top (17.6mm / 15.9mm)
+        page = self.html()
+        self.assertIn(".brand{font:13.33px", page)
+        self.assertIn("font-size:13.33px;width:94.4%", page)
+        self.assertIn("margin:15.9mm 17.6mm", page)
+
     def test_word_is_unchanged(self):
         self.approved("actions", "y")
         text = word_text(self.export(FILED, "docx"))
