@@ -808,7 +808,7 @@ class VipEverywhereTests(unittest.TestCase):
         out = run(v, "report.py", "weekly-data", "ABC").stdout
         cls.weekly = json.loads(out[out.index("{"):])                                        # after any "Note:" lines
         cls.out, cls.errors = chrome(v, """const out={}; go("work"); WT="actions"; applyView("open"); renderWork();
-          const rows=()=>[...document.querySelectorAll('#workTbl tbody tr')];
+          const rows=()=>[...document.querySelectorAll('#workTbl tbody tr[data-row]')];   // not the group header rows (#241)
           out.chip=rows().filter(r=>/\\bVIP\\b/.test(r.textContent)).length; out.all=rows().length;
           FX.vip.add("yes"); workChanged(); out.filtered=rows().map(r=>r.querySelector('td[data-f="o"]').textContent.trim()); out.hash=location.hash;
           FX.vip.clear(); workChanged();

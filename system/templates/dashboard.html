@@ -1092,7 +1092,7 @@ a.plink2{color:inherit;text-decoration:underline dotted;text-underline-offset:3p
 #dispBtn.on{border-color:var(--accent)} .bprop{font-size:var(--fs-xs);color:var(--muted);margin-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12ch}
 /* ===== BL-129 (sprint-work-views) ===== group headers in the List and swimlanes on the Board */
 tr.wgh td{background:var(--sunk);padding:6px 12px;font-size:var(--fs-sm);cursor:pointer} tr.wgh.lv2 td{background:var(--surface);padding-left:32px} tr.wgh .wgn{font-weight:600}
-tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;width:20px;padding:0} tr.wgh .wgtog:focus-visible{outline:2px solid var(--accent)} tr.wgh .wgtick{margin:0 6px 0 2px;vertical-align:-2px}
+tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;width:24px;height:24px;padding:0} tr.wgh .wgtog:focus-visible{outline:2px solid var(--accent)} tr.wgh .wgtick{margin:0 6px 0 2px;vertical-align:-2px}
 .bswim{display:grid;gap:12px;width:100%} .blane{border:1px solid var(--line);border-radius:var(--r-md);padding:8px;background:var(--surface)} .blh{display:flex;align-items:center;gap:6px;margin:0 0 8px} .blh h3{margin:0;font-size:var(--fs-sm);font-weight:600}
 .blane.collapsed .blh{margin:0} .blane .bcol{padding-bottom:32px} .blane .bdrop{position:absolute;left:8px;right:8px;bottom:8px;margin:0}   /* no shift while dragging */ .blcols{display:flex;gap:12px;align-items:flex-start;overflow-x:auto;padding-bottom:4px}
 /* ===== BL-130 (sprint-work-views) ===== the field picker and "is not" */
@@ -79897,6 +79897,7 @@ ${d5.text}`);
         "tabTitle",
         "tdToReview",
         "thisWeek",
+        "tipHide",
         "tl",
         "toIso",
         "trackApprove",
