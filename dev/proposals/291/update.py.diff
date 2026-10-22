@@ -1,59 +1,254 @@
+diff --git a/dev/tests/plain_words_baseline.json b/dev/tests/plain_words_baseline.json
+index 7bcfeb97..e9e27f57 100644
+--- a/dev/tests/plain_words_baseline.json
++++ b/dev/tests/plain_words_baseline.json
+@@ -94,9 +94,9 @@
+    "count": 1,
+    "text": "Applied"
+   },
+-  "ask.js | apply | cb300d77ee58": {
++  "ask.js | apply | fa1fe9777e86": {
+    "count": 1,
+-   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
++   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anythin"
+   },
+   "ask.js | live server | 0067b4023192": {
+    "count": 1,
+@@ -254,9 +254,9 @@
+    "count": 1,
+    "text": "Search the vault for “{}”…"
+   },
+-  "ask.js | vault | cb300d77ee58": {
++  "ask.js | vault | fa1fe9777e86": {
+    "count": 1,
+-   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anyth"
++   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anythin"
+   },
+   "build_dashboard.py | sweep | 7baa85f2636f": {
+    "count": 1,
+@@ -946,10 +946,6 @@
+    "count": 1,
+    "text": "- **Decisions needed:** each pending decision with a decision maker and a needed-by date. Yours come"
+   },
+-  "help.md | apply | 2ecab59873b8": {
+-   "count": 1,
+-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+-  },
+   "help.md | apply | 2ff1a4d0ec96": {
+    "count": 1,
+    "text": "- With the live server running, saves are applied straight away. Without it they wait, and the top b"
+@@ -1066,6 +1062,10 @@
+    "count": 1,
+    "text": "2. Later on, **Activity** lists every change: Undo there reverses the latest apply, and ticking olde"
+   },
++  "help.md | apply | bb967800c16b": {
++   "count": 1,
++   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
++  },
+   "help.md | apply | bd5f20b649ab": {
+    "count": 1,
+    "text": "- **Project documents are set aside**: not listed, and not scanned (that is most of a large engageme"
+@@ -1558,10 +1558,6 @@
+    "count": 1,
+    "text": "- **Messages:** above Week ahead, only when there are any: messages from people you follow, as cards"
+   },
+-  "help.md | proposal | 2ecab59873b8": {
+-   "count": 1,
+-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+-  },
+   "help.md | proposal | 313aca0a7c32": {
+    "count": 1,
+    "text": "- **Process** on a ready meeting (or **Make minutes** for a transcript file) loads the transcript an"
+@@ -1710,6 +1706,10 @@
+    "count": 1,
+    "text": "4. **Client wording:** on a client-visible item, **Draft** under **Client messaging** (in **Details*"
+   },
++  "help.md | proposal | bb967800c16b": {
++   "count": 1,
++   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
++  },
+   "help.md | proposal | c1fbcbb0072f": {
+    "count": 1,
+    "text": "- A minutes file from someone else is copied to the project's minutes folder when you approve its pr"
+@@ -1882,10 +1882,6 @@
+    "count": 1,
+    "text": "3. To move the agreed date, press **Rebaseline…**: on **Movement**, choose the new date, who agreed "
+   },
+-  "help.md | stage | 2ecab59873b8": {
+-   "count": 1,
+-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+-  },
+   "help.md | stage | 3909de176248": {
+    "count": 1,
+    "text": "- **Where each sentence came from:** a Current state drafted by Generate or Make it executive shows "
+@@ -1986,6 +1982,10 @@
+    "count": 1,
+    "text": "4. **Client wording:** on a client-visible item, **Draft** under **Client messaging** (in **Details*"
+   },
++  "help.md | stage | bb967800c16b": {
++   "count": 1,
++   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
++  },
+   "help.md | stage | be82c21b8ba9": {
+    "count": 1,
+    "text": "8. **A reload doesn't lose a change.** Staged changes stay staged, and the bar comes back, in every "
+@@ -2074,10 +2074,6 @@
+    "count": 1,
+    "text": "- **Addresses:** each tab (`#settings/essentials`, `#settings/work`, `#settings/advanced`, `#setting"
+   },
+-  "help.md | sweep | 2ecab59873b8": {
+-   "count": 1,
+-   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
+-  },
+   "help.md | sweep | 2eced6d293f9": {
+    "count": 1,
+    "text": "- Promises come from meetings (cx-minutes proposes them; you approve them on Intake) and from you (\""
+@@ -2214,6 +2210,10 @@
+    "count": 1,
+    "text": "- **New items arrive on their own.** A sweep rebuilds the dashboard when it finishes, and an open da"
+   },
++  "help.md | sweep | bb967800c16b": {
++   "count": 1,
++   "text": "- **Typing sweep is your go-ahead:** a message that is only a sweep (`sweep`, `sweep mail for ABC`, "
++  },
+   "help.md | sweep | bed1b2823789": {
+    "count": 1,
+    "text": "2. Open the vault in Claude Code. The first session after 07:00 backs up the tracker, runs the mail "
+@@ -3942,18 +3942,6 @@
+    "count": 1,
+    "text": "system/releases/{} is already there and differs from the published one. Remove it, or check where it"
+   },
+-  "update.py | refused | 4f8ca1c046f9": {
+-   "count": 1,
+-   "text": "Refused: the zip's VERSION file doesn't match its manifest."
+-  },
+-  "update.py | refused | acfdee154faf": {
+-   "count": 1,
+-   "text": "Refused: {} doesn't match its checksum; the zip is damaged or was changed. Download it again."
+-  },
+-  "update.py | refused | b0ba77c1e949": {
+-   "count": 1,
+-   "text": "Refused: the zip doesn't match its manifest or reaches outside the engine ({})."
+-  },
+   "update.py | script | 10f4aa5204ce": {
+    "count": 1,
+    "text": "This is the development repository: use git here, not update.py."
 diff --git a/dev/tests/test_update.py b/dev/tests/test_update.py
-index 4b6219ad..0cac293d 100644
+index 4b6219ad..0b8bd3c1 100644
 --- a/dev/tests/test_update.py
 +++ b/dev/tests/test_update.py
-@@ -251,12 +251,13 @@ class TestInstall(unittest.TestCase):
+@@ -48,7 +48,7 @@ def build_release():
+     return out / f"creaite-{VERSION}.zip"
+ 
+ 
+-def remake(src, dest, version=None, drop=(), add=None, corrupt=None, unlisted=None):
++def remake(src, dest, version=None, drop=(), add=None, corrupt=None, unlisted=None, missing=(), wrong_version=False):
+     """A copy of a release zip with changes, its manifest kept consistent unless corrupt or unlisted is given."""
+     with zipfile.ZipFile(src) as z:
+         content = {n: z.read(n) for n in z.namelist()}
+@@ -60,6 +60,11 @@ def remake(src, dest, version=None, drop=(), add=None, corrupt=None, unlisted=No
+         manifest["version"] = version
+         content["VERSION"] = f"{version}\n".encode()
+     manifest["files"] = {n: update.sha256(d) for n, d in content.items()}
++    for n in missing:                               # listed in the manifest, not in the zip
++        content.pop(n)
++    if wrong_version:                               # the VERSION file disagrees with the manifest (its checksum is right)
++        content["VERSION"] = b"0.0.1\n"
++        manifest["files"]["VERSION"] = update.sha256(content["VERSION"])
+     if corrupt:
+         content[corrupt] = content[corrupt] + b"\n# changed"
+     content.update(unlisted or {})
+@@ -251,12 +256,20 @@ class TestInstall(unittest.TestCase):
  
      def test_refuses_bad_zips(self):
          t = self.v.tmp
-+        PLAIN = "creaite can't install this update: the download is damaged or was changed"   # #291 Tier 1: no file names
++        TOLD = "creaite can't install this update: "
++        UNSAFE = TOLD + "it would change things outside creaite's own files"
++        STRAY = TOLD + "it holds a file its list doesn't show"
++        MISSING = TOLD + "a file its list shows is missing"
++        VERSION = TOLD + "its version number doesn't match its list"
++        SUM = TOLD + "a file doesn't match its checksum"
          cases = {
              "no manifest": (t / "source.zip", "Source code (zip)"),
 -            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), "outside the engine"),
 -            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), "not listed"),
 -            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), "checksum"),
 -            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), "outside the engine"),
-+            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), PLAIN),
-+            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), PLAIN),
-+            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), PLAIN),
-+            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), PLAIN),
++            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), UNSAFE),
++            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), STRAY),
++            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), SUM),
++            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), UNSAFE),
++            "missing": (remake(self.zip, t / "e.zip", missing=["system/scripts/tracker.py"]), MISSING),
++            "version": (remake(self.zip, t / "f.zip", wrong_version=True), VERSION),
          }
          with zipfile.ZipFile(t / "source.zip", "w") as z:
              z.writestr("creaite-main/VERSION", "9.9.9")
+@@ -264,6 +277,10 @@ class TestInstall(unittest.TestCase):
+             r = self.v.update("install", str(path), ok=False)
+             self.assertEqual(r.returncode, 1, label)
+             self.assertIn(message, r.stderr, label)
++            others = [m for m in (UNSAFE, STRAY, MISSING, VERSION, SUM) if m != message]   # each refusal says its own reason
++            if label != "no manifest":
++                self.assertFalse(any(m in r.stderr for m in others), label)
++                self.assertNotIn(".py", r.stderr.replace("creaite-X.Y.Z.zip", ""), label)   # plain words: no file names
+         self.assertEqual((self.v.root / "VERSION").read_text().strip(), "0.9.0")
+         self.assertEqual((self.v.root / "CLAUDE.md").read_text(), OWN_CLAUDE)
+ 
 diff --git a/system/scripts/update.py b/system/scripts/update.py
-index ac5505d0..bcaa161c 100644
+index ac5505d0..e75a7e76 100644
 --- a/system/scripts/update.py
 +++ b/system/scripts/update.py
-@@ -58,6 +58,10 @@ SYNCED = re.compile(r"/(OneDrive[^/]*|iCloud Drive[^/]*|Mobile Documents|Library
+@@ -58,6 +58,25 @@ SYNCED = re.compile(r"/(OneDrive[^/]*|iCloud Drive[^/]*|Mobile Documents|Library
                      re.I)                          # local only: a vault never lives in a synced folder
  
  
-+# #291 Tier 1: said in plain words, never a file name; "checksum" stays so a person can search for it
-+DAMAGED = "creaite can't install this update: the download is damaged or was changed (a checksum doesn't match). Download it again."
++# #291 Tier 1: one plain line per refusal, never a file name; the member names go to the debug log (paths are allowed there)
++TOLD = "creaite can't install this update: "
++STRAY = TOLD + "it holds a file its list doesn't show. Download it again."
++MISSING = TOLD + "a file its list shows is missing. Download it again."
++UNSAFE = TOLD + "it would change things outside creaite's own files, so it was refused. Download creaite-X.Y.Z.zip again from the release page."
++WRONG_VERSION = TOLD + "its version number doesn't match its list. Download it again."
++BAD_CHECKSUM = TOLD + "a file doesn't match its checksum, so the download is damaged or was changed. Download it again."
++
++
++def refuse(message, why, names=()):
++    """Raise the plain line; record the real reason and up to five member names in the debug log (never raises)."""
++    try:
++        import log as debuglog
++        debuglog.warn("update", f"release refused: {why}" + (": " + ", ".join(sorted(set(names))[:5]) if names else ""))
++    except Exception:
++        pass
++    raise UpdateError(message)
 +
 +
  class UpdateError(Exception):
      pass
  
-@@ -299,18 +303,14 @@ def read_release(zip_path):
+@@ -298,19 +317,19 @@ def read_release(zip_path):
+         missing = [n for n in files if n not in names]
          unsafe = [n for n in names + list(files) if n not in (paths.RELEASE_MANIFEST, BOOTSTRAP) and
                    (n.startswith("/") or "\\" in n or ".." in n.split("/") or not is_engine(n))]
-         if stray or missing or unsafe:
+-        if stray or missing or unsafe:
 -            raise UpdateError("Refused: the zip doesn't match its manifest or reaches outside the engine ("
 -                              + "; ".join(f"{label}: {', '.join(sorted(set(v))[:5])}" for label, v in
 -                                          (("not listed", stray), ("missing", missing), ("outside the engine", unsafe))
 -                                          if v) + ").")
-+            raise UpdateError(DAMAGED)
++        if unsafe:
++            refuse(UNSAFE, "outside the engine", unsafe)
++        if stray:
++            refuse(STRAY, "not listed", stray)
++        if missing:
++            refuse(MISSING, "missing", missing)
          if "VERSION" not in files or z.read("VERSION").decode("utf-8").strip() != manifest["version"]:
 -            raise UpdateError("Refused: the zip's VERSION file doesn't match its manifest.")
-+            raise UpdateError(DAMAGED)
++            refuse(WRONG_VERSION, "VERSION doesn't match the manifest")
          content = {}
          for n, digest in files.items():
              data = z.read(n)
              if sha256(data) != digest:
 -                raise UpdateError(f"Refused: {n} doesn't match its checksum; the zip is damaged or was changed. "
 -                                  "Download it again.")
-+                raise UpdateError(DAMAGED)
++                refuse(BAD_CHECKSUM, "checksum mismatch", [n])
              content[n] = data
      content.pop(BOOTSTRAP, None)                   # checked like the rest, but never installed
      return manifest, content
