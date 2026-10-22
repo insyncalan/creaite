@@ -3738,6 +3738,8 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
 .wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
 .wr-chg{margin-top:6px;max-width:100%} .wr-hcol .dd{display:block} .wr-hcol .btn.sm{width:100%;justify-content:center}
+.wr-hcol .btn.sm.wr-chgi{width:24px;height:24px;min-height:0;padding:0;margin:4px 0 0 auto;justify-content:center;border-color:transparent;background:none;color:var(--rp-grey);line-height:0}
+.wr-chgi .i{width:14px;height:14px} .wrsheet .page .btn.wr-chgi{background:none;border-color:transparent} .wrsheet .page .btn.wr-chgi:hover,.wrsheet .page .btn.wr-chgi[aria-expanded="true"]{background:var(--rp-soft);color:var(--rp-ink)}
 .wrsheet .page .btn{background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule)} .wrsheet .page .btn:hover{background:var(--rp-soft)}
 .wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:var(--fs-lg);line-height:1.35;margin-bottom:6px}
 .wr-last{font-size:var(--fs-xs);color:var(--rp-grey);margin-top:4px}
@@ -42945,7 +42947,7 @@ ${s5}`;
           flag,
           trend: null,
           flagCls: "crflag",
-          change: /* @__PURE__ */ u4("button", { type: "button", class: "btn sm wr-chg", ref: btn, "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", "data-crflag": true, onClick: () => open2 ? setOpen2(false) : begin(), children: "Change" }),
+          change: /* @__PURE__ */ u4("button", { type: "button", class: "btn sm wr-chg wr-chgi", ref: btn, "aria-label": "Change health", title: "Change health", "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", "data-crflag": true, onClick: () => open2 ? setOpen2(false) : begin(), children: /* @__PURE__ */ u4(Icon, { name: "pencil" }) }),
           why: /* @__PURE__ */ u4(S2, { children: [
             edit && inFlag && flag !== inFlag ? /* @__PURE__ */ u4("span", { class: "crdif", title: `Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`, "data-crdif": true, children: [
               "≠ internal: ",
@@ -43536,9 +43538,11 @@ ${s5}`;
       "button",
       {
         type: "button",
-        class: "btn sm wr-chg",
+        class: "btn sm wr-chg wr-chgi",
         "aria-haspopup": "menu",
         "aria-expanded": "false",
+        "aria-label": "Change health",
+        title: "Change health",
         onClick: (e4) => open2(
           /** @type {HTMLElement} */
           e4.currentTarget
@@ -43552,10 +43556,7 @@ ${s5}`;
             );
           }
         },
-        children: [
-          /* @__PURE__ */ u4("span", { children: "Change" }),
-          /* @__PURE__ */ u4(Icon, { name: "chevdown", cls: "nch" })
-        ]
+        children: /* @__PURE__ */ u4(Icon, { name: "pencil" })
       }
     ) });
   }

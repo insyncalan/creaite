@@ -11,6 +11,7 @@
    - Every section: Matching internal or Edited for the client, and Match internal (clientDoc.matchClientSection: client-safe).
    Everything drawn here is the client document's own content; the internal report is read only. */
 import { signal } from "@preact/signals";
+import { Icon } from "../Icon.jsx";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cellsFor, CLIENT_FLAGS, flagOf, healthDiff, matchState, secOf } from "./clientDoc.js";
 import { EyeButton } from "./EyeButton.jsx";
@@ -141,7 +142,7 @@ export function ClientHealth({ ctx }) {
   return (
     <>
       <HealthBlock ctx={ctx} flag={flag} trend={null} flagCls="crflag"
-        change={<button type="button" class="btn sm wr-chg" ref={btn} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} data-crflag onClick={() => open ? setOpen(false) : begin()}>Change</button>}
+        change={<button type="button" class="btn sm wr-chg wr-chgi" ref={btn} aria-label="Change health" title="Change health" aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} data-crflag onClick={() => open ? setOpen(false) : begin()}><Icon name="pencil" /></button>}
         why={<>
           {edit && inFlag && flag !== inFlag ? <span class="crdif" title={`Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`} data-crdif>≠ internal: {inFlag}</span> : null}
           <MatchBar ctx={ctx} />

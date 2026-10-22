@@ -105,6 +105,30 @@ class HealthChangeMenu(LiveBrowserCase):
         self.assertTrue(self.b.eval("document.activeElement===document.querySelector('#v-reporting .wr-chg')"), "Esc gives focus back")
         del m
 
+    def test_the_change_control_is_a_small_quiet_icon_button(self):
+        """The Change control is a discreet pencil icon with a name and a tooltip, not a wide button; the menu is the same."""
+        for w in (1400, 900):
+            with self.subTest(width=w):
+                self.start(w, "creaite")
+                m = self.b.eval("""(()=>{const b=document.querySelector('#v-reporting .wr-chg'), r=b.getBoundingClientRect(),
+                  f=document.querySelector('#v-reporting .wr-flag').getBoundingClientRect();
+                  return {w:r.width,h:r.height,fw:f.width,name:b.getAttribute('aria-label'),tip:b.title||b.dataset.tip||'',text:b.textContent.trim(),
+                    pop:b.getAttribute('aria-haspopup'),icon:!!b.querySelector('svg')}})()""")
+                self.assertLessEqual(m["w"], 32, "a small icon button")
+                self.assertLessEqual(m["h"], 32)
+                self.assertLess(m["w"], m["fw"] / 3, "well under the old full-width button")
+                self.assertEqual((m["name"], m["tip"], m["text"], m["pop"], m["icon"]), ("Change health", "Change health", "", "menu", True))
+                self.b.eval("document.querySelector('#v-reporting .wr-chg').focus()")
+                self.b.key("ArrowDown")
+                self.b.wait(f"!!document.querySelector({MENU!r})", 5)
+                self.b.pump(0.3)
+                pos = self.b.eval(f"""(()=>{{const m=document.querySelector({MENU!r}).getBoundingClientRect(),
+                  a=document.querySelector('#v-reporting .wr-chg').getBoundingClientRect(); return {{mt:m.top,ab:a.bottom,ml:m.left,ar:a.right}}}})()""")
+                self.assertGreaterEqual(pos["mt"], pos["ab"] - 1, "the menu opens under the icon")
+                self.assertEqual(self.b.eval("document.querySelector('#v-reporting .wr-chg').getAttribute('aria-expanded')"), "true")
+                self.b.key("Escape")
+                self.b.wait(f"!document.querySelector({MENU!r})", 5)
+
 
 if __name__ == "__main__":
     unittest.main()

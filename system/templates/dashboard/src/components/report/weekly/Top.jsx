@@ -36,10 +36,10 @@ function HealthChange({ flag, onPick }) {
   };
   return (
     <span class="dd">
-      <button type="button" class="btn sm wr-chg" aria-haspopup="menu" aria-expanded="false"
+      <button type="button" class="btn sm wr-chg wr-chgi" aria-haspopup="menu" aria-expanded="false" aria-label="Change health" title="Change health"
         onClick={e => open(/** @type {HTMLElement} */ (e.currentTarget))}
         onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); open(/** @type {HTMLElement} */ (e.currentTarget)); } }}>
-        <span>Change</span><Icon name="chevdown" cls="nch" />
+        <Icon name="pencil" />
       </button>
     </span>);
 }
