@@ -392,15 +392,23 @@ def rejected_reasons(con, project, days=None):
     return [{**dict(r), **texts[r["fingerprint"]]} for r in rows if r["fingerprint"] in texts]
 
 
+def _safe_resolved(rel_path, purpose):
+    """safe_path's real path and its stored form. v2.6 gate: a link swapped for a file while it is resolved raises OSError with the
+    full path on CPython 3.9.25 (its realpath); it is refused here in the relative path's words."""
+    try:
+        p = paths.resolve(rel_path).resolve()          # projects/… maps to the projects root when it is outside the vault (BL-85)
+        return p, paths.rel(p)
+    except ValueError:
+        raise Invalid(f"{purpose}: path is outside the vault ({rel_path!r})")
+    except OSError as e:
+        raise Invalid(f"{purpose}: {rel_path} changed while it was being checked ({type(e).__name__})") from None
+
+
 def safe_path(rel_path, purpose):
     """Resolve a vault-relative path and refuse anything outside the writable areas."""
     if not rel_path or Path(rel_path).is_absolute() or re.match(r"^[A-Za-z]:", rel_path):
         raise Invalid(f"{purpose}: path must be relative to the vault root ({rel_path!r})")
-    p = paths.resolve(rel_path).resolve()              # projects/… maps to the projects root when it is outside the vault (BL-85)
-    try:
-        r = paths.rel(p)
-    except ValueError:
-        raise Invalid(f"{purpose}: path is outside the vault ({rel_path!r})")
+    p, r = _safe_resolved(rel_path, purpose)
     if not any(p == base or base in p.parents for base in paths.allowed_roots()):
         raise Invalid(f"{purpose}: path is outside the vault and the projects folder ({rel_path!r})")
     if not r.startswith(WRITABLE):
