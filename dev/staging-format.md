@@ -179,7 +179,10 @@ becomes, in the proposal:
 `tracker.py apply` runs these steps, under a new `apply_id`:
 
 1. Back up `tracker.db` to `system/backups/`.
-2. Write the approved items in a single transaction: all or nothing.
+2. Write the approved items in a single transaction (a failure part way rolls all of it back). Before it (#280, with
+   `dev/proposals/280/` applied): an invalid item, or minutes or a report whose file to be filed has gone, goes back to
+   pending and is named (`Held in Review, not applied: …`) while the rest is written; a problem with a file block still
+   stops the whole apply before the backup.
 3. Log every field change to `change_log`, and add rejected items to `rejected`.
 4. Run approved file operations, then record meeting keys in `system/processed.txt`.
 5. Move the file to `system/staging/applied/`.

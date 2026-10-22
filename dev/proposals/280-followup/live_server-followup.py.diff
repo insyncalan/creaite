@@ -1,0 +1,40 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index fa877f81..4d65142a 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -5173,7 +5173,7 @@ def edit_apply(c):
+         return {"ok": False, "message": f"Not applied: {why}"}
+     try:
+         with card_moves_allowed(name):                 # #124 F3: only this Approve makes a card-only move
+-            code, out = run("tracker.py", "apply", name)
++            code, out = run("tracker.py", "apply", "system/staging/" + name)     # #280: never a vault-root namesake
+     except (OSError, ValueError) as e:                 # the marker couldn't be written: nothing applied
+         code, out = 1, f"the approval couldn't be recorded ({type(e).__name__})"
+     if code:                                            # validation failed: nothing written, and nothing left in staging
+@@ -5616,7 +5616,7 @@ def confirmed_apply_one(ask_run, f, data):
+     _, out = edit_run(f"c-{ask_run.id}", raw, "preview")            # the before → after, read before it is written
+     lines = [ln for ln in out.splitlines() if ln.strip() and not ln.startswith((" ", "Problem (", "Person:", "Fix these"))]
+     f.write_text(json.dumps({**data, "applied_on_card": True}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+-    code, out = run("tracker.py", "apply", f.name)
++    code, out = run("tracker.py", "apply", "system/staging/" + f.name)      # #280: never a vault-root namesake
+     if code:
+         f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+         return {"ok": False, "message": f"Not applied: {out.strip().splitlines()[-1] if out.strip() else 'the apply failed'}. "
+@@ -7852,7 +7852,7 @@ def page_move(spec):
+     name, code = Path(m.group(1)).name, 1
+     try:
+         with card_moves_allowed(name):                 # the marker binds this proposal's bytes, as on the card
+-            code, out = run("tracker.py", "apply", name)
++            code, out = run("tracker.py", "apply", "system/staging/" + name)     # #280: never a vault-root namesake
+     except (OSError, ValueError) as e:                 # the marker couldn't be written: nothing applied
+         out = f"the move couldn't be recorded ({type(e).__name__})"
+     finally:
+@@ -8118,7 +8118,7 @@ def notes_apply_now(rel, got):
+     nothing could be applied the proposal is removed, so no approved change is left for the next apply."""
+     import notes_find
+     name = got["file"]
+-    code, out = run("tracker.py", "apply", name)
++    code, out = run("tracker.py", "apply", "system/staging/" + name)     # #280: never a vault-root namesake
+     apply_id, staged = latest_apply(), paths.STAGING / name
+     applied = not staged.exists() or any(it.get("applied") for it in json.loads(staged.read_text(encoding="utf-8")).get("items") or [])
+     if code != 0 or not applied:

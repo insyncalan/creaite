@@ -83,13 +83,14 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
         self.refused_both_ways([{"op": "remove", "path": rel}], f"remove: {rel} {IN_NOTES}", "remove")
         self.assertEqual(note.read_text(), text)
         got = self.py_json(                                       # the card: Approve writes the marker, the apply removes it
-            "import live_server as ls, paths, tracker\n"
+            "import pathlib, live_server as ls, paths, tracker\n"
             f"spec = {{'items': [], 'file_changes': {{'title': 'Remove a note', 'file_ops': [{{'op': 'remove', 'path': {rel!r}}}]}}}}\n"
             "card, why = ls.server_edit_card('t', json.dumps(spec).encode('utf-8'))\n"
             "seen, real = [], ls.run\n"
             "def run(script, *args):\n"
             "    if script == 'tracker.py' and args and args[0] == 'apply':\n"
-            "        seen.append([args[1], (paths.STAGING / args[1]).read_bytes().decode(), sorted(m.name for m in paths.GUARD.glob('move-*'))])\n"
+            "        f = paths.STAGING / pathlib.Path(args[1]).name\n"
+            "        seen.append([f.name, f.read_bytes().decode(), sorted(m.name for m in paths.GUARD.glob('move-*'))])\n"
             "    return real(script, *args)\n"
             "ls.run = run\n"
             "out = ls.edit_apply(ls.EDITS[card['card']])\n"

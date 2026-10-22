@@ -1,0 +1,37 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 17c4bccb..e4c6fcb8 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -2336,8 +2336,10 @@ def backup_db(tag):
+ # apply, one COMMIT, or a ROLLBACK that also reverses the file operations. Messages and their order are unchanged (pinned).
+ def cmd_apply(args):
+     """Write the decided items and file operations of the proposals in `args` (none: every proposal in staging) to
+-    tracker.db under one apply_id, after a dry run and a backup. All or nothing; a recode is applied on its own
+-    (BL-111). Then moves finished proposals to applied/ and rebuilds the dashboard, Excel export and search index.
++    tracker.db under one apply_id, after a dry run and a backup, in one transaction; a recode is applied on its own (BL-111).
++    #280: an invalid item, or minutes or a report whose file to be filed has gone, is held in Review and named, and the rest is
++    written; a problem with a file block (or the other checks in _validate_work) still stops it, before anything is written.
++    Then moves finished proposals to applied/ and rebuilds the dashboard, Excel export and search index.
+     """
+     work = _load_work(args)
+     if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
+@@ -2350,7 +2352,7 @@ def cmd_apply(args):
+     if work is None:
+         return 1
+     con = connect()
+-    blocked, held = _validate_work(con, work)     # dry run first: if any approved item is invalid, nothing is written
++    blocked, held = _validate_work(con, work)     # dry run first: an invalid item is held in Review (#280); a blocker stops it
+     if blocked:
+         _report_blocked(work, blocked)
+         return 1
+@@ -2787,8 +2789,9 @@ def _finish_apply(work, apply_id, summary):
+             save(p, data)
+     pending = sum(1 for p in paths.STAGING.glob("proposed-*.json")
+                   for i in load(p).get("items", []) if not i.get("applied"))
++    held = f"held {summary['held']}, " if summary["held"] else ""      # #280 follow-up: "held 0" said nothing was held
+     print(f"Apply {apply_id}: written {summary['written']}, filed {summary['filed']}, "
+-          f"rejected {summary['rejected']}, held {summary['held']}, {pending} still pending.")
++          f"rejected {summary['rejected']}, {held}{pending} still pending.")
+     by_table = {}
+     for _, d in work:
+         for i in d.get("items", []):
