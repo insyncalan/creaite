@@ -83,6 +83,17 @@ function Prop({ p }) {
 /** A mark as a vnode, for the Picker's options (a status ring, priority bars, initials or an icon). @param {PeekMark} mark */
 export function peekMark(mark) { return <Mark mark={mark} />; }
 
+/** #241 A: a mark as markup, for the Work list's rows (drawn as HTML strings): the same ring and bars as the peek, 16 px.
+    Cached per mark, as a list draws the same few marks many times. @param {PeekMark} mark @returns {string} */
+const MARK_HTML = new Map();
+export function peekMarkHtml(mark) {
+  const key = JSON.stringify(mark);
+  if (!MARK_HTML.has(key)) { const box = document.createElement("div"); render(<Mark mark={mark} />, box);
+    const svg = box.querySelector("svg"); if (svg) { svg.setAttribute("width", "16"); svg.setAttribute("height", "16"); }
+    MARK_HTML.set(key, box.innerHTML); }
+  return MARK_HTML.get(key) || "";
+}
+
 /** The properties as new nodes, for panel.js to put in place of the old ones.
     @param {PeekProp[]} list @returns {ChildNode[]} */
 export function peekPropNodes(list) {

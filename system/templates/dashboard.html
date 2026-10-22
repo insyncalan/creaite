@@ -4272,6 +4272,24 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #dePrev,#chMail{resize:vertical;box-sizing:border-box;height:auto;min-height:8rem;max-height:90vh}
 #dePrev:not([style*="height"]),#chMail:not([style*="height"]){max-height:28vh}
 #dePrev:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* ===== NEW (#241 Work items v2, dev/sprints/work-items-v2-brief.md; mockup dev/mockups/work-items-v2-mockup.html): the .tg tag chip,
+   the row densities .cmp (40 px) and .cmf (57 px, today's two lines), the density switch (a .seg.ico), the row's status and priority
+   marks (.wkm) and the peek's client-visible switch and badge. Tokens and the app's own classes only. Row height only: no width. ===== */
+#workTbl td.title .wkm{display:inline-flex;align-items:center;gap:2px;margin-right:6px;vertical-align:-3px}
+#workTbl td.title .wkm svg{width:16px;height:16px;flex:none}
+.tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;margin-left:6px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500;white-space:nowrap;vertical-align:1px}
+.tg svg{width:12px;height:12px;flex:none}
+.tg[data-tg=cv]{background:var(--accent-soft);color:var(--accent)}
+#workWrap.cmp tbody tr[data-row]>td{height:40px;padding-top:0;padding-bottom:0;vertical-align:middle}
+#workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* a second line that has to stay (no room beside the title) still fits the 40 px */
+#workWrap.cmp td.title>.x.xup{height:0;translate:var(--wkx,0) var(--wky,0);pointer-events:none}   /* #241 a: one line, the ID beside the title; a translate never changes a width (wkPlace) */
+#workWrap.cmp td.title>.x.xup :is(a,[role=link],button){pointer-events:auto}
+#workWrap.cmf tbody tr[data-row]>td{height:57px}
+.seg.ico.wdens[hidden]{display:none}
+#pkCv[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+#pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
+#pkId .cv svg{width:12px;height:12px}
+/* ===== end NEW (#241) ===== */
 </style>
 </head>
 <body>
@@ -4340,7 +4358,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="toolbar">
           <input id="workQ" type="search" placeholder="Search this list" aria-label="Search this list" autocomplete="off">
           <span class="wfilters" id="wfilters"></span>
-          <span class="seg ico" id="wlay" role="group" aria-label="Layout"><button type="button" data-lay="list" aria-pressed="true" aria-label="List" data-tip="List"><svg data-ic="list" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><button type="button" data-lay="board" aria-pressed="false" aria-label="Board" data-tip="Board"><svg data-ic="board" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><!-- BL-159 (sprint-icons): List and Board as a two-icon switch -->
+          <span class="seg ico wdens" id="wdens" role="group" aria-label="Row density"><!-- #241 A: Compact and Comfortable rows (the List only) --><button type="button" data-dens="cmp" aria-pressed="true" aria-label="Compact rows" data-tip="Compact rows"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 9.7h16M4 14.3h16M4 19h16"/></svg></button><button type="button" data-dens="cmf" aria-pressed="false" aria-label="Comfortable rows" data-tip="Comfortable rows"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 8.5h9M4 15.5h16M4 19h9"/></svg></button></span><span class="seg ico" id="wlay" role="group" aria-label="Layout"><button type="button" data-lay="list" aria-pressed="true" aria-label="List" data-tip="List"><svg data-ic="list" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><button type="button" data-lay="board" aria-pressed="false" aria-label="Board" data-tip="Board"><svg data-ic="board" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><!-- BL-159 (sprint-icons): List and Board as a two-icon switch -->
           <span class="dd ddisp"><button class="ib bd" id="dispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dispMenu" aria-label="Display: grouping, order and properties" data-tip="Display: grouping, order and properties" data-key="D"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="dispMenu" role="dialog" aria-label="Display" hidden></div></span><!-- BL-128 (sprint-work-views): one Display menu -->
           <span class="sp"></span>
           <span class="newdd" id="newHost"></span><!-- BL-159: the New tile; on Decisions, a menu (components/work/NewTile.jsx) -->
@@ -4529,6 +4547,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     CST_DEF: () => CST_DEF,
     CST_MAX: () => CST_MAX,
     CUR_PROPS: () => CUR_PROPS,
+    CVTAG: () => CVTAG,
     CXKEYAT: () => CXKEYAT,
     CaptureDrawer: () => CaptureDrawer,
     ChaseEmail: () => ChaseEmail,
@@ -4665,6 +4684,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     KL: () => KL,
     LASTVISIT: () => LASTVISIT,
     LCOLL: () => LCOLL,
+    LDEFG: () => LDEFG,
+    LFOLD: () => LFOLD,
     LINK_MAX: () => LINK_MAX,
     LINK_REFUSED: () => LINK_REFUSED,
     LINK_REL: () => LINK_REL,
@@ -4932,6 +4953,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     WICO: () => WICO,
     WINIT: () => WINIT,
     WK: () => WK,
+    WKF: () => WKF,
     WKNAME: () => WKNAME,
     WKRVF: () => WKRVF,
     WLAY: () => WLAY,
@@ -5573,6 +5595,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     defs: () => defs,
     deleteNote: () => deleteNote,
     deleteView: () => deleteView,
+    densOf: () => densOf,
+    densPaint: () => densPaint,
     depFormDraw: () => depFormDraw,
     depHash: () => depHash,
     depSugDraw: () => depSugDraw,
@@ -6027,6 +6051,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     lastDays: () => lastDays,
     latesOf: () => latesOf,
     layoutOf: () => layoutOf,
+    lcollOf: () => lcollOf,
     learnLabel: () => learnLabel,
     learnSignal: () => learnSignal,
     learnable: () => learnable,
@@ -6044,6 +6069,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     linkWords: () => linkWords,
     linkWrite: () => linkWrite,
     listBody: () => listBody,
+    listGroupBack: () => listGroupBack,
+    listGroupDefault: () => listGroupDefault,
     listGroupOf: () => listGroupOf,
     listHtml: () => listHtml,
     liveLines: () => liveLines,
@@ -6431,6 +6458,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pdWrite: () => pdWrite,
     peekFrame: () => peekFrame,
     peekMark: () => peekMark,
+    peekMarkHtml: () => peekMarkHtml,
     peekPropNodes: () => peekPropNodes,
     pencil: () => pencil,
     pendingCard: () => pendingCard,
@@ -6465,6 +6493,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkClientMsg: () => pkClientMsg,
     pkCommit: () => pkCommit,
     pkCommit1: () => pkCommit1,
+    pkCvDraw: () => pkCvDraw,
     pkDepDraw: () => pkDepDraw,
     pkDescF: () => pkDescF,
     pkDescL: () => pkDescL,
@@ -6905,6 +6934,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setClientReport: () => setClientReport,
     setClientRhythm: () => setClientRhythm,
     setDecision: () => setDecision,
+    setDensity: () => setDensity,
     setFigureShown: () => setFigureShown,
     setLayout: () => setLayout,
     setLive: () => setLive,
@@ -7135,13 +7165,27 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     withdrawDecision: () => withdrawDecision,
     within: () => within,
     withoutSection: () => withoutSection,
+    wkArrowOK: () => wkArrowOK,
     wkAsk: () => wkAsk,
     wkClear: () => wkClear,
+    wkClientToggle: () => wkClientToggle,
+    wkClose: () => wkClose,
+    wkCursor: () => wkCursor,
     wkDays: () => wkDays,
+    wkDecorate: () => wkDecorate,
     wkDow: () => wkDow,
     wkField: () => wkField,
+    wkKey: () => wkKey,
+    wkLeft: () => wkLeft,
+    wkLetterOK: () => wkLetterOK,
     wkLong: () => wkLong,
     wkMark: () => wkMark,
+    wkMarksHtml: () => wkMarksHtml,
+    wkMenuLabel: () => wkMenuLabel,
+    wkOpen: () => wkOpen,
+    wkPlace: () => wkPlace,
+    wkPlaceSoon: () => wkPlaceSoon,
+    wkPropKey: () => wkPropKey,
     workAct: () => workAct,
     workActs: () => workActs,
     workAnnounce: () => workAnnounce,
@@ -7220,6 +7264,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     COLORD: void 0,
     COLVIS: void 0,
     CR: void 0,
+    DENS: void 0,
     DR: void 0,
     FPK: void 0,
     FPQ: void 0,
@@ -34375,6 +34420,139 @@ ${s5}`;
     R(/* @__PURE__ */ u4(PeoplePage, { t: ++tick }, "pl"), el2);
   }
 
+  // components/peek/PeekProps.jsx
+  var ST_COLOUR = (
+    /** @type {Record<string, string>} */
+    {
+      Open: "var(--accent)",
+      Delayed: "var(--warn)",
+      Closed: "var(--ok)",
+      Cancelled: "var(--faint)",
+      Pending: "var(--muted)",
+      Made: "var(--ok)",
+      Withdrawn: "var(--faint)"
+    }
+  );
+  var TICK = "M8 12.5l3 3 5-6", CROSS = "M9 9l6 6M15 9l-6 6";
+  var ST_INNER = (
+    /** @type {Record<string, any>} */
+    {
+      Open: { d: "M12 4a8 8 0 0 1 0 16z", fill: "currentColor", stroke: "none" },
+      Delayed: { d: "M12 8v4l2.5 1.5" },
+      Closed: { d: TICK },
+      Cancelled: { d: CROSS },
+      Made: { d: TICK },
+      Withdrawn: { d: CROSS }
+    }
+  );
+  var PR_N = (
+    /** @type {Record<string, number>} */
+    { Urgent: 4, High: 3, Medium: 2, Low: 1 }
+  );
+  var PR_COLOUR = (
+    /** @type {Record<string, string>} */
+    { Urgent: "var(--bad)", High: "var(--warn)", Medium: "var(--accent)", Low: "var(--faint)" }
+  );
+  function StatusRing({ st: st2 }) {
+    const inner = ST_INNER[st2];
+    return /* @__PURE__ */ u4(
+      "svg",
+      {
+        viewBox: "0 0 24 24",
+        width: "18",
+        height: "18",
+        fill: "none",
+        stroke: "currentColor",
+        style: `color:${ST_COLOUR[st2] || "var(--muted)"}`,
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "aria-hidden": "true",
+        children: [
+          /* @__PURE__ */ u4("circle", { cx: "12", cy: "12", r: "8", "stroke-dasharray": st2 === "Pending" ? "3 3" : void 0 }),
+          inner ? /* @__PURE__ */ u4("path", { ...inner }) : null
+        ]
+      }
+    );
+  }
+  function PriorityBars({ pr: pr2 }) {
+    const n4 = PR_N[pr2] || 0, c5 = PR_COLOUR[pr2] || "var(--faint)";
+    return /* @__PURE__ */ u4("svg", { viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true", children: [0, 1, 2, 3].map((i5) => /* @__PURE__ */ u4("rect", { x: String(3 + i5 * 5), y: String(16 - i5 * 4), width: "3.4", height: String(4 + i5 * 4), rx: "1", fill: c5, opacity: i5 < n4 ? "1" : ".25" }, i5)) });
+  }
+  function Initials({ who: who2 }) {
+    if (!who2) return /* @__PURE__ */ u4(Icon, { name: "user" });
+    const i5 = who2.split(/\s+/).map((w6) => w6[0] || "").join("").slice(0, 2).toUpperCase();
+    return /* @__PURE__ */ u4("svg", { viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u4("circle", { cx: "12", cy: "12", r: "10", fill: "var(--accent-soft)" }),
+      /* @__PURE__ */ u4("text", { x: "12", y: "15.5", "text-anchor": "middle", "font-size": "9.5", "font-weight": "600", fill: "var(--accent)", "font-family": "inherit", children: i5 })
+    ] });
+  }
+  function Mark({ mark }) {
+    if (mark.st != null) return /* @__PURE__ */ u4(StatusRing, { st: mark.st });
+    if (mark.pr != null) return /* @__PURE__ */ u4(PriorityBars, { pr: mark.pr });
+    if (mark.who != null) return /* @__PURE__ */ u4(Initials, { who: mark.who });
+    return /* @__PURE__ */ u4(Icon, { name: mark.icon || "pencil" });
+  }
+  function Prop({ p: p6 }) {
+    const words = /* @__PURE__ */ u4("span", { children: [
+      p6.nw ? /* @__PURE__ */ u4("span", { class: "nw", children: p6.value }) : p6.value,
+      p6.you ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("small", { class: "sub", children: "(you)" })
+      ] }) : null,
+      p6.late ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("em", { children: "overdue" })
+      ] }) : null
+    ] });
+    const plain = `${p6.value}${p6.you ? " (you)" : ""}${p6.late ? " overdue" : ""}`;
+    if (p6.ro) return /* @__PURE__ */ u4("div", { class: "pk-prop", children: /* @__PURE__ */ u4(Chip, { cls: "pk-chip ro", role: "note", "aria-label": p6.ro, tip: p6.roTip, children: [
+      /* @__PURE__ */ u4(Mark, { mark: p6.mark }),
+      words
+    ] }) });
+    return /* @__PURE__ */ u4("div", { class: "pk-prop", children: /* @__PURE__ */ u4(
+      Chip,
+      {
+        button: true,
+        cls: ["pk-chip", p6.empty ? "empty" : "", p6.cls || ""].filter(Boolean).join(" "),
+        "data-pkp": p6.f,
+        "aria-haspopup": (
+          /** @type {any} */
+          p6.popup || "listbox"
+        ),
+        name: `${p6.name}: ${p6.empty ? "not set" : plain}`,
+        tip: p6.name,
+        children: [
+          /* @__PURE__ */ u4(Mark, { mark: p6.mark }),
+          words
+        ]
+      }
+    ) });
+  }
+  function peekMark(mark) {
+    return /* @__PURE__ */ u4(Mark, { mark });
+  }
+  var MARK_HTML = /* @__PURE__ */ new Map();
+  function peekMarkHtml(mark) {
+    const key2 = JSON.stringify(mark);
+    if (!MARK_HTML.has(key2)) {
+      const box = document.createElement("div");
+      R(/* @__PURE__ */ u4(Mark, { mark }), box);
+      const svg = box.querySelector("svg");
+      if (svg) {
+        svg.setAttribute("width", "16");
+        svg.setAttribute("height", "16");
+      }
+      MARK_HTML.set(key2, box.innerHTML);
+    }
+    return MARK_HTML.get(key2) || "";
+  }
+  function peekPropNodes(list) {
+    const box = document.createElement("div");
+    R(/* @__PURE__ */ u4(S2, { children: list.map((p6) => /* @__PURE__ */ u4(Prop, { p: p6 }, p6.f)) }), box);
+    return [...box.childNodes];
+  }
+
   // stores/capture.js
   var capOpen = y3(false);
 
@@ -48154,6 +48332,7 @@ ${s5}`;
         { label: "Milestone", icon: "flag", sub: () => cxList(msChoices(x5.p, x5.ms), x5.ms || "", (v5) => one({ ms: v5 }), "flag") }
       );
     }
+    out.push({ label: "Client-visible", icon: "eye", checked: !!x5.client, hint: x5.client ? "On: it can appear in client reports" : "Off", desc: x5.client ? "Turn off" : "Turn on", run: () => wkClientToggle(k5, id2) });
     out.push({ sep: true }, { label: "Copy ID", icon: "copy", run: () => cxCopy(id2, id2) }, { label: "Copy link", icon: "link", run: () => cxCopy(cxLink(id2), `the link to ${id2}`) });
     const who2 = k5 === "decisions" ? null : pkWho(x5.o);
     if (who2 && PERS().some((p6) => p6.name === who2)) {
@@ -54180,6 +54359,7 @@ ${pre}**Current state title:** ${title}`);
     /* BL-128: Milestone and Last updated can be shown */
     decisions: [["id", "ID"], ["t", "Decision"], ["st", "Status"], ["by", "Made by"], ["due", "Needed by"], ["date", "Date"], ["src", "Source"]]
   };
+  shared.DENS = store.get("creaite-density", null);
   shared.COLVIS = store.get("creaite-cols", null);
   if (!shared.COLVIS || typeof shared.COLVIS !== "object" || Array.isArray(shared.COLVIS)) shared.COLVIS = { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] };
   var visOf = (t47) => {
@@ -54211,6 +54391,116 @@ ${pre}**Current state title:** ${title}`);
       return "<td></td>";
     })();
     return h5;
+  }
+  var densOf = () => shared.DENS === "cmf" ? "cmf" : "cmp";
+  function densPaint() {
+    const w6 = $("#workWrap"), d5 = densOf();
+    if (w6) {
+      w6.classList.toggle("cmp", d5 === "cmp");
+      w6.classList.toggle("cmf", d5 === "cmf");
+    }
+    const seg = $("#wdens");
+    if (!seg) return;
+    seg.hidden = layoutOf(shared.WT) === "board";
+    $$("#wdens [data-dens]").forEach((b5) => b5.setAttribute("aria-pressed", String(b5.dataset.dens === d5)));
+    wkPlaceSoon();
+  }
+  function setDensity(d5) {
+    if (d5 !== "cmp" && d5 !== "cmf") return;
+    shared.DENS = d5;
+    store.set("creaite-density", d5);
+    densPaint();
+    sizeList();
+  }
+  function wkMarksHtml(t47, x5) {
+    const k5 = t47 === "all" ? x5.k : t47, st2 = t47 === "all" ? x5.nst : x5.st, pr2 = k5 === "decisions" ? "" : x5.pr || "";
+    return `<span class="wkm">${peekMarkHtml({ st: st2 })}${pr2 ? peekMarkHtml({ pr: pr2 }) : ""}<span class="vh">${esc(st2)}${pr2 ? `, ${esc(pr2)} priority` : ""}: </span></span>`;
+  }
+  var CVTAG = `<span class="tg" data-tg="cv" title="Client-visible: it can appear in client reports">${ic("eye")}Client</span>`;
+  function wkDecorate() {
+    const t47 = shared.WT;
+    $$("#workTbl tr[data-row]").forEach((tr2) => {
+      const td2 = tr2.querySelector("td.title"), x5 = t47 === "all" ? allRows().find((y5) => y5.id === tr2.dataset.row) : REC(t47, tr2.dataset.row);
+      if (!td2 || !x5 || td2.querySelector(".wkm")) return;
+      addHTML(td2, "afterbegin", raw(wkMarksHtml(t47, x5)));
+      if (x5.client) {
+        const sub = td2.querySelector(":scope > .x");
+        addHTML(sub || td2, sub ? "beforebegin" : "beforeend", raw(CVTAG));
+      }
+    });
+  }
+  var WKPQ = 0, WKMO = null, WKRO = null;
+  var WKOBS = /* @__PURE__ */ new WeakSet();
+  function wkPlaceSoon() {
+    if (!WKPQ) WKPQ = requestAnimationFrame(wkPlace);
+  }
+  var wkRects = (n4, a5, b5) => {
+    const r4 = document.createRange();
+    if (b5) {
+      r4.setStart(n4, 0);
+      r4.setEndBefore(b5);
+    } else r4.selectNodeContents(n4);
+    return [...r4.getClientRects()].filter((c5) => c5.width > 0 && c5.height > 0);
+  };
+  function wkLine(td2, x5) {
+    const q5 = wkRects(td2, null, x5);
+    if (!q5.length) return null;
+    const end = q5.reduce((a5, c5) => c5.bottom > a5.bottom + 1 || Math.abs(c5.bottom - a5.bottom) <= 1 && c5.right > a5.right ? c5 : a5), on2 = q5.filter((c5) => c5.top < end.bottom - 1 && c5.bottom > end.top + 1);
+    const txt = [...td2.childNodes].filter((n4) => n4.nodeType === 3 && n4.textContent.trim() && n4.compareDocumentPosition(x5) & Node.DOCUMENT_POSITION_FOLLOWING).pop(), tq = txt ? wkRects(txt).filter((c5) => c5.top < end.bottom - 1 && c5.bottom > end.top + 1) : [];
+    return { right: Math.max(...on2.map((c5) => c5.right)), bottom: tq.length ? tq[tq.length - 1].bottom : null, mid: (Math.min(...on2.map((c5) => c5.top)) + Math.max(...on2.map((c5) => c5.bottom))) / 2 };
+  }
+  var WKX = ["--wkx", "--wky"];
+  function wkPlace() {
+    WKPQ = 0;
+    const w6 = $("#workWrap");
+    if (!w6) return;
+    wkWatch();
+    const xs2 = $$("#workTbl tbody tr[data-row] > td.title > .x");
+    xs2.forEach((x5) => {
+      if (x5.classList.contains("xup")) {
+        x5.classList.remove("xup");
+        WKX.forEach((v5) => x5.style.removeProperty(v5));
+        x5.style.clipPath = "";
+      }
+    });
+    if (!w6.classList.contains("cmp") || !w6.offsetParent) return;
+    const fit = xs2.map((x5) => {
+      const td2 = x5.parentElement, l6 = wkLine(td2, x5), id2 = x5.querySelector(".rowid");
+      if (!l6 || !id2) return null;
+      const cs2 = getComputedStyle(td2), room = td2.getBoundingClientRect().right - (parseFloat(cs2.paddingRight) || 0) - (parseFloat(cs2.borderRightWidth) || 0) - (l6.right + 10), left = x5.getBoundingClientRect().left, all = wkRects(x5), full = all.length ? Math.max(...all.map((c5) => c5.right)) - left : 0, stops = [full, ...[...x5.querySelectorAll(":scope > .pcode, :scope > .rowid")].map((e4) => e4.getBoundingClientRect().right - left).sort((p6, q5) => q5 - p6)], keep2 = stops.find((v5) => v5 > 0 && v5 <= room + 0.5);
+      return keep2 == null ? null : { dx: l6.right + 10 - left, clip: keep2 < full - 0.5 ? x5.getBoundingClientRect().width - keep2 : 0 };
+    });
+    xs2.forEach((x5, i5) => {
+      const f5 = fit[i5];
+      if (!f5) return;
+      x5.classList.add("xup");
+      x5.style.setProperty("--wkx", f5.dx.toFixed(2) + "px");
+      if (f5.clip) x5.style.clipPath = `inset(-40px ${f5.clip.toFixed(2)}px -40px -8px)`;
+    });
+    const dy2 = xs2.map((x5, i5) => {
+      if (!fit[i5]) return 0;
+      const l6 = wkLine(x5.parentElement, x5), t47 = [...x5.querySelector(".rowid").childNodes].find((n4) => n4.nodeType === 3), q5 = t47 ? wkRects(t47) : [];
+      if (!l6 || !q5.length) return 0;
+      return l6.bottom != null ? l6.bottom - q5[0].bottom : l6.mid - (q5[0].top + q5[0].bottom) / 2;
+    });
+    xs2.forEach((x5, i5) => {
+      if (fit[i5]) x5.style.setProperty("--wky", dy2[i5].toFixed(2) + "px");
+    });
+  }
+  function wkWatch() {
+    const t47 = $("#workTbl");
+    if (!t47 || typeof MutationObserver === "undefined") return;
+    if (!WKMO) {
+      WKMO = new MutationObserver(wkPlaceSoon);
+      WKMO.observe(t47, { childList: true, subtree: true, characterData: true });
+    }
+    if (!WKRO && typeof ResizeObserver !== "undefined") WKRO = new ResizeObserver(wkPlaceSoon);
+    if (WKRO) [$("#workWrap"), t47, ...$$("#workTbl thead th")].forEach((el2) => {
+      if (el2 && !WKOBS.has(el2)) {
+        WKOBS.add(el2);
+        WKRO.observe(el2);
+      }
+    });
   }
   var msLabel = (id2) => {
     for (const p6 of P4) {
@@ -54261,6 +54551,7 @@ ${pre}**Current state title:** ${title}`);
         workAnnounce(F5.length ? e4.querySelector("h2").textContent + ". " + [...e4.querySelectorAll(".relax > div")].map((d5) => d5.querySelector("span").textContent + ": " + d5.querySelector(".sub").textContent).join("; ") : "Nothing here yet");
       } else workAnnounce(`Showing ${shown2} of ${total}${ht2}`);
     }
+    if (layoutOf(shared.WT) !== "board") wkDecorate();
     $$("#v-work tr[data-row], #v-mine tr[data-row]").forEach((tr2) => {
       const td2 = tr2.querySelector("td.title");
       if (td2 && !td2.querySelector(".wflag")) addHTML(td2, "afterbegin", raw(wflag(shared.WT, tr2.dataset.row)));
@@ -54837,6 +55128,7 @@ ${pre}**Current state title:** ${title}`);
     $("#whintBoard").hidden = !bd2;
     putHTML($("#whintList"), raw(workHint("list")));
     putHTML($("#whintBoard"), raw(workHint("board")));
+    densPaint();
     drawDisp();
   }
   function setLayout(t47, lay) {
@@ -55044,6 +55336,10 @@ ${pre}**Current state title:** ${title}`);
       const b5 = e4.target.closest("[data-lay]");
       if (b5) setLayout(shared.WT, b5.dataset.lay);
     });
+    $("#wdens").addEventListener("click", (e4) => {
+      const b5 = e4.target.closest("[data-dens]");
+      if (b5) setDensity(b5.dataset.dens);
+    });
     $("#workBoard").addEventListener("click", (e4) => {
       if (performance.now() - BNOCLICK < 30) return;
       const mv = e4.target.closest(".bmv");
@@ -55208,11 +55504,17 @@ ${pre}**Current state title:** ${title}`);
   var dispOpen = () => $("#dispMenu").classList.contains("on");
   var SORTOPTS = (t47) => t47 === "decisions" ? [["", "Default order"], ["due", "Needed by"], ["date", "Date"], ["st", "Status"], ["by", "Made by"], ["t", "Title"], ["upd", "Last updated"], ["id", "ID"]] : [["", "Default order"], ["due", "Due date"], ["pr", "Priority"], ["st", "Status"], ["o", "Owner"], ["t", "Title"], ["upd", "Last updated"], ["raised", "Raised"], ["id", "ID"]];
   var HINTS = [
-    [["J", "K"], "move", "list"],
+    [["↑", "↓", "J", "K"], "move", "list"],
     [["J", "K"], "step through the cards", "board"],
     [["Space"], "select", "both"],
     ["", "click a value to change it", "list"],
     [["Enter"], "or the ID opens", "both"],
+    [["→"], "opens, ← closes (or the menu)", "both"],
+    [["O"], "owner", "both", true],
+    [["S", "P", "T"], "with an item open: status, priority, due", "both", true],
+    [["C"], "close (no item open)", "both", true],
+    [["V"], "client-visible", "both", true],
+    /* #241 B, C */
     ["", "drag a card, or use its <b>Move to…</b> menu, to change it", "board"],
     [["D"], "display", "both"],
     [["Shift+F"], "filters", "both"],
@@ -55221,16 +55523,16 @@ ${pre}**Current state title:** ${title}`);
     ["", "drag a column edge to resize", "list"]
   ];
   function workHint(lay) {
-    return HINTS.filter((h5) => h5[2] === "both" || h5[2] === lay).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
+    return HINTS.filter((h5) => (h5[2] === "both" || h5[2] === lay) && !(h5[3] && shared.WT === "all")).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
   }
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
     const gopts = bd2 ? groupsOf(t47) : [["none", "None"], ...groupsOf(t47)], gcur = bd2 ? groupOf(t47) : listGroupOf(t47), sub = subOf(t47, bd2 ? "board" : "list");
     putHTML(m5, html`<div><h3><label for="wgrp">${bd2 ? "Group by (columns)" : "Group by"}</label></h3><div class="dline"><select id="wgrp">${gopts.map((g5) => html`<option value="${g5[0]}" ${g5[0] === gcur ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <div ${!bd2 && gcur === "none" ? "hidden" : ""}><h3><label for="wsub">${bd2 ? "Sub-group (swimlanes)" : "Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => html`<option value="${g5[0]}" ${g5[0] === sub ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
+    <div ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><h3><label for="wsub">${bd2 ? "Sub-group (swimlanes)" : "Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => html`<option value="${g5[0]}" ${g5[0] === sub ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
     <h3><label for="wbsort">Order by</label></h3><div class="dline"><select id="wbsort">${opts.map((o5) => html`<option value="${o5[0]}" ${o5[0] === cur ? "selected" : ""}>${o5[1]}</option>`)}${cur && !opts.some((o5) => o5[0] === cur) ? html`<option value="${cur}" selected>Sorted by ${cur}</option>` : ""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s5 && s5.dir === "desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
     <h3>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h3><div class="dprops">${raw(dispProps())}</div>
-    <h3>Show</h3><div class="dline" ${!bd2 && gcur === "none" ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
+    <h3>Show</h3><div class="dline" ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
     <div class="dline"><label for="wclosed">${t47 === "decisions" ? "Decided" : "Closed"} column</label><select id="wclosed"><option value="recent" ${BCLALL.has(t47) ? "" : "selected"}>Last ${raw(+S.boardClosedDays || 14)} days</option><option value="all" ${BCLALL.has(t47) ? "selected" : ""}>All</option></select></div>` : html`<div class="dline sub">Closed items: use the Status filter.</div>`}
     <div class="dfoot"><button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button><span class="sp"></span><button type="button" class="btn primary" id="dispDone">Done</button></div>`);
     if (focusKey) {
@@ -55479,15 +55781,24 @@ ${pre}**Current state title:** ${title}`);
     return await boardMove(t47, id2, { due: d5 }, what);
   }
   var LCOLL = store.obj("creaite-listcoll");
+  var LFOLD = (k5) => /\|due\|closed$/.test(k5);
+  var lcollOf = (k5) => k5 in LCOLL ? !!LCOLL[k5] : LFOLD(k5);
   var HLNOTE = "";
   shared.HLALL = false;
   var grpOK = (t47, g5) => groupsOf(t47).some((x5) => x5[0] === g5);
+  var LDEFG = { actions: "due", raid: "priority", decisions: "status" };
+  var listGroupDefault = (t47) => !(t47 in WLGRP) && !!LDEFG[t47] && !SORT[t47];
+  function listGroupBack(t47) {
+    const s5 = store.get("creaite-listgrp", {});
+    if (s5 && typeof s5 === "object" && t47 in s5) WLGRP[t47] = s5[t47];
+    else delete WLGRP[t47];
+  }
   function listGroupOf(t47) {
-    return grpOK(t47, WLGRP[t47]) ? WLGRP[t47] : "none";
+    return grpOK(t47, WLGRP[t47]) ? WLGRP[t47] : listGroupDefault(t47) ? LDEFG[t47] : "none";
   }
   function subOf(t47, lay) {
     const s5 = WSUB[t47 + "|" + lay], g5 = lay === "board" ? groupOf(t47) : listGroupOf(t47);
-    return g5 !== "none" && grpOK(t47, s5) && s5 !== g5 ? s5 : "none";
+    return g5 !== "none" && !(lay === "list" && listGroupDefault(t47)) && grpOK(t47, s5) && s5 !== g5 ? s5 : "none";
   }
   var grpLabel = (t47, g5) => (groupsOf(t47).find((x5) => x5[0] === g5) || [g5, g5])[1];
   var grpNoun = (t47, n4) => t47 === "actions" ? `${n4} action${n4 === 1 ? "" : "s"}` : t47 === "raid" ? `${n4} item${n4 === 1 ? "" : "s"}` : `${n4} decision${n4 === 1 ? "" : "s"}`;
@@ -55558,7 +55869,7 @@ ${pre}**Current state title:** ${title}`);
     const sg2 = subOf(t47, "list");
     let h5 = "";
     wgGroups(t47, g5, L3, !BHIDE[t47]).forEach((gr2) => {
-      const k5 = `${t47}|${g5}|${gr2.key}`, coll = !!LCOLL[k5];
+      const k5 = `${t47}|${g5}|${gr2.key}`, coll = lcollOf(k5);
       h5 += grpHead(t47, gr2, 1, k5, coll, C5.length);
       if (coll) return;
       if (sg2 === "none") {
@@ -55566,7 +55877,7 @@ ${pre}**Current state title:** ${title}`);
         return;
       }
       wgGroups(t47, sg2, gr2.items, false).forEach((s22) => {
-        const k22 = `${k5}|${sg2}|${s22.key}`, c22 = !!LCOLL[k22];
+        const k22 = `${k5}|${sg2}|${s22.key}`, c22 = lcollOf(k22);
         h5 += grpHead(t47, s22, 2, k22, c22, C5.length);
         if (!c22) h5 += s22.items.map((x5) => row2(x5, ` data-g1="${esc(k5)}" data-g2="${esc(k22)}"`)).join("");
       });
@@ -55582,10 +55893,10 @@ ${pre}**Current state title:** ${title}`);
     });
   }
   function grpToggle(k5) {
-    const sel = "#workTbl tbody tr", key2 = (e4) => e4.dataset.row || "g:" + e4.dataset.gk, snap = reduced() ? null : mSnapRows(sel, key2), open2 = !!LCOLL[k5];
+    const sel = "#workTbl tbody tr", key2 = (e4) => e4.dataset.row || "g:" + e4.dataset.gk, snap = reduced() ? null : mSnapRows(sel, key2), open2 = lcollOf(k5);
     const before = HL.size;
-    LCOLL[k5] = !LCOLL[k5];
-    if (!LCOLL[k5]) delete LCOLL[k5];
+    LCOLL[k5] = !open2;
+    if (!LCOLL[k5] && !LFOLD(k5)) delete LCOLL[k5];
     store.set("creaite-listcoll", LCOLL);
     renderWork();
     const left = before - HL.size;
@@ -56173,6 +56484,7 @@ ${pre}**Current state title:** ${title}`);
     openRecord(k5, id2, field && td2 ? td2.dataset.f : void 0);
   }
   function hlKey(e4) {
+    if (shared.VIEW === "work" && wkKey(e4)) return true;
     if (e4.shiftKey && !/^[JK]$/.test(e4.key) || e4.altKey) return false;
     const a5 = document.activeElement;
     if (a5 && a5 !== document.body && /^(A|BUTTON|SUMMARY)$/.test(a5.tagName) && (e4.key === "Enter" || e4.key === " ")) return false;
@@ -56214,6 +56526,146 @@ ${pre}**Current state title:** ${title}`);
       return true;
     }
     return false;
+  }
+  var WKF = { s: "st", o: "o", p: "pr", t: "due" };
+  var WKSKIP = "[role=tab],[role=tablist],[role=separator],[role=menu],[role=menuitem],[role=listbox],[role=option],[role=slider],[role=switch],dialog";
+  var WKPOP = ".ddmenu,.cal,.combo-list,.pkpop,.linkpop,[role=menu],[role=listbox]";
+  function wkArrowOK(e4) {
+    if (e4.defaultPrevented || contextMenuOpen() || document.querySelector("dialog[open]") || shared.CAL || shared.PKPOP || $("#chat")?.classList.contains("on")) return false;
+    if ([...document.querySelectorAll(WKPOP)].some((el2) => el2.getClientRects().length > 0 && getComputedStyle(el2).visibility !== "hidden")) return false;
+    const a5 = document.activeElement;
+    return !a5 || a5 === document.body || !(a5.closest && a5.closest(WKSKIP));
+  }
+  var wkLetterOK = (e4) => !e4.repeat && wkArrowOK(e4);
+  function wkCursor() {
+    const order = hlOrder(), id2 = shared.HLC ?? shared.SEL, o5 = order.find((x5) => x5.id === id2);
+    return o5 || null;
+  }
+  function wkKey(e4) {
+    if (e4.metaKey || e4.ctrlKey || e4.altKey) return false;
+    const k5 = e4.key;
+    if (k5 === "ArrowDown" || k5 === "ArrowUp") return wkArrowOK(e4) && hlKey({ key: k5 === "ArrowDown" ? e4.shiftKey ? "J" : "j" : e4.shiftKey ? "K" : "k", shiftKey: e4.shiftKey, altKey: false, preventDefault: () => e4.preventDefault() });
+    if (k5 === "ArrowRight" || k5 === "ArrowLeft") {
+      if (e4.shiftKey || !wkArrowOK(e4)) return false;
+      return k5 === "ArrowRight" ? wkOpen(e4) : wkLeft(e4);
+    }
+    if (e4.shiftKey || shared.WT === "all" || !wkLetterOK(e4)) return false;
+    const c5 = k5.toLowerCase();
+    if (WKF[c5]) {
+      const o5 = wkCursor();
+      if (!o5) return false;
+      e4.preventDefault();
+      wkPropKey(WKF[c5], o5);
+      return true;
+    }
+    if (c5 === "c") {
+      if (pkOn()) return false;
+      const o5 = wkCursor();
+      if (!o5) return false;
+      e4.preventDefault();
+      wkClose(o5);
+      return true;
+    }
+    if (c5 === "v") {
+      const o5 = wkCursor();
+      if (!o5 && !(pkOn() && shared.CUR && shared.CUR.mode === "record")) return false;
+      e4.preventDefault();
+      const t47 = o5 || { k: shared.CUR.k, id: shared.CUR.id };
+      wkClientToggle(t47.k, t47.id);
+      return true;
+    }
+    return false;
+  }
+  function wkOpen(e4) {
+    const o5 = wkCursor();
+    if (!o5 || pkOn()) return false;
+    e4.preventDefault();
+    hlOnly(o5.k, o5.id);
+    openRecord(o5.k, o5.id);
+    return true;
+  }
+  function wkLeft(e4) {
+    if (pkOn()) {
+      e4.preventDefault();
+      closePanel();
+      return true;
+    }
+    const c5 = cxCursor();
+    if (!c5) return false;
+    e4.preventDefault();
+    const r4 = c5.el.getBoundingClientRect();
+    cxShow(c5, r4.left + Math.min(48, r4.width / 3), r4.top + Math.min(r4.height, 28));
+    return true;
+  }
+  var wkMenuLabel = (f5, k5) => f5 === "st" ? "Status" : f5 === "o" ? k5 === "decisions" ? "Decision maker" : "Owner" : f5 === "pr" ? k5 === "raid" ? "Impact" : "Priority" : k5 === "decisions" ? "Needed by" : "Due";
+  function wkPropKey(f5, o5) {
+    const many = HL.size >= 2 && HL.has(o5.id), k5 = o5.k;
+    if (f5 === "pr" && k5 === "decisions") {
+      snack("A decision has no priority");
+      return;
+    }
+    if (!many && pkOn() && shared.CUR && shared.CUR.mode === "record" && pkCid() === o5.id) {
+      const pf2 = f5 === "o" && k5 === "decisions" ? "by" : f5 === "pr" && k5 === "raid" ? "imp" : f5 === "due" && k5 === "decisions" && REC(k5, o5.id).st === "Made" ? "date" : f5;
+      const chip = $(`#panel [data-pkp="${pf2}"]`);
+      if (chip) {
+        chip.click();
+        return;
+      }
+    }
+    const cf2 = f5 === "o" && k5 === "decisions" ? "by" : f5 === "pr" && k5 === "raid" ? "imp" : f5, tr2 = !many && layoutOf(shared.WT) !== "board" ? $$("#workTbl tr[data-row]").find((r5) => r5.dataset.row === o5.id) : null, td2 = tr2 && tr2.querySelector(`td[data-f="${cf2}"]`);
+    if (td2 && ceEditable(k5, REC(k5, o5.id), cf2)) {
+      ceOpen(td2);
+      return;
+    }
+    const L3 = many ? cxWorkMany([...HL.keys()].map((id2) => [HL.get(id2), id2])) : cxWork(k5, o5.id), it2 = L3.find((x5) => x5.label === wkMenuLabel(f5, k5) && x5.sub);
+    if (!it2) {
+      snack("That can't be changed here");
+      return;
+    }
+    if (it2.disabled) {
+      snack(it2.hint || `${it2.label} can't be changed now`);
+      return;
+    }
+    const el2 = $$("#workTbl tr[data-row],#workBoard .bcard[data-row]").find((r5) => r5.dataset.row === o5.id), r4 = el2 ? el2.getBoundingClientRect() : { left: 200, top: 200, width: 0, height: 0 };
+    openContextMenu(it2.sub(), r4.left + Math.min(48, r4.width / 3), r4.top + Math.min(r4.height, 28), { label: many ? `${it2.label} of ${HL.size} items` : `${it2.label} of ${o5.id}`, from: el2 || void 0 });
+  }
+  async function wkClose(o5) {
+    const k5 = o5.k;
+    if (k5 === "decisions") {
+      snack("A decision is made or withdrawn, not closed: press S for its status");
+      return;
+    }
+    if (HL.size >= 2 && HL.has(o5.id)) {
+      await batchMove(k5, [...HL.keys()], { st: "Closed" }, "Closed {n}");
+      return;
+    }
+    const x5 = REC(k5, o5.id);
+    if (!x5) return;
+    if (!OPENST(x5.st)) {
+      snack(`${o5.id} is already ${x5.st.toLowerCase()}`);
+      return;
+    }
+    if (pkOn() && shared.CUR && shared.CUR.mode === "record" && pkCid() === o5.id) {
+      pkSetStatus(k5, o5.id, "Closed");
+      return;
+    }
+    await boardMove(k5, o5.id, { st: "Closed" }, `${o5.id} closed: ${x5.t.length > 60 ? x5.t.slice(0, 57) + "…" : x5.t}`);
+  }
+  function wkClientToggle(k5, id2) {
+    const x5 = REC(k5, id2);
+    if (!x5 || k5 === "all") return;
+    const on2 = !x5.client, inPeek = pkOn() && shared.CUR && shared.CUR.mode === "record" && pkCid() === id2;
+    if (inPeek) {
+      pkClient(k5, id2, on2);
+      return;
+    }
+    if (on2 && !pkMsgOK(k5, x5[pkMsgF(k5)])) {
+      hlOnly(k5, id2);
+      openRecord(k5, id2);
+      pkClient(k5, id2, true);
+      return;
+    }
+    boardMove(k5, id2, { client: on2 }, `Client-visible ${on2 ? "on" : "off"} for ${id2}${on2 ? ": it can appear in client reports" : ""}`);
   }
   var CE_FIELDS = { actions: ["st", "o", "due", "pr", "ws", "ms"], raid: ["st", "o", "type", "imp", "due", "ws", "ms"], decisions: ["st", "by", "date"] };
   var CE_LABEL = { st: "status", o: "owner", by: "made by", due: "due date", date: "date", pr: "priority", imp: "priority", ws: "workstream", type: "type", ms: "milestone" };
@@ -59717,124 +60169,6 @@ ${d5.text}`);
     });
   }
 
-  // components/peek/PeekProps.jsx
-  var ST_COLOUR = (
-    /** @type {Record<string, string>} */
-    {
-      Open: "var(--accent)",
-      Delayed: "var(--warn)",
-      Closed: "var(--ok)",
-      Cancelled: "var(--faint)",
-      Pending: "var(--muted)",
-      Made: "var(--ok)",
-      Withdrawn: "var(--faint)"
-    }
-  );
-  var TICK = "M8 12.5l3 3 5-6", CROSS = "M9 9l6 6M15 9l-6 6";
-  var ST_INNER = (
-    /** @type {Record<string, any>} */
-    {
-      Open: { d: "M12 4a8 8 0 0 1 0 16z", fill: "currentColor", stroke: "none" },
-      Delayed: { d: "M12 8v4l2.5 1.5" },
-      Closed: { d: TICK },
-      Cancelled: { d: CROSS },
-      Made: { d: TICK },
-      Withdrawn: { d: CROSS }
-    }
-  );
-  var PR_N = (
-    /** @type {Record<string, number>} */
-    { Urgent: 4, High: 3, Medium: 2, Low: 1 }
-  );
-  var PR_COLOUR = (
-    /** @type {Record<string, string>} */
-    { Urgent: "var(--bad)", High: "var(--warn)", Medium: "var(--accent)", Low: "var(--faint)" }
-  );
-  function StatusRing({ st: st2 }) {
-    const inner = ST_INNER[st2];
-    return /* @__PURE__ */ u4(
-      "svg",
-      {
-        viewBox: "0 0 24 24",
-        width: "18",
-        height: "18",
-        fill: "none",
-        stroke: "currentColor",
-        style: `color:${ST_COLOUR[st2] || "var(--muted)"}`,
-        "stroke-width": "2",
-        "stroke-linecap": "round",
-        "stroke-linejoin": "round",
-        "aria-hidden": "true",
-        children: [
-          /* @__PURE__ */ u4("circle", { cx: "12", cy: "12", r: "8", "stroke-dasharray": st2 === "Pending" ? "3 3" : void 0 }),
-          inner ? /* @__PURE__ */ u4("path", { ...inner }) : null
-        ]
-      }
-    );
-  }
-  function PriorityBars({ pr: pr2 }) {
-    const n4 = PR_N[pr2] || 0, c5 = PR_COLOUR[pr2] || "var(--faint)";
-    return /* @__PURE__ */ u4("svg", { viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true", children: [0, 1, 2, 3].map((i5) => /* @__PURE__ */ u4("rect", { x: String(3 + i5 * 5), y: String(16 - i5 * 4), width: "3.4", height: String(4 + i5 * 4), rx: "1", fill: c5, opacity: i5 < n4 ? "1" : ".25" }, i5)) });
-  }
-  function Initials({ who: who2 }) {
-    if (!who2) return /* @__PURE__ */ u4(Icon, { name: "user" });
-    const i5 = who2.split(/\s+/).map((w6) => w6[0] || "").join("").slice(0, 2).toUpperCase();
-    return /* @__PURE__ */ u4("svg", { viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true", children: [
-      /* @__PURE__ */ u4("circle", { cx: "12", cy: "12", r: "10", fill: "var(--accent-soft)" }),
-      /* @__PURE__ */ u4("text", { x: "12", y: "15.5", "text-anchor": "middle", "font-size": "9.5", "font-weight": "600", fill: "var(--accent)", "font-family": "inherit", children: i5 })
-    ] });
-  }
-  function Mark({ mark }) {
-    if (mark.st != null) return /* @__PURE__ */ u4(StatusRing, { st: mark.st });
-    if (mark.pr != null) return /* @__PURE__ */ u4(PriorityBars, { pr: mark.pr });
-    if (mark.who != null) return /* @__PURE__ */ u4(Initials, { who: mark.who });
-    return /* @__PURE__ */ u4(Icon, { name: mark.icon || "pencil" });
-  }
-  function Prop({ p: p6 }) {
-    const words = /* @__PURE__ */ u4("span", { children: [
-      p6.nw ? /* @__PURE__ */ u4("span", { class: "nw", children: p6.value }) : p6.value,
-      p6.you ? /* @__PURE__ */ u4(S2, { children: [
-        " ",
-        /* @__PURE__ */ u4("small", { class: "sub", children: "(you)" })
-      ] }) : null,
-      p6.late ? /* @__PURE__ */ u4(S2, { children: [
-        " ",
-        /* @__PURE__ */ u4("em", { children: "overdue" })
-      ] }) : null
-    ] });
-    const plain = `${p6.value}${p6.you ? " (you)" : ""}${p6.late ? " overdue" : ""}`;
-    if (p6.ro) return /* @__PURE__ */ u4("div", { class: "pk-prop", children: /* @__PURE__ */ u4(Chip, { cls: "pk-chip ro", role: "note", "aria-label": p6.ro, tip: p6.roTip, children: [
-      /* @__PURE__ */ u4(Mark, { mark: p6.mark }),
-      words
-    ] }) });
-    return /* @__PURE__ */ u4("div", { class: "pk-prop", children: /* @__PURE__ */ u4(
-      Chip,
-      {
-        button: true,
-        cls: ["pk-chip", p6.empty ? "empty" : "", p6.cls || ""].filter(Boolean).join(" "),
-        "data-pkp": p6.f,
-        "aria-haspopup": (
-          /** @type {any} */
-          p6.popup || "listbox"
-        ),
-        name: `${p6.name}: ${p6.empty ? "not set" : plain}`,
-        tip: p6.name,
-        children: [
-          /* @__PURE__ */ u4(Mark, { mark: p6.mark }),
-          words
-        ]
-      }
-    ) });
-  }
-  function peekMark(mark) {
-    return /* @__PURE__ */ u4(Mark, { mark });
-  }
-  function peekPropNodes(list) {
-    const box = document.createElement("div");
-    R(/* @__PURE__ */ u4(S2, { children: list.map((p6) => /* @__PURE__ */ u4(Prop, { p: p6 }, p6.f)) }), box);
-    return [...box.childNodes];
-  }
-
   // core/irUpdate.js
   var UI = (
     /** @type {Record<string, Record<string, string>>} */
@@ -61382,7 +61716,10 @@ ${d5.text}`);
       chevup: '<path d="M6 15l6-6 6 6"/>',
       link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
     });
-    addHTML($("#panel .pin"), "afterbegin", html`<div class="pk-bar" id="pkBar">${raw(ibtn("arrowright", "Close", 'id="pkClose"', "", "Esc"))}${raw(ibtn("expand", "Expand to full width", 'id="pkExpand"'))}<span class="pk-sep" aria-hidden="true"></span>${raw(ibtn("chevup", "Previous item", 'id="pkPrev"', "", "K"))}${raw(ibtn("chevdown", "Next item", 'id="pkNext"', "", "J"))}<span class="sp"></span><span class="pk-save" id="pkSave" role="status" aria-live="polite"></span>${raw(ibtn("link", "Copy link", 'id="pkLink"'))}</div>`);
+    addHTML($("#panel .pin"), "afterbegin", html`<div class="pk-bar" id="pkBar">${raw(ibtn("arrowright", "Close", 'id="pkClose"', "", "Esc"))}${raw(ibtn("expand", "Expand to full width", 'id="pkExpand"'))}<span class="pk-sep" aria-hidden="true"></span>${raw(ibtn("chevup", "Previous item", 'id="pkPrev"', "", "K"))}${raw(ibtn("chevdown", "Next item", 'id="pkNext"', "", "J"))}<span class="sp"></span><span class="pk-save" id="pkSave" role="status" aria-live="polite"></span>${raw(ibtn("eye", "Client-visible: off", 'id="pkCv" aria-pressed="false"', "", "V"))}${raw(ibtn("link", "Copy link", 'id="pkLink"'))}</div>`);
+    $("#pkCv").onclick = () => {
+      if (shared.CUR && shared.CUR.mode === "record") wkClientToggle(shared.CUR.k, shared.CUR.id);
+    };
     $("#pkClose").onclick = () => closePanel();
     $("#pkExpand").onclick = () => pkWide(!PK.wide);
     $("#pkPrev").onclick = () => pkStep(-1);
@@ -61471,8 +61808,20 @@ ${d5.text}`);
       n4.append(" ", b5);
     }
   }
+  function pkCvDraw(x5) {
+    const b5 = $("#pkCv");
+    if (!b5) return;
+    const rec = shared.CUR && shared.CUR.mode === "record", on2 = !!(rec && x5.client);
+    b5.hidden = !rec || chaseIsOpen();
+    b5.setAttribute("aria-pressed", String(on2));
+    const t47 = on2 ? "Client-visible: on, it can appear in client reports" : "Client-visible: off";
+    b5.setAttribute("aria-label", t47);
+    b5.dataset.tip = t47;
+    if (on2 && !$("#pkId .cv")) addHTML($("#pkId"), "beforeend", html`<span class="cv" title="It can appear in client reports">${raw(ic("eye"))}Client-visible</span>`);
+  }
   function pkDrawId(x5, k5) {
     putHTML($("#pkId"), html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p)}</a>` : html`<span>needs a project</span>`}${k5 === "raid" ? html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x5.type}" data-tip="Type">${x5.type}${raw(ic("chevdown"))}</button>` : ""}`);
+    pkCvDraw(x5);
     const w6 = shared.CUR.mode === "record" ? warnsOf(k5, pkCid()) : [];
     putHTML($("#pkWarn"), w6.map((z4) => html`<div class="pk-warn">${raw(WICO.replace("<svg", '<svg width="14" height="14"'))}<span>${z4.text}</span></div>`));
     drawPeekNotes(shared.CUR.mode === "record" ? pkCid() : "");
@@ -62353,7 +62702,7 @@ ${d5.text}`);
     const on2 = shared.CUR.mode === "proposal";
     $("#panel").classList.toggle("pkprop", on2);
     const nav = !!(shared.PKSRC && shared.PKSRC.view && shared.PKSRC.view === shared.VIEW);
-    ["pkLink", "pkMore", "pkPrev", "pkNext", "pkExpand"].forEach((id2) => {
+    ["pkLink", "pkMore", "pkPrev", "pkNext", "pkExpand", "pkCv"].forEach((id2) => {
       const b5 = $("#" + id2);
       if (b5) b5.hidden = on2 && id2 !== "pkExpand" && !(nav && (id2 === "pkPrev" || id2 === "pkNext"));
     });
@@ -70411,7 +70760,7 @@ ${d5.text}`);
       vb: shared.VIEW === "work" && !shared.WVIEW ? WB[shared.WT] || null : null,
       lay: shared.VIEW === "work" && layoutOf(shared.WT) === "board" ? "board" : "list",
       g: shared.VIEW === "work" ? groupOf(shared.WT) : null,
-      lg: shared.VIEW === "work" ? listGroupOf(shared.WT) : null,
+      lg: shared.VIEW === "work" && shared.WT in WLGRP ? listGroupOf(shared.WT) : null,
       sg: shared.VIEW === "work" ? subOf(shared.WT, layoutOf(shared.WT)) : null,
       item: shared.CUR && shared.CUR.mode === "record" ? { k: shared.CUR.k, id: shared.CUR.id } : null,
       scroll: viewEl() ? viewEl().scrollTop : 0
@@ -70453,7 +70802,7 @@ ${d5.text}`);
     if (st2 && st2.v === "minutes") return `#minutes=${encodeURIComponent(typeof st2.arg === "string" ? st2.arg : "")}`;
     if (st2 && st2.v === "milestones") return `#milestones${st2.arg ? `=${st2.arg}` : ""}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
     if (st2 && st2.v === "people") return "#people" + (st2.arg && st2.arg !== "all" ? "/" + st2.arg : "");
-    let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? st2.arg ? `cockpit=${st2.arg}` : "cockpit" : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : ["inbox", "review", "intake", "intake-review"].includes(st2.v) ? "intake-review" + (st2.ir && st2.ir.stage ? `&stage=${st2.ir.stage}` : "") + (st2.ir && st2.ir.m ? `&m=${encodeURIComponent(st2.ir.m)}` : "") : st2.v;
+    let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? st2.arg ? `cockpit=${st2.arg}` : "cockpit" : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && (st2.lg !== "none" || LDEFG[st2.wt]) ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : ["inbox", "review", "intake", "intake-review"].includes(st2.v) ? "intake-review" + (st2.ir && st2.ir.stage ? `&stage=${st2.ir.stage}` : "") + (st2.ir && st2.ir.m ? `&m=${encodeURIComponent(st2.ir.m)}` : "") : st2.v;
     if (st2.item) h5 += `&item=${st2.item.id}`;
     h5 = "#" + h5;
     if (st2 && st2.v === "activity" && st2.aq) {
@@ -70595,7 +70944,7 @@ ${d5.text}`);
         }
         st3.lay = kv.lay === "board" ? "board" : "list";
         if (groupsOf(st3.wt).some((g5) => g5[0] === kv.g)) st3.g = kv.g;
-        st3.lg = groupsOf(st3.wt).some((g5) => g5[0] === kv.lg) ? kv.lg : "none";
+        st3.lg = groupsOf(st3.wt).some((g5) => g5[0] === kv.lg) || kv.lg === "none" ? kv.lg : null;
         st3.sg = groupsOf(st3.wt).some((g5) => g5[0] === kv.sg) ? kv.sg : "none";
       } else if (v5 === "reports") {
         st3.arg = /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : null;
@@ -70698,7 +71047,10 @@ ${d5.text}`);
         WLAY[shared.WT] = st2.lay;
         if (st2.g) WGRP[shared.WT] = st2.g;
       }
-      if (st2.lg) WLGRP[shared.WT] = st2.lay === "board" ? WLGRP[shared.WT] || "none" : st2.lg;
+      if (st2.lay !== "board") {
+        if (st2.lg) WLGRP[shared.WT] = st2.lg;
+        else listGroupBack(shared.WT);
+      }
       if (st2.sg) WSUB[shared.WT + "|" + (st2.lay || "list")] = st2.sg;
     }
     if (st2.v === "reports") repWeek.value = st2.arg || "";
@@ -78150,6 +78502,7 @@ ${d5.text}`);
         "Icon",
         "IconButton",
         "LASTVISIT",
+        "LCOLL",
         "MAC",
         "MFIRST",
         "MM",
@@ -78340,6 +78693,7 @@ ${d5.text}`);
         "closeNote",
         "closePanel",
         "closePicker",
+        "cmOK",
         "comboboxOpen",
         "confirmCard",
         "copied",
@@ -78564,6 +78918,7 @@ ${d5.text}`);
         "linkWithAddress",
         "linkWords",
         "linkWrite",
+        "listGroupOf",
         "loadChat",
         "loadHub",
         "loadPartners",
@@ -78877,6 +79232,7 @@ ${d5.text}`);
         "stopAsk",
         "stopRun",
         "store",
+        "subOf",
         "sw",
         "swept",
         "syncView",

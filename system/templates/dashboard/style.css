@@ -4262,3 +4262,21 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #dePrev,#chMail{resize:vertical;box-sizing:border-box;height:auto;min-height:8rem;max-height:90vh}
 #dePrev:not([style*="height"]),#chMail:not([style*="height"]){max-height:28vh}
 #dePrev:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* ===== NEW (#241 Work items v2, dev/sprints/work-items-v2-brief.md; mockup dev/mockups/work-items-v2-mockup.html): the .tg tag chip,
+   the row densities .cmp (40 px) and .cmf (57 px, today's two lines), the density switch (a .seg.ico), the row's status and priority
+   marks (.wkm) and the peek's client-visible switch and badge. Tokens and the app's own classes only. Row height only: no width. ===== */
+#workTbl td.title .wkm{display:inline-flex;align-items:center;gap:2px;margin-right:6px;vertical-align:-3px}
+#workTbl td.title .wkm svg{width:16px;height:16px;flex:none}
+.tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;margin-left:6px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500;white-space:nowrap;vertical-align:1px}
+.tg svg{width:12px;height:12px;flex:none}
+.tg[data-tg=cv]{background:var(--accent-soft);color:var(--accent)}
+#workWrap.cmp tbody tr[data-row]>td{height:40px;padding-top:0;padding-bottom:0;vertical-align:middle}
+#workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* a second line that has to stay (no room beside the title) still fits the 40 px */
+#workWrap.cmp td.title>.x.xup{height:0;translate:var(--wkx,0) var(--wky,0);pointer-events:none}   /* #241 a: one line, the ID beside the title; a translate never changes a width (wkPlace) */
+#workWrap.cmp td.title>.x.xup :is(a,[role=link],button){pointer-events:auto}
+#workWrap.cmf tbody tr[data-row]>td{height:57px}
+.seg.ico.wdens[hidden]{display:none}
+#pkCv[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+#pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
+#pkId .cv svg{width:12px;height:12px}
+/* ===== end NEW (#241) ===== */
