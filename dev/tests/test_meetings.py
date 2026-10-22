@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -15,6 +16,7 @@ from test_dashboard import today as _cx_today  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 NOW = "2026-10-08 09:30"          # a Thursday: the window starts Monday 05-10-2026
+FRIDAY_AFTER = (date(2026, 10, 5) + timedelta(days=11)).isoformat()   # #318: the window ends on the Friday of next calendar week (Monday + 11 days)
 
 
 def sweep(v, *args, now=NOW):
@@ -56,7 +58,7 @@ class CalendarTests(unittest.TestCase):
         return sweep(self.v, "calendar", str(self.spec))
 
     def test_window_ids_teams_and_nothing_else(self):
-        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": "2026-10-15", "keep_from": "2026-10-05"})   # #146: nothing saved yet, so the whole window
+        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": FRIDAY_AFTER, "keep_from": "2026-10-05"})   # #146; #318: nothing saved yet, so the whole window
         out = self.calendar().stdout
         self.assertIn("Calendar saved: 4 meetings over 3 days", out)
         self.assertIn("Ignored 1: Anything marked private 1", out)                             # BL-97: the private 1:1
@@ -131,7 +133,7 @@ class SweepFromTodayTests(unittest.TestCase):
         return json.loads(sweep(self.v, "calendar-window", now=now).stdout)
 
     def test_window_starts_today_not_monday(self):
-        self.assertEqual(self.window(), {"from": "2026-10-08", "to": "2026-10-15", "keep_from": "2026-10-05"})
+        self.assertEqual(self.window(), {"from": "2026-10-08", "to": FRIDAY_AFTER, "keep_from": "2026-10-05"})
 
     def test_a_gap_is_filled_from_the_window_start(self):
         # last fetched more than a week ago: from the day after what it reached; nothing saved: the whole window
