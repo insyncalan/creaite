@@ -226,8 +226,8 @@ class PeoplePage(Base):
         self.assertFalse(b.eval("!!document.querySelector('#peFollow')"))
         self.tap("#peCancel")
         b.wait("!document.querySelector('#personEdit[open]')")
-        for js, ready in (("go('work')", "VIEW==='work'"), ("go('today')", "VIEW==='today'"), ("go('review')", "VIEW==='review'"),
-                          ("go('inbox')", "VIEW==='inbox'"), ("go('person','Sara Example')", "VIEW==='person'"),
+        for js, ready in (("go('work')", "VIEW==='work'"), ("go('today')", "VIEW==='today'"), ("go('review')", "VIEW==='intake-review'"),   # #232 C2: Review and Inbox are Intake's page
+                          ("go('inbox')", "VIEW==='intake-review'"), ("go('person','Sara Example')", "VIEW==='person'"),
                           ("go('work'); openRecord('actions', A.find(a=>a.o==='Sara Example').id)", "!!document.querySelector('#panel.on, .peek')")):
             b.eval(js)
             b.wait(ready)

@@ -44,3 +44,12 @@ Flake: test_intake_review_harden_b.py (Keys.test_arrows_and_esc_after_the_peek_w
 | File | Class | Fix |
 |---|---|---|
 | test_icons.py | stale test | #288 moved the Work field picker's shortcut to Shift+F |
+
+### Shard 6/8: 63 passed, 3 failed (all failed alone too), 0 flakes
+| File | Class | Fix |
+|---|---|---|
+| test_word_export_227.py | stale test | its client_items stub took (code, fri); the 2.6 review passes `base=` too, so the stub raised and the facts failed closed (no milestones drawn). Check 9 now diffs guarded files against origin/v26-rc (the HOPD's approved diffs are on it) instead of origin/v234-final |
+| test_propose.py | stale test | guard-small: a copy onto a different existing file is refused when staged (was: at apply); nothing staged, file untouched |
+| test_people_page_v2.py | stale test | #232 C2: go('review') / go('inbox') land on intake-review |
+
+Not in the suite but stale the same way: dev/tests/handchecks/test_v260.py lines 909-910 (VIEW==='review' / 'inbox').
