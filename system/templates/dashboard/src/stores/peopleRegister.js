@@ -179,7 +179,7 @@ function applyFollow(r, f) {
   if (f.follow === undefined) return;
   const cur = String(r.extra.Follow || r.extra.VIP || "").trim();
   r.extra.Follow = f.follow ? (cur && !NO_FOLLOW.test(cur) ? cur : "yes") : "";
-  delete r.extra.VIP;                                   // an older register's column is migrated on the first save
+  delete r.extra.VIP;                                   // an older register's column is renamed Follow on the save (settings.js peopleText)
 }
 
 /** Save a person's details (one entry, the same on every project); `projects` the ticked projects; `follow` only from the project

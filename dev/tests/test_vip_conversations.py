@@ -282,7 +282,7 @@ class ConversationRecordTests(unittest.TestCase):
     def test_the_old_message_shape_still_records(self):
         out = record(self.v, [{"kind": "mail", "from": MIA, "subject": "Quick one", "sent": "2026-10-08 08:50",
                                "link": "https://x/m1", "gist": "Asks for a call."}])
-        self.assertIn("VIP: 1 new alert", out)
+        self.assertIn("Followed: 1 new alert", out)
         self.assertNotIn("summary", vip_file(self.v)["alerts"][0])
 
 

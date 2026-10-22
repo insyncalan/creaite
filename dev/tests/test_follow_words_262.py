@@ -28,7 +28,8 @@ def visible_literals(js):
         if l.lstrip().startswith("//"):
             continue
         l = re.sub(r"\s//\s.*$", "", l)
-        out += [m.group(0) for m in re.finditer(r"\"[^\"]*\"|'[^']*'|`[^`]*`", l) if WORD.search(m.group(0))]
+        out += [m.group(0) for m in re.finditer(r"\"[^\"]*\"|'[^']*'|`[^`]*`", l)
+                if WORD.search(m.group(0)) and m.group(0) != '"VIP"']       # "VIP" alone is the older register column's name
     return out
 
 
