@@ -5,6 +5,9 @@ Run: python3 dev/tests/test_held_visible.py      (the page tests need Google Chr
 - Row (quick tier): an item flagged invalid carries its reason in plain words (`bad`), and its row's why says it can't be saved.
 - Page: the invalid item's row shows the reason and its Approve is off (A says why); held minutes show "Held: …" on the row, not
   only in the tip; the apply's message tells a held item from a file that has gone.
+- Fixed in the peek (#291 fix): the invalid item opened and saved in the peek is checked again with the tracker's own check:
+  the field the tracker doesn't keep is left out, the row stops saying it can't be saved, Approve is on, and approving then
+  applying writes it (the apply part skips until tracker.py takes the #280 diffs).
 - Apply (skips until tracker.py takes dev/proposals/280/tracker.py.diff): approve an item carrying `raised`, Apply holds it, and
   its row in Review says why.
 """
@@ -117,6 +120,64 @@ class HeldOnThePage(LiveBrowserCase):
                          ". 2 items are held in Review: they can't be saved as they are. "
                          "1 proposal is held in Review: a file to be filed has gone")
         self.assertEqual(b.eval("heldWords('Apply 3: 2 written')"), "")
+
+
+class FixedInThePeek(LiveBrowserCase):
+    @classmethod
+    def load(cls, v):
+        populate(v)
+        (v.root / "system/staging" / SWEEP).write_text(json.dumps(sweep_proposal(True)), encoding="utf-8")
+
+    def test_saving_the_fixed_item_in_the_peek_lifts_the_hold(self):
+        b = self.b
+        find = f"x=>x.file==='{SWEEP}'&&x.kind==='decisions'"
+        b.wait(f"REV.some({find})", timeout=15)
+        b.eval("go('review')")
+        n = b.eval(f"REV.find({find}).n")
+        row = f'#reviewBody tr[data-n="{n}"]'
+        b.wait(f"!!document.querySelector('{row} [data-act=a]')", timeout=10)
+        self.assertTrue(b.eval(f"document.querySelector('{row} [data-act=a]').disabled"), "held before the fix")
+        b.eval(f"openProposal({n})")
+        b.wait("!!document.querySelector('#pkPropTop .pk-bad')", timeout=10)
+        self.assertIn("Saving leaves out raised", b.eval("document.querySelector('#pkPropTop').innerText"))
+        b.eval(f"shared.CUR.draft.t='Pilot extended by three weeks'; shared.CUR.draft.date='{DAY}'")   # the date it was made
+        b.eval("pkPropSave(false)")
+        b.wait(f"REV.some(x=>x.file==='{SWEEP}'&&x.kind==='decisions'&&!x.bad)", timeout=20)
+        prop = json.loads((self.v.root / "system/staging" / SWEEP).read_text(encoding="utf-8"))
+        vals = prop["items"][1]["values"]
+        self.assertNotIn("raised", vals, "the field the tracker doesn't keep is left out")
+        self.assertEqual(vals["decision"], "Pilot extended by three weeks")
+        n = b.eval(f"REV.find({find}).n")
+        row = f'#reviewBody tr[data-n="{n}"]'
+        b.wait(f"!!document.querySelector('{row} [data-act=a]')&&!document.querySelector('{row} [data-act=a]').disabled",
+               timeout=10)
+        self.assertNotIn("Can't be saved as it is", b.eval(f"document.querySelector('{row}').innerText"))
+        self.assertNotIn("can't be saved", b.eval(f"rvWhyNot(REV.find(x=>x.n==={n}))[1]"), "a new decision, approved on its own")
+        self.assertEqual(b.errors, [])
+        if not HELD_ITEMS:
+            self.skipTest("approve and apply: tracker.py has not taken dev/proposals/280/tracker.py.diff yet")
+        b.click(f"{row} [data-act=a]")
+        prop_file = self.v.root / "system/staging" / SWEEP
+        deadline = time.time() + 10
+        while time.time() < deadline and prop_file.exists() and \
+                json.loads(prop_file.read_text(encoding="utf-8"))["items"][1].get("decision") != "approved":
+            time.sleep(0.2)
+        if prop_file.exists():
+            item = json.loads(prop_file.read_text(encoding="utf-8"))["items"][1]
+            self.assertNotIn("invalid", item.get("flags") or [], "the approval clears the stored flag")
+        b.eval("applyNow()")
+        db = self.v.root / "system/tracker.db"
+        deadline = time.time() + 30
+        import sqlite3
+        while time.time() < deadline:
+            con = sqlite3.connect(db)
+            got = con.execute("SELECT count(*) FROM decisions WHERE decision = 'Pilot extended by three weeks'").fetchone()[0]
+            con.close()
+            if got:
+                break
+            time.sleep(0.5)
+        self.assertEqual(got, 1, "approved and applied, the fixed item is written")
+        self.assertEqual(b.errors, [])
 
 
 @unittest.skipUnless(HELD_ITEMS, "tracker.py has not taken dev/proposals/280/tracker.py.diff yet")
