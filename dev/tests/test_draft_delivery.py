@@ -240,10 +240,10 @@ class Hook(Isolated):
         self.file = self.tmp / "request.json"
         self.file.write_text(json.dumps(self.req["args"]))
 
-    def call(self, tool, inp, file=None):
+    def call(self, tool, inp, file=None, digest=None):
         ev = json.dumps({"tool_name": tool, "tool_input": inp})
-        return subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook", str(file or self.file)],
-                              input=ev, capture_output=True, text=True)
+        return subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook", str(file or self.file),
+                               digest or dd.args_digest(self.req["args"])], input=ev, capture_output=True, text=True)
 
     def test_the_exact_request_is_let_through_once_and_a_second_draft_is_refused(self):
         first = self.call(dd.CREATE_TOOL, self.req["args"])
@@ -279,8 +279,8 @@ class Hook(Isolated):
         bad = self.tmp / "bad.json"
         bad.write_text("[1, 2]")
         self.assertEqual(self.call(dd.CREATE_TOOL, self.req["args"], file=bad).returncode, 2)
-        r = subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook", str(self.file)],
-                           input="not json", capture_output=True, text=True)
+        r = subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook", str(self.file),
+                            dd.args_digest(self.req["args"])], input="not json", capture_output=True, text=True)
         self.assertEqual(r.returncode, 2)
         r = subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook"], input="{}",
                            capture_output=True, text=True)
@@ -294,15 +294,15 @@ class Hook(Isolated):
         cmd = entry["hooks"][0]["command"]
         self.assertEqual(entry["hooks"][0]["type"], "command")
         self.assertTrue(cmd.startswith("/bin/sh /v/system/scripts/run draft_delivery.py hook "))
-        self.assertTrue(cmd.endswith("'/tmp/x y/request.json'"))
+        self.assertIn("'/tmp/x y/request.json' ", cmd)
         self.assertNotIn("sara@example.com", cmd)
 
-    def test_the_request_is_written_where_the_wrapper_allows_an_argument_and_removed_after(self):
-        was = dd.paths.STAGING
-        dd.paths.STAGING = self.tmp
-        self.addCleanup(setattr, dd.paths, "STAGING", was)
+    def test_the_request_is_written_in_the_guard_folder_and_removed_after(self):
+        was = dd.paths.GUARD
+        dd.paths.GUARD = self.tmp / "guard"
+        self.addCleanup(setattr, dd.paths, "GUARD", was)
         path = dd.hook_request_file(self.req)
-        self.assertEqual(Path(path).parent, self.tmp / "drafts")                  # system/staging/drafts/ in a vault
+        self.assertEqual(Path(path).parent, self.tmp / "guard")                   # system/guard/ in a vault
         self.assertTrue(os.path.isabs(path))
         try:
             self.assertEqual(json.loads(Path(path).read_text()), self.req["args"])
@@ -312,6 +312,37 @@ class Hook(Isolated):
             dd.hook_cleanup(path)
         self.assertFalse(Path(path).exists())
         self.assertFalse(Path(path + ".used").exists())
+
+    def test_the_settings_carry_the_digest_of_the_file_as_written(self):
+        cmd = json.loads(dd.hook_settings(["/r"], str(self.file)))["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+        self.assertTrue(cmd.endswith(" " + dd.args_digest(self.req["args"])))
+        gone = json.loads(dd.hook_settings(["/r"], str(self.tmp / "nope.json")))["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+        self.assertTrue(gone.endswith(" " + "0" * 64))                             # unreadable: a digest nothing matches
+
+    def test_a_rewritten_request_file_makes_the_hook_refuse(self):
+        digest = dd.args_digest(self.req["args"])
+        self.file.write_text(json.dumps({**self.req["args"], "bcc": ["x@example.com"]}))   # an added Bcc
+        changed = {**self.req["args"], "bcc": ["x@example.com"]}
+        for args in (changed, self.req["args"]):
+            r = self.call(dd.CREATE_TOOL, args, digest=digest)
+            self.assertEqual(r.returncode, 2)
+            self.assertEqual(r.stdout.strip(), "")
+        self.assertEqual(self.call(dd.CREATE_TOOL, changed, digest="0" * 64).returncode, 2)   # a digest that does not match
+        self.assertEqual(self.call("ToolSearch", {}, digest=digest).returncode, 2)            # fails closed for every tool
+        self.assertEqual(self.call(dd.CREATE_TOOL, changed, digest=dd.args_digest(changed)).returncode, 0)  # the live server's digest only
+
+    def test_no_ask_creaite_run_can_write_the_request_file_in_any_mode(self):
+        import reach
+        path = str(dd.paths.GUARD / "draft-hook-abc.json")
+        for op in ("create", "change", "delete", "move"):
+            self.assertEqual(reach.classify(path, op)[0], "never", op)
+        for mode in ("ask", "confirmed", "sweep", "held", "prep"):
+            for tool, key in (("Write", "file_path"), ("Edit", "file_path")):
+                ok, why = reach.hook_decision(tool, {key: path, "content": "{}"}, mode, "run-x")
+                self.assertFalse(ok, f"{tool} in {mode}")
+                self.assertTrue(why)
+            ok, why = reach.hook_decision("Bash", {"command": f"echo x > {path}"}, mode, "run-x")
+            self.assertFalse(ok, f"Bash in {mode}")
 
     def test_the_refusal_words_say_what_was_made_and_to_delete_it_unsent(self):
         changed = {**self.req["args"], "bcc": ["x@example.com"]}

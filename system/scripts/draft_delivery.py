@@ -24,6 +24,7 @@ recipient address. Never the subject, an address or any of the email's text. Lib
 `check`, `created`, `copied`, `access`, `sent`: JSON on stdin, JSON out), for the live server's route.
 """
 import hashlib
+import hmac
 import html.parser
 import json
 import os
@@ -303,23 +304,37 @@ def check(events, req):
 # afterwards, when a draft to another To, Cc or Bcc, or a second one, would already exist. So the run is also started with a
 # PreToolUse hook (`--settings`, hook_settings) that runs `draft_delivery.py hook <request file>` before every tool call: create-draft
 # only with exactly the request's arguments and only once, ToolSearch, nothing else; any error refuses (exit 2, the reason goes back
-# to the model). The request is written by hook_request_file (system/staging/drafts/) and removed by hook_cleanup.
+# to the model). The request is written by hook_request_file (system/guard/, which an ask creaite run cannot write; its digest is
+# in the hook's command) and removed by hook_cleanup.
 HOOK_ALLOW = json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}})
+
+
+def args_digest(args):
+    """SHA-256 (hex) of the request's arguments in one canonical form (sorted keys, no spaces, UTF-8)."""
+    return hashlib.sha256(json.dumps(args, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
 def hook_settings(runner, request_file):
     """The --settings JSON for the draft run: the PreToolUse hook (matcher "*": every tool, MCP included) that runs
-    `<runner> hook <request file>`. `runner` is the command that starts this script (the wrapper, as the guard hook's)."""
-    cmd = " ".join(shlex.quote(str(x)) for x in (*runner, "hook", request_file))
+    `<runner> hook <request file> <sha256>`. `runner` is the command that starts this script (the wrapper, as the guard hook's).
+    The digest of the file's arguments, taken now, travels in this command, which only the live server sets, so a file changed
+    later (by anyone) no longer matches and the hook refuses. A file that can't be read gets a digest nothing matches."""
+    try:
+        with open(request_file, encoding="utf-8") as f:
+            digest = args_digest(json.load(f))
+    except (OSError, ValueError):
+        digest = "0" * 64
+    cmd = " ".join(shlex.quote(str(x)) for x in (*runner, "hook", request_file, digest))
     return json.dumps({"disableAllHooks": False,
                        "hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}})
 
 
 def hook_request_file(req):
-    """The request's arguments in a file of their own, `draft-hook-*.json` in system/staging/drafts/ (the one place the wrapper that
-    starts the hook lets an argument name, and not a place the run can read: it has no file tool and starts elsewhere); returns its
-    absolute path. The hook marks it used there (`<file>.used`); hook_cleanup removes both."""
-    d = paths.STAGING / "drafts"
+    """The request's arguments in a file of their own, `draft-hook-*.json` in system/guard/ (on reach.py's never list for every
+    write by an ask creaite run, in every mode, and open to a read, which the wrapper needs to pass it as an argument; it is not
+    in system/staging/drafts/, where an ask run may write); returns its absolute path. Written here, by the live server's own
+    process. The hook marks it used there (`<file>.used`); hook_cleanup removes both."""
+    d = paths.GUARD
     d.mkdir(parents=True, exist_ok=True)
     fd, path = tempfile.mkstemp(prefix="draft-hook-", suffix=".json", dir=str(d))
     with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -350,16 +365,18 @@ def hook_decision(tool, inp, args, claim):
 
 
 def hook_main(argv):
-    """`draft_delivery.py hook <request file>`: Claude Code's PreToolUse hook for the draft run (call JSON on stdin). Exit 0 lets the
-    call through, exit 2 refuses it with the reason on stderr. Any error refuses. The create-draft call is allowed only by this
+    """`draft_delivery.py hook <request file> <sha256>`: Claude Code's PreToolUse hook for the draft run (call JSON on stdin).
+    Exit 0 lets the call through, exit 2 refuses it with the reason on stderr. Any error refuses. The create-draft call is allowed only by this
     hook printing `permissionDecision: allow` (HOOK_ALLOW); the run's allow list does not hold the tool (fail closed)."""
     try:
-        path = argv[0]
+        path, digest = argv[0], argv[1]
         call = json.loads(sys.stdin.read() or "{}")
         with open(path, encoding="utf-8") as f:
             args = json.load(f)
         if not isinstance(args, dict) or not isinstance(call, dict):
             raise ValueError("not a request")
+        if not hmac.compare_digest(args_digest(args), str(digest)):
+            raise ValueError("the request changed")
 
         def claim():
             """True the first time (the used mark made), False after."""
