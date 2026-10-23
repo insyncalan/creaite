@@ -21,7 +21,7 @@ Against a given release zip:              CREAITE_HC_BASE=x CREAITE_HC_DIR=<run 
   53  finding 1 (HIGH, 307a)   A3b the same after the quick refresh, for a press already on its way
   54  finding 1 (HIGH, 307a)   the same file renumbering, Reject on the Bravo row rejects Charlie (irReject is not checked either)
   55  finding 1 (HIGH, 307a)   A7  /api/review matches file + ref only. Pins the contract the review proposes: the call carries
-                                   `expect` (text of the item the person saw) and the server refuses when the item at ref no
+                                   `expect` (the fingerprint of the item the page showed) and the server refuses when the item at ref no
                                    longer shows it. If the fix names that field differently, rename it here
   56  finding 3 (HIGH, panel.js, older)  A4  the peek's Save and approve acts on the item that now has the peek's list number and
                                    overwrites it with the peek's fields (Charlie's proposal is lost, Bravo is approved twice)
@@ -303,7 +303,7 @@ class Identity307(HandcheckCase):
     @unittest.expectedFailure if not _REVIEW_EXPECT else (lambda f: f)   # an expected failure until the guarded review.py --expect <fp> + /api/review pass-through (#314, 2.6.2) is in this tree
     def test_c55_the_review_route_refuses_when_the_item_at_ref_is_not_the_one_the_page_showed(self):
         """55. Pins finding 1 (A7). The page calls /api/review with file + ref, and the server matched on those alone. With `expect`
-        (the text the person saw) the item at ref 2 is now Charlie, so the call must be refused and Charlie left pending.
+        (the fingerprint of the item the page showed) the item at ref 2 is now Charlie, so the call must be refused and Charlie left pending.
         Expected to fail until 2.6.2 (#314): a raw route call, a second tab or a fast renumber in the window before guardFresh can
         still act on a different item of the user's own pending list."""
         alpha, bravo, charlie = names("rt")
@@ -321,6 +321,8 @@ class Identity307(HandcheckCase):
         print(f"\n  route said {said}")
         self.assertFalse(said.get("ok"), f"the route said ok for an item that is not the one the caller meant: {said}")
         self.assertTrue(self.pending(name, charlie), "WRONG ITEM: the route rejected Charlie for a caller who meant Bravo")
+        if _REVIEW_EXPECT:                              # Cap's nit: refused for the right reason, in review.py's words
+            self.assertIn("has changed since you looked at it", said.get("message", ""))
 
     def test_c56_the_peek_save_and_approve_never_overwrites_another_item(self):
         """56. Pins finding 3 (A4, panel.js, older than #307). The peek is open on Bravo; an item in an EARLIER file is approved and
