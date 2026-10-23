@@ -1,5 +1,5 @@
 diff --git a/system/scripts/review.py b/system/scripts/review.py
-index edfbf73a..2d3d477d 100644
+index edfbf73a..3b48d35b 100644
 --- a/system/scripts/review.py
 +++ b/system/scripts/review.py
 @@ -13,6 +13,7 @@ Commands:
@@ -10,7 +10,7 @@ index edfbf73a..2d3d477d 100644
    reject <number> --discard     #280: set a held proposal aside (minutes or a report whose file to be filed has gone) in
                                  system/staging/discarded/, writing nothing to the tracker; only a held proposal
    reject <numbers> [--reason=TEXT] [--duplicate-of=ID]
-@@ -1226,12 +1227,42 @@ def cmd_discard(n):
+@@ -1226,12 +1227,89 @@ def cmd_discard(n):
      dest, k = DISCARDED / p.name, 2
      while dest.exists():
          dest, k = DISCARDED / f"{p.stem}-{k}{p.suffix}", k + 1
@@ -18,9 +18,44 @@ index edfbf73a..2d3d477d 100644
 +    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block), "name": p.name}
      save(p, data)
      p.replace(dest)
++    _ledger_add({"name": dest.name, "sha256": _sha(dest), "at": data["discarded"]["at"]})       # #307: what Discard itself set aside
      debuglog.info("review", f"discarded {p.name} ({ref}): held")
      print(f"Discarded 1. {block.get('title') or p.name}: set aside in {paths.rel(dest)}; nothing was written to the tracker.")
      return 0
++
++
++# #307 path 12 (Cap's H1): Undo puts back only what Discard itself set aside. Discard appends {name, sha256 of the file as set aside, at}
++# to this ledger, which is in system/staging/ and so on reach.py's never list (system/staging/*.jsonl, as system/staging/discarded/ is):
++# ask creaite, a sweep and filechange can neither add a line nor edit the file. A restore needs the newest line for the name to be a
++# Discard line whose checksum is the file's, so a planted or edited file is refused.
++DISCARD_LEDGER = paths.STAGING / "discarded-ledger.jsonl"
++
++
++def _sha(path):
++    import hashlib
++    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
++
++
++def _ledger_add(entry):
++    with open(DISCARD_LEDGER, "a", encoding="utf-8") as f:
++        f.write(json.dumps(entry) + "\n")
++
++
++def _ledger_last(name):
++    """The newest ledger line for this name in discarded/, or None (no ledger, an unreadable line is skipped)."""
++    last = None
++    try:
++        lines = DISCARD_LEDGER.read_text(encoding="utf-8").splitlines()
++    except OSError:
++        return None
++    for line in lines:
++        try:
++            e = json.loads(line)
++        except ValueError:
++            continue
++        if isinstance(e, dict) and e.get("name") == name:
++            last = e
++    return last
 +
 +
 +def cmd_restore_discarded(name):
@@ -32,6 +67,17 @@ index edfbf73a..2d3d477d 100644
 +        print(bad + "that proposal isn't among the ones set aside.")
 +        return 2
 +    src = DISCARDED / name
++    st = src.lstat()
++    if src.is_symlink() or st.st_nlink > 1:
++        print(bad + "that file isn't one Discard set aside.")
++        return 2
++    rec = _ledger_last(name)
++    if not rec or not rec.get("sha256"):
++        print(bad + "Discard has no record of setting that proposal aside.")
++        return 2
++    if rec.get("sha256") != _sha(src):
++        print(bad + "that file has changed since Discard set it aside.")
++        return 2
 +    try:
 +        data = json.loads(src.read_text(encoding="utf-8"))
 +    except (OSError, ValueError):
@@ -48,13 +94,14 @@ index edfbf73a..2d3d477d 100644
 +        return 2
 +    dest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 +    src.unlink()
++    _ledger_add({"name": name, "restored": True, "at": clock().isoformat(timespec="seconds")})     # a replayed Undo finds no Discard line
 +    debuglog.info("review", f"restored {back} from discarded")
 +    print(f"Put back: {(data.get('meeting') or data.get('report') or {}).get('title') or back} is waiting in Intake again.")
 +    return 0
  # ===== end #280 (round 3) =====
  
  
-@@ -2572,6 +2603,8 @@ def _main_with_held(argv):
+@@ -2572,6 +2650,8 @@ def _main_with_held(argv):
              print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
              return 2
          return cmd_discard(keys[0])

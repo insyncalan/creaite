@@ -106,7 +106,7 @@ class RestoreDiscarded(unittest.TestCase):
         stray.write_text(json.dumps({"meeting": {"title": "x"}}), encoding="utf-8")
         r = self.restore(stray.name)
         self.assertEqual(r.returncode, 2)
-        self.assertIn("wasn't set aside by Discard", r.stdout)
+        self.assertIn("no record of setting that proposal aside", r.stdout)
         self.assertTrue(stray.is_file())
         stray.write_text("not json", encoding="utf-8")
         self.assertEqual(self.restore(stray.name).returncode, 2)
