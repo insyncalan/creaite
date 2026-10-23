@@ -1,5 +1,5 @@
 diff --git a/system/scripts/review.py b/system/scripts/review.py
-index edfbf73a..3b48d35b 100644
+index edfbf73a..70873765 100644
 --- a/system/scripts/review.py
 +++ b/system/scripts/review.py
 @@ -13,6 +13,7 @@ Commands:
@@ -10,7 +10,7 @@ index edfbf73a..3b48d35b 100644
    reject <number> --discard     #280: set a held proposal aside (minutes or a report whose file to be filed has gone) in
                                  system/staging/discarded/, writing nothing to the tracker; only a held proposal
    reject <numbers> [--reason=TEXT] [--duplicate-of=ID]
-@@ -1226,12 +1227,89 @@ def cmd_discard(n):
+@@ -1226,12 +1227,94 @@ def cmd_discard(n):
      dest, k = DISCARDED / p.name, 2
      while dest.exists():
          dest, k = DISCARDED / f"{p.stem}-{k}{p.suffix}", k + 1
@@ -52,32 +52,37 @@ index edfbf73a..3b48d35b 100644
 +        try:
 +            e = json.loads(line)
 +        except ValueError:
-+            continue
++            continue                                        # a line that isn't JSON is no record
 +        if isinstance(e, dict) and e.get("name") == name:
 +            last = e
 +    return last
 +
 +
-+def cmd_restore_discarded(name):
-+    """#307 path 12: put a discarded proposal back in system/staging/ as it was (Discard's Undo). `name` is the file's bare name in
-+    system/staging/discarded/; the marker cmd_discard added is the only thing removed. Refuses a name that isn't a proposal file
-+    there, and a name already taken in staging (nothing is overwritten)."""
-+    bad = f"{name or 'Nothing'}: not put back — "
-+    if not re.fullmatch(r"proposed-[\w.-]+\.json", name or "") or ".." in name or not (DISCARDED / name).is_file():
-+        print(bad + "that proposal isn't among the ones set aside.")
-+        return 2
++def _discarded_problem(name):
++    """Why `name` can't be put back, in words (the part after "not put back — "), else None. Reads only."""
 +    src = DISCARDED / name
-+    st = src.lstat()
-+    if src.is_symlink() or st.st_nlink > 1:
-+        print(bad + "that file isn't one Discard set aside.")
-+        return 2
++    if not re.fullmatch(r"proposed-[\w.-]+\.json", name or "") or ".." in name or not src.is_file():
++        return "that proposal isn't among the ones set aside."
++    if src.is_symlink() or src.lstat().st_nlink > 1:
++        return "that file isn't one Discard set aside."
 +    rec = _ledger_last(name)
 +    if not rec or not rec.get("sha256"):
-+        print(bad + "Discard has no record of setting that proposal aside.")
-+        return 2
++        return "Discard has no record of setting that proposal aside."
 +    if rec.get("sha256") != _sha(src):
-+        print(bad + "that file has changed since Discard set it aside.")
++        return "that file has changed since Discard set it aside."
++    return None
++
++
++def cmd_restore_discarded(name):
++    """#307 path 12: put a discarded proposal back in system/staging/ as it was (Discard's Undo). `name` is the file's bare name in
++    system/staging/discarded/; the marker cmd_discard added is the only thing removed. Refuses what Discard did not set aside (its
++    ledger line and checksum), and a name already taken in staging (nothing is overwritten)."""
++    bad = f"{name or 'Nothing'}: not put back — "
++    why = _discarded_problem(name)
++    if why:
++        print(bad + why)
 +        return 2
++    src = DISCARDED / name
 +    try:
 +        data = json.loads(src.read_text(encoding="utf-8"))
 +    except (OSError, ValueError):
@@ -101,7 +106,7 @@ index edfbf73a..3b48d35b 100644
  # ===== end #280 (round 3) =====
  
  
-@@ -2572,6 +2650,8 @@ def _main_with_held(argv):
+@@ -2572,6 +2655,8 @@ def _main_with_held(argv):
              print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
              return 2
          return cmd_discard(keys[0])
