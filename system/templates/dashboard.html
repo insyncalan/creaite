@@ -998,6 +998,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
    theme's own primary button, so it reads in every theme and mode */
 .chlogbox{position:relative;flex:1;min-height:0;display:flex;flex-direction:column} .chlogbox .chlog{flex:1;min-height:0}
 /* ===== BL-257 (sprint-ask-flow) ===== the queued messages, under the log */
+.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:13px} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
 .chqueue{border-top:1px solid var(--line);padding:6px 14px 4px;display:flex;flex-direction:column;gap:4px;max-height:30%;overflow:auto} .chqueue[hidden]{display:none}
 .chqhead{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .chqitem{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm)} .chqitem .chqtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -4466,6 +4467,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   <div class="chs" id="chSub"></div>
   <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
+  <div class="chlong" id="chLong" role="region" aria-label="Long chat" hidden><span id="chLongText"></span><span class="chlongact"><button type="button" class="mini" id="chLongGo">Continue fresh with a summary</button><button type="button" class="mini" id="chLongNo">Not now</button></span></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
   <div class="chthumbs" id="chThumbs" hidden></div>
   <div class="chin"><div class="acmenu" id="acMenu" role="listbox" aria-label="Suggestions" hidden></div><button class="iconbtn chbtn" id="chAttach" type="button" title="Attach an image (or paste or drop one)" aria-label="Attach an image"><svg data-ic="clip" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg></button><input type="file" id="chFile" accept="image/png,image/jpeg" multiple hidden><textarea id="chIn" aria-autocomplete="list" aria-controls="acMenu" rows="1" placeholder="Ask a question or give an instruction…" aria-label="Message"></textarea><button type="button" class="sendb" id="chSend" aria-label="Send" data-tip="Send" data-key="Enter"><svg data-ic="arrowup" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
@@ -4530,6 +4532,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     APPLYT: () => APPLYT,
     AS: () => AS,
     ASKDONE: () => ASKDONE,
+    ASKED_ABOUT: () => ASKED_ABOUT,
     ASKED_KEY: () => ASKED_KEY,
     ASKMARK: () => ASKMARK,
     ASKTICK: () => ASKTICK,
@@ -4740,14 +4743,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     KINDL: () => KINDL,
     KL: () => KL,
     LASTVISIT: () => LASTVISIT,
+    LAST_TURNS: () => LAST_TURNS,
     LCOLL: () => LCOLL,
     LDEFG: () => LDEFG,
     LFOLD: () => LFOLD,
+    LINE_MAX: () => LINE_MAX,
     LINK_MAX: () => LINK_MAX,
     LINK_REFUSED: () => LINK_REFUSED,
     LINK_REL: () => LINK_REL,
     LLF: () => LLF,
     LOGO_KINDS: () => LOGO_KINDS,
+    LONG_TURNS: () => LONG_TURNS,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
     MDC: () => MDC,
@@ -4961,6 +4967,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     START_CMD: () => START_CMD,
     STOPI: () => STOPI,
     SU: () => SU,
+    SUMMARY_MAX: () => SUMMARY_MAX,
     SU_LAUNCH: () => SU_LAUNCH,
     SU_M365: () => SU_M365,
     SU_SETUP: () => SU_SETUP,
@@ -5244,6 +5251,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bootAsk0208: () => bootAsk0208,
     bootAutostart: () => bootAutostart,
     bootCalendar: () => bootCalendar,
+    bootChatLength: () => bootChatLength,
     bootCmdEnter: () => bootCmdEnter,
     bootContextMenu: () => bootContextMenu,
     bootCopyCommand: () => bootCopyCommand,
@@ -5428,7 +5436,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     chaseNote: () => chaseNote,
     chaseOpen: () => chaseOpen,
     chatClamp: () => chatClamp,
+    chatContinueFresh: () => chatContinueFresh,
     chatFromKey: () => chatFromKey,
+    chatLength: () => chatLength,
+    chatLengthSync: () => chatLengthSync,
     chatMdBlocks: () => chatMdBlocks,
     chatMdInline: () => chatMdInline,
     chatNear: () => chatNear,
@@ -5436,6 +5447,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     chatReturnTarget: () => chatReturnTarget,
     chatScroll: () => chatScroll,
     chatShown: () => chatShown,
+    chatTurns: () => chatTurns,
     checkLive: () => checkLive,
     checkMeeting: () => checkMeeting,
     checkSources: () => checkSources,
@@ -6199,6 +6211,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     logoKindsOf: () => logoKindsOf,
     longDate: () => longDate,
     longDay: () => longDay,
+    longLimit: () => longLimit,
     longText: () => longText,
     mCells: () => mCells,
     mChipEls: () => mChipEls,
@@ -7175,6 +7188,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     suText: () => suText,
     subName: () => subName,
     subOf: () => subOf,
+    summaryOf: () => summaryOf,
     sw: () => sw2,
     swapHTML: () => swapHTML,
     sweepDueShown: () => sweepDueShown,
@@ -58318,6 +58332,7 @@ ${pre}**Current state title:** ${title}`);
   // components/settings/MoreSettings.jsx
   var LIMITS = {
     "assistant.run_timeout_minutes": [1, 240],
+    "assistant.long_chat_turns": [5, 500],
     "logging.max_mb": [1, 500],
     "logging.keep_days": [1, 90],
     "search.debounce_ms": [0, 2e3],
@@ -80034,6 +80049,78 @@ ${d5.text}`);
     setInterval(rollDay, 6e4);
   }
 
+  // chatLength.js
+  var LONG_TURNS = 30, LAST_TURNS = 4, ASKED_ABOUT = 5, LINE_MAX = 160, SUMMARY_MAX = 1800;
+  var NOTNOW = /* @__PURE__ */ new Set();
+  var CATLOADED = false;
+  var clip = (s5, n4) => {
+    s5 = String(s5 || "").replace(/\s+/g, " ").trim();
+    return s5.length > n4 ? s5.slice(0, n4 - 1).trimEnd() + "…" : s5;
+  };
+  function chatTurns() {
+    const out = [];
+    for (const m5 of $$("#chLog .msg.u, #chLog .msg.a.md, #chLog .msg.a:not(.info):not(.runask)")) {
+      const u5 = m5.classList.contains("u"), t47 = clip(m5.textContent, 600);
+      if (t47) out.push({ who: u5 ? "you" : "creaite", text: t47 });
+    }
+    return out;
+  }
+  var chatLength = () => $$("#chLog .msg.u").length;
+  function longLimit() {
+    const s5 = settingOf("assistant.long_chat_turns"), n4 = Number(s5 ? s5.value : LONG_TURNS);
+    return Number.isFinite(n4) && n4 >= 5 ? Math.round(n4) : LONG_TURNS;
+  }
+  function summaryOf(turns) {
+    const asked2 = turns.filter((t47) => t47.who === "you");
+    const about = asked2.slice(0, ASKED_ABOUT).map((t47) => "- " + clip(t47.text, LINE_MAX));
+    const last = turns.slice(-LAST_TURNS).map((t47) => (t47.who === "you" ? "You: " : "creaite: ") + clip(t47.text, 400));
+    let s5 = `Continuing from an earlier chat of ${asked2.length} messages.
+
+What I asked about:
+${about.join("\n")}
+
+The last few turns:
+${last.join("\n")}
+
+Next: `;
+    if (s5.length > SUMMARY_MAX) s5 = s5.slice(0, SUMMARY_MAX - 7).trimEnd() + "…\n\nNext: ";
+    return s5;
+  }
+  function chatLengthSync() {
+    const box = $("#chLong");
+    if (!box) return;
+    const n4 = chatLength(), lim = longLimit(), key2 = String(shared.ASKCHAT || ""), on2 = !!shared.ASKCHAT && n4 >= lim && !NOTNOW.has(key2);
+    box.hidden = !on2;
+    const t47 = $("#chLongText");
+    if (t47 && on2) t47.textContent = `This chat is long (${n4} messages), so each reply takes longer and costs more.`;
+  }
+  function chatContinueFresh() {
+    if (shared.BUSY) return;
+    const text = summaryOf(chatTurns());
+    newChat();
+    chPut(text);
+    chatLengthSync();
+  }
+  function bootChatLength() {
+    const log = $("#chLog"), box = $("#chLong");
+    if (!log || !box) return;
+    let t47 = 0;
+    new MutationObserver(() => {
+      clearTimeout(t47);
+      t47 = window.setTimeout(chatLengthSync, 120);
+    }).observe(log, { childList: true });
+    $("#chLongGo").addEventListener("click", chatContinueFresh);
+    $("#chLongNo").addEventListener("click", () => {
+      NOTNOW.add(String(shared.ASKCHAT || ""));
+      chatLengthSync();
+      $("#chIn").focus();
+    });
+    if (viaServer() && !CATLOADED) {
+      CATLOADED = true;
+      loadCatalogue().then(chatLengthSync);
+    }
+  }
+
   // core/globals.json
   var globals_default = {
     about: "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and so do dev/tools/build_dashboard_js.py and convert_area.py. Keep each list sorted.",
@@ -80289,6 +80376,7 @@ ${d5.text}`);
         "cell",
         "chFit",
         "changesCardHtml",
+        "chatLengthSync",
         "chatMdInline",
         "checkHealth",
         "checkLive",
@@ -80563,6 +80651,7 @@ ${d5.text}`);
         "loadTab",
         "logoKindsOf",
         "longDate",
+        "longLimit",
         "mCreated",
         "mLandRow",
         "mScroll",
@@ -80848,6 +80937,7 @@ ${d5.text}`);
         "send",
         "sensitive",
         "sentLog",
+        "setChat",
         "setChatWidth",
         "setClientLogos",
         "setClientName",
@@ -81334,6 +81424,7 @@ ${d5.text}`);
   bootPanel0166();
   bootPanelChase();
   bootSneak();
+  bootChatLength();
   bootPanel0167();
   bootPanel0168();
   bootPanel0169();
