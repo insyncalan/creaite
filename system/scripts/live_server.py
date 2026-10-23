@@ -415,9 +415,10 @@ def reach_dirs():
     return list(dict.fromkeys([str(reach.home())] + extra_dirs()))
 # ===== end BL-141 =====
 
-# BL-288: who Alan marks as a VIP is private to him. Every prompt that may write something shown or shared carries this.
-VIP_PRIVATE_RULE = (" VIP is private to Alan: never call or label a person a VIP (or say who is one) in a reply, an item, "
-                    "a draft, a report or any file you write; you may still put what they send or own first, unlabelled.")
+# BL-288 (revised 23-10-2026): who Alan follows stays inside the app. Every prompt that may write something shown or shared carries this.
+VIP_PRIVATE_RULE = (" Who Alan follows stays inside the app: never call or label a person a VIP (or any other label of importance), and "
+                    "never say who is followed, in a reply, an item, a draft, a report or any file you write; you may still put what "
+                    "they send or own first, unlabelled.")
 
 ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), running headless in the vault. Follow "
               "CLAUDE.md and the skills. Be brief; show dates as DD-MM-YYYY. You may read the vault, the tracker and "
@@ -1430,6 +1431,8 @@ class Handler(BaseHTTPRequestHandler):
             n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
             if n is None:
                 return self.send(200, {"ok": False, "message": "That proposal is no longer pending."})
+            if self.expect_args(req) is None:                           # 2.6.2 (#314, Cap's note): say what is wrong
+                return self.send(200, {"ok": False, "message": "Review can't check which item that is, so nothing was decided. Look at the list again."})
             args = self.review_args(req, n)
             if args is None:
                 return self.send(200, {"ok": False, "message": "That isn't a decision Review knows."})
@@ -1443,8 +1446,11 @@ class Handler(BaseHTTPRequestHandler):
     def review_args(req, n):
         """review.py's arguments for one decision on row n, or None for a decision Review doesn't know. #280: discard is
         `reject N --discard` (review.py checks the proposal is held); without-transcript goes only with an approve."""
+        guard = Handler.expect_args(req)
+        if guard is None:
+            return None
         if req.get("decision") == "discard":
-            return ["reject", str(n), "--discard"]
+            return ["reject", str(n), "--discard", *guard]
         action = {"approved": "approve", "rejected": "reject", "keep": "keep", "override": "override"}.get(req.get("decision"))
         if action is None:
             return None
@@ -1456,7 +1462,16 @@ class Handler(BaseHTTPRequestHandler):
                 args.append(f"--reason={reason}")
             if dup and re.fullmatch(r"[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}", dup):
                 args.append(f"--duplicate-of={dup}")
-        return args
+        return args + guard
+
+    @staticmethod
+    def expect_args(req):
+        """2.6.2 (#314): ["--expect=<fp>"] when the page sent the item's fingerprint (review.py refuses if item n is not it), [] when it
+        sent none, None when it sent something that is not 12 hex digits (refused, nothing decided)."""
+        expect = req.get("expect")
+        if expect is None:
+            return []
+        return [f"--expect={expect}"] if isinstance(expect, str) and re.fullmatch(r"[0-9a-f]{12}", expect) else None
 
     def refresh(self, req):
         """POST /api/refresh {file}: re-extract a meeting's items from its edited draft minutes (minutes.py refresh)."""
@@ -1708,11 +1723,27 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(413, {"ok": False, "message": "Files can be 25 MB at most"})
         if not data:
             return self.send(400, {"ok": False, "message": "That file is empty"})
-        paths.INBOX.mkdir(parents=True, exist_ok=True)
-        target, n = paths.INBOX / f"{stem}{ext}", 2
-        while target.exists():                 # never overwrite
-            target, n = paths.INBOX / f"{stem} ({n}){ext}", n + 1
-        target.write_bytes(data)
+        import errno
+        try:
+            made = False
+            paths.INBOX.mkdir(parents=True, exist_ok=True)
+            target, n = paths.INBOX / f"{stem}{ext}", 2
+            while True:                            # never overwrite: "xb" fails on a name that exists, so the next number is tried
+                try:
+                    with open(target, "xb") as out:
+                        made = True
+                        out.write(data)
+                    break
+                except FileExistsError:
+                    target, n = paths.INBOX / f"{stem} ({n}){ext}", n + 1
+        except OSError as e:                       # 2.6.2: plain words, never the exception's text or a path; the log gets the kind only
+            if made:                               # this call made the file, and the write failed: no truncated copy is left for cx-minutes
+                target.unlink(missing_ok=True)
+            if debuglog:
+                debuglog.warn("inbox", f"upload not saved: {type(e).__name__} errno {e.errno}")
+            long = e.errno == errno.ENAMETOOLONG
+            return self.send(400 if long else 500, {"ok": False, "message": "The file name is too long. Rename it and add it again."
+                                                    if long else "That file couldn't be saved. Try again."})
         return self.send(200, {"ok": True, "path": paths.rel(target), "name": target.name})
 
     def inbox_file(self, rel):
@@ -3952,7 +3983,7 @@ VIP_SOURCES = {False: ("Outlook Inbox mail and Teams chats and channel messages.
                        "not messages."),
                True: "Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates."}
 VIP_KINDS = {False: '"teams"|"mail"', True: '"teams"|"mail"|"calendar"'}
-VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send nothing. Search Alan's Microsoft 365 for "
+VIP_PROMPT = ("creaite follow check. Read-only: change nothing, write nothing, send nothing. Search Alan's Microsoft 365 for "
               "messages SENT BY these addresses since {since} ({zone}): {sources} Addresses: {addresses}. For each mail "
               "message found, call read_resource on it once to get its conversation ID. Then read each CONVERSATION one of "
               "those messages belongs to (the Teams chat, or the mail thread by its conversation ID): everyone's messages "
@@ -4051,7 +4082,7 @@ def vip_check(how="check"):
         return "skipped: development repository"
     vs, vips = sweep.vip_settings(), sweep.vip_addresses()
     if not vs.get("enabled", True) or not vips:
-        return "skipped: no VIPs"
+        return "skipped: nobody followed"
     quiet = vip_schedule.paused()                         # #97: no check in quiet hours (overnight, weekend days)
     if quiet:
         return quiet
@@ -4079,7 +4110,7 @@ def vip_check(how="check"):
         took = time.monotonic() - began
         vip_usage(r, took)                                # #197: tokens and cost, counts only
         if not isinstance(found, list):                   # the reason shown is fixed words: never the model's or a tool's
-            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {vip_why(why)}"
+            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the follow check didn't finish: {vip_why(why)}"
             print(VIP_STATUS["last_error"], flush=True)
             vip_debug(sweep.vip_check_line({}, [], took, cost, failed=True))
             return VIP_STATUS["last_error"]
@@ -4139,7 +4170,7 @@ def vip_note(new):
     """The check's one line for the server's output: how many alerts are new or updated, and any still being waited for."""
     import sweep
     held = len(sweep.vip_state().get("held") or {})
-    return (f"VIP check: {len(new)} new or updated alert{'s' if len(new) != 1 else ''}"
+    return (f"Follow check: {len(new)} new or updated alert{'s' if len(new) != 1 else ''}"
             + (f", {held} waiting to go quiet" if held else ""))
 
 
@@ -4153,7 +4184,7 @@ def vip_timer():
         try:
             vip_check(how)
         except Exception as e:  # noqa: BLE001  never stops the server
-            print(f"Note: the VIP check failed: {e}", flush=True)
+            print(f"Note: the follow check failed: {e}", flush=True)
         how = "check"
         try:
             wait = max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds()))
@@ -6228,6 +6259,37 @@ REVIEW_WORK_ROUTES["/api/review/retarget"] = review_retarget_route
 # ===== end BL-297 =====
 
 
+# ===== #307 path 12: Discard's Undo =====
+# POST /api/review/restore-discarded {file}: put a proposal Discard set aside back in staging (review.py restore-discarded), as it was.
+# `file` is the bare name Discard's reply gave (system/staging/discarded/<name>); review.py refuses anything else, and a name that
+# is already waiting in staging. The open page's own call only (page_call, as the Health fixes and the Notes moves), the job lock
+# waited for ten seconds at most, the development copy refuses, and the reply is review.py's plain words. Not a permission: reach.py classes
+# `review.py restore-discarded` as record, so an ask creaite run Alan hasn't confirmed can't run it.
+RESTORE_NAME = re.compile(r"proposed-[\w.-]+\.json")
+
+
+def review_restore_discarded_route(handler, req):
+    """POST /api/review/restore-discarded {file}: Discard's Undo. {ok, message}."""
+    if not page_call(handler):
+        return handler.send(403, {"ok": False, "message": "Not allowed"})
+    name = req.get("file")
+    if not isinstance(name, str) or not RESTORE_NAME.fullmatch(name) or ".." in name:
+        return handler.send(400, {"ok": False, "message": "Say which discarded suggestion to put back."})
+    if (paths.ROOT / ".creaite-dev").exists():
+        return handler.send(200, {"ok": False, "message": "This is the development copy, so nothing was put back."})
+    if not LOCK.acquire(timeout=10):                         # a moment's wait for a short job, never behind a long one
+        return handler.send(200, {"ok": False, "message": "Something else is running: try again when it has finished."})
+    try:
+        rc, out = run("review.py", "restore-discarded", name)
+    finally:
+        LOCK.release()
+    return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
+
+
+REVIEW_WORK_ROUTES["/api/review/restore-discarded"] = review_restore_discarded_route
+# ===== end #307 path 12 =====
+
+
 # ===== BL-315 (v1.9.2) ===== Rejects, in real life, through review.py (its checks), as approve and reject are. Only the proposals change;
 # the page applies as after any decision (Save at once), and tracker.py apply writes `rejected`.
 #   POST /api/review/guesses {}: {ok, reasons: the seven, guesses: [{n, file, ref, reason, why, of}]} (read only)
@@ -7239,6 +7301,143 @@ def chase_pane_route(handler, req):
 
 
 DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
+
+
+# ===== #183 (2.6) ===== Draft email delivery: the email in Alan's Outlook Drafts folder, never sent (Alan, 19-10-2026).
+# POST /api/email/draft {action: "create"|"copied", to, subject, html, ids, mode, name}, token-checked like every POST (authorised()).
+# draft_delivery.py (plain code) checks the payload and the setting (draft_email.outlook_drafts, off by default) and builds the one
+# call; this route is the ONLY caller of the Microsoft 365 write tool, in a headless run whose allow list is exactly
+# draft_delivery.allowed_tools() (ToolSearch only: outlook_create_draft is allowed by the run's hook alone, so no hook means no
+# draft) and whose deny list names every other Microsoft 365 action
+# (send_draft and send_mail among them), the other connectors and every built-in but ToolSearch: no Bash, no file tool, no guard
+# hook of the guard needed because nothing in it can read or write the vault. Cap's M1 (22-10-2026): the arguments are checked BEFORE
+# the tool runs, by a PreToolUse hook of the run's own (`--settings`, draft_delivery.hook_settings: create-draft only with exactly the
+# arguments shown and only once, ToolSearch, nothing else), so an injected To, Cc, Bcc or a second draft is never made. The run's
+# stream-json events are then checked by draft_delivery.check (the backstop) before anything is recorded; the chase is recorded only
+# then. "copied" (Copy email with the setting on) keeps the references only, for the sweep's Sent Items match.
+# POST /api/email/outlook-access {}: Settings' Check, a run whose only Microsoft 365 tool is the reading tool get_granted_scopes.
+# Never in the development repository; never from ask creaite (draft_delivery.py is not in reach.SCRIPT_COMMANDS: fails closed).
+DRAFT_RUN_LOCK = threading.Lock()
+DRAFT_RUN_SECONDS = 120
+
+
+def draft_run_deny(allowed, hooked=()):
+    """A draft or access run's deny list: DENY_TOOLS, every Microsoft 365 action (draft_delivery.denied_tools) and every Microsoft
+    365 READING tool (#183 review M1: the run must not read mail, Teams or SharePoint and put it in a draft), F3's
+    run_deny_extras() and every built-in but ToolSearch, once each; never a tool in `allowed` or `hooked` (a deny beats an
+    allow and a hook's allow), so the access run keeps only get_granted_scopes and the draft run keeps none of the readers."""
+    import draft_delivery
+    out = []
+    for t in (list(DENY_TOOLS) + draft_delivery.denied_tools() + vault_permissions.m365_read_tools()
+              + vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES):
+        if t not in out and t not in allowed and t not in hooked:
+            out.append(t)
+    return out
+
+
+def draft_hook_runner():
+    """How the draft run's PreToolUse hook starts draft_delivery.py: as the guard hook's runner starts reach.py (hook_runner)."""
+    r = hook_runner()
+    return [*r[:-1], r[-1].replace("reach.py", "draft_delivery.py")]
+
+
+def draft_run(prompt, allowed, hook_file=None):
+    """One headless run with only `allowed`; its stream-json events ([] when it couldn't start or timed out). `hook_file` (Cap's
+    M1): the request file the run's PreToolUse hook checks every tool call against, before it runs. #183 review M1: it
+    starts in an empty folder outside the vault with NO_CONTEXT_ARGS (no setting sources, so none of the vault's allow rules, no
+    CLAUDE.md, no session-start rule; no session saved) and NARROW_BUILTINS (ToolSearch the only built-in); the Microsoft 365
+    connector is account-level, not a setting, so it stays (probed, Claude Code 2.1.x). MCP is not strict: it needs the connector."""
+    import draft_delivery
+    cmd = prompt_last([claude_path(), "-p", "--output-format", "stream-json", "--verbose", *NO_CONTEXT_ARGS, *NARROW_BUILTINS,
+                       "--allowedTools", ",".join(allowed), "--disallowedTools",
+                       ",".join(draft_run_deny(allowed, draft_delivery.hook_tools() if hook_file else ())),
+                       *(["--settings", draft_delivery.hook_settings(draft_hook_runner(), hook_file)] if hook_file else [])], prompt)
+    try:
+        r = subprocess.run(cmd, cwd=neutral_cwd(), capture_output=True, text=True, timeout=DRAFT_RUN_SECONDS,
+                           env={**run_env(), **NO_CONTEXT_ENV})
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+    events = []
+    for ln in (r.stdout or "").splitlines():
+        try:
+            e = json.loads(ln)
+        except ValueError:
+            continue                                      # a line that isn't an event: nothing to check in it
+        if isinstance(e, dict):
+            events.append(e)
+    return events
+
+
+def _draft_request(body):
+    """(the checked create-draft request, None) or (None, the reason it was refused), from draft_delivery.py request."""
+    rc, out = run_stdin("draft_delivery.py", body, "request")
+    try:
+        got = json.loads(out)
+    except ValueError:
+        return None, "creaite couldn't check the email"
+    if rc or not got.get("ok"):
+        return None, str(got.get("message") or "creaite couldn't check the email")[:300]
+    return {k: v for k, v in got.items() if k != "ok"}, None
+
+
+def email_draft_route(handler, req):
+    """Create draft in Outlook (action create) or note a copy (action copied). Answers {ok, web_link, no_recipient, chased,
+    chases} or {ok: False, reason, made}; never sends."""
+    import draft_delivery
+    if (paths.ROOT / ".creaite-dev").exists():
+        return handler.send(200, {"ok": False, "reason": "this is the development repository"})
+    # #183 review L1: the action goes too, so a copy skips the markup check
+    body = {k: req.get(k) for k in ("action", "to", "subject", "html", "ids", "mode", "name")}
+    dreq, why = _draft_request(body)
+    if why:
+        return handler.send(200, {"ok": False, "reason": why})
+    if req.get("action") == "copied":
+        with LOCK:
+            rc, _ = run_stdin("draft_delivery.py", body, "copied")
+        return handler.send(200, {"ok": rc == 0})
+    if req.get("action") != "create":
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    if not DRAFT_RUN_LOCK.acquire(blocking=False):
+        return handler.send(200, {"ok": False, "reason": "a draft is being made: wait a moment"})
+    hook_file = draft_delivery.hook_request_file(dreq)      # Cap's M1: the run's own hook checks the call against it, before it runs
+    try:
+        res = draft_delivery.check(draft_run(draft_delivery.prompt(dreq), draft_delivery.allowed_tools(), hook_file), dreq)
+        if debuglog is not None:
+            debuglog.info("drafts", f"outlook draft: {'made' if res['ok'] else 'refused'}, {len(dreq['ids'])} item(s), "
+                                    f"{len(dreq['args'].get('to') or [])} recipient(s), {len(dreq['args']['body'])} characters")
+        if not res["ok"]:
+            return handler.send(200, {"ok": False, "reason": res["reason"], "made": res["made"]})
+        with LOCK:
+            rc, out = run_stdin("draft_delivery.py", dreq, "created")
+        rec = json.loads(out) if rc == 0 else {}
+        _, counts = run("drafts.py", "chases")
+        return handler.send(200, {"ok": True, "web_link": res.get("web_link", ""), "no_recipient": dreq["no_recipient"],
+                                  "chased": rec.get("chased") or [], "chases": json.loads(counts or "{}")})
+    finally:
+        draft_delivery.hook_cleanup(hook_file)
+        DRAFT_RUN_LOCK.release()
+
+
+ACCESS_PROMPT = ("creaite Outlook access check. Read-only: change nothing, write nothing, send nothing. Call get_granted_scopes once "
+                 "(load its schema with ToolSearch if it is deferred) and reply with only {\"ok\": true}. No other words.")
+
+
+def outlook_access_route(handler, req):
+    """Settings' Outlook access Check: {ok, can: true|false|null, at: HH:MM} from the granted scopes (a reading tool only)."""
+    import draft_delivery
+    if (paths.ROOT / ".creaite-dev").exists():
+        return handler.send(200, {"ok": False, "message": "Not in the development repository."})
+    if not DRAFT_RUN_LOCK.acquire(blocking=False):
+        return handler.send(200, {"ok": False, "message": "Outlook is busy with a draft: try again in a moment."})
+    try:
+        got = draft_delivery.access(draft_run(ACCESS_PROMPT, [draft_delivery.ACCESS_TOOL, "ToolSearch"]))
+    finally:
+        DRAFT_RUN_LOCK.release()
+    return handler.send(200, {"ok": True, **got})
+
+
+DRAFT_ROUTES.update({"/api/email/draft": email_draft_route, "/api/email/outlook-access": outlook_access_route})
+# ===== end #183 =====
 
 
 # ===== BL-301 C (v20-capture): the capture drawer (⌘⇧N) =====

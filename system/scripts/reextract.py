@@ -106,6 +106,32 @@ def _read_json(p):
     return data if isinstance(data, dict) else None
 
 
+HOLD_MAX = 1 << 20          # a hold.json creaite wrote is a few hundred bytes; a larger one is not read (Cap H-1b)
+
+
+def _read_hold(p):
+    """The manifest at `p`, or None when it is missing, not a regular file (a link, a FIFO, a device, a directory), unreadable,
+    not an object, or larger than HOLD_MAX. One open, no following of links, no blocking; the size is checked on the open file
+    and the read is bounded, so nothing can be swapped in after the check (Cap H-1b)."""
+    try:
+        fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return None
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_size > HOLD_MAX:
+            return None
+        raw = os.read(fd, HOLD_MAX + 1)
+        if len(raw) > HOLD_MAX:
+            return None
+        data = json.loads(raw.decode("utf-8"))
+    except (OSError, ValueError):
+        return None
+    finally:
+        os.close(fd)
+    return data if isinstance(data, dict) else None
+
+
 def _write_json(p, data):
     paths.write_text_atomic(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
@@ -193,7 +219,7 @@ def _held(name):
     if not root.is_dir():
         return False
     for d in root.iterdir():
-        h = _read_json(d / "hold.json") if d.is_dir() else None
+        h = _read_hold(d / "hold.json") if d.is_dir() else None
         if h and h.get("state") == "held" and h.get("proposal") == name:
             return True
     return False
@@ -256,7 +282,7 @@ def _prune():
     ended = []
     for d in root.iterdir():
         ok = RUN.fullmatch(d.name) and not d.is_symlink() and d.is_dir() and _plain_file(d / "hold.json")
-        h = _read_json(d / "hold.json") if ok else None             # only the state and time are read here; nothing is moved by them
+        h = _read_hold(d / "hold.json") if ok else None             # only the state and time are read here; nothing is moved by them
         if h and h.get("state") not in ("held", "kept_aside"):    # review L4: kept aside still holds the earlier minutes
             at = h.get("at")
             ended.append((at if isinstance(at, (int, float)) and not isinstance(at, bool) else 0, d))
@@ -334,7 +360,7 @@ def _manifest(run_id):
         return None
     if d.is_symlink() or not d.is_dir() or not _plain_file(d / "hold.json"):
         return None
-    return _clean(run_id, _read_json(d / "hold.json"))
+    return _clean(run_id, _read_hold(d / "hold.json"))
 
 
 def _save(run_id, h):
@@ -665,7 +691,7 @@ def recover():
         try:
             h = _manifest(d.name) if RUN.fullmatch(d.name) else None     # H-1: a manifest that isn't creaite's is left alone
             if h and h.get("state") == "held":
-                finish(d.name, h.get("at") or 0, (), "failed")
+                put_back(d.name, FAILED, state="failed")     # Cap H-1a: nothing else is set aside at start, whatever `at` says
                 out.append(h["proposal"])
         except (OSError, ValueError) as e:
             debuglog.warn("reextract", f"recover {d.name}: {type(e).__name__}")

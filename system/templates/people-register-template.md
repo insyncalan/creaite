@@ -4,7 +4,7 @@ Keep this file at `projects/_portfolio/people-register.md`, beside `project-regi
 
 ## People
 
-| Full name | Email | Aliases | Organisation | Role | Hidden | VIP | Labels |
+| Full name | Email | Aliases | Organisation | Role | Hidden | Follow | Labels |
 |-----------|-------|---------|--------------|------|--------|-----|--------|
 
 Notes:
@@ -13,6 +13,6 @@ Notes:
 - **Aliases:** other ways the name appears, comma-separated (for example `Sara, Sara K, SK`). A merge adds the old name here.
 - **Organisation and Role:** free text (for example `Northgate Bank`, `Sponsor`). No split between client and internal people.
 - **Hidden:** `yes` keeps someone out of the owner picker. Their items keep their name.
-- **VIP:** blank, or which kind (`management`, `client` or `yes`). Anything a VIP sends (mail, Teams, a calendar invite) is alerted at the top of Today, whatever the sweep's project matching and ignore rules say.
+- **Follow:** blank, or `yes` for a person you follow. Anything a person you follow sends (mail, Teams) is alerted at the top of Today, whatever the sweep's project matching and ignore rules say. An older register's `VIP` column is still read until the register is next saved from the app, which writes `Follow`.
 - **Labels (BL-94):** comma-separated names from the labels list (for example `Client principal`, `Executive sponsor`, `External`). A people label can carry the same behaviours as an item label: an item owned by, or naming, a labelled person is treated as sensitive for warnings.
 - Use no `|` characters inside a cell.

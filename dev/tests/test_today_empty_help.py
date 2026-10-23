@@ -1,4 +1,4 @@
-"""Defect #237 (v2.5.1): Today's Needs attention, when nothing waits, says only "Nothing needs your attention."
+"""Defect #237 (v2.5.1): Today's Needs attention, when nothing waits, is gone entirely (#322, 2.6.2: no heading, no sentence)
 
 Alan: "I do not need a 'how today works' note here all the time". The permanent grey box with the "How Today works" link
 is gone from the empty state; Today's help stays one key away: the ? key opens the ? panel (helpscreen.js) with its
@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
+from test_dashboard import new  # noqa: E402
 
 
 class EmptyNeedsAttention(LiveBrowserCase):
@@ -35,16 +36,35 @@ class EmptyNeedsAttention(LiveBrowserCase):
         self.b.eval("go('today'); renderToday()")
         self.b.wait("document.getElementById('attnList')")
 
-    def test_the_empty_state_is_only_the_sentence(self):
+    def test_the_empty_state_hides_the_whole_section(self):
+        """#322 (2.6.2): nothing to attend to, no section: the heading goes too, not a heading over a sentence."""
         self.today()
-        o = self.b.eval("""(()=>({rows:document.querySelectorAll('#attnList>li').length, none:document.querySelectorAll('#attnList .none').length,
+        o = self.b.eval("""(()=>{const s=document.getElementById('attnSec');
+          return {hidden:s.hidden, shown:s.getBoundingClientRect().height>0, rows:document.querySelectorAll('#attnList>li').length,
+          none:document.querySelectorAll('#attnList .none').length,
           text:document.getElementById('attnList').textContent.trim(),
           box:document.querySelectorAll('#attnSec .hhow, #attnSec [data-hhow]').length,
-          anywhere:document.querySelectorAll('#v-today .hhow, #v-today [data-hhow]').length}))()""")
-        self.assertEqual([o["rows"], o["none"]], [1, 1], o["text"])
-        self.assertEqual(o["text"], "Nothing needs your attention.")
+          anywhere:document.querySelectorAll('#v-today .hhow, #v-today [data-hhow]').length}})()""")
+        self.assertTrue(o["hidden"] and not o["shown"], "Needs attention (heading included) is gone when empty")
+        self.assertEqual([o["rows"], o["none"], o["text"]], [0, 0, ""])
         self.assertEqual(o["box"], 0, "no How Today works box in Needs attention")
         self.assertEqual(o["anywhere"], 0, "no How Today works box anywhere on Today")
+
+    def test_the_section_comes_and_goes_live(self):
+        """#322: one item and the section is back; remove it and it goes again, with no page reload."""
+        self.today()
+        self.b.eval("window.MARK=1")
+        self.v.propose("e322", [new("actions", 1, project="ABC", description="Book the review room", due_date="2099-01-01", source="Alan (cx-edit)")])
+        self.v.run("apply")
+        self.b.eval("window.RELOADED=false; reloadData().then(()=>{ renderToday(); window.RELOADED=true; })")
+        self.b.wait("window.RELOADED===true", 30)
+        o = self.b.eval("({hidden:document.getElementById('attnSec').hidden, heading:document.getElementById('hAttn').getBoundingClientRect().height>0, rows:document.querySelectorAll('#attnList>li').length, mark:window.MARK})")
+        self.assertFalse(o["hidden"], o)
+        self.assertTrue(o["heading"])
+        self.assertGreaterEqual(o["rows"], 1)
+        self.assertEqual(o["mark"], 1, "same page, no reload")
+        self.b.eval("A.length=0; R.length=0; renderToday()")
+        self.assertTrue(self.b.eval("document.getElementById('attnSec').hidden"))
 
     def press_help(self):
         self.b.eval("document.activeElement&&document.activeElement.blur&&document.activeElement.blur()")

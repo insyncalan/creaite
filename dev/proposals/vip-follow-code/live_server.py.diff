@@ -1,0 +1,63 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 5e5018d3..4159ae42 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -411,9 +411,10 @@ def reach_dirs():
+     return list(dict.fromkeys([str(reach.home())] + extra_dirs()))
+ # ===== end BL-141 =====
+ 
+-# BL-288: who Alan marks as a VIP is private to him. Every prompt that may write something shown or shared carries this.
+-VIP_PRIVATE_RULE = (" VIP is private to Alan: never call or label a person a VIP (or say who is one) in a reply, an item, "
+-                    "a draft, a report or any file you write; you may still put what they send or own first, unlabelled.")
++# BL-288 (revised 23-10-2026): who Alan follows stays inside the app. Every prompt that may write something shown or shared carries this.
++VIP_PRIVATE_RULE = (" Who Alan follows stays inside the app: never call or label a person a VIP (or any other label of importance), and "
++                    "never say who is followed, in a reply, an item, a draft, a report or any file you write; you may still put what "
++                    "they send or own first, unlabelled.")
+ 
+ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), running headless in the vault. Follow "
+               "CLAUDE.md and the skills. Be brief; show dates as DD-MM-YYYY. You may read the vault, the tracker and "
+@@ -3816,7 +3817,7 @@ VIP_SOURCES = {False: ("Outlook Inbox mail and Teams chats and channel messages.
+                        "not messages."),
+                True: "Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates."}
+ VIP_KINDS = {False: '"teams"|"mail"', True: '"teams"|"mail"|"calendar"'}
+-VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send nothing. Search Alan's Microsoft 365 for "
++VIP_PROMPT = ("creaite follow check. Read-only: change nothing, write nothing, send nothing. Search Alan's Microsoft 365 for "
+               "messages SENT BY these addresses since {since} ({zone}): {sources} Addresses: {addresses}. For each mail "
+               "message found, call read_resource on it once to get its conversation ID. Then read each CONVERSATION one of "
+               "those messages belongs to (the Teams chat, or the mail thread by its conversation ID): everyone's messages "
+@@ -3915,7 +3916,7 @@ def vip_check(how="check"):
+         return "skipped: development repository"
+     vs, vips = sweep.vip_settings(), sweep.vip_addresses()
+     if not vs.get("enabled", True) or not vips:
+-        return "skipped: no VIPs"
++        return "skipped: nobody followed"
+     quiet = vip_schedule.paused()                         # #97: no check in quiet hours (overnight, weekend days)
+     if quiet:
+         return quiet
+@@ -3943,7 +3944,7 @@ def vip_check(how="check"):
+         took = time.monotonic() - began
+         vip_usage(r, took)                                # #197: tokens and cost, counts only
+         if not isinstance(found, list):                   # the reason shown is fixed words: never the model's or a tool's
+-            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {vip_why(why)}"
++            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the follow check didn't finish: {vip_why(why)}"
+             print(VIP_STATUS["last_error"], flush=True)
+             vip_debug(sweep.vip_check_line({}, [], took, cost, failed=True))
+             return VIP_STATUS["last_error"]
+@@ -4003,7 +4004,7 @@ def vip_note(new):
+     """The check's one line for the server's output: how many alerts are new or updated, and any still being waited for."""
+     import sweep
+     held = len(sweep.vip_state().get("held") or {})
+-    return (f"VIP check: {len(new)} new or updated alert{'s' if len(new) != 1 else ''}"
++    return (f"Follow check: {len(new)} new or updated alert{'s' if len(new) != 1 else ''}"
+             + (f", {held} waiting to go quiet" if held else ""))
+ 
+ 
+@@ -4017,7 +4018,7 @@ def vip_timer():
+         try:
+             vip_check(how)
+         except Exception as e:  # noqa: BLE001  never stops the server
+-            print(f"Note: the VIP check failed: {e}", flush=True)
++            print(f"Note: the follow check failed: {e}", flush=True)
+         how = "check"
+         try:
+             wait = max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds()))

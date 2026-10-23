@@ -191,6 +191,15 @@ class Stale307(LiveBrowserCase):
           try{ setDecision(data,r,'approved'); return 'flipped'; }catch(e){ return e.message; } })()""")
         self.assertIn("already changed", r)
 
+    def test_c23_an_edit_retargets_only_the_edited_row_not_an_identical_one_in_the_file(self):
+        """Cap (2.6.2): two identical items in one file share a fingerprint; editing one must not move the other's snapshot."""
+        b = self.b
+        self.open_mail()
+        r = b.eval("""(()=>{ SNAP.model=D.intake_review; SNAP.keys=new Map([[1,{key:'f.json|1',fp:'x',cfp:'OLD'}],[2,{key:'f.json|2',fp:'x',cfp:'OLD'}],
+          [3,{key:'g.json|1',fp:'x',cfp:'OLD'}]]);
+          snapFollowEdit('f.json','1','OLD','NEW'); return [1,2,3].map(n=>SNAP.keys.get(n).cfp); })()""")
+        self.assertEqual(r, ["NEW", "OLD", "OLD"])
+
 
 if __name__ == "__main__":
     unittest.main()

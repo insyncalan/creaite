@@ -139,7 +139,7 @@ function later(hostId, dlg) {
 export function makeDraftEmailDialog() {
   return later("deDlgHost",
     <Dialog cmdEnter={false} id="deDlg" class="prepdlg" labelledBy="deTitle">
-      <div class="prephead"><div style="flex:1"><div class="sub">Nothing is sent: copy it and paste it into Outlook</div><h2 id="deTitle"></h2></div>
+      <div class="prephead"><div style="flex:1"><div class="sub" id="deSub">Nothing is sent: copy it and paste it into Outlook</div><h2 id="deTitle"></h2></div>
         <button class="iconbtn" id="deClose" aria-label="Close"><Icon name="x" /></button></div>
       <div class="prepbody" id="deBody"></div>
     </Dialog>);

@@ -35,6 +35,7 @@ import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./project
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn } from "./review.js";
 import { asQuestionHtml } from "./autostart.js";
+import { profileQuestionHtml } from "./profile.js";   /* #312 */
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, syncView } from "./work.js";
 /* ======================= Today ======================= */
@@ -173,7 +174,7 @@ export function renderToday(){
   putHTML($("#briefText"),html`<b>${pend.length} suggestion${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, ${raw(countLink(`${plur(mineOver.length,"overdue action")} of yours`,mineOver.length,"actions:overdue:",{o:["@me"]},`<b>${mineOver.length} of your actions</b>`))} ${mineOver.length===1?"is":"are"} overdue${off.length?html`, and <b>${andList(off.map(p=>p.name))}</b> ${off.length===1?"is":"are"} off track`:""}.`);
   renderDn();   /* BL-210: Decisions needed, ahead of Needs attention */
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
-  $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
+  $("#nAttn").textContent=att.length?String(att.length):""; /* #322: nothing to attend to, no section (heading included) */ $("#attnSec").hidden=!ac.html; putHTML($("#attnList"),ac.html?raw(ac.html):html``); putHTML($("#attnMore"),raw(ac.more));
   const mine=[...mineOver,...mineSoon].sort((a,b)=>a.due.localeCompare(b.due)), mc=capped(mine.map((x,i)=>tl(i+1,tLink(html`data-open="actions:${x.id}"`,html`${x.t??""}`),
     html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${lw(x.upd).length>140?lw(x.upd).slice(0,139)+"…":lw(x.upd)}`:""}.`,itemActs("actions",x))),5,"mine");
   putHTML($("#nMine"),raw(mine.length?countLink(`${plur(mine.length,"action")} of yours due or overdue`,mine.length,"actions:open:",{st:["Open","Delayed"],due:["overdue","soon"],o:["@me"]}):""));   /* BL-190 */ putHTML($("#mineList"),mc.html?raw(mc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing due from you this week.</span></div></li>`); putHTML($("#mineMore"),raw(mc.more));
@@ -451,6 +452,7 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
     if(li&&!li.classList.contains("done")){ const go=li.querySelector(".rmgo"); putHTML(go,html`<button type="button" class="mini" data-sucheck="m365" ${viaServer()?"":html`disabled title="creaite isn’t running"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`); }
     if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */
   /* #300: the one question about starting creaite at sign-in (autostart.js; shown only where the server can do it) */
+  { const q=profileQuestionHtml(), box=$("#setupList"), cur=$("#pfQ"); if(cur) cur.remove(); if(q&&box) addHTML(box,"beforeend",raw(q)); }   /* #312: About you, before the sign-in question */
   { const q=asQuestionHtml(), box=$("#setupList"), cur=$("#asQ"); if(cur) cur.remove(); if(q&&box) addHTML(box,"beforeend",raw(q)); } }
 /* ===== end BL-156 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */

@@ -15,6 +15,7 @@ named outside files do not exist. Run it with and without the guarded chain appl
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -135,6 +136,56 @@ class Planting(Fixture, unittest.TestCase):
                      {"transcript": 5}, {"title": None}, {"new_proposal": "system/scripts/x.py", "state": "replaced"},
                      {"new_draft": "system/scripts/x.py", "state": "replaced"}):
             self.every_way_in(self.manifest(**over))
+
+    def test_a_manifest_over_a_megabyte_is_never_read_and_moves_nothing(self):
+        """Cap H-1b: a valid manifest padded past 1 MB is not parsed at all."""
+        h = self.manifest()
+        h["pad"] = "x" * (1 << 20)
+        self.every_way_in(h)
+
+    def test_a_fifo_as_the_hold_never_hangs_a_reader(self):
+        """Cap H-1b: a FIFO named hold.json blocked a request thread. Every reader returns at once and moves nothing."""
+        d = self.hold_dir()
+        os.mkfifo(d / "hold.json")
+        code = ("import sys; sys.path.insert(0, 'system/scripts'); import reextract as r\n"
+                f"print(r._read_hold(r.hold_dir({RUN!r}) / 'hold.json'), r._held('proposed-x.json'), r.recover(), r._manifest({RUN!r}))")
+        out = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True, timeout=20)
+        self.assertEqual(out.stdout.strip(), "None False [] None", out.stderr)
+
+    def test_a_link_as_the_hold_is_never_read_whatever_it_points_at(self):
+        """Cap H-1b: lstat sized the link, read_text followed it. A link to a valid manifest, a big file or /dev/null is refused."""
+        d = self.hold_dir()
+        big = d / "big.json"
+        big.write_text(json.dumps({**self.manifest(), "pad": "x" * (2 << 20)}), encoding="utf-8")
+        small = d / "small.json"
+        small.write_text(json.dumps(self.manifest()), encoding="utf-8")
+        for target in (big, small, Path("/dev/null")):
+            link = d / "hold.json"
+            link.unlink(missing_ok=True)
+            os.symlink(target, link)
+            code = f"import reextract as r\nprint(json.dumps([r._read_hold(r.hold_dir({RUN!r}) / 'hold.json'), r._manifest({RUN!r})]))"
+            self.assertEqual(in_vault(self.v, code), [None, None], str(target))
+
+    def test_a_manifest_of_exactly_a_megabyte_is_read_and_one_byte_more_is_not(self):
+        d = self.hold_dir()
+        h = self.manifest()
+        base = len(json.dumps(h).encode()) + len(', "pad": ""'.encode())
+        for extra, want in ((0, True), (1, False)):
+            h["pad"] = "x" * ((1 << 20) - base + extra)
+            (d / "hold.json").write_text(json.dumps(h), encoding="utf-8")
+            self.assertEqual(len((d / "hold.json").read_bytes()), (1 << 20) + extra)
+            code = f"import reextract as r\nprint(json.dumps(r._read_hold(r.hold_dir({RUN!r}) / 'hold.json') is not None))"
+            self.assertEqual(in_vault(self.v, code), want)
+
+    def test_a_planted_hold_with_at_zero_leaves_the_pending_minutes_in_review(self):
+        """Cap H-1a: recover() puts a hold back; it no longer sets aside every proposal for the transcript since `at`."""
+        mine = self.v.root / "system/staging" / self.proposal
+        was = mine.read_bytes()
+        h = self.manifest(at=0, transcript=self.data["meeting"]["transcript"])
+        self.plant(h)
+        in_vault(self.v, "import reextract as r; r.recover(); print(1)")
+        self.assertEqual(mine.read_bytes(), was, "Alan's pending minutes are still where they were")
+        self.assertFalse((self.hold_dir() / "unused").exists())
 
     def test_a_hold_that_is_not_a_plain_file_moves_nothing(self):
         d = self.hold_dir()

@@ -1,0 +1,117 @@
+diff --git a/system/scripts/review.py b/system/scripts/review.py
+index edfbf73a..70873765 100644
+--- a/system/scripts/review.py
++++ b/system/scripts/review.py
+@@ -13,6 +13,7 @@ Commands:
+   approve <number> --without-transcript
+                                 #280: minutes whose transcript is no longer in the inbox (held by apply) are approved without
+                                 the transcript copy: the draft is filed, the transcript is not; refused while it is still there
++  restore-discarded <file>      #307: put a discarded proposal back in Intake (Discard's Undo); refuses a taken name
+   reject <number> --discard     #280: set a held proposal aside (minutes or a report whose file to be filed has gone) in
+                                 system/staging/discarded/, writing nothing to the tracker; only a held proposal
+   reject <numbers> [--reason=TEXT] [--duplicate-of=ID]
+@@ -1226,12 +1227,94 @@ def cmd_discard(n):
+     dest, k = DISCARDED / p.name, 2
+     while dest.exists():
+         dest, k = DISCARDED / f"{p.stem}-{k}{p.suffix}", k + 1
+-    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block)}
++    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block), "name": p.name}
+     save(p, data)
+     p.replace(dest)
++    _ledger_add({"name": dest.name, "sha256": _sha(dest), "at": data["discarded"]["at"]})       # #307: what Discard itself set aside
+     debuglog.info("review", f"discarded {p.name} ({ref}): held")
+     print(f"Discarded 1. {block.get('title') or p.name}: set aside in {paths.rel(dest)}; nothing was written to the tracker.")
+     return 0
++
++
++# #307 path 12 (Cap's H1): Undo puts back only what Discard itself set aside. Discard appends {name, sha256 of the file as set aside, at}
++# to this ledger, which is in system/staging/ and so on reach.py's never list (system/staging/*.jsonl, as system/staging/discarded/ is):
++# ask creaite, a sweep and filechange can neither add a line nor edit the file. A restore needs the newest line for the name to be a
++# Discard line whose checksum is the file's, so a planted or edited file is refused.
++DISCARD_LEDGER = paths.STAGING / "discarded-ledger.jsonl"
++
++
++def _sha(path):
++    import hashlib
++    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
++
++
++def _ledger_add(entry):
++    with open(DISCARD_LEDGER, "a", encoding="utf-8") as f:
++        f.write(json.dumps(entry) + "\n")
++
++
++def _ledger_last(name):
++    """The newest ledger line for this name in discarded/, or None (no ledger, an unreadable line is skipped)."""
++    last = None
++    try:
++        lines = DISCARD_LEDGER.read_text(encoding="utf-8").splitlines()
++    except OSError:
++        return None
++    for line in lines:
++        try:
++            e = json.loads(line)
++        except ValueError:
++            continue                                        # a line that isn't JSON is no record
++        if isinstance(e, dict) and e.get("name") == name:
++            last = e
++    return last
++
++
++def _discarded_problem(name):
++    """Why `name` can't be put back, in words (the part after "not put back — "), else None. Reads only."""
++    src = DISCARDED / name
++    if not re.fullmatch(r"proposed-[\w.-]+\.json", name or "") or ".." in name or not src.is_file():
++        return "that proposal isn't among the ones set aside."
++    if src.is_symlink() or src.lstat().st_nlink > 1:
++        return "that file isn't one Discard set aside."
++    rec = _ledger_last(name)
++    if not rec or not rec.get("sha256"):
++        return "Discard has no record of setting that proposal aside."
++    if rec.get("sha256") != _sha(src):
++        return "that file has changed since Discard set it aside."
++    return None
++
++
++def cmd_restore_discarded(name):
++    """#307 path 12: put a discarded proposal back in system/staging/ as it was (Discard's Undo). `name` is the file's bare name in
++    system/staging/discarded/; the marker cmd_discard added is the only thing removed. Refuses what Discard did not set aside (its
++    ledger line and checksum), and a name already taken in staging (nothing is overwritten)."""
++    bad = f"{name or 'Nothing'}: not put back — "
++    why = _discarded_problem(name)
++    if why:
++        print(bad + why)
++        return 2
++    src = DISCARDED / name
++    try:
++        data = json.loads(src.read_text(encoding="utf-8"))
++    except (OSError, ValueError):
++        print(bad + "that file can't be read.")
++        return 2
++    marker = data.pop("discarded", None) if isinstance(data, dict) else None
++    if not isinstance(marker, dict):
++        print(bad + "that proposal wasn't set aside by Discard.")
++        return 2
++    back = marker.get("name") if re.fullmatch(r"proposed-[\w.-]+\.json", str(marker.get("name") or "")) else name
++    dest = paths.STAGING / back
++    if dest.exists():
++        print(bad + "a proposal with that name is already waiting in Intake.")
++        return 2
++    dest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
++    src.unlink()
++    _ledger_add({"name": name, "restored": True, "at": clock().isoformat(timespec="seconds")})     # a replayed Undo finds no Discard line
++    debuglog.info("review", f"restored {back} from discarded")
++    print(f"Put back: {(data.get('meeting') or data.get('report') or {}).get('title') or back} is waiting in Intake again.")
++    return 0
+ # ===== end #280 (round 3) =====
+ 
+ 
+@@ -2572,6 +2655,8 @@ def _main_with_held(argv):
+             print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
+             return 2
+         return cmd_discard(keys[0])
++    if cmd == "restore-discarded":                                      # #307 path 12: Discard's Undo
++        return cmd_restore_discarded(keys[0] if len(keys) == 1 else "")
+     if cmd == "approve" and "--without-transcript" in rest and keys:
+         mode = "sync" if "--sync" in rest else "as-staged" if "--as-staged" in rest else None
+         return cmd_decide(" ".join(keys), "approved", mode, drop=True)

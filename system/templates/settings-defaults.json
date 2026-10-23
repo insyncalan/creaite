@@ -66,8 +66,12 @@
       }
     ]
   },
+  "draft_email": {
+    "_about": "Draft email (#183): outlook_drafts on puts the Draft email popup's email in your Outlook Drafts folder (Create draft in Outlook), ready for you to check and send; creaite never sends anything. Off (the default): you copy it and paste it into Outlook. Turn it off if you can't write to Outlook.",
+    "outlook_drafts": false
+  },
   "vip": {
-    "_about": "VIPs (BL-99): people marked VIP in the people register. Anything they send is alerted at the top of Today. check_minutes: how often the live server looks for VIP mail, Teams and invites while it runs (nothing is seen while creaite is closed; the next start catches up). notify: a browser notification as well as the Today block. quiet_overnight, quiet_from, quiet_to, quiet_weekend (#97): no checks between the two 24-hour times, nor on the weekend days (work.weekend_days); the first check after reads back to the last one.",
+    "_about": "People you follow (BL-99): people with Follow set in the people register. Anything they send is alerted at the top of Today. check_minutes: how often the live server looks for their mail and Teams messages while it runs (nothing is seen while creaite is closed; the next start catches up). notify: a browser notification as well as the Today block. quiet_overnight, quiet_from, quiet_to, quiet_weekend (#97): no checks between the two 24-hour times, nor on the weekend days (work.weekend_days); the first check after reads back to the last one.",
     "enabled": true,
     "check_minutes": 30,
     "notify": true,

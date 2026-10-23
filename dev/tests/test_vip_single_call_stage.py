@@ -372,7 +372,7 @@ class MergePinTests(unittest.TestCase):
             s.stop()
         self.assertEqual(args[:-1], ["-p", "--output-format", "json", "--allowedTools", ",".join(self.ls.VIP_TOOLS),
                                      "--disallowedTools", ",".join(self.ls.vip_deny()), "--"])
-        self.assertTrue(args[-1].startswith("creaite VIP check."))                          # the prompt, alone, last
+        self.assertTrue(args[-1].startswith(("creaite VIP check.", "creaite follow check.")))                          # the prompt, alone, last
         self.assertNotIn("ToolSearch", args[args.index("--disallowedTools") + 1].split(","))
 
     def test_part_3b_limits_and_prompt_parts_are_unchanged(self):
@@ -439,7 +439,7 @@ class SingleCallServerTests(unittest.TestCase):
         self.assertIn('"ABC-A-007"', prompt)                                                 # OPEN WORK filled
         self.assertIn("OPEN: []", prompt)                                                    # no open cards yet
         self.assertIn("Never for a private conversation", prompt)
-        self.assertEqual(re.findall(r"VIP", prompt.replace("creaite VIP check.", "").replace("Never use the word VIP", "")), [])
+        self.assertEqual(re.findall(r"VIP", prompt.replace("creaite VIP check.", "").replace("creaite follow check.", "").replace("Never use the word VIP", "")), [])
 
     def test_the_reply_is_checked_before_it_is_recorded(self):
         alerts = vip_file(self.s.v)["alerts"]

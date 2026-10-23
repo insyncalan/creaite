@@ -1,0 +1,21 @@
+# The approved guarded chain for 2.6.2, one diff per line, in apply order (GUARDED-2.6.2.md). Read by dev/tests/guarded_chain.py.
+# Lines starting with # are comments. Paths are relative to the repo root. Change this list only when Alan approves a change to the chain.
+# Base: the 2.6.1 release commit (the 2.6.1 chain is already applied there).
+# small: inbox upload OSError, review expect
+dev/proposals/inbox-upload-oserror/live_server.diff
+dev/proposals/review-expect/review.py.diff
+dev/proposals/review-expect/live_server.diff
+# discard-undo
+dev/proposals/discard-undo/review.py.diff
+dev/proposals/discard-undo/reach.py.diff
+dev/proposals/discard-undo/live_server.py.diff
+# 183 draft delivery (code)
+dev/proposals/draft-delivery/live_server.diff
+# emit_event inside the apply transaction (tracker.py)
+dev/proposals/emit-event-txn/tracker.diff
+# follow wording (code)
+dev/proposals/vip-follow-code/propose.py.diff
+dev/proposals/vip-follow-code/live_server.py.diff
+# rules and skill: 183h, then VIP/follow
+dev/proposals/draft-delivery/rules-and-skill.diff
+dev/proposals/vip-follow-rules/creaite-rules.md.diff

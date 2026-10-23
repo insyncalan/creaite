@@ -87,6 +87,9 @@ def command(script, *words, wrapped=False):
 class Classified(unittest.TestCase):
     def test_every_script_and_command_is_classified(self):
         found = dispatched()
+        # #183: draft_delivery.py is out of SCRIPT_COMMANDS on purpose, so every ask creaite run refuses it (its README, check 5)
+        self.assertNotIn("draft_delivery.py", reach.SCRIPT_COMMANDS)
+        found.pop("draft_delivery.py", None)
         self.assertEqual(sorted(set(found) - set(reach.SCRIPT_COMMANDS)), [],
                          "scripts with a command line that BL-267's list (reach.SCRIPT_COMMANDS) doesn't classify")
         missing = sorted(f"{s} {c}" for s, cmds in found.items() for c in cmds
@@ -121,7 +124,9 @@ class Classified(unittest.TestCase):
             "update.py install", "update.py undo", "update.py tidy", "update.py new-vault",
             "backup.py tidy", "backup.py restore",            # BL-323 (14-10-2026): removes old backups for good; restores the vault
             "permissions.py", "live_server.py", "launch.py",
-            "archive.py daily", "archive.py items"]))          # BL-10 (14-10-2026): the daily archiving writes the record
+            "archive.py daily", "archive.py items"]       # BL-10 (14-10-2026): the daily archiving writes the record
+            # #307 path 12: Discard's Undo puts a proposal back in staging, classed record as reject is (dev/proposals/discard-undo/reach.py.diff)
+            + (["review.py restore-discarded"] if "restore-discarded" in reach.SCRIPT_COMMANDS["review.py"] else [])))
 
 
 class Hook(unittest.TestCase):
