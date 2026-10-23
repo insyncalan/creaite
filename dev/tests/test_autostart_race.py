@@ -73,6 +73,9 @@ class LateStatus(Base):
             self.skipTest("the slot is reserved on a Mac only")
         box = "(()=>{const e=document.querySelector('#asQ'),l=document.querySelector('#setupList');"\
               "if(!e)return null;const r=e.getBoundingClientRect(),q=l.getBoundingClientRect();return [r.top,r.height,q.height,document.querySelector('#dnList').getBoundingClientRect().top]})()"
+        # The real status may already have answered, so put the page back into its boot state (no status yet) and draw Today's list
+        # as the first paint does; the held status is then still in flight.
+        b.eval("(()=>{const e=document.querySelector('#asQ'); if(e) e.remove(); AS.status=null; AS.done=false; renderSetup(); 0})()")
         first = b.eval(box)
         self.assertIsNotNone(first, "no slot before the status answers")
         b.eval("window.__asr.release()")
