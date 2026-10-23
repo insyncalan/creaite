@@ -27,8 +27,9 @@ Commands:
   transcripts todo|record <facts.json>|show
                            BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
                            was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py.
-                           #250: with sweep.fetch_transcripts on (off by default) record also fetches each eligible ended
-                           meeting's transcript into inbox/ (never a confidential one), and done adds "Fetched n transcripts"
+                           #250: with sweep.fetch_transcripts on (off by default) the live server's observer (never this
+                           command) fetches each eligible ended meeting's transcript into inbox/ (never a confidential
+                           one), and done adds "Fetched n transcripts"
   vip addresses|record <found.json> [--found sweep|start-up|check]|seen <id…>|--all|list
                            VIPs (BL-99): the addresses to check, recording alerts in system/staging/vip.json (from a
                            VIP only; never ignored, never matched away), marking them seen, listing the unseen ones

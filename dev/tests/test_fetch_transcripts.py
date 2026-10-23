@@ -310,6 +310,20 @@ class Fetch(unittest.TestCase):
         self.assertEqual(self.inbox(), [])
         self.tracker_untouched()
 
+    def test_medium_a_url_two_events_share_is_never_fetched_whatever_the_read_order(self):
+        # Cap 23-10 N1: ev-1 confidential, ev-2 normal, both reads return the same transcript URL. Reading ev-1 then ev-2 then the
+        # URL tied it to ev-2 (the later read overwrote the first) and put the confidential text in inbox/.
+        self.set_on()
+        edit_calendar(self.v, lambda ev: ev.update(sensitivity="confidential") if ev.get("id") == "ev-1" else None)
+        secret = result_at("09:05", contents=("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n<v A>CONFIDENTIAL-HR-TEXT</v>\n",))
+        ev1 = self.read("ev-1", secret)
+        ev2 = [("calendar:///events/ev-2", {**event("ev-2"), "meetingTranscriptUrl": ev1[1][0]}, False)]   # a duplicate invite
+        for order in ((ev1[0], ev2[0]), (ev2[0], ev1[0])):
+            with self.subTest(order=[o[0][-6:] for o in order]):
+                self.assertEqual(self.obs([*order, (ev1[1][0], secret, False)]), {})
+                self.assertEqual(self.inbox(), [])
+        self.tracker_untouched()
+
     def test_the_observer_reads_only_the_exact_read_tool_and_never_overwrites_a_planted_link(self):
         self.set_on()
         steps = self.read("ev-1")

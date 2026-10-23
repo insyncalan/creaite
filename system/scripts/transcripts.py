@@ -609,7 +609,7 @@ def stamp_failure(eid, uri, at, ctx):
 def tally_fetch(outcomes):
     """Add this step's outcomes to the sweep's tally (system/staging/sweep-fetched.json): event IDs by outcome, never text. Kept by
     ID so the live server's copy and the sweep's own record of one meeting count once."""
-    kind = {"not tied": "left"}                                    # refused a file it couldn't tie: left for Process
+    kind = {"not tied": "left"}                                    # older tallies only: left for Process
     add = {k: sorted(e for e, v in outcomes.items() if kind.get(v, v) == k) for k in TALLY_KEYS}
     if not any(add.values()):
         return
@@ -663,6 +663,7 @@ class SweepFetch:
 
     def __init__(self):
         self.uris = {}                       # meeting-transcript URL -> event ID, from the event reads of this run
+        self.shared = set()                  # URLs a held event named, or more than one event did: never tied (Cap N1)
         self.held = set()                    # events whose own read says they aren't "normal" sensitivity: never fetched
         self.outcomes = {}
 
@@ -674,17 +675,28 @@ class SweepFetch:
         if uri.startswith("calendar:///events/") and not is_error:
             data = as_json(text)
             facts = event_facts(data)
-            if facts.get("id") and str(data.get("sensitivity") or "").strip().lower() != "normal":
-                self.held.add(str(facts["id"]))                                # the event read itself: fail closed
-            if facts.get("id") and facts.get("uri"):
-                self.uris[facts["uri"]] = str(facts["id"])
+            self.note_event(data, facts)
         elif uri.startswith("meeting-transcript:///"):
             self.transcript(uri, text, is_error)
+
+    def note_event(self, data, facts):
+        """One event read: hold it unless it says "normal", and tie its transcript URL to it. A URL named by a held event, or by two
+        events (a duplicate invite), ties to nobody, whatever the order of the reads (Cap N1)."""
+        eid, uri = str(facts.get("id") or ""), facts.get("uri")
+        if not eid:
+            return
+        held = str(data.get("sensitivity") or "").strip().lower() != "normal"      # the event read itself: fail closed
+        if held:
+            self.held.add(eid)
+        if uri:
+            if held or self.uris.get(uri, eid) != eid:
+                self.shared.add(uri)
+            self.uris[uri] = eid
 
     def event_of(self, uri):
         """The event ID a meeting-transcript URL belongs to: only the event whose own read, in this run, returned that URL.
         A URL recorded in transcripts.json (typed by Claude through `record`) is never a tie (Cap's HIGH on #250): fail closed."""
-        return self.uris.get(uri)
+        return None if uri in self.shared else self.uris.get(uri)
 
     def transcript(self, uri, text, is_error):
         """A transcript read came back: fetch it if its meeting is to be fetched (a retry after a dropped connection too)."""
