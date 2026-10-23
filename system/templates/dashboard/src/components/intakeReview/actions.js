@@ -17,7 +17,7 @@ import { shared } from "../../core/state.js";
 import { pName } from "../../core/data.js";
 import { srcShort } from "../../core/fields.js";
 import { irFixed, irKindOf, irMatches, irNameOk, irUnsure } from "../../core/irFold.js";
-import { irAddProblems, irAside, irAskQ, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefRun, irRow, irRefreshing, irSetAskQ, irSetBusy, irSetChecking, irSetFileKind, irStep, irTick } from "../../stores/intakeReview.js";
+import { irAddProblems, irAside, irAskQ, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefRun, irRow, irRefreshing, irSetAskQ, irSetBusy, irSetChecking, irSetFileKind, irStep, irTick, irClearTicks } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
@@ -139,14 +139,14 @@ export async function irProcessAll() {
 /** The clear route's item for a row. @param {any} m @param {Record<string, any>} [extra] */
 const asideItem = (m, extra) => ({ key: m.key || m.path, day: m.src === "upload" ? TODAY : m.day, start: m.start || "", title: m.title, ...extra });
 
-/** Set meetings aside through the clear route, then offer Undo. @param {any[]} ms @param {Record<string, any>} extra @param {string} what */
-async function setAside(ms, extra, what) {
+/** Set meetings aside through the clear route, then offer Undo. @param {any[]} ms @param {Record<string, any> | ((m: any) => Record<string, any>)} extra @param {string} what */
+async function setAside(ms, extra, what, after = "") {
   if (!viaServer()) { snack(needsConnection("This")); return false; }
-  const r = await api("/api/intake/clear", { op: "clear", items: ms.map(m => asideItem(m, extra)) });
+  const r = await api("/api/intake/clear", { op: "clear", items: ms.map(m => asideItem(m, typeof extra === "function" ? extra(m) : extra)) });
   if (!r.ok) { snack(plainSay(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't do that"))); return false; }
   const keys = ms.map(m => m.key || m.path);
   await reloadData();
-  snack(`${what}: ${ms.length === 1 ? ms[0].title : `${ms.length} meetings`}`, () => irRestore(keys));
+  snack(`${what}: ${ms.length === 1 ? ms[0].title : `${ms.length} meetings`}${after}`, () => irRestore(keys));
   return true;
 }
 
@@ -157,6 +157,18 @@ export function irLater(m) { return irCanSetAside(m) ? setAside([m], { kind: "la
 /** Not needed, with a reason (and a one-line note); an Undo is offered. @param {any} m @param {string} reason @param {string} [note] */
 export function irNotNeeded(m, reason, note) {
   return irCanSetAside(m) && IR_REASONS.includes(reason) ? setAside([m], { reason, note: note || "" }, "Not needed") : Promise.resolve(false);
+}
+
+/** #323: Later or Not needed for several ticked rows in one call (the route takes up to 200), one Undo. Rows that cannot take it
+    (drafted, done or being processed) are left out and counted in the message. @param {any[]} ms @param {"later"|{reason: string}} how */
+export async function irAsideMany(ms, how) {
+  const ok = ms.filter(irCanSetAside).slice(0, 200), left = ms.length - ok.length;
+  if (!ok.length) { snack("Nothing to set aside: those meetings are already drafted, done or being processed"); return false; }
+  if (how !== "later" && !IR_REASONS.includes(how.reason)) return false;
+  const word = how === "later" ? "Later" : "Not needed", note = left ? ` · ${left} left out: already drafted, done or being processed` : "";
+  const done = await setAside(ok, how === "later" ? (/** @type {any} */ m) => ({ kind: "later", seen: m.state === "ready" }) : { reason: how.reason, note: "" }, word, note);
+  if (done) irClearTicks();
+  return done;
 }
 
 /** What "Restored n …" calls the things restored: files (keys that are inbox paths), meetings, or both. @param {string[]} keys @param {number} n */

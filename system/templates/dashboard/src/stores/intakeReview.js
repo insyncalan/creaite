@@ -14,7 +14,7 @@
 import { signal } from "@preact/signals";
 import { D, store } from "../core/page.js";
 import { modelKeyOf, REV, revForModelN, revKey } from "../core/data.js";
-import { IR_KINDS, IR_STAGES, irCounts, irFoldClick, irKeepOpen, irKindOf, irStageClick, irToggle, irViewNorm } from "../core/irFold.js";
+import { IR_KINDS, IR_STAGES, irCounts, irFoldClick, irGroupNorm, irKeepOpen, irKindOf, irStageClick, irStateFilterNorm, irToggle, irViewNorm } from "../core/irFold.js";
 
 export const IR_VIEW_KEY = "creaite-ir-view";
 /** @returns {import("../core/irFold.js").IrModel} */
@@ -55,6 +55,30 @@ export const irView = signal(irViewNorm((() => { try { return store.get(IR_VIEW_
 /** @param {string} v */
 export function irSetView(v) { irView.value = irViewNorm(v); try { store.set(IR_VIEW_KEY, irView.value); } catch (x) { /* storage blocked: this page only */ } }
 
+/** Group by (None, Day, Project, Meeting state, Transcript): this browser's, remembered; never shared, never in settings.json (#323). */
+export const IR_GROUP_KEY = "creaite-ir-group";
+export const irGroup = signal(irGroupNorm((() => { try { return store.get(IR_GROUP_KEY, "none"); } catch (x) { return "none"; } })()));
+/** @param {string} v */
+export function irSetGroup(v) { irGroup.value = irGroupNorm(v); try { store.set(IR_GROUP_KEY, irGroup.value); } catch (x) { /* storage blocked: this page only */ } }
+/** Show only meetings in one state (All meetings, Waiting for the transcript, ...): for this visit only (#323). */
+export const irStateFilter = signal("all");
+/** @param {string} v */
+export function irSetStateFilter(v) { irStateFilter.value = irStateFilterNorm(v); }
+/** The meetings ticked for a group action (the right-click menu, the bar above the list), by row id; only rows still on the page stay (#323). */
+export const irTicked = signal(/** @type {string[]} */ ([]));
+/** The row last ticked, where a Shift-click range starts. */
+let irTickFrom = /** @type {string|null} */ (null);
+/** Tick or untick a row; with `range` (a Shift-click) everything between the last ticked row and this one, in the order `order` gives.
+    @param {string} id @param {boolean} on @param {string[]} [order] row ids as drawn @param {boolean} [range] */
+export function irSetTick(id, on, order, range) {
+  const ids = range && order && irTickFrom && order.includes(irTickFrom) && order.includes(id)
+    ? order.slice(Math.min(order.indexOf(irTickFrom), order.indexOf(id)), Math.max(order.indexOf(irTickFrom), order.indexOf(id)) + 1) : [id];
+  const cur = irTicked.value.filter(x => !ids.includes(x));
+  irTicked.value = on ? [...cur, ...ids] : cur;
+  irTickFrom = id;
+}
+export function irClearTicks() { irTicked.value = []; irTickFrom = null; }
+
 export const irOpen = signal(/** @type {string|null} */ (null));
 export const irStage = signal("all");
 export const irFolded = signal(/** @type {Record<string, boolean>} */ ({}));
@@ -70,7 +94,10 @@ export function irClickStage(g) { irStage.value = irStageClick(irStage.value, g)
 /** @param {string} sec */
 export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); }
 /** After new data: the open meeting stays open while it is in the list. */
-export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irPruneKinds(); irTick.value++; }
+export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel());
+  const have = new Set((irModel().meetings || []).map((/** @type {any} */ x) => x.id)), keep = irTicked.value.filter(x => have.has(x));
+  if (keep.length !== irTicked.value.length) irTicked.value = keep;      /* #323: a ticked row that left the list (set aside, restored elsewhere) is no longer ticked */
+  irPruneKinds(); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
 export const irLiveCounts = () => {
   const c = irCounts(irModel(), irDone, irFileKinds.value), fr = irFreshFiles();

@@ -4186,6 +4186,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
+/* #323 Intake: Group by and Show, headings, tick boxes and the bar for ticked rows */
+#v-intake-review .irsel{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}
+#v-intake-review tr.icgrouphd td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)} #v-intake-review tr.icgrouphd b{color:var(--ink);font-weight:600}
+#v-intake-review input.irtick{margin:0 8px 0 0;vertical-align:middle;accent-color:var(--accent)}
+#v-intake-review .irtickbar{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:8px 0;background:var(--accent-soft);border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}

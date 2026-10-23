@@ -140,6 +140,41 @@ export function irStateCounts(model, done) {
   return o;
 }
 
+/* ===== #323: Group by and the state filter ===== pure; the list's headings and the "Show" choice read these. */
+/** Group by choices (None is today's flat list, newest day first; the first is the default). */
+export const IR_GROUPS = [["none", "None"], ["day", "Day"], ["project", "Project"], ["state", "Meeting state"], ["transcript", "Transcript"]];
+/** @param {any} v */
+export const irGroupNorm = v => (IR_GROUPS.some(x => x[0] === v) ? v : "none");
+/** The "Show" choices: every state, or one (Alan, 23-10-2026: he can filter to just the meetings waiting for the transcript). */
+export const IR_STATE_FILTERS = [["all", "All meetings"], ["waiting", "Waiting for the transcript"], ["ready", "Transcript ready"], ["check", "Suggestions to check"], ["done", "Done"]];
+/** @param {any} v */
+export const irStateFilterNorm = v => (IR_STATE_FILTERS.some(x => x[0] === v) ? v : "all");
+/** The meetings in one state, or all of them. @param {IrMeeting[]} list @param {string} st @param {(n:number)=>boolean} done */
+export const irByState = (list, st, done) => (st === "all" || !IR_STATE_FILTERS.some(x => x[0] === st) ? list : list.filter(m => irStateOf(m, done) === st));
+/** Whether a row has its transcript: a file that is a transcript, a meeting whose transcript has arrived (or that is past that step).
+    @param {any} m @param {Record<string, any>} [kinds] */
+export const irHasTranscript = (m, kinds) => (m.src === "upload" ? irKindOf(m, kinds) === "transcript" : m.state !== "waiting");
+/** The rows split under headings, in the order the headings should appear; rows keep their order inside a heading and an empty
+    heading is not drawn. `o.day` and `o.project` say a day's and a project's words. @param {any[]} list @param {string} by
+    @param {{done: (n:number)=>boolean, kinds?: Record<string, any>, day?: (d:string)=>string, project?: (c:string)=>string}} o
+    @returns {{key: string, label: string, items: any[]}[]} */
+export function irGroupMeetings(list, by, o) {
+  if (by === "none" || !IR_GROUPS.some(x => x[0] === by)) return [{ key: "", label: "", items: list }];
+  const heads = /** @type {Map<string, {key: string, label: string, items: any[]}>} */ (new Map());
+  const put = (/** @type {string} */ key, /** @type {string} */ label, /** @type {any} */ m) => { if (!heads.has(key)) heads.set(key, { key, label, items: [] }); /** @type {any} */ (heads.get(key)).items.push(m); };
+  for (const m of list) {
+    if (by === "day") put(m.day || "", m.day ? (o.day ? o.day(m.day) : m.day) : "No date", m);
+    else if (by === "project") put(m.p || "", m.p ? (o.project ? o.project(m.p) : m.p) : "No project", m);
+    else if (by === "state") { const st = irStateOf(m, o.done); put(st, st === "ready" ? "Transcript ready" : IR_STATE_CHIP[/** @type {"waiting"} */ (st)], m); }
+    else { const has = irHasTranscript(m, o.kinds); put(has ? "has" : "no", has ? "Has a transcript" : "No transcript yet", m); }
+  }
+  const all = [...heads.values()];
+  if (by === "state") return ["waiting", "ready", "check", "done"].map(k => heads.get(k)).filter(Boolean).map(x => /** @type {any} */ (x));
+  if (by === "transcript") return all.sort((a, b) => (a.key === "has" ? 0 : 1) - (b.key === "has" ? 0 : 1));
+  if (by === "project") return all.sort((a, b) => (a.key ? 0 : 1) - (b.key ? 0 : 1) || a.label.localeCompare(b.label));
+  return all;                                    /* day: the list is newest day first already */
+}
+
 /** The live counts: the server's, less what the page has decided since. A meeting whose proposals are all decided counts as
     approved. @param {IrModel} model @param {(n:number)=>boolean} done */
 export function irCounts(model, done, kinds) {

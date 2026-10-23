@@ -4,14 +4,20 @@
    the open meeting's proposals under the board. Two panes: the meetings on the left, the selected one on the right. Each ends with
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
-import { IR_STAGES, irLive } from "../../core/irFold.js";
-import { irBusy, irClickMeeting, irDone, irHeld, irLiveCounts, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
+import { IR_STAGES, irGroupMeetings, irLive } from "../../core/irFold.js";
+import { fd } from "../../core/page.js";
+import { irBusy, irClickMeeting, irDone, irFileKinds, irGroup, irHeld, irLiveCounts, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
-import { FileFacts, IrNote, MeetingRow, Progress, RowActions, StageTrack, irRunningWords, irStateWords, irWhen } from "./rows.jsx";
+import { irRowKey, irRowMenu } from "./selection.js";
+import { FileFacts, IrNote, IrTick, MeetingRow, Progress, RowActions, StageTrack, irRunningWords, irStateWords, irWhen } from "./rows.jsx";
 
 export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
 const IR_EMPTY = "Nothing here. Meetings appear when they end.";
 const irNone = () => (irQuery.value.trim() ? "Nothing matches your search." : IR_EMPTY);
+
+/** #323: the rows under their Group by headings (None: one list, no headings). Headings carry the count. */
+const irGroups = (/** @type {any[]} */ list) => irGroupMeetings(list, irGroup.value, { done: irDone, kinds: irFileKinds.value, day: fd, project: pName });
+const GroupHead = ({ g }) => <tr class="icgrouphd" data-irgroup={g.key || "none"}><td colSpan={2}><b>{g.label}</b> <span class="sub">{g.items.length}</span></td></tr>;
 
 /** @param {{model: any}} props */
 function MailSections({ model }) {
@@ -39,7 +45,7 @@ function MeetingBlock({ m }) {
 /** @param {{model: any, list: any[]}} props */
 export function ListView({ model, list }) {
   return <div data-irv="list">
-    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock key={m.id} m={m} />)}</tbody></table></div> : <div class="empty">{irNone()}</div>}
+    {list.length ? <div class="tbl"><table><tbody>{irGroups(list).map(g => <>{irGroup.value !== "none" ? <GroupHead g={g} /> : null}{g.items.map((/** @type {any} */ m) => <MeetingBlock key={m.id} m={m} />)}</>)}</tbody></table></div> : <div class="empty">{irNone()}</div>}
     <MailSections model={model} />
   </div>;
 }
@@ -54,8 +60,9 @@ export function BoardView({ model }) {
         <h2>{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (g)]} <span class="sub rgc">{l.length}</span></h2>
         {l.length ? l.map((/** @type {any} */ m) => (
           <div key={m.id} class="card iccard click" data-irm={m.id} data-stage={m.stage} data-state={irBusy.value.includes(m.id) ? "running" : m.state} tabindex={0}
-            onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
-            <div class="t">{m.title}</div>
+            onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}
+            onContextMenu={e => irRowMenu(e, m)} onKeyDown={e => irRowKey(e, m)}>
+            <div class="t"><IrTick m={m} /> {m.title}</div>
             {m.src === "upload" ? <FileFacts m={m} n={m.groups.needs.length + m.groups.routine.length} /> : <>
               <div class="why">{m.p && !m.private && !m.confidential ? pName(m.p) : ""}</div>
               <div class="why">{irStateWords(m, m.groups.needs.length + m.groups.routine.length)}</div>
@@ -81,12 +88,13 @@ export function TwoPanes({ model, list }) {
     <div class="icsplit">
       <div>
         <div class="icpipe icsum"><span class="icsub">Arrived {c.arrived} → Drafted {c.drafted} → Approved {c.approved}</span></div>
-        {list.length ? <div class="tbl"><table><tbody>{list.map(m => (
-        <tr key={m.id} class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={() => { irSel.value = m.id; }}>
-          <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]} · {irWhen(m)}</div></td>
+        {list.length ? <div class="tbl"><table><tbody>{irGroups(list).map(g => <>{irGroup.value !== "none" ? <GroupHead g={g} /> : null}{g.items.map((/** @type {any} */ m) => (
+        <tr key={m.id} class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("input")) irSel.value = m.id; }}
+          onContextMenu={e => irRowMenu(e, m)} onKeyDown={e => irRowKey(e, m)}>
+          <td class="title"><IrTick m={m} /> {m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]} · {irWhen(m)}</div></td>
           <td class="icsub irright">{right(m)}</td>
         </tr>
-      ))}</tbody></table></div> : <div class="empty">{irNone()}</div>}</div>
+      ))}</>)}</tbody></table></div> : <div class="empty">{irNone()}</div>}</div>
       <div class="card icdet" data-irdet={sel ? sel.id : ""}>
         {sel ? <>
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>

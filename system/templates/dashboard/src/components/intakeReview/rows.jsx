@@ -4,10 +4,11 @@
    (style.css, "#232 Intake and Review"). */
 import { pName } from "../../core/data.js";
 import { fd, TODAY } from "../../core/page.js";
-import { irAskQ, irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen, irStep } from "../../stores/intakeReview.js";
+import { irAskQ, irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen, irSetTick, irStep, irTicked } from "../../stores/intakeReview.js";
 import { IconButton } from "../IconButton.jsx";
 import { IrIcon } from "./icons.js";
 import { irFixed } from "../../core/irFold.js";
+import { irRowKey, irRowMenu } from "./selection.js";
 import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
@@ -43,6 +44,16 @@ export function irStateWords(m, n) {
   const base = state === "proposals" ? (n === 1 ? "1 suggestion to check" : `${n} ${IR_STATE_WORDS.proposals}`) : `${IR_STATE_WORDS[/** @type {keyof IR_STATE_WORDS} */ (state)] || ""}${tx}`;
   const age = state === "ready" || state === "proposals" ? ` · ${ageWords(m.age)}` : "";
   return `${base}${age}${m.later_back ? " · back from Later" : ""}`;
+}
+
+/** #323: the tick box on a row that can be set aside (Later, Not needed). Shift-click ticks everything between the last tick and this
+    row, in the order the rows are drawn. The label names the meeting. @param {{m: any}} props */
+export function IrTick({ m }) {
+  if (!irCanSetAside(m)) return null;
+  const on = irTicked.value.includes(m.id);
+  return <input type="checkbox" class="irtick" data-irtick-box={m.id} checked={on} aria-label={`Select ${m.title}`}
+    onClick={e => { e.stopPropagation(); irSetTick(m.id, /** @type {HTMLInputElement} */ (e.currentTarget).checked,
+      [...document.querySelectorAll("#v-intake-review input.irtick")].map(x => x.getAttribute("data-irtick-box") || ""), e.shiftKey); }} />;
 }
 
 /** The progress bar a meeting shows while it is drafted in the background. */
@@ -139,8 +150,10 @@ export function MeetingRow({ m, live }) {
   return (
     <tr class={`click irmeet${open ? " icopen" : ""}`} data-irm={m.id} data-stage={m.stage} data-state={state} tabindex={0}
       aria-expanded={can ? open : undefined}
-      onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
+      onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}
+      onContextMenu={e => irRowMenu(e, m)} onKeyDown={e => irRowKey(e, m)}>
       <td class="title">
+        <IrTick m={m} />
         <span class="ki" aria-hidden="true" data-irki={m.src === "upload" ? "file" : "meeting"}><IrIcon name={m.src === "upload" ? "file" : "meeting"} /></span>
         <b class="icmeethd">{m.title}</b>
         {m.stale ? <> <span class="tag stale">Stale · {ageWords(m.age)}</span></> : null}
