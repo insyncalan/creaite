@@ -1824,6 +1824,7 @@ body.keys-seen #whintList,body.keys-seen #whintBoard,body.keys-seen #rvHint{disp
 /* ===== end BL-155 (CSS) ===== */
 /* ===== BL-156 (sprint-ux) ===== the first-run checklist on Today */
 .setupsec .th{display:flex;align-items:baseline;gap:8px} .setupsec .setupx{margin-left:auto}
+.asq-slot{visibility:hidden}   /* #asQ's reserved slot: keeps the height until the autostart status answers */
 .setupbl li.done .t{color:var(--day-muted);text-decoration:line-through;text-decoration-color:var(--day-rule)}
 .setupbl li.done .n{color:var(--ok)}
 /* ===== end BL-156 (CSS) ===== */
@@ -5169,6 +5170,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     asQuestionSync: () => asQuestionSync,
     asRedraw: () => asRedraw,
     asRefresh: () => asRefresh,
+    asReserved: () => asReserved,
     asSet: () => asSet,
     asStatus: () => asStatus,
     asUsable: () => asUsable,
@@ -32762,7 +32764,9 @@ ${s5}`;
     ready: (
       /** @type {Promise<void>|null} */
       null
-    )
+    ),
+    /** the boot read has answered (or failed): the reserved slot is filled or released */
+    done: false
   };
   var AS_HELP_ID = "fix-a-stopped-server-and-other-problems";
   var ASKED_KEY = "creaite-autostart-asked";
@@ -32855,14 +32859,32 @@ system/scripts/run launch.py agent ${what}`;
     return `<div class="hp-signin" id="asHelp"><p><b>Start creaite when you sign in, from Terminal.</b> Open Terminal and paste the lines under the one you want. They use your own creaite folder. Settings › creaite and backups has the same switch.</p>
     <p class="sub">Turn it on</p>${cmd("install")}<p class="sub">Turn it off</p>${cmd("remove")}</div>`;
   }
+  function asReserved() {
+    if (AS.done || AS.status || !viaServer()) return false;
+    let asked2 = false;
+    try {
+      asked2 = !!store.get(ASKED_KEY, false);
+    } catch (e4) {
+    }
+    return !asked2 && /Mac/i.test(String(navigator.platform || navigator.userAgent));
+  }
   function asQuestionHtml() {
+    const body2 = asQuestionDueHtml();
+    return body2 ? body2 : asReserved() ? asQuestionDueHtml(true) : "";
+  }
+  function asQuestionDueHtml(slot) {
+    if (slot) return `<div class="tb asq-slot" id="asQ" data-slot="1" aria-hidden="true"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
+    <span class="rmgo"><button type="button" class="btn primary" tabindex="-1" disabled>Yes</button> <button type="button" class="btn" tabindex="-1" disabled>Not now</button></span></div>`;
     return asQuestionDue() ? `<div class="tb" id="asQ"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
     <span class="rmgo"><button type="button" class="btn primary" data-asq="yes">Yes</button> <button type="button" class="btn" data-asq="no">Not now</button></span></div>` : "";
   }
   function asQuestionSync() {
     const box = $("#setupList"), cur = $("#asQ"), q5 = asQuestionDue();
     if (!box) return;
-    if (q5 && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
+    if (q5 && cur && cur.dataset.slot) {
+      cur.remove();
+      addHTML(box, "beforeend", raw(asQuestionHtml()));
+    } else if (q5 && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
     else if (!q5 && cur) cur.remove();
   }
   function asRedraw() {
@@ -32873,7 +32895,11 @@ system/scripts/run launch.py agent ${what}`;
     }
   }
   async function asRefresh() {
-    await asStatus(true);
+    try {
+      await asStatus(true);
+    } finally {
+      AS.done = true;
+    }
     if (shared.VIEW === "settings") asRedraw();
     if (shared.VIEW === "today") asQuestionSync();
   }
@@ -56755,9 +56781,13 @@ ${pre}**Current state title:** ${title}`);
         go2("settings", a5.dataset.setopen);
       }
     });
-    if (viaServer()) suStatus().then(() => {
-      if (shared.VIEW === "today") renderSetup();
-    });
+    if (viaServer()) {
+      const sig = () => JSON.stringify(setupSteps().map((x5) => [x5[2], x5[5]]));
+      const before = sig();
+      suStatus().then(() => {
+        if (shared.VIEW === "today" && sig() !== before) renderSetup();
+      });
+    }
   }
   function tib(icon, label, name, attrs = "", primary = false, why = "") {
     return `<button type="button" class="ib sm${primary ? " pri" : ""}" aria-label="${esc(name || label)}" data-tip="${esc(why || label)}"${why ? ' aria-disabled="true"' : ""} ${attrs}>${ic(icon)}</button>`;

@@ -542,7 +542,8 @@ document.addEventListener("click",async e=>{ const t=e.target;
     snack(oneLine(r&&r.message)||"The rebuild didn't run"); return; } });
 /* the checklist: Connect Microsoft 365 says why it can't be done here, with Copy and Check again (and How, which opens Help) */
 document.addEventListener("click",e=>{ const a=e.target.closest("[data-setopen]"); if(a){ e.preventDefault(); go("settings",a.dataset.setopen); } });
-if(viaServer()) suStatus().then(()=>{ if(shared.VIEW==="today") renderSetup(); });
+if(viaServer()){ const sig=()=>JSON.stringify(setupSteps().map(x=>[x[2],x[5]]));   /* redraw only if the answer changed a step: an unchanged list keeps its nodes (no click lands on a replaced one) */
+  const before=sig(); suStatus().then(()=>{ if(shared.VIEW==="today"&&sig()!==before) renderSetup(); }); }
 }
 /* ===== BL-319 (v1.9.2): Today as one home =====
    (dev/mockups/today-one-home-mockup.html, tab "Today, one home"). The day band stays exactly as BL-293 drew it, at full width;

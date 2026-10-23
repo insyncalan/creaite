@@ -1814,6 +1814,7 @@ body.keys-seen #whintList,body.keys-seen #whintBoard,body.keys-seen #rvHint{disp
 /* ===== end BL-155 (CSS) ===== */
 /* ===== BL-156 (sprint-ux) ===== the first-run checklist on Today */
 .setupsec .th{display:flex;align-items:baseline;gap:8px} .setupsec .setupx{margin-left:auto}
+.asq-slot{visibility:hidden}   /* #asQ's reserved slot: keeps the height until the autostart status answers */
 .setupbl li.done .t{color:var(--day-muted);text-decoration:line-through;text-decoration-color:var(--day-rule)}
 .setupbl li.done .n{color:var(--ok)}
 /* ===== end BL-156 (CSS) ===== */
