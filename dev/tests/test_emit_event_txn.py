@@ -5,9 +5,10 @@ With the swallow, the apply COMMITS change_log rows without their item_events (a
 any other failure of the insert propagates and rolls the whole apply back (rc 1, nothing written).
 
 The fault is a TRIGGER in the throwaway vault's database that aborts every insert into item_events.
-Run: python3 dev/tests/test_emit_event_txn.py     The fix tests skip until the diff is applied (marker in tracker.py).
+Run: python3 dev/tests/test_emit_event_txn.py     Without the diff in the tree, the test applies it to the throwaway vault's own tracker.py (green both ways).
 """
 import sqlite3
+import subprocess
 import sys
 import unittest
 from contextlib import closing
@@ -20,7 +21,8 @@ from test_tracker import Vault, action  # noqa: E402
 
 SRC = (REPO / "system/scripts/tracker.py").read_text(encoding="utf-8")
 CHAIN = "def emit_event" in SRC
-FIXED = "emit-event-txn" in SRC
+FIXED = "emit-event-txn" in SRC          # the repo's own tracker.py carries the fix (in-process test only)
+DIFF = REPO / "dev/proposals/emit-event-txn/tracker.diff"
 
 
 def count(v, sql):
@@ -31,6 +33,14 @@ def count(v, sql):
 class EmitEventTxn(unittest.TestCase):
     def setUp(self):
         self.v = Vault()
+        self.fixed = FIXED
+        if not FIXED and CHAIN:     # the diff is not in the tree: the throwaway vault's own copy of tracker.py gets it
+            r = subprocess.run(["git", "apply", "-p1", str(DIFF)],
+                               cwd=self.v.root.resolve(), capture_output=True, text=True)
+            if r.returncode != 0:
+                self.v.cleanup()
+                self.skipTest("the diff does not apply to this tracker.py: " + r.stderr.strip()[:200])
+            self.fixed = True
         self.v.run("init")
 
     def tearDown(self):
@@ -62,7 +72,6 @@ class EmitEventTxn(unittest.TestCase):
         self.assertEqual(after, before, "nothing is written: no change rows, no applies row, no item")
         self.assertEqual(after["orphans"], 0)
 
-    @unittest.skipUnless(FIXED, "needs the emit-event-txn diff")
     def test_a_fault_the_dry_run_sees_holds_the_item_and_writes_nothing(self):
         self.break_events(only_real=False)
         before = self.state()
@@ -70,31 +79,36 @@ class EmitEventTxn(unittest.TestCase):
         self.v.run("apply", ok=False)
         self.assertEqual(self.state(), before)
 
-    @unittest.skipUnless(FIXED, "needs the emit-event-txn diff")
     def test_the_failure_is_plain_words(self):
         self.break_events()
         self.v.propose("t2", [action(1, description="Item one")])
         r = self.v.run("apply", ok=False)
         self.assertNotIn("Traceback", r.stdout + r.stderr)
 
-    @unittest.skipUnless(FIXED, "needs the emit-event-txn diff")
     def test_a_working_apply_has_an_event_for_every_change(self):
         self.v.propose("t3", [action(1, description="Item one")])
         self.v.run("apply")
         self.assertGreater(count(self.v, "SELECT count(*) FROM change_log"), 0)
         self.assertEqual(self.state()["orphans"], 0)
 
-    @unittest.skipUnless(CHAIN, "needs the history chain (emit_event in tracker.py)")
-    def test_undo_with_a_failing_event_insert_rolls_back_too(self):
+    def test_undo_with_a_failing_event_insert_in_its_own_transaction_changes_nothing(self):
+        """The fault appears only inside the real transaction of `tracker.py undo` (route 'undo'), not in the apply before it."""
         self.v.propose("t4", [action(1, description="Item one")])
         self.v.run("apply")
-        self.break_events()
+        with closing(sqlite3.connect(self.v.root / "system" / "tracker.db")) as con:
+            con.execute("CREATE TRIGGER no_undo_events BEFORE INSERT ON item_events WHEN NEW.route = 'undo' "
+                        "BEGIN SELECT RAISE(ABORT, 'disk I/O error'); END")
+            con.commit()
         before = self.state()
         r = self.v.run("undo", ok=False)
-        self.assertNotEqual(r.returncode, 0)
-        self.assertEqual(self.state(), before)
+        print(f"\n[undo repro] rc={r.returncode} before={before} after={self.state()}\n{r.stdout.strip()[-200:]}")
+        self.assertNotEqual(r.returncode, 0, "the undo must fail, not report success")
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+        self.assertEqual(self.state(), before, "no partial reversal: the item is still applied, no change rows added")
+        self.assertEqual(len(self.v.rows("actions")), 1)
+        self.assertIsNone(self.v.rows("applies")[0]["undone_at"], "the apply is not marked undone")
 
-    @unittest.skipUnless(FIXED, "needs the emit-event-txn diff")
+    @unittest.skipUnless(FIXED, "in process: needs the diff applied to the repo's tracker.py")
     def test_a_field_of_the_wrong_shape_is_skipped_before_the_insert(self):
         """In process: reading the route raises a shape error (TypeError); the event is still written from the via alone."""
         sys.path.insert(0, str(REPO / "system" / "scripts"))
