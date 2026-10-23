@@ -106,6 +106,19 @@ def _read_json(p):
     return data if isinstance(data, dict) else None
 
 
+HOLD_MAX = 1 << 20          # a hold.json creaite wrote is a few hundred bytes; a larger one is not read (Cap H-1b)
+
+
+def _read_hold(p):
+    """The manifest at `p`, or None when it is missing, unreadable, not an object, or larger than HOLD_MAX."""
+    try:
+        if os.lstat(p).st_size > HOLD_MAX:
+            return None
+    except OSError:
+        return None
+    return _read_json(p)
+
+
 def _write_json(p, data):
     paths.write_text_atomic(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
@@ -193,7 +206,7 @@ def _held(name):
     if not root.is_dir():
         return False
     for d in root.iterdir():
-        h = _read_json(d / "hold.json") if d.is_dir() else None
+        h = _read_hold(d / "hold.json") if d.is_dir() else None
         if h and h.get("state") == "held" and h.get("proposal") == name:
             return True
     return False
@@ -256,7 +269,7 @@ def _prune():
     ended = []
     for d in root.iterdir():
         ok = RUN.fullmatch(d.name) and not d.is_symlink() and d.is_dir() and _plain_file(d / "hold.json")
-        h = _read_json(d / "hold.json") if ok else None             # only the state and time are read here; nothing is moved by them
+        h = _read_hold(d / "hold.json") if ok else None             # only the state and time are read here; nothing is moved by them
         if h and h.get("state") not in ("held", "kept_aside"):    # review L4: kept aside still holds the earlier minutes
             at = h.get("at")
             ended.append((at if isinstance(at, (int, float)) and not isinstance(at, bool) else 0, d))
@@ -334,7 +347,7 @@ def _manifest(run_id):
         return None
     if d.is_symlink() or not d.is_dir() or not _plain_file(d / "hold.json"):
         return None
-    return _clean(run_id, _read_json(d / "hold.json"))
+    return _clean(run_id, _read_hold(d / "hold.json"))
 
 
 def _save(run_id, h):

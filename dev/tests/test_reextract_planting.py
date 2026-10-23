@@ -136,6 +136,12 @@ class Planting(Fixture, unittest.TestCase):
                      {"new_draft": "system/scripts/x.py", "state": "replaced"}):
             self.every_way_in(self.manifest(**over))
 
+    def test_a_manifest_over_a_megabyte_is_never_read_and_moves_nothing(self):
+        """Cap H-1b: a valid manifest padded past 1 MB is not parsed at all."""
+        h = self.manifest()
+        h["pad"] = "x" * (1 << 20)
+        self.every_way_in(h)
+
     def test_a_hold_that_is_not_a_plain_file_moves_nothing(self):
         d = self.hold_dir()
         real = self.v.root / "system/staging/real-hold.json"
