@@ -160,7 +160,7 @@ class Page(LiveBrowserCase):
         (self.v.root / "system/staging/last-sweep.txt").write_text("2026-10-10 07:05\n", encoding="utf-8")
         b.click('#setupList [data-sucheck="m365"]')
         b.wait("[...document.querySelectorAll('#setupList li')].some(li=>li.classList.contains('done')&&/Microsoft 365/.test(li.textContent))", 10)
-        b.click('#setupList [data-setopen="setup"]')
+        b.click('#setupList [data-setopen="setup"]', exact=True)             # the row above just changed: wait until the link has stopped moving
         b.wait("VIEW==='settings' && document.getElementById('suCard')", 5)
 
 
