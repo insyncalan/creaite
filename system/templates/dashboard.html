@@ -5177,6 +5177,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     askClaude: () => askClaude,
     askDeleteNote: () => askDeleteNote,
     askDiscard: () => askDiscard,
+    askFiling: () => askFiling,
     askFinished: () => askFinished,
     askLive: () => askLive,
     askMarkClear: () => askMarkClear,
@@ -5379,6 +5380,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     calendarLive: () => calendarLive,
     canHover: () => canHover,
     cancelCurEdit: () => cancelCurEdit,
+    cancelFiling: () => cancelFiling,
     cantCard: () => cantCard,
     cantGo: () => cantGo,
     capChips: () => capChips,
@@ -5518,6 +5520,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     commitRecord: () => commitRecord,
     confMark: () => confMark,
     confirmCard: () => confirmCard,
+    confirmFiling: () => confirmFiling,
     conflictChoice: () => conflictChoice,
     conflictHtml: () => conflictHtml,
     contentBox: () => contentBox,
@@ -5709,6 +5712,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     diagRedraw: () => diagRedraw,
     diagRefusals: () => diagRefusals,
     diagRepeats: () => diagRepeats,
+    dismissFiled: () => dismissFiled,
     dismissedF: () => dismissedF,
     dismissedS: () => dismissedS,
     dispChanged: () => dispChanged,
@@ -5849,8 +5853,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     figHtml: () => figHtml,
     figRefs: () => figRefs,
     fileWithoutTranscript: () => fileWithoutTranscript,
+    filedNote: () => filedNote,
+    filedProblem: () => filedProblem,
     filesOpened: () => filesOpened,
     filesStatus: () => filesStatus,
+    filingAsk: () => filingAsk,
+    filingError: () => filingError,
     fillThumbs: () => fillThumbs,
     filterBarOpen: () => filterBarOpen,
     filterChrome: () => filterChrome,
@@ -6446,6 +6454,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     noteMarks: () => noteMarks,
     noteMeta: () => noteMeta,
     noteMetaFor: () => noteMetaFor,
+    noteNumbered: () => noteNumbered,
     noteOpenFileVersion: () => noteOpenFileVersion,
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
@@ -6486,6 +6495,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     openDialog: () => openDialog,
     openDisp: () => openDisp,
     openDraftEmail: () => openDraftEmail,
+    openFiled: () => openFiled,
     openFilterBar: () => openFilterBar,
     openFollowup: () => openFollowup,
     openFound: () => openFound,
@@ -7158,6 +7168,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     startCurEdit: () => startCurEdit,
     status: () => status,
     statusDotNodes: () => statusDotNodes,
+    stemOf: () => stemOf,
     step: () => step,
     stepDay: () => stepDay,
     stepGroup: () => stepGroup,
@@ -7216,6 +7227,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     trkLeftOut: () => trkLeftOut,
     tx: () => tx2,
     txReady: () => txReady,
+    typeFiling: () => typeFiling,
     typeWord: () => typeWord,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
@@ -37559,7 +37571,7 @@ system/scripts/run launch.py agent ${what}`;
   );
   var filingError = y3("");
   var filedNote = y3(
-    /** @type {{key: string|null, items: {project: string, folder_label: string, name: string}[]}|null} */
+    /** @type {{key: string|null, items: {code: string, project: string, folder_label: string, name: string}[], numbered?: string[]}|null} */
     null
   );
   var filedProblem = y3("");
@@ -37585,22 +37597,36 @@ system/scripts/run launch.py agent ${what}`;
     const a5 = filingAsk.value;
     if (!a5) return;
     const shown2 = [];
+    const changed2 = [];
     for (const it2 of a5.items) {
       const stem = (a5.typed[it2.code] || "").trim();
       let name = it2.will_be;
       if (stem !== stemOf(it2.will_be, it2.ext)) {
         const r4 = await api("/api/minutes/destination/name", { file: a5.file, code: it2.code, name: stem + it2.ext });
         if (!r4 || !r4.ok) {
+          for (const done of changed2) await api("/api/minutes/destination/name", { file: a5.file, code: done.code, name: done.will_be });
           filingError.value = oneLine(r4 && r4.message || "That name can't be used.");
           return;
         }
         name = r4.name;
+        changed2.push(it2);
       }
-      shown2.push({ project: it2.project, folder_label: it2.folder_label, name });
+      shown2.push({ code: it2.code, project: it2.project, folder_label: it2.folder_label, name });
     }
     filingAsk.value = null;
     filedNote.value = { key: a5.key, items: shown2 };
     a5.resolve(true);
+  }
+  function noteNumbered(moved2) {
+    const n4 = filedNote.value;
+    if (!n4 || !moved2 || !moved2.length) return;
+    const said2 = [];
+    const items2 = n4.items.map((i5) => {
+      const m5 = moved2.find((x5) => x5.kind === "draft" && x5.code === i5.code);
+      if (m5 && m5.name !== i5.name) said2.push(m5.name);
+      return m5 ? { ...i5, name: m5.name } : i5;
+    });
+    filedNote.value = { ...n4, items: items2, numbered: said2 };
   }
   function cancelFiling() {
     const a5 = filingAsk.value;
@@ -37661,13 +37687,7 @@ system/scripts/run launch.py agent ${what}`;
             ),
             /* @__PURE__ */ u4("span", { class: "sub", children: it2.ext })
           ] }),
-          it2.taken && stemOf(it2.will_be, it2.ext) === a5.typed[it2.code] ? /* @__PURE__ */ u4("p", { class: "sub", "data-numbered": true, children: [
-            "A file called “",
-            it2.name,
-            "” is already there, so these are numbered: “",
-            it2.will_be,
-            "”."
-          ] }) : null,
+          it2.taken && stemOf(it2.will_be, it2.ext) === a5.typed[it2.code] ? /* @__PURE__ */ u4("p", { class: "sub", "data-numbered": true, children: it2.filed_copy ? `A copy called “${it2.name}” already exists, so these are numbered: “${it2.will_be}”. If this meeting was filed before, cancel.` : `Another minutes called “${it2.name}” are waiting, so these are numbered: “${it2.will_be}”.` }) : null,
           it2.transcript ? /* @__PURE__ */ u4("p", { class: "sub", children: [
             "The transcript is filed beside it in ",
             it2.transcript.folder_label,
@@ -37697,6 +37717,7 @@ system/scripts/run launch.py agent ${what}`;
     return /* @__PURE__ */ u4("div", { class: "snack on", role: "status", "data-minutes-filed": true, style: "bottom:64px", children: [
       /* @__PURE__ */ u4("span", { children: [
         n4.items.length > 1 ? `Filed in ${n4.items.length} projects.` : `Filed as ${first.name} in ${first.folder_label}.`,
+        n4.numbered && n4.numbered.length ? " The name you chose was taken meanwhile, so it was numbered." : "",
         filedProblem.value ? ` ${filedProblem.value}` : ""
       ] }),
       /* @__PURE__ */ u4("button", { type: "button", "data-filed": "file", onClick: () => go3("file"), children: "Open file" }),
@@ -37842,6 +37863,7 @@ system/scripts/run launch.py agent ${what}`;
     if (how.approve === false) return { ok: true, made, done };
     if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+    if (r4 && r4.ok) noteNumbered(r4.numbered);
     return { ...r4 || { ok: false, message: "Nothing was saved or changed." }, made };
   }
   async function trackPutBack(path, done) {
@@ -80457,6 +80479,7 @@ ${d5.text}`);
         "calFoot",
         "calendarLive",
         "canHover",
+        "cancelFiling",
         "cantGo",
         "capped",
         "cardGroup",
@@ -80499,6 +80522,7 @@ ${d5.text}`);
         "cmOK",
         "comboboxOpen",
         "confirmCard",
+        "confirmFiling",
         "copied",
         "countFor",
         "countUp",
@@ -80581,6 +80605,9 @@ ${d5.text}`);
         "evidence",
         "fd",
         "fileWithoutTranscript",
+        "filedNote",
+        "filingAsk",
+        "filingError",
         "firstHelp",
         "fitFilterBar",
         "flip",
@@ -80816,6 +80843,7 @@ ${d5.text}`);
         "noteGone",
         "noteLeave",
         "noteMeta",
+        "noteNumbered",
         "noteSave",
         "noteText",
         "notesList",

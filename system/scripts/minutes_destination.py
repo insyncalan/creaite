@@ -151,10 +151,12 @@ def view(file):
         if not code:
             continue
         taken = _taken(to, meeting.get("draft"), others)
+        on_disk = taken and (paths.resolve(to).exists() or paths.resolve(to).is_symlink())     # a FILED copy, not another pending one
         final = _numbered(to, meeting.get("draft"), others) if taken else to
         tr = _transcript_of(meeting, code, others)
         items.append({"code": code, "project": _label(code), "folder_label": folder_label(code), "name": Path(to).name,
-                      "ext": Path(to).suffix.lower(), "taken": taken, "numbered": Path(final).name if taken else None,
+                      "ext": Path(to).suffix.lower(), "taken": taken, "filed_copy": bool(on_disk),
+                      "numbered": Path(final).name if taken else None,
                       "will_be": Path(final).name, "transcript": tr,
                       "local": not paths.is_online_only(paths.resolve(to)) if paths.resolve(to).exists() else True})
     return {"ok": True, "items": items, "multiple": len(items) > 1, "key": meeting.get("key") or None}
@@ -294,10 +296,16 @@ def settle(file):
 
 # ── Where approved minutes sit (#326) ────────────────────────────────────────
 
+def _sane(rel):
+    """Whether a stored path is a plausible one: no NUL or control character, at most 400 characters, each part at most 200 (a longer
+    one makes the disk raise ENAMETOOLONG on older Pythons, and the error would carry the real folder)."""
+    return len(rel) <= 400 and not any(ord(c) < 32 for c in rel) and all(len(x) <= 200 for x in rel.split("/"))
+
+
 def _filed_in(key, path):
     """The stored path of filed minutes: from a stored path given, else the last processed.txt line for the meeting key. None if none."""
     rel = str(path or "")
-    if re.fullmatch(r"projects/.+", rel) and ".." not in Path(rel).parts and rel.lower().endswith(MINUTES_EXTS):
+    if _sane(rel) and re.fullmatch(r"projects/.+", rel) and ".." not in Path(rel).parts and rel.lower().endswith(MINUTES_EXTS):
         return rel
     if not key:
         return None
@@ -313,16 +321,28 @@ def _filed_in(key, path):
     return None
 
 
+NOT_FOUND = {"ok": False, "state": "moved", "message": "These minutes aren't in a project's Minutes folder that creaite knows."}
+
+
 def where(key=None, path=None):
     """{ok, state: here | moved | online, code, project, folder_label, name, message}: approved minutes found in a project's own
-    minutes folder, in words. `moved` covers a file or folder that is no longer there. No path is ever in the answer."""
+    minutes folder, in words. `moved` covers a file or folder that is no longer there. No path is ever in the answer; a path the disk
+    refuses is answered as not found."""
+    try:
+        return _where(key, path)
+    except (OSError, ValueError):
+        return dict(NOT_FOUND)
+
+
+def _where(key, path):
+    """where(), without the guard against a path the disk refuses."""
     rel = _filed_in(key, path)
-    code = _code_of(rel) if rel else None
-    if not rel or not code or _code_of(rel) is None or paths.rel(paths.folder(code, "minutes")) != rel.rsplit("/", 1)[0]:
-        return {"ok": False, "state": "moved", "message": "These minutes aren't in a project's Minutes folder that creaite knows."}
+    code = _code_of(rel) if rel and _sane(rel) else None
+    if not rel or not code or paths.rel(paths.folder(code, "minutes")) != rel.rsplit("/", 1)[0]:
+        return dict(NOT_FOUND)
     real, name, label = paths.resolve(rel), Path(rel).name, folder_label(code)
     base = {"code": code, "project": _label(code), "folder_label": label, "name": name}
-    if real.is_symlink() or not real.exists():
+    if real.is_symlink() or not real.is_file():           # a folder named like a file is not the minutes
         if paths.resolve(rel.rsplit("/", 1)[0]).is_dir():
             return {"ok": True, "state": "moved", **base, "folder_only": True,
                     "message": f"{name} isn't in {label} now: it may have been moved or renamed. The folder can still be opened."}
@@ -362,6 +382,14 @@ def open_where(key=None, path=None, what="folder"):
     if not w.get("ok"):
         return {**w, "launched": False}
     rel = _filed_in(key, path)
+    try:
+        return _opened(w, rel, what)
+    except (OSError, ValueError):
+        return {**NOT_FOUND, "launched": False}
+
+
+def _opened(w, rel, what):
+    """open_where's last step, on a path `where` found."""
     real = paths.resolve(rel)
     if what == "file":
         if w["state"] != "here":

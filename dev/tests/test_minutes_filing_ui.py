@@ -120,7 +120,7 @@ class Filing(LiveBrowserCase):
         self.b.pump(1.0)
         self.open(second)
         self.ask()
-        self.assertIn("is already there", self.ev("document.getElementById('mnFiling').textContent"))
+        self.assertIn("already exists", self.ev("document.getElementById('mnFiling').textContent"))
         self.assertRegex(self.ev("document.getElementById('mnFilingName0').value"), r"Steering committee \(2\)$")
         self.b.click("#mnFilingGo")
         for _ in range(60):                                  # the first approve's message is still up: wait for the second file itself
@@ -146,6 +146,33 @@ class Filing(LiveBrowserCase):
         self.b.click("#v-intake-review [data-ira=openfolder]")
         self.b.wait("/may have been moved or renamed/.test(document.getElementById('snack').textContent)", 15)
         self.assertNotIn("projects/", self.snack())
+
+    def test_6_all_or_none_a_refusal_on_the_second_project_puts_the_first_name_back(self):
+        self.ask()
+        self.ev("""(()=>{ const a=filingAsk.value, it=a.items[0], calls=[]; window.__calls=calls;
+            window.api=async(p,b)=>{ calls.push([p.split('/').pop(), b.code, b.name]); return p.endsWith('/name') && b.code==='XYZ' ? {ok:false,message:'No.'} : {ok:true,name:b.name}; };
+            filingAsk.value={...a, items:[it,{...it,code:'XYZ',project:'Other'}], typed:{[it.code]:'Changed one', XYZ:'Changed two'}};
+            confirmFiling(); })()""")
+        self.b.wait("window.__calls.length>=3", 15)
+        calls = self.ev("window.__calls")
+        self.assertEqual([c[:2] for c in calls], [["name", "ABC"], ["name", "XYZ"], ["name", "ABC"]])
+        self.assertTrue(calls[0][2].startswith("Changed one") and calls[2][2].endswith(".html") and "Changed" not in calls[2][2], calls)
+        self.assertEqual(self.ev("filingError.value"), "No.")
+        self.assertTrue(self.ev("!!filingAsk.value"), "the box stays open")
+        self.ev("filingAsk.value && cancelFiling()")
+
+    def test_7_a_name_taken_meanwhile_is_numbered_and_the_note_says_so(self):
+        self.ask()
+        self.ev("noteNumbered([{kind:'draft', code:'ABC', name:'2026-10-14 Steering committee (2).html', was:'x'}])")
+        self.assertEqual(self.ev("filedNote.value"), None, "no note before the box is answered")
+        self.ev("filedNote.value={key:null, items:[{code:'ABC', project:'Example Programme', folder_label:'Example Programme › minutes', name:'Mine.html'}]};"
+                " noteNumbered([{kind:'draft', code:'ABC', name:'Mine (2).html', was:'Mine.html'}])")
+        self.ev("filingAsk.value=null")
+        self.b.wait("document.querySelector('[data-minutes-filed]')", 10)
+        note = self.ev("document.querySelector('[data-minutes-filed]').textContent")
+        self.assertIn("Mine (2).html", note)
+        self.assertIn("taken meanwhile", note)
+        self.ev("noteNumbered([{kind:'draft', code:'ABC', name:'Mine (2).html', was:'x'}]); filedNote.value.numbered")   # same name again: nothing new
 
 
 if __name__ == "__main__":

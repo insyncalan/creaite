@@ -4,6 +4,7 @@
  "Core": [
   "unreached: dialog Dialog id:crHeldDlg (src/components/report/MatchHeldDialog.jsx)",
   "unreached: dialog Dialog id:exportClashDlg (src/components/report/ExportSave.jsx)",
+  "unreached: dialog Dialog id:mnFiling (src/components/minutes/FilingDialog.jsx)",
   "unreached: dialog Dialog id:noteLeaveDlg (src/components/notes/NotesPage.jsx)",
   "unreached: menu Menu label:Which report (src/components/report/hub/HubBar.jsx)"
  ],

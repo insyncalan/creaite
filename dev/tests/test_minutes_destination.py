@@ -243,6 +243,39 @@ class Where(Dest):
         self.assertFalse(self.lib("print(json.dumps(md.open_where(key='nothing like it', what='folder')))")["ok"])
 
 
+class Hardening(Dest):
+    """The review's fixes: a path the disk refuses, a folder named like a file, and a typed name losing to a filed copy."""
+
+    def filed(self):
+        self.assertTrue(self.approve()["ok"])
+        return self.data()["meeting"]["key"]
+
+    def test_a_path_the_disk_refuses_is_not_found_in_words_with_no_path(self):
+        for p in (f"{ABC}/minutes/" + "x" * 300 + ".html", f"{ABC}/minutes/a\x00b.html", f"{ABC}/minutes/" + "/".join(["d"] * 300) + ".html"):
+            for call in ("where", "open_where"):
+                out = self.lib(f"print(json.dumps(md.{call}(path={p!r})))")
+                self.assertFalse(out["ok"], call)
+                self.assertNotIn(str(self.v.root), json.dumps(out))
+                self.assertNotIn("Errno", json.dumps(out))
+
+    def test_a_folder_named_like_the_minutes_is_not_the_minutes(self):
+        key = self.filed()
+        f = self.v.root / FILED
+        f.unlink()
+        f.mkdir()
+        w = self.lib(f"print(json.dumps(md.where(key={key!r})))")
+        self.assertEqual((w["state"], w.get("folder_only")), ("moved", True))
+        self.assertFalse(self.lib(f"print(json.dumps(md.open_where(key={key!r}, what='file')))")["ok"])
+
+    def test_the_read_says_whether_the_taken_name_is_a_filed_copy(self):
+        (self.v.root / FILED).parent.mkdir(parents=True, exist_ok=True)
+        (self.v.root / FILED).write_text("filed before", encoding="utf-8")
+        [it] = self.lib(f"print(json.dumps(md.view({self.name!r})))")["items"]
+        self.assertTrue(it["taken"] and it["filed_copy"])
+        (self.v.root / FILED).unlink()
+        self.assertFalse(self.lib(f"print(json.dumps(md.view({self.name!r})))")["items"][0]["filed_copy"])
+
+
 # ── The routes (live_server.py is guarded: dev/proposals/324/live_server.diff) ──
 
 class Routes(Dest):

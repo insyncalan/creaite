@@ -10,7 +10,7 @@ import { signal } from "@preact/signals";
 import { api, oneLine } from "../core/server.js";
 
 /** @typedef {{code: string, project: string, folder_label: string, name: string, ext: string, taken: boolean, numbered: string|null,
-    will_be: string, local: boolean, transcript: {name: string, will_be: string, folder_label: string}|null}} Destination */
+    will_be: string, local: boolean, filed_copy?: boolean, transcript: {name: string, will_be: string, folder_label: string}|null}} Destination */
 /** @typedef {{file: string, key: string|null, items: Destination[], typed: Record<string, string>, resolve: (ok: boolean) => void}} Ask */
 
 /** The question on screen, or null. */
@@ -18,7 +18,7 @@ export const filingAsk = signal(/** @type {Ask|null} */ (null));
 /** Why a name was refused (plain words, in the dialog). */
 export const filingError = signal("");
 /** Where the last approved minutes went. */
-export const filedNote = signal(/** @type {{key: string|null, items: {project: string, folder_label: string, name: string}[]}|null} */ (null));
+export const filedNote = signal(/** @type {{key: string|null, items: {code: string, project: string, folder_label: string, name: string}[], numbered?: string[]}|null} */ (null));
 /** Why Open file or Open folder could not (plain words, in the note). */
 export const filedProblem = signal("");
 
@@ -46,24 +46,44 @@ export function typeFiling(code, value) {
   filingError.value = "";
 }
 
-/** File and approve: each name that differs is sent first; the first refusal stays in the dialog and nothing is approved. */
+/** File and approve: each name that differs is sent first. All or none: the first refusal puts back the names already changed (so
+    the dialog matches what is staged), stays in the dialog and approves nothing. */
 export async function confirmFiling() {
   const a = filingAsk.value;
   if (!a) return;
-  /** @type {{project: string, folder_label: string, name: string}[]} */ const shown = [];
+  /** @type {{code: string, project: string, folder_label: string, name: string}[]} */ const shown = [];
+  /** @type {Destination[]} */ const changed = [];
   for (const it of a.items) {
     const stem = (a.typed[it.code] || "").trim();
     let name = it.will_be;
     if (stem !== stemOf(it.will_be, it.ext)) {
       const r = await api("/api/minutes/destination/name", { file: a.file, code: it.code, name: stem + it.ext });
-      if (!r || !r.ok) { filingError.value = oneLine((r && r.message) || "That name can't be used."); return; }
-      name = r.name;
+      if (!r || !r.ok) {
+        for (const done of changed) await api("/api/minutes/destination/name", { file: a.file, code: done.code, name: done.will_be });
+        filingError.value = oneLine((r && r.message) || "That name can't be used.");
+        return;
+      }
+      name = r.name; changed.push(it);
     }
-    shown.push({ project: it.project, folder_label: it.folder_label, name });
+    shown.push({ code: it.code, project: it.project, folder_label: it.folder_label, name });
   }
   filingAsk.value = null;
   filedNote.value = { key: a.key, items: shown };
   a.resolve(true);
+}
+
+/** The approve numbered a name after all (another pending meeting took it first): the note says the name it was filed under.
+    @param {{code: string, name: string, was: string, kind: string}[]|undefined} moved */
+export function noteNumbered(moved) {
+  const n = filedNote.value;
+  if (!n || !moved || !moved.length) return;
+  const said = [];
+  const items = n.items.map(i => {
+    const m = moved.find(x => x.kind === "draft" && x.code === i.code);
+    if (m && m.name !== i.name) said.push(m.name);          // only when it differs from what the box showed
+    return m ? { ...i, name: m.name } : i;
+  });
+  filedNote.value = { ...n, items, numbered: said };
 }
 
 /** Cancel: nothing is filed or approved. */

@@ -24,7 +24,8 @@ export function FilingDialog() {
               maxLength={140} onInput={(e) => typeFiling(it.code, /** @type {HTMLInputElement} */ (e.target).value)} />
             <span class="sub">{it.ext}</span>
           </div>
-          {it.taken && stemOf(it.will_be, it.ext) === a.typed[it.code] ? <p class="sub" data-numbered>A file called “{it.name}” is already there, so these are numbered: “{it.will_be}”.</p> : null}
+          {it.taken && stemOf(it.will_be, it.ext) === a.typed[it.code] ? <p class="sub" data-numbered>{it.filed_copy ? `A copy called “${it.name}” already exists, so these are numbered: “${it.will_be}”. If this meeting was filed before, cancel.`
+            : `Another minutes called “${it.name}” are waiting, so these are numbered: “${it.will_be}”.`}</p> : null}
           {it.transcript ? <p class="sub">The transcript is filed beside it in {it.transcript.folder_label} as “{it.transcript.will_be}”.</p> : null}
           {it.local ? null : <p class="sub">That file is online-only in OneDrive.</p>}
         </div>)}
@@ -47,7 +48,7 @@ function FiledNote() {
   const go = async (/** @type {"file"|"folder"} */ what) => { const r = await openFiled(what, { key: n.key }); filedProblem.value = r.ok ? "" : r.message; };
   return (
     <div class="snack on" role="status" data-minutes-filed style="bottom:64px">
-      <span>{n.items.length > 1 ? `Filed in ${n.items.length} projects.` : `Filed as ${first.name} in ${first.folder_label}.`}{filedProblem.value ? ` ${filedProblem.value}` : ""}</span>
+      <span>{n.items.length > 1 ? `Filed in ${n.items.length} projects.` : `Filed as ${first.name} in ${first.folder_label}.`}{n.numbered && n.numbered.length ? " The name you chose was taken meanwhile, so it was numbered." : ""}{filedProblem.value ? ` ${filedProblem.value}` : ""}</span>
       <button type="button" data-filed="file" onClick={() => go("file")}>Open file</button>
       <button type="button" data-filed="folder" onClick={() => go("folder")}>Open folder</button>
       <button type="button" onClick={dismissFiled}>Close</button>

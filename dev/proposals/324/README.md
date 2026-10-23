@@ -3,16 +3,28 @@
 **Status: a proposal. `live_server.py` is guarded; nothing here is applied.** One diff, `live_server.diff`, serves all three items.
 `tracker.py` is NOT touched (the never-overwrite rule there stays the backstop; see "Why no tracker.py diff").
 
-## What the diff does (9 added lines, all in `system/scripts/live_server.py`)
+## What the diff does (22 added lines, all in `system/scripts/live_server.py`)
 1. Docstring: one entry for the four new routes.
 2. `minutes_approve_route`: under the existing `LOCK`, call `minutes_destination.settle(file)` before `review.approve_minutes`, and add
    `numbered` (what was numbered) to a successful answer.
 3. After `REVIEW_WORK_ROUTES.update(MINUTES_ROUTES)`: `import minutes_destination` and
-   `REVIEW_WORK_ROUTES.update(minutes_destination.routes(LOCK))` (same shape as `report_server.routes(...)`; dispatched with Review's
+   `REVIEW_WORK_ROUTES.update(...routes(LOCK))` (same shape as `report_server.routes(...)`; dispatched with Review's
    work, so token and Host checks are the existing ones and `do_POST` gains no branch).
 
 Everything else is in the tree and unguarded: `system/scripts/minutes_destination.py` (new library, no command line),
 `stores/minutesFiling.js`, `components/minutes/FilingDialog.jsx`, the Approved-this-week Open folder button, tests, `dashboard.html`.
+
+4. Review fix (LOW 5): `/api/minutes/destination/open` is wrapped in `minutes_open_route`, the open page's own call only (`page_call`,
+   as the restore and Health routes), 403 otherwise.
+
+## Review round 1 (independent review, READY WITH NOTES) and what changed
+- MEDIUM, a path over 255 bytes made `where`/`open_where` raise ENAMETOOLONG (3.9 to 3.11) and the 500 carried the real folder: a path is
+  now capped (400 characters, 200 a part, no NUL or control character) and any OSError or ValueError answers "not found" in words.
+  Tested, and the whole file passes under /usr/bin/python3 (3.9.6).
+- LOW 1 a folder named `*.html` is not the minutes (`is_file` required for here and online-only). LOW 2 the box is all or none: a refusal
+  puts the names already changed back. LOW 3 the box says "A copy called ... already exists ... If this meeting was filed before, cancel"
+  for a filed copy (`filed_copy` in the read), and a different line for another pending meeting. LOW 4 the note says when the approve
+  numbered the name after all. LOW 5 above.
 
 ## Why (items)
 - **#332** a second meeting with the same title and day could not be approved ("Apply stopped"): the filed name (and the transcript

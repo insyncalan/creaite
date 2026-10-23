@@ -1,18 +1,19 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 9b6f514..c2ad1d2 100644
+index 9b6f514..45cd164 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -107,6 +107,9 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
+@@ -107,6 +107,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                           remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
  - POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
                           approve_minutes, through tracker.py apply); unticked items wait in Review
 +- POST /api/minutes/destination[/name|/where|/open] (#324, #326, #332; minutes_destination.py): where minutes will be filed and under
 +                         what name (a taken name is numbered, never overwritten), another name, where approved minutes sit now
-+                         and Open file / Open folder for them; Approve numbers a taken name first (settle)
++                         and Open file / Open folder for them (the open page's own call only: page_call); Approve numbers a taken
++                         name first (settle)
  - POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (read only)
  - POST /api/minutes/export {path, format, file_beside, version}: HTML, Word or PDF through creaite_doc.export (P2), opened once
                           made; version "distributed" exports the distributed version (approved minutes only; never overwriting);
-@@ -6111,7 +6114,10 @@ def minutes_approve_route(handler, req):
+@@ -6111,7 +6115,10 @@ def minutes_approve_route(handler, req):
      import review
      own = [n for n in req.get("own") or [] if isinstance(n, int)]
      with LOCK:
@@ -23,12 +24,24 @@ index 9b6f514..c2ad1d2 100644
      return handler.send(200, out)
  
  
-@@ -6154,6 +6160,8 @@ MINUTES_ROUTES = {"/api/minutes/followup": minutes_followup_route,
+@@ -6154,6 +6161,20 @@ MINUTES_ROUTES = {"/api/minutes/followup": minutes_followup_route,
                    "/api/minutes/draft": minutes_draft_route, "/api/minutes/save": minutes_save_route,
                    "/api/minutes/approve": minutes_approve_route, "/api/minutes/export": minutes_export_route}
  REVIEW_WORK_ROUTES.update(MINUTES_ROUTES)        # dispatched with Review's work, so do_POST gains no branch
 +import minutes_destination  # noqa: E402  #324, #326, #332: where minutes are filed, their name, Open file / Open folder
-+REVIEW_WORK_ROUTES.update(minutes_destination.routes(LOCK))
++
++
++def minutes_open_route(handler, req):
++    """POST /api/minutes/destination/open: the open page's own call only (page_call, as the restore and Health routes)."""
++    if not page_call(handler):
++        return handler.send(403, {"ok": False, "message": "Not allowed"})
++    return OPEN_FILED(handler, req)
++
++
++MINUTES_DESTINATION_ROUTES = minutes_destination.routes(LOCK)
++OPEN_FILED = MINUTES_DESTINATION_ROUTES["/api/minutes/destination/open"]
++MINUTES_DESTINATION_ROUTES["/api/minutes/destination/open"] = minutes_open_route
++REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
  # ===== end v2.1.0 P4 =====
  # ===== end BL-200 =====
  
