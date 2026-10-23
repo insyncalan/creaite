@@ -8,9 +8,8 @@
    list holds ~/Library/LaunchAgents). Three places use it: the Settings switch (beside Stop), the first-run question on Today's
    Getting started, and the Terminal note, which prints the user's own folder, filled in here at run time from the page's own
    vault path and never written in code. */
-import { $, esc, raw, swapHTML } from "./core/dom.js";
+import { $, esc, raw, swapHTML, addHTML } from "./core/dom.js";
 import { shared } from "./core/state.js";
-import { renderSetup } from "./today.js";
 import { api, oneLine, snack, viaServer } from "./core/server.js";
 import { copied, store, VAULT_PATH } from "./core/page.js";
 
@@ -97,10 +96,17 @@ export function asQuestionHtml() {
     <span class="rmgo"><button type="button" class="btn primary" data-asq="yes">Yes</button> <button type="button" class="btn" data-asq="no">Not now</button></span></div>` : "";
 }
 
+/** The late answer touches only its own node: insert or remove #asQ in the setup list, never the list, Today or an open panel. */
+export function asQuestionSync() {
+  const box = $("#setupList"), cur = $("#asQ"), q = asQuestionDue();
+  if (!box) return;
+  if (q && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
+  else if (!q && cur) cur.remove();
+}
 /** Draw the Settings card again, in place. */
 export function asRedraw() { const c = $("#asCard"); if (c) { swapHTML(c, raw(asCardHtml())); asWire(asRedraw); } }
 /** Read the state, then draw whatever shows it: the Settings card and Today's question. */
-export async function asRefresh() { await asStatus(true); if (shared.VIEW === "settings") asRedraw(); if (shared.VIEW === "today") renderSetup(); }
+export async function asRefresh() { await asStatus(true); if (shared.VIEW === "settings") asRedraw(); if (shared.VIEW === "today") asQuestionSync(); }
 
 /** The start-up step: the first-run question's two buttons, and the first read of the state. */
 export function bootAutostart() {
@@ -108,7 +114,7 @@ export function bootAutostart() {
     const q = /** @type {HTMLElement|null} */ ((/** @type {HTMLElement} */ (e.target)).closest("[data-asq]")); if (!q) return;
     e.preventDefault(); const yes = q.dataset.asq === "yes";
     await asAnswer(yes); if (!yes) snack("Okay. Settings › creaite and backups has the switch if you change your mind");
-    if (shared.VIEW === "today") renderSetup();
+    if (shared.VIEW === "today") asQuestionSync();
   });
   document.addEventListener("click", async e => {      /* Copy, in Help */
     const x = /** @type {HTMLElement|null} */ ((/** @type {HTMLElement} */ (e.target)).closest("[data-ascopy]")); if (!x) return;
