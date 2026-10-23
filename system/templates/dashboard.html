@@ -695,7 +695,7 @@ h2{font:500 var(--fs-h2)/var(--lh-h2) var(--font);margin:0}   /* BL-325: the one
 .th{display:flex;align-items:baseline;gap:10px;margin:0 0 14px;color:var(--day-ink)}
 #hWeek,#hRes{gap:4px}   /* "Week ahead to 09-10" reads as one phrase, not a count */ .th .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)} .th a{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)}
 ol.bl{list-style:none;margin:0;padding:0} ol.bl>li{position:relative;display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--day-rule)}
-ol.bl>li[hidden],.tsec .sub[hidden]{display:none}
+ol.bl>li[hidden],.tsec .sub[hidden]{display:none} .tsec[hidden]{display:none}
 ol.bl>li[data-msattn] .t u{text-decoration:underline;text-underline-offset:3px;font-weight:700}   /* #251: "Milestone <u>name</u> is due …", the name the link */
 .bl .n{flex:none;width:16px;font-size:var(--fs-md);color:var(--day-muted)} .bl .tb{min-width:0;flex:1}
 .bl .tb p,.tb .none{margin:4px 0 0;font-size:var(--fs-md);color:var(--day-muted)}
@@ -49579,7 +49579,8 @@ system/scripts/run launch.py agent ${what}`;
     renderDn();
     const att = attentionItems(), ac2 = capped(att.map((x5, i5) => x5.html(i5 + 1)), 5, "attn");
     $("#nAttn").textContent = att.length ? String(att.length) : "";
-    putHTML($("#attnList"), ac2.html ? raw(ac2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`);
+    $("#attnSec").hidden = !ac2.html;
+    putHTML($("#attnList"), ac2.html ? raw(ac2.html) : html``);
     putHTML($("#attnMore"), raw(ac2.more));
     const mine = [...mineOver, ...mineSoon].sort((a5, b5) => a5.due.localeCompare(b5.due)), mc2 = capped(mine.map((x5, i5) => tl2(
       i5 + 1,
