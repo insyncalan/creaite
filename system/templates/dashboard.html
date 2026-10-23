@@ -78059,7 +78059,14 @@ ${d5.text}`);
     return Array.from(H4, (x5) => x5.toString(16).padStart(8, "0")).join("");
   }
   var short = (x5) => fpSha256(fpCanon(x5)).slice(0, 12);
-  var itemFp = (it2) => short([it2.op, it2.table, it2.id, it2.changes, it2.values]);
+  var itemFp = (it2) => short([it2.op, it2.table, it2.id, it2.changes, derivedOff(it2.values)]);
+  var derivedOff = (v5) => {
+    if (v5 && typeof v5 === "object" && !Array.isArray(v5) && "raised" in v5) {
+      const { raised, ...rest } = v5;
+      return rest;
+    }
+    return v5;
+  };
   var blockFp = (b5) => short([b5.key, b5.title, b5.draft, b5.project, b5.projects]);
   var BLOCKS = ["meeting", "report", "file_changes"];
   var itemGuard = (rw2) => ({ file: rw2.file, ref: rw2.ref, fp: rw2.fp || null, rw: rw2 });
@@ -79932,6 +79939,7 @@ ${d5.text}`);
         "greet",
         "groupOf",
         "grpToggle",
+        "guardFresh",
         "handle",
         "hashOf",
         "headerPolicy",
