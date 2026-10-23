@@ -10,8 +10,8 @@ follow rules `origin/v261-vip-rules`. Rebuilt on `v262-line` (23-10-2026): every
 ## Order (chosen)
 1 f1 nullable columns (schema.sql, tracker.py); 2 writer-pins-after-f1 (not guarded); 3 inbox-upload live_server; 4 review-expect review.py;
 5 review-expect live_server; 6 discard-undo review.py; 7 discard-undo reach.py; 8 discard-undo live_server; 9 draft-delivery live_server;
-10 fetch-transcripts live_server; 11 emit-event-txn tracker.py; 12 follow propose.py; 13 follow live_server; 14 183r rules-and-skill; 15 VIP/follow rules; 16 250 rules after-vip.
-F1 is the F1c version (`origin/v262-f1c` 957fcfd2); emit is `origin/v262-emit` 9b1f7f30; discard-undo's live_server diff says "suggestion", not "proposal" (plain words).
+10 fetch-transcripts live_server; 11 emit-event-txn tracker.py; 12 follow propose.py; 13 follow live_server; 14 183h rules-and-skill; 15 VIP/follow rules; 16 250 rules after-vip.
+F1 is the F1c version (`origin/v262-f1c` 957fcfd2); emit is `origin/v262-emit` 9b1f7f30 as regenerated on the line (round 2); discard-undo's live_server diff says "suggestion", not "proposal" (plain words).
 
 ## Orders tried on v262-line (rerun 23-10-2026 on the line's tree: the chain order forward and reversed, all 720 permutations of the six live_server.py diffs, review.py in both orders: all apply and reverse, clean tree after). Earlier table (throwaway detached worktree off release2; forward `git apply`, then `-R` in reverse order; clean tree after)
 | Group | Orders tried | Result |
