@@ -1,15 +1,17 @@
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -1634,7 +1634,8 @@
+@@ -1634,8 +1634,9 @@
                                         "message": "ask creaite is still working on the last request."})
              try:
                  sweep = panel_sweep(message, images, req.get("confirmed"))      # BL-309: the server decides, from the words
 -                run = Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images, sweep=sweep)
+-            except OSError as e:
 +                run = Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images, sweep=sweep,
 +                          fresh=fresh_session(req))
-             except OSError as e:
++            except (OSError, ValueError) as e:                  # #327 B: a NUL in a stored message makes Popen raise ValueError
                  return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e}). Is `claude` installed and "
                                                                 f"signed in?"})
+         return self.follow(run, numbered=self.numbered())
 @@ -2553,20 +2554,59 @@
      if policy in TOOLLESS_KINDS or policy == "calendar":       # #265: the calendar refresh reads no project file
          return []
@@ -50,7 +52,7 @@
 +    """#327 B: (the carried text, the session the guard marks from, the session to resume, the usage line's `resumed`) for a run.
 +    A resumed run is as before; a fresh one resumes nothing, and an ask's `resumed` is False (None for the other kinds)."""
 +    if not fresh:
-+        return "", session, session, (bool(session) if kind == "ask" else None)
++        return "", mark_session(session, chat), session, (bool(session) if kind == "ask" else None)
 +    return ("" if sweep else carry_over(chat)), mark_session(session, chat), None, (False if kind == "ask" else None)
 +
 +
@@ -92,6 +94,15 @@
          self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
          self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
          self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
+@@ -2597,7 +2639,7 @@
+             env.update(more_env)                                                       # #126
+             self.proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                          bufsize=1, env=env)
+-        except OSError:
++        except (OSError, ValueError):                           # #327 B: carried text can hold what Popen refuses (a NUL)
+             if guarded:
+                 reach.end_run(run_id)
+             raise
 @@ -3047,7 +3089,7 @@
              kind, label = usage_kind(self)
              run_usage(kind, getattr(self, "usage_result", None), label=label, model=getattr(self, "usage_model", ""),
@@ -101,12 +112,14 @@
          except Exception as e:  # noqa: BLE001
              swallowed("usage", e)
      # ===== end #197 =====
-@@ -3195,7 +3237,7 @@
+@@ -3195,8 +3237,8 @@
          images = [i for i in item.get("images") or [] if ask_image_files(i)]
          try:
              nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
 -                      sweep=panel_sweep(item["text"], images))                             # BL-309: a queued sweep too
+-        except OSError:
 +                      sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
-         except OSError:
++        except (OSError, ValueError):
              q["items"].insert(0, item)
              q["held"] = True
+             queue_save(q)

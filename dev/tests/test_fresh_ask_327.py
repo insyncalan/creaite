@@ -97,7 +97,7 @@ class RunCommand(unittest.TestCase):
 class MarkFollowsTheChat(unittest.TestCase):
     """The reviewer's main risk: a chat that read outside content stays marked when its next message runs in a fresh session."""
 
-    def run_fresh(self, marked, session="sess-old", chat="c-1", chat_last=None):
+    def run_fresh(self, marked, session="sess-old", chat="c-1", chat_last=None, fresh=True):
         import tempfile
         reach = live_server.reach
         with tempfile.TemporaryDirectory() as d:
@@ -110,7 +110,7 @@ class MarkFollowsTheChat(unittest.TestCase):
                     (g / "marked-sessions.json").write_text(json.dumps(marked))
                 try:
                     with mock.patch.object(live_server, "chat_session", return_value=chat_last):
-                        live_server.Run("r-mark327", "hello", session, chat, None, fresh=True)
+                        live_server.Run("r-mark327", "hello", session, chat, None, fresh=fresh)
                 except Exception:              # whatever follows the launch is not under test
                     pass
                 rec = reach.guard_run() or {}
@@ -128,6 +128,15 @@ class MarkFollowsTheChat(unittest.TestCase):
         self.assertFalse(was)
         self.assertNotIn("sess-new", after)
 
+    def test_continue_and_confirmed_with_a_lost_session_keep_the_mark_for_the_next_fresh_run(self):
+        # chat S0 unmarked; S1 read mail and is marked (the chat's history session); the page sends session null with continue:true
+        # (a run that resumes nothing here). It must start marked, and the NEXT ordinary message must too.
+        was, _, after = self.run_fresh(["S1"], session=None, chat="S0", chat_last="S1", fresh=False)
+        self.assertTrue(was)
+        self.assertIn("sess-new", after)                               # the new session (S3 in the report) is marked
+        was2, _, _ = self.run_fresh(sorted(after), session=None, chat="S0", chat_last="sess-new", fresh=True)
+        self.assertTrue(was2)
+
     def test_a_lost_or_stale_page_session_does_not_unmark_the_chat(self):
         for kw in ({"session": None, "chat_last": "sess-last"}, {"session": "stale", "chat_last": "sess-last"},
                    {"session": None, "chat": "c-1"}):
@@ -138,6 +147,25 @@ class MarkFollowsTheChat(unittest.TestCase):
 
 @unittest.skipUnless(HAVE, "needs dev/proposals/327b/live_server.diff")
 class UsageAndQueue(unittest.TestCase):
+    def test_a_nul_in_the_prompt_is_caught_and_the_guard_run_is_cleared(self):
+        import tempfile
+        reach = live_server.reach
+
+        def boom(cmd, **k):
+            raise ValueError("embedded null byte")
+
+        with tempfile.TemporaryDirectory() as d:
+            g = Path(d)
+            with mock.patch.object(reach, "GUARD", g), mock.patch.object(reach, "RUN_FILE", g / "run.json"), \
+                    mock.patch.object(reach, "SESSIONS_FILE", g / "marked-sessions.json"), \
+                    mock.patch.object(live_server.subprocess, "Popen", boom), mock.patch.object(live_server.threading, "Thread"):
+                with self.assertRaises(ValueError):
+                    live_server.Run("r-nul327", "hi\x00there", None, None, None)
+                self.assertIsNone(reach.guard_run())                   # no half-started run is left behind
+        src = (ROOT / "system/scripts/live_server.py").read_text(encoding="utf-8")
+        self.assertEqual(src.count("except (OSError, ValueError)"), 3)       # the run, the ask handler, the queue
+
+
     def test_the_usage_line_says_resumed_for_an_ask_only(self):
         import usage_log
         self.assertIs(usage_log.line_for("ask", resumed=True)["resumed"], True)

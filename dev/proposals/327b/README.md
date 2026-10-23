@@ -30,6 +30,13 @@ After the 2.6.2 chain (last in the chain, or anywhere: it touches `ask()`, `Run.
 ## Measurement plan (Alan's vault, after release)
 Compare START load (`start_tokens`, never dollars) for kind `ask`: median and 90th percentile, at least 10 runs each, the 7 days before and the 7 days after release, split by `resumed`. Include a chat of 5+ turns, a typed sweep and a Continue run. Target: fresh starts under 150k, 500k the red line, against 366k to 503k before.
 
+## Review round 2
+- `fresh_plan` now takes the guard's mark from `mark_session(session, chat)` in BOTH branches, so a continued or confirmed run whose page session was lost still starts marked, and so does the next fresh one (test: `test_continue_and_confirmed_with_a_lost_session...`).
+- A NUL in a stored message makes Popen raise ValueError: the run, the ask handler and `queue_start` catch it with OSError (the run also clears its guard record). Test: `test_a_nul_in_the_prompt...`.
+- **Search's "continue as chat"** (kind search, not guarded) carries an unmarked answer: pre-existing, unchanged here.
+- **`usage_report.py` has no `resumed` column** (decided: left alone). To split by hand, read `system/staging/run-usage.jsonl`: for lines with `"kind":"ask"`, group by `resumed` (true or false) and take the median and 90th percentile of `start_tokens`.
+- `marked-sessions.json` is still never pruned (above).
+
 ## Risks (for the reviewer)
 1. **Outside-content mark (BL-141).** The mark is kept by session ID. A fresh session would lose it, and the carried text could hold outside content. Mitigation above: the old session ID goes to `guard_args`. Review that `start_run(session=old)` marks the run and `end_run(run, new session)` saves the mark. A chat whose last session was not marked is not marked, as before.
 2. **Carried text is data in the prompt.** It is Alan's and creaite's own words from the chat, labelled as background. No new capability; the run's tools, deny list and hook are unchanged.
