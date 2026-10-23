@@ -4,7 +4,7 @@
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0042-sources.js, 0043-calendar-picker.js, 0044-bl-147-sprint-ux.js, 0045-owner-combobox.js, 0057-bl-274-sprint-ui-sweep.js, 0062-bl-216-sprint-ui-sweep.js, 0099-after-bl-120.js, 0115-bl-146-sprint-ux.js, 0116-after-bl-146.js, 0180-bl-181-sprint-peek-new.js */
 import { meetingOfFile, meetingRoute } from "../meetings.js";
 import { chatScroll, nowIso, stampMsg, step } from "../ask.js";
-import { A, DEC, peopleAll, R, REV, useCount } from "./data.js";
+import { A, DEC, peopleAll, R, REV, revForModelN, useCount } from "./data.js";
 import { parseWords } from "./datewords.js";
 import { $, addHTML, esc, html, ic, putHTML, raw } from "./dom.js";
 import { linkAnchor } from "./linkUrl.js";
@@ -269,10 +269,10 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&WK.ask&&WK.ask.box
 /* the table's date cell, the bulk bar, an undated card and the Board's prompt */
 /* typed due dates say so while they are typed (BL-147's line under the field) */
 /* Review: a proposal's weekend date, with the two working days, which edit the proposal; approving it unchanged keeps the date */
-document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wkrv]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=REV.find(x=>String(x.n)===b.dataset.wkrv); if(!r||!WKRVF[r.kind]) return;
+document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wkrv]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=revForModelN(+b.dataset.wkrv); if(!r||!WKRVF[r.kind]) return;
   const [ui,db]=WKRVF[r.kind], to=b.dataset.to; if(!await needVault()) return;
-  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied"); it.values=it.values||{}; it.values[db]=to; it.edited_in="dashboard"; }); }
-  catch(err){ snack("Not saved: "+err.message); return; }
+  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied"); it.values=it.values||{}; it.values[db]=to; it.edited_in="dashboard"; },r); }
+  catch(err){ snack(/already|no longer/.test(err.message)?"That one was already approved or changed, so nothing was saved. The list has been refreshed.":"Not saved: "+err.message); return; }
   r.rec[ui]=to; r.edited=true; refreshAll(); snack(`Proposal moved to ${wkLong(to)}: still waiting for review`); },true);
 /* the early warning: listed with the others (Settings › Health and warnings › Early warnings), and in the peek with the two days */
 WSIG.push(["weekend","Open item due on a weekend",null,null]);

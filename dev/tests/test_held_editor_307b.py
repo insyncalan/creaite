@@ -113,7 +113,7 @@ class WordDraftRefusalOnTheRow(LiveBrowserCase):
         b = self.b
         b.eval("go('intake-review')")
         b.wait("D.review.some(x=>x.kind==='draft')", 15)
-        b.eval("window.CALLS=[]; const real=window.api; window.api=(p,o)=>p==='/api/review'&&!(o.modes||[]).includes('as-staged')"
+        b.eval("window.CALLS=[]; const real=window.api; window.api=(p,o)=>p!=='/api/review'?real(p,o):!(o.modes||[]).includes('as-staged')"
                "?Promise.resolve({ok:false,message:\"2: not approved — the draft differs from the staged items:\\n    A RAID item in Review isn't in the draft: x\\n  (say \\\"approve 2 --as-staged\\\" to keep them)\"}):"
                "(CALLS.push(o.modes),Promise.resolve({ok:true,message:'ok'}));"
                "reviewViaServer(D.review.find(x=>x.kind==='draft'),'approved',[]); 0")

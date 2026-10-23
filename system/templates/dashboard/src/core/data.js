@@ -14,9 +14,13 @@ shared.ACT=D.activity;
    point at another item. SNAP remembers, for the model on the page, which file and ref each n meant when the model arrived. */
 export const SNAP={model:null,keys:new Map()};
 export const revKey=r=>r?`${r.file}|${r.ref}`:"";
-export function snapModelKeys(force){ const m=D.intake_review||0; if(!force&&SNAP.model===m) return; SNAP.model=m; SNAP.keys=new Map(REV.map(r=>[r.n,{key:revKey(r),fp:JSON.stringify([r.rec,r.p,r.kind,r.flags||null])}])); }
+export function snapModelKeys(force){ const m=D.intake_review||0; if(!force&&SNAP.model===m) return; SNAP.model=m; SNAP.keys=new Map(REV.map(r=>[r.n,{key:revKey(r),fp:JSON.stringify([r.rec,r.p,r.kind,r.flags||null]),cfp:r.fp||null}])); }
 /** the current REV row the model's number n meant (same file and ref); null when it is gone or the number now means another item */
-export function revForModelN(n){ snapModelKeys(false); const k=SNAP.keys.get(n); if(!k) return REV.find(r=>r.n===n)||null; return REV.find(r=>revKey(r)===k.key)||null; }
+/** #307 h2: the REV row that key (file|ref) and content fingerprint cfp name now: the row at that file and ref if its content is the same;
+    else the row of the same file with that content (the engine renumbered the file); else null. No cfp (an older model): the key alone. */
+export function rowFor(key,cfp){ const at=REV.find(r=>revKey(r)===key); if(!cfp) return at||null; if(at&&at.fp===cfp) return at; const file=key.split("|")[0];
+  const same=REV.filter(r=>r.file===file&&r.fp===cfp); return same.length===1?same[0]:null; }
+export function revForModelN(n){ snapModelKeys(false); const k=SNAP.keys.get(n); if(!k) return REV.find(r=>r.n===n)||null; return rowFor(k.key,k.cfp); }
 export const modelKeyOf=n=>{ snapModelKeys(false); const k=SNAP.keys.get(n); return k?k.key:""; };
 export const pName=c=>(P.find(p=>p.code===c)||{}).name||(c==="_portfolio"?"Portfolio":c);
 /* BL-101 (v1.9.5 hand checks, plan #81): a file's project as people read it; the portfolio's files are "Portfolio", never _portfolio (Files, ⌘K) */
