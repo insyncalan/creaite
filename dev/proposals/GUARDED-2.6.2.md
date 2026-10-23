@@ -6,14 +6,14 @@ The guard is `dev/tests/guarded_chain.py` (`CHAIN2_MARKER`, `CHAIN2_FILE`, `CHAI
 Change the chain list or any listed diff, and `CHAIN2_SHA256` must be re-set (Alan's say). Owners of the listed diffs: f1 `origin/v262-f1b`,
 small `origin/v262-small`, discard-undo `origin/v262-discard-undo`, draft-delivery `origin/v262-183b` (live_server) and `origin/v262-183r`
 (rules-and-skill, RULES-ORDER.md), fetch-transcripts `origin/v262-250b`, follow code `origin/v262-followb` (identical to `v262-follow`),
-follow rules `origin/v261-vip-rules`. Nothing was regenerated: every diff is byte for byte its branch's.
+follow rules `origin/v261-vip-rules`. Rebuilt on `v262-line` (23-10-2026): every diff is byte for byte the version in the tree; none was regenerated. The review-expect diffs and the discard-undo review.py/reach.py/live_server.py diffs are the later versions (not the ones the first chain listed); the .chain list order is unchanged.
 
 ## Order (chosen)
 1 f1 nullable columns (schema.sql, tracker.py); 2 writer-pins-after-f1 (not guarded); 3 inbox-upload live_server; 4 review-expect review.py;
 5 review-expect live_server; 6 discard-undo review.py; 7 discard-undo reach.py; 8 discard-undo live_server; 9 draft-delivery live_server;
 10 fetch-transcripts live_server; 11 follow propose.py; 12 follow live_server; 13 183r rules-and-skill; 14 VIP/follow rules; 15 250 rules after-vip.
 
-## Orders tried (throwaway detached worktree off release2; forward `git apply`, then `-R` in reverse order; clean tree after)
+## Orders tried on v262-line (rerun 23-10-2026 on the line's tree: the chain order forward and reversed, all 720 permutations of the six live_server.py diffs, review.py in both orders: all apply and reverse, clean tree after). Earlier table (throwaway detached worktree off release2; forward `git apply`, then `-R` in reverse order; clean tree after)
 | Group | Orders tried | Result |
 |-------|--------------|--------|
 | live_server.py: inbox, review-expect, discard-undo, draft-delivery, fetch-transcripts | all 120 permutations | all apply and reverse |
