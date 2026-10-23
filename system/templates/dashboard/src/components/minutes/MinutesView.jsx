@@ -183,6 +183,7 @@ async function minutesMoved() {
 /** #306: file the minutes without the transcript copy, then say what was saved (with Undo) or why not. @param {any} v the minutes view */
 async function fileWithout(v) {
   const r = await fileWithoutTranscript(v.proposal);
+  if (r.stale) { snack(r.message); await reloadData(); return; }   /* 2.6.2 (#314): the minutes changed since the page loaded; nothing was filed */
   if (!r.ok) { snack(`Not saved because ${r.message.replace(/\.$/, "")}`); return; }
   snack(`Filed without the transcript copy: ${r.n} item${r.n === 1 ? "" : "s"} saved`,
     r.apply_id ? async () => { await undoApply(r.apply_id); loadMinutes({ file: v.proposal }); } : null);

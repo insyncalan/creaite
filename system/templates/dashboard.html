@@ -5818,6 +5818,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     fieldsSeams: () => fieldsSeams,
     figHtml: () => figHtml,
     figRefs: () => figRefs,
+    fileWithoutTranscript: () => fileWithoutTranscript,
     filesOpened: () => filesOpened,
     filesStatus: () => filesStatus,
     fillThumbs: () => fillThumbs,
@@ -37396,7 +37397,9 @@ ${s5}`;
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
-    const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
+    const row2 = REV.find((x5) => x5.kind === "draft" && x5.file === proposal);
+    const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"], ...row2 && row2.fp ? { expect: row2.fp } : {} });
+    if (res && !res.ok && REVIEW_CHANGED.test(res.message || "")) return { ok: false, stale: true, message: STALE_ROW_MSG };
     if (!res || !res.ok) return { ok: false, message: oneLine(res && res.message || "creaite couldn't file these minutes").replace(/^\d+:\s*/, "").replace(/not approved — /, "") };
     const a5 = await applyNow();
     if (!a5.ok) return { ok: false, message: oneLine(a5.message || "creaite couldn't file these minutes") };
@@ -71386,6 +71389,11 @@ ${d5.text}`);
   }
   async function fileWithout(v5) {
     const r4 = await fileWithoutTranscript(v5.proposal);
+    if (r4.stale) {
+      snack(r4.message);
+      await reloadData();
+      return;
+    }
     if (!r4.ok) {
       snack(`Not saved because ${r4.message.replace(/\.$/, "")}`);
       return;
@@ -79733,6 +79741,7 @@ ${d5.text}`);
         "SKEY",
         "SNAP",
         "SORT",
+        "STALE_ROW_MSG",
         "START_CMD",
         "STATUSES",
         "SU",
@@ -79953,6 +79962,7 @@ ${d5.text}`);
         "evRoot",
         "evidence",
         "fd",
+        "fileWithoutTranscript",
         "firstHelp",
         "fitFilterBar",
         "flip",
