@@ -17,7 +17,7 @@ import { srcShort, weekendNote, wkLong } from "./core/fields.js";
 import { go } from "./core/nav.js";
 import { D, fd, fdText, isMe, nowStamp, OPENST, prio, S, TODAY, who } from "./core/page.js";
 import { needsConnection, plainSay } from "./core/say.js";
-import { api, apply, applyNow, applySoon, applyWords, conflictChoice, editProposal, guardFresh, STALE_ROW_MSG, needVault, oneLine, refreshAll, reloadData, reviewViaServer, snack, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
+import { api, apply, applyNow, applySoon, applyWords, conflictChoice, editProposal, guardFresh, REVIEW_CHANGED, STALE_ROW_MSG, needVault, oneLine, refreshAll, reloadData, reviewViaServer, snack, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { deBarred, deItems, deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./core/intakeApi.js";
@@ -478,7 +478,8 @@ export const heldMsg=r=>`Held: ${plainSay(r.held)}. Approve the minutes without 
 export async function heldApprove(r){ if(!viaServer()){ snack(needsConnection("Approving these minutes without the transcript")); return; }
   /* #306: it says what happened, on the row and in a message: saved (with Undo) or not saved and why, never nothing */
   if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
-  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"approved",modes:["without-transcript"]});
+  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"approved",modes:["without-transcript"],...(r.fp?{expect:r.fp}:{})});   /* 2.6.2 (#314) */
+  if(!res.ok&&REVIEW_CHANGED.test(res.message||"")){ snack(STALE_ROW_MSG); await reloadData(); return; }
   if(!res.ok){ const why=heldWhy(res.message); HELD_ERR.set(r.file,why); await reloadData(); snack(`Not saved because ${why}`); refreshAll(); return; }
   HELD_ERR.delete(r.file); if(!S.autoApply){ await reloadData(); snack("Approved without the transcript: not saved yet"); return; }
   const a=await applyNow();
@@ -492,7 +493,9 @@ export const heldWhy=m=>{ const t=String(m||"").replace(/^\s*Approved \d+\.\s*/,
   return saidPlain(t).replace(/\s*\.?\s*$/,"")||"creaite couldn't save these minutes"; };
 export async function heldDiscard(r){ if(!viaServer()){ snack(needsConnection("Discarding these minutes")); return; }
   if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
-  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard"}); await reloadData(); snack(saidPlain(res.message)); }
+  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard",...(r.fp?{expect:r.fp}:{})});   /* 2.6.2 (#314) */
+  if(!res.ok&&REVIEW_CHANGED.test(res.message||"")){ snack(STALE_ROW_MSG); await reloadData(); return; }
+  await reloadData(); snack(saidPlain(res.message)); }
 /* the apply's "Held in Review, not applied: …" lines, for its snack */
 export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>/^Held in Review, not applied:/.test(x)); }
 /* #291: the snack's words for them: an item held because it can't be saved as it is, apart from a proposal whose file has gone */

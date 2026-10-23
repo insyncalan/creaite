@@ -170,7 +170,10 @@ export function applySoon(row,verb){ APPLYN++; APPLYL.push({r:row||null,v:verb||
   const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
   snack(r.ok?`${decidedWords(savedCapped(L,r.message))}${held}`:plainSay(oneLine(applyWords(r.message))),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
-export async function reviewViaServer(r,decision,modes){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
+/* 2.6.2 (#314): review.py's refusal when the item at the number is no longer the one the page sent */
+export const REVIEW_CHANGED=/has changed since you looked at it/;
+export async function reviewViaServer(r,decision,modes){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[],...(r.fp?{expect:r.fp}:{})});   /* 2.6.2 (#314): the server checks the item is still this one; an older server ignores the field */
+  if(!res.ok&&REVIEW_CHANGED.test(res.message||"")){ snack(STALE_ROW_MSG); await reloadData(); return; }
   if(res.ok){ if(S.autoApply) applySoon(r,decision); else await reloadData(); snack(plainSay(oneLine(res.message))); return; }
   const m=res.message||"";
   if(/differs from the staged items/.test(m)&&shared.VIEW==="intake-review"){   /* #307 path 4: on Intake's row the reason is said in plain words with its way out, not in the ask panel */
