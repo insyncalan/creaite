@@ -67,6 +67,7 @@ export * from "./components/prep/PrepPage.jsx";   /* BL-286 D: Meetings › Prep
 export * from "./components/settings/Health.jsx";   /* #159: runHealthFix is tested by name (test_link_renderers) */
 export * from "./components/prep/PrepShape.jsx";   /* #159: its source link is tested by name (test_link_renderers) */
 export * from "./stores/prep.js";
+export { fileWithoutTranscript } from "./stores/minutes.js";   /* 2.6.2 (#314): File without transcript sends the row's fingerprint; tested by name */
 export * from "./components/today/DayTabs.jsx";
 export * from "./components/today/DayCurve.jsx";
 export * from "./components/today/DayMeetings.jsx";

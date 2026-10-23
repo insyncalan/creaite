@@ -37,6 +37,26 @@ class PageSendsExpect(LiveBrowserCase):
         self.b.pump(0.5)
         self.assertIn("Approved", self.b.eval("(document.getElementById('toastHost')||{innerText:''}).innerText"), "the decision went through")
 
+    def test_file_without_transcript_carries_the_fingerprint_and_a_changed_item_is_not_filed(self):
+        """Cap's note 1: File without transcript (stores/minutes.js) sent file + ref only. It now sends the row's fingerprint, and the
+        server's "has changed since you looked at it" is told to the person as the stale-row words, with nothing filed."""
+        b = self.b
+        b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
+        b.wait("document.querySelector('#v-minutes tr.mi')", 15)
+        row = b.eval(f"REV.find(r=>r.kind==='draft'&&r.file==={json.dumps(self.proposal)})")
+        b.eval("window.SENT=[]; const f=window.fetch; window.fetch=function(u,o){ if(/\\/api\\/review$/.test(String(u))){ window.SENT.push(JSON.parse(o.body)); "
+               "return Promise.resolve(new Response(JSON.stringify({ok:false,message:'1: not recorded — that item has changed since you looked at it, so nothing was changed. Look at the list again.'}),{status:200})); } return f.apply(this,arguments); }")
+        b.eval(f"window.RES=null; fileWithoutTranscript({json.dumps(self.proposal)}).then(x=>{{window.RES=x}})")
+        b.wait("!!window.RES", 30)
+        sent = b.eval("window.SENT")
+        self.assertEqual(len(sent), 1, sent)
+        self.assertEqual(sent[0]["expect"], row["fp"])
+        self.assertIn("without-transcript", sent[0]["modes"])
+        res = b.eval("window.RES")
+        self.assertFalse(res["ok"])
+        self.assertTrue(res.get("stale"))
+        self.assertEqual(res["message"], b.eval("STALE_ROW_MSG"))
+
     def test_the_mismatch_words_are_recognised(self):
         self.assertTrue(self.b.eval("REVIEW_CHANGED.test('2: not recorded — that item has changed since you looked at it, so nothing was changed. Look at the list again.')"))
         self.assertFalse(self.b.eval("REVIEW_CHANGED.test('3: already approved')"))

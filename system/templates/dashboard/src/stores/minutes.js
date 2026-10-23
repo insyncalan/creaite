@@ -11,7 +11,8 @@ import { signal } from "@preact/signals";
 import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
 import { needsConnection } from "../core/say.js";
-import { api, applyNow, oneLine, viaServer } from "../core/server.js";
+import { REV } from "../core/data.js";
+import { api, applyNow, oneLine, REVIEW_CHANGED, STALE_ROW_MSG, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{n: number, who: string|null, start: string|null, end: string|null, text: string}} Turn */
@@ -211,9 +212,11 @@ export { isMovedMinutes };   /* defined in core/say.js (plain words), used here 
 export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));
 
 /** #306: file held minutes without the transcript copy, in place: the minutes and their ticked items in one go.
-    @param {string} proposal the minutes' proposal file @returns {Promise<{ok: boolean, message: string, n?: number, apply_id?: number|null}>} */
+    @param {string} proposal the minutes' proposal file @returns {Promise<{ok: boolean, message: string, stale?: boolean, n?: number, apply_id?: number|null}>} */
 export async function fileWithoutTranscript(proposal) {
-  const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
+  const row = REV.find(x => x.kind === "draft" && x.file === proposal);   /* 2.6.2 (#314): the server files these minutes only if they are still the ones on the page */
+  const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"], ...(row && row.fp ? { expect: row.fp } : {}) });
+  if (res && !res.ok && REVIEW_CHANGED.test(res.message || "")) return { ok: false, stale: true, message: STALE_ROW_MSG };
   if (!res || !res.ok) return { ok: false, message: oneLine((res && res.message) || "creaite couldn't file these minutes").replace(/^\d+:\s*/, "").replace(/not approved — /, "") };
   const a = await applyNow();
   if (!a.ok) return { ok: false, message: oneLine(a.message || "creaite couldn't file these minutes") };
