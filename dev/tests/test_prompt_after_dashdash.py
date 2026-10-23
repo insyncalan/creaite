@@ -57,7 +57,7 @@ class PromptLast(unittest.TestCase):
     def test_no_launch_names_the_prompt_straight_after_p(self):
         src = (Path(__file__).resolve().parents[2] / "system/scripts/live_server.py").read_text(encoding="utf-8")
         self.assertEqual(re.findall(r'claude_path\(\), "-p", (?!"--)', src), [])        # an option follows -p, never text
-        self.assertEqual(len(re.findall(r"prompt_last\(", src)), 3)                       # the helper, a run, the VIP check
+        self.assertIn(len(re.findall(r"prompt_last\(", src)), (3, 4))               # the helper, a run, the VIP check (and, with the 2.6.2 chain, draft delivery)
 
 
 class ServerRuns(unittest.TestCase):
