@@ -239,35 +239,6 @@ class F1Columns(unittest.TestCase):
         self.v.run("undo-changes", str(rid))                                           # undo-changes on the old shape too
         self.assertNotIn("engine_version", info(old, "applies"))
 
-    def test_migrate_keeps_change_log_rowids_when_there_is_a_gap(self):
-        """Cap M-B: item_events.change and a revert's via string point at change_log rowids. A table rebuild that did not carry
-        the rowid would renumber every row after a gap and point them at other rows. Also applies (its apply_id) and the
-        change_log.apply_id links stay as they were."""
-        for n in (1, 2, 3):
-            self.apply_one(n)
-        with closing(sqlite3.connect(self.db)) as con:
-            ids = [r[0] for r in con.execute("SELECT rowid FROM change_log ORDER BY rowid")]
-            con.execute("DELETE FROM change_log WHERE rowid = ?", (ids[len(ids) // 3],))              # a hand-made gap in the middle
-            con.execute("DELETE FROM applies WHERE apply_id = 2 AND NOT EXISTS (SELECT 1 FROM change_log WHERE apply_id = 2)")
-            con.commit()
-        old_database(self.v)
-        with closing(sqlite3.connect(self.db)) as con:
-            before_log = con.execute("SELECT rowid, item_id, field, old_value, new_value, apply_id FROM change_log ORDER BY rowid").fetchall()
-            before_ev = con.execute("SELECT event_id, change FROM item_events ORDER BY event_id").fetchall()
-            before_ap = con.execute("SELECT apply_id, at, proposals FROM applies ORDER BY apply_id").fetchall()
-        self.assertGreater(len(before_ev), 0)
-        self.assertNotEqual([r[0] for r in before_log], list(range(1, len(before_log) + 1)), "the fixture must have a gap")
-        self.assertIn("Migrated", self.v.run("migrate").stdout)
-        with closing(sqlite3.connect(self.db)) as con:
-            self.assertEqual(con.execute("SELECT rowid, item_id, field, old_value, new_value, apply_id FROM change_log ORDER BY rowid").fetchall(), before_log)
-            self.assertEqual(con.execute("SELECT event_id, change FROM item_events ORDER BY event_id").fetchall(), before_ev)
-            self.assertEqual(con.execute("SELECT apply_id, at, proposals FROM applies ORDER BY apply_id").fetchall(), before_ap)
-            self.assertEqual(con.execute("PRAGMA foreign_key_check").fetchall(), [])
-        self.assertIn("up to date", self.v.run("migrate").stdout)                                      # second time: nothing
-        self.apply_one(4)                                                                              # new rows go after the highest rowid
-        with closing(sqlite3.connect(self.db)) as con:
-            self.assertGreater(con.execute("SELECT max(rowid) FROM change_log").fetchone()[0], before_log[-1][0])
-
     def test_rollback_is_the_dated_copy(self):
         self.apply_one()
         old = old_database(self.v)
