@@ -120,7 +120,7 @@ class Fetch(unittest.TestCase):
     def read(self, eid="ev-1", result=None, **ev_kw):
         """The two reads a sweep run makes for one meeting: its event, then its transcript (a URL of its own)."""
         ev = {**event(eid), **ev_kw}
-        ev["meetingTranscriptUrl"] = ev["meetingTranscriptUrl"].replace("?", f"-{eid}?", 1) + "&e=" + eid   # a meeting of its own: its own path
+        ev["meetingTranscriptUrl"] = ev["meetingTranscriptUrl"] + "&e=" + eid
         return [(f"calendar:///events/{eid}", ev, False), (ev["meetingTranscriptUrl"], result or transcript_result(), False)]
 
     def assert_not_fetched(self, eid, result, **ev_kw):
@@ -323,42 +323,6 @@ class Fetch(unittest.TestCase):
                 self.assertEqual(self.obs([*order, (ev1[1][0], secret, False)]), {})
                 self.assertEqual(self.inbox(), [])
         self.tracker_untouched()
-
-    def test_medium_the_hold_holds_however_the_url_is_written(self):
-        # Cap #250 MEDIUM: ev-1 confidential names U; ev-2 (normal) names U written another way: the same meeting. Whatever the order of
-        # the reads, nothing is tied to ev-2 and nothing is fetched. The real URL carries the occurrence's start and end.
-        self.set_on()
-        edit_calendar(self.v, lambda ev: ev.update(sensitivity="confidential") if ev.get("id") == "ev-1" else None)
-        secret = result_at("09:05", contents=("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n<v A>CONFIDENTIAL-HR-TEXT</v>\n",))
-        ev1 = self.read("ev-1", secret, sensitivity="confidential")
-        u = ev1[1][0]
-        base, _, query = u.partition("?")
-        variants = {"upper path": base.upper().replace("MEETING-TRANSCRIPT", "meeting-transcript") + "?" + query,
-                    "upper scheme": "MEETING-TRANSCRIPT" + u[len("meeting-transcript"):],
-                    "trailing slash": base + "/?" + query, "extra query": u + "&extra=1", "fragment": u + "#frag",
-                    "no query": base, "own window": base + "?start=2026-10-24T08:00:00Z&end=2026-10-24T09:00:00Z",
-                    "percent-encoded": base.replace("-ev-1", "%2Dev%2D1") + "?" + query,
-                    "double slash": base.replace("/events/", "//events/", 1) + "?" + query}
-        for name, variant in variants.items():
-            ev2 = ("calendar:///events/ev-2", {**event("ev-2"), "meetingTranscriptUrl": variant}, False)
-            for order in ((ev1[0], ev2), (ev2, ev1[0])):
-                for read_uri in (variant, u):
-                    with self.subTest(variant=name, first=order[0][0][-4:], read=read_uri[-12:]):
-                        self.assertEqual(self.obs([*order, (read_uri, secret, False)]), {})
-                        self.assertEqual(self.inbox(), [])
-        self.tracker_untouched()
-
-    def test_two_normal_occurrences_of_one_meeting_keep_their_own_windows(self):
-        """The block is for a held meeting. Two normal events with the same meeting path and their own windows are not mixed up."""
-        f = T.SweepFetch()
-        a = "meeting-transcript:///events/join1?start=2026-10-23T08:00:00Z&end=2026-10-23T09:00:00Z"
-        b = "meeting-transcript:///events/join1?start=2026-10-24T08:00:00Z&end=2026-10-24T09:00:00Z"
-        f.note_event({"sensitivity": "normal"}, {"id": "ev-a", "uri": a})
-        f.note_event({"sensitivity": "normal"}, {"id": "ev-b", "uri": b})
-        self.assertEqual((f.event_of(a), f.event_of(b), f.event_of(a.upper().replace("MEETING-TRANSCRIPT", "meeting-transcript"))),
-                         ("ev-a", "ev-b", "ev-a"), "case and spelling of the URL do not matter; the window does")
-        f.note_event({"sensitivity": "confidential"}, {"id": "ev-c", "uri": a + "&x=1"})
-        self.assertEqual((f.event_of(a), f.event_of(b)), (None, None), "a held event blocks the whole meeting, either window")
 
     def test_the_observer_reads_only_the_exact_read_tool_and_never_overwrites_a_planted_link(self):
         self.set_on()

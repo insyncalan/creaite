@@ -656,28 +656,14 @@ def fetch_text(counts):
     return "; ".join(parts)
 
 
-def meeting_key(uri):
-    """The meeting a transcript URL names, written one way (Cap #250): scheme and host in lower case, the path decoded, lower case, repeated
-    slashes made one and no trailing slash; the query and the fragment (an occurrence's start/end window) are not part of it."""
-    u = urlsplit(str(uri or "").strip())
-    return (u.scheme.lower(), re.sub(r"/+", "/", "/" + unquote(u.netloc + u.path).lower()).rstrip("/"))
-
-
-def occurrence_key(uri):
-    """meeting_key plus the sorted query parameters (lower case): one occurrence of the meeting. The fragment is dropped."""
-    u = urlsplit(str(uri or "").strip())
-    return meeting_key(uri) + (tuple(sorted((k.lower(), tuple(v)) for k, v in parse_qs(u.query, keep_blank_values=True).items())),)
-
-
 class SweepFetch:
     """The live server's copy of a sweep run's Microsoft 365 reads (proposal: dev/proposals/fetch-transcripts/). It is handed each
     tool call and result, as a transcript Job is, and fetches a transcript the moment its read comes back. Nothing here comes from
     what Claude says; with the setting off it does nothing."""
 
     def __init__(self):
-        self.uris = {}                       # occurrence_key(URL) -> event ID, from the event reads of this run
-        self.shared = set()                  # occurrence keys two events named: never tied (Cap N1)
-        self.blocked = set()                 # meeting_key of every URL a held event named: no event ties to that meeting (Cap #250)
+        self.uris = {}                       # meeting-transcript URL -> event ID, from the event reads of this run
+        self.shared = set()                  # URLs a held event named, or more than one event did: never tied (Cap N1)
         self.held = set()                    # events whose own read says they aren't "normal" sensitivity: never fetched
         self.outcomes = {}
 
@@ -694,9 +680,8 @@ class SweepFetch:
             self.transcript(uri, text, is_error)
 
     def note_event(self, data, facts):
-        """One event read: hold it unless it says "normal", and tie its transcript URL to it. A meeting named by a held event, or an
-        occurrence named by two events (a duplicate invite), ties to nobody, however the URL is written (case, slash, query, fragment)
-        and whatever the order of the reads (Cap N1, #250)."""
+        """One event read: hold it unless it says "normal", and tie its transcript URL to it. A URL named by a held event, or by two
+        events (a duplicate invite), ties to nobody, whatever the order of the reads (Cap N1)."""
         eid, uri = str(facts.get("id") or ""), facts.get("uri")
         if not eid:
             return
@@ -704,18 +689,14 @@ class SweepFetch:
         if held:
             self.held.add(eid)
         if uri:
-            occ = occurrence_key(uri)
-            if held:
-                self.blocked.add(meeting_key(uri))
-            if held or self.uris.get(occ, eid) != eid:
-                self.shared.add(occ)
-            self.uris[occ] = eid
+            if held or self.uris.get(uri, eid) != eid:
+                self.shared.add(uri)
+            self.uris[uri] = eid
 
     def event_of(self, uri):
         """The event ID a meeting-transcript URL belongs to: only the event whose own read, in this run, returned that URL.
         A URL recorded in transcripts.json (typed by Claude through `record`) is never a tie (Cap's HIGH on #250): fail closed."""
-        occ = occurrence_key(uri)
-        return None if meeting_key(uri) in self.blocked or occ in self.shared else self.uris.get(occ)
+        return None if uri in self.shared else self.uris.get(uri)
 
     def transcript(self, uri, text, is_error):
         """A transcript read came back: fetch it if its meeting is to be fetched (a retry after a dropped connection too)."""

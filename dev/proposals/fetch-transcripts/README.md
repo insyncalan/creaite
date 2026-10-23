@@ -52,11 +52,3 @@ fail-closed sensitivity and the observer-only tie (no result-file tie: option 2 
 - **Later until a transcript arrives (#232):** there's no store for it on main yet; `transcripts.snoozed_ids()` returns nothing
   until #232 adds one.
 - Nothing reaches `tracker.db` and nothing is staged (the tests check both); the debug log gets counts only.
-
-## Round 2 (Cap #250 MEDIUM, 23-10-2026)
-The hold no longer compares transcript URLs as exact strings. `transcripts.meeting_key` writes a URL one way (scheme and host in lower case,
-path decoded, lower case, repeated slashes made one, no trailing slash; query and fragment left out) and `occurrence_key` adds the sorted
-query (the start/end window). A held event blocks its whole meeting (`SweepFetch.blocked`), so any other event naming it another way
-is never tied; two normal events naming one occurrence still tie to nobody; two normal occurrences with their own windows keep their own.
-The change is in `system/scripts/transcripts.py` (not guarded); the live_server.diff is unchanged. Tests: `test_medium_the_hold_holds_however_the_url_is_written`
-(nine spellings, both read orders, both URLs read) and `test_two_normal_occurrences_of_one_meeting_keep_their_own_windows`.
