@@ -20,6 +20,8 @@ export function snapModelKeys(force){ const m=D.intake_review||0; if(!force&&SNA
     else the row of the same file with that content (the engine renumbered the file); else null. No cfp (an older model): the key alone. */
 export function rowFor(key,cfp){ const at=REV.find(r=>revKey(r)===key); if(!cfp) return at||null; if(at&&at.fp===cfp) return at; const file=key.split("|")[0];
   const same=REV.filter(r=>r.file===file&&r.fp===cfp); return same.length===1?same[0]:null; }
+/** an edit changed a row's content (its fingerprint): the model on the page, drawn before it, keeps naming the row by the old one, so it follows */
+export function snapFollowEdit(file,oldFp,newFp){ if(!oldFp||!newFp||oldFp===newFp) return; for(const k of SNAP.keys.values()) if(k.cfp===oldFp&&k.key.split("|")[0]===file) k.cfp=newFp; }
 export function revForModelN(n){ snapModelKeys(false); const k=SNAP.keys.get(n); if(!k) return REV.find(r=>r.n===n)||null; return rowFor(k.key,k.cfp); }
 export const modelKeyOf=n=>{ snapModelKeys(false); const k=SNAP.keys.get(n); return k?k.key:""; };
 export const pName=c=>(P.find(p=>p.code===c)||{}).name||(c==="_portfolio"?"Portfolio":c);
