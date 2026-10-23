@@ -53,11 +53,21 @@ else:
         out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": i, "name": name, "input": inp}]}})
         ev = json.dumps({"tool_name": name, "tool_input": inp})
         h = subprocess.run(hook, shell=True, input=ev, capture_output=True, text=True) if hook else None
+        if h is not None and mode == "nodecision":
+            h.stdout = ""                              # a hook that returns no decision
         if h is not None and h.returncode == 2:
             return {"type": "tool_result", "tool_use_id": i, "is_error": True, "content": h.stderr}
+        allow = name in args[args.index("--allowedTools") + 1].split(",")      # Claude Code: the allow list, or a hook's allow decision
+        if not allow and h is not None and h.returncode == 0 and h.stdout.strip():
+            try:
+                allow = json.loads(h.stdout)["hookSpecificOutput"]["permissionDecision"] == "allow"
+            except (ValueError, KeyError, TypeError):
+                allow = False
+        if not allow:                                 # headless default-deny: nothing is made
+            return {"type": "tool_result", "tool_use_id": i, "is_error": True, "content": "permission denied"}
         open(here + ".made", "a").write("1\n")
         return ({"type": "tool_result", "tool_use_id": i, "content": json.dumps({"id": "AAMk1", "webLink": "https://outlook.office365.com/owa/?ItemID=AAMk1"})}
-                if mode in ("made", "inject", "twice") else {"type": "tool_result", "tool_use_id": i, "is_error": True, "content": "ErrorAccessDenied: Access is denied."})
+                if mode in ("made", "inject", "twice", "nodecision") else {"type": "tool_result", "tool_use_id": i, "is_error": True, "content": "ErrorAccessDenied: Access is denied."})
     res = [call("t1", "%s", a)] + ([call("t2", "%s", a)] if mode == "twice" else [])
     out({"type": "user", "message": {"content": res}})
 out({"type": "result", "result": "{\"ok\": true}"})
@@ -127,6 +137,25 @@ class Route(LiveBrowserCase):
         self.assertTrue(r["j"]["made"])
         self.assertIn("delete it unsent", r["j"]["reason"])
 
+    def test_with_no_hook_the_create_tool_is_not_allowed_and_nothing_is_made(self):
+        """Fail closed: the create tool is not in --allowedTools, so a run that gets no hook cannot make the draft (the stand-in
+        applies headless default-deny)."""
+        self.mode("made")
+        n = self.made()
+        import subprocess
+        p = subprocess.run([str(self.fake), "-p", "--allowedTools", "ToolSearch", "--",
+                            "x these arguments, copied byte for byte, the body unchanged: {}\nThen reply"], capture_output=True, text=True)
+        self.assertEqual(self.made(), n)
+        self.assertIn("permission denied", p.stdout)
+
+    def test_a_hook_that_gives_no_decision_makes_nothing(self):
+        self.mode("nodecision")
+        n, before = self.made(), self.staging("chases.json")
+        r = self.post("/api/email/draft", self.body(ids=["ABC-A-020"]))
+        self.assertFalse(r["j"]["ok"])
+        self.assertEqual(self.made(), n)
+        self.assertEqual(self.staging("chases.json"), before)
+
     def test_the_run_carries_a_hook_over_every_tool_and_its_request_file_is_removed_after(self):
         self.mode("made")
         self.assertTrue(self.post("/api/email/draft", self.body())["j"]["ok"])
@@ -154,7 +183,7 @@ class Route(LiveBrowserCase):
         args = self.argv()[-1]
         allowed = args[args.index("--allowedTools") + 1].split(",")
         denied = args[args.index("--disallowedTools") + 1].split(",")
-        self.assertEqual(allowed, [CREATE, "ToolSearch"])
+        self.assertEqual(allowed, ["ToolSearch"])                                 # the hook is the only path to the create tool
         self.assertNotIn(CREATE, denied)
         for t in ("outlook_send_draft", "outlook_send_mail", "outlook_update_draft", "Bash", "Write", "Edit", "Read"):
             self.assertIn(t if t[0].isupper() else "mcp__claude_ai_Microsoft_365__" + t, denied)
@@ -172,7 +201,7 @@ class Route(LiveBrowserCase):
         self.assertTrue(self.post("/api/email/draft", self.body())["j"]["ok"])
         self.assertTrue(self.post("/api/email/outlook-access", {})["j"]["can"])
         draft, access = self.argv()[-2:]
-        for args, allowed in ((draft, [CREATE, "ToolSearch"]), (access, [SCOPES, "ToolSearch"])):
+        for args, allowed in ((draft, ["ToolSearch"]), (access, [SCOPES, "ToolSearch"])):
             self.assertEqual(args[args.index("--allowedTools") + 1].split(","), allowed)
             denied = args[args.index("--disallowedTools") + 1].split(",")
             self.assertIn(M365 + "outlook_email_search", denied)                  # the reader a prompt injection would use

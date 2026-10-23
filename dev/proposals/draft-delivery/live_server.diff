@@ -2,7 +2,7 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
 index 9b6f5144..6c8a040e 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -7241,6 +7241,141 @@ def chase_pane_route(handler, req):
+@@ -7241,6 +7241,142 @@ def chase_pane_route(handler, req):
  DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
  
  
@@ -10,7 +10,7 @@ index 9b6f5144..6c8a040e 100644
 +# POST /api/email/draft {action: "create"|"copied", to, subject, html, ids, mode, name}, token-checked like every POST (authorised()).
 +# draft_delivery.py (plain code) checks the payload and the setting (draft_email.outlook_drafts, off by default) and builds the one
 +# call; this route is the ONLY caller of the Microsoft 365 write tool, in a headless run whose allow list is exactly
-+# draft_delivery.allowed_tools() (outlook_create_draft and ToolSearch) and whose deny list names every other Microsoft 365 action
++# draft_delivery.allowed_tools() (ToolSearch only; outlook_create_draft is allowed by the run's hook alone, so no hook means no draft) and whose deny list names every other Microsoft 365 action
 +# (send_draft and send_mail among them), the other connectors and every built-in but ToolSearch: no Bash, no file tool, no guard
 +# hook of the guard needed because nothing in it can read or write the vault. Cap's M1 (22-10-2026): the arguments are checked BEFORE
 +# the tool runs, by a PreToolUse hook of the run's own (`--settings`, draft_delivery.hook_settings: create-draft only with exactly the
@@ -23,16 +23,16 @@ index 9b6f5144..6c8a040e 100644
 +DRAFT_RUN_SECONDS = 120
 +
 +
-+def draft_run_deny(allowed):
++def draft_run_deny(allowed, hooked=()):
 +    """A draft or access run's deny list: DENY_TOOLS, every Microsoft 365 action (draft_delivery.denied_tools) and every Microsoft
 +    365 READING tool (#183 review M1: the run must not read mail, Teams or SharePoint and put it in a draft), F3's
-+    run_deny_extras() and every built-in but ToolSearch, once each; never a tool in `allowed` (a deny beats an allow), so the
++    run_deny_extras() and every built-in but ToolSearch, once each; never a tool in `allowed` or `hooked` (a deny beats an allow and a hook's allow), so the
 +    access run keeps only get_granted_scopes and the draft run keeps none of the readers."""
 +    import draft_delivery
 +    out = []
 +    for t in (list(DENY_TOOLS) + draft_delivery.denied_tools() + vault_permissions.m365_read_tools()
 +              + vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES):
-+        if t not in out and t not in allowed:
++        if t not in out and t not in allowed and t not in hooked:
 +            out.append(t)
 +    return out
 +
@@ -51,7 +51,8 @@ index 9b6f5144..6c8a040e 100644
 +    connector is account-level, not a setting, so it stays (probed, Claude Code 2.1.x). MCP is not strict: it needs the connector."""
 +    import draft_delivery
 +    cmd = prompt_last([claude_path(), "-p", "--output-format", "stream-json", "--verbose", *NO_CONTEXT_ARGS, *NARROW_BUILTINS,
-+                       "--allowedTools", ",".join(allowed), "--disallowedTools", ",".join(draft_run_deny(allowed)),
++                       "--allowedTools", ",".join(allowed), "--disallowedTools",
++                       ",".join(draft_run_deny(allowed, draft_delivery.hook_tools() if hook_file else ())),
 +                       *(["--settings", draft_delivery.hook_settings(draft_hook_runner(), hook_file)] if hook_file else [])], prompt)
 +    try:
 +        r = subprocess.run(cmd, cwd=neutral_cwd(), capture_output=True, text=True, timeout=DRAFT_RUN_SECONDS,
