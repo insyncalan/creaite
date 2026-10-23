@@ -1,10 +1,11 @@
+diff --git a/system/scripts/review.py b/system/scripts/review.py
+index edfbf73a..0871e2e6 100644
 --- a/system/scripts/review.py
 +++ b/system/scripts/review.py
-@@ -2594,6 +2594,73 @@
- 
+@@ -2595,5 +2595,72 @@ def _main_with_numbers(argv):
  _main_before_numbers = main
  main = _main_with_numbers
-+
+ 
 +# ===== 2.6.2 (#314) ===== "approve N --expect <fp>" and "reject N --expect <fp>": act only if item N is still the one the caller meant
 +EXPECT_FP = re.compile(r"[0-9a-f]{12}")
 +BLOCK_REFS = ("meeting", "report", "file_changes")
@@ -13,14 +14,14 @@
 +class ExpectMismatch(Exception):
 +    """The item at a review number is not the one whose fingerprint the caller gave."""
 +
- 
++
 +def _expecting(real, want):
 +    """lookup with the check made on the very file read for the decision (build_dashboard.item_fp / block_fp, 12 hex)."""
 +    def look(n):
 +        """The same four values as lookup; ExpectMismatch when the item at n is not the one fingerprinted `want`."""
 +        p, data, ref, item = real(n)
 +        import build_dashboard
-+        if (build_dashboard.block_fp(item) if ref in BLOCK_REFS else build_dashboard.item_fp(item)) != want:
++        if item is None or (build_dashboard.block_fp(item) if ref in BLOCK_REFS else build_dashboard.item_fp(item)) != want:   # None: taken out
 +            raise ExpectMismatch(f"{n}: not recorded — that item has changed since you looked at it, "
 +                                 "so nothing was changed. Look at the list again.")
 +        return p, data, ref, item
