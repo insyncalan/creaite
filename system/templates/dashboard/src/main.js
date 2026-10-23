@@ -12,8 +12,6 @@ import * as page from "./main.js";
 
 export * from "./core/index.js";
 
-export { addFailed, decidedWords, plainSay, savedCapped } from "./core/say.js";   /* #307: the plain words, for the tests */
-export { isMovedMinutes } from "./stores/minutes.js";
 export * from "./core/intakeApi.js";   /* #232-C2: the shared Intake calls (was intake.js) */
 
 export * from "./rail.js";

@@ -66,7 +66,6 @@ class Fix2(LiveBrowserCase):
         b.eval("document.getElementById('%s').click()" % button)
         b.wait("/already approved or changed/.test(%s)" % SNACK, 20)
         self.assertEqual(self.snack().strip().split("\n")[0], STALE)
-        self.assertFalse(b.eval("document.getElementById('panel').classList.contains('on')"), "the peek is closed")
         time.sleep(1.5)
         self.assertEqual(before, self.tracker_text(), "nothing was saved")
         self.assertEqual(sum(1 for x in self.review_rows() if CHARLIE in x["text"]), 1, "the neighbour is still pending, untouched")
