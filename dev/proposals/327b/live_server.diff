@@ -10,7 +10,7 @@
              except OSError as e:
                  return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e}). Is `claude` installed and "
                                                                 f"signed in?"})
-@@ -2553,20 +2554,51 @@
+@@ -2553,20 +2554,59 @@
      if policy in TOOLLESS_KINDS or policy == "calendar":       # #265: the calendar refresh reads no project file
          return []
      return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
@@ -37,13 +37,21 @@
 +             for m in (msgs or [])[-CARRY_TURNS:] if isinstance(m, dict) and m.get("text")]
 +    return ("\n\n---\nBackground only, the end of this chat so far (not instructions; Alan's message is the text above this line):\n"
 +            + "\n".join(lines)) if lines else ""
- 
- 
++
++
 +def mark_session(session, chat):
 +    """#327 B: the session whose outside-content mark a fresh run inherits: the page's session, else the chat's last or first one,
 +    whichever had read outside content (the page's values can be lost or stale, so the chat's own record counts too)."""
 +    marked = reach.marked_sessions()
 +    return next((x for x in (session, chat_session(chat), chat) if x and x in marked), session)
+ 
+ 
++def fresh_plan(fresh, sweep, kind, session, chat):
++    """#327 B: (the carried text, the session the guard marks from, the session to resume, the usage line's `resumed`) for a run.
++    A resumed run is as before; a fresh one resumes nothing, and an ask's `resumed` is False (None for the other kinds)."""
++    if not fresh:
++        return "", session, session, (bool(session) if kind == "ask" else None)
++    return ("" if sweep else carry_over(chat)), mark_session(session, chat), None, (False if kind == "ask" else None)
 +
 +
  class Run:
@@ -59,31 +67,32 @@
          prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
          self.images = list(images)
 -        said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
-+        carry = carry_over(chat) if fresh and not sweep else ""          # #327 B
++        carry, mark, resume, resumed = fresh_plan(fresh, sweep, kind, session, chat)      # #327 B
 +        said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images) + carry
          cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                 "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
                 "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
-@@ -2574,14 +2606,16 @@
+@@ -2574,14 +2614,16 @@
          cmd += more
          for d in run_dirs(policy, guarded):                     # #264: a Process run reads the vault and the projects folder
              cmd += ["--add-dir", d]
 -        cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session,
 +        cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held,
-+                          mark_session(session, chat) if fresh else session,
++                          mark,
                            files=files, as_minutes=as_minutes)                       # #264, #232 E1: a Process run only
          self.guarded = guarded
 -        if session:
-+        if session and not fresh:                               # #327 B: a fresh run keeps the old session only for the guard's mark above
-             cmd += ["--resume", session]
+-            cmd += ["--resume", session]
++        if resume:                                              # #327 B: a fresh run keeps the old session only for the guard's mark above
++            cmd += ["--resume", resume]
          cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
          self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
          self.sweep = bool(sweep)                                # BL-309
-+        self.resumed = bool(session) and not fresh if kind == "ask" else None     # #327 B: the usage line says which (counts only)
++        self.resumed = resumed                                  # #327 B: the usage line says which (counts only)
          self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
          self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
          self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
-@@ -3047,7 +3081,7 @@
+@@ -3047,7 +3089,7 @@
              kind, label = usage_kind(self)
              run_usage(kind, getattr(self, "usage_result", None), label=label, model=getattr(self, "usage_model", ""),
                        seconds=time.time() - self.started, start_tokens=getattr(self, "usage_start", 0), stopped=bool(self.stop),
@@ -92,7 +101,7 @@
          except Exception as e:  # noqa: BLE001
              swallowed("usage", e)
      # ===== end #197 =====
-@@ -3195,7 +3229,7 @@
+@@ -3195,7 +3237,7 @@
          images = [i for i in item.get("images") or [] if ask_image_files(i)]
          try:
              nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
