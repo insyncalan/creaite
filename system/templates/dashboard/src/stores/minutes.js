@@ -193,12 +193,13 @@ export function trackApprovedWords(r) {
   return `Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} still to check` : ""}`;
 }
 
-/** Export the minutes as HTML, Word or PDF (P2's export, opened once made). #268: one version only: the view never asks for
-    the distributed export (the server's distributed code is left as it is). @param {string} format */
-export async function exportMinutes(format) {
+/** Export the minutes as HTML, Word or PDF (P2's export, opened once made). #330: `version` "distributed" is the Shareable file
+    (the server's distributed_of: no Sensitive, partner-only, excluded or Internal only content); anything else is the Internal one.
+    @param {string} format @param {"internal"|"distributed"} [version] */
+export async function exportMinutes(format, version = "internal") {
   const v = minutesView.value;
   if (!v || !v.ok || !v.path) return { ok: false, message: "The minutes aren't open." };
-  return (await api("/api/minutes/export", { path: v.path, format, file_beside: true })) || { ok: false, message: "Not exported." };
+  return (await api("/api/minutes/export", { path: v.path, format, file_beside: true, version: version === "distributed" ? "distributed" : "internal" })) || { ok: false, message: "Not exported." };
 }
 
 /** #306: the words when the transcript has gone (review.HELD_MINUTES_WORDS). */

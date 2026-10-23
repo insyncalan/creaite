@@ -50,13 +50,20 @@ import { signal } from "@preact/signals";
     real size (fitMax: 100%), so a wide screen shows the A4 page centred on the grey; − + and a pinch still go past it. The bar
     says the real size (the scale drawn, so hiding the transcript, which widens the area, says the new size). */
 export const MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
-/** The Export menu (Word is an export only: editing the exported file never flows back). */
+/** The Export menu (Word is an export only: editing the exported file never flows back). #330: Shareable first (the default
+    pairing with the follow-up email: nothing Internal only, Sensitive, partner-only or excluded), then Internal (everything,
+    marked Internal). The ids are "<format>:<version>". */
 export const MN_EXPORTS = [
-  { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
-  { id: "pdf", name: "PDF", line: "Printed from the page" },
-  { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
+  { head: "Shareable: for sending" },
+  { id: "docx:distributed", name: "Word", line: "Shareable. No Sensitive or Internal-only items; edits to it never come back" },
+  { id: "pdf:distributed", name: "PDF", line: "Shareable. Printed from the page" },
+  { id: "html:distributed", name: "HTML", line: "Shareable. A read-only page, filed beside the minutes" },
+  { id: "followup", name: "Draft the follow-up email", line: "Shareable: no Internal-only or Sensitive items; copied, never sent" },
   { id: "sep", sep: true },
-  { id: "followup", name: "Draft the follow-up email", line: "For sending: no Internal-only or Sensitive items; copied, never sent" },
+  { head: "Internal: colleagues only" },
+  { id: "docx:internal", name: "Word (Internal)", line: "Everything, marked Internal; an export only, edits never come back" },
+  { id: "pdf:internal", name: "PDF (Internal)", line: "Everything, marked Internal" },
+  { id: "html:internal", name: "HTML (Internal)", line: "Everything, marked Internal; filed beside the minutes" },
   { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }];
 
 let dirty = false;
@@ -89,8 +96,9 @@ async function exportAs(id) {
   const v = minutesView.value;
   if (id === "followup") { openMinutesFollowup(v && v.path, "distributed"); return; }          // the default: nothing Internal or Sensitive
   if (id === "followup-internal") { openMinutesFollowup(v && v.path, "internal"); return; }   // a deliberate choice
-  const r = await exportMinutes(id);
-  snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
+  const [fmt, ver] = id.split(":");
+  const r = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
+  snack(r.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
 }
 
 /** #283 Read again: the meeting's minutes drafted afresh from its transcript, as their own run (POST /api/minutes/reextract through

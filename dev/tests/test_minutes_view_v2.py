@@ -424,8 +424,9 @@ class MinutesViewV2(LiveBrowserCase):
         self.b.wait("document.querySelector('.ddmenu.on')")
         items = self.ev("[...document.querySelectorAll('.ddmenu.on [role=menuitem]')].map(x=>[x.querySelector('b,strong,.mname')?x.querySelector('b,strong,.mname').textContent:x.textContent, x.textContent])")
         names = [i[0] for i in items]
-        self.assertEqual(names, ["Word", "PDF", "HTML", "Draft the follow-up email", "Draft an Internal follow-up email"])
-        for name, whole in items[:3]:
+        self.assertEqual(names, ["Word", "PDF", "HTML", "Draft the follow-up email",       # #330: Shareable first, then Internal
+                                 "Word (Internal)", "PDF (Internal)", "HTML (Internal)", "Draft an Internal follow-up email"])
+        for name, whole in items[:3] + items[4:7]:
             self.assertGreater(len(whole), len(name) + 10, f"{name} has its description line")
         self.assertIn("never come back", items[0][1], "Word is an export only")
         self.b.key("Escape")
