@@ -1,8 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 5e5018d3..cffef8ba 100644
+index 9b6f5144..32c744ce 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -5985,6 +5985,37 @@ REVIEW_WORK_ROUTES["/api/review/retarget"] = review_retarget_route
+@@ -6228,6 +6228,37 @@ REVIEW_WORK_ROUTES["/api/review/retarget"] = review_retarget_route
  # ===== end BL-297 =====
  
  
