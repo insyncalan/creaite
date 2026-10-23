@@ -210,8 +210,8 @@ export function writeProposal(items,extra){ return vq(async()=>{ let name=`propo
    is set to the item's number in that file, so the callers' `i.n===r.ref` finds the right one; none found (renumbered and changed, the
    file deleted and written again, approved elsewhere) refuses with "already ... changed". The write carries expect_text (/api/fs), so a
    file that changed between the read and the write (a second tab, an apply, a sweep) is never written over. */
-export let editProposal = function(file,mut,rws){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
-  const guarded=rws?[].concat(rws):[]; for(const r of guarded) if(!findGuarded(data,r)) throw new Error("already approved or changed");
+export let editProposal = function(file,mut,rws,same){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
+  const guarded=rws?[].concat(rws):[]; for(const r of guarded) if(!findGuarded(data,r,same)) throw new Error("already approved or changed");
   const apWas=apSnap(data); mut(data); apStamp(data,apWas); try{ await shared.VW.write(path,JSON.stringify(data,null,2)+"\n",text); }catch(e){ if(/changed since it was read/.test(e.message)) throw new Error("already approved or changed"); throw e; }
   guarded.forEach(r=>{ const was=r.fp; refreshGuard(data,r); snapFollowEdit(file,was,r.fp); }); }); };
 export const STALE_ROW_MSG="That one was already approved or changed, so nothing was saved. The list has been refreshed.";
