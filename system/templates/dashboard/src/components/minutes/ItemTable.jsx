@@ -28,6 +28,7 @@ import { jumpTo } from "./TranscriptPane.jsx";
 import { shortTime } from "./TextLines.jsx";
 import { DeadlinePopover } from "./DeadlinePopover.jsx";
 import { attnFilter, attnFocus, hiddenBy } from "./Attention.jsx";
+import { keyRow } from "./rowKeys.js";
 import { needsOf, nextTrack, setTrack, trackOf, rowN } from "./track.js";
 import { A, DEC, R, wsFor } from "../../core/data.js";
 import { go } from "../../core/nav.js";
@@ -178,7 +179,7 @@ function MnRow({ r, ctx, full }) {
   const need = t === "y" ? needsOf(ctx.doc, m.plan, m.checks).get(n) : undefined, hide = hiddenBy(need, attnFilter.value);
   const held = row.ref ? ((minutesView.value || {}).withheld || {})[String(row.ref)] || "" : "";    // Cap's #268 review L2: read only
   return (
-    <tr class={`mi${lit ? " hl" : ""}${attnFocus.value === n ? " nx" : ""}`} hidden={hide || undefined} data-n={n} data-trk={t} data-ref={row.ref || undefined} data-turn={turn || undefined}
+    <tr class={`mi${lit ? " hl" : ""}${attnFocus.value === n ? " nx" : ""}${keyRow.value === n ? " kc" : ""}`} tabIndex={-1} hidden={hide || undefined} data-n={n} data-trk={t} data-ref={row.ref || undefined} data-turn={turn || undefined}
       onMouseEnter={() => { if (turn) hoverTurn.value = { turn, from: "row" }; }} onMouseLeave={() => { if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null; }}>
       <td class="mntc"><TrackButtons t={t} label={label} onPick={w => ctx.setDoc(setTrack(ctx.doc, n, w === "m" ? "" : nextTrack(t, w)), "Track")} /></td>
       <td class="mnic">

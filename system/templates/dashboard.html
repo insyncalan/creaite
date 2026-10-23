@@ -3670,6 +3670,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnflag2{display:inline-block;font-size:var(--fs-xs);color:var(--warn);background:var(--warn-soft);border-radius:var(--r-pill);padding:1px 9px}
 .page tr.mi.nx td{background:var(--accent-soft)}
 .page tr.mi[hidden]{display:none}
+.page tr.mi.kc{outline:2px solid var(--accent);outline-offset:-2px}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -46263,7 +46264,7 @@ system/scripts/run launch.py agent ${what}`;
     h2(() => {
       if (ed3.current) paintChecks(ed3.current, checks);
     }, [key2]);
-    const [active, setActive] = d2(false);
+    const [active2, setActive] = d2(false);
     const [spot, setSpot] = d2(
       /** @type {BarSpot} */
       "al"
@@ -46272,7 +46273,7 @@ system/scripts/run launch.py agent ${what}`;
       /** @type {HTMLDivElement|null} */
       null
     );
-    const showBar = active && editable && rich;
+    const showBar = active2 && editable && rich;
     _2(() => {
       const w6 = wrap.current, bar = w6 && /** @type {HTMLElement|null} */
       w6.querySelector(".sheet-rtebar");
@@ -52048,13 +52049,13 @@ system/scripts/run launch.py agent ${what}`;
     );
     return ok2 !== false;
   }
-  async function setProjectActive(code, active) {
+  async function setProjectActive(code, active2) {
     const p6 = psProject(code);
     if (!p6) return false;
-    const was = projectState(code), now = active ? "active" : "closed";
+    const was = projectState(code), now = active2 ? "active" : "closed";
     const ok2 = await save(
-      `${p6.name}: ${active ? "active again" : "closed"}`,
-      [{ op: "update", table: "projects", id: code, changes: { active: active ? 1 : 0 } }],
+      `${p6.name}: ${active2 ? "active again" : "closed"}`,
+      [{ op: "update", table: "projects", id: code, changes: { active: active2 ? 1 : 0 } }],
       null,
       () => {
         markState(code, now);
@@ -61739,7 +61740,7 @@ ${d5.text}`);
     if (!dl2 || !MOREF[k5]) return;
     const mark = [...dl2.querySelectorAll(":scope>.fsec")].find((e4) => e4.textContent === MOREMARK);
     if (!mark) return;
-    const active = document.activeElement, key2 = `${shared.CUR.mode}:${k5}:${shared.CUR.id || shared.CUR.n || "new"}`, x5 = curObj();
+    const active2 = document.activeElement, key2 = `${shared.CUR.mode}:${k5}:${shared.CUR.id || shared.CUR.n || "new"}`, x5 = curObj();
     const det = document.createElement("details");
     det.className = "morefields";
     putHTML(det, html`<summary>More fields</summary>`);
@@ -61758,7 +61759,7 @@ ${d5.text}`);
     det.querySelector("summary").addEventListener("click", () => setTimeout(() => {
       MOREOPEN[key2] = det.open;
     }));
-    if (active && box.contains(active)) active.focus();
+    if (active2 && box.contains(active2)) active2.focus();
   }
   var msName = (id2) => {
     const m5 = (D.milestone_names || {})[id2];
@@ -71286,6 +71287,94 @@ ${d5.text}`);
     );
   }
 
+  // components/minutes/rowKeys.js
+  var keyRow = y3(
+    /** @type {number|null} */
+    null
+  );
+  var UNDO = [];
+  var rowKeysReset = () => {
+    keyRow.value = null;
+    UNDO.length = 0;
+  };
+  var shownRows = () => [...document.querySelectorAll("#v-minutes tr.mi:not([hidden])")].map((r4) => Number(
+    /** @type {HTMLElement} */
+    r4.dataset.n
+  ));
+  function moveRow(d5) {
+    const list = shownRows();
+    if (!list.length) return;
+    const at2 = keyRow.value == null ? -1 : list.indexOf(keyRow.value);
+    const n4 = at2 < 0 ? d5 === 1 ? list[0] : list[list.length - 1] : list[Math.max(0, Math.min(list.length - 1, at2 + d5))];
+    keyRow.value = n4;
+    requestAnimationFrame(() => {
+      const row2 = (
+        /** @type {HTMLElement|null} */
+        document.querySelector(`#v-minutes tr.mi[data-n='${n4}']`)
+      );
+      if (row2) {
+        row2.focus({ preventScroll: true });
+        row2.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
+  }
+  var active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
+  function rowKey(e4, api2) {
+    if (e4.metaKey || e4.ctrlKey || e4.altKey || e4.shiftKey || e4.isComposing || !e4.key || e4.key.length !== 1 || !active()) return false;
+    const doc = api2.doc();
+    if (!doc || doc.state !== "draft") return false;
+    const k5 = e4.key.toLowerCase();
+    if (k5 === "j" || k5 === "k") {
+      moveRow(k5 === "j" ? 1 : -1);
+      return true;
+    }
+    const n4 = keyRow.value;
+    if (k5 === "z") {
+      const u5 = UNDO.pop();
+      if (!u5) return false;
+      const track = { ...(doc.layout || {}).track || {} };
+      if (u5.was === void 0) delete track[String(u5.n)];
+      else track[String(u5.n)] = u5.was;
+      api2.setDoc({ ...doc, layout: { ...doc.layout || {}, track } }, "Track");
+      keyRow.value = u5.n;
+      return true;
+    }
+    if (n4 == null || !"ymnes".includes(k5)) return false;
+    const r4 = trackRows(doc).find((x5) => x5.n === n4);
+    if (!r4) return false;
+    if (k5 === "e") {
+      const box = (
+        /** @type {HTMLElement|null} */
+        document.querySelector(`#v-minutes tr.mi[data-n='${n4}'] .mnit [contenteditable='true']`)
+      );
+      if (box) box.focus();
+      return true;
+    }
+    if (k5 === "s") {
+      const turn = r4.row && r4.row.at && r4.row.at.turn ? Number(r4.row.at.turn) : null;
+      if (turn) jumpTo(turn);
+      else snack("This line has no place in the transcript");
+      return true;
+    }
+    const want = k5 === "y" ? "y" : k5 === "n" ? "n" : "";
+    if (trackOf(doc, r4, api2.plan()) === want) return true;
+    const was = ((doc.layout || {}).track || {})[String(n4)];
+    UNDO.push({ n: n4, was });
+    api2.setDoc(setTrack(doc, n4, want), "Track");
+    return true;
+  }
+  var installed = false;
+  function installRowKeys(api2) {
+    if (installed) return;
+    installed = true;
+    document.addEventListener("keydown", (e4) => {
+      if (rowKey(e4, api2)) {
+        e4.preventDefault();
+        e4.stopPropagation();
+      }
+    }, true);
+  }
+
   // components/minutes/ItemTable.jsx
   var MAIN = { actions: "action", decisions: "decision", raid: "description" };
   var ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
@@ -71488,7 +71577,8 @@ ${d5.text}`);
     return /* @__PURE__ */ u4(
       "tr",
       {
-        class: `mi${lit ? " hl" : ""}${attnFocus.value === n4 ? " nx" : ""}`,
+        class: `mi${lit ? " hl" : ""}${attnFocus.value === n4 ? " nx" : ""}${keyRow.value === n4 ? " kc" : ""}`,
+        tabIndex: -1,
         hidden: hide || void 0,
         "data-n": n4,
         "data-trk": t47,
@@ -72089,10 +72179,15 @@ ${d5.text}`);
     if (!mnMounted) {
       R(/* @__PURE__ */ u4(MinutesView, {}), el2);
       mnMounted = true;
+      installRowKeys({ doc: () => minutesDoc.value, plan: () => {
+        const v5 = minutesView.value;
+        return v5 && v5.plan ? v5.plan.items : null;
+      }, setDoc: onDoc });
     }
     const a5 = typeof arg === "string" ? { path: arg } : arg;
     if (a5 && (a5.file || a5.path)) {
       dirty = false;
+      rowKeysReset();
       keptChecks.value = [];
       approveOpen.value = false;
       paneRemembered();
