@@ -301,8 +301,7 @@ class Fetch(unittest.TestCase):
                      self.fact("ev-2", uri="meeting-transcript:///attacker-chosen")):   # a URL of the attacker's choosing
             with self.subTest(fact=fact["uri"][-24:] + fact["id"]):
                 self.record(fact)
-                for eid in ("ev-1", "ev-2"):
-                    self.assertEqual(self.obs([(fact["uri"], secret, False)]), {})      # no event read in this run: refused
+                self.assertEqual(self.obs([(fact["uri"], secret, False)]), {})          # no event read in this run: refused
                 self.assertEqual(self.inbox(), [])
         # and with an event read in the run, a recorded URL for another meeting still does not bind: ev-2's read names its own URL
         self.record(self.fact("ev-2", uri=ev1_url))

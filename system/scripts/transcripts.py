@@ -965,7 +965,7 @@ class Job:
         stem = file_stem(day, meta["title"])
         paths.INBOX.mkdir(parents=True, exist_ok=True)
         vtt = unique(paths.INBOX, stem, ".vtt")
-        with open(vtt, "x", encoding="utf-8", newline="\n") as fh:      # "x": a dangling symlink at the name is refused, not followed    # write_text(newline=) needs Python 3.10; creaite runs on 3.9
+        with open(vtt, "x", encoding="utf-8", newline="\n") as fh:      # "x": no dangling link; 3.9
             fh.write(tidy_vtt([t["content"] for t in self.transcripts], meta))
         files = [paths.rel(vtt)]
         msg = f"Loaded {vtt.name}."

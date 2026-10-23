@@ -36,12 +36,14 @@ Both are already in `permissions.M365_READ`, so already in `READ_TOOLS` and `KIN
 
 The staging row records `transcripts.json`'s new stamps (`fetched`, `left`, `fetch_error` times and a `fetch_tries` count) and the
 new `sweep-fetched.json` (event IDs by outcome, cleared by `done`/`fail`); the cx-sweep row mentions the off-by-default fetch, the
-fail-closed sensitivity and the result-file tie.
+fail-closed sensitivity and the observer-only tie (no result-file tie: option 2 has none).
 
 ## Points for the guard check
 
 - **In the live server** the observer ties each transcript read to its event by the URL the event read returned (`SweepFetch.uris`),
-  and holds back any event whose own read says its sensitivity isn't `normal`.
+  and holds back any event whose own read says its sensitivity isn't `normal`. **Only that map ties a read (Cap's HIGH, 23-10):** a URL
+  recorded in `transcripts.json` (typed by Claude through `record`) is never a tie; an unknown URL, or a read in a run that did not
+  read the event, is refused. The observer takes only the exact read tool name, and writes with `open(..., "x")` (a planted link is refused).
 - **Claude Code sessions (no live server):** nothing is fetched (option 2). `transcripts record` takes the same facts as before, minus `result_file`.
 - **Sensitivity fails closed:** only `normal` is fetched; a missing or unknown value counts as confidential (the sweep writes the
   key for every row that isn't private).
