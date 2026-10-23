@@ -40,7 +40,8 @@ class IntakeHeld(LiveBrowserCase):
     def test_a_failure_is_said_on_the_row(self):
         b = self.b
         n = self.open_row()
-        b.eval("window.api=(p,o)=>Promise.resolve(p==='/api/review'?{ok:false,message:\"2: not approved — the minutes are open in Word\"}:{ok:true,message:''})")
+        # other routes go through: the page reads the proposal file first (#307 h2 guardFresh) and must find the row's item in it
+        b.eval("window.REALAPI=window.api; window.api=(p,o)=>p==='/api/review'?Promise.resolve({ok:false,message:\"2: not approved — the minutes are open in Word\"}):window.REALAPI(p,o)")
         b.click(f"{ROW % n} [data-ira=held-approve]")
         b.wait("(document.getElementById('toastHost')||{innerText:''}).innerText.includes('Not saved because')", timeout=15)
         b.pump(0.5)
