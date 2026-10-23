@@ -48,7 +48,7 @@ class ContextMenuTests(LiveBrowserCase):
     def test_work_row_menu_saves_through_the_existing_path(self):
         b = self.b
         ids = self.work()
-        b.click(f'#workTbl tr[data-row="{ids[0]}"] td.title', button="right")
+        b.click(f'#workTbl tr[data-row="{ids[0]}"] td.title', inset=110, button="right")
         b.wait(f'!!document.querySelector("{MENU}")')
         self.assertEqual(b.eval(f'document.querySelector("{MENU} [role=menu]").getAttribute("role")'), "menu")
         L = self.labels()
@@ -77,9 +77,9 @@ class ContextMenuTests(LiveBrowserCase):
     def test_several_rows_act_together(self):
         b = self.b
         ids = self.work()
-        b.click(f'#workTbl tr[data-row="{ids[0]}"] td.title')
-        b.click(f'#workTbl tr[data-row="{ids[2]}"] td.title', modifiers=CMD)
-        b.click(f'#workTbl tr[data-row="{ids[2]}"] td.title', button="right")
+        b.click(f'#workTbl tr[data-row="{ids[0]}"] td.title', inset=110)
+        b.click(f'#workTbl tr[data-row="{ids[2]}"] td.title', inset=110, modifiers=CMD)
+        b.click(f'#workTbl tr[data-row="{ids[2]}"] td.title', inset=110, button="right")
         b.wait(f'!!document.querySelector("{MENU}")')
         L = self.labels()
         self.assertEqual(L[0], "#2 items")

@@ -216,7 +216,7 @@ class ReviewIcons(LiveBrowserCase):
         b = self.b
         S.open_page(b)
         self.assertTrue(b.eval("/^Approve routine \\(\\d+\\)$/.test(document.querySelector('[data-ira=routine]').textContent.trim())"))
-        self.assertIn("Approves every routine proposal here", b.eval("document.querySelector('[data-ira=routine]').title"))
+        self.assertIn("Approves every routine suggestion here", b.eval("document.querySelector('[data-ira=routine]').title"))
         row = "#v-intake-review tr.irprop"
         acts = b.eval(f"""(()=>{{ const tr=document.querySelector('{row}'); const q=s=>tr.querySelector(s);
           return {{approve:q('[data-ira=approve]').textContent.trim(), reject:[q('[data-ira=reject]').textContent.trim(), q('[data-ira=reject]').getAttribute('aria-label'), q('[data-ira=reject]').dataset.tip],
@@ -284,7 +284,7 @@ class TheRest(LiveBrowserCase):
 
     def test_the_copy_icon_ticks(self):
         b = self.b
-        b.eval("go('settings'); const q=$('#setq'); q.value='live server'; q.dispatchEvent(new Event('input',{bubbles:true}))")
+        b.eval("go('settings'); const q=$('#setq'); q.value='restart creaite'; q.dispatchEvent(new Event('input',{bubbles:true}))")
         b.pump(0.3)
         sel = "#settingsBody [data-copycmd]"
         b.wait(f"!!document.querySelector({sel!r})")

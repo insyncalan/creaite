@@ -211,8 +211,9 @@ class Report:
                 self.b.wait("!!document.querySelector('%s .sheet-root.rpt-slim')" % self.VIEW, 5)
                 self.b.pump(0.3)
                 self.assertTrue(self.off())
-                self.assertAlmostEqual(self.b.eval(f"document.querySelector('{self.VIEW} .sheet-bar').getBoundingClientRect().top"), 0, delta=1.5,
-                                       msg="#202's slim bar is at the very top of the window")
+                self.assertAlmostEqual(self.b.eval(f"document.querySelector('{self.VIEW} .sheet-bar').getBoundingClientRect().top"),
+                                       self.b.eval(f"document.querySelector('{self.VIEW} .mnattn')?.getBoundingClientRect().height || 0"), delta=1.5,
+                                       msg="#202's slim bar is at the very top of the window (under the minutes' attention strip, #302 A, which stays)")
                 for up in (8, 50, 500):
                     self.b.eval(f"{self.scroller()}.scrollTop=900")
                     self.b.pump(0.2)
