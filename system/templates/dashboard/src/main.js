@@ -40,6 +40,7 @@ export * from "./meetings.js";
 
 export * from "./help.js";
 export * from "./autostart.js";   /* #300 */
+export * from "./profile.js";   /* #312 */
 export * from "./helpscreen.js";
 
 export * from "./drafts.js";
@@ -130,6 +131,7 @@ import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAs
 import { bootData } from "./core/data.js";
 import { bootDayRoll } from "./core/dayroll.js";
 import { bootAutostart } from "./autostart.js";
+import { bootProfile } from "./profile.js";   /* #312 */
 import { bootDialogs } from "./components/dialogs/PageDialogs.jsx";
 import { bootLostClick, bootTooltips } from "./core/dom.js";
 import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources, bootTickBoxes, bootWeekendNote } from "./core/fields.js";
@@ -319,4 +321,5 @@ bootAsk0208();
 bootNotes();   /* BL-301 B */
 bootDayRoll();   /* #171 */
 bootAutostart();   /* #300 */
+bootProfile();   /* #312 */
 bootPageRefresh();   /* BL-327: last, once everything is drawn */

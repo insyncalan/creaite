@@ -9,6 +9,7 @@ import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
 import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, revForModelN, SWEPT, wsKey } from "./core/data.js";
 import { effect } from "@preact/signals";
 import { asCardHtml, asRedraw, asStatus, asWire } from "./autostart.js";
+import { profileCardHtml, profileWire } from "./profile.js";   /* #312 */
 import { h, render } from "preact";
 import { essText, Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
@@ -70,7 +71,7 @@ export const catOf=s=>CATOF[s.cat]||s.cat;
 /* Addresses: #settings/<tab> opens that tab; #settings/<sub> an Advanced sub-tab; #settings/<section> (sweep, diagnostics…)
    opens the tab the section is in and scrolls to it. The old ones (prefs, admin, general, capture, system, the old "more")
    still work. */
-export const SETOLD={prefs:"essentials",general:"look",capture:"sweep",system:"health",more:"advanced"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"essentials",vip:"essentials",you:"essentials"};
+export const SETOLD={prefs:"essentials",general:"look",capture:"sweep",system:"health",more:"advanced"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"essentials",vip:"essentials",you:"essentials",about:"profile","about-you":"profile","your-profile":"profile"};
 export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t};
   if(ADVSUBS.some(c=>c[0]===t)) return {cat:"advanced",sub:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
   const a=SETALIAS[t]||t; if(SETCATS.some(c=>c[0]===a)) return {cat:a};
@@ -124,6 +125,7 @@ export const SETSECTIONS=[
  /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
     whether a search finds anything in it. v2.6 (#246): `groups` are the catalogue groups drawn inside this card, after its
     own rows (one card per group). */
+ {id:"profile",cat:"essentials",title:"Your profile",raw:true,kw:"your profile about you name email aliases organisation role this is me",render:()=>profileCardHtml(),after:()=>profileWire()},   /* #312: your own people-register entry */
  {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day you short forms email domains follow browser notification",
   mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(essText(r),w)); }},
  {id:"views",cat:"work",title:"Opening views",groups:["Opening views"],kw:"default priority new action actions raid open status filter view opening page sort archived projects show",

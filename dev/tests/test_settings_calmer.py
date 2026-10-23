@@ -252,7 +252,7 @@ class SettingsChanging(LiveBrowserCase):
 
     def open(self, cat="essentials"):
         self.b.eval(f"go('settings',{cat!r})")
-        self.b.wait("VIEW==='settings' && document.querySelectorAll('#settingsBody .srow').length>0")
+        self.b.wait("VIEW==='settings' && document.querySelectorAll('#settingsBody .srow').length>0" + (" && document.querySelectorAll('#set-essentials .srow').length>0" if cat == "essentials" else ""))   # #312: Your profile's card has rows at once; the catalogue's come when it is read
 
     def ess_row(self, label):
         return (f"[...document.querySelectorAll('#set-essentials .srow')].find(r=>r.querySelector('span[id]').textContent==={label!r})")

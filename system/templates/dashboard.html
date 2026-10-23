@@ -4842,6 +4842,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PRESETS: () => PRESETS,
     PRIF: () => PRIF,
     PRIOS: () => PRIOS,
+    PROFILE_ASKED_KEY: () => PROFILE_ASKED_KEY,
     PROJF: () => PROJF,
     PROMS: () => PROMS,
     PRS: () => PRS,
@@ -5303,6 +5304,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bootPanel0199: () => bootPanel0199,
     bootPanel0200: () => bootPanel0200,
     bootPanelChase: () => bootPanelChase,
+    bootProfile: () => bootProfile,
     bootProjects0029: () => bootProjects0029,
     bootProjects0054: () => bootProjects0054,
     bootProjects0055: () => bootProjects0055,
@@ -5769,6 +5771,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     editCtl: () => editCtl,
     editFlow: () => editFlow,
     editProposal: () => editProposal,
+    emailKey: () => emailKey,
     emptyHtml: () => emptyHtml,
     endCurEdit: () => endCurEdit,
     errBanner: () => errBanner,
@@ -6718,7 +6721,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     previewInbox: () => previewInbox,
     prio: () => prio,
     processLive: () => processLive,
+    profileCardHtml: () => profileCardHtml,
+    profileDetails: () => profileDetails,
+    profileDone: () => profileDone,
+    profileEdit: () => profileEdit,
+    profileEntry: () => profileEntry,
+    profileQuestionDue: () => profileQuestionDue,
+    profileQuestionHtml: () => profileQuestionHtml,
+    profileRedraw: () => profileRedraw,
+    profileSave: () => profileSave,
     profileTools: () => profileTools,
+    profileWire: () => profileWire,
     projArchive: () => projArchive,
     projArchivedHtml: () => projArchivedHtml,
     projFeedItems: () => projFeedItems,
@@ -55307,6 +55320,118 @@ ${pre}**Current state title:** ${title}`);
   // stores/today.js
   var selDay = y3("");
 
+  // profile.js
+  var PROFILE_ASKED_KEY = "creaite-profile-asked";
+  var emailKey = (e4) => String(e4 || "").split(/[,;]/)[0].trim().toLowerCase();
+  function profileEntry() {
+    const me2 = String(S.me || "").trim();
+    if (!me2) return null;
+    return pFind(shared.REG, me2) || shared.REG.find((p6) => pKey(p6.name) === pKey(me2)) || null;
+  }
+  function profileDetails() {
+    const p6 = profileEntry();
+    return { name: String(S.me || "").trim(), email: p6 ? String(p6.email || "") : "", aliases: p6 ? p6.aliases || [] : [], org: p6 ? p6.org || "" : "", role: p6 ? p6.role || "" : "" };
+  }
+  var profileDone = () => {
+    const d5 = profileDetails();
+    return !!d5.name && !!emailKey(d5.email);
+  };
+  var askedBefore = () => {
+    try {
+      return !!store.get(PROFILE_ASKED_KEY, false);
+    } catch (e4) {
+      return false;
+    }
+  };
+  var profileQuestionDue = () => !profileDone() && !askedBefore();
+  async function profileSave(f5) {
+    const name = String(S.me || "").trim();
+    if (!name) {
+      snack("Add your name first");
+      return false;
+    }
+    return regEdit(name, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+  }
+  async function profileEdit() {
+    const name = String(S.me || "").trim();
+    if (!name) {
+      snack("Add your name first");
+      return false;
+    }
+    const p6 = profileEntry();
+    const res = await askPerson(p6 ? { edit: true, person: p6 } : { details: true, person: pBlank(name) });
+    if (!res || !res.person) return false;
+    const { name: _n2, ...f5 } = res.person;
+    return profileSave(f5);
+  }
+  function profileCardHtml() {
+    const d5 = profileDetails(), line = (l6, v5, id2) => `<div class="srow"><div><span id="${id2}Lab">${l6}</span></div><div><span id="${id2}">${v5 ? esc(v5) : '<span class="sub">Not set</span>'}</span></div></div>`;
+    return `<div class="card" id="profileCard" data-sec="profile"><h2>Your profile</h2>
+   <div class="srow"><div><span id="pfNameLab">Your name</span><small>Which person in the people register is you</small></div><div><input type="text" id="pfName" aria-labelledby="pfNameLab" value="${esc(d5.name)}" autocomplete="off"> <button type="button" class="btn" id="pfNameSave">Save name</button></div></div>
+   ${line("Email", d5.email, "pfEmail")}${line("Other ways people write your name", d5.aliases.join(", "), "pfAliases")}${line("Organisation", d5.org, "pfOrg")}${line("Role", d5.role, "pfRole")}
+   <div class="srow"><div><span id="pfDetailsLab">Details</span><small>Saved in the people register, like anyone else's, and you can undo a change</small></div><div><button type="button" class="btn primary" id="pfEdit" ${d5.name ? "" : "disabled"}>${profileEntry() ? "Edit my details" : "Add my details"}</button></div></div>
+   <p class="sub" id="pfNote">Your email is a label only. creaite doesn't check it, and it doesn't give you or anyone else access to anything. Which person is you is kept in this computer's settings, not in the shared register.</p></div>`;
+  }
+  function profileRedraw() {
+    const c5 = $("#profileCard");
+    if (c5) {
+      swapHTML(c5, raw(profileCardHtml()));
+      profileWire();
+    }
+  }
+  function profileWire() {
+    const b5 = $("#pfEdit");
+    if (b5) b5.onclick = async () => {
+      await profileEdit();
+      profileRedraw();
+    };
+    const s5 = $("#pfNameSave");
+    if (s5) s5.onclick = async () => {
+      const v5 = String(
+        /** @type {HTMLInputElement} */
+        $("#pfName").value || ""
+      ).trim();
+      if (!v5) {
+        snack("Your name can't be empty");
+        return;
+      }
+      if (await saveSettings({ "identity.name": v5 })) {
+        S.me = v5;
+        snack("Your name is saved");
+      }
+      profileRedraw();
+    };
+  }
+  function profileQuestionHtml() {
+    return profileQuestionDue() ? `<div class="tb" id="pfQ"><span class="t">About you</span><p>Add your name and email so creaite knows which items are yours. You can change this any time in Settings.</p>
+    <span class="rmgo"><button type="button" class="btn primary" data-pfq="yes">Add my details</button> <button type="button" class="btn" data-pfq="no">Not now</button></span></div>` : "";
+  }
+  function bootProfile() {
+    document.addEventListener("click", async (e4) => {
+      const q5 = (
+        /** @type {HTMLElement|null} */
+        /** @type {HTMLElement} */
+        e4.target.closest("[data-pfq]")
+      );
+      if (!q5) return;
+      e4.preventDefault();
+      if (q5.dataset.pfq === "no") {
+        try {
+          store.set(PROFILE_ASKED_KEY, true);
+        } catch (x5) {
+        }
+        snack("Okay. Settings › Essentials › Your profile has it when you want it");
+        if (shared.VIEW === "today") renderSetup();
+        return;
+      }
+      if (!String(S.me || "").trim()) {
+        go2("settings", "profile");
+        return;
+      }
+      if (await profileEdit() && shared.VIEW === "today") renderSetup();
+    });
+  }
+
   // today.js
   var dismissedF = () => store.list("creaite-dismiss"), dismissedS = () => {
     try {
@@ -56167,6 +56292,11 @@ ${pre}**Current state title:** ${title}`);
         putHTML(go3, html`<button type="button" class="mini" data-sucheck="m365" ${viaServer() ? "" : html`disabled title="creaite isn’t running"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`);
       }
       if ($("#setupList") && !$("#suMore")) addHTML($("#setupList"), "beforeend", html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`);
+    }
+    {
+      const q5 = profileQuestionHtml(), box2 = $("#setupList"), cur = $("#pfQ");
+      if (cur) cur.remove();
+      if (q5 && box2) addHTML(box2, "beforeend", raw(q5));
     }
     {
       const q5 = asQuestionHtml(), box2 = $("#setupList"), cur = $("#asQ");
@@ -58181,7 +58311,7 @@ system/scripts/run launch.py agent ${what}`;
   var CATOF = { general: "look", capture: "sweep", review: "advanced", system: "health" };
   var OLDCATS = { general: "You and the look", work: "Work and views", review: "Review and warnings", capture: "Capture and alerts", advanced: "Everything else" };
   var catOf = (s5) => CATOF[s5.cat] || s5.cat;
-  var SETOLD = { prefs: "essentials", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials" };
+  var SETOLD = { prefs: "essentials", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials", about: "profile", "about-you": "profile", "your-profile": "profile" };
   function setResolve(t47) {
     t47 = String(t47 || "").toLowerCase();
     if (SETCATS.some((c5) => c5[0] === t47)) return { cat: t47 };
@@ -58282,6 +58412,8 @@ system/scripts/run launch.py agent ${what}`;
     /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
        whether a search finds anything in it. v2.6 (#246): `groups` are the catalogue groups drawn inside this card, after its
        own rows (one card per group). */
+    { id: "profile", cat: "essentials", title: "Your profile", raw: true, kw: "your profile about you name email aliases organisation role this is me", render: () => profileCardHtml(), after: () => profileWire() },
+    /* #312: your own people-register entry */
     {
       id: "essentials",
       cat: "essentials",
@@ -80258,6 +80390,9 @@ ${d5.text}`);
         "previewInbox",
         "prio",
         "processLive",
+        "profileDone",
+        "profileQuestionDue",
+        "profileQuestionHtml",
         "profileTools",
         "projPeople",
         "projectState",
@@ -80885,6 +81020,7 @@ ${d5.text}`);
   bootNotes();
   bootDayRoll();
   bootAutostart();
+  bootProfile();
   bootPageRefresh();
   return __toCommonJS(main_exports);
 })();
