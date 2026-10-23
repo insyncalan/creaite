@@ -24,7 +24,7 @@ CHAIN_SHA256 = "a598a48e87c29f40227e21f2233329bd816e0c5154c1037e12f96a9b14cb3c8f
 # The 2.6.2 chain (dev/proposals/GUARDED-2.6.2.md): its own marker, list and pin. Its range starts at BASE, the 2.6.1 release commit.
 CHAIN2_MARKER = "Guarded 2.6.2 chain:"
 CHAIN2_FILE = "dev/proposals/GUARDED-2.6.2.chain"
-CHAIN2_SHA256 = "PIN2"
+CHAIN2_SHA256 = "223727761a2e2d51fc64e62d499c3de661b08b5a4cb0ecf98fdbde560a52e56b"
 # BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE (the default) is the 2.6.1 release commit. Until the 2.6.1 release
 # is cut it is the head of origin/v261-release2 (the 2.6.1 candidate with the 2.6.1 chain applied). Jarvis sets it to the final 2.6.1
 # release commit's FULL sha when 2.6.1 ships, and CHAIN2_SHA256 to the value `python3 dev/tests/guarded_chain.py` prints.
