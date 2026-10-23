@@ -21,7 +21,7 @@ dev/proposals/emit-event-txn/tracker.diff
 # follow wording (code). Slot: replace with origin/v262-followb's dev/proposals/vip-follow-code diffs if that branch lands.
 dev/proposals/vip-follow-code/propose.py.diff
 dev/proposals/vip-follow-code/live_server.py.diff
-# rules and skill: 183r, then VIP/follow, then 250 after-vip (RULES-ORDER.md)
+# rules and skill: 183h, then VIP/follow, then 250 after-vip
 dev/proposals/draft-delivery/rules-and-skill.diff
 dev/proposals/vip-follow-rules/creaite-rules.md.diff
 dev/proposals/fetch-transcripts/creaite-rules.after-vip.diff

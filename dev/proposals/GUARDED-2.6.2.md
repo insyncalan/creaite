@@ -4,8 +4,7 @@ Base: `5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b`, the published 2.6.1 release co
 The chain is `GUARDED-2.6.2.chain` (apply order). Apply it as ONE commit whose subject starts `Guarded 2.6.2 chain:`.
 The guard is `dev/tests/guarded_chain.py` (`CHAIN2_MARKER`, `CHAIN2_FILE`, `CHAIN2_SHA256`, `BASE2`/`BASE`); `python3 dev/tests/guarded_chain.py` prints both pins.
 Change the chain list or any listed diff, and `CHAIN2_SHA256` must be re-set (Alan's say). Owners of the listed diffs: f1 `origin/v262-f1b`,
-small `origin/v262-small`, discard-undo `origin/v262-discard-undo`, draft-delivery `origin/v262-183b` (live_server) and `origin/v262-183r`
-(rules-and-skill, RULES-ORDER.md), fetch-transcripts `origin/v262-250b`, follow code `origin/v262-followb` (identical to `v262-follow`),
+small `origin/v262-small`, discard-undo `origin/v262-discard-undo`, draft-delivery `origin/v262-183h` 68eb5391 (live_server 0fb173ec and rules-and-skill b1fb8d96), fetch-transcripts `origin/v262-250b`, follow code `origin/v262-followb` (identical to `v262-follow`),
 follow rules `origin/v261-vip-rules`. Rebuilt on `v262-line` (23-10-2026): every diff is byte for byte the version in the tree; none was regenerated. The review-expect diffs and the discard-undo review.py/reach.py/live_server.py diffs are the later versions (not the ones the first chain listed); the .chain list order is unchanged.
 
 ## Order (chosen)
@@ -48,3 +47,12 @@ Browser tests and handchecks were not run. Only discard-undo's two test files tu
 Every 2.6.1 case now runs for the 2.6.1 chain and again for the 2.6.2 chain (extra edit in a marked commit, unmarked edit, forgeries a, b, c,
 missing chain file, pin mismatch, live pin). Six more mix the two chains. Real check 9 (test_word_export_227): passes on the branch (release2 + guard),
 on a simulated 2.6.2 commit (chain applied, `Guarded 2.6.2 chain: simulated`), against `BASE` and against `BASE_261`; an extra unmarked tracker.py edit then fails.
+
+## Changed on the line after the first assembly (23-10-2026)
+- 183r/183b replaced by 183h (hook-only create tool). `RULES-ORDER.md` is gone with 183r: the rules order is unchanged (183h, VIP/follow, 250 after-vip).
+- emit-event-txn/tracker.diff regenerated (Cap #275 MEDIUM: the dry run records no events, a lasting history fault refuses the apply).
+- review-expect/review.py.diff regenerated (a repeated --expect is refused). Everything else in the chain is byte for byte its branch.
+- The 250 URL fix is in transcripts.py (not guarded); the live_server diff is unchanged.
+- Left open, with reasons: Cap's H-1a (reextract: a manifest with valid fields still acts) is closed only by a ledger under system/guard/
+  (a never-list place: reach.py and the guard, so a guarded diff and Alan's decision; Cap's draft ef4471b9 exists), and any check on `at`
+  would also refuse a genuine hold left by a crash after a long downtime. Not taken. H-1b (size cap) is done in reextract.py.
