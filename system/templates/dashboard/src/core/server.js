@@ -132,6 +132,13 @@ export async function blockerWords(list){ const parts=[];
    (an item, not its minutes: the refusal names items, and minutes open in their own view) */
 export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done), first=L.find(x=>!["draft","files"].includes(x.kind))||L[0];
   go("intake-review",first?{n:first.n}:undefined); if(first){ irReveal([first.n,...L.map(x=>x.n)]); openProposal(first.n); } }
+/* 2.6.2: is this draft held right now? One server read of the review list (nothing on the page is replaced except the row's own held reason),
+   so an approve checks the transcript as it is this moment, not as it was when the page loaded. Returns the reason, or "" */
+export async function heldNow(file){ if(!SERVED) return "";
+  try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return ""; const n=await r.json();
+    const row=(n.review||[]).find(x=>x.kind==="draft"&&x.file===file), mine=REV.find(x=>x.kind==="draft"&&x.file===file);
+    if(mine&&row) mine.held=row.held;
+    return row&&row.held?String(row.held):""; }catch(e){ return ""; } }
 /* fresh data after an apply or undo */
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
@@ -163,7 +170,10 @@ export function applySoon(row,verb){ APPLYN++; APPLYL.push({r:row||null,v:verb||
   const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
   snack(r.ok?`${decidedWords(savedCapped(L,r.message))}${held}`:plainSay(oneLine(applyWords(r.message))),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
-export async function reviewViaServer(r,decision,modes){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
+/* 2.6.2 (#314): review.py's refusal when the item at the number is no longer the one the page sent */
+export const REVIEW_CHANGED=/has changed since you looked at it/;
+export async function reviewViaServer(r,decision,modes){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[],...(r.fp?{expect:r.fp}:{})});   /* 2.6.2 (#314): the server checks the item is still this one; an older server ignores the field */
+  if(!res.ok&&REVIEW_CHANGED.test(res.message||"")){ snack(STALE_ROW_MSG); await reloadData(); return; }
   if(res.ok){ if(S.autoApply) applySoon(r,decision); else await reloadData(); snack(plainSay(oneLine(res.message))); return; }
   const m=res.message||"";
   if(/differs from the staged items/.test(m)&&shared.VIEW==="intake-review"){   /* #307 path 4: on Intake's row the reason is said in plain words with its way out, not in the ask panel */
