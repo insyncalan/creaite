@@ -162,18 +162,22 @@ class Planting(Fixture, unittest.TestCase):
     # the guarded half
     @needs_rule
     def test_filechange_and_the_hook_refuse_a_write_under_reextract(self):
+        """The hook lets a `filechange.py` Bash call through (filechange decides), so the proof is filechange's own refusal; a direct
+        Write is refused by the hook in every mode, a confirmed run too."""
         code = ("import reach\n"
                 "p = 'system/staging/reextract/abcdef1/hold.json'\n"
-                "cmd = 'system/scripts/run filechange.py create ' + p + ' --from system/staging/drafts/h.json'\n"
                 "out = {'classify': [reach.classify(p, op, marked=m)[0] for op in ('create', 'change', 'delete') for m in (False, True)],\n"
-                "       'hook': {m: reach.decide('Bash', {'command': cmd}, m, 'r-test')[0] for m in ('ask', 'sweep', 'confirmed')},\n"
                 "       'write': {m: reach.decide('Write', {'file_path': str(reach.paths.ROOT / p), 'content': '{}'}, m, 'r-test')[0]\n"
                 "                 for m in ('ask', 'sweep', 'confirmed')}}\n"
                 "print(json.dumps(out))")
         got = in_vault(self.v, code)
         self.assertEqual(set(got["classify"]), {"never"})
-        self.assertEqual(got["hook"], {"ask": False, "sweep": False, "confirmed": False})
         self.assertEqual(got["write"], {"ask": False, "sweep": False, "confirmed": False})
+        (self.v.root / "system/staging/drafts/h.json").write_text(json.dumps(self.manifest()), encoding="utf-8")
+        for where in ("system/staging/reextract/abcdef1/hold.json", "system/staging/reextract/abcdef1/record.html"):
+            r = self.v.run("create", where, "--from", "system/staging/drafts/h.json", script="filechange.py", ok=False, cwd=self.v.root)
+            self.assertNotEqual(r.returncode, 0, r.stdout)
+            self.assertFalse((self.v.root / where).exists())
 
     @needs_rule
     def test_the_live_servers_own_hold_is_unaffected_by_the_rule(self):
