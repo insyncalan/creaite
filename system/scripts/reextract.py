@@ -300,23 +300,30 @@ def _draft_ok(stored):
     return not os.path.lexists(rp) or (_plain_file(rp) and minutes_record.is_record(stored))
 
 
+def _shape_ok(h):
+    """The plain fields of a manifest: text where text is used, a list of codes, a number for the time."""
+    at = h.get("at")
+    return (isinstance(h.get("transcript"), str) and isinstance(h.get("date"), str) and isinstance(h.get("title"), str)
+            and isinstance(h.get("projects"), list) and all(isinstance(c, str) for c in h["projects"])
+            and isinstance(at, (int, float)) and not isinstance(at, bool))
+
+
+def _names_ok(h):
+    """The names of files a manifest points at: a proposal's, its record's, and the new ones' once there are."""
+    if not (isinstance(h.get("proposal"), str) and NAME.fullmatch(h["proposal"]) and _draft_ok(h.get("draft"))):
+        return False
+    new_p, new_d = h.get("new_proposal"), h.get("new_draft")
+    return (new_p is None or (isinstance(new_p, str) and NAME.fullmatch(new_p) is not None)) and (new_d is None or _draft_ok(new_d))
+
+
 def _clean(run_id, h):
     """The manifest `h` of hold `run_id` when every field creaite uses from it is what creaite itself wrote, else None. A hold.json is
     a file in a folder the model's filechange could once create in, so nothing read from it is trusted: the run, the state, the
     proposal's name (a staged proposal's), the record paths (directly in drafts), the shape. Nothing moves for a manifest that fails."""
-    ok = isinstance(h, dict) and h.get("run") == run_id and h.get("state") in STATES
-    ok = ok and isinstance(h.get("proposal"), str) and NAME.fullmatch(h["proposal"]) is not None and _draft_ok(h.get("draft"))
-    ok = ok and isinstance(h.get("transcript"), str) and isinstance(h.get("date"), str) and isinstance(h.get("title"), str)
-    ok = ok and isinstance(h.get("projects"), list) and all(isinstance(c, str) for c in h["projects"])
-    ok = ok and isinstance(h.get("at"), (int, float)) and not isinstance(h.get("at"), bool)
-    if ok and h.get("new_proposal") is not None:
-        ok = isinstance(h["new_proposal"], str) and NAME.fullmatch(h["new_proposal"]) is not None
-    if ok and h.get("new_draft") is not None:
-        ok = _draft_ok(h["new_draft"])
-    if not ok:
-        debuglog.warn("reextract", f"{run_id} hold ignored: its manifest isn't one creaite wrote")   # no content in the log
-        return None
-    return h
+    if isinstance(h, dict) and h.get("run") == run_id and h.get("state") in STATES and _shape_ok(h) and _names_ok(h):
+        return h
+    debuglog.warn("reextract", f"{run_id} hold ignored: its manifest isn't one creaite wrote")   # no content in the log
+    return None
 
 
 def _manifest(run_id):

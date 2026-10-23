@@ -19,7 +19,7 @@ BASE = "9501f2cdc850618e2ae34419bf2c6cb1c0d94ba0"
 # Pin: sha256 over the ordered chain list and the bytes of every diff it names (see chain_digest). The chain is read from the marked
 # commit's PARENT and must match this, so a commit cannot bring its own proof. Changing the chain means changing this, knowingly:
 # `python3 dev/tests/guarded_chain.py` prints the current value.
-CHAIN_SHA256 = "2533385b895ea27fe1cf77318b807396b04de01da4c5136dedc1600604759ea1"
+CHAIN_SHA256 = "a598a48e87c29f40227e21f2233329bd816e0c5154c1037e12f96a9b14cb3c8f"
 
 
 class HistoryMissing(AssertionError):

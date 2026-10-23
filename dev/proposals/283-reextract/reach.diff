@@ -6,7 +6,7 @@ index be8f4164..12df8241 100644
      ("vault", "system/staging/*.txt", "write", RECORD), ("vault", "dashboard.html", "write", RECORD),
      ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
      ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
-+    ("vault", "system/staging/reextract", "write", RECORD),              # #283: the Read again holds, written only by the live server (reextract.py)
++    ("vault", "system/staging/reextract", "write", RECORD),              # #283: Read again holds: the live server only
      ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
      ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
      ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),

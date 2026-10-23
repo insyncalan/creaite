@@ -93,11 +93,11 @@ class Planting(Fixture, unittest.TestCase):
     def every_way_in(self, h, link=None, undo=False):
         self.plant(h, link)
         run = "import reextract as r\n"
-        self.nothing_moves(run + f"r.recover(); r.recover(); print(1)")
+        self.nothing_moves(run + "r.recover(); r.recover(); print(1)")
         self.nothing_moves(run + f"r.put_back({RUN!r}); r.put_back({RUN!r}, 'x', 'needs', 'q'); print(1)")
         self.nothing_moves(run + f"r.finish({RUN!r}, 0, (), 'failed'); r.finish({RUN!r}, 0, (), 'done'); print(1)")
         self.nothing_moves(run + f"print(json.dumps(r.undo({RUN!r})))")
-        self.nothing_moves(run + f"r._prune(); print(1)")
+        self.nothing_moves(run + "r._prune(); print(1)")
 
     # held holds: recover, put back, settle
     def test_a_draft_that_names_an_engine_file_moves_nothing(self):
