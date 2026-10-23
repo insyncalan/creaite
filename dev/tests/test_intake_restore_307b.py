@@ -18,7 +18,8 @@ class RestoreGone(IrHardenCase):
         b.click(self.sel(name, " [data-ira=later]"))
         b.wait("D.intake_review.later.some(x=>x.title.includes('Gone soon'))", 20)
         (self.v.root / "inbox" / name).unlink()
-        b.click("#snackU")
+        b.wait("(()=>{ const e=document.getElementById('snackU'), r=e&&e.getBoundingClientRect(); return !!(r&&r.width&&r.height); })()", 20)   # shown, not just present
+        b.click("#snackU", exact=True)
         b.wait("/no longer in your inbox/.test(document.getElementById('snackT').textContent)", 20)
         t = b.eval("document.getElementById('snackT').textContent")
         self.assertEqual(t, "That file is no longer in your inbox, so nothing was restored.")
