@@ -297,9 +297,12 @@ class Identity307(HandcheckCase):
         self.assertNotIn(charlie, rejected, "WRONG ITEM: the Bravo row's Reject rejected Charlie")
         self.assertTrue(self.pending(name, charlie), "Charlie's proposal was decided by a press on Bravo")
 
+    @unittest.expectedFailure   # needs the guarded review.py --expect <fp> + /api/review pass-through: #314, 2.6.2, Alan approved
     def test_c55_the_review_route_refuses_when_the_item_at_ref_is_not_the_one_the_page_showed(self):
         """55. Pins finding 1 (A7). The page calls /api/review with file + ref, and the server matched on those alone. With `expect`
-        (the text the person saw) the item at ref 2 is now Charlie, so the call must be refused and Charlie left pending."""
+        (the text the person saw) the item at ref 2 is now Charlie, so the call must be refused and Charlie left pending.
+        Expected to fail until 2.6.2 (#314): a raw route call, a second tab or a fast renumber in the window before guardFresh can
+        still act on a different item of the user's own pending list."""
         alpha, bravo, charlie = names("rt")
         name = self.sweep_file((alpha, bravo, charlie), "rt")
         self.open_intake(bravo)
