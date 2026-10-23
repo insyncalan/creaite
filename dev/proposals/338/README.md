@@ -6,8 +6,8 @@ For Alan's approval: the exact diff of a guarded file. Nothing is weakened; the 
 
 | | Before | After | Cut |
 |---|---|---|---|
-| Rules on `origin/v262-line` | 62,721 B (about 15,680 tokens) | 31,116 B (about 7,780 tokens) | 50.4% |
-| Rules after the 2.6.2 VIP/follow chain | 66,315 B (about 16,580 tokens) | 32,509 B (about 8,130 tokens) | 51.0% |
+| Rules on `origin/v262-line` | 62,721 B (about 15,680 tokens) | 31,209 B (about 7,800 tokens) | 50.2% |
+| Rules after the 2.6.2 VIP/follow chain | 66,315 B (about 16,580 tokens) | 32,605 B (about 8,150 tokens) | 50.8% |
 
 Every run loads the rules file, so each run starts about 7,900 tokens lighter. That is the size of this lever (about 3% of a 503k ask start, as #327 says); the 60k and 150k run targets come mostly from part B (fresh sessions).
 The moved text is in the new `system/templates/creaite-reference.md` (62 KB, read by section only when a task needs it; it ships because `system/templates/` is part of the engine). Nothing is deleted from the project: the reference holds the old wording of every section I shortened, word for word.
@@ -42,17 +42,19 @@ Both were checked with `git apply --check`, applied forward, compared byte for b
 
 ## Proof
 
-`dev/tests/test_rules_retained_338.py`:
-- A fixture lists, with exact words taken from the current file, 93 full-clause rules that must stay in the imported rules, 7 rules reworded shorter (both wordings checked), and 27 "never" clauses that only describe what a record holds or how code enforces a rule (kept word for word in the reference, each with a pointer line that stays in the rules). A further check extracts every "never" clause of the original and fails if one is in none of these and is not a 6-word-or-longer clause present verbatim in the rules.
-- It also checks the note limits, the images rule, `only the version he confirmed`, the sweep refusals and the staging exceptions, which contain no "never". It applies the right diff to a scratch copy (or reverses it if already applied), checks every fixture phrase is in the unslimmed file, that the rules are at most half the size, that the line diff adds no chain wording, that all ten non-negotiable bullets are present, that the skills table rows and both date formats survive, and that the diffs apply forward and reverse.
-- Mutants: deleting the line that holds any rule, turning a "never" into "may", or deleting a moved clause from the reference each make it fail (checked for all of them in the test, and by hand on the tree).
-- Run on three states: the line file, the file after the chain, and each slimmed file in place.
-
-Also run with the line diff applied on a scratch tree: the tests that read the rules file (see the handover note for the list and results).
+`dev/tests/test_rules_retained_338.py` (25 tests):
+- **Non-negotiables and Development guard: byte for byte** as in the original.
+- **Every other section, whole sentences**, one test per section (Header, Folder map, Starting a session, Skills, Dashboard editing, Updates, Project documents, Portability, Memory, Retention, Conventions): 144 rule-bearing sentences (any sentence with never, only, must, may, off, not, stay, refuse, nothing, every, approve, confirm, flagged, client and the like) are asserted whole, never as fragments and never matched both ways. State-specific wording (before and after the 2.6.2 follow diff) is kept apart.
+- **Every "never" clause of the original** is accounted for: inside a fixture sentence, present verbatim (six words or more), or in one of two lists: REWORDED (9 whole original clauses and the whole shorter clause that now carries each) and MAPPED (24 clauses that only describe what a record holds or how code or the launcher behaves, each kept word for word in the reference, with its reason and a pointer line that stays in the rules).
+- **Permanent mutants:** 44 named mutants (46 after the chain), covering the 28 the second review found green plus more (BL-267, "runs only read commands", the sweep refusals, `Only flagged items`, `off by default`, `four` images, the permission-file checks, "nothing the model can read or run holds", "or one Alan edited", the client-safety rules and others), each edits a copy of the slimmed rules and must turn the check red. In addition every fixture sentence is deleted and flipped automatically (304 more mutants), and each REWORDED and MAPPED entry is removed.
+- Also: the rules are at most half the original, the line diff adds no chain wording, the diffs apply forward and reverse, the skills table rows and both date formats survive.
+- Run in four states: the line file, the line file slimmed, the file after the real chain, and that slimmed.
 
 ## Review notes dealt with (24-10-2026)
 
 The note-exemption limit, the accurate staging exceptions (calendar.json invite bodies, vip.json gist, usage-reviews notes, the confidential-meeting rule), the images rule, the sweep refusals and plain-chat rule, the Find updates rule, `only the version he confirmed`, the 99 System rule and the restore rule are back in the rules file. "Runs on a Mac" now reads "with the things below and nothing else", so it no longer clashes with the Windows line.
+
+Second review (24-10-2026): the two client-safety rules (a partner's name reaches a client only as its logo picture; client report files are made only from the checked copy, #239) are back in the rules, the Prep page keeps "or one Alan edited" and the cx-prep command-line rule (BL-271), "never a chat" is limited to the run kinds, vip.json is listed as "a gist and Claude's own summary, never message text", and the reasons on the moved clauses are corrected.
 
 ## Risks
 
