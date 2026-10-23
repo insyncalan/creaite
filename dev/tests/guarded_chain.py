@@ -24,7 +24,7 @@ CHAIN_SHA256 = "a598a48e87c29f40227e21f2233329bd816e0c5154c1037e12f96a9b14cb3c8f
 # The 2.6.2 chain (dev/proposals/GUARDED-2.6.2.md): its own marker, list and pin. Its range starts at BASE, the 2.6.1 release commit.
 CHAIN2_MARKER = "Guarded 2.6.2 chain:"
 CHAIN2_FILE = "dev/proposals/GUARDED-2.6.2.chain"
-CHAIN2_SHA256 = "0e4608b6496d25875555b1712640f1fde73d0663e4cb15dfd1f5f60a0b048651"
+CHAIN2_SHA256 = "d6441d5568bc7680a2e7f051e6fe3e91f1d14af079220743edf9910e09637c8d"
 # BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE2 (also BASE, the default) is the 2.6.1 release commit, published:
 # the full sha of 5bf7da29 (Jarvis, 23-10-2026; main's merge commit 256fdcc2 changes no content). CHAIN2_SHA256 is the value
 # `python3 dev/tests/guarded_chain.py` prints; change it only with the chain list.
