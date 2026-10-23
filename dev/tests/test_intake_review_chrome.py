@@ -29,7 +29,7 @@ class Head(IntakeBase):
 
     def test_the_sub_line_says_when_the_calendar_was_read_and_the_icon_reads_it_again(self):
         b = self.b
-        self.assertRegex(self.sub(), r"^\d+ ready to process · \d+ proposals? to approve · Calendar read 07:00$")    # read today at 07:00: the time only
+        self.assertRegex(self.sub(), r"^\d+ ready to process · \d+ suggestions? to approve · Calendar read 07:00$")    # read today at 07:00: the time only
         self.assertEqual(b.eval("document.querySelector('#icRef').getAttribute('aria-label')"), "Refresh the calendar")
         self.assertFalse(b.eval("document.querySelector('#icRef').disabled"))
 
@@ -74,15 +74,14 @@ class AddFiles(IntakeBase):
         self.b.eval("""(()=>{ const dt=new DataTransfer(); dt.items.add(new File(['x'],'a.vtt'));
           document.querySelector(%s).dispatchEvent(new DragEvent(%s,{dataTransfer:dt,bubbles:true,cancelable:true})); })()""" % (json.dumps(target), json.dumps(kind)))
 
-    def test_add_files_is_an_icon_button_with_a_hidden_file_input(self):
+    def test_add_files_is_an_icon_button_that_makes_its_file_input_at_the_click(self):
         b = self.b
         self.assertEqual(b.eval("document.querySelector('[data-irpick]').textContent.trim()"), "")
         self.assertEqual(b.eval("document.querySelector('[data-irpick]').getAttribute('aria-label')"), b.eval("document.querySelector('[data-irpick]').dataset.tip"))   # BL-158: named with its tip's words (C2)
         self.assertTrue(b.eval("document.querySelector('[data-irpick]').getAttribute('aria-label')").startswith("Add files"))
         self.assertIn("drop them anywhere", b.eval("document.querySelector('[data-irpick]').dataset.tip"))
         self.assertEqual(b.eval("!!document.querySelector('[data-irpick] svg[data-iric=upload]')"), True)
-        self.assertEqual(b.eval("(i=>[i.type,i.multiple,i.hidden,i.accept])(document.querySelector('#v-intake-review input[type=file]'))"),
-                         ["file", True, True, ".vtt,.docx,.txt,.md,.pdf"])
+        self.assertEqual(b.eval("!!document.querySelector('#v-intake-review input[type=file]')"), False)       # #307: the chooser's input is made at the click (irPickFiles), none kept in the page
 
     def test_a_full_page_overlay_shows_while_files_are_dragged_over_and_never_takes_the_pointer(self):
         b = self.b
@@ -184,7 +183,7 @@ class Gaps(IntakeBase):
         c = b.eval("irLiveCounts()")
         self.assertEqual(b.eval("document.querySelector('[data-irv=two] .icsum').textContent"), f"Arrived {c['arrived']} → Drafted {c['drafted']} → Approved {c['approved']}")
         mid = b.eval("D.intake_review.meetings.find(m=>m.title==='ABC Steering'&&m.src==='draft').id")
-        self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{mid}\"] .irright').textContent"), "4 proposals")
+        self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{mid}\"] .irright').textContent"), "4 suggestions")
         rid = b.eval("D.intake_review.meetings.find(m=>m.title==='Weekly sync 12').id")
         self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"] .irright').textContent"), "ready")
         b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"]').click()")

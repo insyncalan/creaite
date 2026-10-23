@@ -3,11 +3,12 @@
    open questions, what wasn't covered, the source) drawn line by line, each line drawn from the transcript with its time tag
    (P4's section `tags`: {ref: "transcript", turn, time}). A tag's click scrolls the transcript pane to what was said; ✕ on it
    (shown on hover or focus) takes the tag off. A check's words are underlined in the line. Edit, or a click on a line, opens
-   the section in the sheet's Text (the one editor); Done goes back to the lines.
+   the section in the sheet's Text (the one editor); there is no Done button (#302): edits save as you go, and a click
+   away or Esc goes back to the lines.
    #268: one version only, so no line is marked Internal only. The summary is edited where it stands (SummaryText).
    Each topic of Updates is a block with ctx.level.
    Exported or read only: the lines alone, no tags, checks or controls. */
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { SheetEditor } from "../report/SheetText.jsx";
 import { Checked } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
@@ -64,12 +65,23 @@ function blocks(ls) {
 /** A text section, line by line. @param {{ctx: SectionCtx}} props */
 export function TextLines({ ctx }) {
   const [ed, setEd] = useState(false);
-  const s = ctx.section, { Text } = ctx;
-  if (ctx.editing && ed) {
+  const box = useRef(/** @type {HTMLDivElement|null} */ (null));
+  const s = ctx.section, { Text } = ctx, open = ctx.editing && ed;
+  useEffect(() => {                                    // #302: no Done button: a click away (not on the AI bar or its card) goes back to the lines
+    if (!open) return undefined;
+    const away = (/** @type {PointerEvent} */ e) => {
+      const t = /** @type {HTMLElement|null} */ (e.target);
+      if (t && box.current && !box.current.contains(t) && !t.closest("#aiBarBox, .aisug, .ddmenu, .snack, #snack")) setEd(false);
+    };
+    const esc = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector("#aiBarBox, .aisug, dialog[open]")) setEd(false); };
+    document.addEventListener("pointerdown", away, true);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away, true); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  if (open) {
     return (
-      <div class="mnedit">
+      <div class="mnedit" ref={box}>
         <Text field="text" rich label={s.heading} />
-        <button type="button" class="btn sm" onClick={() => setEd(false)}>Done</button>
       </div>
     );
   }

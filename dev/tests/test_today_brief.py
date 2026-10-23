@@ -94,17 +94,22 @@ class LiveIndicatorTests(PageTests):
 
     def test_every_state_the_dot_showed_is_covered_by_the_alert(self):
         o = self.probe("""
-          const a=document.getElementById("liveAlert"), q=()=>({on:a.classList.contains("on"), found:a.classList.contains("found"), text:a.textContent, copy:!!a.querySelector("[data-copycmd]"), check:!!a.querySelector("#checkLive")});
+          const a=document.getElementById("liveAlert"), q=()=>({on:a.classList.contains("on"), found:a.classList.contains("found"), text:a.textContent, copy:!!a.querySelector("[data-copycmd]"), cmd:[...a.querySelectorAll("code")].map(c=>c.textContent), start:START_CMD, check:!!a.querySelector("#checkLive")});
           LIVELINK=false; setLive(true); const running=q();                                       // server running: nothing to show
           setLive(false); const stopped=q();                                                      // stopped: the alert, with the command and Check again
           LIVELINK=true; setLive(false); const fileCopy=q();                                      // the file version of the dashboard while the server runs
           LIVELINK=false; setLive(true);
           window.OUT={running,stopped,fileCopy};""")
         self.assertFalse(o["running"]["on"])
-        self.assertTrue(o["stopped"]["on"] and o["stopped"]["copy"] and o["stopped"]["check"])
-        self.assertIn("Live server isn't running", o["stopped"]["text"])
+        self.assertTrue(o["stopped"]["on"] and o["stopped"]["check"])
+        self.assertTrue(o["stopped"]["copy"], "the stopped alert carries the restart command with Copy (b0f439eb)")
+        self.assertEqual(o["stopped"]["cmd"], [o["stopped"]["start"]])                            # exactly the restart command, nothing else typed
+        self.assertIn("paste this into Terminal", o["stopped"]["text"])
+        self.assertIn("creaite has stopped", o["stopped"]["text"])
         self.assertTrue(o["fileCopy"]["on"] and o["fileCopy"]["found"])
-        self.assertIn("The live server is running. This copy of the dashboard is the file version", o["fileCopy"]["text"])
+        self.assertFalse(o["fileCopy"]["copy"], "#291 Tier 1: only the stopped alert shows a typed command")
+        self.assertEqual(o["fileCopy"]["cmd"], [])
+        self.assertIn("creaite is running. This copy of the dashboard is the file version", o["fileCopy"]["text"])
 
     def test_the_top_strip_stays_quiet_and_shows_only_what_needs_an_action(self):
         o = self.probe("""
@@ -112,7 +117,7 @@ class LiveIndicatorTests(PageTests):
           VSTATE="ok"; status(); const quiet=document.getElementById("status");
           window.OUT={held,vault,quiet:[quiet.textContent.trim(),getComputedStyle(quiet).display]};""")
         self.assertEqual(o["held"], "2 held")
-        self.assertEqual(o["vault"], "Reconnect vault")
+        self.assertEqual(o["vault"], "Reconnect your creaite folder")
         self.assertEqual(o["quiet"], ["", "none"])
 
     def test_the_live_server_card_says_when_mail_and_teams_were_swept(self):
@@ -120,7 +125,7 @@ class LiveIndicatorTests(PageTests):
           go("settings","live"); const card=document.getElementById("liveCard");
           window.OUT={text:card.textContent.replace(/\\s+/g," "), swept:SWEPT, data:DATA_AT, fdSwept:fd(SWEPT), fdData:fd(DATA_AT).slice(0,16)};""")
         self.assertIn("Mail, Teams and data", o["text"])
-        self.assertRegex(o["text"], r"Mail and Teams (last swept \d\d-\d\d-\d{4}|never swept) · data as of ")
+        self.assertRegex(o["text"], r"Mail and Teams (last checked \d\d-\d\d-\d{4}|never checked) · data as of ")
         self.assertIn(f"data as of {o['fdData']}", o["text"])
 
 
@@ -346,7 +351,7 @@ class TodayBriefTests(PageTests):
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertIn("4 proposals to approve", o["td"])                                # #245: every proposal is counted in Intake's one quiet line, not listed
+        self.assertIn("4 suggestions to approve", o["td"])                                # #245: every proposal is counted in Intake's one quiet line, not listed
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """
@@ -428,7 +433,7 @@ class TodayBriefTests(PageTests):
         self.assertEqual(o["days"][2][2][0], "Over the weekend — Sara Example · Example Programme | due over the weekend")   # BL-319: why it is there
         self.assertEqual(o["days"][2][2][1], "UAT start — Example Programme | on track")
         self.assertIn("Friday action", o["days"][3][2][0])
-        self.assertEqual(o["to"], "5 items to Friday 16th October")        # #105: the count and the end date, as Resolved's
+        self.assertEqual(o["to"], "5 items to Friday 16th October · 1 more listed above")   # #105 and #313: the count, the end date, and the one counted not repeated
         self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
         self.assertEqual(o["acts"][0], ["Draft email", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone

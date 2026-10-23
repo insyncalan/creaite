@@ -838,7 +838,7 @@ def p8_client(ctx, kind, aud, src):
 
 
 def p8_weekly(kind, aud):
-    """P8's weekly route: (outcome, problem or None); a weekly report is always labelled Internal."""
+    """P8's weekly route: (outcome, problem or None); a weekly report is always labelled "Internal, not for distribution" (v2.6.1)."""
     f, text = weekly_text()
     if text is None:
         return "skipped", None
@@ -856,7 +856,7 @@ def p8_weekly(kind, aud):
     if kind != "weekly":
         return "accepted", "a stored kind that isn't weekly was exported on the weekly route"
     label = re.search(r'</h1><div class="sub">.*?</div></div><div class="sub">([^<]*)</div>', out)
-    return "accepted", (None if label and label.group(1) == "Internal" else f"a weekly report labelled {label and label.group(1)!r}")
+    return "accepted", (None if label and label.group(1) == "Internal, not for distribution" else f"a weekly report labelled {label and label.group(1)!r}")
 
 
 MINUTES_NAMED = f"system/staging/drafts/{WEEK} Steering minutes - Example Programme.html"

@@ -39,13 +39,14 @@ ESSENTIAL_ROWS = (
      ("identity.short_forms",)),                                                            # v2.6 (#246): the old "You" card joined
     ("You", "Own email domains", "Comma-separated; addresses at these domains are inside your company, so Draft email warns "
      "about anyone outside.", ("identity.own_domains",)),
-    ("Your day", "Morning sweep from", "creaite catches up on mail and Teams when you first open it after this time.",
+    ("Your day", "Daily check time", "creaite checks mail and Teams when you first open it after this time.",
      ("sweep.due_from",)),
-    ("Your day", "What the sweep reads", "Inbox, Sent Items, Teams chats and channels, your calendar.",
+    ("Your day", "What the check reads", "Inbox, Sent Items, Teams chats and channels, your calendar.",
      ("sweep.sources.inbox", "sweep.sources.sent_items", "sweep.sources.teams_chats", "sweep.sources.teams_channels",
       "sweep.sources.calendar")),
     ("Your day", "Evening, offer Close the day from", "A quiet dot on the door icon, never a pop-up.", ("day.close_from",)),
-    ("Your day", "Catch up before closing", "Starts a sweep if the last one was a while ago.", ("day.catchup_sweep",)),
+    ("Your day", "Catch up before closing", "Starts a last check of mail and Teams if the last one was a while ago.",
+     ("day.catchup_sweep",)),
     ("Your day", "Weekly report reminder", "One line on Today until each report is approved.",
      ("reminders.weekly_report_day", "reminders.weekly_report_from")),
     ("Saving and review", "Save my changes at once",
@@ -70,13 +71,17 @@ ESSENTIAL_ROWS = (
      ("dashboard.rail_labels",)),
     ("Look and help", "Show the Press ? line on each screen",
      "A quiet line under a page's title the first time you visit it. The line at the foot of the page stays.", ("help.first_line",)),
-    ("Look and help", "AI drafts", "Suggestions you can use, edit or ignore. Never applied by themselves.",
+    ("Look and help", "Single-key shortcuts",
+     "Keys such as W for Work or J and K in lists. Off: only Cmd or Ctrl keys, Esc, Enter and arrows act.",
+     ("help.single_keys",)),
+    ("Look and help", "AI drafts", "Suggestions you can use, edit or ignore. Never saved by themselves.",
      ("drafting.update", "drafting.client", "drafting.thinking", "drafting.reason", "drafting.agenda", "drafting.email",
       "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape", "drafting.report-section",
       "drafting.minutes-section")),
     ("Safety", "Daily backup, and a copy in OneDrive",
-     "The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) "
-     "goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.",
+     "The database is backed up each day; with the projects in OneDrive a closed zip (your project record, settings, "
+     "items waiting in Review, history) "
+     "goes to your portfolio folder. Chats, who you follow and the live database never leave the laptop.",
      ("backups.daily",)),
 )
 
@@ -90,7 +95,7 @@ FIXED = ("excel.export", "live_mode.required", "live_mode.port", "assistant.enab
          "locations.offsite_backup")
 FIXED_WHY = {
     "excel.export": "a description of how the export runs, not a choice",
-    "live_mode.required": "the dashboard needs the live server (IT-approved); not a choice",
+    "live_mode.required": "the dashboard needs creaite running (IT-approved); not a choice",
     "live_mode.port": "the installed app belongs to its port; change it at set-up",
     "assistant.enabled": "ask creaite's switch is kept out of the screens on purpose",
     "people.added": "an old list; set-up moves it into the people register",
@@ -100,35 +105,37 @@ FIXED_WHY = {
 }
 CATALOGUE = {
     # ── Sweep
-    "sweep.due_from": ("Your day", "Morning sweep from", "The time after which the first session of the day sweeps mail and Teams.",
+    "sweep.due_from": ("Your day", "Daily check time", "The time after which the first session of the day checks mail and Teams.",
                        "Before the first meeting, after overnight mail from other time zones."),
-    "promises.from_sweep": ("Sweep", "Promises from the sweep",                               # BL-125 A (joined on release-192)
-                            "Let the sweep propose promises from mail and Teams; promises from meetings and your own are unaffected.",
-                            "Off: promises come from meetings and from you until the sweep's are trusted."),
-    "sweep.first_run_lookback_days": ("Sweep", "First sweep looks back", "How many days the very first sweep reads.",
+    "promises.from_sweep": ("Checking mail and Teams", "Promises from mail and Teams",     # BL-125 A (joined on release-192)
+                            "Let the check suggest promises from mail and Teams; promises from meetings and your own are unaffected.",
+                            "Off: promises come from meetings and from you until the check's are trusted."),
+    "sweep.first_run_lookback_days": ("Checking mail and Teams", "First check looks back", "How many days the very first check reads.",
                                       "Two weeks catches what's still live without flooding Review on day one."),
-    "sweep.max_lookback_days": ("Sweep", "Sweep looks back at most",
-                                "The furthest back a sweep reads mail and Teams after a gap; \"sweep the last 7 days\" overrides it.",
+    "sweep.max_lookback_days": ("Checking mail and Teams", "Check looks back at most",
+                                "The furthest back a check reads mail and Teams after a gap; "
+                                "\"check my mail the last 7 days\" overrides it.",
                                 "Three days covers a long weekend without a flood in Review after a holiday."),
-    "sweep.sources.inbox": ("Your day", "Sweep reads: Inbox", "Mail you received.",
-                            "Missing a source is worse than one more proposal; ignore rules handle the noise."),
-    "sweep.sources.sent_items": ("Your day", "Sweep reads: Sent Items", "Mail you sent, where your own promises are.",
-                                 "Missing a source is worse than one more proposal; ignore rules handle the noise."),
-    "sweep.sources.teams_chats": ("Your day", "Sweep reads: Teams chats", "Your one-to-one and group chats.",
-                                  "Missing a source is worse than one more proposal; ignore rules handle the noise."),
-    "sweep.sources.teams_channels": ("Your day", "Sweep reads: Teams channels", "Channel posts in your teams.",
-                                     "Missing a source is worse than one more proposal; ignore rules handle the noise."),
-    "sweep.sources.calendar": ("Your day", "Sweep reads: calendar", "The week's meetings, for Today, Intake and prep.",
+    "sweep.sources.inbox": ("Your day", "Check reads: Inbox", "Mail you received.",
+                            "Missing a source is worse than one more suggestion; ignore rules handle the noise."),
+    "sweep.sources.sent_items": ("Your day", "Check reads: Sent Items", "Mail you sent, where your own promises are.",
+                                 "Missing a source is worse than one more suggestion; ignore rules handle the noise."),
+    "sweep.sources.teams_chats": ("Your day", "Check reads: Teams chats", "Your one-to-one and group chats.",
+                                  "Missing a source is worse than one more suggestion; ignore rules handle the noise."),
+    "sweep.sources.teams_channels": ("Your day", "Check reads: Teams channels", "Channel posts in your teams.",
+                                     "Missing a source is worse than one more suggestion; ignore rules handle the noise."),
+    "sweep.sources.calendar": ("Your day", "Check reads: calendar", "The week's meetings, for Today, Intake and prep.",
                                "Today's day view and meeting prep need it."),
-    "sweep.show_possible_matches": ("Sweep", "Show possible matches",
+    "sweep.show_possible_matches": ("Checking mail and Teams", "Show possible matches",
                                     "Messages that may belong to a project are shown in Review to place, not dropped.",
                                     "A weak match you can place is better than a message silently lost."),
-    "sweep.ignore": ("Sweep", "Ignore rules", "Mail, Teams and invites the sweep skips (counted, never read into proposals).",
+    "sweep.ignore": ("Checking mail and Teams", "What creaite skips",
+                     "Mail, Teams and invites the check skips (counted, never read into suggestions).",
                      "Private items are always skipped; the rest are common noise you can switch off or edit."),
     # ── People I follow
     "vip.enabled": ("People I follow", "Tell me when they write", "Messages from people you follow head Today.",
                     "On: these are the people you can't afford to miss."),
-    "vip.check_minutes": ("People I follow", "Check every (minutes)", "How often the live server looks for their messages.",
+    "vip.check_minutes": ("People I follow", "Check every (minutes)", "How often creaite looks for their messages.",
                           "Fast enough to matter, light on Microsoft 365 calls."),
     "vip.notify": ("People I follow", "Browser notification", "Also show a notification on the Mac, not only on Today.",
                    "On: an alert you don't see until you open Today is late; nothing leaves the laptop."),
@@ -137,7 +144,7 @@ CATALOGUE = {
     "vip.quiet_from": ("People I follow", "Pause overnight from", "24-hour HH:MM; the same as To means no pause.",
                        "19:00: the working day is over; the first check after the pause looks back to the last one."),
     "vip.quiet_to": ("People I follow", "Pause overnight until", "24-hour HH:MM; checks start again at this time.",
-                     "07:00: before the morning sweep and the first meeting."),
+                     "07:00: before the morning check and the first meeting."),
     "vip.quiet_weekend": ("People I follow", "Pause alert checks on weekend days", "No checks on the weekend days set in You.",
                           "On: with overnight, about 64% fewer checks a week; Monday's first check reads back to Friday's last."),
     # ── Reminders
@@ -155,7 +162,7 @@ CATALOGUE = {
     "review.auto_advance": ("Review", "Move to the next item", "After a decision, Review moves on to the next item.",
                             "On: approving a batch is quicker without reaching for the next row."),
     "review.duplicate_overlap": ("Review", "Duplicate likeness",
-                                 "How alike (0 to 1) a proposal must be to an open item to be tagged a likely repeat.",
+                                 "How alike (0 to 1) a suggestion must be to an open item to be tagged a likely repeat.",
                                  "0.6 catches reworded repeats without tagging items that merely share a topic."),
     "review.due_soon_days": ("Review", "Due soon (days)", "How far ahead counts as due soon.", "A week matches the weekly rhythm."),
     "review.spot_check_every": ("Review", "Spot-check one in", "When approving routine items together, one in this many is shown to check.",
@@ -204,7 +211,7 @@ CATALOGUE = {
     "dashboard.flow_weeks": ("Project page", "Flow chart weeks", "How many weeks the opened and closed chart shows.",
                              "Eight weeks shows a trend without old noise."),
     "dashboard.auto_apply": ("Saving and review", "Save my changes at once",
-                             "Your own edits are applied straight away, with Undo.",
+                             "Your own edits are saved straight away, with Undo.",
                              "On: matches how you work; Review still guards what creaite suggests."),
     "dashboard.project_list_cap": ("Project page", "Project page list length", "How many due or overdue actions a project page lists.",
                                    "Ten fits the page; the rest are one click away in Work."),
@@ -213,8 +220,9 @@ CATALOGUE = {
     "dashboard.rail.order": ("Look and layout", "Rail order", "The order of the pages on the left-hand rail.",
                              "The day's order: Today first, Settings last."),
     "dashboard.rail.hidden": ("Look and layout", "Hidden rail pages", "Pages taken off the rail.", "None: everything is reachable."),
-    "dashboard.rail.more": ("Look and layout", "Pages in More", "The pages kept in More, at the bottom of the sidebar.",   # BL-319
-                            "Intake, Files, Activity and Settings: the pages of every day stay in view."),
+    "dashboard.rail.more": ("Look and layout", "Pages in the menu under your name",                                    # BL-319; #295
+                            "The pages kept in the menu under your name, at the foot of the sidebar.",
+                            "Files, Activity and Settings: the pages of every day stay in view."),
     "dashboard.rail.display": ("Look and layout", "Rail shows", "Titles beside the icons, or icons only.",
                                "Titles: plainer for a new user; icons only is there when you know them."),
     # ── Current state
@@ -245,7 +253,7 @@ CATALOGUE = {
                                      "Reports, minutes and one-pagers older than this are offered monthly in Health; 0 never.",
                                      "Twelve months: a year of reporting stays at hand (Alan, 14-10-2026)."),
     # ── Safety, live server, ask creaite
-    "backups.daily": ("Safety", "Daily backup", "Copy the database each day, then a closed zip of what rebuilds the vault (to OneDrive "
+    "backups.daily": ("Safety", "Daily backup", "Copy the database each day, then a closed zip of what rebuilds creaite (to OneDrive "
                       "when projects live there).", "On: non-negotiable safety; off only on purpose."),
     # BL-323: retention, applied by the daily Tidy up here and in OneDrive (Alan, 14-10-2026)
     "backups.daily_days": ("Archiving and backups",
@@ -255,8 +263,8 @@ CATALOGUE = {
         "Then keep one a week for (days)", "After that, the Monday's, for this long; then the first "
                             "of each month for good.", "A year of weekly points, then monthly ones for good (Alan, 14-10-2026)."),
     "backups.copy_days": ("Archiving and backups",
-        "Keep apply and undo copies for (days)", "The database copies made before each apply, undo, "
-                          "revert or migrate.", "14 days: they undo recent changes on this laptop; the daily backups cover the rest."),
+        "Keep copies made before each save and undo for (days)", "The copies of your project record made before each save, undo, "
+                          "revert or update.", "14 days: they undo recent changes on this laptop; the daily backups cover the rest."),
     "backups.snapshot_days": ("Archiving and backups",
         "Keep daily dashboard snapshots for (days)", "Then one a month. The flow history is kept "
                               "for good.", "30 days: a snapshot is only a view of the database."),
@@ -269,24 +277,25 @@ CATALOGUE = {
     "backups.update_backups_kept": ("Archiving and backups",
         "Update backups kept", "The backups made before each update (undo update uses the "
                                     "last one).", "3: the last three updates."),
-    "live_mode.required": ("Live server and ask creaite", "Live server required", "The dashboard works through the live server.",
-                           "Required: IT approved live mode; it is what makes Apply and ask creaite work."),
+    "live_mode.required": ("creaite and ask creaite", "creaite must be running",
+                           "The dashboard works through creaite running on this computer.",
+                           "Required (IT approved): it is what saves your changes and runs ask creaite."),
     # Port and Log level are on Health's own cards (v2.6, #246)
-    "live_mode.port": ("Live server and backups", "Port", "The local port the live server listens on.",
+    "live_mode.port": ("creaite and backups", "Port", "The local port creaite listens on.",
                        "8765: free on a normal Mac; the installed app belongs to it."),
-    "live_mode.health_check_seconds": ("Live server and ask creaite", "Check the server every (seconds)",
-                                       "How often the open page checks the server and refreshes itself.",
+    "live_mode.health_check_seconds": ("creaite and ask creaite", "Check creaite every (seconds)",
+                                       "How often the open page checks that creaite is running and refreshes itself.",
                                        "Thirty seconds: quick to notice, no load to speak of."),
-    "live_mode.script_policy": ("Live server and ask creaite", "Script policy", "The page's script policy: report-only, or off.",
+    "live_mode.script_policy": ("creaite and ask creaite", "Script policy", "The page's script policy: report-only, or off.",
                                 "Report-only: violations are counted before the policy is ever enforced."),
-    "assistant.enabled": ("Live server and ask creaite", "ask creaite", "The assistant panel.", "On: it is how you ask creaite."),
-    "assistant.shortcut": ("Live server and ask creaite", "Shortcut", "The key that opens ask creaite.",
+    "assistant.enabled": ("creaite and ask creaite", "ask creaite", "The assistant panel.", "On: it is how you ask creaite."),
+    "assistant.shortcut": ("creaite and ask creaite", "Shortcut", "The key that opens ask creaite.",
                            "Cmd/Ctrl+J: free in Chrome and easy to reach."),
-    "assistant.confirm_writes": ("Live server and ask creaite", "Confirm changes", "ask creaite asks before changing the record.",
+    "assistant.confirm_writes": ("creaite and ask creaite", "Confirm changes", "ask creaite asks before changing the record.",
                                  "On: nothing reaches the record without your yes."),
-    "assistant.run_timeout_minutes": ("Live server and ask creaite", "Unwatched run stops after (minutes)",
+    "assistant.run_timeout_minutes": ("creaite and ask creaite", "Unwatched run stops after (minutes)",
                                       "A request nobody is watching ends after this long.",
-                                      "Half an hour fits the longest real job (a sweep or minutes)."),
+                                      "Half an hour fits the longest real job (a mail and Teams check or minutes)."),
     # ── You
     "identity.name": ("You", "Your name", "Who \"me\" is: items you own, mail you sent.", "Empty until set-up asks for it."),
     "identity.short_forms": ("You", "Short forms of your name", "Other ways people write your name (Al, AC).",
@@ -296,8 +305,8 @@ CATALOGUE = {
     "people.added": ("Legacy", "People (old list)", "Names added before the people register.", "Empty: the register holds people now."),
     "people.hidden": ("Legacy", "Hidden people (old list)", "Names hidden before the people register.",
                       "Empty: the register holds people now."),
-    "excel.export": ("Files", "Excel export", "When tracker-view.xlsx is rebuilt.",
-                     "After every apply, paused only while it has edits not yet imported."),
+    "excel.export": ("Files", "Excel export", "When the Excel view is rebuilt.",
+                     "After every save, paused only while it has edits not yet imported."),
     # ── New items and views
     "defaults.new_action_priority": ("Opening views", "New action priority", "The priority a new action starts with.",
                                      "Medium: most actions are; raise the few that aren't."),
@@ -330,7 +339,7 @@ CATALOGUE = {
                                "Three: once or twice is normal planning."),
     "warnings.repeat_risk.on": ("Early warnings", "Risk raised again", "Flag a risk with no response that keeps coming up.",
                                 "On: a risk discussed but unanswered is the one that bites."),
-    "warnings.repeat_risk.mentions": ("Early warnings", "Risk raised again: mentions", "How many meetings or sweeps raise the flag.",
+    "warnings.repeat_risk.mentions": ("Early warnings", "Risk raised again: mentions", "How many meetings or checks raise the flag.",
                                       "Three mentions is a pattern."),
     "warnings.milestone_slip.on": ("Early warnings", "Milestone slipping", "Flag a milestone whose forecast keeps moving later.",
                                    "On: repeated slips are the early sign of a miss."),
@@ -369,14 +378,16 @@ CATALOGUE = {
                     "Empty: filled in as you choose from a meeting's prep."),
     "search.debounce_ms": ("Search", "Search delay (ms)", "How long search waits after typing before it runs.",
                            "150 ms: feels instant without searching on every key."),
-    "search.ask_budget_chars": ("Search", "ask creaite reads up to (characters)", "How much vault text a search answer may read.",
+    "search.ask_budget_chars": ("Search", "ask creaite reads up to (characters)",
+                                "How much of your creaite folder a search answer may read.",
                                 "40,000 characters: enough sources for a grounded answer, quick to run."),
     "search.include_documents": ("Search", "Search documents", "Include project documents in search.",
                                  "On: documents are often where the answer is."),
     "inbox.meetings_from": ("Meeting prep and Intake", "Calendar import goes back to", "Monday of this week, or a number of days.",
                             "Monday: the working week so far."),
     # ── Folders and OneDrive (set at set-up)
-    "locations.projects_root": ("Folders and OneDrive", "Projects folder", "Where the engagement folders live; empty is the vault's own.",
+    "locations.projects_root": ("Folders and OneDrive", "Projects folder",
+                                "Where the engagement folders live; empty is creaite's own folder.",
                                 "Empty: works out of the box; set-up points it at OneDrive."),
     "locations.portfolio": ("Folders and OneDrive", "Portfolio folder", "The portfolio's folder inside the projects folder.",
                             "_Portfolio, as in your template."),
@@ -409,6 +420,9 @@ CATALOGUE = {
     "help.first_line": ("Look and help", "Show the Press ? line on each screen",
                         "A quiet line under a page's title the first time you visit it.",
                         "On: a new user learns the Help key once per page, then never sees it again."),
+    "help.single_keys": ("Look and help", "Single-key shortcuts",
+                         "Keys such as W for Work or J and K in lists. Off: only Cmd or Ctrl keys, Esc, Enter and arrows act.",
+                         "On: they save clicks. Off helps voice control and stray key presses (WCAG 2.1.4)."),
     "drafting.update": ("AI drafts", "AI drafts: updates", "Draft an action's latest update.", "On: drafts only suggest."),
     "drafting.client": ("AI drafts", "AI drafts: client messages", "Draft a client-facing message for an item.",
                         "On: drafts only suggest."),
@@ -420,7 +434,7 @@ CATALOGUE = {
                               "POAD: purpose, objectives, approach, deliverables, your house format."),
     "drafting.email": ("AI drafts", "AI drafts: emails", "Draft a follow-up or chase email (never sent).", "On: drafts only suggest."),
     "drafting.forms": ("AI drafts", "AI drafts: forms", "Fill a new item's form from its source.", "On: drafts only suggest."),
-    "drafting.repeat": ("AI drafts", "AI drafts: repeats", "Spot a proposal that repeats an open item.",
+    "drafting.repeat": ("AI drafts", "AI drafts: repeats", "Spot a suggestion that repeats an open item.",
                         "On: it only marks, you decide."),
     "drafting.done": ("AI drafts", "AI drafts: probably done", "Spot an open item a later message says is done.",
                       "On: it only marks, you decide."),
@@ -442,11 +456,12 @@ CATALOGUE = {
                                     "A day: anything older has stopped."),
     "day.close_from": ("Your day", "Offer Close the day from", "The time a quiet dot appears on the door icon.",
                        "17:30: off hid the feature; a quiet dot at the end of the working day, never a pop-up (Alan, 14-10-2026)."),
-    "day.catchup_sweep": ("Your day", "Catch up before closing", "Start, offer or skip a sweep before the day closes.",
-                          "Start it: your decision for BL-295; the sweep runs while you read on."),
-    "day.catchup_after_minutes": ("Close the day", "Catch up if the last sweep is older than (minutes)",
-                                  "Only sweep before closing when the last sweep is older than this.",
-                                  "Half an hour: a recent sweep is enough."),
+    "day.catchup_sweep": ("Your day", "Catch up before closing",
+                          "Start, offer or skip a last check of mail and Teams before the day closes.",
+                          "Start it: your decision for BL-295; the check runs while you read on."),
+    "day.catchup_after_minutes": ("Close the day", "Catch up if the last check is older than (minutes)",
+                                  "Only check before closing when the last check is older than this.",
+                                  "Half an hour: a recent check is enough."),
     # ── Reports and minutes (v2.1.0)
     "reports.file_minutes_exports_beside": ("Reports and minutes", "File minutes exports beside them",
                                             "An HTML, Word or PDF export of minutes is also filed beside the minutes, "
@@ -456,15 +471,15 @@ CATALOGUE = {
 }
 GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Opening views", "Work board", "Project page", "Files",
-               "Sweep", "Meeting prep and Intake", "Close the day", "Reports and minutes", "Reminders", "AI drafts",
+               "Checking mail and Teams", "Meeting prep and Intake", "Close the day", "Reports and minutes", "Reminders", "AI drafts",
                "Look and layout", "Help", "Review", "Health thresholds", "Early warnings", "Current state",
-               "Archiving and backups", "Folders and OneDrive", "Live server and ask creaite", "Search", "Logging",
-               "Health check", "Live server and backups", "Diagnostics", "Legacy", "Developer")
+               "Archiving and backups", "Folders and OneDrive", "creaite and ask creaite", "Search", "Logging",
+               "Health check", "creaite and backups", "Diagnostics", "Legacy", "Developer")
 # v2.6 (#246, Alan 19-10-2026): Settings is tabs. Each group's tab ("advanced/<sub>" for Advanced's five sub-tabs). An Essential
 # is always on the Essentials tab, whatever its group; every other setting is on its group's tab. A group mapped to None is
 # kept (the data is still read) but drawn nowhere: Legacy's old lists, read by the dashboard, propose.py, tracker.py migrate
 # and doctor until set-up moves them (HIDDEN_GROUPS).
-TABS = (("essentials", "Essentials"), ("work", "Work and reports"), ("sweep", "Sweep and Intake"),
+TABS = (("essentials", "Essentials"), ("work", "Work and reports"), ("sweep", "Mail, Teams and Intake"),
         ("reports", "Reports and minutes"), ("ai", "AI drafts"), ("look", "Look and help"), ("advanced", "Advanced"),
         ("health", "Health"))
 ADVANCED_SUBS = (("review", "Review and warnings"), ("state", "Current state"), ("arch", "Archiving and backups"),
@@ -473,15 +488,15 @@ GROUP_TAB = {
     "You": "essentials", "Your day": "essentials", "Saving and review": "essentials", "People I follow": "essentials",
     "Safety": "essentials",
     "Opening views": "work", "Work board": "work", "Project page": "work", "Files": "work",
-    "Sweep": "sweep", "Meeting prep and Intake": "sweep", "Close the day": "sweep",
+    "Checking mail and Teams": "sweep", "Meeting prep and Intake": "sweep", "Close the day": "sweep",
     "Reports and minutes": "reports", "Reminders": "reports",
     "AI drafts": "ai",
     "Look and help": "look", "Look and layout": "look", "Help": "look",
     "Review": "advanced/review", "Health thresholds": "advanced/review", "Early warnings": "advanced/review",
     "Current state": "advanced/state", "Archiving and backups": "advanced/arch", "Folders and OneDrive": "advanced/folders",
-    "Live server and ask creaite": "advanced/server", "Search": "advanced/server", "Logging": "advanced/server",
+    "creaite and ask creaite": "advanced/server", "Search": "advanced/server", "Logging": "advanced/server",
     "Developer": "advanced/server",
-    "Health check": "health", "Live server and backups": "health", "Diagnostics": "health",
+    "Health check": "health", "creaite and backups": "health", "Diagnostics": "health",
     "Legacy": None,
 }
 # Essentials' "AI drafts" row is one switch over every kind; each kind's own switch, its home, is on the AI drafts tab.

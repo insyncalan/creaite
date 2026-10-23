@@ -965,14 +965,14 @@ class People248(V260Case):
     @needs("248")
     def test_c56_needs_details(self):
         """56. A person whose record lacks an email, organisation or role shows "needs details" (the missing parts in a tooltip) and an
-        Add details button that opens the edit form; Needs attention filters No email, No organisation, No role."""
+        quiet flag (No email and so on) that opens the edit form; Needs attention filters No email, No organisation, No role."""
         self.open_people()
         b = self.b
         tips = b.eval("[...document.querySelectorAll('#v-people [data-needs]')].map(e=>e.title||e.dataset.tip||'')")
         self.assertTrue(tips, "premise: a demo person with something missing")
         for t in tips:
             self.assertTrue(t.startswith("Missing: "), t)
-        self.assertTrue(b.eval("[...document.querySelectorAll('#v-people button')].some(x=>x.textContent.trim()==='Add details')"))
+        self.assertTrue(b.eval("[...document.querySelectorAll('#v-people button')].some(x=>x.hasAttribute('data-pl-details')&&/^No /.test(x.textContent.trim()))"))
 
     @needs("248")
     def test_c57_people_look(self):

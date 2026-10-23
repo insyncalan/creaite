@@ -6,10 +6,12 @@
    /api/minutes/export. Nothing here writes any other way; nothing is sent.
    #275: trackApprove is Approve minutes by the Track column, the one implementation: the minutes view's Approve minutes and
    Review's Approve (and Approve n routine) on minutes kept as a record all call it, so both give the same result. */
+import { isMovedMinutes } from "../core/say.js";
 import { signal } from "@preact/signals";
 import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
-import { api, oneLine, viaServer } from "../core/server.js";
+import { needsConnection } from "../core/say.js";
+import { api, applyNow, oneLine, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{n: number, who: string|null, start: string|null, end: string|null, text: string}} Turn */
@@ -35,7 +37,7 @@ export const PANE_KEY = "creaite-minutes-transcript";
 /** The transcript pane: open, the turn picked from a time tag, the words searched for. */
 export const paneOpen = signal(true);
 /** Show or hide the transcript, and remember the choice. @param {boolean} on */
-export function setPane(on) { paneOpen.value = !!on; store.set(PANE_KEY, !!on); }
+export function setPane(on) { paneOpen.value = !!on; if (!on) paneTurn.value = null; store.set(PANE_KEY, !!on); }
 /** The remembered choice, read as each minutes opens. */
 export function paneRemembered() { paneOpen.value = store.get(PANE_KEY, true) !== false; }
 /** #268: the turn lit by hovering, both ways: a row lights its turn (from "row", the pane scrolls to it), a turn lights its
@@ -70,7 +72,7 @@ export async function openMinutesRecord(arg, stale = () => false) {
 export async function loadMinutes(arg) {
   const mine = ++mnAsked;
   minutesArg.value = arg;
-  if (!viaServer()) { minutesView.value = { ok: false, message: "The minutes view needs the live server." }; return; }
+  if (!viaServer()) { minutesView.value = { ok: false, message: needsConnection("The minutes view") }; return; }
   minutesBusy.value = "Opening the minutes…";
   const r = await openMinutesRecord(arg, () => mine !== mnAsked);
   if (r === null) return;
@@ -158,7 +160,7 @@ export async function trackApprove(v, how = {}) {
   if (how.approve === false) return { ok: true, made, done };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
   const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
-  return { ...(r || { ok: false, message: "The apply didn't run; nothing was changed." }), made };
+  return { ...(r || { ok: false, message: "Nothing was saved or changed." }), made };
 }
 
 /** #275 round 3: the Track column's changes a trackApprove made (`done`, in order) taken back, newest first: a `remove` by
@@ -182,12 +184,12 @@ export async function trackPutBack(path, done) {
 /** What a failed trackApprove says (review M1: and that some of the Track column's changes were made). @param {TrackApproved} r
     @param {string} button the button to press again */
 export const trackFailWords = (r, button) => (r.made ? `${r.message ? `${oneLine(r.message)} ` : ""}Some changes were made to the minutes; press ${button} again.`
-  : String(r.message || "The minutes weren't approved; nothing was applied.").split("\n")[0]);
+  : String(r.message || "The minutes weren't approved; nothing was saved.").split("\n")[0]);
 
-/** What an approve says: "Minutes approved · 3 work items registered · 1 wait in Review". @param {TrackApproved} r */
+/** What an approve says: "Minutes approved · 3 work items registered · 1 still to check". @param {TrackApproved} r */
 export function trackApprovedWords(r) {
   const n = r.approved || 0, left = (r.waiting || []).length;
-  return `Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`;
+  return `Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} still to check` : ""}`;
 }
 
 /** Export the minutes as HTML, Word or PDF (P2's export, opened once made). #268: one version only: the view never asks for
@@ -196,4 +198,25 @@ export async function exportMinutes(format) {
   const v = minutesView.value;
   if (!v || !v.ok || !v.path) return { ok: false, message: "The minutes aren't open." };
   return (await api("/api/minutes/export", { path: v.path, format, file_beside: true })) || { ok: false, message: "Not exported." };
+}
+
+/** #306: the words when the transcript has gone (review.HELD_MINUTES_WORDS). */
+export const HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
+
+/** #307: the minutes were filed or moved elsewhere while this view was open (the server's "That file isn't there." or "nothing pending"). */
+export const MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
+export { isMovedMinutes };   /* defined in core/say.js (plain words), used here and by the tests */
+
+/** #306: Approve minutes stopped because the transcript has left the inbox (the server's plain words say so). @param {string} m */
+export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));
+
+/** #306: file held minutes without the transcript copy, in place: the minutes and their ticked items in one go.
+    @param {string} proposal the minutes' proposal file @returns {Promise<{ok: boolean, message: string, n?: number, apply_id?: number|null}>} */
+export async function fileWithoutTranscript(proposal) {
+  const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
+  if (!res || !res.ok) return { ok: false, message: oneLine((res && res.message) || "creaite couldn't file these minutes").replace(/^\d+:\s*/, "").replace(/not approved — /, "") };
+  const a = await applyNow();
+  if (!a.ok) return { ok: false, message: oneLine(a.message || "creaite couldn't file these minutes") };
+  const n = Number((String(a.message || "").match(/written (\d+)/) || [])[1] || 0);
+  return { ok: true, message: "", n, apply_id: a.apply_id };
 }

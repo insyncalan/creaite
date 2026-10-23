@@ -45,7 +45,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 
 KINDS = ("ask", "sweep", "generate", "prep", "check", "load", "draft", "vip", "process",     # #264: Intake's Process
-         "calendar")                                                                     # #265: Calendar import's Refresh
+         "calendar",                                                                     # #265: Calendar import's Refresh
+         "reextract")                                                                    # #283: the Minutes view's Read again
 
 
 MAX_COUNT = 10 ** 12            # no count the monitor keeps is larger: an odd line can't overflow or bend a median

@@ -6,6 +6,7 @@ export * from "./dom.js";
 export * from "./page.js";
 export * from "./data.js";
 export * from "./server.js";
+export * from "./say.js";   /* #307: the plain words, for the tests */
 export * from "./instant.js";
 export * from "./nav.js";
 export * from "./fields.js";

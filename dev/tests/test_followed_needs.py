@@ -547,9 +547,9 @@ class Page(LiveBrowserCase):
     def test_a_the_proposal_and_b_the_note_are_from_rows_that_go_to_review(self):
         b = self.b
         got = {r["key"]: r for r in self.rows()}
-        prop = next(r for r in got.values() if r["text"].startswith("From Mia Hale: [ABC] SOW") and "proposals" in r["text"])
+        prop = next(r for r in got.values() if r["text"].startswith("From Mia Hale: [ABC] SOW") and "suggestions" in r["text"])
         note = next(r for r in got.values() if r["text"].startswith("From Mia Hale: [ABC] SOW") and "memory" in r["text"])
-        self.assertIn("2 proposals in Review", prop["text"])
+        self.assertIn("2 suggestions in Review", prop["text"])
         self.assertIn("Send the SOW", prop["text"])
         self.assertIn("Risk", prop["text"])
         self.assertIn("A note for", note["text"])
@@ -655,7 +655,7 @@ class Dismiss(LiveBrowserCase):
     def test_dismiss_stay_gone_come_back(self):
         b = self.b
         b.eval("go('today'); EXPAND.add('td'); EXPAND.add('attn'); renderToday()")
-        rid = self.row("2 proposals in Review")
+        rid = self.row("2 suggestions in Review")
         self.assertTrue(rid)
         b.click(f'#attnList [data-alertdo="dismiss"][data-id="{rid}"]')
         b.wait(f"!document.querySelector('#attnList li[data-al=\"{rid}\"]')")
@@ -666,12 +666,12 @@ class Dismiss(LiveBrowserCase):
         b.wait(f"!document.querySelector('#attnList li[data-al=\"{rid}\"]')")
         stage(self.v, [item("Send the SOW", src("RE: [ABC] SOW", "https://x/4", sent=f"{TODAY} 11:00"))], now=STAMP)   # asked again
         self.refresh()
-        self.assertIsNone(self.row("2 proposals in Review"))
-        self.assertIsNone(self.row("proposals in Review"))
+        self.assertIsNone(self.row("2 suggestions in Review"))
+        self.assertIsNone(self.row("suggestions in Review"))
         stage(self.v, [item("Book the UAT environment", src("RE: [ABC] SOW", "https://x/5", sent=f"{TODAY} 11:30"))], now=STAMP)   # a new action
         self.refresh()
         self.assertTrue(self.row("new since you dismissed it"), self.b.eval("[...document.querySelectorAll('#attnList > li')].map(l=>l.textContent)"))
-        self.assertIn("proposals in Review", self.b.eval("document.querySelector('#attnList li[data-al=\"" + rid + "\"]').textContent"))
+        self.assertIn("suggestions in Review", self.b.eval("document.querySelector('#attnList li[data-al=\"" + rid + "\"]').textContent"))
 
 
 if __name__ == "__main__":

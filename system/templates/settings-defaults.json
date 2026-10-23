@@ -301,7 +301,8 @@
   "help": {
     "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",
     "start_seen": false,
-    "first_line": true
+    "first_line": true,
+    "single_keys": true
   },
   "drafting": {
     "_about": "AI drafts (BL-218 to BL-227): each feature on (true) or off. A draft is a suggestion, never a write: it lands in an unsaved field, a pending proposal or a dialog. Settings › General › AI drafts.",

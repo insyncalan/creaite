@@ -902,6 +902,9 @@ def stage_ops(spec, projects, name, copies=None):
     return folders, ops, source_map, tcopies
 
 
+CLIENT_ONLY_ALAN = ("client_visible", "client_message")       # #283 review M2: never staged from a meeting's spec
+
+
 class Staging:
     """The items one meeting stages (BL-229: out of cmd_stage): new items, updates to open items, and notes on what was
     skipped."""
@@ -975,8 +978,9 @@ class Staging:
                           source_words(raw.get("source")) or self.source_for(row["project"], raw.get("section") or "Updates", table))
 
     def new_values(self, raw, table):
-        """The new item's values with the meeting's defaults and its source."""
-        values = dict(raw.get("values") or {})
+        """The new item's values with the meeting's defaults and its source. #283 review M2: never client-visible, and never a
+        client wording: both are Alan's alone (tracker-conventions.md), and a spec is written from a transcript's text."""
+        values = {k: v for k, v in dict(raw.get("values") or {}).items() if k not in CLIENT_ONLY_ALAN}
         if table not in RAISED_TABLES:                # #280: decisions are dated by `date`; `raised` is not a decision field
             raised = values.pop("raised", None)
             if table == "decisions" and raised and not values.get("date") and values.get("status") != "Pending":

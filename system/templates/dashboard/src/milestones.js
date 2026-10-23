@@ -223,18 +223,18 @@ export function mvStrip(list,cli){ const {A0,A1,months}=mvAxis(list,false), W=Ma
   items.sort((a,b)=>a.x-b.x);
   items.forEach(it=>{ const m=it.m, st=m.state, ach=st==="achieved", x=it.x, text=it.g?150:Math.min(Math.max(m.n.length*6.4,76)+12,220), left=Math.min(Math.max(x-text/2,0),W-text); let lv=0;
     while(levels[lv]!==undefined&&left<levels[lv]+8) lv++; levels[lv]=left+text; const top=base+lv*LH, nm=m.n.length>26?m.n.slice(0,25)+"…":m.n;
-    h+=`<div class="mv-lead" style="left:${x}px;top:56px;height:${top-56}px"></div>`;
+    h+=`<div class="mv-lead" data-lv="${lv}" style="left:${x}px;top:56px;height:${top-56}px"></div>`;
     if(it.g){ const ax=px(mvT(m.agr));
       h+=`<div class="mv-gconn" style="left:${ax}px;width:${x-ax}px"></div><div class="mv-ghost" style="left:${x}px" role="img" aria-label="${MSW}: ${esc(m.n)} now expected ${fd(m.fc)}" data-tip="${MSW}: ${esc(m.n)} now expected ${fd(m.fc)}"></div>`;
-      h+=`<button type="button" class="mv-lab gl" data-mvedit="${m.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m.n)} now expected ${fd(m.fc)}"><b>Expected ${fd(m.fc)}</b><span>${esc(m.n.length>20?m.n.slice(0,19)+"…":m.n)}</span></button>`; }
+      h+=`<button type="button" class="mv-lab gl" data-lv="${lv}" data-mvedit="${m.id}" style="left:${left}px;top:${top}px;width:${text}px" aria-label="${esc(m.n)} now expected ${fd(m.fc)}"><b>Expected ${fd(m.fc)}</b><span>${esc(m.n.length>20?m.n.slice(0,19)+"…":m.n)}</span></button>`; }
     else{ h+=`${(w=>`<button type="button" class="mv-mk ${st}" data-mvedit="${m.id}" style="left:${x}px" aria-label="${w}" data-tip="${w}">${mvShape(st,20)}</button>`)(`${MSW}: ${esc(m.n)}, ${(cli?MVCWORD:MVWORD)[st]}, ${ach?"achieved "+fd(m.actual||m.fc):"agreed "+fd(m.agr||m.fc)}`)}`;
-      h+=`<button type="button" class="mv-lab${st==="overdue"?" late":""}${ach?" ok":""}" data-mvedit="${m.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m.n)}"><b>${esc(nm)}</b><span>${fd(mvWhen(m))}</span></button>`; } });
+      h+=`<button type="button" class="mv-lab${st==="overdue"?" late":""}${ach?" ok":""}" data-lv="${lv}" data-mvedit="${m.id}" tabindex="-1" style="left:${left}px;top:${top}px;width:${text}px" title="${esc(m.n)}"><b>${esc(nm)}</b><span>${fd(mvWhen(m))}</span></button>`; } });
   h+=`<div class="tday" style="left:${px(mvT(TODAY))}px;height:${base-6}px"><span>Today</span></div>`;
   const first=new Date(A0), last=new Date(A1-864e5);
-  return {html:h,w:W,h:base+Math.max(1,levels.length)*LH+4,range:`${MVMN[first.getUTCMonth()]} ${first.getUTCFullYear()} to ${MVMN[last.getUTCMonth()]} ${last.getUTCFullYear()}`,today:px(mvT(TODAY))}; }
+  return {html:h,w:W,lv:Math.max(1,levels.length),h:base+Math.max(1,levels.length)*LH+4,range:`${MVMN[first.getUTCMonth()]} ${first.getUTCFullYear()} to ${MVMN[last.getUTCMonth()]} ${last.getUTCFullYear()}`,today:px(mvT(TODAY))}; }
 export function mvPlan(code,cli,host){ const list=mvVis(code,cli,false).sort((a,b)=>(mvWhen(a)||"9").localeCompare(mvWhen(b)||"9")), s=mvStrip(list,cli);
   let h=`<div class="mv-stripbar">${ibtn("chevleft","Scroll the plan line left",'data-mvact="sl"',"mv-ib")}${ibtn("chevright","Scroll the plan line right",'data-mvact="sr"',"mv-ib")}<button type="button" class="mv-btn sm" data-mvact="st">Today</button><span class="mv-hint">${s.range}</span></div>
-    <div class="mv-stripwrap" tabindex="0" data-mvscroll="${host}" data-today="${Math.round(s.today)}" aria-label="Milestone plan line, scrolls sideways"><div class="mv-strip" style="width:${s.w}px;height:${s.h}px">${s.html}</div></div>
+    <div class="mv-stripwrap" tabindex="0" data-mvscroll="${host}" data-today="${Math.round(s.today)}" aria-label="Milestone plan line, scrolls sideways"><div class="mv-strip" data-lvls="${s.lv}" style="width:${s.w}px;height:${s.h}px">${s.html}</div></div>
     <div class="mv-detog"><button type="button" data-mvact="det" aria-expanded="${MVDET}" aria-controls="mvRows-${host}"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>${MVDET?"Hide milestone details":"Show milestone details"}</button></div>
     <div class="mv-rows" id="mvRows-${host}"${MVDET?"":" hidden"}>`;
   list.forEach(m=>{ const st=m.state, moved=st!=="achieved"&&m.agr&&m.fc>m.agr, ach=st==="achieved";
@@ -246,7 +246,22 @@ export function mvPlan(code,cli,host){ const list=mvVis(code,cli,false).sort((a,
       <div><div class="mv-lbl">${ach?"Achieved":"Agreed date"}</div><div class="dt"${ach?' style="color:var(--ok)"':""}>${ach?fd(m.actual||m.fc):(m.agr?fd(m.agr):"Not agreed yet")}</div>${ach&&m.agr?`<div class="mv-hint">Agreed ${fd(m.agr)}${m.actual===m.agr?" · on the agreed date":""}</div>`:""}${moved?`<div class="exp">Expected ${fd(m.fc)} (${mvDays(m.fc,m.agr)} days later)</div>`:""}${!cli?mvRevised(m):""}</div>
       <div>${mvPct(m)}</div></div>`; });
   return h+"</div>"; }
-export function mvBindScroll(root){ (root||document).querySelectorAll("[data-mvscroll]").forEach(sw=>{ const k=sw.dataset.mvscroll; if(shared.MV.scroll[k]===undefined) shared.MV.scroll[k]=Math.max(0,(+sw.dataset.today||0)-sw.clientWidth/3);
+/* #301: the plan line is as tall as you drag its corner grip (the browser's own, like the Draft email preview's, #281): taller spreads the
+   label rows apart, shorter scrolls; double-click the grip to go back. Remembered per browser, not per project. Mouse only. */
+export const MVHKEY="creaite.mvStripH", MVHMIN=120;
+export function mvFit(sw){ const st=sw.querySelector(".mv-strip"); if(!st) return; const n=+st.dataset.lvls||1, base=62, own=!!sw.style.height;
+  const lh=own?Math.max(42,Math.min(72,Math.floor((sw.clientHeight-base-12)/n))):42, hh=base+n*lh+4;
+  st.style.height=hh+"px";
+  st.querySelectorAll("[data-lv]").forEach(e=>{ const top=base+(+e.dataset.lv)*lh; if(e.classList.contains("mv-lead")) e.style.height=(top-56)+"px"; else e.style.top=top+"px"; }); }
+export function mvBindResize(sw){ if(sw.dataset.mvh) return; sw.dataset.mvh="1";
+  const clamp=h=>Math.max(MVHMIN,Math.min(h,Math.round(innerHeight*0.85)));
+  try{ const v=+localStorage.getItem(MVHKEY); if(v>=MVHMIN) sw.style.height=clamp(v)+"px"; }catch(e){}
+  let last=sw.clientHeight;
+  if(typeof ResizeObserver==="function") new ResizeObserver(()=>{ if(!sw.isConnected||sw.clientHeight<MVHMIN-8||sw.clientHeight===last) return; last=sw.clientHeight; if(sw.style.height){ mvFit(sw); try{ localStorage.setItem(MVHKEY,String(Math.round(sw.getBoundingClientRect().height))); }catch(e){} } }).observe(sw);
+  sw.addEventListener("dblclick",e=>{ const r=sw.getBoundingClientRect(); if(e.clientX<r.right-22||e.clientY<r.bottom-22) return;   /* only on the grip in the bottom corner */
+    sw.style.height=""; try{ localStorage.removeItem(MVHKEY); }catch(x){} mvFit(sw); });
+  mvFit(sw); }
+export function mvBindScroll(root){ (root||document).querySelectorAll("[data-mvscroll]").forEach(sw=>{ mvBindResize(sw); const k=sw.dataset.mvscroll; if(shared.MV.scroll[k]===undefined) shared.MV.scroll[k]=Math.max(0,(+sw.dataset.today||0)-sw.clientWidth/3);
   sw.scrollLeft=shared.MV.scroll[k]; sw.addEventListener("scroll",()=>{ shared.MV.scroll[k]=sw.scrollLeft; }); }); }
 
 /* ---- the cockpit's card: the Plan only, never Movement ---- */

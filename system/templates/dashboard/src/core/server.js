@@ -13,13 +13,15 @@ import { renderActivity } from "../activity.js";
 import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
 import { openChat, reattach, say } from "../ask.js";
-import { A, DEC, FILES, P, R, REMINDERS, REV } from "./data.js";
+import { A, DEC, FILES, P, R, REMINDERS, REV, snapFollowEdit, snapModelKeys } from "./data.js";
+import { findGuarded, refreshGuard } from "./identity.js";
 import { $, $$, esc, html, putHTML, raw } from "./dom.js";
 import { typing } from "./keys.js";
 import { mCells, mCounts } from "./motion.js";
 import { go, tabTitle } from "./nav.js";
 import { D, days, fd, fdMd, fdText, mK, mSay, nowStamp, prio, reduced, S, TODAY } from "./page.js";
 import { shared } from "./state.js";
+import { decidedWords, plainSay, savedCapped } from "./say.js";
 import { heldWords, rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
@@ -82,13 +84,29 @@ export const SVW={ async read(p){ const r=await api("/api/fs",{op:"read",path:p}
 export const viaServer=()=>SERVED&&shared.LIVE;
 shared.VW={ read:(...a)=>(viaServer()?SVW:FVW).read(...a), write:(...a)=>(viaServer()?SVW:FVW).write(...a), remove:(...a)=>(viaServer()?SVW:FVW).remove(...a),
   exists:(...a)=>(viaServer()?SVW:FVW).exists(...a), append:(...a)=>(viaServer()?SVW:FVW).append(...a), upload:(...a)=>(viaServer()?SVW:FVW).upload(...a) };
-export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
+/* #291 Tier 1: the server's "can't open <path>" in words (the path is never shown; the server message is unchanged) */
+export const noPath=m=>String(m||"").replace(/^can't open \S.*$/m,"That file isn't in the project folder any more, so it can't be opened.");
+export const oneLine=m=>noPath(m).split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
 /* #92: tracker.py refuses an apply when a file changed after the item was staged ("write: <path> changed since this proposal was
    made"); said in plain words, with what to do. Only the page's wording: tracker.py's refusal is unchanged. */
+/* #291 Tier 1: the meeting or item an apply error names, from Review's own rows (never the proposal's file name) */
+export const applyTitle=(file,ref)=>{ const L=typeof REV!=="undefined"?REV.filter(x=>x.file===file):[], row=L.find(x=>ref!=null&&String(x.ref)===String(ref))||L.find(x=>x.kind==="draft")||L[0], r=(row&&row.rec)||{};
+  return String(r.t||r.title||r.decision||"").replace(/^[A-Z][A-Za-z ]{0,20}: /,"").trim(); };
 export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
-  if(f) return `${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`;
-  /* #275 round 3: the Track check's refusal, without tracker.py's header (the page says "Apply stopped" itself) or the proposal's file */
-  if(!/in the minutes' Track column|the minutes record can't be read/.test(t)) return t;
+  if(f) return "A file changed after this suggestion was made, so nothing was saved. Make the suggestion again from the current file, or drop it in Intake.";
+  /* #275 round 3: the Track check's refusal, without tracker.py's header or the proposal's file */
+  if(!/in the minutes' Track column|the minutes record can't be read/.test(t)){
+    /* #291 Tier 1: a stop in plain words: which suggestion, never the file, the field list or the script's header */
+    const miss=t.match(/(proposed-[^\s\/\\:]+\.json) \w+: copy: source not found/);
+    if(miss){ const n=applyTitle(miss[1]); return `The minutes${n?` for ${n}`:""} couldn't be filed: the transcript isn't in your inbox any more. Nothing was saved.`; }
+    const bad=[...t.matchAll(/(proposed-[^\s\/\\:]+\.json) item (\d+): /g)];
+    if(bad.length){ const one=bad.length===1, n=applyTitle(bad[0][1],bad[0][2]);
+      return `${one?"One suggestion":bad.length+" suggestions"}${one&&n?` (${n})`:""} couldn't be saved. ${one?"It needs":"They need"} fixing in Intake. Nothing was saved.`; }
+    /* #275 (Cap's 1): the two shapes that are not a suggestion's own fault are not sent to Review */
+    if(/a recode is applied on its own/.test(t)) return "A change of project code has to go through on its own, so nothing was saved. Approve or drop everything else waiting in Intake first, then ask for the code change again.";
+    if(/^Apply failed/m.test(t)) return "creaite couldn't save this, so nothing was changed. Settings › Health › Diagnostics has the reason.";
+    if(/Apply stopped|proposed-\S+\.json/.test(t)) return "Nothing was saved. creaite stopped before changing anything; Settings › Health › Diagnostics has the reason.";
+    return t; }
   return t.split("\n").map(x=>x.trim()).filter(x=>x&&!/^Apply stopped\. Nothing was written\.$/.test(x))
     .map(x=>x.replace(/^proposed-\S+\.json (item \d+|minutes): /,(a,w)=>w==="minutes"?"":"an item was ")).join("\n"); };
 /* #280: an apply that stopped because of other, older staged proposals (an older server applied everything staged with a save).
@@ -105,11 +123,11 @@ export function applyBlockers(msg,own){ const t=String(msg||""); if(!/Apply stop
 export async function proposalLabel(file){ let data=null; try{ data=JSON.parse(await shared.VW.read("system/staging/"+file)); }catch(e){ data=null; }
   const b=data&&(data.meeting||data.report), title=b&&b.title?String(b.title):"", made=(b&&b.date)||(data&&data.created)||(file.match(/\d{4}-\d{2}-\d{2}/)||[""])[0];
   const when=fd(String(made).slice(0,10));
-  return title?`${title}${when?" ("+when+")":""}`:`a proposal staged ${when||"earlier"}`; }
+  return title?`${title}${when?" ("+when+")":""}`:`a suggestion from ${when||"earlier"}`; }
 /* #280: the words: an older proposal is stopping it, not his edit; every blocking file named; Intake offered */
 export async function blockerWords(list){ const parts=[];
-  for(const b of list) parts.push(`${await proposalLabel(b.file)}: ${b.why.join("; ")}`);
-  return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older staged proposals are`:"an older staged proposal is"} stopping the apply. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Intake, then save again.`; }
+  for(const b of list) parts.push(await proposalLabel(b.file));
+  return `Not saved, and not because of your edit: ${list.length>1?`${list.length} older suggestions are`:"an older suggestion is"} stopping the save. ${parts.join(" · ")}. Fix or reject ${list.length>1?"those items":"that item"} in Intake, then save again.`; }
 /* Intake (the one page for Review since #232), with the blocking proposals' meeting open and the first blocking item in the peek
    (an item, not its minutes: the refusal names items, and minutes open in their own view) */
 export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done), first=L.find(x=>!["draft","files"].includes(x.kind))||L[0];
@@ -117,7 +135,7 @@ export function openBlockersInIntake(files){ const L=REV.filter(x=>files.include
 /* fresh data after an apply or undo */
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
-  Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b));
+  Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b)); snapModelKeys(true);
   shared.ACT=n.activity; R.forEach(x=>x.pr=prio(x.imp,x.lik)); shared.DATA_AT=n.data_at||shared.DATA_AT;
   [...A,...R,...DEC,...P].forEach(o=>["t","upd","resp","cm","cmd","reason","current"].forEach(k=>{ if(typeof o[k]==="string") o[k]=(k==="current"?fdMd:fdText)(o[k]); })); shared.ACT.forEach(a=>a.what=fdText(a.what));
   ovReapply();   /* BL-304: a change still saving stays on screen */
@@ -134,23 +152,27 @@ export let TRKRELOAD=null;
 export function reloadForTrack(){ const p=reloadData().finally(()=>{ if(TRKRELOAD===p) TRKRELOAD=null; }); TRKRELOAD=p; return p; }
 export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 /* BL-189 (sprint-milestones): every apply but the peek's own leaves the peek's staged changes in staging (hold_peek); pkApply passes peek */
-export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=applyWords(r.message); return r; }
+export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=plainSay(applyWords(r.message)); return r; }
 export let undoApply = async function(id,ids){ const u=await api("/api/undo",{apply_id:id}); if(!(ids&&await refreshRecords(ids))) await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };   /* BL-304: ids, just those items again */
 /* BL-304: just these items again (Review keeps its selection; the peek's staging is reconciled), or false */
 export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{after:async()=>{ await pkReconcile(); }}); }
 /* several quick decisions (bulk approve) become one apply */
-export let APPLYT=null, APPLYN=0;
-export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
+/* #307: applySoon(row, "approved"|"rejected") says what was saved from the real kind and count ("Saved 1 action"), never "decision" for everything */
+export let APPLYT=null, APPLYN=0, APPLYL=/** @type {{r:any,v:string}[]} */ ([]);
+export function applySoon(row,verb){ APPLYN++; APPLYL.push({r:row||null,v:verb||"approved"}); clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const L=APPLYL; APPLYN=0; APPLYL=[]; const r=await applyNow();
   const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
-  snack(r.ok?`Applied ${n} decision${n===1?"":"s"}${held}`:"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  snack(r.ok?`${decidedWords(savedCapped(L,r.message))}${held}`:plainSay(oneLine(applyWords(r.message))),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
-export async function reviewViaServer(r,decision,modes){ const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
-  if(res.ok){ if(S.autoApply) applySoon(); else await reloadData(); snack(oneLine(res.message)); return; }
-  openChat(); const m=res.message||""; let acts="";
+export async function reviewViaServer(r,decision,modes){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
+  if(res.ok){ if(S.autoApply) applySoon(r,decision); else await reloadData(); snack(plainSay(oneLine(res.message))); return; }
+  const m=res.message||"";
+  if(/differs from the staged items/.test(m)&&shared.VIEW==="intake-review"){   /* #307 path 4: on Intake's row the reason is said in plain words with its way out, not in the ask panel */
+    snack("The Word draft doesn't match the suggestions for these minutes. File them as they are, or fix the Word draft and try again.",()=>reviewViaServer(r,decision,[...(modes||[]),"as-staged"]),"File as they are"); return; }
+  openChat(); let acts="";
   if(/possible internal content/.test(m)) acts=`<button class="mini" data-rv="retry">I've edited the draft: check again</button><button class="mini" data-rv="as-staged">File it anyway</button>`;
-  else if(/differs from the staged items/.test(m)) acts=(/--sync/.test(m)?`<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>`:"")+(r.ref==="meeting"?`<button class="mini" data-rv="refresh">Rebuild the items from the draft</button>`:"")+`<button class="mini" data-rv="as-staged">Keep the items as staged</button>`;
+  else if(/differs from the staged items/.test(m)) acts=(/--sync/.test(m)?`<button class="mini" data-rv="sync">Update owners and dates to match the draft</button>`:"")+(r.ref==="meeting"?`<button class="mini" data-rv="refresh">Rebuild from the minutes</button>`:"")+`<button class="mini" data-rv="as-staged">Keep the items as they are</button>`;
   /* review.py speaks to Claude Code ("2: …, or say “approve 2 --as-staged”"); here the buttons do that */
-  await say(m.replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/,? or say “[^”]*”\.?/g,".").replace(/\n\s*\(say [^)]*\)/g,"").trim(),acts);
+  await say(m.replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/,? or say “[^”]*”\.?/g,".").replace(/\n\s*\(say [\s\S]*\)\s*$/,"").replace(/not approved — the draft differs from the staged items:/,"these minutes don't match the items waiting in Review:").trim(),acts);
   $$("#chLog [data-rv]").forEach(b=>b.onclick=()=>{ $$("#chLog [data-rv]").forEach(x=>x.disabled=true); if(b.dataset.rv==="refresh"){ refreshItems(r); return; } reviewViaServer(r,decision,b.dataset.rv==="retry"?modes:[...(modes||[]),b.dataset.rv]); }); }
 /* re-extract: rebuild a meeting's proposed items from its edited draft */
 export async function refreshItems(r){ const res=await api("/api/refresh",{file:r.file}); await reloadData();
@@ -183,7 +205,25 @@ export function writeProposal(items,extra){ return vq(async()=>{ let name=`propo
   while(await shared.VW.exists("system/staging/"+name)) name=`proposed-${stampFile()}-dashboard-${i++}.json`;
   const data=Object.assign({created:stampFull().replace(" ","T"),source_run:"dashboard",files:[],items:items.map((it,j)=>Object.assign({n:j+1,match:"strong",flags:[],decision:"approved"},it))},extra||{});
   await shared.VW.write("system/staging/"+name,JSON.stringify(data,null,2)+"\n"); return name; }); }
-export let editProposal = function(file,mut){ return vq(async()=>{ const path="system/staging/"+file; let data; try{ data=JSON.parse(await shared.VW.read(path)); }catch(e){ throw new Error("that proposal has already been applied or removed"); } const apWas=apSnap(data); mut(data); apStamp(data,apWas); await shared.VW.write(path,JSON.stringify(data,null,2)+"\n"); }); };
+/* #307 h2: the one place a page edit of a proposal is read, checked and written. `rws` (a row, or a list of them) are the Intake rows the
+   edit acts on: each is found in the freshly read file by its content (core/identity.js findGuarded), never by its number, and its ref
+   is set to the item's number in that file, so the callers' `i.n===r.ref` finds the right one; none found (renumbered and changed, the
+   file deleted and written again, approved elsewhere) refuses with "already ... changed". The write carries expect_text (/api/fs), so a
+   file that changed between the read and the write (a second tab, an apply, a sweep) is never written over. */
+export let editProposal = function(file,mut,rws,same){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
+  const guarded=rws?[].concat(rws):[]; for(const r of guarded) if(!findGuarded(data,r,same)) throw new Error("already approved or changed");
+  const apWas=apSnap(data); mut(data); apStamp(data,apWas); try{ await shared.VW.write(path,JSON.stringify(data,null,2)+"\n",text); }catch(e){ if(/changed since it was read/.test(e.message)) throw new Error("already approved or changed"); throw e; }
+  guarded.forEach(r=>{ const was=r.fp; refreshGuard(data,r); snapFollowEdit(file,was,r.fp); }); }); };
+export const STALE_ROW_MSG="That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+/** #307 h2: for the routes that act by file and ref on the server (review.py: drafts, conflicts, Reject with a reason, repeats): read each
+    row's file just now and keep only the rows whose content is still in it (their refs are set to the number now). The check and the
+    server's act are two steps, so a change between them is possible but one request wide; the edits themselves are atomic (editProposal).
+    @param {any[]} rws @returns {Promise<any[]>} */
+export async function guardFresh(rws){ const out=[], cache=new Map();
+  for(const r of rws){ if(!r.fp){ out.push(r); continue; } let data=cache.get(r.file);
+    if(data===undefined){ try{ data=JSON.parse(await shared.VW.read("system/staging/"+r.file)); }catch(e){ data=null; } cache.set(r.file,data); }
+    if(data&&findGuarded(data,r)) out.push(r); }
+  return out; }
 /* ===== BL-232 (fix-as-proposed): capture edits. Every page edit of a proposal goes through editProposal, which (as
    tracker.stamp_as_proposed does for review.py and minutes.py) gives an item whose values (new) or changes (update) the
    edit altered a write-once as_proposed copy of what they were. One that has it keeps it; one whose as_proposed an
@@ -365,11 +405,11 @@ document.addEventListener("keydown",e=>{ if(shared.VIEW!=="work"||!(e.metaKey||e
   e.preventDefault(); if(!shared.UNDO){ snack("Nothing to undo"); return; } const u=shared.UNDO; shared.UNDO=null; hideSnack(); u(); });
 }
 export const DIAG={level:"info",days:0,errors:[],last24:0,loaded:false};   /* declared before status, which runs at load */
-export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE==="ok"?"":html`<button class="mini" id="vaultBtn">${shared.VSTATE==="prompt"?"Reconnect vault":shared.VSTATE==="unsupported"?"Read-only: use Chrome":"Connect vault"}</button>`}${shared.HELD.length?html`<span class="pend">${shared.HELD.length} held</span>`:""}`);   /* BL-71: only what needs an action; Live moved to the rail */
+export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE==="ok"?"":html`<button class="mini" id="vaultBtn">${shared.VSTATE==="prompt"?"Reconnect your creaite folder":shared.VSTATE==="unsupported"?"Read-only: use Chrome":"Connect your creaite folder"}</button>`}${shared.HELD.length?html`<span class="pend">${shared.HELD.length} held</span>`:""}`);   /* BL-71: only what needs an action; Live moved to the rail */
   $("#liveAlert").classList.toggle("on",!shared.LIVE); $("#liveAlert").classList.toggle("found",shared.LIVELINK);
   if(ALERT0===null) ALERT0=$("#liveAlert").innerHTML;
   if(!(shared.LIVELINK&&!SERVED)){ if($("#liveAlert").innerHTML!==ALERT0) putHTML($("#liveAlert"),raw(ALERT0)); }
-  else putHTML($("#liveAlert"),html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save and apply directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude Code on this laptop, working in your vault"}:{status:"off",word:"Live server not running — commands will be copied instead"});   /* BL-316: the StatusDot block */ 
+  else putHTML($("#liveAlert"),html`<b>creaite is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude, working in your creaite folder"}:{status:"off",word:"creaite isn’t running"});   /* BL-316: the StatusDot block */ 
   if(!shared.LOADING) errBanner(); }
 /* BL-86: the installed app. The service worker shows an offline page when the server is stopped; the page says "still here"
    every 10 seconds, so a server the launcher started can stop itself when the last window closes. */
@@ -383,7 +423,7 @@ export function apply(what,doIt,undoIt,by="You, in the dashboard",ids=[]){
   refreshAll(); snack(shared.LIVE?`${what} — saved and applied`:`${what} — saved; applies when the server is back`,()=>{ undoIt(); const i=shared.ACT.indexOf(entry); if(i>=0) shared.ACT.splice(i,1); refreshAll(); });
 }
 shared.PENDING=[];
-export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); return; }
+export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):oneLine(applyWords(r.message)),r.ok?()=>undoApply(r.apply_id):null); return; }
   snack("Say “apply” in Claude Code, or start the live server"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */

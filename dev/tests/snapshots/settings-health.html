@@ -8,7 +8,7 @@
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="work" data-scat="work">Work and reports</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Sweep and Intake</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="sweep" data-scat="sweep">Mail, Teams and Intake</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="reports" data-scat="reports">Reports and minutes</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="ai" data-scat="ai">AI drafts</button>
 <button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="look" data-scat="look">Look and help</button>
@@ -20,7 +20,7 @@
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
 <option value="work">Work and reports</option>
-<option value="sweep">Sweep and Intake</option>
+<option value="sweep">Mail, Teams and Intake</option>
 <option value="reports">Reports and minutes</option>
 <option value="ai">AI drafts</option>
 <option value="look">Look and help</option>
@@ -72,15 +72,15 @@
 </ul>
 <div class="hrestore" id="backupRestore">
 <h3 class="hsub">Restore from a backup</h3>
-<p class="sub">Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched.</p>
+<p class="sub">Puts creaite back as it was in a daily backup: your project record, settings, items waiting in Review and history. The current database and every file it replaces are kept first. Project files are never touched.</p>
 <button type="button" class="btn" id="backupList">Choose a backup…</button>
 </div>
 <h3 class="hsub">After every update, creaite does this for you</h3>
 <ul class="hsteps">
 <li>Backs up first, and rolls back if a step fails</li>
-<li>Makes this vault's launcher again</li>
+<li>Makes creaite's launcher again</li>
 <li>Asks Chrome to refresh its copy of the app's icon</li>
-<li>Restarts the live server on the new version, and runs the health check</li>
+<li>Restarts creaite on the new version, and runs the health check</li>
 </ul>
 </div>
 </div>
@@ -102,11 +102,11 @@
 </div>
 </div>
 <div class="card" id="liveCard" data-sec="live">
-<h2>Live server and backups</h2>
+<h2>creaite and backups</h2>
 <div class="srow">
 <div>
 <span id="sr#1">Status</span>
-<small id="sr#1h">127.0.0.1, required</small>
+<small id="sr#1h">On this computer, required</small>
 </div>
 <div>
 <span class="h-ok">Running</span>
@@ -116,32 +116,21 @@
 <div>
 <span id="sr#2">Mail, Teams and data</span>
 </div>
-<div>Mail and Teams never swept · data as of 09-10-2026 08:01</div>
+<div>Mail and Teams never checked · data as of 09-10-2026 08:01</div>
 </div>
 <div class="srow chg">
 <div>
 <span id="sr#3">Port</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="sr#3h">The creaite app belongs to this port: if you change it, install the app again and reconnect the vault</small>
+<small id="sr#3h">The creaite app belongs to this port: if you change it, install the app again and reconnect your creaite folder</small>
 </div>
 <div>
 <input aria-labelledby="sr#3" aria-describedby="sr#3h" type="number" data-k="port" value="8766" min="0" style="width:#px">
 </div>
 </div>
 <div class="srow" style="display:block">
-<div>Start the live server<small>Paste into Terminal</small>
-</div>
-<div class="cmdbox">
-<code>cd <VAULT> &amp;&amp; python3 system/scripts/live_server.py</code>
-<button type="button" class="ib sm" aria-label="Copy the command" data-tip="Copy the command" data-copycmd="">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="copy">
-<rect x="8" y="8" width="13" height="13" rx="2">
-</rect>
-<path d="M4 16V5a2 2 0 0 1 2-2h10">
-</path>
-</svg>
-</button>
+<div>If creaite stops<small>Reopen the creaite app. Its set-up steps are in Diagnostics</small>
 </div>
 </div>
 <div style="display:flex;gap:#px;margin-top:#px">
@@ -161,7 +150,7 @@
 <div class="srow">
 <div>
 <span id="sr#4">Health check</span>
-<small id="sr#4h">The same checks as “health check” in Claude Code (doctor.py): it only reads</small>
+<small id="sr#4h">Checks creaite's set-up; it only reads</small>
 </div>
 <div>
 <button type="button" class="btn" id="suHealth">Run the health check</button>
@@ -170,7 +159,7 @@
 <div class="srow">
 <div>
 <span id="sr#5">Rebuild the dashboard and Excel view</span>
-<small id="sr#5h">From the tracker; nothing in the tracker changes</small>
+<small id="sr#5h">From your project record; nothing in it changes</small>
 </div>
 <div>
 <button type="button" class="btn" id="suRebuild">Rebuild…</button>
@@ -179,42 +168,34 @@
 <div class="srow">
 <div>
 <span id="sr#6">Microsoft 365</span>
-<small id="sr#6h">Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then say this in Claude Code. The first sweep confirms it</small>
+<small id="sr#6h">Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then ask Claude to check it. The first mail and Teams check confirms it</small>
 </div>
 <div>
 <span class="sub">Not confirmed yet</span>
 </div>
 </div>
 <div class="sucmd">
-<code>setup: check Microsoft 365</code>
-<button type="button" class="mini" data-sucopy="m365">Copy</button>
 <button type="button" class="mini" data-sucheck="m365">Check again</button>
 </div>
 <div class="srow">
 <div>
 <span id="sr#7">Launcher</span>
-<small id="sr#7h">A small app that opens creaite in its own window and starts the live server. It goes outside the vault, so the page can’t make it: paste this into Terminal</small>
+<small id="sr#7h">A small app that opens creaite in its own window and starts creaite. It goes outside your creaite folder, so the page can’t make it: Settings › Health › Diagnostics has the one step</small>
 </div>
 <div>
 <span class="sub">Not made yet</span>
 </div>
 </div>
 <div class="sucmd">
-<code>cd <VAULT> &amp;&amp; python3 system/scripts/launch.py make-launcher</code>
-<button type="button" class="mini" data-sucopy="launch">Copy</button>
 <button type="button" class="mini" data-sucheck="launch">Check again</button>
 </div>
 <div class="srow">
 <div>
 <span id="sr#8">The rest of set-up</span>
-<small id="sr#8h">Your name and role, the projects folder, git and the optional schedules are a conversation: in Claude Code say</small>
+<small id="sr#8h">Your name and role are in Settings › Essentials. The projects folder, git and the optional schedules are a conversation: ask Claude to set creaite up.</small>
 </div>
 <div>
 </div>
-</div>
-<div class="sucmd">
-<code>setup</code>
-<button type="button" class="mini" data-sucopy="setup">Copy</button>
 </div>
 </div>
 <div class="card" id="diagCard" data-sec="diag">
@@ -249,6 +230,29 @@
 <button class="btn" id="diagCopy">Copy diagnostics</button>
 </div>
 </div>
+<div class="srow" style="display:block">
+<div>Restart creaite<small>Only if the creaite app can’t be reopened: paste into Terminal</small>
+</div>
+<div class="cmdbox">
+<code>cd <VAULT> &amp;&amp; python3 system/scripts/live_server.py</code>
+<button type="button" class="ib sm" aria-label="Copy the command" data-tip="Copy the command" data-copycmd="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="copy">
+<rect x="8" y="8" width="13" height="13" rx="2">
+</rect>
+<path d="M4 16V5a2 2 0 0 1 2-2h10">
+</path>
+</svg>
+</button>
+</div>
+</div>
+<div class="srow" style="display:block">
+<div>Make the launcher<small>A small app that opens creaite in its own window: paste into Terminal</small>
+</div>
+<div class="sucmd">
+<code>cd <VAULT> &amp;&amp; python3 system/scripts/launch.py make-launcher</code>
+<button type="button" class="mini" data-sucopy="launch">Copy</button>
+</div>
+</div>
 <div class="srow">
 <div>
 <span id="sr#12">Refused commands</span>
@@ -278,7 +282,7 @@
 <div class="srow">
 <div>
 <span id="sr#14">Update</span>
-<small id="sr#14h">Save a creaite-X.Y.Z.zip from GitHub in system/releases</small>
+<small id="sr#14h">Download the new creaite from GitHub; creaite finds it in Downloads</small>
 </div>
 <div>
 <span class="sub">Up to date</span>
@@ -297,15 +301,29 @@
 <div id="updPlan">
 </div>
 </div>
-<div class="card" id="dangerCard" data-sec="danger">
-<h2>Stop the live server</h2>
+<div class="card" id="asCard" data-sec="signin">
+<h2>Start creaite when I sign in</h2>
 <div class="srow">
 <div>
-<span id="sr#16">Stop the live server</span>
-<small id="sr#16h">Open creaite again from its launcher or Terminal. Edits wait until it is running again</small>
+<span id="asLab">Start creaite when I sign in</span>
+<small>Opens creaite in the background each time you sign in to this Mac. Stop still keeps it stopped until next time</small>
 </div>
 <div>
-<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>
+<span class="sub" id="asState">Off</span>
+<button type="button" class="btn" id="asSwitch" role="switch" aria-checked="false" aria-label="Start creaite when I sign in">Turn on…</button>
+</div>
+</div>
+<p class="sub" id="asTerm">Prefer Terminal? <a href="#help-howto-fix-a-stopped-server-and-other-problems" data-help="howto-fix-a-stopped-server-and-other-problems">Help › Fix a stopped server</a> has the commands, with your own folder filled in.</p>
+</div>
+<div class="card" id="dangerCard" data-sec="danger">
+<h2>Stop creaite</h2>
+<div class="srow">
+<div>
+<span id="sr#16">Stop creaite</span>
+<small id="sr#16h">Open creaite again from its launcher. Edits wait until it is running again</small>
+</div>
+<div>
+<button class="btn danger" id="liveStop" title="Stops creaite; open it again from its launcher">Stop</button>
 </div>
 </div>
 </div>
@@ -319,6 +337,6 @@
 </div>
 <button class="btn" data-go="help">Open help</button>
 </div>
-<p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+<p class="sub">Settings save instantly, with a backup and a log entry.</p>
 </div>
 </section>

@@ -3,7 +3,7 @@
    Tabs Everyone, With work, Nothing assigned and Needs attention (the Tabs block; the tab is in the address, #people/<tab>, and
    remembered in this browser); columns Name, Email, Organisation, Role, Projects, Actions, RAID, Decisions, Overdue (what is
    still open, each opening Work so); the search and the same two-pane filter as the project page's People view (Project, How
-   they're involved, Organisation; Needs attention: No email, No organisation, No role); Add a person; on each row Add details
+   they're involved, Organisation; Needs attention: No email, No organisation, No role); Add a person; on each row a quiet flag of what is missing
    (when something is missing), Edit and Remove from the register, which asks first and has Undo. A name opens their page; a
    right-click is the person menu, with Draft email. No star for a followed person here (BL-288: only on the project settings
    page), no merge, and no "Press ? for help" line (as on Today). The pieces are components/people/PeopleParts.jsx; the data and
@@ -16,7 +16,7 @@ import { pName } from "../../core/data.js";
 import { store } from "../../core/page.js";
 import { navWrite } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
-import { addPerson, inRegister, namedIn, newFilter, personPasses, registerRows, removeFromRegister, savePerson } from "../../stores/peopleRegister.js";
+import { addPerson, inRegister, missingFlag, namedIn, newFilter, personPasses, registerRows, removeFromRegister, savePerson } from "../../stores/peopleRegister.js";
 import { Count, Dash, NameCell, PeopleApplied, PeopleTools, openPersonForm, peopleWord, peoplePlural, useFields } from "./PeopleParts.jsx";
 
 /** @typedef {import("../../stores/peopleRegister.js").PersonRow} PersonRow */
@@ -94,7 +94,7 @@ function PlRow({ x }) {
       <td class={`num${x.late ? " late" : ""}`}><Count n={x.late} label={`${peoplePlural(x.late, "overdue item")} owned by ${nm}`} nav="all:open:"
         extra={{ st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: plOwners(late) }} /></td>
       <td class="mgract">{x.me ? <span class="x">Change in Settings › Essentials › You</span> : <>
-        {x.missing.length ? <button type="button" class="mini" data-pl-details={x.n} aria-haspopup="dialog" aria-label={`Add details for ${x.n}`} onClick={edit}>Add details</button> : null}
+        {x.missing.length ? <button type="button" class="miniflag" data-pl-details={x.n} aria-haspopup="dialog" aria-label={`${missingFlag(x)} for ${x.n}: edit details`} onClick={edit}>{missingFlag(x)}</button> : null}
         <IconButton icon="pencil" label="Edit details" name={`Edit details: ${x.n}`} haspopup="dialog" data={{ "pl-edit": x.n }} onClick={edit} />
         <RemoveButton x={x} /></>}</td>
     </tr>

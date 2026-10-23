@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_today_intake_line.py   (Chrome tier; skipped without Chrome)
 The "Intake and Review" section (heading, count, "new" mark, fold, line) is gone from Today. In its place one muted line at the foot
-of Your commitments: "Intake: 1 meeting ready to process and 4 proposals to approve.", each phrase a link, and a small x. Nothing
+of Your commitments: "Intake: 1 meeting ready to process and 4 suggestions to approve.", each phrase a link, and a small x. Nothing
 waiting, no line. The x hides it until something new arrives (an item not waiting when it was pressed) or the next morning, kept in this browser. Today's
 rows have no quick Approve or Reject. Messages from people Alan follows (BL-334) keep their cards, now in a section of their own.
 """
@@ -64,24 +64,24 @@ class Shows(Line):
         b = self.b
         self.waiting(4, 1)
         self.assertTrue(b.eval(VISIBLE))
-        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 proposals to approve.")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 suggestions to approve.")
         links = b.eval("[...document.querySelectorAll('#tdQuiet a')].map(a=>[a.dataset.tdq,a.textContent,a.getAttribute('href')])")
-        self.assertEqual(links, [["meetings", "1 meeting ready to process", "#intake-review&stage=arrived"], ["proposals", "4 proposals to approve", "#intake-review&stage=drafted"]])
+        self.assertEqual(links, [["meetings", "1 meeting ready to process", "#intake-review&stage=arrived"], ["proposals", "4 suggestions to approve", "#intake-review&stage=drafted"]])
         self.assertTrue(b.eval("!!document.querySelector('#tdQuiet svg.i') && !!document.querySelector('#tdQuiet button#tdQx svg')"))
 
     def test_plurals_and_singulars(self):
         self.waiting(1, 3)
-        self.assertEqual(self.text(), "Intake: 3 meetings ready to process and 1 proposal to approve.")
+        self.assertEqual(self.text(), "Intake: 3 meetings ready to process and 1 suggestion to approve.")
 
     def test_only_one_kind_waiting_has_one_phrase(self):
         self.waiting(2, 0)
-        self.assertEqual(self.text(), "Intake: 2 proposals to approve.")
+        self.assertEqual(self.text(), "Intake: 2 suggestions to approve.")
         self.waiting(0, 2)
         self.assertEqual(self.text(), "Intake: 2 meetings ready to process.")
 
     def test_new_files_in_intake_are_a_third_phrase(self):
         self.waiting(4, 1, 2)
-        self.assertEqual(self.text(), "Intake: 1 meeting ready to process, 4 proposals to approve and 2 new files to process.")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process, 4 suggestions to approve and 2 new files to process.")
         self.assertEqual(self.b.eval("document.querySelector('#tdQuiet [data-tdq=files]').getAttribute('href')"), "#intake-review&stage=arrived")
 
     def test_a_file_of_unknown_kind_is_not_a_new_file_to_process(self):
@@ -127,7 +127,7 @@ class Shows(Line):
         self.assertEqual((o["role"], o["live"], o["atomic"]), ("status", "polite", "true"))
         self.assertEqual(o["text"], "7 waiting in Intake")                       # the count alone, not the sentence
         self.assertTrue(o["small"])                                              # visually hidden
-        self.assertEqual(o["visible"], "Intake: 1 meeting ready to process, 4 proposals to approve and 2 new files to process.")
+        self.assertEqual(o["visible"], "Intake: 1 meeting ready to process, 4 suggestions to approve and 2 new files to process.")
 
     def test_a_redraw_with_the_same_count_leaves_the_region_alone_and_a_dismiss_silences_it(self):
         b = self.b
@@ -180,7 +180,7 @@ class Shows(Line):
     def test_confidential_meeting_counts_but_is_never_named(self):
         b = self.b
         self.waiting(2, 2, 0, conf=True)
-        self.assertEqual(self.text(), "Intake: 2 meetings ready to process and 2 proposals to approve.")
+        self.assertEqual(self.text(), "Intake: 2 meetings ready to process and 2 suggestions to approve.")
         self.assertNotIn("SECRETBOARD", b.eval("document.getElementById('v-today').innerText + document.getElementById('v-today').innerHTML"))
 
     def test_no_vip_label_and_dates_are_not_us_style(self):
@@ -195,7 +195,7 @@ class Shows(Line):
         self.waiting(3, 2, 1)
         o = b.eval("({p:REV.filter(r=>!r.done).length, m:MTG().filter(txReady).length, f:(D.inbox||[]).filter(x=>x.state==='new').length})")
         self.assertEqual(o, {"p": 3, "m": 2, "f": 1})
-        self.assertIn("3 proposals to approve", self.text())
+        self.assertIn("3 suggestions to approve", self.text())
         self.assertIn("2 meetings ready to process", self.text())
 
 
@@ -273,7 +273,7 @@ class Dismiss(Line):
         self.waiting(4, 1)                                              # a refresh with the same things: still hidden
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
         self.waiting(5, 1)
-        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 5 proposals to approve.")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 5 suggestions to approve.")
 
     def test_it_comes_back_when_a_new_meeting_or_file_arrives(self):
         b = self.b
@@ -348,7 +348,7 @@ class Dismiss(Line):
         b.eval("go('today')")
         b.pump(0.2)
         self.assertTrue(b.eval(VISIBLE))
-        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 proposals to approve.")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 suggestions to approve.")
 
     def test_a_fifth_shows_it_and_approving_an_older_one_keeps_it_showing(self):
         """Repro (b): 4 dismissed, a 5th arrives (shows); one of the older 4 is approved: the new one still waits, so the line stays."""
@@ -360,7 +360,7 @@ class Dismiss(Line):
         self.assertTrue(b.eval(VISIBLE))
         b.eval("REV.find(r=>r.n===9000).done='approved'; renderToday()")
         self.assertTrue(b.eval(VISIBLE))
-        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 proposals to approve.")
+        self.assertEqual(self.text(), "Intake: 1 meeting ready to process and 4 suggestions to approve.")
 
     def test_what_is_kept_is_hashed_ids_per_kind_and_never_text(self):
         b = self.b
@@ -405,7 +405,7 @@ class Dismiss(Line):
         # approve the first proposal (the kept list is the last 200, so the first one is beyond the cap) and stage a new one
         b.eval("REV.find(r=>r.n===9000).done='approved'; REV.push({...REV.find(r=>r.n===9001), n:9998, ref:998}); renderToday()")
         self.assertTrue(b.eval(VISIBLE))
-        self.assertIn("250 proposals to approve", self.text())
+        self.assertIn("250 suggestions to approve", self.text())
 
     def test_the_same_set_beyond_the_cap_in_another_order_stays_hidden(self):
         b = self.b

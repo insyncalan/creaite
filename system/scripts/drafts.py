@@ -59,10 +59,10 @@ FEATURES = {
     "reason": ("Draft the reason for a health or forecast change", "One sentence from the evidence creaite already holds"),
     # ===== BL-221 (sprint-drafts-extraction) =====
     "repeat": ("Spot repeats of existing items",
-               "Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review"),
+               "Marks a suggestion that looks like an item already in your project record; Merge, Keep or Reject in Review"),
     # ===== BL-218 (sprint-drafts-extraction) =====
     "done": ("Spot items that are probably done",
-             "The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished"),
+             "The mail and Teams check and the minutes suggest closing an open item when a sent mail, reply or meeting shows it finished"),
     # ===== BL-220 (sprint-drafts-extraction) =====
     "sharpen": ("Sharpen a vague action", "A clear, verb-first title for a vague action, beside the original; you pick one"),
     # ===== BL-223, BL-224, BL-227 (sprint-drafts-writing) =====

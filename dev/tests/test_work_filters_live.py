@@ -41,6 +41,7 @@ class WorkCase(LiveBrowserCase):
         # BL-327: the shared server's data is soon older than PAGE_FRESH, so each load re-reads /api/data after its first paint,
         # and that redraw closes and replaces an open filter menu; under load it landed between opening a menu and the tick.
         self.b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
+        W.closed_open(self.b)            # #241 b: these tests count closed rows too; Closed is folded only where nothing is saved
 
     # ── driving the page as a person does ──
     def open_work(self, tab="actions", view=None):

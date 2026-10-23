@@ -6,18 +6,19 @@
    proposal in the peek (the app's right-hand panel: Save, Save and approve, Reject, previous and next).
    The rule for "routine" is the server's (review.hold_reason, the row's `hold`); rvBulkOK reads it. Tokens and the app's own
    classes only (style.css, "#232-B"). */
-import { REV, pName } from "../../core/data.js";
+import { modelKeyOf, pName, REV, revForModelN, revKey, rowFor, SNAP } from "../../core/data.js";
 import { fd, fdText } from "../../core/page.js";
 import { srcParse, weekendNote, wkLong } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
 import { irLineHead, irLineParts, irVerb } from "../../core/irUpdate.js";
 import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel, PK, pkOn } from "../../projects.js";
-import { reviewViaServer, snack, viaServer } from "../../core/server.js";
+import { plainSay } from "../../core/say.js";
+import { reloadData, reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
-import { approveRoutineTracked, BAD_MSG, decide, draftOn, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
-import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
+import { approveRoutineTracked, BAD_MSG, decide, draftOn, HELD_ERR, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
+import { irCur, irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
 import { ConflictBlock } from "./UpdatePeek.jsx";
@@ -30,7 +31,7 @@ const PEEKABLE = ["actions", "raid", "decisions", "update"];
 export function irPill(r) {
   if (r.kind === "raid") return (r.rec && r.rec.type) || "Risk";
   if (r.kind === "draft") return r.ref === "report" ? "Report" : "Minutes";
-  return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[/** @type {"actions"} */ (r.kind)] || "Proposal";
+  return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[/** @type {"actions"} */ (r.kind)] || "Suggestion";
 }
 
 const irDueWords = (/** @type {string|null|undefined} */ d) => (d ? `due ${fd(d)}` : "No due date");
@@ -91,15 +92,15 @@ function WeekendNote({ r }) {
 function ConflictChoices({ r }) {
   const live = viaServer(), pick = (/** @type {Event} */ e, /** @type {"keep"|"override"} */ how) => { /** @type {HTMLButtonElement} */ (e.currentTarget).disabled = true; reviewViaServer(r, how, []); };
   return <>
-    <button type="button" class="mini" data-act="ck" disabled={!live} title={live ? undefined : "Needs the live server"} onClick={e => pick(e, "keep")}>Keep current</button>
-    {" "}<button type="button" class="mini ok" data-act="co" disabled={!live} title={live ? undefined : "Needs the live server"} onClick={e => pick(e, "override")}>Use this one</button>
+    <button type="button" class="mini" data-act="ck" disabled={!live} title={live ? undefined : "creaite isn’t running"} onClick={e => pick(e, "keep")}>Keep current</button>
+    {" "}<button type="button" class="mini ok" data-act="co" disabled={!live} title={live ? undefined : "creaite isn’t running"} onClick={e => pick(e, "override")}>Use this one</button>
   </>;
 }
 
 /** #280: minutes held because a file they file has gone (their transcript left the inbox): Approve without the transcript copy and
     Discard in place of Approve (review.py approve --without-transcript, reject --discard, through the live server). @param {{r: any}} props */
 function HeldChoices({ r }) {
-  const live = viaServer(), off = live ? undefined : "Needs the live server";
+  const live = viaServer(), off = live ? undefined : "creaite isn’t running";
   return <>
     <button type="button" class="mini ok" data-ira="held-approve" data-act="hw" disabled={!live} title={off || heldMsg(r)} onClick={() => heldApprove(r)}>Approve without the transcript</button>
     {" "}<button type="button" class="mini" data-ira="held-discard" data-act="hd" disabled={!live} title={off} onClick={() => heldDiscard(r)}>Discard</button>
@@ -109,7 +110,7 @@ function HeldChoices({ r }) {
 /** #280, #291: why a held or invalid proposal waits, on its row (not only in the tip). @param {{r: any}} props */
 function HeldNote({ r }) {
   if (r.done) return null;
-  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {r.held}</span> · Approve the minutes without the transcript copy, or discard the proposal</div>;
+  if (r.kind === "draft" && r.held) return <div class="rvnote"><span class="h-warn">Held: {plainSay(r.held)}</span> · Approve the minutes without the transcript copy, or discard the suggestion{HELD_ERR.get(r.file) ? <div class="h-warn" data-ira="held-error">Not saved because {HELD_ERR.get(r.file)}</div> : null}</div>;
   if (r.bad) return <div class="rvnote"><span class="h-warn">Can't be saved as it is: {r.bad}</span> · Edit it or reject it</div>;
   return null;
 }
@@ -118,41 +119,61 @@ function HeldNote({ r }) {
 export function irOpenPeek(n) {
   const r = irRow(n);
   if (!r || r.done || !PEEKABLE.includes(r.kind) && r.kind !== "draft") return;
-  if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n && PK.dirty && pkOn()) { pkNote("Save or cancel this proposal first: its changes aren't saved yet."); return; }   /* #232 C2: the old Review row's guard (BL-198): edits not yet saved stay */
+  if (shared.CUR && shared.CUR.mode === "proposal" && shared.CUR.n !== n && PK.dirty && pkOn()) { pkNote("Save or cancel this suggestion first: its changes aren't saved yet."); return; }   /* #232 C2: the old Review row's guard (BL-198): edits not yet saved stay */
   shared.PKSRC = {
     view: "intake-review",
     order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "") || t.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t.getAttribute("data-irn") || 0)))).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
-    step: (/** @type {any} */ o) => { irPeek.value = o.n; openProposal(o.n); },
+    step: (/** @type {any} */ o) => { irPeek.value = o.n; openProposal(irCur(o.n)); },
   };
   irPeek.value = n;
-  openProposal(n);
+  openProposal(r.n);
 }
 
 /** Approve one proposal (the app's decide: its project, conflict and draft checks all apply). @param {number} n */
-export const irApprove = n => decide(n, "approved");
+export const STALE_MSG = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+/** #307 (paths 16 to 18): the row is not what the page showed (renumbered, approved or changed elsewhere): say so, save nothing, refresh. */
+export async function irStale(msg) { snack(msg || STALE_MSG); await reloadData(); }
+export function irApprove(n) {
+  const r = irRow(n);     /* by proposal file and item ref (core/data.js SNAP), never by the place in a list that may have moved */
+  if (!r) return irStale();
+  return decide(r.n, "approved");
+}
 
 /** Reject: the reasons menu where a proposal can be rejected with one; minutes, reports and file changes on their own. @param {number} n @param {Element|null} anchor */
 export function irReject(n, anchor) {
   const r = irRow(n);
-  if (!r || r.done) return;
-  if (rvRejectOK(r)) rjMenuFor([r], anchor); else if (r.kind === "draft" && r.ref === "meeting") rejectMinutes(r); else decide(n, "rejected");
+  if (!r) { irStale(); return; }
+  if (r.done) return;
+  if (rvRejectOK(r)) rjMenuFor([r], anchor); else if (r.kind === "draft" && r.ref === "meeting") rejectMinutes(r); else decide(r.n, "rejected");
 }
 
 /** Approve routine: the routine group only, in one apply with one Undo (rvDecideMany); never the first group.
     @param {{needs: number[], routine: number[]}} groups */
 export async function irApproveRoutine(groups) {
-  const min = [...groups.needs, ...groups.routine].map(irRow).find(r => !!r && !r.done && isRecordMin(r));
-  if (min && viaServer()) { await approveRoutineTracked(min); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
-  const list = irBulk(groups, irDone, irHeld).map(irRow).filter(r => rvBulkOK(r));
-  if (!list.length) { snack("Nothing routine to approve"); return; }
-  const res = await rvDecideMany(list, "approved");
+  /* #307: take the routine rows as the page showed them (file + ref + content), read the server's list again, and approve only
+     those that are still the same; the rest are counted and left for the person */
+  const looked = (groups.routine || []).map(n => ({ key: modelKeyOf(n), fp: (SNAP.keys.get(n) || {}).fp, cfp: (SNAP.keys.get(n) || {}).cfp })).filter(x => x.key);
+  /* the minutes record's own row sits in the first group (needs), not in the routine one: find it by file + ref, before and after the reload */
+  const minKey = [...(groups.needs || []), ...(groups.routine || [])].map(n => { const r = irRow(n); return r && !r.done && isRecordMin(r) ? modelKeyOf(n) : null; }).find(Boolean);
+  await reloadData();
+  const now = looked.map(x => { const r = rowFor(x.key, x.cfp); return r && !r.done && JSON.stringify([r.rec, r.p, r.kind, r.flags || null]) === x.fp ? r : null; });
+  const same = /** @type {any[]} */ (now.filter(Boolean)), changed = looked.length - same.length;
+  const left = changed ? `${changed} changed since you looked, left for you` : "";
+  if (looked.length && !same.length) { snack(STALE_MSG); return; }
+  const keys = new Set(same.map(revKey));
+  const min = (minKey && REV.find(y => revKey(y) === minKey && !y.done && isRecordMin(y))) || same.find(r => isRecordMin(r));
+  if (min && viaServer()) { await approveRoutineTracked(min, keys, left); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
+  const list = same.filter(r => rvBulkOK(r));
+  if (!list.length && !same.length) { snack("Nothing routine to approve"); return; }   /* rows the bulk rule now leaves out (crossed in Track) still go through rvDecideMany, which says so */
+  const res = await rvDecideMany(list.length ? list : same, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
   const out = trkLeftOut(res);      /* #275 round 3: an apply that stopped (the batch back on Intake) and rows the Track reload left out */
-  snack(`Approved ${res.n} routine${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
+  if (left) out.push(left);
+  snack(`Approved ${res.n} routine item${res.n === 1 ? "" : "s"}${out.length ? " · " + out.join(" · ") : ""}${failed}`, res.undo || null);
 }
 
 /** The meta line's hover when a proposal has no owner, date or priority to show (minutes, reports, file changes). */
-const TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
+const TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the suggestion to see them" };
 
 /** Whether a new risk with no response offers Draft a response (BL-225). @param {any} r */
 const canDraftResponse = r => !!r && !r.done && r.kind === "raid" && !String((r.rec && r.rec.resp) || "").trim() && !(r.rec.type && r.rec.type !== "Risk") && draftOn("thinking");
@@ -205,10 +226,10 @@ export function ProposalGroups({ groups, meet, child }) {
       <tr class={`icsubhead ${g.kind}${child ? " child" : ""}`} data-irg={g.kind}><td colSpan={2}>
         <span class="icsh">{meet ? `${meet} · ` : ""}{IR_GROUP_HEAD[g.kind][0]} · {g.ns.length}</span>
         <span class="icshs">{IR_GROUP_HEAD[g.kind][1]}</span>
-        {g.kind === "routine" ? <span class="icshr"><button type="button" class="mini ok" data-ira="routine" title="Approves every routine proposal here; the ones above stay for you"
+        {g.kind === "routine" ? <span class="icshr"><button type="button" class="mini ok" data-ira="routine" title="Approves every routine suggestion here; the ones above stay for you"
           onClick={() => irApproveRoutine(groups)}>Approve routine ({g.ns.length})</button></span> : null}
       </td></tr>
-      {g.ns.map(n => <ProposalLine n={n} child={child} />)}
+      {g.ns.map(n => <ProposalLine key={modelKeyOf(n) + "|" + ((SNAP.keys.get(n) || {}).cfp || "")} n={n} child={child} />)}
     </>
   ))}</>;
 }

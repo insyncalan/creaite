@@ -15,8 +15,8 @@ import { $ } from "../../core/dom.js";
 import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
@@ -34,7 +34,7 @@ const irPlural = (/** @type {number} */ n, /** @type {string} */ w) => `${n} ${w
 /** The stage counts: each a filter (one click shows that stage, a second shows all), with an icon, and Show all as a fourth box
     after a thin rule. @param {{c: Record<string, number>}} props */
 export function StagePipe({ c }) {
-  const sub = { arrived: `${c.ready} ready to process${c.need_type ? ` · ${c.need_type} need a type` : ""}`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+  const sub = { arrived: `${c.ready} ready to process${c.need_type ? ` · ${c.need_type} need a type` : ""}`, drafted: `${irPlural(c.to_approve, "suggestion")} to check`, approved: "this week", all: "meetings and files" };
   const word = { ...IR_STAGE_NAMES, all: "Show all" };
   const box = (/** @type {"arrived"|"drafted"|"approved"|"all"} */ g) => (
     <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
@@ -43,7 +43,7 @@ export function StagePipe({ c }) {
       <div class="l">{word[g]}</div><div class="icsub">{sub[g]}</div>
     </div>);
   return (
-    <div class="icpipe" role="group" aria-label="Stages">
+    <div class="icpipe" role="group" aria-label="Steps">
       {box("arrived")}<span class="ar" aria-hidden="true">→</span>{box("drafted")}<span class="ar" aria-hidden="true">→</span>{box("approved")}
       <span class="icsep" aria-hidden="true"></span>{box("all")}
     </div>
@@ -72,15 +72,11 @@ function ProcessAll({ n, left }) {
     title={blocked ? "ask creaite is busy; try again when it's finished" : n ? lefts : lefts || "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
 
-/** Add files: an icon button (choose them here), or drop them anywhere on the page. */
+/** Add files: an icon button (choose them here), or drop them anywhere on the page. The chooser is the one irPickFiles opens (an input
+    made at the click and removed after), not a hidden input kept in the page, so nothing in the page can leave it without a chooser. */
 function UploadFiles() {
-  const pick = useRef(/** @type {HTMLInputElement | null} */ (null));
   const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
-  return <>
-    <button type="button" class="ib" data-irpick="1" aria-label={tip} data-tip={tip} onClick={() => pick.current && pick.current.click()}><IrIcon name="upload" /></button>
-    <input type="file" ref={pick} multiple hidden accept={IR_UPLOAD_TYPES.join(",")} aria-label="Choose transcripts or minutes to add"
-      onChange={e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget); irAddFiles([...(el.files || [])]); el.value = ""; }} />
-  </>;
+  return <button type="button" class="ib" data-irpick="1" aria-label={tip} data-tip={tip} onClick={() => irPickFiles()}><IrIcon name="upload" /></button>;
 }
 
 /** The overlay while files are dragged over the page. It takes no pointer events, so a drop on ask creaite's panel still reaches it. */
@@ -139,7 +135,7 @@ function IntakeReviewView() {
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
-      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
+      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "suggestion")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
         <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
           onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
@@ -156,6 +152,11 @@ function IntakeReviewView() {
           ))}
         </span>
       </div>
+      {irAddProblems.value.length ? <div class="why irnote iraddfail" role="alert" data-iraddfail="1">
+        <b>{irAddProblems.value.length === 1 ? "1 file wasn't added" : `${irAddProblems.value.length} files weren't added`}</b>
+        <ul style={{ margin: "4px 0 0", paddingLeft: "18px" }}>{irAddProblems.value.map(p => <li>{p}</li>)}</ul>
+        <button type="button" class="linkbtn" data-ira="dismissaddfail" onClick={() => { irAddProblems.value = []; }}>Dismiss</button>
+      </div> : null}
       {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: {IR_LEFT_WHY}.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
       <FoldSection sec="later" title="Later" n={model.later.length}>

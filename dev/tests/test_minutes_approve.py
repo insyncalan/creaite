@@ -255,7 +255,7 @@ class RefusedSave(Base):
 class Rows(Base):
     def test_remove_drops_the_line_and_rejects_the_item_in_the_same_apply(self):
         r = self.change({"op": "remove", "n": 2})
-        self.assertEqual(r["message"], "Removed item 2 and its line.")
+        self.assertEqual(r["message"], "Removed “Test data isn't anonymised” and its line.")
         doc = self.doc()
         self.assertEqual([x["ref"] for x in self.rows(doc, "raid")], ["@5"])
         self.assertNotIn("@2", doc["items"])
@@ -287,7 +287,7 @@ class Rows(Base):
         r = self.js("import minutes_record\n"
                     f"r = minutes_record.change({draft!r}, {{'op': 'update', 'n': 1, 'id': 'abc-a-001'}})\nr.pop('doc')\n"
                     "print(json.dumps(r))")
-        self.assertEqual(r["message"], "Item 1 now updates ABC-A-001 instead.")
+        self.assertEqual(r["message"], "“Send the SOW to the client” now updates ABC-A-001 instead.")
         doc = self.doc(draft)
         row = self.rows(doc, "actions")[0]
         self.assertEqual(row["does"], "Updates ABC-A-001")

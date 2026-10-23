@@ -5,6 +5,7 @@ filter should show, so the page's rows and counts can be checked against somethi
 with every status, priority, owner spelling, due-date kind, workstream, source and client-visible flag that the
 filters care about. Dates are relative to today, so the data is always current.
 """
+import json
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -15,6 +16,17 @@ from test_dashboard import _today, stamped_apply  # noqa: E402
 
 TODAY = _today()        # CREAITE_NOW's day when it is set, as test_dashboard's sample data uses
 DUE_SOON = 7
+
+
+# #241 b (Alan, 19-10-2026): the List folds a Closed group (under the due grouping) where nothing is saved for it. The tests
+# that count every row a filter shows, closed ones too, save "Closed open" first, as a person who opened the group has.
+CLOSED_OPEN = {"actions|due|closed": False, "raid|due|closed": False}
+
+
+def closed_open(b):
+    """Save the Closed groups as open in this browser (and in the page already loaded), keeping any other saved group state."""
+    b.eval(f"""(()=>{{ const o={json.dumps(CLOSED_OPEN)}; let s={{}}; try{{ s=JSON.parse(localStorage.getItem('creaite-listcoll'))||{{}}; }}catch(e){{}}
+      localStorage.setItem('creaite-listcoll', JSON.stringify(Object.assign(s,o))); if(typeof LCOLL==='object') Object.assign(LCOLL,o); }})()""")
 
 
 def d(n):

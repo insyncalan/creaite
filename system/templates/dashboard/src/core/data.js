@@ -9,7 +9,22 @@ import { isHiddenPerson, resolver, WSD, wsTable } from "../settings.js";
 /* ======================= data (from tracker.db, system/staging/ and the vault; see build_dashboard.py) ======================= */
 export const P=D.projects, A=D.actions, R=D.raid, DEC=D.decisions, REV=D.review, FILES=D.files, REMINDERS=D.reminders;
 shared.ACT=D.activity;
-export const pName=c=>(P.find(p=>p.code===c)||{}).name||c;
+/* #307 (paths 16 to 18): a row on Intake is its proposal file plus its item ref, never its place in the current list. The model
+   (D.intake_review) and the DOM name rows by REV's number n; the quick refresh renumbers REV without the model, so n alone can
+   point at another item. SNAP remembers, for the model on the page, which file and ref each n meant when the model arrived. */
+export const SNAP={model:null,keys:new Map()};
+export const revKey=r=>r?`${r.file}|${r.ref}`:"";
+export function snapModelKeys(force){ const m=D.intake_review||0; if(!force&&SNAP.model===m) return; SNAP.model=m; SNAP.keys=new Map(REV.map(r=>[r.n,{key:revKey(r),fp:JSON.stringify([r.rec,r.p,r.kind,r.flags||null]),cfp:r.fp||null}])); }
+/** the current REV row the model's number n meant (same file and ref); null when it is gone or the number now means another item */
+/** #307 h2: the REV row that key (file|ref) and content fingerprint cfp name now: the row at that file and ref if its content is the same;
+    else the row of the same file with that content (the engine renumbered the file); else null. No cfp (an older model): the key alone. */
+export function rowFor(key,cfp){ const at=REV.find(r=>revKey(r)===key); if(!cfp) return at||null; if(at&&at.fp===cfp) return at; const file=key.split("|")[0];
+  const same=REV.filter(r=>r.file===file&&r.fp===cfp); return same.length===1?same[0]:null; }
+/** an edit changed a row's content (its fingerprint): the model on the page, drawn before it, keeps naming the row by the old one, so it follows */
+export function snapFollowEdit(file,oldFp,newFp){ if(!oldFp||!newFp||oldFp===newFp) return; for(const k of SNAP.keys.values()) if(k.cfp===oldFp&&k.key.split("|")[0]===file) k.cfp=newFp; }
+export function revForModelN(n){ snapModelKeys(false); const k=SNAP.keys.get(n); if(!k) return REV.find(r=>r.n===n)||null; return rowFor(k.key,k.cfp); }
+export const modelKeyOf=n=>{ snapModelKeys(false); const k=SNAP.keys.get(n); return k?k.key:""; };
+export const pName=c=>(P.find(p=>p.code===c)||{}).name||(c==="_portfolio"?"Portfolio":c);
 /* BL-101 (v1.9.5 hand checks, plan #81): a file's project as people read it; the portfolio's files are "Portfolio", never _portfolio (Files, ⌘K) */
 export const fpName=c=>c==="_portfolio"?"Portfolio":pName(c);
 export const LASTVISIT=store.get("creaite-lastvisit",D.data_at); 

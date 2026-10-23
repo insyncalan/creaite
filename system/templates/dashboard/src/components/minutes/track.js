@@ -92,6 +92,7 @@ export function trackCounts(doc, plan) {
   const c = { y: 0, k: 0, n: 0, w: 0 };
   for (const r of trackRows(doc)) {
     const t = trackOf(doc, r, plan), g = planGroupOf(plan, r.n);
+    if (g === "applied") continue;                      // approved earlier: its work item is in the tracker, nothing left to count
     if (t === "n") c.n++;
     else if (t === "y") { if (r.kept || g === "group" || g === "own") c.y++; else c.w++; }
     else if (waitsWhenNeither(r, plan)) c.w++;
@@ -106,6 +107,44 @@ const trackPlural = (/** @type {number} */ n, /** @type {string} */ one, /** @ty
     only when there are some). @param {{y: number, k: number, n: number, w?: number}} c */
 export const trackSummary = c => `${trackPlural(c.y, "work item", "work items")} to register · ${c.k} kept in the minutes only${c.w ? ` · ${c.w} left in Review` : ""}${c.n ? ` · ${c.n} removed` : ""}`;
 
+/** What the ticked rows will track, by kind (#302): actions, decisions, issues, risks, and for the rest assumptions,
+    dependencies and updates to an existing item. A row approved earlier is not counted. @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan
+    @returns {Record<string, number>} */
+export function trackedKinds(doc, plan) {
+  /** @type {Record<string, number>} */
+  const out = {};
+  for (const r of trackRows(doc)) {
+    if (trackOf(doc, r, plan) !== "y" || planGroupOf(plan, r.n) === "applied") continue;
+    const it = r.item || {}, ty = String((it.values || {}).type || ((r.row.cells || {}).type) || "Risk").toLowerCase();
+    const k = it.op === "update" ? "update" : r.section === "actions" ? "action" : r.section === "decisions" ? "decision"
+      : ["issue", "assumption", "dependency"].includes(ty) ? ty : "risk";
+    out[k] = (out[k] || 0) + 1;
+  }
+  return out;
+}
+
+/** The Approve button's words: "Approve minutes · tracks 2 actions, 1 decision", or "… tracks nothing". @param {Record<string, number>} k */
+export function approveLabel(k) {
+  const order = ["action", "decision", "issue", "risk", "assumption", "dependency", "update"];
+  const parts = order.filter(x => k[x]).map(x => `${k[x]} ${x}${k[x] === 1 ? "" : "s"}`);
+  return `Approve minutes · tracks ${parts.length ? parts.join(", ") : "nothing"}`;
+}
+
+/** Which ticked rows still need something (#302): a new action, issue or risk that is tracked but has no owner or no date. A "vague"
+    date is one the transcript gave in words that the row doesn't hold yet (a deadline check is open on it). A decision never needs
+    either. @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan @param {{kind: string, n?: number}[]} checks
+    @returns {Map<number, {owner: boolean, date: boolean, vague: boolean}>} */
+export function needsOf(doc, plan, checks) {
+  const out = new Map();
+  for (const r of trackRows(doc)) {
+    if (r.section === "decisions" || !r.item || r.item.op !== "new" || trackOf(doc, r, plan) !== "y" || planGroupOf(plan, r.n) === "applied") continue;
+    const v = r.item.values || {}, o = String(v.owner || "").trim();
+    const owner = !o || o === "TBC", date = !v.due_date, vague = date && (checks || []).some(c => c.kind === "due" && c.n === r.n);
+    if (owner || date) out.set(r.n, { owner, date, vague });
+  }
+  return out;
+}
+
 /** The record's changes that bring its rows in line with the choices, in order (each one of minutes_record.change's ops):
     a cross on a pending row is `remove`; neither on a pending row is `remove` with `keep_line` (nothing for an update approved
     one by one: it stays in Review); a tick on a kept line is `restore`; a cross on a kept line is `restore` then `remove`. @param {SheetDoc} doc @param {PlanItem[]|null|undefined} plan
@@ -113,6 +152,7 @@ export const trackSummary = c => `${trackPlural(c.y, "work item", "work items")}
 export function reconcileOps(doc, plan) {
   const ops = [];
   for (const r of trackRows(doc)) {
+    if (planGroupOf(plan, r.n) === "applied") continue;                      // approved earlier: nothing to change, never an error
     const want = trackOf(doc, r, plan), now = r.kept ? "" : "y";
     if (want === now || (want === "" && waitsWhenNeither(r, plan))) continue;     // an update decided one by one stays in Review
     if (r.kept) { ops.push({ op: "restore", n: r.n }); if (want === "n") ops.push({ op: "remove", n: r.n, keep_line: false }); }

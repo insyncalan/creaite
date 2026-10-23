@@ -30,7 +30,7 @@ ADVANCED = ["thresholds", "warnings", "more-review"]              # Advanced ope
 WANT = {"essentials": ["essentials"], "work": ["views", "board", "projpage", "files", "more-work"],
         "sweep": ["sweep", "more-sweep", "closeday"], "reports": ["more-reports", "reminders"], "ai": ["drafts", "more-ai"],
         "look": ["appearance", "help", "more-look"], "advanced": ADVANCED,
-        "health": ["health", "more-health", "live", "setup", "diag", "version", "danger"],
+        "health": ["health", "more-health", "live", "setup", "diag", "version", "signin", "danger"],
         "state": ["more-state"], "arch": ["more-arch"], "folders": ["more-folders"], "server": ["more-server"]}
 PAGES = CATS + SUBS[1:]                                         # every tab and every other Advanced sub-tab
 
@@ -123,7 +123,7 @@ class SettingsPage(LiveBrowserCase):
     def test_sections_come_from_one_list_and_the_page_has_no_wrappers(self):
         # v2.6 (#246): 33: You and People I follow joined Essentials, Everything else became each tab's More, Help joined;
         # the Settings line: 30, as People, Workstreams and Projects and register left for their own pages
-        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 30)
+        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 31)
         self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.id && SETCATS.some(c=>c[0]===catOf(s)) && typeof s.kw==='string' && (typeof s.render==='function' || typeof s.mount==='function'))"))
         self.assertEqual(self.b.eval("renderSettings.toString().includes('const rs=')"), False)
 
@@ -321,7 +321,7 @@ class SettingsPage(LiveBrowserCase):
         self.type_query("sweep")
         self.assertIn("sweep", self.sections())
         self.assertEqual(self.b.eval("document.querySelectorAll('#setcats [aria-selected=true]').length"), 0)
-        self.assertEqual(self.b.eval("document.querySelector('[data-sec=sweep]').previousElementSibling.textContent"), "Sweep and Intake › Sweep")
+        self.assertEqual(self.b.eval("document.querySelector('[data-sec=sweep]').previousElementSibling.textContent"), "Mail, Teams and Intake › Checking mail and Teams")
         own = "[...document.querySelectorAll('[data-sec=sweep] .srow:not([hidden])')].filter(r=>!r.closest('.setembed'))"
         self.assertEqual(self.b.eval(f"{own}.length"), 3)
         self.b.wait("document.querySelectorAll('[data-sec=sweep] .setembed .srow').length>=2")   # the Sweep group's rows, one card
@@ -343,7 +343,7 @@ class SettingsPage(LiveBrowserCase):
         self.type_query("people i follow")        # the follow section, in Essentials, matches by its title: every row shows
         self.b.wait("document.querySelectorAll('#set-essentials [data-ess=\"People I follow\"] .srow').length===5")   # #97: and the two quiet-hours rows
         self.assertIn("essentials", self.sections())
-        self.type_query("ignore rules")           # the Ignore rules row matches: it shows, with its rules; the sweep's other rows don't
+        self.type_query("what creaite skips")    # the What creaite skips row matches: it shows, with its rules; the sweep's other rows don't
         self.assertIn("sweep", self.sections())
         self.assertTrue(self.b.eval("document.querySelectorAll('[data-sec=sweep] .igrow').length > 0 && ![...document.querySelectorAll('[data-sec=sweep] .igrow')].some(r=>r.offsetParent===null)"))
         self.assertEqual(self.b.eval("[...document.querySelectorAll('[data-sec=sweep] .srow')].filter(r=>r.hidden&&!r.closest('.setembed')).length"), 2)

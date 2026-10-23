@@ -23,7 +23,7 @@ import { api, OLDSERVER, snack } from "../../core/server.js";
 
 const KIND = { ask: "ask creaite", sweep: "Sweep", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
   check: "Transcript check", load: "Transcript load", vip: "Alert check", process: "Intake processing",
-  calendar: "Calendar refresh", other: "Other" };
+  calendar: "Calendar refresh", reextract: "Read again", other: "Other" };
 const FILE = { rules: "Rules (creaite-rules.md)", claude_md: "Your CLAUDE.md", memory: "Project memory and registers",
   skills: "Skill names and descriptions" };
 

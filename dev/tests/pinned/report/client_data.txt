@@ -47,7 +47,7 @@ exit 0
  ],
  "needs_client_messaging": [],
  "excluded_high_risks": [
-  "ABC-005 Risk: Vendor exits the market before go-live (Urgent)"
+  "ABC-005 Risk (Urgent)"
  ],
  "client_safe_no": [
   "- Budget overrun on phase one is being absorbed (Client-safe: no)"

@@ -18,7 +18,7 @@
                                                        update its copy of the app's icon (writes system/staging/app-icon.json only)
   python3 system/scripts/launch.py restart            BL-320: ask this vault's running live server to restart (SIGUSR1); it
                                                        restarts once no job is running. Nothing running: nothing to do
-  python3 system/scripts/launch.py agent install|remove|status
+  python3 system/scripts/launch.py agent install|remove|status [--json]
                                                        macOS only: a per-user LaunchAgent (~/Library/LaunchAgents, no admin) that
                                                        starts the live server at login and restarts it if it crashes. Alan runs
                                                        this himself in Terminal; ask creaite cannot (reach.py never list)
@@ -455,12 +455,19 @@ def older_agents():
     return [f for f in agent_dir().glob(f"*.creaite.{agent_slug()}.plist") if f.name != agent_file().name]
 
 
+def agent_is_own_server():
+    """#300 review H1: whether this process is a server (or a script a server runs) that launchd started from this vault's own
+    agent (launchd sets XPC_SERVICE_NAME to the job's label). Unloading that job would stop the very process asking."""
+    return os.environ.get("XPC_SERVICE_NAME") == agent_label()
+
+
 def drop_older_agents():
     """Unload and delete this vault's agent under an earlier label; returns how many."""
     old = older_agents()
     for f in old:
-        launchctl("bootout", f"{agent_domain()}/{f.stem}")
-        f.unlink(missing_ok=True)
+        f.unlink(missing_ok=True)                                           # the file first, so it is gone whatever happens next
+        if os.environ.get("XPC_SERVICE_NAME") != f.stem:                    # never unload the job this process is running in
+            launchctl("bootout", f"{agent_domain()}/{f.stem}")
     return len(old)
 
 
@@ -522,6 +529,10 @@ def agent_install():
         print("Removed this vault's login agent under its earlier name.")
     p = port()
     seen = health(p)
+    if agent_is_own_server():       # #300 review H1: unloading would stop this very server; the new file is read at the next sign-in
+        print(f"Login agent installed: {f}\nThis copy of creaite is the one the agent started, so it carries on as it is; "
+              "the agent starts it at your next sign-in.")
+        return 0
     if agent_loaded():
         launchctl("bootout", f"{agent_domain()}/{label}")
     r = launchctl("bootstrap", agent_domain(), str(f))
@@ -538,23 +549,50 @@ def agent_install():
 
 
 def agent_remove():
-    """Unload and delete this vault's login agent (BL-243); a server it started keeps running."""
+    """Delete this vault's login agent, then unload it (BL-243). The file goes first (#300 review H1), so it is gone even if the unload
+    ends this process; and when this process is the agent's own server the unload is left out: it would stop the server that is
+    answering, so that copy carries on and simply isn't started again at the next sign-in."""
     f = agent_file()
-    if agent_loaded():
-        launchctl("bootout", f"{agent_domain()}/{agent_label()}")
-    if drop_older_agents() and not f.exists():
-        print("Login agent removed (it had an earlier name).")
-        return 0
-    if f.exists():
+    own = agent_is_own_server()
+    had = f.exists()
+    if had:
         f.unlink()
-        print(f"Login agent removed ({f}). A server it started may still be running: stop it in Settings, or it ends at the next restart.")
-    else:
+    old = drop_older_agents()
+    if not (had or old):
         print("No login agent for this vault.")
+        return 0
+    if own:
+        print("Login agent removed. This copy of creaite is the one it started, so it carries on until you stop it; "
+              "it won't start again when you sign in.")
+        return 0
+    loaded = agent_loaded()
+    if loaded:
+        launchctl("bootout", f"{agent_domain()}/{agent_label()}")
+    print(("Login agent removed. creaite won't start when you sign in." if had else "Login agent removed (it had an earlier name).")
+          + (" The copy it had started has stopped." if loaded else ""))
     return 0
 
 
-def agent_status():
-    """Print whether the login agent is installed and loaded, and whether the server answers."""
+def agent_state():
+    """#300: the login agent's real state as plain data, for the page and Health (nothing is written). supported: macOS and not the
+    development repository; installed: this vault's plist is there; loaded: launchd has it (None when it can't be asked);
+    folder: where this vault is, for the Terminal note. Never raises."""
+    dev = (paths.ROOT / ".creaite-dev").exists()
+    mac = sys.platform == "darwin" or bool(os.environ.get("CREAITE_AGENT_DIR"))
+    try:
+        installed = agent_file().exists()
+        loaded = agent_loaded() if installed else False
+    except OSError:
+        installed, loaded = False, None
+    return {"supported": mac and not dev, "dev": dev, "mac": mac, "installed": installed, "loaded": loaded,
+            "on": bool(installed and loaded is not False), "own": agent_is_own_server(), "folder": str(paths.ROOT)}
+
+
+def agent_status(as_json=False):
+    """Print whether the login agent is installed and loaded, and whether the server answers (as one JSON line with --json, #300)."""
+    if as_json:
+        print(json.dumps(agent_state()))
+        return 0
     f = agent_file()
     loaded = agent_loaded()
     seen = health(port())
@@ -605,6 +643,8 @@ def main(argv):
             print(__doc__)
             return 2
         return make_launcher(where, opts.get("--dest"), replace)
+    if argv == ["agent", "status", "--json"]:             # #300: the page's and Health's read of the agent
+        return agent_status(True)
     if argv and argv[0] == "agent" and len(argv) == 2 and argv[1] in ("install", "remove", "status"):
         return {"install": agent_install, "remove": agent_remove, "status": agent_status}[argv[1]]()
     if argv:

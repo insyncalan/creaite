@@ -1,0 +1,55 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 35e9c13..fe60c9e 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -1879,13 +1879,16 @@ def _remove_checked(apply_id, fop, blk, done):
+     there without following a link (and without blocking on a pipe), checked (regular file, one name, the staged checksum), backed
+     up from the bytes read, moved to a private name in that folder, found to be the very file that was read (same inode), and
+     unlinked from there. So a link put in place of the file, or of inbox/ or a folder in it, or a different file of the same name
+-    put there at any moment, removes nothing but the staged file; a different file caught by the move is put back."""
++    put there at any moment, removes nothing but the staged file; a different file caught by the move is put back. #261: the file
++    read is held open until the unlink, so its inode number can't be given to a different file put at the name meanwhile (Linux
++    reuses a freed number at once), and the inode check stays a check of the very file that was read."""
+     rel = fop["path"]
+     dfd = _open_inbox_folder(rel)
+     name = rel.rsplit("/", 1)[1]
++    held = []
+     try:
+         try:
+-            st, data = _read_regular(name, dir_fd=dfd)
++            st, data = _read_regular(name, dir_fd=dfd, hold=held)
+         except FileNotFoundError:
+             return                                                 # already gone
+         except OSError as e:
+@@ -1896,6 +1899,8 @@ def _remove_checked(apply_id, fop, blk, done):
+         _unlink_same(dfd, name, st, rel)
+         done.append({"op": "remove", "path": rel, "kept": kept})
+     finally:
++        for fd in held:
++            os.close(fd)
+         os.close(dfd)
+ 
+ 
+@@ -2645,16 +2650,20 @@ class NotRegular(OSError):
+     """An entry that is not a regular file (a pipe, a device, a folder) where a file of someone else's minutes should be."""
+ 
+ 
+-def _read_regular(path, dir_fd=None):
++def _read_regular(path, dir_fd=None, hold=None):
+     """(stat, bytes) of a regular file, opened without following a link and without blocking on a pipe, the type checked on the open
+     file before it is read. The one way the checks, the copy and the remove read someone else's minutes (a plain read_bytes or
+-    file_hash would block for ever on a pipe put there, or follow a link). Raises NotRegular, or the OSError the open gave."""
++    file_hash would block for ever on a pipe put there, or follow a link). Raises NotRegular, or the OSError the open gave.
++    #261: given a list `hold`, a descriptor of the file is added to it once it is known to be regular, for the caller to close:
++    while it is open the file's (st_dev, st_ino) can't belong to any other file, even after its name is unlinked."""
+     import stat
+     fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0), dir_fd=dir_fd)
+     with os.fdopen(fd, "rb") as f:
+         st = os.fstat(f.fileno())
+         if not stat.S_ISREG(st.st_mode):
+             raise NotRegular(0, "not a regular file")
++        if hold is not None:
++            hold.append(os.dup(f.fileno()))
+         return st, f.read()
+ 
+ 

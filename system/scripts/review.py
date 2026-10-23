@@ -557,7 +557,7 @@ def minutes_differences(data, block):
     for k, row in enumerate(parsed["actions"], start=1):
         hit = best(row["text"], actions, 0.75)
         if not hit:
-            diffs.append({"msg": f"Action {k} is in the draft but not staged: {row['text']}"})
+            diffs.append({"msg": f"Action {k} is in the draft but not in Review: {row['text']}"})
             continue
         item = hit[1]
         matched.add(id(item))
@@ -573,10 +573,10 @@ def minutes_differences(data, block):
                 shown_staged = tracker.shown(v.get(field)) if field == "due_date" else v.get(field, "TBC")
                 diffs.append({"item": item, "field": field, "value": draft_value,
                               "msg": f"Action {k} {label}: draft says {shown_draft or 'none'}; "
-                                     f"staged {shown_staged or 'none'}"})
+                                     f"in Review {shown_staged or 'none'}"})
     for text, item in actions:
         if id(item) not in matched:
-            diffs.append({"msg": f"Staged action not in the draft: {text}"})
+            diffs.append({"msg": f"An action in Review isn't in the draft: {text}"})
     for kind, table, drafted in (("decision", "decisions", parsed["decisions"]),
                                  ("RAID item", "raid", [f"{d['type'] or 'Risk'}: {d['text']}" for d in parsed["raid"]])):
         staged = [((f"{i['values'].get('type')}: " if table == "raid" else "") +
@@ -584,10 +584,10 @@ def minutes_differences(data, block):
                   for i in live if i["table"] == table]
         for text in drafted:
             if not best(text, staged, 0.6):
-                diffs.append({"msg": f"Draft has a {kind} that isn't staged: {text}"})
+                diffs.append({"msg": f"Draft has a {kind} that isn't in Review: {text}"})
         for text, _ in staged:
             if not best(text, [(t, None) for t in drafted], 0.6):
-                diffs.append({"msg": f"Staged {kind} not in the draft: {text}"})
+                diffs.append({"msg": f"A {kind} in Review isn't in the draft: {text}"})
     return diffs
 
 
@@ -1057,6 +1057,7 @@ def decide_entry(n, p, data, ref, block, decision, mode=None, drop=False):
         return held
     if drop:
         drop_transcript(block)
+        save(p, data)        # #306: a minutes record is settled from the file (track_minutes), so the dropped copy must be on disk first
     if ref == "meeting" and str(block.get("draft") or "").lower().endswith(".html"):
         return no_draft_refusal(n, ref, block, decision) or decide_record(n, p, data, block, decision)
     return no_draft_refusal(n, ref, block, decision) or decide_draft(n, p, data, ref, block, decision, mode)
@@ -2473,6 +2474,10 @@ def minutes_plan(data):
             "items": rows, "group": sum(1 for r in rows if r["group"] == "group"), "joins": sorted(MINUTES_GROUP_JOINS)}
 
 
+HELD_MINUTES_WORDS = ("These minutes can't be filed yet: the transcript is no longer in your inbox. "
+                      "You can file the minutes without the transcript copy.")
+
+
 def _minutes_refusal(p, data):
     """Why these minutes can't be approved from the minutes view, or None."""
     import minutes_record
@@ -2482,8 +2487,7 @@ def _minutes_refusal(p, data):
     if not minutes_record.is_record(meeting.get("draft")):
         return "These minutes are a Word draft: approve them in Review."
     if held_reason(meeting):                                             # #280: its transcript has gone; Review offers the two ways out
-        return (f"These minutes can't be filed as staged: {held_reason(meeting)}. In Review, approve them without the transcript "
-                "copy, or discard the proposal.")
+        return HELD_MINUTES_WORDS   # #306: plain words; the page offers "File without the transcript copy" in place
     return None
 
 

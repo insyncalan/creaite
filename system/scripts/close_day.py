@@ -80,13 +80,13 @@ def catchup_status(now, last, mode, minutes, busy, sweeping, dev, force):
     return "offer" if mode == "offer" and not force else "start"
 
 
-CATCHUP_SAYS = {"start": "Catching up: reading Inbox, Sent Items and Teams since {last}.",
-                "offer": "Last swept {last}. Catch up before you close?",
+CATCHUP_SAYS = {"start": "Catching up: reading your Inbox, Sent Items and Teams since {last}.",
+                "offer": "Mail and Teams last checked {last}. Catch up before you close?",
                 "recent": "Caught up at {last}.",
-                "off": "The catch-up sweep is off (Settings › General).",
-                "busy": "Waiting for ask creaite to finish; the sweep starts after it (one run at a time).",
-                "sweeping": "A sweep is already running; this follows it.",
-                "cant": "The development repository never reads Microsoft 365, so there is no catch-up sweep here."}
+                "off": "The last check of mail and Teams is off (Settings › General).",
+                "busy": "Waiting for ask creaite to finish; the check starts after it (one run at a time).",
+                "sweeping": "A check of mail and Teams is already running; this follows it.",
+                "cant": "The development repository never reads Microsoft 365, so there is no check of mail and Teams here."}
 
 
 # ── Loose ends ───────────────────────────────────────────────────────────────
@@ -120,9 +120,15 @@ def proposal_rows(review_rows, new_files):
     return out
 
 
+def plain_file_name(name):
+    """#291: an inbox file as a person names it: no extension, no leading 'Recording - ' (never the file name itself)."""
+    stem = re.sub(r"\.[A-Za-z0-9]{1,5}$", "", str(name or "")).strip()
+    return re.sub(r"^Recording\s*-\s+", "", stem) or stem
+
+
 def intake_rows(d):
     """Files waiting in inbox/ (not processed, not a chat) and meetings whose transcript is ready but not loaded or processed."""
-    out = [{"ref": f"f:{fingerprint(f['path'])}", "kind": "intake", "type": "File in Intake", "t": f.get("name") or "",
+    out = [{"ref": f"f:{fingerprint(f['path'])}", "kind": "intake", "type": "File in Intake", "t": plain_file_name(f.get("name") or ""),
             "p": f.get("p"), "new": False} for f in d.get("inbox") or [] if f.get("state") == "new"]
     for m in (d.get("meetings") or {}).get("rows") or []:
         if m.get("id") and m.get("transcript") == "available" and not (m.get("processed") or m.get("draft") or m.get("loaded")):
@@ -353,7 +359,7 @@ class Lookup:
             files = sorted(paths.INBOX.iterdir()) if paths.INBOX.is_dir() else []
             self._inbox = {fingerprint(paths.rel(f)): f.name for f in files if f.is_file()}
         name = self._inbox.get(rest)
-        return {"kind": "intake", "type": "File in Intake", "t": name or "", "p": None, "open": name is not None}
+        return {"kind": "intake", "type": "File in Intake", "t": plain_file_name(name or ""), "p": None, "open": name is not None}
 
 
 def pending_refs(files):

@@ -16,7 +16,8 @@ import { srcShort, weekendNote, wkLong } from "./core/fields.js";
 
 import { go } from "./core/nav.js";
 import { D, fd, fdText, isMe, nowStamp, OPENST, prio, S, TODAY, who } from "./core/page.js";
-import { api, apply, applyNow, applySoon, conflictChoice, editProposal, needVault, oneLine, refreshAll, reloadData, reviewViaServer, snack, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
+import { needsConnection, plainSay } from "./core/say.js";
+import { api, apply, applyNow, applySoon, applyWords, conflictChoice, editProposal, guardFresh, STALE_ROW_MSG, needVault, oneLine, refreshAll, reloadData, reviewViaServer, snack, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { deBarred, deItems, deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./core/intakeApi.js";
@@ -33,14 +34,18 @@ import { approveProblems } from "./components/minutes/track.js";
 import { contextMenuOpen, openContextMenu } from "./components/review/ContextMenu.jsx";
 import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
 import { rjAddGone, rjDropGone, rjGone, rjGuessFor, rjGuesses, rjOpenMenu, rjReasons, rjRecent, rjSetGone } from "./stores/rejects.js";
-import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, HL, hlOnly, items, kOfId, recordFromBoard, rows, thisFriday } from "./work.js";     /* RHL: the highlighted rows (BL-122); a row that may be ticked is ticked too, so the two are one selection */
+import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, HL, hlOnly, items, kOfId, recordFromBoard, rows, thisFriday, wkClientToggle } from "./work.js";     /* RHL: the highlighted rows (BL-122); a row that may be ticked is ticked too, so the two are one selection */
+/** #307: a server message, one line, in plain words (core/say.js) */
+const saidPlain=m=>plainSay(oneLine(m));
 export function applyProposal(r){ if(r.kind==="actions"){ const rec=Object.assign({id:nextId("actions",r.p),p:r.p,raised:TODAY,closed:null,src:r.src,upd_at:nowStamp()},r.rec); A.push(rec); return ()=>A.splice(A.indexOf(rec),1); }
   if(r.kind==="raid"){ const rec=Object.assign({id:nextId("raid",r.p),p:r.p,raised:TODAY,closed:null,src:r.src,upd_at:nowStamp()},r.rec); rec.pr=prio(rec.imp,rec.lik); R.push(rec); return ()=>R.splice(R.indexOf(rec),1); }
   if(r.kind==="decisions"){ const rec=Object.assign({id:nextId("decisions",r.p),p:r.p,src:r.src,upd_at:nowStamp()},r.rec); DEC.push(rec); return ()=>DEC.splice(DEC.indexOf(rec),1); }
   if(r.kind==="update"){ const x=REC("actions",r.rec.target)||REC("raid",r.rec.target); if(!x||r.rec.field!=="status") return ()=>{}; const b={...x}; x.st=r.rec.to; if(!OPENST(x.st)) x.closed=TODAY; return ()=>Object.assign(x,b); } return ()=>{}; }
 export function setDecision(data,r,v){ const bf={meeting:"minutes_decision",report:"report_decision",file_changes:"file_changes_decision"}[r.ref];
-  if(bf){ if(!data[r.ref]||data[r.ref].applied) throw new Error("already applied"); data[r.ref][bf]=v; data[r.ref].decided_in="dashboard"; return; }
-  const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("already applied"); it.decision=v; it.decided_in="dashboard";
+  if(bf){ if(!data[r.ref]||data[r.ref].applied) throw new Error("already saved"); data[r.ref][bf]=v; data[r.ref].decided_in="dashboard"; return; }
+  const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("already saved");
+  if(v!=="pending"&&it.decision&&it.decision!=="pending"&&it.decision!==v) throw new Error("already changed");   /* #307: decided the other way elsewhere */
+  it.decision=v; it.decided_in="dashboard";
   if(v==="approved"&&!r.bad&&(it.flags||[]).includes("invalid")){ it.flags=it.flags.filter(f=>f!=="invalid"); delete it.invalid_reason; }   /* #291 fix: checked again and now valid, so the stored flag goes */
   const w=RVREASON.get(r.n);
     if(v==="rejected"&&w){ it.reject_reason=w.reason; if(w.dup) it.duplicate_of=w.dup; else delete it.duplicate_of; RVREASON.delete(r.n); } else if(v!=="rejected"){ delete it.reject_reason; delete it.duplicate_of; }
@@ -59,17 +64,17 @@ export let decide = async function(n,v,written,g){
   if(v==="approved"&&r.trk!=null){ snack(`${r.trk==="n"?"Crossed":"Kept in the minutes only"} in the minutes' Track column: tick it there to register it`); return; }   /* #275 */
   if(viaServer()&&v==="approved"&&r.kind==="draft") return reviewViaServer(r,"approved",[]);
   if(viaServer()&&v==="approved"&&(r.flags||[]).includes("conflict")) return conflictChoice(r);
-  if(v==="approved"&&r.kind==="draft"){ snack(`Approving a draft needs the live server, which checks and cleans it first; or say “approve ${r.rec.t.replace(/^Minutes: /,"minutes for ").replace(/^Report: /,"report for ")}” in Claude Code`); return; }   /* BL-149 */
-  if(v==="approved"&&(r.flags||[]).includes("conflict")){ snack("This conflicts with a newer change: Keep current or Use this one needs the live server; or say “keep” or “override” in Claude Code (review)"); return; }   /* BL-149 */
-  if(!written){ if(!await needVault()) return; try{ await editProposal(r.file,data=>setDecision(data,r,v)); }catch(e){ snack("Not saved: "+e.message); return; } }
-  if(viaServer()&&S.autoApply){ r.done=v; refreshAll(); applySoon(); return; }
+  if(v==="approved"&&r.kind==="draft"){ snack(needsConnection("Approving a draft")); return; }   /* BL-149 */
+  if(v==="approved"&&(r.flags||[]).includes("conflict")){ snack(`This conflicts with a newer change. ${needsConnection("Keep current or Use this one")}`); return; }   /* BL-149 */
+  if(!written){ if(!await needVault()) return; try{ await editProposal(r.file,data=>setDecision(data,r,v),r); }catch(e){ if(/already|no longer/.test(e.message)){ snack("That one was already approved or changed, so nothing was saved. The list has been refreshed."); await reloadData(); return; } snack("Not saved: "+e.message); return; } }
+  if(viaServer()&&S.autoApply){ r.done=v; refreshAll(); applySoon(r,v); return; }
   let undoRec=()=>{};
   apply(`#${n} ${v==="approved"?"approved":"rejected"}: ${r.rec.t}`,()=>{ r.done=v; if(v==="approved") undoRec=applyProposal(r); },
-    async()=>{ delete r.done; undoRec(); try{ await editProposal(r.file,data=>setDecision(data,r,"pending")); }catch(e){ snack(viaServer()?"Already applied: undo it in Activity":"Already applied: use “undo last apply” in Claude Code"); } },"You, in Intake"); })();   /* BL-149 */
+    async()=>{ delete r.done; undoRec(); try{ await editProposal(r.file,data=>setDecision(data,r,"pending"),r); }catch(e){ snack(viaServer()?"Already saved: undo it in Activity":"Already saved: ask Claude Code to undo the last save"); } },"You, in Intake"); })();   /* BL-149 */
   return res; };   /* BL-225: stays on the row */
 /* #229 gate: what a user acts on or must notice stays visible beside the one meta line (never part of it): the weekend note with its buttons (BL-180), the "Drafted" tag (BL-218), the no-Word-draft notice (BL-260) */
 export const BAD_MSG="Can't be saved as it is: edit it or reject it";   /* #291: declared before revRow, which runs at load */
-const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">(?:No Word draft was made for these minutes<\/span> · Reject them and process the meeting again|Held: [^<]*<\/span> · Approve the minutes without the transcript copy, or discard the proposal|Can't be saved as it is: [^<]*<\/span> · Edit it or reject it)/;   /* #291: held and invalid rows say why on the row, not only in the tip (Intake: HeldNote) */
+const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">(?:No Word draft was made for these minutes<\/span> · Reject them and process the meeting again|Held: [^<]*<\/span> · Approve the minutes without the transcript copy, or discard the suggestion|Can't be saved as it is: [^<]*<\/span> · Edit it or reject it)/;   /* #291: held and invalid rows say why on the row, not only in the tip (Intake: HeldNote) */
 export const rvTipText=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim().replace(/\s*·$/,"");   /* #291: a note taken out of the end leaves no dot */
   /* #271: the line truncates with an ellipsis, so the tip ends with its reason and full source */
   const tail=[r.why,fdText(srcShort(r.src))].map(x=>String(x??"").trim()).filter(x=>x&&x!=="—").join(" · ");
@@ -87,7 +92,7 @@ export function revDetail(r){ const x=r.rec, w=t=>`<span class="h-warn">${t}</sp
     r.kind==="decisions"?[x.by?`Made by ${personLink(x.by,x.by)}`:w("Made by not recorded"),x.date?fd(x.date):""]:
     r.kind==="update"?(x.changes||[]).map(c=>`${esc(c.field)}: ${esc(fd(c.from==null||c.from===""?"—":linkWords(String(c.from))))} → ${esc(fd(c.to==null||c.to===""?"—":linkWords(String(c.to))))}`):
     r.kind==="draft"&&r.nodraft&&!r.done?[w("No Word draft was made for these minutes"),"Reject them and process the meeting again"]:
-    r.kind==="draft"&&r.held&&!r.done?[w("Held: "+esc(r.held)),"Approve the minutes without the transcript copy, or discard the proposal"]:[];   /* BL-260; #280 */
+    r.kind==="draft"&&r.held&&!r.done?[w("Held: "+esc(plainSay(r.held))),"Approve the minutes without the transcript copy, or discard the suggestion"]:[];   /* BL-260; #280 */
   if(r.bad&&!r.done) parts.push(w("Can't be saved as it is: "+esc(r.bad)),"Edit it or reject it");   /* #291 */
   let h=(r.dn?dnHtml(r):"")+parts.filter(Boolean).join(" · ")+shRvHtml(r);
   if(r.kind==="update"&&r.rec&&r.rec.why) h=`${h} · <span class="sub">“${esc(r.rec.why)}”</span>`;   /* BL-65 */
@@ -108,7 +113,7 @@ export const isMin=r=>r&&r.kind==="draft"&&r.ref==="meeting";
    were (openMinutesRecord settles them). Ported onto the Intake page's decide (v26-line merge). */
 export const isRecordMin=r=>isMin(r)&&/\.html$/i.test(r.src||"");
 export async function approveTracked(r,g){ const v=await openMinutesRecord({file:r.file});
-  if(!v||!v.ok){ snack(oneLine((v&&v.message)||"")||"Couldn't open the minutes"); return; }
+  if(!v||!v.ok){ snack(saidPlain((v&&v.message)||"")||"Couldn't open the minutes"); return; }
   /* under one project of minutes covering several, only that project's ticked items are registered; the others wait in Review */
   const mine=g&&g!=="*"&&(r.projects||[]).length>1?new Set(REV.filter(x=>x.file===r.file&&!["draft","files"].includes(x.kind)&&(x.p||"?")===g).map(x=>x.ref)):null;
   if(v.doc&&v.plan&&approveProblems(v.doc,v.plan.items,unknownOwner).some(p=>!mine||mine.has(p.n))){ go("minutes",{file:r.file,approve:true}); return; }
@@ -120,24 +125,24 @@ export async function approveTracked(r,g){ const v=await openMinutesRecord({file
    ported when Review retired): the Track column's crosses and neithers on the meeting's items first (trackApprove with approve
    false, the minutes view's changes), then the routine items, in one apply whose Undo also settles the minutes back, exactly as
    they were. The minutes, and an item approved one by one, still wait for their own Approve (the bulk rule). */
-export async function approveRoutineTracked(m){ const v=await openMinutesRecord({file:m.file});
-  if(!v||!v.ok){ snack(oneLine((v&&v.message)||"")||"Couldn't open the minutes"); return; }
+export async function approveRoutineTracked(m,keys,extra){ const v=await openMinutesRecord({file:m.file});
+  if(!v||!v.ok){ snack(saidPlain((v&&v.message)||"")||"Couldn't open the minutes"); return; }
   const item=x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done, mine=new Set(REV.filter(item).map(x=>x.ref));
   const tr=await trackApprove(v,{only:n=>mine.has(n),approve:false}), made=tr.made;
   if(made) await reloadData();
   if(!tr.ok){ snack(trackFailWords(tr,"Approve routine")); return; }
-  const ks=REV.filter(x=>item(x)&&rvBulkOK(x)), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
+  const ks=REV.filter(x=>item(x)&&rvBulkOK(x)&&(!keys||keys.has(`${x.file}|${x.ref}`))), left=REV.filter(x=>item(x)&&!rvBulkOK(x)).length;
   let undo=null, out=[], got=ks.length;
   /* #275 round 3: an apply that stops puts the Track column's changes back too (trackPutBack), so the minutes are as they were */
   const putBack=async why=>{ const pb=made?await trackPutBack(v.path,tr.done||[]):{ok:true,message:""}; await reloadData();
     snack(`Approved 0 items from these minutes · ${why}${made?(pb.ok?" · the minutes are as they were":` · the minutes couldn't be put back (${pb.message||"try again"}): open them to check`):""}`); };
   if(ks.length){ const res=await rvDecideMany(ks,"approved"); undo=res.undo||null; out=trkLeftOut(res); got=res.n; if(res.stopped){ await putBack(out.join(" · ")); return; } }
-  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(`apply stopped: ${oneLine(res.message)}`); return; } }
+  else if(made&&S.autoApply){ const res=await applyNow(); if(res.ok) undo=()=>undoApply(res.apply_id); else { await putBack(saidPlain(applyWords(res.message))); return; } }
   const tail=made?` · ${made} line${made===1?"":"s"} taken out of the minutes or kept as lines only`:"";
-  snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}`,
+  snack(`Approved ${got} item${got===1?"":"s"} from these minutes${tail}${left?` · ${left} still need approving one by one`:""}${out.length?" · "+out.join(" · "):""}${extra?" · "+extra:""}`,
     undo?async()=>{ await undo(); await openMinutesRecord({file:m.file}); await reloadData(); }:null); }
 export async function rejectMinutes(m){ await decide(m.n,"rejected"); const pend=REV.filter(x=>x.file===m.file&&!["draft","files"].includes(x.kind)&&!x.done);
-  if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay for review.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); },`Reject ${pend.length===1?"it":"them"} too`); }                                     /* a batch over this asks first (a let, so a test can lower it) */
+  if(pend.length) snack(`Minutes rejected. Its ${pend.length} item${pend.length===1?"":"s"} stay to check.`,async()=>{ for(const k of pend) await decide(k.n,"rejected"); },`Reject ${pend.length===1?"it":"them"} too`); }                                     /* a batch over this asks first (a let, so a test can lower it) */
 /* #232-B: the page's rule is the server's (review.hold_reason, carried on each row as `hold`; "" is routine, "invalid" is held back). A row without it (an edit made on the page) keeps the older test */
 export const rvBulkOK=r=>!!r&&!r.done&&!r.bad&&!(r.flags||[]).includes("invalid")&&("hold" in r?!r.hold:!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict"))&&r.trk==null;   /* #275: r.trk, crossed or neither in the minutes' Track column (build_dashboard, minutes_record.track_blocked) */
 export const rvRejectOK=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind);
@@ -156,10 +161,10 @@ export async function rvDecideMany(list,v){ let dropped=[];
     dropped=list.filter(r=>r&&!r.done&&r.trk!=null); list=list.filter(r=>r&&r.trk==null); }
   list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0,dropped}; if(!await needVault()) return {n:0,dropped};
   const byFile=new Map(); list.forEach(r=>{ if(!byFile.has(r.file)) byFile.set(r.file,[]); byFile.get(r.file).push(r); }); const done=[], failed=[];
-  for(const [file,rs] of byFile){ try{ await editProposal(file,data=>rs.forEach(r=>setDecision(data,r,v))); done.push(...rs); }catch(e){ failed.push(...rs.map(r=>`#${r.n} (${e.message})`)); } }
-  const undoFiles=async()=>{ for(const [file,rs] of byFile){ const mine=rs.filter(r=>done.includes(r)); if(mine.length) try{ await editProposal(file,data=>mine.forEach(r=>setDecision(data,r,"pending"))); }catch(e){} } };
+  for(const [file,rs] of byFile){ try{ await editProposal(file,data=>rs.forEach(r=>setDecision(data,r,v)),rs); done.push(...rs); }catch(e){ failed.push(...rs.map(r=>`#${r.n} (${e.message})`)); } }
+  const undoFiles=async()=>{ for(const [file,rs] of byFile){ const mine=rs.filter(r=>done.includes(r)); if(mine.length) try{ await editProposal(file,data=>mine.forEach(r=>setDecision(data,r,"pending")),mine); }catch(e){} } };
   if(viaServer()&&S.autoApply){ done.forEach(r=>r.done=v); refreshAll(); const res=await applyNow();
-    if(!res.ok){ await undoFiles(); done.forEach(r=>{ delete r.done; }); await reloadData(); return {n:0,failed,dropped,stopped:oneLine(res.message),res}; }
+    if(!res.ok){ await undoFiles(); done.forEach(r=>{ delete r.done; }); await reloadData(); return {n:0,failed,dropped,stopped:saidPlain(res.message),res}; }
     return {n:done.length,failed,dropped,undo:()=>undoApply(res.apply_id),res}; }
   let undoRecs=[]; const what=`${done.length} proposal${done.length===1?"":"s"} ${v}`;
   apply(what,()=>{ done.forEach(r=>{ r.done=v; if(v==="approved") undoRecs.push(applyProposal(r)); }); },async()=>{ done.forEach(r=>delete r.done); undoRecs.forEach(u=>u()); undoRecs=[]; await undoFiles(); },"You, in Intake");
@@ -167,7 +172,7 @@ export async function rvDecideMany(list,v){ let dropped=[];
 /* #275 round 3: what an rvDecideMany result left out, in words: an apply that stopped (all back on Intake) and the rows the Track
    reload left out (crossed, or kept in the minutes only) */
 export function trkLeftOut(res){ const dr=(res&&res.dropped)||[], dn=dr.filter(r=>r.trk==="n").length, dk=dr.length-dn;
-  return [res&&res.stopped?`apply stopped, all back on Intake: ${res.stopped}`:"",dn?`${dn} crossed in the minutes' Track column`:"",dk?`${dk} kept in the minutes only (Track: neither)`:""].filter(Boolean); }
+  return [res&&res.stopped?`saving stopped, all back in Intake: ${res.stopped}`:"",dn?`${dn} crossed in the minutes' Track column`:"",dk?`${dk} kept in the minutes only (Track: neither)`:""].filter(Boolean); }
 export function rvSummary(verb,res,left){ const by={project:0,indiv:0,conflict:0}; left.forEach(r=>by[rvWhyNot(r)[0]]++);
   const parts=[...trkLeftOut({stopped:res.stopped}),by.project?`${by.project} need${by.project===1?"s":""} a project`:"",by.indiv?`${by.indiv} need${by.indiv===1?"s":""} individual approval`:"",by.conflict?`${by.conflict} ${by.conflict===1?"has a conflict":"have conflicts"}`:"",...trkLeftOut({dropped:res.dropped}),res.failed&&res.failed.length?`not saved: ${res.failed.join(", ")}`:""].filter(Boolean);
   const text=`${verb} ${res.n}${parts.length?" · "+parts.join(" · "):""}`;
@@ -203,8 +208,9 @@ export function llCompare(r){ const d=r.dup, x=REC(r.kind,d.id)||{t:d.t}, dlg=$(
   LLF.forEach(([f,lab])=>{ const a=mine[f], b=theirs[f]; if(!a&&!b) return; const tr=document.createElement("tr"), th=document.createElement("th"); th.scope="row"; th.textContent=lab; tr.append(th);
     [a,b].forEach(v=>{ const td=document.createElement("td"); td.textContent=f==="due"?(fd(v)||"—"):String(v||"—"); if(f!=="t"&&String(a||"")!==String(b||"")) td.className="lldiff"; tr.append(td); }); body.append(tr); });
   $("#llMerge").hidden=!(d.staged&&d.same!==false&&d.state!=="closed"); $("#llMerge").textContent=`Merge as an update to ${d.id}`; $("#llKeep").hidden=!d.staged; dlg.dataset.n=r.n; openDialog(dlg,{focus:"#llClose"}); }
-export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ snack(`${how==="merge"?"Merging":"Keeping it as new"} needs the live server; or say “${how==="merge"?"merge":"keep-new"} ${r.n}” in Claude Code (review)`); return; }
-  const res=await api("/api/review/repeat",{file:r.file,ref:r.ref,how}); snack(oneLine(res.message)||(res.ok?"Done":"Not changed")); if(res.ok){ closePanel(); await reloadData(); } }
+export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ snack(needsConnection(how==="merge"?"Merging":"Keeping it as new")); return; }
+  if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
+  const res=await api("/api/review/repeat",{file:r.file,ref:r.ref,how}); snack(saidPlain(res.message)||(res.ok?"Done":"Not changed")); if(res.ok){ closePanel(); await reloadData(); } }
 /* ===== end BL-221 ===== */
 /* ===== BL-297 D (v19-review-picker) ===== "Update an existing item instead": any pending new action, RAID item or decision with a
    project can be pointed at an open item of its project and kind, whether or not Looks like marked one. The proposal's peek has the
@@ -222,19 +228,19 @@ export function rtNoteHtml(r){ if(!rtOK(r)) return "";
 export function rtHint(c){ const s=c.strength?(c.why?`${c.strength}: ${c.why}`:c.strength):"";
   return [c.marked?"Looks like":"",s,c.owner||"",c.due?`Due ${fd(c.due)}`:""].filter(Boolean).join(" · "); }
 export async function rtOpen(anchor,r){ if(!rtOK(r)) return;
-  if(!viaServer()){ snack(`Updating an existing item instead needs the live server; or say “${r.n} is an update to <ID>” in Claude Code (review)`); return; }
+  if(!viaServer()){ snack(needsConnection("Updating an existing item instead")); return; }
   anchor.setAttribute("aria-busy","true"); const res=await api("/api/review/candidates",{file:r.file,ref:r.ref}); anchor.removeAttribute("aria-busy");
-  if(!res||!res.ok){ snack(oneLine(res&&res.message)||"Couldn't list the items"); return; }
+  if(!res||!res.ok){ snack(saidPlain(res&&res.message)||"Couldn't list the items"); return; }
   const L=res.items||[]; if(!L.length){ snack(`No open ${RTKINDS[r.kind]} in ${pName(r.p)} for it to update`); return; }
   if(!anchor.isConnected){   /* the list or the peek was drawn again while the server answered: open on the new one, never silently not at all */
     anchor=document.querySelector(`[data-rvrt="${r.n}"]`); if(!anchor) return; }
   openPicker(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
-export async function rtGo(r,id){ const at={file:r.file,ref:r.ref};
-  const res=await api("/api/review/retarget",{...at,id}); if(!res||!res.ok){ snack(oneLine(res&&res.message)||"Not changed"); return; }
+export async function rtGo(r,id){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const at={file:r.file,ref:r.ref};
+  const res=await api("/api/review/retarget",{...at,id}); if(!res||!res.ok){ snack(saidPlain(res&&res.message)||"Not changed"); return; }
   if(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===r.n) closePanel(); await reloadData();
   const dup=/duplicate/i.test(res.message||"");
   snack(dup?`Rejected as a duplicate of ${id}: it carried nothing new`:`Now an update to ${id}`,async()=>{ const back=await api("/api/review/retarget",{...at,undo:true});
-    snack(back&&back.ok?"Back to a new item, as it was proposed":oneLine(back&&back.message)||"Not undone"); if(back&&back.ok) await reloadData(); }); }
+    snack(back&&back.ok?"Back to a new item, as it was suggested":saidPlain(back&&back.message)||"Not undone"); if(back&&back.ok) await reloadData(); }); }
 /* ===== end BL-297 D ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 /* ===== BL-218 (sprint-drafts-extraction) ===== "Probably done": a closing update the sweep or the minutes staged because a sent mail, a
@@ -318,6 +324,7 @@ export function cxWork(k,id){ const x=REC(k,id), one=(patch,label)=>boardMove(k,
         :[{label:"Impact",icon:"alert",sub:()=>cxList(["High","Medium","Low"],x.imp,v=>one({imp:v}))},{label:"Likelihood",icon:"alert",sub:()=>cxList(["High","Medium","Low"],x.lik,v=>one({lik:v}))}]),
       {label:"Workstream",icon:"layers",sub:()=>cxList([...wsFor(x.p),["","None"]],x.ws||"",v=>one({ws:v}),"layers")},
       {label:"Milestone",icon:"flag",sub:()=>cxList(msChoices(x.p,x.ms),x.ms||"",v=>one({ms:v}),"flag")}); }
+  out.push({label:"Client-visible",icon:"eye",checked:!!x.client,hint:x.client?"On: it can appear in client reports":"Off",desc:x.client?"Turn off":"Turn on",run:()=>wkClientToggle(k,id)});   /* #241 C */
   out.push({sep:true},{label:"Copy ID",icon:"copy",run:()=>cxCopy(id,id)},{label:"Copy link",icon:"link",run:()=>cxCopy(cxLink(id),`the link to ${id}`)});
   const who=k==="decisions"?null:pkWho(x.o); if(who&&PERS().some(p=>p.name===who)) { out.push({label:"Draft email",icon:"mail",desc:"Asks for an update (update request)",run:()=>openDraftEmail(who)}); if(x.due&&x.due<TODAY&&OPENST(x.st)&&!deMe(who)) out.push({label:"Draft email",icon:"mail",desc:"Chases this overdue item (chase)",run:()=>openDraftEmail(who,"chase")}); }   /* BL-224 */
   return out; }
@@ -376,7 +383,7 @@ const rjGhost=(r,reason,dup)=>({...r,rec:{...r.rec},gone:true,key:rjKey(r),rk:rv
 const rjBy=(rows,body)=>{ const m=new Map(); rows.forEach(r=>{ const b=body(r), k=JSON.stringify(b); if(!m.has(k)) m.set(k,{body:b,L:[]}); m.get(k).L.push(r); }); return [...m.values()]; };
 const rjRef=k=>{ const i=k.lastIndexOf("#"), ref=k.slice(i+1); return {file:k.slice(0,i),ref:/^\d+$/.test(ref)?+ref:ref}; };
 export async function rjReject(list,c,after){ list=list.filter(r=>rvRejectOK(r)); if(!list.length) return;
-  if(list.length>shared.RV_MAX&&!await boardAsk({title:`Reject ${list.length} proposals?`,hint:"Rejecting writes nothing to the tracker; Undo brings them back",clear:true,okText:`Reject ${list.length}`})) return;
+  if(list.length>shared.RV_MAX&&!await boardAsk({title:`Reject ${list.length} suggestions?`,hint:"Rejecting saves nothing; Undo brings them back",clear:true,okText:`Reject ${list.length}`})) return;
   const why=r=>{ if(!c.guess) return c.reason||null; const g=rjGuessOf(r); return g?g.reason:null; };
   const dupOf=r=>{ if(c.guess){ const g=rjGuessOf(r); return g&&g.reason==="Duplicate"&&g.of||null; } return c.reason==="Duplicate"?rjDupOf(r)||c.dup||null:null; };
   const how=c.guess?"with their guesses":c.reason?`as ${c.reason}`:"without a reason";
@@ -385,22 +392,23 @@ export async function rjReject(list,c,after){ list=list.filter(r=>rvRejectOK(r))
     if(list.length===1) await decide(list[0].n,"rejected"); else { const res=await rvDecideMany(list,"rejected"); rvSummary("Rejected",res,[]); }
     rjAddGone(G.filter(g=>REV.some(r=>rvKey(r)===g.rk&&r.done==="rejected"))); if(after) after(); return; }
   const done=[], msgs=[];
+  { const fresh=await guardFresh(list); if(fresh.length<list.length) msgs.push(STALE_ROW_MSG); list=fresh; if(!list.length){ snack(STALE_ROW_MSG); await reloadData(); return; } }
   for(const {body,L} of rjBy(list,r=>c.guess?{guess:true}:{reason:c.reason||"",duplicate_of:dupOf(r)||""})){
     const res=await api("/api/review/reject",{rows:L.map(r=>({file:r.file,ref:r.ref})),...body});
-    if(res.ok) (res.rejected||[]).forEach(x=>{ const r=L.find(y=>y.file===x.file&&String(y.ref)===String(x.ref)); if(r) done.push(r); }); else msgs.push(oneLine(res.message)); }
+    if(res.ok) (res.rejected||[]).forEach(x=>{ const r=L.find(y=>y.file===x.file&&String(y.ref)===String(x.ref)); if(r) done.push(r); }); else msgs.push(saidPlain(res.message)); }
   if(!done.length){ snack("Not rejected: "+(msgs[0]||"nothing changed")); return; }
   const G=done.map(r=>rjGhost(r,why(r),dupOf(r)));
   done.forEach(r=>{ r.done="rejected"; });
   rjAddGone(G); irTick.value++;
   const ap=S.autoApply?await applyNow():(await reloadData(),null);
-  const n=done.length, text=`Rejected ${n===1?"1":n} ${how}`+(ap&&!ap.ok?` · not applied: ${oneLine(ap.message)}`:"")+(msgs.length?` · not rejected: ${msgs[0]}`:"");
+  const n=done.length, text=`Rejected ${n===1?"1":n} ${how}`+(ap&&!ap.ok?` · not saved: ${saidPlain(ap.message)}`:"")+(msgs.length?` · not rejected: ${msgs[0]}`:"");
   rjSay(text,()=>rjUnreject(G));
   if(after) after(); }
 async function rjRejected(rows,how,extra){ return api("/api/review/rejected",{rows:rows.map(r=>({file:r.file,ref:r.ref})),how,...(extra||{})}); }
-const rjOff=what=>{ snack(`${what} needs the live server; or say “review” in Claude Code`); };
+const rjOff=what=>{ snack(needsConnection(what)); };
 /* Undo a reject (pending or applied): back in Intake, waiting */
 export async function rjUnreject(rows){ if(!viaServer()){ rjOff("Putting a reject back"); return; }
-  const res=await rjRejected(rows,"undo"); if(!res.ok){ snack("Not undone: "+oneLine(res.message)); return; }
+  const res=await rjRejected(rows,"undo"); if(!res.ok){ snack("Not undone: "+saidPlain(res.message)); return; }
   const keys=rows.map(r=>r.key||rjKey(r)); rjDropGone(keys); await reloadData();
   if(shared.VIEW==="activity") rjLoadRecent();
   snack(`Back in Intake: ${keys.length}`); }
@@ -408,7 +416,7 @@ export async function rjUnreject(rows){ if(!viaServer()){ rjOff("Putting a rejec
 export async function rjRereason(rows,c,quiet){ if(!viaServer()){ rjOff("Changing a reason"); return; }
   const body=r=>{ if(c.guess){ const g=r.guess; return {reason:g?g.reason:"",duplicate_of:g&&g.reason==="Duplicate"&&g.of||""}; } return {reason:c.reason||"",duplicate_of:c.reason==="Duplicate"?c.dup||r.dup||"":""}; };
   const done=[], msgs=[];
-  for(const {body:b,L} of rjBy(rows,body)){ const res=await rjRejected(L,"reason",b); if(res.ok){ (res.done||[]).forEach(d=>done.push({...d,now:b})); } else msgs.push(oneLine(res.message)); }
+  for(const {body:b,L} of rjBy(rows,body)){ const res=await rjRejected(L,"reason",b); if(res.ok){ (res.done||[]).forEach(d=>done.push({...d,now:b})); } else msgs.push(saidPlain(res.message)); }
   if(!done.length){ snack("Not changed: "+(msgs[0]||"nothing changed")); return; }
   done.forEach(d=>rjSetGone([d.key],()=>({reason:d.now.reason||null,dup:d.now.duplicate_of||null})));
   if(S.autoApply) await applyNow(); else await reloadData(); if(shared.VIEW==="activity") rjLoadRecent();
@@ -420,22 +428,22 @@ export async function rjRereason(rows,c,quiet){ if(!viaServer()){ rjOff("Changin
     snack("Reason put back"); }); }
 /* Approve instead: the reject undone and the item approved in one step; one approved only on its own goes back to Intake, opened */
 export async function rjApproveInstead(rows){ if(!viaServer()){ rjOff("Approve instead"); return; }
-  const res=await rjRejected(rows,"approve"); if(!res.ok){ snack("Not approved: "+oneLine(res.message)); return; }
+  const res=await rjRejected(rows,"approve"); if(!res.ok){ snack("Not approved: "+saidPlain(res.message)); return; }
   const was=res.done||[], open=res.open||[], keys=rows.map(r=>r.key||rjKey(r)), ghosts=rjGone.value.filter(g=>keys.includes(g.key)); rjDropGone(keys);
   const ap=S.autoApply&&was.length?await applyNow():(await reloadData(),null);
   if(shared.VIEW==="activity") rjLoadRecent();
-  const n=was.length, text=[n?`Approved instead: ${n}`:"",open.length?`${open.length} need${open.length===1?"s":""} approving on ${open.length===1?"its":"their"} own`:"",ap&&!ap.ok?`not applied: ${oneLine(ap.message)}`:""].filter(Boolean).join(" · ");
+  const n=was.length, text=[n?`Approved instead: ${n}`:"",open.length?`${open.length} need${open.length===1?"s":""} approving on ${open.length===1?"its":"their"} own`:"",ap&&!ap.ok?`not saved: ${saidPlain(ap.message)}`:""].filter(Boolean).join(" · ");
   const undo=n?async()=>{ const back=was.map(d=>({...rjRef(d.key),key:d.key,was:d.was||{}}));
-    if(ap&&ap.ok&&ap.apply_id){ const u=await api("/api/undo",{apply_id:ap.apply_id}); if(!u.ok){ snack("Not undone: "+oneLine(u.message)); return; } await reloadData();
+    if(ap&&ap.ok&&ap.apply_id){ const u=await api("/api/undo",{apply_id:ap.apply_id}); if(!u.ok){ snack("Not undone: "+saidPlain(u.message)); return; } await reloadData();
       for(const {body:b,L} of rjBy(back,x=>({reason:x.was.reason||"",duplicate_of:x.was.duplicate_of||""}))) await api("/api/review/reject",{rows:L.map(x=>({file:x.file,ref:x.ref})),...b}); }
-    else { for(const x of back){ try{ await editProposal(x.file,data=>{ const it=(data.items||[]).find(i=>i.n===x.ref); if(!it||it.applied) throw new Error("already applied"); it.decision="rejected"; it.decided_in="dashboard";
+    else { for(const x of back){ try{ await editProposal(x.file,data=>{ const it=(data.items||[]).find(i=>i.n===x.ref); if(!it||it.applied) throw new Error("already saved"); it.decision="rejected"; it.decided_in="dashboard";
         if(x.was.reason) it.reject_reason=x.was.reason; else delete it.reject_reason; if(x.was.duplicate_of) it.duplicate_of=x.was.duplicate_of; else delete it.duplicate_of; }); }catch(e){ snack("Not rejected again: "+e.message); } } }
     rjAddGone(ghosts.filter(g=>back.some(x=>x.key===g.key))); if(S.autoApply) await applyNow(); else await reloadData(); if(shared.VIEW==="activity") rjLoadRecent(); snack(`Rejected again: ${back.length}`); }:null;
   rjSay(text||"Nothing changed",undo);
   if(open.length){ const L=REV.filter(x=>open.includes(rjKey(x))&&!x.done); if(L.length){ if(shared.VIEW!=="intake-review") go("intake-review"); openProposal(L[0].n); } } }
 /* Activity › What you rejected */
 export async function rjLoadRecent(){ if(!viaServer()){ rjRecent.value={state:"off",items:[]}; return; } rjRecent.value={...rjRecent.value,state:"loading"};
-  const res=await api("/api/review/rejects",{limit:50}); rjRecent.value=res.ok?{state:"ok",items:res.items||[]}:{state:"error",items:[],message:oneLine(res.message)}; }
+  const res=await api("/api/review/rejects",{limit:50}); rjRecent.value=res.ok?{state:"ok",items:res.items||[]}:{state:"error",items:[],message:saidPlain(res.message)}; }
 /* ===== end BL-315 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 /* #232-C2: the listeners that outlive the old Review page. They serve the Intake page's rows and the peek, and Today (they were in bootReview0064, 0065, 0067 and 0315). */
@@ -466,16 +474,30 @@ export const reviewSeams = { decide: v => { decide = v; } };
    build_dashboard sets held with the reason). They are never approved as staged: Intake's row (components/intakeReview/proposals.jsx, HeldChoices) offers Approve without the transcript copy
    (review.py approve --without-transcript: the draft is filed, the transcript is not) or Discard (review.py reject --discard: the
    proposal is set aside in system/staging/discarded/, nothing written). Both go through the live server, so review.py's checks run. */
-export const heldMsg=r=>`Held: ${r.held}. Approve the minutes without the transcript copy, or discard the proposal`;
-export async function heldApprove(r){ if(!viaServer()){ snack(`Approving these minutes without the transcript needs the live server; or say “approve ${r.n} --without-transcript” in Claude Code`); return; }
-  return reviewViaServer(r,"approved",["without-transcript"]); }
-export async function heldDiscard(r){ if(!viaServer()){ snack(`Discarding a proposal needs the live server; or say “reject ${r.n} --discard” in Claude Code`); return; }
-  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard"}); await reloadData(); snack(oneLine(res.message)); }
+export const heldMsg=r=>`Held: ${plainSay(r.held)}. Approve the minutes without the transcript copy, or discard the suggestion`;
+export async function heldApprove(r){ if(!viaServer()){ snack(needsConnection("Approving these minutes without the transcript")); return; }
+  /* #306: it says what happened, on the row and in a message: saved (with Undo) or not saved and why, never nothing */
+  if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
+  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"approved",modes:["without-transcript"]});
+  if(!res.ok){ const why=heldWhy(res.message); HELD_ERR.set(r.file,why); await reloadData(); snack(`Not saved because ${why}`); refreshAll(); return; }
+  HELD_ERR.delete(r.file); if(!S.autoApply){ await reloadData(); snack("Approved without the transcript: not saved yet"); return; }
+  const a=await applyNow();
+  if(!a.ok){ const why=heldWhy(a.message); HELD_ERR.set(r.file,why); snack(`Not saved because ${why}`); refreshAll(); return; }
+  const n=Number((String(a.message||"").match(/written (\d+)/)||[])[1]||0);
+  snack(`Approved without the transcript: ${n} item${n===1?"":"s"} saved${heldWords(a.message)}`,()=>undoApply(a.apply_id)); }
+/* #306: review.py's refusal in plain words for a row (no command to say, no number prefix) */
+/** #306: why the last Approve without the transcript failed, by proposal file (the rows are rebuilt on every reload) */
+export const HELD_ERR=new Map();
+export const heldWhy=m=>{ const t=String(m||"").replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/not approved — /,"").replace(/,? or say “[^”]*”\.?/g,"").replace(/\n\s*\(say [\s\S]*\)\s*$/,"").replace(/the draft differs from the staged items:/,"these minutes don't match the suggestions waiting in Intake:");
+  return saidPlain(t).replace(/\s*\.?\s*$/,"")||"creaite couldn't save these minutes"; };
+export async function heldDiscard(r){ if(!viaServer()){ snack(needsConnection("Discarding these minutes")); return; }
+  if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
+  const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard"}); await reloadData(); snack(saidPlain(res.message)); }
 /* the apply's "Held in Review, not applied: …" lines, for its snack */
-export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>x.startsWith("Held in Review, not applied:")); }
+export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>/^Held in Review, not applied:/.test(x)); }
 /* #291: the snack's words for them: an item held because it can't be saved as it is, apart from a proposal whose file has gone */
 export function heldWords(msg){ const L=heldLines(msg), i=L.filter(x=>/^Held in Review, not applied: \S+ item \d+:/.test(x)).length, f=L.length-i, out=[];
   if(i) out.push(`${i} item${i===1?" is":"s are"} held in Intake: ${i===1?"it can't be saved as it is":"they can't be saved as they are"}`);
-  if(f) out.push(`${f} proposal${f===1?" is":"s are"} held in Intake: a file to be filed has gone`);
+  if(f) out.push(`${f} suggestion${f===1?" is":"s are"} held in Intake: a file to be filed has gone`);
   return out.length?". "+out.join(". "):""; }
 /* ===== end #280 (round 3) ===== */

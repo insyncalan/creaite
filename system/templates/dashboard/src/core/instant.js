@@ -12,7 +12,7 @@
      into the store (A, R, DEC keep their objects) and redraws; it never calls /api/data. A full reload (reloadData) stays the
      fallback: on start, after a server restart, when the live-updates stream has a gap or names more than items, and from
      Settings › Diagnostics. */
-import { A, DEC, open, P, R, REV } from "./data.js";
+import { A, DEC, open, P, R, REV, snapModelKeys } from "./data.js";
 import { D, fdText, prio } from "./page.js";
 import { shared } from "./state.js";
 import { REC } from "../panel.js";
@@ -56,7 +56,7 @@ export function recMerge(n) {
     if (x) { Object.keys(x).forEach(c => { if (!(c in got)) delete x[c]; }); Object.assign(x, got); } else arr.push(got); }
   for (const id of n.missing || []) for (const t of RECORD_KINDS) { const arr = T[t], i = arr.findIndex(o => o.id === id); if (i >= 0) arr.splice(i, 1); }
   for (const k of ["review_focus", "peek_staged", "activity_capped", "activity_older", "milestone_names", "latest_apply"]) if (k in n) D[k] = n[k];
-  if (Array.isArray(n.review)) { REV.splice(0, REV.length, ...n.review); D.review = REV; }
+  if (Array.isArray(n.review)) { snapModelKeys(false); REV.splice(0, REV.length, ...n.review); D.review = REV; }
   if (Array.isArray(n.activity)) { shared.ACT = n.activity; shared.ACT.forEach(a => a.what = fdText(a.what)); }
   if (n.data_at) shared.DATA_AT = n.data_at;
   ovReapply(); undatedRecount(); }

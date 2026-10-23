@@ -8,7 +8,7 @@
 import { useRef } from "preact/hooks";
 import { psChanged, psTick } from "../../stores/projectSettings.js";
 import {
-  addPerson, addToProject, countsIn, newFilter, personPasses, registerRows, removeFromProject, savePerson,
+  addPerson, addToProject, countsIn, missingFlag, newFilter, personPasses, registerRows, removeFromProject, savePerson,
 } from "../../stores/peopleRegister.js";
 import { Count, Dash, NameCell, PeopleApplied, PeopleTools, openPersonForm, peopleWord, peoplePlural, useFields, useRedraw } from "../people/PeopleParts.jsx";
 import { IconButton } from "../IconButton.jsx";
@@ -37,7 +37,7 @@ function PsPersonRow({ x, code }) {
       <td class="num"><Count n={c.a} label={`${peoplePlural(c.a, "action")} owned by ${x.n} in this project, any status`} nav={`actions:open:${code}`} extra={{ st: [], o: [x.n] }} /></td>
       <td class="num"><Count n={c.r} label={`${peoplePlural(c.r, "RAID item")} owned by ${x.n} in this project, any status`} nav={`raid:open:${code}`} extra={{ st: [], o: [x.n] }} /></td>
       <td class="mgract">{x.me ? <span class="x">{ME_NOTE}</span> : <>
-        {x.missing.length ? <button type="button" class="mini" data-pm-details={x.n} aria-haspopup="dialog" aria-label={`Add details for ${x.n}`} onClick={edit}>Add details</button> : null}
+        {x.missing.length ? <button type="button" class="miniflag" data-pm-details={x.n} aria-haspopup="dialog" aria-label={`${missingFlag(x)} for ${x.n}: edit details`} onClick={edit}>{missingFlag(x)}</button> : null}
         <IconButton icon="pencil" label="Edit details" name={`Edit ${x.n}`} haspopup="dialog" data={{ "pm-edit": x.n }} onClick={edit} />
         <IconButton icon="trash" label="Remove from this project" name={`Remove ${x.n} from this project`} cls="no" data={{ "pm-remove": x.n }}
           onClick={async () => { await removeFromProject(x.n, code); psChanged(); }} />

@@ -409,11 +409,20 @@ def proposal_for(doc):
     return p, json.loads(p.read_text(encoding="utf-8"))
 
 
+def words_of(item):
+    """An item in words for a message: its title, else what the update does ("that line" when there is nothing to say)."""
+    v = item.get("values") or {}
+    text = str(v.get("description") or v.get("decision") or "").strip() or str(does(item) or "").strip()
+    return f"\u201c{text[:80]}\u201d" if text else "That line"
+
+
 def item_of(data, n):
-    """The proposal's item n, not yet applied. Raises RecordError."""
+    """The proposal's item n, not yet applied. Raises RecordError, in words (never the item's number)."""
     item = next((i for i in data.get("items") or [] if i.get("n") == n), None)
-    if item is None or item.get("applied"):
-        raise RecordError(f"Item {n} isn't a pending item of these minutes.")
+    if item is None:
+        raise RecordError("That line isn't one of these minutes' items any more.")
+    if item.get("applied"):
+        raise RecordError(f"{words_of(item)} was already approved earlier.")
     return item
 
 
@@ -520,7 +529,7 @@ def remove(doc, data, n, keep_line=False):
     item = item_of(data, n)
     s, i = find_row(doc, n)
     if item.get("decision") == "rejected" and str(n) in doc["meta"].get("removed", {}):
-        raise RecordError(f"Item {n} is already removed.")
+        raise RecordError(f"{words_of(item)} is already removed.")
     item.update(decision="rejected", reject_reason="Removed in the minutes", decided_in="minutes")
     removed = doc["meta"].setdefault("removed", {})
     if s is not None:
@@ -533,16 +542,16 @@ def remove(doc, data, n, keep_line=False):
         else:
             del s["rows"][i]
     doc["items"].pop(f"@{n}", None)
-    return f"Removed item {n}" + (" (its line is kept in the minutes)." if keep_line else " and its line.")
+    return f"Removed {words_of(item)}" + (" (its line is kept in the minutes)." if keep_line else " and its line.")
 
 
 def restore(doc, data, n):
     """Undo ✕ Remove: the item is pending again and its row back where it was."""
     item = item_of(data, n)
     if item.get("decision") != "rejected" or item.get("decided_in") != "minutes":
-        raise RecordError(f"Item {n} wasn't removed here.")
+        raise RecordError(f"{words_of(item)} wasn't removed here.")
     _row_back(doc, data, item)
-    return f"Item {n} is back."
+    return f"{words_of(item)} is back."
 
 
 def _row_back(doc, data, item):
@@ -590,6 +599,7 @@ def update_that_one(doc, data, p, n, target):
     and its row says so."""
     import review
     target = str(target or "").strip().upper()
+    said = words_of(item_of(data, n))
     code, msg = review.retarget_item(p, data, item_of(data, n), target, decided_in="minutes")
     if code:
         raise RecordError(msg[:1].upper() + msg[1:])
@@ -600,23 +610,23 @@ def update_that_one(doc, data, p, n, target):
             doc["meta"].setdefault("removed", {})[str(n)] = {"section": s["id"], "index": i, "row": s["rows"].pop(i),
                                                             "kept_line": False, "held": _held_why(item, doc["items"].get(f"@{n}"))}
         doc["items"].pop(f"@{n}", None)
-        return f"Nothing new to carry to {target}: item {n} repeats it, so it was taken out of the minutes."
+        return f"Nothing new to carry to {target}: {said} repeats it, so it was taken out of the minutes."
     sync_item(doc, item)
-    return f"Item {n} now updates {target} instead."
+    return f"{said} now updates {target} instead."
 
 
 def keep_new(doc, data, p, n):
     """"Keep as new": the "Looks like" mark is dropped, or a merge undone (review's keep-new and unmerge)."""
     item = item_of(data, n)
     if not isinstance(item.get("was"), dict) and not item.get("looks_like"):
-        raise RecordError(f"Item {n} doesn't look like an existing item.")
+        raise RecordError(f"{words_of(item)} doesn't look like an existing item.")
     if isinstance(item.get("was"), dict):
         item = {**item["was"], "n": n}
         data["items"][next(k for k, i in enumerate(data["items"]) if i.get("n") == n)] = item
     if item.get("looks_like"):
         item["looks_like"] = {**item["looks_like"], "kept": True}
     sync_item(doc, item)
-    return f"Item {n} stays a new item."
+    return f"{words_of(item)} stays a new item."
 
 
 EDITABLE = {"actions": ("description", "owner", "due_date", "workstream", "priority"),
@@ -651,7 +661,7 @@ def edit_item(doc, data, n, values):
     item = item_of(data, n)
     allowed = EDITABLE.get(item.get("table"), ())
     if item.get("op") != "new" or not allowed:
-        raise RecordError(f"Item {n} is an update; change it in Review.")
+        raise RecordError(f"{words_of(item)} is an update; change it in Review.")
     bad = sorted(set(values) - set(allowed) - {"due_words"})
     if bad:
         raise RecordError(f"{', '.join(bad)} can't be changed from the minutes.")
@@ -671,7 +681,7 @@ def edit_item(doc, data, n, values):
     item["edited_in"] = "minutes"
     sync_item(doc, item)
     due = v.get("due_date")
-    return f"Item {n} changed" + (f"; due {date_words.said(due)}." if "due_words" in values and due else ".")
+    return f"{words_of(item)} changed" + (f"; due {date_words.said(due)}." if "due_words" in values and due else ".")
 
 
 # ── Agenda coverage: what was done about each point ─────────────────────────

@@ -161,7 +161,7 @@ export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run||DRRUN){ sna
   putHTML($("#genStart"),raw(GEN_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-gstart="${k}">${l}</button>`).join(" ")));
   putHTML($("#genSrc"),raw(GEN_SRC.map(([k,l,on])=>`<label><input type="checkbox" value="${k}" ${on?"checked":""}> ${l}</label>`).join("")));
   genSrcOpen(false); $("#genKbd").textContent=MOD+"↵";
-  $("#genSweep").textContent=SWEPT&&SWEPT!=="never"?`Mail and Teams last swept ${fd(SWEPT)}; anything newer isn't in the vault yet.`:"Mail and Teams haven't been swept yet.";
+  $("#genSweep").textContent=SWEPT&&SWEPT!=="never"?`Mail and Teams last checked ${fd(SWEPT)}; anything newer isn't in your project record yet.`:"Mail and Teams haven't been checked yet.";
   genOptions(); openDialog("genDlg"); })();
   const ttl=csTitle(code), h=ttl===CST_DEF?"Generate current state":`Generate: ${ttl}`; if(shared.GEN.form==="current") $("#genTitle").textContent=h; }   /* a remembered other form keeps its own "Write an …" title */   /* the dialog's title, which names it, names the status (BL-274) */
 export function genStatus(html){ const el=$("#genStatus"); if(!el) return; el.hidden=!html; putHtml(el,html||""); }
@@ -883,7 +883,7 @@ export function decorateWarnings(root){ if(!root) return;
   root.querySelectorAll("[data-open]").forEach(el=>{ if(el.closest(".wlist")||el.querySelector(".wflag")) return; const [k,id]=el.dataset.open.split(":"); const f=wflag(k,id); if(f) addHTML((el.querySelector(".t")||el),"afterbegin",raw(f)); });
   root.querySelectorAll(".msrow[data-ms] .msn").forEach(el=>{ if(!el.querySelector(".wflag")) addHTML(el,"afterbegin",raw(wflag("milestones",el.closest("[data-ms]").dataset.ms))); }); }
 /* Settings › Early warnings: each signal on or off, with its threshold (settings.json `warnings`) */
-export const WSIG=[["redated","Action re-dated again and again","times","Re-dated at least (times)"],["repeat_risk","Risk raised repeatedly, no response","mentions","Raised in at least (meetings or sweeps)"],
+export const WSIG=[["redated","Action re-dated again and again","times","Re-dated at least (times)"],["repeat_risk","Risk raised repeatedly, no response","mentions","Raised in at least (meetings or checks)"],
   ["milestone_slip","Milestone slipping week after week","weeks","Forecast later this many weeks running"],["long_open","Action open far longer than usual","factor","Longer than the project's usual by (times)"],
   ["key_person","One person owns most of a project's open items","share","More than (% of the project's open items)"],
   ["dependency","Dependency due after what it blocks, or overdue near it","near_days","Overdue counts when the milestone is within (days)"]];   /* BL-56, BL-90 */

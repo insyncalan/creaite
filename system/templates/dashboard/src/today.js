@@ -30,10 +30,11 @@ import { openMilestone } from "./milestones.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MTG } from "./core/intakeApi.js";
 import { irProcessById, irRefreshCalendar } from "./components/intakeReview/actions.js";   /* #232-C2: Today's day line and Refresh calendar go through the Intake page's own actions */
-import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
+import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, dnList, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn } from "./review.js";
+import { asQuestionHtml } from "./autostart.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, syncView } from "./work.js";
 /* ======================= Today ======================= */
@@ -54,10 +55,10 @@ export function capped(items,cap,key){ const open=EXPAND.has(key), n=items.lengt
 /* Review items are grouped by the meeting or sweep they came from: the proposal file */
 export function revGroupTitle(file,items){ const w=file.match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/), when=w?`${longDay(w[1])}, ${w[2]}:${w[3]}`:esc(file), d=items.find(r=>r.kind==="draft");
   if(d){ const nm=esc(d.rec.t.replace(/^[^:]*:\s*/,"")); return d.ref==="meeting"?`Review the ${nm} minutes`:`Review the ${esc(d.rec.t.split(":")[0].toLowerCase())}: ${nm}`; }
-  if(/-sweep(-\d+)?\.json$/.test(file)) return `Review the sweep of ${when}`;
+  if(/-sweep(-\d+)?\.json$/.test(file)) return `Review the mail and Teams check of ${when}`;
   if(/-(dashboard|edit)(-\d+)?\.json$/.test(file)) return "Review your pending edits";
   if(/-excel(-\d+)?\.json$/.test(file)) return "Review the Excel import";
-  return `Review the proposals from ${when}`; }
+  return `Review the suggestions from ${when}`; }
 export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-319 (Alan, 14-10-2026): proposals are To decide's alone, so Needs attention has no per-meeting groups (nor their Approve n routine).
   #236 (Alan, 19-10-2026): the proposals and memory notes the sweep takes from a followed person's messages, and a private conversation, are Needs attention rows
   (From <name>, never labelled: BL-288; Review still holds the proposals). The conversation cards (BL-334, BL-342) stay in To decide. */
@@ -76,14 +77,28 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
       gl.map(([p,g])=>{ const own=[cnt(p,"actions",g.actions,"action","actions"),cnt(p,"raid",g.raid,"risk or issue","risks and issues")].filter(Boolean),
         parts=[own.length?`${andList(own)} with no owner`:"",g.due?`${cnt(p,"due",g.due,"action","actions")} with no due date`:""].filter(Boolean);
         return `${p?projLink(p):"No project"}: ${parts.join("; ")}`; }).join(". ")+".")}); }
-  { const L=decPending().sort(decRank); if(L.length){
-    const mine=L.filter(d=>isMe(d.by)).length, others=L.length-mine, late=L.filter(decLate).length, parts=[];
+  { const L=decPending().sort(decRank); if(L.length){   /* #313: a decision under Decisions needed is counted here, never named again */
+    const mine=L.filter(d=>isMe(d.by)).length, others=L.length-mine, late=L.filter(decLate).length, parts=[], dnIds=new Set(dnList().map(d=>d.id)), rest=L.filter(d=>!dnIds.has(d.id)), above=L.length-rest.length;
     if(others) parts.push(`${plur(others,"decision")} waiting on others`); if(mine) parts.push(others?`${mine} for you`:`${plur(mine,"decision")} for you`);
-    const show=L.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
-    out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),`${andList(show)}${L.length>3?` and ${L.length-3} more`:""}.`)}); } }
+    const show=rest.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
+    const body=[show.length?`${andList(show)}${rest.length>3?` and ${rest.length-3} more`:""}.`:"",above?(above===L.length?"All of them are listed under Decisions needed.":`${above===1?"1 is":`${above} are`} listed under Decisions needed.`):""].filter(Boolean).join(" ");
+    out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),body)}); } }
   out.unshift(...msAttention().map(r=>({milestone:r.ms,html:n=>msAttnRow(n,r)})));   /* #251: time-critical, so first, soonest first */
   out.push(...attnAlertItems());   /* #236: after the decisions, the reminders and the gaps line, as the help says (Stark's review: they led the list) */
   return out; }
+/* ===== #313 (2.6.1): no item is shown twice on Today. The one-row rule, in one place so it cannot drift =====
+   An item is a row in ONE section; every other section counts it or links to it, never lists it again. The order, most urgent
+   first: Decisions needed (a pending decision with a decision maker and a needed-by date), Your commitments (Alan's own actions
+   due or overdue), Needs attention (a milestone row names the other open items on it, a decisions line names the pending decisions
+   that have no decision maker or date), then the Week ahead, which leaves out whatever is already listed above and says how many.
+   You owe and Waiting on are promises, with their own IDs. A decision's "If it stays open" line and a Messages card's matched-item
+   chip name an ID as context, not as a row. dev/tests/test_today_once.py fails when any two sections list the same ID. */
+const todayMineIds=()=>new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id));
+/** the IDs already listed above the Week ahead, by section @returns {{dn:Set<string>,mine:Set<string>,attn:Set<string>,above:Set<string>}} */
+export function todayClaims(){ const dn=new Set(dnList().map(d=>d.id)), mine=todayMineIds(), attn=new Set();
+  msAttention().forEach(r=>{ attn.add(r.ms); r.named.slice(0,3).forEach(x=>attn.add(x.id)); });
+  decPending().filter(d=>!dn.has(d.id)).sort(decRank).slice(0,3).forEach(d=>attn.add(d.id));
+  return {dn,mine,attn,above:new Set([...dn,...mine,...attn])}; }
 /* #251 (Alan, 19-10 and 20-10-2026): one Needs attention row per milestone not yet achieved (or dropped) that is due within the
    Due soon window (review.due_soon_days), or already past due, by its forecast date when it has one, else its agreed date, and
    has open work attached that must close for it to hold: open (or delayed) actions and open issues. Risks are left out (a
@@ -96,7 +111,8 @@ export function msAttention(){ const out=[];
     if(!its.length) continue;
     // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items first)
     its.sort((a,b)=>(msLate(b)-msLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id));
-    out.push({ms:id,p:p.code,name:m[0],when,its}); }
+    const mineIds=todayMineIds(), named=its.filter(x=>!mineIds.has(x.id));   /* #313: Alan's own are rows under Your commitments, counted here */
+    out.push({ms:id,p:p.code,name:m[0],when,its,named,inMine:its.length-named.length}); }
   return out.sort((a,b)=>a.when.localeCompare(b.when)||pName(a.p).localeCompare(pName(b.p))||a.name.localeCompare(b.name)); }
 /* one attached item: "DEF-A-003 Confirm licence count, 1 day late" (red), "…, due Thursday", "…, no due date, no owner" */
 export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} ${esc(decShort(x.t||"",70))}`, own=!x.o||x.o==="TBC"?", no owner":"";
@@ -107,13 +123,25 @@ export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} 
    lists exactly the items counted */
 export function msAttnOpenWork(id){ const r=msAttention().find(x=>x.ms===id); if(!r) return;
   openWork(r.p,"all","open",{st:["Open"],ty:["Action","Issue"],mi:[r.ms]}); }
+/* #310 (Alan, 22-10-2026): the Week ahead's milestone row says how many open work items it depends on: the open actions (Open or
+   Delayed, as Work's open filter has it) and open RAID items attached to it, never an archived one; decisions carry no milestone.
+   It is exactly the list Work shows for the Milestone filter with open items only. */
+export function msOpenItems(id){ const its=[...A.filter(a=>a.ms===id&&open(a)&&!a.ar),...R.filter(r=>r.ms===id&&r.st==="Open"&&!r.ar)];
+  return {n:its.length,over:its.filter(x=>!!x.due&&x.due<TODAY).length}; }
+export function msItemsOpenWork(id,code){ openWork(code,"all","open",{st:["Open"],mi:[id]}); }
 export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its.length} in Work`;
-export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
+/* #310 + #313 (2.6.1): a milestone is ONE row on Today, in Needs attention if it qualifies there, else in the Week ahead, and the
+   open-items count button is on whichever row it has. One source for its words, so the two rows say the same thing. */
+export function msCountWords(id,name){ const c=msOpenItems(id); if(!c.n) return undefined; const w=`${c.n} open work item${c.n===1?"":"s"}`;
+  return {n:c.n,over:c.over,label:c.over?`${c.n} open`:`${c.n} open item${c.n===1?"":"s"}`,overLabel:c.over?`, ${c.over} overdue`:"",
+    tip:`${w} this milestone depends on`,aria:`Milestone ${name}: ${w}${c.over?`, ${c.over} overdue`:""}. Open the list`}; }
+export function msAttnRow(n,r){ const k=days(r.when), items="its open work must close";
   const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`
     :`is due ${k===0?"today":k===1?"tomorrow":longDay(r.when)}: ${items} for it to hold`;
-  const shown=r.its.slice(0,3).map(msItemWords), more=c>3?[`and ${c-3} more`]:[];
+  const shown=r.named.slice(0,3).map(msItemWords), more=r.named.length>3?[`and ${r.named.length-3} more`]:[], mineWords=r.inMine?[`${r.inMine===1?"1 is":`${r.inMine} are`} under Your commitments`]:[];
+  const cw=msCountWords(r.ms,r.name), cnt=cw?`<button type="button" class="wkcnt" data-wkitems="${esc(r.ms)}" data-p="${esc(r.p)}" aria-label="${esc(cw.aria)}" data-tip="${esc(cw.tip)}">${esc(cw.label)}${cw.overLabel?`<span class="warn">${esc(cw.overLabel)}</span>`:""}</button>`:"";
   return tl(n,tLink(html`data-ms="${r.ms}"`,html`Milestone <u>${r.name}</u> ${raw(when)}`),
-    [...shown,...more,projLink(r.p),sLink(html`data-msattnwork="${r.ms}"`,msAttnWorkWord(r))].join(" · "),
+    [...shown,...more,...mineWords,projLink(r.p),cnt].filter(Boolean).join(" · "),
     `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
     html`data-msattn="${r.ms}"`); }
 export function msAttnMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=msAttention().find(x=>x.ms===id); if(!r) return;
@@ -128,7 +156,7 @@ export const ordinal=n=>n+((n%100>=11&&n%100<=13)?"th":["th","st","nd","rd"][n%1
    #prep=<key>, BL-286 D) and the "Prep page made" chip. A real button of its own (never inside Prep), named for the meeting; its tooltip
    says when the page was saved. Without the live server it is shown disabled. */
 export function prepGoHtml(e,day){ const pg=prepPageOf(e,day); if(!pg) return ""; const live=viaServer();
-  return String(html`<button type="button" class="ib prepgo" data-prepgo="${pg.key}" data-prepgoday="${day}" aria-label="Open the prep page for ${e.title??""}" data-tip="${live?`Prep page saved ${pg.when}`:"Needs the live server"}"${raw(live?"":' aria-disabled="true"')}>${raw(ic("external"))}</button><span class="tag ok prepmade">Prep page made</span>`); }
+  return String(html`<button type="button" class="ib prepgo" data-prepgo="${pg.key}" data-prepgoday="${day}" aria-label="Open the prep page for ${e.title??""}" data-tip="${live?`Prep page saved ${pg.when}`:"creaite isn’t running"}"${raw(live?"":' aria-disabled="true"')}>${raw(ic("external"))}</button><span class="tag ok prepmade">Prep page made</span>`); }
 export const longDay=iso=>{ if(!iso||!DATE.test(iso.slice(0,10))) return iso||""; const d=new Date(iso.slice(0,10)+"T12:00:00");
   return `${d.toLocaleDateString("en-GB",{weekday:"long"})} ${ordinal(d.getDate())} ${d.toLocaleDateString("en-GB",{month:"long"})}${iso.slice(0,4)!==TODAY.slice(0,4)?" "+iso.slice(0,4):""}`; };
 export const longDate=iso=>{ const d=new Date(iso.slice(0,10)+"T12:00:00"); return `${ordinal(d.getDate())} ${d.toLocaleDateString("en-GB",{month:"long"})} ${iso.slice(0,4)}`; };   /* "8th October 2026" */
@@ -142,7 +170,7 @@ export const pkAdd=(iso,n)=>{ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d
 export function renderToday(){
   renderDay();   /* BL-293: the date or the day line too */
   const pend=REV.filter(r=>!r.done), mineOver=A.filter(x=>isMe(x.o)&&overdue(x)), mineSoon=A.filter(x=>isMe(x.o)&&soon(x)), off=P.filter(p=>p.health==="Off track");
-  putHTML($("#briefText"),html`<b>${pend.length} proposal${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, ${raw(countLink(`${plur(mineOver.length,"overdue action")} of yours`,mineOver.length,"actions:overdue:",{o:["@me"]},`<b>${mineOver.length} of your actions</b>`))} ${mineOver.length===1?"is":"are"} overdue${off.length?html`, and <b>${andList(off.map(p=>p.name))}</b> ${off.length===1?"is":"are"} off track`:""}.`);
+  putHTML($("#briefText"),html`<b>${pend.length} suggestion${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, ${raw(countLink(`${plur(mineOver.length,"overdue action")} of yours`,mineOver.length,"actions:overdue:",{o:["@me"]},`<b>${mineOver.length} of your actions</b>`))} ${mineOver.length===1?"is":"are"} overdue${off.length?html`, and <b>${andList(off.map(p=>p.name))}</b> ${off.length===1?"is":"are"} off track`:""}.`);
   renderDn();   /* BL-210: Decisions needed, ahead of Needs attention */
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
   $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
@@ -196,14 +224,14 @@ export function renderDay(){ const cal=D.calendar, first=(S.me||"").split(" ")[0
   const line=$("#dayLine"), meets=$("#dayMeets"); line.hidden=!on; meets.hidden=!on;
   if(tabs){ meets.setAttribute("role","tabpanel"); meets.setAttribute("aria-label",rec.long); } else { meets.removeAttribute("role"); meets.removeAttribute("aria-label"); }
   const v=on?dayView(iso):{known:false,meetings:[],allDay:[]};
-  $("#dayHead").textContent=v.known?dayShape(v.meetings,first,iso):`Good ${nowMins()<12*60?"morning":nowMins()<18*60?"afternoon":"evening"}${first?", "+first:""}.`;
+  $("#dayHead").textContent=v.known?dayShape(v.meetings,first,iso):v.unread?`${rec.dow} has not been read yet${first?", "+first:""}.`:`Good ${nowMins()<12*60?"morning":nowMins()<18*60?"afternoon":"evening"}${first?", "+first:""}.`;
   if(!on){ drawDayCurve(line,null); drawDayMeetings(meets,null); calFoot(null); return; }
   /* ===== BL-151 (sprint-ux) ===== no calendar for today: the band is one quiet line, "No calendar yet", with Refresh calendar
      (Intake's action) beside it; no empty timeline. When the calendar arrives the band opens as before; a day read with no
      meetings keeps its line and says so ("No meetings today"). BL-270: that line says when it was read. */
   const common={day:iso,dow:rec.dow||synthDay(iso).dow,isToday,past:iso<TODAY,now:nowMins(),live:viaServer(),calendar:!!cal,acts:DAYACTS,onWheel:onDayWheel,meetings:v.meetings,allDay:v.allDay};
   if(!v.known){ line.hidden=true; drawDayCurve(line,null);
-    drawDayMeetings(meets,{...common,mode:"none",lastRead:cal&&cal.fetched?longDay(cal.fetched)+(cal.fetched.length>10?", "+cal.fetched.slice(11,16):""):""}); calFoot(null); return; }
+    drawDayMeetings(meets,{...common,mode:"none",unread:!!v.unread,lastRead:cal&&cal.fetched?longDay(cal.fetched)+(cal.fetched.length>10?", "+cal.fetched.slice(11,16):""):""}); calFoot(null); return; }
   /* ===== end BL-151 ===== */
   const n=v.meetings.length;
   drawDayCurve(line,{day:iso,timed:v.meetings,now:isToday?nowMins():null,past:iso<TODAY,label:isToday?`Today's meetings: ${n}`:`${rec.long}: ${plur(n,"meeting")}`,width:line.clientWidth,onWheel:onDayWheel});
@@ -230,6 +258,7 @@ export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=da
         const prep=priv?null:(s&&s.prep)||(iso>=TODAY&&prepOf(e,iso)?{key:prepKey(e,iso)}:null);
         return extra({start:e.start,end:e.end,title:e.title??"",private:priv,confidential:conf,id:e.id||(s&&s.id)||null,p:priv||conf?null:(s&&s.p)||e.p||null,
           where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i,attendees:conf||priv||!Array.isArray(e.attendees)?undefined:e.attendees.length}); })}; }
+  if(rec&&rec.unread) return {known:false,unread:true,meetings:[],allDay:[]};   /* #318: a day beyond what the calendar was read to is "Not read yet", never "no meetings" */
   if(rec&&iso!==TODAY) return {known:true,meetings:srv.map(m=>extra({...m,ix:null})),allDay:(rec.all_day||[]).map(t=>({title:t,p:null}))};
   return {known:false,meetings:[],allDay:[]}; }
 /** Show day `iso`, sliding the band in from its side. False when there is no day line. */
@@ -310,7 +339,7 @@ document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) irR
 export const PEOPLE_MOVE="setup: move the people still listed in settings.json into the people register";
 export function remLabel(r){ return r.id.startsWith("weekly:")?"Draft weekly report":r.id.startsWith("client:")?"Draft client report":"Run it"; }
 export function remBody(r){ if(!r.cmd) return ""; return viaServer()?"":`It needs the live server; or say <span data-codeok>“${esc(r.cmd)}”</span> in Claude Code.`; }
-export function remBtn(r){ if(!r.cmd) return ""; const run=RUNNING.has(r.id), live=viaServer(), why=run?"Already running":live?"":"Needs the live server";
+export function remBtn(r){ if(!r.cmd) return ""; const run=RUNNING.has(r.id), live=viaServer(), why=run?"Already running":live?"":"creaite isn’t running";
   return `<span class="rmgo tacts">${tib("filetext",run?"Running…":remLabel(r),`${remLabel(r)}: ${r.text}`,`data-d="run"${why?` data-why="${esc(why)}"`:""}`,true,why)}</span>`; }   /* BL-319: an icon, named on hover */
 export const isConflict=r=>!!r&&!r.done&&(r.flags||[]).includes("conflict");
 export function conflictHtml(r){ const ch=(r.rec.changes&&r.rec.changes.length?r.rec.changes:r.rec.field?[{field:r.rec.field,from:r.rec.from,to:r.rec.to}]:[]);
@@ -381,7 +410,7 @@ export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${
   return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
 /* BL-316: a reminder's "…" menu is the Menu block's (openMenu): Run report now, Dismiss for this session, Dismiss forever */
-export function remMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=REMINDERS.find(x=>x.id===id); if(!r) return; const why=RUNNING.has(id)?"Already running":viaServer()?"":"Needs the live server";
+export function remMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=REMINDERS.find(x=>x.id===id); if(!r) return; const why=RUNNING.has(id)?"Already running":viaServer()?"":"creaite isn’t running";
   openMenu(b,{label:`Options: ${r.text}`,id:"remMenu",align:"right",onPick:d=>remPick(id,d),
     items:[...(r.cmd?[{id:"run",name:"Run report now",disabled:!!why,tip:why||undefined,data:{d:"run"}}]:[]),{id:"s",name:"Dismiss for this session",data:{d:"s"}},{id:"f",name:"Dismiss forever",data:{d:"f"}}]}); }
 export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id===id)); return; }
@@ -395,6 +424,7 @@ $("#attnList").addEventListener("click",e=>{ const mb=e.target.closest("li[data-
   const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-wkitems]"); if(b){ e.preventDefault(); msItemsOpenWork(b.dataset.wkitems,b.dataset.p||""); return; } });   /* #310 */
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
 }
 /* ===== BL-156 (sprint-ux) ===== first run: a short checklist on Today. On a vault that hasn't finished set-up (no project, no
@@ -404,11 +434,11 @@ document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".c
    "sweep"), Open Intake (ticked once Intake has been opened in this browser). It goes when all five are ticked, or for good with
    Dismiss (kept with the dismissed reminders, so Settings › Reminders › Restore brings it back). Nothing it does is new. */
 export function setupSteps(){ const seen=store.get(SETUPK,{});
-  return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the sweep has read your mail":`Connected in Claude itself, so the page can’t: connect it there, then say “${esc(SU_M365)}” in Claude Code. The first sweep confirms it`],
+  return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the mail and Teams check has read your mail":`Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it`],
     ["proj","Add a project",P.length>0,"Add a project","proj",`${P.length} project${P.length===1?"":"s"}`],
     ["people","Add people",shared.REG.length>0,"Add people","people",`${shared.REG.length} in the people register`],
-    ["sweep","Run the first sweep",swept(),"Run the first sweep","sweep",swept()?`Last swept ${esc(String(D.last_sweep))}`:"Reads mail, Teams and the calendar since the look-back days"],
-    ["review","Open Intake",!!seen.review,"Open Intake","review","Approve what's right; nothing reaches the tracker until you do"]]; }
+    ["sweep","Run the first check",swept(),"Run the first check","sweep",swept()?`Last checked ${esc(fd(String(D.last_sweep)))}`:"Reads mail, Teams and the calendar since the look-back days"],
+    ["review","Open Intake",!!seen.review,"Open Intake","review","Approve what's right; nothing reaches your project record until you do"]]; }
 export function setupShown(){ if([...dismissedF(),...(D.dismissed||[])].includes(SETUPID)) return false;
   const st=setupSteps(), base=st.slice(0,4).some(x=>!x[2]); if(base){ const seen=store.get(SETUPK,{}); if(!seen.shown){ seen.shown=true; store.set(SETUPK,seen); } return true; }
   return !!store.get(SETUPK,{}).shown&&!st[4][2]; }
@@ -416,10 +446,12 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
   if(!on){ if(box) box.remove(); return; }
   if(!box){ addHTML($("#tBrief"),"afterbegin",html`<section class="tsec setupsec" id="setupList" aria-labelledby="hSetup"></section>`); box=$("#setupList"); }
   const st=setupSteps(), done=st.filter(x=>x[2]).length;
-  putHTML(box,html`<h2 class="th" id="hSetup">Getting started <span class="cnt">${raw(done)} of ${st.length}</span><button type="button" class="linkbtn setupx" data-setup="dismiss">Dismiss</button></h2><ol class="bl setupbl">${raw(st.map(([k,t,ok,btn,act,note],i)=>`<li class="${ok?"done":""}"><span class="n" aria-hidden="true">${ok?"✓":i+1}</span><div class="tb"><span class="t">${esc(t)}</span>${ok?' <span class="vh">(done)</span>':""}<p>${note}</p></div>${ok?"":`<span class="rmgo"><button type="button" class="btn ${i===st.findIndex(x=>!x[2])?"primary":""}" data-setup="${act}" ${act==="sweep"&&!viaServer()?'disabled title="Needs the live server"':""}>${esc(btn)}</button></span>`}</li>`).join(""))}</ol>`); 
+  putHTML(box,html`<h2 class="th" id="hSetup">Getting started <span class="cnt">${raw(done)} of ${st.length}</span><button type="button" class="linkbtn setupx" data-setup="dismiss">Dismiss</button></h2><ol class="bl setupbl">${raw(st.map(([k,t,ok,btn,act,note],i)=>`<li class="${ok?"done":""}"><span class="n" aria-hidden="true">${ok?"✓":i+1}</span><div class="tb"><span class="t">${esc(t)}</span>${ok?' <span class="vh">(done)</span>':""}<p>${note}</p></div>${ok?"":`<span class="rmgo"><button type="button" class="btn ${i===st.findIndex(x=>!x[2])?"primary":""}" data-setup="${act}" ${act==="sweep"&&!viaServer()?'disabled title="creaite isn’t running"':""}>${esc(btn)}</button></span>`}</li>`).join(""))}</ol>`); 
   { const b=$('#setupList [data-setup="help"]'), li=b&&b.closest("li");
-    if(li&&!li.classList.contains("done")){ const go=li.querySelector(".rmgo"); putHTML(go,html`<button type="button" class="mini" data-sucopy="m365">Copy</button> <button type="button" class="mini" data-sucheck="m365" ${viaServer()?"":html`disabled title="Needs the live server"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`); }
-    if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */ }
+    if(li&&!li.classList.contains("done")){ const go=li.querySelector(".rmgo"); putHTML(go,html`<button type="button" class="mini" data-sucheck="m365" ${viaServer()?"":html`disabled title="creaite isn’t running"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`); }
+    if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */
+  /* #300: the one question about starting creaite at sign-in (autostart.js; shown only where the server can do it) */
+  { const q=asQuestionHtml(), box=$("#setupList"), cur=$("#asQ"); if(cur) cur.remove(); if(q&&box) addHTML(box,"beforeend",raw(q)); } }
 /* ===== end BL-156 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 /* #200: "Sweep due since 07:00" with Run sweep, above Today's sections. Shown only when the build says the daily sweep is due, not in the
@@ -435,7 +467,7 @@ function sweepDueDismissed(){ const d=SDMEM||store.get(SDKEY,null); return !!(d&
 export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept())&&!sweepDueDismissed(); }
 export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const on=sweepDueShown(); box.hidden=!on;
   if(!on){ putHTML(box,html``); return; }
-  putHTML(box,html`<b>Sweep due since ${D.sweep_due.due_from||"07:00"}.</b> <span class="sd-last">${D.sweep_due.last?`Last swept ${D.sweep_due.last}.`:"No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next sweep is due" data-tip="Dismiss until the next sweep is due">${raw(ic("x"))}</button>`); }
+  putHTML(box,html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last?`Last checked ${fd(String(D.sweep_due.last))}.`:"Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`); }
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; e.preventDefault();   /* #243 */
   const box=$("#sweepDue"), had=box&&box.contains(document.activeElement);
   SDMEM={day:TODAY,last:sdLast()}; store.set(SDKEY,SDMEM); renderSweepDue();
@@ -443,7 +475,7 @@ document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; 
       .find(n=>!!(box.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)&&n.offsetParent!==null);
     if(nxt) nxt.focus(); else if(v){ if(!v.hasAttribute("tabindex")) v.setAttribute("tabindex","-1"); v.focus(); } } });
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepRun")) return; e.preventDefault();
-  if(!viaServer()){ snack("Needs the live server"); return; }
+  if(!viaServer()){ snack("creaite isn't running"); return; }
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); });
 /** v2.6 (the Settings line): Add a project opens the Projects page; there (its empty state's button) it starts “add project ” in
     ask creaite, unsent, as Settings › Projects and register used to say: a project is added in plain English (cx-edit). */
@@ -468,29 +500,29 @@ export const SU={status:null,health:null,confirm:false,busy:""};
 const suRead=onceFor(2000,async()=>{ const r=await api("/api/setup/status",{}); if(r&&r.ok){ SU.status=r; if(r.swept&&(!D.last_sweep||D.last_sweep==="never")) D.last_sweep=r.swept; } return SU.status; });   /* #96: one read for callers that arrive together */
 export async function suStatus(force){ if(!viaServer()) return null; return suRead(force); }
 export async function suCopy(text,btn){ try{ if(!navigator.clipboard) throw 0; await navigator.clipboard.writeText(text); copied(btn); snack("Copied"); }catch(e){ prompt("Copy this:",text); } }
-export const suCmd=(text,id,check)=>`<div class="sucmd"><code>${esc(text)}</code><button type="button" class="mini" data-sucopy="${id}">Copy</button>${check?`<button type="button" class="mini" data-sucheck="${id}" ${viaServer()?"":'disabled title="Needs the live server"'}>Check again</button>`:""}</div>`;
+export const suCmd=(text,id,check)=>`<div class="sucmd"><code>${esc(text)}</code><button type="button" class="mini" data-sucopy="${id}">Copy</button>${check?`<button type="button" class="mini" data-sucheck="${id}" ${viaServer()?"":'disabled title="creaite isn’t running"'}>Check again</button>`:""}</div>`;
 export const suText=id=>id==="m365"?SU_M365:id==="launch"?SU_LAUNCH():SU_SETUP;
 export function suHealthHtml(){ const h=SU.health; if(!h) return "";
   const li=l=>{ const k=l.slice(0,4); return `<li><span class="k ${k.toLowerCase()}">${k}</span><span>${esc(l.slice(4).trim())}</span></li>`; }, L=h.lines.filter(l=>/^(PASS|WARN|FAIL)\s/.test(l));
   const bad=L.filter(l=>!l.startsWith("PASS")), ok=L.filter(l=>l.startsWith("PASS"));   /* what needs attention first; the passes folded */
   return `<div class="sub" role="status">${esc(h.lines[h.lines.length-1]||"")}</div>${bad.length?`<ul class="sures" aria-label="Needs attention">${bad.map(li).join("")}</ul>`:""}<details class="sures"><summary>${ok.length} passed</summary><ul class="sures">${ok.map(li).join("")}</ul></details>`; }
-export function suCardHtml(){ const st=SU.status||{}, live=viaServer(), off=live?"":'disabled title="Needs the live server"';
+export function suCardHtml(){ const st=SU.status||{}, live=viaServer(), off=live?"":'disabled title="creaite isn’t running"';
   const swept=st.swept||(D.last_sweep&&D.last_sweep!=="never"?D.last_sweep:null);
   return `<div class="card" id="suCard" data-sec="setup"><h2>Set-up</h2><p class="sub">The set-up steps the page can do, and the two it can’t. Each runs on your click; nothing here is a new permission.</p>
-   ${row("Health check",`<button type="button" class="btn" id="suHealth" ${off}>${SU.busy==="health"?"Checking…":"Run the health check"}</button>`,"The same checks as “health check” in Claude Code (doctor.py): it only reads")}
+   ${row("Health check",`<button type="button" class="btn" id="suHealth" ${off}>${SU.busy==="health"?"Checking…":"Run the health check"}</button>`,"Checks creaite's set-up; it only reads")}
    ${suHealthHtml()?`<div id="suHealthOut">${suHealthHtml()}</div>`:""}
-   ${row("Rebuild the dashboard and Excel view",`<button type="button" class="btn" id="suRebuild" ${off}>${SU.busy==="rebuild"?"Rebuilding…":"Rebuild…"}</button>`,"From the tracker; nothing in the tracker changes")}
-   ${SU.confirm?`<div class="sushown" id="suConfirm">This rewrites <code>dashboard.html</code> and <code>tracker-view.xlsx</code> from the tracker. If the workbook has edits you haven’t imported, it is left as it is. <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-sucancel>Cancel</button><button type="button" class="btn primary" id="suRebuildGo">Rebuild now</button></span></div>`:""}
-   ${row("Microsoft 365",swept?`<span class="h-ok">Connected</span>`:`<span class="sub">Not confirmed yet</span>`,swept?`The sweep last read your mail ${esc(fd(String(swept).slice(0,10)))}`:"Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then say this in Claude Code. The first sweep confirms it")}
-   ${swept?"":suCmd(SU_M365,"m365",true)}
-   ${row("Launcher",st.launcher?`<span class="h-ok">Made</span>`:`<span class="sub">Not made yet</span>`,st.launcher?`${esc(st.launcher)}: double-click it to open creaite`:"A small app that opens creaite in its own window and starts the live server. It goes outside the vault, so the page can’t make it: paste this into Terminal")}
-   ${st.launcher?"":suCmd(SU_LAUNCH(),"launch",true)}
-   ${row("The rest of set-up","","Your name and role, the projects folder, git and the optional schedules are a conversation: in Claude Code say")}${suCmd(SU_SETUP,"setup")}</div>`; }
+   ${row("Rebuild the dashboard and Excel view",`<button type="button" class="btn" id="suRebuild" ${off}>${SU.busy==="rebuild"?"Rebuilding…":"Rebuild…"}</button>`,"From your project record; nothing in it changes")}
+   ${SU.confirm?`<div class="sushown" id="suConfirm">This rebuilds the dashboard and the Excel view from your project record. If the workbook has edits you haven’t imported, it is left as it is. <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-sucancel>Cancel</button><button type="button" class="btn primary" id="suRebuildGo">Rebuild now</button></span></div>`:""}
+   ${row("Microsoft 365",swept?`<span class="h-ok">Connected</span>`:`<span class="sub">Not confirmed yet</span>`,swept?`The mail and Teams check last read your mail ${esc(fd(String(swept).slice(0,10)))}`:"Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then ask Claude to check it. The first mail and Teams check confirms it")}
+   ${swept?"":`<div class="sucmd"><button type="button" class="mini" data-sucheck="m365" ${viaServer()?"":'disabled title="creaite isn\'t running"'}>Check again</button></div>`}
+   ${row("Launcher",st.launcher?`<span class="h-ok">Made</span>`:`<span class="sub">Not made yet</span>`,st.launcher?`${esc(st.launcher)}: double-click it to open creaite`:"A small app that opens creaite in its own window and starts creaite. It goes outside your creaite folder, so the page can’t make it: Settings › Health › Diagnostics has the one step")}
+   ${st.launcher?"":`<div class="sucmd"><button type="button" class="mini" data-sucheck="launch" ${viaServer()?"":'disabled title="creaite isn\'t running"'}>Check again</button></div>`}
+   ${row("The rest of set-up","","Your name and role are in Settings › Essentials. The projects folder, git and the optional schedules are a conversation: ask Claude to set creaite up.")}</div>`; }
 export function suRedraw(){ const c=$("#suCard"); if(c) swapHTML(c,raw(suCardHtml())); }
 export async function suCheck(what,btn){ if(btn) btn.disabled=true; const r=await suStatus(true); if(btn&&btn.isConnected) btn.disabled=false;
-  if(!r){ snack("Checking needs the live server"); return; }
-  if(what==="m365") snack(r.swept?`Microsoft 365 is connected: the sweep last read your mail ${fd(String(r.swept).slice(0,10))}`:"Not confirmed yet: the first sweep confirms it, as it reads your mail");
-  else snack(r.launcher?`The launcher is made: ${r.launcher}`:"No launcher yet: paste the command into Terminal, then check again");
+  if(!r){ snack("Checking needs creaite running"); return; }
+  if(what==="m365") snack(r.swept?`Microsoft 365 is connected: the mail and Teams check last read your mail ${fd(String(r.swept).slice(0,10))}`:"Not confirmed yet: the first mail and Teams check confirms it, as it reads your mail");
+  else snack(r.launcher?`The launcher is made: ${r.launcher}`:"No launcher yet: Settings › Health › Diagnostics has the one step, then check again");
   suRedraw(); if(shared.VIEW==="today") renderSetup(); }
 /* ===== end BL-166 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -577,7 +609,7 @@ export function attnAlertHtml(n,a){ const refs=/** @type {any[]} */(a.refs||[]),
   if(a.marker==="private"){ const ext=a.link?linkAnchor(a.link,esc(t),"t"):null;
     return tl(n,ext||(first.file?tLink(rvAttr(first),esc(t)):`<span class="t">${esc(t)}</span>`),when?`updated ${esc(whenWords(when))}`:"",`<span class="tacts">${dis(`Dismiss: ${t}`)}</span>`,attrs); }
   const note=a.kind==="note", inRev=refs.filter(r=>refReview(r.file,r.ref)), cnt=refs.length, proj=a.p&&a.p!=="_portfolio"?pName(a.p):"no project";
-  const what=note?(inRev.length?`A note for ${proj}'s memory, in Review`:`A note for ${proj}'s memory, staged: written at the next apply`):`${cnt} proposal${cnt===1?"":"s"} in Review`;
+  const what=note?(inRev.length?`A note for ${proj}'s memory, in Review`:`A note for ${proj}'s memory, waiting: saved at the next save`):`${cnt} suggestion${cnt===1?"":"s"} in Review`;
   const lines=a.marker==="confidential"?[]:refs.map(r=>{ const x=refReview(r.file,r.ref);   /* a confidential thread: the title, the mark and the times, no item words */ return x?`${esc(r.tag?r.tag[0].toUpperCase()+r.tag.slice(1):"Item")}: ${sLink(rvAttr(r),esc(String(x.rec&&x.rec.t||"")))}`:""; }).filter(Boolean);
   const meta=[what,note?"":proj,a.sent?`sent ${whenWords(String(a.sent).replace("T"," ").slice(0,16))}`:"",confMark(a),a.returned?"new since you dismissed it":""].filter(Boolean).map(esc).join(" · ");
   const name=`From ${a.who??""}, ${t}`;
@@ -657,7 +689,7 @@ export const intakeTarget=/** @param {string} key */key=>key==="proposals"?"inta
 /** @returns {{key:string,n:number,text:string,go:string}[]} meetings first, then proposals, then new files; none at zero */
 export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(txReady).length, fl=irFreshFiles().ready.length, L=[];   /* the files the rail's badge counts: ready ones, not a transcript already loaded for a meeting */
   if(nTr) L.push({key:"meetings",n:nTr,text:`${nTr} meeting${nTr===1?"":"s"} ready to process`,go:intakeTarget("meetings")});
-  if(pr) L.push({key:"proposals",n:pr,text:`${pr} proposal${pr===1?"":"s"} to approve`,go:intakeTarget("proposals")});
+  if(pr) L.push({key:"proposals",n:pr,text:`${pr} suggestion${pr===1?"":"s"} to approve`,go:intakeTarget("proposals")});
   if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} to process`,go:intakeTarget("files")});
   return L; }
 /* The x hides the line until something new arrives or the next morning. This browser keeps the day and, per kind, which items were
@@ -745,17 +777,20 @@ export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="
 /** the Week ahead's groups: Urgent with no date, each day, Further ahead.
     #112 (Alan, 16-10-2026): calm rows. Overdue work is not here (it is in Your commitments when it is Alan's, and in the quiet
     line above the days when it is someone else's); nothing already under Your commitments is repeated. */
-export function weekGroups(){ const W=D.week; if(!W) return [];
+export function weekGroups(){ const W=D.week; if(!W) return Object.assign(/** @type {any[]} */([]),{above:0});
   const live=viaServer(), out=/** @type {any[]} */([]);
-  const mineIds=new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id)), quiet=i=>i.kind==="actions"&&mineIds.has(i.id);   /* mine are already under Your commitments */
+  const above=todayClaims().above, quiet=i=>above.has(i.id);   /* #313: whatever is already listed above (Your commitments, Decisions needed, Needs attention) is not a row again */
+  let hidden=0; const only=L=>L.filter(i=>{ if(quiet(i)){ hidden++; return false; } return true; });
   const dotOf=i=>i.pr==="Urgent"?"u":i.pr==="High"?"h":"";
   const whyOf=(i,further,undated)=>{ if(undated) return "no date set";
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
     const d=further&&i.date?` ${longDay(i.date)}`:"";
     return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
+  const msItems=i=>{ const w=msCountWords(i.id,i.t); return w?{ms:i.id,p:i.p,...w}:undefined; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
-  const item=(i,key,further,undated=false)=>({key,kind:i.kind,type:i.type||"",dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
+  const item=(i,key,further,undated=false)=>({key,kind:i.kind,type:i.type||"",dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{ms:i.id}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
+    items:i.kind==="milestone"?msItems(i):undefined,
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
   const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"", key=prepKey(e,day);
     return {key:`m${day}${e.start}${e.title}`,kind:"meeting",time:e.start||"",t,
@@ -764,11 +799,11 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
         pname:e.p?pName(e.p):"",pageWhen:pg?pg.when:"",page:pg?pg.path:null}:undefined,
       acts:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
-  group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
+  group("wkund","Urgent, with no date",only(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
   (W.days||[]).forEach(d=>{
-    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
-  group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
-  return out; }
+    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...only(d.items||[]).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
+  group("wkfur","Further ahead",only(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
+  return Object.assign(out,{above:hidden}); }   /* #313: `above` counts the rows left out because they are listed above */
 /** The open actions that are overdue and owned by others (RAID items, decisions and milestones are not counted, so the count is exactly the Actions tab's list at the address): the quiet line above the days (#112). */
 export function othersOverdue(){ const n=[...A].filter(x=>overdue(x)&&!isMe(x.o)).length;
   return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
@@ -778,8 +813,9 @@ function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; w
   f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
   const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
-  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}`:"";   /* #105: the quiet count and the end date, as Resolved's */
-  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const above=groups.above||0;   /* #313: the rows left out because they are listed above are counted, not dropped silently */
+  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}${above?` · ${above} more listed above`:""}`:"";   /* #105: the quiet count and the end date, as Resolved's */
+  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:above?`The rest of what is due until ${W?longDay(W.to):"next Monday"} is listed above.`:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

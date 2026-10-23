@@ -1,0 +1,15 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -394,7 +394,10 @@
+ 
+ def _safe_resolved(rel_path, purpose):
+     """safe_path's real path and its stored form. v2.6 gate: a link swapped for a file while it is resolved raises OSError with the
+-    full path on CPython 3.9.25 (its realpath); it is refused here in the relative path's words."""
++    full path on CPython 3.9.25 (its realpath); it is refused here in the relative path's words. v2.6.1 (security review L2): a NUL
++    byte is refused as that, in its own words (before v2.6.0 it escaped as a bare ValueError; v2.6.0 called it "outside the vault")."""
++    if "\0" in str(rel_path):
++        raise Invalid(f"{purpose}: path contains a NUL character")
+     try:
+         p = paths.resolve(rel_path).resolve()          # projects/… maps to the projects root when it is outside the vault (BL-85)
+         return p, paths.rel(p)

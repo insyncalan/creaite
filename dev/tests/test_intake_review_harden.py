@@ -183,7 +183,7 @@ class Hostile(Base):
         b = self.b
         b.eval("""(()=>{ const dt=new DataTransfer(); dt.items.add(new File(["x"],"evil.exe"));
           document.querySelector('#v-intake-review h1').dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true})); })()""")
-        b.wait("/only \\.vtt/.test(document.getElementById('snackT').textContent)")
+        b.wait("/evil\\.exe: .*not this kind/.test((document.querySelector('[data-iraddfail]')||{}).innerText||'')")   # #307: named, with why, kept on the page
         self.assertFalse((self.v.root / "inbox" / "evil.exe").exists())
 
     def test_a_drop_on_another_page_uploads_nothing(self):

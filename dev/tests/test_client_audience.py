@@ -277,7 +277,7 @@ class Audience(unittest.TestCase):
                     p = self.v.root / e["path"]
                     if fmt == "html":
                         page = p.read_text()
-                        self.assertIn('<div class="sub">Internal</div>', page)
+                        self.assertIn('<div class="sub">Internal, not for distribution</div>', page)
                         self.assertNotIn('<div class="sub">Client</div>', page)
                         self.assertNotIn('<div class="sub">Distributed</div>', page)
                     else:

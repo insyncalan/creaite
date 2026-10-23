@@ -48,7 +48,7 @@ def build_release():
     return out / f"creaite-{VERSION}.zip"
 
 
-def remake(src, dest, version=None, drop=(), add=None, corrupt=None, unlisted=None):
+def remake(src, dest, version=None, drop=(), add=None, corrupt=None, unlisted=None, missing=(), wrong_version=False):
     """A copy of a release zip with changes, its manifest kept consistent unless corrupt or unlisted is given."""
     with zipfile.ZipFile(src) as z:
         content = {n: z.read(n) for n in z.namelist()}
@@ -60,6 +60,11 @@ def remake(src, dest, version=None, drop=(), add=None, corrupt=None, unlisted=No
         manifest["version"] = version
         content["VERSION"] = f"{version}\n".encode()
     manifest["files"] = {n: update.sha256(d) for n, d in content.items()}
+    for n in missing:                               # listed in the manifest, not in the zip
+        content.pop(n)
+    if wrong_version:                               # the VERSION file disagrees with the manifest (its checksum is right)
+        content["VERSION"] = b"0.0.1\n"
+        manifest["files"]["VERSION"] = update.sha256(content["VERSION"])
     if corrupt:
         content[corrupt] = content[corrupt] + b"\n# changed"
     content.update(unlisted or {})
@@ -251,12 +256,20 @@ class TestInstall(unittest.TestCase):
 
     def test_refuses_bad_zips(self):
         t = self.v.tmp
+        TOLD = "creaite can't install this update: "
+        UNSAFE = TOLD + "it would change things outside creaite's own files"
+        STRAY = TOLD + "it holds a file its list doesn't show"
+        MISSING = TOLD + "a file its list shows is missing"
+        VERSION = TOLD + "its version number doesn't match its list"
+        SUM = TOLD + "a file doesn't match its checksum"
         cases = {
             "no manifest": (t / "source.zip", "Source code (zip)"),
-            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), "outside the engine"),
-            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), "not listed"),
-            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), "checksum"),
-            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), "outside the engine"),
+            "outside the engine": (remake(self.zip, t / "a.zip", add={"projects/x.md": b"x"}), UNSAFE),
+            "unlisted": (remake(self.zip, t / "b.zip", unlisted={"system/scripts/extra.py": b"x"}), STRAY),
+            "checksum": (remake(self.zip, t / "c.zip", corrupt="system/scripts/tracker.py"), SUM),
+            "CLAUDE.md": (remake(self.zip, t / "d.zip", add={"CLAUDE.md": b"x"}), UNSAFE),
+            "missing": (remake(self.zip, t / "e.zip", missing=["system/scripts/tracker.py"]), MISSING),
+            "version": (remake(self.zip, t / "f.zip", wrong_version=True), VERSION),
         }
         with zipfile.ZipFile(t / "source.zip", "w") as z:
             z.writestr("creaite-main/VERSION", "9.9.9")
@@ -264,6 +277,10 @@ class TestInstall(unittest.TestCase):
             r = self.v.update("install", str(path), ok=False)
             self.assertEqual(r.returncode, 1, label)
             self.assertIn(message, r.stderr, label)
+            others = [m for m in (UNSAFE, STRAY, MISSING, VERSION, SUM) if m != message]   # each refusal says its own reason
+            if label != "no manifest":
+                self.assertFalse(any(m in r.stderr for m in others), label)
+                self.assertNotIn(".py", r.stderr.replace("creaite-X.Y.Z.zip", ""), label)   # plain words: no file names
         self.assertEqual((self.v.root / "VERSION").read_text().strip(), "0.9.0")
         self.assertEqual((self.v.root / "CLAUDE.md").read_text(), OWN_CLAUDE)
 

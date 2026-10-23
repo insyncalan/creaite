@@ -211,7 +211,9 @@ class Snapshots(LiveBrowserCase):
         """The fixed clock and zone, and an empty home folder of its own: the server reads ~/Applications (the launcher) and
         ~/Downloads (an update zip), and a screen must never show what this machine's home holds."""
         cls.home = tempfile.mkdtemp(prefix="creaite-snap-home-")
-        return {"CREAITE_NOW": NOW, "TZ": "UTC", "HOME": cls.home}
+        # #300: the login agent's state is read from the platform; a folder of its own (empty) makes Linux answer as the Mac the goldens
+        # were recorded on, and keeps a Mac from reading its real LaunchAgents.
+        return {"CREAITE_NOW": NOW, "TZ": "UTC", "HOME": cls.home, "CREAITE_AGENT_DIR": os.path.join(cls.home, "agents")}
 
     @classmethod
     def tearDownClass(cls):

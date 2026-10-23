@@ -102,7 +102,7 @@ export function UpdateBody({ id, title, table, list, rec, conflict, current }) {
   const cm = changed.some(c => c.col === "client_message");
   return (
     <>
-      {conflict ? <><div class="pk-dl">This proposal and the tracker disagree</div><ConflictBlock rec={rec} /></> : null}
+      {conflict ? <><div class="pk-dl">This suggestion and your project record disagree</div><ConflictBlock rec={rec} /></> : null}
       {diffs.map(c => <TextDiff key={c.col} label={irLabel(c.col)} was={c.was} now={c.now} />)}
       {cm ? <div class="pk-dl">The client messaging changes (its wording is not shown here)</div> : null}
       {shownPlain ? <><div class="pk-dl">{irLabel(plain)}</div><div class="pk-updtext">{String(shownPlain)}</div></> : null}

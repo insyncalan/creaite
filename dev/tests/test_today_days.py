@@ -135,7 +135,7 @@ class PrepByDay(unittest.TestCase):
         f.write_text(json.dumps({**CALENDAR, "fetched": "2026-10-08 07:00"}))
         try:
             self.assertIn("beyond the saved calendar, which runs to 15-10-2026", context(self.v, FRIDAY)["error"])
-            self.assertEqual(days(self.v)["last"], "2026-10-15")
+            self.assertEqual(days(self.v)["last"], "2026-10-23")      # #318: the line is the Friday of next calendar week; the days past 15-10 are not read yet
         finally:
             f.write_text(json.dumps(CALENDAR))
 
@@ -204,13 +204,14 @@ class DayData(unittest.TestCase):
         return next(m for m in self.by[day]["meetings"] if m["title"] == title)
 
     def test_every_working_day_from_monday_to_the_last_day_and_a_weekend_day_only_with_a_meeting(self):
-        self.assertEqual((self.d["first"], self.d["last"], self.d["today"]), ("2026-10-12", "2026-10-20", "2026-10-13"))
+        self.assertEqual((self.d["first"], self.d["last"], self.d["today"]), ("2026-10-12", "2026-10-23", "2026-10-13"))   # #318: the line runs to the Friday of next calendar week
         self.assertEqual(list(self.by), ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
-                                         "2026-10-19", "2026-10-20"])          # Saturday (all day only) out, Sunday in
+                                         "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"])   # Saturday (all day only) out, Sunday in; 21 to 23 (#318) not read yet
+        self.assertEqual([k for k, x in self.by.items() if x.get("unread")], ["2026-10-21", "2026-10-22", "2026-10-23"])
         self.assertEqual(self.by["2026-10-15"]["meetings"], [])                 # a working day with no meetings stays
         sun = self.by["2026-10-18"]
         self.assertTrue(sun["weekend"])
-        self.assertEqual([x["week"] for x in self.d["days"]], [0, 0, 0, 0, 0, 0, 1, 1])
+        self.assertEqual([x["week"] for x in self.d["days"]], [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
         tue = self.by["2026-10-13"]
         self.assertEqual((tue["today"], tue["past"], tue["date_shown"], tue["short"], tue["long"]),
                          (True, False, "13-10-2026", "Tue 13", "Tuesday 13th October"))
@@ -261,7 +262,7 @@ class DayData(unittest.TestCase):
     def test_the_dashboard_data_carries_it_and_prep_meetings_stay_today_and_tomorrow(self):
         out = py(self.v, "import build_dashboard; d = build_dashboard.collect(); "
                          "print(json.dumps([len(d['days']['days']), sorted(d['prep']['meetings'])]))")
-        self.assertEqual(out[0], 8)
+        self.assertEqual(out[0], 11)       # #318: and Wed 21 to Fri 23 are not read yet
         self.assertEqual(out[1], ["09:00|DEF stand-up", "14:00|ABC risk review", "2026-10-14|10:00|ABC board",
                                   "|Sara Khan on leave"])                  # unchanged: today's and tomorrow's only
 
@@ -369,13 +370,13 @@ class ThroughTheServer(unittest.TestCase):
     def test_1_days_route_gives_every_day_or_one(self):
         out = self.post("/api/today/days", {})
         self.assertTrue(out["ok"])
-        self.assertEqual(len(out["days"]), 8)
+        self.assertEqual(len(out["days"]), 11)        # #318
         one = self.post("/api/today/days", {"day": "2026-10-16"})
         self.assertEqual([x["date"] for x in one["days"]], ["2026-10-16"])
         self.assertEqual(self.post("/api/today/days", {"day": "Friday"})["status"], 400)
         logs = "".join(f.read_text() for f in (self.v.root / "system/logs").glob("debug-*.log"))
         line = next(ln for ln in logs.splitlines() if "days:" in ln)
-        self.assertIn("8 day(s), 12 meeting(s)", line)
+        self.assertIn("11 day(s), 12 meeting(s)", line)
         self.assertNotIn("ABC", line)                                       # counts only, never a title
 
     def test_2_prep_page_run_refuses_a_past_day_and_builds_three_days_out(self):

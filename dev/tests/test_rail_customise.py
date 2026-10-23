@@ -170,7 +170,7 @@ class Sidebar(LiveBrowserCase):
         b.eval("healthCount.value=1")                                                          # one problem from Settings > Health
         b.wait("document.getElementById('railMoreBadge').textContent==='1'")
         m = b.eval("(()=>{ const m=document.getElementById('railMore'); return {label:m.getAttribute('aria-label'), shown:getComputedStyle(document.getElementById('railMoreBadge')).display}; })()")
-        self.assertEqual(m["label"], "More, 1 problem")
+        self.assertEqual(m["label"], "Alan Carter, menu, 1 problem")                           # #295: the avatar
         self.assertNotEqual(m["shown"], "none")                                                # a count and a name, never colour alone
         self.open_more()
         self.assertEqual(b.eval("document.getElementById('railMore').getAttribute('aria-expanded')"), "true")
@@ -212,11 +212,13 @@ class Sidebar(LiveBrowserCase):
         self.assertTrue(b.eval("[...document.querySelectorAll('#railMoreMenu .rl')].every(x=>x.offsetParent!==null)"))   # names shown in the menu
         self.assertFalse(b.eval("!!document.getElementById('railMore').dataset.tip"))          # its flyout, not a tooltip
 
-    def test_an_empty_more_is_hidden(self):
+    def test_an_empty_more_still_shows_the_avatar(self):
+        """#295: the avatar always shows (Health, Help and Customise sidebar live in its menu)."""
         b = self.b
         b.eval("railSave({...RAILCFG,order:[...RAILCFG.order,...RAILCFG.more],more:[]})")
         self.wait_saved("!r.more.length")
-        b.wait("!document.getElementById('railMore')")
+        b.wait("!document.querySelector('#railMoreMenu [data-v]')")
+        self.assertTrue(b.eval("!!document.getElementById('railMore') && document.getElementById('railMore').offsetParent!==null"))
         self.assertEqual(len(self.top()), 9)   # #232: Intake is the one entry for both pages
 
     # ── Customise ──
@@ -227,7 +229,7 @@ class Sidebar(LiveBrowserCase):
         self.assertEqual(b.eval("document.getElementById('railCustH').textContent"), "Customise sidebar")
         self.assertTrue(b.eval("document.getElementById('railCust').contains(document.activeElement)"))
         lists = b.eval("[...document.querySelectorAll('#railCust ul')].map(u=>[document.getElementById(u.getAttribute('aria-labelledby')).textContent,[...u.children].map(li=>li.dataset.rid)])")
-        self.assertEqual(lists, [["In the sidebar", TOP], ["In More", MORE]])
+        self.assertEqual(lists, [["In the sidebar", TOP], ["In the menu under your name", MORE]])
         # Today: always first, no controls
         self.assertIn("Always first", b.eval("document.querySelector('#railCust li[data-rid=today]').textContent"))
         self.assertEqual(b.eval("document.querySelectorAll('#railCust li[data-rid=today] button').length"), 0)
@@ -236,7 +238,7 @@ class Sidebar(LiveBrowserCase):
         b.click(self.row("settings", "swap"))
         self.assertEqual(b.eval("document.querySelector('#railCust ul[data-zone=top]').lastElementChild.dataset.rid"), "settings")
         self.assertEqual(b.eval("document.activeElement.closest('li').dataset.rid"), "settings")
-        self.assertEqual(b.eval("document.activeElement.getAttribute('aria-label')"), "Move Settings to More")
+        self.assertEqual(b.eval("document.activeElement.getAttribute('aria-label')"), "Move Settings to the menu under your name")
         self.assertIn("Settings moved to the sidebar", b.eval("document.querySelector('#railCust [aria-live]').textContent"))
         # People up, by its button
         b.click(self.row("people", "up"))

@@ -5,7 +5,7 @@
 <div class="dd" id="todayDate">Friday 9th October</div>
 <h1 id="dayHead">Good morning, Alan.</h1>
 <p id="briefText">
-<b>4 proposals</b> need your decision, <a href="#" class="cntl" data-nav="actions:overdue::o=%40me" data-n="1" aria-label="1 overdue action of yours, open in Work">
+<b>4 suggestions</b> need your decision, <a href="#" class="cntl" data-nav="actions:overdue::o=%40me" data-n="1" aria-label="1 overdue action of yours, open in Work">
 <b>1 of your actions</b>
 </a> is overdue, and <b>Example Programme</b> is off track.</p>
 </div>
@@ -46,10 +46,9 @@
 <span class="n" aria-hidden="true">1</span>
 <div class="tb">
 <span class="t">Connect Microsoft 365</span>
-<p>Connected in Claude itself, so the page can’t: connect it there, then say “setup: check Microsoft 365” in Claude Code. The first sweep confirms it</p>
+<p>Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it</p>
 </div>
 <span class="rmgo">
-<button type="button" class="mini" data-sucopy="m365">Copy</button>
 <button type="button" class="mini" data-sucheck="m365">Check again</button>
 <button type="button" class="linkbtn" data-setup="help">How</button>
 </span>
@@ -73,18 +72,18 @@
 <li class="">
 <span class="n" aria-hidden="true">4</span>
 <div class="tb">
-<span class="t">Run the first sweep</span>
+<span class="t">Run the first check</span>
 <p>Reads mail, Teams and the calendar since the look-back days</p>
 </div>
 <span class="rmgo">
-<button type="button" class="btn " data-setup="sweep">Run the first sweep</button>
+<button type="button" class="btn " data-setup="sweep">Run the first check</button>
 </span>
 </li>
 <li class="">
 <span class="n" aria-hidden="true">5</span>
 <div class="tb">
 <span class="t">Open Intake</span>
-<p>Approve what's right; nothing reaches the tracker until you do</p>
+<p>Approve what's right; nothing reaches your project record until you do</p>
 </div>
 <span class="rmgo">
 <button type="button" class="btn " data-setup="review">Open Intake</button>
@@ -92,6 +91,14 @@
 </li>
 </ol>
 <p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>
+<div class="tb" id="asQ">
+<span class="t">Start creaite automatically when you sign in?</span>
+<p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
+<span class="rmgo">
+<button type="button" class="btn primary" data-asq="yes">Yes</button>
+<button type="button" class="btn" data-asq="no">Not now</button>
+</span>
+</div>
 </section>
 <!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
 <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden="">
@@ -268,7 +275,7 @@
 <path d="M4 13h5l1 2h4l1-2h5">
 </path>
 </svg>
-<span class="tdq">Intake: <a href="#intake-review&amp;stage=drafted" data-tdq="proposals">4 proposals to approve</a> and <a href="#intake-review&amp;stage=arrived" data-tdq="files">2 new files to process</a>.</span>
+<span class="tdq">Intake: <a href="#intake-review&amp;stage=drafted" data-tdq="proposals">4 suggestions to approve</a> and <a href="#intake-review&amp;stage=arrived" data-tdq="files">2 new files to process</a>.</span>
 <button type="button" class="ib sm" id="tdQx" aria-label="Dismiss until something new arrives" data-tip="Dismiss until something new arrives">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
 <path d="M18 6 6 18M6 6l12 12">

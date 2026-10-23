@@ -81,6 +81,8 @@ function finish(x, codes) {
 
 /** "Missing: email, organisation" for the needs-details tag's tooltip. @param {PersonRow} x */
 export const missingWords = x => x.missing.length ? `Missing: ${x.missing.join(", ")}` : "";
+/** The quiet flag on a row: what is missing, "No email" or "No email, no role" (#304). @param {PersonRow} x */
+export const missingFlag = x => x.missing.length ? "No " + x.missing.join(", no ") : "";
 /** the counts of one project, or of all of them @param {PersonRow} x @param {string} [code] */
 export function countsIn(x, code) {
   const cs = code ? [code] : Object.keys(x.it);

@@ -1,0 +1,14 @@
+# The approved guarded chain for 2.6.1, one diff per line, in apply order (GUARDED-2.6.1.md). Read by dev/tests/guarded_chain.py.
+# Lines starting with # are comments. Paths are relative to the repo root. Change this list only when Alan approves a change to the chain.
+dev/proposals/261-low-notes/tracker-resolve-einval.diff
+dev/proposals/261-inode-gap/tracker-inode.py.diff
+dev/proposals/work-item-history/schema.diff
+dev/proposals/work-item-history/tracker.diff
+dev/proposals/291/live_server.py.diff
+dev/proposals/291/update.py.diff
+dev/proposals/300/live_server.diff
+dev/proposals/work-item-history/live_server.diff
+dev/proposals/work-item-history/tests-after.diff
+dev/proposals/283-reextract/reach.diff
+dev/proposals/283-reextract/live_server.diff
+dev/proposals/snapshots-after-chain.diff

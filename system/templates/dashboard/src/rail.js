@@ -1,7 +1,7 @@
 // @ts-check
 /* rail.js: the sidebar (BL-163, BL-191; BL-319 part 6). The items, the saved choice and the signals are in
    stores/rail.js; the sidebar is drawn by the components in components/sidebar/ (dev/COMPONENTS.md), mounted here into
-   the shell's containers: the pages (#railMain), More
+   the shell's containers: the pages (#railMain), the avatar and its menu (#295; More's place and ids)
    (#railFoot) and Customise sidebar (#railCustBox, a modal dialog). Old code reaches the sidebar only through the store
    (setRailView, setRailCount), never its DOM.
 
@@ -11,7 +11,7 @@
 
    The choice is settings.json's dashboard.rail = {order, more, hidden, display}, written through writeSettings (a backup
    and a log line); a write that fails is put back. display "icons" is the collapsed sidebar, the 56px rail of icons; the
-   toggle and ⌘\ (Ctrl+\) change it. A right-click on the sidebar (or Shift+F10 on a page in it), More's Customise
+   toggle and ⌘\ (Ctrl+\) change it. A right-click on the sidebar (or Shift+F10 on a page in it), the avatar menu's Customise
    sidebar… and Settings › General › Appearance open Customise. */
 import { effect } from "@preact/signals";
 import { h, render } from "preact";
@@ -24,12 +24,12 @@ import { go } from "./core/nav.js";
 import { MAC, S } from "./core/page.js";
 import { writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railIconSize, railItem, railLabelled, railLabelsOn, railSizeNorm, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailCount, setRailView } from "./stores/rail.js";
+import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railIconSize, railItem, railLabelled, railLabelsOn, railSizeNorm, railLoadUser, railMoreOpen, railName, railNarrow, railNorm, railSetUser, railWide, setRailCount, setRailView } from "./stores/rail.js";
 import { row, SETSECTIONS } from "./settings.js";
 import { WTABS, workTabGo } from "./work.js";
-import { catalogue, healthCount, loadCatalogue } from "./stores/settings.js";
+import { catalogue, healthCount, healthFirst, loadCatalogue } from "./stores/settings.js";
 
-export { RAIL_DEF, RAIL_ITEMS, healthCount, railIconSize, railItem, railLabelsOn, railNorm, setRailCount };   /* the stores', on the page for the tests and ⌘K */
+export { RAIL_DEF, RAIL_ITEMS, healthCount, healthFirst, railIconSize, railItem, railLabelsOn, railName, railNorm, setRailCount };   /* the stores', on the page for the tests and ⌘K */
 
 /** Where Customise was opened from: focus goes back there when it closes. */
 export let RAILOPENER = /** @type {HTMLElement | null} */ (null);
@@ -103,6 +103,7 @@ export function bootRail0007() {
   Object.defineProperty(shared, "RAILCFG", { configurable: true, enumerable: true, get: () => railCfg.value, set: v => { railCfg.value = railNorm(v); } });
   railCfg.value = railNorm(S.rail);
   railLabelsOn.value = S.railLabels !== false; railIconSize.value = railSizeNorm(S.railIconSize); railLoadUser();
+  railName.value = S.meSet === false ? "" : String(S.me || "").trim();   /* #295: the avatar's name, from settings only */
   const mq = matchMedia("(max-width:899px)"); railNarrow.value = mq.matches; mq.addEventListener("change", e => { railNarrow.value = e.matches; });
   const mw = matchMedia("(min-width:1200px)"); railWide.value = mw.matches; mw.addEventListener("change", e => { railWide.value = e.matches; });
   effect(() => {        /* #182: the icon size is a class on the page (CSS sets the icon box and the row heights) */
@@ -154,6 +155,6 @@ export function bootRail0007() {
 /* ===== BL-163 (sprint-rail) ===== Settings › General › Appearance: "Sidebar: Customise…" opens the same dialog as a right-click on the sidebar (BL-191) */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootRail0077() {
-  const ap = SETSECTIONS.find(x => x.id === "appearance"), r0 = ap.render; ap.kw += " left rail sidebar navigation hide reorder order icons only titles customise collapse more";
-  ap.render = () => r0() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in More, put them in your own order, or show icons only");
+  const ap = SETSECTIONS.find(x => x.id === "appearance"), r0 = ap.render; ap.kw += " left rail sidebar navigation hide reorder order icons only titles customise collapse more menu name avatar";
+  ap.render = () => r0() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in the menu under your name, put them in your own order, or show icons only");
 }

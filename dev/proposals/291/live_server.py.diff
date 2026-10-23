@@ -1,0 +1,42 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 5e5018d3..30696524 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2205,12 +2205,26 @@ PANEL_SWEEP_WORDS = re.compile(
+     r"(?:please )?(?:"
+     r"sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \d{1,3} days?)?"
+     r"|sweep(?: mail)? the last \d{1,3} days?"
++    r"|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \d{1,3} days?)?"   # #291: the plain words
++    r"|check (?:my )?(?:mail|email)(?: and teams)? the last \d{1,3} days?"
+     r"|sweep the (?P<subject>[^\n.,;:!?]{1,80}) thread"
+     r"|refresh (?:the |my )?calendar"
+     r")(?: now)?(?: please)?[.!]?", re.I)
++# #291 guard: "for <code>" must read as a project code, never an ordinary word ("check my mail for urgent"). A code is typed in
++# capitals or holds a digit; a short lower-case one (abc) is accepted unless it is a common word; anything else is a plain chat.
++PANEL_SWEEP_FOR = re.compile(r"\bfor ([a-z][a-z0-9]{2,6})\b", re.I)
++PANEL_SWEEP_COMMON = frozenset({"the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"})
+ PANEL_SWEEP_NOT = re.compile(r"\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\b", re.I)
+ 
+ 
++def panel_sweep_code_ok(code):
++    """#291: whether a word after "for" reads as a project code ("for the last 7 days" is not one; capitals or a digit are;
++    a short lower-case word is unless it is a common word)."""
++    if code.lower() == "the" or code == code.upper() or any(c.isdigit() for c in code):
++        return True
++    return len(code) <= 3 and code.lower() not in PANEL_SWEEP_COMMON
++
++
+ def panel_sweep(message, images=(), confirmed=None):
+     """True when a panel request is a plain sweep (BL-309): cx-sweep's own words and nothing more. A thread's subject may not
+     carry another instruction ("and", "then", apply, approve…); an image or a confirmed request is never a sweep."""
+@@ -2218,7 +2232,9 @@ def panel_sweep(message, images=(), confirmed=None):
+     if images or confirmed or len(text) > 120:
+         return False
+     m = PANEL_SWEEP_WORDS.fullmatch(text)
+-    return bool(m) and not (m.group("subject") and PANEL_SWEEP_NOT.search(m.group("subject")))
++    if not m or (m.group("subject") and PANEL_SWEEP_NOT.search(m.group("subject"))):
++        return False
++    return m.group("subject") is not None or all(panel_sweep_code_ok(c) for c in PANEL_SWEEP_FOR.findall(text))
+ 
+ 
+ PANEL_SWEEP_PROMPT = (

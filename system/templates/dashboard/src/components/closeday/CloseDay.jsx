@@ -96,13 +96,13 @@ function CatchUp({ cu, last, onStop, onSkip, onAgain }) {
       <div class="cdsweep" aria-busy="true">
         <div class="row"><span class="spin" aria-hidden="true"></span>
           <div class="grow"><b>{waiting ? "Waiting to catch up" : "Catching up…"}</b>{" "}
-            <span class="sub">{waiting ? cu.message : cu.label || "Reading mail and Teams since the last sweep"}</span></div>
+            <span class="sub">{waiting ? cu.message : cu.label || "Reading mail and Teams since the last check"}</span></div>
           {running ? <button type="button" class="mini" data-cdstop="1" onClick={onStop}>Stop</button> : null}
           <button type="button" class="mini" data-cdskip="1" onClick={onSkip}>Skip</button>
         </div>
         {running ? <ol class="cdsrc" aria-label="Sources">{SOURCES.map((s, i) =>
           <li class={i < cu.reached ? "done" : i === cu.reached ? "now" : ""}>{s}</li>)}</ol> : null}
-        <p class="sub">It runs while you read on. It only proposes items for Review; nothing is applied, and nothing changes in
+        <p class="sub">It runs while you read on. It only adds suggestions to Review; nothing is saved, and nothing changes in
           Microsoft 365.</p>
       </div>
     );
@@ -121,9 +121,9 @@ function CatchUp({ cu, last, onStop, onSkip, onAgain }) {
       </div>
     );
   }
-  const words = st === "stopped" ? "Stopped. What it had read so far is in Review; the next sweep does the rest."
-    : st === "skipped" ? "Skipped. The next sweep picks up anything new."
-    : st === "failed" || st === "gave_up" ? "The catch-up sweep didn't run. The next sweep picks up anything new."
+  const words = st === "stopped" ? "Stopped. What it had read so far is in Review; the next check does the rest."
+    : st === "skipped" ? "Skipped. The next check picks up anything new."
+    : st === "failed" || st === "gave_up" ? "The last check of mail and Teams didn't run. The next check picks up anything new."
     : cu.message;
   const offer = cu.status === "offer" || st === "stopped" || st === "skipped" || st === "failed" || st === "gave_up";
   const again = cu.status === "recent";
@@ -131,8 +131,8 @@ function CatchUp({ cu, last, onStop, onSkip, onAgain }) {
     <div class="cdsweep">
       <div class="row"><div class="grow">{cu.status === "offer" ? <b>Catch up before you close?</b> : null}{" "}
         <span class={cu.status === "offer" ? "sub" : ""}>{words}</span></div>
-        {offer ? <button type="button" class={cu.status === "offer" ? "btn primary" : "mini"} data-cdsweep="1" onClick={onAgain}>Sweep now</button> : null}
-        {again ? <button type="button" class="mini" data-cdsweep="1" onClick={onAgain}>Sweep again</button> : null}
+        {offer ? <button type="button" class={cu.status === "offer" ? "btn primary" : "mini"} data-cdsweep="1" onClick={onAgain}>Check now</button> : null}
+        {again ? <button type="button" class="mini" data-cdsweep="1" onClick={onAgain}>Check again</button> : null}
       </div>
     </div>
   );
@@ -145,7 +145,7 @@ function Today({ day, onAdd }) {
     m.applied ? plur(m.applied, "item") + " changed" : ""].filter(Boolean);
   return (
     <>
-      <section><h4>Moved today</h4><p>{mov.length ? mov.join(" · ") : "Nothing was applied today."}</p></section>
+      <section><h4>Moved today</h4><p>{mov.length ? mov.join(" · ") : "Nothing was saved today."}</p></section>
       <section><h4>You promised today</h4>
         {prom.length ? <><ul class="dclist">{prom.map((x, i) => {
           const r = REV.find(q => q.file === x.file && q.ref === x.n);
@@ -183,7 +183,7 @@ function LooseWords({ x }) {
 /** Step 3: every loose end gets a place. @param {{loose: LooseEnd[], places: Record<string, string>, all: boolean,
     onPick: (ref: string, v: string) => void, onAll: (v: string) => void, onMore: () => void, sweeping: boolean}} props */
 function LooseEnds({ loose, places, all, onPick, onAll, onMore, sweeping }) {
-  if (!loose.length) return <p class="sub">{sweeping ? "Nothing is open yet; anything the sweep finds is added here." : "Nothing is left open. Everything has a place."}</p>;
+  if (!loose.length) return <p class="sub">{sweeping ? "Nothing is open yet; anything the check finds is added here." : "Nothing is left open. Everything has a place."}</p>;
   const shown = all ? loose : loose.slice(0, SHOWN), common = loose.every(x => places[x.ref] === places[loose[0].ref]) ? places[loose[0].ref] : "";
   return (
     <>
@@ -195,7 +195,7 @@ function LooseEnds({ loose, places, all, onPick, onAll, onMore, sweeping }) {
         {loose.length > shown.length ? <button type="button" class="linkbtn" data-cdmore="1" onClick={onMore}>and {loose.length - shown.length} more</button> : null}
       </section>
       <p class="sub">Nothing is approved here. Review now opens Intake (or Work) after you close; First thing tomorrow puts
-        it at the top of tomorrow's Today.{sweeping ? " The sweep's finds are added as it ends." : ""}</p>
+        it at the top of tomorrow's Today.{sweeping ? " What the check finds is added as it ends." : ""}</p>
     </>
   );
 }
@@ -333,7 +333,7 @@ export function CloseDay() {
   /** Ask the server to start (or follow) the catch-up. @param {boolean} force Sweep now / Sweep again */
   const catchup = async force => {
     const r = await api("/api/day/catchup", force ? { force: true } : {});
-    if (!r.ok) { setCu(u => ({ ...u, status: "cant", message: oneLine(r.message) || "The catch-up sweep couldn't start." })); return; }
+    if (!r.ok) { setCu(u => ({ ...u, status: "cant", message: oneLine(r.message) || "The last check of mail and Teams couldn't start." })); return; }
     const pub = r.catchup || {}, run = r.run && r.run.id || pub.run && pub.run.id || null;
     setCu(u => ({ ...u, status: r.status, message: r.message || "", state: pub.state || null, run, ended: pub.ended, reached: force ? 0 : u.reached,
       label: force ? "" : u.label, found: force ? [] : u.found }));
@@ -438,7 +438,7 @@ export function CloseDay() {
     <Dialog open={open} onClose={notYet} labelledBy="dcH" id="closeDlg" class="dcdlg cdcard" focus={closed ? "[data-cdfinish]" : "[data-cdnext]"}>
       <div onKeyDown={keys}>
         <header class="cdhead"><h2 id="dcH">Close the day</h2><span class="sub">{longDay(day.today || TODAY)} · about three minutes</span></header>
-        <div class="vh" role="status" aria-live="polite">{closed ? `Day closed at ${closed.at}` : pending ? "Closing when the sweep finishes" : said}</div>
+        <div class="vh" role="status" aria-live="polite">{closed ? `Day closed at ${closed.at}` : pending ? "Closing when the check finishes" : said}</div>
         {closed ? (
           <div class="cddone">
             <div class="cdseal" aria-hidden="true"><Tick /></div>
@@ -448,7 +448,7 @@ export function CloseDay() {
               <button type="button" class="btn primary" data-cdfinish="1" onClick={finish}>{toReview ? "Review now" : "Done"}</button></div>
           </div>
         ) : pending ? (
-          <div class="cddone"><span class="spin" aria-hidden="true"></span><h3>Closing when the sweep finishes</h3>
+          <div class="cddone"><span class="spin" aria-hidden="true"></span><h3>Closing when the check finishes</h3>
             <p class="sub">You can walk away: what it finds and you haven't placed goes to First thing tomorrow.</p>
             <div class="cdacts"><button type="button" class="btn" onClick={notYet}>Hide</button></div></div>
         ) : (
@@ -459,7 +459,7 @@ export function CloseDay() {
               {err ? <p class="cderr" role="alert">{err}</p> : null}
               {step === 0 ? (full[0] ? <CatchUp cu={cu} last={(card && card.now) || ""} onStop={() => cu.run && api("/api/ask/stop", { run: cu.run }).then(status)}
                 onSkip={() => api("/api/day/catchup/skip", {}).then(r => setCu(u => ({ ...u, state: (r && r.state) || "skipped" })))}
-                onAgain={() => catchup(true)} /> : <p class="sub">{cu.message || "No catch-up sweep tonight."}</p>) : null}
+                onAgain={() => catchup(true)} /> : <p class="sub">{cu.message || "No last check of mail and Teams tonight."}</p>) : null}
               {step === 1 ? <Today day={day} onAdd={async i => { const x = (day.promised || [])[i], r = x && REV.find(q => q.file === x.file && q.ref === x.n);
                 if (r) { await decide(r.n, "approved"); setCard(c => c && { ...c }); } }} /> : null}
               {step === 2 ? <LooseEnds loose={loose} places={places} all={all} sweeping={sweeping}
@@ -468,7 +468,7 @@ export function CloseDay() {
               {step === 3 ? <TomorrowStep tm={tm} prep={prep} made={made} first={firstList} weekly={weekly} friday={!!day.friday}
                 onPrep={k => setPrep(p => { const q = new Set(p); q.has(k) ? q.delete(k) : q.add(k); return q; })} /> : null}
             </section>
-            <footer class="cdfoot"><span class="left">{sweeping ? "The sweep only proposes; closing now closes when it finishes." : `${step + 1} of 4`}</span>
+            <footer class="cdfoot"><span class="left">{sweeping ? "The check only suggests; closing now closes when it finishes." : `${step + 1} of 4`}</span>
               {step ? <button type="button" class="btn" data-cdback="1" onClick={() => move(-1)}>Back</button>
                 : <button type="button" class="btn" data-dcnot="1" onClick={notYet}>Not yet</button>}
               {step < 3 ? <button type="button" class="btn primary" data-cdnext="1" onClick={() => move(1)}>Next</button>

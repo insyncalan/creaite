@@ -7,12 +7,15 @@ Called by tracker.py after every apply. Standard library only; the page needs no
 """
 import base64
 import contextlib
+import hashlib
 import json
+import math
 import os
 import re
 import sqlite3
 import sys
 import time
+import unicodedata
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -791,7 +794,7 @@ def queue_block(n, p, key, label, b, aged):
             "why": f"Draft {label.lower()}" if key in ("meeting", "report") else label, "indiv": True,
             "hold": "minutes" if key == "meeting" else "report" if key == "report" else "file changes",   # #232: never routine
             "rec": {"t": f"{label}: {b.get('title') or Path(b.get('draft') or '').stem}"},
-            "src": b.get("draft") or "", "file": p.name, "ref": key,
+            "src": b.get("draft") or "", "file": p.name, "ref": key, "fp": block_fp(b),   # #307 h2: the row's content, not its number
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
             **draft_missing(key, b),   # BL-260
@@ -810,7 +813,7 @@ def queue_item(con, n, p, item, aged, overlap):
     return {"n": n, "p": project, "kind": kind, "why": item_why(item, project, flags), "indiv": bool(review.individual_only(item)),
             "hold": review.hold_reason(item) or "",                                         # #232: "" is routine (cmd_bulk's rule)
             "dup": dup, "signals": signals,
-            "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
+            "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), "fp": item_fp(item), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
             "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
             **({"bad": invalid_words(item.get("invalid_reason")), "badf": unknown_fields(item.get("invalid_reason"))}
@@ -1679,11 +1682,19 @@ def sweep_due_info():
         return {"due": False, "due_from": "07:00", "last": None}
 
 
+def installed_version():
+    """#295: the installed version for the avatar menu, or "" when the VERSION file is missing."""
+    f = paths.VERSION_FILE
+    return f.read_text(encoding="utf-8").strip() if f.exists() else ""
+
+
 def ui_settings(s):
     """settings.json → the dashboard's settings keys."""
     import tracker      # BL-181: the weekend days
     g = lambda *k, d=None: _dig(s, k, d)  # noqa: E731
     return {"me": g("identity", "name", d="Alan Carter"), "short": ", ".join(g("identity", "short_forms", d=[])),
+            "meSet": bool(str(g("identity", "name", d="") or "").strip()),   # #295: the avatar shows "You" until a name is set
+            "version": installed_version(),                                  # #295: the avatar menu's "creaite · v…"
             "ownDomains": [str(d).lower() for d in g("identity", "own_domains", d=[])],        # BL-83: who counts as inside the company
             "staleDays": g("review", "stale_after_days", d=7), "rvAdvance": g("review", "auto_advance", d=True),   # BL-133
             "dupOverlap": g("review", "duplicate_overlap", d=0.6),   # BL-133 stage B: how close a proposal must be to an open item "dueSoon": g("review", "due_soon_days", d=7),
@@ -1708,6 +1719,7 @@ def ui_settings(s):
             "undatedGrace": g("dashboard", "undated_grace_days", d=3),      # BL-95
             "flowWeeks": flow_weeks(s),                                     # BL-91
             "weekPrios": list(g("dashboard", "week_ahead_priorities", d=None) or []),   # BL-235 (fix-small-17): empty means every priority
+            "singleKeys": bool(g("help", "single_keys", d=True)),   # #298: the single-key shortcuts, on or off
             "helpLine": bool(g("help", "first_line", d=True)),   # #158: the first-visit "Press ? for help" line
             "helpSeen": g("help", "start_seen", d=False),   # BL-84: Help › Start here shows once, on the first visit
             "port": g("live_mode", "port", d=8765), "healthSecs": g("live_mode", "health_check_seconds", d=30),
@@ -2859,12 +2871,44 @@ def proposal_meta():
     return out
 
 
+def _filed_row(line, folders):
+    """One processed.txt line (date | key | filed; … | n) as a #307 Done row, or None unless it is a no-calendar meeting."""
+    cells = [c.strip() for c in line.split(" | ")]
+    if len(cells) < 3 or not cells[1].startswith("fp:"):
+        return None
+    if cells[2].lower() in ("not filed", ""):          # #307: rejected minutes are written "not filed | 0"; they are not approved
+        return None
+    names = [f.strip() for f in cells[2].split(";") if f.strip()]
+    filed = next((f for f in names if f.endswith(".docx")), "") or next((f for f in names if f.lower().endswith(".html")), "")
+    if not filed:        # a rejection still files the transcript (… | transcripts/x.vtt | 0): only minutes (.docx or .html) were approved
+        return None
+    parts = filed.split("/")
+    day = cells[1][3:13] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", cells[1][3:13]) else cells[0]
+    title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else (cells[1].split("|") + ["Meeting"])[1].strip().capitalize()
+    return {"key": cells[1], "day": day, "title": title, "path": filed or None, "date": cells[0],
+            "p": folders.get(parts[1]) if len(parts) > 1 and parts[0] == "projects" else None}
+
+
+def processed_this_week(today):
+    """#307: the minutes filed this week for a meeting with no calendar entry (a dropped transcript, someone's minutes; their
+    processed.txt key starts "fp:"), as [{key, day, title, path, p}], newest first. A calendar meeting is its own Done row."""
+    try:
+        lines = paths.PROCESSED.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    monday = (today - timedelta(days=today.weekday())).isoformat()
+    folders = {v: k for k, v in paths.register_folders().items()}
+    rows = (_filed_row(line, folders) for line in lines)
+    return [r for r in reversed([r for r in rows if r]) if r["date"] >= monday]
+
+
 def intake_review(meetings, files, queue, today, meta=None, stale_after=None, aside=None):
     """The merged row model for Intake and Review (#232), from the built meetings, inbox and review lists. `aside` is
     intake-cleared.json's entries (Not needed and Later), which also keep an uploaded file away from the rows (#232-A)."""
     return intake_review_model(meetings or {}, files or [], queue or [], proposal_meta() if meta is None else meta, today,
                                review.stale_days() if stale_after is None else stale_after,
-                               cleared_load(today=today) if aside is None else aside)
+                               cleared_load(today=today) if aside is None else aside,
+                               processed_this_week(today))
 
 
 def _ir_split(rows):
@@ -2967,6 +3011,13 @@ def _ir_drafts(by_mkey, by_path, used, meta, today, stale_after):
     return out
 
 
+def _ir_filed(done, used, today, stale_after):
+    """#307: a Done row for minutes filed this week from a dropped transcript or someone's minutes (nothing is left in the inbox
+    or in Review to make a row from), so Approved this week counts them."""
+    return [_ir_row("draft", d["key"], [], "done", today, stale_after, mkey=d["key"], path=d.get("path"), title=d["title"],
+                    day=d["day"], p=d.get("p")) for d in done if d["key"] not in used]
+
+
 def _ir_counts(out, queue):
     """The stage counts, the proposals to approve and the badge (ready meetings and files, plus proposals). A file whose kind is
     not sure (`ft` ""; transcript or minutes is not known yet) is not ready: `need_type` counts them (#232-A5; the mockup's nProc)."""
@@ -3005,7 +3056,7 @@ def _ir_aside_lists(meetings, files, aside):
     return later + later_files, not_needed + gone_files
 
 
-def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None):
+def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None, done=None):
     """Pure: the model from its inputs (unit tested in dev/tests/test_intake_review_model.py).
     {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
     row: {id, src (calendar|upload|draft), key, mkey, path, title, day, start, end, p, stage (arrived|drafted|approved),
@@ -3020,6 +3071,7 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=
     out += _ir_uploads(files, by_path, loaded, today, stale_after, aside_keys)
     used = {r["mkey"] for r in out if r["mkey"]} | {r["path"] for r in out if r["path"]}
     out += _ir_drafts(by_mkey, by_path, used, meta, today, stale_after)
+    out += _ir_filed(done or [], {r["mkey"] for r in out if r["mkey"]}, today, stale_after)      # #307
     out.sort(key=lambda r: r["start"])
     out.sort(key=lambda r: r["day"], reverse=True)       # newest day first, each day in time order (as Intake); stable sorts
     later, not_needed = _ir_aside_lists(meetings, files, aside)
@@ -3029,7 +3081,7 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=
 
 
 # ===== BL-293 (sprint-today-days-server) ===== Today moves between the calendar's days. calendar_days gives every working day
-# the saved calendar holds (sweep.calendar_span: Monday of this week, or inbox.meetings_from, to seven days ahead), with a weekend
+# the saved calendar holds (sweep.calendar_span: Monday of this week, or inbox.meetings_from, to next week's Friday, #318), with a weekend
 # day only when it has a meeting. Each meeting carries its times, and: an ended one its follow-up (Minutes made, Transcript ready,
 # No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar import reads them); today
 # and later its Prep key, whether it is worth preparing for (the Week ahead's plan) and its prep page (BL-286's records). A
@@ -3041,15 +3093,19 @@ TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not trans
 
 def calendar_days(d, now):
     """{"first", "last", "today", "fetched", "days": [day]} for Today's day line (BL-293), from the collected data `d`. A day:
-    {date, date_shown, dow, short, long, today, past, weekend, week (0 this week, 1 the next…), meetings, all_day}."""
+    {date, date_shown, dow, short, long, today, past, weekend, week (0 this week, 1 the next…), meetings, all_day,
+    unread (#318: not read yet)}."""
     import sweep
     span, today = sweep.calendar_span(now.date()), now.date()
     if not span:
         return {"first": None, "last": None, "today": today.isoformat(), "fetched": None, "days": []}
     raw, look = saved_calendar_days(), day_lookups(d, now)
+    line_end = max(span[1], sweep.calendar_window(now.date())[1])      # #318: the line runs to the Friday of next calendar week
     out, day = [], span[0]
-    while day <= span[1]:
-        rec = day_record(day, raw.get(day.isoformat()), look)
+    while day <= line_end:
+        rec = day_record(day, raw.get(day.isoformat()) if day <= span[1] else None, look)
+        if rec and day > span[1]:
+            rec["unread"] = True                  # #318: beyond what the calendar was read to: not "no meetings", not read yet
         if rec:
             out.append(rec)
         day += timedelta(days=1)
@@ -3057,7 +3113,8 @@ def calendar_days(d, now):
         fetched = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("fetched")
     except (OSError, ValueError, AttributeError):  # read a moment ago by calendar_span; gone since: no fetch time
         fetched = None
-    return {"first": span[0].isoformat(), "last": span[1].isoformat(), "today": today.isoformat(), "fetched": fetched, "days": out}
+    return {"first": span[0].isoformat(), "last": line_end.isoformat(), "read_to": span[1].isoformat(), "today": today.isoformat(),
+            "fetched": fetched, "days": out}
 
 
 def day_lookups(d, now):
@@ -4181,6 +4238,59 @@ def close_day(today, at, plan=None):
     it (references only; close_day.record). Returns the days."""
     import close_day as day_plan
     return day_plan.record(today, at, plan)["days"]
+
+# ===== #307 h2: a row's content fingerprint (the Python twin of dashboard/src/core/identity.js, whose header holds the spec) =====
+_FP_SAFE = 2 ** 53 - 1
+
+
+def _fp_s(x):
+    return unicodedata.normalize("NFC", x)
+
+
+def fp_canon(x):
+    """Canonical JSON text: sorted keys (code points), kept array order, NFC strings, integers as digits, other numbers as {"f":n}."""
+    if x is None:
+        return "null"
+    if isinstance(x, bool):
+        return "true" if x else "false"
+    if isinstance(x, (int, float)):
+        if isinstance(x, float):
+            if not math.isfinite(x):
+                return "null"
+            if x == int(x):
+                x = int(x)
+            else:
+                return '{"f":%d}' % math.floor(x * 1e6 + 0.5)
+        if abs(x) > _FP_SAFE:
+            return str(int(float(x)))
+        return str(x)
+    if isinstance(x, str):
+        return json.dumps(_fp_s(x), ensure_ascii=False)
+    if isinstance(x, (list, tuple)):
+        return "[" + ",".join(fp_canon(i) for i in x) + "]"
+    if isinstance(x, dict):
+        keys = sorted(x, key=lambda k: _fp_s(str(k)))
+        return "{" + ",".join(json.dumps(_fp_s(str(k)), ensure_ascii=False) + ":" + fp_canon(x[k]) for k in keys) + "}"
+    return "null"
+
+
+def _fp_short(x):
+    return hashlib.sha256(fp_canon(x).encode("utf-8")).hexdigest()[:12]
+
+
+def item_fp(it):
+    """A staged item's content fingerprint (12 hex): op, table, id, changes and values; never its number or decision."""
+    values = it.get("values")
+    if isinstance(values, dict) and "raised" in values:     # filled in by the engine (BL-26), so it says nothing about which item this is
+        values = {k: x for k, x in values.items() if k != "raised"}
+    return _fp_short([it.get("op"), it.get("table"), it.get("id"), it.get("changes"), values])
+
+
+def block_fp(b):
+    """A minutes, report or file-changes block's content fingerprint."""
+    return _fp_short([b.get("key"), b.get("title"), b.get("draft"), b.get("project"), b.get("projects")])
+# ===== end #307 h2 =====
+
 
 if __name__ == "__main__":
     try:

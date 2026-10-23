@@ -61,8 +61,10 @@ class Banner:
         self.b.call("Input.dispatchMouseEvent", type="mouseWheel", x=r[0], y=r[1], deltaX=0, deltaY=dy)
 
     def header_height(self):
-        """Everything above the report: from the top of the window to the foot of the toolbar."""
-        return self.b.eval(f"document.querySelector('{self.VIEW} .sheet-bar').getBoundingClientRect().bottom")
+        """Everything above the report: from the top of the window to the foot of the toolbar. The minutes' attention strip (#302 A) is
+        a strip over the sheet that stays put; it is not part of the header that hides, so its height is left out."""
+        return self.b.eval(f"document.querySelector('{self.VIEW} .sheet-bar').getBoundingClientRect().bottom"
+                           f" - (document.querySelector('{self.VIEW} .mnattn')?.getBoundingClientRect().height || 0)")
 
     def press(self, selector):
         """A real mouse click at the element's centre, without scrolling it into view (the harness's click does, and moves the page)."""

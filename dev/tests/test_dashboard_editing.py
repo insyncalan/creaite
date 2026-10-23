@@ -344,7 +344,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertIn(("approved", "dashboard"), decided.values())
         self.assertIn(("rejected", "dashboard"), decided.values())
         self.assertEqual(pending["meeting"]["minutes_decision"], "pending")     # drafts are approved in Claude Code
-        self.assertIn("Approving a draft needs the live server", self.result["draftSnack"])   # BL-149: the command is the footnote
+        self.assertIn("Approving a draft needs creaite", self.result["draftSnack"])   # BL-149: the command is the footnote
 
     def test_closing_fills_closed_date_in_shown_form(self):
         today = __import__("datetime").date.today()
@@ -353,7 +353,7 @@ class DashboardEditingTests(unittest.TestCase):
 
     def test_reminder_run_report_now(self):
         menu = self.result["remMenu"]
-        self.assertEqual(menu[0], ["Run report now", True, "Needs the live server"])
+        self.assertEqual(menu[0], ["Run report now", True, "creaite isn’t running"])
         self.assertEqual([m[0] for m in menu[1:]], ["Dismiss for this session", "Dismiss forever"])
 
     def test_workstreams_within_their_project(self):
@@ -466,7 +466,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertIn('"name":"Stuck","f":{"st":["Cancelled"]}', r["saved"][2])
         saved = json.loads(self.result["files"]["system/config/settings.json"])["work"]["saved_views"]["actions"]
         self.assertEqual(saved, [{"name": "Stuck", "f": {"st": ["Cancelled"]}, "lay": "list", "g": "due", "o": None,     # BL-103: a saved view keeps its layout and grouping
-                                  "lg": "none", "sg": "none", "lsg": "none"}])                                            # BL-128, BL-129: its order, List grouping and sub-groups
+                                  "lg": "due", "sg": "none", "lsg": "none"}])                                            # BL-128, BL-129: its order, List grouping and sub-groups; #241 A: Actions are grouped by due where nothing is saved, and a view keeps what was shown
 
     def test_more_filters(self):
         self.assertEqual(self.result["more"], ["Workstream", "Source", "Client-visible", "Stale", "Last updated", "Raised", "Milestone", "People I follow",

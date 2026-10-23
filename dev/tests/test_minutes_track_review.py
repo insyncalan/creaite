@@ -226,7 +226,7 @@ class TrackFromReview(LiveBrowserCase):
         b.pump(1.5)
         self.assertNotIn(SOW, self.descs(), "crossed a moment ago: never registered")
         self.assertEqual(self.staged(1)["decision"], "pending")
-        self.assertIn("Approved 0 routine · 1 crossed in the minutes' Track column", shown,
+        self.assertIn("Approved 0 routine items · 1 crossed in the minutes' Track column", shown,
                       "Cap's round 2 (5): the row left out after the reload is reported, with why")
 
     def test_07_the_row_approve_straight_after_leaving_the_minutes_waits_for_the_track_choices(self):
@@ -269,7 +269,7 @@ class TrackFromReview(LiveBrowserCase):
         text = self.ev("window.__t8")
         self.assertIsNotNone(text)
         self.assertIn("Approved 0", text)
-        self.assertIn("apply stopped, all back on Intake: an item was crossed in the minutes' Track column", text)
+        self.assertIn("saving stopped, all back in Intake: an item was crossed in the minutes' Track column", text)
         self.assertNotIn("proposed-", text)
         self.assertNotIn("Nothing was written", text)
         self.assertEqual(self.staged(1)["decision"], "pending", "the batch put back: on Intake again")
@@ -289,7 +289,7 @@ class TrackFromReview(LiveBrowserCase):
         b.wait("document.getElementById('snack').classList.contains('on') && /from these minutes/.test(document.getElementById('snack').textContent)", 60)
         text = self.snack()
         self.assertIn("Approved 0 items from these minutes", text)
-        self.assertIn("apply stopped, all back on Intake: an item was crossed in the minutes' Track column", text)
+        self.assertIn("saving stopped, all back in Intake: an item was crossed in the minutes' Track column", text)
         self.assertIn("the minutes are as they were", text)
         self.assertNotIn("proposed-", text)
         self.assertEqual([self.staged(n)["decision"] for n in (1, 2, 3, 4, 5)], ["pending"] * 5, "nothing rejected or approved")
@@ -541,7 +541,7 @@ class RowlessPromiseFromReview(LiveBrowserCase):
         to_intake(b, self.proposal)
         b.eval(MIN + ".querySelector('[data-ira=approve]').click()")
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
-        self.assertIn("Minutes approved · 1 work item registered · 1 wait in Review", self.snack())
+        self.assertIn("Minutes approved · 1 work item registered · 1 still to check", self.snack())
         self.assertIn("Draft the cutover runbook", [a["description"] for a in self.rows_of("actions")])
         self.assertNotIn("Send the vendor's rate card", [x["description"] for x in self.rows_of("promises")],
                          "a promise nobody saw is never registered")

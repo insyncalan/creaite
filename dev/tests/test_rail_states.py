@@ -10,9 +10,9 @@ Done when (the issue's list):
 - the wordmark is the toggle (aria-expanded, "Collapse the rail" / "Expand the rail", Enter and Space, "c_" when collapsed), no
   other toggle; icons only never opens the full rail on hover;
 - the current page is a tonal pill with a bold name, a thicker icon and the 3px bar (icon 3:1 on the pill, light and dark, and
-  in forced colours a border); counts: Review's an accent pill, More's amber and named ("More, 1 problem"), 99+ at most;
-- flyouts on Projects (active projects by name with health), Work (four lists with open counts) and More (with Health, Help and the
-  Customise sidebar block), on the hover standard's times (open after 200 ms, close 300 ms after leaving), by keyboard
+  in forced colours a border); counts: Review's an accent pill, More's (the avatar since #295) amber and named ("Alan Carter, menu, 1 problem"), 99+ at most;
+- flyouts on Projects (active projects by name with health), Work (four lists with open counts) and More (the avatar's menu
+  since #295, opened on a click only; with Health, Help and the Customise sidebar block), on the hover standard's times (open after 200 ms, close 300 ms after leaving), by keyboard
   (→ or ↓ opens with focus inside, arrows, Esc back to the button); the icon alone still goes to the page;
 - Customise sidebar stays (Labels when collapsed beside Icons only; a saved display "icons" opens as icons only).
 Dates are pinned (CREAITE_NOW) so the page's day does not move under the tests.
@@ -85,7 +85,10 @@ class RailStates(LiveBrowserCase):
         return self.b.eval(f"document.querySelector('{self.btn(v)}').getAttribute('aria-expanded')")
 
     def open_by_hover(self, v):
-        self.hover(self.btn(v))
+        if v == "more":                                    # #295: the avatar (More's place) opens on a click only
+            self.b.click(self.btn(v))
+        else:
+            self.hover(self.btn(v))
         self.b.wait(f"document.querySelector('{self.btn(v)}').getAttribute('aria-expanded')==='true'", 5)
         self.b.wait(f"(e=>e&&!e.hidden&&e.getClientRects().length>0)(document.querySelector('{self.fly(v)}'))", 5)
 
@@ -153,7 +156,7 @@ class RailStates(LiveBrowserCase):
         """#214: Labels when collapsed lives only in Customise sidebar; More's menu has no copy of it."""
         b = self.b
         self.collapse()
-        self.hover("#railMore")
+        b.click("#railMore")                                                                   # #295: a click only
         b.wait("!document.getElementById('railMoreMenu').hidden", 5)
         self.assertFalse(b.eval("!!document.getElementById('railLabelsSw')"))
         self.assertNotIn("Labels when collapsed", b.eval("document.getElementById('railMoreMenu').textContent"))
@@ -293,14 +296,14 @@ class RailStates(LiveBrowserCase):
         b.wait("document.getElementById('railMoreBadge').textContent==='1'", 5)
         warn = b.eval("(()=>{ const d=document.createElement('i'); d.style.color='var(--warn-soft)'; document.body.appendChild(d); const c=getComputedStyle(d).color; d.remove(); return c; })()")
         self.assertEqual(b.eval("getComputedStyle(document.getElementById('railMoreBadge')).backgroundColor"), warn)   # amber
-        self.assertEqual(b.eval("document.getElementById('railMore').getAttribute('aria-label')"), "More, 1 problem")
+        self.assertEqual(b.eval("document.getElementById('railMore').getAttribute('aria-label')"), "Alan Carter, menu, 1 problem")   # #295
         b.eval("healthCount.value=2")
-        b.wait("document.getElementById('railMore').getAttribute('aria-label')==='More, 2 problems'", 5)
+        b.wait("document.getElementById('railMore').getAttribute('aria-label')==='Alan Carter, menu, 2 problems'", 5)
         b.eval("healthCount.value=1")
-        self.hover("#railMore")
+        b.click("#railMore")                                                                   # #295: a click only
         b.wait("!document.getElementById('railMoreMenu').hidden", 5)
-        self.assertIn("1 problem", b.eval("document.getElementById('railHealth').textContent"))     # the flyout names it
-        self.away()
+        self.assertIn("1 problem", b.eval("document.getElementById('railHealth').textContent"))     # the menu names it
+        b.key("Escape")
         b.wait("document.getElementById('railMoreMenu').hidden", 5)
         # collapsed: the badge sits on the icon's corner, inside the rail
         self.collapse()
@@ -376,7 +379,7 @@ class RailStates(LiveBrowserCase):
         b.wait(f"document.querySelector('{self.btn('projects')}').getAttribute('aria-expanded')==='false'", 5)
         self.hover(self.btn("work"))
         b.wait(f"document.querySelector('{self.btn('work')}').getAttribute('aria-expanded')==='true'", 5)
-        self.hover("#railMore")
+        b.click("#railMore")                                                                   # #295: the avatar opens on a click and shuts Work's
         b.wait("document.querySelector('#railMore').getAttribute('aria-expanded')==='true'", 5)
         b.wait(f"document.querySelector('{self.btn('work')}').getAttribute('aria-expanded')==='false'", 5)
         self.assertEqual(b.eval("document.querySelectorAll('#railMain [aria-expanded=true], .railmore [aria-expanded=true]').length"), 1)

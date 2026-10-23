@@ -28,7 +28,7 @@ export const shared = {
   CURED: undefined, CURRD: undefined, DRH: undefined, EV: undefined, GEN: undefined, PDBASE: undefined,
   PDKEY: undefined, PDOFFER: undefined, PDT: undefined, PKDRC: undefined, PREPDAY: undefined, PREPEV: undefined, PREPPEEK: undefined,
   // work: set where its `let` was
-  CE: undefined, COLORD: undefined, COLVIS: undefined, CR: undefined, DR: undefined, FPK: undefined, FPQ: undefined,
+  CE: undefined, COLORD: undefined, COLVIS: undefined, CR: undefined, DENS: undefined, DR: undefined, FPK: undefined, FPQ: undefined,
   HLA: undefined, HLALL: undefined, HLC: undefined, LAYCHOSEN: undefined, MKEYHELD: undefined, PTAB: undefined,
   RVA: undefined, RZ: undefined, SAVED: undefined, SEL: undefined, WQ: undefined, WT: undefined, WVIEW: undefined,
   XCQ: undefined,

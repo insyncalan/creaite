@@ -89,7 +89,7 @@ class SettingsReading(LiveBrowserCase):
             return !(by&&document.getElementById(by)&&document.getElementById(by).textContent.trim()); }).map(e=>e.outerHTML)""")
         self.assertEqual(unnamed, [])
         groups = self.b.eval("[...document.querySelectorAll('#set-essentials [role=group]')].map(g=>document.getElementById(g.getAttribute('aria-labelledby')).textContent)")
-        self.assertEqual(groups, ["Weekend", "What the sweep reads", "Week ahead shows"])
+        self.assertEqual(groups, ["Weekend", "What the check reads", "Week ahead shows"])
 
     def test_no_vip_label_on_the_following_settings(self):            # BL-288 (the early warning and ignore rules' words are BL-288's own)
         self.open("essentials")
@@ -140,9 +140,9 @@ class SettingsReading(LiveBrowserCase):
             self.b.eval(f"setSearch({q!r})")
             self.b.wait("!!document.querySelector('#set-more-server .srow')")
             self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-more-server .srow')].map(r=>r.dataset.keys)"), ["logging.keep_days"], q)
-        self.b.eval("setSearch('morning sweep')")
+        self.b.eval("setSearch('daily check')")
         self.b.wait("document.querySelectorAll('#set-essentials .srow').length===1")
-        self.assertEqual(self.b.eval("document.querySelector('#set-essentials .srow span[id]').textContent"), "Morning sweep from")
+        self.assertEqual(self.b.eval("document.querySelector('#set-essentials .srow span[id]').textContent"), "Daily check time")
         self.b.eval("setSearch('')")
 
     def test_old_addresses_still_open_their_card(self):
@@ -176,7 +176,7 @@ class SettingsReading(LiveBrowserCase):
         self.assertEqual(b.eval("JSON.parse(localStorage.getItem('creaite-health-count')).n"), 2)
         # the cards that were in System follow Health
         self.assertEqual(b.eval("[...document.querySelectorAll('#settingsBody [data-sec]')].map(c=>c.dataset.sec)"),
-                         ["health", "more-health", "live", "setup", "diag", "version", "danger"])   # v2.6 (#246): Health check's Reset, under Health
+                         ["health", "more-health", "live", "setup", "diag", "version", "signin", "danger"])   # v2.6 (#246): Health check's Reset, under Health
 
     def test_a_built_fix_says_what_it_does_and_posts_its_own_route_with_nothing_else(self):
         ans = json.loads(json.dumps(HEALTH))
@@ -259,12 +259,12 @@ class SettingsChanging(LiveBrowserCase):
 
     def test_an_essential_saves_shows_its_dot_and_resets(self):
         self.open()
-        b, row = self.b, self.ess_row("Morning sweep from")
+        b, row = self.b, self.ess_row("Daily check time")
         self.assertFalse(b.eval(f"!!{row}.querySelector('.setdot')"))
         b.eval(f"(()=>{{ const i={row}.querySelector('input'); i.value='06:30'; i.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
         self.until(lambda: self.settings_file()["sweep"]["due_from"] == "06:30")
         b.wait(f"!!{row}.querySelector('.setdot') && !!{row}.querySelector('.setreset')")
-        self.assertEqual(b.eval(f"{row}.querySelector('.setreset').getAttribute('aria-label')"), "Reset Morning sweep from to its default")
+        self.assertEqual(b.eval(f"{row}.querySelector('.setreset').getAttribute('aria-label')"), "Reset Daily check time to its default")
         b.eval(f"{row}.querySelector('.setreset').click()")
         self.until(lambda: self.settings_file()["sweep"]["due_from"] == "07:00")
         b.wait(f"!{row}.querySelector('.setdot')")
@@ -275,7 +275,7 @@ class SettingsChanging(LiveBrowserCase):
     def test_a_bad_time_is_refused_and_nothing_is_written(self):
         self.open()
         before = self.settings_file()
-        self.b.eval(f"(()=>{{ const i={self.ess_row('Morning sweep from')}.querySelector('input'); i.value='7am'; i.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
+        self.b.eval(f"(()=>{{ const i={self.ess_row('Daily check time')}.querySelector('input'); i.value='7am'; i.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
         self.b.wait("document.getElementById('snackT').textContent.includes('HH:MM')")
         time.sleep(0.5)
         self.assertEqual(self.settings_file(), before)
