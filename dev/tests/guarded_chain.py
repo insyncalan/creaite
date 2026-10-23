@@ -25,11 +25,12 @@ CHAIN_SHA256 = "a598a48e87c29f40227e21f2233329bd816e0c5154c1037e12f96a9b14cb3c8f
 CHAIN2_MARKER = "Guarded 2.6.2 chain:"
 CHAIN2_FILE = "dev/proposals/GUARDED-2.6.2.chain"
 CHAIN2_SHA256 = "223727761a2e2d51fc64e62d499c3de661b08b5a4cb0ecf98fdbde560a52e56b"
-# BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE (the default) is the 2.6.1 release commit. Until the 2.6.1 release
-# is cut it is the head of origin/v261-release2 (the 2.6.1 candidate with the 2.6.1 chain applied). Jarvis sets it to the final 2.6.1
-# release commit's FULL sha when 2.6.1 ships, and CHAIN2_SHA256 to the value `python3 dev/tests/guarded_chain.py` prints.
+# BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE2 (also BASE, the default) is the 2.6.1 release commit, published:
+# the full sha of 5bf7da29 (Jarvis, 23-10-2026; main's merge commit 256fdcc2 changes no content). CHAIN2_SHA256 is the value
+# `python3 dev/tests/guarded_chain.py` prints; change it only with the chain list.
 BASE_261 = "9501f2cdc850618e2ae34419bf2c6cb1c0d94ba0"
-BASE = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
+BASE2 = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
+BASE = BASE2
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
 
