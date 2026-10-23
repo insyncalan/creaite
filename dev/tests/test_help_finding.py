@@ -210,7 +210,7 @@ class PageTests(unittest.TestCase):
     def test_a_one_letter_word_does_not_stop_a_search(self):
         o = self.probe("""
           const n=q=>helpFind(q).length;
-          out.n={undo:n("undo a mistake"),add:n("add a project"),plan:n("plan a meeting"),vip:n("what is a vip"),plain:n("undo mistake"),only:n("a"),mark:helpMark("Undo a mistake now","undo a mistake")};
+          out.n={undo:n("undo a mistake"),add:n("add a project"),plan:n("plan a meeting"),vip:n("what is a follow"),plain:n("undo mistake"),only:n("a"),mark:helpMark("Undo a mistake now","undo a mistake")};
           out.top=helpFind("undo a mistake").slice(0,3).map(r=>r.e.target);
           window.OUT=out;""")
         for k in ("undo", "add", "plan", "vip", "plain"):

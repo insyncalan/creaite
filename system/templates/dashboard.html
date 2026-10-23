@@ -35377,7 +35377,7 @@ ${s5}`;
     return r4 && r4.extra || {};
   }
   var followedIn = (x5) => {
-    const v5 = String(x5.VIP || "").trim();
+    const v5 = String(x5.Follow || x5.VIP || "").trim();
     return !!v5 && !NO_FOLLOW.test(v5);
   };
   function regRowOf(map, n4) {
@@ -35556,8 +35556,9 @@ ${s5}`;
   var onOf = (name) => (registerRows().find((x5) => x5.n === name) || { on: [] }).on;
   function applyFollow(r4, f5) {
     if (f5.follow === void 0) return;
-    const cur = String(r4.extra.VIP || "").trim();
-    r4.extra.VIP = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+    const cur = String(r4.extra.Follow || r4.extra.VIP || "").trim();
+    r4.extra.Follow = f5.follow ? cur && !NO_FOLLOW.test(cur) ? cur : "yes" : "";
+    delete r4.extra.VIP;
   }
   function savePerson(name, f5) {
     const derived = derivedOf(name);
@@ -59024,13 +59025,15 @@ system/scripts/run launch.py agent ${what}`;
     const t47 = pTable(lines2);
     let cols = t47 ? pSplit(lines2[t47.head]) : [];
     cols = [...cols, ...PCOLS.filter((c5) => !cols.includes(c5))];
+    const mig = cols.includes("VIP") && !cols.includes("Follow");
+    if (mig) cols = cols.map((c5) => c5 === "VIP" ? "Follow" : c5);
     people.forEach((p6) => Object.keys(p6.extra || {}).forEach((c5) => {
-      if (!cols.includes(c5)) cols.push(c5);
+      if (!cols.includes(c5) && !(mig && c5 === "VIP")) cols.push(c5);
     }));
     cols = [...new Set(cols)];
     const cell2 = (p6, c5) => {
-      const f5 = PFIELD[c5];
-      return f5 === "aliases" || f5 === "labels" ? pCell((p6[f5] || []).join(", ")) : f5 === "hidden" ? p6.hidden ? "yes" : "" : pCell(f5 ? p6[f5] : (p6.extra || {})[c5]);
+      const f5 = PFIELD[c5], x5 = p6.extra || {};
+      return f5 === "aliases" || f5 === "labels" ? pCell((p6[f5] || []).join(", ")) : f5 === "hidden" ? p6.hidden ? "yes" : "" : pCell(f5 ? p6[f5] : c5 === "Follow" && !("Follow" in x5) ? x5.VIP : x5[c5]);
     };
     const row2 = (a5) => "| " + a5.join(" | ") + " |", table = [row2(cols), "|" + cols.map((c5) => "-".repeat(c5.length + 2)).join("|") + "|", ...people.map((p6) => row2(cols.map((c5) => cell2(p6, c5))))];
     if (t47) {

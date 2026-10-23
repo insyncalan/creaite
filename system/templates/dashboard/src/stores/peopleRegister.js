@@ -9,7 +9,7 @@
      add a project to that, and "Remove from this project" takes one away. Both are kept in the person's own register row, in two
      columns of codes, "Projects" (added) and "Left projects" (taken away), so nothing about an item changes.
    - Email, aliases, organisation and role are one entry per person, the same on every project; only the counts are per project.
-   - Followed (the register's VIP column, BL-99) is read here only for the project settings page's People view (BL-288: the star
+   - Followed (the register's Follow column, BL-99; an older register's VIP column is still read) is read here only for the project settings page's People view (BL-288: the star
      and the Follow tick are shown there and nowhere else); `follow` on a field list or a save is that page's alone.
    Every change is one proposal holding the register file (settings.js regSave: logged, applied, with Undo). */
 import { A, DEC, open, P, R } from "../core/data.js";
@@ -22,7 +22,7 @@ export const codesOf = v => String(v || "").split(",").map(x => x.trim()).filter
 const NO_FOLLOW = /^(no|n|false|0|-)$/i;
 
 /** The register as it is now: the data the page last loaded (an Undo of an applied change reloads it), or, while a change of
-    this page is still waiting to be applied, the text it wrote (settings.js REGTEXT). Its rows keep their extra columns (VIP,
+    this page is still waiting to be applied, the text it wrote (settings.js REGTEXT). Its rows keep their extra columns (Follow,
     Projects, Left projects…), which the page's own list (shared.REG) does not. */
 let regCache = { text: /** @type {string|null} */ (null), list: /** @type {any[]} */ ([]) };
 export function regList() {
@@ -34,7 +34,7 @@ export function regList() {
 /** @param {string} name @returns {Record<string, string>} */
 export function regExtra(name) { const r = pFind(regList(), name); return (r && r.extra) || {}; }
 /** @param {Record<string, string>} x */
-const followedIn = x => { const v = String(x.VIP || "").trim(); return !!v && !NO_FOLLOW.test(v); };
+const followedIn = x => { const v = String(x.Follow || x.VIP || "").trim(); return !!v && !NO_FOLLOW.test(v); };
 
 /** @typedef {{a: number, r: number, d: number, st: boolean}} ProjCounts */
 /** @typedef {{n: string, p: any, me: boolean, email: string, org: string, role: string, aliases: string[], followed: boolean,
@@ -174,15 +174,16 @@ const onOf = name => (registerRows().find(x => x.n === name) || { on: [] }).on;
 /** @typedef {{email: string, aliases: string[], org: string, role: string, projects?: string[], follow?: boolean}} PersonFields */
 
 /** The Follow tick into the register row's followed column (the project settings page only); no `follow` leaves it as it is.
-    A value already set (Management, Client) is kept when the tick stays on. @param {any} r @param {PersonFields} f */
+    A value already set is kept when the tick stays on. @param {any} r @param {PersonFields} f */
 function applyFollow(r, f) {
   if (f.follow === undefined) return;
-  const cur = String(r.extra.VIP || "").trim();
-  r.extra.VIP = f.follow ? (cur && !NO_FOLLOW.test(cur) ? cur : "yes") : "";
+  const cur = String(r.extra.Follow || r.extra.VIP || "").trim();
+  r.extra.Follow = f.follow ? (cur && !NO_FOLLOW.test(cur) ? cur : "yes") : "";
+  delete r.extra.VIP;                                   // an older register's column is renamed Follow on the save (settings.js peopleText)
 }
 
 /** Save a person's details (one entry, the same on every project); `projects` the ticked projects; `follow` only from the project
-    settings page. A VIP value already set (Management, Client) is kept when the tick stays on. @param {string} name @param {PersonFields} f */
+    settings page. A value already set is kept when the tick stays on. @param {string} name @param {PersonFields} f */
 export function savePerson(name, f) {
   const derived = derivedOf(name);
   return regSave(`Changed ${name} in the people register`, L => {
