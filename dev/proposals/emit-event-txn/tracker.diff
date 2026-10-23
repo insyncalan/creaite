@@ -1,5 +1,5 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index 43c92860..8d260c10 100644
+index 6f63fe56..8d260c10 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -729,7 +729,7 @@ def _event_route(via):
@@ -11,27 +11,35 @@ index 43c92860..8d260c10 100644
          return
      kind, item_id = "change", key
      if table == "rejected":
-@@ -737,16 +737,15 @@ def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
+@@ -737,15 +737,20 @@ def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
          if not item.get("id") or EVENT_CTX.get("apply_id") != apply_id:
              return
          kind, item_id = "reject", item["id"]
--    # emit-event-txn: a field of the wrong shape (a note that is a string or a list) is skipped BEFORE the insert, so no exception
--    # arises for it; any other failure of the insert propagates, and the apply or undo rolls back whole (never change rows without events).
 +    # emit-event-txn: a field of the wrong shape (a note that is a string or a list) is read by the via alone, before the insert; any
 +    # other failure propagates, and the apply or undo rolls back whole (never change rows without events). The dry run records no
 +    # events (EVENT_CTX["dry"]), so a lasting history fault stops the real apply (rc 1, proposal untouched), never holds items.
      try:
          route, place, origin, actor, src = _event_route(via)
-     except (TypeError, AttributeError, KeyError, ValueError) as e:   # the shape of the data, never the database
-         debuglog.warn("tracker", f"item_events: change {rowid} read by its via alone ({type(e).__name__})")   # the type only
-         route = "undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"
-         place, origin, actor, src = None, None, "you", None
--    if src is not None and not isinstance(src, str):
--        src = None
-     was = con.execute("SELECT event_id FROM item_events WHERE change = ? ORDER BY event_id DESC LIMIT 1",
-                       (undoes,)).fetchone() if undoes else None
-     con.execute("INSERT INTO item_events (at, apply_id, item_id, change, kind, route, place, origin, actor, src_ref, undoes) "
-@@ -1410,10 +1409,12 @@ def dry_run_all(con, batch, only_approved):
+-        was = con.execute("SELECT event_id FROM item_events WHERE change = ? ORDER BY event_id DESC LIMIT 1",
+-                          (undoes,)).fetchone() if undoes else None
+-        con.execute("INSERT INTO item_events (at, apply_id, item_id, change, kind, route, place, origin, actor, src_ref, undoes) "
+-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+-                    (now(), apply_id, item_id, rowid, kind, route, place, origin, actor, src, was[0] if was else None))
+-    except Exception as e:  # noqa: BLE001  the history never stops an apply (M1: a malformed note field too): logged, the change stands
+-        debuglog.warn("tracker", f"item_events: no event for change {rowid} ({type(e).__name__})")   # the type only, never the content
++    except (TypeError, AttributeError, KeyError, ValueError) as e:   # the shape of the data, never the database
++        debuglog.warn("tracker", f"item_events: change {rowid} read by its via alone ({type(e).__name__})")   # the type only
++        route = "undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"
++        place, origin, actor, src = None, None, "you", None
++    was = con.execute("SELECT event_id FROM item_events WHERE change = ? ORDER BY event_id DESC LIMIT 1",
++                      (undoes,)).fetchone() if undoes else None
++    con.execute("INSERT INTO item_events (at, apply_id, item_id, change, kind, route, place, origin, actor, src_ref, undoes) "
++                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
++                (now(), apply_id, item_id, rowid, kind, route, place, origin, actor, src, was[0] if was else None))
+ # ===== end #241 D =====
+ 
+ 
+@@ -1404,10 +1409,12 @@ def dry_run_all(con, batch, only_approved):
      batch: [(key, data, via)]. Returns {key: {n: (kind, reason)}}."""
      out = {key: {} for key, _, _ in batch}
      con.execute("BEGIN")
