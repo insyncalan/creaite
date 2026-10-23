@@ -216,6 +216,9 @@ class AutostartPage(LiveBrowserCase):
         b.eval("go('settings','health')")
         b.wait("!!document.querySelector('#asCard')", 20)
         b.pump(0.5)
+        if stub:
+            b.eval("window.ASR=false; asRefresh().then(()=>{ window.ASR=true; })")
+            b.wait("window.ASR===true", 10)                                  # the card may have been drawn from the real status (a Linux runner says "Only on a Mac")
         if stub and routes_exist():
             # #300 review M1: with the real routes the page's own refresh (started at boot, or by opening Settings) can answer after the
             # stub went in and put the real vault's folder over the stub's. Ask again through the stub until its answer is the one held.
@@ -284,6 +287,13 @@ class AutostartPage(LiveBrowserCase):
         b = self.b
         b.eval("try{localStorage.removeItem('creaite-autostart-asked')}catch(e){}")
         b.eval(STUB)
+        for _ in range(20):                                       # a real status asked at boot can answer after the stub went in: ask until the stub's answer is the one held
+            b.eval("asStatus(true)")
+            b.pump(0.3)
+            if b.eval("!!(window.AS && AS.status && String(AS.status.folder).startsWith('/Users/example'))"):
+                break
+        else:
+            self.fail("the stubbed status never replaced the real one")
         b.eval("asStatus(true).then(()=>{ go('today'); renderSetup(); })")
         b.pump(0.8)
         if not b.eval("!!document.querySelector('#setupList')"):
