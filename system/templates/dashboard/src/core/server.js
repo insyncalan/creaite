@@ -223,7 +223,7 @@ export function writeProposal(items,extra){ return vq(async()=>{ let name=`propo
 export let editProposal = function(file,mut,rws,same){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
   const guarded=rws?[].concat(rws):[]; for(const r of guarded) if(!findGuarded(data,r,same)) throw new Error("already approved or changed");
   const apWas=apSnap(data); mut(data); apStamp(data,apWas); try{ await shared.VW.write(path,JSON.stringify(data,null,2)+"\n",text); }catch(e){ if(/changed since it was read/.test(e.message)) throw new Error("already approved or changed"); throw e; }
-  guarded.forEach(r=>{ const was=r.fp; refreshGuard(data,r); snapFollowEdit(file,was,r.fp); }); }); };
+  guarded.forEach(r=>{ const was=r.fp; refreshGuard(data,r); snapFollowEdit(file,r.ref,was,r.fp); }); }); };
 export const STALE_ROW_MSG="That one was already approved or changed, so nothing was saved. The list has been refreshed.";
 /** #307 h2: for the routes that act by file and ref on the server (review.py: drafts, conflicts, Reject with a reason, repeats): read each
     row's file just now and keep only the rows whose content is still in it (their refs are set to the number now). The check and the

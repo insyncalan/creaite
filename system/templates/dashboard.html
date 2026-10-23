@@ -78783,7 +78783,7 @@ ${d5.text}`);
       guarded.forEach((r4) => {
         const was = r4.fp;
         refreshGuard(data, r4);
-        snapFollowEdit(file, was, r4.fp);
+        snapFollowEdit(file, r4.ref, was, r4.fp);
       });
     });
   };
@@ -79663,9 +79663,10 @@ ${d5.text}`);
     const same2 = REV.filter((r4) => r4.file === file && r4.fp === cfp);
     return same2.length === 1 ? same2[0] : null;
   }
-  function snapFollowEdit(file, oldFp, newFp) {
+  function snapFollowEdit(file, ref, oldFp, newFp) {
     if (!oldFp || !newFp || oldFp === newFp) return;
-    for (const k5 of SNAP.keys.values()) if (k5.cfp === oldFp && k5.key.split("|")[0] === file) k5.cfp = newFp;
+    const key2 = `${file}|${ref}`;
+    for (const k5 of SNAP.keys.values()) if (k5.cfp === oldFp && k5.key === key2) k5.cfp = newFp;
   }
   function revForModelN(n4) {
     snapModelKeys(false);
@@ -80601,6 +80602,7 @@ ${d5.text}`);
         "slashRows",
         "sleep",
         "snack",
+        "snapFollowEdit",
         "snapshot",
         "soon",
         "sourceHref",
