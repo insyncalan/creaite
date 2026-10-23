@@ -4186,6 +4186,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
+/* #325 Intake: a meeting's state chip, and the work items nested under their minutes */
+#v-intake-review .irchip{display:inline-flex;align-items:center;gap:6px;padding:1px 10px 1px 8px;border-left:3px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk);color:var(--ink);font-size:var(--fs-xs);font-weight:500;vertical-align:middle}
+#v-intake-review .irchip .i{width:14px;height:14px;flex:none}
+#v-intake-review .irchip.check{border-left-color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .irchip.done{border-left-color:var(--ok);background:var(--ok-soft)}
+#v-intake-review tr.mchild.irkid td.title{padding-left:48px} #v-intake-review tr.mchild.irkid td.title::before{left:32px}
+#v-intake-review tr.icsubhead.child.irkid td{padding-left:48px}
+#v-intake-review .irkidsbar{margin-top:4px;font-size:var(--fs-xs)} #v-intake-review .irkidscaret{display:inline-block;width:1em}
 /* #323 Intake: Group by and Show, headings, tick boxes and the bar for ticked rows */
 #v-intake-review .irsel{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}
 #v-intake-review tr.icgrouphd td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)} #v-intake-review tr.icgrouphd b{color:var(--ink);font-weight:600}

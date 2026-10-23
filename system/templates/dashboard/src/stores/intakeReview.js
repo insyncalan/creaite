@@ -55,6 +55,10 @@ export const irView = signal(irViewNorm((() => { try { return store.get(IR_VIEW_
 /** @param {string} v */
 export function irSetView(v) { irView.value = irViewNorm(v); try { store.set(IR_VIEW_KEY, irView.value); } catch (x) { /* storage blocked: this page only */ } }
 
+/** #325: minutes whose work items are folded away, by meeting id: this visit only (a session), nothing is stored. */
+export const irKidsFold = signal(/** @type {Record<string, boolean>} */ ({}));
+/** @param {string} id */
+export function irToggleKids(id) { irKidsFold.value = { ...irKidsFold.value, [id]: !irKidsFold.value[id] }; }
 /** Group by (None, Day, Project, Meeting state, Transcript): this browser's, remembered; never shared, never in settings.json (#323). */
 export const IR_GROUP_KEY = "creaite-ir-group";
 export const irGroup = signal(irGroupNorm((() => { try { return store.get(IR_GROUP_KEY, "none"); } catch (x) { return "none"; } })()));
