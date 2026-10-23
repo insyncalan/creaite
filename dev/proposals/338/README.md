@@ -6,8 +6,8 @@ For Alan's approval: the exact diff of a guarded file. Nothing is weakened; the 
 
 | | Before | After | Cut |
 |---|---|---|---|
-| Rules on `origin/v262-line` | 62,721 B (about 15,680 tokens) | 31,209 B (about 7,800 tokens) | 50.2% |
-| Rules after the 2.6.2 VIP/follow chain | 66,315 B (about 16,580 tokens) | 32,605 B (about 8,150 tokens) | 50.8% |
+| Rules on `origin/v262-line` | 62,721 B (about 15,680 tokens) | 31,282 B (about 7,820 tokens) | 50.1% |
+| Rules after the 2.6.2 VIP/follow chain | 66,315 B (about 16,580 tokens) | 32,678 B (about 8,170 tokens) | 50.7% |
 
 Every run loads the rules file, so each run starts about 7,900 tokens lighter. That is the size of this lever (about 3% of a 503k ask start, as #327 says); the 60k and 150k run targets come mostly from part B (fresh sessions).
 The moved text is in the new `system/templates/creaite-reference.md` (62 KB, read by section only when a task needs it; it ships because `system/templates/` is part of the engine). Nothing is deleted from the project: the reference holds the old wording of every section I shortened, word for word.
