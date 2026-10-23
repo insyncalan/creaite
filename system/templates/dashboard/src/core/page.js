@@ -83,7 +83,7 @@ export function bootDevTag(){
 if(D.dev){ { const lg=document.querySelector(".rail .logo"); if(lg) addHTML(lg,"beforeend",html`<span class="devtag" title="Development repository: sample data only">DEV</span>`); } document.title="DEV · "+document.title; }
 }
 /* ======================= settings ======================= */
-export const S=Object.assign({me:"Alan Carter",short:"Alan, AC",defPriority:"Medium",defActionView:"open",defRaidView:"open",autoApply:true,theme:"System",palette:"creaite",remindersOn:true,weeklyDay:"Friday",weeklyTime:"12:00",sweepDue:"07:00",catchupSweep:"start",catchupAfter:30,lookback:14,srcInbox:true,srcSent:true,srcChats:true,srcChannels:true,srcCalendar:true,possible:true,fetchTx:false,staleDays:7,overdueDays:7,slipAtRisk:2,slipOff:2,urgentOff:2,dueSoon:7,dailyBackup:true,port:8765},D.settings);
+export const S=Object.assign({me:"Alan Carter",short:"Alan, AC",defPriority:"Medium",defActionView:"open",defRaidView:"open",autoApply:true,theme:"System",palette:"creaite",remindersOn:true,weeklyDay:"Friday",weeklyTime:"12:00",sweepDue:"07:00",catchupSweep:"start",catchupAfter:30,lookback:14,srcInbox:true,srcSent:true,srcChats:true,srcChannels:true,srcCalendar:true,possible:true,staleDays:7,overdueDays:7,slipAtRisk:2,slipOff:2,urgentOff:2,dueSoon:7,dailyBackup:true,port:8765},D.settings);
 export const saveS=()=>{};   /* settings are written to settings.json by writeSettings() */
 export const meNames=()=>[S.me,...S.short.split(",").map(x=>x.trim()).filter(Boolean)].map(x=>x.toLowerCase());
 export const isMe=o=>meNames().includes((o||"").toLowerCase());

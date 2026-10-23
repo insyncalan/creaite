@@ -8196,7 +8196,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       document.title = "DEV · " + document.title;
     }
   }
-  var S = Object.assign({ me: "Alan Carter", short: "Alan, AC", defPriority: "Medium", defActionView: "open", defRaidView: "open", autoApply: true, theme: "System", palette: "creaite", remindersOn: true, weeklyDay: "Friday", weeklyTime: "12:00", sweepDue: "07:00", catchupSweep: "start", catchupAfter: 30, lookback: 14, srcInbox: true, srcSent: true, srcChats: true, srcChannels: true, srcCalendar: true, possible: true, fetchTx: false, staleDays: 7, overdueDays: 7, slipAtRisk: 2, slipOff: 2, urgentOff: 2, dueSoon: 7, dailyBackup: true, port: 8765 }, D.settings);
+  var S = Object.assign({ me: "Alan Carter", short: "Alan, AC", defPriority: "Medium", defActionView: "open", defRaidView: "open", autoApply: true, theme: "System", palette: "creaite", remindersOn: true, weeklyDay: "Friday", weeklyTime: "12:00", sweepDue: "07:00", catchupSweep: "start", catchupAfter: 30, lookback: 14, srcInbox: true, srcSent: true, srcChats: true, srcChannels: true, srcCalendar: true, possible: true, staleDays: 7, overdueDays: 7, slipAtRisk: 2, slipOff: 2, urgentOff: 2, dueSoon: 7, dailyBackup: true, port: 8765 }, D.settings);
   var saveS = () => {
   };
   var meNames = () => [S.me, ...S.short.split(",").map((x5) => x5.trim()).filter(Boolean)].map((x5) => x5.toLowerCase());
@@ -58425,14 +58425,6 @@ ${pre}**Current state title:** ${title}`);
     },
     moreSection("work"),
     {
-      id: "transcripts",
-      cat: "sweep",
-      title: "Transcripts",
-      kw: "transcripts fetch intake check mail teams process meetings ready",
-      /* #250 (#181 C2): off by default */
-      render: () => row("Fetch transcripts as they appear", sw2("fetchTx"), "Off: creaite fetches a transcript when you press Process. On: each mail and Teams check fetches the transcripts of meetings that have ended, so they are ready when you open Intake. It only reads: no AI runs and nothing is added to your project records. Confidential meetings are never fetched.")
-    },
-    {
       id: "sweep",
       cat: "sweep",
       title: "Checking mail and Teams",
@@ -79024,7 +79016,7 @@ ${d5.text}`);
     }, op2.by, opIds(op2));
     return true;
   }
-  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", railLabels: "dashboard.rail_labels", helpLine: "help.first_line", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", fetchTx: "sweep.fetch_transcripts", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
+  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", railLabels: "dashboard.rail_labels", helpLine: "help.first_line", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
   async function writeSettings(changes) {
     let sp2 = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {
