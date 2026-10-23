@@ -26,6 +26,8 @@ VECTORS = [
     {"op": "new", "table": "actions", "values": {"a": None, "b": True, "c": False, "d": "", "e": [], "f": {}, "g": [None, {"z": 1, "a": {"y": 2, "b": 3}}]}},
     {"op": "new", "table": "actions", "values": {"q": 'quote " back \\ tab \t nl \n ctl \x01 del \x7f sep  '}},
     {"op": "new", "table": "actions", "values": {"é": 1, "e": 2, "漢": 3, "\U0001F600": 4, "～": 5}},                      # key order by code point
+    {"op": "new", "table": "raid", "values": {"description": "Late", "impact": "High", "raised": "2026-10-04"}},     # raised is the engine's: not identity
+    {"op": "new", "table": "raid", "values": {"description": "Late", "impact": "High"}},
     {},
 ]
 BLOCKS = [{"key": "fp:2026-10-05|steering|abc", "title": "Steering", "draft": "x.html", "projects": ["ABC"]}, {}]
@@ -75,6 +77,9 @@ class Fp(unittest.TestCase):
         self.assertEqual(len(f(base)), 12)
         # what is not identity (a decision, flags, the item's number) never changes it
         self.assertEqual(f(base), f({**base, "n": 9, "decision": "approved", "flags": ["vip"]}))
+        # `raised` is filled in by the engine (shown, and kept when an apply saves the file): the same item before and after
+        risk = {"op": "new", "table": "raid", "values": {"description": "x", "type": "Risk"}}
+        self.assertEqual(f(risk), f({**risk, "values": {**risk["values"], "raised": "2026-10-04"}}))
 
 
 class RowFpIsTheFileItem(unittest.TestCase):
@@ -100,6 +105,10 @@ class RowFpIsTheFileItem(unittest.TestCase):
             raw = json.loads(p.read_text())["items"][0]
             self.assertNotIn("raised", raw["values"])
             self.assertIn(item_fp.item_fp(raw), json.loads(r.stdout.strip().splitlines()[-1]))
+            if shutil.which("node"):                                    # the page's own function over the same file item agrees
+                js = Fp("test_same_in_both_languages").js([raw], [])
+                self.assertEqual(js["i"][0], item_fp.item_fp(raw))
+                self.assertIn(js["i"][0], json.loads(r.stdout.strip().splitlines()[-1]))
         finally:
             v.cleanup()
 
