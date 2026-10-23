@@ -78045,7 +78045,7 @@ ${d5.text}`);
       const b5 = data[rw2.ref];
       return b5 && (!rw2.fp || blockFp(b5) === rw2.fp) ? b5 : null;
     }
-    const its = (data.its || []).filter((i5) => i5 && typeof i5 === "object");
+    const its = (data.items || []).filter((i5) => i5 && typeof i5 === "object");
     const at2 = its.find((i5) => i5.n === rw2.ref);
     if (!rw2.fp) return at2 || null;
     if (at2 && itemFp(at2) === rw2.fp) return at2;
@@ -78058,7 +78058,7 @@ ${d5.text}`);
   }
   function refreshGuard(data, rw2) {
     if (!rw2 || !rw2.fp) return;
-    const it2 = BLOCKS.includes(rw2.ref) ? data[rw2.ref] : (data.its || []).find((i5) => i5 && i5.n === rw2.ref);
+    const it2 = BLOCKS.includes(rw2.ref) ? data[rw2.ref] : (data.items || []).find((i5) => i5 && i5.n === rw2.ref);
     if (it2) rw2.fp = BLOCKS.includes(rw2.ref) ? blockFp(it2) : itemFp(it2);
   }
 
