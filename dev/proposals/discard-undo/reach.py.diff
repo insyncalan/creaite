@@ -1,0 +1,14 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index be8f4164..540428a5 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -970,7 +970,8 @@ SCRIPT_COMMANDS = {
+                   "merge": RECORD, "keep-new": RECORD,
+                   "retarget": RECORD, "unmerge": RECORD, "candidates": READ,    # BL-297
+                   "reasons": READ, "guesses": READ, "rejects": READ,            # BL-315
+-                  "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
++                  "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD,
++                  "restore-discarded": RECORD},                                 # #307 path 12: Discard's Undo
+     "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
+                    "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
+                    "register-columns": RECORD, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec

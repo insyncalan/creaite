@@ -38720,7 +38720,12 @@ ${s5}`;
     }
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "discard" });
     await reloadData();
-    snack(saidPlain(res.message));
+    const aside = res.ok && /discarded\/(proposed-[\w.-]+\.json)/.exec(String(res.message || ""));
+    snack(saidPlain(res.message), aside ? async () => {
+      const back2 = await api("/api/review/restore-discarded", { file: aside[1] });
+      snack(saidPlain(back2 && back2.message) || "Not put back");
+      if (back2 && back2.ok) await reloadData();
+    } : void 0);
   }
   function heldLines(msg) {
     return String(msg || "").split("\n").map((x5) => x5.trim()).filter((x5) => /^Held in Review, not applied:/.test(x5));
