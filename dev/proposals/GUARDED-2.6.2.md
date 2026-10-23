@@ -43,7 +43,7 @@ Note for main: `origin/v262-small` and `origin/v262-discard-undo` conflict in `s
 Browser tests and handchecks were not run. Only discard-undo's two test files turned from red to green; the others also pass without the chain
 (they skip or accept both wordings).
 
-## Guard checks (dev/tests/test_guarded_chain.py: 58 tests)
+## Guard checks (dev/tests/test_guarded_chain.py: 52 tests)
 Every 2.6.1 case now runs for the 2.6.1 chain and again for the 2.6.2 chain (extra edit in a marked commit, unmarked edit, forgeries a, b, c,
 missing chain file, pin mismatch, live pin). Six more mix the two chains. Real check 9 (test_word_export_227): passes on the branch (release2 + guard),
 on a simulated 2.6.2 commit (chain applied, `Guarded 2.6.2 chain: simulated`), against `BASE` and against `BASE_261`; an extra unmarked tracker.py edit then fails.
