@@ -9,6 +9,7 @@ Run: python3 dev/tests/test_inbox_upload_oserror.py
 """
 import base64
 import json
+import resource
 import os
 import re
 import shutil
@@ -35,7 +36,7 @@ def has_catch():
 
 
 class Server:
-    def __init__(self, mutate=False):
+    def __init__(self, mutate=False, fsize=None):
         self.home = Path(tempfile.mkdtemp(prefix="creaite-b262-")).resolve()
         self.v = Vault()
         d = self.v.root
@@ -57,7 +58,8 @@ class Server:
             self.port = s.getsockname()[1]
         self.base = f"http://127.0.0.1:{self.port}"
         env = {**os.environ, "HOME": str(self.home), "CREAITE_PORT": str(self.port), "CREAITE_NO_LAUNCHCTL": "1"}
-        self.proc = subprocess.Popen([sys.executable, str(d / "system/scripts/live_server.py")], env=env,
+        limit = (lambda: resource.setrlimit(resource.RLIMIT_FSIZE, (fsize, fsize))) if fsize else None      # a write past it fails (EFBIG), as a full disk does
+        self.proc = subprocess.Popen([sys.executable, str(d / "system/scripts/live_server.py")], env=env, preexec_fn=limit,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(150):
             try:
@@ -120,6 +122,23 @@ class Checks:
         plain(r["message"], s.v.root)
 
     @staticmethod
+    def truncated(s):
+        """Cap's note 2: a write that fails part-way leaves nothing behind, so a retry is saved under the same name, not "x (2)"."""
+        inbox = s.v.root / "inbox"
+        inbox.mkdir(exist_ok=True)
+        (inbox / "kept.vtt").write_bytes(b"WEBVTT\nkept\n")
+        code, r = s.upload("big.vtt", b"x" * 400000)
+        assert code == 500 and r.get("ok") is False, (code, r)
+        left = sorted(p.name for p in inbox.iterdir())
+        assert left == ["kept.vtt"], left
+        assert (inbox / "kept.vtt").read_bytes() == b"WEBVTT\nkept\n"
+        code, r = s.upload("kept.vtt", b"y" * 400000)                      # a file this call did not create is never removed
+        assert code == 500 and sorted(p.name for p in inbox.iterdir()) == ["kept.vtt"], (code, r)
+        assert (inbox / "kept.vtt").read_bytes() == b"WEBVTT\nkept\n"
+        code, r = s.upload("small.vtt", b"WEBVTT\n")
+        assert code == 200 and r["name"] == "small.vtt", (code, r)
+
+    @staticmethod
     def odd_names(s):
         inbox = s.v.root / "inbox"
         inbox.mkdir(exist_ok=True)
@@ -148,6 +167,16 @@ class Routes(unittest.TestCase):
 
     def test_nul_and_folder_names(self):
         Checks.odd_names(self.s)
+
+
+@unittest.skipIf(os.geteuid() == 0, "root ignores a file size limit")
+class Truncated(unittest.TestCase):
+    def test_a_failed_write_leaves_no_partial_file(self):
+        s = Server(fsize=150000)
+        try:
+            Checks.truncated(s)
+        finally:
+            s.close()
 
 
 class Mutant(unittest.TestCase):
