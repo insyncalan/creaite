@@ -65281,7 +65281,7 @@ ${d5.text}`);
       attendees: r4.attendees || [],
       lead: "",
       summary: r4.summary || "",
-      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
+      note: version === "distributed" ? `From the Shareable version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
       picked: /* @__PURE__ */ new Set(),
       includeUpdate: false,
       replyBy: "",
@@ -65297,7 +65297,7 @@ ${d5.text}`);
     const owners = new Set(ok2.map((i5) => i5.o));
     de2.lead = (de2.attendees.find((a5) => owners.has(a5.name)) || {}).name || "";
     de2.picked = new Set(ok2.filter((i5) => !i5.sens).map((i5) => i5.k + ":" + i5.id));
-    deShow(`${version === "distributed" ? "Distributed" : "Internal"} follow-up: ${r4.title}`);
+    deShow(`${version === "distributed" ? "Shareable" : "Internal"} follow-up: ${r4.title}`);
   }
   async function deFollowFacts(de2, m5) {
     const r4 = await api("/api/email/followup", { key: m5.key, eid: m5.eid || "", day: m5.day, start: m5.start, title: m5.title, files: [...m5.files || [], ...m5.draft ? [m5.draft] : []] });
@@ -71653,7 +71653,8 @@ ${d5.text}`);
       { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
       { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
       { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent" },
+      // The email's summary is free text from the Shareable version (minutes_record.py followup_facts), so it has the same #329 gap as the Updates text.
+      { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent", tip: draft ? "Draft: check before sending" : void 0 },
       { id: "sep", sep: true },
       { head: "Internal: colleagues only" },
       { id: "docx:internal", name: "Word (Internal)", line: "Everything, marked Internal; an export only, edits never come back" },

@@ -74,6 +74,7 @@ class MinutesExportChoice(LiveBrowserCase):
             self.assertIn("check the Updates text", whole)
             self.assertNotIn("No Sensitive or Internal-only", whole, "no claim wider than the item rows")
         self.assertIsNone(lines[3][2], "the Shareable email works on a draft (existing behaviour)")
+        self.assertEqual(lines[3][3], "Draft: check before sending", "with a tip, not a disable")
         names = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem] b')].map(x=>x.textContent)")
         self.assertEqual(names, ["Word", "PDF", "HTML", "Draft the follow-up email",
                                  "Word (Internal)", "PDF (Internal)", "HTML (Internal)", "Draft an Internal follow-up email"],
@@ -85,6 +86,10 @@ class MinutesExportChoice(LiveBrowserCase):
         self.b.eval("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].find(x=>x.querySelector('b').textContent==='Draft the follow-up email').click()")
         self.b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         self.assertEqual(self.ev("DE.version"), "distributed")
+        words = self.ev("document.getElementById('deDlg').textContent")
+        self.assertIn("Shareable follow-up", words)
+        self.assertIn("From the Shareable version", words)
+        self.assertNotIn("Distributed", words)
 
 
     def test_3_shareable_waits_for_approval_then_holds_no_sensitive_item_and_internal_does(self):

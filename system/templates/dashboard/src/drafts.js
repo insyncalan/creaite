@@ -173,10 +173,10 @@ export async function openMinutesFollowup(path,version){ const r=await api("/api
   if(!ok.length){ snack(version==="distributed"?"The distributed version has no actions or decisions to put in an email":"The minutes have no actions or decisions to put in an email"); return; }
   const outside=version==="distributed"?deOutsideAll(r.attendees||[]):false;
   const de={mode:"followup",token:"",title:r.title,day:r.day,codes:r.codes||[],items:ok,left:all.length-ok.length,attendees:r.attendees||[],lead:"",summary:r.summary||"",
-    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
+    note:version==="distributed"?`From the Shareable version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
     picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:false,cover:"",polish:null,internal:version!=="distributed",version};
   shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.filter(i=>!i.sens).map(i=>i.k+":"+i.id));   /* nothing Sensitive starts ticked */
-  deShow(`${version==="distributed"?"Distributed":"Internal"} follow-up: ${r.title}`); }
+  deShow(`${version==="distributed"?"Shareable":"Internal"} follow-up: ${r.title}`); }
 export async function deFollowFacts(de,m){ const r=await api("/api/email/followup",{key:m.key,eid:m.eid||"",day:m.day,start:m.start,title:m.title,files:[...(m.files||[]),...(m.draft?[m.draft]:[])]});
   if(shared.DE!==de) return; if(!r.ok){ de.note=oneLine(r.message)||"Couldn't read the attendees and the summary"; drawDraftEmail(true); return; }
   de.attendees=r.attendees||[]; de.summary=r.summary||""; de.note=r.note||""; de.outside=deOutsideAll(de.attendees);
