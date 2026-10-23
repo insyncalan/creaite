@@ -1,12 +1,13 @@
 """Cap's HIGH (2.6.1): a failed item_events insert must not be swallowed inside the apply transaction.
 
 With the swallow, the apply COMMITS change_log rows without their item_events (a history gap) and says success. The fix
-(dev/proposals/emit-event-txn/tracker.diff): a note of the wrong shape is skipped BEFORE the insert (no exception arises for it);
+(dev/proposals/emit-event-txn/tracker.diff): a note of the wrong shape is read by the via alone, before the insert;
 any other failure of the insert propagates and rolls the whole apply back (rc 1, nothing written).
 
 The fault is a TRIGGER in the throwaway vault's database that aborts every insert into item_events.
 Run: python3 dev/tests/test_emit_event_txn.py     Without the diff in the tree, the test applies it to the throwaway vault's own tracker.py (green both ways).
 """
+import json
 import sqlite3
 import subprocess
 import sys
@@ -72,12 +73,29 @@ class EmitEventTxn(unittest.TestCase):
         self.assertEqual(after, before, "nothing is written: no change rows, no applies row, no item")
         self.assertEqual(after["orphans"], 0)
 
-    def test_a_fault_the_dry_run_sees_holds_the_item_and_writes_nothing(self):
+    def test_a_lasting_fault_refuses_the_apply_and_leaves_the_proposal_untouched(self):
+        """Cap #275 MEDIUM: the fault is there from the start (the dry run too). The apply stops (rc 1, plain words); it must not
+        hold every item as invalid and rewrite the proposal, which would lose Alan's approvals."""
         self.break_events(only_real=False)
         before = self.state()
-        self.v.propose("t5", [action(1, description="Item one")])
-        self.v.run("apply", ok=False)
+        p = self.v.propose("t5", [action(1, description="Item one"), action(2, description="Item two")])
+        for item in json.loads(p.read_text())["items"]:
+            self.assertEqual(item.get("decision"), "approved")
+        raw = p.read_bytes()
+        r = self.v.run("apply", ok=False)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertNotIn("Held in Review", r.stdout, "a database fault is not a fault in each item")
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
         self.assertEqual(self.state(), before)
+        self.assertEqual(p.read_bytes(), raw, "the proposal is byte for byte as it was: every approval still stands")
+
+    def test_validate_with_a_lasting_fault_does_not_flag_items_invalid(self):
+        self.break_events(only_real=False)
+        p = self.v.propose("t6", [action(1, description="Item one")])
+        self.v.run("validate", p.name, ok=True)
+        for item in json.loads(p.read_text())["items"]:
+            self.assertNotIn("invalid", item.get("flags", []))
+            self.assertEqual(item.get("decision"), "approved")
 
     def test_the_failure_is_plain_words(self):
         self.break_events()
@@ -128,6 +146,23 @@ class EmitEventTxn(unittest.TestCase):
         finally:
             item_history.source_of = orig
         self.assertEqual(con.execute("SELECT count(*) FROM item_events").fetchone()[0], 1)
+
+    @unittest.skipUnless(FIXED, "in process: needs the diff applied to the repo's tracker.py")
+    def test_only_a_shape_error_is_read_by_the_via_alone(self):
+        """The fallback is for the shape of the data. A database error while reading the route is not swallowed (mutant: widened except)."""
+        sys.path.insert(0, str(REPO / "system" / "scripts"))
+        import item_history
+        import tracker
+        con = sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE item_events (x)")
+        orig = item_history.source_of
+        item_history.source_of = lambda *a: (_ for _ in ()).throw(sqlite3.OperationalError("disk I/O error"))
+        try:
+            tracker.EVENT_CTX.clear()
+            with self.assertRaises(sqlite3.OperationalError):
+                tracker.emit_event(con, 1, None, "actions", "ABC-A-001", "status", "proposed-x.json")
+        finally:
+            item_history.source_of = orig
 
 
 if __name__ == "__main__":
