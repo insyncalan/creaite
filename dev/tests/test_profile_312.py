@@ -48,10 +48,73 @@ class Card(Base):
 
     def open_card(self, me):
         b = self.b
-        b.eval(f"S.me={me!r}; S.meSet=true")
+        b.eval(f"S.me={me!r}; S.meSet=true; window.__asked=[]; window.__yes=true; window.confirm=m=>{{ __asked.push(m); return __yes; }}")
         b.eval("go('settings','profile')")
         b.wait("!!document.querySelector('#profileCard')", 20)
         time.sleep(0.6)
+
+    def count(self, text):
+        return sum(1 for ln in self.register.splitlines() if ln.startswith(f"| {text} |"))
+
+    def fill_and_save(self, email):
+        b = self.b
+        self.tap("#pfEdit")
+        b.wait("document.getElementById('personDlg').open")
+        b.eval(f"document.getElementById('pd_email').value={email!r}")
+        self.tap("#pdSave")
+        self.applied()
+
+    def test_a_name_with_a_bar_is_one_row_however_often_it_is_saved(self):          # M1
+        b = self.b
+        self.open_card("Kai | Example")
+        self.fill_and_save("kai@example.test")
+        b.eval("go('settings','profile')")
+        b.wait("!!document.querySelector('#profileCard')", 20)
+        self.fill_and_save("kai2@example.test")
+        self.assertEqual(self.count("Kai / Example"), 1)
+        self.assertNotIn("Kai | Example", self.register)
+
+    def test_a_name_that_is_already_someone_asks_whose_row_it_is_before_anything_is_edited(self):   # M2
+        b = self.b
+        self.open_card("Sara Example")
+        b.eval("__yes=false")
+        before = self.register
+        self.tap("#pfEdit")
+        time.sleep(0.8)
+        self.assertFalse(b.eval("document.getElementById('personDlg').open"))
+        asked = b.eval("__asked")
+        self.assertEqual(len(asked), 1)
+        self.assertIn("Sara Example", asked[0])
+        self.assertIn("sara@example.com", asked[0])
+        self.assertEqual(self.register, before)
+        b.eval("__yes=true")                                                       # yes: it is edited, and it is not asked again
+        self.tap("#pfEdit")
+        b.wait("document.getElementById('personDlg').open")
+        b.eval("document.getElementById('pdCancel')&&document.getElementById('pdCancel').click()")
+        self.assertEqual(b.eval("profileEntry().name"), "Sara Example")
+
+    def test_a_missing_name_never_writes_the_placeholder(self):                  # L1
+        b = self.b
+        self.open_card("Alan Carter")
+        b.eval("S.meSet=false; profileRedraw()")
+        self.assertTrue(b.eval("document.querySelector('#pfEdit').disabled"))
+        self.assertEqual(b.eval("document.querySelector('#pfName').value"), "")
+        self.assertEqual(b.eval("profileDetails().name"), "")
+        self.assertFalse(b.eval("profileSave({email:'me@example.test',aliases:[],org:'',role:''})"))
+        self.assertNotIn("Alan Carter", self.register)
+
+    def test_the_address_is_the_key_once_there_is_one(self):                     # L2
+        b = self.b
+        self.open_card("Sara Alias")                                              # no row of that name: the address finds Sara's row
+        n = self.count("Sara Example")
+        self.assertTrue(b.eval("profileSave({email:'SARA@example.com',aliases:['Sara'],org:'',role:'Lead'})"))
+        self.applied()
+        self.assertEqual(self.count("Sara Example"), n)
+        self.assertEqual(self.count("Sara Alias"), 0)
+        self.assertIn("Lead", self.register)
+        self.assertEqual(b.eval("emailKey(' A@B.test; c@d.test ')"), "a@b.test")
+        cfg = json.loads((self.v.root / "system/config/settings.json").read_text())
+        self.assertNotIn("sara@example.com", json.dumps(cfg), "which person is you stays a name on this computer")
 
     def test_it_shows_the_register_entry_for_you(self):
         self.open_card("Sara Example")

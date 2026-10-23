@@ -4854,6 +4854,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PRIF: () => PRIF,
     PRIOS: () => PRIOS,
     PROFILE_ASKED_KEY: () => PROFILE_ASKED_KEY,
+    PROFILE_CLAIMED_KEY: () => PROFILE_CLAIMED_KEY,
     PROJF: () => PROJF,
     PROMS: () => PROMS,
     PRS: () => PRS,
@@ -6392,6 +6393,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvTrend: () => mvTrend,
     mvVis: () => mvVis,
     mvWhen: () => mvWhen,
+    myName: () => myName,
     myOwnerNames: () => myOwnerNames,
     nameProblem: () => nameProblem,
     navBlocked: () => navBlocked,
@@ -57407,15 +57409,32 @@ ${pre}**Current state title:** ${title}`);
 
   // profile.js
   var PROFILE_ASKED_KEY = "creaite-profile-asked";
+  var PROFILE_CLAIMED_KEY = "creaite-profile-claimed";
+  var myName = () => S.meSet === false ? "" : pCell(String(S.me || "").trim());
+  var claimedList = () => {
+    try {
+      const v5 = store.get(PROFILE_CLAIMED_KEY, []);
+      return Array.isArray(v5) ? v5 : [];
+    } catch (e4) {
+      return [];
+    }
+  };
+  var claimed = (n4) => claimedList().includes(pKey(n4));
+  var claim = (n4) => {
+    try {
+      store.set(PROFILE_CLAIMED_KEY, [.../* @__PURE__ */ new Set([...claimedList(), pKey(n4)])]);
+    } catch (e4) {
+    }
+  };
   var emailKey = (e4) => String(e4 || "").split(/[,;]/)[0].trim().toLowerCase();
   function profileEntry() {
-    const me2 = String(S.me || "").trim();
+    const me2 = myName();
     if (!me2) return null;
-    return pFind(shared.REG, me2) || shared.REG.find((p6) => pKey(p6.name) === pKey(me2)) || null;
+    return pFind(shared.REG, me2) || null;
   }
   function profileDetails() {
     const p6 = profileEntry();
-    return { name: String(S.me || "").trim(), email: p6 ? String(p6.email || "") : "", aliases: p6 ? p6.aliases || [] : [], org: p6 ? p6.org || "" : "", role: p6 ? p6.role || "" : "" };
+    return { name: myName(), email: p6 ? String(p6.email || "") : "", aliases: p6 ? p6.aliases || [] : [], org: p6 ? p6.org || "" : "", role: p6 ? p6.role || "" : "" };
   }
   var profileDone = () => {
     const d5 = profileDetails();
@@ -57430,29 +57449,43 @@ ${pre}**Current state title:** ${title}`);
   };
   var profileQuestionDue = () => !profileDone() && !askedBefore();
   async function profileSave(f5) {
-    const name = String(S.me || "").trim();
+    const name = myName();
     if (!name) {
       snack("Add your name first");
       return false;
     }
-    return regEdit(name, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+    const key2 = emailKey(f5.email);
+    const ok2 = await regSave(`Changed ${name} in the people register`, (L3) => {
+      let r4 = key2 && L3.find((p6) => emailKey(p6.email) === key2) || pFind(L3, name);
+      if (!r4) {
+        r4 = pBlank(name);
+        L3.push(r4);
+      }
+      Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+      return L3;
+    });
+    if (ok2) claim(name);
+    return ok2;
   }
   async function profileEdit() {
-    const name = String(S.me || "").trim();
+    const name = myName();
     if (!name) {
       snack("Add your name first");
       return false;
     }
     const p6 = profileEntry();
+    if (p6 && !claimed(name) && !confirm(`“${p6.name}” is already in the people register${p6.email ? ` (${p6.email})` : ""}. Is that row you? Editing it changes it for everyone who uses this register.`)) return false;
     const res = await askPerson(p6 ? { edit: true, person: p6 } : { details: true, person: pBlank(name) });
     if (!res || !res.person) return false;
     const { name: _n2, ...f5 } = res.person;
+    const other = emailKey(f5.email) && shared.REG.find((q5) => emailKey(q5.email) === emailKey(f5.email) && pKey(q5.name) !== pKey(name));
+    if (other && !confirm(`${f5.email} is already ${other.name}'s address in the people register. Change ${other.name}'s row?`)) return false;
     return profileSave(f5);
   }
   function profileCardHtml() {
     const d5 = profileDetails(), line = (l6, v5, id2) => `<div class="srow"><div><span id="${id2}Lab">${l6}</span></div><div><span id="${id2}">${v5 ? esc(v5) : '<span class="sub">Not set</span>'}</span></div></div>`;
     return `<div class="card" id="profileCard" data-sec="profile"><h2>Your profile</h2>
-   <div class="srow"><div><span id="pfNameLab">Your name</span><small>Which person in the people register is you</small></div><div><input type="text" id="pfName" aria-labelledby="pfNameLab" value="${esc(d5.name)}" autocomplete="off"> <button type="button" class="btn" id="pfNameSave">Save name</button></div></div>
+   <div class="srow"><div><span id="pfNameLab">Your name</span><small>Which person in the people register is you</small></div><div><input type="text" id="pfName" aria-labelledby="pfNameLab" value="${esc(S.meSet === false ? "" : pCell(String(S.me || "").trim()))}" autocomplete="off"> <button type="button" class="btn" id="pfNameSave">Save name</button></div></div>
    ${line("Email", d5.email, "pfEmail")}${line("Other ways people write your name", d5.aliases.join(", "), "pfAliases")}${line("Organisation", d5.org, "pfOrg")}${line("Role", d5.role, "pfRole")}
    <div class="srow"><div><span id="pfDetailsLab">Details</span><small>Saved in the people register, like anyone else's, and you can undo a change</small></div><div><button type="button" class="btn primary" id="pfEdit" ${d5.name ? "" : "disabled"}>${profileEntry() ? "Edit my details" : "Add my details"}</button></div></div>
    <p class="sub" id="pfNote">Your email is a label only. creaite doesn't check it, and it doesn't give you or anyone else access to anything. Which person is you is kept in this computer's settings, not in the shared register.</p></div>`;
@@ -57472,10 +57505,10 @@ ${pre}**Current state title:** ${title}`);
     };
     const s5 = $("#pfNameSave");
     if (s5) s5.onclick = async () => {
-      const v5 = String(
+      const v5 = pCell(String(
         /** @type {HTMLInputElement} */
         $("#pfName").value || ""
-      ).trim();
+      ));
       if (!v5) {
         snack("Your name can't be empty");
         return;
@@ -80359,6 +80392,7 @@ ${d5.text}`);
         "edTurnInto",
         "edValue",
         "editProposal",
+        "emailKey",
         "errBanner",
         "esc",
         "evClose",
@@ -80705,9 +80739,13 @@ ${d5.text}`);
         "previewInbox",
         "prio",
         "processLive",
+        "profileDetails",
         "profileDone",
+        "profileEntry",
         "profileQuestionDue",
         "profileQuestionHtml",
+        "profileRedraw",
+        "profileSave",
         "profileTools",
         "projPeople",
         "projectState",
