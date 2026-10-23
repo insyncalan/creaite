@@ -296,7 +296,7 @@ def check(events, req):
 # afterwards, when a draft to another To, Cc or Bcc, or a second one, would already exist. So the run is also started with a
 # PreToolUse hook (`--settings`, hook_settings) that runs `draft_delivery.py hook <request file>` before every tool call: create-draft
 # only with exactly the request's arguments and only once, ToolSearch, nothing else; any error refuses (exit 2, the reason goes back
-# to the model). The request is written outside the vault by hook_request_file and removed by hook_cleanup.
+# to the model). The request is written by hook_request_file (system/staging/drafts/) and removed by hook_cleanup.
 def hook_settings(runner, request_file):
     """The --settings JSON for the draft run: the PreToolUse hook (matcher "*": every tool, MCP included) that runs
     `<runner> hook <request file>`. `runner` is the command that starts this script (the wrapper, as the guard hook's)."""
@@ -306,26 +306,24 @@ def hook_settings(runner, request_file):
 
 
 def hook_request_file(req):
-    """The request's arguments in a file of their own in a new folder outside the vault; returns its path. The hook reads it and
-    marks it used there (`<file>.used`); hook_cleanup removes the folder."""
-    d = tempfile.mkdtemp(prefix="creaite-draft-")
-    path = os.path.join(d, "request.json")
-    with open(path, "w", encoding="utf-8") as f:
+    """The request's arguments in a file of their own, `draft-hook-*.json` in system/staging/drafts/ (the one place the wrapper that
+    starts the hook lets an argument name, and not a place the run can read: it has no file tool and starts elsewhere); returns its
+    absolute path. The hook marks it used there (`<file>.used`); hook_cleanup removes both."""
+    d = paths.STAGING / "drafts"
+    d.mkdir(parents=True, exist_ok=True)
+    fd, path = tempfile.mkstemp(prefix="draft-hook-", suffix=".json", dir=str(d))
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(req["args"], f, ensure_ascii=False)
     return path
 
 
 def hook_cleanup(path):
-    """Remove the request file, its used mark and their folder."""
+    """Remove the request file and its used mark."""
     for f in (path, path + ".used"):
         try:
             os.remove(f)
         except OSError:
             pass                                         # already gone
-    try:
-        os.rmdir(os.path.dirname(path))
-    except OSError:
-        pass                                             # not empty or gone: a temp folder, left for the system to clear
 
 
 def hook_decision(tool, inp, args, claim):

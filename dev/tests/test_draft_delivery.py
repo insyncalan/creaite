@@ -293,15 +293,21 @@ class Hook(Isolated):
         self.assertTrue(cmd.endswith("'/tmp/x y/request.json'"))
         self.assertNotIn("sara@example.com", cmd)
 
-    def test_the_request_is_written_outside_the_vault_for_the_hook_and_removed_after(self):
+    def test_the_request_is_written_where_the_wrapper_allows_an_argument_and_removed_after(self):
+        was = dd.paths.STAGING
+        dd.paths.STAGING = self.tmp
+        self.addCleanup(setattr, dd.paths, "STAGING", was)
         path = dd.hook_request_file(self.req)
+        self.assertEqual(Path(path).parent, self.tmp / "drafts")                  # system/staging/drafts/ in a vault
+        self.assertTrue(os.path.isabs(path))
         try:
             self.assertEqual(json.loads(Path(path).read_text()), self.req["args"])
             self.assertEqual(self.call(dd.CREATE_TOOL, self.req["args"], file=path).returncode, 0)
+            self.assertTrue(Path(path + ".used").exists())
         finally:
             dd.hook_cleanup(path)
         self.assertFalse(Path(path).exists())
-        self.assertFalse(Path(path).parent.exists())
+        self.assertFalse(Path(path + ".used").exists())
 
     def test_the_refusal_words_say_what_was_made_and_to_delete_it_unsent(self):
         changed = {**self.req["args"], "bcc": ["x@example.com"]}
