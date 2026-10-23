@@ -78028,6 +78028,13 @@ ${d5.text}`);
         e4.stopImmediatePropagation();
         const to2 = rows2[Math.max(0, Math.min(rows2.length - 1, at2 + (e4.key === "ArrowDown" ? 1 : -1)))];
         if (to2) to2.focus();
+      } else if ((e4.key === "ArrowLeft" || e4.key === "ArrowRight") && row2.hasAttribute("data-irkids")) {
+        const id2 = row2.getAttribute("data-irkids") || "", folded = !!irKidsFold.value[id2];
+        if (e4.key === "ArrowLeft" !== folded) {
+          e4.preventDefault();
+          e4.stopImmediatePropagation();
+          irToggleKids(id2);
+        }
       } else if (e4.key === "a" || e4.key === "A") {
         e4.preventDefault();
         e4.stopImmediatePropagation();

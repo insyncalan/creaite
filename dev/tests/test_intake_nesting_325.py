@@ -41,7 +41,7 @@ class Nesting(IntakeBase):
 
     def test_work_items_are_nested_under_the_minutes_and_fold(self):
         b = self.b
-        b.eval(f"{self.row('ABC Steering')}.click()")
+        b.eval("document.querySelector('#v-intake-review [data-irm=\"' + D.intake_review.meetings.find(m=>m.stage==='drafted').id + '\"]').click()")
         b.wait("!!document.querySelector('#v-intake-review tr.irprop')")
         parents = b.eval("document.querySelectorAll('#v-intake-review tr.irparent').length")
         if not parents:

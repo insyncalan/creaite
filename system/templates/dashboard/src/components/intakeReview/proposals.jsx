@@ -276,6 +276,9 @@ export function bootIrReviewKeys() {
       e.preventDefault(); e.stopImmediatePropagation();
       const to = rows[Math.max(0, Math.min(rows.length - 1, at + (e.key === "ArrowDown" ? 1 : -1)))];
       if (to) to.focus();
+    } else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && row.hasAttribute("data-irkids")) {        /* #325: the minutes row folds (Left) and unfolds (Right) its work items */
+      const id = row.getAttribute("data-irkids") || "", folded = !!irKidsFold.value[id];
+      if ((e.key === "ArrowLeft") !== folded) { e.preventDefault(); e.stopImmediatePropagation(); irToggleKids(id); }
     } else if (e.key === "a" || e.key === "A") { e.preventDefault(); e.stopImmediatePropagation(); irApprove(n); }
     else if (e.key === "r" || e.key === "R") { e.preventDefault(); e.stopImmediatePropagation(); irReject(n, row.querySelector("[data-ira=reject]")); }
   }, true);
