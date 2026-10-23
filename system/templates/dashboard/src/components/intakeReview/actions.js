@@ -144,9 +144,9 @@ async function setAside(ms, extra, what, after = "") {
   if (!viaServer()) { snack(needsConnection("This")); return false; }
   const r = await api("/api/intake/clear", { op: "clear", items: ms.map(m => asideItem(m, typeof extra === "function" ? extra(m) : extra)) });
   if (!r.ok) { snack(plainSay(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't do that"))); return false; }
-  const keys = ms.map(m => m.key || m.path);
+  const keys = ms.map(m => m.key || m.path), count = Number(r.count) || ms.length;
   await reloadData();
-  snack(`${what}: ${ms.length === 1 ? ms[0].title : `${ms.length} meetings`}${after}`, () => irRestore(keys));
+  snack(`${what}: ${ms.length === 1 ? ms[0].title : `${count} meetings`}${after}`, () => irRestore(keys));
   return true;
 }
 
@@ -162,10 +162,10 @@ export function irNotNeeded(m, reason, note) {
 /** #323: Later or Not needed for several ticked rows in one call (the route takes up to 200), one Undo. Rows that cannot take it
     (drafted, done or being processed) are left out and counted in the message. @param {any[]} ms @param {"later"|{reason: string}} how */
 export async function irAsideMany(ms, how) {
-  const ok = ms.filter(irCanSetAside).slice(0, 200), left = ms.length - ok.length;
+  const able = ms.filter(irCanSetAside), ok = able.slice(0, 200), left = ms.length - able.length, over = able.length - ok.length;
   if (!ok.length) { snack("Nothing to set aside: those meetings are already drafted, done or being processed"); return false; }
   if (how !== "later" && !IR_REASONS.includes(how.reason)) return false;
-  const word = how === "later" ? "Later" : "Not needed", note = left ? ` · ${left} left out: already drafted, done or being processed` : "";
+  const word = how === "later" ? "Later" : "Not needed", note = (left ? ` · ${left} left out: already drafted, done or being processed` : "") + (over ? ` · ${over} not done: 200 at a time, do the rest again` : "");
   const done = await setAside(ok, how === "later" ? (/** @type {any} */ m) => ({ kind: "later", seen: m.state === "ready" }) : { reason: how.reason, note: "" }, word, note);
   if (done) irClearTicks();
   return done;

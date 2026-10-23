@@ -29,6 +29,17 @@ class FirstScreen(IntakeBase):
         self.assertGreaterEqual(r["stripTop"], r["viewTop"] - 1, r)
         self.assertLessEqual(r["stripBottom"], r["viewBottom"], r)
 
+    def test_an_open_meetings_approve_is_in_the_first_screen(self):
+        b = self.b
+        b.eval("irOpen.value=D.intake_review.meetings.find(m=>m.stage==='drafted').id; 0")
+        b.wait("!!document.querySelector('#v-intake-review tr.irprop [data-ira=approve]')")
+        for w in (1400, 900):
+            b.resize(w, 900)
+            b.wait("!!document.querySelector('#v-intake-review [data-irstage=all]')")
+            r = b.eval(FIRST)
+            self.assertTrue(b.eval("!!document.querySelector('#v-intake-review tr.irprop [data-ira=approve]')"))
+            self.assertLessEqual(r["ctlBottom"], r["viewBottom"], f"open Approve below the first screen at {w}: {r}")
+
     def test_first_approval_in_the_first_screen_at_1400(self):
         self.check(1400)
 

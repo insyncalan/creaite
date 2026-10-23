@@ -62,6 +62,15 @@ class Nesting(IntakeBase):
         self.assertEqual(b.eval("Object.values(irKidsFold.value).filter(Boolean).length"), 1)    # kept for the session, in memory only
         self.assertIsNone(b.eval("localStorage.getItem('creaite-ir-kids')"))
 
+    def test_a_child_under_held_minutes_says_so(self):
+        b = self.b
+        b.eval("document.querySelector('#v-intake-review [data-irm=\"' + D.intake_review.meetings.find(m=>m.stage==='drafted').id + '\"]').click()")
+        b.wait("!!document.querySelector('#v-intake-review tr.irparent')")
+        self.assertEqual(b.eval("document.querySelectorAll('#v-intake-review [data-irheldkid]').length"), 0)
+        b.eval("(()=>{ const r=REV.find(x=>x.kind==='draft'&&x.ref==='meeting'&&!x.done); r.held='the transcript has gone'; irTick.value++; })()")
+        b.wait("document.querySelectorAll('#v-intake-review [data-irheldkid]').length>0")
+        self.assertIn("Its minutes are held. Approving this does not approve them.", b.eval("document.querySelector('#v-intake-review [data-irheldkid]').innerText"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -67,7 +67,7 @@ export function irSetGroup(v) { irGroup.value = irGroupNorm(v); try { store.set(
 /** Show only meetings in one state (All meetings, Waiting for the transcript, ...): for this visit only (#323). */
 export const irStateFilter = signal("all");
 /** @param {string} v */
-export function irSetStateFilter(v) { irStateFilter.value = irStateFilterNorm(v); }
+export function irSetStateFilter(v) { irStateFilter.value = irStateFilterNorm(v); irClearTicks(); }
 /** The meetings ticked for a group action (the right-click menu, the bar above the list), by row id; only rows still on the page stay (#323). */
 export const irTicked = signal(/** @type {string[]} */ ([]));
 /** The row last ticked, where a Shift-click range starts. */
@@ -81,6 +81,14 @@ export function irSetTick(id, on, order, range) {
   irTicked.value = on ? [...cur, ...ids] : cur;
   irTickFrom = id;
 }
+/** The rows on the page now (after Show, the step and Search): the page sets it each time it draws. Actions on ticked rows use only these. */
+let irShownSet = /** @type {Set<string>|null} */ (null);
+/** @param {string[]|null} ids */
+export function irSetShown(ids) { irShownSet = ids ? new Set(ids) : null; }
+/** @param {string} id */
+export const irIsShown = id => !irShownSet || irShownSet.has(id);
+/** The ticked rows that are on the page. */
+export const irTickedShown = () => irTicked.value.filter(irIsShown);
 export function irClearTicks() { irTicked.value = []; irTickFrom = null; }
 
 export const irOpen = signal(/** @type {string|null} */ (null));
@@ -94,12 +102,12 @@ export const irTick = signal(0);
 /** @param {string} id */
 export function irClickMeeting(id) { irOpen.value = irToggle(irOpen.value, id, irModel()); }
 /** @param {string} g */
-export function irClickStage(g) { irStage.value = irStageClick(irStage.value, g); }
+export function irClickStage(g) { irStage.value = irStageClick(irStage.value, g); irClearTicks(); }
 /** @param {string} sec */
 export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); }
 /** After new data: the open meeting stays open while it is in the list. */
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel());
-  const have = new Set((irModel().meetings || []).map((/** @type {any} */ x) => x.id)), keep = irTicked.value.filter(x => have.has(x));
+  const have = new Set((irModel().meetings || []).filter((/** @type {any} */ x) => x.stage === "arrived" && x.src !== "draft" && !irBusy.value.includes(x.id)).map((/** @type {any} */ x) => x.id)), keep = irTicked.value.filter(x => have.has(x));      /* a row that started processing or was drafted is unticked too */
   if (keep.length !== irTicked.value.length) irTicked.value = keep;      /* #323: a ticked row that left the list (set aside, restored elsewhere) is no longer ticked */
   irPruneKinds(); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
@@ -175,7 +183,7 @@ export function irSetAskQ(id, q) { const n = { ...irAskQ.value }; if (q) n[id] =
 /** #265 on this page: the calendar refresh in progress, its run ID (for Stop) and its latest step, or null. */
 export const irRefRun = signal(/** @type {{id: string, step: string} | null} */ (null));
 /** Mark a meeting as being processed (or not). @param {string} id @param {boolean} on */
-export function irSetBusy(id, on) { irBusy.value = on ? [...irBusy.value.filter(x => x !== id), id] : irBusy.value.filter(x => x !== id); }
+export function irSetBusy(id, on) { irBusy.value = on ? [...irBusy.value.filter(x => x !== id), id] : irBusy.value.filter(x => x !== id); if (on) irTicked.value = irTicked.value.filter(x => x !== id); }
 
 /* ---- #232-C: addresses and links (232-A and 232-B leave this section alone) ----
    An address or a link names a place on the page: a stage (#intake-review&stage=drafted), a meeting (&m=<meeting id>) or a

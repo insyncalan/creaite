@@ -15,7 +15,7 @@ import { $ } from "../../core/dom.js";
 import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irEsc, irFiltered, irIsFolded, irStateCounts } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irSetShown, irTickedShown, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { irAsideMany } from "./actions.js";
@@ -148,10 +148,10 @@ function GroupControls({ view }) {
 
 /** #323: what the ticked rows can do at once, above the list. The same actions as the right-click menu on a ticked row. */
 function TickBar() {
-  const ms = irTargets(irTicked.value[0] || ""), n = irTicked.value.length;
-  if (!n) return null;
+  const shown = irTickedShown(), ms = irTargets(shown[0] || ""), n = shown.length, hidden = irTicked.value.length - n;
+  if (!n && !hidden) return null;
   return <div class="irtickbar" role="group" aria-label="Selected meetings" data-irtickbar="1">
-    <b>{n} selected</b>
+    <b>{n} selected{hidden ? `, ${hidden} hidden` : ""}</b>
     <button type="button" class="mini" data-ira="laterall" onClick={() => irAsideMany(ms, "later")}>Later</button>
     <button type="button" class="mini" data-ira="reasonall" aria-haspopup="menu" onClick={e => {
       const el = /** @type {HTMLElement} */ (e.currentTarget); openContextMenuAt(el, /** @type {any} */ (irMenuItems(ms).find(x => x.sub) || { label: "", sub: [] }).sub, { label: "Not needed because" }); }}>Not needed because…</button>
@@ -165,13 +165,14 @@ function IntakeReviewView() {
   const found = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
   const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };     /* #323: Show */
   const list = irFiltered(model, irStage.value);
+  irSetShown((view === "list" ? list : model.meetings).map((/** @type {any} */ m) => m.id));       /* #323: ticked rows a filter hides are not acted on */
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
       <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "suggestion")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
         <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
-          onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
+          onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; irClearTicks(); }}
           onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; } }} />
         <GroupControls view={view} />
         <span class="sp"></span>

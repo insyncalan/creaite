@@ -64,6 +64,31 @@ class MultiSelect(IntakeBase):
         b.wait("D.intake_review.not_needed.length===0 && D.intake_review.meetings.some(m=>m.title==='Weekly sync 12')", 20)
         self.assertEqual(self.cleared(), [])
 
+    def test_ticks_a_filter_hides_are_not_acted_on(self):
+        b = self.b
+        self.tick("Busy")
+        self.tick("Weekly sync 12")
+        b.eval("irSetStateFilter('waiting')")                                          # only Busy stays visible: the ticks are cleared
+        b.wait("document.querySelectorAll('#v-intake-review tr.irmeet').length===1")
+        self.assertEqual(b.eval("irTicked.value.length"), 0)
+        # and if a hidden tick remains (set directly), the bar says so and every action covers the visible ticked rows only
+        b.eval("irTicked.value=[D.intake_review.meetings.find(m=>m.title==='Weekly sync 12').id, D.intake_review.meetings.find(m=>m.title==='Busy').id]; 0")
+        b.wait("/1 selected, 1 hidden/.test(document.querySelector('[data-irtickbar]').innerText)")
+        self.ctx("Busy")
+        words = self.menu_words()
+        self.assertFalse(any("2 meetings" in w for w in words), words)
+        b.eval("[...document.querySelectorAll('.cxmenu .pkopt')].find(x=>/^Later/.test(x.innerText.trim())).click()")
+        b.wait("D.intake_review.later.length>=1", 20)
+        self.assertEqual([c["key"] for c in self.cleared()], ["ev-3"])                 # Busy only; Weekly sync 12 was not set aside
+        b.click("#snackU")
+
+    def test_a_row_that_starts_processing_is_unticked(self):
+        b = self.b
+        self.tick("ABC Steering")
+        b.eval("irSetBusy(D.intake_review.meetings.find(m=>m.title==='ABC Steering'&&m.stage==='arrived').id, true); 0")
+        self.assertEqual(b.eval("irTicked.value.length"), 0)
+        b.eval("irBusy.value=[]; 0")
+
     def test_group_by_day_state_and_show_waiting_for_the_transcript(self):
         b = self.b
         b.eval("irSetGroup('state')")

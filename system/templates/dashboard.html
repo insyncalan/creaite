@@ -6083,6 +6083,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irHeld: () => irHeld,
     irHold: () => irHold,
     irIsFolded: () => irIsFolded,
+    irIsShown: () => irIsShown,
     irKeepOpen: () => irKeepOpen,
     irKidsFold: () => irKidsFold,
     irKindOf: () => irKindOf,
@@ -6135,6 +6136,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetChecking: () => irSetChecking,
     irSetFileKind: () => irSetFileKind,
     irSetGroup: () => irSetGroup,
+    irSetShown: () => irSetShown,
     irSetStateFilter: () => irSetStateFilter,
     irSetTick: () => irSetTick,
     irSetView: () => irSetView,
@@ -6150,6 +6152,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irTarget: () => irTarget,
     irTick: () => irTick,
     irTicked: () => irTicked,
+    irTickedShown: () => irTickedShown,
     irToggle: () => irToggle,
     irToggleKids: () => irToggleKids,
     irUnsure: () => irUnsure,
@@ -9791,6 +9794,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var irStateFilter = y3("all");
   function irSetStateFilter(v5) {
     irStateFilter.value = irStateFilterNorm(v5);
+    irClearTicks();
   }
   var irTicked = y3(
     /** @type {string[]} */
@@ -9806,6 +9810,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irTicked.value = on2 ? [...cur, ...ids] : cur;
     irTickFrom = id2;
   }
+  var irShownSet = (
+    /** @type {Set<string>|null} */
+    null
+  );
+  function irSetShown(ids) {
+    irShownSet = ids ? new Set(ids) : null;
+  }
+  var irIsShown = (id2) => !irShownSet || irShownSet.has(id2);
+  var irTickedShown = () => irTicked.value.filter(irIsShown);
   function irClearTicks() {
     irTicked.value = [];
     irTickFrom = null;
@@ -9837,13 +9850,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function irClickStage(g5) {
     irStage.value = irStageClick(irStage.value, g5);
+    irClearTicks();
   }
   function irClickFold(sec) {
     irFolded.value = irFoldClick(irFolded.value, sec);
   }
   function irAfterData() {
     irOpen.value = irKeepOpen(irOpen.value, irModel());
-    const have = new Set((irModel().meetings || []).map((x5) => x5.id)), keep2 = irTicked.value.filter((x5) => have.has(x5));
+    const have = new Set((irModel().meetings || []).filter((x5) => x5.stage === "arrived" && x5.src !== "draft" && !irBusy.value.includes(x5.id)).map((x5) => x5.id)), keep2 = irTicked.value.filter((x5) => have.has(x5));
     if (keep2.length !== irTicked.value.length) irTicked.value = keep2;
     irPruneKinds();
     irTick.value++;
@@ -9949,6 +9963,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   );
   function irSetBusy(id2, on2) {
     irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
+    if (on2) irTicked.value = irTicked.value.filter((x5) => x5 !== id2);
   }
   function irMeetingOf(n4) {
     const m5 = (irModel().meetings || []).find((x5) => x5.groups && [...x5.groups.needs || [], ...x5.groups.routine || []].includes(n4));
@@ -77064,9 +77079,9 @@ ${d5.text}`);
       snack(plainSay(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't do that")));
       return false;
     }
-    const keys = ms2.map((m5) => m5.key || m5.path);
+    const keys = ms2.map((m5) => m5.key || m5.path), count = Number(r4.count) || ms2.length;
     await reloadData();
-    snack(`${what}: ${ms2.length === 1 ? ms2[0].title : `${ms2.length} meetings`}${after}`, () => irRestore(keys));
+    snack(`${what}: ${ms2.length === 1 ? ms2[0].title : `${count} meetings`}${after}`, () => irRestore(keys));
     return true;
   }
   function irLater(m5) {
@@ -77076,13 +77091,13 @@ ${d5.text}`);
     return irCanSetAside(m5) && IR_REASONS.includes(reason) ? setAside([m5], { reason, note: note || "" }, "Not needed") : Promise.resolve(false);
   }
   async function irAsideMany(ms2, how) {
-    const ok2 = ms2.filter(irCanSetAside).slice(0, 200), left = ms2.length - ok2.length;
+    const able = ms2.filter(irCanSetAside), ok2 = able.slice(0, 200), left = ms2.length - able.length, over = able.length - ok2.length;
     if (!ok2.length) {
       snack("Nothing to set aside: those meetings are already drafted, done or being processed");
       return false;
     }
     if (how !== "later" && !IR_REASONS.includes(how.reason)) return false;
-    const word = how === "later" ? "Later" : "Not needed", note = left ? ` · ${left} left out: already drafted, done or being processed` : "";
+    const word = how === "later" ? "Later" : "Not needed", note = (left ? ` · ${left} left out: already drafted, done or being processed` : "") + (over ? ` · ${over} not done: 200 at a time, do the rest again` : "");
     const done = await setAside(ok2, how === "later" ? (m5) => ({ kind: "later", seen: m5.state === "ready" }) : { reason: how.reason, note: "" }, word, note);
     if (done) irClearTicks();
     return done;
@@ -77312,18 +77327,21 @@ ${d5.text}`);
 
   // components/intakeReview/selection.js
   function irTargets(id2) {
-    const ms2 = irModel().meetings || [], ids = irTicked.value.includes(id2) ? irTicked.value : [id2];
-    return ms2.filter((m5) => ids.includes(m5.id));
+    const ms2 = irModel().meetings || [], shown2 = irTickedShown(), ids = shown2.includes(id2) ? shown2 : [id2];
+    return ms2.filter((m5) => ids.includes(m5.id) && irIsShown(m5.id));
   }
   function irMenuItems(ms2) {
     const n4 = ms2.length, one = n4 === 1 ? ms2[0] : null, can = ms2.filter(irCanSetAside).length, words = n4 === 1 ? "" : ` · ${n4} meetings`;
-    const items2 = [];
-    if (one && irCanProcess(one)) items2.push({ label: "Process", run: () => irProcess(one) });
-    items2.push({ label: `Later${words}`, disabled: !can, hint: can ? "" : "Nothing here can be set aside", run: () => irAsideMany(ms2, "later") });
-    items2.push({ label: `Not needed because${words}`, disabled: !can, sub: IR_REASONS.map((r4) => ({ label: r4, run: () => irAsideMany(ms2, { reason: r4 }) })) });
-    if (one && irCanCheck(one)) items2.push({ label: "Check again", run: () => irCheck(one) });
-    if (n4 > 1 || irTicked.value.length) items2.push({ sep: true }, { label: "Clear the ticks", run: () => irClearTicks() });
-    return items2;
+    const menu = (
+      /** @type {any[]} */
+      []
+    );
+    if (one && irCanProcess(one)) menu.push({ label: "Process", run: () => irProcess(one) });
+    menu.push({ label: `Later${words}`, disabled: !can, hint: can ? "" : "Nothing here can be set aside", run: () => irAsideMany(ms2, "later") });
+    menu.push({ label: `Not needed because${words}`, disabled: !can, sub: IR_REASONS.map((r4) => ({ label: r4, run: () => irAsideMany(ms2, { reason: r4 }) })) });
+    if (one && irCanCheck(one)) menu.push({ label: "Check again", run: () => irCheck(one) });
+    if (n4 > 1 || irTickedShown().length) menu.push({ sep: true }, { label: "Clear the ticks", run: () => irClearTicks() });
+    return menu;
   }
   var irKbAt = 0;
   function irRowMenu(e4, m5) {
@@ -77945,6 +77963,7 @@ ${d5.text}`);
   }
   var isMinutes = (r4) => !!r4 && r4.kind === "draft" && r4.ref === "meeting";
   function ProposalGroups({ groups, meet, child, meetId }) {
+    const tick2 = irTick.value;
     const shown2 = irGroupsShown(groups, irDone, irHeld), minN = meetId ? shown2.flatMap((g5) => g5.ns).find((n4) => isMinutes(irRow(n4))) : void 0;
     const nested = minN != null, rest = nested ? shown2.map((g5) => ({ ...g5, ns: g5.ns.filter((n4) => n4 !== minN) })).filter((g5) => g5.ns.length) : shown2;
     const count = rest.reduce((a5, g5) => a5 + g5.ns.length, 0), folded = nested && !!irKidsFold.value[
@@ -77954,7 +77973,7 @@ ${d5.text}`);
       /** @type {number} */
       minN
     ) : null;
-    const minHeld = !!mr2 && !mr2.done && !!(mr2.held || mr2.nodraft);
+    const minHeld = tick2 >= 0 && !!mr2 && !mr2.done && !!(mr2.held || mr2.nodraft);
     return /* @__PURE__ */ u4(S2, { children: [
       nested ? [
         /** @type {number} */
@@ -78431,12 +78450,13 @@ ${d5.text}`);
     ] });
   }
   function TickBar() {
-    const ms2 = irTargets(irTicked.value[0] || ""), n4 = irTicked.value.length;
-    if (!n4) return null;
+    const shown2 = irTickedShown(), ms2 = irTargets(shown2[0] || ""), n4 = shown2.length, hidden = irTicked.value.length - n4;
+    if (!n4 && !hidden) return null;
     return /* @__PURE__ */ u4("div", { class: "irtickbar", role: "group", "aria-label": "Selected meetings", "data-irtickbar": "1", children: [
       /* @__PURE__ */ u4("b", { children: [
         n4,
-        " selected"
+        " selected",
+        hidden ? `, ${hidden} hidden` : ""
       ] }),
       /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "laterall", onClick: () => irAsideMany(ms2, "later"), children: "Later" }),
       /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "reasonall", "aria-haspopup": "menu", onClick: (e4) => {
@@ -78460,6 +78480,7 @@ ${d5.text}`);
     const found = irFilterModel(irModel(), q5);
     const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };
     const list = irFiltered(model, irStage.value);
+    irSetShown((view === "list" ? list : model.meetings).map((m5) => m5.id));
     return /* @__PURE__ */ u4("div", { class: "wrapmax irpage", "data-irtick": tick2, children: [
       /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake" }),
       /* @__PURE__ */ u4("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
@@ -78482,6 +78503,7 @@ ${d5.text}`);
             onInput: (e4) => {
               irQuery.value = /** @type {HTMLInputElement} */
               e4.currentTarget.value;
+              irClearTicks();
             },
             onKeyDown: (e4) => {
               if (e4.key === "Escape" && irQuery.value) {
@@ -80918,6 +80940,7 @@ ${d5.text}`);
         "irRow",
         "irSaveChanges",
         "irSel",
+        "irSetBusy",
         "irSetChecking",
         "irSetFileKind",
         "irSetGroup",

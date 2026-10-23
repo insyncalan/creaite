@@ -232,10 +232,11 @@ const isMinutes = r => !!r && r.kind === "draft" && r.ref === "meeting";
     own file-plus-item key (#307): the nesting is only drawn, nothing is approved with the minutes. The parent folds and unfolds.
     @param {{groups: {needs: number[], routine: number[]}, meet?: string, child?: boolean, meetId?: string}} props */
 export function ProposalGroups({ groups, meet, child, meetId }) {
+  const tick = irTick.value;        /* the minutes' hold is read from REV, which is not a signal: the tick redraws the children when it changes */
   const shown = irGroupsShown(groups, irDone, irHeld), minN = meetId ? shown.flatMap(g => g.ns).find(n => isMinutes(irRow(n))) : undefined;
   const nested = minN != null, rest = nested ? shown.map(g => ({ ...g, ns: g.ns.filter(n => n !== minN) })).filter(g => g.ns.length) : shown;
   const count = rest.reduce((a, g) => a + g.ns.length, 0), folded = nested && !!irKidsFold.value[/** @type {string} */ (meetId)], mr = nested ? irRow(/** @type {number} */ (minN)) : null;
-  const minHeld = !!mr && !mr.done && !!(mr.held || mr.nodraft);
+  const minHeld = tick >= 0 && !!mr && !mr.done && !!(mr.held || mr.nodraft);
   return <>
     {nested ? [/** @type {number} */ (minN)].map(n => <ProposalLine key={modelKeyOf(n) + "|" + ((SNAP.keys.get(n) || {}).cfp || "")} n={n} child={child} kids={{ id: /** @type {string} */ (meetId), count, folded }} />) : null}
     {folded ? null : rest.map(g => (

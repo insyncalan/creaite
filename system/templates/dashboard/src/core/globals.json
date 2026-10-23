@@ -490,6 +490,7 @@
    "irRow",
    "irSaveChanges",
    "irSel",
+   "irSetBusy",
    "irSetChecking",
    "irSetFileKind",
    "irSetGroup",
