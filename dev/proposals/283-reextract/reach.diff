@@ -1,8 +1,16 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index be8f4164..292ff161 100644
+index be8f4164..12df8241 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
-@@ -679,14 +679,15 @@ def start_run(run, mode, outside, session=None, files=None, as_minutes=None):
+@@ -69,6 +69,7 @@ NEVER = (
+     ("vault", "system/staging/*.txt", "write", RECORD), ("vault", "dashboard.html", "write", RECORD),
+     ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
+     ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
++    ("vault", "system/staging/reextract", "write", RECORD),              # #283: Read again holds: the live server only
+     ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
+     ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
+     ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),
+@@ -679,14 +680,15 @@ def start_run(run, mode, outside, session=None, files=None, as_minutes=None):
      """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
      Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage. #232 E1:
      `as_minutes`, the ones of them Alan pressed Find work items on (someone else's minutes): those are staged only as
@@ -20,7 +28,7 @@ index be8f4164..292ff161 100644
  
  
  def _process_start():
-@@ -1538,16 +1539,16 @@ def decide(tool, inp, mode, run, held=False, use_id=None):
+@@ -1538,16 +1540,16 @@ def decide(tool, inp, mode, run, held=False, use_id=None):
      other call by hook_decision, unchanged. `use_id` (Claude Code's tool_use_id) ties a Process call to its PostToolUse."""
      if mode in HELD_MODES:
          return prep_decision(tool, inp)
@@ -40,7 +48,7 @@ index be8f4164..292ff161 100644
  # ===== end #60 option (a) =====
  
  
-@@ -1739,7 +1740,7 @@ def _direct_write_refusal(inp, mode):
+@@ -1739,7 +1741,7 @@ def _direct_write_refusal(inp, mode):
      outside the run's direct-write folder. #264: a Process run writes only its own .json input files in drafts."""
      p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
      rp = real(p)
@@ -49,7 +57,7 @@ index be8f4164..292ff161 100644
          why = process_write_problem(rp)
          if why:
              return f"{p}: {why}"
-@@ -1770,7 +1771,7 @@ def hook_decision(tool, inp, mode, run):
+@@ -1770,7 +1772,7 @@ def hook_decision(tool, inp, mode, run):
          kind, why = classify(p, "read")
          if kind == "never":
              return False, f"{p}: {why}"
@@ -58,7 +66,7 @@ index be8f4164..292ff161 100644
          why = process_reach_problem(tool, inp)
          if why:
              return False, why
-@@ -2003,7 +2004,7 @@ def record_gate(command, mode):
+@@ -2003,7 +2005,7 @@ def record_gate(command, mode):
      """Why a record command is refused in this mode, or None: a confirmed run may; the catch-up sweep may map names in a draft;
      an Intake Process run (#264) runs only its read and minutes steps (process_gate); a calendar refresh (#265) only the sweep's
      calendar steps (calendar_gate)."""
@@ -67,7 +75,7 @@ index be8f4164..292ff161 100644
          return process_gate(command)
      if mode == "calendar":
          return calendar_gate(command)
-@@ -2032,20 +2033,27 @@ def sweep_maps_draft(command):
+@@ -2032,20 +2034,27 @@ def sweep_maps_draft(command):
  # minutes.py refresh and carry, report.py, tracker.py apply and undo, review.py approve and reject...). Direct Edit and Write stay
  # in system/staging/drafts/ (direct_write_area), and every check a plain chat has still runs first (bash_refusal and the rest).
  PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
@@ -98,7 +106,7 @@ index be8f4164..292ff161 100644
      return data
  
  
-@@ -2193,12 +2201,13 @@ def _call_key(tool, inp):
+@@ -2193,12 +2202,13 @@ def _call_key(tool, inp):
      return hashlib.sha256(json.dumps([str(tool), inp], sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()
  
  
@@ -115,7 +123,7 @@ index be8f4164..292ff161 100644
      try:
          key = _call_key(tool, inp)
          with _RunLock():
-@@ -2218,7 +2227,7 @@ def post_tool(tool, inp, run, use_id=None):
+@@ -2218,7 +2228,7 @@ def post_tool(tool, inp, run, use_id=None):
      except (OSError, ValueError, TypeError):     # nothing recorded: the files stay not the run's (fail closed)
          return False
      finally:
@@ -124,7 +132,7 @@ index be8f4164..292ff161 100644
  
  
  def _runs_proposals():
-@@ -2361,8 +2370,31 @@ def _process_validate_problem(words):
+@@ -2361,8 +2371,31 @@ def _process_validate_problem(words):
          "Process validates only a proposal it staged itself"
  
  
@@ -156,7 +164,7 @@ index be8f4164..292ff161 100644
      if name == "minutes.py stage":
          return _process_stage_problem(words)
      if name == "propose.py people map":
-@@ -2497,8 +2529,8 @@ def vault_relative(command):
+@@ -2497,8 +2530,8 @@ def vault_relative(command):
  
  
  def hook_main(argv):
@@ -167,7 +175,7 @@ index be8f4164..292ff161 100644
      on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
      error refuses: the guard fails closed."""
      try:
-@@ -2506,8 +2538,8 @@ def hook_main(argv):
+@@ -2506,8 +2539,8 @@ def hook_main(argv):
          call = json.loads(sys.stdin.read() or "{}")
          tool, inp = str(call.get("tool_name") or ""), call.get("tool_input") or {}
          if opts.get("--event") == "post":            # #264 round 3: a Process run's PostToolUse; it never blocks (exit 0)

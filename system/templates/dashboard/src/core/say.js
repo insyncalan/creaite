@@ -11,6 +11,8 @@ const REWORDS = /** @type {[RegExp, string][]} */ ([
   [/nothing was written to the tracker/g, "nothing was saved"],
   [/transcript no longer in the inbox/g, "the transcript is no longer in Intake"],
   [/\b(\d+) of (\d+) staged for Review; (\d+) not staged\b/g, "$1 of $2 drafted; $3 not drafted"],
+  [/\b0 of \d+ waiting in Review;? (\d+) couldn't be read\b/g, "Nothing was drafted. $1 couldn't be read"],
+  [/\b0 of \d+ waiting in Review\b/g, "Nothing was drafted"],
   [/\b(\d+) of (\d+) waiting in Review\b/g, "$1 of $2 drafted, ready to check in Intake"],
   [/\bNot staged: process it again\b/g, "Nothing was drafted: process it again"],
   [/\bNot in Review yet\b/g, "Not drafted yet"],
@@ -79,5 +81,17 @@ export function decidedWords(list) {
   return out.length ? out.join(". ") : "Saved";
 }
 
+/** #307: the decided rows, cut to what the server's apply line says it really saved ("Apply 12: written 1, filed 0, rejected 0, …"),
+    so a repeated click is never counted twice. An apply line that cannot be read leaves the list as it is. @param {{r: any, v: string}[]} list @param {unknown} msg */
+export function savedCapped(list, msg) {
+  const m = /written (\d+), filed (\d+), rejected (\d+)/.exec(String(msg || ""));
+  if (!m) return list;
+  let ok = +m[1] + +m[2], no = +m[3];
+  return list.filter(x => x.v === "rejected" ? no-- > 0 : ok-- > 0);
+}
+
 /** Why a file could not be added, one line: the page's own rule, or the server's answer in plain words. @param {string} name @param {string} why */
 export const addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
+
+/** #307: the minutes were filed or moved elsewhere while this view was open: exactly the server's two answers, nothing longer that merely says "isn't there". @param {unknown} m */
+export const isMovedMinutes = m => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m || "").trim());

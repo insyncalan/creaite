@@ -259,17 +259,22 @@ class Reflow(UiSweepCase):
         """v1.9.2: at 656 px Work's Action column is just under half the frame, so it stays put while the table scrolls a
         little; a person link in Owner brought into view (focus, scrollIntoView) lands right of it, never under it."""
         b = self.b
+        tested = 0
         try:
-            for w in (656, 664):
+            # the width where the first column is just under half the frame depends on the fonts (Ubuntu's differ from the Mac's, and
+            # #241 changed the column), so walk the widths and check every one where the case holds
+            for w in range(560, 761, 8):
                 b.resize(w, 800)
+                self.goto("work")
+                if not b.eval("document.getElementById('workWrap').classList.contains('xstick')"):
+                    continue
                 with self.subTest(width=w):
-                    self.goto("work")
-                    self.assertTrue(b.eval("document.getElementById('workWrap').classList.contains('xstick')"),
-                                    "the case under test: a fixed first column in a frame that scrolls")
+                    tested += 1
                     r = b.eval("AUD.reflow('#v-work')")
                     self.assertEqual([c for c in r["covered"] if "#workTbl" in c["sig"]], [], "controls under the fixed column")
         finally:
             b.resize(self.width, self.height)
+        self.assertTrue(tested, "the case under test: a fixed first column in a frame that scrolls, at some width between 560 and 760")
 
     def test_the_rail_turns_to_icons_under_480(self):
         b = self.b

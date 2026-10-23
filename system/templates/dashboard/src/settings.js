@@ -6,7 +6,7 @@ import { closeDialog, openDialog } from "./components/Dialog.jsx";
 import { makeArchiveAskDialog } from "./components/dialogs/PageDialogs.jsx";
 
 import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
-import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, SWEPT, wsKey } from "./core/data.js";
+import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, revForModelN, SWEPT, wsKey } from "./core/data.js";
 import { effect } from "@preact/signals";
 import { asCardHtml, asRedraw, asStatus, asWire } from "./autostart.js";
 import { h, render } from "preact";
@@ -590,12 +590,12 @@ export async function handOver(name){ const to0=$("#handTo").value.trim(); if(!t
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0127(){
 /* Review: an item whose workstream isn't one of its project's offers to add it, or to leave it blank */
-document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wsq]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=REV.find(x=>x.n===+b.dataset.n); if(!r||!await needVault()) return;
+document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wsq]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=revForModelN(+b.dataset.n); if(!r||!await needVault()) return;
   const name=r.ws_suggest, add=b.dataset.wsq==="add", s=add?wsSuggest(r.p,name):null;
   try{ await editProposal(r.file,data=>{ const items=data.items||[], it=items.find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
       it.flags=(it.flags||[]).filter(f=>f!=="new-workstream"); delete it.ws_suggest; if(!add) return;
       const known=wsRow(r.p,name), target=it.values||(it.changes=it.changes||{}); target.workstream=known?known.name:name;
-      if(!known) items.splice(items.indexOf(it),0,{n:Math.max(0,...items.map(i=>+i.n||0))+1,op:"new",table:"workstreams",values:Object.fromEntries(Object.entries({project:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,source:`${S.me} in review, ${TODAY}`}).filter(([,x])=>x)),match:"strong",flags:[],decision:"approved"}); }); }
+      if(!known) items.splice(items.indexOf(it),0,{n:Math.max(0,...items.map(i=>+i.n||0))+1,op:"new",table:"workstreams",values:Object.fromEntries(Object.entries({project:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,source:`${S.me} in review, ${TODAY}`}).filter(([,x])=>x)),match:"strong",flags:[],decision:"approved"}); },r); }
   catch(err){ snack("Not saved: "+err.message); return; }
   r.flags=(r.flags||[]).filter(f=>f!=="new-workstream"); r.ws_suggest=null; if(add&&!wsRow(r.p,name)) (D.ws_table=D.ws_table||[]).push({id:"",p:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,st:"Active",nA:0,nR:0});
   if(add&&r.rec) r.rec.ws=name; irTick.value++; snack(add?`Workstream ${name} will be added to ${pName(r.p)} with this item — check its details in ${pName(r.p)}'s settings › Workstreams`:"Left without a workstream",add?()=>openProjectWs(r.p):undefined,add?"Open its workstreams":undefined); },true);

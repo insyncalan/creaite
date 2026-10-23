@@ -46,6 +46,8 @@ BASE_DIFF = REPO / "dev" / "proposals" / "guard-small" / "tracker-copy-source.di
 BASE_MARKER = "class CopySource:"
 UNPATCHED = os.environ.get("E1_TRACKER_UNPATCHED") == "1"
 MARKER = "def by_others_waiting"
+INODE_DIFF = REPO / "dev" / "proposals" / "261-inode-gap" / "tracker-inode.py.diff"     # #261, built on E1: reversed before it
+INODE_MARKER = "hold=held"
 MUTATE = os.environ.get("E1_TRACKER_MUTATE", "")
 # One text change per mutation, made on the patched scratch copy (E1_TRACKER_MUTATE=<name>): a test must turn red
 MUTATIONS = {
@@ -100,8 +102,8 @@ ITEMS = [{"table": "actions", "section": "Action Items",
           "values": {"project": "ABC", "description": "Book the pilot room", "owner": "Sara Khan", "due_date": "2026-10-23"}}]
 
 
-def _patch(root, *flags, diff=DIFF):
-    r = subprocess.run(["patch", "-p0", "-s", *flags, "-i", str(diff)], cwd=root, capture_output=True, text=True)
+def _patch(root, *flags, diff=DIFF, strip="-p0"):
+    r = subprocess.run(["patch", strip, "-s", *flags, "-i", str(diff)], cwd=root, capture_output=True, text=True)
     if r.returncode != 0:
         raise AssertionError(f"patch {' '.join(flags)} failed in the scratch copy:\n{r.stdout}\n{r.stderr}")
 
@@ -118,6 +120,8 @@ def scratch(patched):
     already = MARKER in tracker.read_text(encoding="utf-8")
     if patched and not already:
         _patch(v.root)
+    if not patched and already and INODE_MARKER in tracker.read_text(encoding="utf-8"):
+        _patch(v.root, "-R", diff=INODE_DIFF, strip="-p1")           # #261 touches E1's remove: off first, or E1's -R fails
     if not patched and already:
         _patch(v.root, "-R")
     if MUTATE and patched:                       # the mutation breaks the patch: the unpatched copy has nothing to break

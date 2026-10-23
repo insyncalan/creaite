@@ -7,12 +7,15 @@ Called by tracker.py after every apply. Standard library only; the page needs no
 """
 import base64
 import contextlib
+import hashlib
 import json
+import math
 import os
 import re
 import sqlite3
 import sys
 import time
+import unicodedata
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -791,7 +794,7 @@ def queue_block(n, p, key, label, b, aged):
             "why": f"Draft {label.lower()}" if key in ("meeting", "report") else label, "indiv": True,
             "hold": "minutes" if key == "meeting" else "report" if key == "report" else "file changes",   # #232: never routine
             "rec": {"t": f"{label}: {b.get('title') or Path(b.get('draft') or '').stem}"},
-            "src": b.get("draft") or "", "file": p.name, "ref": key,
+            "src": b.get("draft") or "", "file": p.name, "ref": key, "fp": block_fp(b),   # #307 h2: the row's content, not its number
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
             **draft_missing(key, b),   # BL-260
@@ -810,7 +813,7 @@ def queue_item(con, n, p, item, aged, overlap):
     return {"n": n, "p": project, "kind": kind, "why": item_why(item, project, flags), "indiv": bool(review.individual_only(item)),
             "hold": review.hold_reason(item) or "",                                         # #232: "" is routine (cmd_bulk's rule)
             "dup": dup, "signals": signals,
-            "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
+            "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), "fp": item_fp(item), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
             "mf": item.get("moved_from"), "op": item.get("op"),   # BL-200 (sprint-review-work): moved on its own; new or update
             **({"bad": invalid_words(item.get("invalid_reason")), "badf": unknown_fields(item.get("invalid_reason"))}
@@ -2873,7 +2876,12 @@ def _filed_row(line, folders):
     cells = [c.strip() for c in line.split(" | ")]
     if len(cells) < 3 or not cells[1].startswith("fp:"):
         return None
-    filed = next((f.strip() for f in cells[2].split(";") if f.strip().endswith(".docx")), "")
+    if cells[2].lower() in ("not filed", ""):          # #307: rejected minutes are written "not filed | 0"; they are not approved
+        return None
+    names = [f.strip() for f in cells[2].split(";") if f.strip()]
+    filed = next((f for f in names if f.endswith(".docx")), "") or next((f for f in names if f.lower().endswith(".html")), "")
+    if not filed:        # a rejection still files the transcript (… | transcripts/x.vtt | 0): only minutes (.docx or .html) were approved
+        return None
     parts = filed.split("/")
     day = cells[1][3:13] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", cells[1][3:13]) else cells[0]
     title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else (cells[1].split("|") + ["Meeting"])[1].strip().capitalize()
@@ -4230,6 +4238,56 @@ def close_day(today, at, plan=None):
     it (references only; close_day.record). Returns the days."""
     import close_day as day_plan
     return day_plan.record(today, at, plan)["days"]
+
+# ===== #307 h2: a row's content fingerprint (the Python twin of dashboard/src/core/identity.js, whose header holds the spec) =====
+_FP_SAFE = 2 ** 53 - 1
+
+
+def _fp_s(x):
+    return unicodedata.normalize("NFC", x)
+
+
+def fp_canon(x):
+    """Canonical JSON text: sorted keys (code points), kept array order, NFC strings, integers as digits, other numbers as {"f":n}."""
+    if x is None:
+        return "null"
+    if isinstance(x, bool):
+        return "true" if x else "false"
+    if isinstance(x, (int, float)):
+        if isinstance(x, float):
+            if not math.isfinite(x):
+                return "null"
+            if x == int(x):
+                x = int(x)
+            else:
+                return '{"f":%d}' % math.floor(x * 1e6 + 0.5)
+        if abs(x) > _FP_SAFE:
+            return str(int(float(x)))
+        return str(x)
+    if isinstance(x, str):
+        return json.dumps(_fp_s(x), ensure_ascii=False)
+    if isinstance(x, (list, tuple)):
+        return "[" + ",".join(fp_canon(i) for i in x) + "]"
+    if isinstance(x, dict):
+        keys = sorted(x, key=lambda k: _fp_s(str(k)))
+        return "{" + ",".join(json.dumps(_fp_s(str(k)), ensure_ascii=False) + ":" + fp_canon(x[k]) for k in keys) + "}"
+    return "null"
+
+
+def _fp_short(x):
+    return hashlib.sha256(fp_canon(x).encode("utf-8")).hexdigest()[:12]
+
+
+def item_fp(it):
+    """A staged item's content fingerprint (12 hex): op, table, id, changes and values; never its number or decision."""
+    return _fp_short([it.get("op"), it.get("table"), it.get("id"), it.get("changes"), it.get("values")])
+
+
+def block_fp(b):
+    """A minutes, report or file-changes block's content fingerprint."""
+    return _fp_short([b.get("key"), b.get("title"), b.get("draft"), b.get("project"), b.get("projects")])
+# ===== end #307 h2 =====
+
 
 if __name__ == "__main__":
     try:

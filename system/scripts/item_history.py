@@ -118,11 +118,16 @@ def stored_events(con, item_id, rowids):
 
 # ── The route of a change: stored, or worked out ────────────────────────────────────────────────────────────────────────
 
+def _dict(x):
+    """`x` when it is a dict, else {}: a proposal's field of the wrong shape (a note that is a string or a list) reads as absent."""
+    return x if isinstance(x, dict) else {}
+
+
 def derive(via, data=None, item=None):
     """(route, place, origin, actor) for a change written with change_log `via` from proposal `data` (item `item`), either
     of which may be None. The one rule for today's rows, and the one tracker.py stores once the diff is applied."""
     via = str(via or "")
-    data, item = data or {}, item or {}
+    data, item = _dict(data), _dict(item)
     if via.startswith(REVERT_VIA):
         return "activity", None, None, "you"
     route = FIXED.get(via)
@@ -179,9 +184,9 @@ def one_ref(value):
 
 def source_of(item, data, rel):
     """The source reference of a change: the item's own source, the note it came from, else the proposal's file."""
-    item, data = item or {}, data or {}
-    for cand in (item.get("source"), (item.get("values") or {}).get("source"), (data.get("note") or {}).get("path")):
-        if one_ref(cand):
+    item, data = _dict(item), _dict(data)
+    for cand in (item.get("source"), _dict(item.get("values")).get("source"), _dict(data.get("note")).get("path")):
+        if isinstance(cand, str) and one_ref(cand):             # only a text is a reference (M1: a path that is a list is none)
             return one_ref(cand)
     return rel
 

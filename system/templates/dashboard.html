@@ -4896,6 +4896,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     RejectsList: () => RejectsList,
     S: () => S,
     SA: () => SA,
+    SAFE_WHY: () => SAFE_WHY,
     SAVEQ: () => SAVEQ,
     SCREEN_OF: () => SCREEN_OF,
     SEARCHCFG: () => SEARCHCFG,
@@ -4941,6 +4942,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     SRCQ: () => SRCQ,
     SRN: () => SRN,
     STALE_MSG: () => STALE_MSG,
+    STALE_ROW: () => STALE_ROW,
+    STALE_ROW_MSG: () => STALE_ROW_MSG,
     START_CMD: () => START_CMD,
     STOPI: () => STOPI,
     SU: () => SU,
@@ -5056,6 +5059,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actUndoSelected: () => actUndoSelected,
     activeFilters: () => activeFilters,
     addEl: () => addEl,
+    addFailed: () => addFailed,
     addHTML: () => addHTML,
     addImages: () => addImages,
     addNoteImage: () => addNoteImage,
@@ -5649,6 +5653,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     decRevisit: () => decRevisit,
     decShort: () => decShort,
     decide: () => decide,
+    decidedWords: () => decidedWords,
     decisionCheck: () => decisionCheck,
     decisionFields: () => decisionFields,
     decodeHtml: () => decodeHtml,
@@ -5883,6 +5888,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     grpRows: () => grpRows,
     grpTicks: () => grpTicks,
     grpToggle: () => grpToggle,
+    guardFresh: () => guardFresh,
     hSugDraw: () => hSugDraw,
     handOver: () => handOver,
     handle: () => handle,
@@ -6087,6 +6093,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isLinkUrl: () => isLinkUrl,
     isMe: () => isMe,
     isMin: () => isMin,
+    isMovedMinutes: () => isMovedMinutes,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
     isRecordMin: () => isRecordMin,
@@ -6362,6 +6369,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     navState: () => navState,
     navWrite: () => navWrite,
     needVault: () => needVault,
+    needsConnection: () => needsConnection,
     needsMe: () => needsMe,
     newChat: () => newChat,
     newItemOf: () => newItemOf,
@@ -6674,6 +6682,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkX: () => pkX,
     placePicker: () => placePicker,
     plainPaths: () => plainPaths,
+    plainSay: () => plainSay,
     playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
@@ -6924,6 +6933,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rollWeekStart: () => rollWeekStart,
     row: () => row,
     rowCounts: () => rowCounts,
+    rowFor: () => rowFor,
     rowHead: () => rowHead,
     rowHtml: () => rowHtml,
     rowKeys: () => rowKeys,
@@ -6973,7 +6983,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     saveTab: () => saveTab,
     saveView: () => saveView,
     saveWs: () => saveWs,
+    savedCapped: () => savedCapped,
     savedFactsHtml: () => savedFactsHtml,
+    savedNoun: () => savedNoun,
     savedNow: () => savedNow,
     savedViewMenu: () => savedViewMenu,
     savesSettled: () => savesSettled,
@@ -36535,6 +36547,8 @@ ${s5}`;
       [/nothing was written to the tracker/g, "nothing was saved"],
       [/transcript no longer in the inbox/g, "the transcript is no longer in Intake"],
       [/\b(\d+) of (\d+) staged for Review; (\d+) not staged\b/g, "$1 of $2 drafted; $3 not drafted"],
+      [/\b0 of \d+ waiting in Review;? (\d+) couldn't be read\b/g, "Nothing was drafted. $1 couldn't be read"],
+      [/\b0 of \d+ waiting in Review\b/g, "Nothing was drafted"],
       [/\b(\d+) of (\d+) waiting in Review\b/g, "$1 of $2 drafted, ready to check in Intake"],
       [/\bNot staged: process it again\b/g, "Nothing was drafted: process it again"],
       [/\bNot in Review yet\b/g, "Not drafted yet"],
@@ -36606,9 +36620,17 @@ ${s5}`;
     }
     return out.length ? out.join(". ") : "Saved";
   }
+  function savedCapped(list, msg) {
+    const m5 = /written (\d+), filed (\d+), rejected (\d+)/.exec(String(msg || ""));
+    if (!m5) return list;
+    let ok2 = +m5[1] + +m5[2], no2 = +m5[3];
+    return list.filter((x5) => x5.v === "rejected" ? no2-- > 0 : ok2-- > 0);
+  }
   var addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
+  var isMovedMinutes = (m5) => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m5 || "").trim());
 
   // core/intakeApi.js
+  var SAFE_WHY = (m5) => /OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m5) ? /too long/i.test(m5) ? "the file name is too long. Rename it and add it again" : "it couldn't be saved. Try again" : m5;
   var MTG = () => D.meetings && D.meetings.rows || [], MRUN = {};
   var nowHM = function() {
     const n4 = /* @__PURE__ */ new Date();
@@ -36658,6 +36680,7 @@ ${s5}`;
     if (!UPLOAD_TYPES.includes(ext)) return { fail: addFailed(f5.name, "Intake takes transcripts (VTT), Word, text, Markdown and PDF files, not this kind") };
     if (f5.size > UPLOAD_MAX) return { fail: addFailed(f5.name, "it is over 25 MB") };
     if (!f5.size) return { fail: addFailed(f5.name, "the file is empty") };
+    if (f5.name.length > 200) return { fail: addFailed(f5.name.slice(0, 40) + "…", "the file name is too long. Rename it and add it again") };
     const data = await new Promise((res, rej) => {
       const fr2 = new FileReader();
       fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
@@ -36670,7 +36693,7 @@ ${s5}`;
         snack(OLDSERVER);
         return false;
       }
-      return { fail: addFailed(f5.name, oneLine(r4.message)) };
+      return { fail: addFailed(f5.name, SAFE_WHY(oneLine(r4.message))) };
     }
     return { r: r4, ext };
   }
@@ -37368,7 +37391,6 @@ ${s5}`;
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-  var isMovedMinutes = (m5) => /isn't there|nothing pending/i.test(String(m5 || ""));
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
     const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
@@ -37789,7 +37811,7 @@ ${s5}`;
       if (!written) {
         if (!await needVault()) return;
         try {
-          await editProposal(r4.file, (data) => setDecision(data, r4, v5));
+          await editProposal(r4.file, (data) => setDecision(data, r4, v5), r4);
         } catch (e4) {
           if (/already|no longer/.test(e4.message)) {
             snack("That one was already approved or changed, so nothing was saved. The list has been refreshed.");
@@ -37818,7 +37840,7 @@ ${s5}`;
           delete r4.done;
           undoRec();
           try {
-            await editProposal(r4.file, (data) => setDecision(data, r4, "pending"));
+            await editProposal(r4.file, (data) => setDecision(data, r4, "pending"), r4);
           } catch (e4) {
             snack(viaServer() ? "Already saved: undo it in Activity" : "Already saved: ask Claude Code to undo the last save");
           }
@@ -37970,7 +37992,7 @@ ${s5}`;
     const done = [], failed = [];
     for (const [file, rs2] of byFile) {
       try {
-        await editProposal(file, (data) => rs2.forEach((r4) => setDecision(data, r4, v5)));
+        await editProposal(file, (data) => rs2.forEach((r4) => setDecision(data, r4, v5)), rs2);
         done.push(...rs2);
       } catch (e4) {
         failed.push(...rs2.map((r4) => `#${r4.n} (${e4.message})`));
@@ -37980,7 +38002,7 @@ ${s5}`;
       for (const [file, rs2] of byFile) {
         const mine = rs2.filter((r4) => done.includes(r4));
         if (mine.length) try {
-          await editProposal(file, (data) => mine.forEach((r4) => setDecision(data, r4, "pending")));
+          await editProposal(file, (data) => mine.forEach((r4) => setDecision(data, r4, "pending")), mine);
         } catch (e4) {
         }
       }
@@ -38067,6 +38089,11 @@ ${s5}`;
       snack(needsConnection(how === "merge" ? "Merging" : "Keeping it as new"));
       return;
     }
+    if (!(await guardFresh([r4])).length) {
+      snack(STALE_ROW_MSG);
+      await reloadData();
+      return;
+    }
     const res = await api("/api/review/repeat", { file: r4.file, ref: r4.ref, how });
     snack(saidPlain(res.message) || (res.ok ? "Done" : "Not changed"));
     if (res.ok) {
@@ -38109,6 +38136,11 @@ ${s5}`;
     openPicker(anchor, { role: "listbox", search: L3.length > 7, label: `Update which ${RTKINDS[r4.kind]} instead`, options: L3.map((c5) => ({ v: c5.id, label: `${c5.id} · ${c5.t}`, hint: rtHint(c5) })), onPick: (v5) => rtGo(r4, v5) });
   }
   async function rtGo(r4, id2) {
+    if (!(await guardFresh([r4])).length) {
+      snack(STALE_ROW_MSG);
+      await reloadData();
+      return;
+    }
     const at2 = { file: r4.file, ref: r4.ref };
     const res = await api("/api/review/retarget", { ...at2, id: id2 });
     if (!res || !res.ok) {
@@ -38387,6 +38419,16 @@ ${s5}`;
       return;
     }
     const done = [], msgs = [];
+    {
+      const fresh = await guardFresh(list);
+      if (fresh.length < list.length) msgs.push(STALE_ROW_MSG);
+      list = fresh;
+      if (!list.length) {
+        snack(STALE_ROW_MSG);
+        await reloadData();
+        return;
+      }
+    }
     for (const { body: body2, L: L3 } of rjBy(list, (r4) => c5.guess ? { guess: true } : { reason: c5.reason || "", duplicate_of: dupOf(r4) || "" })) {
       const res = await api("/api/review/reject", { rows: L3.map((r4) => ({ file: r4.file, ref: r4.ref })), ...body2 });
       if (res.ok) (res.rejected || []).forEach((x5) => {
@@ -38629,6 +38671,11 @@ ${s5}`;
       snack(needsConnection("Approving these minutes without the transcript"));
       return;
     }
+    if (!(await guardFresh([r4])).length) {
+      snack(STALE_ROW_MSG);
+      await reloadData();
+      return;
+    }
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "approved", modes: ["without-transcript"] });
     if (!res.ok) {
       const why = heldWhy(res.message);
@@ -38663,6 +38710,11 @@ ${s5}`;
   async function heldDiscard(r4) {
     if (!viaServer()) {
       snack(needsConnection("Discarding these minutes"));
+      return;
+    }
+    if (!(await guardFresh([r4])).length) {
+      snack(STALE_ROW_MSG);
+      await reloadData();
       return;
     }
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision: "discard" });
@@ -57309,7 +57361,7 @@ system/scripts/run launch.py agent ${what}`;
         }
       }
     );
-    const ticks = (all, short = (v5) => v5) => {
+    const ticks = (all, short2 = (v5) => v5) => {
       const have = Array.isArray(val(k5)) ? val(k5) : [];
       return /* @__PURE__ */ u4("span", { class: "setticks", role: "group", ...named, children: all.map((v5) => /* @__PURE__ */ u4("label", { class: "settick", children: [
         /* @__PURE__ */ u4(
@@ -57333,7 +57385,7 @@ system/scripts/run launch.py agent ${what}`;
           }
         ),
         " ",
-        short(v5)
+        short2(v5)
       ] })) });
     };
     let control;
@@ -59397,7 +59449,7 @@ system/scripts/run launch.py agent ${what}`;
       if (!b5) return;
       e4.preventDefault();
       e4.stopPropagation();
-      const r4 = REV.find((x5) => x5.n === +b5.dataset.n);
+      const r4 = revForModelN(+b5.dataset.n);
       if (!r4 || !await needVault()) return;
       const name = r4.ws_suggest, add = b5.dataset.wsq === "add", s5 = add ? wsSuggest(r4.p, name) : null;
       try {
@@ -59410,7 +59462,7 @@ system/scripts/run launch.py agent ${what}`;
           const known2 = wsRow(r4.p, name), target = it2.values || (it2.changes = it2.changes || {});
           target.workstream = known2 ? known2.name : name;
           if (!known2) items2.splice(items2.indexOf(it2), 0, { n: Math.max(0, ...items2.map((i5) => +i5.n || 0)) + 1, op: "new", table: "workstreams", values: Object.fromEntries(Object.entries({ project: r4.p, name, lead: s5.lead, keywords: s5.keywords, aliases: s5.aliases, channel: s5.channel, source: `${S.me} in review, ${TODAY}` }).filter(([, x5]) => x5)), match: "strong", flags: [], decision: "approved" });
-        });
+        }, r4);
       } catch (err) {
         snack("Not saved: " + err.message);
         return;
@@ -60892,9 +60944,9 @@ ${d5.text}`);
     for (const col of [...EDITABLE[table] || [], ...SIDE[table] || []]) if (col in draft) now[col] = draft[col];
     return now;
   }
-  function irPhrase(c5, short) {
+  function irPhrase(c5, short2) {
     if (irIsText(c5.col)) return { label: PHRASE[c5.col], delta: "", text: true };
-    const label = short && SHORT[c5.col] ? SHORT[c5.col] : irLabel(c5.col).toLowerCase();
+    const label = short2 && SHORT[c5.col] ? SHORT[c5.col] : irLabel(c5.col).toLowerCase();
     return { label, delta: `${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`, text: false };
   }
   function irNoteWords(changed2) {
@@ -61661,14 +61713,14 @@ ${d5.text}`);
     if (r4.kind === "update") {
       const u5 = updOpen(r4);
       if (u5) {
-        shared.CUR = { mode: "proposal", k: u5.table, n: n4, draft: u5.draft, upd: u5.upd };
+        shared.CUR = { mode: "proposal", k: u5.table, n: n4, rf: r4.file, fp: r4.fp, draft: u5.draft, upd: u5.upd };
         shared.EDITING = true;
         drawPanel();
         $("#panel").classList.add("on");
         return;
       }
     }
-    shared.CUR = { mode: "proposal", k: r4.kind, n: n4, draft: Object.assign({ p: r4.p }, r4.rec) };
+    shared.CUR = { mode: "proposal", k: r4.kind, n: n4, rf: r4.file, fp: r4.fp, draft: Object.assign({ p: r4.p }, r4.rec) };
     shared.EDITING = true;
     drawPanel();
     $("#panel").classList.add("on");
@@ -61748,7 +61800,10 @@ ${d5.text}`);
   }
   async function updSave(approve) {
     const u5 = shared.CUR.upd, r4 = pkRev(), x5 = shared.CUR.draft;
-    if (!r4) return;
+    if (!r4) {
+      snack(STALE_ROW);
+      return;
+    }
     const plan = irSaveChanges(u5.table, u5.changes, u5.liveDb, u5.opened, toDb(u5.table, x5));
     if ("error" in plan) {
       pkNote(plan.error);
@@ -61776,9 +61831,9 @@ ${d5.text}`);
           it2.decision = "approved";
           it2.decided_in = "dashboard";
         }
-      });
+      }, r4);
     } catch (e4) {
-      snack("Not saved: " + e4.message);
+      snack(/already|no longer/.test(e4.message) ? STALE_ROW : "Not saved: " + e4.message);
       return;
     }
     const was = r4.rec.changes || [], cols = Object.keys(fin);
@@ -61856,11 +61911,11 @@ ${d5.text}`);
         }
         if (shared.CUR.mode === "proposal" && !x5.p) h5 = `<div class="cmnote">Choose a project before saving.</div>` + h5;
         if (shared.CUR.mode === "record" || shared.CUR.mode === "proposal") {
-          const src = shared.CUR.mode === "record" ? x5.src : REV.find((r4) => r4.n === shared.CUR.n).src;
+          const src = shared.CUR.mode === "record" ? x5.src : (pkRev() || {}).src;
           h5 += `<div class="fsec">Record</div>${shared.CUR.mode === "record" ? `<dt>ID</dt><dd>${shared.CUR.id}</dd>` : ""}<dt>Source</dt><dd>${srcHTML(src)}</dd>${shared.CUR.mode === "record" ? `<dt>Last updated</dt><dd>${x5.upd_at ? fd(x5.upd_at) : "—"}</dd>` : ""}`;
         }
         if (shared.CUR.mode === "proposal") {
-          const sig = learnable(REV.find((r4) => r4.n === shared.CUR.n));
+          const sig = learnable(pkRev());
           if (sig) h5 += `<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`;
         }
         if (shared.CUR.mode === "health") h5 += `<div class="evidence" id="hEvidence" aria-live="polite"></div>`;
@@ -61948,7 +62003,7 @@ ${d5.text}`);
       morePanel(focusField);
       {
         if (shared.CUR && shared.CUR.mode === "proposal") {
-          const r4 = REV.find((x5) => x5.n === shared.CUR.n);
+          const r4 = pkRev();
           if (r4 && rvDup(r4) && !r4.done)
             addHTML($("#pFields"), "afterbegin", raw(llNoteHtml(r4)));
         }
@@ -62155,7 +62210,11 @@ ${d5.text}`);
       return;
     }
     if (shared.CUR.mode === "proposal") {
-      const r4 = REV.find((x5) => x5.n === shared.CUR.n);
+      const r4 = pkRev();
+      if (!r4) {
+        snack(STALE_ROW);
+        return;
+      }
       const before = JSON.parse(JSON.stringify(r4));
       if (!await needVault()) return;
       try {
@@ -62197,9 +62256,9 @@ ${d5.text}`);
             it2.decision = "approved";
             it2.decided_in = "dashboard";
           }
-        });
+        }, r4);
       } catch (e4) {
-        snack("Not saved: " + e4.message);
+        snack(/already|no longer/.test(e4.message) ? STALE_ROW : "Not saved: " + e4.message);
         return;
       }
       const lc2 = $("#f_learn");
@@ -63301,7 +63360,12 @@ ${d5.text}`);
     if (String(id2).startsWith("rv")) return shared.CUR && shared.CUR.mode === "proposal" && "rv" + shared.CUR.n === id2 ? shared.CUR.draft : null;
     return REC(k5, id2);
   }
-  var pkRev = () => shared.CUR && shared.CUR.mode === "proposal" ? REV.find((r4) => r4.n === shared.CUR.n) : null;
+  var STALE_ROW = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+  var pkRev = () => {
+    const c5 = shared.CUR;
+    if (!c5 || c5.mode !== "proposal") return null;
+    return c5.fp ? REV.find((r4) => r4.file === c5.rf && r4.fp === c5.fp) || null : REV.find((r4) => r4.n === c5.n) || null;
+  };
   function pkPropDraw(x5, k5) {
     const on2 = shared.CUR.mode === "proposal";
     $("#panel").classList.toggle("pkprop", on2);
@@ -67287,7 +67351,7 @@ ${d5.text}`);
       if (!b5) return;
       e4.preventDefault();
       e4.stopPropagation();
-      const r4 = REV.find((x5) => String(x5.n) === b5.dataset.wkrv);
+      const r4 = revForModelN(+b5.dataset.wkrv);
       if (!r4 || !WKRVF[r4.kind]) return;
       const [ui2, db2] = WKRVF[r4.kind], to2 = b5.dataset.to;
       if (!await needVault()) return;
@@ -67298,9 +67362,9 @@ ${d5.text}`);
           it2.values = it2.values || {};
           it2.values[db2] = to2;
           it2.edited_in = "dashboard";
-        });
+        }, r4);
       } catch (err) {
-        snack("Not saved: " + err.message);
+        snack(/already|no longer/.test(err.message) ? "That one was already approved or changed, so nothing was saved. The list has been refreshed." : "Not saved: " + err.message);
         return;
       }
       r4.rec[ui2] = to2;
@@ -67714,13 +67778,13 @@ ${d5.text}`);
       change2 = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
     }
     if (!text) return html`${String(a5.what ?? "")}`;
-    const short = text.length > 80 ? text.slice(0, 79) + "…" : text, kind = /-A-/.test(id2) ? "actions" : /-D-/.test(id2) ? "decisions" : /-M-/.test(id2) ? "ms" : /-\d{3}$/.test(id2) ? "raid" : /^[A-Z][A-Z0-9]{2,6}$/.test(id2) ? "proj" : "";
+    const short2 = text.length > 80 ? text.slice(0, 79) + "…" : text, kind = /-A-/.test(id2) ? "actions" : /-D-/.test(id2) ? "decisions" : /-M-/.test(id2) ? "ms" : /-\d{3}$/.test(id2) ? "raid" : /^[A-Z][A-Z0-9]{2,6}$/.test(id2) ? "proj" : "";
     const ch2 = String(change2 ?? "");
     if (kind === "proj") return html`<a href="#" class="hlink" data-proj="${id2}">${pName(id2)}</a> — ${ch2}`;
     const upd = id2.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/);
     if (upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch2}`;
     const link = kind === "ms" ? html`<a href="${actHref(kind, id2)}" class="hlink" data-ms="${id2}">${id2}</a>` : kind && itemText(id2) ? html`<a href="${actHref(kind, id2)}" class="hlink" data-open="${kind}:${id2}">${id2}</a>` : String(id2 ?? "");
-    return html`${link} · <span title="${text}">${short}</span> — ${ch2}`;
+    return html`${link} · <span title="${text}">${short2}</span> — ${ch2}`;
   }
   var ACTKINDS = [
     ["action", "Action", "action"],
@@ -77009,10 +77073,14 @@ ${d5.text}`);
     else decide(r4.n, "rejected");
   }
   async function irApproveRoutine(groups) {
-    const looked = (groups.routine || []).map((n4) => ({ key: modelKeyOf(n4), fp: (SNAP.keys.get(n4) || {}).fp })).filter((x5) => x5.key);
+    const looked = (groups.routine || []).map((n4) => ({ key: modelKeyOf(n4), fp: (SNAP.keys.get(n4) || {}).fp, cfp: (SNAP.keys.get(n4) || {}).cfp })).filter((x5) => x5.key);
+    const minKey = [...groups.needs || [], ...groups.routine || []].map((n4) => {
+      const r4 = irRow(n4);
+      return r4 && !r4.done && isRecordMin(r4) ? modelKeyOf(n4) : null;
+    }).find(Boolean);
     await reloadData();
     const now = looked.map((x5) => {
-      const r4 = REV.find((y5) => revKey(y5) === x5.key);
+      const r4 = rowFor(x5.key, x5.cfp);
       return r4 && !r4.done && JSON.stringify([r4.rec, r4.p, r4.kind, r4.flags || null]) === x5.fp ? r4 : null;
     });
     const same2 = (
@@ -77025,17 +77093,17 @@ ${d5.text}`);
       return;
     }
     const keys = new Set(same2.map(revKey));
-    const min = same2.find((r4) => isRecordMin(r4));
+    const min = minKey && REV.find((y5) => revKey(y5) === minKey && !y5.done && isRecordMin(y5)) || same2.find((r4) => isRecordMin(r4));
     if (min && viaServer()) {
       await approveRoutineTracked(min, keys, left);
       return;
     }
     const list = same2.filter((r4) => rvBulkOK(r4));
-    if (!list.length) {
+    if (!list.length && !same2.length) {
       snack("Nothing routine to approve");
       return;
     }
-    const res = await rvDecideMany(list, "approved");
+    const res = await rvDecideMany(list.length ? list : same2, "approved");
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
     const out = trkLeftOut(res);
     if (left) out.push(left);
@@ -77901,6 +77969,121 @@ ${d5.text}`);
     R(/* @__PURE__ */ u4(Toast, { ...props }), host2);
   }
 
+  // core/identity.js
+  function fpCanon(x5) {
+    if (x5 === null || x5 === void 0) return "null";
+    if (typeof x5 === "boolean") return x5 ? "true" : "false";
+    if (typeof x5 === "number") {
+      if (!isFinite(x5)) return "null";
+      if (Number.isInteger(x5)) return Math.abs(x5) > Number.MAX_SAFE_INTEGER ? BigInt(x5).toString() : String(x5 === 0 ? 0 : x5);
+      return `{"f":${Math.floor(x5 * 1e6 + 0.5)}}`;
+    }
+    if (typeof x5 === "string") return JSON.stringify(x5.normalize("NFC"));
+    if (Array.isArray(x5)) return "[" + x5.map(fpCanon).join(",") + "]";
+    return "{" + Object.keys(x5).sort((a5, b5) => cmp(a5.normalize("NFC"), b5.normalize("NFC"))).map((k5) => JSON.stringify(k5.normalize("NFC")) + ":" + fpCanon(x5[k5])).join(",") + "}";
+  }
+  var cmp = (a5, b5) => {
+    const x5 = Array.from(a5), y5 = Array.from(b5);
+    for (let i5 = 0; i5 < Math.min(x5.length, y5.length); i5++) {
+      const d5 = x5[i5].codePointAt(0) - y5[i5].codePointAt(0);
+      if (d5) return d5;
+    }
+    return x5.length - y5.length;
+  };
+  function fpSha256(s5) {
+    const K2 = new Uint32Array(64);
+    {
+      let n4 = 2, i5 = 0;
+      while (i5 < 64) {
+        let p6 = true;
+        for (let d5 = 2; d5 * d5 <= n4; d5++) if (n4 % d5 === 0) {
+          p6 = false;
+          break;
+        }
+        if (p6) {
+          K2[i5++] = Math.floor(Math.cbrt(n4) % 1 * 4294967296);
+        }
+        n4++;
+      }
+    }
+    const H4 = new Uint32Array(8);
+    {
+      let n4 = 2, i5 = 0;
+      while (i5 < 8) {
+        let p6 = true;
+        for (let d5 = 2; d5 * d5 <= n4; d5++) if (n4 % d5 === 0) {
+          p6 = false;
+          break;
+        }
+        if (p6) {
+          H4[i5++] = Math.floor(Math.sqrt(n4) % 1 * 4294967296);
+        }
+        n4++;
+      }
+    }
+    const b5 = new TextEncoder().encode(s5), l6 = b5.length, tot = l6 + 9 + 63 >> 6 << 6, m5 = new Uint8Array(tot);
+    m5.set(b5);
+    m5[l6] = 128;
+    const dv = new DataView(m5.buffer);
+    dv.setUint32(tot - 8, Math.floor(l6 * 8 / 4294967296));
+    dv.setUint32(tot - 4, l6 * 8 >>> 0);
+    const w6 = new Uint32Array(64), rr2 = (x5, n4) => x5 >>> n4 | x5 << 32 - n4;
+    for (let o5 = 0; o5 < tot; o5 += 64) {
+      for (let i5 = 0; i5 < 16; i5++) w6[i5] = dv.getUint32(o5 + i5 * 4);
+      for (let i5 = 16; i5 < 64; i5++) {
+        const s02 = rr2(w6[i5 - 15], 7) ^ rr2(w6[i5 - 15], 18) ^ w6[i5 - 15] >>> 3, s12 = rr2(w6[i5 - 2], 17) ^ rr2(w6[i5 - 2], 19) ^ w6[i5 - 2] >>> 10;
+        w6[i5] = w6[i5 - 16] + s02 + w6[i5 - 7] + s12 >>> 0;
+      }
+      let [a5, bb2, c5, d5, e4, f5, g5, h5] = H4;
+      for (let i5 = 0; i5 < 64; i5++) {
+        const S12 = rr2(e4, 6) ^ rr2(e4, 11) ^ rr2(e4, 25), ch2 = e4 & f5 ^ ~e4 & g5, t110 = h5 + S12 + ch2 + K2[i5] + w6[i5] >>> 0, S02 = rr2(a5, 2) ^ rr2(a5, 13) ^ rr2(a5, 22), mj = a5 & bb2 ^ a5 & c5 ^ bb2 & c5, t210 = S02 + mj >>> 0;
+        h5 = g5;
+        g5 = f5;
+        f5 = e4;
+        e4 = d5 + t110 >>> 0;
+        d5 = c5;
+        c5 = bb2;
+        bb2 = a5;
+        a5 = t110 + t210 >>> 0;
+      }
+      H4[0] += a5;
+      H4[1] += bb2;
+      H4[2] += c5;
+      H4[3] += d5;
+      H4[4] += e4;
+      H4[5] += f5;
+      H4[6] += g5;
+      H4[7] += h5;
+    }
+    return Array.from(H4, (x5) => x5.toString(16).padStart(8, "0")).join("");
+  }
+  var short = (x5) => fpSha256(fpCanon(x5)).slice(0, 12);
+  var itemFp = (it2) => short([it2.op, it2.table, it2.id, it2.changes, it2.values]);
+  var blockFp = (b5) => short([b5.key, b5.title, b5.draft, b5.project, b5.projects]);
+  var BLOCKS = ["meeting", "report", "file_changes"];
+  var itemGuard = (rw2) => ({ file: rw2.file, ref: rw2.ref, fp: rw2.fp || null, rw: rw2 });
+  function findGuarded(data, rw2) {
+    if (BLOCKS.includes(rw2.ref)) {
+      const b5 = data[rw2.ref];
+      return b5 && (!rw2.fp || blockFp(b5) === rw2.fp) ? b5 : null;
+    }
+    const its = (data.items || []).filter((i5) => i5 && typeof i5 === "object");
+    const at2 = its.find((i5) => i5.n === rw2.ref);
+    if (!rw2.fp) return at2 || null;
+    if (at2 && itemFp(at2) === rw2.fp) return at2;
+    const same2 = its.filter((i5) => itemFp(i5) === rw2.fp);
+    if (same2.length === 1) {
+      rw2.ref = same2[0].n;
+      return same2[0];
+    }
+    return null;
+  }
+  function refreshGuard(data, rw2) {
+    if (!rw2 || !rw2.fp) return;
+    const it2 = BLOCKS.includes(rw2.ref) ? data[rw2.ref] : (data.items || []).find((i5) => i5 && i5.n === rw2.ref);
+    if (it2) rw2.fp = BLOCKS.includes(rw2.ref) ? blockFp(it2) : itemFp(it2);
+  }
+
   // core/server.js
   var VDB = () => new Promise((res, rej) => {
     const q5 = indexedDB.open("creaite-vault", 1);
@@ -78251,10 +78434,15 @@ ${d5.text}`);
       APPLYL = [];
       const r4 = await applyNow();
       const held = r4.ok ? heldWords(r4.message) : "";
-      snack(r4.ok ? `${decidedWords(L3)}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
+      snack(r4.ok ? `${decidedWords(savedCapped(L3, r4.message))}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
+    if (!(await guardFresh([r4])).length) {
+      snack(STALE_ROW_MSG);
+      await reloadData();
+      return;
+    }
     const res = await api("/api/review", { file: r4.file, ref: r4.ref, decision, modes: modes || [] });
     if (res.ok) {
       if (S.autoApply) applySoon(r4, decision);
@@ -78350,21 +78538,51 @@ ${d5.text}`);
       return name;
     });
   }
-  var editProposal = function(file, mut) {
+  var editProposal = function(file, mut, rws) {
     return vq(async () => {
       const path = "system/staging/" + file;
-      let data;
+      let text, data;
       try {
-        data = JSON.parse(await shared.VW.read(path));
+        text = await shared.VW.read(path);
+        data = JSON.parse(text);
       } catch (e4) {
         throw new Error("that proposal has already been applied or removed");
       }
+      const guarded = rws ? [].concat(rws) : [];
+      for (const r4 of guarded) if (!findGuarded(data, r4)) throw new Error("already approved or changed");
       const apWas = apSnap(data);
       mut(data);
       apStamp(data, apWas);
-      await shared.VW.write(path, JSON.stringify(data, null, 2) + "\n");
+      try {
+        await shared.VW.write(path, JSON.stringify(data, null, 2) + "\n", text);
+      } catch (e4) {
+        if (/changed since it was read/.test(e4.message)) throw new Error("already approved or changed");
+        throw e4;
+      }
+      guarded.forEach((r4) => refreshGuard(data, r4));
     });
   };
+  var STALE_ROW_MSG = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
+  async function guardFresh(rws) {
+    const out = [], cache = /* @__PURE__ */ new Map();
+    for (const r4 of rws) {
+      if (!r4.fp) {
+        out.push(r4);
+        continue;
+      }
+      let data = cache.get(r4.file);
+      if (data === void 0) {
+        try {
+          data = JSON.parse(await shared.VW.read("system/staging/" + r4.file));
+        } catch (e4) {
+          data = null;
+        }
+        cache.set(r4.file, data);
+      }
+      if (data && findGuarded(data, r4)) out.push(r4);
+    }
+    return out;
+  }
   var apKey = (v5) => JSON.stringify(v5, (k5, x5) => x5 && typeof x5 === "object" && !Array.isArray(x5) ? Object.fromEntries(Object.keys(x5).sort().map((n4) => [n4, x5[n4]])) : x5);
   function apSnap(data) {
     const m5 = /* @__PURE__ */ new Map();
@@ -79210,13 +79428,21 @@ ${d5.text}`);
     const m5 = D.intake_review || 0;
     if (!force && SNAP.model === m5) return;
     SNAP.model = m5;
-    SNAP.keys = new Map(REV.map((r4) => [r4.n, { key: revKey(r4), fp: JSON.stringify([r4.rec, r4.p, r4.kind, r4.flags || null]) }]));
+    SNAP.keys = new Map(REV.map((r4) => [r4.n, { key: revKey(r4), fp: JSON.stringify([r4.rec, r4.p, r4.kind, r4.flags || null]), cfp: r4.fp || null }]));
+  }
+  function rowFor(key2, cfp) {
+    const at2 = REV.find((r4) => revKey(r4) === key2);
+    if (!cfp) return at2 || null;
+    if (at2 && at2.fp === cfp) return at2;
+    const file = key2.split("|")[0];
+    const same2 = REV.filter((r4) => r4.file === file && r4.fp === cfp);
+    return same2.length === 1 ? same2[0] : null;
   }
   function revForModelN(n4) {
     snapModelKeys(false);
     const k5 = SNAP.keys.get(n4);
     if (!k5) return REV.find((r4) => r4.n === n4) || null;
-    return REV.find((r4) => revKey(r4) === k5.key) || null;
+    return rowFor(k5.key, k5.cfp);
   }
   var modelKeyOf = (n4) => {
     snapModelKeys(false);
@@ -79547,6 +79773,7 @@ ${d5.text}`);
         "autoGrow",
         "batchMove",
         "bkDate",
+        "blockFp",
         "blockerWords",
         "boardAsk",
         "boardKeyOf",
@@ -79681,6 +79908,8 @@ ${d5.text}`);
         "fitFilterBar",
         "flip",
         "flowCard",
+        "fpCanon",
+        "fpSha256",
         "fuApply",
         "fuFind",
         "fuMsg",
@@ -79809,8 +80038,10 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
+        "isMovedMinutes",
         "isNotePath",
         "itemDatePicker",
+        "itemFp",
         "items",
         "jobLive",
         "joinPanes",
@@ -80081,6 +80312,7 @@ ${d5.text}`);
         "revForModelN",
         "reviewViaServer",
         "rjGuesses",
+        "rjMenu",
         "rkText",
         "row",
         "rowKeys",
@@ -80099,6 +80331,7 @@ ${d5.text}`);
         "saveCurrent",
         "savePanel",
         "saveView",
+        "savedCapped",
         "savesSettled",
         "say",
         "sayMd",
