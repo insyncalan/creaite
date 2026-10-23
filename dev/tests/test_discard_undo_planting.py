@@ -203,6 +203,15 @@ class NeverList(Base):
         r = self.py(code, str(self.stage / "discarded/proposed-planted.json"))
         self.assertEqual(r.stdout.strip(), "False", r.stderr)
 
+    def test_a_direct_write_in_a_confirmed_run_is_refused_by_the_never_rule(self):
+        """Cap LOW 1: mode 'ask' is refused anyway; in a confirmed run only the never row on the folder stops a Write there."""
+        code = ("import sys, reach\n"
+                "ok, why = reach.hook_decision('Write', {'file_path': sys.argv[1], 'content': '{}'}, 'confirmed', 'r1')\n"
+                "print(ok)\n")
+        for target in (self.stage / "discarded" / "proposed-planted.json", self.ledger):
+            r = self.py(code, str(target))
+            self.assertEqual(r.stdout.strip(), "False", (target.name, r.stderr))
+
     def test_discard_itself_still_writes_there(self):
         held, before, aside = self.discard()                # review.py, run by the live server through the record route, not filechange
         self.assertTrue(aside.is_file() and self.ledger.is_file())
@@ -210,6 +219,7 @@ class NeverList(Base):
 
 MUTANTS = [
     ("no checksum check", "system/scripts/review.py", '    if rec.get("sha256") != _sha(src):', "    if False:"),
+    ("no never row", "system/scripts/reach.py", '    ("vault", "system/staging/discarded", "write", RECORD),', ""),
 ]
 
 
@@ -232,6 +242,14 @@ class Mutants(unittest.TestCase):
         r = unittest.TextTestRunner(stream=io.StringIO()).run(unittest.defaultTestLoader.loadTestsFromName(
             "test_nothing_but_discard_can_create_change_delete_or_move_there", M))
         self.assertFalse(r.wasSuccessful(), "mutant survived: no never rule")
+
+    def test_removing_the_never_row_turns_the_confirmed_write_test_red(self):
+        class M(Planting):
+            def setUp(self):
+                Base.setUp(self, MUTANTS[1][1:])
+        r = unittest.TextTestRunner(stream=io.StringIO()).run(unittest.defaultTestLoader.loadTestsFromName(
+            "test_a_direct_write_in_a_confirmed_run_is_refused_by_the_never_rule", M))
+        self.assertFalse(r.wasSuccessful(), "mutant survived: no never row")
 
 
 if __name__ == "__main__":

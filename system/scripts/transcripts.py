@@ -426,7 +426,7 @@ def record(facts_list, at=None, refused=None):
 # meetings are never fetched. It is a read: no AI works on the text and nothing is written to the tracker. The text comes only from
 # what Microsoft 365 returned (the live server's own copy of the run's tool results, SweepFetch), never from text Claude typed.
 # Option 2 (Jarvis/Alan, 23-10-2026): the live server's observer is the only path that fetches; `record` and `sweep.py` never
-# write inbox/. transcripts.json gains only "fetched", a time.
+# write inbox/. transcripts.json gains only times and counts (STAMPS: fetched, left, fetch_error, fetch_tries), never text.
 FETCH_TOOLS = (M365 + "outlook_calendar_search", M365 + "read_resource")     # the only tools the fetch uses: the ones Process uses
 FETCH_TALLY = paths.STAGING / "sweep-fetched.json"                           # this sweep's fetch counts, read and cleared by done
 FETCH_TRIES = 3                      # a meeting whose transcript couldn't be saved this many times is left for Process
