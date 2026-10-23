@@ -214,8 +214,8 @@ export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(S
 /** #306: file held minutes without the transcript copy, in place: the minutes and their ticked items in one go.
     @param {string} proposal the minutes' proposal file @returns {Promise<{ok: boolean, message: string, stale?: boolean, n?: number, apply_id?: number|null}>} */
 export async function fileWithoutTranscript(proposal) {
-  const row = REV.find(x => x.kind === "draft" && x.file === proposal);   /* 2.6.2 (#314): the server files these minutes only if they are still the ones on the page */
-  const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"], ...(row && row.fp ? { expect: row.fp } : {}) });
+  const held = REV.find(x => x.kind === "draft" && x.file === proposal);   /* 2.6.2 (#314): the server files these minutes only if they are still the ones on the page */
+  const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"], ...(held && held.fp ? { expect: held.fp } : {}) });
   if (res && !res.ok && REVIEW_CHANGED.test(res.message || "")) return { ok: false, stale: true, message: STALE_ROW_MSG };
   if (!res || !res.ok) return { ok: false, message: oneLine((res && res.message) || "creaite couldn't file these minutes").replace(/^\d+:\s*/, "").replace(/not approved — /, "") };
   const a = await applyNow();
