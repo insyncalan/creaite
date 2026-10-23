@@ -1408,7 +1408,6 @@ EXPORTS = {"html": ".html", "docx": ".docx", "pdf": ".pdf"}
 TEMPLATES = {"weekly": "weekly-report-template.docx", "client": "client-report-template.docx", "minutes": "minutes-template.docx"}
 WORD_EL = re.compile(r"<w:p(?: [^>]*)?/>|<w:p(?: [^>]*)?>.*?</w:p>|<w:tbl>.*?</w:tbl>", re.S)
 WORD_TEXT = re.compile(r"<w:t(?: [^>]*)?>([^<]*)</w:t>")
-FRONT_DROP = ("{{HEALTH_LINE}}", "{{ATTENDEES}}")     # the template's health and attendees lines: the document's sections instead
 CHROME_SECONDS = 90
 
 
@@ -2270,15 +2269,39 @@ def _front_values(doc):
             "MEETING_WHEN": meta.get("when") or tracker.long_date(d), "REPORT_DATE": tracker.long_date(d)}
 
 
-def _front(els, doc):
-    """The template's title block, filled: the project or meeting, the status line and the date. Health and attendees lines go
-    (they are sections)."""
+def _header_lines(shown):
+    """The When and Attendees lines of the shown header section, as the page prints them (the text after "**When:**" and
+    "**Attendees:**", markup removed). The header section is the page's own: a hidden header, or one a client or distributed
+    document doesn't show, is already empty in `shown` (clean), so nothing is read from it. Anything else is not read."""
+    header = next((s for s in shown.get("sections") or [] if s.get("type") == "header" and not s.get("hidden")), None)
+    found = {}
+    for line in str((header or {}).get("text") or "").splitlines():
+        m = re.match(r"\s*\*\*(When|Attendees):\*\*\s*(.+)", line)
+        if m and not found.get(m[1].lower()):
+            found[m[1].lower()] = _nobraces(_plain_inline(m[2])).strip()
+    return found
+
+
+def _front(els, doc, lines=None):
+    """The template's title block, filled: the project or meeting, the status line, the date, and (#331) the project's name, the
+    meeting's When and the attendees, as the page has them (`lines`, _header_lines). The health line goes (it is a section)."""
     import docx_tools
     values, has_start = _front_values(doc), bool((doc.get("meta") or {}).get("period_start"))
+    lines = lines or {}
+    if lines.get("when"):
+        values["MEETING_WHEN"] = lines["when"]
+    named = any("{{PROJECT_NAME}}" in _word_text(e) for e in els)
+    who = _nobraces(doc.get("project_name") or "") + ((" · " + _nobraces(doc["client"])) if doc.get("client") else "")
     out = []
     for el in els:
         text = _word_text(el)
-        if any(p in text for p in FRONT_DROP):
+        if "{{HEALTH_LINE}}" in text:
+            continue
+        if "{{ATTENDEES}}" in text:
+            if who and not named:
+                out.append(docx_tools.put_text(el, who))
+            if lines.get("attendees"):
+                out.append(docx_tools.put_text(el, "Attendees: " + lines["attendees"]))
             continue
         if "{{" in text:
             text = text if has_start else text.replace("{{PERIOD_START}} to {{PERIOD_END}}", "week ending {{PERIOD_END}}")
@@ -2331,9 +2354,9 @@ def _word_body(doc, els, work):
         raise DocError("The Word template isn't one creaite can fill (no summary or table to copy).")
     heading, para = els[at - 1], els[at]
     total = sum(int(w) for w in re.findall(r'<w:gridCol w:w="(\d+)"', table)) or 9000
-    out, values = _front(els[:at - 1], doc), {}
-    out += [e for e, t in zip(els, texts) if "{{STYLE_" in t]              # the fill's style samples (topic headings)
     shown = clean(doc)
+    out, values = _front(els[:at - 1], doc, _header_lines(shown)), {}
+    out += [e for e, t in zip(els, texts) if "{{STYLE_" in t]              # the fill's style samples (topic headings)
     ctx = _Word(shown, work)
     values.update(_logos_front(ctx, shown, out, para))
     for n, s in enumerate(shown["sections"]):
