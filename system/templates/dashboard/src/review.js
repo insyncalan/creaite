@@ -17,7 +17,7 @@ import { srcShort, weekendNote, wkLong } from "./core/fields.js";
 import { go } from "./core/nav.js";
 import { D, fd, fdText, isMe, nowStamp, OPENST, prio, S, TODAY, who } from "./core/page.js";
 import { needsConnection, plainSay } from "./core/say.js";
-import { api, apply, applyNow, applySoon, applyWords, conflictChoice, editProposal, needVault, oneLine, refreshAll, reloadData, reviewViaServer, snack, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
+import { api, apply, applyNow, applySoon, applyWords, conflictChoice, editProposal, guardFresh, STALE_ROW_MSG, needVault, oneLine, refreshAll, reloadData, reviewViaServer, snack, TRKRELOAD, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { deBarred, deItems, deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./core/intakeApi.js";
@@ -66,11 +66,11 @@ export let decide = async function(n,v,written,g){
   if(viaServer()&&v==="approved"&&(r.flags||[]).includes("conflict")) return conflictChoice(r);
   if(v==="approved"&&r.kind==="draft"){ snack(needsConnection("Approving a draft")); return; }   /* BL-149 */
   if(v==="approved"&&(r.flags||[]).includes("conflict")){ snack(`This conflicts with a newer change. ${needsConnection("Keep current or Use this one")}`); return; }   /* BL-149 */
-  if(!written){ if(!await needVault()) return; try{ await editProposal(r.file,data=>setDecision(data,r,v)); }catch(e){ if(/already|no longer/.test(e.message)){ snack("That one was already approved or changed, so nothing was saved. The list has been refreshed."); await reloadData(); return; } snack("Not saved: "+e.message); return; } }
+  if(!written){ if(!await needVault()) return; try{ await editProposal(r.file,data=>setDecision(data,r,v),r); }catch(e){ if(/already|no longer/.test(e.message)){ snack("That one was already approved or changed, so nothing was saved. The list has been refreshed."); await reloadData(); return; } snack("Not saved: "+e.message); return; } }
   if(viaServer()&&S.autoApply){ r.done=v; refreshAll(); applySoon(r,v); return; }
   let undoRec=()=>{};
   apply(`#${n} ${v==="approved"?"approved":"rejected"}: ${r.rec.t}`,()=>{ r.done=v; if(v==="approved") undoRec=applyProposal(r); },
-    async()=>{ delete r.done; undoRec(); try{ await editProposal(r.file,data=>setDecision(data,r,"pending")); }catch(e){ snack(viaServer()?"Already saved: undo it in Activity":"Already saved: ask Claude Code to undo the last save"); } },"You, in Intake"); })();   /* BL-149 */
+    async()=>{ delete r.done; undoRec(); try{ await editProposal(r.file,data=>setDecision(data,r,"pending"),r); }catch(e){ snack(viaServer()?"Already saved: undo it in Activity":"Already saved: ask Claude Code to undo the last save"); } },"You, in Intake"); })();   /* BL-149 */
   return res; };   /* BL-225: stays on the row */
 /* #229 gate: what a user acts on or must notice stays visible beside the one meta line (never part of it): the weekend note with its buttons (BL-180), the "Drafted" tag (BL-218), the no-Word-draft notice (BL-260) */
 export const BAD_MSG="Can't be saved as it is: edit it or reject it";   /* #291: declared before revRow, which runs at load */
@@ -161,8 +161,8 @@ export async function rvDecideMany(list,v){ let dropped=[];
     dropped=list.filter(r=>r&&!r.done&&r.trk!=null); list=list.filter(r=>r&&r.trk==null); }
   list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0,dropped}; if(!await needVault()) return {n:0,dropped};
   const byFile=new Map(); list.forEach(r=>{ if(!byFile.has(r.file)) byFile.set(r.file,[]); byFile.get(r.file).push(r); }); const done=[], failed=[];
-  for(const [file,rs] of byFile){ try{ await editProposal(file,data=>rs.forEach(r=>setDecision(data,r,v))); done.push(...rs); }catch(e){ failed.push(...rs.map(r=>`#${r.n} (${e.message})`)); } }
-  const undoFiles=async()=>{ for(const [file,rs] of byFile){ const mine=rs.filter(r=>done.includes(r)); if(mine.length) try{ await editProposal(file,data=>mine.forEach(r=>setDecision(data,r,"pending"))); }catch(e){} } };
+  for(const [file,rs] of byFile){ try{ await editProposal(file,data=>rs.forEach(r=>setDecision(data,r,v)),rs); done.push(...rs); }catch(e){ failed.push(...rs.map(r=>`#${r.n} (${e.message})`)); } }
+  const undoFiles=async()=>{ for(const [file,rs] of byFile){ const mine=rs.filter(r=>done.includes(r)); if(mine.length) try{ await editProposal(file,data=>mine.forEach(r=>setDecision(data,r,"pending")),mine); }catch(e){} } };
   if(viaServer()&&S.autoApply){ done.forEach(r=>r.done=v); refreshAll(); const res=await applyNow();
     if(!res.ok){ await undoFiles(); done.forEach(r=>{ delete r.done; }); await reloadData(); return {n:0,failed,dropped,stopped:saidPlain(res.message),res}; }
     return {n:done.length,failed,dropped,undo:()=>undoApply(res.apply_id),res}; }
@@ -209,6 +209,7 @@ export function llCompare(r){ const d=r.dup, x=REC(r.kind,d.id)||{t:d.t}, dlg=$(
     [a,b].forEach(v=>{ const td=document.createElement("td"); td.textContent=f==="due"?(fd(v)||"—"):String(v||"—"); if(f!=="t"&&String(a||"")!==String(b||"")) td.className="lldiff"; tr.append(td); }); body.append(tr); });
   $("#llMerge").hidden=!(d.staged&&d.same!==false&&d.state!=="closed"); $("#llMerge").textContent=`Merge as an update to ${d.id}`; $("#llKeep").hidden=!d.staged; dlg.dataset.n=r.n; openDialog(dlg,{focus:"#llClose"}); }
 export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ snack(needsConnection(how==="merge"?"Merging":"Keeping it as new")); return; }
+  if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
   const res=await api("/api/review/repeat",{file:r.file,ref:r.ref,how}); snack(saidPlain(res.message)||(res.ok?"Done":"Not changed")); if(res.ok){ closePanel(); await reloadData(); } }
 /* ===== end BL-221 ===== */
 /* ===== BL-297 D (v19-review-picker) ===== "Update an existing item instead": any pending new action, RAID item or decision with a
@@ -234,7 +235,7 @@ export async function rtOpen(anchor,r){ if(!rtOK(r)) return;
   if(!anchor.isConnected){   /* the list or the peek was drawn again while the server answered: open on the new one, never silently not at all */
     anchor=document.querySelector(`[data-rvrt="${r.n}"]`); if(!anchor) return; }
   openPicker(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
-export async function rtGo(r,id){ const at={file:r.file,ref:r.ref};
+export async function rtGo(r,id){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const at={file:r.file,ref:r.ref};
   const res=await api("/api/review/retarget",{...at,id}); if(!res||!res.ok){ snack(saidPlain(res&&res.message)||"Not changed"); return; }
   if(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===r.n) closePanel(); await reloadData();
   const dup=/duplicate/i.test(res.message||"");
@@ -391,6 +392,7 @@ export async function rjReject(list,c,after){ list=list.filter(r=>rvRejectOK(r))
     if(list.length===1) await decide(list[0].n,"rejected"); else { const res=await rvDecideMany(list,"rejected"); rvSummary("Rejected",res,[]); }
     rjAddGone(G.filter(g=>REV.some(r=>rvKey(r)===g.rk&&r.done==="rejected"))); if(after) after(); return; }
   const done=[], msgs=[];
+  { const fresh=await guardFresh(list); if(fresh.length<list.length) msgs.push(STALE_ROW_MSG); list=fresh; if(!list.length){ snack(STALE_ROW_MSG); await reloadData(); return; } }
   for(const {body,L} of rjBy(list,r=>c.guess?{guess:true}:{reason:c.reason||"",duplicate_of:dupOf(r)||""})){
     const res=await api("/api/review/reject",{rows:L.map(r=>({file:r.file,ref:r.ref})),...body});
     if(res.ok) (res.rejected||[]).forEach(x=>{ const r=L.find(y=>y.file===x.file&&String(y.ref)===String(x.ref)); if(r) done.push(r); }); else msgs.push(saidPlain(res.message)); }
@@ -475,6 +477,7 @@ export const reviewSeams = { decide: v => { decide = v; } };
 export const heldMsg=r=>`Held: ${plainSay(r.held)}. Approve the minutes without the transcript copy, or discard the suggestion`;
 export async function heldApprove(r){ if(!viaServer()){ snack(needsConnection("Approving these minutes without the transcript")); return; }
   /* #306: it says what happened, on the row and in a message: saved (with Undo) or not saved and why, never nothing */
+  if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
   const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"approved",modes:["without-transcript"]});
   if(!res.ok){ const why=heldWhy(res.message); HELD_ERR.set(r.file,why); await reloadData(); snack(`Not saved because ${why}`); refreshAll(); return; }
   HELD_ERR.delete(r.file); if(!S.autoApply){ await reloadData(); snack("Approved without the transcript: not saved yet"); return; }
@@ -488,6 +491,7 @@ export const HELD_ERR=new Map();
 export const heldWhy=m=>{ const t=String(m||"").replace(/^\s*Approved \d+\.\s*/,"").replace(/^\s*\d+:\s*/,"").replace(/not approved — /,"").replace(/,? or say “[^”]*”\.?/g,"").replace(/\n\s*\(say [\s\S]*\)\s*$/,"").replace(/the draft differs from the staged items:/,"these minutes don't match the suggestions waiting in Intake:");
   return saidPlain(t).replace(/\s*\.?\s*$/,"")||"creaite couldn't save these minutes"; };
 export async function heldDiscard(r){ if(!viaServer()){ snack(needsConnection("Discarding these minutes")); return; }
+  if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
   const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard"}); await reloadData(); snack(saidPlain(res.message)); }
 /* the apply's "Held in Review, not applied: …" lines, for its snack */
 export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>/^Held in Review, not applied:/.test(x)); }

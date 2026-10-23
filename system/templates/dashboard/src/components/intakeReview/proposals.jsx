@@ -6,7 +6,7 @@
    proposal in the peek (the app's right-hand panel: Save, Save and approve, Reject, previous and next).
    The rule for "routine" is the server's (review.hold_reason, the row's `hold`); rvBulkOK reads it. Tokens and the app's own
    classes only (style.css, "#232-B"). */
-import { modelKeyOf, pName, REV, revForModelN, revKey, SNAP } from "../../core/data.js";
+import { modelKeyOf, pName, REV, revForModelN, revKey, rowFor, SNAP } from "../../core/data.js";
 import { fd, fdText } from "../../core/page.js";
 import { srcParse, weekendNote, wkLong } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
@@ -152,11 +152,11 @@ export function irReject(n, anchor) {
 export async function irApproveRoutine(groups) {
   /* #307: take the routine rows as the page showed them (file + ref + content), read the server's list again, and approve only
      those that are still the same; the rest are counted and left for the person */
-  const looked = (groups.routine || []).map(n => ({ key: modelKeyOf(n), fp: (SNAP.keys.get(n) || {}).fp })).filter(x => x.key);
+  const looked = (groups.routine || []).map(n => ({ key: modelKeyOf(n), fp: (SNAP.keys.get(n) || {}).fp, cfp: (SNAP.keys.get(n) || {}).cfp })).filter(x => x.key);
   /* the minutes record's own row sits in the first group (needs), not in the routine one: find it by file + ref, before and after the reload */
   const minKey = [...(groups.needs || []), ...(groups.routine || [])].map(n => { const r = irRow(n); return r && !r.done && isRecordMin(r) ? modelKeyOf(n) : null; }).find(Boolean);
   await reloadData();
-  const now = looked.map(x => { const r = REV.find(y => revKey(y) === x.key); return r && !r.done && JSON.stringify([r.rec, r.p, r.kind, r.flags || null]) === x.fp ? r : null; });
+  const now = looked.map(x => { const r = rowFor(x.key, x.cfp); return r && !r.done && JSON.stringify([r.rec, r.p, r.kind, r.flags || null]) === x.fp ? r : null; });
   const same = /** @type {any[]} */ (now.filter(Boolean)), changed = looked.length - same.length;
   const left = changed ? `${changed} changed since you looked, left for you` : "";
   if (looked.length && !same.length) { snack(STALE_MSG); return; }

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "system" / "scripts"))
-import item_fp  # noqa: E402
+import build_dashboard as item_fp  # noqa: E402
 
 VECTORS = [
     {"op": "new", "table": "actions", "values": {"description": "Send the plan", "owner": "Sara", "due_date": "2026-11-01"}},
@@ -42,8 +42,8 @@ class Fp(unittest.TestCase):
         shutil.copy(ROOT / "system/templates/dashboard/src/core/identity.js", d / "identity.mjs")
         (d / "run.mjs").write_text('import * as I from "./identity.mjs"; import fs from "fs";'
                                    'const j=JSON.parse(fs.readFileSync(process.argv[2],"utf8"));'
-                                   'console.log(JSON.stringify({i:j.items.map(I.itemFp),b:j.blocks.map(I.blockFp),c:j.items.map(I.canon),'
-                                   's:[I.sha256(""),I.sha256("abc"),I.sha256("a".repeat(1000))]}));')
+                                   'console.log(JSON.stringify({i:j.items.map(I.itemFp),b:j.blocks.map(I.blockFp),c:j.items.map(I.fpCanon),'
+                                   's:[I.fpSha256(""),I.fpSha256("abc"),I.fpSha256("a".repeat(1000))]}));')
         (d / "in.json").write_text(json.dumps({"items": items, "blocks": blocks}, ensure_ascii=True))
         r = subprocess.run(["node", str(d / "run.mjs"), str(d / "in.json")], capture_output=True, text=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
