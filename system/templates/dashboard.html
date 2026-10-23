@@ -5800,6 +5800,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     editFlow: () => editFlow,
     editProposal: () => editProposal,
     emailKey: () => emailKey,
+    emailKeys: () => emailKeys,
     emptyHtml: () => emptyHtml,
     endCurEdit: () => endCurEdit,
     errBanner: () => errBanner,
@@ -6539,6 +6540,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pBlank: () => pBlank,
     pCell: () => pCell,
     pFind: () => pFind,
+    pFindOrAlias: () => pFindOrAlias,
     pKey: () => pKey,
     pKeysShow: () => pKeysShow,
     pLink: () => pLink,
@@ -57427,10 +57429,12 @@ ${pre}**Current state title:** ${title}`);
     }
   };
   var emailKey = (e4) => String(e4 || "").split(/[,;]/)[0].trim().toLowerCase();
+  var emailKeys = (e4) => String(e4 || "").split(/[,;]/).map((x5) => x5.trim().toLowerCase()).filter(Boolean);
+  var pFindOrAlias = (L3, n4) => pFind(L3, n4) || L3.find((p6) => (p6.aliases || []).some((a5) => pKey(a5) === pKey(n4)));
   function profileEntry() {
     const me2 = myName();
     if (!me2) return null;
-    return pFind(shared.REG, me2) || null;
+    return pFindOrAlias(shared.REG, me2) || null;
   }
   function profileDetails() {
     const p6 = profileEntry();
@@ -57448,20 +57452,26 @@ ${pre}**Current state title:** ${title}`);
     }
   };
   var profileQuestionDue = () => !profileDone() && !askedBefore();
-  async function profileSave(f5) {
+  async function profileSave(f5, merge = false) {
     const name = myName();
     if (!name) {
       snack("Add your name first");
       return false;
     }
-    const key2 = emailKey(f5.email);
+    const keys = emailKeys(f5.email);
     const ok2 = await regSave(`Changed ${name} in the people register`, (L3) => {
-      let r4 = key2 && L3.find((p6) => emailKey(p6.email) === key2) || pFind(L3, name);
+      let r4 = keys.length && L3.find((p6) => emailKeys(p6.email).some((k5) => keys.includes(k5))) || pFindOrAlias(L3, name);
       if (!r4) {
         r4 = pBlank(name);
         L3.push(r4);
       }
-      Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+      if (!merge) {
+        Object.assign(r4, { email: f5.email, aliases: f5.aliases, org: f5.org, role: f5.role });
+        return L3;
+      }
+      const al2 = [...r4.aliases || []];
+      for (const a5 of [...f5.aliases, ...pKey(r4.name) === pKey(name) ? [] : [name]]) if (a5 && pKey(a5) !== pKey(r4.name) && !al2.some((x5) => pKey(x5) === pKey(a5))) al2.push(a5);
+      Object.assign(r4, { email: f5.email || r4.email, aliases: al2, org: f5.org || r4.org, role: f5.role || r4.role });
       return L3;
     });
     if (ok2) claim(name);
@@ -57478,8 +57488,17 @@ ${pre}**Current state title:** ${title}`);
     const res = await askPerson(p6 ? { edit: true, person: p6 } : { details: true, person: pBlank(name) });
     if (!res || !res.person) return false;
     const { name: _n2, ...f5 } = res.person;
-    const other = emailKey(f5.email) && shared.REG.find((q5) => emailKey(q5.email) === emailKey(f5.email) && pKey(q5.name) !== pKey(name));
-    if (other && !confirm(`${f5.email} is already ${other.name}'s address in the people register. Change ${other.name}'s row?`)) return false;
+    const keys = emailKeys(f5.email);
+    const other = keys.length ? shared.REG.find((q5) => q5 !== p6 && emailKeys(q5.email).some((k5) => keys.includes(k5))) : null;
+    if (other) {
+      const will = [];
+      if (f5.aliases.some((a5) => !(other.aliases || []).some((x5) => pKey(x5) === pKey(a5)))) will.push("other ways of writing the name");
+      if (f5.org && f5.org !== other.org) will.push("organisation");
+      if (f5.role && f5.role !== other.role) will.push("role");
+      if (pKey(other.name) !== pKey(name)) will.push(`“${name}” as another way of writing ${other.name}`);
+      if (!confirm(`${f5.email} is already ${other.name}'s address in the people register. Change ${other.name}'s row? ${will.length ? `It keeps everything already there and adds: ${will.join(", ")}.` : "It keeps everything already there and changes nothing else."}`)) return false;
+      return profileSave(f5, true);
+    }
     return profileSave(f5);
   }
   function profileCardHtml() {

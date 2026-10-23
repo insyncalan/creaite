@@ -29,10 +29,15 @@ const claim = (/** @type {string} */ n) => { try { store.set(PROFILE_CLAIMED_KEY
 /** An address as a person's key: trimmed, lower case, the first one when several are listed. Never a name. @param {unknown} e */
 export const emailKey = e => String(e || "").split(/[,;]/)[0].trim().toLowerCase();
 
-/** Your own register entry, found by your name (an address is only known once it is in the entry). null when you aren't in the register yet. */
+/** Every address listed, as keys. @param {unknown} e */
+export const emailKeys = e => String(e || "").split(/[,;]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+/** A row by name, or by one of its other ways of writing the name (the People page treats an alias the same way). @param {any[]} L @param {string} n */
+export const pFindOrAlias = (L, n) => pFind(L, n) || L.find(p => (p.aliases || []).some((/** @type {string} */ a) => pKey(a) === pKey(n)));
+
+/** Your own register entry, found by your name or an alias of it (an address is only known once it is in the entry). null when you aren't in the register yet. */
 export function profileEntry() {
   const me = myName(); if (!me) return null;
-  return pFind(shared.REG, me) || null;
+  return pFindOrAlias(shared.REG, me) || null;
 }
 /** The details shown: what the register holds for you (empty strings when it holds nothing). */
 export function profileDetails() {
@@ -46,15 +51,21 @@ const askedBefore = () => { try { return !!store.get(PROFILE_ASKED_KEY, false); 
 /** The first-run question is shown until the details are in or "Not now" is pressed. */
 export const profileQuestionDue = () => !profileDone() && !askedBefore();
 
-/** Save the details you typed into your register entry (the name itself is a setting). @param {{email:string, aliases:string[], org:string, role:string}} f */
-export async function profileSave(f) {
+/** Save the details you typed into your register entry (the name itself is a setting). With merge (an entry that is someone
+    else's by address): what is there is kept, a field you left empty is never blanked, aliases are added to, and your name is
+    added as another way to write theirs so the card finds it.
+    @param {{email:string, aliases:string[], org:string, role:string}} f @param {boolean} [merge] */
+export async function profileSave(f, merge = false) {
   const name = myName(); if (!name) { snack("Add your name first"); return false; }
-  const key = emailKey(f.email);
-  /* #312 L2: an address, once there is one, is the key; the name only finds the entry before that */
+  const keys = emailKeys(f.email);
+  /* #312 L2: an address, once there is one, is the key (any address listed); the name or an alias only finds the entry before that */
   const ok = await regSave(`Changed ${name} in the people register`, L => {
-    let r = (key && L.find(p => emailKey(p.email) === key)) || pFind(L, name);
+    let r = (keys.length && L.find(p => emailKeys(p.email).some(k => keys.includes(k)))) || pFindOrAlias(L, name);
     if (!r) { r = pBlank(name); L.push(r); }
-    Object.assign(r, { email: f.email, aliases: f.aliases, org: f.org, role: f.role }); return L;
+    if (!merge) { Object.assign(r, { email: f.email, aliases: f.aliases, org: f.org, role: f.role }); return L; }
+    const al = [...(r.aliases || [])];
+    for (const a of [...f.aliases, ...(pKey(r.name) === pKey(name) ? [] : [name])]) if (a && pKey(a) !== pKey(r.name) && !al.some((/** @type {string} */ x) => pKey(x) === pKey(a))) al.push(a);
+    Object.assign(r, { email: f.email || r.email, aliases: al, org: f.org || r.org, role: f.role || r.role }); return L;
   });
   if (ok) claim(name);
   return ok;
@@ -68,8 +79,18 @@ export async function profileEdit() {
   const res = await askPerson(p ? { edit: true, person: p } : { details: true, person: pBlank(name) });
   if (!res || !res.person) return false;
   const { name: _n, ...f } = res.person;
-  const other = emailKey(f.email) && shared.REG.find(q => emailKey(q.email) === emailKey(f.email) && pKey(q.name) !== pKey(name));
-  if (other && !confirm(`${f.email} is already ${other.name}'s address in the people register. Change ${other.name}'s row?`)) return false;
+  const keys = emailKeys(f.email);
+  const other = keys.length ? shared.REG.find(q => q !== p && emailKeys(q.email).some(k => keys.includes(k))) : null;
+  if (other) {
+    /* say what will change: the fields you filled in that differ from the row, and your name added to theirs; nothing is blanked */
+    const will = [];
+    if (f.aliases.some((/** @type {string} */ a) => !(other.aliases || []).some((/** @type {string} */ x) => pKey(x) === pKey(a)))) will.push("other ways of writing the name");
+    if (f.org && f.org !== other.org) will.push("organisation");
+    if (f.role && f.role !== other.role) will.push("role");
+    if (pKey(other.name) !== pKey(name)) will.push(`“${name}” as another way of writing ${other.name}`);
+    if (!confirm(`${f.email} is already ${other.name}'s address in the people register. Change ${other.name}'s row? ${will.length ? `It keeps everything already there and adds: ${will.join(", ")}.` : "It keeps everything already there and changes nothing else."}`)) return false;
+    return profileSave(f, true);
+  }
   return profileSave(f);
 }
 

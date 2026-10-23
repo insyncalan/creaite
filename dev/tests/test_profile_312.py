@@ -154,6 +154,70 @@ class Card(Base):
         self.applied()
         self.assertRegex(self.register, r"\| Zoe Example \|[^\n]*zoe@example\.test")
 
+    def colleague_address(self, me, email, yes):
+        b = self.b
+        self.open_card(me)
+        b.eval(f"__yes={'true' if yes else 'false'}")
+        self.tap("#pfEdit")
+        b.wait("document.getElementById('personDlg').open")
+        b.eval(f"document.getElementById('pd_email').value={email!r}")
+        self.tap("#pdSave")
+        time.sleep(1.0)
+
+    def sara_line(self):
+        return [ln for ln in self.register.splitlines() if ln.startswith("| Sara Example")][0]
+
+    def test_a_colleagues_address_with_yes_keeps_her_details_and_finishes_your_profile(self):   # #312 review 1
+        b = self.b
+        before = self.sara_line()
+        self.colleague_address("Zoe Example", "sara@example.com", True)
+        self.applied()
+        asked = b.eval("__asked")
+        self.assertEqual(len(asked), 1)
+        self.assertIn("keeps everything already there", asked[0])
+        self.assertIn("Zoe Example", asked[0])
+        line = self.sara_line()
+        for kept in ("sara@example.com", "Sara", "SE", "Example Client Ltd", "Delivery lead"):
+            self.assertIn(kept, line)
+        self.assertIn("Zoe Example", line, "your name is added to her aliases")
+        self.assertNotEqual(line, before)
+        self.assertEqual(self.count("Zoe Example"), 0, "no second row")
+        self.assertEqual(b.eval("profileEntry().name"), "Sara Example")
+        self.assertTrue(b.eval("profileDone()"))
+
+    def test_a_colleagues_address_with_no_changes_nothing(self):                     # #312 review 1
+        b = self.b
+        before = self.register
+        self.colleague_address("Zoe Example", "sara@example.com", False)
+        self.assertEqual(len(b.eval("__asked")), 1)
+        self.assertEqual(self.register, before)
+        self.assertFalse(b.eval("profileDone()"))
+
+    def test_an_alias_is_you_so_no_second_row_is_made(self):                          # #312 review 2
+        b = self.b
+        self.open_card("SE")
+        self.assertEqual(b.eval("profileEntry().name"), "Sara Example")
+        self.assertEqual(b.eval("profileDetails().role"), "Delivery lead")
+        self.assertTrue(b.eval("profileSave({email:'sara@example.com',aliases:['Sara','SE'],org:'',role:'Lead'})"))
+        self.applied()
+        self.assertEqual(self.count("SE"), 0)
+        self.assertEqual(self.count("Sara Example"), 1)
+        self.assertIn("Lead", self.sara_line())
+
+    def test_a_second_address_of_a_colleague_is_checked_too(self):                   # #312 review 3
+        b = self.b
+        self.open_card("Zoe Example")
+        b.eval("shared.REG.find(p=>p.name==='Sara Example').email='sara@example.com; sara.two@example.com'; __yes=false")
+        before = self.register
+        self.tap("#pfEdit")
+        b.wait("document.getElementById('personDlg').open")
+        b.eval("document.getElementById('pd_email').value='SARA.TWO@example.com'")
+        self.tap("#pdSave")
+        time.sleep(1.0)
+        self.assertEqual(len(b.eval("__asked")), 1)
+        self.assertIn("Sara Example", b.eval("__asked")[0])
+        self.assertEqual(self.register, before)
+
     def test_the_name_is_the_identity_setting_on_this_computer(self):
         self.open_card("Sara Example")
         b = self.b
