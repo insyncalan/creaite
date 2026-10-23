@@ -448,6 +448,12 @@ class Migration(unittest.TestCase):
         ("rejected", "fingerprint, via", ("abc123", "cx-edit")),
     ]
 
+    F1_KEYS = ("author", "origin", "sequence", "base_version", "engine_version")      # F1: nullable columns added to applies and change_log (absent without the F1 diff)
+
+    def kept(self, t, r):
+        """A migrated row without what the migration adds: the BL-09 archived flag and the F1 keys."""
+        return {k: x for k, x in r.items() if not (k == "archived" and t in self.FLAGGED) and not (t in ("applies", "change_log") and k in self.F1_KEYS)}
+
     def dump(self, db):
         with closing(sqlite3.connect(db)) as con:
             con.row_factory = sqlite3.Row
@@ -477,7 +483,7 @@ class Migration(unittest.TestCase):
         after = self.dump(db)
         self.assertEqual(sorted(t for t in after if t not in NEW_TABLES or t in before), sorted(before))   # NEW_TABLES: made by a later schema, not by BL-09
         for t in before:
-            got = [{k: x for k, x in r.items() if not (k == "archived" and t in self.FLAGGED)} for r in after[t]]
+            got = [self.kept(t, r) for r in after[t]]
             self.assertEqual(got, before[t], t)                                       # every row, every value kept
         for t in self.FLAGGED:
             self.assertTrue(after[t] and all(r["archived"] == 0 for r in after[t]), t)
