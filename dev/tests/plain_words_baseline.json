@@ -3755,18 +3755,6 @@
    "count": 1,
    "text": "system/releases/{} is already there and differs from the published one. Remove it, or check where it"
   },
-  "update.py | refused | 4f8ca1c046f9": {
-   "count": 1,
-   "text": "Refused: the zip's VERSION file doesn't match its manifest."
-  },
-  "update.py | refused | acfdee154faf": {
-   "count": 1,
-   "text": "Refused: {} doesn't match its checksum; the zip is damaged or was changed. Download it again."
-  },
-  "update.py | refused | b0ba77c1e949": {
-   "count": 1,
-   "text": "Refused: the zip doesn't match its manifest or reaches outside the engine ({})."
-  },
   "update.py | script | 10f4aa5204ce": {
    "count": 1,
    "text": "This is the development repository: use git here, not update.py."
