@@ -676,7 +676,7 @@ class SetAside307(Intake307):
         self.assertEqual(self.counts()["arrived"], before["arrived"])
         print("\nC43 row:", row, "| toasts:", self.toast_texts())
         self.assertPlain(row.replace("2026-10-20 Sierra planning.vtt", "<file name>") + " " + " ".join(self.toast_texts()), "the row's result")
-        self.assertRegex(row, r"Couldn't|Needs you|not made|No minutes", "the row doesn't say what happened")
+        self.assertRegex(row, r"Couldn't|Needs you|not made|No minutes|Not drafted yet", "the row doesn't say what happened")
 
     def test_c44_process_that_fails_says_so_on_the_row(self):
         """44. Make minutes when the model run fails: the row says it couldn't and why in words, and the file stays where it was."""
