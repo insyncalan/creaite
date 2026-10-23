@@ -338,34 +338,35 @@ FLIPS = [("never", "may"), ("Never", "May"), ("Only", "Also"), ("only", "also"),
          ("every", "some"), ("stay off", "stay on"), (" not ", " "), ("unless", "and"), ("refus", "allow")]
 
 
+def _stop(cell, i, depth, tick):
+    """Whether the full stop at cell[i] ends a sentence: outside brackets and backticks, then a space or the bold mark."""
+    if cell[i] != "." or tick or depth:
+        return False
+    after = cell[i + 1:i + 3]
+    if re.search(r"(e\.g|v0)$", cell[max(0, i - 3):i]):
+        return False
+    return after[:1] == " " or after == "**" or after == "* " or i + 1 == len(cell)
+
+
+def _split_cell(cell):
+    out, start, depth, tick, i = [], 0, 0, False, 0
+    while i < len(cell):
+        ch = cell[i]
+        tick = not tick if ch == "`" else tick
+        depth += (ch in "([" and not tick) - (ch in ")]" and not tick and depth > 0)
+        if _stop(cell, i, depth, tick):
+            i += 2 if cell[i + 1:i + 3] == "**" else 0
+            out.append(cell[start:i + 1].strip())
+            start = i + 1
+        i += 1
+    out.append(cell[start:].strip())
+    return out
+
+
 def sentences(text):
     """Rules text as sentences: split at newlines, table bars, and a full stop outside brackets and backticks."""
-    out = []
-    for line in text.split("\n"):
-        for cell in line.split("|"):
-            buf, depth, tick, i = [], 0, False, 0
-            while i < len(cell):
-                ch = cell[i]
-                buf.append(ch)
-                if ch == "`":
-                    tick = not tick
-                elif not tick and ch in "([":
-                    depth += 1
-                elif not tick and ch in ")]":
-                    depth = max(0, depth - 1)
-                elif ch == "." and not tick and depth == 0:
-                    nxt = cell[i + 1] if i + 1 < len(cell) else " "
-                    prev = "".join(buf[-4:])
-                    if nxt in " *" and not re.search(r"(e\.g|v0)\.$", prev) and (nxt == " " or cell[i + 1:i + 3] in ("**", "* ")):
-                        if nxt == "*" and cell[i + 1:i + 3] == "**":
-                            buf.append("**")
-                            i += 2
-                        out.append("".join(buf).strip())
-                        buf = []
-                i += 1
-            if "".join(buf).strip():
-                out.append("".join(buf).strip())
-    return [re.sub(r"^(- )+", "", s).strip() for s in out if s]
+    out = [s for line in text.split("\n") for cell in line.split("|") for s in _split_cell(cell)]
+    return [re.sub(r"^(- )+", "", s).strip() for s in out if s.strip()]
 
 
 def git_apply(text, diff, reverse=False):
