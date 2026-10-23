@@ -77,5 +77,32 @@ class Fp(unittest.TestCase):
         self.assertEqual(f(base), f({**base, "n": 9, "decision": "approved", "flags": ["vip"]}))
 
 
+class RowFpIsTheFileItem(unittest.TestCase):
+    """A Review row's fp is the fingerprint of the item AS THE FILE HOLDS IT. review.proposals() fills a risk's `raised` in memory
+    (BL-26), which must not reach the fp: the page re-reads the file and compares (found by the gate-3 run: Approve on a risk said
+    'already approved or changed')."""
+
+    def test_a_risk_without_raised_keeps_the_files_fp(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from test_tracker import Vault
+        import test_dashboard
+        v = Vault()
+        try:
+            test_dashboard.populate(v)
+            item = {"n": 1, "op": "new", "table": "raid", "match": "strong", "flags": [], "decision": "pending",
+                    "values": {"project": "ABC", "type": "Risk", "description": "Supplier may slip", "owner": "Omar",
+                               "impact": "High", "likelihood": "Medium", "source": "Teams chat"}}
+            p = v.propose("2026-10-08-0900-fp", [item])
+            code = ("import json,sys; sys.path.insert(0,'system/scripts'); import build_dashboard as B;"
+                    "print(json.dumps([r['fp'] for r in B.collect(B.clock())['review']]))")
+            r = subprocess.run([sys.executable, "-c", code], cwd=v.root, capture_output=True, text=True, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+            raw = json.loads(p.read_text())["items"][0]
+            self.assertNotIn("raised", raw["values"])
+            self.assertIn(item_fp.item_fp(raw), json.loads(r.stdout.strip().splitlines()[-1]))
+        finally:
+            v.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()
