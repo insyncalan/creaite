@@ -154,7 +154,11 @@ class EmitEventTxn(unittest.TestCase):
         import item_history
         import tracker
         con = sqlite3.connect(":memory:")
-        con.execute("CREATE TABLE item_events (x)")
+        con.row_factory = sqlite3.Row
+        con.executescript("CREATE TABLE applies (apply_id INTEGER PRIMARY KEY); CREATE TABLE change_log (x);")
+        schema = (REPO / "system/scripts/schema.sql").read_text(encoding="utf-8")     # the real table: the insert itself would work
+        start = schema.index("CREATE TABLE IF NOT EXISTS item_events")
+        con.executescript(schema[start:schema.index("CREATE INDEX IF NOT EXISTS item_events_item")])
         orig = item_history.source_of
         item_history.source_of = lambda *a: (_ for _ in ()).throw(sqlite3.OperationalError("disk I/O error"))
         try:
