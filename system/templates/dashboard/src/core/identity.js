@@ -6,7 +6,7 @@
    - canonical JSON: object keys sorted (by code point), array order kept, no spaces; strings NFC-normalised, then JSON-escaped;
    - numbers: an integer is its decimal digits (1.0 and -0 are "1" and "0"; beyond 2^53 the digits of the double); any other number
      is {"f":<floor(x*1e6+0.5)>}; true, false and null as they are; an absent field is null;
-   - an item: [op, table, id, changes, values]; a block (minutes, report, file changes): [key, title, draft, project, projects]. */
+   - an item: [op, table, id, changes, values without its `raised`]; a block (minutes, report, file changes): [key, title, draft, project, projects]. */
 
 /** @param {any} x @returns {string} */
 export function fpCanon(x){
@@ -38,7 +38,10 @@ export function fpSha256(s){
 }
 const short=x=>fpSha256(fpCanon(x)).slice(0,12);
 /** the fingerprint of a staged item (the object in a proposal file's `items`) @param {any} it */
-export const itemFp=it=>short([it.op,it.table,it.id,it.changes,it.values]);
+export const itemFp=it=>short([it.op,it.table,it.id,it.changes,derivedOff(it.values)]);
+/* `raised` is filled in by the engine (BL-26: on a new risk or issue, when it is shown and again whenever an apply saves the file), so it
+   says nothing about WHICH item this is: left out, the same item has the same fingerprint before and after */
+const derivedOff=v=>{ if(v&&typeof v==="object"&&!Array.isArray(v)&&"raised" in v){ const {raised,...rest}=v; return rest; } return v; };
 /** the fingerprint of a minutes, report or file-changes block (a proposal file's `meeting`, `report`, `file_changes`) @param {any} b */
 export const blockFp=b=>short([b.key,b.title,b.draft,b.project,b.projects]);
 const BLOCKS=["meeting","report","file_changes"];
