@@ -367,7 +367,8 @@ def hook_decision(tool, inp, args, claim):
 def hook_main(argv):
     """`draft_delivery.py hook <request file> <sha256>`: Claude Code's PreToolUse hook for the draft run (call JSON on stdin).
     Exit 0 lets the call through, exit 2 refuses it with the reason on stderr. Any error refuses.
-    The create-draft call is allowed only by this hook printing `permissionDecision: allow` (HOOK_ALLOW); the run's allow list does not hold the tool (fail closed)."""
+    The create-draft call is allowed only by this hook printing `permissionDecision: allow` (HOOK_ALLOW);
+    the run's allow list does not hold the tool (fail closed)."""
     try:
         path, digest = argv[0], argv[1]
         call = json.loads(sys.stdin.read() or "{}")
