@@ -106,6 +106,37 @@ def chain_explains(repo, sha, files, pin=None, spec=SPEC1):
     return back is not None and all(back[f] == _blob(repo, sha + "^", f) for f in files)
 
 
+def _marked_chains(repo, base, head, pin, pin2):
+    """(peel, carried): per chain, latest first, (spec, pin, marked commit, guarded files its marked commits changed), and the union of
+    those files. (None, set()) when a marked commit is not exactly its chain."""
+    log = _git(repo, "log", "--no-merges", "--format=%H%x09%s", f"{base}..{head}")
+    subjects = [l.split("\t", 1) for l in log.stdout.splitlines()]
+    peel, carried = [], set()
+    for spec, p in ((SPEC2, pin2), (SPEC1, pin)):
+        marked = [h for h, subj in subjects if subj.startswith(spec[0])]
+        if not marked:
+            continue
+        own_all = set()
+        for sha in marked:                          # every marked commit must be exactly its chain
+            own = [f for f in _git(repo, "diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha).stdout.splitlines() if _is_guarded(f)]
+            if not chain_explains(repo, sha, own, p, spec):
+                return None, set()
+            own_all |= set(own)
+        peel.append((spec, p, marked[0], sorted(own_all)))
+        carried |= own_all
+    return peel, carried
+
+
+def _peel_back(repo, head, peel, cur):
+    """Reverse each chain on its own files, latest first, updating cur in place. False when a chain does not reverse."""
+    for spec, p, sha, own in peel:
+        back = reversed_chain(repo, sha + "^", head, [f for f in own if f in cur], p, spec, start=cur)
+        if back is None:
+            return False
+        cur.update(back)
+    return True
+
+
 def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None):
     """Guarded script paths whose content differs between base and head (the net change), except what the approved chain commits
     explain: for each chain (2.6.1, 2.6.2) a commit in the range whose subject starts with its marker and which passes chain_explains.
@@ -119,33 +150,12 @@ def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None):
     net = [f for f in d.stdout.splitlines() if _is_guarded(f)]
     if not net:
         return []
-    log = _git(repo, "log", "--no-merges", "--format=%H%x09%s", f"{base}..{head}")
-    subjects = [l.split("\t", 1) for l in log.stdout.splitlines()]
-    peel = []                                       # (spec, pin, marked commit, the guarded files its marked commits changed), latest chain first
-    carried = set()
-    for spec, p in ((SPEC2, pin2), (SPEC1, pin)):
-        marked = [h for h, subj in subjects if subj.startswith(spec[0])]
-        if not marked:
-            continue
-        own_all = set()
-        for sha in marked:                          # every marked commit must be exactly its chain
-            own = [f for f in _git(repo, "diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha).stdout.splitlines() if _is_guarded(f)]
-            if not chain_explains(repo, sha, own, p, spec):
-                return net
-            own_all |= set(own)
-        peel.append((spec, p, marked[0], sorted(own_all)))
-        carried |= own_all
-    if not peel or not set(net) <= carried:         # a net change no marked commit made itself is somebody else's edit
+    peel, carried = _marked_chains(repo, base, head, pin, pin2)
+    if peel is None or not peel or not set(net) <= carried:     # a net change no marked commit made itself is somebody else's edit
         return net
     cur = {f: _blob(repo, head, f) for f in net}
-    if any(v is None for v in cur.values()):
+    if any(v is None for v in cur.values()) or not _peel_back(repo, head, peel, cur):
         return net
-    for spec, p, sha, own in peel:
-        files = [f for f in own if f in cur]
-        back = reversed_chain(repo, sha + "^", head, files, p, spec, start=cur)
-        if back is None:
-            return net
-        cur.update(back)
     return [f for f in net if cur[f] != _blob(repo, base, f)]
 
 
