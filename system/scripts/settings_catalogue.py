@@ -129,6 +129,12 @@ CATALOGUE = {
     "sweep.show_possible_matches": ("Checking mail and Teams", "Show possible matches",
                                     "Messages that may belong to a project are shown in Review to place, not dropped.",
                                     "A weak match you can place is better than a message silently lost."),
+    "sweep.fetch_transcripts": ("Checking mail and Teams", "Fetch transcripts as they appear",                 # #250 (#181 C2)
+                                "It only reads: no AI runs and nothing is added to your project records. Confidential meetings are "
+                                "never fetched.",                  # the line is capped at 140 characters: the brief's last two sentences
+                                "Off: creaite fetches a transcript when you press Process. On: each mail and Teams check fetches the "
+                                "transcripts of meetings that have ended, so they are ready when you open Intake. It only reads: "
+                                "no AI runs and nothing is added to your project records. Confidential meetings are never fetched."),
     "sweep.ignore": ("Checking mail and Teams", "What creaite skips",
                      "Mail, Teams and invites the check skips (counted, never read into suggestions).",
                      "Private items are always skipped; the rest are common noise you can switch off or edit."),
