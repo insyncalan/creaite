@@ -48,15 +48,18 @@ const BLOCKS=["meeting","report","file_changes"];
 export const itemGuard=rw=>({file:rw.file,ref:rw.ref,fp:rw.fp||null,rw});
 /** The item in the freshly read proposal `data` that the row stands for, or null: the one at its ref if its content matches, else
     the single other item that matches. A row with no fingerprint is trusted at its ref. Sets row.ref to the item's number now.
-    @param {any} data @param {any} rw */
-export function findGuarded(data,rw){
+    @param {any} data @param {any} rw @param {{table:string,id:string}=} same only for an unapproved merge-save of an update: that record */
+export function findGuarded(data,rw,same){
   if(BLOCKS.includes(rw.ref)){ const b=data[rw.ref]; return b&&(!rw.fp||blockFp(b)===rw.fp)?b:null; }
   const its=(data.items||[]).filter(i=>i&&typeof i==="object");
   const at=its.find(i=>i.n===rw.ref);
   if(!rw.fp) return at||null;
   if(at&&itemFp(at)===rw.fp) return at;
-  const same=its.filter(i=>itemFp(i)===rw.fp);
-  if(same.length===1){ rw.ref=same[0].n; return same[0]; }
+  const alike=its.filter(i=>itemFp(i)===rw.fp);
+  if(alike.length===1){ rw.ref=alike[0].n; return alike[0]; }
+  /* a save that only puts right the columns Alan edited (the peek's Save without approving) merges into the file's own `changes`, so
+     an update still at its number that updates the same record is the same item even if its other columns moved on (another window) */
+  if(same&&at&&at.op==="update"&&at.table===same.table&&at.id===same.id) return at;
   return null;
 }
 /** after a saved edit the row stands for the item as it now is @param {any} data @param {any} rw */

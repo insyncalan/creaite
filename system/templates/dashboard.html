@@ -61832,7 +61832,7 @@ ${d5.text}`);
           it2.decision = "approved";
           it2.decided_in = "dashboard";
         }
-      }, r4);
+      }, r4, approve ? void 0 : { table: u5.table, id: u5.id });
     } catch (e4) {
       snack(/already|no longer/.test(e4.message) ? STALE_ROW : "Not saved: " + e4.message);
       return;
@@ -78063,7 +78063,7 @@ ${d5.text}`);
   var blockFp = (b5) => short([b5.key, b5.title, b5.draft, b5.project, b5.projects]);
   var BLOCKS = ["meeting", "report", "file_changes"];
   var itemGuard = (rw2) => ({ file: rw2.file, ref: rw2.ref, fp: rw2.fp || null, rw: rw2 });
-  function findGuarded(data, rw2) {
+  function findGuarded(data, rw2, same2) {
     if (BLOCKS.includes(rw2.ref)) {
       const b5 = data[rw2.ref];
       return b5 && (!rw2.fp || blockFp(b5) === rw2.fp) ? b5 : null;
@@ -78072,11 +78072,12 @@ ${d5.text}`);
     const at2 = its.find((i5) => i5.n === rw2.ref);
     if (!rw2.fp) return at2 || null;
     if (at2 && itemFp(at2) === rw2.fp) return at2;
-    const same2 = its.filter((i5) => itemFp(i5) === rw2.fp);
-    if (same2.length === 1) {
-      rw2.ref = same2[0].n;
-      return same2[0];
+    const alike = its.filter((i5) => itemFp(i5) === rw2.fp);
+    if (alike.length === 1) {
+      rw2.ref = alike[0].n;
+      return alike[0];
     }
+    if (same2 && at2 && at2.op === "update" && at2.table === same2.table && at2.id === same2.id) return at2;
     return null;
   }
   function refreshGuard(data, rw2) {
@@ -78539,7 +78540,7 @@ ${d5.text}`);
       return name;
     });
   }
-  var editProposal = function(file, mut, rws) {
+  var editProposal = function(file, mut, rws, same2) {
     return vq(async () => {
       const path = "system/staging/" + file;
       let text, data;
@@ -78550,7 +78551,7 @@ ${d5.text}`);
         throw new Error("that proposal has already been applied or removed");
       }
       const guarded = rws ? [].concat(rws) : [];
-      for (const r4 of guarded) if (!findGuarded(data, r4)) throw new Error("already approved or changed");
+      for (const r4 of guarded) if (!findGuarded(data, r4, same2)) throw new Error("already approved or changed");
       const apWas = apSnap(data);
       mut(data);
       apStamp(data, apWas);
