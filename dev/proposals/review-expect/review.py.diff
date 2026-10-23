@@ -1,0 +1,76 @@
+--- a/system/scripts/review.py
++++ b/system/scripts/review.py
+@@ -2594,6 +2594,73 @@
+ 
+ _main_before_numbers = main
+ main = _main_with_numbers
++
++# ===== 2.6.2 (#314) ===== "approve N --expect <fp>" and "reject N --expect <fp>": act only if item N is still the one the caller meant
++EXPECT_FP = re.compile(r"[0-9a-f]{12}")
++BLOCK_REFS = ("meeting", "report", "file_changes")
++
++
++class ExpectMismatch(Exception):
++    """The item at a review number is not the one whose fingerprint the caller gave."""
++
+ 
++def _expecting(real, want):
++    """lookup with the check made on the very file read for the decision (build_dashboard.item_fp / block_fp, 12 hex)."""
++    def look(n):
++        """The same four values as lookup; ExpectMismatch when the item at n is not the one fingerprinted `want`."""
++        p, data, ref, item = real(n)
++        import build_dashboard
++        if (build_dashboard.block_fp(item) if ref in BLOCK_REFS else build_dashboard.item_fp(item)) != want:
++            raise ExpectMismatch(f"{n}: not recorded — that item has changed since you looked at it, "
++                                 "so nothing was changed. Look at the list again.")
++        return p, data, ref, item
++    return look
++
++
++def _split_expect(argv):
++    """(the arguments without --expect, the fingerprint given); both forms, --expect FP and --expect=FP."""
++    rest, want, i = [], "", 1
++    while i < len(argv):
++        if argv[i] == "--expect":
++            want, i = argv[i + 1] if i + 1 < len(argv) else "", i + 2
++            continue
++        if argv[i].startswith("--expect="):
++            want = argv[i][len("--expect="):]
++        else:
++            rest.append(argv[i])
++        i += 1
++    return rest, want
++
++
++def _main_with_expect(argv):
++    """--expect <fp> (or --expect=<fp>) on approve, reject, keep or override of one number; every other call is unchanged."""
++    if not any(a == "--expect" or a.startswith("--expect=") for a in argv[1:]):
++        return _main_before_expect(argv)
++    rest, want = _split_expect(argv)
++    keys = [a for a in rest if not a.startswith("--")]
++    if argv[0] not in ("approve", "reject", "keep", "override") or len(keys) != 1 or not keys[0].isdigit() or not EXPECT_FP.fullmatch(want):
++        print(f"{' '.join(keys) or 'Nothing'}: not recorded — --expect goes with approve, reject, keep or override, "
++              "one review number and the item's 12-character fingerprint.")
++        return 2
++    global lookup
++    real, lookup = lookup, _expecting(lookup, want)
++    try:
++        return _main_before_expect([argv[0], *rest])
++    except ExpectMismatch as e:
++        print(e)
++        return 2
++    except SystemExit as e:                       # lookup's own "no longer pending" / "already applied", in one plain line and exit 2
++        if isinstance(e.code, str):
++            print(e.code)
++            return 2
++        raise
++    finally:
++        lookup = real
++
++
++_main_before_expect = main
++main = _main_with_expect
++# ===== end 2.6.2 (#314) =====
++
+ if __name__ == "__main__":
+     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))
