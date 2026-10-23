@@ -644,6 +644,27 @@ class Drawer(LiveBrowserCase):
         b.key("Enter")
         self.assertEqual(w(), 440)
 
+    def test_reset_width_button_321(self):
+        b = self.b
+        self.open()
+        self.assertFalse(b.eval("!!document.getElementById('capWidthReset')"))        # at the default: not shown
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("ArrowLeft")
+        b.wait("!!document.getElementById('capWidthReset')")
+        self.assertEqual(b.eval("document.getElementById('capWidthReset').textContent"), "Reset width")
+        self.assertEqual(b.eval("localStorage.getItem('creaite-capture-width')"), "464")
+        b.click("#capWidthReset")
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
+        self.assertIsNone(b.eval("localStorage.getItem('creaite-capture-width')"))
+        self.assertFalse(b.eval("!!document.getElementById('capWidthReset')"))
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("End")
+        b.wait("!!document.getElementById('capWidthReset')")
+        b.eval("document.getElementById('capWidthReset').focus()")                   # reachable by keyboard: Enter activates it
+        b.key("Enter")
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
+        self.assertIsNone(b.eval("localStorage.getItem('creaite-capture-width')"))
+
     def test_the_drawer_width_works_when_storage_throws_321(self):
         b = self.b
         b.eval("""Object.defineProperty(window,'localStorage',{get(){ throw new Error('blocked'); }}), true""")

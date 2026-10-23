@@ -34925,6 +34925,13 @@ system/scripts/run launch.py agent ${what}`;
   var pageW = () => Math.max(CAP_W0, window.innerWidth || CAP_W0);
   var clampW = (w6) => Math.round(Math.min(pageW(), Math.max(CAP_W0, Number(w6) || CAP_W0)));
   var capW = y3(clampW(store.get(WKEY, CAP_W0)));
+  function resetCapW() {
+    capW.value = CAP_W0;
+    try {
+      localStorage.removeItem(WKEY);
+    } catch (e4) {
+    }
+  }
   function setCapW(w6, keep2) {
     capW.value = clampW(w6);
     if (keep2) store.set(WKEY, capW.value);
@@ -35144,7 +35151,8 @@ system/scripts/run launch.py agent ${what}`;
       if (to2 === null) return;
       e4.preventDefault();
       e4.stopPropagation();
-      setCapW(to2, true);
+      if (to2 === CAP_W0) resetCapW();
+      else setCapW(to2, true);
     };
     return /* @__PURE__ */ u4(
       "div",
@@ -35166,7 +35174,7 @@ system/scripts/run launch.py agent ${what}`;
         onPointerUp: up2,
         onPointerCancel: up2,
         onKeyDown: key2,
-        onDblClick: () => setCapW(CAP_W0, true)
+        onDblClick: resetCapW
       }
     );
   }
@@ -35240,6 +35248,7 @@ system/scripts/run launch.py agent ${what}`;
             /* @__PURE__ */ u4("div", { class: "caphead", children: [
               /* @__PURE__ */ u4("h2", { id: "capH", children: meeting ? "Note for this meeting" : "New note" }),
               /* @__PURE__ */ u4("span", { class: "sp" }),
+              capW.value !== CAP_W0 ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn capdiscard", id: "capWidthReset", onClick: () => resetCapW(), children: "Reset width" }) : null,
               typed(n4) ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn capdiscard", onClick: () => discard(), children: "Discard" }) : null,
               /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close", name: "Close the note (what you typed is kept)", onClick: () => closeCapture() })
             ] }),

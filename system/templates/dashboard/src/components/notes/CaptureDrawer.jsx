@@ -49,6 +49,8 @@ const pageW = () => Math.max(CAP_W0, window.innerWidth || CAP_W0);
 const clampW = w => Math.round(Math.min(pageW(), Math.max(CAP_W0, Number(w) || CAP_W0)));
 const capW = signal(clampW(store.get(WKEY, CAP_W0)));
 /** Set the width; with `keep` it is also remembered. @param {number} w @param {boolean} [keep] */
+/** Back to the default width, and forget the remembered one. */
+function resetCapW() { capW.value = CAP_W0; try { localStorage.removeItem(WKEY); } catch (e) { /* no storage: nothing was kept */ } }
 function setCapW(w, keep) { capW.value = clampW(w); if (keep) store.set(WKEY, capW.value); }
 
 /** The note in the drawer (kept while the drawer is closed, so ⌘⇧N carries on). */
@@ -226,12 +228,12 @@ function CapHandle() {
       : e.key === "End" ? pageW() : e.key === "Home" || e.key === "Enter" ? CAP_W0 : null;
     if (to === null) return;
     e.preventDefault(); e.stopPropagation();
-    setCapW(to, true);
+    if (to === CAP_W0) resetCapW(); else setCapW(to, true);
   };
   return <div id="capResize" class="capresize" role="separator" aria-orientation="vertical" tabindex={0} aria-label="Width of the note"
     aria-valuemin={CAP_W0} aria-valuemax={pageW()} aria-valuenow={w} aria-valuetext={`${w} pixels wide`}
     data-tip="Drag to change the width; double-click to put it back" style={{ right: `min(${w}px, 100vw)` }}
-    onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onKeyDown={key} onDblClick={() => setCapW(CAP_W0, true)} />;
+    onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onKeyDown={key} onDblClick={resetCapW} />;
 }
 
 /** The drawer. */
@@ -273,6 +275,7 @@ export function CaptureDrawer() {
       <div class="caphead">
         <h2 id="capH">{meeting ? "Note for this meeting" : "New note"}</h2>
         <span class="sp" />
+        {capW.value !== CAP_W0 ? <button type="button" class="linkbtn capdiscard" id="capWidthReset" onClick={() => resetCapW()}>Reset width</button> : null}
         {typed(n) ? <button type="button" class="linkbtn capdiscard" onClick={() => discard()}>Discard</button> : null}
         <IconButton icon="x" label="Close" name="Close the note (what you typed is kept)" onClick={() => closeCapture()} />
       </div>
