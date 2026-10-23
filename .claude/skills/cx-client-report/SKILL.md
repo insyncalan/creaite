@@ -1,11 +1,11 @@
 ---
 name: cx-client-report
-description: creaite client report. Drafts a client-safe status report for one project as the Reporting hub's client report (approved there, and exported to Word, HTML or PDF from its checked copy), filed in that project's reports folder on approval. Never sends anything and never creates email drafts. Use when Alan says "client report ABC", "client report ABC since 2026-09-01", or responds to a client-report reminder.
+description: creaite client report. Drafts a client-safe status report for one project as the Reporting hub's client report (approved there, and exported to Word, HTML or PDF from its checked copy), filed in that project's reports folder on approval. Never sends anything; an email about it follows the Draft email setting (an Outlook draft only when Create drafts in Outlook is on, made by the live server, never by this skill). Use when Alan says "client report ABC", "client report ABC since 2026-09-01", or responds to a client-report reminder.
 ---
 
 # cx-client-report
 
-A client-safe status report for one project, drafted for review. Claude **never sends it and never creates an email draft**. Alan distributes it himself.
+A client-safe status report for one project, drafted for review. Claude **never sends it**, and this skill never creates an email draft. Alan distributes it himself; the Draft email popup can put a covering email in his Outlook Drafts folder when Create drafts in Outlook is on (#183), for him to check and send.
 
 **Not from ask creaite (Alan, 19-10-2026).** Reports are the user's to edit in the Reporting hub. In an ask creaite chat (and in any run the live server starts) this skill never drafts, stages or writes a report or its draft: `reach.py`'s guard hook refuses `report.py client-stage`, an Edit or Write of a report file or draft, and a Bash call that names one. If asked there, say the report is made and edited in the Reporting hub (Generate, then edit) and offer to read it or answer questions about it. The steps below are for Alan's own Claude Code session only.
 
@@ -56,7 +56,7 @@ Read these first:
 
 ## Rules
 
-- **Never send. Never create Outlook drafts.**
+- **Never send. This skill never creates an Outlook draft** (only the Draft email popup's Create draft in Outlook, through the live server, with the setting on).
 - **Individual approval:** excluded from bulk approval.
 - **Undo covers the filing.**
 - **Dates:** DD-MM-YYYY in what Alan and the client read (long dates in the report header); YYYY-MM-DD stored and in file names.
