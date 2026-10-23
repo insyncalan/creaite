@@ -20,7 +20,7 @@ on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty
 # ===== #89: who runs what =====
 # Python 3.14 runs every test file (the browser tests included); Python 3.9, the floor, runs the files that never start Chrome
 # (`--quick`: the quick tier, read from the files by dev/tools/run_support.py). Each is split in shards (`--shard I/N`).
-# So a browser test runs once per commit, not twice, and the floor is still tested on all the rest. #89 (round 2): 8 shards
+# So a browser test runs once per commit, not twice, and the floor is still tested on all the rest. #89 (round 2): 12 shards
 # for 3.14 and 2 for 3.9, balanced greedily by the real per-file times in dev/tools/shard_times.txt (refresh it from a recent
 # full run's logs: the lines "OK file.py (Ns)"), so the slowest shard is the wall. macOS (3.14, all files, 3
 # shards) runs on release branches only. `--max-fail 8` stops a shard that has plainly gone wrong after 8 failed files.
@@ -42,19 +42,19 @@ concurrency:
 
 jobs:
   tests:
-    name: ${{ matrix.os }} · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/${{ matrix.python == '3.9' && 2 || 8 }}
+    name: ${{ matrix.os }} · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/${{ matrix.python == '3.9' && 2 || 12 }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      # #89: Python 3.14 runs the suite in 8 shards and 3.9 (the quick tier) in 2 (dev/tools/run_tests.py --shard I/N), side
-      # by side, so the wait is the slowest shard (the exclude drops 3.9's shards 3 to 8). Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
+      # #89: Python 3.14 runs the suite in 12 shards and 3.9 (the quick tier) in 2 (dev/tools/run_tests.py --shard I/N), side
+      # by side, so the wait is the slowest shard (the exclude drops 3.9's shards 3 to 12). Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
       # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
       # The "Tests passed" job below is green only if every shard is.
       matrix:
         os: [ubuntu-24.04]      # not ubuntu-latest: it became 26.04 on 21-10-2026, which has no Python 3.9 (the floor)
         python: ["3.9", "3.14"]
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         exclude:
           - {python: "3.9", shard: 3}
           - {python: "3.9", shard: 4}
@@ -62,6 +62,10 @@ jobs:
           - {python: "3.9", shard: 6}
           - {python: "3.9", shard: 7}
           - {python: "3.9", shard: 8}
+          - {python: "3.9", shard: 9}
+          - {python: "3.9", shard: 10}
+          - {python: "3.9", shard: 11}
+          - {python: "3.9", shard: 12}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -88,7 +92,7 @@ jobs:
           FILES: ${{ github.event.inputs.files }}
           JOBS: 4
           SHARD: ${{ matrix.shard }}
-          SHARDS: ${{ matrix.python == '3.9' && 2 || 8 }}
+          SHARDS: ${{ matrix.python == '3.9' && 2 || 12 }}
           SCOPE: ${{ matrix.python == '3.9' && '--quick' || '' }}
         run: |
           if [ -n "$FILES" ]; then
