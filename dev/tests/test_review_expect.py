@@ -130,6 +130,24 @@ class Expect(Base):
         self.assertNotEqual(code, 0)
         self.assertEqual(self.decisions(), {1: "pending", 2: "pending", 3: "pending"})
 
+    def test_a_block_taken_out_under_the_caller_is_a_mismatch_not_a_traceback(self):
+        """Cap's note 3: a writer that doesn't take the server's lock removes the `meeting` block between the list and the decision;
+        the answer is the same plain line (exit 2), never a traceback or a path."""
+        self.name = self.v.propose("2026-10-21-0910-z", [item(1, "Delta item")], meeting={"title": "Steering", "date": "2026-10-01",
+                                   "projects": ["ABC"], "draft": "projects/ABC Example/minutes/2026-10-01 Steering.docx"}).name
+        n = self.number("meeting")
+        fp = build_dashboard.block_fp(json.loads((self.v.root / "system/staging" / self.name).read_text())["meeting"])
+        p = self.v.root / "system/staging" / self.name
+        data = json.loads(p.read_text())
+        del data["meeting"]
+        p.write_text(json.dumps(data))
+        for cmd in ("approve", "reject"):
+            code, out = self.review(cmd, str(n), f"--expect={fp}")
+            self.assertEqual(code, 2, out)
+            self.assertIn("has changed since you looked at it", out)
+            self.assertNotIn("Traceback", out)
+            self.assertNotIn(str(self.v.root), out)
+
     def test_without_expect_nothing_changes(self):
         code, out = self.review("approve", str(self.number(3)))
         self.assertEqual(code, 0, out)
