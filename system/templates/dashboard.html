@@ -77325,7 +77325,7 @@ ${d5.text}`);
     if (n4 > 1 || irTicked.value.length) items2.push({ sep: true }, { label: "Clear the ticks", run: () => irClearTicks() });
     return items2;
   }
-  var kbAt2 = 0;
+  var irKbAt = 0;
   function irRowMenu(e4, m5) {
     const el2 = (
       /** @type {HTMLElement} */
@@ -77336,7 +77336,7 @@ ${d5.text}`);
       e4.target.closest("a,input,select,textarea")
     ) return;
     e4.preventDefault();
-    if (Date.now() - kbAt2 < 400) return;
+    if (Date.now() - irKbAt < 400) return;
     const r4 = el2.getBoundingClientRect();
     openContextMenu(irMenuItems(irTargets(m5.id)), e4.clientX || r4.left + 24, e4.clientY || r4.bottom, { label: "Intake actions", from: el2 });
   }
@@ -77347,7 +77347,7 @@ ${d5.text}`);
       e4.currentTarget
     ), r4 = el2.getBoundingClientRect();
     e4.preventDefault();
-    kbAt2 = Date.now();
+    irKbAt = Date.now();
     openContextMenu(irMenuItems(irTargets(m5.id)), r4.left + 24, r4.bottom, { label: "Intake actions", from: el2 });
   }
 
@@ -77415,7 +77415,7 @@ ${d5.text}`);
       }
     );
   }
-  function StateChip2({ m: m5, n: n4 }) {
+  function IrStateChip({ m: m5, n: n4 }) {
     if (irBusy.value.includes(m5.id)) return null;
     const st2 = irMeetingState(m5, n4), words = IR_STATE_CHIP[
       /** @type {"waiting"} */
@@ -77438,8 +77438,8 @@ ${d5.text}`);
     ] : "";
     return [tx3, st2 === "check" ? ageWords(m5.age) : "", st2 === "done" && m5.already ? "Already processed" : "", m5.later_back ? "back from Later" : ""].filter(Boolean).join(" · ");
   }
-  function StateLine({ m: m5, n: n4 }) {
-    const chip = StateChip2({ m: m5, n: n4 });
+  function IrStateLine({ m: m5, n: n4 }) {
+    const chip = IrStateChip({ m: m5, n: n4 });
     if (!chip) return /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, n4) });
     const d5 = stateDetail(m5, n4);
     return /* @__PURE__ */ u4("div", { class: "why irstate", children: [
@@ -77499,7 +77499,7 @@ ${d5.text}`);
         " · Likely project: ",
         m5.p ? pName(m5.p) : "Not sure"
       ] }),
-      /* @__PURE__ */ u4(StateLine, { m: m5, n: n4 }),
+      /* @__PURE__ */ u4(IrStateLine, { m: m5, n: n4 }),
       waiting ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
     ] });
   }
@@ -77606,7 +77606,7 @@ ${d5.text}`);
                 m5.start ? ` ${m5.start}${m5.end ? `–${m5.end}` : ""}` : "",
                 m5.p && !m5.private && !m5.confidential ? ` · ${pName(m5.p)}` : ""
               ] }),
-              /* @__PURE__ */ u4(StateLine, { m: m5, n: n4 })
+              /* @__PURE__ */ u4(IrStateLine, { m: m5, n: n4 })
             ] }),
             state === "running" ? /* @__PURE__ */ u4(S2, { children: [
               /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite waits until this ends" }),
@@ -78148,7 +78148,7 @@ ${d5.text}`);
                 ] }),
                 m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
                   /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
-                  /* @__PURE__ */ u4(StateLine, { m: m5, n: liveN(m5) })
+                  /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
                 ] }),
                 irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
                 /* @__PURE__ */ u4(IrNote, { m: m5 }),
@@ -78223,7 +78223,7 @@ ${d5.text}`);
             sel.src !== "upload" && sel.p && !hidden(sel) ? ` · ${pName(sel.p)}` : ""
           ] }),
           /* @__PURE__ */ u4("div", { class: "icrack", children: /* @__PURE__ */ u4(StageTrack, { m: sel }) }),
-          sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: liveN(sel) }) : /* @__PURE__ */ u4(StateLine, { m: sel, n: liveN(sel) }),
+          sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: liveN(sel) }) : /* @__PURE__ */ u4(IrStateLine, { m: sel, n: liveN(sel) }),
           sel.stage === "arrived" && sel.state === "waiting" ? /* @__PURE__ */ u4("div", { class: "empty", children: "Waiting for the transcript. It appears here when the meeting’s transcript arrives." }) : null,
           irBusy.value.includes(sel.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(sel) }) : null,
           /* @__PURE__ */ u4(IrNote, { m: sel }),

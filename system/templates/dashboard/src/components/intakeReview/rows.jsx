@@ -58,7 +58,7 @@ export function IrTick({ m }) {
 
 /** #325: a meeting's state as one chip: an icon, words and a coloured left edge (never colour alone). The state is irMeetingState, the
     one definition the stage boxes and the Show choice also read. Ready, running and files being read have no chip. @param {{m: any, n: number}} props */
-export function StateChip({ m, n }) {
+export function IrStateChip({ m, n }) {
   if (irBusy.value.includes(m.id)) return null;
   const st = irMeetingState(m, n), words = IR_STATE_CHIP[/** @type {"waiting"} */ (st)];
   if (!words) return null;
@@ -74,8 +74,8 @@ function stateDetail(m, n) {
 
 /** The state line of a row, the same in the List, the Board's card and the Two panes' detail: the chip with its detail, or the plain
     words while there is no chip (ready, running). @param {{m: any, n: number}} props */
-export function StateLine({ m, n }) {
-  const chip = StateChip({ m, n });
+export function IrStateLine({ m, n }) {
+  const chip = IrStateChip({ m, n });
   if (!chip) return <div class="why">{irStateWords(m, n)}</div>;
   const d = stateDetail(m, n);
   return <div class="why irstate">{chip}{d ? ` ${d}` : ""}</div>;
@@ -136,7 +136,7 @@ export function FileFacts({ m, n }) {
   const waiting = m.stage === "arrived" && m.state === "ready" && !irBusy.value.includes(m.id);
   return <>
     <div class="why">{irAdded(m)} · Likely project: {m.p ? pName(m.p) : "Not sure"}</div>
-    <StateLine m={m} n={n} />
+    <IrStateLine m={m} n={n} />
     {waiting ? <FileKind m={m} /> : null}
   </>;
 }
@@ -184,7 +184,7 @@ export function MeetingRow({ m, live }) {
         {m.stale ? <> <span class="tag stale">Stale · {ageWords(m.age)}</span></> : null}
         {m.src === "upload" ? <FileFacts m={m} n={n} /> : <>
           <div class="why">{m.day ? fd(m.day) : ""}{m.start ? ` ${m.start}${m.end ? `–${m.end}` : ""}` : ""}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div>
-          <StateLine m={m} n={n} />
+          <IrStateLine m={m} n={n} />
         </>}
         {state === "running" ? <><div class="why">ask creaite waits until this ends</div><Progress words={irRunningWords(m)} /></> : null}
         <IrNote m={m} />

@@ -78,9 +78,9 @@ class IntakeReviewPage(LiveBrowserCase):
         row = "document.querySelector('[data-irm=mA] td.title')"
         b.eval(f"{row}.click()")
         b.wait("document.querySelector('[data-irm=mA]').getAttribute('aria-expanded')==='true'")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#v-intake-review [data-irv=list] tbody tr.icsubhead')].slice(0,2).map(t=>t.dataset.irg)"),
-                         ["needs", "routine"])
-        self.assertIn("Sample steering · Needs your decision · 1", b.eval("document.querySelector('[data-irg=needs]').textContent"))
+        self.assertEqual(b.eval("[...document.querySelectorAll('#v-intake-review [data-irv=list] [data-irpart=work] tr.icsubhead')].map(t=>t.dataset.irg)"),
+                         ["routine"])        # #325: the minutes were the only "Needs your decision" row; they are the parent row now, not a group
+        self.assertEqual(b.eval("document.querySelectorAll('#v-intake-review tr.irparent').length"), 1)
         b.eval("document.querySelector('[data-irm=mB] td.title').click()")              # nothing to check: it never opens, the first stays open
         self.assertEqual(b.eval("irOpen.value"), "mA")
         b.eval(f"{row}.click()")
