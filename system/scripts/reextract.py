@@ -110,13 +110,26 @@ HOLD_MAX = 1 << 20          # a hold.json creaite wrote is a few hundred bytes; 
 
 
 def _read_hold(p):
-    """The manifest at `p`, or None when it is missing, unreadable, not an object, or larger than HOLD_MAX."""
+    """The manifest at `p`, or None when it is missing, not a regular file (a link, a FIFO, a device, a directory), unreadable,
+    not an object, or larger than HOLD_MAX. One open, no following of links, no blocking; the size is checked on the open file
+    and the read is bounded, so nothing can be swapped in after the check (Cap H-1b)."""
     try:
-        if os.lstat(p).st_size > HOLD_MAX:
-            return None
+        fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except OSError:
         return None
-    return _read_json(p)
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_size > HOLD_MAX:
+            return None
+        raw = os.read(fd, HOLD_MAX + 1)
+        if len(raw) > HOLD_MAX:
+            return None
+        data = json.loads(raw.decode("utf-8"))
+    except (OSError, ValueError):
+        return None
+    finally:
+        os.close(fd)
+    return data if isinstance(data, dict) else None
 
 
 def _write_json(p, data):
@@ -678,7 +691,7 @@ def recover():
         try:
             h = _manifest(d.name) if RUN.fullmatch(d.name) else None     # H-1: a manifest that isn't creaite's is left alone
             if h and h.get("state") == "held":
-                finish(d.name, h.get("at") or 0, (), "failed")
+                put_back(d.name, FAILED, state="failed")     # Cap H-1a: nothing else is set aside at start, whatever `at` says
                 out.append(h["proposal"])
         except (OSError, ValueError) as e:
             debuglog.warn("reextract", f"recover {d.name}: {type(e).__name__}")
