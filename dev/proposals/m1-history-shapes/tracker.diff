@@ -1,0 +1,47 @@
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index c4d226b2..654a486a 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -715,13 +715,29 @@ def _events_table(con):
+     return con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'item_events'").fetchone() is not None
+ 
+ 
++def _via_route(via):
++    """(route, place, origin, actor, src_ref) from the via alone: no proposal is read."""
++    return ("undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"), None, None, "you", None
++
++
+ def _event_route(via):
+-    """(route, place, origin, actor, src_ref) of the change being logged, from EVENT_CTX when it is this apply's item."""
++    """(route, place, origin, actor, src_ref) of the change being logged, from EVENT_CTX when it is this apply's item. Review
++    M1 (2.6.1): the proposal is untrusted data and the history is best-effort, so a fault in working the route out of it (a
++    `note` or `values` of the wrong shape) gives the via alone and never stops the apply."""
+     ctx = EVENT_CTX
+     try:
+         import item_history
+     except ImportError:              # an engine copied without item_history.py: the via alone
+-        return ("undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"), None, None, "you", None
++        return _via_route(via)
++    try:
++        return _proposal_route(item_history, via, ctx)
++    except Exception as e:  # noqa: BLE001  best-effort history: the change stands, the event from the via alone (logged)
++        debuglog.warn("tracker", f"item_events: route from the via alone ({type(e).__name__})")
++        return _via_route(via)
++
++
++def _proposal_route(item_history, via, ctx):
++    """(route, place, origin, actor, src_ref) worked out from the apply's proposal and item (item_history.derive)."""
+     route, place, origin, actor = item_history.derive(via, ctx.get("data"), ctx.get("item"))
+     src = None if route in ("undo", "activity") else item_history.source_of(ctx.get("item"), ctx.get("data"), ctx.get("rel"))
+     return route, place, origin, actor, item_history.one_ref(src)
+@@ -744,7 +760,9 @@ def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
+         con.execute("INSERT INTO item_events (at, apply_id, item_id, change, kind, route, place, origin, actor, src_ref, undoes) "
+                     "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                     (now(), apply_id, item_id, rowid, kind, route, place, origin, actor, src, was[0] if was else None))
+-    except sqlite3.IntegrityError as e:        # the history's own row never stops an apply: the change stands, logged
++    except sqlite3.Error as e:                 # the history's own row never stops an apply: the change stands, logged
++        if not con.in_transaction:             # review M1: unless SQLite ended the apply's transaction, which must then fail whole
++            raise
+         debuglog.warn("tracker", f"item_events: no event for change {rowid} ({type(e).__name__})")
+ # ===== end #241 D =====
+ 

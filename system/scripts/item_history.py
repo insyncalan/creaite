@@ -61,6 +61,17 @@ ROW_SQL = ("SELECT c.rowid AS rowid, c.at, c.apply_id, c.tbl, c.item_id, c.field
            "OR (c.tbl IN ('links', 'item_labels') AND ('|' || c.item_id || '|') LIKE ?)) ORDER BY c.rowid")
 
 
+def _d(x):
+    """`x` when it is a dict, else {}: a proposal is untrusted data, so a field of the wrong shape (a `note` or `values` that
+    is a string or a list, review M1) reads as missing, never raises."""
+    return x if isinstance(x, dict) else {}
+
+
+def _l(x):
+    """`x` when it is a list, else []."""
+    return x if isinstance(x, list) else []
+
+
 def empty(item_id):
     """The answer for an item with no history (or no database)."""
     return {"id": item_id, "events": [], "exact": False}
@@ -122,7 +133,7 @@ def derive(via, data=None, item=None):
     """(route, place, origin, actor) for a change written with change_log `via` from proposal `data` (item `item`), either
     of which may be None. The one rule for today's rows, and the one tracker.py stores once the diff is applied."""
     via = str(via or "")
-    data, item = data or {}, item or {}
+    data, item = _d(data), _d(item)
     if via.startswith(REVERT_VIA):
         return "activity", None, None, "you"
     route = FIXED.get(via)
@@ -179,8 +190,8 @@ def one_ref(value):
 
 def source_of(item, data, rel):
     """The source reference of a change: the item's own source, the note it came from, else the proposal's file."""
-    item, data = item or {}, data or {}
-    for cand in (item.get("source"), (item.get("values") or {}).get("source"), (data.get("note") or {}).get("path")):
+    item, data = _d(item), _d(data)
+    for cand in (item.get("source"), _d(item.get("values")).get("source"), _d(data.get("note")).get("path")):
         if one_ref(cand):
             return one_ref(cand)
     return rel
@@ -225,7 +236,8 @@ class Proposals:
                 p = folder / name
                 if p.is_file():
                     try:
-                        self.files[name] = (paths.rel(p), json.loads(p.read_text(encoding="utf-8")))
+                        data = json.loads(p.read_text(encoding="utf-8"))
+                        self.files[name] = (paths.rel(p), data if isinstance(data, dict) else None)   # M1: a dict or nothing
                     except (OSError, ValueError):
                         self.files[name] = (paths.rel(p), None)    # unreadable: the route is worked out from the via alone
                     break
@@ -247,14 +259,14 @@ def match_item(data, apply_id, tbl, key):
     """The proposal item that made a change to (tbl, key): the one applied in this apply first, else any for it."""
     if tbl == "item_labels":
         tbl, key = None, str(key).split("|")[0]          # labels are set on the item itself
-    found = [i for i in data.get("items") or [] if isinstance(i, dict) and item_is(i, tbl, key)]
+    found = [i for i in _l(_d(data).get("items")) if isinstance(i, dict) and item_is(i, tbl, key)]
     return next((i for i in found if i.get("applied") == apply_id), found[0] if found else None)
 
 
 def item_is(i, tbl, key):
     """True when proposal item `i` is about (tbl, key); tbl None matches any item table."""
     if tbl == "links":
-        v = i.get("values") or {}
+        v = _d(i.get("values"))
         return i.get("table") == "links" and (i.get("id") == key or f"{v.get('from_item')}|{v.get('to_item')}" in str(key))
     return (tbl is None or i.get("table") == tbl) and key in (i.get("result_id"), i.get("id"))
 
@@ -447,7 +459,7 @@ def derived_rejections(item_id, apply_id, at, props):
     """The rejections of an update to the item in one apply, from its proposals (only while they are still applied)."""
     out = []
     for rel, data in props.listed(apply_id):
-        for i in (data or {}).get("items") or []:
+        for i in _l(_d(data).get("items")):
             if isinstance(i, dict) and i.get("decision") == "rejected" and i.get("id") == item_id and i.get("applied") == apply_id:
                 out.append(reject_event(f"{apply_id}-{i.get('n')}", at, apply_id, None, i, data, rel))
     return out

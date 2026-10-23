@@ -36,7 +36,19 @@ own .json files in drafts):
     unused/         a proposal (and its record) the run staged but that didn't take the place: after Stop or a failure, a second
                     one, or the new one after Undo
 The newest KEEP holds are kept; older ones are removed when a new one is made (creaite's own files only).
+
+2.6.1 review H-1: a manifest is read as untrusted data (manifest_problem). The only moves it can ever lead to are its proposal
+(a proposed-*.json name, never a path) between the hold and system/staging/, and its record between the hold and the one stored
+path `system/staging/drafts/<name>.html`; nothing else is restored. A manifest with any field of the wrong type, an unknown key,
+a path elsewhere, `..`, an absolute path, or a link on the way is refused whole (nothing moved, one plain log line, no path), and
+a move never replaces a file that is already there. A hold is trusted only when creaite's own ledger, system/guard/
+reextract-holds.json (the guard folder is on the never list: only the live server's process writes it, and Read again runs
+there), names it with the proposal it set aside; a file goes back out of a hold only when its sha256 is the one the ledger kept
+when creaite moved it in. So a hold the model planted, or a file it swapped in, never reaches Review or a draft. The guard's
+never list also keeps the model out of system/staging/reextract/ (dev/proposals/h1-reextract-hold/reach.diff); this module's
+checks hold on their own without it.
 """
+import hashlib
 import json
 import os
 import re
@@ -68,6 +80,12 @@ PORTFOLIO = "_portfolio"
 BY_OTHERS = "minutes by others"
 QUESTION = re.compile(r"^QUESTION:\s*[`\"]?([^`\"|\n]{1,300}?)[`\"]?\s*\|\s*(.+?)\s*$", re.M)
 QUESTION_MAX = 300
+MANIFEST_MAX = 64 * 1024       # a hold.json is a few hundred bytes; anything bigger is not creaite's
+MANIFEST_KEYS = {"run", "state", "at", "proposal", "draft", "transcript", "date", "title", "projects", "outcome", "ended",
+                 "new_proposal", "new_draft", "undone"}
+STATES = ("held", "put_back", "kept_aside", "needs", "replaced", "undone")
+LEDGER = "reextract-holds.json"   # in system/guard/: {run: {"proposal", "proposal_sha", "record_sha"?}}
+RECORD = re.compile(r"system/staging/drafts/(?!\.)[^/\\\x00-\x1f]{1,200}\.html")   # a minutes record directly in drafts
 CUTOFF = {"actions": 0.75, "decisions": 0.6, "raid": 0.6}
 TEXT = {"actions": "description", "decisions": "decision", "raid": "description"}
 
@@ -97,8 +115,10 @@ def plain(text):
     return "".join(c for c in str(text) if unicodedata.category(c)[0] != "C" and unicodedata.category(c) not in ("Zl", "Zp"))
 
 
-def _read_json(p):
+def _read_json(p, limit=None):
     try:
+        if limit is not None and os.lstat(p).st_size > limit:
+            return None
         data = json.loads(Path(p).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
@@ -116,6 +136,44 @@ def _plain_file(p):
     except OSError:
         return False
     return stat.S_ISREG(st.st_mode) and st.st_nlink == 1
+
+
+def _sha(p):
+    """sha256 of a plain file's bytes, or None."""
+    if not _plain_file(p):
+        return None
+    try:
+        return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _ledger_file():
+    return paths.GUARD / LEDGER
+
+
+def _ledger():
+    """{run: entry} of the holds creaite made (review H-1); {} when there is none or it is unreadable."""
+    if paths.GUARD.is_symlink():
+        return {}
+    data = _read_json(_ledger_file(), 1024 * 1024)
+    return {k: v for k, v in (data or {}).items() if isinstance(v, dict)}
+
+
+def _ledger_set(run_id, **entry):
+    """Record (or update) this run's hold in the ledger; entries whose hold has gone are dropped."""
+    led = {k: v for k, v in _ledger().items() if RUN.fullmatch(k) and (hold_root() / k).is_dir()}
+    led[run_id] = {**led.get(run_id, {}), **entry}
+    paths.GUARD.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if paths.GUARD.is_symlink():                         # as the live server: the guard folder only ever the vault's own
+        raise OSError("the guard folder is a link")
+    _write_json(_ledger_file(), led)
+
+
+def _trusted(run_id, h):
+    """True when creaite's ledger has this run's hold, setting aside this proposal."""
+    e = _ledger().get(run_id) or {}
+    return isinstance(e.get("proposal_sha"), str) and e.get("proposal") == h.get("proposal")
 
 
 # ── The request ──────────────────────────────────────────────────────────────
@@ -192,7 +250,7 @@ def _held(name):
     if not root.is_dir():
         return False
     for d in root.iterdir():
-        h = _read_json(d / "hold.json") if d.is_dir() else None
+        h = _manifest(d.name) if RUN.fullmatch(d.name) else None
         if h and h.get("state") == "held" and h.get("proposal") == name:
             return True
     return False
@@ -271,6 +329,7 @@ def hold(ctx, run_id):
     _prune()
     d.mkdir(parents=True)
     src = paths.STAGING / ctx["proposal"]
+    _ledger_set(run_id, proposal=ctx["proposal"], proposal_sha=_sha(src))     # review H-1: what creaite itself set aside
     h = {"run": run_id, "state": "held", "at": time.time(), "proposal": ctx["proposal"], "draft": ctx["draft"],
          "transcript": ctx["transcript"], "date": ctx["date"], "title": ctx["title"], "projects": ctx["projects"]}
     _write_json(d / "hold.json", h)
@@ -283,11 +342,78 @@ def hold(ctx, run_id):
     return h
 
 
+def _num(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and x >= 0
+
+
+def _record_path_problem(draft):
+    """Why a manifest's record path isn't a minutes record directly in system/staging/drafts/ (stored, relative, no link on
+    the way), or None. The one place a record ever goes back to."""
+    if not isinstance(draft, str) or not RECORD.fullmatch(draft) or ".." in draft.split("/"):
+        return "record"
+    rp = paths.resolve(draft)
+    if rp.parent != paths.DRAFTS or os.path.realpath(rp.parent) != os.path.realpath(paths.DRAFTS):
+        return "record place"
+    if os.path.islink(rp) or (os.path.lexists(rp) and not _plain_file(rp)):
+        return "record file"
+    return None
+
+
+def _field_problem(h):
+    """Why a manifest's fields have the wrong type or value, or None (the shape only; the record path apart)."""
+    checks = (
+        ("state", h.get("state") in STATES), ("at", _num(h.get("at"))),
+        ("proposal", isinstance(h.get("proposal"), str) and bool(NAME.fullmatch(h["proposal"]))),
+        ("transcript", isinstance(h.get("transcript"), str) and 0 < len(h["transcript"]) <= 1000 and "\0" not in h["transcript"]),
+        ("date", isinstance(h.get("date"), str)), ("title", isinstance(h.get("title"), str)),
+        ("projects", isinstance(h.get("projects"), list) and all(
+            isinstance(c, str) and (c == PORTFOLIO or CODE_OK.fullmatch(c)) for c in h["projects"])),
+        ("new_proposal", h.get("new_proposal") is None or (isinstance(h["new_proposal"], str) and NAME.fullmatch(h["new_proposal"]))),
+        ("new_draft", h.get("new_draft") is None or isinstance(h["new_draft"], str)),
+        ("outcome", h.get("outcome") is None or isinstance(h["outcome"], dict)),
+        ("ended", h.get("ended") is None or _num(h["ended"])), ("undone", h.get("undone") is None or _num(h["undone"])))
+    return next((name for name, ok in checks if not ok), None)
+
+
+def manifest_problem(h, run_id):
+    """Review H-1: why a hold's manifest isn't one creaite wrote for this run (a plain word naming the field), or None. A
+    manifest is untrusted data: every key known, every field of its type, the proposal a name, the record a stored path
+    directly in drafts."""
+    if not isinstance(h, dict):
+        return "not a manifest"
+    if set(h) - MANIFEST_KEYS:
+        return "unknown key"
+    if h.get("run") != run_id:
+        return "run"
+    return _field_problem(h) or _record_path_problem(h.get("draft"))
+
+
 def _manifest(run_id):
+    """The run's manifest, checked (manifest_problem); None when there is none, or it is refused (logged without a path)."""
     try:
-        return _read_json(hold_dir(run_id) / "hold.json")
+        d = hold_dir(run_id)
     except ValueError:
         return None
+    f = d / "hold.json"
+    if d.is_symlink() or not d.is_dir() or not _plain_file(f):
+        return None
+    h = _read_json(f, MANIFEST_MAX)
+    why = manifest_problem(h, run_id) if h is not None else "unreadable or too big"
+    if not why and not _trusted(run_id, h):
+        why = "not a hold creaite made"
+    if why:
+        debuglog.warn("reextract", f"{run_id} hold refused, nothing moved: {why}")
+        return None
+    return h
+
+
+def _move(src, dst, sha=None):
+    """Move src to dst, never replacing a file (or a link) already at dst, never moving a link, and, given `sha`, only the
+    bytes creaite moved in (the ledger's sha256). False when it didn't."""
+    if os.path.lexists(dst) or not _plain_file(src) or (sha is not None and _sha(src) != sha):
+        return False
+    os.replace(src, dst)
+    return True
 
 
 def _save(run_id, h):
@@ -296,13 +422,7 @@ def _save(run_id, h):
 
 def _move_back(d, h):
     """The earlier proposal back in staging under its own name; False when that name is taken (it then stays in the hold)."""
-    src, dst = d / h["proposal"], paths.STAGING / h["proposal"]
-    if not src.is_file():
-        return False
-    if os.path.lexists(dst):
-        return False
-    os.replace(src, dst)
-    return True
+    return _move(d / h["proposal"], paths.STAGING / h["proposal"], _ledger().get(d.name, {}).get("proposal_sha") or "")
 
 
 def _new_ones(h, started):
@@ -372,8 +492,8 @@ def put_back(run_id, line=None, state="put_back", question=None):
         return h.get("outcome") or {"state": h.get("state")}
     back = _move_back(d, h)
     rec = paths.resolve(h["draft"])
-    if back and (d / "record.html").is_file() and not os.path.lexists(rec):
-        os.replace(d / "record.html", rec)                 # review L2: a settle that failed half way gives the record back too
+    if back:
+        _move(d / "record.html", rec, _ledger().get(run_id, {}).get("record_sha") or "")                      # review L2: a settle that failed half way gives the record back too
     out = {"run": run_id, "state": state if back else "kept_aside", "proposal": h["proposal"], "path": h["draft"],
            "line": (line or NOTHING) if back else
            "Your earlier minutes couldn't go back: another draft has their place. Settings › Diagnostics has the details.",
@@ -487,7 +607,8 @@ def _replace(run_id, d, h, newest, data):
     except (ValueError, OSError) as e:                       # the new draft stands; only the choices didn't come across
         debuglog.warn("reextract", f"{run_id} choices not carried: {type(e).__name__}")
     old_rec = paths.resolve(h["draft"])
-    if old_rec.parent == paths.DRAFTS and _plain_file(old_rec):
+    if old_rec.parent == paths.DRAFTS and _plain_file(old_rec) and not os.path.lexists(d / "record.html"):
+        _ledger_set(run_id, record_sha=_sha(old_rec))                       # review H-1: the record creaite moved in
         os.replace(old_rec, d / "record.html")
     out = {"run": run_id, "state": "replaced", "proposal": newest.name, "path": new_rec, **counts,
            "line": replaced_line(counts)}
@@ -586,9 +707,9 @@ def undo(run_id):
         return {"ok": False, "message": why}
     old_rec = paths.resolve(h["draft"])
     _set_aside(d, newp, data)
-    if (d / "record.html").is_file():
-        os.replace(d / "record.html", old_rec)
-    os.replace(d / h["proposal"], paths.STAGING / h["proposal"])
+    led = _ledger().get(run_id, {})
+    _move(d / "record.html", old_rec, led.get("record_sha") or "")
+    _move(d / h["proposal"], paths.STAGING / h["proposal"], led.get("proposal_sha") or "")
     h.update(state="undone", undone=time.time())
     _save(run_id, h)
     debuglog.info("reextract", f"{run_id} undone: {h['proposal']} back")
@@ -605,6 +726,10 @@ def _undo_problem(d, h, newp, data):
     taken = newp.name != h["proposal"] and os.path.lexists(paths.STAGING / h["proposal"])   # the new one may have its name
     if taken or os.path.lexists(paths.resolve(h["draft"])) or not (d / h["proposal"]).is_file():
         return "The earlier minutes can't come back: another draft has their place."
+    led = _ledger().get(d.name, {})                     # review H-1: only what creaite set aside comes back
+    if _sha(d / h["proposal"]) != led.get("proposal_sha") or (
+            (d / "record.html").exists() and _sha(d / "record.html") != led.get("record_sha")):
+        return "The earlier minutes can't come back: they were changed while set aside."
     return None
 
 
@@ -616,7 +741,7 @@ def recover():
         return out
     for d in sorted(root.iterdir()):
         try:
-            h = _read_json(d / "hold.json") if d.is_dir() and RUN.fullmatch(d.name) else None
+            h = _manifest(d.name) if RUN.fullmatch(d.name) else None     # review H-1: checked, or refused whole
             if h and h.get("state") == "held":
                 finish(d.name, h.get("at") or 0, (), "failed")
                 out.append(h["proposal"])
