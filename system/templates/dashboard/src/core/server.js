@@ -21,7 +21,7 @@ import { mCells, mCounts } from "./motion.js";
 import { go, tabTitle } from "./nav.js";
 import { D, days, fd, fdMd, fdText, mK, mSay, nowStamp, prio, reduced, S, TODAY } from "./page.js";
 import { shared } from "./state.js";
-import { decidedWords, plainSay } from "./say.js";
+import { decidedWords, plainSay, savedCapped } from "./say.js";
 import { heldWords, rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
@@ -161,7 +161,7 @@ export async function refreshRecords(ids){ if(!SERVED) return false; return awai
 export let APPLYT=null, APPLYN=0, APPLYL=/** @type {{r:any,v:string}[]} */ ([]);
 export function applySoon(row,verb){ APPLYN++; APPLYL.push({r:row||null,v:verb||"approved"}); clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const L=APPLYL; APPLYN=0; APPLYL=[]; const r=await applyNow();
   const held=r.ok?heldWords(r.message):"";   /* #280; #291: a held item apart from a file that has gone */
-  snack(r.ok?`${decidedWords(L)}${held}`:plainSay(oneLine(applyWords(r.message))),r.ok?()=>undoApply(r.apply_id):null); },600); }
+  snack(r.ok?`${decidedWords(savedCapped(L,r.message))}${held}`:plainSay(oneLine(applyWords(r.message))),r.ok?()=>undoApply(r.apply_id):null); },600); }
 /* drafts and conflicts go through review.py, so its checks run; its questions come back as buttons */
 export async function reviewViaServer(r,decision,modes){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const res=await api("/api/review",{file:r.file,ref:r.ref,decision,modes:modes||[]});
   if(res.ok){ if(S.autoApply) applySoon(r,decision); else await reloadData(); snack(plainSay(oneLine(res.message))); return; }

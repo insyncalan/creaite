@@ -153,17 +153,19 @@ export async function irApproveRoutine(groups) {
   /* #307: take the routine rows as the page showed them (file + ref + content), read the server's list again, and approve only
      those that are still the same; the rest are counted and left for the person */
   const looked = (groups.routine || []).map(n => ({ key: modelKeyOf(n), fp: (SNAP.keys.get(n) || {}).fp, cfp: (SNAP.keys.get(n) || {}).cfp })).filter(x => x.key);
+  /* the minutes record's own row sits in the first group (needs), not in the routine one: find it by file + ref, before and after the reload */
+  const minKey = [...(groups.needs || []), ...(groups.routine || [])].map(n => { const r = irRow(n); return r && !r.done && isRecordMin(r) ? modelKeyOf(n) : null; }).find(Boolean);
   await reloadData();
   const now = looked.map(x => { const r = rowFor(x.key, x.cfp); return r && !r.done && JSON.stringify([r.rec, r.p, r.kind, r.flags || null]) === x.fp ? r : null; });
   const same = /** @type {any[]} */ (now.filter(Boolean)), changed = looked.length - same.length;
   const left = changed ? `${changed} changed since you looked, left for you` : "";
   if (looked.length && !same.length) { snack(STALE_MSG); return; }
   const keys = new Set(same.map(revKey));
-  const min = same.find(r => isRecordMin(r));
+  const min = (minKey && REV.find(y => revKey(y) === minKey && !y.done && isRecordMin(y))) || same.find(r => isRecordMin(r));
   if (min && viaServer()) { await approveRoutineTracked(min, keys, left); return; }   /* #275 M-c: minutes kept as a record, by their Track column */
   const list = same.filter(r => rvBulkOK(r));
-  if (!list.length) { snack("Nothing routine to approve"); return; }
-  const res = await rvDecideMany(list, "approved");
+  if (!list.length && !same.length) { snack("Nothing routine to approve"); return; }   /* rows the bulk rule now leaves out (crossed in Track) still go through rvDecideMany, which says so */
+  const res = await rvDecideMany(list.length ? list : same, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
   const out = trkLeftOut(res);      /* #275 round 3: an apply that stopped (the batch back on Intake) and rows the Track reload left out */
   if (left) out.push(left);

@@ -4896,6 +4896,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     RejectsList: () => RejectsList,
     S: () => S,
     SA: () => SA,
+    SAFE_WHY: () => SAFE_WHY,
     SAVEQ: () => SAVEQ,
     SCREEN_OF: () => SCREEN_OF,
     SEARCHCFG: () => SEARCHCFG,
@@ -5058,6 +5059,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actUndoSelected: () => actUndoSelected,
     activeFilters: () => activeFilters,
     addEl: () => addEl,
+    addFailed: () => addFailed,
     addHTML: () => addHTML,
     addImages: () => addImages,
     addNoteImage: () => addNoteImage,
@@ -5651,6 +5653,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     decRevisit: () => decRevisit,
     decShort: () => decShort,
     decide: () => decide,
+    decidedWords: () => decidedWords,
     decisionCheck: () => decisionCheck,
     decisionFields: () => decisionFields,
     decodeHtml: () => decodeHtml,
@@ -6090,6 +6093,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isLinkUrl: () => isLinkUrl,
     isMe: () => isMe,
     isMin: () => isMin,
+    isMovedMinutes: () => isMovedMinutes,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
     isRecordMin: () => isRecordMin,
@@ -6677,6 +6681,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkX: () => pkX,
     placePicker: () => placePicker,
     plainPaths: () => plainPaths,
+    plainSay: () => plainSay,
     playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
@@ -6977,6 +6982,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     saveTab: () => saveTab,
     saveView: () => saveView,
     saveWs: () => saveWs,
+    savedCapped: () => savedCapped,
     savedFactsHtml: () => savedFactsHtml,
     savedNow: () => savedNow,
     savedViewMenu: () => savedViewMenu,
@@ -36539,6 +36545,8 @@ ${s5}`;
       [/nothing was written to the tracker/g, "nothing was saved"],
       [/transcript no longer in the inbox/g, "the transcript is no longer in Intake"],
       [/\b(\d+) of (\d+) staged for Review; (\d+) not staged\b/g, "$1 of $2 drafted; $3 not drafted"],
+      [/\b0 of \d+ waiting in Review;? (\d+) couldn't be read\b/g, "Nothing was drafted. $1 couldn't be read"],
+      [/\b0 of \d+ waiting in Review\b/g, "Nothing was drafted"],
       [/\b(\d+) of (\d+) waiting in Review\b/g, "$1 of $2 drafted, ready to check in Intake"],
       [/\bNot staged: process it again\b/g, "Nothing was drafted: process it again"],
       [/\bNot in Review yet\b/g, "Not drafted yet"],
@@ -36610,9 +36618,16 @@ ${s5}`;
     }
     return out.length ? out.join(". ") : "Saved";
   }
+  function savedCapped(list, msg) {
+    const m5 = /written (\d+), filed (\d+), rejected (\d+)/.exec(String(msg || ""));
+    if (!m5) return list;
+    let ok2 = +m5[1] + +m5[2], no2 = +m5[3];
+    return list.filter((x5) => x5.v === "rejected" ? no2-- > 0 : ok2-- > 0);
+  }
   var addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
 
   // core/intakeApi.js
+  var SAFE_WHY = (m5) => /OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m5) ? /too long/i.test(m5) ? "the file name is too long. Rename it and add it again" : "it couldn't be saved. Try again" : m5;
   var MTG = () => D.meetings && D.meetings.rows || [], MRUN = {};
   var nowHM = function() {
     const n4 = /* @__PURE__ */ new Date();
@@ -36662,6 +36677,7 @@ ${s5}`;
     if (!UPLOAD_TYPES.includes(ext)) return { fail: addFailed(f5.name, "Intake takes transcripts (VTT), Word, text, Markdown and PDF files, not this kind") };
     if (f5.size > UPLOAD_MAX) return { fail: addFailed(f5.name, "it is over 25 MB") };
     if (!f5.size) return { fail: addFailed(f5.name, "the file is empty") };
+    if (f5.name.length > 200) return { fail: addFailed(f5.name.slice(0, 40) + "…", "the file name is too long. Rename it and add it again") };
     const data = await new Promise((res, rej) => {
       const fr2 = new FileReader();
       fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
@@ -36674,7 +36690,7 @@ ${s5}`;
         snack(OLDSERVER);
         return false;
       }
-      return { fail: addFailed(f5.name, oneLine(r4.message)) };
+      return { fail: addFailed(f5.name, SAFE_WHY(oneLine(r4.message))) };
     }
     return { r: r4, ext };
   }
@@ -37372,7 +37388,7 @@ ${s5}`;
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-  var isMovedMinutes = (m5) => /isn't there|nothing pending/i.test(String(m5 || ""));
+  var isMovedMinutes = (m5) => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m5 || "").trim());
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
     const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
@@ -77056,6 +77072,10 @@ ${d5.text}`);
   }
   async function irApproveRoutine(groups) {
     const looked = (groups.routine || []).map((n4) => ({ key: modelKeyOf(n4), fp: (SNAP.keys.get(n4) || {}).fp, cfp: (SNAP.keys.get(n4) || {}).cfp })).filter((x5) => x5.key);
+    const minKey = [...groups.needs || [], ...groups.routine || []].map((n4) => {
+      const r4 = irRow(n4);
+      return r4 && !r4.done && isRecordMin(r4) ? modelKeyOf(n4) : null;
+    }).find(Boolean);
     await reloadData();
     const now = looked.map((x5) => {
       const r4 = rowFor(x5.key, x5.cfp);
@@ -77071,17 +77091,17 @@ ${d5.text}`);
       return;
     }
     const keys = new Set(same2.map(revKey));
-    const min = same2.find((r4) => isRecordMin(r4));
+    const min = minKey && REV.find((y5) => revKey(y5) === minKey && !y5.done && isRecordMin(y5)) || same2.find((r4) => isRecordMin(r4));
     if (min && viaServer()) {
       await approveRoutineTracked(min, keys, left);
       return;
     }
     const list = same2.filter((r4) => rvBulkOK(r4));
-    if (!list.length) {
+    if (!list.length && !same2.length) {
       snack("Nothing routine to approve");
       return;
     }
-    const res = await rvDecideMany(list, "approved");
+    const res = await rvDecideMany(list.length ? list : same2, "approved");
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
     const out = trkLeftOut(res);
     if (left) out.push(left);
@@ -78412,7 +78432,7 @@ ${d5.text}`);
       APPLYL = [];
       const r4 = await applyNow();
       const held = r4.ok ? heldWords(r4.message) : "";
-      snack(r4.ok ? `${decidedWords(L3)}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
+      snack(r4.ok ? `${decidedWords(savedCapped(L3, r4.message))}${held}` : plainSay(oneLine(applyWords(r4.message))), r4.ok ? () => undoApply(r4.apply_id) : null);
     }, 600);
   }
   async function reviewViaServer(r4, decision, modes) {
@@ -80016,6 +80036,7 @@ ${d5.text}`);
         "irViewNorm",
         "irWord",
         "isMe",
+        "isMovedMinutes",
         "isNotePath",
         "itemDatePicker",
         "itemFp",
@@ -80308,6 +80329,7 @@ ${d5.text}`);
         "saveCurrent",
         "savePanel",
         "saveView",
+        "savedCapped",
         "savesSettled",
         "say",
         "sayMd",
