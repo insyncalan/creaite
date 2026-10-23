@@ -395,12 +395,19 @@ class Places(Base):
         b = self.b
         b.eval("WT='actions'; go('work')")
         b.wait("document.querySelector('#workTbl a.tlink')", 10)
+        b.click('#wdens [data-dens="cmf"]')
+        b.wait("document.getElementById('workWrap').classList.contains('cmf')")
+        b.pump(0.5)
+        b.wait("(()=>{ const a=[...document.querySelectorAll('#workTbl a.tlink')].find(a=>{ const r=a.getBoundingClientRect(); "
+               "const x=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return x&&x.closest('a.tlink')===a }); "
+               "if(a) a.classList.add('__shown'); return !!a })()", 5)
         before = b.eval("document.getElementById('panel').classList.contains('on')")
         # a real click on the link: the row it sits in must not also open the peek, and the link itself is the only thing that happens
         b.eval("window.__saw=0; window.__links=0; "
                "window.addEventListener('click',e=>{ if(e.target.closest('a.tlink')){ window.__saw++; e.preventDefault(); } },true); "   # the test stops the new tab opening
                "document.addEventListener('click',e=>{ if(e.target.closest('a.tlink')) window.__links++; }); 0")
-        b.click("#workTbl a.tlink")
+        # #241: in the compact list the links beside a long title are clipped away; the comfortable list shows them, so click there
+        b.click("#workTbl a.tlink.__shown", exact=True)
         b.pump(0.4)
         self.assertEqual(b.eval("window.__saw"), 1, "the click reached the link")
         self.assertEqual(b.eval("window.__links"), 0, "and no handler of the page's own after it (the row, a card, a button)")
