@@ -26,8 +26,11 @@ recipient address. Never the subject, an address or any of the email's text. Lib
 import hashlib
 import html.parser
 import json
+import os
 import re
+import shlex
 import sys
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -276,13 +279,92 @@ def check(events, req):
     if not calls:
         return {"ok": False, "made": False, "reason": "Outlook wasn't reached"}
     if len(calls) > 1 or any(inp != req["args"] for _, inp in calls):
-        return {"ok": False, "made": bool(done), "reason": "the draft wasn't made exactly as shown: check your Drafts folder"}
+        if not done:                                     # the hook (below) refused it before the tool ran
+            return {"ok": False, "made": False, "reason": "creaite stopped a draft that wasn't the one shown: nothing was made"}
+        return {"ok": False, "made": True,
+                "reason": "the draft wasn't made exactly as shown: delete it unsent from your Drafts folder"}
     tid = calls[0][0]
     if tid not in results:
         return {"ok": False, "made": False, "reason": "Outlook didn't answer"}
     if results[tid][0]:
         return {"ok": False, "made": False, "reason": reason(results[tid][1])}
     return {"ok": True, "made": True, **_made(results[tid][1])}
+
+
+# ===== Cap's M1 (22-10-2026): the arguments are checked BEFORE the tool runs =====
+# The draft run holds the write tool while it reads an email that can carry text from outside mail. check() above judges the run
+# afterwards, when a draft to another To, Cc or Bcc, or a second one, would already exist. So the run is also started with a
+# PreToolUse hook (`--settings`, hook_settings) that runs `draft_delivery.py hook <request file>` before every tool call: create-draft
+# only with exactly the request's arguments and only once, ToolSearch, nothing else; any error refuses (exit 2, the reason goes back
+# to the model). The request is written outside the vault by hook_request_file and removed by hook_cleanup.
+def hook_settings(runner, request_file):
+    """The --settings JSON for the draft run: the PreToolUse hook (matcher "*": every tool, MCP included) that runs
+    `<runner> hook <request file>`. `runner` is the command that starts this script (the wrapper, as the guard hook's)."""
+    cmd = " ".join(shlex.quote(str(x)) for x in (*runner, "hook", request_file))
+    return json.dumps({"disableAllHooks": False,
+                       "hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}})
+
+
+def hook_request_file(req):
+    """The request's arguments in a file of their own in a new folder outside the vault; returns its path. The hook reads it and
+    marks it used there (`<file>.used`); hook_cleanup removes the folder."""
+    d = tempfile.mkdtemp(prefix="creaite-draft-")
+    path = os.path.join(d, "request.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(req["args"], f, ensure_ascii=False)
+    return path
+
+
+def hook_cleanup(path):
+    """Remove the request file, its used mark and their folder."""
+    for f in (path, path + ".used"):
+        try:
+            os.remove(f)
+        except OSError:
+            pass
+    try:
+        os.rmdir(os.path.dirname(path))
+    except OSError:
+        pass
+
+
+def hook_decision(tool, inp, args, claim):
+    """(allowed, why) for one tool call: ToolSearch; create-draft with exactly `args` (and `claim()` true, once); else refused."""
+    if tool in ALLOWED_EXTRA:
+        return True, ""
+    if tool != CREATE_TOOL:
+        return False, "this run may only make the one draft shown"
+    if inp != args:
+        return False, "not the draft shown: nothing was made"
+    if not claim():
+        return False, "the draft shown is made once"
+    return True, ""
+
+
+def hook_main(argv):
+    """`draft_delivery.py hook <request file>`: Claude Code's PreToolUse hook for the draft run (call JSON on stdin). Exit 0 lets the
+    call through, exit 2 refuses it with the reason on stderr. Any error refuses."""
+    try:
+        path = argv[0]
+        call = json.loads(sys.stdin.read() or "{}")
+        with open(path, encoding="utf-8") as f:
+            args = json.load(f)
+        if not isinstance(args, dict) or not isinstance(call, dict):
+            raise ValueError("not a request")
+
+        def claim():
+            try:
+                os.close(os.open(path + ".used", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600))
+                return True
+            except FileExistsError:
+                return False
+        ok, why = hook_decision(str(call.get("tool_name") or ""), call.get("tool_input"), args, claim)
+    except Exception as e:  # noqa: BLE001 - fail closed
+        ok, why = False, f"creaite couldn't check this call ({type(e).__name__})"
+    if not ok:
+        sys.stderr.write(f"creaite refused this: {why}\n")
+        return 2
+    return 0
 
 
 def fingerprint(text):
@@ -440,7 +522,10 @@ def _cmd(name, body):
 
 
 def main(argv):
-    """draft_delivery.py <command>: JSON on stdin, one JSON answer on stdout; exit 1 with {ok: false, message} when refused."""
+    """draft_delivery.py <command>: JSON on stdin, one JSON answer on stdout; exit 1 with {ok: false, message} when refused.
+    `hook <request file>` is the draft run's PreToolUse hook instead (exit 0 or 2)."""
+    if argv and argv[0] == "hook":
+        return hook_main(argv[1:])
     try:
         body = json.loads(sys.stdin.read() or "{}")
         out = _cmd(argv[0] if argv else "", body if isinstance(body, dict) else {})

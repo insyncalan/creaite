@@ -261,7 +261,7 @@ export function deHtml(){ const el=$("#dePrev");
    recorded when the draft is made and marked sent when a sweep sees it in Sent Items ({action:"copied"} after a copy, so the sweep
    records it then). A refusal keeps the email, records nothing and offers Copy it instead. Off: the popup as before. */
 export const deOutlookOn=()=>S.outlookDrafts===true;
-export const DD_STEPS="The reminder steps up when the draft is created (or when a sweep finds the sent email, if you copy it instead).";
+export const DD_STEPS="The reminder steps up when the draft is created (or when the next check finds the sent email, if you copy it instead).";
 export const DD_SUB={off:"Nothing is sent: copy it and paste it into Outlook",on:"Nothing is sent: creaite puts a draft in your Outlook Drafts folder, for you to check and send"};
 /** The To line when no address is on record (Alan, 19-10-2026: it never stops the draft). @param {string} name */
 export const deNoAddress=name=>`No email address on record for ${name||"them"}. ${deOutlookOn()?"The draft is still created, with nothing in To: add the address in Outlook.":"Add the address when you paste it into Outlook."}`;
@@ -284,12 +284,12 @@ export const deLink=l=>/^https:\/\/outlook\.(office|office365|live)\.com\//.test
 /** @param {{link:string,noTo:boolean,chased:number}} d */
 export function deMadeHtml(d){ const n=d.chased||0;
   return `<b>Draft created in Outlook</b> (your Drafts folder). ${d.noTo?"It has no recipient yet: add the address in Outlook. ":""}Open it there to check and send.${deLink(d.link)}`
-    +(n?`<br><span class="sub">Chase recorded: drafted today, ${plur(n,"item")}. It will show as sent once a sweep sees it in Sent Items.</span>`:""); }
+    +(n?`<br><span class="sub">Chase recorded: drafted today, ${plur(n,"item")}. It will show as sent once the next check sees it in Sent Items.</span>`:""); }
 /** @param {string} why */
 export const deRefusedHtml=why=>`<b>Outlook would not create the draft</b> (${esc(why)}). Nothing was sent and nothing was recorded. The email is still here: <button class="mini" id="deFallback">Copy it instead</button> or turn the setting off in Settings › Essentials › Draft email.`;
 /** Create draft in Outlook: one call; the email stays whatever Outlook says. @param {any} btn the button (disabled while it runs) */
 export async function deMakeDraft(btn){ const de=shared.DE; if(!de||btn.disabled) return;
-  if(!viaServer()){ deStatShow("bad",deRefusedHtml("creaite's live server isn't reachable")); return; }
+  if(!viaServer()){ deStatShow("bad",deRefusedHtml("creaite isn't running")); return; }
   btn.disabled=true; $("#deMsg").textContent="Creating the draft in Outlook…";
   const r=await api("/api/email/draft",{action:"create",...deDraftBody()});
   if(shared.DE!==de) return;

@@ -228,6 +228,95 @@ class Check(Isolated):
         self.assertEqual(dd.check([{"type": "result", "result": "{}"}], self.req)["reason"], "Outlook wasn't reached")
 
 
+class Hook(Isolated):
+    """#183 (Cap's M1, 22-10-2026): the arguments are checked BEFORE the tool runs. A PreToolUse hook in the draft run lets
+    create-draft through once, with exactly the request's arguments, and refuses everything else, so an injected Cc, Bcc, To,
+    subject or a second draft is never made (check() afterwards is only the backstop)."""
+
+    def setUp(self):
+        super().setUp()
+        self.req = dd.request(PAYLOAD, ON)
+        self.file = self.tmp / "request.json"
+        self.file.write_text(json.dumps(self.req["args"]))
+
+    def call(self, tool, inp, file=None):
+        ev = json.dumps({"tool_name": tool, "tool_input": inp})
+        return subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook", str(file or self.file)],
+                              input=ev, capture_output=True, text=True)
+
+    def test_the_exact_request_is_let_through_once_and_a_second_draft_is_refused(self):
+        first = self.call(dd.CREATE_TOOL, self.req["args"])
+        self.assertEqual(first.returncode, 0, first.stderr)
+        second = self.call(dd.CREATE_TOOL, self.req["args"])
+        self.assertEqual(second.returncode, 2)
+        self.assertIn("once", second.stderr)
+
+    def test_a_changed_or_added_argument_is_refused_before_anything_is_made(self):
+        for extra in ({"bcc": ["x@example.com"]}, {"cc": ["x@example.com"]}, {"subject": "Changed"}, {"to": ["x@example.com"]},
+                      {"body": "<p>Other</p>"}, {"bodyType": "text"}):
+            with self.subTest(extra=extra):
+                r = self.call(dd.CREATE_TOOL, {**self.req["args"], **extra})
+                self.assertEqual(r.returncode, 2)
+                self.assertIn("not the draft shown", r.stderr)
+        missing = {k: v for k, v in self.req["args"].items() if k != "to"}
+        self.assertEqual(self.call(dd.CREATE_TOOL, missing).returncode, 2)
+        self.assertEqual(self.call(dd.CREATE_TOOL, "not a dict").returncode, 2)
+        self.assertEqual(self.call(dd.CREATE_TOOL, self.req["args"]).returncode, 0)   # refusals did not use up the one draft
+
+    def test_no_other_tool_is_let_through_but_toolsearch(self):
+        self.assertEqual(self.call("ToolSearch", {"query": "outlook_create_draft"}).returncode, 0)
+        for tool in (permissions.M365 + "outlook_send_draft", permissions.M365 + "outlook_email_search", "Bash", "Read", "?"):
+            with self.subTest(tool=tool):
+                self.assertEqual(self.call(tool, {}).returncode, 2)
+                self.assertEqual(self.call(tool, self.req["args"]).returncode, 2)       # even with the draft's own arguments
+
+    def test_the_hook_fails_closed(self):
+        self.assertEqual(self.call(dd.CREATE_TOOL, self.req["args"], file=self.tmp / "missing.json").returncode, 2)
+        bad = self.tmp / "bad.json"
+        bad.write_text("[1, 2]")
+        self.assertEqual(self.call(dd.CREATE_TOOL, self.req["args"], file=bad).returncode, 2)
+        r = subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook", str(self.file)],
+                           input="not json", capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2)
+        r = subprocess.run([sys.executable, str(REPO / "system/scripts/draft_delivery.py"), "hook"], input="{}",
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2)
+
+    def test_the_run_settings_carry_the_hook_for_every_tool_and_name_only_the_request_file(self):
+        got = json.loads(dd.hook_settings(["/bin/sh", "/v/system/scripts/run", "draft_delivery.py"], "/tmp/x y/request.json"))
+        self.assertIs(got["disableAllHooks"], False)
+        (entry,) = got["hooks"]["PreToolUse"]
+        self.assertEqual(entry["matcher"], "*")
+        cmd = entry["hooks"][0]["command"]
+        self.assertEqual(entry["hooks"][0]["type"], "command")
+        self.assertTrue(cmd.startswith("/bin/sh /v/system/scripts/run draft_delivery.py hook "))
+        self.assertTrue(cmd.endswith("'/tmp/x y/request.json'"))
+        self.assertNotIn("sara@example.com", cmd)
+
+    def test_the_request_is_written_outside_the_vault_for_the_hook_and_removed_after(self):
+        path = dd.hook_request_file(self.req)
+        try:
+            self.assertEqual(json.loads(Path(path).read_text()), self.req["args"])
+            self.assertEqual(self.call(dd.CREATE_TOOL, self.req["args"], file=path).returncode, 0)
+        finally:
+            dd.hook_cleanup(path)
+        self.assertFalse(Path(path).exists())
+        self.assertFalse(Path(path).parent.exists())
+
+    def test_the_refusal_words_say_what_was_made_and_to_delete_it_unsent(self):
+        changed = {**self.req["args"], "bcc": ["x@example.com"]}
+        blocked = [{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t1", "name": dd.CREATE_TOOL, "input": changed}]}},
+                   {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "is_error": True,
+                                                              "content": "creaite refused this: not the draft shown"}]}}]
+        got = dd.check(blocked, self.req)
+        self.assertEqual((got["ok"], got["made"]), (False, False))
+        self.assertIn("nothing was made", got["reason"])
+        made = dd.check(stub_run(self.req, {"id": "x"}, args=changed), self.req)
+        self.assertTrue(made["made"])
+        self.assertIn("delete it", made["reason"])
+        self.assertIn("unsent", made["reason"])
+
+
 class Access(unittest.TestCase):
     """Settings' Outlook access Check: the granted scopes, read with the reading tool get_granted_scopes."""
 
