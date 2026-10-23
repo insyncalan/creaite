@@ -61,6 +61,7 @@ USAGE_LABEL = "Read again"     # Activity › Usage (UsagePanel.jsx KIND)
 LABEL = "Read a meeting's transcript again"
 HOLD = "reextract"             # system/staging/<HOLD>/<run>/
 KEEP = 20
+STATES = ("held", "kept_aside", "put_back", "needs", "replaced", "undone", "stopped", "failed")
 NAME = re.compile(r"proposed-[\w.-]{1,160}\.json")
 RUN = re.compile(r"[A-Za-z0-9-]{6,64}")
 CODE_OK = re.compile(r"[A-Z][A-Z0-9]{2,6}")
@@ -254,9 +255,11 @@ def _prune():
         return
     ended = []
     for d in root.iterdir():
-        h = _read_json(d / "hold.json") if d.is_dir() and not d.is_symlink() and RUN.fullmatch(d.name) else None
+        ok = RUN.fullmatch(d.name) and not d.is_symlink() and d.is_dir() and _plain_file(d / "hold.json")
+        h = _read_json(d / "hold.json") if ok else None             # only the state and time are read here; nothing is moved by them
         if h and h.get("state") not in ("held", "kept_aside"):    # review L4: kept aside still holds the earlier minutes
-            ended.append((h.get("at") or 0, d))
+            at = h.get("at")
+            ended.append((at if isinstance(at, (int, float)) and not isinstance(at, bool) else 0, d))
     for _, d in sorted(ended, key=lambda x: x[0], reverse=True)[KEEP:]:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -283,11 +286,48 @@ def hold(ctx, run_id):
     return h
 
 
+def _draft_ok(stored):
+    """#283 (Team Cap's H-1): a record path read from a hold is trusted only when it is a stored path, relative, with no `..`, naming
+    a .html file directly inside system/staging/drafts/, and (when the file is there) a plain file that is a minutes record."""
+    import minutes_record
+    if not isinstance(stored, str) or not stored or stored != stored.strip() or "\\" in stored or "\0" in stored:
+        return False
+    if stored.startswith(("/", "~")) or re.match(r"[A-Za-z]:", stored) or ".." in stored.split("/") or not stored.lower().endswith(".html"):
+        return False
+    rp = paths.resolve(stored)
+    if rp.parent != paths.DRAFTS or rp.name.startswith("."):
+        return False
+    return not os.path.lexists(rp) or (_plain_file(rp) and minutes_record.is_record(stored))
+
+
+def _clean(run_id, h):
+    """The manifest `h` of hold `run_id` when every field creaite uses from it is what creaite itself wrote, else None. A hold.json is
+    a file in a folder the model's filechange could once create in, so nothing read from it is trusted: the run, the state, the
+    proposal's name (a staged proposal's), the record paths (directly in drafts), the shape. Nothing moves for a manifest that fails."""
+    ok = isinstance(h, dict) and h.get("run") == run_id and h.get("state") in STATES
+    ok = ok and isinstance(h.get("proposal"), str) and NAME.fullmatch(h["proposal"]) is not None and _draft_ok(h.get("draft"))
+    ok = ok and isinstance(h.get("transcript"), str) and isinstance(h.get("date"), str) and isinstance(h.get("title"), str)
+    ok = ok and isinstance(h.get("projects"), list) and all(isinstance(c, str) for c in h["projects"])
+    ok = ok and isinstance(h.get("at"), (int, float)) and not isinstance(h.get("at"), bool)
+    if ok and h.get("new_proposal") is not None:
+        ok = isinstance(h["new_proposal"], str) and NAME.fullmatch(h["new_proposal"]) is not None
+    if ok and h.get("new_draft") is not None:
+        ok = _draft_ok(h["new_draft"])
+    if not ok:
+        debuglog.warn("reextract", f"{run_id} hold ignored: its manifest isn't one creaite wrote")   # no content in the log
+        return None
+    return h
+
+
 def _manifest(run_id):
+    """The run's manifest, checked (_clean), or None; a hold folder or manifest that is a link is never read."""
     try:
-        return _read_json(hold_dir(run_id) / "hold.json")
+        d = hold_dir(run_id)
     except ValueError:
         return None
+    if d.is_symlink() or not d.is_dir() or not _plain_file(d / "hold.json"):
+        return None
+    return _clean(run_id, _read_json(d / "hold.json"))
 
 
 def _save(run_id, h):
@@ -297,7 +337,7 @@ def _save(run_id, h):
 def _move_back(d, h):
     """The earlier proposal back in staging under its own name; False when that name is taken (it then stays in the hold)."""
     src, dst = d / h["proposal"], paths.STAGING / h["proposal"]
-    if not src.is_file():
+    if not _plain_file(src):
         return False
     if os.path.lexists(dst):
         return False
@@ -372,7 +412,7 @@ def put_back(run_id, line=None, state="put_back", question=None):
         return h.get("outcome") or {"state": h.get("state")}
     back = _move_back(d, h)
     rec = paths.resolve(h["draft"])
-    if back and (d / "record.html").is_file() and not os.path.lexists(rec):
+    if back and _plain_file(d / "record.html") and not os.path.lexists(rec):
         os.replace(d / "record.html", rec)                 # review L2: a settle that failed half way gives the record back too
     out = {"run": run_id, "state": state if back else "kept_aside", "proposal": h["proposal"], "path": h["draft"],
            "line": (line or NOTHING) if back else
@@ -586,7 +626,7 @@ def undo(run_id):
         return {"ok": False, "message": why}
     old_rec = paths.resolve(h["draft"])
     _set_aside(d, newp, data)
-    if (d / "record.html").is_file():
+    if _plain_file(d / "record.html"):
         os.replace(d / "record.html", old_rec)
     os.replace(d / h["proposal"], paths.STAGING / h["proposal"])
     h.update(state="undone", undone=time.time())
@@ -603,7 +643,7 @@ def _undo_problem(d, h, newp, data):
     if _items_problem(data):
         return "Some of the new minutes' items are saved or approved: undo that first."
     taken = newp.name != h["proposal"] and os.path.lexists(paths.STAGING / h["proposal"])   # the new one may have its name
-    if taken or os.path.lexists(paths.resolve(h["draft"])) or not (d / h["proposal"]).is_file():
+    if taken or os.path.lexists(paths.resolve(h["draft"])) or not _plain_file(d / h["proposal"]):
         return "The earlier minutes can't come back: another draft has their place."
     return None
 
@@ -616,7 +656,7 @@ def recover():
         return out
     for d in sorted(root.iterdir()):
         try:
-            h = _read_json(d / "hold.json") if d.is_dir() and RUN.fullmatch(d.name) else None
+            h = _manifest(d.name) if RUN.fullmatch(d.name) else None     # H-1: a manifest that isn't creaite's is left alone
             if h and h.get("state") == "held":
                 finish(d.name, h.get("at") or 0, (), "failed")
                 out.append(h["proposal"])
