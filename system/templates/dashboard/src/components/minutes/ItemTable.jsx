@@ -28,7 +28,7 @@ import { jumpTo } from "./TranscriptPane.jsx";
 import { shortTime } from "./TextLines.jsx";
 import { DeadlinePopover } from "./DeadlinePopover.jsx";
 import { attnFilter, attnFocus, hiddenBy } from "./Attention.jsx";
-import { keyRow } from "./rowKeys.js";
+import { keyRow, rememberTrack } from "./rowKeys.js";
 import { needsOf, nextTrack, setTrack, trackOf, rowN } from "./track.js";
 import { A, DEC, R, wsFor } from "../../core/data.js";
 import { go } from "../../core/nav.js";
@@ -181,7 +181,7 @@ function MnRow({ r, ctx, full }) {
   return (
     <tr class={`mi${lit ? " hl" : ""}${attnFocus.value === n ? " nx" : ""}${keyRow.value === n ? " kc" : ""}`} tabIndex={-1} hidden={hide || undefined} data-n={n} data-trk={t} data-ref={row.ref || undefined} data-turn={turn || undefined}
       onMouseEnter={() => { if (turn) hoverTurn.value = { turn, from: "row" }; }} onMouseLeave={() => { if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null; }}>
-      <td class="mntc"><TrackButtons t={t} label={label} onPick={w => ctx.setDoc(setTrack(ctx.doc, n, w === "m" ? "" : nextTrack(t, w)), "Track")} /></td>
+      <td class="mntc"><TrackButtons t={t} label={label} onPick={w => { rememberTrack(ctx.doc, n); ctx.setDoc(setTrack(ctx.doc, n, w === "m" ? "" : nextTrack(t, w)), "Track"); }} /></td>
       <td class="mnic">
         {isNew ? <ItemText value={String(v[ROW_FIELD[sid]] || "")} label={`${ctx.section.heading}: ${label}`} n={n} onSave={x => edit({ [ROW_FIELD[sid]]: x })} />
           : <div class="mnit mnit-ro"><Linked text={String(cells[MAIN[sid]] || "")} /></div>}

@@ -71293,6 +71293,9 @@ ${d5.text}`);
     null
   );
   var UNDO = [];
+  var rememberTrack = (doc, n4) => {
+    UNDO.push({ n: n4, was: ((doc.layout || {}).track || {})[String(n4)] });
+  };
   var rowKeysReset = () => {
     keyRow.value = null;
     UNDO.length = 0;
@@ -71358,8 +71361,7 @@ ${d5.text}`);
     }
     const want = k5 === "y" ? "y" : k5 === "n" ? "n" : "";
     if (trackOf(doc, r4, api2.plan()) === want) return true;
-    const was = ((doc.layout || {}).track || {})[String(n4)];
-    UNDO.push({ n: n4, was });
+    rememberTrack(doc, n4);
     api2.setDoc(setTrack(doc, n4, want), "Track");
     return true;
   }
@@ -71591,7 +71593,10 @@ ${d5.text}`);
           if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null;
         },
         children: [
-          /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, w6 === "m" ? "" : nextTrack(t47, w6)), "Track") }) }),
+          /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => {
+            rememberTrack(ctx.doc, n4);
+            ctx.setDoc(setTrack(ctx.doc, n4, w6 === "m" ? "" : nextTrack(t47, w6)), "Track");
+          } }) }),
           /* @__PURE__ */ u4("td", { class: "mnic", children: [
             isNew ? /* @__PURE__ */ u4(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u4("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u4(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
             turn || held || need || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("div", { class: "mnrow2", children: [

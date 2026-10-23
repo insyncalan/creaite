@@ -3,6 +3,7 @@
 - J and K move from row to row (the rows shown); nothing is taken until one has chosen a row, so E and S stay page keys.
 - Y, M and N set Tracked, Minutes only and Dropped on that row; the bar's counts and the Approve label follow; Z undoes the last key choice.
 - E puts the cursor in the row's words; S lights the row's turn in the transcript.
+- Clicks on the Track control and keys share one Z stack, in order.
 - Never while typing in a field, and never with a modifier held.
 - Nothing on screen advertises the keys (no bar, no hint).
 
@@ -101,6 +102,19 @@ class MinutesKeys302C(v2.MinutesViewV2):
     def test_c05_nothing_advertises_the_keys(self):
         self.assertEqual(self.ev("document.querySelectorAll('#v-minutes [data-key], #v-minutes .kbd, #v-minutes kbd').length"), 0)
         self.assertNotRegex(self.ev("document.getElementById('v-minutes').innerText"), r"(?i)press j|keyboard shortcut|review mode")
+
+    def test_c06_clicks_and_keys_share_one_undo_stack(self):
+        self.press("j")
+        n = int(self.cursor())
+        start = self.trk()[str(n)]
+        self.b.click(ROW % n + " .mntrk button.n")                                  # a click: Dropped
+        self.b.pump(0.3)
+        self.press("m")                                                           # a key: Minutes only
+        self.assertEqual(self.trk()[str(n)], "")
+        self.press("z")
+        self.assertEqual(self.trk()[str(n)], "n", "the key is undone first")
+        self.press("z")
+        self.assertEqual(self.trk()[str(n)], start, "then the click")
 
 
 for _n in [n for n in dir(v2.MinutesViewV2) if n.startswith('test_')]:    # only this file's tests, not the ones it builds on

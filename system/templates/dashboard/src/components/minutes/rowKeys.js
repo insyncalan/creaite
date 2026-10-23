@@ -1,8 +1,7 @@
 // @ts-check
 /* rowKeys (#302 C): the minutes' keyboard. Nothing on screen advertises it (Alan, 22-10-2026: no review-mode bar).
    J and K move from row to row (the rows shown, so a pressed attention chip is respected); then Y sets Tracked, M Minutes only,
-   N Dropped (one key drops, nothing asked), E edits the row's words, S shows its source in the transcript, Z undoes the last key
-   choice. Never while typing in a field, never with a menu, list or dialog open, never with a modifier held, and not at all
+   N Dropped (one key drops, nothing asked), E edits the row's words, S shows its source in the transcript, Z undoes the last Track choice (key or click). Never while typing in a field, never with a menu, list or dialog open, never with a modifier held, and not at all
    when Settings › Look and help has single-key shortcuts off (core/keys.js sees to that first). Until J or K has chosen a row,
    no key here is taken, so E and S stay the page keys they are everywhere else. The choices are the Track control's own
    (track.js setTrack), so counts, the strip and the Approve label follow as they do for a click. */
@@ -20,6 +19,8 @@ import { shared } from "../../core/state.js";
 export const keyRow = signal(/** @type {number|null} */ (null));
 /** The last key choices: the row and what the layout held for it before (undefined = nothing chosen). @type {{n: number, was: string|undefined}[]} */
 const UNDO = [];
+/** Note row n's choice before it changes, so Z can put it back (the keys and the Track control's clicks share one stack). @param {SheetDoc} doc @param {number} n */
+export const rememberTrack = (doc, n) => { UNDO.push({ n, was: ((doc.layout || {}).track || {})[String(n)] }); };
 export const rowKeysReset = () => { keyRow.value = null; UNDO.length = 0; };
 
 /** The item numbers of the rows on screen, in page order. */
@@ -73,8 +74,7 @@ export function rowKey(e, api) {
   }
   const want = k === "y" ? "y" : k === "n" ? "n" : "";
   if (trackOf(doc, r, api.plan()) === want) return true;
-  const was = ((doc.layout || {}).track || {})[String(n)];
-  UNDO.push({ n, was });
+  rememberTrack(doc, n);
   api.setDoc(setTrack(doc, n, want), "Track");
   return true;
 }
