@@ -77,7 +77,7 @@ class SettingsReading(LiveBrowserCase):
         labels = self.b.eval("[...document.querySelectorAll('#set-essentials .srow[data-keys]')].map(r=>r.querySelector('span[id]').textContent)")
         self.assertEqual(labels, [r[1] for r in settings_catalogue.ESSENTIAL_ROWS])
         self.assertTrue(14 <= len(labels) <= 25)                                     # #97: two quiet-hours rows
-        lines = self.b.eval("[...document.querySelectorAll('#set-essentials .srow small')].map(s=>s.textContent)")
+        lines = self.b.eval("[...document.querySelectorAll('#set-essentials .srow[data-keys] small')].map(s=>s.textContent)")
         self.assertEqual(lines, [r[2] for r in settings_catalogue.ESSENTIAL_ROWS])
 
     def test_every_essentials_control_is_named_by_its_row(self):

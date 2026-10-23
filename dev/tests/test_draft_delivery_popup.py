@@ -174,7 +174,7 @@ class Popup(PopupCase):
 
     def test_no_address_on_record_says_so_and_still_offers_the_draft(self):
         b = self.b
-        b.eval("(()=>{ const x=PERS().find(y=>y.name==='Sara Example'); if(x.p) x.p.email=''; })()")   # no address on record
+        b.eval("(()=>{ REG.filter(y=>y.name==='Sara Example').forEach(x=>{ x.email=''; }); })()")   # no address on record
         self.open_chase()
         self.assertEqual(b.eval("document.getElementById('deTo').textContent"),
                          "No email address on record for Sara Example. Add the address when you paste it into Outlook.")
