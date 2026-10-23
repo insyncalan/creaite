@@ -229,7 +229,7 @@ export function ProposalGroups({ groups, meet, child }) {
         {g.kind === "routine" ? <span class="icshr"><button type="button" class="mini ok" data-ira="routine" title="Approves every routine suggestion here; the ones above stay for you"
           onClick={() => irApproveRoutine(groups)}>Approve routine ({g.ns.length})</button></span> : null}
       </td></tr>
-      {g.ns.map(n => <ProposalLine n={n} child={child} />)}
+      {g.ns.map(n => <ProposalLine key={modelKeyOf(n) + "|" + ((SNAP.keys.get(n) || {}).cfp || "")} n={n} child={child} />)}
     </>
   ))}</>;
 }
