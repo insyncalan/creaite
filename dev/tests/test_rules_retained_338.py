@@ -320,7 +320,7 @@ class RetainedRules(unittest.TestCase):
             if weak != self.slim:
                 self.assertIn(p, missing(weak, self.ref, self.chain), "weakening %r stays green" % p)
             count += 1
-        for clause, (_why, pointer) in MAPPED.items():
+        for _clause, (_why, pointer) in MAPPED.items():
             kept = "".join(ln for ln in self.slim.splitlines(keepends=True) if pointer not in ln)
             self.assertIn(pointer, missing(kept, self.ref, self.chain))
             count += 1
