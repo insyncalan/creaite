@@ -35,6 +35,7 @@ import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./project
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn } from "./review.js";
 import { asQuestionHtml } from "./autostart.js";
+import { profileQuestionHtml } from "./profile.js";   /* #312 */
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, syncView } from "./work.js";
 /* ======================= Today ======================= */
@@ -451,6 +452,7 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
     if(li&&!li.classList.contains("done")){ const go=li.querySelector(".rmgo"); putHTML(go,html`<button type="button" class="mini" data-sucheck="m365" ${viaServer()?"":html`disabled title="creaite isn’t running"`}>Check again</button> <button type="button" class="linkbtn" data-setup="help">How</button>`); }
     if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */
   /* #300: the one question about starting creaite at sign-in (autostart.js; shown only where the server can do it) */
+  { const q=profileQuestionHtml(), box=$("#setupList"), cur=$("#pfQ"); if(cur) cur.remove(); if(q&&box) addHTML(box,"beforeend",raw(q)); }   /* #312: About you, before the sign-in question */
   { const q=asQuestionHtml(), box=$("#setupList"), cur=$("#asQ"); if(cur) cur.remove(); if(q&&box) addHTML(box,"beforeend",raw(q)); } }
 /* ===== end BL-156 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
