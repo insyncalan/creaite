@@ -5,8 +5,9 @@ Nothing else in the rules changes. Both are on `v262-183`, in `dev/proposals/`.
 
 1. `draft-delivery/rules-and-skill.diff` (#183): the rules file and `.claude/skills/cx-client-report/SKILL.md`.
 2. `fetch-transcripts/creaite-rules.diff` (#250): rules file only. It applies only after step 1 (both edit the same staging row).
-   If Jarvis's `vip-follow-rules` diff is applied first, use `fetch-transcripts/creaite-rules.after-vip.diff` instead of step 2
-   (the VIP diff and the #250 diff both edit the cx-sweep row, so the plain one fails after it). The VIP diff and #183 apply in either order.
+   **Recommended order: #183, then Jarvis's VIP diff (`vip-follow-rules/creaite-rules.md.diff`), then `fetch-transcripts/creaite-rules.after-vip.diff`.**
+   After the VIP diff the plain #250 diff fails (both edit the cx-sweep row), so use `after-vip` then. The VIP diff and #183 apply in either
+   order. All orders tested against the real VIP diff (29e03fd9) on release2: see `RULES-ORDER.md`.
 
 Changes in the order they appear in the file.
 
@@ -30,10 +31,12 @@ Changes in the order they appear in the file.
 
 ## 4. Skills table, "client report ABC" row (#183)
 - **Before:** "Never sends, never creates email drafts."
-- **After:** "Never sends." An email about it follows the Draft email setting: off, copy and paste; on, the live server puts it in your
-  Outlook Drafts folder for you to check and send. The report itself is never sent. **Why:** the old wording would contradict item 1.
-- The skill file says the same in three places (its description, its opening line and its Rules): "this skill never creates a draft;
-  only the popup does, through the live server."
+- **After:** "Never sends, never creates email drafts (the Draft email popup has no client-report email; #183's Outlook draft is a
+  separate feature)." **Why (Cap's L3):** an earlier wording said a client report's email follows the Draft email setting. That is not
+  built: the popup builds an update request, a chase and a meeting or minutes follow-up only. The text now claims nothing more.
+- The skill file changes only its Rules line (the description and opening line keep "never creates email drafts", which is still true
+  of the skill): "the popup's Outlook draft is the live server's own feature for its update, chase and follow-up emails; there is no
+  client-report email, and this skill never uses it."
 
 ## 5. Skills table, cx-sweep row (#250)
 - **Adds:** with `sweep.fetch_transcripts` on (off by default) a sweep also fetches ended meetings' transcripts into `inbox/`: read
@@ -48,7 +51,8 @@ Changes in the order they appear in the file.
   a hook in the run checks every tool call before it runs and lets the draft through once, with exactly the subject, To and HTML shown
   (an injected To, Cc, Bcc or a second draft is refused before anything is made; Cap's M1), and the server checks afterwards that exactly one was made; the body is the preview's own HTML;
   the chase is logged when the draft is made (not "I sent it") and marked sent when a sweep sees it in Sent Items; a refusal records
-  nothing and offers Copy instead; off means copy and paste as before. **Why:** this is the guard's definition; a reader of the rules
+  nothing and offers Copy instead; off means copy and paste as before. It covers only the emails the popup builds (update request,
+  chase, meeting and minutes follow-up); the chase is recorded for an update request or a chase only (L3: no client-report email exists). **Why:** this is the guard's definition; a reader of the rules
   sees what is allowed and what is checked.
 
 ## 7. Assistant ("ask creaite") bullet (#183)
@@ -58,3 +62,14 @@ Changes in the order they appear in the file.
 ## What does not change
 `permissions.py` and `reach.py` stay as they are: `outlook_create_draft` stays in the Microsoft 365 action list, so every other run
 still denies it and no settings file can allow it. The allow exists only in the live server's route (a separate diff, `live_server.diff`).
+
+## 8. NEW, proposed for you to approve or strike: "leaves the vault" (Cap's L4)
+The first non-negotiable says only a closed backup zip leaves the vault. An Outlook draft does too (subject, To and body go to your
+own mailbox), so it should be said. **Proposed new bullet, added after "Confidential material" (not in the "Local" bullet: Jarvis's VIP
+diff edits that line and the two would conflict):**
+> **A draft in Outlook is the one email that leaves the vault (#183; Alan to approve).** With **Create drafts in Outlook** on
+> (`draft_email.outlook_drafts`, off by default), the email shown in the Draft email popup (its subject, To addresses and body) goes to
+> Alan's own Outlook Drafts folder, only when he presses that button. It is a draft in his own mailbox: nothing is sent, and nothing
+> else is written to Microsoft 365.
+
+It is in `rules-and-skill.diff`. To leave it out, delete that one `+` line (and its hunk) before applying; nothing else depends on it.
