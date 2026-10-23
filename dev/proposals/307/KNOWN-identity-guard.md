@@ -36,3 +36,11 @@
 - Approve routine or a bulk Reject: the rows still the same go through; "n changed since you looked, left for you" names the rest. If none are left, the message above.
 - A Save in the peek keeps your edit and does not undo a newer edit to other fields of the same record.
 - If the page cannot find the row any more after a refresh, there is nothing to press, and nothing is saved.
+
+## D. Known (autostart card on Macs; added 24-10-2026)
+
+For the release notes, if the page fix is not in 2.6.1:
+
+- On a Mac, the first-run "Start creaite when you sign in?" card can appear a moment after Today opens. If you opened a decision or other panel in that moment, the panel can close. Open it again; nothing is lost and nothing is changed.
+
+Reviewer note: the late status answer from the autostart route redraws Today's setup list, which resets an open peek or panel. Measured on a Mac: the first bad commit is the guarded-chain commit that adds the route; the failure rate is the same at low and high machine load. CI does not see it because Linux reports "Only on a Mac" and the card never appears there. The fix is page-side (branch v261-asrace): the late status updates only the question card's own node.
