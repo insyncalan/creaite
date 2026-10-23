@@ -122,7 +122,9 @@ class Expect(Base):
     def test_a_bad_fingerprint_or_shape_is_refused(self):
         n = self.number(1)
         for args in ((str(n), "--expect=zzz"), (str(n), "--expect"), (str(n), "--expect", "ABCDEF123456"), (f"{n},{n + 1}", f"--expect={self.fp(1)}"),
-                     (f"--expect={self.fp(1)}",)):
+                     (f"--expect={self.fp(1)}",),
+                     (str(n), "--expect=aaaaaaaaaaaa", f"--expect={self.fp(1)}"), (str(n), f"--expect={self.fp(1)}", "--expect=aaaaaaaaaaaa"),
+                     (str(n), f"--expect={self.fp(1)}", "--expect", self.fp(1))):     # Cap note 4: a repeated --expect is refused
             code, out = self.review("approve", *args)
             self.assertEqual(code, 2, (args, out))
             self.assertIn("--expect goes with", out)
