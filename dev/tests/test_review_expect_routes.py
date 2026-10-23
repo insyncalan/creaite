@@ -142,6 +142,7 @@ class Checks:
         for bad in ("Bravo item", "ABCDEF123456", "", 7, ["a" * 12]):
             r = s.review(file=name, ref=2, decision="approved", modes=[], expect=bad)
             assert r.get("ok") is False, (bad, r)
+            assert "can't check which item" in r.get("message", ""), (bad, r)         # Cap's note 6: it says what is wrong, not "a decision Review knows"
         assert s.decisions(name) == {1: "pending", 2: "pending", 3: "pending"}
 
     @staticmethod
