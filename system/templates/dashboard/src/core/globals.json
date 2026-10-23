@@ -313,6 +313,7 @@
    "deBarred",
    "deBuild",
    "deCopyText",
+   "deHtml",
    "dePolish",
    "deRowHtml",
    "deSent",
