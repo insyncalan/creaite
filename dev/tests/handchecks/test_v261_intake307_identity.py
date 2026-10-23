@@ -43,6 +43,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))      # dev/tests
 from hcbase import HandcheckCase, NOTES, db_rows  # noqa: E402
 
+_SCRIPTS = Path(__file__).resolve().parents[3] / "system/scripts"
+_REVIEW_EXPECT = "_main_with_expect" in (_SCRIPTS / "review.py").read_text() and "--expect=" in (_SCRIPTS / "live_server.py").read_text()   # 2.6.2 (#314)
+
 KIND = {n: "scriptable" for n in range(50, 60)}
 LIVE_ONLY = {}
 
@@ -297,7 +300,7 @@ class Identity307(HandcheckCase):
         self.assertNotIn(charlie, rejected, "WRONG ITEM: the Bravo row's Reject rejected Charlie")
         self.assertTrue(self.pending(name, charlie), "Charlie's proposal was decided by a press on Bravo")
 
-    @unittest.expectedFailure   # needs the guarded review.py --expect <fp> + /api/review pass-through: #314, 2.6.2, Alan approved
+    @unittest.expectedFailure if not _REVIEW_EXPECT else (lambda f: f)   # an expected failure until the guarded review.py --expect <fp> + /api/review pass-through (#314, 2.6.2) is in this tree
     def test_c55_the_review_route_refuses_when_the_item_at_ref_is_not_the_one_the_page_showed(self):
         """55. Pins finding 1 (A7). The page calls /api/review with file + ref, and the server matched on those alone. With `expect`
         (the text the person saw) the item at ref 2 is now Charlie, so the call must be refused and Charlie left pending.
@@ -308,8 +311,11 @@ class Identity307(HandcheckCase):
         self.open_intake(bravo)
         self.take_out(name, alpha)                      # Bravo is item 1, Charlie item 2
         b = self.b
+        sys.path.insert(0, str(_SCRIPTS))
+        import build_dashboard
+        fp = next(build_dashboard.item_fp(i) for i in json.loads(self.staging(name).read_text())["items"] if i["values"]["description"] == bravo)
         b.eval("window.RR=null; api('/api/review',{file:%s,ref:2,decision:'rejected',modes:[],expect:%s}).then(x=>{window.RR=x})"
-               % (json.dumps(name), json.dumps(bravo)))
+               % (json.dumps(name), json.dumps(fp)))
         b.wait("!!window.RR", 30)
         said = b.eval("window.RR")
         print(f"\n  route said {said}")
