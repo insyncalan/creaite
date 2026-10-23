@@ -5907,6 +5907,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     heldDiscard: () => heldDiscard,
     heldLines: () => heldLines,
     heldMsg: () => heldMsg,
+    heldNow: () => heldNow,
     heldWhy: () => heldWhy,
     heldWords: () => heldWords,
     helpCk: () => helpCk,
@@ -71329,7 +71330,7 @@ ${d5.text}`);
     const v5 = minutesView.value, doc = minutesDoc.value;
     if (!v5 || !v5.plan || !doc || approving.value) return;
     const plan = v5.plan.items;
-    if (v5.proposal && REV.some((r4) => r4.kind === "draft" && r4.file === v5.proposal && r4.held)) {
+    if (v5.proposal && (await heldNow(v5.proposal) || REV.some((r4) => r4.kind === "draft" && r4.file === v5.proposal && r4.held))) {
       snack(HELD_MINUTES_WORDS, () => fileWithout(v5), "File without the transcript copy");
       return;
     }
@@ -78358,6 +78359,19 @@ ${d5.text}`);
     if (first) {
       irReveal([first.n, ...L3.map((x5) => x5.n)]);
       openProposal(first.n);
+    }
+  }
+  async function heldNow(file) {
+    if (!SERVED) return "";
+    try {
+      const r4 = await fetch("/api/data", { headers: { "X-Creaite-Token": D.token } });
+      if (!r4.ok) return "";
+      const n4 = await r4.json();
+      const row2 = (n4.review || []).find((x5) => x5.kind === "draft" && x5.file === file), mine = REV.find((x5) => x5.kind === "draft" && x5.file === file);
+      if (mine && row2) mine.held = row2.held;
+      return row2 && row2.held ? String(row2.held) : "";
+    } catch (e4) {
+      return "";
     }
   }
   async function reloadData() {

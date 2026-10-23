@@ -132,6 +132,13 @@ export async function blockerWords(list){ const parts=[];
    (an item, not its minutes: the refusal names items, and minutes open in their own view) */
 export function openBlockersInIntake(files){ const L=REV.filter(x=>files.includes(x.file)&&!x.done), first=L.find(x=>!["draft","files"].includes(x.kind))||L[0];
   go("intake-review",first?{n:first.n}:undefined); if(first){ irReveal([first.n,...L.map(x=>x.n)]); openProposal(first.n); } }
+/* 2.6.2: is this draft held right now? One server read of the review list (nothing on the page is replaced except the row's own held reason),
+   so an approve checks the transcript as it is this moment, not as it was when the page loaded. Returns the reason, or "" */
+export async function heldNow(file){ if(!SERVED) return "";
+  try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return ""; const n=await r.json();
+    const row=(n.review||[]).find(x=>x.kind==="draft"&&x.file===file), mine=REV.find(x=>x.kind==="draft"&&x.file===file);
+    if(mine&&row) mine.held=row.held;
+    return row&&row.held?String(row.held):""; }catch(e){ return ""; } }
 /* fresh data after an apply or undo */
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
     await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
