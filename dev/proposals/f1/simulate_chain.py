@@ -81,6 +81,20 @@ def counts(vault):
         return {n: con.execute(f"SELECT count(*) FROM {n}").fetchone()[0] for n in names}
 
 
+def rowid_print(vault):
+    """F1c: a fingerprint of change_log by rowid and of item_events' links to it; a migrate must leave it unchanged."""
+    import hashlib
+    h = hashlib.sha256()
+    with closing(db(vault)) as con:
+        for r in con.execute("SELECT rowid, item_id, field, old_value, new_value, apply_id FROM change_log ORDER BY rowid"):
+            h.update(repr(tuple(r)).encode())
+        names = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+        if "item_events" in names:
+            for r in con.execute("SELECT event_id, change FROM item_events ORDER BY event_id"):
+                h.update(repr(tuple(r)).encode())
+    return h.hexdigest()[:16]
+
+
 def pragmas(vault):
     with closing(db(vault)) as con:
         integ = con.execute("PRAGMA integrity_check").fetchall()
@@ -301,6 +315,7 @@ def step_run(vault, workdir, base, name, diffs, extra_cmds, seed_after=None, cop
     dated, old_engine = dated_backup(vault, f"pre-{name}")
     before = counts(vault)
     sql_before = {t: table_sql(vault, t) for t in before}
+    rowids_before = rowid_print(vault)
     out = {"step": name, "dated_backup": dated.name, "counts_before": before}
     for d in diffs:
         apply_diff(vault, d)
@@ -316,6 +331,7 @@ def step_run(vault, workdir, base, name, diffs, extra_cmds, seed_after=None, cop
     out["tables_rebuilt_or_changed"] = [t for t in before if t in after and table_sql(vault, t) != sql_before.get(t)]
     out["row_count_changes"] = {t: [before.get(t), after.get(t)] for t in sorted(set(before) | set(after)) if before.get(t) != after.get(t)}
     out["integrity"], out["fk_problems"] = pragmas(vault)
+    out["change_log_rowids_and_event_links_kept"] = rowids_before == rowid_print(vault)
     with closing(db(vault)) as con:
         cols = [r["name"] for r in con.execute("PRAGMA table_info(applies)")]
         out["applies_engine_version_stamped"] = (con.execute("SELECT count(*) FROM applies WHERE engine_version IS NOT NULL").fetchone()[0]
