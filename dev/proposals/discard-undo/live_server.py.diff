@@ -21,7 +21,7 @@ index 9b6f5144..32c744ce 100644
 +        return handler.send(403, {"ok": False, "message": "Not allowed"})
 +    name = req.get("file")
 +    if not isinstance(name, str) or not RESTORE_NAME.fullmatch(name) or ".." in name:
-+        return handler.send(400, {"ok": False, "message": "Say which discarded proposal to put back."})
++        return handler.send(400, {"ok": False, "message": "Say which discarded suggestion to put back."})
 +    if (paths.ROOT / ".creaite-dev").exists():
 +        return handler.send(200, {"ok": False, "message": "This is the development copy, so nothing was put back."})
 +    if not LOCK.acquire(timeout=10):                         # a moment's wait for a short job, never behind a long one

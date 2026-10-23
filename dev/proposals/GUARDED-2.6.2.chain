@@ -16,6 +16,8 @@ dev/proposals/discard-undo/live_server.py.diff
 dev/proposals/draft-delivery/live_server.diff
 # 250 fetch transcripts (code)
 dev/proposals/fetch-transcripts/live_server.diff
+# emit_event inside the apply transaction (tracker.py; applies with F1c in either order)
+dev/proposals/emit-event-txn/tracker.diff
 # follow wording (code). Slot: replace with origin/v262-followb's dev/proposals/vip-follow-code diffs if that branch lands.
 dev/proposals/vip-follow-code/propose.py.diff
 dev/proposals/vip-follow-code/live_server.py.diff
