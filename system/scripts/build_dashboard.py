@@ -2880,6 +2880,8 @@ def _filed_row(line, folders):
         return None
     names = [f.strip() for f in cells[2].split(";") if f.strip()]
     filed = next((f for f in names if f.endswith(".docx")), "") or next((f for f in names if f.lower().endswith(".html")), "")
+    if not filed:        # a rejection still files the transcript (… | transcripts/x.vtt | 0): only minutes (.docx or .html) were approved
+        return None
     parts = filed.split("/")
     day = cells[1][3:13] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", cells[1][3:13]) else cells[0]
     title = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", Path(filed).stem) if filed else (cells[1].split("|") + ["Meeting"])[1].strip().capitalize()

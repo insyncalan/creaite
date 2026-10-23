@@ -9,13 +9,9 @@
    the one script before BL-231). The modules import each other; none reads another's value while it loads
    (test_dashboard_split checks it), so the order esbuild runs them in doesn't matter. */
 import * as page from "./main.js";
-import { addFailed, decidedWords, plainSay, savedCapped } from "./core/say.js";
-import { isMovedMinutes } from "./stores/minutes.js";
 
 export * from "./core/index.js";
 
-export { addFailed, decidedWords, plainSay, savedCapped };   /* #307: the plain words, for the tests */
-export { isMovedMinutes };
 export * from "./core/intakeApi.js";   /* #232-C2: the shared Intake calls (was intake.js) */
 
 export * from "./rail.js";
