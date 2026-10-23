@@ -3181,6 +3181,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 /* ===== BL-301 C (v20-capture): the capture drawer (components/notes/CaptureDrawer.jsx), at the right of any page, not modal ===== */
 .capdrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);box-sizing:border-box;z-index:var(--z-stage);background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
 .capdrawer[hidden]{display:none}
+.capresize{position:fixed;top:0;bottom:0;width:10px;margin-right:-5px;z-index:calc(var(--z-stage) + 1);cursor:col-resize;touch-action:none;outline:0}
+.capresize::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;border-radius:var(--r-sm)}
+.capresize:hover::before,.capresize.dragging::before{width:4px;left:3px;background:var(--accent)}
+.capresize:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r-sm)}
 .caphead{display:flex;align-items:center;gap:8px} .caphead h2{margin:0;font-size:var(--fs-h2);line-height:var(--lh-24)} .caphead .sp,.capfoot .sp,.caprow .sp{flex:1}
 .capwhere{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:var(--fs-sm)}
 .capwhere select{max-width:100%}

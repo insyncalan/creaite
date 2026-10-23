@@ -601,6 +601,86 @@ class Drawer(LiveBrowserCase):
         self.assertNotEqual(got["bg"], "rgb(255, 255, 255)")
         b.eval("delete document.documentElement.dataset.theme")
 
+    def test_the_drawer_width_321(self):
+        """#321: drag the left-edge handle, clamp at the page width, remembered, double-click and Home reset, arrow keys, no storage."""
+        b = self.b
+        self.open()
+        w = lambda: b.eval("Math.round(document.getElementById('capDrawer').getBoundingClientRect().width)")
+        now = lambda: b.eval("+document.getElementById('capResize').getAttribute('aria-valuenow')")
+        self.assertEqual((w(), now()), (440, 440))
+        self.assertEqual(b.eval("[document.getElementById('capResize').getAttribute('role'), document.getElementById('capResize').tabIndex]"), ["separator", 0])
+        b.drag("#capResize", "#capResize", offset=(-300, 0))
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width>700")
+        self.assertEqual(w(), now())
+        self.assertGreater(w(), 700)
+        b.drag("#capResize", "#capResize", offset=(-3000, 0))                      # past the page: stops at its width
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width>=innerWidth-1")
+        self.assertEqual(w(), b.eval("innerWidth"))
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("Home")
+        b.drag("#capResize", "#capResize", offset=(500, 0))                        # and not below the default
+        self.assertEqual(w(), 440)
+        b.drag("#capResize", "#capResize", offset=(-200, 0))
+        wide = w()
+        self.assertGreater(wide, 600)
+        b.reload()
+        b.wait("typeof go==='function' && LIVE")
+        self.open()
+        self.assertEqual(w(), wide)                                               # remembered
+        b.click("#capResize", count=2)                                            # double-click: the default
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("ArrowLeft")
+        self.assertEqual(w(), 464)
+        b.key("ArrowLeft", 8)
+        self.assertEqual(w(), 560)
+        b.key("ArrowRight")
+        self.assertEqual(w(), 536)
+        self.assertEqual(now(), 536)
+        b.key("Home")
+        self.assertEqual(w(), 440)
+        b.key("End")
+        self.assertEqual(w(), b.eval("innerWidth"))
+        b.key("Enter")
+        self.assertEqual(w(), 440)
+
+    def test_reset_width_button_321(self):
+        b = self.b
+        self.open()
+        self.assertFalse(b.eval("!!document.getElementById('capWidthReset')"))        # at the default: not shown
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("ArrowLeft")
+        b.wait("!!document.getElementById('capWidthReset')")
+        self.assertEqual(b.eval("document.getElementById('capWidthReset').textContent"), "Reset width")
+        self.assertEqual(b.eval("localStorage.getItem('creaite-capture-width')"), "464")
+        b.click("#capWidthReset")
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
+        self.assertIsNone(b.eval("localStorage.getItem('creaite-capture-width')"))
+        self.assertFalse(b.eval("!!document.getElementById('capWidthReset')"))
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("End")
+        b.wait("!!document.getElementById('capWidthReset')")
+        b.eval("document.getElementById('capWidthReset').focus()")                   # reachable by keyboard: Enter activates it
+        b.key("Enter")
+        b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
+        self.assertIsNone(b.eval("localStorage.getItem('creaite-capture-width')"))
+
+    def test_the_drawer_width_works_when_storage_throws_321(self):
+        b = self.b
+        b.eval("""Object.defineProperty(window,'localStorage',{get(){ throw new Error('blocked'); }}), true""")
+        self.open()
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("ArrowLeft")
+        self.assertEqual(b.eval("Math.round(document.getElementById('capDrawer').getBoundingClientRect().width)"), 464)
+
+    def test_the_drawer_width_at_900_321(self):
+        b = self.b
+        b.resize(900, 700)
+        self.open()
+        b.eval("document.getElementById('capResize').focus()")
+        b.key("End")
+        self.assertEqual(b.eval("[Math.round(document.getElementById('capDrawer').getBoundingClientRect().width), document.documentElement.scrollWidth<=innerWidth]"), [900, True])
+
     def test_fits_320_and_dark(self):
         b = self.b
         b.resize(320, 700)

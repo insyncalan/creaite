@@ -3191,6 +3191,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 /* ===== BL-301 C (v20-capture): the capture drawer (components/notes/CaptureDrawer.jsx), at the right of any page, not modal ===== */
 .capdrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);box-sizing:border-box;z-index:var(--z-stage);background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
 .capdrawer[hidden]{display:none}
+.capresize{position:fixed;top:0;bottom:0;width:10px;margin-right:-5px;z-index:calc(var(--z-stage) + 1);cursor:col-resize;touch-action:none;outline:0}
+.capresize::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;border-radius:var(--r-sm)}
+.capresize:hover::before,.capresize.dragging::before{width:4px;left:3px;background:var(--accent)}
+.capresize:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r-sm)}
 .caphead{display:flex;align-items:center;gap:8px} .caphead h2{margin:0;font-size:var(--fs-h2);line-height:var(--lh-24)} .caphead .sp,.capfoot .sp,.caprow .sp{flex:1}
 .capwhere{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:var(--fs-sm)}
 .capwhere select{max-width:100%}
@@ -4558,6 +4562,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     BW_MAX: () => BW_MAX,
     BW_MIN: () => BW_MIN,
     CALI: () => CALI,
+    CAP_STEP: () => CAP_STEP,
+    CAP_W0: () => CAP_W0,
     CARDTYPE: () => CARDTYPE,
     CARD_CLOSE: () => CARD_CLOSE,
     CARD_OPEN: () => CARD_OPEN,
@@ -34914,6 +34920,22 @@ system/scripts/run launch.py agent ${what}`;
   var WAIT = 600;
   var newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   var blank = () => ({ id: newId(), code: "", chosen: false, how: "", reason: "", title: "", body: "", template: "blank", date: "", with: [], confidential: false, saved: "" });
+  var CAP_W0 = 440, CAP_STEP = 24;
+  var WKEY = "creaite-capture-width";
+  var pageW = () => Math.max(CAP_W0, window.innerWidth || CAP_W0);
+  var clampW = (w6) => Math.round(Math.min(pageW(), Math.max(CAP_W0, Number(w6) || CAP_W0)));
+  var capW = y3(clampW(store.get(WKEY, CAP_W0)));
+  function resetCapW() {
+    capW.value = CAP_W0;
+    try {
+      localStorage.removeItem(WKEY);
+    } catch (e4) {
+    }
+  }
+  function setCapW(w6, keep2) {
+    capW.value = clampW(w6);
+    if (keep2) store.set(WKEY, capW.value);
+  }
   var capNote = y3(blank());
   var capRecent = y3(
     /** @type {{notes: Recent[], drafts: Draft[]}} */
@@ -35094,6 +35116,68 @@ system/scripts/run launch.py agent ${what}`;
     loadRecent();
   }
   var capWhen = (at2) => !at2 ? "" : at2.slice(0, 10) === TODAY ? at2.slice(11, 16) : fd(at2.slice(0, 10));
+  function CapHandle() {
+    const w6 = Math.min(capW.value, pageW());
+    const down = (e4) => {
+      const el2 = (
+        /** @type {HTMLElement} */
+        e4.currentTarget
+      );
+      e4.preventDefault();
+      try {
+        el2.setPointerCapture(e4.pointerId);
+      } catch (x5) {
+      }
+      el2.classList.add("dragging");
+    };
+    const move = (e4) => {
+      if (
+        /** @type {HTMLElement} */
+        e4.currentTarget.classList.contains("dragging")
+      ) setCapW(window.innerWidth - e4.clientX);
+    };
+    const up2 = (e4) => {
+      const el2 = (
+        /** @type {HTMLElement} */
+        e4.currentTarget
+      );
+      if (!el2.classList.contains("dragging")) return;
+      el2.classList.remove("dragging");
+      setCapW(capW.value, true);
+    };
+    const key2 = (e4) => {
+      const big = e4.shiftKey ? 4 : 1, now = w6;
+      const to2 = e4.key === "ArrowLeft" ? now + CAP_STEP * big : e4.key === "ArrowRight" ? now - CAP_STEP * big : e4.key === "End" ? pageW() : e4.key === "Home" || e4.key === "Enter" ? CAP_W0 : null;
+      if (to2 === null) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      if (to2 === CAP_W0) resetCapW();
+      else setCapW(to2, true);
+    };
+    return /* @__PURE__ */ u4(
+      "div",
+      {
+        id: "capResize",
+        class: "capresize",
+        role: "separator",
+        "aria-orientation": "vertical",
+        tabindex: 0,
+        "aria-label": "Width of the note",
+        "aria-valuemin": CAP_W0,
+        "aria-valuemax": pageW(),
+        "aria-valuenow": w6,
+        "aria-valuetext": `${w6} pixels wide`,
+        "data-tip": "Drag to change the width; double-click to put it back",
+        style: { right: `min(${w6}px, 100vw)` },
+        onPointerDown: down,
+        onPointerMove: move,
+        onPointerUp: up2,
+        onPointerCancel: up2,
+        onKeyDown: key2,
+        onDblClick: resetCapW
+      }
+    );
+  }
   function CaptureDrawer() {
     const box = A2(
       /** @type {HTMLDivElement|null} */
@@ -35147,164 +35231,181 @@ system/scripts/run launch.py agent ${what}`;
     const off = live ? void 0 : "Saving a note needs the live server";
     const meeting = n4.template === "working-session";
     const drafts = recent.drafts.filter((d5) => d5.id !== n4.id);
-    return /* @__PURE__ */ u4("aside", { id: "capDrawer", class: "capdrawer", role: "dialog", "aria-modal": "false", "aria-labelledby": "capH", hidden: !open2, onKeyDown: keys, children: [
-      /* @__PURE__ */ u4("div", { class: "caphead", children: [
-        /* @__PURE__ */ u4("h2", { id: "capH", children: meeting ? "Note for this meeting" : "New note" }),
-        /* @__PURE__ */ u4("span", { class: "sp" }),
-        typed(n4) ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn capdiscard", onClick: () => discard(), children: "Discard" }) : null,
-        /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close", name: "Close the note (what you typed is kept)", onClick: () => closeCapture() })
-      ] }),
-      /* @__PURE__ */ u4("div", { class: "capwhere", children: [
-        /* @__PURE__ */ u4("label", { for: "capProj", children: "Project" }),
-        /* @__PURE__ */ u4(
-          "select",
-          {
-            id: "capProj",
-            value: n4.code,
-            "aria-describedby": "capWhy",
-            onChange: (e4) => {
-              const code = (
-                /** @type {HTMLSelectElement} */
-                e4.currentTarget.value
-              );
-              patchNote({ code, chosen: true, how: "chosen" });
-              capSoon();
-            },
-            children: [
-              /* @__PURE__ */ u4("option", { value: "", children: "Unfiled" }),
-              P4.map((p6) => /* @__PURE__ */ u4("option", { value: p6.code, children: p6.name }))
-            ]
-          }
-        ),
-        /* @__PURE__ */ u4("span", { class: "sub", id: "capWhy", children: why ? why : n4.code ? "" : "Unfiled until something names a project" })
-      ] }),
-      meeting ? /* @__PURE__ */ u4("div", { class: "sub capmeet", children: [
-        "Working session",
-        n4.date ? ` · ${fd(n4.date)}` : "",
-        n4.with.length ? ` · with ${n4.with.join(", ")}` : ""
-      ] }) : null,
+    return /* @__PURE__ */ u4(S2, { children: [
+      open2 ? /* @__PURE__ */ u4(CapHandle, {}) : null,
       /* @__PURE__ */ u4(
-        "input",
+        "aside",
         {
-          id: "capTitle",
-          class: "captitle",
-          type: "text",
-          "aria-label": "Title",
-          placeholder: "Title (or the first line)",
-          value: n4.title,
-          autocomplete: "off",
-          onInput: (e4) => {
-            patchNote({ title: (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value
-            ) });
-            capSoon();
-          }
+          id: "capDrawer",
+          class: "capdrawer",
+          role: "dialog",
+          "aria-modal": "false",
+          "aria-labelledby": "capH",
+          hidden: !open2,
+          onKeyDown: keys,
+          style: { width: `min(${capW.value}px, 100vw)` },
+          children: [
+            /* @__PURE__ */ u4("div", { class: "caphead", children: [
+              /* @__PURE__ */ u4("h2", { id: "capH", children: meeting ? "Note for this meeting" : "New note" }),
+              /* @__PURE__ */ u4("span", { class: "sp" }),
+              capW.value !== CAP_W0 ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn capdiscard", id: "capWidthReset", onClick: () => resetCapW(), children: "Reset width" }) : null,
+              typed(n4) ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn capdiscard", onClick: () => discard(), children: "Discard" }) : null,
+              /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close", name: "Close the note (what you typed is kept)", onClick: () => closeCapture() })
+            ] }),
+            /* @__PURE__ */ u4("div", { class: "capwhere", children: [
+              /* @__PURE__ */ u4("label", { for: "capProj", children: "Project" }),
+              /* @__PURE__ */ u4(
+                "select",
+                {
+                  id: "capProj",
+                  value: n4.code,
+                  "aria-describedby": "capWhy",
+                  onChange: (e4) => {
+                    const code = (
+                      /** @type {HTMLSelectElement} */
+                      e4.currentTarget.value
+                    );
+                    patchNote({ code, chosen: true, how: "chosen" });
+                    capSoon();
+                  },
+                  children: [
+                    /* @__PURE__ */ u4("option", { value: "", children: "Unfiled" }),
+                    P4.map((p6) => /* @__PURE__ */ u4("option", { value: p6.code, children: p6.name }))
+                  ]
+                }
+              ),
+              /* @__PURE__ */ u4("span", { class: "sub", id: "capWhy", children: why ? why : n4.code ? "" : "Unfiled until something names a project" })
+            ] }),
+            meeting ? /* @__PURE__ */ u4("div", { class: "sub capmeet", children: [
+              "Working session",
+              n4.date ? ` · ${fd(n4.date)}` : "",
+              n4.with.length ? ` · with ${n4.with.join(", ")}` : ""
+            ] }) : null,
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                id: "capTitle",
+                class: "captitle",
+                type: "text",
+                "aria-label": "Title",
+                placeholder: "Title (or the first line)",
+                value: n4.title,
+                autocomplete: "off",
+                onInput: (e4) => {
+                  patchNote({ title: (
+                    /** @type {HTMLInputElement} */
+                    e4.currentTarget.value
+                  ) });
+                  capSoon();
+                }
+              }
+            ),
+            /* @__PURE__ */ u4("label", { class: "capconf", children: [
+              /* @__PURE__ */ u4(
+                "input",
+                {
+                  type: "checkbox",
+                  class: "switch",
+                  role: "switch",
+                  id: "capConf",
+                  checked: n4.confidential,
+                  onChange: (e4) => {
+                    patchNote({ confidential: (
+                      /** @type {HTMLInputElement} */
+                      e4.currentTarget.checked
+                    ) });
+                    capSoon();
+                  }
+                }
+              ),
+              /* @__PURE__ */ u4("span", { children: "Confidential" }),
+              n4.confidential ? /* @__PURE__ */ u4("span", { class: "sub", children: "Kept out of prep pages and client reports; Claude reads it only if you say yes" }) : null
+            ] }),
+            /* @__PURE__ */ u4(EditorBar, { profile: "capture", cls: "capbar", handle: () => ed2 }),
+            /* @__PURE__ */ u4(
+              "div",
+              {
+                ref: box,
+                id: "capBody",
+                class: "capbody",
+                role: "textbox",
+                "aria-multiline": "true",
+                "aria-label": "Note",
+                "aria-describedby": "capSaved",
+                "data-ph": "Type the note: what was said, what you think, who to follow up…",
+                spellcheck: true
+              }
+            ),
+            /* @__PURE__ */ u4("div", { class: "capfoot", children: [
+              /* @__PURE__ */ u4("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need the live server") }),
+              /* @__PURE__ */ u4("span", { class: "sp" }),
+              /* @__PURE__ */ u4(
+                "button",
+                {
+                  type: "button",
+                  class: "btn ai",
+                  id: "capFind",
+                  disabled: capBusy.value,
+                  "aria-disabled": off ? "true" : void 0,
+                  "data-tip": off || "Save it, then open it with Find updates",
+                  onClick: () => captureDone(true),
+                  children: "Done and find updates"
+                }
+              ),
+              /* @__PURE__ */ u4(
+                "button",
+                {
+                  type: "button",
+                  class: "btn primary",
+                  id: "capDone",
+                  disabled: capBusy.value,
+                  "aria-disabled": off ? "true" : void 0,
+                  "data-tip": off,
+                  "data-key": "⌘↵",
+                  onClick: () => captureDone(false),
+                  children: "Done"
+                }
+              )
+            ] }),
+            drafts.length || recent.notes.length ? /* @__PURE__ */ u4("div", { class: "caprecent", "aria-labelledby": "capRecentH", role: "region", children: [
+              /* @__PURE__ */ u4("h3", { id: "capRecentH", children: "Recent notes" }),
+              /* @__PURE__ */ u4("ul", { children: [
+                drafts.map((d5) => /* @__PURE__ */ u4("li", { children: /* @__PURE__ */ u4("button", { type: "button", class: "caprow", onClick: () => resume(d5), "aria-label": `Carry on with the unfinished note ${d5.title || "Untitled"}`, children: [
+                  /* @__PURE__ */ u4("b", { children: d5.title || (d5.body || "").trim().split("\n")[0].slice(0, 60) || "Untitled" }),
+                  /* @__PURE__ */ u4("span", { class: "sp" }),
+                  /* @__PURE__ */ u4("span", { class: "sub", children: [
+                    "Unfinished · ",
+                    where(d5.code),
+                    " · ",
+                    capWhen(d5.at)
+                  ] })
+                ] }) })),
+                recent.notes.map((r4) => /* @__PURE__ */ u4("li", { children: /* @__PURE__ */ u4(
+                  "button",
+                  {
+                    type: "button",
+                    class: "caprow",
+                    onClick: () => {
+                      capOpen.value = false;
+                      openNoteFull({ code: r4.code, path: r4.path, find: false });
+                    },
+                    "aria-label": `Open the note ${r4.title}`,
+                    children: [
+                      /* @__PURE__ */ u4("b", { children: r4.title }),
+                      /* @__PURE__ */ u4("span", { class: "sp" }),
+                      /* @__PURE__ */ u4("span", { class: "sub", children: [
+                        where(r4.code),
+                        " · ",
+                        capWhen(r4.at)
+                      ] })
+                    ]
+                  }
+                ) }))
+              ] })
+            ] }) : null
+          ]
         }
-      ),
-      /* @__PURE__ */ u4("label", { class: "capconf", children: [
-        /* @__PURE__ */ u4(
-          "input",
-          {
-            type: "checkbox",
-            class: "switch",
-            role: "switch",
-            id: "capConf",
-            checked: n4.confidential,
-            onChange: (e4) => {
-              patchNote({ confidential: (
-                /** @type {HTMLInputElement} */
-                e4.currentTarget.checked
-              ) });
-              capSoon();
-            }
-          }
-        ),
-        /* @__PURE__ */ u4("span", { children: "Confidential" }),
-        n4.confidential ? /* @__PURE__ */ u4("span", { class: "sub", children: "Kept out of prep pages and client reports; Claude reads it only if you say yes" }) : null
-      ] }),
-      /* @__PURE__ */ u4(EditorBar, { profile: "capture", cls: "capbar", handle: () => ed2 }),
-      /* @__PURE__ */ u4(
-        "div",
-        {
-          ref: box,
-          id: "capBody",
-          class: "capbody",
-          role: "textbox",
-          "aria-multiline": "true",
-          "aria-label": "Note",
-          "aria-describedby": "capSaved",
-          "data-ph": "Type the note: what was said, what you think, who to follow up…",
-          spellcheck: true
-        }
-      ),
-      /* @__PURE__ */ u4("div", { class: "capfoot", children: [
-        /* @__PURE__ */ u4("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need the live server") }),
-        /* @__PURE__ */ u4("span", { class: "sp" }),
-        /* @__PURE__ */ u4(
-          "button",
-          {
-            type: "button",
-            class: "btn ai",
-            id: "capFind",
-            disabled: capBusy.value,
-            "aria-disabled": off ? "true" : void 0,
-            "data-tip": off || "Save it, then open it with Find updates",
-            onClick: () => captureDone(true),
-            children: "Done and find updates"
-          }
-        ),
-        /* @__PURE__ */ u4(
-          "button",
-          {
-            type: "button",
-            class: "btn primary",
-            id: "capDone",
-            disabled: capBusy.value,
-            "aria-disabled": off ? "true" : void 0,
-            "data-tip": off,
-            "data-key": "⌘↵",
-            onClick: () => captureDone(false),
-            children: "Done"
-          }
-        )
-      ] }),
-      drafts.length || recent.notes.length ? /* @__PURE__ */ u4("div", { class: "caprecent", "aria-labelledby": "capRecentH", role: "region", children: [
-        /* @__PURE__ */ u4("h3", { id: "capRecentH", children: "Recent notes" }),
-        /* @__PURE__ */ u4("ul", { children: [
-          drafts.map((d5) => /* @__PURE__ */ u4("li", { children: /* @__PURE__ */ u4("button", { type: "button", class: "caprow", onClick: () => resume(d5), "aria-label": `Carry on with the unfinished note ${d5.title || "Untitled"}`, children: [
-            /* @__PURE__ */ u4("b", { children: d5.title || (d5.body || "").trim().split("\n")[0].slice(0, 60) || "Untitled" }),
-            /* @__PURE__ */ u4("span", { class: "sp" }),
-            /* @__PURE__ */ u4("span", { class: "sub", children: [
-              "Unfinished · ",
-              where(d5.code),
-              " · ",
-              capWhen(d5.at)
-            ] })
-          ] }) })),
-          recent.notes.map((r4) => /* @__PURE__ */ u4("li", { children: /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              class: "caprow",
-              onClick: () => {
-                capOpen.value = false;
-                openNoteFull({ code: r4.code, path: r4.path, find: false });
-              },
-              "aria-label": `Open the note ${r4.title}`,
-              children: [
-                /* @__PURE__ */ u4("b", { children: r4.title }),
-                /* @__PURE__ */ u4("span", { class: "sp" }),
-                /* @__PURE__ */ u4("span", { class: "sub", children: [
-                  where(r4.code),
-                  " · ",
-                  capWhen(r4.at)
-                ] })
-              ]
-            }
-          ) }))
-        ] })
-      ] }) : null
+      )
     ] });
   }
 
