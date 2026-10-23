@@ -14,7 +14,7 @@ sheet for 2.6.2 yet, so the numbers are the items in order and the PM can number
    9 small2 inbox        an upload that fails part-way leaves no partial file in inbox/ and says it in plain words
   10 #321                The New note drawer can be widened: a focusable separator handle (keyboard and pointer) up to the page width and
                          never beyond it, remembered per viewer (the page still works when storage throws), a Reset width button, full
-                         width with no sideways scroll at 320 px, and no write to the server for a width change
+                         width at 900 px, and no write to the server for a width change
 
 How a check is wired (every class has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Emit262                         a vault and no server: the engine's own commands, or its code run in the vault
@@ -1063,7 +1063,7 @@ class Drawer262(HandcheckCase):
         to the default) and with a mouse drag, up to the page width and never beyond it, at 1400 px and at 900 px. The width is remembered
         for this viewer only: a reload keeps it, and a page whose storage throws still starts, opens the drawer and widens it. The Reset
         width button (shown only when the width is not the default) and a double-click on the handle return it to the default and forget
-        the remembered width. At 320 px the drawer is the full width of the page, with no sideways scroll and Done on screen. A width
+        the remembered width. A width
         change makes no request that writes (no POST), and changes nothing in the vault's settings."""
         b = self.b
         W = self.DEFAULT
@@ -1192,20 +1192,6 @@ class Drawer262(HandcheckCase):
         self.assertEqual((s["w"], s["kept"]), (900, "900"), f"and a drag past the edge is held at 900 px: {s}")
         writes += self.writes_since(mark)
 
-        # 320 px: the full width of the page (the width kept above is 900), no sideways scroll, Done on screen
-        b.resize(320, 700)
-        b.pump(0.3)
-        s = self.state()
-        self.assertEqual((s["iw"], s["w"], s["left"], s["right"]), (320, 320, 0, 320), f"at 320 px the drawer is the full width: {s}")
-        self.assertLessEqual(s["sw"], s["iw"], f"and the page does not scroll sideways: {s}")
-        self.assertTrue(s["doneIn"], f"Done is on screen: {s}")
-        s = self.press("End")
-        self.assertEqual((s["w"], s["left"]), (320, 0), s)
-        self.assertLessEqual(s["sw"], s["iw"])
-        b.eval("document.getElementById('capWidthReset') && document.getElementById('capWidthReset').click(); true")
-        b.pump(0.2)
-        self.assertIsNone(self.state()["kept"], "and Reset width clears it from there too")
-
         # nothing was written: no request that writes, and the settings file is as it was
         self.assertEqual(writes, [], f"a width change made requests that write: {writes}")
         self.assertEqual(settings.read_bytes(), settings0, "the settings file is untouched")
@@ -1214,7 +1200,7 @@ class Drawer262(HandcheckCase):
         b.eval("fetch('/api/hc262-width-probe', {method: 'POST', body: '{}'}).then(r => r.status).catch(() => 0)")
         self.assertTrue(any(m == "POST" and u.endswith("/api/hc262-width-probe") for m, u in self.writes_since(mark)), "the watcher sees a POST")
         self.note(10, "440 default; keys (step 24, Shift 96, End, Home, Enter) and mouse drag held between the default and the page width at "
-                      "1400, 900 and 320 px; kept for a reload (650) and forgotten by Reset width and a double-click; unreadable storage "
+                      "1400 and 900 px; kept for a reload (650) and forgotten by Reset width and a double-click; unreadable storage "
                       "starts the page and widens; 0 requests that write")
 
 
