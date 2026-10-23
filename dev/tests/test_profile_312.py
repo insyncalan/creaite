@@ -77,7 +77,7 @@ class Card(Base):
         head = [ln for ln in self.register.splitlines() if ln.startswith("| Full name")][0]
         old = [ln for ln in before_cols if ln.startswith("| Full name")][0]
         new_cols = set(c.strip() for c in head.strip("|").split("|")) - set(c.strip() for c in old.strip("|").split("|"))
-        self.assertLessEqual(new_cols, {"Labels"}, "no column for you in the shared file (Labels is the register's own)")
+        self.assertLessEqual(new_cols, {"Labels", "Follow"}, "no column for you in the shared file (Labels and Follow are the register's own)")
         b.wait("document.querySelector('#pfRole') && document.querySelector('#pfRole').textContent==='Delivery lead'")
 
     def test_someone_not_in_the_register_is_added_by_the_same_form(self):

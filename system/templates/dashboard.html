@@ -35157,6 +35157,8 @@ system/scripts/run launch.py agent ${what}`;
       localStorage.removeItem(WKEY);
     } catch (e4) {
     }
+    const h5 = document.getElementById("capResize");
+    if (h5) h5.focus();
   }
   function setCapW(w6, keep2) {
     capW.value = clampW(w6);

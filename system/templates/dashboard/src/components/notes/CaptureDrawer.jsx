@@ -50,7 +50,12 @@ const clampW = w => Math.round(Math.min(pageW(), Math.max(CAP_W0, Number(w) || C
 const capW = signal(clampW(store.get(WKEY, CAP_W0)));
 /** Set the width; with `keep` it is also remembered. @param {number} w @param {boolean} [keep] */
 /** Back to the default width, and forget the remembered one. */
-function resetCapW() { capW.value = CAP_W0; try { localStorage.removeItem(WKEY); } catch (e) { /* no storage: nothing was kept */ } }
+function resetCapW() {
+  capW.value = CAP_W0;
+  try { localStorage.removeItem(WKEY); } catch (e) { /* no storage: nothing was kept */ }
+  const h = document.getElementById("capResize");              // the Reset width button goes with the width: focus stays on the handle
+  if (h) h.focus();
+}
 function setCapW(w, keep) { capW.value = clampW(w); if (keep) store.set(WKEY, capW.value); }
 
 /** The note in the drawer (kept while the drawer is closed, so ⌘⇧N carries on). */

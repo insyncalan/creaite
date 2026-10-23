@@ -657,6 +657,7 @@ class Drawer(LiveBrowserCase):
         b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
         self.assertIsNone(b.eval("localStorage.getItem('creaite-capture-width')"))
         self.assertFalse(b.eval("!!document.getElementById('capWidthReset')"))
+        self.assertTrue(b.eval("document.activeElement===document.getElementById('capResize')"))      # focus moved to the handle, not lost
         b.eval("document.getElementById('capResize').focus()")
         b.key("End")
         b.wait("!!document.getElementById('capWidthReset')")
@@ -664,6 +665,18 @@ class Drawer(LiveBrowserCase):
         b.key("Enter")
         b.wait("document.getElementById('capDrawer').getBoundingClientRect().width===440")
         self.assertIsNone(b.eval("localStorage.getItem('creaite-capture-width')"))
+        self.assertTrue(b.eval("document.activeElement===document.getElementById('capResize')"))
+
+    def test_a_stored_width_is_clamped_when_the_drawer_opens_321(self):
+        b = self.b
+        width = lambda: b.eval("Math.round(document.getElementById('capDrawer').getBoundingClientRect().width)")
+        for stored, want in (("99999", "innerWidth"), ("100", "440"), ("wide", "440")):
+            b.eval(f"localStorage.setItem('creaite-capture-width', {stored!r})")
+            b.reload()
+            b.wait("typeof go==='function' && LIVE")
+            self.open()
+            self.assertEqual(width(), b.eval(want), stored)
+            b.key("Escape")
 
     def test_the_drawer_width_works_when_storage_throws_321(self):
         b = self.b
