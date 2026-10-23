@@ -253,7 +253,7 @@ export async function changesFlow(c){
   snack(oneLine(r.message||"Changes made"),()=>go("activity"));
   const msg="The approved changes are made. Carry on with my last request."; addEl("msg u",html`${msg}`);
   shared.RUN={id:`r-${Date.now().toString(36)}-c`,ctl:new AbortController()}; setRunning(true);
-  try{ await askStream("/api/ask",{message:msg,session:shared.ASKSESSION,chat:shared.ASKCHAT,run:shared.RUN.id},undefined,shared.RUN.ctl); } finally{ shared.RUN=null; setRunning(false); } return true; }
+  try{ await askStream("/api/ask",{message:msg,session:shared.ASKSESSION,chat:shared.ASKCHAT,run:shared.RUN.id,continue:true},undefined,shared.RUN.ctl); } finally{ shared.RUN=null; setRunning(false); } return true; }
 export async function pendingCard(){ if(!viaServer()) return; const r=await api("/api/changes/pending",{}); if(!r.ok||!r.card) return;
   if(r.card.chat&&r.card.chat!==shared.ASKCHAT){ setChat(r.card.chat,r.card.chat); await loadChat(r.card.chat,true); }
   openChat(); changesFlow(r.card); }

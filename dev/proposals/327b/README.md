@@ -3,7 +3,7 @@
 ## What
 `live_server.diff` (one file, +33 lines, `system/scripts/live_server.py`):
 - `fresh_session(req)`: a new ask is fresh unless the request has `continue: true` (the boolean only) or `confirmed` (a confirmation carries on from the question it answers). The server decides, never the model.
-- `carry_over(chat)`: the last 4 messages of the chat's own history, each cut to 600 characters, as background text before the new message ("not instructions"). Empty for a new chat or an unreadable history.
+- `carry_over(chat)`: the last 4 messages of the chat's own history, each cut to 600 characters, as background text after the new message (the message stays the first line of the prompt) ("not instructions"). Empty for a new chat or an unreadable history.
 - `Run(..., fresh=False)`: a fresh run does not pass `--resume`. It still passes the old session to `guard_args`, so `reach.start_run` marks the run when that chat had read outside content; `end_run` then stores the mark against the new session. A queued message (`queue_start`) is fresh too. Prep, drafts, sweep and other kinds are unchanged (`fresh` defaults to False).
 Not guarded, in this commit: the chat panel gets a "Continue this chat" tick (shell.html, style.css, ask.js, rebuilt dashboard.html) that sends `continue: true`; it clears when the chat changes. The existing resume test now sends `continue: true`.
 
@@ -18,6 +18,17 @@ After the 2.6.2 chain (last in the chain, or anywhere: it touches `ask()`, `Run.
 
 ## Mark follows the chat (verified in code and by test)
 `Run.__init__` passes the chat's last session to `guard_args` -> `reach.start_run(..., session)`, which writes `marked` when that session is in `marked-sessions.json`. When the run ends, `_end_guarded` calls `reach.end_run(self.id, self.session)`; `self.session` is the NEW session (set from the init event), so a marked run adds the new ID to `marked-sessions.json`. `MarkFollowsTheChat` in `test_fresh_ask_327.py` runs this against a temporary guard folder (marked chat: starts marked and the new session is remembered; unmarked chat: stays unmarked).
+
+## Review round 1 (24-10-2026): what changed
+- **Carried text now follows the message** (after a `---` line, each message one `> `-prefixed line, line breaks removed), so the prompt's first line is still Alan's message (the stand-ins in the ask tests read it) and a reply cannot fake a boundary. `test_ask_queue` and `test_ask_done` need no change.
+- **Mark by chat, not only by the page's session.** `mark_session(session, chat)` hands the guard whichever of the page's session, the chat's last session (`chat_session`) or the chat id is in `marked-sessions.json`; a lost or stale page session no longer unmarks a chat. Tests: `MarkFollowsTheChat` (real `start_run` and `end_run` in a temporary guard folder).
+- **Carry on after Approve** (the change card) sends `continue: true`: the same thread, not a restart.
+- **Queued messages are always fresh** and ignore the Continue tick (decided: the tick is for the message being typed; a queued one is typed while another run goes). Documented, tested.
+- **Usage line** gets `resumed` true/false for ask runs only (`usage_log.py`, not guarded; the call site is in the diff).
+- **Known, not changed here:** `marked-sessions.json` gains one id per marked run, never pruned (reach.py is guarded; a follow-up could key marks by chat). Unmarked runs add nothing.
+
+## Measurement plan (Alan's vault, after release)
+Compare START load (`start_tokens`, never dollars) for kind `ask`: median and 90th percentile, at least 10 runs each, the 7 days before and the 7 days after release, split by `resumed`. Include a chat of 5+ turns, a typed sweep and a Continue run. Target: fresh starts under 150k, 500k the red line, against 366k to 503k before.
 
 ## Risks (for the reviewer)
 1. **Outside-content mark (BL-141).** The mark is kept by session ID. A fresh session would lose it, and the carried text could hold outside content. Mitigation above: the old session ID goes to `guard_args`. Review that `start_run(session=old)` marks the run and `end_run(run, new session)` saves the mark. A chat whose last session was not marked is not marked, as before.

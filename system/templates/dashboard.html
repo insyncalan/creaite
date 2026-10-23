@@ -74155,7 +74155,7 @@ ${d5.text}`);
     shared.RUN = { id: `r-${Date.now().toString(36)}-c`, ctl: new AbortController() };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: msg, session: shared.ASKSESSION, chat: shared.ASKCHAT, run: shared.RUN.id }, void 0, shared.RUN.ctl);
+      await askStream("/api/ask", { message: msg, session: shared.ASKSESSION, chat: shared.ASKCHAT, run: shared.RUN.id, continue: true }, void 0, shared.RUN.ctl);
     } finally {
       shared.RUN = null;
       setRunning(false);

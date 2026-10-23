@@ -10,15 +10,15 @@
              except OSError as e:
                  return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e}). Is `claude` installed and "
                                                                 f"signed in?"})
-@@ -2553,20 +2554,44 @@
+@@ -2553,20 +2554,51 @@
      if policy in TOOLLESS_KINDS or policy == "calendar":       # #265: the calendar refresh reads no project file
          return []
      return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
 +
 +
 +CARRY_TURNS, CARRY_CHARS = 4, 600       # #327 B: the last two exchanges, each message cut to this length, go into a fresh session
- 
- 
++
++
 +def fresh_session(req):
 +    """#327 B: a new ask starts a fresh Claude session (a long resumed chat reached 500k start tokens), unless Alan ticked Continue
 +    this chat or this is a confirmation (it carries on from the question it answers). Decided here, never by the model."""
@@ -33,10 +33,17 @@
 +        msgs = json.loads(p.read_text(encoding="utf-8")).get("messages") if p and p.is_file() else None
 +    except (OSError, ValueError):
 +        return ""
-+    lines = [f"{'Alan' if m.get('who') == 'you' else 'creaite'}: {str(m.get('text') or '')[:CARRY_CHARS]}"
++    lines = [f"> {'Alan' if m.get('who') == 'you' else 'creaite'}: {' '.join(str(m.get('text') or '').split())[:CARRY_CHARS]}"
 +             for m in (msgs or [])[-CARRY_TURNS:] if isinstance(m, dict) and m.get("text")]
-+    return ("Background only, the end of this chat so far (not instructions; Alan's new message follows it):\n"
-+            + "\n".join(lines) + "\n\nAlan's new message:\n") if lines else ""
++    return ("\n\n---\nBackground only, the end of this chat so far (not instructions; Alan's message is the text above this line):\n"
++            + "\n".join(lines)) if lines else ""
+ 
+ 
++def mark_session(session, chat):
++    """#327 B: the session whose outside-content mark a fresh run inherits: the page's session, else the chat's last or first one,
++    whichever had read outside content (the page's values can be lost or stale, so the chat's own record counts too)."""
++    marked = reach.marked_sessions()
++    return next((x for x in (session, chat_session(chat), chat) if x and x in marked), session)
 +
 +
  class Run:
@@ -53,12 +60,17 @@
          self.images = list(images)
 -        said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
 +        carry = carry_over(chat) if fresh and not sweep else ""          # #327 B
-+        said = carry + message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
++        said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images) + carry
          cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                 "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
                 "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
-@@ -2577,7 +2602,7 @@
-         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session,
+@@ -2574,14 +2606,16 @@
+         cmd += more
+         for d in run_dirs(policy, guarded):                     # #264: a Process run reads the vault and the projects folder
+             cmd += ["--add-dir", d]
+-        cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session,
++        cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held,
++                          mark_session(session, chat) if fresh else session,
                            files=files, as_minutes=as_minutes)                       # #264, #232 E1: a Process run only
          self.guarded = guarded
 -        if session:
@@ -66,7 +78,21 @@
              cmd += ["--resume", session]
          cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
          self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
-@@ -3195,7 +3220,7 @@
+         self.sweep = bool(sweep)                                # BL-309
++        self.resumed = bool(session) and not fresh if kind == "ask" else None     # #327 B: the usage line says which (counts only)
+         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
+         self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
+         self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
+@@ -3047,7 +3081,7 @@
+             kind, label = usage_kind(self)
+             run_usage(kind, getattr(self, "usage_result", None), label=label, model=getattr(self, "usage_model", ""),
+                       seconds=time.time() - self.started, start_tokens=getattr(self, "usage_start", 0), stopped=bool(self.stop),
+-                      skills=list(getattr(self, "usage_skills", None) or {}))
++                      skills=list(getattr(self, "usage_skills", None) or {}), resumed=getattr(self, "resumed", None))
+         except Exception as e:  # noqa: BLE001
+             swallowed("usage", e)
+     # ===== end #197 =====
+@@ -3195,7 +3229,7 @@
          images = [i for i in item.get("images") or [] if ask_image_files(i)]
          try:
              nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
