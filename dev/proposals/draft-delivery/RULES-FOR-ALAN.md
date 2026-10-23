@@ -43,9 +43,9 @@ Changes in the order they appear in the file.
 
 ## 6. New bullet "Draft email delivery" (#183), after the Project settings page bullet
 - **Adds** the one place the whole mechanism is stated: the setting and its Outlook access Check; the popup's primary button; the
-  route runs Claude headless with exactly two tools (`outlook_create_draft`, ToolSearch), every other Microsoft 365 tool, every other
+  route runs Claude headless with one allowed tool (ToolSearch) and one tool that only its hook can allow (`outlook_create_draft`: no hook, or a hook that fails, means no draft), every other Microsoft 365 tool, every other
   connector and every other built-in denied, in an empty folder outside the vault with no settings loaded, so it can read nothing;
-  a hook in the run checks every tool call before it runs and lets the draft through once, with exactly the subject, To and HTML shown
+  the hook in the run checks every tool call before it runs and is the only way the draft is allowed: once, with exactly the subject, To and HTML shown
   (an injected To, Cc, Bcc or a second draft is refused before anything is made; Cap's M1), and the server checks afterwards that exactly one was made; the body is the preview's own HTML;
   the chase is logged when the draft is made (not "I sent it") and marked sent when a sweep sees it in Sent Items; a refusal records
   nothing and offers Copy instead; off means copy and paste as before. **Why:** this is the guard's definition; a reader of the rules
