@@ -99,8 +99,10 @@ class EditorHeld(LiveBrowserCase):
         b = self.b
         self.open()
         (self.v.root / "system/staging" / self.proposal).unlink()          # nothing left to file
-        b.click("#toastHost button")
-        b.wait("(document.getElementById('toastHost')||{innerText:''}).innerText.includes('Not saved because')", timeout=20)
+        b.pump(1.5)                                                        # the page notices the change and may draw its held message again
+        # a press that lands on a toast the page then replaces with its held message is lost: press again (the button is the same one)
+        b.click_until("#toastHost button", "(document.getElementById('toastHost')||{innerText:''}).innerText.includes('Not saved because')",
+                      timeout=30, tries=3)
 
 
 if __name__ == "__main__":
