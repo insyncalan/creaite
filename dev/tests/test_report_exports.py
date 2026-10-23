@@ -204,6 +204,33 @@ class Word(Base):
             self.assertNotIn(gone, got["hidden"], gone)
         self.assertIn("Example Programme", got["hidden"])                  # the name still shows
 
+    def test_minutes_header_lines_follow_the_page_for_links_lists_and_second_when(self):
+        """#331 review: a link's address, an image's, an autolink and a reference never reach the Word; a list under Attendees and a
+        second When line are carried as the page shows them; meta.when wins over the header's When, as in the page's title block."""
+        text = ("Draft status.\n\n**When:** 16 October 2026, 10:00\n\n"
+                "**Attendees:** [Sam Patel](https://example.invalid/private-path); ![pic](https://img.invalid/a.png) <https://auto.invalid/q> "
+                "[Ola][1] https://bare.invalid/z\n- Mia Hale\n- Jo Reed\n\n**When:** moved to 11:00\n\n[1]: https://ref.invalid/x")
+        header = {"id": "header", "type": "header", "heading": "Meeting", "hidden": False, "text": text, "data": {}}
+        code = ("import paths, docx_tools\n"
+                "def make(audience, meta):\n"
+                "    doc = creaite_doc.new('minutes', 'ABC', 'Steering', '2026-10-16', [h], items={})\n"
+                "    doc['audience'] = audience\n    doc['meta'] = dict(doc.get('meta') or {}, **meta)\n"
+                "    out = paths.DRAFTS / (audience + str(len(meta)) + '.docx')\n    paths.DRAFTS.mkdir(parents=True, exist_ok=True)\n"
+                "    creaite_doc.word_export(doc, out)\n"
+                "    raw = next(r for i, r in docx_tools.read_parts(out) if i.filename == 'word/document.xml')\n"
+                "    return docx_tools.story_text(raw.decode('utf-8'))\n"
+                f"h = {header!r}\n"
+                "print(json.dumps([make('internal', {}), make('distributed', {}), make('internal', {'when': 'Set in meta'})]))")
+        internal, distributed, meta = self.py(code)
+        for text in (internal, distributed):
+            self.assertIn("Attendees: Sam Patel;", text)
+            self.assertIn("Mia Hale; Jo Reed", text)
+            self.assertIn("16 October 2026, 10:00; moved to 11:00", text)
+            for gone in ("example.invalid", "img.invalid", "ref.invalid", "private-path"):
+                self.assertNotIn(gone, text, gone)
+        self.assertIn("Set in meta", meta)
+        self.assertNotIn("moved to 11:00", meta)
+
     def test_a_pasted_control_character_still_gives_a_file_word_opens(self):
         """#127 round 6: a bell (\\x07) or U+FFFE pasted into a section or a table cell made document.xml invalid XML."""
         secs = json.loads(json.dumps(SECTIONS))

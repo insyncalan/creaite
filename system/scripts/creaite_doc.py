@@ -2271,15 +2271,32 @@ def _front_values(doc):
 
 def _header_lines(shown):
     """The When and Attendees lines of the shown header section, as the page prints them (the text after "**When:**" and
-    "**Attendees:**", markup removed). The header section is the page's own: a hidden header, or one a client or distributed
+    "**Attendees:**", as the page prints them: a link as its words, a list under the label included).
+    The header section is the page's own: a hidden header, or one a client or distributed
     document doesn't show, is already empty in `shown` (clean), so nothing is read from it. Anything else is not read."""
     header = next((s for s in shown.get("sections") or [] if s.get("type") == "header" and not s.get("hidden")), None)
-    found = {}
-    for line in str((header or {}).get("text") or "").splitlines():
-        m = re.match(r"\s*\*\*(When|Attendees):\*\*\s*(.+)", line)
-        if m and not found.get(m[1].lower()):
-            found[m[1].lower()] = _nobraces(_plain_inline(m[2])).strip()
-    return found
+    import html
+    found, last = {"when": [], "attendees": []}, None
+    # The page's own reading of the text (md_html): a link keeps its words only, and a list under the label belongs to it.
+    for para, item in re.findall(r"<p>(.*?)</p>|<li>(.*?)</li>", md_html((header or {}).get("text") or ""), re.S):
+        line = html.unescape(re.sub(r"<[^>]*>", "", para or item)).strip()
+        m = re.match(r"(When|Attendees):\s*(.*)", line) if para else None
+        if m:
+            last = m[1].lower()
+            if m[2]:
+                found[last].append(m[2])
+        elif item and last == "attendees" and line:
+            found[last].append(line)
+        else:
+            last = None
+    return {k: _nobraces("; ".join(v)).strip() for k, v in found.items() if v}
+
+
+def _who_line(doc, els):
+    """The project's name (and the client) as a title-block line, when the template has no PROJECT_NAME of its own; else empty."""
+    if any("{{PROJECT_NAME}}" in _word_text(e) for e in els):
+        return ""
+    return _nobraces(doc.get("project_name") or "") + ((" · " + _nobraces(doc["client"])) if doc.get("client") else "")
 
 
 def _front(els, doc, lines=None):
@@ -2288,20 +2305,16 @@ def _front(els, doc, lines=None):
     import docx_tools
     values, has_start = _front_values(doc), bool((doc.get("meta") or {}).get("period_start"))
     lines = lines or {}
-    if lines.get("when"):
+    if lines.get("when") and not (doc.get("meta") or {}).get("when"):      # the page's title block follows meta.when first
         values["MEETING_WHEN"] = lines["when"]
-    named = any("{{PROJECT_NAME}}" in _word_text(e) for e in els)
-    who = _nobraces(doc.get("project_name") or "") + ((" · " + _nobraces(doc["client"])) if doc.get("client") else "")
+    who = _who_line(doc, els)
     out = []
     for el in els:
         text = _word_text(el)
         if "{{HEALTH_LINE}}" in text:
             continue
         if "{{ATTENDEES}}" in text:
-            if who and not named:
-                out.append(docx_tools.put_text(el, who))
-            if lines.get("attendees"):
-                out.append(docx_tools.put_text(el, "Attendees: " + lines["attendees"]))
+            out += [docx_tools.put_text(el, t) for t in (who, "Attendees: " + lines["attendees"] if lines.get("attendees") else "") if t]
             continue
         if "{{" in text:
             text = text if has_start else text.replace("{{PERIOD_START}} to {{PERIOD_END}}", "week ending {{PERIOD_END}}")
