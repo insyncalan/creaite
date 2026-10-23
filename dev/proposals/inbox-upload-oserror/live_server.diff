@@ -1,0 +1,27 @@
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1708,11 +1708,19 @@
+             return self.send(413, {"ok": False, "message": "Files can be 25 MB at most"})
+         if not data:
+             return self.send(400, {"ok": False, "message": "That file is empty"})
+-        paths.INBOX.mkdir(parents=True, exist_ok=True)
+-        target, n = paths.INBOX / f"{stem}{ext}", 2
+-        while target.exists():                 # never overwrite
+-            target, n = paths.INBOX / f"{stem} ({n}){ext}", n + 1
+-        target.write_bytes(data)
++        import errno
++        try:
++            paths.INBOX.mkdir(parents=True, exist_ok=True)
++            target, n = paths.INBOX / f"{stem}{ext}", 2
++            while target.exists():                 # never overwrite
++                target, n = paths.INBOX / f"{stem} ({n}){ext}", n + 1
++            target.write_bytes(data)
++        except OSError as e:                       # 2.6.2: plain words, never the exception's text or a path; the log gets the kind only
++            if debuglog:
++                debuglog.warn("inbox", f"upload not saved: {type(e).__name__} errno {e.errno}")
++            long = e.errno == errno.ENAMETOOLONG
++            return self.send(400 if long else 500, {"ok": False, "message": "The file name is too long. Rename it and add it again."
++                                                    if long else "That file couldn't be saved. Try again."})
+         return self.send(200, {"ok": True, "path": paths.rel(target), "name": target.name})
+ 
+     def inbox_file(self, rel):

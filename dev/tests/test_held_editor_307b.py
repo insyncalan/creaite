@@ -31,7 +31,8 @@ class FailedApproveWritesNothing(LiveBrowserCase):
         b.wait("document.querySelector('#v-minutes tr.mi')", 15)
         b.pump(0.5)
         before = version(b)
-        recs = sorted(self.v.root.glob("projects/**/*.json")) + sorted((self.v.root / "system/staging").glob("*.json"))
+        recs = [p for p in sorted(self.v.root.glob("projects/**/*.json")) + sorted((self.v.root / "system/staging").glob("*.json"))
+                if p.name != "review-index.json"]   # 2.6.2: the derived list cache is remade by the held re-read; it is not a record
         snap = {p: p.read_bytes() for p in recs}
         b.eval("document.getElementById('mnApproveBtn').click()")
         b.pump(0.5)
@@ -42,7 +43,8 @@ class FailedApproveWritesNothing(LiveBrowserCase):
         self.assertEqual(version(b), before, "the page's version did not move")
         for p, data in snap.items():
             self.assertEqual(p.read_bytes(), data, f"{p.name} was not written by a failed approve")
-        self.assertEqual(sorted(self.v.root.glob("projects/**/*.json")) + sorted((self.v.root / "system/staging").glob("*.json")), list(snap),
+        self.assertEqual([p for p in sorted(self.v.root.glob("projects/**/*.json")) + sorted((self.v.root / "system/staging").glob("*.json"))
+                          if p.name != "review-index.json"], list(snap),
                          "no record was added")
 
 
