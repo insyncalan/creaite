@@ -5,7 +5,7 @@
 import { openDialog } from "./components/Dialog.jsx";
 import { closePicker } from "./components/Picker.jsx";
 import { linkSegments, linkWithAddress, sentStrip } from "./core/linkText.js";
-import { linkUrl } from "./core/linkUrl.js";
+import { linkAnchor, linkUrl } from "./core/linkUrl.js";
 import { makeDraftEmailDialog } from "./components/dialogs/PageDialogs.jsx";
 import { drawCk, rbEnd, rbStart } from "./ask.js";
 import { drawChips } from "./components/Chip.jsx";
@@ -280,7 +280,7 @@ export function deDraftBody(){ const de=shared.DE, ids=de.items.filter(i=>de.pic
 /** @param {"ok"|"bad"} kind @param {string} h */
 export function deStatShow(kind,h){ const el=$("#deStat"); if(!el) return; el.hidden=false; el.className=`denote ddstat ${kind}`; putHtml(el,h); }
 /** @param {string} l */
-export const deLink=l=>/^https:\/\/outlook\.(office|office365|live)\.com\//.test(String(l||""))?` <a href="${esc(l)}" target="_blank" rel="noopener">Open in Outlook</a>`:"";
+export const deLink=l=>{ const a=/^https:\/\/outlook\.(office|office365|live)\.com\//.test(String(l||""))?linkAnchor(l,"Open in Outlook"):null; return a?` ${a}`:""; };   /* the one anchor (core/linkUrl.js) */
 /** @param {{link:string,noTo:boolean,chased:number}} d */
 export function deMadeHtml(d){ const n=d.chased||0;
   return `<b>Draft created in Outlook</b> (your Drafts folder). ${d.noTo?"It has no recipient yet: add the address in Outlook. ":""}Open it there to check and send.${deLink(d.link)}`

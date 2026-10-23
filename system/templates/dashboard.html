@@ -65215,7 +65215,10 @@ ${d5.text}`);
     el2.className = `denote ddstat ${kind}`;
     putHtml(el2, h5);
   }
-  var deLink = (l6) => /^https:\/\/outlook\.(office|office365|live)\.com\//.test(String(l6 || "")) ? ` <a href="${esc(l6)}" target="_blank" rel="noopener">Open in Outlook</a>` : "";
+  var deLink = (l6) => {
+    const a5 = /^https:\/\/outlook\.(office|office365|live)\.com\//.test(String(l6 || "")) ? linkAnchor(l6, "Open in Outlook") : null;
+    return a5 ? ` ${a5}` : "";
+  };
   function deMadeHtml(d5) {
     const n4 = d5.chased || 0;
     return `<b>Draft created in Outlook</b> (your Drafts folder). ${d5.noTo ? "It has no recipient yet: add the address in Outlook. " : ""}Open it there to check and send.${deLink(d5.link)}` + (n4 ? `<br><span class="sub">Chase recorded: drafted today, ${plur(n4, "item")}. It will show as sent once the next check sees it in Sent Items.</span>` : "");
