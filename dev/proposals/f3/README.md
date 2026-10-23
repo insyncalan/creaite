@@ -80,7 +80,13 @@ Before step 4: nothing outside the new table changed; drop it by restoring the c
 - `python3 dev/tests/test_people_table_db.py` (8 tests, end to end; skips on the plain branch): import, no VIP or Hidden in the table or the generated copy, second import changes nothing, export then import round trip, dry run, re-key on a new email, propose reads the private values back, the generated register's `people_text` leaves them out, `migrate` adds the table to an older database, 1,000 people import and re-import.
 - Run with the diffs applied on a throwaway worktree: `test_people`, `test_tracker`, `test_backups`, `test_vip_private`, `test_vip_matching` pass.
 
+## Questions and decisions
+
+**Decided by Alan, 23-10-2026 ("AM: adopt"): all eight recommendations below are adopted.** F3 is built on these answers when F2 has shipped (2.6.4). Nothing below changes without Alan.
+
 ## Open questions, with a recommendation for each (answer "AM:" in one pass)
+
+(The questions are kept as asked; the Recommendation column is the decided answer.)
 
 | # | Question | Recommendation | Why | Cost |
 |---|---|---|---|---|
