@@ -248,6 +248,7 @@ Where: any page · [[⌘⇧N]] · ⌘K "New note" · Today › a meeting's **Not
 3. It is kept as you type ("Saved 10:42"). Esc or × closes it and keeps what you typed: [[⌘⇧N]] carries on, and unfinished notes are listed under **Recent notes**.
 4. Press **Done** ([[⌘↵]]) to save it in the project's `08 Notes` folder, named by its title (or its first line). Or press **Done and find updates** to save it and open it on the project's Notes tab with Find updates, which turns its lines into tracker changes.
 5. **Confidential** (off unless you turn it on) marks the note confidential: it is kept out of prep pages and client reports, and Claude reads its text only if you say yes.
+6. To make the note wider, drag the thin bar on its left edge (up to the width of the page) or focus it and press the left and right arrow keys. Double-click it, or press Home, to put it back. creaite remembers the width on this computer.
 6. On Today, **Note** under a meeting starts a Working session note with the meeting's title, date and who was invited.
 
 Or say: `note: Sara confirmed the pilot extends to 60 agents`
