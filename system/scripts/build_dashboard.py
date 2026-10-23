@@ -720,6 +720,7 @@ def review_queue(con):
         age = review.age(data)
         aged = {"age": age, "stale": age > limit, "made": data.get("created") or ""}   # #245: made is part of Today's dismissed id
         data = recheck_invalid(p, data, mem)
+        raw_fp = raw_item_fps(p)    # #307 h2: the file's own items (review.proposals fills a risk's `raised` in memory, which the page never sees)
         for key, field, label in review.BLOCKS:
             b = data.get(key)
             if b and not b.get("applied") and b.get(field, "pending") == "pending":
@@ -731,6 +732,7 @@ def review_queue(con):
                 continue
             n = num.get((p.name, item.get("n")), n + 1)
             row = queue_item(con, n, p, item, aged, overlap)
+            row["fp"] = raw_fp.get(item.get("n"), row["fp"])
             if item.get("n") in blocked:
                 row["trk"] = blocked[item["n"]]
             out.append(row)
@@ -799,6 +801,15 @@ def queue_block(n, p, key, label, b, aged):
             **({"cov": b.get("coverage") or [], "mt": hub_token(b["key"])} if key == "meeting" and b.get("key") else {}),   # BL-209
             **draft_missing(key, b),   # BL-260
             **({"held": review.held_reason(b)} if key in ("meeting", "report") and review.held_reason(b) else {})}   # #280
+
+
+def raw_item_fps(p):
+    """{item number: fingerprint} of the items as the proposal file holds them (the page compares with the file it reads)."""
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+        return {i.get("n"): item_fp(i) for i in raw.get("items", []) if isinstance(i, dict)}
+    except (OSError, ValueError):
+        return {}
 
 
 def queue_item(con, n, p, item, aged, overlap):
