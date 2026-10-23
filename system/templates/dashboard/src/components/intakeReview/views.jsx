@@ -4,7 +4,7 @@
    the open meeting's proposals under the board. Two panes: the meetings on the left, the selected one on the right. Each ends with
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
-import { IR_STAGES, irGroupMeetings, irLive } from "../../core/irFold.js";
+import { IR_STAGES, irGroupMeetings, irLeadWithWork, irLive } from "../../core/irFold.js";
 import { fd } from "../../core/page.js";
 import { irBusy, irClickMeeting, irDone, irFileKinds, irGroup, irHeld, irLiveCounts, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
@@ -45,11 +45,19 @@ function MeetingBlock({ m }) {
   </>;
 }
 
-/** @param {{model: any, list: any[]}} props */
+/** The List. #340: the work to decide leads: Drafted and Approved meetings first, then what was sent by mail and Teams, then Arrived
+    (the long tail of meetings waiting for a transcript), so the first approvals are in the first screen. With a Group by (#323) the
+    headings keep their rows together, each led the same way, and mail and Teams comes first. @param {{model: any, list: any[]}} props */
 export function ListView({ model, list }) {
+  const lead = irLeadWithWork(list), grouped = irGroup.value !== "none";
+  const table = (/** @type {any[]} */ rows, /** @type {string} */ part) => rows.length ? <div class="tbl" data-irpart={part}><table><tbody>{irGroups(rows).map(g => <>{grouped ? <GroupHead g={g} /> : null}{g.items.map((/** @type {any} */ m) => <MeetingBlock key={m.id} m={m} />)}</>)}</tbody></table></div> : null;
+  if (!list.length) return <div data-irv="list"><div class="empty">{irNone()}</div><MailSections model={model} /></div>;
   return <div data-irv="list">
-    {list.length ? <div class="tbl"><table><tbody>{irGroups(list).map(g => <>{irGroup.value !== "none" ? <GroupHead g={g} /> : null}{g.items.map((/** @type {any} */ m) => <MeetingBlock key={m.id} m={m} />)}</>)}</tbody></table></div> : <div class="empty">{irNone()}</div>}
-    <MailSections model={model} />
+    {grouped ? <><MailSections model={model} />{table(lead, "all")}</> : <>
+      {table(lead.filter((/** @type {any} */ m) => m.stage !== "arrived"), "work")}
+      <MailSections model={model} />
+      {table(lead.filter((/** @type {any} */ m) => m.stage === "arrived"), "arrived")}
+    </>}
   </div>;
 }
 

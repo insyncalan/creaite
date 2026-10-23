@@ -87,6 +87,10 @@ export function irHold(r) {
 /** The stage filter after a click on a stage's count ("all" is Show all). @param {string} cur @param {string} g */
 export const irStageClick = (cur, g) => (g === "all" || cur === g ? "all" : IR_STAGES.includes(g) ? g : cur);
 
+/** #340: the list leads with the work to decide. Drafted first (suggestions to check), then Approved, then Arrived; rows keep their order
+    inside a step. @param {any[]} list */
+export const irLeadWithWork = list => ["drafted", "approved", "arrived"].flatMap(g => list.filter(m => m.stage === g)).concat(list.filter(m => !["drafted", "approved", "arrived"].includes(m.stage)));
+
 /** The meetings the list shows under a stage filter. @param {IrModel} model @param {string} stage */
 export const irFiltered = (model, stage) => (model.meetings || []).filter(m => stage === "all" || m.stage === stage);
 

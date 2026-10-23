@@ -6087,6 +6087,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irKidsFold: () => irKidsFold,
     irKindOf: () => irKindOf,
     irLater: () => irLater,
+    irLeadWithWork: () => irLeadWithWork,
     irLeaveOut: () => irLeaveOut,
     irLeftOut: () => irLeftOut,
     irLive: () => irLive,
@@ -9599,6 +9600,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     return IR_EDITED_HOLDS.includes(r4.hold || "") ? "" : r4.hold || "";
   }
   var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
+  var irLeadWithWork = (list) => ["drafted", "approved", "arrived"].flatMap((g5) => list.filter((m5) => m5.stage === g5)).concat(list.filter((m5) => !["drafted", "approved", "arrived"].includes(m5.stage)));
   var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
   function irFoldClick(folded, sec) {
     return { ...folded, [sec]: !irIsFolded(folded, sec) };
@@ -78092,13 +78094,23 @@ ${d5.text}`);
     ] });
   }
   function ListView({ model, list }) {
-    return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
-      list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(list).map((g5) => /* @__PURE__ */ u4(S2, { children: [
-        irGroup.value !== "none" ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
-        g5.items.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 }, m5.id))
-      ] })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
+    const lead = irLeadWithWork(list), grouped = irGroup.value !== "none";
+    const table = (rows2, part) => rows2.length ? /* @__PURE__ */ u4("div", { class: "tbl", "data-irpart": part, children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(rows2).map((g5) => /* @__PURE__ */ u4(S2, { children: [
+      grouped ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
+      g5.items.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 }, m5.id))
+    ] })) }) }) }) : null;
+    if (!list.length) return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
+      /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
+    return /* @__PURE__ */ u4("div", { "data-irv": "list", children: grouped ? /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(MailSections, { model }),
+      table(lead, "all")
+    ] }) : /* @__PURE__ */ u4(S2, { children: [
+      table(lead.filter((m5) => m5.stage !== "arrived"), "work"),
+      /* @__PURE__ */ u4(MailSections, { model }),
+      table(lead.filter((m5) => m5.stage === "arrived"), "arrived")
+    ] }) });
   }
   function BoardView({ model }) {
     const open2 = model.meetings.find((m5) => m5.id === irOpen.value);
