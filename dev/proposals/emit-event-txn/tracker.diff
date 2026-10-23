@@ -1,8 +1,8 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index 41608c21..445251dd 100644
+index 41608c21..9b0c3e20 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
-@@ -737,15 +737,20 @@ def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
+@@ -737,15 +737,21 @@ def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
          if not item.get("id") or EVENT_CTX.get("apply_id") != apply_id:
              return
          kind, item_id = "reject", item["id"]
@@ -19,7 +19,8 @@ index 41608c21..445251dd 100644
 -        debuglog.warn("tracker", f"item_events: no event for change {rowid} ({type(e).__name__})")   # the type only, never the content
 +    except (TypeError, AttributeError, KeyError, ValueError) as e:   # the shape of the data, never the database
 +        debuglog.warn("tracker", f"item_events: change {rowid} read by its via alone ({type(e).__name__})")   # the type only
-+        route, place, origin, actor, src = ("undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"), None, None, "you", None
++        route = "undo" if via == "undo" else "activity" if str(via).startswith(REVERT_VIA) else "review"
++        place, origin, actor, src = None, None, "you", None
 +    if src is not None and not isinstance(src, str):
 +        src = None
 +    was = con.execute("SELECT event_id FROM item_events WHERE change = ? ORDER BY event_id DESC LIMIT 1",
