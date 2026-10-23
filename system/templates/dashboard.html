@@ -7075,6 +7075,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     sleep: () => sleep,
     slideDown: () => slideDown,
     snack: () => snack,
+    snapFollowEdit: () => snapFollowEdit,
     snapModelKeys: () => snapModelKeys,
     snapshot: () => snapshot,
     sneakClose: () => sneakClose,
@@ -78559,7 +78560,11 @@ ${d5.text}`);
         if (/changed since it was read/.test(e4.message)) throw new Error("already approved or changed");
         throw e4;
       }
-      guarded.forEach((r4) => refreshGuard(data, r4));
+      guarded.forEach((r4) => {
+        const was = r4.fp;
+        refreshGuard(data, r4);
+        snapFollowEdit(file, was, r4.fp);
+      });
     });
   };
   var STALE_ROW_MSG = "That one was already approved or changed, so nothing was saved. The list has been refreshed.";
@@ -79437,6 +79442,10 @@ ${d5.text}`);
     const file = key2.split("|")[0];
     const same2 = REV.filter((r4) => r4.file === file && r4.fp === cfp);
     return same2.length === 1 ? same2[0] : null;
+  }
+  function snapFollowEdit(file, oldFp, newFp) {
+    if (!oldFp || !newFp || oldFp === newFp) return;
+    for (const k5 of SNAP.keys.values()) if (k5.cfp === oldFp && k5.key.split("|")[0] === file) k5.cfp = newFp;
   }
   function revForModelN(n4) {
     snapModelKeys(false);
