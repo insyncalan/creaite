@@ -70,6 +70,7 @@ def make_vault():
               "archive.py",                                        # BL-10, BL-03
               "usage_log.py", "usage_report.py",                   # #197, #238: the Usage figures in the page's data
               "usage_reviews.py",                                  # #238 delta (v2.5.3): Your reviews on the Usage tab
+              "minutes_destination.py",                            # #324, #326, #332: where minutes are filed (live_server imports it)
               "vip_schedule.py",                                   # #97: the alert check's quiet hours
               "notes.py",                                          # BL-301: the note format, read by search
               "capture.py",                                        # BL-301 C: the capture drawer's server side
@@ -121,6 +122,10 @@ def make_vault():
     # processed.txt starts empty, as in a fresh checkout (it isn't in git): the dev repo's own copy, from trying the app,
     # would make tests see different data on this Mac and on GitHub (test_writer_pinned did)
     (tmp / "system" / "processed.txt").write_text("", encoding="utf-8")
+    for diff in filter(None, os.environ.get("CREAITE_TEST_DIFFS", "").split(",")):   # a guarded proposal tried on this throwaway copy only
+        r = subprocess.run(["git", "apply", str(REPO / diff)], cwd=tmp, capture_output=True, text=True)
+        if r.returncode != 0:
+            raise AssertionError(f"CREAITE_TEST_DIFFS: {diff} does not apply to the throwaway vault: {r.stderr}")
     return tmp
 
 

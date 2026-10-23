@@ -8,7 +8,7 @@ import { irAskQ, irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen,
 import { IconButton } from "../IconButton.jsx";
 import { IrIcon } from "./icons.js";
 import { irFixed } from "../../core/irFold.js";
-import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
+import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irOpenFolder, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
 export const IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
@@ -115,7 +115,7 @@ export function RowActions({ m, mini }) {
   const open = irOpen.value === m.id;
   if (running) return <><button type="button" class="mini" disabled data-ira="processing">Processing</button>{irCanStop(m) ? <>{" "}<button type="button" class="mini" data-ira="stop" title="Stop processing" onClick={() => irStop()}>Stop</button></> : null}</>;
   if (m.stage === "drafted") return mini ? null : <button type="button" class="mini" data-ira="open" onClick={() => irClickMeeting(m.id)}>{open ? "Close" : "Check them"}</button>;
-  if (!irCanSetAside(m)) return m.stage === "approved" ? <><span class="icsub">Done</span>{m.already ? <>{" "}<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)" onClick={() => irRemoveFile(m)}>Remove</button></> : null}</> : null;
+  if (!irCanSetAside(m)) return m.stage === "approved" ? <><span class="icsub">Done</span>{m.src !== "upload" ? <>{" "}<button type="button" class="mini" data-ira="openfolder" title="Show where the minutes were filed" onClick={() => irOpenFolder(m)}>Open folder</button></> : null}{m.already ? <>{" "}<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)" onClick={() => irRemoveFile(m)}>Remove</button></> : null}</> : null;
   const unsure = m.src === "upload" && !irFileKind(m), badName = irBadName(m);
   return <>
     {badName ? <button type="button" class="mini" data-ira="process" disabled title="Rename this file to process it">{irProcessWord(m)}</button> : unsure ? <>

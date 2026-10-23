@@ -117,6 +117,13 @@ class MinutesViewV2(LiveBrowserCase):
         self.ev(f"(()=>{{const e=document.querySelector({json.dumps(sel)}), s=getSelection(); s.selectAllChildren(e); s.collapseToEnd();}})()")
         self.b.pump(0.15)
 
+    def file_box(self):
+        """#324: Approve minutes asks where the minutes are filed when the server offers it (the guarded diff): press File and approve.
+        Returns at once when the minutes are approved without the question."""
+        self.b.wait("(document.getElementById('mnFiling')||{}).open || /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        if self.ev("!!(document.getElementById('mnFiling')||{}).open"):
+            self.b.click("#mnFilingGo")
+
     def snack(self):
         return self.ev("document.getElementById('snack').classList.contains('on') ? document.getElementById('snack').textContent : ''")
 
@@ -452,6 +459,7 @@ class MinutesViewV2(LiveBrowserCase):
         b.click("#mnApproveBtn")
         b.wait("document.getElementById('mnApprove').open")
         b.click("#mnApproveGo")
+        self.file_box()
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 3 work items registered", self.snack())
         self.assertTrue(self.ev("getComputedStyle(document.getElementById('snackU')).display!=='none'"), "with Undo")
@@ -479,6 +487,7 @@ class MinutesViewV2(LiveBrowserCase):
         b.click("#mnApproveBtn")
         b.wait("document.getElementById('mnApprove').open")
         b.click("#mnApproveGo")
+        self.file_box()
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 3 work items registered", self.snack())
         self.assertNotIn("wait in Review", self.snack(), "the same result as the first time")
@@ -491,6 +500,7 @@ class MinutesViewV2(LiveBrowserCase):
         b.pump(0.3)
         self.assertEqual(self.summary(), "1 work item to register · 3 kept in the minutes only · 1 removed")
         b.click("#mnApproveBtn")
+        self.file_box()
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertFalse(self.ev("document.getElementById('mnApprove').open"), "no box")
         self.assertIn("Minutes approved · 1 work item registered", self.snack())
@@ -508,6 +518,7 @@ class MinutesViewV2(LiveBrowserCase):
             b.pump(0.1)
         self.assertEqual(self.summary(), "0 work items to register · 5 kept in the minutes only")
         b.click("#mnApproveBtn")
+        self.file_box()
         b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · no work items registered", self.snack())
         self.assertEqual([a for a in self.rows_of("actions") if a["description"] == "Send the revised SOW to the client"], [])

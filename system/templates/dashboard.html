@@ -6076,6 +6076,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irNote: () => irNote,
     irNotes: () => irNotes,
     irOpen: () => irOpen,
+    irOpenFolder: () => irOpenFolder,
     irOpenPeek: () => irOpenPeek,
     irOpenable: () => irOpenable,
     irPeek: () => irPeek,
@@ -37551,6 +37552,166 @@ system/scripts/run launch.py agent ${what}`;
     return out;
   }
 
+  // stores/minutesFiling.js
+  var filingAsk = y3(
+    /** @type {Ask|null} */
+    null
+  );
+  var filingError = y3("");
+  var filedNote = y3(
+    /** @type {{key: string|null, items: {project: string, folder_label: string, name: string}[]}|null} */
+    null
+  );
+  var filedProblem = y3("");
+  var stemOf = (name, ext) => ext && name.toLowerCase().endsWith(ext) ? name.slice(0, -ext.length) : name;
+  async function askFiling(proposal) {
+    const r4 = await api("/api/minutes/destination", { file: proposal });
+    if (!r4 || !r4.ok || !Array.isArray(r4.items) || !r4.items.length) return true;
+    filingError.value = "";
+    filedNote.value = null;
+    filedProblem.value = "";
+    return new Promise((resolve) => {
+      const typed2 = {};
+      for (const it2 of r4.items) typed2[it2.code] = stemOf(it2.will_be, it2.ext);
+      filingAsk.value = { file: proposal, key: r4.key || null, items: r4.items, typed: typed2, resolve };
+    });
+  }
+  function typeFiling(code, value) {
+    const a5 = filingAsk.value;
+    if (a5) filingAsk.value = { ...a5, typed: { ...a5.typed, [code]: value } };
+    filingError.value = "";
+  }
+  async function confirmFiling() {
+    const a5 = filingAsk.value;
+    if (!a5) return;
+    const shown2 = [];
+    for (const it2 of a5.items) {
+      const stem = (a5.typed[it2.code] || "").trim();
+      let name = it2.will_be;
+      if (stem !== stemOf(it2.will_be, it2.ext)) {
+        const r4 = await api("/api/minutes/destination/name", { file: a5.file, code: it2.code, name: stem + it2.ext });
+        if (!r4 || !r4.ok) {
+          filingError.value = oneLine(r4 && r4.message || "That name can't be used.");
+          return;
+        }
+        name = r4.name;
+      }
+      shown2.push({ project: it2.project, folder_label: it2.folder_label, name });
+    }
+    filingAsk.value = null;
+    filedNote.value = { key: a5.key, items: shown2 };
+    a5.resolve(true);
+  }
+  function cancelFiling() {
+    const a5 = filingAsk.value;
+    filingAsk.value = null;
+    filingError.value = "";
+    filedNote.value = null;
+    if (a5) a5.resolve(false);
+  }
+  function dismissFiled() {
+    filedNote.value = null;
+    filedProblem.value = "";
+  }
+  async function openFiled(what, where2) {
+    const r4 = await api("/api/minutes/destination/open", { what, key: where2.key || void 0, path: where2.path || void 0 });
+    const ok2 = !!(r4 && r4.ok);
+    return { ok: ok2, message: oneLine(r4 && r4.message || "") || (ok2 ? "" : "The minutes can't be opened.") };
+  }
+
+  // components/minutes/FilingDialog.jsx
+  function FilingDialog() {
+    const a5 = filingAsk.value;
+    const many = !!a5 && a5.items.length > 1;
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(Dialog, { open: !!a5, onClose: cancelFiling, labelledBy: "mnFilingH", id: "mnFiling", class: "mnapprove", focus: "#mnFilingName0", children: a5 ? /* @__PURE__ */ u4("form", { class: "mnap", onSubmit: (e4) => {
+        e4.preventDefault();
+        confirmFiling();
+      }, children: [
+        /* @__PURE__ */ u4("h2", { id: "mnFilingH", children: "File the minutes" }),
+        /* @__PURE__ */ u4("p", { class: "sub", children: [
+          many ? "The minutes are filed in each project's Minutes folder." : "Check where the minutes go and what they are called.",
+          " Cancel files nothing."
+        ] }),
+        a5.items.map((it2, i5) => /* @__PURE__ */ u4("div", { class: "mnap-one", "data-code": it2.code, style: "display:block", children: [
+          /* @__PURE__ */ u4("div", { children: [
+            /* @__PURE__ */ u4("b", { children: it2.project }),
+            " ",
+            /* @__PURE__ */ u4("span", { class: "sub", children: [
+              "in ",
+              it2.folder_label
+            ] })
+          ] }),
+          /* @__PURE__ */ u4("div", { style: "display:flex;gap:6px;align-items:center;margin-top:6px", children: [
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                class: "pkdt",
+                id: `mnFilingName${i5}`,
+                "aria-label": `File name in ${it2.project}`,
+                style: "flex:1;min-width:0",
+                value: a5.typed[it2.code],
+                maxLength: 140,
+                onInput: (e4) => typeFiling(
+                  it2.code,
+                  /** @type {HTMLInputElement} */
+                  e4.target.value
+                )
+              }
+            ),
+            /* @__PURE__ */ u4("span", { class: "sub", children: it2.ext })
+          ] }),
+          it2.taken && stemOf(it2.will_be, it2.ext) === a5.typed[it2.code] ? /* @__PURE__ */ u4("p", { class: "sub", "data-numbered": true, children: [
+            "A file called “",
+            it2.name,
+            "” is already there, so these are numbered: “",
+            it2.will_be,
+            "”."
+          ] }) : null,
+          it2.transcript ? /* @__PURE__ */ u4("p", { class: "sub", children: [
+            "The transcript is filed beside it in ",
+            it2.transcript.folder_label,
+            " as “",
+            it2.transcript.will_be,
+            "”."
+          ] }) : null,
+          it2.local ? null : /* @__PURE__ */ u4("p", { class: "sub", children: "That file is online-only in OneDrive." })
+        ] }, it2.code)),
+        filingError.value ? /* @__PURE__ */ u4("p", { class: "sub", role: "alert", id: "mnFilingErr", style: "color:var(--bad, #b00020)", children: filingError.value }) : null,
+        /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnFilingNo", onClick: cancelFiling, children: "Cancel" }),
+          /* @__PURE__ */ u4("button", { type: "submit", class: "btn primary", id: "mnFilingGo", children: "File and approve" })
+        ] })
+      ] }) : null }),
+      /* @__PURE__ */ u4(FiledNote, {})
+    ] });
+  }
+  function FiledNote() {
+    const n4 = filedNote.value;
+    if (!n4 || filingAsk.value) return null;
+    const first = n4.items[0];
+    const go3 = async (what) => {
+      const r4 = await openFiled(what, { key: n4.key });
+      filedProblem.value = r4.ok ? "" : r4.message;
+    };
+    return /* @__PURE__ */ u4("div", { class: "snack on", role: "status", "data-minutes-filed": true, style: "bottom:64px", children: [
+      /* @__PURE__ */ u4("span", { children: [
+        n4.items.length > 1 ? `Filed in ${n4.items.length} projects.` : `Filed as ${first.name} in ${first.folder_label}.`,
+        filedProblem.value ? ` ${filedProblem.value}` : ""
+      ] }),
+      /* @__PURE__ */ u4("button", { type: "button", "data-filed": "file", onClick: () => go3("file"), children: "Open file" }),
+      /* @__PURE__ */ u4("button", { type: "button", "data-filed": "folder", onClick: () => go3("folder"), children: "Open folder" }),
+      /* @__PURE__ */ u4("button", { type: "button", onClick: dismissFiled, children: "Close" })
+    ] });
+  }
+  function mountFiling() {
+    if (typeof document === "undefined" || document.getElementById("minutesFilingHost")) return;
+    const el2 = document.createElement("div");
+    el2.id = "minutesFilingHost";
+    document.body.appendChild(el2);
+    R(/* @__PURE__ */ u4(FilingDialog, {}), el2);
+  }
+
   // stores/minutes.js
   var minutesArg = y3(
     /** @type {{file?: string, path?: string}|null} */
@@ -37660,6 +37821,10 @@ system/scripts/run launch.py agent ${what}`;
     const doc = v5 && v5.ok ? v5.doc : null, plan = v5 && v5.plan ? v5.plan.items : null;
     if (!doc || !plan || !v5.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
     const args = approveArgs(doc, plan);
+    if (how.approve !== false && v5.proposal) {
+      mountFiling();
+      if (!await askFiling(v5.proposal)) return { ok: false, message: "Cancelled: nothing was filed or approved.", made: 0 };
+    }
     let base = Number(doc.version) || void 0, made = 0;
     const done = [];
     const change2 = how.change || (async (op2) => {
@@ -77065,6 +77230,16 @@ ${d5.text}`);
     const day = f5.slice(0, 10), t47 = /^.{10}[ T](\d{2}:\d{2})/.exec(f5);
     return `Calendar read ${[day === today ? "" : fd(day), t47 ? t47[1] : ""].filter(Boolean).join(" ")}`;
   }
+  async function irOpenFolder(m5) {
+    if (!m5) return false;
+    if (!viaServer()) {
+      snack(needsConnection("Opening the folder"));
+      return false;
+    }
+    const r4 = await openFiled("folder", { key: m5.mkey || m5.key, path: m5.src === "upload" ? null : m5.path });
+    if (r4.message) snack(r4.message);
+    return r4.ok;
+  }
   async function irRemoveFile(m5) {
     if (!m5 || m5.src !== "upload" || !m5.path) return false;
     if (!viaServer()) {
@@ -77270,6 +77445,10 @@ ${d5.text}`);
     if (m5.stage === "drafted") return mini ? null : /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" });
     if (!irCanSetAside(m5)) return m5.stage === "approved" ? /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("span", { class: "icsub", children: "Done" }),
+      m5.src !== "upload" ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "openfolder", title: "Show where the minutes were filed", onClick: () => irOpenFolder(m5), children: "Open folder" })
+      ] }) : null,
       m5.already ? /* @__PURE__ */ u4(S2, { children: [
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "removefile", title: "Take it out of Intake (kept in backups)", onClick: () => irRemoveFile(m5), children: "Remove" })

@@ -14,6 +14,7 @@ import { D, fd, fdText, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { addFailed, needsConnection, plainSay } from "../../core/say.js";
 import { shared } from "../../core/state.js";
+import { openFiled } from "../../stores/minutesFiling.js";
 import { pName } from "../../core/data.js";
 import { srcShort } from "../../core/fields.js";
 import { irFixed, irKindOf, irMatches, irNameOk, irUnsure } from "../../core/irFold.js";
@@ -250,6 +251,17 @@ export function irCalendarRead(fetched, today) {
   if (!/^\d{4}-\d{2}-\d{2}/.test(f)) return "No calendar yet";
   const day = f.slice(0, 10), t = /^.{10}[ T](\d{2}:\d{2})/.exec(f);
   return `Calendar read ${[day === today ? "" : fd(day), t ? t[1] : ""].filter(Boolean).join(" ")}`;
+}
+
+/** #326: Open folder on a Done row: the project's Minutes folder, the filed minutes shown in it. The server finds the file from the
+    meeting's key (or the filed path of a row that has one); a moved, missing or online-only target is said in words, with no path.
+    @param {any} m @returns {Promise<boolean>} */
+export async function irOpenFolder(m) {
+  if (!m) return false;
+  if (!viaServer()) { snack(needsConnection("Opening the folder")); return false; }
+  const r = await openFiled("folder", { key: m.mkey || m.key, path: m.src === "upload" ? null : m.path });
+  if (r.message) snack(r.message);
+  return r.ok;
 }
 
 /** Take an uploaded file out of Intake (kept in backups); an Undo puts it back. Used for a file that was already processed.
