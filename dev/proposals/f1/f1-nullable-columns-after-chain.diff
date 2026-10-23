@@ -32,7 +32,7 @@ index 41ef7dc0..28f45e83 100644
  
  -- #241 D: a work item's history (item_history.py; dev/proposals/work-item-history/DESIGN.md). One row per change_log row (never
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index 41608c21..6f63fe56 100644
+index 41608c21..81d58f28 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -749,6 +749,26 @@ def emit_event(con, rowid, apply_id, table, key, field, via, undoes=None):
@@ -78,32 +78,7 @@ index 41608c21..6f63fe56 100644
          done, skipped = revert_plan(con, rowids, apply_id, REVERT_VIA + "pending")
          via = REVERT_VIA + ",".join(str(d["rowid"]) for d in sorted(done, key=lambda d: d["rowid"]))
          con.execute("UPDATE change_log SET via = ? WHERE apply_id = ?", (via, apply_id))
-@@ -3876,6 +3898,15 @@ def tidy_after_update():
-         debuglog.exception("tracker", "update tidy failed")
- 
- 
-+def copy_rows(con, t, keep):
-+    """Copy the shared columns from t into t__new. F1: a table with no INTEGER PRIMARY KEY (change_log) keeps its rowids:
-+    item_events.change and a revert's via string point at them, and a plain copy renumbers every row after a gap."""
-+    pk = [r for r in con.execute(f"PRAGMA table_info({t}__new)") if r["pk"]]
-+    own_id = len(pk) == 1 and pk[0]["type"].upper() == "INTEGER"
-+    rid = "" if own_id else "rowid, "
-+    con.execute(f"INSERT INTO {t}__new ({rid}{', '.join(keep)}) SELECT {rid}{', '.join(keep)} FROM {t}" + ("" if own_id else " ORDER BY rowid"))
-+
-+
- def migrate_schema():
-     """Bring tracker.db up to schema.sql, keeping every row: rebuild changed tables after a backup, add new
-     tables, recreate the search index if needed and move workstreams into their table.
-@@ -3902,7 +3933,7 @@ def migrate_schema():
-                 con.execute("UPDATE milestones SET status = 'Planned' WHERE status = 'Missed'")
-             con.execute(creates[t].replace(f"CREATE TABLE IF NOT EXISTS {t} (", f"CREATE TABLE {t}__new (", 1))
-             keep = [c for c in columns(con, f"{t}__new") if c in old_cols]
--            con.execute(f"INSERT INTO {t}__new ({', '.join(keep)}) SELECT {', '.join(keep)} FROM {t}")
-+            copy_rows(con, t, keep)
-             before = con.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
-             con.execute(f"DROP TABLE {t}")
-             con.execute(f"ALTER TABLE {t}__new RENAME TO {t}")
-@@ -3948,6 +3979,7 @@ def retire_missed(con, missed):
+@@ -3948,6 +3970,7 @@ def retire_missed(con, missed):
      at = now()
      apply_id = con.execute("INSERT INTO applies (at, proposals, file_ops) VALUES (?, ?, ?)",
                             (at, json.dumps([]), "[]")).lastrowid
