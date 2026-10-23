@@ -74,12 +74,12 @@ export function noteNumbered(moved) {
   const n = filedNote.value;
   if (!n || !moved || !moved.length) return;
   const said = [];
-  const items = n.items.map(i => {
+  const updated = n.items.map(i => {
     const m = moved.find(x => x.kind === "draft" && x.code === i.code);
     if (m && m.name !== i.name) said.push(m.name);          // only when it differs from what the box showed
     return m ? { ...i, name: m.name } : i;
   });
-  filedNote.value = { ...n, items, numbered: said };
+  filedNote.value = { ...n, items: updated, numbered: said };
 }
 
 /** Cancel: nothing is filed or approved. */

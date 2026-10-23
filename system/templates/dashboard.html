@@ -37619,12 +37619,12 @@ system/scripts/run launch.py agent ${what}`;
     const n4 = filedNote.value;
     if (!n4 || !moved2 || !moved2.length) return;
     const said2 = [];
-    const items2 = n4.items.map((i5) => {
+    const updated = n4.items.map((i5) => {
       const m5 = moved2.find((x5) => x5.kind === "draft" && x5.code === i5.code);
       if (m5 && m5.name !== i5.name) said2.push(m5.name);
       return m5 ? { ...i5, name: m5.name } : i5;
     });
-    filedNote.value = { ...n4, items: items2, numbered: said2 };
+    filedNote.value = { ...n4, items: updated, numbered: said2 };
   }
   function cancelFiling() {
     const a5 = filingAsk.value;
