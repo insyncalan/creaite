@@ -1,12 +1,12 @@
 diff --git a/system/scripts/reach.py b/system/scripts/reach.py
-index 03d21f44..e1bc3c0b 100644
+index 03d21f44..258685b2 100644
 --- a/system/scripts/reach.py
 +++ b/system/scripts/reach.py
 @@ -70,6 +70,7 @@ NEVER = (
      ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
      ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
      ("vault", "system/staging/reextract", "write", RECORD),              # #283: Read again holds: the live server only
-+    ("vault", "system/staging/discarded", "write", RECORD),             # #307: Discard's set-aside proposals: Discard (review.py) only; Undo restores them
++    ("vault", "system/staging/discarded", "write", RECORD),             # #307: Discard's set-aside proposals: review.py only
      ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
      ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
      ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),
