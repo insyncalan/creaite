@@ -16,6 +16,9 @@ After the 2.6.2 chain (last in the chain, or anywhere: it touches `ask()`, `Run.
 - `dev/tests/test_fresh_ask_327.py`: 4 tests skip without the diff, pass with it (scratch copy); the page test always runs. `test_prompt_after_dashdash`, `test_ask_queue` pass with it.
 - `check.py` OK on the tree without the diff; `test_plain_words` OK. This diff adds no long line over the limit (checked by reading; run check.py with the diff applied before it is committed to the chain).
 
+## Mark follows the chat (verified in code and by test)
+`Run.__init__` passes the chat's last session to `guard_args` -> `reach.start_run(..., session)`, which writes `marked` when that session is in `marked-sessions.json`. When the run ends, `_end_guarded` calls `reach.end_run(self.id, self.session)`; `self.session` is the NEW session (set from the init event), so a marked run adds the new ID to `marked-sessions.json`. `MarkFollowsTheChat` in `test_fresh_ask_327.py` runs this against a temporary guard folder (marked chat: starts marked and the new session is remembered; unmarked chat: stays unmarked).
+
 ## Risks (for the reviewer)
 1. **Outside-content mark (BL-141).** The mark is kept by session ID. A fresh session would lose it, and the carried text could hold outside content. Mitigation above: the old session ID goes to `guard_args`. Review that `start_run(session=old)` marks the run and `end_run(run, new session)` saves the mark. A chat whose last session was not marked is not marked, as before.
 2. **Carried text is data in the prompt.** It is Alan's and creaite's own words from the chat, labelled as background. No new capability; the run's tools, deny list and hook are unchanged.

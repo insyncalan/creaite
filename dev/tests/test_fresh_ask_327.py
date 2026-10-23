@@ -83,6 +83,41 @@ class RunCommand(unittest.TestCase):
         self.assertFalse(cmd[-1].startswith("BACKGROUND"))
 
 
+@unittest.skipUnless(HAVE, "needs dev/proposals/327b/live_server.diff")
+class MarkFollowsTheChat(unittest.TestCase):
+    """The reviewer's main risk: a chat that read outside content stays marked when its next message runs in a fresh session."""
+
+    def run_fresh(self, marked):
+        import tempfile
+        reach = live_server.reach
+        with tempfile.TemporaryDirectory() as d:
+            g = Path(d)
+            with mock.patch.object(reach, "GUARD", g), mock.patch.object(reach, "RUN_FILE", g / "run.json"), \
+                    mock.patch.object(reach, "SESSIONS_FILE", g / "marked-sessions.json"), \
+                    mock.patch.object(live_server.subprocess, "Popen", lambda cmd, **k: Fakeproc()), \
+                    mock.patch.object(live_server, "carry_over", return_value=""), mock.patch.object(live_server.threading, "Thread"):
+                if marked:
+                    (g / "marked-sessions.json").write_text(json.dumps(["sess-old"]))
+                try:
+                    live_server.Run("r-mark327", "hello", "sess-old", "c-1", None, fresh=True)
+                except Exception:              # whatever follows the launch is not under test
+                    pass
+                rec = reach.guard_run() or {}
+                reach.end_run("r-mark327", "sess-new")          # the run ends under the NEW session the init event gave it
+                return bool(rec.get("marked")), rec.get("session"), reach.marked_sessions()
+
+    def test_a_marked_chat_starts_marked_and_the_new_session_is_remembered(self):
+        was, session, after = self.run_fresh(True)
+        self.assertTrue(was)
+        self.assertEqual(session, "sess-old")
+        self.assertIn("sess-new", after)
+
+    def test_an_unmarked_chat_stays_unmarked(self):
+        was, _, after = self.run_fresh(False)
+        self.assertFalse(was)
+        self.assertNotIn("sess-new", after)
+
+
 class Page(unittest.TestCase):
     def test_the_page_offers_continue_this_chat_and_sends_it(self):
         text = PAGE.read_text(encoding="utf-8")
