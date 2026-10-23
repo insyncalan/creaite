@@ -15,7 +15,7 @@ import { copied, store, VAULT_PATH } from "./core/page.js";
 
 /** @typedef {{ok?: boolean, supported?: boolean, installed?: boolean, loaded?: boolean|null, on?: boolean, dev?: boolean, folder?: string}} AutoStatus */
 
-export const AS = { /** @type {AutoStatus|null} */ status: null, confirm: /** @type {""|"on"|"off"} */ (""), busy: false };
+export const AS = { /** @type {AutoStatus|null} */ status: null, confirm: /** @type {""|"on"|"off"} */ (""), busy: false, /** the boot read, so a test can wait for the late answer before it clicks */ ready: /** @type {Promise<void>|null} */ (null) };
 export const AS_HELP_ID = "fix-a-stopped-server-and-other-problems";
 export const ASKED_KEY = "creaite-autostart-asked";
 
@@ -121,5 +121,5 @@ export function bootAutostart() {
     e.preventDefault(); const t = asCommand(/** @type {"install"|"remove"} */ (x.dataset.ascopy));
     try { await navigator.clipboard.writeText(t); copied(x); snack("Copied"); } catch (err) { prompt("Copy this:", t); }
   });
-  if (viaServer()) asRefresh();
+  if (viaServer()) AS.ready = asRefresh();
 }

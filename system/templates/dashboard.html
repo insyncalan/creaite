@@ -32710,7 +32710,12 @@ ${s5}`;
       /** @type {""|"on"|"off"} */
       ""
     ),
-    busy: false
+    busy: false,
+    /** the boot read, so a test can wait for the late answer before it clicks */
+    ready: (
+      /** @type {Promise<void>|null} */
+      null
+    )
   };
   var AS_HELP_ID = "fix-a-stopped-server-and-other-problems";
   var ASKED_KEY = "creaite-autostart-asked";
@@ -32859,7 +32864,7 @@ system/scripts/run launch.py agent ${what}`;
         prompt("Copy this:", t47);
       }
     });
-    if (viaServer()) asRefresh();
+    if (viaServer()) AS.ready = asRefresh();
   }
 
   // stores/settings.js
