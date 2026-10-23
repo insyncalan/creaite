@@ -495,7 +495,10 @@ export async function heldDiscard(r){ if(!viaServer()){ snack(needsConnection("D
   if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
   const res=await api("/api/review",{file:r.file,ref:r.ref,decision:"discard",...(r.fp?{expect:r.fp}:{})});   /* 2.6.2 (#314) */
   if(!res.ok&&REVIEW_CHANGED.test(res.message||"")){ snack(STALE_ROW_MSG); await reloadData(); return; }
-  await reloadData(); snack(saidPlain(res.message)); }
+  await reloadData();
+  const aside=res.ok&&/discarded\/(proposed-[\w.-]+\.json)/.exec(String(res.message||""));      /* #307 path 12: the toast's Undo puts it back */
+  snack(saidPlain(res.message),aside?async()=>{ const back=await api("/api/review/restore-discarded",{file:aside[1]});
+    snack(saidPlain(back&&back.message)||"Not put back"); if(back&&back.ok) await reloadData(); }:undefined); }
 /* the apply's "Held in Review, not applied: …" lines, for its snack */
 export function heldLines(msg){ return String(msg||"").split("\n").map(x=>x.trim()).filter(x=>/^Held in Review, not applied:/.test(x)); }
 /* #291: the snack's words for them: an item held because it can't be saved as it is, apart from a proposal whose file has gone */
