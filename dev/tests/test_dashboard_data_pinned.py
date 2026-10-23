@@ -12,6 +12,8 @@ build_dashboard.collect, and the dashboard's "review", "hub" and "flow" data are
 - flow: weeks of opened, closed and cancelled actions and risks, due dates moved (and one move undone), milestone forecasts
   moved, a week from a saved snapshot, ageing buckets.
 
+Review rows carry "fp" (the item's content fingerprint, from #307's identity guard; re-pinned deliberately at gate 3: only the fp keys were added).
+
 Fixed: the sample vault's dates (TODAY), the scripts' clock (CREAITE_NOW), the change log's times. Masked: the vault path and
 each proposal's age (review.age reads the real clock).
 
