@@ -167,7 +167,8 @@ class CopiedCommand(unittest.TestCase):
 
 class NeverSends(unittest.TestCase):
     def test_the_run_may_use_create_draft_and_tool_search_only(self):
-        self.assertEqual(dd.allowed_tools(), ["mcp__claude_ai_Microsoft_365__outlook_create_draft", "ToolSearch"])
+        self.assertEqual(dd.allowed_tools(), ["ToolSearch"])
+        self.assertEqual(dd.hook_tools(), ["mcp__claude_ai_Microsoft_365__outlook_create_draft"])
 
     def test_every_other_microsoft_365_action_is_denied_by_name_and_create_draft_is_not(self):
         denied = dd.denied_tools()
@@ -247,6 +248,9 @@ class Hook(Isolated):
     def test_the_exact_request_is_let_through_once_and_a_second_draft_is_refused(self):
         first = self.call(dd.CREATE_TOOL, self.req["args"])
         self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(json.loads(first.stdout)["hookSpecificOutput"],           # the hook alone allows it (no allow-list entry)
+                         {"hookEventName": "PreToolUse", "permissionDecision": "allow"})
+        self.assertEqual(self.call("ToolSearch", {}).stdout.strip(), "")
         second = self.call(dd.CREATE_TOOL, self.req["args"])
         self.assertEqual(second.returncode, 2)
         self.assertIn("once", second.stderr)

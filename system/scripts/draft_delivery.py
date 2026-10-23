@@ -199,8 +199,15 @@ def request(payload, settings=None):
 
 
 def allowed_tools():
-    """The route's run may use these and nothing else: the create-draft tool and ToolSearch."""
-    return [CREATE_TOOL, *ALLOWED_EXTRA]
+    """What the route's run is started with in `--allowedTools`: ToolSearch ONLY. The create-draft tool is deliberately not here
+    (Cap's review of 23-10-2026, fail closed): only the run's PreToolUse hook can allow it (hook_tools), so with no hook, a hook
+    that never runs or one that errors, headless default-deny leaves the tool refused."""
+    return list(ALLOWED_EXTRA)
+
+
+def hook_tools():
+    """The one tool only the hook can allow (its `permissionDecision: allow`, for exactly the request's arguments, once)."""
+    return [CREATE_TOOL]
 
 
 def denied_tools():
@@ -271,7 +278,7 @@ def check(events, req):
     """What the run did: {ok, made, id, web_link} or {ok: False, made, reason}. `made` says whether a draft may exist (a call that
     went through), so a mismatch is never reported as nothing having happened."""
     uses, results = _blocks(events)
-    other = [n for _, n, _ in uses if n not in allowed_tools()]
+    other = [n for _, n, _ in uses if n not in allowed_tools() + hook_tools()]
     calls = [(i, inp) for i, n, inp in uses if n == CREATE_TOOL]
     done = [(i, inp) for i, inp in calls if i in results and not results[i][0]]
     if other:
@@ -297,6 +304,9 @@ def check(events, req):
 # PreToolUse hook (`--settings`, hook_settings) that runs `draft_delivery.py hook <request file>` before every tool call: create-draft
 # only with exactly the request's arguments and only once, ToolSearch, nothing else; any error refuses (exit 2, the reason goes back
 # to the model). The request is written by hook_request_file (system/staging/drafts/) and removed by hook_cleanup.
+HOOK_ALLOW = json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}})
+
+
 def hook_settings(runner, request_file):
     """The --settings JSON for the draft run: the PreToolUse hook (matcher "*": every tool, MCP included) that runs
     `<runner> hook <request file>`. `runner` is the command that starts this script (the wrapper, as the guard hook's)."""
@@ -341,7 +351,8 @@ def hook_decision(tool, inp, args, claim):
 
 def hook_main(argv):
     """`draft_delivery.py hook <request file>`: Claude Code's PreToolUse hook for the draft run (call JSON on stdin). Exit 0 lets the
-    call through, exit 2 refuses it with the reason on stderr. Any error refuses."""
+    call through, exit 2 refuses it with the reason on stderr. Any error refuses. The create-draft call is allowed only by this
+    hook printing `permissionDecision: allow` (HOOK_ALLOW); the run's allow list does not hold the tool (fail closed)."""
     try:
         path = argv[0]
         call = json.loads(sys.stdin.read() or "{}")
@@ -363,6 +374,8 @@ def hook_main(argv):
     if not ok:
         sys.stderr.write(f"creaite refused this: {why}\n")
         return 2
+    if str(call.get("tool_name") or "") == CREATE_TOOL:
+        sys.stdout.write(HOOK_ALLOW + "\n")
     return 0
 
 
