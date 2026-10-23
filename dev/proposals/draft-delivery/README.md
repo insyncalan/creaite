@@ -34,10 +34,8 @@ vault as its working folder (as `launch.py` does) and asserts the run's folder i
 the VIP/alert check and the other runs on main, which deny only the servers in that list.
 
 **Apply order (rebuilt on `v261-line2`, 23-10-2026):** `live_server.diff` (guarded; applies to line2 and on top of the whole GUARDED-2.6.1.md chain), then
-`rules-and-skill.diff` (the rules file and cx-client-report's SKILL.md, regenerated for line2: the old one did not apply). The rules diff is
-`#183` first: `fetch-transcripts/creaite-rules.diff` (#250) applies only after it (both edit the staging row), and if the VIP-follow rules
-diff (`origin/v261-vip-rules`) lands first, use `fetch-transcripts/creaite-rules.after-vip.diff` instead. #183 and the VIP diff apply in either
-order. Every diff was checked with `git apply --check`, applied, and reversed (`-R --check`, `-R`) on line2 and on line2 with the guarded chain.
+`rules-and-skill.diff` (the rules file and cx-client-report's SKILL.md, regenerated for line2: the old one did not apply). The rules diff applies in either order with the VIP-follow rules diff (`origin/v261-vip-rules`).
+Every diff was checked with `git apply --check`, applied, and reversed (`-R --check`, `-R`) on line2 and on line2 with the guarded chain.
 `RULES-FOR-ALAN.md` is the plain-words before/after of each rules change. `dev/tests/test_draft_route.py` runs in both states: with the
 diff absent it applies it to a throwaway vault copy.
 

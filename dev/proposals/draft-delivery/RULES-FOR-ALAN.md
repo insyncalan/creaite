@@ -1,12 +1,9 @@
-# Rules changes for #183 and #250, in plain words
+# Rules changes for #183, in plain words
 
-For Alan to read before approving. Two diffs to `system/creaite-rules.md`, applied in this order, plus one skill file.
-Nothing else in the rules changes. Both are on `v262-183`, in `dev/proposals/`.
+For Alan to read before approving. One diff to `system/creaite-rules.md` plus one skill file.
+Nothing else in the rules changes. It is on `v262-183`, in `dev/proposals/`.
 
-1. `draft-delivery/rules-and-skill.diff` (#183): the rules file and `.claude/skills/cx-client-report/SKILL.md`.
-2. `fetch-transcripts/creaite-rules.diff` (#250): rules file only. It applies only after step 1 (both edit the same staging row).
-   If Jarvis's `vip-follow-rules` diff is applied first, use `fetch-transcripts/creaite-rules.after-vip.diff` instead of step 2
-   (the VIP diff and the #250 diff both edit the cx-sweep row, so the plain one fails after it). The VIP diff and #183 apply in either order.
+1. `draft-delivery/rules-and-skill.diff` (#183): the rules file and `.claude/skills/cx-client-report/SKILL.md`. It applies in either order with the VIP-follow rules diff.
 
 Changes in the order they appear in the file.
 
@@ -17,12 +14,9 @@ Changes in the order they appear in the file.
   do it, and every other Microsoft 365 action stays refused.
 - **Why:** you retired "never creates email drafts" on 19-10-2026 and IT now allows `outlook_create_draft`. This keeps the door that narrow.
 
-## 2. Folder map, `system/staging/` row (#183, then #250)
+## 2. Folder map, `system/staging/` row (#183)
 - **#183 adds** `drafted.json`: each Draft email put in Outlook or copied, as item IDs, times and fingerprints of the subject and
   addresses; never text. **Why:** the chase log needs to know a draft exists without keeping its words.
-- **#250 adds** to `transcripts.json` the times a sweep fetched a transcript, left it for Process or could not save it (and a count
-  of tries); and a new `sweep-fetched.json` (event IDs only, cleared when the sweep finishes). **Why:** so a transcript is fetched
-  once and a failure is visible.
 
 ## 3. Folder map, `system/scripts/` row (#183)
 - **Adds** `draft_delivery.py`: builds and checks the Outlook draft request, records the chase, matches Sent Items. Plain code;
@@ -35,13 +29,7 @@ Changes in the order they appear in the file.
 - The skill file says the same in three places (its description, its opening line and its Rules): "this skill never creates a draft;
   only the popup does, through the live server."
 
-## 5. Skills table, cx-sweep row (#250)
-- **Adds:** with `sweep.fetch_transcripts` on (off by default) a sweep also fetches ended meetings' transcripts into `inbox/`: read
-  only, Microsoft 365 reading tools only, no AI, nothing to the tracker; never a confidential meeting or one whose sensitivity is
-  missing or unknown. **Only in the live server's own run: no script writes `inbox/`**, so a sweep from Claude Code never fetches
-  (option 2, chosen by Jarvis/Alan 23-10-2026; you can overrule). **Why:** transcripts arrive without you pressing Load.
-
-## 6. New bullet "Draft email delivery" (#183), after the Project settings page bullet
+## 5. New bullet "Draft email delivery" (#183), after the Project settings page bullet
 - **Adds** the one place the whole mechanism is stated: the setting and its Outlook access Check; the popup's primary button; the
   route runs Claude headless with one allowed tool (ToolSearch) and one tool that only its hook can allow (`outlook_create_draft`: no hook, or a hook that fails, means no draft), every other Microsoft 365 tool, every other
   connector and every other built-in denied, in an empty folder outside the vault with no settings loaded, so it can read nothing;
@@ -51,9 +39,9 @@ Changes in the order they appear in the file.
   nothing and offers Copy instead; off means copy and paste as before. **Why:** this is the guard's definition; a reader of the rules
   sees what is allowed and what is checked.
 
-## 7. Assistant ("ask creaite") bullet (#183)
+## 6. Assistant ("ask creaite") bullet (#183)
 - **Adds** one sentence after "Microsoft 365 actions stay off": the one exception is not ask creaite's; it is the popup's
-  Create draft in Outlook (item 6). **Why:** so ask creaite's own bullet cannot be read as allowing it.
+  Create draft in Outlook (item 5). **Why:** so ask creaite's own bullet cannot be read as allowing it.
 
 ## What does not change
 `permissions.py` and `reach.py` stay as they are: `outlook_create_draft` stays in the Microsoft 365 action list, so every other run
