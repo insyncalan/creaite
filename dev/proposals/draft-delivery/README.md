@@ -11,7 +11,8 @@
 |---|---|
 | `live_server.diff` | The two routes: `POST /api/email/draft` (create, copied) and `POST /api/email/outlook-access` (the Settings Check). One block, after `/api/chase/pane`. |
 | `rules-and-skill.diff` | `system/creaite-rules.md` ("Microsoft 365 actions stay off" gets its one exception; cx-client-report's row; the Assistant paragraph; a new Draft email delivery bullet; `drafted.json` and `draft_delivery.py` in the folder map) and `.claude/skills/cx-client-report/SKILL.md` ("never creates email drafts" rewritten: the skill still never does; the popup may, with the setting on). |
-| `test_draft_route.py` | The route's tests, to move to `dev/tests/` with the diff. Verified: **7 pass with the diff applied** (in a scratch copy of the branch), the 5 original ones fail without it (404). |
+| `RULES-FOR-ALAN.md` | The rules changes in plain words, before and after, with why. |
+| (`dev/tests/test_draft_route.py`) | The route's tests, now in `dev/tests/`; they apply `live_server.diff` to a throwaway vault copy when the routes are absent. |
 
 ## Review fixes (#183 independent review, 20-10-2026)
 
@@ -32,8 +33,13 @@ vault as its working folder (as `launch.py` does) and asserts the run's folder i
 `permissions.NON_M365_MCP_DENY`. In this route's run they are stopped by headless default-deny and by `check()`; the same gap exists for
 the VIP/alert check and the other runs on main, which deny only the servers in that list.
 
-**Apply order:** `live_server.diff`, then `rules-and-skill.diff` (independent; either order applies), then move `test_draft_route.py` to
-`dev/tests/`. The branch's own files (`draft_delivery.py`, the popup, the tests) arrive when the branch is merged.
+**Apply order (rebuilt on `v261-line2`, 23-10-2026):** `live_server.diff` (guarded; applies to line2 and on top of the whole GUARDED-2.6.1.md chain), then
+`rules-and-skill.diff` (the rules file and cx-client-report's SKILL.md, regenerated for line2: the old one did not apply). The rules diff is
+`#183` first: `fetch-transcripts/creaite-rules.diff` (#250) applies only after it (both edit the staging row), and if the VIP-follow rules
+diff (`origin/v261-vip-rules`) lands first, use `fetch-transcripts/creaite-rules.after-vip.diff` instead. #183 and the VIP diff apply in either
+order. Every diff was checked with `git apply --check`, applied, and reversed (`-R --check`, `-R`) on line2 and on line2 with the guarded chain.
+`RULES-FOR-ALAN.md` is the plain-words before/after of each rules change. `dev/tests/test_draft_route.py` runs in both states: with the
+diff absent it applies it to a throwaway vault copy.
 
 ## What the branch already has (unguarded, committed)
 

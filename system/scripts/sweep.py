@@ -422,8 +422,7 @@ def stage(spec_file):
     print(summary + (f" — {paths.rel(out)}" if out else "") + (" — say review" if items else ""))
     for name in att.get("to_file", []):
         print(f"  To file in documents/: {name}")
-    for note in notes:
-        print("  Note: " + note)
+    print("".join(f"  Note: {n}\n" for n in notes), end="")
     tally_ignored(ignored)
     tally_run(items=len(items), possible=possible, skipped=sum(skipped.values()))     # #253: done logs these, not the summary
     sent_items(spec)                                                    # #183: drafted emails seen in Sent Items

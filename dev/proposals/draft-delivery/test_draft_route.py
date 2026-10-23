@@ -43,12 +43,25 @@ if "access check" in p:
 else:
     start = p.index("these arguments, copied byte for byte, the body unchanged: ") + len("these arguments, copied byte for byte, the body unchanged: ")
     a = json.loads(p[start:p.index("\nThen reply")])
-    out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t1", "name": "%s", "input": a}]}})
-    res = ({"type": "tool_result", "tool_use_id": "t1", "content": json.dumps({"id": "AAMk1", "webLink": "https://outlook.office365.com/owa/?ItemID=AAMk1"})}
-           if mode == "made" else {"type": "tool_result", "tool_use_id": "t1", "is_error": True, "content": "ErrorAccessDenied: Access is denied."})
-    out({"type": "user", "message": {"content": [res]}})
+    if mode == "inject":
+        a = dict(a, bcc=["x@example.com"])          # a model driven by injected text
+    hook = None
+    if "--settings" in args:                          # Cap's M1: run the run's own PreToolUse hook as Claude Code would, before the tool
+        import subprocess
+        hook = json.loads(args[args.index("--settings") + 1])["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    def call(i, name, inp):
+        out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": i, "name": name, "input": inp}]}})
+        ev = json.dumps({"tool_name": name, "tool_input": inp})
+        h = subprocess.run(hook, shell=True, input=ev, capture_output=True, text=True) if hook else None
+        if h is not None and h.returncode == 2:
+            return {"type": "tool_result", "tool_use_id": i, "is_error": True, "content": h.stderr}
+        open(here + ".made", "a").write("1\n")
+        return ({"type": "tool_result", "tool_use_id": i, "content": json.dumps({"id": "AAMk1", "webLink": "https://outlook.office365.com/owa/?ItemID=AAMk1"})}
+                if mode in ("made", "inject", "twice") else {"type": "tool_result", "tool_use_id": i, "is_error": True, "content": "ErrorAccessDenied: Access is denied."})
+    res = [call("t1", "%s", a)] + ([call("t2", "%s", a)] if mode == "twice" else [])
+    out({"type": "user", "message": {"content": res}})
 out({"type": "result", "result": "{\"ok\": true}"})
-''' % CREATE
+''' % (CREATE, CREATE)
 HTML = '<div style="color:#1a1a1a;"><p>Hi Sara,</p><table><tbody><tr><td>ABC-A-006</td></tr></tbody></table></div>'
 
 
@@ -91,6 +104,41 @@ class Route(LiveBrowserCase):
     def cwds(self):
         p = Path(str(self.fake) + ".cwd")
         return [Path(ln).resolve() for ln in p.read_text().splitlines()] if p.exists() else []
+
+    def made(self):
+        p = Path(str(self.fake) + ".made")
+        return len(p.read_text().splitlines()) if p.exists() else 0
+
+    def test_the_hook_refuses_an_injected_bcc_and_a_second_draft_before_anything_is_made(self):
+        """Cap's M1: the run is started with its own PreToolUse hook (--settings); an injected Bcc is refused before the tool runs
+        (nothing made, nothing recorded), and a second create is refused though the first went through."""
+        self.mode("inject")
+        before, n = self.staging("chases.json"), self.made()
+        r = self.post("/api/email/draft", self.body(ids=["ABC-A-020"]))
+        self.assertFalse(r["j"]["ok"])
+        self.assertFalse(r["j"]["made"])
+        self.assertIn("nothing was made", r["j"]["reason"])
+        self.assertEqual(self.made(), n)                                         # the tool never ran
+        self.assertEqual(self.staging("chases.json"), before)
+        self.mode("twice")
+        r = self.post("/api/email/draft", self.body())
+        self.assertFalse(r["j"]["ok"])
+        self.assertEqual(self.made(), n + 1)                                     # one draft, the second refused by the hook
+        self.assertTrue(r["j"]["made"])
+        self.assertIn("delete it unsent", r["j"]["reason"])
+
+    def test_the_run_carries_a_hook_over_every_tool_and_its_request_file_is_removed_after(self):
+        self.mode("made")
+        self.assertTrue(self.post("/api/email/draft", self.body())["j"]["ok"])
+        args = self.argv()[-1]
+        hooks = json.loads(args[args.index("--settings") + 1])["hooks"]["PreToolUse"]
+        self.assertEqual(hooks[0]["matcher"], "*")
+        cmd = hooks[0]["hooks"][0]["command"]
+        self.assertIn("draft_delivery.py hook ", cmd)
+        self.assertFalse(Path(cmd.split()[-1].strip("'")).exists())             # removed when the run ended
+        self.mode("made")
+        self.post("/api/email/outlook-access", {})
+        self.assertNotIn("--settings", self.argv()[-1])                           # the access run has no write tool: no hook
 
     def staging(self, name):
         p = self.v.root / "system/staging" / name

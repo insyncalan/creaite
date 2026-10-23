@@ -321,11 +321,11 @@ def hook_cleanup(path):
         try:
             os.remove(f)
         except OSError:
-            pass
+            pass                                         # already gone
     try:
         os.rmdir(os.path.dirname(path))
     except OSError:
-        pass
+        pass                                             # not empty or gone: a temp folder, left for the system to clear
 
 
 def hook_decision(tool, inp, args, claim):
@@ -353,6 +353,7 @@ def hook_main(argv):
             raise ValueError("not a request")
 
         def claim():
+            """True the first time (the used mark made), False after."""
             try:
                 os.close(os.open(path + ".used", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600))
                 return True

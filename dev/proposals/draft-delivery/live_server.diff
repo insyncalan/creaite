@@ -1,8 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index ded1d52..816d952 100644
+index 9b6f5144..6c8a040e 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -6724,6 +6724,129 @@ def chase_pane_route(handler, req):
+@@ -7241,6 +7241,141 @@ def chase_pane_route(handler, req):
  DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
  
  
@@ -12,9 +12,11 @@ index ded1d52..816d952 100644
 +# call; this route is the ONLY caller of the Microsoft 365 write tool, in a headless run whose allow list is exactly
 +# draft_delivery.allowed_tools() (outlook_create_draft and ToolSearch) and whose deny list names every other Microsoft 365 action
 +# (send_draft and send_mail among them), the other connectors and every built-in but ToolSearch: no Bash, no file tool, no guard
-+# hook needed because nothing in it can read or write the vault. The run's stream-json events are checked by draft_delivery.check
-+# (exactly one create-draft call, with exactly the arguments shown, no other tool) before anything is recorded; the chase is
-+# recorded only then. "copied" (Copy email with the setting on) keeps the references only, for the sweep's Sent Items match.
++# hook of the guard needed because nothing in it can read or write the vault. Cap's M1 (22-10-2026): the arguments are checked BEFORE
++# the tool runs, by a PreToolUse hook of the run's own (`--settings`, draft_delivery.hook_settings: create-draft only with exactly the
++# arguments shown and only once, ToolSearch, nothing else), so an injected To, Cc, Bcc or a second draft is never made. The run's
++# stream-json events are then checked by draft_delivery.check (the backstop) before anything is recorded; the chase is recorded only
++# then. "copied" (Copy email with the setting on) keeps the references only, for the sweep's Sent Items match.
 +# POST /api/email/outlook-access {}: Settings' Check, a run whose only Microsoft 365 tool is the reading tool get_granted_scopes.
 +# Never in the development repository; never from ask creaite (draft_delivery.py is not in reach.SCRIPT_COMMANDS: fails closed).
 +DRAFT_RUN_LOCK = threading.Lock()
@@ -35,14 +37,22 @@ index ded1d52..816d952 100644
 +    return out
 +
 +
-+def draft_run(prompt, allowed):
-+    """One headless run with only `allowed`; its stream-json events ([] when it couldn't start or timed out). #183 review M1: it
++def draft_hook_runner():
++    """How the draft run's PreToolUse hook starts draft_delivery.py: as the guard hook's runner starts reach.py (hook_runner)."""
++    r = hook_runner()
++    return [*r[:-1], r[-1].replace("reach.py", "draft_delivery.py")]
++
++
++def draft_run(prompt, allowed, hook_file=None):
++    """One headless run with only `allowed`; its stream-json events ([] when it couldn't start or timed out). `hook_file` (Cap's
++    M1): the request file the run's PreToolUse hook checks every tool call against, before it runs. #183 review M1: it
 +    starts in an empty folder outside the vault with NO_CONTEXT_ARGS (no setting sources, so none of the vault's allow rules, no
 +    CLAUDE.md, no session-start rule; no session saved) and NARROW_BUILTINS (ToolSearch the only built-in); the Microsoft 365
 +    connector is account-level, not a setting, so it stays (probed, Claude Code 2.1.x). MCP is not strict: it needs the connector."""
++    import draft_delivery
 +    cmd = prompt_last([claude_path(), "-p", "--output-format", "stream-json", "--verbose", *NO_CONTEXT_ARGS, *NARROW_BUILTINS,
-+                       "--allowedTools", ",".join(allowed),
-+                       "--disallowedTools", ",".join(draft_run_deny(allowed))], prompt)
++                       "--allowedTools", ",".join(allowed), "--disallowedTools", ",".join(draft_run_deny(allowed)),
++                       *(["--settings", draft_delivery.hook_settings(draft_hook_runner(), hook_file)] if hook_file else [])], prompt)
 +    try:
 +        r = subprocess.run(cmd, cwd=neutral_cwd(), capture_output=True, text=True, timeout=DRAFT_RUN_SECONDS,
 +                           env={**run_env(), **NO_CONTEXT_ENV})
@@ -90,8 +100,9 @@ index ded1d52..816d952 100644
 +        return handler.send(400, {"ok": False, "message": "Bad request"})
 +    if not DRAFT_RUN_LOCK.acquire(blocking=False):
 +        return handler.send(200, {"ok": False, "reason": "a draft is being made: wait a moment"})
++    hook_file = draft_delivery.hook_request_file(dreq)      # Cap's M1: the run's own hook checks the call against it, before it runs
 +    try:
-+        res = draft_delivery.check(draft_run(draft_delivery.prompt(dreq), draft_delivery.allowed_tools()), dreq)
++        res = draft_delivery.check(draft_run(draft_delivery.prompt(dreq), draft_delivery.allowed_tools(), hook_file), dreq)
 +        if debuglog is not None:
 +            debuglog.info("drafts", f"outlook draft: {'made' if res['ok'] else 'refused'}, {len(dreq['ids'])} item(s), "
 +                                    f"{len(dreq['args'].get('to') or [])} recipient(s), {len(dreq['args']['body'])} characters")
@@ -104,6 +115,7 @@ index ded1d52..816d952 100644
 +        return handler.send(200, {"ok": True, "web_link": res.get("web_link", ""), "no_recipient": dreq["no_recipient"],
 +                                  "chased": rec.get("chased") or [], "chases": json.loads(counts or "{}")})
 +    finally:
++        draft_delivery.hook_cleanup(hook_file)
 +        DRAFT_RUN_LOCK.release()
 +
 +

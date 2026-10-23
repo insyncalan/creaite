@@ -493,8 +493,8 @@ TABS = (("essentials", "Essentials"), ("work", "Work and reports"), ("sweep", "M
 ADVANCED_SUBS = (("review", "Review and warnings"), ("state", "Current state"), ("arch", "Archiving and backups"),
                  ("folders", "Folders and OneDrive"), ("server", "Server, search and logs"))
 GROUP_TAB = {
-    "You": "essentials", "Draft email": "essentials", "Your day": "essentials", "Saving and review": "essentials", "People I follow": "essentials",
-    "Safety": "essentials",
+    "You": "essentials", "Draft email": "essentials", "Your day": "essentials", "Saving and review": "essentials",
+    "People I follow": "essentials", "Safety": "essentials",
     "Opening views": "work", "Work board": "work", "Project page": "work", "Files": "work",
     "Checking mail and Teams": "sweep", "Meeting prep and Intake": "sweep", "Close the day": "sweep",
     "Reports and minutes": "reports", "Reminders": "reports",
