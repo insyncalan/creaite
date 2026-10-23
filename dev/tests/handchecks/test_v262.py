@@ -12,18 +12,21 @@ sheet for 2.6.2 yet, so the numbers are the items in order and the PM can number
    7 small2 review       approve and reject with --expect refuse an item that has changed or moved (the command line and /api/review)
    8 small2 review       a repeated --expect is refused, never the last one taken
    9 small2 inbox        an upload that fails part-way leaves no partial file in inbox/ and says it in plain words
+  10 #321                The New note drawer can be widened: a focusable separator handle (keyboard and pointer) up to the page width and
+                         never beyond it, remembered per viewer (the page still works when storage throws), a Reset width button, full
+                         width with no sideways scroll at 320 px, and no write to the server for a width change
 
 How a check is wired (every class has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Emit262                         a vault and no server: the engine's own commands, or its code run in the vault
   Discard262, Review262           a vault and its live server (the page's own token), no browser
   Inbox262                        a vault and a live server started with a file-size limit (a write past it fails, as a full disk does)
   Draft262                        a vault and a live server whose Claude is a stand-in that plays the draft run (never Microsoft 365)
-  Follow262, Today262             a vault, its live server and Chrome
+  Follow262, Today262, Drawer262  a vault, its live server and Chrome
 
 The guarded parts (emit, discard, follow, #183, small2) are the 2.6.2 chain, dev/proposals/GUARDED-2.6.2.chain.
 A check that needs a guarded change this tree does not have is an EXPECTED FAILURE (the convention test_v261_intake307_identity.py
 uses): it still runs, is red for the right reason, and turns into an unexpected success (flagged) the moment the change is in. With the
-chain applied they are plain checks. #322 is not guarded and is on the line.
+chain applied they are plain checks. #322 and #321 are not guarded and are on the line (check 10 is page-only: it passes with or without the chain).
 
 Run them (from the repository root; a release zip is built from this checkout first):
   python3 dev/tests/handchecks/test_v262.py                         all, with the committed tree (or --dirty: uncommitted engine files)
@@ -66,7 +69,7 @@ NOTES.clear()
 REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 
-KIND = {n: "scriptable" for n in range(1, 10)}
+KIND = {n: "scriptable" for n in range(1, 11)}
 LIVE_ONLY = {}        # check 4's last step (the draft in Outlook's Drafts folder) is live only, said in its note; the check itself runs
 
 
@@ -978,6 +981,241 @@ class Today262(HandcheckCase):
         self.assertEqual(back["mark"], 1, "all of it without a reload")
         self.assertEqual(b.errors, [], "no page errors")
         self.note(6, f"{full['rows']} rows shown; emptied: section, heading and filler gone; one item: back with count 1; emptied; read again: back; no reload")
+
+
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# 10  #321: the New note drawer can be widened
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+# A page whose storage throws, as in a private window or with site data blocked: the accessor and the methods all throw. Run on every
+# new document (Page.addScriptToEvaluateOnNewDocument), so it is in place before the page's own scripts.
+STORAGE_THROWS = """(()=>{ const boom=()=>{ throw new DOMException('storage is blocked','SecurityError'); };
+  try{ Object.defineProperty(window,'localStorage',{configurable:true,get:boom}); }catch(e){}
+  try{ for(const m of ['getItem','setItem','removeItem']) Storage.prototype[m]=boom; }catch(e){} })()"""
+WIDTH_KEY = "creaite-capture-width"
+
+
+class Drawer262(HandcheckCase):
+    """Check 10. Own vault, the live server and Chrome: the New note drawer is opened as a person opens it (⌘⇧N) and widened with the keys
+    and the mouse. Page only; nothing here needs the guarded chain."""
+    own_vault = True
+    DEFAULT = 440
+
+    STATE = """(()=>{ const d=document.getElementById('capDrawer'), h=document.getElementById('capResize'), r=d.getBoundingClientRect();
+      const hr=h&&h.getBoundingClientRect(), x=document.getElementById('capWidthReset'), done=document.getElementById('capDone');
+      let kept=null; try{ kept=localStorage.getItem(%s); }catch(e){ kept='THROWS'; }
+      const dr=done&&done.getBoundingClientRect();
+      return {open:!d.hidden, w:Math.round(r.width), left:Math.round(r.left), right:Math.round(r.right), iw:innerWidth,
+        sw:document.scrollingElement.scrollWidth, hx:hr&&Math.round(hr.left+hr.width/2), hy:hr&&Math.round(hr.top+hr.height/2),
+        role:h&&h.getAttribute('role'), tab:h&&h.tabIndex, name:h&&h.getAttribute('aria-label'), orient:h&&h.getAttribute('aria-orientation'),
+        min:h&&Number(h.getAttribute('aria-valuemin')), max:h&&Number(h.getAttribute('aria-valuemax')), now:h&&Number(h.getAttribute('aria-valuenow')),
+        kept:kept, reset:!!x&&x.getClientRects().length>0, resetText:x?x.textContent.trim():null, focus:!!h&&document.activeElement===h,
+        doneIn:!!dr&&dr.width>0&&dr.left>=0&&dr.right<=innerWidth}; })()""" % json.dumps(WIDTH_KEY)
+
+    def state(self):
+        return self.b.eval(self.STATE)
+
+    def open_drawer(self):
+        """⌘⇧N (Ctrl+Shift+N off a Mac), as a person opens it, from wherever the page is."""
+        b = self.b
+        b.eval("document.body.focus(); true")
+        b.key("N", (4 if b.is_mac() else 2) | 8)
+        b.wait("(()=>{ const d=document.getElementById('capDrawer'); return !!d && !d.hidden && !!document.getElementById('capResize'); })()", 15)
+        b.pump(0.3)
+        return self.state()
+
+    def press(self, key, modifiers=0):
+        self.b.key(key, modifiers)
+        return self.state()
+
+    def pointer_drag(self, to_x, steps=6, release=True):
+        """A real mouse press on the handle, a move to `to_x` (clientX) and the release: pointer events, hit-tested."""
+        b = self.b
+        s = self.state()
+        x0, y0 = s["hx"], s["hy"]
+        top = b.eval("(()=>{ const e=document.elementFromPoint(%d,%d); return e&&e.id; })()" % (x0, y0))
+        self.assertEqual(top, "capResize", "the handle is what the pointer meets on the drawer's edge")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=x0, y=y0, button="none")
+        b.call("Input.dispatchMouseEvent", type="mousePressed", x=x0, y=y0, button="left", buttons=1, clickCount=1)
+        for i in range(1, steps + 1):
+            b.call("Input.dispatchMouseEvent", type="mouseMoved", x=x0 + (to_x - x0) * i / steps, y=y0, button="left", buttons=1)
+            b.pump(0.01)
+        if release:
+            b.call("Input.dispatchMouseEvent", type="mouseReleased", x=to_x, y=y0, button="left", buttons=0, clickCount=1)
+        b.pump(0.15)
+        return self.state()
+
+    def writes_since(self, mark):
+        """The requests the page has made since `mark` (an index into the browser's events) that could change something on the server."""
+        self.b.pump(0.3)
+        return [(e["params"]["request"]["method"], e["params"]["request"]["url"]) for e in self.b.events[mark:]
+                if e.get("method") == "Network.requestWillBeSent" and e["params"]["request"]["method"] not in ("GET", "HEAD", "OPTIONS")]
+
+    def boot(self, why):
+        try:
+            self.b.reload("typeof go==='function' && LIVE", timeout=30)
+        except TimeoutError as e:
+            self.fail(f"{why}: the page did not start ({str(e)[:200]})")
+
+    def test_c10_new_note_drawer_can_be_widened_remembered_and_reset(self):
+        """10. (#321) The New note drawer opens at its default width (440 px). Its left edge is a separator handle (role separator, an
+        accessible name, focusable) that widens it with the arrow keys (Shift for bigger steps, End for the page width, Home or Enter back
+        to the default) and with a mouse drag, up to the page width and never beyond it, at 1400 px and at 900 px. The width is remembered
+        for this viewer only: a reload keeps it, and a page whose storage throws still starts, opens the drawer and widens it. The Reset
+        width button (shown only when the width is not the default) and a double-click on the handle return it to the default and forget
+        the remembered width. At 320 px the drawer is the full width of the page, with no sideways scroll and Done on screen. A width
+        change makes no request that writes (no POST), and changes nothing in the vault's settings."""
+        b = self.b
+        W = self.DEFAULT
+        settings = self.vault / "system/config/settings.json"
+        settings0 = settings.read_bytes()
+        writes = []
+
+        # the default
+        s = self.open_drawer()
+        self.assertTrue(s["open"], s)
+        self.assertEqual((s["w"], s["right"], s["left"]), (W, s["iw"], s["iw"] - W), f"the drawer opens at its default width: {s}")
+        self.assertIsNone(s["kept"], "nothing is remembered yet")
+        self.assertFalse(s["reset"], "Reset width is not offered at the default")
+        self.assertEqual((s["role"], s["tab"], s["orient"]), ("separator", 0, "vertical"), s)
+        self.assertTrue((s["name"] or "").strip(), "the handle has an accessible name")
+        self.assertEqual((s["min"], s["now"], s["max"]), (W, W, s["iw"]), "the handle says its range and where it is")
+        self.assertTrue(abs(s["hx"] - (s["iw"] - W)) <= 1, f"the handle sits on the drawer's left edge: {s}")
+        b.eval("document.getElementById('capResize').focus(); true")
+        self.assertTrue(self.state()["focus"], "the handle takes keyboard focus")
+        iw = s["iw"]
+
+        # the keys
+        mark = len(b.events)
+        s = self.press("ArrowLeft")
+        self.assertEqual((s["w"], s["now"], s["kept"]), (W + 24, W + 24, str(W + 24)), f"ArrowLeft widens by one step and remembers it: {s}")
+        self.assertEqual((s["left"], s["right"]), (iw - W - 24, iw))
+        self.assertTrue(s["reset"] and s["resetText"] == "Reset width", f"Reset width is offered once the width is not the default: {s}")
+        self.assertTrue(abs(s["hx"] - s["left"]) <= 1, "the handle moved with the edge")
+        self.assertTrue(s["focus"], "and keeps focus")
+        s = self.press("ArrowLeft", 8)
+        self.assertEqual((s["w"], s["kept"]), (W + 24 + 96, str(W + 120)), f"Shift+ArrowLeft takes four steps: {s}")
+        s = self.press("ArrowRight")
+        self.assertEqual((s["w"], s["now"]), (W + 96, W + 96), f"ArrowRight narrows by one step: {s}")
+        s = self.press("End")
+        self.assertEqual((s["w"], s["now"], s["kept"], s["left"]), (iw, iw, str(iw), 0), f"End goes to the page width: {s}")
+        self.assertLessEqual(s["sw"], iw, "no sideways scroll at the full width")
+        for _ in range(2):
+            s = self.press("ArrowLeft", 8)
+        self.assertEqual((s["w"], s["now"], s["kept"]), (iw, iw, str(iw)), f"past the page width the key goes no further: {s}")
+        s = self.press("Home")
+        self.assertEqual((s["w"], s["kept"], s["reset"]), (W, None, False), f"Home is the default again and forgets the remembered width: {s}")
+        s = self.press("ArrowRight")
+        self.assertEqual((s["w"], s["now"]), (W, W), f"and it is not narrower than the default: {s}")
+        s = self.press("ArrowLeft")
+        s = self.press("Enter")
+        self.assertEqual((s["w"], s["kept"]), (W, None), f"Enter is the default too: {s}")
+        writes += self.writes_since(mark)
+
+        # the mouse
+        mark = len(b.events)
+        s = self.pointer_drag(iw - 700)
+        self.assertEqual((s["w"], s["now"], s["kept"]), (700, 700, "700"), f"a drag to 700 px from the right edge: {s}")
+        self.assertTrue(abs(s["hx"] - (iw - 700)) <= 1)
+        s = self.pointer_drag(0)
+        self.assertEqual((s["w"], s["kept"], s["left"]), (iw, str(iw), 0), f"a drag to the left edge of the page is the page width: {s}")
+        self.assertLessEqual(s["sw"], iw)
+        s = self.pointer_drag(-300)
+        self.assertEqual((s["w"], s["now"], s["kept"]), (iw, iw, str(iw)), f"a drag beyond the page is held at the page width, in the page and in what is kept: {s}")
+        self.assertLessEqual(s["sw"], iw)
+        s = self.pointer_drag(iw - 100)
+        self.assertEqual(s["w"], W, f"a drag narrower than the default stops at the default: {s}")
+        s = self.pointer_drag(iw - 650)
+        self.assertEqual((s["w"], s["kept"]), (650, "650"), s)
+        writes += self.writes_since(mark)
+
+        # remembered for this viewer: a reload keeps it
+        self.boot("reload with a remembered width")
+        s = self.open_drawer()
+        self.assertEqual((s["w"], s["kept"], s["reset"]), (650, "650", True), f"a reload keeps the width: {s}")
+
+        # Reset width: a real click
+        mark = len(b.events)
+        b.click("#capWidthReset")
+        b.pump(0.2)
+        s = self.state()
+        self.assertEqual((s["w"], s["kept"], s["reset"]), (W, None, False), f"Reset width returns to the default, forgets it and goes away: {s}")
+        writes += self.writes_since(mark)
+        self.boot("reload after Reset width")
+        s = self.open_drawer()
+        self.assertEqual((s["w"], s["kept"]), (W, None), f"and a reload stays at the default: {s}")
+
+        # a double-click on the handle is the same
+        mark = len(b.events)
+        b.eval("document.getElementById('capResize').focus(); true")
+        self.press("ArrowLeft", 8)
+        self.assertEqual(self.state()["w"], W + 96)
+        b.click("#capResize", count=2)
+        b.pump(0.2)
+        s = self.state()
+        self.assertEqual((s["w"], s["kept"]), (W, None), f"a double-click on the handle puts the width back: {s}")
+        writes += self.writes_since(mark)
+
+        # storage that throws: the page starts, the drawer opens at the default and still widens, and Reset works
+        errors0 = len(b.errors)
+        ident = b.call("Page.addScriptToEvaluateOnNewDocument", source=STORAGE_THROWS)["identifier"]
+        try:
+            self.boot("storage that throws")
+            self.assertTrue(b.eval("(()=>{ try{ localStorage.getItem('x'); return false; }catch(e){ return true; } })()"), "the stand-in storage throws")
+            s = self.open_drawer()
+            self.assertEqual(s["w"], W, f"with unreadable storage the drawer opens at the default: {s}")
+            mark = len(b.events)
+            b.eval("document.getElementById('capResize').focus(); true")
+            s = self.press("ArrowLeft")
+            self.assertEqual((s["w"], s["now"]), (W + 24, W + 24), f"and widens with the keys: {s}")
+            s = self.pointer_drag(iw - 600)
+            self.assertEqual(s["w"], 600, f"and with the mouse: {s}")
+            b.click("#capWidthReset")
+            b.pump(0.2)
+            self.assertEqual(self.state()["w"], W, "and Reset width works")
+            writes += self.writes_since(mark)
+            self.assertEqual(b.errors[errors0:], [], "no page error from storage that throws")
+        finally:
+            b.call("Page.removeScriptToEvaluateOnNewDocument", identifier=ident)
+
+        # 900 px: the page width is the limit
+        self.boot("back to working storage")
+        b.resize(900, 800)
+        s = self.open_drawer()
+        self.assertEqual((s["iw"], s["w"]), (900, W), s)
+        mark = len(b.events)
+        b.eval("document.getElementById('capResize').focus(); true")
+        s = self.press("End")
+        self.assertEqual((s["w"], s["now"], s["kept"], s["left"]), (900, 900, "900", 0), f"at 900 px End is 900 px: {s}")
+        self.assertLessEqual(s["sw"], 900)
+        s = self.pointer_drag(-200)
+        self.assertEqual((s["w"], s["kept"]), (900, "900"), f"and a drag past the edge is held at 900 px: {s}")
+        writes += self.writes_since(mark)
+
+        # 320 px: the full width of the page (the width kept above is 900), no sideways scroll, Done on screen
+        b.resize(320, 700)
+        b.pump(0.3)
+        s = self.state()
+        self.assertEqual((s["iw"], s["w"], s["left"], s["right"]), (320, 320, 0, 320), f"at 320 px the drawer is the full width: {s}")
+        self.assertLessEqual(s["sw"], s["iw"], f"and the page does not scroll sideways: {s}")
+        self.assertTrue(s["doneIn"], f"Done is on screen: {s}")
+        s = self.press("End")
+        self.assertEqual((s["w"], s["left"]), (320, 0), s)
+        self.assertLessEqual(s["sw"], s["iw"])
+        b.eval("document.getElementById('capWidthReset') && document.getElementById('capWidthReset').click(); true")
+        b.pump(0.2)
+        self.assertIsNone(self.state()["kept"], "and Reset width clears it from there too")
+
+        # nothing was written: no request that writes, and the settings file is as it was
+        self.assertEqual(writes, [], f"a width change made requests that write: {writes}")
+        self.assertEqual(settings.read_bytes(), settings0, "the settings file is untouched")
+        # the watcher itself works: a POST from the page is seen
+        mark = len(b.events)
+        b.eval("fetch('/api/hc262-width-probe', {method: 'POST', body: '{}'}).then(r => r.status).catch(() => 0)")
+        self.assertTrue(any(m == "POST" and u.endswith("/api/hc262-width-probe") for m, u in self.writes_since(mark)), "the watcher sees a POST")
+        self.note(10, "440 default; keys (step 24, Shift 96, End, Home, Enter) and mouse drag held between the default and the page width at "
+                      "1400, 900 and 320 px; kept for a reload (650) and forgotten by Reset width and a double-click; unreadable storage "
+                      "starts the page and widens; 0 requests that write")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
