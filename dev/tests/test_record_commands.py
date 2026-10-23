@@ -87,6 +87,9 @@ def command(script, *words, wrapped=False):
 class Classified(unittest.TestCase):
     def test_every_script_and_command_is_classified(self):
         found = dispatched()
+        # #183: draft_delivery.py is out of SCRIPT_COMMANDS on purpose, so every ask creaite run refuses it (its README, check 5)
+        self.assertNotIn("draft_delivery.py", reach.SCRIPT_COMMANDS)
+        found.pop("draft_delivery.py", None)
         self.assertEqual(sorted(set(found) - set(reach.SCRIPT_COMMANDS)), [],
                          "scripts with a command line that BL-267's list (reach.SCRIPT_COMMANDS) doesn't classify")
         missing = sorted(f"{s} {c}" for s, cmds in found.items() for c in cmds
