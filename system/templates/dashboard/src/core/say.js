@@ -92,3 +92,6 @@ export function savedCapped(list, msg) {
 
 /** Why a file could not be added, one line: the page's own rule, or the server's answer in plain words. @param {string} name @param {string} why */
 export const addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
+
+/** #307: the minutes were filed or moved elsewhere while this view was open: exactly the server's two answers, nothing longer that merely says "isn't there". @param {unknown} m */
+export const isMovedMinutes = m => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m || "").trim());

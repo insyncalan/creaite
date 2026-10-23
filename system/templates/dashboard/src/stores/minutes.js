@@ -6,6 +6,7 @@
    /api/minutes/export. Nothing here writes any other way; nothing is sent.
    #275: trackApprove is Approve minutes by the Track column, the one implementation: the minutes view's Approve minutes and
    Review's Approve (and Approve n routine) on minutes kept as a record all call it, so both give the same result. */
+import { isMovedMinutes } from "../core/say.js";
 import { signal } from "@preact/signals";
 import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
@@ -204,7 +205,7 @@ export const HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcr
 
 /** #307: the minutes were filed or moved elsewhere while this view was open (the server's "That file isn't there." or "nothing pending"). */
 export const MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-export const isMovedMinutes = m => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m || "").trim());
+export { isMovedMinutes };   /* defined in core/say.js (plain words), used here and by the tests */
 
 /** #306: Approve minutes stopped because the transcript has left the inbox (the server's plain words say so). @param {string} m */
 export const isHeldMinutes = m => /transcript is no longer in your inbox/.test(String(m || ""));

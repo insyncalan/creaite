@@ -6093,6 +6093,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isLinkUrl: () => isLinkUrl,
     isMe: () => isMe,
     isMin: () => isMin,
+    isMovedMinutes: () => isMovedMinutes,
     isNewUndated: () => isNewUndated,
     isNotePath: () => isNotePath,
     isRecordMin: () => isRecordMin,
@@ -36626,6 +36627,7 @@ ${s5}`;
     return list.filter((x5) => x5.v === "rejected" ? no2-- > 0 : ok2-- > 0);
   }
   var addFailed = (name, why) => `${name}: ${plainSay(why).replace(/[.\s]+$/, "")}`;
+  var isMovedMinutes = (m5) => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m5 || "").trim());
 
   // core/intakeApi.js
   var SAFE_WHY = (m5) => /OSError|Errno|Traceback|(^|[\s'"(])\/(Users|private|home|var|tmp)\//i.test(m5) ? /too long/i.test(m5) ? "the file name is too long. Rename it and add it again" : "it couldn't be saved. Try again" : m5;
@@ -37389,7 +37391,6 @@ ${s5}`;
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
-  var isMovedMinutes = (m5) => /^(That file isn't there|That proposal is no longer pending)\.?$/i.test(String(m5 || "").trim());
   var isHeldMinutes = (m5) => /transcript is no longer in your inbox/.test(String(m5 || ""));
   async function fileWithoutTranscript(proposal) {
     const res = await api("/api/review", { file: proposal, ref: "meeting", decision: "approved", modes: ["without-transcript", "as-staged"] });
