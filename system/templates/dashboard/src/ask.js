@@ -566,6 +566,7 @@ shared.ASKSESSION=store.get(SESSK,store.get("creaite-ask-session",null)); shared
 /* BL-20: New chat and History. Chats are kept by the live server in system/staging/ask/ */
 export function setChat(chat,session){ const was=shared.ASKCHAT; if(chat!==was&&$("#chIn").value&&was!==null) draftSave();
   shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set(CHATK,chat); store.set(SESSK,session);
+  $("#chContL").hidden=!chat; if(chat!==was) $("#chCont").checked=false;   /* #327 B: a new ask starts fresh; ticking this resumes the whole thread */
   if(chat!==was){ if(was===null&&$("#chIn").value) draftSave(); else draftRestore(); } }
 export function newChat(){ if(shared.BUSY) return; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
 export async function loadChat(chat,quiet,skipRun){
@@ -602,7 +603,7 @@ export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; sh
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
 export let askLive = async function(q,confirmed){ const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
-  try{ await askStream("/api/ask",{message:q,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed,run:id,images:SENDIMG.length?SENDIMG:undefined},confirmed,ctl); } finally{ shared.RUN=null; setRunning(false); } };
+  try{ await askStream("/api/ask",{message:q,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed,run:id,images:SENDIMG.length?SENDIMG:undefined,continue:$("#chCont").checked||undefined},confirmed,ctl); } finally{ shared.RUN=null; setRunning(false); } };
 /* BL-37: runs belong to the live server. Closing the panel or the page doesn't stop one; on load the page reattaches
    (steps so far replayed, then live), the ask creaite button shows it's working, and a note says when it's done. */
 export async function attachRun(run){ if(run&&run.kind==="search") return reattachSearch(run);   /* BL-07: a search answer */ if(shared.RUN||!run) return;   /* BL-326: a run creaite started (a draft, a Prep page, a check or load) is drawn plainly: its ask, steps and closure */ const ctl=new AbortController(); shared.RUN={id:run.id,ctl,attached:true}; setRunning(!run.done);

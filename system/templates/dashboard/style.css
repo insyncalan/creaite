@@ -977,6 +977,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .chgrip:hover::after,.chgrip:focus-visible::after,body.chresizing .chgrip::after{background:var(--faint)} body.chresizing{cursor:ew-resize;user-select:none}
 @media (max-width:600px){#chat{width:100vw} .chgrip{display:none}}
 .chh{display:flex;align-items:center;gap:8px;padding:14px 12px 6px 16px} .chh h2{flex:1}
+.chcont{display:block;padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chcont input{margin-right:6px}
 .chs{padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:4px} .chs .dot.off{background:var(--bad)}
 .chq{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px;border-bottom:1px solid var(--line)}
 .chbtn{color:var(--muted)} #askBtn.working{position:relative} #askBtn.working::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--ok);animation:askpulse 1.2s ease-in-out infinite}

@@ -987,6 +987,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .chgrip:hover::after,.chgrip:focus-visible::after,body.chresizing .chgrip::after{background:var(--faint)} body.chresizing{cursor:ew-resize;user-select:none}
 @media (max-width:600px){#chat{width:100vw} .chgrip{display:none}}
 .chh{display:flex;align-items:center;gap:8px;padding:14px 12px 6px 16px} .chh h2{flex:1}
+.chcont{display:block;padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chcont input{margin-right:6px}
 .chs{padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:4px} .chs .dot.off{background:var(--bad)}
 .chq{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px;border-bottom:1px solid var(--line)}
 .chbtn{color:var(--muted)} #askBtn.working{position:relative} #askBtn.working::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--ok);animation:askpulse 1.2s ease-in-out infinite}
@@ -4464,6 +4465,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <aside id="chat" aria-label="ask creaite"><div class="chgrip" id="chGrip" role="separator" aria-orientation="vertical" aria-label="Resize ask creaite" tabindex="0" title="Drag to resize; double-click to reset"></div>
   <div class="chh"><h2>ask creaite</h2><button class="iconbtn chbtn" id="chNew" title="New chat" aria-label="New chat"><svg data-ic="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button><span class="dd"><button class="iconbtn chbtn" id="chHist" title="History" aria-label="History" aria-haspopup="menu" aria-expanded="false"><svg data-ic="history" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button></span><button class="iconbtn" id="chatClose" aria-label="Close" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
   <div class="chs" id="chSub"></div>
+  <label class="chcont" id="chContL" hidden><input type="checkbox" id="chCont"> Continue this chat (keeps the whole thread: slower and costs more)</label>
   <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
@@ -74812,6 +74814,8 @@ ${d5.text}`);
     shared.ASKSESSION = session;
     store.set(CHATK, chat);
     store.set(SESSK, session);
+    $("#chContL").hidden = !chat;
+    if (chat !== was) $("#chCont").checked = false;
     if (chat !== was) {
       if (was === null && $("#chIn").value) draftSave();
       else draftRestore();
@@ -74967,7 +74971,7 @@ ${d5.text}`);
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0 }, confirmed, ctl);
+      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl);
     } finally {
       shared.RUN = null;
       setRunning(false);
