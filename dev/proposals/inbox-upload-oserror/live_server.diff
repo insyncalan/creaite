@@ -1,6 +1,8 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 9b6f5144..f3091082 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -1708,11 +1708,19 @@
+@@ -1708,11 +1708,27 @@ class Handler(BaseHTTPRequestHandler):
              return self.send(413, {"ok": False, "message": "Files can be 25 MB at most"})
          if not data:
              return self.send(400, {"ok": False, "message": "That file is empty"})
@@ -11,12 +13,20 @@
 -        target.write_bytes(data)
 +        import errno
 +        try:
++            made = False
 +            paths.INBOX.mkdir(parents=True, exist_ok=True)
 +            target, n = paths.INBOX / f"{stem}{ext}", 2
-+            while target.exists():                 # never overwrite
-+                target, n = paths.INBOX / f"{stem} ({n}){ext}", n + 1
-+            target.write_bytes(data)
++            while True:                            # never overwrite: "xb" fails on a name that exists, so the next number is tried
++                try:
++                    with open(target, "xb") as out:
++                        made = True
++                        out.write(data)
++                    break
++                except FileExistsError:
++                    target, n = paths.INBOX / f"{stem} ({n}){ext}", n + 1
 +        except OSError as e:                       # 2.6.2: plain words, never the exception's text or a path; the log gets the kind only
++            if made:                               # this call made the file, and the write failed: no truncated copy is left for cx-minutes
++                target.unlink(missing_ok=True)
 +            if debuglog:
 +                debuglog.warn("inbox", f"upload not saved: {type(e).__name__} errno {e.errno}")
 +            long = e.errno == errno.ENAMETOOLONG
