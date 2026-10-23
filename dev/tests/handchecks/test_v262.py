@@ -1,42 +1,41 @@
 """creaite 2.6.2's hand checks, automated against a vault made from the release zip (the fictional demo portfolio: Falcon Data
 Platform and the rest). One check per item, `test_cNN_...`, its docstring quoting what the item must do. There is no Product Manager's
-sheet for 2.6.2 yet, so the numbers are the items in order and the PM can number them in:
+sheet for 2.6.2 yet, so the numbers are the items in order and the PM can number them in. F1 (#312, #314) and #250 (transcripts) went to
+2.6.3 on 23-10-2026 (Alan); their checks are in test_v263.py.
 
-   1 F1    (#312, #314)  nullable columns: migrate keeps change_log rowids with a gap, the item_events links, a second migrate is a no-op
-   2 emit  (#275)        a failing item_events insert rolls apply, undo and undo-changes back whole (rc 1, plain words); a dry run records nothing
-   3 discard (#275)      Undo puts back a genuine Discard and refuses a planted file, a symlink, a second hard link, a wrong checksum, a replay
-   4 follow              the follow flag is shown in the app, the word VIP never is; a person ticked Follow is alerted
-   5 #183  draft         the Outlook draft route fails closed: no hook, a crash, no decision, an injected Bcc, a second create all leave nothing made
-   6 #183  setting       Draft email in Outlook is off by default, and while off no run starts
-   7 #250  transcripts   a confidential meeting's transcript is never fetched, however the two events spell the meeting's URL, in either read order
-   8 #322                Today hides the Needs attention heading when it is empty, shows it with an item, live (no reload)
-   9 small2 review       approve and reject with --expect refuse an item that has changed or moved (the command line and /api/review)
-  10 small2 review       a repeated --expect is refused, never the last one taken
-  11 small2 inbox        an upload that fails part-way leaves no partial file in inbox/ and says it in plain words
+   1 emit  (#275)        a failing item_events insert rolls apply, undo and undo-changes back whole (rc 1, plain words); a dry run records nothing
+   2 discard (#275)      Undo puts back a genuine Discard and refuses a planted file, a symlink, a second hard link, a wrong checksum, a replay
+   3 follow              the follow flag is shown in the app, the word VIP never is; a person ticked Follow is alerted
+   4 #183  draft         the Outlook draft route fails closed: no hook, a crash, no decision, an injected Bcc, a second create all leave nothing made
+   5 #183  setting       Draft email in Outlook is off by default, and while off no run starts
+   6 #322                Today hides the Needs attention heading when it is empty, shows it with an item, live (no reload)
+   7 small2 review       approve and reject with --expect refuse an item that has changed or moved (the command line and /api/review)
+   8 small2 review       a repeated --expect is refused, never the last one taken
+   9 small2 inbox        an upload that fails part-way leaves no partial file in inbox/ and says it in plain words
 
 How a check is wired (every class has a vault of its own, made from the zip, so nothing a check changes reaches another):
-  F1262, Emit262, Fetch262        a vault and no server: the engine's own commands, or its code run in the vault
+  Emit262                         a vault and no server: the engine's own commands, or its code run in the vault
   Discard262, Review262           a vault and its live server (the page's own token), no browser
   Inbox262                        a vault and a live server started with a file-size limit (a write past it fails, as a full disk does)
   Draft262                        a vault and a live server whose Claude is a stand-in that plays the draft run (never Microsoft 365)
   Follow262, Today262             a vault, its live server and Chrome
 
-The guarded parts (F1, emit, discard, follow, #183, small2, #250's live-server half) are the 2.6.2 chain, dev/proposals/GUARDED-2.6.2.chain.
+The guarded parts (emit, discard, follow, #183, small2) are the 2.6.2 chain, dev/proposals/GUARDED-2.6.2.chain.
 A check that needs a guarded change this tree does not have is an EXPECTED FAILURE (the convention test_v261_intake307_identity.py
 uses): it still runs, is red for the right reason, and turns into an unexpected success (flagged) the moment the change is in. With the
-chain applied they are plain checks. #322 and #250's engine half are not guarded and are on the line.
+chain applied they are plain checks. #322 is not guarded and is on the line.
 
 Run them (from the repository root; a release zip is built from this checkout first):
   python3 dev/tests/handchecks/test_v262.py                         all, with the committed tree (or --dirty: uncommitted engine files)
-  python3 dev/tests/handchecks/test_v262.py F1262.test_c01_...      one check
-  python3 dev/tools/handcheck.py v2.6.2 [--dirty] [--only 1,5]      the runner (Results table, run folder)
+  python3 dev/tests/handchecks/test_v262.py Emit262.test_c01_...    one check
+  python3 dev/tools/handcheck.py v2.6.2 [--dirty] [--only 1,4]      the runner (Results table, run folder)
 Standalone, the module builds the zip itself, with the uncommitted engine files when the tree has any (the chain applied but not
 committed), and removes its run folder at the end (CREAITE_HC_KEEP=1 keeps it). With CREAITE_HC_BASE, CREAITE_HC_DIR and CREAITE_HC_ZIP
 set (what handcheck.py sets) it uses those. Safe at -j 3: every vault, port and folder is new, and every server and Chrome is stopped by
 its own process group (proc_guard), never by name.
 
 Never Microsoft 365, never a real model: Claude is the stand-in. Fictional data only (the demo's people).
-Live only: the draft actually appearing in Outlook's Drafts folder (check 5 proves nothing is made when it must not be, and what is
+Live only: the draft actually appearing in Outlook's Drafts folder (check 4 proves nothing is made when it must not be, and what is
 asked for when it may be; the real tool needs Alan's live Outlook test).
 """
 import base64
@@ -67,8 +66,8 @@ NOTES.clear()
 REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 
-KIND = {n: "scriptable" for n in range(1, 12)}
-LIVE_ONLY = {}        # check 5's last step (the draft in Outlook's Drafts folder) is live only, said in its note; the check itself runs
+KIND = {n: "scriptable" for n in range(1, 10)}
+LIVE_ONLY = {}        # check 4's last step (the draft in Outlook's Drafts folder) is live only, said in its note; the check itself runs
 
 
 def _src(name):
@@ -78,7 +77,6 @@ def _src(name):
 
 # What this tree has of the guarded 2.6.2 chain (read from the repository's own files, which the zip is built from)
 HAS = {
-    "f1": "engine_version" in _src("schema.sql") and "def stamp_apply" in _src("tracker.py"),
     "emit": "emit-event-txn" in _src("tracker.py"),
     "discard": "restore-discarded" in _src("review.py") and "/api/review/restore-discarded" in _src("live_server.py"),
     "follow": "creaite follow check" in _src("live_server.py") and "Follow" in _src("propose.py"),
@@ -87,7 +85,7 @@ HAS = {
     "inbox": "2.6.2: plain words" in _src("live_server.py"),
     "today": 'attnSec").hidden' in (REPO / "system/templates/dashboard/src/today.js").read_text(encoding="utf-8"),
 }
-CHAIN = {"f1": "F1 (schema.sql, tracker.py)", "emit": "emit-event-txn/tracker.diff", "discard": "discard-undo (review.py, reach.py, live_server.py)",
+CHAIN = {"emit": "emit-event-txn/tracker.diff", "discard": "discard-undo (review.py, reach.py, live_server.py)",
          "follow": "vip-follow-code and vip-follow-rules", "draft": "draft-delivery/live_server.diff (183h)",
          "expect": "review-expect (review.py, live_server.py)", "inbox": "inbox-upload-oserror/live_server.diff",
          "today": "#322"}
@@ -277,137 +275,11 @@ class Engine262(HandcheckCase):
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 1  F1: nullable columns
-# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-# The tables as the engine before F1 made them (the 2.6.1 CREATE statements), so the migration has something to migrate
-OLD_APPLIES = """CREATE TABLE applies (
-  apply_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-  at          TEXT NOT NULL DEFAULT (datetime('now')),
-  proposals   TEXT NOT NULL,
-  file_ops    TEXT,
-  undone_at   TEXT
-)"""
-OLD_CHANGE_LOG = """CREATE TABLE change_log (
-  at         TEXT NOT NULL DEFAULT (datetime('now')),
-  apply_id   INTEGER REFERENCES applies(apply_id),
-  tbl        TEXT NOT NULL,
-  item_id    TEXT NOT NULL,
-  field      TEXT NOT NULL,
-  old_value  TEXT,
-  new_value  TEXT,
-  op         TEXT NOT NULL DEFAULT 'update' CHECK (op IN ('insert','update','undo')),
-  via        TEXT NOT NULL
-)"""
-OLD_SHAPE = (("applies", OLD_APPLIES, ("apply_id", "at", "proposals", "file_ops", "undone_at")),
-             ("change_log", OLD_CHANGE_LOG, ("at", "apply_id", "tbl", "item_id", "field", "old_value", "new_value", "op", "via")))
-NEW_APPLY_COLS = ("author", "origin", "sequence", "engine_version")
-NEW_LOG_COLS = ("author", "origin", "sequence", "base_version", "engine_version")
-LINKS = ("SELECT e.event_id, e.change, c.item_id, c.field, c.old_value, c.new_value, c.apply_id FROM item_events e "
-         "LEFT JOIN change_log c ON c.rowid = e.change ORDER BY e.event_id")
-
-
-class F1262(Engine262):
-    """Check 1. A vault and no server: the database is taken back to the 2.6.1 shape, then migrated by the engine in the vault."""
-
-    @staticmethod
-    def make_old(db):
-        """The vault's database as the 2.6.1 engine left it: applies and change_log rebuilt from the old CREATE statements, every row
-        and rowid kept (the change_log index put back)."""
-        with closing(sqlite3.connect(db)) as con:
-            con.execute("PRAGMA foreign_keys = OFF")
-            for table, create, cols in OLD_SHAPE:
-                lst = ", ".join(cols)
-                con.execute(f"CREATE TABLE {table}_keep AS SELECT rowid AS _rid, {lst} FROM {table}")
-                con.execute(f"DROP TABLE {table}")
-                con.execute(create)
-                head = "rowid, " if table == "change_log" else ""
-                con.execute(f"INSERT INTO {table} ({head}{lst}) SELECT {'_rid, ' if head else ''}{lst} FROM {table}_keep ORDER BY _rid")
-                con.execute(f"DROP TABLE {table}_keep")
-            con.execute("CREATE INDEX IF NOT EXISTS change_log_item ON change_log(item_id)")
-            con.commit()
-
-    @staticmethod
-    def columns(db, table):
-        with closing(sqlite3.connect(db)) as con:
-            return {r[1]: r for r in con.execute(f"PRAGMA table_info({table})")}
-
-    def dump(self, query):
-        with closing(sqlite3.connect(self.vault / "system/tracker.db")) as con:
-            return con.execute(query).fetchall()
-
-    @needs("f1")
-    def test_c01_f1_migrate_keeps_change_log_rowids_with_a_gap_and_the_item_event_links(self):
-        """1. (#312, #314) A 2.6.1 database with a gap in change_log's rowids is migrated by `tracker.py migrate`: every change_log row keeps
-        its rowid, so every item_events link and every `revert:<rowids>` still names the same change; the new columns are there and
-        nullable; every value is kept; integrity and foreign keys are clean; a second migrate changes nothing (the file is the same
-        bytes); a new apply is stamped with the engine's version."""
-        db = self.vault / "system/tracker.db"
-        events = self.count("item_events")
-        self.assertGreater(events, 100, "the demo's history has item_events to point at the log")
-        self.make_old(db)
-        self.assertNotIn("engine_version", self.columns(db, "applies"), "the fixture is the 2.6.1 shape")
-        ids = [r[0] for r in self.dump("SELECT rowid FROM change_log ORDER BY rowid")]
-        gap = ids[len(ids) // 3]
-        with closing(sqlite3.connect(db)) as con:                    # a hand-made gap in the middle, and the event that named it with it
-            con.execute("DELETE FROM change_log WHERE rowid = ?", (gap,))
-            con.execute("DELETE FROM item_events WHERE change = ?", (gap,))
-            con.commit()
-        rows = "SELECT rowid, at, apply_id, tbl, item_id, field, old_value, new_value, op, via FROM change_log ORDER BY rowid"
-        before = {"log": self.dump(rows), "links": self.dump(LINKS), "applies": self.dump("SELECT apply_id, at, proposals, file_ops, undone_at FROM applies ORDER BY apply_id"),
-                  "actions": self.dump("SELECT * FROM actions ORDER BY id")}
-        numbers = [r[0] for r in before["log"]]
-        self.assertNotEqual(numbers, list(range(1, len(numbers) + 1)), "the fixture has a gap in the rowids")
-        self.assertGreater(len(before["links"]), 100)
-
-        code, out = self.run_in_vault("tracker.py", "migrate")
-        self.assertEqual(code, 0, out[-600:])
-        self.assertIn("Migrated", out)
-        for table, cols in (("applies", NEW_APPLY_COLS), ("change_log", NEW_LOG_COLS)):
-            info = self.columns(db, table)
-            for c in cols:
-                self.assertIn(c, info, f"{table}.{c}")
-                self.assertEqual((info[c][3], info[c][4]), (0, None), f"{table}.{c} is nullable with no default")
-        self.assertEqual(self.dump(rows), before["log"], "every change_log row keeps its rowid and every value")
-        self.assertEqual(self.dump(LINKS), before["links"], "every item_events link still names the same change (item, field, values)")
-        self.assertEqual(self.dump("SELECT apply_id, at, proposals, file_ops, undone_at FROM applies ORDER BY apply_id"), before["applies"])
-        self.assertEqual(self.dump("SELECT * FROM actions ORDER BY id"), before["actions"], "no work item moved")
-        self.assertTrue(all(r[0] is None for r in self.dump(f"SELECT {', '.join(NEW_LOG_COLS)} FROM change_log")), "old rows are NULL in the new columns")
-        with closing(sqlite3.connect(db)) as con:
-            self.assertEqual(con.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-            self.assertEqual(con.execute("PRAGMA foreign_key_check").fetchall(), [])
-        backups = sorted((self.vault / "system/backups").glob("tracker-*-migrate.db"))
-        self.assertTrue(backups, "migrate takes a dated copy first")
-
-        was = hashlib.sha256(db.read_bytes()).hexdigest()
-        code, out = self.run_in_vault("tracker.py", "migrate")
-        self.assertEqual(code, 0, out[-300:])
-        self.assertIn("up to date", out)
-        self.assertEqual(hashlib.sha256(db.read_bytes()).hexdigest(), was, "the second migrate changes nothing")
-        self.assertEqual(sorted((self.vault / "system/backups").glob("tracker-*-migrate.db")), backups, "and takes no new copy")
-
-        self.apply_and_check_stamp()
-        self.note(1, f"{len(numbers)} change_log rows, rowid {gap} removed; {len(before['links'])} item_events links identical before and after; "
-                     "second migrate: same file bytes")
-
-    def apply_and_check_stamp(self):
-        version = (self.vault / "VERSION").read_text(encoding="utf-8").strip()
-        self.stage_edit([self.new_action("Book the retrospective room")], "hc262-f1")
-        code, out = self.run_in_vault("tracker.py", "apply")
-        self.assertEqual(code, 0, out[-400:])
-        last = self.sql("SELECT apply_id, engine_version, author, origin, sequence FROM applies ORDER BY apply_id DESC LIMIT 1")[0]
-        self.assertEqual((last["engine_version"], last["author"], last["origin"], last["sequence"]), (version, None, None, None))
-        top = max(r[0] for r in self.dump("SELECT rowid FROM change_log"))
-        self.assertGreater(top, max(r[0] for r in self.dump("SELECT rowid FROM change_log WHERE apply_id IS NOT NULL AND apply_id < %d" % last["apply_id"])),
-                           "new rows go after the highest rowid")
-
-
-# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 2  emit: a failing item_events insert rolls the whole change back
+# 1  emit: a failing item_events insert rolls the whole change back
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 class Emit262(Engine262):
-    """Check 2. A vault and no server: a trigger in the vault's own database makes every insert into item_events fail, as a full disk would."""
+    """Check 1. A vault and no server: a trigger in the vault's own database makes every insert into item_events fail, as a full disk would."""
 
     def state(self):
         return {"change_log": self.count("change_log"), "applies": self.count("applies"), "actions": self.count("actions"),
@@ -432,8 +304,8 @@ class Emit262(Engine262):
         self.assertNotIn("sqlite", out.lower())
 
     @needs("emit")
-    def test_c02_emit_a_failing_history_insert_rolls_apply_undo_and_undo_changes_back_whole(self):
-        """2. (#275) When the history insert (item_events) fails, `tracker.py apply`, `undo` and `undo-changes` each stop with exit 1 and a
+    def test_c01_emit_a_failing_history_insert_rolls_apply_undo_and_undo_changes_back_whole(self):
+        """1. (#275) When the history insert (item_events) fails, `tracker.py apply`, `undo` and `undo-changes` each stop with exit 1 and a
         plain message and write nothing at all (no change_log rows, no applies row, no work item, no event); the proposal is byte for
         byte as it was, so every approval stands. A dry run (`validate`) records nothing, with a healthy history and with a failing one,
         and flags no item invalid. With the fault gone the same proposal applies and undoes."""
@@ -493,16 +365,16 @@ class Emit262(Engine262):
         self.assertEqual(code, 0, out[-400:])
         code, out = self.run_in_vault("tracker.py", "undo")
         self.assertIn(code, (0, 1), out[-300:])
-        self.note(2, "apply, undo and undo-changes each exit 1 with 'nothing was written' and change no row; the proposal is the same bytes; "
+        self.note(1, "apply, undo and undo-changes each exit 1 with 'nothing was written' and change no row; the proposal is the same bytes; "
                      "a dry run records nothing")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 3  Discard and its Undo
+# 2  Discard and its Undo
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 class Discard262(Engine262):
-    """Check 3. A vault and its live server: Discard through the page's own route, Undo through the new one."""
+    """Check 2. A vault and its live server: Discard through the page's own route, Undo through the new one."""
     with_server = True
 
     def discarded(self, title):
@@ -534,8 +406,8 @@ class Discard262(Engine262):
         return res["message"]
 
     @needs("discard")
-    def test_c03_discard_undo_restores_a_genuine_discard_and_refuses_everything_else(self):
-        """3. (#275) Discard on held minutes sets the proposal aside; Undo puts it back byte for byte, in Review again, and writes nothing to
+    def test_c02_discard_undo_restores_a_genuine_discard_and_refuses_everything_else(self):
+        """2. (#275) Discard on held minutes sets the proposal aside; Undo puts it back byte for byte, in Review again, and writes nothing to
         the record. Undo refuses, in words and moving nothing: a file planted in the set-aside folder, a symlink, a second hard link, a
         file whose checksum differs from the one Discard recorded, and a replay (a second Undo of the same name)."""
         decided = self.count("actions"), self.count("applies")
@@ -592,16 +464,16 @@ class Discard262(Engine262):
         code, res = self.restore(name4)
         self.assertEqual((code, res.get("ok")), (200, True), "with the second link gone the genuine Undo works: " + str(res))
         self.assertEqual(self.staging(name4).read_bytes(), before4)
-        self.note(3, "Undo restored a genuine Discard byte for byte; refused a planted file, a forged checksum, an edited file, a symlink, a "
+        self.note(2, "Undo restored a genuine Discard byte for byte; refused a planted file, a forged checksum, an edited file, a symlink, a "
                      "second hard link and a replay, each in words with nothing moved")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 9, 10  small2: review --expect
+# 7, 8  small2: review --expect
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 class Review262(Engine262):
-    """Checks 9 and 10. A vault and its live server: pending mail proposals of the check's own, decided from the command line and through /api/review."""
+    """Checks 7 and 8. A vault and its live server: pending mail proposals of the check's own, decided from the command line and through /api/review."""
     with_server = True
     _n = 0
 
@@ -636,8 +508,8 @@ class Review262(Engine262):
         return self.run_in_vault("review.py", *args)
 
     @needs("expect")
-    def test_c09_review_expect_approve_and_reject_refuse_an_item_that_changed_or_moved(self):
-        """9. (small2, #314) `review.py approve N --expect <fp>` and `reject N --expect <fp>` (and /api/review with `expect`, as the page
+    def test_c07_review_expect_approve_and_reject_refuse_an_item_that_changed_or_moved(self):
+        """7. (small2, #314) `review.py approve N --expect <fp>` and `reject N --expect <fp>` (and /api/review with `expect`, as the page
         sends it) act only if item N is still the item the caller meant: a matching fingerprint decides that item and no other; an item
         changed under the caller, or renumbered because another was taken out, is refused in one plain line (exit 2, nothing decided,
         no traceback, no path); a call without --expect is unchanged."""
@@ -698,12 +570,12 @@ class Review262(Engine262):
         code, out = self.review("approve", str(self.number(name_c, 2)))
         self.assertEqual(code, 0, out)
         self.assertEqual(self.decisions(name_c), {1: "approved", 2: "approved"})
-        self.note(9, "a match decides one item; a changed or moved item is refused (exit 2, 'has changed since you looked at it') by the command "
+        self.note(7, "a match decides one item; a changed or moved item is refused (exit 2, 'has changed since you looked at it') by the command "
                      "line and /api/review, nothing decided; no --expect behaves as before")
 
     @needs("expect")
-    def test_c10_review_expect_a_repeated_expect_is_refused_never_the_last_one_taken(self):
-        """10. (small2 note 4) `approve N --expect=<wrong> --expect=<right>` and `--expect=<right> --expect=<wrong>` and the same fingerprint
+    def test_c08_review_expect_a_repeated_expect_is_refused_never_the_last_one_taken(self):
+        """8. (small2 note 4) `approve N --expect=<wrong> --expect=<right>` and `--expect=<right> --expect=<wrong>` and the same fingerprint
         twice are all refused (exit 2, '--expect goes with …'), in either order, with nothing decided; one --expect with the right
         fingerprint still decides."""
         name = self.sweep_file(["Hotel boat count", "India roof survey"])
@@ -720,11 +592,11 @@ class Review262(Engine262):
         code, out = self.review("approve", str(n), f"--expect={right}")
         self.assertEqual(code, 0, out)
         self.assertEqual(self.decisions(name), {1: "approved", 2: "pending"})
-        self.note(10, "a repeated --expect is refused in every order and form (approve and reject), nothing decided")
+        self.note(8, "a repeated --expect is refused in every order and form (approve and reject), nothing decided")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 11  small2: inbox upload
+# 9  small2: inbox upload
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def _limit_file_size():
@@ -733,7 +605,7 @@ def _limit_file_size():
 
 
 class Inbox262(Engine262):
-    """Check 11. A vault and a live server with a file-size limit."""
+    """Check 9. A vault and a live server with a file-size limit."""
     with_server = True
     preexec = staticmethod(_limit_file_size)
 
@@ -745,8 +617,8 @@ class Inbox262(Engine262):
         return sorted(p.name for p in (self.vault / "inbox").iterdir())
 
     @needs("inbox")
-    def test_c11_inbox_upload_that_fails_part_way_leaves_no_partial_file(self):
-        """11. (small2) An upload whose write fails part-way (the disk is full) answers in plain words (no exception text, no path), leaves
+    def test_c09_inbox_upload_that_fails_part_way_leaves_no_partial_file(self):
+        """9. (small2) An upload whose write fails part-way (the disk is full) answers in plain words (no exception text, no path), leaves
         no truncated file in inbox/ for cx-minutes to read, never removes a file it did not make, and a retry that fits is saved under the
         same name, not 'name (2)'. A name of 300 characters says the name is too long."""
         inbox = self.vault / "inbox"
@@ -769,11 +641,11 @@ class Inbox262(Engine262):
         self.assertEqual((code, res.get("ok")), (400, False), res)
         self.assertEqual(res.get("message"), "The file name is too long. Rename it and add it again.")
         self.assertNotIn("big (2).vtt", self.inbox())
-        self.note(11, "a write that failed part-way left nothing in inbox/; the retry kept the name; plain words, no path")
+        self.note(9, "a write that failed part-way left nothing in inbox/; the retry kept the name; plain words, no path")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 5, 6  #183: Draft email into Outlook
+# 4, 5  #183: Draft email into Outlook
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 CREATE = "mcp__claude_ai_Microsoft_365__outlook_create_draft"
@@ -833,7 +705,7 @@ HTML = '<div style="color:#1a1a1a;"><p>Hi Sara,</p><table><tbody><tr><td>FAL-A-0
 
 
 class Draft262(Engine262):
-    """Checks 5 and 6. A vault and a live server whose Claude is the stand-in above."""
+    """Checks 4 and 5. A vault and a live server whose Claude is the stand-in above."""
     with_server = True
 
     @classmethod
@@ -877,8 +749,8 @@ class Draft262(Engine262):
         self.assertEqual(self.record("drafted.json"), before_drafted, f"{why}: a draft was recorded")
 
     @needs("draft")
-    def test_c05_draft_in_outlook_fails_closed_when_the_hook_is_missing_crashes_says_nothing_or_sees_an_injection(self):
-        """5. (#183) With Draft email in Outlook on and Claude stood in for, the draft is made only through the run's own hook, once, with
+    def test_c04_draft_in_outlook_fails_closed_when_the_hook_is_missing_crashes_says_nothing_or_sees_an_injection(self):
+        """4. (#183) With Draft email in Outlook on and Claude stood in for, the draft is made only through the run's own hook, once, with
         exactly the arguments asked for. With no hook, a hook that crashes, a hook that gives no decision, an injected Bcc, or a second
         create, nothing is made (or, for a second create, only the one) and nothing is recorded; the run's allow list is ToolSearch alone,
         the send, update and delete tools are denied, and the request file the hook read is removed afterwards. No Microsoft 365 call is made."""
@@ -938,12 +810,12 @@ class Draft262(Engine262):
                 self.assertEqual(self.post("/api/email/draft", self.body(), token=False)[0], 403)
         finally:
             self.set_setting("draft_email", "outlook_drafts", False if was == "__absent__" else was)
-        self.note(5, "genuine draft made once through the hook; no hook, a crashing hook, no decision, an injected Bcc and a second create left "
+        self.note(4, "genuine draft made once through the hook; no hook, a crashing hook, no decision, an injected Bcc and a second create left "
                      "nothing (or one) made and nothing recorded; the real draft in Outlook is live only")
 
     @needs("draft")
-    def test_c06_draft_in_outlook_is_off_by_default_and_while_off_no_run_starts(self):
-        """6. (#183) A new vault has Draft email in Outlook off (settings-defaults and the effective setting); a draft request while it is
+    def test_c05_draft_in_outlook_is_off_by_default_and_while_off_no_run_starts(self):
+        """5. (#183) A new vault has Draft email in Outlook off (settings-defaults and the effective setting); a draft request while it is
         off is refused in words before any run starts (the stand-in is never called), and nothing is recorded."""
         defaults = json.loads((self.vault / "system/templates/settings-defaults.json").read_text(encoding="utf-8"))
         self.assertIs(defaults["draft_email"]["outlook_drafts"], False)
@@ -960,102 +832,18 @@ class Draft262(Engine262):
         code, res = self.post("/api/email/draft", self.body(), token=False)
         self.assertEqual(code, 403, "and without the page's token it is refused before anything")
         self.assertEqual(len(self.draft_runs()), n)
-        self.note(6, "off in settings-defaults and in the new vault; a create is refused in words before any run; nothing recorded")
+        self.note(5, "off in settings-defaults and in the new vault; a create is refused in words before any run; nothing recorded")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 7  #250: fetch transcripts
-# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-class Fetch262(Engine262):
-    """Check 7. A vault and no server: the live server's observer (transcripts.SweepFetch) handed the reads a sweep makes, which are
-    stood in for with fixture results. Microsoft 365 is never called."""
-
-    def prepare_calendar(self):
-        """Yesterday's three online meetings in the saved calendar: ev-1 confidential, ev-2 and ev-3 normal. Returns the day."""
-        day = (date.fromisoformat((self.now or str(date.today()))[:10]) - timedelta(days=1)).isoformat()
-        rows = [{"id": f"ev-{k}", "start": "09:00", "end": "10:00", "title": f"Harbour review {k}", "teams": True, "all_day": False,
-                 "sensitivity": "confidential" if k == 1 else "normal"} for k in (1, 2, 3)]
-        cal = self.staging("calendar.json")
-        cal.write_text(json.dumps({"fetched": f"{day} 07:00", "days": {day: rows}}), encoding="utf-8")
-        self.set_setting("sweep", "fetch_transcripts", True)
-        return day
-
-    def observe(self, steps):
-        """What the observer fetched, given [(uri, payload, is_error)] read_resource results in order: {event id: outcome}."""
-        code = ("import transcripts as T\nj = T.SweepFetch()\n"
-                "for u, r, e in json.loads(%r):\n    j.observe(T.M365 + 'read_resource', {'uri': u}, json.dumps(r), e)\n"
-                "print(json.dumps(j.outcomes))" % json.dumps(steps))
-        return self.py(code)
-
-    def inbox_text(self):
-        inbox = self.vault / "inbox"
-        return {p.name: p.read_text(encoding="utf-8", errors="replace") for p in inbox.iterdir() if p.suffix in (".vtt", ".txt")}
-
-    @staticmethod
-    def event(day, eid, uri, sensitivity="normal"):
-        return {"id": eid, "subject": f"Harbour review {eid[-1]}", "isOrganizer": True, "isCancelled": False, "sensitivity": sensitivity,
-                "organizer": {"name": "Alan Carter", "address": "alan.carter@example.com"},
-                "attendees": [{"name": "Sara Khan", "address": "sara.khan@example.com"}],
-                "start": {"dateTime": f"{day}T09:00:00.0000000", "timeZone": "UTC"}, "end": {"dateTime": f"{day}T10:00:00.0000000", "timeZone": "UTC"},
-                "onlineMeeting": {"joinUrl": "https://teams.example.test/l/meetup-join/hc262"}, "meetingTranscriptUrl": uri}
-
-    @staticmethod
-    def transcript(day, text):
-        cue = f"WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n<v Sara Khan>{text}</v>\n"
-        return {"meeting": {"id": "m1", "subject": "Harbour review"},
-                "transcripts": [{"id": "tr0", "createdDateTime": f"{day}T09:05:30Z", "endDateTime": f"{day}T09:55:00Z", "content": cue}]}
-
-    def test_c07_fetch_a_confidential_meetings_transcript_is_never_fetched_however_its_url_is_written(self):
-        """7. (#250) With fetching on, a confidential meeting's transcript is never written to inbox/, and never under another event's name:
-        a normal event that names the same meeting by another spelling of its URL (upper case, a trailing slash, a fragment, an extra
-        query, percent-encoding, a double slash, another window) ties to nobody, whichever event is read first and whichever of the two
-        URLs the transcript is read by. Nothing reaches the tracker, nothing is staged. A lone normal meeting is fetched (the control)."""
-        day = self.prepare_calendar()
-        secret = "CONFIDENTIAL-HR-TEXT-HC262"
-        conf = self.transcript(day, secret)
-        base = "meeting-transcript:///events/hc262meetingone"
-        window = f"start={day}T09:00:00Z&end={day}T10:00:00Z"
-        u = f"{base}?{window}"
-        variants = {"upper case": base.replace("meeting-transcript", "MEETING-TRANSCRIPT") + "?" + window, "trailing slash": base + "/?" + window,
-                    "a fragment": u + "#frag", "an extra query": u + "&extra=1", "no query": base, "percent-encoded": base.replace("hc262", "%68c262") + "?" + window,
-                    "a double slash": base.replace("/events/", "//events/", 1) + "?" + window, "upper-case path": base.upper().replace("MEETING-TRANSCRIPT", "meeting-transcript") + "?" + window}
-        applies, staged = self.count("applies"), self.pending()
-        ev1 = ("calendar:///events/ev-1", self.event(day, "ev-1", u, "confidential"), False)
-        for name, spelling in variants.items():
-            ev2 = ("calendar:///events/ev-2", self.event(day, "ev-2", spelling), False)
-            for order in ((ev1, ev2), (ev2, ev1)):
-                for read_uri in (spelling, u):
-                    with self.subTest(spelling=name, first=order[0][0][-4:], read=("its own" if read_uri == spelling else "the confidential one")):
-                        got = self.observe([*order, (read_uri, conf, False)])
-                        self.assertEqual(got, {}, f"fetched: {got}")
-                        leaked = [n for n, t in self.inbox_text().items() if secret in t]
-                        self.assertEqual(leaked, [], "the confidential text reached inbox/")
-        # the same, with the confidential event read first but never read again, and a transcript read the run never named
-        self.assertEqual(self.observe([(f"{base}?{window}", conf, False)]), {}, "a transcript no event read named is never tied")
-        self.assertFalse(any(secret in t for t in self.inbox_text().values()))
-
-        # the control: a lone normal meeting, read as the sweep reads it, is fetched into inbox/
-        u3 = f"meeting-transcript:///events/hc262meetingthree?{window}"
-        got = self.observe([("calendar:///events/ev-3", self.event(day, "ev-3", u3), False), (u3, self.transcript(day, "A normal meeting."), False)])
-        self.assertEqual(got, {"ev-3": "fetched"}, "the control: the harness can fetch a normal meeting")
-        files = self.inbox_text()
-        self.assertTrue(any("A normal meeting." in t for t in files.values()), "and its text is in inbox/")
-        self.assertFalse(any(secret in t for t in files.values()))
-        self.assertEqual(self.count("applies"), applies, "nothing reached the tracker")
-        self.assertEqual(self.pending(), staged, "and nothing was staged")
-        self.note(7, f"{len(variants)} spellings x 2 read orders x 2 read URLs: nothing fetched, no confidential text in inbox/; control fetched")
-
-
-# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# 4, 8  in the browser
+# 3, 6  in the browser
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 VIP_WORD = re.compile(r"\bVIPs?\b", re.I)
 
 
 class Follow262(HandcheckCase):
-    """Check 4. Own vault: an alert from a followed person is recorded with the check's own command (sweep.py vip record)."""
+    """Check 3. Own vault: an alert from a followed person is recorded with the check's own command (sweep.py vip record)."""
     own_vault = True
     CONV = "19:hc262-follow@thread.v2"
     RASHID = "Rashid Al Suwaidi <rashid@northgate.example>"
@@ -1071,8 +859,8 @@ class Follow262(HandcheckCase):
                     {"id": "m1", "from": self.RASHID, "at": f"{day} 08:40", "text": "HC262 MESSAGE TEXT NEVER KEPT"}]}
 
     @needs("follow")
-    def test_c04_follow_flag_is_shown_in_the_app_and_the_word_vip_never_is(self):
-        """4. (follow) A person ticked Follow in the people register (or in the older VIP column, still read) is alerted when they write; the
+    def test_c03_follow_flag_is_shown_in_the_app_and_the_word_vip_never_is(self):
+        """3. (follow) A person ticked Follow in the people register (or in the older VIP column, still read) is alerted when they write; the
         alert is on Today. Nowhere the app shows text — Today, Work, Intake, Files, Activity, Projects, People, Help, Settings, the
         shipped Help and the register template — does the word VIP appear; the app says Follow. The command line's own lines say 'follow'."""
         b = self.b
@@ -1111,7 +899,7 @@ class Follow262(HandcheckCase):
             left = [ln for ln in text.splitlines() if VIP_WORD.search(ln)]
             self.assertTrue(len(left) <= 1 and all("older" in ln for ln in left), f"{rel}: {left[:2]}")
         self.assertEqual(b.errors, [], "no page errors")
-        self.note(4, f"{len(shown)} screens read: no VIP; alert recorded with its lines saying follow; Follow and the older VIP column both read")
+        self.note(3, f"{len(shown)} screens read: no VIP; alert recorded with its lines saying follow; Follow and the older VIP column both read")
 
     @staticmethod
     def around(text):
@@ -1126,7 +914,7 @@ class Follow262(HandcheckCase):
 
 
 class Today262(HandcheckCase):
-    """Check 8. Own vault; the page's data is emptied and refilled in place, so Needs attention goes and comes with no reload."""
+    """Check 6. Own vault; the page's data is emptied and refilled in place, so Needs attention goes and comes with no reload."""
     own_vault = True
 
     STATE = """(()=>({hidden:document.getElementById('attnSec').hidden,
@@ -1138,8 +926,8 @@ class Today262(HandcheckCase):
       count:document.getElementById('nAttn').textContent, mark:window.__hc262}))()"""
 
     @needs("today")
-    def test_c08_today_hides_needs_attention_when_empty_and_shows_it_live_with_an_item(self):
-        """8. (#322) On Today, with nothing under Needs attention the heading, its count and its list are not drawn at all (no empty section, no
+    def test_c06_today_hides_needs_attention_when_empty_and_shows_it_live_with_an_item(self):
+        """6. (#322) On Today, with nothing under Needs attention the heading, its count and its list are not drawn at all (no empty section, no
         'Nothing needs your attention' line, nothing left that names it); with one item the heading is back with its count; when it is gone
         again so is the heading; and after the data is read again from the server it is back, all on the same page, with no reload."""
         b = self.b
@@ -1189,7 +977,7 @@ class Today262(HandcheckCase):
         self.assertGreaterEqual(back["rows"], 2)
         self.assertEqual(back["mark"], 1, "all of it without a reload")
         self.assertEqual(b.errors, [], "no page errors")
-        self.note(8, f"{full['rows']} rows shown; emptied: section, heading and filler gone; one item: back with count 1; emptied; read again: back; no reload")
+        self.note(6, f"{full['rows']} rows shown; emptied: section, heading and filler gone; one item: back with count 1; emptied; read again: back; no reload")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
