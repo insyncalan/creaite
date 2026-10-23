@@ -4728,6 +4728,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IR_REASONS: () => IR_REASONS,
     IR_SECTIONS: () => IR_SECTIONS,
     IR_STAGES: () => IR_STAGES,
+    IR_STATE_CHIP: () => IR_STATE_CHIP,
+    IR_STATE_STAGE: () => IR_STATE_STAGE,
     IR_UPLOAD_TYPES: () => IR_UPLOAD_TYPES,
     IR_VIEWS: () => IR_VIEWS,
     IR_VIEW_KEY: () => IR_VIEW_KEY,
@@ -6068,6 +6070,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irMatches: () => irMatches,
     irMeetingFields: () => irMeetingFields,
     irMeetingOf: () => irMeetingOf,
+    irMeetingState: () => irMeetingState,
     irMissing: () => irMissing,
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
@@ -6110,6 +6113,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irStage: () => irStage,
     irStageClick: () => irStageClick,
     irStale: () => irStale,
+    irStateCounts: () => irStateCounts,
+    irStateOf: () => irStateOf,
     irStep: () => irStep,
     irStop: () => irStop,
     irTarget: () => irTarget,
@@ -9584,12 +9589,25 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     return true;
   }
   var irUnsure = (m5, kinds) => !!m5 && m5.src === "upload" && !irKindOf(m5, kinds);
+  function irMeetingState(m5, left) {
+    if (m5.stage === "approved") return "done";
+    if (m5.stage === "drafted") return left > 0 ? "check" : "done";
+    return m5.state === "waiting" ? "waiting" : "ready";
+  }
+  var IR_STATE_CHIP = { waiting: "Waiting for the transcript", check: "Suggestions to check", done: "Done" };
+  var IR_STATE_STAGE = { waiting: "arrived", ready: "arrived", check: "drafted", done: "approved" };
+  function irStateOf(m5, done) {
+    const l6 = irLive(m5.groups, done);
+    return irMeetingState(m5, l6.needs.length + l6.routine.length);
+  }
+  function irStateCounts(model, done) {
+    const o5 = { waiting: 0, ready: 0, check: 0, done: 0 };
+    for (const m5 of model.meetings || []) o5[irStateOf(m5, done)]++;
+    return o5;
+  }
   function irCounts(model, done, kinds) {
-    const ms2 = model.meetings || [], left = (m5) => {
-      const l6 = irLive(m5.groups, done);
-      return l6.needs.length + l6.routine.length;
-    };
-    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
+    const ms2 = model.meetings || [];
+    const stage = (m5) => IR_STATE_STAGE[irStateOf(m5, done)];
     const all = [
       ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
       ...["mail", "other"].flatMap((k5) => [.../** @type {any} */

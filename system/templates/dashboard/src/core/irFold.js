@@ -118,11 +118,33 @@ export function irNameOk(name) {
 /** Whether a file row's kind is not known yet: it is not ready to process, and not in the badge. */
 export const irUnsure = (/** @type {any} */ m, /** @type {Record<string, any>} */ kinds) => !!m && m.src === "upload" && !irKindOf(m, kinds);
 
+/** #325/#323: a meeting's state, defined once. The chip on its row, the stage boxes' counts and the Group by / filter all read this.
+    "waiting" (no transcript yet), "ready" (transcript here, not drafted), "check" (suggestions still to decide), "done" (everything
+    decided). `left` is how many of its suggestions are still waiting on the page. @param {{stage: string, state?: string}} m @param {number} left */
+export function irMeetingState(m, left) {
+  if (m.stage === "approved") return "done";
+  if (m.stage === "drafted") return left > 0 ? "check" : "done";
+  return m.state === "waiting" ? "waiting" : "ready";
+}
+/** The state's words (the chip's), and the stage the stage boxes count it under. */
+export const IR_STATE_CHIP = { waiting: "Waiting for the transcript", check: "Suggestions to check", done: "Done" };
+export const IR_STATE_STAGE = { waiting: "arrived", ready: "arrived", check: "drafted", done: "approved" };
+/** A meeting's state on the live model: the proposals left are the ones not yet decided on the page. @param {IrMeeting} m @param {(n:number)=>boolean} done */
+export function irStateOf(m, done) { const l = irLive(m.groups, done); return irMeetingState(m, l.needs.length + l.routine.length); }
+
+/** How many meetings are in each state, live: the numbers the Group by / filter shows beside its choices.
+    @param {IrModel} model @param {(n:number)=>boolean} done @returns {Record<string, number>} */
+export function irStateCounts(model, done) {
+  const o = { waiting: 0, ready: 0, check: 0, done: 0 };
+  for (const m of model.meetings || []) o[irStateOf(m, done)]++;
+  return o;
+}
+
 /** The live counts: the server's, less what the page has decided since. A meeting whose proposals are all decided counts as
     approved. @param {IrModel} model @param {(n:number)=>boolean} done */
 export function irCounts(model, done, kinds) {
-  const ms = model.meetings || [], left = (/** @type {IrMeeting} */ m) => { const l = irLive(m.groups, done); return l.needs.length + l.routine.length; };
-  const stage = (/** @type {IrMeeting} */ m) => (m.stage === "drafted" && !left(m) ? "approved" : m.stage);
+  const ms = model.meetings || [];
+  const stage = (/** @type {IrMeeting} */ m) => IR_STATE_STAGE[irStateOf(m, done)];     /* the same state the chip shows */
   const all = [...ms.flatMap(m => [...(m.groups.needs || []), ...(m.groups.routine || [])]),
     ...["mail", "other"].flatMap(k => [...((/** @type {any} */ (model)[k] || {}).needs || []), ...((/** @type {any} */ (model)[k] || {}).routine || [])])];
   const toApprove = new Set(all.filter(n => !done(n))).size;
