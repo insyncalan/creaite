@@ -37,6 +37,11 @@ Compare START load (`start_tokens`, never dollars) for kind `ask`: median and 90
 - **`usage_report.py` has no `resumed` column** (decided: left alone). To split by hand, read `system/staging/run-usage.jsonl`: for lines with `"kind":"ask"`, group by `resumed` (true or false) and take the median and 90th percentile of `start_tokens`.
 - `marked-sessions.json` is still never pruned (above).
 
+## Review round 3
+- **The mark no longer depends on session ids.** `remember_chat` sets `outside: true` on the chat's own history record as soon as a run in it is marked (`run_marked`: the hook's mark, an inherited mark, or `was_marked` after the run ended), and never clears it. `inherit_mark` calls `reach.mark(run, ...)` on any guarded run in a flagged chat, fresh or resumed, queued or typed. No `reach.py` change.
+- **`chat_rec` never overwrites the stored session with None** (a run that failed or was stopped before Claude reported a session id keeps the last known one).
+- Tests (`MarkSurvivesFailure`, real `Run`, `read`, `start_run` and `end_run`): a run that fails before the session id; a stopped run; a reopened chat with no page session; the flag alone (no marked session id, no stored session); a clean chat stays unflagged and unmarked. The reviewer's probe (`probe327d.py`) passes 12 of 12.
+
 ## Risks (for the reviewer)
 1. **Outside-content mark (BL-141).** The mark is kept by session ID. A fresh session would lose it, and the carried text could hold outside content. Mitigation above: the old session ID goes to `guard_args`. Review that `start_run(session=old)` marks the run and `end_run(run, new session)` saves the mark. A chat whose last session was not marked is not marked, as before.
 2. **Carried text is data in the prompt.** It is Alan's and creaite's own words from the chat, labelled as background. No new capability; the run's tools, deny list and hook are unchanged.

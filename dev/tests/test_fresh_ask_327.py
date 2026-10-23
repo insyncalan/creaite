@@ -145,6 +145,110 @@ class MarkFollowsTheChat(unittest.TestCase):
             self.assertIn("sess-new", after)
 
 
+MAIL = "mcp__claude_ai_Microsoft_365__outlook_email_search"
+
+
+class Proc:
+    """A stand-in for the `claude` process: prints the given events, then ends."""
+
+    def __init__(self, lines, rc=0):
+        it = iter([json.dumps(x) + "\n" for x in lines])
+        self.stdout = type("S", (), {"readline": staticmethod(lambda: next(it, ""))})()
+        self.stderr = type("E", (), {"read": staticmethod(lambda: "boom")})()
+        self.returncode, self.pid = rc, 999999
+
+    def wait(self):
+        return self.returncode
+
+    def poll(self):
+        return self.returncode
+
+
+@unittest.skipUnless(HAVE, "needs dev/proposals/327b/live_server.diff")
+class MarkSurvivesFailure(unittest.TestCase):
+    """Round 3: the mark is on the chat's own record, so a run that stops or fails before Claude reports its session id, and a
+    reopened chat with no page session, still start the next run marked (real Run, read, record, start_run and end_run)."""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        g = Path(self.tmp.name)
+        (g / "chats").mkdir()
+        reach = live_server.reach
+        self.n = 0
+        for patch in (mock.patch.object(reach, "GUARD", g), mock.patch.object(reach, "RUN_FILE", g / "run.json"),
+                      mock.patch.object(reach, "SESSIONS_FILE", g / "marked-sessions.json"),
+                      mock.patch.object(live_server.paths, "ASK_CHATS", g / "chats"),
+                      mock.patch.object(live_server, "run_usage", lambda *a, **k: None),
+                      mock.patch.object(live_server.threading, "Thread")):
+            patch.start()
+            self.addCleanup(patch.stop)
+        self.g, self.reach = g, reach
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def step(self, session, chat, reads=False, emit=True, fail=False, stop=False, text="reply"):
+        """One request. Returns (started marked, the prompt, the run)."""
+        self.n += 1
+        new, lines = f"sess-{self.n:04d}", []
+        if emit:
+            lines.append({"type": "system", "subtype": "init", "session_id": new})
+        if not fail and not stop:
+            tool = [{"type": "tool_use", "id": "t1", "name": MAIL, "input": {"query": "x"}}] if reads else []
+            lines += [{"type": "assistant", "message": {"content": tool + [{"type": "text", "text": text}]}},
+                      {"type": "result", "result": text}]
+        seen = {}
+
+        def popen(cmd, **k):                   # the run is marked, or not, by the time Claude starts
+            seen.update(cmd=cmd, marked=bool((self.reach.guard_run() or {}).get("marked")))
+            return Proc(lines, 1 if fail else 0)
+
+        with mock.patch.object(live_server.subprocess, "Popen", popen):
+            run = live_server.Run(f"r-{new}", "hello", session, chat, None, fresh=True)
+            run.stop = stop
+            run.read()
+        return seen.get("marked"), seen["cmd"][-1], run
+
+    def history(self, chat):
+        return json.loads(live_server.chat_file(chat).read_text())
+
+    def marked_chat(self):
+        _, _, r0 = self.step(None, None, text="first")
+        _, _, r1 = self.step(r0.session, r0.chat, reads=True, text="MAILSECRET")
+        return r0.chat, r1.session
+
+    def test_a_run_that_fails_before_the_session_id_keeps_the_mark_and_the_session(self):
+        chat, s1 = self.marked_chat()
+        self.assertTrue(self.history(chat)["outside"])
+        started, _, _ = self.step(None, chat, emit=False, fail=True)
+        self.assertTrue(started)
+        self.assertEqual(self.history(chat)["session"], s1)                   # never overwritten with None
+        started, prompt, _ = self.step(None, chat)                            # reopened from History: no page session
+        self.assertTrue(started)
+        self.assertIn("MAILSECRET", prompt)
+
+    def test_a_stopped_run_keeps_the_mark(self):
+        chat, _ = self.marked_chat()
+        self.step(None, chat, emit=False, stop=True)
+        started, _, _ = self.step(None, chat)
+        self.assertTrue(started)
+
+    def test_the_flag_alone_marks_it_whatever_the_session_ids_say(self):
+        chat, _ = self.marked_chat()
+        (self.g / "marked-sessions.json").write_text("[]")                    # no session id is marked any more
+        rec = self.history(chat)
+        rec["session"] = None
+        live_server.chat_file(chat).write_text(json.dumps(rec))
+        self.assertTrue(self.step(None, chat)[0])
+
+    def test_a_clean_chat_has_no_flag_and_starts_unmarked(self):
+        _, _, r0 = self.step(None, None, text="first")
+        self.step(r0.session, r0.chat)
+        self.assertNotIn("outside", self.history(r0.chat))
+        self.assertFalse(self.step(None, r0.chat)[0])
+
+
 @unittest.skipUnless(HAVE, "needs dev/proposals/327b/live_server.diff")
 class UsageAndQueue(unittest.TestCase):
     def test_a_nul_in_the_prompt_is_caught_and_the_guard_run_is_cleared(self):
