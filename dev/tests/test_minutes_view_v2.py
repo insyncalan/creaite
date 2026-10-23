@@ -428,7 +428,7 @@ class MinutesViewV2(LiveBrowserCase):
                                  "Word (Internal)", "PDF (Internal)", "HTML (Internal)", "Draft an Internal follow-up email"])
         for name, whole in items[:3] + items[4:7]:
             self.assertGreater(len(whole), len(name) + 10, f"{name} has its description line")
-        self.assertIn("never come back", items[0][1], "Word is an export only")
+        self.assertIn("edits never come back", items[4][1], "Word is an export only")
         self.b.key("Escape")
 
     def test_11_approve_with_a_problem_asks_first_then_registers_the_ticked_items(self):

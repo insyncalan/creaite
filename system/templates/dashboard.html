@@ -71646,19 +71646,22 @@ ${d5.text}`);
 
   // components/minutes/MinutesView.jsx
   var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
-  var MN_EXPORTS = [
-    { head: "Shareable: for sending" },
-    { id: "docx:distributed", name: "Word", line: "Shareable. No Sensitive or Internal-only items; edits to it never come back" },
-    { id: "pdf:distributed", name: "PDF", line: "Shareable. Printed from the page" },
-    { id: "html:distributed", name: "HTML", line: "Shareable. A read-only page, filed beside the minutes" },
-    { id: "followup", name: "Draft the follow-up email", line: "Shareable: no Internal-only or Sensitive items; copied, never sent" },
-    { id: "sep", sep: true },
-    { head: "Internal: colleagues only" },
-    { id: "docx:internal", name: "Word (Internal)", line: "Everything, marked Internal; an export only, edits never come back" },
-    { id: "pdf:internal", name: "PDF (Internal)", line: "Everything, marked Internal" },
-    { id: "html:internal", name: "HTML (Internal)", line: "Everything, marked Internal; filed beside the minutes" },
-    { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
-  ];
+  var mnExports = (draft) => {
+    const hold = draft ? "Approve the minutes first" : void 0;
+    return [
+      { head: "Shareable: for sending" },
+      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent" },
+      { id: "sep", sep: true },
+      { head: "Internal: colleagues only" },
+      { id: "docx:internal", name: "Word (Internal)", line: "Everything, marked Internal; an export only, edits never come back" },
+      { id: "pdf:internal", name: "PDF (Internal)", line: "Everything, marked Internal" },
+      { id: "html:internal", name: "HTML (Internal)", line: "Everything, marked Internal; filed beside the minutes" },
+      { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
+    ];
+  };
   var dirty = false;
   var approving = y3(false);
   var reAsk = y3(false), reBusy = y3(false), reStep = y3("");
@@ -71694,7 +71697,7 @@ ${d5.text}`);
     }
     const [fmt, ver] = id2.split(":");
     const r4 = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
-    snack(r4.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+    snack(r4.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").replace(/^Distributed minutes/, "Shareable minutes").split("\n")[0]);
   }
   async function readAgain() {
     const v5 = minutesView.value;
@@ -71930,7 +71933,7 @@ ${d5.text}`);
             data: { mnexport: "" },
             items: (
               /** @type {any} */
-              MN_EXPORTS
+              mnExports(draft)
             ),
             onPick: exportAs
           }

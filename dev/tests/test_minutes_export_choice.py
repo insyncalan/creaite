@@ -61,10 +61,6 @@ class MinutesExportChoice(LiveBrowserCase):
                     % json.dumps(label))
         self.b.pump(1.5)
 
-    def made(self, before):
-        return [f for f in (self.v.root / "projects").rglob("*") if f.is_file() and f not in before and f.suffix in (".html", ".docx", ".pdf")] + \
-               [f for f in (self.v.root / "system/staging/drafts").glob("*") if f.is_file() and f not in before and f.suffix in (".html", ".docx", ".pdf")]
-
     def files(self):
         return set(self.v.root.rglob("*.html")) | set(self.v.root.rglob("*.docx")) | set(self.v.root.rglob("*.pdf"))
 
@@ -72,6 +68,12 @@ class MinutesExportChoice(LiveBrowserCase):
         self.open_menu()
         heads = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on .fsec2')].map(x=>x.textContent)")
         self.assertEqual(heads, ["Shareable: for sending", "Internal: colleagues only"])
+        lines = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].map(x=>[x.querySelector('b').textContent, x.textContent, x.getAttribute('aria-disabled'), x.getAttribute('data-tip')])")
+        for name, whole, dis, tip in lines[:3]:
+            self.assertEqual((dis, tip), ("true", "Approve the minutes first"), f"{name}: Shareable file is disabled on a draft, with its reason")
+            self.assertIn("check the Updates text", whole)
+            self.assertNotIn("No Sensitive or Internal-only", whole, "no claim wider than the item rows")
+        self.assertIsNone(lines[3][2], "the Shareable email works on a draft (existing behaviour)")
         names = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem] b')].map(x=>x.textContent)")
         self.assertEqual(names, ["Word", "PDF", "HTML", "Draft the follow-up email",
                                  "Word (Internal)", "PDF (Internal)", "HTML (Internal)", "Draft an Internal follow-up email"],
@@ -86,10 +88,10 @@ class MinutesExportChoice(LiveBrowserCase):
 
 
     def test_3_shareable_waits_for_approval_then_holds_no_sensitive_item_and_internal_does(self):
-        for label in FMT:                        # a draft: Shareable is refused in plain words and makes no file
+        for label in FMT:                        # a draft: the Shareable entries are disabled, so nothing is asked and no file made
             before = self.files()
             self.pick(label)
-            self.assertIn("only after the internal minutes are approved", self.ev("document.body.textContent"))
+            self.b.key("Escape")
             self.assertEqual(self.files(), before, "no Shareable file from a draft")
         self.b.click("#mnApproveBtn")
         self.b.pump(0.5)
@@ -116,7 +118,7 @@ class MinutesExportChoice(LiveBrowserCase):
                         else:
                             self.assertIn(s, where, f"Internal {fmt} keeps {s!r}, by design")
                     if ver == "distributed":
-                        self.assertIn("(distributed)", new[0].name)
+                        self.assertIn("(shareable)", new[0].name)
 
 if __name__ == "__main__":
     unittest.main()
