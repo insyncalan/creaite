@@ -26,6 +26,9 @@ Everything else is in the tree and unguarded: `system/scripts/minutes_destinatio
   for a filed copy (`filed_copy` in the read), and a different line for another pending meeting. LOW 4 the note says when the approve
   numbered the name after all. LOW 5 above.
 
+- Round 2: the name call is one atomic `names` call (all or none, no rollback to get wrong); `open_where` reads the filed path once; Esc and
+  Enter on the box are tested (Esc found focus not returning: fixed). The diff itself did not change.
+
 ## Why (items)
 - **#332** a second meeting with the same title and day could not be approved ("Apply stopped"): the filed name (and the transcript
   copy's) is taken and is never overwritten. `settle` numbers both ("Title (2)") before the apply, so every web approve path (Minutes

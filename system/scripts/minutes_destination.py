@@ -237,39 +237,53 @@ def _transcript_follows(meeting, code, old, fixed, others):
     return t_old, t_new
 
 
-def set_name(file, code, name):
-    """File the minutes of project `code` under `name`: {ok, name, message}. The transcript copy follows (same stem, its own
-    extension) when it carried the minutes' stem. Refused, with nothing changed, when the name can't be used or is taken."""
+def _rename_in(data, others, code, name):
+    """Rename project `code`'s minutes (and the transcript copy that follows) in the loaded proposal `data`; the name used.
+    Raises DestinationError, having changed nothing in `data`."""
+    meeting = data["meeting"]
+    idx = next((i for i in _copies(meeting, "draft") if _code_of(meeting["file_ops"][i]["to"]) == code), None)
+    if idx is None:
+        raise DestinationError("Those minutes aren't filed in that project.")
+    old = meeting["file_ops"][idx]["to"]
+    ext = Path(old).suffix.lower()
+    if ext not in MINUTES_EXTS:
+        raise DestinationError("Those minutes can't be renamed.")
+    day = str(meeting.get("date") or "")
+    if not DAY.fullmatch(day):
+        raise DestinationError("Those minutes have no meeting date to start the name with.")
+    fixed, why = clean_name(name, ext, day)
+    if why:
+        raise DestinationError(why)
+    new = f"{old.rsplit('/', 1)[0]}/{fixed}"
+    if new == old:
+        return fixed
+    if _taken(new, meeting.get("draft"), others):
+        raise DestinationError(f"{fixed} is already in {folder_label(code)}. Choose another name.")
+    t_old, t_new = _transcript_follows(meeting, code, old, fixed, others)
+    _rewrite(data, old, new)
+    if t_new:
+        _rewrite(data, t_old, t_new)
+    return fixed
+
+
+def set_names(file, names):
+    """File the minutes under {code: name}: {ok, names: {code: name}, message}. All or none: every name is checked and applied to
+    the loaded proposal, which is written once at the end, so a refusal on any project changes nothing."""
     try:
         p, data = _proposal(file)
-        meeting = data["meeting"]
-        idx = next((i for i in _copies(meeting, "draft") if _code_of(meeting["file_ops"][i]["to"]) == code), None)
-        if idx is None:
-            raise DestinationError("Those minutes aren't filed in that project.")
-        old = meeting["file_ops"][idx]["to"]
-        ext = Path(old).suffix.lower()
-        if ext not in MINUTES_EXTS:
-            raise DestinationError("Those minutes can't be renamed.")
-        day = str(meeting.get("date") or "")
-        if not DAY.fullmatch(day):
-            raise DestinationError("Those minutes have no meeting date to start the name with.")
-        fixed, why = clean_name(name, ext, day)
-        if why:
-            raise DestinationError(why)
-        new = f"{old.rsplit('/', 1)[0]}/{fixed}"
-        if new == old:
-            return {"ok": True, "name": fixed, "message": ""}
-        others = _others(p.name)
-        if _taken(new, meeting.get("draft"), others):
-            raise DestinationError(f"{fixed} is already in {folder_label(code)}. Choose another name.")
-        t_old, t_new = _transcript_follows(meeting, code, old, fixed, others)
-        _rewrite(data, old, new)
-        if t_new:
-            _rewrite(data, t_old, t_new)
+        others, used = _others(p.name), {}
+        for code, name in (names or {}).items():
+            used[code] = _rename_in(data, others, str(code), name)
         _save(p, data)
     except DestinationError as e:
         return {"ok": False, "message": str(e)}
-    return {"ok": True, "name": fixed, "message": ""}
+    return {"ok": True, "names": used, "message": ""}
+
+
+def set_name(file, code, name):
+    """File one project's minutes under `name`: {ok, name, message} (set_names for one project)."""
+    r = set_names(file, {code: name})
+    return {"ok": True, "name": r["names"][code], "message": ""} if r["ok"] else r
 
 
 def settle(file):
@@ -329,14 +343,13 @@ def where(key=None, path=None):
     minutes folder, in words. `moved` covers a file or folder that is no longer there. No path is ever in the answer; a path the disk
     refuses is answered as not found."""
     try:
-        return _where(key, path)
+        return _where(_filed_in(key, path))
     except (OSError, ValueError):
         return dict(NOT_FOUND)
 
 
-def _where(key, path):
-    """where(), without the guard against a path the disk refuses."""
-    rel = _filed_in(key, path)
+def _where(rel):
+    """where() for the stored path `_filed_in` gave (read once, so what is checked is what is opened)."""
     code = _code_of(rel) if rel and _sane(rel) else None
     if not rel or not code or paths.rel(paths.folder(code, "minutes")) != rel.rsplit("/", 1)[0]:
         return dict(NOT_FOUND)
@@ -378,11 +391,11 @@ def _open_file(real):
 def open_where(key=None, path=None, what="folder"):
     """Open approved minutes (`what` "file") or show them (`what` "folder": the file in Finder, else the folder). The same words as
     `where` when it can't."""
-    w = where(key, path)
-    if not w.get("ok"):
-        return {**w, "launched": False}
-    rel = _filed_in(key, path)
     try:
+        rel = _filed_in(key, path)                  # read once: the path checked is the path opened
+        w = _where(rel)
+        if not w.get("ok"):
+            return {**w, "launched": False}
         return _opened(w, rel, what)
     except (OSError, ValueError):
         return {**NOT_FOUND, "launched": False}
@@ -411,6 +424,8 @@ def routes(lock):
     def name(handler, req):
         """POST /api/minutes/destination/name {file, code, name}: file the minutes under another name."""
         with lock:
+            if isinstance(req.get("names"), dict):          # all projects at once: all or none
+                return handler.send(200, set_names(req.get("file"), req["names"]))
             return handler.send(200, set_name(req.get("file"), str(req.get("code") or ""), req.get("name")))
 
     def at(handler, req):

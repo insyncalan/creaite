@@ -275,6 +275,28 @@ class Hardening(Dest):
         (self.v.root / FILED).unlink()
         self.assertFalse(self.lib(f"print(json.dumps(md.view({self.name!r})))")["items"][0]["filed_copy"])
 
+    def test_a_refusal_on_any_project_changes_nothing_even_when_the_transcript_name_is_used(self):
+        """Review round 2: A's minutes name is free but its transcript name is a filed copy; B is not a project: all or none."""
+        (self.v.root / ABC / "transcripts").mkdir(parents=True, exist_ok=True)
+        (self.v.root / ABC / "transcripts/2026-10-14 X.vtt").write_text("filed", encoding="utf-8")
+        was = self.proposal_path().read_bytes()
+        out = self.lib("print(json.dumps(md.set_names(" + repr(self.name) + ", {'ABC': '2026-10-14 X', 'XYZ': '2026-10-14 Y'})))")
+        self.assertFalse(out["ok"])
+        self.assertEqual(self.proposal_path().read_bytes(), was)
+        out = self.lib("print(json.dumps(md.set_names(" + repr(self.name) + ", {'ABC': '2026-10-14 X'})))")
+        self.assertFalse(out["ok"], "the used transcript name refuses the rename")
+        self.assertEqual(self.proposal_path().read_bytes(), was)
+        out = self.lib("print(json.dumps(md.set_names(" + repr(self.name) + ", {'ABC': '2026-10-14 Z'})))")
+        self.assertEqual(out["names"], {"ABC": "2026-10-14 Z.html"})
+
+    def test_open_reads_the_path_once_so_what_is_checked_is_what_opens(self):
+        key = self.filed()
+        out = self.lib("import itertools\nreal = md._filed_in\ncalls = []\n"
+                       "def once(k, p):\n    calls.append(1)\n    return real(k, p) if len(calls) == 1 else 'projects/../../etc/passwd.html'\n"
+                       "md._filed_in = once\n"
+                       f"r = md.open_where(key={key!r}, what='folder')\nprint(json.dumps([r['ok'], len(calls)]))")
+        self.assertEqual(out, [True, 1])
+
 
 # ── The routes (live_server.py is guarded: dev/proposals/324/live_server.diff) ──
 

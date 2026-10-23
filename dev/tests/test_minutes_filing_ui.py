@@ -147,19 +147,34 @@ class Filing(LiveBrowserCase):
         self.b.wait("/may have been moved or renamed/.test(document.getElementById('snack').textContent)", 15)
         self.assertNotIn("projects/", self.snack())
 
-    def test_6_all_or_none_a_refusal_on_the_second_project_puts_the_first_name_back(self):
+    def test_6_all_or_none_one_call_and_a_refusal_changes_nothing(self):
         self.ask()
-        self.ev("""(()=>{ const a=filingAsk.value, it=a.items[0], calls=[]; window.__calls=calls;
-            window.api=async(p,b)=>{ calls.push([p.split('/').pop(), b.code, b.name]); return p.endsWith('/name') && b.code==='XYZ' ? {ok:false,message:'No.'} : {ok:true,name:b.name}; };
-            filingAsk.value={...a, items:[it,{...it,code:'XYZ',project:'Other'}], typed:{[it.code]:'Changed one', XYZ:'Changed two'}};
+        was = (self.v.root / "system/staging" / self.proposal).read_bytes()
+        self.ev("""(()=>{ const a=filingAsk.value, it=a.items[0], day=it.name.split(' ')[0];
+            filingAsk.value={...a, items:[it,{...it,code:'XYZ',project:'Other'}], typed:{[it.code]:day+' Changed one', XYZ:day+' Changed two'}};
+            window.__calls=[]; const real=window.api; window.api=async(p,b)=>{ window.__calls.push(p.split('/').pop()); return real(p,b); };
             confirmFiling(); })()""")
-        self.b.wait("window.__calls.length>=3", 15)
-        calls = self.ev("window.__calls")
-        self.assertEqual([c[:2] for c in calls], [["name", "ABC"], ["name", "XYZ"], ["name", "ABC"]])
-        self.assertTrue(calls[0][2].startswith("Changed one") and calls[2][2].endswith(".html") and "Changed" not in calls[2][2], calls)
-        self.assertEqual(self.ev("filingError.value"), "No.")
+        self.b.wait("window.__calls.length>=1 && filingError.value", 15)
+        self.assertEqual(self.ev("window.__calls"), ["name"], "one call, not one per project")
         self.assertTrue(self.ev("!!filingAsk.value"), "the box stays open")
+        self.assertEqual((self.v.root / "system/staging" / self.proposal).read_bytes(), was, "nothing is staged differently")
         self.ev("filingAsk.value && cancelFiling()")
+
+    def test_8_esc_cancels_and_files_nothing_and_focus_returns(self):
+        self.ask()
+        self.b.key("Escape")
+        self.b.pump(0.5)
+        self.assertFalse(self.ev("document.getElementById('mnFiling').open"))
+        self.assertIsNone(self.filed())
+        self.assertEqual(self.ev("document.activeElement.id"), "mnApproveBtn", "focus back on Approve minutes")
+
+    def test_9_enter_in_the_name_field_files_and_approves(self):
+        self.ask()
+        self.ev("document.getElementById('mnFilingName0').focus()")
+        self.b.key("Enter")
+        self.b.wait("/Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.assertIsNotNone(self.filed())
+        self.assertFalse(self.ev("document.getElementById('mnFiling').open"))
 
     def test_7_a_name_taken_meanwhile_is_numbered_and_the_note_says_so(self):
         self.ask()

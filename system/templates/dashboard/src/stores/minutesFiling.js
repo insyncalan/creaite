@@ -46,27 +46,23 @@ export function typeFiling(code, value) {
   filingError.value = "";
 }
 
-/** File and approve: each name that differs is sent first. All or none: the first refusal puts back the names already changed (so
-    the dialog matches what is staged), stays in the dialog and approves nothing. */
+/** File and approve: the names that differ go to the server in one call (all or none: a refusal changes nothing, so the box always
+    matches what is staged), which stays in the box in words. */
 export async function confirmFiling() {
   const a = filingAsk.value;
   if (!a) return;
-  /** @type {{code: string, project: string, folder_label: string, name: string}[]} */ const shown = [];
-  /** @type {Destination[]} */ const changed = [];
+  /** @type {Record<string, string>} */ const names = {};
   for (const it of a.items) {
     const stem = (a.typed[it.code] || "").trim();
-    let name = it.will_be;
-    if (stem !== stemOf(it.will_be, it.ext)) {
-      const r = await api("/api/minutes/destination/name", { file: a.file, code: it.code, name: stem + it.ext });
-      if (!r || !r.ok) {
-        for (const done of changed) await api("/api/minutes/destination/name", { file: a.file, code: done.code, name: done.will_be });
-        filingError.value = oneLine((r && r.message) || "That name can't be used.");
-        return;
-      }
-      name = r.name; changed.push(it);
-    }
-    shown.push({ code: it.code, project: it.project, folder_label: it.folder_label, name });
+    if (stem !== stemOf(it.will_be, it.ext)) names[it.code] = stem + it.ext;
   }
+  /** @type {Record<string, string>} */ let used = {};
+  if (Object.keys(names).length) {
+    const r = await api("/api/minutes/destination/name", { file: a.file, names });
+    if (!r || !r.ok) { filingError.value = oneLine((r && r.message) || "That name can't be used."); return; }
+    used = r.names || {};
+  }
+  const shown = a.items.map(it => ({ code: it.code, project: it.project, folder_label: it.folder_label, name: used[it.code] || it.will_be }));
   filingAsk.value = null;
   filedNote.value = { key: a.key, items: shown };
   a.resolve(true);
@@ -91,6 +87,11 @@ export function cancelFiling() {
   const a = filingAsk.value;
   filingAsk.value = null; filingError.value = ""; filedNote.value = null;
   if (a) a.resolve(false);
+  /* Approve minutes is disabled while it waits for the box, so the dialog can't give focus back to it: put it there once it is enabled */
+  for (const ms of [60, 300]) setTimeout(() => {
+    const b = typeof document === "undefined" ? null : document.getElementById("mnApproveBtn");
+    if (b && !b.disabled && document.activeElement === document.body) b.focus();
+  }, ms);
 }
 
 /** The note is dismissed. */

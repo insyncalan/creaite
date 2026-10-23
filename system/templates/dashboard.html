@@ -37596,23 +37596,21 @@ system/scripts/run launch.py agent ${what}`;
   async function confirmFiling() {
     const a5 = filingAsk.value;
     if (!a5) return;
-    const shown2 = [];
-    const changed2 = [];
+    const names = {};
     for (const it2 of a5.items) {
       const stem = (a5.typed[it2.code] || "").trim();
-      let name = it2.will_be;
-      if (stem !== stemOf(it2.will_be, it2.ext)) {
-        const r4 = await api("/api/minutes/destination/name", { file: a5.file, code: it2.code, name: stem + it2.ext });
-        if (!r4 || !r4.ok) {
-          for (const done of changed2) await api("/api/minutes/destination/name", { file: a5.file, code: done.code, name: done.will_be });
-          filingError.value = oneLine(r4 && r4.message || "That name can't be used.");
-          return;
-        }
-        name = r4.name;
-        changed2.push(it2);
-      }
-      shown2.push({ code: it2.code, project: it2.project, folder_label: it2.folder_label, name });
+      if (stem !== stemOf(it2.will_be, it2.ext)) names[it2.code] = stem + it2.ext;
     }
+    let used2 = {};
+    if (Object.keys(names).length) {
+      const r4 = await api("/api/minutes/destination/name", { file: a5.file, names });
+      if (!r4 || !r4.ok) {
+        filingError.value = oneLine(r4 && r4.message || "That name can't be used.");
+        return;
+      }
+      used2 = r4.names || {};
+    }
+    const shown2 = a5.items.map((it2) => ({ code: it2.code, project: it2.project, folder_label: it2.folder_label, name: used2[it2.code] || it2.will_be }));
     filingAsk.value = null;
     filedNote.value = { key: a5.key, items: shown2 };
     a5.resolve(true);
@@ -37634,6 +37632,10 @@ system/scripts/run launch.py agent ${what}`;
     filingError.value = "";
     filedNote.value = null;
     if (a5) a5.resolve(false);
+    for (const ms2 of [60, 300]) setTimeout(() => {
+      const b5 = typeof document === "undefined" ? null : document.getElementById("mnApproveBtn");
+      if (b5 && !b5.disabled && document.activeElement === document.body) b5.focus();
+    }, ms2);
   }
   function dismissFiled() {
     filedNote.value = null;
