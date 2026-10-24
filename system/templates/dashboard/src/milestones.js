@@ -193,7 +193,8 @@ export const mvMismatch=m=>m.state!=="achieved"&&MVRANK[m.state]<MVRANK[m.sug];
 export function mvVis(code,cli,move){ return mvAll(code).filter(m=>!cli||move||m.cvis); }
 /* #337: the Client view of a project whose milestones are all internal says so, rather than "0 achieved, 0 to come." over an empty line */
 export function mvNoneShown(code,cli){ const n=mvAll(code).length; return !!(cli&&n&&!mvVis(code,true,false).length); }
-export function mvNoneMsg(code,add){ const n=mvAll(code).length; return `<p class="mv-none">${n===1?"The milestone is":`None of the ${n} milestones are`} shown to the client yet. Switch to Internal view to see ${n===1?"it":"them"}.${add?` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>`:""}</p>`; }
+export const mvNoneText=n=>n===1?"The milestone is not shown to the client yet. Switch to Internal view to see it.":`None of the ${n} milestones are shown to the client yet. Switch to Internal view to see them.`;
+export function mvNoneMsg(code,add){ const n=mvAll(code).length; return `<p class="mv-none">${mvNoneText(n)}${add?` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>`:""}</p>`; }
 export function mvOpen(code,cli,move){ return mvVis(code,cli,move).filter(m=>m.state!=="achieved").sort((a,b)=>(a.agr||a.fc||"9").localeCompare(b.agr||b.fc||"9")); }
 /* #286: a milestone marker on the Plan strip and the Movement list names its type first, "Milestone: …", on hover (data-tip) and to a screen reader */
 const MSW=typeWord("milestone");

@@ -6438,6 +6438,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvMovement: () => mvMovement,
     mvNoneMsg: () => mvNoneMsg,
     mvNoneShown: () => mvNoneShown,
+    mvNoneText: () => mvNoneText,
     mvOf: () => mvOf,
     mvOpen: () => mvOpen,
     mvOpenPage: () => mvOpenPage,
@@ -44926,9 +44927,10 @@ system/scripts/run launch.py agent ${what}`;
     const n4 = mvAll(code).length;
     return !!(cli && n4 && !mvVis(code, true, false).length);
   }
+  var mvNoneText = (n4) => n4 === 1 ? "The milestone is not shown to the client yet. Switch to Internal view to see it." : `None of the ${n4} milestones are shown to the client yet. Switch to Internal view to see them.`;
   function mvNoneMsg(code, add) {
     const n4 = mvAll(code).length;
-    return `<p class="mv-none">${n4 === 1 ? "The milestone is" : `None of the ${n4} milestones are`} shown to the client yet. Switch to Internal view to see ${n4 === 1 ? "it" : "them"}.${add ? ` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>` : ""}</p>`;
+    return `<p class="mv-none">${mvNoneText(n4)}${add ? ` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>` : ""}</p>`;
   }
   function mvOpen(code, cli, move) {
     return mvVis(code, cli, move).filter((m5) => m5.state !== "achieved").sort((a5, b5) => (a5.agr || a5.fc || "9").localeCompare(b5.agr || b5.fc || "9"));
@@ -81524,6 +81526,7 @@ Next: `;
         "mvEdDraw",
         "mvEdOpen",
         "mvGet",
+        "mvNoneText",
         "mvOpenPage",
         "mvRebaseline",
         "mvSetState",

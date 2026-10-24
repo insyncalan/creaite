@@ -592,6 +592,7 @@
    "mvEdDraw",
    "mvEdOpen",
    "mvGet",
+   "mvNoneText",
    "mvOpenPage",
    "mvRebaseline",
    "mvSetState",
