@@ -4,7 +4,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ## creaite 2.6.4
 
-2.6.4 contains all of 2.6.3. The headline: the words on screen and in Help are plain (suggestions, save, your project record, your creaite folder, a mail and Teams check), there is a weekly budget for creaite's own AI use that stays off until you switch it on, a set of design fixes, and a page that has gone stale is now turned away instead of deciding the wrong item. A few older wordings and paths are still on screen in places; they are listed under Good to know.
+2.6.4 contains all of 2.6.3. The headline: the words on screen and in Help are plain (suggestions, save, your project record, your creaite folder, a mail and Teams check), there is a weekly budget for creaite's own AI use that stays off until you switch it on, a set of design fixes, rules for each run that are half the size, and a page that has gone stale is now turned away instead of deciding the wrong item. A few older wordings and paths are still on screen in places; they are listed under Good to know.
 
 
 ### Plain words
@@ -26,6 +26,9 @@ What changed for you in each release of creaite, newest first. Written in plain 
 ### Chats with ask creaite
 - **A weekly budget for creaite's own AI use, off until you switch it on.** Settings › Advanced, in "creaite and ask creaite", has "Weekly AI budget". Switched on, it counts the week's AI use (ask creaite, drafts, the mail and Teams check and the alert check), Monday to Sunday, in dollars (50 to start) or tokens. From 80% a quiet line in the chat warns you. At 100% a request you type either asks first ("Run anyway" or "Cancel") or is turned away until Monday, whichever you chose in "At the limit". The Usage tab shows used against the budget and the date the week ends. With it off, the Usage tab says so and where to switch it on, and nothing is ever held or warned about. It holds only a request you type to ask creaite: the buttons in the dashboard (Review, Save, Undo), the daily check and the alert check are never held. It keeps counts and dates only, never any text, and an ask creaite run cannot raise or reset it (changing Settings needs your approval card). (#334)
 
+### Lighter rules
+- **The rules every run reads at the start are about half the size.** The rules file went from 66,315 to 32,736 bytes, about 8,400 fewer tokens each time a run starts, so runs start cheaper. The full wording moved to a reference file that a run reads only when it needs a section. The part with the never list and the approval rules is unchanged, and a test checks that every other "never" is still in the short file or in the reference. What ask creaite may read, change or never touch is decided in code, and that is not changed. You see nothing different and need do nothing. If you want to check: ask ask creaite to delete something inside the .git folder and it still says no. (#338)
+
 ### Review
 - **A stale page is turned away.** Every way of deciding on a suggestion from the page now says which item it means, and checks it is still the version you saw. If the list changed behind an open page, you read "That item has changed since you looked at it, so nothing was changed. Look at the list again." and nothing is decided on the wrong item. This now covers reject, Approve instead, repeat, make it an update, and moving an item to another project. (#345)
 - **Approve minutes checks the items too.** It now checks the minutes and every item you ticked, not only the minutes, so minutes that were read again behind an open page are not approved with different items than you saw. (#345)
@@ -37,7 +40,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ### Behind the scenes
 - The chat of runs creaite started itself ("Runs creaite started") no longer carries what a run read into your next question. A run that fails to set up leaves nothing behind, and creaite no longer answers "busy" afterwards. (#346)
-- If you rename minutes while approving them, another open Review page is brought up to date instead of refusing until you reload it. (#346)
+- If you rename minutes while approving them, the Review page you are on carries on with the new name. A second Review tab that was already open is not brought up to date: its next decision on those items is turned away with "That item has changed since you looked at it" until you reload it. (#345)
 - New reports for the team that measure how big each run is at the start, and the size of the rules files. They change nothing on screen. (#87)
 - Tests for the draft routes now run in the release checks (#350), and several tests that failed now and then no longer do (#349).
 
@@ -51,7 +54,6 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - A dashboard tab left open from before the update gets a "reload the page" message instead of deciding anything. Reload it.
 - The weekly budget is off by default. Once on, a count that goes wrong never blocks Review, Save or Undo, a mail check or an alert check.
 - Not in 2.6.4 (minutes): only the three #333 fixes above are in. The other six wait, among them the count in the toast after Approve minutes (it can say more work items registered than were saved when a ticked row is held back in Review) and the long dates ("23 October 2026") in the minutes headers, which need your decision.
-- Not in 2.6.4: the lighter rules file (#338). The rules every run reads are the same size as in 2.6.3.
 - Still on screen in a few places: a file path or a command (the hover on the portfolio folder in Files, the folder shown on a project's Settings page, the detail lines of some Health checks).
 - Help still says past days on Today show each meeting's follow-up ("Transcript ready", "Minutes made", "Check", "Process"). That is out of date since the change above; use Intake for those jobs.
 - Still wrong in one place: after you edit an item, the top says "Saved for Review" while the bar below says nothing is saved until you press Save.
@@ -88,9 +90,6 @@ What changed for you in each release of creaite, newest first. Written in plain 
 ### Behind the scenes
 - Deciding on a suggestion from the page now always says which item it means; a page without that is told to reload and decides nothing.
 - The Outlook draft code is now on the list of files that change only with Alan's say.
-
-### Conditional: a lighter rules file (#338, only if approved)
-- Cuts the rules every run reads by about half (roughly 7,900 fewer tokens to start each run). Every "never" and every approval rule stays; the long reference moves to a file read only when needed. Not included unless Alan approves it.
 
 
 - Update from the release zip as usual.
