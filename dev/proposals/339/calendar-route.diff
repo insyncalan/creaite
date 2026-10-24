@@ -1,21 +1,29 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 1d0867e..4009462 100644
+index 1d0867e..793031a 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -1659,6 +1659,12 @@ class Handler(BaseHTTPRequestHandler):
+@@ -1658,6 +1658,20 @@ class Handler(BaseHTTPRequestHandler):
+             if busy and not busy.done:
                  return self.send(409, {"ok": False, "busy": True, "run": busy.summary(),
                                         "message": "ask creaite is still working on the last request."})
-             try:
-+                import calendar_refresh                          # #339 A: a typed "refresh calendar" is the small calendar run
-+                if panel_calendar(message, images, req.get("confirmed")) and not calendar_refresh.precheck() \
-+                        and not sweep_running():
++            if panel_calendar(message, images, req.get("confirmed")):       # #339 A: the small calendar run, no chat, no history
++                import calendar_refresh
++                if sweep_running():                                         # (the busy check above already answered 409 for a run)
++                    return self.send(409, {"ok": False, "busy": True,
++                                           "message": "A sweep is running: the calendar comes in with it."})
++                why = calendar_refresh.precheck()
++                if why:
++                    return self.send(400, {"ok": False, "message": why})
++                try:
 +                    run = Run(run_id, calendar_refresh.build_prompt(), None, None, None, kind="calendar",
 +                              label=calendar_refresh.label(), closer=calendar_refresh.closer(), lines=calendar_refresh.lines())
-+                    return self.follow(run, numbered=self.numbered())
++                except OSError as e:
++                    return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
++                return self.follow(run, numbered=self.numbered())
+             try:
                  sweep = panel_sweep(message, images, req.get("confirmed"))      # BL-309: the server decides, from the words
                  run = Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images, sweep=sweep,
-                           fresh=fresh_session(req))
-@@ -2334,6 +2340,16 @@ def panel_sweep_code_ok(code):
+@@ -2334,6 +2348,16 @@ def panel_sweep_code_ok(code):
      return len(code) <= 3 and code.lower() not in PANEL_SWEEP_COMMON
  
  

@@ -23,3 +23,13 @@ Status: plan only. Review tier Full. Everything that touches the run engine is g
 
 ## Targets (from the issue)
 Typed sweep under 60k tokens and $1.50; plain ask under 150k start tokens (500k red line, with part B).
+
+## Pinned tests (checked against the plan)
+- `test_panel_sweep` test_2 pins a typed "refresh calendar" as a sweep (guard `--mode sweep`, the sweep's tools). Step 2 (route it to the "calendar" kind, guard mode "calendar") contradicts it. Not loosened: `dev/proposals/339/calendar-route.diff` is HELD until Alan decides; if he agrees, test_2 changes in the same chain.
+- `test_panel_sweep` test_1 pins a typed sweep as kind "ask" (chat history kept). Step 3 keeps that: only `--add-dir` changes. No pinned test names the sweep's --add-dir.
+- Step 4 (status question and lookup to "search") is unchanged and still held for a word list.
+
+## Patches (dev/proposals/339/, guarded, each `git apply --check` clean alone and together)
+- `sweep-no-home.diff`: a sweep's --add-dir drops the home folder.
+- `sweep-followed-rule.diff`: both sweep prompts (Close the day's and the typed one) end with the followed-people rule (`VIP_PRIVATE_RULE`).
+- `calendar-route.diff` (HELD, above): no chat, 409 while a sweep runs (the existing busy check answers 409 for any other run), 400 if the calendar precheck fails.
