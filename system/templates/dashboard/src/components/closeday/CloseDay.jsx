@@ -36,7 +36,7 @@ import { dcIcon } from "../../ask.js";
 /** @typedef {{key: string, state: string, run?: string|null, path?: string|null, message?: string|null}} PrepItem */
 /** @typedef {{ok: boolean, message?: string, now: string, last_sweep?: string, day: any, catchup: CatchupPublic,
     loose: LooseEnd[], tomorrow: Tomorrow, prep: {items: PrepItem[], running: boolean}}} Card */
-/** @typedef {{status: string, message: string, state: string|null, run: string|null, label: string, reached: number, ended?: string|null,
+/** @typedef {{status: string, message: string, state: string|null, run: string|null, label: string, done: number[], steps: number, ended?: string|null,
     found: {ref: string, type: string, t: string, p?: string|null, project?: string|null}[]}} Catchup */
 /** @typedef {{at: string, counts: {review: number, first: number, left: number, prep: number},
     open: {review: {file: string, ref: number|string}[], work: string[], intake: boolean}}} Closed */
@@ -44,7 +44,7 @@ import { dcIcon } from "../../ask.js";
 export const CD_STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"];
 const PLACES = [["review", "Review now"], ["first", "First thing tomorrow"], ["leave", "Leave"]];
 const SOURCES = ["Mail", "Teams chats", "Teams channels", "Matching to projects"];
-const READING = ["Reading mail", "Reading Teams chats", "Reading Teams channels", "Matching to projects"];
+const WORKING = "Working through the sources";   // a claim about order only, so it never names one source as being read now
 const SHOWN = 8;                       // Loose ends: the first eight, then "and n more"
 const POLL = 1500;                     // ms between status reads while the catch-up runs or waits
 
@@ -63,18 +63,23 @@ export function openCloseDay() {
   cdOpen.value = true;
 }
 
-/** Which of SOURCES a run's step line is reading (its index), or -1 for another step. Labels are the server's describe_tool,
-    or (BL-326: the catch-up is a run creaite started) its plain_step words.
-    @param {string} label */
+/** Which of SOURCES a run's step line is (its index), or -1 for any other step. #358: whole labels only, matched exactly (the server's
+    describe_tool form, or, for the catch-up, a run creaite started, its plain_step words), never a search of the text, so a mail subject
+    with "Teams" in it ticks nothing. The calendar has no row, and a script step ("Staging what the sweep found") ticks nothing.
+    "Matching to projects" (3) is never ticked by a step. */
+const CD_LABELS = [
+  ["Searching mail", "Microsoft 365: outlook email search"],
+  ["Searching Teams chats", "Reading Teams chats", "Microsoft 365: chat message search", "Microsoft 365: teams list chats"],
+  ["Reading Teams channels", "Microsoft 365: teams list channels", "Microsoft 365: teams list channel messages"],
+];
+/** @param {string} label */
 export function cdSourceOf(label) {
-  const l = String(label || "").toLowerCase();
-  if (/calendar|read resource|a meeting, a message or a chat/.test(l)) return -1;
-  if (/channel/.test(l)) return 2;
-  if (/teams|chat message|list chats/.test(l)) return 1;
-  if (/email|outlook|mail/.test(l)) return 0;
-  if (/sweep\.py stage|people map|propose\.py|staging what the sweep found|mapping names/.test(l)) return 3;
-  return -1;
+  return CD_LABELS.findIndex(l => l.includes(label));
 }
+
+/** The row shown as now: the first of the three source rows not done, and only once the run has finished a step (before that every row
+    waits). Matching to projects is never shown as now. @param {Catchup} cu */
+export const cdNow = cu => (cu.steps > 0 ? [0, 1, 2].find(i => !cu.done.includes(i)) ?? -1 : -1);
 
 /** The ← → keys move only when focus isn't in a field. @param {EventTarget | null} t */
 const cdTyping = t => t instanceof HTMLElement && !!t.closest("input,textarea,select,[contenteditable]");
@@ -101,7 +106,7 @@ function CatchUp({ cu, last, onStop, onSkip, onAgain }) {
           <button type="button" class="mini" data-cdskip="1" onClick={onSkip}>Skip</button>
         </div>
         {running ? <ol class="cdsrc" aria-label="Sources">{SOURCES.map((s, i) =>
-          <li class={i < cu.reached ? "done" : i === cu.reached ? "now" : ""}>{s}</li>)}</ol> : null}
+          <li class={cu.done.includes(i) ? "done" : i === cdNow(cu) ? "now" : ""}>{s}</li>)}</ol> : null}
         <p class="sub">It runs while you read on. It only adds suggestions to Review; nothing is saved, and nothing changes in
           Microsoft 365.</p>
       </div>
@@ -274,7 +279,7 @@ export function CloseDay() {
   const [places, setPlaces] = useState(/** @type {Record<string, string>} */ ({}));
   const [all, setAll] = useState(false);
   const [prep, setPrep] = useState(/** @type {Set<string>} */ (new Set()));
-  const [cu, setCu] = useState(/** @type {Catchup} */ ({ status: "", message: "", state: null, run: null, label: "", reached: 0, found: [] }));
+  const [cu, setCu] = useState(/** @type {Catchup} */ ({ status: "", message: "", state: null, run: null, label: "", done: [], steps: 0, found: [] }));
   const [closed, setClosed] = useState(/** @type {Closed | null} */ (null));
   const [pending, setPending] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -313,7 +318,8 @@ export function CloseDay() {
         let ev; try { ev = JSON.parse(part.slice(6)); } catch (e) { continue; }
         if (ev.type === "step") {
           const s = cdSourceOf(ev.label);
-          if (s >= 0) setCu(u => ({ ...u, reached: Math.max(u.reached, s), label: READING[Math.max(u.reached, s)] }));
+          setCu(u => ({ ...u, steps: u.steps + 1, done: s >= 0 && !u.done.includes(s) ? [...u.done, s] : u.done,
+            label: s >= 0 ? WORKING : u.label }));
         }
       }
     }
@@ -335,7 +341,7 @@ export function CloseDay() {
     const r = await api("/api/day/catchup", force ? { force: true } : {});
     if (!r.ok) { setCu(u => ({ ...u, status: "cant", message: oneLine(r.message) || "The last check of mail and Teams couldn't start." })); return; }
     const pub = r.catchup || {}, run = r.run && r.run.id || pub.run && pub.run.id || null;
-    setCu(u => ({ ...u, status: r.status, message: r.message || "", state: pub.state || null, run, ended: pub.ended, reached: force ? 0 : u.reached,
+    setCu(u => ({ ...u, status: r.status, message: r.message || "", state: pub.state || null, run, ended: pub.ended, done: force ? [] : u.done, steps: force ? 0 : u.steps,
       label: force ? "" : u.label, found: force ? [] : u.found }));
     if (run && (pub.state === "running" || r.status === "start")) attach(run);
     else if (pub.state === "done") status();                               // ended earlier today: what it found
