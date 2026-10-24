@@ -2,6 +2,46 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.6
+
+2.6.6 contains all of 2.6.5. The headline: the screens are calmer and plainer (the 17 design decisions), the mail and Teams check says truthfully what it is doing while it runs, and a project code in a meeting's title now always wins over what creaite remembered for that series.
+
+### Mail and Teams check
+- **A true line while it runs.** The line under a check you ask for in the chat reads "Looked in so far: Outlook mail, Teams · 3 searches, 5 items read". It names only the places the check has searched, with counts that grow. There is no total and no percentage. (#358)
+- **It says how it ended.** "Finished. Looked in Outlook mail, Teams. Found 7 new, 4 need a project." or "Finished. Nothing new to review." Stop and an early end say so and give what was found so far. (#358)
+- **Found N counts new items only**, not updates to items you already have. (#358)
+- **Close the day ticks its rows from the check's own searches.** A subject or message that happens to say "Teams" ticks nothing. (#358)
+
+### Meetings and projects
+- **A project code in the title always wins.** "[def] Weekly sync" is the project DEF, in any case, even when you earlier chose another project for a series of that name. (#362)
+- **Two different codes win nothing.** A title naming two projects says "Not sure" and offers both. A title with no code behaves as before, and a confidential meeting still shows no project. (#362)
+
+### Design decisions
+- **No coloured bars down the side of notes.** Tips, warnings and quotes carry a small icon instead. The selected row has a line above and below. (#341)
+- **Review's "what changes" line** is 14 px like the title, bold rather than bigger. (#341)
+- **Projects** shows the next milestone as 13-11-2026 (in 24 days), only the figures above zero (or "Nothing flagged"), and a reason and next step for a health that is Not set. (#341)
+- **Work** has no half-circle or bars before a title. (#341)
+- **Intake** has one look for a selected meeting in all three views, and a file you added takes one line of facts. (#341)
+- **Milestones** has a smaller, quieter switch between Internal view and Client view. (#341)
+- **People** has one link style in a row. (#341)
+- **Plainer words.** "Open RAID" is "Open risks and issues", "Flow" is "Progress over time" and "Milestone slip" is "Late milestones". (#341)
+- **Cockpit** gives the right-hand column two fifths of the page. (#341)
+- **Files** has two ways to narrow the list, the folder tree and Filter. The four views moved into Filter. The search button says "ask creaite". (#341)
+- **Activity** has a Select all tick for the changes you can undo. (#341)
+- **Settings** no longer has the "Help and documentation" card. (#341)
+- **Amber** is not changed yet. A list of where it is used is ready for you to decide on. (#341)
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+- Run one mail and Teams check from the chat and read its line, then walk Projects, Work, Intake, Files, Activity, People and the milestones page once.
+
+### Good to know
+- A dashboard tab left open from before the update gets a "reload the page" message instead of deciding anything. Reload it.
+- The "Looked in so far" line is for a check you ask for in the chat. Close the day shows its own four rows.
+- If Review cannot be read when a check ends, the line says "Finished. Open Review to see what it found."
+- Amber changes in a later release, after you have chosen.
+- Not in 2.6.6: fetching transcripts as they appear, and the shared-database work (paused).
+
 ## creaite 2.6.5
 
 2.6.5 (also called 2.6.4b) contains all of 2.6.4. The headline: Intake leads with the work you have to do, People gets the same Display menu as Work, and a round of smaller design fixes makes the screens calmer and easier to read.
