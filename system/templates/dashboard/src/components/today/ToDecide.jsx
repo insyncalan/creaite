@@ -11,7 +11,7 @@
    conversation's card carries a quiet "Confidential" mark beside its title; its summary shows like any other (Alan, 15-10-2026).
    BL-342 Part 3 B: a card whose matched action looks done says why in one quiet line; once its close is staged, "Staged for
    Review" with Undo. BL-342 Part 5: Alan's own promises in the thread, one line each with Add a promise and Dismiss, then
-   "Staged for Review" with Undo; and a promise that looks kept, said in one quiet line like a close. */
+   "Waiting in Review" with Undo; and a promise that looks kept, said in one quiet line like a close. */
 import { render } from "preact";
 import { IconButton } from "../IconButton.jsx";
 import { LINK_REL, linkUrl } from "../../core/linkUrl.js";
@@ -61,13 +61,13 @@ function TdLine({ r, hidden, p }) {
         ) : null}
         {r.closeWhy ? <p class="tdwhy tddone">{r.closeWhy}</p> : null}
         {r.closeStaged ? (
-          <p class="tdstaged">{`Close of ${r.closeStaged}: Staged for Review`}{" · "}
+          <p class="tdstaged">{`Close of ${r.closeStaged}: Waiting in Review`}{" · "}
             <button type="button" class="qa" data-alertdo="closeundo" data-id={r.closeCard}
-              aria-label={`Undo the staged close of ${r.closeStaged}`}>Undo</button></p>
+              aria-label={`Undo the saved close of ${r.closeStaged}`}>Undo</button></p>
         ) : null}
         {r.keptWhy ? <p class="tdwhy tddone">{r.keptWhy}</p> : null}
         {r.keptStaged ? (
-          <p class="tdstaged">{`${r.keptStaged} kept: Staged for Review`}{" · "}
+          <p class="tdstaged">{`${r.keptStaged} kept: Waiting in Review`}{" · "}
             <button type="button" class="qa" data-alertdo="keptundo" data-id={r.keptCard}
               aria-label={`Undo ${r.keptStaged} kept`}>Undo</button></p>
         ) : null}
@@ -97,7 +97,7 @@ function TdLine({ r, hidden, p }) {
                   <span class="tag tdctag">{c.tag}</span>
                   <span class="ct">{c.t}{c.sub ? <span class="cs">{` · ${c.sub}`}</span> : null}</span>
                   {c.staged
-                    ? <span class="tdstaged">{"Staged for Review · "}
+                    ? <span class="tdstaged">{"Waiting in Review · "}
                         <button type="button" class="qa" data-alertdo="promiseundo" data-id={c.card}
                           data-pkey={c.pkey} aria-label={`Undo the promise: ${c.t}`}>Undo</button></span>
                     : <span class="tacts">{acts(c.acts)}</span>}

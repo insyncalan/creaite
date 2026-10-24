@@ -368,7 +368,7 @@ class Bars(LiveBrowserCase):
         b = self.b
         b.eval("document.getElementById('snackT').textContent=''")
         b.key("Enter", self.mod())
-        b.wait("/saved and applied|Not saved/i.test(document.getElementById('snackT').textContent)", 20)
+        b.wait("/— saved|Not saved/i.test(document.getElementById('snackT').textContent)", 20)
         return b.eval("document.getElementById('snackT').textContent")
 
     def test_current_state_stored_headings_open_as_heading_one_to_three_and_save_back_the_same(self):
@@ -393,7 +393,7 @@ class Bars(LiveBrowserCase):
         for n in (1, 2, 3):
             self.assertRegex(value, rf"(?m)^{'#' * (n + 2)} New {n}$")
         self.assertFalse(re.search(r"(?m)^#{1,2} ", value), "no heading level that would end the section")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         sec = self.section()
         self.assertFalse(re.search(r"(?m)^#{1,2} ", sec), sec)
         for line in ("### Top", "#### Middle", "##### Low", "### New 1", "#### New 2", "##### New 3"):

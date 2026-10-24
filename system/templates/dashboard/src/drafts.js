@@ -126,7 +126,7 @@ export function deFollowup(o){ const e=esc, today=o.today, items=dePicked(o), ac
   lines.push(ask,...endT);
   return {to:att.map(a=>a.email).filter(Boolean).join("; "),subject:`${o.internal?"[Internal] ":""}${codes.join(" / ")}${codes.length?" · ":""}${o.title||"Meeting"}: follow-up and actions`,html,text:lines.join("\n"),items}; }
 /* The popup. Opening, copying and changing it write nothing; the only record is "I sent it" in Chase (system/staging/chases.json,
-   item IDs, the date and the mode, through the live server). Nothing is sent. No Outlook draft is made unless Create drafts in
+   item IDs, the date and the mode, through creaite). Nothing is sent. No Outlook draft is made unless Create drafts in
    Outlook is on (#183, below), and then only by its button. */
 shared.DE=null;   /* {mode, name, email, items, picked:Set, includeUpdate, replyBy, edited, subjEdited, outside, cover, polish; followup: token, title, day, attendees, lead, summary, note} */
 export const deHost=addr=>String(addr||"").split("@")[1]?.trim().toLowerCase()||"";
@@ -160,8 +160,8 @@ export function openDraftEmail(name,mode="update",only){ shared.SENTVIA=""; (()=
 /* from a meeting's page (and Review): the follow-up, with what the meeting produced that is in the tracker */
 export function openFollowup(t){ const m=(D.hub||{})[t]; if(!m){ snack("That meeting isn't in creaite's records any more"); return; }
   const all=(m.items||[]).filter(x=>x.id&&(x.k==="actions"||x.k==="decisions")).map(x=>REC(x.k,x.id)&&deItem(x.k,REC(x.k,x.id))).filter(Boolean), ok=all.filter(i=>!deBarred(i));
-  if(!ok.length){ snack("The meeting has no actions or decisions in the tracker yet: approve and apply them first"); return; }
-  shared.DE={mode:"followup",token:t,title:m.title,day:m.day,codes:m.p||[],items:ok,left:all.length-ok.length,attendees:[],lead:"",summary:"",note:viaServer()?"Reading the attendees and the minutes' summary…":"The attendees and the minutes' summary need the live server.",
+  if(!ok.length){ snack("The meeting has no actions or decisions in your project record yet: approve and save them first"); return; }
+  shared.DE={mode:"followup",token:t,title:m.title,day:m.day,codes:m.p||[],items:ok,left:all.length-ok.length,attendees:[],lead:"",summary:"",note:viaServer()?"Reading the attendees and the minutes' summary…":"The attendees and the minutes' summary need creaite to be running.",
     picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:true,cover:"",polish:null};
   shared.DE.picked=deDefaults(ok,true); deShow(`Follow-up: ${m.title}`); if(viaServer()) deFollowFacts(shared.DE,m); }
 /* v2.1.0 P7: from the minutes view's Export menu, for the version shown ("internal" or "distributed"). The server builds the content
@@ -255,7 +255,7 @@ export function deHtml(){ const el=$("#dePrev");
 /* ===== end #133 ===== */
 /* ===== #183 (2.6) ===== Draft email delivery. With Settings › Essentials › Draft email › Create drafts in Outlook on
    (S.outlookDrafts, settings.json draft_email.outlook_drafts, off by default) the popup's primary button is Create draft in Outlook:
-   the live server's token-checked POST /api/email/draft {action:"create", to, subject, html, ids, mode, name} makes one Outlook draft
+   creaite's token-checked POST /api/email/draft {action:"create", to, subject, html, ids, mode, name} makes one Outlook draft
    (draft_delivery.py builds and checks the call; it never sends). The html is deHtml(), the very HTML Copy email puts on the
    clipboard, so what is on screen is what lands in Outlook. Copy email and Copy as plain text stay; I sent it goes: the chase is
    recorded when the draft is made and marked sent when a sweep sees it in Sent Items ({action:"copied"} after a copy, so the sweep
@@ -354,7 +354,7 @@ export async function sentLog(entries,o){ let ok=0; const mine=[];   /* the stag
 /** One send (one popup, one pane) remembers which items it has recorded and logged, so a retry after a failure repeats only what is missing. */
 export function sendState(id){ if(!shared.SENT) shared.SENT={}; if(!shared.SENT[id]) shared.SENT[id]={rec:new Set(),done:new Set()}; return shared.SENT[id]; }
 /* "I sent it" in the popup, update and chase modes: one record, then a Latest update on each ticked item */
-export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase needs the live server"); return; }
+export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase needs creaite to be running"); return; }
   const picked=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)); if(!picked.length){ snack("Tick the items you sent it about"); return; }
   if(btn.disabled) return;
   const ids=picked.map(i=>i.id), mode=shared.DE.mode==="update"?"update":"chase", name=shared.DE.name, replyBy=shared.DE.replyBy;
@@ -450,21 +450,21 @@ export const DRAFTFEATURES=[["update","Draft the latest update","An action's lat
   ["sharpen","Sharpen a vague action","A clear, verb-first title for a vague action, beside the original; you pick one"]];   /* BL-220 */
 export let DRRUN=null;
 export function draftWhyNot(kind){ const f=DRAFTKIND[kind]||kind, name=(DRAFTFEATURES.find(x=>x[0]===f)||[])[1]||"Drafting";
-  return !draftOn(f)?`${name} is off in Settings › Advanced › AI drafts`:!viaServer()?`${name} needs the live server`:DRRUN?"A draft is being written; wait for it or stop it":""; }
+  return !draftOn(f)?`${name} is off in Settings › Advanced › AI drafts`:!viaServer()?`${name} needs creaite`:DRRUN?"A draft is being written; wait for it or stop it":""; }
 export function draftBtn(kind,word,tip,attrs=""){ const why=draftWhyNot(kind);
   return `<button type="button" class="drbtn" data-draft="${kind}" ${attrs} aria-label="${esc(word)}" data-tip="${esc(why||tip)}"${why?' aria-disabled="true"':""}>${ic("spark")}<span>${esc(word)}</span></button>`; }
 export function draftStat(feature,event,n=1){ if(feature&&viaServer()) api("/api/draft/stat",{feature,event,n}).catch(()=>{}); }
 export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
   if(DRRUN) return {ok:false,message:"A draft is already being written"};
   if(shared.RUN||shared.GEN.run||shared.BUSY||shared.PREPRUN) return {ok:false,message:"ask creaite is busy; try again when it's finished"};
-  if(!viaServer()) return {ok:false,message:"Drafting needs the live server"};
+  if(!viaServer()) return {ok:false,message:"Drafting needs creaite to be running"};
   const id=`d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); DRRUN={id,ctl};
   let steps=0, res, started=false; const out={said:[]};
   const show=()=>status(`<span class="spin" aria-hidden="true"></span><span>${esc(o.label||"Drafting with Claude")}${steps?` · ${steps} step${steps===1?"":"s"}`:""}</span><button type="button" class="mini" data-drstop>Stop</button>`);
   shared.RBOUT=""; show();
   try{
     try{ res=await fetch(o.url||"/api/draft",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({...body,run:id})}); }   /* o.url: BL-296's /api/alerts/draft */
-    catch(e){ return {ok:false,message:"The live server isn't reachable"}; }
+    catch(e){ return {ok:false,message:"creaite isn't reachable"}; }
     if(!res.ok||!res.body||(res.headers.get("Content-Type")||"").includes("json")){ const j=await res.json().catch(()=>({}));
       return {ok:!!j.ok&&!!j.nothing,nothing:j.nothing||"",off:!!j.off,confidential:!!j.confidential,message:res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message||"")||"The draft couldn't be started"}; }
     started=true; rbStart(o.label||"Drafting with Claude");
@@ -500,13 +500,13 @@ export function bootDrafts0196(){
 Object.assign(ICONS,{spark:ICONS.spark||SPARKI});
 document.addEventListener("click",e=>{ if(e.target.closest("[data-drstop]")&&DRRUN){ api("/api/ask/stop",{run:DRRUN.id}).then(r=>{ if(!r.ok&&DRRUN) DRRUN.ctl.abort(); }); } });
 document.addEventListener("click",async e=>{ const a=e.target.closest("[data-dropen]"); if(!a) return; e.preventDefault();
-  if(!viaServer()){ snack("Opening a file needs the live server"); return; } const r=await api("/api/open",{path:a.dataset.dropen}); if(!r.ok) snack(oneLine(r.message)||"Couldn't open it"); });
+  if(!viaServer()){ snack("Opening a file needs creaite to be running"); return; } const r=await api("/api/open",{path:a.dataset.dropen}); if(!r.ok) snack(oneLine(r.message)||"Couldn't open it"); });
 /* Settings › AI drafts: a switch per feature, and what Alan has done with each kind of draft (from draft-stats.json) */
 SETSECTIONS.splice(SETSECTIONS.findIndex(s=>s.id==="more-ai"),0,{id:"drafts",cat:"ai",title:"AI drafts",groups:["AI drafts"],   /* v2.6 (#246): its own tab; the agenda style joins it */
   kw:"ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
   render:()=>`<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a suggestion in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs creaite running.</p>`
     +DRAFTFEATURES.map(([f,l,h])=>row(l,`<input type="checkbox" class="switch" data-drsw="${f}" ${draftOn(f)?"checked":""} aria-label="${esc(l)}">`,h)).join("")
-    +`<div class="drstats" id="drStats">${viaServer()?"":"How often each kind of draft is used shows here while the live server runs."}</div>`,
+    +`<div class="drstats" id="drStats">${viaServer()?"":"How often each kind of draft is used shows here while creaite is running."}</div>`,
   after:()=>drStatsLoad()});
 $("#settingsBody").addEventListener("change",async e=>{ const el=e.target.closest&&e.target.closest("[data-drsw]"); if(!el) return; const f=el.dataset.drsw, v=el.checked;
   if(!await writeSettings({["drafting."+f]:v})){ el.checked=!v; return; } S.drafting={...(S.drafting||{}),[f]:v}; });
@@ -689,7 +689,7 @@ export function shRvHtml(r){ if(!r||r.done||r.kind!=="actions"||(S.drafting&&S.d
 /* ⌘K: chips under "add an action" (a click sets that field on the change before Enter stages it), and a note for a vague title */
 export function ckChipsHtml(c){ if(c.k!=="actions"||!c.new) return ""; c.chips=capChips(c.new.t,c.new.p,{...c.new,o:c.new.o==="TBC"?"":c.new.o,pr:""}).filter(x=>!(x.f==="pr"&&x.v===c.new.pr));
   const v=vagueWhy(c.new.t);
-  return `${c.chips.length?`<div class="ckchips" role="group" aria-label="Suggested fields">${c.chips.map((x,i)=>`<button type="button" class="chip capchip" data-ckchip="${i}" title="Suggested ${esc(x.why)}; click to set it">+ ${esc(x.label)}</button>`).join("")}</div>`:""}${v?`<div class="sub ckvague">The title is vague (${esc(v)}): write what is to be done, or stage it and Sharpen it in the item.</div>`:""}`; }
+  return `${c.chips.length?`<div class="ckchips" role="group" aria-label="Suggested fields">${c.chips.map((x,i)=>`<button type="button" class="chip capchip" data-ckchip="${i}" title="Suggested ${esc(x.why)}; click to set it">+ ${esc(x.label)}</button>`).join("")}</div>`:""}${v?`<div class="sub ckvague">The title is vague (${esc(v)}): write what is to be done, or save it and Sharpen it in the item.</div>`:""}`; }
 /* ===== end BL-220 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootDrafts0204(){

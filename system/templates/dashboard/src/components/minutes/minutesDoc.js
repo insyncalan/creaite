@@ -5,7 +5,7 @@
    - lineTag(line, tags): the time tag P4 gave that line (`{ref: "transcript", turn, time, text}`);
    - checksOf(doc, turns, people): the checks against the transcript and the record (§4.5's shape), worked out here in plain
      code (no model): an owner whose record needs details (#266), an action with no owner, a deadline that isn't what was said,
-     a figure the transcript doesn't say, an item the tracker's checks refused;
+     a figure the transcript doesn't say, an item your project record's checks refused;
    - distributedOf(doc): the distributed version (BL-338 point 13) as the page shows it: the internal record without the lines
      and rows marked Internal only (`layout.internal_only`) and without withheld items (Sensitive, partner-only or labelled to
      exclude: the item's own flags and the route's `withheld`, from its labels). minutes_record.distributed_of makes the same
@@ -137,7 +137,7 @@ function rowChecks(doc, s, r, i, turns, unknown) {
       actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }] });
   if ((it.flags || []).some((/** @type {string} */ f) => f === "invalid" || f === "conflict"))
     out.push({ id: `item:${r.ref}`, section: s.id, row: i, quote: "", kind: "item", n,
-      note: "The tracker's checks refused this item as it stands: change it in Review.", actions: [{ id: "keep", label: "Keep mine" }] });
+      note: "The project record's checks couldn't accept this item as it stands: change it in Review.", actions: [{ id: "keep", label: "Keep mine" }] });
   return out;
 }
 

@@ -602,7 +602,7 @@ def close_vault(v):
 
 class ThreadCardClose(LiveBrowserCase):
     """BL-342 Part 3 B, step 9: "Looks done: close <ID>" beside Log at 1400 and 900px, light and dark; one click stages the
-    close for Review and the card says "Staged for Review" with Undo; Undo takes it back. Nothing says VIP."""
+    close for Review and the card says "Waiting in Review" with Undo; Undo takes it back. Nothing says VIP."""
 
     @classmethod
     def load(cls, v):
@@ -651,7 +651,7 @@ class ThreadCardClose(LiveBrowserCase):
         b.click(f'#tdList [data-alertdo="close"][data-id="{aid}"]')
         b.wait(f"(document.querySelector('#tdList li[data-td=\"al{aid}\"] .tdstaged')||{{}}).textContent", 20)
         o = self.card()
-        self.assertEqual(o["staged"], f"Close of {item}: Staged for Review · Undo")
+        self.assertEqual(o["staged"], f"Close of {item}: Waiting in Review · Undo")
         self.assertNotIn(f"Stage a close of {item} for Review", o["buttons"])
         staged = [i for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
                   for i in json.loads(f.read_text())["items"] if i.get("id") == item]
@@ -762,8 +762,8 @@ class ThreadCardPromise(LiveBrowserCase):
         b.click(f'#tdList [data-alertdo="kept"][data-id="{aid}"]')
         b.wait(f"(document.querySelector('#tdList li[data-td=\"al{aid}\"] p.tdstaged')||{{}}).textContent", 20)
         o = self.card()
-        self.assertIn("Staged for Review · Undo", o["staged"])
-        self.assertIn(f"{pid} kept: Staged for Review · Undo", o["staged"])
+        self.assertIn("Waiting in Review · Undo", o["staged"])
+        self.assertIn(f"{pid} kept: Waiting in Review · Undo", o["staged"])
         self.assertEqual(o["pbuttons"], [])
         self.assertNotIn(f"Stage {pid} as kept for Review", o["buttons"])
         got = sorted((i["op"], i["table"], i.get("id") or i["values"]["description"], i["decision"]) for i in self.staged())

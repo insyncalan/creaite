@@ -83,7 +83,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
   putHTML($("#v-cockpit"),html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div></div>
    <div id="cockTabs"></div>
-   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run||DRRUN?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run||DRRUN?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
+   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run||DRRUN?' aria-disabled="true"':""}`,!viaServer()?"Generate needs creaite to be running":shared.RUN||shared.GEN.run||DRRUN?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}${raw(legBtn())}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1,"actions:overdue"],["No due date",undatedWork(code).length,0,""],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1,"raid:urgentonly"],["Milestone slip",p.slip?p.slip+" days":"None",p.slip,""],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0,"actions:soon",{st:["Open","Delayed"]}]].map(([l,v,b,nav,ex])=>`<div class="evbox${nav?" click":""}" ${nav?`data-nav="${esc(navOf(`${nav}:${code}`,ex))}" role="link" tabindex="0" title="Open in Work"`:""}><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join(""))}</div></div>
@@ -124,7 +124,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
   $$("#v-cockpit [data-msjump]").forEach(b=>{ b.title="Open milestones: Movement"; b.setAttribute("aria-label",`Milestone slip ${b.querySelector(".v")?.textContent.trim()||""}, open milestones: Movement`); });
     mvBindScroll($("#v-cockpit")); paintIcons($("#mvCard"));   /* BL-245 */
     const h=[...$$("#v-cockpit .card>h2")].find(x=>x.textContent==="Client messaging"), card=h&&h.parentElement;
-    if(card&&DRAFTKIND["client-bulk"]&&!card.querySelector("[data-drcmall]")&&draftOn("client")) addHTML(card,"beforeend",html`<div class="drstale">${raw(draftBtn("client-bulk","Draft all","Draft client wording for each of them, as proposals in Review (each approved on its own)",`data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`); } }   /* BL-219 */
+    if(card&&DRAFTKIND["client-bulk"]&&!card.querySelector("[data-drcmall]")&&draftOn("client")) addHTML(card,"beforeend",html`<div class="drstale">${raw(draftBtn("client-bulk","Draft all","Draft client wording for each of them, as suggestions in Review (each approved on its own)",`data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`); } }   /* BL-219 */
 /** #122 B: the editor the key is in has its / menu open (SlashMenu sets aria-expanded on the text) @param {EventTarget|null} t */
 const slashOn=t=>!!t&&/** @type {Element} */(t).getAttribute?.("aria-expanded")==="true";
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -134,10 +134,10 @@ window.addEventListener("resize",()=>{ if(shared.VIEW==="cockpit") rkClamp($("#v
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-edcur]"); if(b){ startCurEdit(b.dataset.edcur); } const h=e.target.closest("[data-edproj]"); if(h) openProject(h.dataset.edproj,"health"); const f=e.target.closest("[data-files]"); if(f){ shared.FSEL={p:f.dataset.files,f:"All",sub:"",quick:"all"}; FOPEN.add(f.dataset.files); go("files"); } const rp=e.target.closest("[data-reports]"); if(rp){ openSpace(rp.dataset.reports); } const ps=e.target.closest("[data-psettings]"); if(ps){ e.preventDefault(); openProjectSettings(ps.dataset.psettings); } const a=e.target.closest("[data-ask]"); if(a){ openChat(); send(a.dataset.ask); } });
 }
 /* ======================= Generate current state with Claude (BL-46) ======================= */
-export const GEN_SRC=[["tracker","Tracker changes and open items",1,"tracker"],["minutes","Minutes and transcripts",1,"minutes and transcripts"],["reports","Weekly and client reports",1,"reports"],["updates","Weekly updates",1,"weekly updates"],["swept","Mail and Teams items already swept",1,"swept mail and Teams"],["documents","Project documents (internal; off by default)",0,"project documents"]];   /* #110: the fourth is the short name for the Draw on line */
+export const GEN_SRC=[["tracker","Project record changes and open items",1,"tracker"],["minutes","Minutes and transcripts",1,"minutes and transcripts"],["reports","Weekly and client reports",1,"reports"],["updates","Weekly updates",1,"weekly updates"],["swept","Mail and Teams items already checked",1,"checked mail and Teams"],["documents","Project documents (internal; off by default)",0,"project documents"]];   /* #110: the fourth is the short name for the Draw on line */
 export const GEN_STARTERS=[["risks","Lead with risks"],["decisions","Lead with decisions needed"],["plain","Plain words, no jargon"]];   /* #110: a click appends the sentence to Steer it; keyed by id, never by the words */
 export const GEN_FORMS=[["current","Current state"],["steering","Steering note"],["three","Three-line update"],["email","Email paragraph"],["teams","Teams message"]];   /* BL-227 */
-export const GEN_AUDNOTE={internal:"Candid: the internal view of every item.",client:"Only items marked client-visible, in their client wording. Nothing else from the vault is used.",
+export const GEN_AUDNOTE={internal:"Candid: the internal view of every item.",client:"Only items marked client-visible, in their client wording. Nothing else from your creaite folder is used.",
   steering:"Internal wording for the steering committee, decisions and asks first; nothing confidential, restricted or marked Client-safe: no.",sponsor:"Internal wording for the sponsor, what is needed from them first; nothing confidential, restricted or marked Client-safe: no."};
 export const GEN_AUD=[["internal","Internal"],["client","Client-safe"],["steering","Steering committee"],["sponsor","Sponsor"]], GEN_LEN=[["short","Short"],["standard","Standard"],["fuller","Fuller"]];   /* BL-106 */
 /* #110: the four settings are quiet fields, each a button that opens the Picker block's list (↑ ↓ Home End, Enter, Esc, Tab); the buttons are
@@ -153,7 +153,7 @@ export function genPick(btn){ if(btn.getAttribute("aria-disabled")==="true") ret
   openPicker(btn,{label:c.label,value:c.value,options:c.options,onPick:v=>{ c.set(v); genOptions(); }}); }
 shared.GEN={code:null,days:S.genDays||7,aud:store.get("creaite-gen-aud","internal"),len:store.get("creaite-gen-len","standard"),form:store.get("creaite-gen-form","current"),run:null,ctl:null};
   
-export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run||DRRUN){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Generate needs the live server"); return; } if(shared.RUN||shared.GEN.run||DRRUN){ snack("ask creaite is busy; try again when it's finished"); return; }
+export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run||DRRUN){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Generate needs creaite to be running"); return; } if(shared.RUN||shared.GEN.run||DRRUN){ snack("ask creaite is busy; try again when it's finished"); return; }
   if(shared.GEN.code!==code){ $("#genNote").value=""; $("#genFrom").value=""; $("#genTo").value=""; }   /* another project: no steer or dates from the last one */
   shared.GEN.code=code; $("#genWho").textContent=pName(code);
   genReset();   /* a dialog opened again starts as a new one: setup showing, no draft, Draw on folded */
@@ -169,7 +169,7 @@ export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrit
   const id=`g-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.GEN.run=id; shared.GEN.ctl=ctl;
   let said=[], steps=0, stopped=false, res;
   const show=()=>genStatus(`<span class="spin"></span> ${kind==="rewrite"?"Rewriting in the executive voice":"Drafting with Claude"}${steps?` · ${steps} step${steps===1?"":"s"}`:""} <button class="mini" data-genstop>Stop</button>`); show();
-  try{ res=await fetch(kind==="rewrite"?"/api/current/rewrite":"/api/current/generate",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({...body,run:id})}); }catch(e){ shared.GEN.run=null; genStatus(""); shared.RBOUT="failed"; snack("The live server isn't reachable"); return; }
+  try{ res=await fetch(kind==="rewrite"?"/api/current/rewrite":"/api/current/generate",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({...body,run:id})}); }catch(e){ shared.GEN.run=null; genStatus(""); shared.RBOUT="failed"; snack("creaite isn't reachable"); return; }
   if(res.status===409||!res.ok||!res.body){ shared.GEN.run=null; genStatus(""); shared.RBOUT="failed"; const j=await res.json().catch(()=>({})); snack(res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message)||"Couldn't start the draft"); return; }
   if((res.headers.get("Content-Type")||"").includes("json")){ shared.GEN.run=null; genStatus(""); const j=await res.json(); snack(oneLine(j.message)||"Couldn't start the draft"); return; }
   const rd=res.body.getReader(), dec=new TextDecoder(); let buf="";
@@ -284,7 +284,7 @@ export function rewriteHtml(){ const rw=shared.CURED&&shared.CURED.rewrite; if(!
   return `<div class="genrewrite" id="genRewrite" role="region" aria-label="Executive version"><div class="rwhead"><strong>Executive version</strong> <span class="sub">A draft. What is in the editor above is unchanged until you use this.</span></div>
     <div class="rwbody">${mdHtml(rw.md,(P.find(x=>x.code===shared.CURED.code)||{}).images)}</div>${notes}
     <div class="curacts"><span class="sp"></span><button class="btn" data-rw="discard">Discard</button><button class="btn primary" data-rw="use">Use this version</button></div></div>`; }
-export function execRewrite(){ if(!shared.CURED) return; if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Make it executive needs the live server"); return; }
+export function execRewrite(){ if(!shared.CURED) return; if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Make it executive needs creaite to be running"); return; }
   const text=edValue($("#curEd")); if(!text.trim()){ snack("Write something first, or use Generate"); return; }
   runGen({code:shared.CURED.code,text,...execOpts()},"rewrite"); }
 export function execResult(code,original,md){ if(!shared.CURED||shared.CURED.code!==code){ snack("The rewrite finished, but the editor was closed. Nothing was changed."); return; }
@@ -369,7 +369,7 @@ export async function saveCurEdit(){ const cur=shared.CURED, code=cur&&cur.code,
      didn't happen are taken away again. */
   shared.CURED.saving=true; const staged=[], cur=shared.CURED, giveUp=async msg=>{ for(const f of staged){ try{ await shared.VW.remove(f); }catch(e){} } if(msg) snack(msg); cur.saving=false; };
   /* BL-63: each new image is staged in system/staging/uploads/ and filed in the project's images/ with the text */
-  const ups=shared.CURED.uploads||{}, ids=[...md.matchAll(/\]\(new:([a-z0-9]+)\)/g)].map(m=>m[1]).filter(id=>ups[id]), ops=[], added=[], notSaved=()=>$("#snack").classList.contains("on")?"":"Not saved: the live server isn't running and the vault isn't connected. Your text and pictures are still here.";
+  const ups=shared.CURED.uploads||{}, ids=[...md.matchAll(/\]\(new:([a-z0-9]+)\)/g)].map(m=>m[1]).filter(id=>ups[id]), ops=[], added=[], notSaved=()=>$("#snack").classList.contains("on")?"":"Not saved: creaite isn't running and your creaite folder isn't connected. Your text and pictures are still here.";
   if(ids.length){ if(!await needVault()){ await giveUp(notSaved()); return; } const dir=((D.image_dirs&&D.image_dirs[code])||`projects/${D.folders[code]}/images`)+"/", taken=new Set();   /* BL-85: the mapped images folder */
     for(const id of ids){ const u=ups[id], cap=(md.match(new RegExp(`!\\[([^\\]]*)\\]\\(new:${id}\\)`))||[])[1]||"", ext=u.file.type==="image/png"?"png":"jpg";
       const slug=((cap||u.file.name.replace(/\.[^.]+$/,"")).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40))||"image";
@@ -664,7 +664,7 @@ export function savedFactsHtml(c){ return (c.saved.facts||[]).map((f,i)=>{ const
   const local=(f.src||[]).filter(s=>!s.startsWith("projects/")).map(id=>{ const k=/-A-\d{3}$/.test(id)?"actions":/-D-\d{3}$/.test(id)?"decisions":/-M-\d{3}$/.test(id)?"milestones":"raid", x=k==="milestones"?null:REC(k,id);
     return x?{id,kind:k,title:x.t,status:x.st,owner:x.o||x.by,due:x.due,closed:x.closed}:{id,kind:k,title:k==="milestones"?(((D.milestone_names||{})[id]||[])[0]||""):"",status:""}; });
   const rows=got&&got!=="…"&&got.rows?got.rows:local, files=got&&got!=="…"?got.files||[]:(f.src||[]).filter(s=>s.startsWith("projects/")).map(p=>({path:p,line:0,text:""}));
-  return `<div class="evfact"><div class="evpart">${esc(f.part||"Fact")}</div><div>${esc(f.text)}</div>${rows.map(evRowHtml).join("")}${files.map(q=>`<div class="evrow">${evQuote(q)||`<div class="evqsrc">${esc(String(q.path).split("/").pop())}</div>`}</div>`).join("")}${!viaServer()&&(f.src||[]).length?'<div class="evqsrc">The quoted lines need the live server.</div>':""}</div>`; }).join(""); }
+  return `<div class="evfact"><div class="evpart">${esc(f.part||"Fact")}</div><div>${esc(f.text)}</div>${rows.map(evRowHtml).join("")}${files.map(q=>`<div class="evrow">${evQuote(q)||`<div class="evqsrc">${esc(String(q.path).split("/").pop())}</div>`}</div>`).join("")}${!viaServer()&&(f.src||[]).length?'<div class="evqsrc">The quoted lines need creaite to be running.</div>':""}</div>`; }).join(""); }
 /* Check sources: every sentence in the editor without a link becomes a claim to re-check (plain code: the same dates, numbers
    and words as a fact), then the usual check runs. */
 export function claimsAdopt(){ const root=$("#curEd"); if(!root||!shared.CURED) return 0; const set=shared.CURED.claims||(shared.CURED.claims={}); let n=Math.max(0,...Object.keys(set).map(Number)), added=0;
@@ -681,7 +681,7 @@ export function claimsAdopt(){ const root=$("#curEd"); if(!root||!shared.CURED) 
   if(ed) edClaim(root,runs);
   made.forEach(k=>{ set[k]={text:claimText(root,k),ids:[],how:"",edited:true,touched:true}; });
   claimPaint("ed"); return added; }
-export async function checkSources(code){ if(!viaServer()){ snack("Check sources needs the live server"); return; }
+export async function checkSources(code){ if(!viaServer()){ snack("Check sources needs creaite to be running"); return; }
   if(!shared.CURED){ startCurEdit(code); if(!shared.CURED) return; }
   Object.values(shared.CURED.claims||{}).forEach(c=>{ if(c.how==="saved"){ c.edited=true; c.saved=null; c.how=""; } });   /* re-find them all against today's facts */
   claimsAdopt(); claimPaint("ed"); await curCheck(); snack("Sources checked. A sentence creaite couldn't place is marked."); }
@@ -951,7 +951,7 @@ export function drawPrep(){ popupRev.value++; { const key=prepKey(shared.PREPEV,
     +prepReports(code,all,sec,pc)+'</div>'); })();
   { const m=prepOf(shared.PREPEV)||{}, code=m.p, body=$("#prepBody");
     if(body&&code&&code!=="_portfolio"&&isSteering(shared.PREPEV&&shared.PREPEV.title)&&!body.querySelector(".steerlink")){
-    const bar=`<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer()?"":"; needs the live server"})</span></p>`;
+    const bar=`<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer()?"":"; needs creaite to be running"})</span></p>`;
     addHTML(body,"afterbegin",raw(bar)); } }   /* BL-92 */
   { const m=prepOf(shared.PREPEV)||{}, code=m.p, body=$("#prepBody"); if(body&&code&&!body.querySelector("#prepDecs")){
     const all=code==="_portfolio", inP=x=>all||x.p===code, pc=x=>all?pLink(x.p)+" ":"", rk=id=>((m.rank||{}).decisions||{})[id];
@@ -975,5 +975,5 @@ $("#settingsBody").addEventListener("change",async e=>{ const el=e.target.closes
   if(el.type==="number"&&!(v>0)){ snack("Use a number above 0"); renderSettings(); return; }
   if(!await writeSettings({[`warnings.${sig}.${key}`]:v})){ renderSettings(); return; }
   ((D.warn_settings=D.warn_settings||{})[sig]=D.warn_settings[sig]||{})[key]=v; renderSettings();
-  if(SERVED){ await reloadData(); snack("Saved; early warnings updated"); } else snack("Saved to settings.json; the flags update at the next rebuild"); },true);
+  if(SERVED){ await reloadData(); snack("Saved; early warnings updated"); } else snack("Saved; the flags update at the next rebuild"); },true);
 }

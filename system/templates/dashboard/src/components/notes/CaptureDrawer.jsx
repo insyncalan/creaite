@@ -170,7 +170,7 @@ export function openNoteFull(r) {
 export async function captureDone(find) {
   clearTimeout(timer);
   const n = capNote.value;
-  if (!viaServer()) { capMsg.value = "Saving a note needs the live server."; return false; }
+  if (!viaServer()) { capMsg.value = "Saving a note needs creaite to be running."; return false; }
   if (!hasText(n)) { capMsg.value = "Write the note first."; return false; }
   capBusy.value = true;
   try {
@@ -270,7 +270,7 @@ export function CaptureDrawer() {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); captureDone(e.shiftKey); }
   };
   const why = n.chosen ? "chosen by you" : n.reason;
-  const off = live ? undefined : "Saving a note needs the live server";
+  const off = live ? undefined : "Saving a note needs creaite to be running";
   const meeting = n.template === "working-session";
   const drafts = recent.drafts.filter(d => d.id !== n.id);
   return (<>
@@ -306,7 +306,7 @@ export function CaptureDrawer() {
       <div ref={box} id="capBody" class="capbody" role="textbox" aria-multiline="true" aria-label="Note" aria-describedby="capSaved"
         data-ph="Type the note: what was said, what you think, who to follow up…" spellcheck />
       <div class="capfoot">
-        <span class="sub" id="capSaved" role="status" aria-live="polite">{capMsg.value || (n.saved ? `Saved ${capWhen(n.saved)}` : live ? "Saved as you type" : "Notes need the live server")}</span>
+        <span class="sub" id="capSaved" role="status" aria-live="polite">{capMsg.value || (n.saved ? `Saved ${capWhen(n.saved)}` : live ? "Saved as you type" : "Notes need creaite to be running")}</span>
         <span class="sp" />
         <button type="button" class="btn ai" id="capFind" disabled={capBusy.value} aria-disabled={off ? "true" : undefined} data-tip={off || "Save it, then open it with Find updates"}
           onClick={() => captureDone(true)}>Done and find updates</button>

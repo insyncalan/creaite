@@ -203,7 +203,7 @@ function AllSwitch({ keys, named, save }) {
 /** The Essentials, in their sections. */
 export function Essentials() {
   const c = catalogue.value;
-  if (!c) return <div class="card wide"><h2>Essentials</h2><p class="sub" role="status">{catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.")}</p></div>;
+  if (!c) return <div class="card wide"><h2>Essentials</h2><p class="sub" role="status">{catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need creaite to be running: open creaite from it.")}</p></div>;
   const w = settingWords(query.value);
   const rows = c.essentials.filter(r => (!w.length || settingHasAll(essText(r), w)));
   if (!rows.length) return null;

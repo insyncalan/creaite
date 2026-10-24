@@ -394,7 +394,7 @@ def main(argv):
         with contextlib.redirect_stdout(sys.stderr):        # library notes ("image not found…") must not mix into the JSON
             facts = status_facts.facts(code, opts.get("--from"), opts.get("--to"), audience)
     except (ValueError, SystemExit) as e:
-        print(e if isinstance(e, ValueError) else "That project isn't in the tracker.")
+        print(e if isinstance(e, ValueError) else "That project isn't in your project record.")
         return 2
     if length not in status_facts.settings()["length_words"]:
         print(f"length must be one of {', '.join(status_facts.settings()['length_words'])}")

@@ -206,8 +206,8 @@ class Staging(PeekCase):
         files = self.staged()
         self.assertEqual(len(files), 3)                                                         # each edit its own proposal
         self.assertEqual(self.action(id_), before)                                              # nothing in the tracker yet
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "3 changes staged on 1 item")
-        self.assertIn("staged", b.eval("document.getElementById('pkLast').textContent"))
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "3 changes waiting to be saved on 1 item")
+        self.assertIn("waiting", b.eval("document.getElementById('pkLast').textContent"))
         self.assertEqual(b.eval("document.querySelectorAll('#pkFeed .pk-pill.st').length"), 3)
         first = json.loads((self.v.root / "system/staging" / files[0]).read_text())
         self.assertEqual((first["source_run"], first["items"][0]["decision"], first["items"][0]["changes"]), ("dashboard", "approved", {"priority": "Low"}))
@@ -399,7 +399,7 @@ class Review(PeekCase):
         self.assertTrue(b.eval("!!document.querySelector('#pkTitle[contenteditable]')"))
         self.assertEqual(b.eval("[...document.querySelectorAll('#pkFoot2 button')].map(x=>x.textContent.trim())"), ["Reject", "Cancel", "Save", "Save and approve"])
         top = b.eval("document.getElementById('pkPropTop').textContent")
-        self.assertIn("Editing a proposal", top)
+        self.assertIn("Editing a suggestion", top)
         self.assertIn("Choose a project before saving.", top)
         self.pick("pr", "Low")
         b.pump(0.3)

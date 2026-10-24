@@ -36,8 +36,8 @@ export function PageDialogs() {
       </Dialog>
       {/* BL-221 (sprint-drafts-extraction): Compare a repeat */}
       <Dialog cmdEnter={false} id="llDlg" class="rvdlg lldlg" labelledBy="llTitle">
-        <h2 id="llTitle">Compare</h2><p class="sub">The proposal beside the item it looks like. Nothing changes until you choose.</p>
-        <table class="lltab"><thead><tr><th scope="col"><span class="vh">Field</span></th><th scope="col" id="llNew">Proposed</th>
+        <h2 id="llTitle">Compare</h2><p class="sub">The suggestion beside the item it looks like. Nothing changes until you choose.</p>
+        <table class="lltab"><thead><tr><th scope="col"><span class="vh">Field</span></th><th scope="col" id="llNew">Suggested</th>
           <th scope="col" id="llOld">Existing</th></tr></thead><tbody id="llRows"></tbody></table>
         <div class="row" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><span class="sp" style="flex:1"></span>
           <button type="button" class="btn" id="llClose">Close</button><button type="button" class="btn" id="llKeep">Keep as new</button>

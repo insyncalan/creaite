@@ -106,7 +106,7 @@ class RunBadge(LiveBrowserCase):
         b.eval("stopAsk()")
         self.done("stopped")
         for q, words in (("weekly report ABC", "Drafting the weekly report"), ("refresh calendar", "Refreshing the calendar"),
-                         ("sweep", "Sweeping mail and Teams"), ("process inbox/x.vtt", "Processing a meeting")):
+                         ("sweep", "Checking mail and Teams"), ("process inbox/x.vtt", "Processing a meeting")):
             self.assertEqual(self.b.eval(f"rbGuess({q!r})"), words)
 
     def test_a_transcript_job_and_generate_and_a_search_all_show_it(self):

@@ -94,7 +94,7 @@ export function Decisions({ ctx }) {
             <div class="wr-decbody">
               <Rich ctx={ctx} text={c.decision} row={i} col="decision" label="Decision" empty="Say what was decided" />
               <div class="wr-meta">Made by {bit("by", "Made by")} on {bit("date", "Date")} · Source: {bit("source", "Source")}{row.ref ? <> · <ctx.ItemRef id={row.ref} /></> : null}
-                {ctx.editing && row.source === "added" ? <span class="rs-new" title="Added from the tracker by you">New</span> : null}</div>
+                {ctx.editing && row.source === "added" ? <span class="rs-new" title="Added from your project record by you">New</span> : null}</div>
             </div>
           </li>);
       })}</ul>

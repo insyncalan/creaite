@@ -78,7 +78,7 @@ def target(req):
         raise report_doc.ReportError("Say which report: weekly or client, and the project's code.")
     with tracker.connect() as con:
         if not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
-            raise report_doc.ReportError(f"{code} isn't in the tracker.")
+            raise report_doc.ReportError(f"{code} isn't in your project record.")
     try:
         fri = report_doc.friday(req.get("week_ending") or None)
     except ValueError:

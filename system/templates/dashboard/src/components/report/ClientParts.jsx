@@ -1,6 +1,6 @@
 // @ts-check
 /* ClientParts (v2.1.0 P8, BL-336; #221): what is the client report's OWN. The client report is the same sheet as the internal one
-   (ReportSheet, ReportParts.jsx: the header, the health indicator, the tables with their eyes, "Add from the tracker", At a glance, the
+   (ReportSheet, ReportParts.jsx: the header, the health indicator, the tables with their eyes, "Add from your project record", At a glance, the
    words, Current state); only its audience differs, and this file holds exactly that:
    - Health: the client's flag (Change opens the reason it needs when it differs from the internal one) and its headline; Match
      internal health takes the internal flag and headline.
@@ -38,7 +38,7 @@ export function ServerExported({ doc, version, save }) {
   useEffect(() => {
     let live = true;
     setGot(null);
-    if (!viaServer()) { setGot({ ok: false, message: "Show as exported needs the live server." }); return undefined; }
+    if (!viaServer()) { setGot({ ok: false, message: "Show as exported needs creaite to be running." }); return undefined; }
     (async () => {
       const s = save ? await save() : null;
       if (!live) return;

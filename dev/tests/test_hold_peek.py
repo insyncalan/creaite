@@ -49,7 +49,7 @@ class HoldPeek(LiveBrowserCase):
         self.assertEqual(len(self.peek_files()), 1)
         self.assertEqual(self.desc(self.peek_id), self.before)
         b.wait("PKS.length===1&&!document.getElementById('pkStage').hidden", timeout=15)
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change staged on 1 item")
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change waiting to be saved on 1 item")
 
     def then_the_peek_applies(self):
         b = self.b

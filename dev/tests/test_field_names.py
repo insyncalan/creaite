@@ -46,7 +46,7 @@ class FieldNames(LiveBrowserCase):
         self.b.click("#fmBtn")       # #192: the Filter menu holds Type and the two dates
         names = self.b.eval("""['vsInput','fmBtn','fsFrom','fsTo'].map(id=>{ const el=document.getElementById(id);
           return el.getAttribute('aria-label')||[...(el.labels||[])].map(l=>l.textContent.trim()).join(' '); })""")
-        self.assertEqual(names, ["Search the vault", "Filter", "From", "To"])
+        self.assertEqual(names, ["Search everything", "Filter", "From", "To"])
         self.assertEqual(self.b.eval("document.querySelector('#fmenu fieldset legend').textContent"), "Type")
         self.assertEqual(self.unnamed("files"), [])
 

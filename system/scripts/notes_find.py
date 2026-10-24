@@ -117,7 +117,7 @@ def note_of(rel):
     finally:
         con.close()
     if row is None:
-        return {"refused": "This note's project isn't in the tracker."}
+        return {"refused": "This note's project isn't in your project record."}
     when = str(meta.get("date") or "")
     return {"rel": rel, "code": code, "name": row["name"], "meta": meta, "body": body,
             "day": when if DAY_RE.fullmatch(when) else today(), "confidential": bool(meta.get("confidential")),
@@ -443,7 +443,7 @@ def item_flags(item):
     if (item.get("suggested") or {}).get("feature") == "done":
         out.append({"t": "Probably done" if item["suggested"]["strength"] == "Looks done" else "Maybe done", "tone": "soft"})
     if any(x.get("field") == "description" for x in item.get("inferred") or []):
-        out.append({"t": "Vague title", "tone": "soft", "tip": "Under four words or no verb: make it clearer before applying"})
+        out.append({"t": "Vague title", "tone": "soft", "tip": "Under four words or no verb: make it clearer before saving"})
     return out + [{"t": FLAG_WORDS[f], "tone": "soft"} for f in item.get("flags") or [] if f in FLAG_WORDS]
 
 
@@ -901,14 +901,15 @@ def stage(rel, sent, mode):
         return {"ok": False, "message": note["refused"]}
     built, problems = check_sent(note, sent)
     if problems or not built:
-        return {"ok": False, "problems": problems, "message": "Some rows can't be applied as they are" if problems else "Tick a row first"}
+        return {"ok": False, "problems": problems, "message": "Some rows can't be saved as they are" if problems else "Tick a row first"}
     spec = spec_of(built, note, "approved" if mode == "apply" else "pending")
     rows_kept = spec.pop("_rows")
     propose.complete(spec)
     propose.people_check_spec(spec)
     bad = propose.check(spec)
     if bad:
-        return {"ok": False, "problems": refused(bad, spec, rows_kept, built), "message": "Some rows don't pass the tracker's checks"}
+        return {"ok": False, "problems": refused(bad, spec, rows_kept, built),
+                "message": "Some rows don't pass your project record's checks"}
     spec["note"]["rows"] = [{"n": it["n"], "p": r["p"], "fp": r["fp"]} for it, r in zip(spec["items"], rows_kept)]
     spec["note"]["files"] = [{"p": r["p"], "fp": r["fp"]} for r in file_rows(built)]
     out = proposal_path()

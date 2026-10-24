@@ -124,7 +124,7 @@ async function mayLeave() {
 export async function openNote(path, discard = false) {
   if (!discard && !await mayLeave()) return false;
   if (!noteCur.value || noteCur.value.path !== path) { noteFind.value = false; noteFindP.value = 0; noteMarks.value = { markers: {}, hover: 0 }; }   /* BL-301 E: Find updates is per note */
-  if (!viaServer()) { notesMsg.value = "Opening a note needs the live server."; return false; }
+  if (!viaServer()) { notesMsg.value = "Opening a note needs creaite to be running."; return false; }
   const rev = ses.rev;
   noteLoading.value = true;
   const r = await api("/api/notes/get", { path });
@@ -203,7 +203,7 @@ export async function noteMetaFor(path, changes, toggle) {
   const c = noteCur.value;
   if (c && c.path === path) { noteMeta(toggle ? { [toggle]: !(c.meta && c.meta[toggle] !== undefined ? c.meta[toggle] : c.note[toggle]) } : changes, true); return true; }
   if (noteHeld.value === path) { notesMsg.value = "This note waits on the approval card to be deleted: answer the card first."; return false; }
-  if (!viaServer()) { notesMsg.value = "Changing a note needs the live server."; return false; }
+  if (!viaServer()) { notesMsg.value = "Changing a note needs creaite to be running."; return false; }
   const g = await api("/api/notes/get", { path });
   if (!g || !g.ok) { notesMsg.value = oneLine((g && g.message) || "That note couldn't be read."); return false; }
   if (toggle) changes = { [toggle]: !(g.note && g.note[toggle]) };
@@ -226,7 +226,7 @@ export async function noteFlush(final = true) {
   const c = noteCur.value;
   if (!c) return true;
   if (!ses.dirty) return final ? settleAndRecheck() : true;
-  if (!viaServer()) { noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." }; return false; }
+  if (!viaServer()) { noteSave.value = { state: "error", msg: "Not saved: creaite isn't running. Your typing is still here." }; return false; }
   const sent = { ...ses.changes }, b = body(), rev = ses.rev, oldTitle = c.note.title;
   noteSave.value = { state: "saving" };
   ses.busy = api("/api/notes/save", { path: c.path, body: b, changes: sent, base: c.base, session: sessionId() }).catch(() => null);
@@ -293,7 +293,7 @@ export function noteUnsavedAtExit() { return ses.dirty && ["conflict", "error", 
     @param {string} code @param {{template: string, title: string, date?: string, with?: string[]}} o */
 export async function createNote(code, o) {
   if (!await mayLeave()) return null;
-  if (!viaServer()) { notesMsg.value = "Making a note needs the live server."; return null; }
+  if (!viaServer()) { notesMsg.value = "Making a note needs creaite to be running."; return null; }
   const rev = ses.rev;
   const r = await api("/api/notes/new", { code, ...o });
   if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || "The note wasn't made."); return null; }
@@ -468,7 +468,7 @@ export async function addNoteImage(file) {
   if (!c) return null;
   if (!/^image\/(png|jpeg)$/.test(file.type)) { notesMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`; return null; }
   if (file.size > 2 * 1024 * 1024) { notesMsg.value = `${file.name} is over 2 MB: pictures can be 2 MB at most.`; return null; }
-  if (!viaServer()) { notesMsg.value = "Adding a picture needs the live server."; return null; }
+  if (!viaServer()) { notesMsg.value = "Adding a picture needs creaite to be running."; return null; }
   const src = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result || "")); fr.onerror = () => res(""); fr.readAsDataURL(file); });
   const r = src ? await api("/api/notes/image", { path: c.path, name: file.name, data: src.slice(src.indexOf(",") + 1) }) : null;
   if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || `${file.name} couldn't be added.`); return null; }

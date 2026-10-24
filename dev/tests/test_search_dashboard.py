@@ -55,10 +55,10 @@ SCRIPT = r"""
     await type(el("vsInput"),"zzzqqq"); out.empty=document.querySelector("#vsResults .empty")?.textContent||"";
     el("vsInput").value=""; el("vsInput").dispatchEvent(new Event("input",{bubbles:true})); await wait(300);
     // ⌘K: a search row from three characters, with the top five results beneath the jump list
-    openCk(); const ck=el("cmdkIn"); ck.value="da"; ck.dispatchEvent(new Event("input")); out.ckShort=[...document.querySelectorAll("#cmdkList button")].some(b=>b.textContent.startsWith("Search the vault"));
+    openCk(); const ck=el("cmdkIn"); ck.value="da"; ck.dispatchEvent(new Event("input")); out.ckShort=[...document.querySelectorAll("#cmdkList button")].some(b=>b.textContent.startsWith("Search everything"));
     ck.value="data access"; ck.dispatchEvent(new Event("input")); await wait(700);
     out.ck=[...document.querySelectorAll("#cmdkList button")].map(b=>b.textContent); out.ckGroups=[...document.querySelectorAll("#cmdkList .grp")].map(g=>g.textContent);
-    const sr=[...document.querySelectorAll("#cmdkList button")].find(b=>b.textContent.startsWith("Search the vault")); sr.click(); await wait(700);
+    const sr=[...document.querySelectorAll("#cmdkList button")].find(b=>b.textContent.startsWith("Search everything")); sr.click(); await wait(700);
     out.ckOpened=[VIEW,el("vsInput").value,rows().length>0,document.activeElement===el("vsInput")];
     // (headless Chrome's simulated clock doesn't advance a streamed download, so the answer's stream is stood in for here;
     // the server's side of it is tested in test_search_live.py)
@@ -174,7 +174,7 @@ class SearchPageTests(unittest.TestCase):
     def test_command_palette_row(self):
         r = self.r
         self.assertFalse(r["ckShort"])                                    # two characters: no search row
-        row = r["ck"].index("Search the vault for “data access”…Files")
+        row = r["ck"].index("Search everything for “data access”…Files")
         self.assertGreater(row, 0)                                         # under the existing jump list
         self.assertIn("Search results", r["ckGroups"])
         self.assertTrue(0 < len(r["ck"]) - row - 1 <= 5)                   # the top five results follow it
@@ -201,7 +201,7 @@ class SearchPageTests(unittest.TestCase):
         self.assertEqual(r["ckAsk"], "ask creaite: “why did go-live move?”An answer with sources")
 
     def test_a_plain_note_without_the_live_server(self):
-        self.assertIn("Live server needed", self.r["offline"])
+        self.assertIn("creaite needs to be running", self.r["offline"])
 
 
 if __name__ == "__main__":

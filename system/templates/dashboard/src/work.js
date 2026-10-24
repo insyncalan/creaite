@@ -569,7 +569,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&BDRAG&&BDRAG.activ
 /* ===== BL-128 (sprint-work-views) =====
    One Display menu beside the List | Board switch: Layout, Group by, Sub-group, Order by (with a reverse button), Properties (the List's
    columns and the Board card's fields, at most four on a card) and Show (empty groups; on the Board, the Closed column's window). Options
-   that don't apply to the layout in use are hidden, not greyed (BL-114). Reset returns the tab's display to its default (the layout
+   that don't save to the layout in use are hidden, not greyed (BL-114). Reset returns the tab's display to its default (the layout
    stays as it is). D opens it; Esc or Done closes it and puts the focus back on the button. Nothing here changes what is filtered. */
 export const WLGRP=store.obj("creaite-listgrp"), WSUB=store.obj("creaite-worksub");    /* the List's grouping per tab (none by default); the sub-group per tab and layout */
 export const DEFCOLS={actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","st","by","due","date","src"]};
@@ -1103,7 +1103,7 @@ document.addEventListener("focusout",e=>{ if(!shared.CE||!shared.CE.td.contains(
 /* ===== BL-124 (sprint-polish) =====
    Change several selected items at once. With two or more rows highlighted (BL-122) a bar appears above the list or the board:
    "3 selected", Close and Reopen, and the fields that can be changed together as the same lists and picker as BL-123. A field that
-   doesn't apply to every selected item isn't offered, and says why on hover; workstream and milestone belong to one project, so
+   doesn't save to every selected item isn't offered, and says why on hover; workstream and milestone belong to one project, so
    they are offered only when every item is in the same one. The change is checked item by item (`prepMove`: the sidebar's own
    checks); items that can't take it are left out and named in the message, the others change, and nothing is saved unless at least
    one can. It is one proposal, so one Undo and one apply; Activity gets a line for each item. A long batch (over 25) asks first.
@@ -1162,7 +1162,7 @@ export function hlBar(){ if(shared.VIEW==="work"&&shared.WT==="all"){ const bar=
     if(HL.size<all.length) n&&addHTML(n,"afterend",html`<button type="button" class="linkbtn" data-bq="all" title="Highlights every item the filters show, in collapsed groups too">Select all ${all.length} matching</button>`); } } }
   if(!shared.LOADING){ const bar=$("#wbulk"); if(bar&&!bar.hidden){ const L=bkItems();
     if(L.length&&L.every(o=>o.k==="actions")&&!bar.querySelector("[data-drbulk]")) { const sp=bar.querySelector(".sp"); if(sp) addHTML(sp,"beforebegin",
-      html`${raw(draftBtn("update-bulk","Draft updates",`Draft an update for each of the ${L.length} from what has happened since, as proposals in Review`,'data-drbulk="1"'))}<span class="drbst" role="status"></span>`); } } } }
+      html`${raw(draftBtn("update-bulk","Draft updates",`Draft an update for each of the ${L.length} from what has happened since, as suggestions in Review`,'data-drbulk="1"'))}<span class="drbst" role="status"></span>`); } } } }
 export const bkWhat=(f,v)=>f==="st"&&v==="Closed"?"Closed {n}":f==="st"&&v==="Open"?"Reopened {n}":`${BK_LABEL[f][0].toUpperCase()+BK_LABEL[f].slice(1)} set to ${v===""||v===null||v===undefined?"none":(f==="due"?fd(v):v)} on {n}`;
 export async function bkApply(f,v){ if(f==="due"&&v&&!WK.ok&&wkAsk(v,$("#bkDate")||document.body,d=>bkApply("due",d))) return; const L=bkItems(); if(L.length<2) return; await batchMove(L[0].k,L.map(o=>o.id),{[f]:v},bkWhat(f,v)); }
 export function bkDate(){ const i=$("#bkDate"); if(!i) return; const v=i.value.trim(); let out=null;

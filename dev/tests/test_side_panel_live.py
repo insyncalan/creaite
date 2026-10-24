@@ -81,7 +81,7 @@ class SaveAndClose(PanelCase):
         self.clear_snack()
         self.b.key("Enter", modifiers=META)                                   # BL-176: commits the title, applies, closes
         self.wait_closed()
-        self.b.wait("/Applied 1 change/.test(document.getElementById('snackT').textContent)", 10)
+        self.b.wait("/Saved 1 change/.test(document.getElementById('snackT').textContent)", 10)
         self.assertEqual(self.action(id_)["description"], before + " (edited)")
         self.assertEqual(self.b.errors, [])
 
@@ -91,7 +91,7 @@ class SaveAndClose(PanelCase):
         self.title(before + " (ctrl)")
         self.b.key("Enter", modifiers=CTRL)
         self.wait_closed()
-        self.b.wait("/Applied 1 change/.test(document.getElementById('snackT').textContent)", 10)
+        self.b.wait("/Saved 1 change/.test(document.getElementById('snackT').textContent)", 10)
         self.assertEqual(self.action(id_)["description"], before + " (ctrl)")
 
     def test_it_saves_from_a_menu_and_from_the_owner_box_without_picking_the_highlighted_person(self):
@@ -108,7 +108,7 @@ class SaveAndClose(PanelCase):
         self.assertTrue(self.b.eval("!!document.querySelector('.pkpop .pkopt')"))
         self.b.key("Enter", modifiers=META)                                     # closes the list without picking, applies, closes
         self.wait_closed()
-        self.b.wait("/Applied 1 change/.test(document.getElementById('snackT').textContent)", 10)
+        self.b.wait("/Saved 1 change/.test(document.getElementById('snackT').textContent)", 10)
         self.assertEqual(self.action(id_)["priority"], "Low")
         self.assertEqual(self.action(id_)["owner"], owner)
 
@@ -118,7 +118,7 @@ class SaveAndClose(PanelCase):
         self.clear_snack()
         self.b.key("Enter", modifiers=META)
         self.wait_closed()
-        self.assertEqual(self.snack(), "Nothing to apply")                                         # BL-176: said, and nothing written
+        self.assertEqual(self.snack(), "Nothing to save")                                         # BL-176: said, and nothing written
         self.assertEqual(self.action(id_), row)                                                    # and the row is untouched
 
     def test_a_failed_check_leaves_the_panel_open_with_the_message(self):
@@ -140,7 +140,7 @@ class SaveAndClose(PanelCase):
         self.b.eval("document.activeElement.textContent='What it is: Data access approvals\\nWhat it means for you: UAT may slip a week\\nWhat is being done: Escalated to the CIO'")
         self.b.key("Enter", modifiers=META)
         self.wait_closed()
-        self.b.wait("/Applied 1 change/.test(document.getElementById('snackT').textContent)", 10)
+        self.b.wait("/Saved 1 change/.test(document.getElementById('snackT').textContent)", 10)
         self.assertEqual(self.action(id_)["client_visible"], 1)
 
     def test_a_new_item_is_created_and_the_panel_closes(self):
@@ -194,7 +194,7 @@ class SaveAndClose(PanelCase):
         b.key("End")
         b.type(" v2")
         b.key("Enter")
-        b.wait("/renamed|saved and applied/.test(document.getElementById('snackT').textContent)", 10)
+        b.wait("/renamed|— saved/.test(document.getElementById('snackT').textContent)", 10)
         for _ in range(100):
             if name + " v2" in [m["name"] for m in self.v.rows("milestones")]:
                 break

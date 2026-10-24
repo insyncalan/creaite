@@ -204,7 +204,7 @@ class PanesLive(LiveBrowserCase):
     def save(self):
         self.b.eval("document.getElementById('snackT').textContent=''")
         self.b.click('[data-cure="save"]')
-        self.b.wait("/saved and applied|Not saved/i.test(document.getElementById('snackT').textContent)", 15)
+        self.b.wait("/— saved|Not saved/i.test(document.getElementById('snackT').textContent)", 15)
         return self.b.eval("document.getElementById('snackT').textContent")
 
     def widths(self):
@@ -238,7 +238,7 @@ class PanesLive(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelectorAll('.curpane h2, .curpane h3, .curpane legend, .curpane label').length"), 0)   # the panes have no titles
         b.type("My own note.")
         self.assertFalse(b.eval("document.getElementById('curEd2').classList.contains('blank')"))
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         md = self.md()
         self.assertIn(f"\n\n{MARKER}\n\nMy own note.", md)
         self.assertEqual(md.count(MARKER), 1)
@@ -382,7 +382,7 @@ class PanesLive(LiveBrowserCase):
         b.wait("document.querySelectorAll('#curEd2 figure.cimg').length>=1", 5)
         self.assertEqual(b.eval("document.querySelectorAll('#curEd figure').length"), 0)                 # so the picture lands there
         b.type("Third view")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         md = self.md()
         left, right = md.split(MARKER)
         self.assertIn("Left start. Left added.", left)
@@ -434,7 +434,7 @@ class PanesLive(LiveBrowserCase):
         self.assertIn("A new drafted left pane.", b.eval("document.getElementById('curEd').textContent"))
         self.assertEqual(b.eval("document.getElementById('curEd2').textContent.trim()"), "Alan's own notes.")
         self.assertEqual(b.eval("edValue(document.getElementById('curEd2')).includes(\"Alan's own notes.\")"), True)
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         left, right = self.md().split(MARKER)
         self.assertIn("A new drafted left pane.", left)
         self.assertNotIn("Old left text.", left)

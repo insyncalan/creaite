@@ -315,7 +315,7 @@ class Pane(VaultCase):
         self.assertEqual(p["draft"]["unblocks"], "the next steps on Example Programme")
 
     def test_closed_confidential_and_unknown_items_are_refused(self):
-        for item, words in ((self.closed, "closed"), (self.secret, "confidential"), ("ABC-A-999", "isn't in the tracker")):
+        for item, words in ((self.closed, "closed"), (self.secret, "confidential"), ("ABC-A-999", "isn't in your project record")):
             p = self.pane(id=item)
             self.assertFalse(p["ok"])
             self.assertIn(words, p["message"])

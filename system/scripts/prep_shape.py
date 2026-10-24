@@ -562,7 +562,7 @@ def parse_reading(parts, known_ids):
         if bit:
             ids = ID_RE.findall(bit)
             focus.append({**({"id": ids[0]} if ids else {}), "text": bit})
-            checks += [_check("error", "Focus", f"{i} isn't in the tracker.") for i in ids if i not in known_ids]
+            checks += [_check("error", "Focus", f"{i} isn't in your project record.") for i in ids if i not in known_ids]
     aim = TAGS.sub("", " ".join(parts.get("AIM") or [])).strip()
     show_raw = " ".join(parts.get("SHOW") or []).strip().lower()
     show = "focus-only" if "only" in show_raw else "focus-first" if "first" in show_raw else None

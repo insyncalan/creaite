@@ -160,7 +160,7 @@ aiAction({ id: "fu-line", name: "Make this an action, a risk, a decision or an u
 function FindButton() {
   const on = noteFind.value;
   return <button type="button" class={`btn sm${on ? " on" : ""}`} id="noteFind" aria-expanded={on ? "true" : "false"} aria-controls="noteSide"
-    disabled={!viaServer()} data-tip={viaServer() ? "Find the tracker changes this note's new lines state" : "Find updates needs the live server"}
+    disabled={!viaServer()} data-tip={viaServer() ? "Find your project record changes this note's new lines state" : "Find updates needs creaite to be running"}
     onClick={() => toggleFind()}><span aria-hidden="true">✦ </span>Find updates</button>;
 }
 /** The right-hand column: the note's context, or Find updates while it is open. @param {{code: string, onOpen: (path: string) => void, onOpenItem: (id: string) => void}} props */
@@ -263,7 +263,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
       {noteLoading.value ? <p class="sub">Opening…</p> : <>
         <h2>{notesList.value.length ? "Pick a note on the left, or start a new one" : "No notes yet"}</h2>
         <p class="sub"><a class="hhow" href="#help-reference-notes" data-hhow="notes">How Notes works</a></p>
-        <p class="sub">Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay internal and are never extracted on their own.</p>
+        <p class="sub">Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay internal and are never read for items on their own.</p>
       </>}
     </article>);
   const m = cur.meta || {}, n = cur.note, tags = /** @type {string[]} */ (m.tags || []);
@@ -433,7 +433,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
       </div>
       {code !== "_portfolio" ? <ProjectTabs code={code} selected="notes" count={notesList.value.length} onGo={id => { if (id === "overview") onGo("cockpit", code); }} /> : null}
       {notesMsg.value ? <div class="nmsg" role="status">{notesMsg.value}</div> : null}
-      {!viaServer() ? <div class="nmsg" role="status">Notes open and save through the live server. Start it to edit; the list is as of the last build.</div> : null}
+      {!viaServer() ? <div class="nmsg" role="status">Notes open and save through creaite. Start it to edit; the list is as of the last build.</div> : null}
       <div class={`nsplit${notesListOpen.value ? "" : " collapsed"}${noteFind.value && noteCur.value ? " finding" : ""}`} id="notesSplit">
         <NotesList code={code} onOpen={openPath} onOpenFile={onOpenFile} />
         <NoteDoc code={code} onOpen={openPath} onOpenItem={onOpenItem} onNew={t => setDlg(t)} onOpenFile={onOpenFile} />

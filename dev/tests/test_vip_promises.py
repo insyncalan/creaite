@@ -340,7 +340,7 @@ class StageTests(Base):
                   + "'))['items'][0])))")
         self.assertIsNone(rule)                                                                # routine, as every new promise
         self.assertEqual(self.proms()[0]["state"], "staged")
-        self.assertEqual(self.call("vip_promise_stage", self.aid, self.key), {"refused": "Already staged for Review."})
+        self.assertEqual(self.call("vip_promise_stage", self.aid, self.key), {"refused": "Already waiting in Review."})
         self.assertEqual(len(self.staged()), 1)
         self.assertNotIn("ABC-P-014", self.promise_rows())                                    # nothing applied
 
@@ -401,8 +401,8 @@ class StageTests(Base):
             st = vip_file(self.v)
             st["alerts"][0].update(fields)
             (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
-        cases = {"handled": ({"state": "handled", "seen": "2026-10-08 09:12"}, "This thread is handled: nothing to stage."),
-                 "seen": ({"seen": "2026-10-08 09:12"}, "This thread was marked seen: nothing to stage."),
+        cases = {"handled": ({"state": "handled", "seen": "2026-10-08 09:12"}, "This thread is handled: nothing to save."),
+                 "seen": ({"seen": "2026-10-08 09:12"}, "This thread was marked seen: nothing to save."),
                  "private": ({"marker": "private"}, "No promises for a private conversation.")}
         card = self.card()
         for name, (fields, said) in cases.items():
@@ -440,7 +440,7 @@ class StageTests(Base):
                           "print(json.dumps([r.get('dn') for r in build_dashboard.review_queue(con) if r.get('dn')]))")
         self.assertEqual([(r["strength"], r["ev"]) for r in rows],
                          [("Looks done", "Mail 08-10-2026 09:10 by Alan Carter: Alan sent the budget summary to Sara")])
-        self.assertEqual(self.call("vip_kept_stage", self.aid), {"refused": "Already staged for Review."})
+        self.assertEqual(self.call("vip_kept_stage", self.aid), {"refused": "Already waiting in Review."})
         self.assertEqual(self.promise_rows()["ABC-P-012"], "Open")                          # nothing applied
         self.assertEqual(self.call("vip_kept_unstage", self.aid)["state"], "undone")
         self.assertEqual(self.staged(), [])
@@ -449,7 +449,7 @@ class StageTests(Base):
         f = self.v.root / "system/staging/proposed-2026-10-08-090000-edit.json"
         f.write_text(json.dumps({"source_run": "cx-edit", "files": [], "items": [
             {"n": 1, "op": "update", "table": "promises", "id": "ABC-P-012", "changes": {"status": "Done"}, "decision": "pending"}]}))
-        self.assertEqual(self.call("vip_kept_stage", self.aid), {"refused": "Already staged for Review."})
+        self.assertEqual(self.call("vip_kept_stage", self.aid), {"refused": "Already waiting in Review."})
         f.unlink()
         self.settings(drafting={"done": False})
         self.assertEqual(self.call("vip_kept_stage", self.aid), {"refused": "Looks done suggestions are switched off in Settings."})
@@ -707,7 +707,7 @@ class PromiseServerTests(unittest.TestCase):
         self.assertEqual((said[0]["ok"], said[0]["state"]), (True, "staged"))
         self.assertEqual(said[0]["promises"][0]["staged"]["proposal"], said[0]["proposal"])
         said.append(self.post("/api/alerts/promise", {"id": aid, "what": "add", "key": key}))
-        self.assertEqual((said[-1]["ok"], said[-1]["error"]), (False, "Already staged for Review."))
+        self.assertEqual((said[-1]["ok"], said[-1]["error"]), (False, "Already waiting in Review."))
         said.append(self.post("/api/alerts/promise", {"id": aid, "what": "kept"}))
         self.assertEqual((said[-1]["ok"], said[-1]["id"]), (True, "ABC-P-012"))
         self.assertEqual(len(list((self.v.root / "system/staging").glob("proposed-*-dashboard*.json"))), 2)

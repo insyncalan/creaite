@@ -61,7 +61,7 @@ class Panel(LiveBrowserCase):
         self.assertEqual(groups, ["New", "Updates to existing items", "Milestones", "Project information"])
         self.assertEqual(b.eval("document.querySelectorAll('#fuCol .fu-r').length"), 8)
         self.assertEqual(b.eval("document.querySelectorAll('#fuCol .fu-tick:checked').length"), 5)
-        self.assertEqual(b.eval("document.getElementById('fuApply').textContent"), "Apply 5 changes")
+        self.assertEqual(b.eval("document.getElementById('fuApply').textContent"), "Save 5 changes")
         self.assertIn("8 found · 5 ticked · 1 line left as a note", b.eval("document.querySelector('#fuCol .fu-sum').textContent"))
         # markers: each line that gave a change is numbered, matching its rows; the last line has none
         marks = b.eval("[...document.querySelectorAll('#fuNote [data-p]')].map(p=>p.getAttribute('data-fu-mk'))")

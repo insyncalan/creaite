@@ -153,7 +153,7 @@ function Today({ day, onAdd }) {
             {r && !r.done ? <button type="button" class="mini" data-dcadd={i} onClick={() => onAdd(i)}>Add it to your commitments</button>
               : r && r.done ? <span class="tag">Added</span> : null}</li>;
         })}</ul>
-          <p class="sub">Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the tracker at the next apply.</p></>
+          <p class="sub">Suggested today, owned by you, still waiting in Review. Adding approves it there; it reaches your project record at the next save.</p></>
           : <p class="sub">Nothing from today is waiting with your name on it.</p>}
       </section>
     </>
@@ -345,7 +345,7 @@ export function CloseDay() {
   useEffect(() => {
     if (!open) return;
     if (closed && !pending) return;                                        // the end line stays until Look at the day again
-    if (!viaServer()) { setErr("Close the day needs the live server: start it, then try again."); return; }
+    if (!viaServer()) { setErr("Close the day needs creaite to be running: start it, then try again."); return; }
     if (pending) { status(); return; }                                     // closing when the sweep finishes: follow it
     (async () => { const c = await loadCard(); if (c && !closed) await catchup(false); })();
   }, [open]);
@@ -409,7 +409,7 @@ export function CloseDay() {
 
   const close = async () => {
     if (busy) return;
-    if (!viaServer()) { snack("Closing the day needs the live server"); return; }
+    if (!viaServer()) { snack("Closing the day needs creaite to be running"); return; }
     setBusy(true);
     const plan = buildPlan();
     const r = await api("/api/day/close", { choices: plan.choices, prep: [...prep] });

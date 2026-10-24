@@ -301,7 +301,7 @@ def item_row(con, item_id):
         raise Refused(f"{item_id} isn't an action, a RAID item or a decision.")
     row = con.execute(f"SELECT * FROM {table} WHERE id = ?", (item_id,)).fetchone()
     if not row:
-        raise Refused(f"{item_id} isn't in the tracker.")
+        raise Refused(f"{item_id} isn't in your project record.")
     return table, dict(row)
 
 
@@ -310,14 +310,14 @@ def proposal_item(req):
     p = req.get("proposal") or {}
     name, ref = str(p.get("file") or ""), p.get("ref")
     if not re.fullmatch(r"proposed-[A-Za-z0-9._-]+\.json", name):
-        raise Refused("Not a proposal.")
+        raise Refused("Not a suggestion.")
     try:
         data = json.loads((paths.STAGING / name).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        raise Refused("That proposal has been applied or removed.")
+        raise Refused("That suggestion has been saved or removed.")
     it = next((i for i in data.get("items") or [] if i.get("n") == ref), None)
     if not it or it.get("op") != "new" or it.get("table") not in ("actions", "raid", "decisions"):
-        raise Refused("That proposal isn't a new item.")
+        raise Refused("That suggestion isn't a new item.")
     v = dict(it.get("values") or {})
     edits = req.get("edits") if isinstance(req.get("edits"), dict) else {}      # what Alan has changed in the peek, not yet saved
     for k in ("description", "decision", "type", "response_action", "reasoning", "options"):
@@ -928,11 +928,12 @@ def suggest_health(con, code, audience):
     src = suggest_facts(con, code, client)
     if not client and ev["reasons"]:
         why = "; ".join(_no_ids(r) for r in ev["reasons"])
-        line = f"The tracker's criteria give {suggested}: {why}"
+        line = f"Your project record's criteria give {suggested}: {why}"
         if not (secret(line) or VIP_RE.search(line)):          # a reason naming a confidential milestone is left out: the health stays
             src.insert(0, {"id": code, "kind": "criteria", "text": line})
     if not src:
-        raise Nothing("The tracker holds nothing to explain a health: no overdue actions, slipped milestones, open risks or overdue "
+        raise Nothing("Your project record holds nothing to explain a health: no overdue actions, slipped milestones, "
+                      "open risks or overdue "
                       "decisions" + (" that a client may see" if client else "") + ". Say why in your own words.")
     kept, listed = number(src)
     note = ("A client will read this: plain client wording, with no item numbers, internal names or internal reasons."
@@ -1005,7 +1006,8 @@ def build_forecast(con, req):
         if not r["needed_by"] or r["needed_by"] <= fc:
             src.append({"id": r["id"], "kind": "decision", "text": f"Decision still pending{' (needed by ' + tracker.shown(r['needed_by']) + ')' if r['needed_by'] else ''}: {short(r['decision'], 120)}"})
     if not src:
-        raise Nothing("Nothing in the tracker explains the move: no overdue work, dependency or pending decision behind it. Say why in your own words.")
+        raise Nothing("Nothing in your project record explains the move: no overdue work, dependency or pending decision "
+                      "behind it. Say why in your own words.")
     kept, listed = number(src)
     days_ = (date.fromisoformat(fc) - date.fromisoformat(old)).days if old else 0
     return Draft({"milestone": m["name"], "old": tracker.shown(old) if old else "none", "new": tracker.shown(fc),

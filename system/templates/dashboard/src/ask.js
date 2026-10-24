@@ -63,7 +63,7 @@ export function vsRender(){ const res=SRCH.res, box=$("#vsResults"); if(!res){ b
 export function vsClear(){ if(shared.ASKQ.done||!shared.ASKQ.run){ shared.ASKQ={run:null}; vsAnswerDraw(); } SRCH.skip=[]; SRCH.res=null; SRCH.q=""; $("#vsInput").value=""; $("#vsChips").textContent=""; $("#vsNote").textContent=""; $("#vsResults").textContent=""; vsShow(false); vsAskSync(); }
 export function vsShow(on){ const f=$("#v-files .files"); if(f) f.hidden=on; $("#vsResults").hidden=!on; }
 export let runSearch = async function(){ const q=$("#vsInput").value.trim(); SRCH.q=q; if(!q){ vsClear(); return; } vsShow(true);
-  if(!viaServer()){ SRCH.res=null; $("#vsResults").textContent=""; putHTML($("#vsNote"),html`Live server needed: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`); $("#vsChips").textContent=""; return; }
+  if(!viaServer()){ SRCH.res=null; $("#vsResults").textContent=""; putHTML($("#vsNote"),html`creaite needs to be running: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`); $("#vsChips").textContent=""; return; }
   const seq=++SRCH.seq; $("#vsNote").textContent="Searching…";
   try{ const res=await searchFetch(q,SRCH.skip); if(seq!==SRCH.seq) return; SRCH.res=res; vsRender(); }catch(e){ if(seq===SRCH.seq){ $("#vsNote").textContent=oneLine(e.message); } } };
 export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.res.groups[g]&&SRCH.res.groups[g][+i]; if(r) openFound(r); }
@@ -79,7 +79,7 @@ export async function openFound(r){ const o=r.opens;
   if(o.type==="preview"&&isNotePath(o.path)){ openNoteAt(o.path); return; }   /* BL-301 B: a note opens in its Notes tab */
   if(o.type==="preview") return searchPreview(o.path,o.q);
   openPath(o.path); }
-export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing needs the live server"); return; }
+export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing needs creaite to be running"); return; }
   const r=await api("/api/search/preview",{path,q}); if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
   if(r.empty){ openPath(path); return; }
   $("#spName").textContent=r.name; putHTML($("#spText"),raw(r.html)); $("#spCut").hidden=!r.cut; $("#searchPrev").dataset.path=path; openDialog("searchPrev");
@@ -87,7 +87,7 @@ export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing
 export function openSearch(q){ go("files"); $("#vsInput").value=q; SRCH.skip=[]; runSearch(); $("#vsInput").focus(); }
 /* ⌘K: a "Search the vault…" row from three characters, with the top five results under the jump list */
 export const CKS={q:"",items:[],timer:null};
-export function searchCkItems(){ const q=$("#cmdkIn").value.trim(); if(q.length<3) return []; const out=[{g:"Search",l:`Search the vault for “${q}”…`,h:"Files",fn:()=>openSearch(q)}];
+export function searchCkItems(){ const q=$("#cmdkIn").value.trim(); if(q.length<3) return []; const out=[{g:"Search",l:`Search everything for “${q}”…`,h:"Files",fn:()=>openSearch(q)}];
   if(questionLike(q)) out.unshift({g:"Search",l:`ask creaite: “${q}”`,h:"An answer with sources",fn:()=>{ openSearch(q); askClaude(); }});
   if(CKS.q===q) CKS.items.forEach((r,i)=>out.push({g:"Search results",l:r.title,h:[SKIND[r.kind],r.date_shown].filter(Boolean).join(" · "),fn:()=>openFound(r)}));
   else if(viaServer()){ clearTimeout(CKS.timer); CKS.timer=setTimeout(async()=>{ try{ const res=await searchFetch(q); CKS.q=q; CKS.items=Object.keys(SGROUP).flatMap(g=>res.groups[g]).slice(0,5);
@@ -113,7 +113,7 @@ export function vsCite(h){ return h.replace(/\[([^\[\]<>]{2,200})\]/g,(m,inner)=
     return parts.every(Boolean)?"["+parts.join("; ")+"]":m; }); }
 export function vsAnswerDraw(){ const a=shared.ASKQ, box=$("#vsAnswer"); if(!a||!a.q){ box.hidden=true; vsAskSync(); return; } box.hidden=false;
   const running=!!a.run&&!a.done, text=a.said.join("\n\n").trim();
-  putHTML(box,html`<div class="vsah"><b>Answer</b> <span class="sub">from your vault · “${a.q}”</span><span class="sp"></span>${running?html`<button class="mini" data-vsstop>Stop</button>`:raw('<button class="mini" data-vsdismiss aria-label="Close the answer">'+ic("x")+'</button>')}</div>
+  putHTML(box,html`<div class="vsah"><b>Answer</b> <span class="sub">from your creaite folder · “${a.q}”</span><span class="sp"></span>${running?html`<button class="mini" data-vsstop>Stop</button>`:raw('<button class="mini" data-vsdismiss aria-label="Close the answer">'+ic("x")+'</button>')}</div>
     ${running&&!text?html`<div class="vsab sub"><span class="spin"></span> Reading your files…${a.steps?html` ${a.steps} step${a.steps===1?"":"s"}`:""}</div>`:""}
     ${text?html`<div class="vsab">${raw(vsCite(mdHtml(text)))}</div>`:""}
     ${a.err?html`<div class="vsab" style="color:var(--bad)">${a.err}</div>`:""}${a.stopped?html`<div class="vsab sub">Stopped.</div>`:""}
@@ -127,11 +127,11 @@ export async function vsConsume(res,ctl){ const rd=res.body.getReader(), dec=new
       vsAnswerDraw(); } }
   shared.ASKQ.done=true; vsAnswerDraw(); const id=shared.ASKQ.run; if(id) api("/api/ask/ack",{run:id}); }
 export async function askClaude(){ const q=$("#vsInput").value.trim(); if(q&&viaServer()) rbStart("Answering a question"); try{ if(!q) return;
-  if(!viaServer()){ putHTML($("#vsNote"),html`Live server needed: Ask runs through it. <button class="mini" data-copycmd>Copy the start command</button>`); return; }
+  if(!viaServer()){ putHTML($("#vsNote"),html`creaite needs to be running: Ask runs through it. <button class="mini" data-copycmd>Copy the start command</button>`); return; }
   if(shared.ASKQ.run&&!shared.ASKQ.done){ snack("An answer is already being written"); return; }
   const id=`q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.ASKQ={run:id,ctl,q,said:[],sources:[],steps:0,done:false}; vsShow(true); vsAnswerDraw();
   let res; try{ res=await fetch("/api/search/ask",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify({q,skip:SRCH.skip,run:id})}); }
-  catch(e){ shared.ASKQ={run:null}; vsAnswerDraw(); if(e.name!=="AbortError") snack("The live server isn't reachable"); return; }
+  catch(e){ shared.ASKQ={run:null}; vsAnswerDraw(); if(e.name!=="AbortError") snack("creaite isn't reachable"); return; }
   if(!res.ok||!res.body||(res.headers.get("Content-Type")||"").includes("json")){ const j=await res.json().catch(()=>({})); shared.ASKQ={run:null}; vsAnswerDraw(); snack(res.status===404?OLDSERVER:oneLine(j.message||"Couldn't start the answer")); return; }
   await vsConsume(res,ctl); }
   finally{ rbEnd(shared.ASKQ.stopped?"stopped":shared.ASKQ.err?"failed":"done"); } }
@@ -170,14 +170,14 @@ export async function permissionFlow(ev){ permissionInfo(ev); return false; }
    rule that is really out of bounds (it would run anything, or reach the database, the engine or the permissions) mentions
    editing .claude/settings.json yourself in Terminal. */
 export function permissionInfoText(ev){ const asked=ev.asked&&ev.asked!==ev.rule?` (asked as ${ev.asked})`:"", shapes=(ev.refused||[]).filter(Boolean);
-  if(ev.state==="allowed"||ev.covered) return `Nothing to add: ${ev.rule}${asked} is already allowed by ${ev.covered}. The request was refused for another reason`+(shapes.length?`: ${shapes.join("; ")}.`:".")+" ask creaite can run the script on its own instead.";
-  if(ev.state==="out_of_bounds") return `ask creaite asked for ${ev.rule}${asked}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
+  if(ev.state==="allowed"||ev.covered) return `Nothing to add: ${ev.rule}${asked} is already allowed by ${ev.covered}. The request was stopped for another reason`+(shapes.length?`: ${shapes.join("; ")}.`:".")+" ask creaite can run the script on its own instead.";
+  if(ev.state==="out_of_bounds") return `ask creaite asked for ${ev.rule}${asked}, which creaite won't add: ${ev.reason}. If you do want it, change that setting yourself in Settings.`;
   return `ask creaite asked for ${ev.rule}${asked}, which creaite won't add: ${ev.reason}.`; }
 export function permissionInfo(ev){ const d=addEl("msg a info",html`${permissionInfoText(ev)}`);
   if(ev.state!=="allowed"&&!ev.covered) return;
   const a=document.createElement("div"); a.className="acts"; putHTML(a,html`<button class="btn" type="button">Try again</button>`); d.appendChild(a);
   a.querySelector("button").onclick=()=>{ if(shared.BUSY) return; putHTML(a,html`<span class='sub'>Trying again</span>`);
-    send(`${ev.rule} is already allowed, so no rule is needed. Run the script on its own (python3 system/scripts/<name>.py …, with no cd, pipe, redirect or heredoc) and carry on with my last request.`); }; }
+    send(`${ev.rule} is already allowed, so no rule is needed. Carry on with my last request.`); }; }
 /* ===== end BL-140 ===== */
 
 /* ===== BL-141 (sprint-admin): What ask creaite changed ===== */
@@ -215,7 +215,7 @@ export async function renderAskChanges(){ const loading=shared.LOADING, was=new 
       if(no){ const td=no.closest("td"); td.querySelector("[data-achgq]").remove(); td.querySelector("[data-achgrestore]").hidden=false; return; }
       if(ok){ ok.disabled=true; await achgRestore(+ok.dataset.achgrestoreyes,ok.dataset.path,ok.dataset.at); renderAskChanges(); return; }
       const b=e.target.closest("[data-achgundo]"); if(!b) return; b.disabled=true; const r=await api("/api/changes/undo",{id:+b.dataset.achgundo}); snack(oneLine(r.message||(r.ok?"Undone":"Not undone"))); renderAskChanges(); }); }
-  if(!viaServer()) putHTML($("#achgTbl"),html`<div class="empty">This list needs the live server.</div>`);
+  if(!viaServer()) putHTML($("#achgTbl"),html`<div class="empty">This list needs creaite to be running.</div>`);
   else { const r=await api("/api/changes/list",{}); putHTML($("#achgTbl"),r.ok?askChangesHtml(r.changes||[]):html`<div class="empty">${oneLine(r.message||"Couldn't read the list.")}</div>`); }
   if(loading) return; if(reduced()) { ACHGFIRST=false; return; } const rows=$$("#achgTbl tr[data-achg]");
     if(ACHGFIRST&&rows.length){ ACHGFIRST=false; rows.slice(0,8).forEach((t,i)=>anim(t,[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320,delay:i*40})); }
@@ -236,7 +236,7 @@ export function changesCardHtml(c){ const n=c.items.length, nh=c.items.filter(it
     `${nh?`<span class="sub chgtiers">${nh===n?(n===1?"It is":"All are"):`${nh} ${nh===1?"is":"are"}`} High-risk: ${nh===1?"it changes":"they change"} what ask creaite is allowed to do. Read ${nh===1?"it":"them"} closely.</span>`:""}`+
     `<ol class="chglist">${c.items.map((it,i)=>{ const hi=it.tier==="high"; return `<li class="chgtier ${hi?"tier-high":"tier-sens"}" data-tier="${hi?"high":"sensitive"}" style="--i:${Math.min(i,7)}">${chgTierTag(hi)} <b>${esc(it.title)}</b><div class="sub">${esc(it.reason)}.${hi&&it.tier_reason?` High-risk because ${esc(it.tier_reason)}.`:""}${it.why?` Why: ${esc(it.why)}`:""}</div>`+
       `${(it.diff||[]).length?`<pre class="permdiff">${esc(it.diff.join("\n"))}</pre>`:it.summary?`<div class="sub">${esc(it.summary)}</div>`:""}${(it.files||[]).length?`<div class="sub">Deletes: ${it.files.map(f=>`<code>${esc(f)}</code>`).join(", ")}</div>`:""}${hi?chgRollback(it.id):""}</li>`; }).join("")}</ol>`+
-    `${(c.refused||[]).length?`<div class="sub">Refused, whatever is approved: ${esc(c.refused.join("; "))}</div>`:""}`+
+    `${(c.refused||[]).length?`<div class="sub">creaite can't do that: ${esc(c.refused.join("; "))}</div>`:""}`+
     `<div class="acts"><button class="btn" data-chg="no">Decline</button><button class="btn primary" data-chg="yes">Approve</button></div></div>`; }
 export async function changesFlow(c){
   if(!c.card){ if((c.refused||[]).length) addEl("msg a info",html`${`Not changed, whatever is approved: ${c.refused.join("; ")}.`}`); return false; }
@@ -292,7 +292,7 @@ export function editCardHtml(c){ const n=c.lines.filter(l=>!/^\s/.test(l)).lengt
     `${(c.problems||[]).length?`<div class="sub edprob">${c.problems.map(esc).join("<br>")}</div>`:""}`+
     `${(c.clash||[]).length?`<div class="sub">${esc(c.clash.join(", "))} already ${c.clash.length===1?"has":"have"} a change waiting in Review, so this one can only wait in Review.</div>`:""}`+
     `<div class="acts"></div></div>`; }
-export function edActs(acts,kinds){ const word={reject:"Reject",stage:"Stage for review",approve:"Approve"};
+export function edActs(acts,kinds){ const word={reject:"Reject",stage:"Save for Review",approve:"Approve"};
   acts.replaceChildren(...kinds.map(k=>{ const b=document.createElement("button"); b.type="button"; b.className="btn"+(k===kinds[kinds.length-1]&&k!=="reject"?" primary":""); b.dataset.ed=k; b.textContent=word[k]; return b; })); }
 export async function editFlow(c,o={}){
   if(!c.card){ addEl("msg a info",html`${`The change wasn't put on a card: ${c.refused}.`}`); return; }
@@ -302,13 +302,13 @@ export async function editFlow(c,o={}){
   edActs(acts,!c.valid?["reject"]:(c.clash||[]).length?["reject",later]:["reject","approve"]);
   for(;;){ const how=await new Promise(res=>acts.querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>res(b.dataset.ed)));
     acts.textContent="Working…"; const r=await api(`/api/edit/${how}`,{card:c.card});
-    if(r.ok){ acts.textContent=how==="approve"?"✓ Approved":how==="stage"?"Staged for review":"Rejected";
-      if(how==="reject"){ addEl("step stopped","Rejected: nothing was staged or changed"); return; }
+    if(r.ok){ acts.textContent=how==="approve"?"✓ Approved":how==="stage"?"Waiting in Review":"Rejected";
+      if(how==="reject"){ addEl("step stopped","Rejected: nothing was saved or changed"); return; }
       const m=addEl("msg a",html`${r.message}${how==="approve"&&r.apply_id?html` <button class="mini" data-edundo="${String(r.apply_id)}">Undo</button>`:""}`);
       if(how==="approve") snack(oneLine(r.message)); await reloadData(); return m; }
     if(r.busy||(r.clash||[]).length){ addEl("msg a info",html`${r.message}`); edActs(acts,["reject",later]); continue; }
     if(r.stale){ addEl("msg a info",html`${oneLine(r.message)}`); if(o.onStale) o.onStale(r); edActs(acts,["reject"]); continue; }   /* #124: the card stays; nothing moved */
-    acts.textContent="Not applied"; addEl("msg a info",html`${oneLine(r.message||"Not applied")}`); return; } }
+    acts.textContent="Not saved"; addEl("msg a info",html`${oneLine(r.message||"Not saved")}`); return; } }
 export async function pendingEdit(){ if(!viaServer()) return; const r=await api("/api/edit/pending",{}); if(!r.ok||!r.card) return;
   if(r.card.chat&&r.card.chat!==shared.ASKCHAT){ setChat(r.card.chat,r.card.chat); await loadChat(r.card.chat,true); }
   openChat(); if(resumeDeleteNote(r.card)) return;   /* #124: a Delete note card this tab started is watched as the first time */
@@ -325,7 +325,7 @@ export async function serverCardFlow(card,o={}){ openChat(); const m=await editF
    Cancel does nothing. Nothing here is new to the server: the routes are the dashboard's, and nothing is written before Go ahead. */
 export function fieldCardHtml(c){ const n=(c.items||[]).length;
   return `<div class="confirm edcard" role="group" aria-label="A change waiting for you" data-fcard="${esc(c.card)}"><b>${esc(c.title)}</b>`+
-    `<span class="sub">Nothing has been written yet. ${c.valid?`Go ahead saves ${n===1?"it":`all ${n} items`} as an edit in the dashboard does${S.autoApply?", applied at once, with Undo":"; press Apply to write it"}.`:"It has problems, so it can't be saved: ask creaite to fix it, or edit the item yourself."}</span>`+
+    `<span class="sub">Nothing has been written yet. ${c.valid?`Go ahead saves ${n===1?"it":`all ${n} items`} as an edit in the dashboard does${S.autoApply?", saved at once, with Undo":"; press Save to write it"}.`:"It has problems, so it can't be saved: ask creaite to fix it, or edit the item yourself."}</span>`+
     `<ul class="edlines">${(c.lines||[]).map(edLine).join("")}</ul>`+
     `${(c.problems||[]).length?`<div class="sub edprob">${c.problems.map(esc).join("<br>")}</div>`:""}`+
     `${(c.notes||[]).length?`<div class="sub">${c.notes.map(esc).join("<br>")}</div>`:""}`+
@@ -342,7 +342,7 @@ export async function fieldFlow(c){
   const r=await itemsMove(c.items.map(it=>({k:it.k,id:it.id,patch:{...it.patch}})),what,{wait:true});   /* the dashboard's own save */
   const done=r.done, left=[...r.left,...r.missing.map(id=>`${id} (not on this page: reload and ask again)`)];
   acts.textContent=done.length?"✓ Saved":"Not saved";
-  if(done.length) addEl("msg a",html`${S.autoApply?"Applied":"Saved, waiting for Apply"}: ${done.join(", ")}.${S.autoApply&&D.latest_apply?html` <button class="mini" data-edundo="${String(D.latest_apply)}">Undo</button>`:""}`);
+  if(done.length) addEl("msg a",html`${S.autoApply?"Saved":"Saved, waiting for Save"}: ${done.join(", ")}.${S.autoApply&&D.latest_apply?html` <button class="mini" data-edundo="${String(D.latest_apply)}">Undo</button>`:""}`);
   if(left.length) addEl("msg a info",html`${`Left out: ${left.join("; ")}.`}`);
   else if(!done.length) addEl("msg a info","Not saved: nothing was changed (the message at the bottom of the screen says why).");
   return done.length; }
@@ -374,7 +374,7 @@ $("#chLog").addEventListener("click",e=>{ const b=e.target.closest("[data-chgcop
 }
 /* ======================= ask creaite ======================= */
 export const sleep=ms=>new Promise(r=>setTimeout(r,ms)); shared.BUSY=false;
-export const GREET="Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.";
+export const GREET="Hello. I run your requests through Claude Code in creaite, so your skills and rules still apply. Anything that writes asks you first.";
 /* ===== BL-262 (sprint-ask-flow) ===== reopening shows the chat as it was: openChat never clears or redraws the log; an empty one
    is filled from the history in one step, or greeted at once (never typed out). SHOWN is the run whose events are on screen and
    the last event drawn (its sequence number), so a reattach asks only for what is newer. */
@@ -574,11 +574,11 @@ export async function loadChat(chat,quiet,skipRun){
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
     if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
   setChat(rec.chat,rec.session); CHSTARTED=rec.started?{chat:rec.chat,started:rec.started}:null;
-  rec.messages.forEach((m,i)=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); const r=rec.messages[i+1]; if(m.run&&r&&r.plain&&r.run===m.run) runAsk(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
+  rec.messages.forEach((m,i)=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); const r=rec.messages[i+1]; if(m.run&&r&&r.plain&&r.run===m.run) runAsk(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: creaite stopped"); } }); dayDividers(); return rec; }
 /* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing. BL-316: the Menu
    block's menu (openMenu), opened from #chHist; a slow list shows the skeleton first (motion 15) */
 export function histClose(){ if(menuOpenFor($("#chHist"))) closeMenu(); }
-export async function showHistory(e){ e&&e.stopPropagation(); if(menuOpenFor($("#chHist"))){ histClose(); return; } if(shared.BUSY) return; if(!viaServer()){ snack("History needs the live server"); return; } await drawHistory(); }
+export async function showHistory(e){ e&&e.stopPropagation(); if(menuOpenFor($("#chHist"))){ histClose(); return; } if(shared.BUSY) return; if(!viaServer()){ snack("History needs creaite to be running"); return; } await drawHistory(); }
 export const histOpen=(items,loading)=>openMenu($("#chHist"),{label:"History",id:"chHistMenu",cls:"chhist",align:"right",loading,items,onPick:c=>{ if(c!==shared.ASKCHAT) loadChat(c); }});
 export async function drawHistory(){ let shown=false; const t=setTimeout(()=>{ shown=true; histOpen([],true); },150);
   try{ const res=await api("/api/chats"), L=(res.chats||[]).slice(0,10); if(shown&&!menuOpenFor($("#chHist"))) return;   /* closed while it loaded */
@@ -587,11 +587,11 @@ export async function drawHistory(){ let shown=false; const t=setTimeout(()=>{ s
   finally{ clearTimeout(t); const M=$("#chHistMenu"); if(M) anim(M,[{opacity:.4,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } }
 
 export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "note: …" in ask creaite */
-  if(m){ if(!viaServer()){ await say("Saving a note needs the live server."); return; }   /* BL-301 C: saved as a note, the drawer's way (never the model) */
+  if(m){ if(!viaServer()){ await say("Saving a note needs creaite to be running."); return; }   /* BL-301 C: saved as a note, the drawer's way (never the model) */
     const r=await api("/api/notes/capture/done",{code:"auto",body:m[1].trim(),template:"blank"});
     if(!r.ok){ await say(oneLine(r.message||"The note wasn't saved.")); return; }
-    const un=r.code==="_portfolio"; await say(`Saved the note “${r.title}” in ${un?"Unfiled":pName(r.code)}${r.reason?(un?`: ${r.reason}`:` (${r.reason})`):""}. Find updates on the note turns it into tracker changes.`); return; }
-  if(!viaServer()){ await say(SERVED?"The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
+    const un=r.code==="_portfolio"; await say(`Saved the note “${r.title}” in ${un?"Unfiled":pName(r.code)}${r.reason?(un?`: ${r.reason}`:` (${r.reason})`):""}. Find updates on the note turns it into project record changes.`); return; }
+  if(!viaServer()){ await say(SERVED?"creaite isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start creaite), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
   await askLive(q,null); }
 /* BL-33: a running request can be stopped (the Send button becomes Stop; #130: only that button stops it, Esc just closes the panel and the run carries on). Read-only requests stop
    at once; a confirmed write stops once the step running now has finished. What's shown so far is kept. */
@@ -679,7 +679,7 @@ export let rbDraw = function(){ const el=$("#runBadge"); if(!el) return; if(!RB.
   $("#rbE").hidden=s!=="running"; $("#rbX").hidden=s==="running"; rbTick(); };
 export function rbTick(){ if(RB.state==="running") $("#rbE").textContent=rbClock(Date.now()-RB.t0); }
 export function rbGuess(q){ q=String(q||""); return /weekly report/i.test(q)?"Drafting the weekly report":/client report/i.test(q)?"Drafting the client report":/steerco|one-pager/i.test(q)?"Drafting the one-pager":
-  /refresh calendar/i.test(q)?"Refreshing the calendar":/^sweep/i.test(q)?"Sweeping mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
+  /refresh calendar/i.test(q)?"Refreshing the calendar":/^sweep/i.test(q)?"Checking mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
 export function rbUnmark(){ if(shared.RBMARKED){ shared.RBMARKED=false; if(document.title.startsWith(RBMARK)) document.title=document.title.slice(RBMARK.length); } }
 export function rbStart(label){ if(RB.state==="running"){ if(label) RB.label=label; rbDraw(); return; }       /* a confirmed follow-up of the same run keeps its clock */
   askMarkClear(); rbUnmark(); Object.assign(RB,{state:"running",t0:Date.now(),label:label||shared.RUNLABEL||"",took:""}); shared.RUNLABEL=""; clearInterval(RB.timer); RB.timer=setInterval(rbTick,1000); rbDraw(); }
@@ -737,7 +737,7 @@ export const QUIPS=["Percolating coffee","Getting my steps in","Waiting for the 
   "Finding the action log","Unmuting","Sharing the wrong screen","Sharing the right screen","Waiting for the room to empty",
   "Collecting the printouts","Refilling the stapler","Looking for a working pen","Fixing the wobbly chair","Warming up the projector",
   "Asking who has the clicker","Moving the stand-up to Tuesday","Waiting for quorum","Taking the minutes","Agreeing the next steps",
-  "Parking that for now","Coming back to that","Noting the dependency","Updating the tracker","Colour-coding the spreadsheet",
+  "Parking that for now","Coming back to that","Noting the dependency","Updating your project record","Colour-coding the spreadsheet",
   "Merging two spreadsheets","Finding the latest version","Renaming it final_final","Checking the shared drive","Clearing the inbox",
   "Flagging it for later","Drafting a polite nudge","Softening the wording","Adding a gentle reminder","Writing the out-of-office",
   "Booking the next check-in","Finding a slot that suits everyone","Declining a clashing invite","Accepting tentatively",
@@ -786,9 +786,9 @@ export function runClosure(c){ const href=/^#[\w=%.|:&-]*$/.test(String(c.href||
 /* ===== end BL-326 ===== */
 export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, outcome="done"; const live=!ended; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
   try{ res=await fetch(url,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token,"X-Creaite-Seq":"1"},body:JSON.stringify(body)}); }   /* BL-262: numbered events */
-  catch(e){ askWorking(false); if(e.name==="AbortError"){ rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("The live server stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
+  catch(e){ askWorking(false); if(e.name==="AbortError"){ rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("creaite stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
-  if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check the live server window."); retryOffer("failed",body); return; }
+  if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check creaite window."); retryOffer("failed",body); return; }
   const work=()=>live?working():document.createElement("div");   /* BL-262 */ let next=null;
   const rd=res.body.getReader(), dec=new TextDecoder(), t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
   for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i; const replayed=url==="/api/ask/attach"&&performance.now()-t0<150;   /* #148: the backlog an attach opens with (the server sends it as soon as the stream opens), is drawn as it was: no words fading in */
@@ -820,7 +820,7 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
   if(fcard) await fieldFlow(fcard);   /* BL-314 */
   if(conf&&await confirmCard(conf.title,conf.body,"Go ahead",null,true)){ addEl("msg u",html`${"Go ahead: "+conf.title}`); shared.RUN.id=`${shared.RUN.id}-w`; shared.RUN.ctl=new AbortController(); setRunning(true);
     await askStream("/api/ask",{message:`Go ahead: ${conf.title}`,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed:conf.title,run:shared.RUN.id},conf.title,shared.RUN.ctl); return; }
-  if(prep&&await confirmCard("Prep page",html`Research ${prep.title}${prep.project?html` (${prep.project})`:""} and save a page in the project's Agendas folder. The live server writes it, marked Internal.`,"Go ahead")){ addEl("msg u",html`${"Go ahead: Prep page"}`); await prepPage(prep.key); }   /* BL-307: the Prep page route (BL-98), never the chat */
+  if(prep&&await confirmCard("Prep page",html`Research ${prep.title}${prep.project?html` (${prep.project})`:""} and save a page in the project's Agendas folder. creaite writes it, marked Internal.`,"Go ahead")){ addEl("msg u",html`${"Go ahead: Prep page"}`); await prepPage(prep.key); }   /* BL-307: the Prep page route (BL-98), never the chat */
   if(chg||ecard||fcard||conf||prep) setTimeout(queueResume,0);   /* BL-257: answered, so a held queue goes on */
   if(confirmed) await reloadData(); }
 /* ===== Images in ask creaite (BL-100) ===== */
@@ -838,7 +838,7 @@ export function shrinkImage(file){ return new Promise((res,rej)=>{ const u=URL.c
     rej(new Error("too big")); };
   im.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error("not an image")); }; im.src=u; }); }
 export function drawThumbs(){ const T=$("#chThumbs"); T.hidden=!shared.PIMG.length; putHTML(T,html`${shared.PIMG.map((p,i)=>html`<div class="chthumb${p.id?"":" up"}" data-i="${i}" style="background-image:url('${p.url}')" title="Click to enlarge"><button class="x" type="button" data-rm="${i}" aria-label="Remove image">${raw(ic("x"))}</button></div>`)}`); }
-export async function addImages(files){ if(!viaServer()){ imgFlash("Images need the live server"); return; }
+export async function addImages(files){ if(!viaServer()){ imgFlash("Images need creaite to be running"); return; }
   for(const f of files){ if(shared.PIMG.length>=IMG_MAX){ imgFlash(`Up to ${IMG_MAX} images on a message`); break; }
     if(f.type!=="image/png"&&f.type!=="image/jpeg"){ imgFlash("Only PNG or JPEG images"); continue; }
     let s; try{ s=await shrinkImage(f); }catch(e){ imgFlash("Couldn't read that image"); continue; }
@@ -888,8 +888,8 @@ export function refusedSteps(ev){ const pl=ev.plain||[], seen=new Set();
    is the plain "I can't" for something the panel can never do (a Microsoft 365 action, the live server): one sentence and a
    button to where it can be done, in place of a Go ahead that would only be refused. Display only: the guard is unchanged. */
 export function claimsNote(found){ if(!found||!found.length) return; const n=k=>found.filter(f=>f.kind===k).length, t=n("title"), o=n("owner"), m=n("missing");
-  const parts=[t?`${t} title${t===1?"":"s"} didn't match`:"",o?`${o} owner${o===1?"":"s"} corrected`:"",m?`${m} ID${m===1?"":"s"} not in the tracker`:""].filter(Boolean);
-  addEl("step checked",html`<span>Checked against the tracker: ${parts.join(", ")}.</span>`); }
+  const parts=[t?`${t} title${t===1?"":"s"} didn't match`:"",o?`${o} owner${o===1?"":"s"} corrected`:"",m?`${m} ID${m===1?"":"s"} not in your project record`:""].filter(Boolean);
+  addEl("step checked",html`<span>Checked against your project record: ${parts.join(", ")}.</span>`); }
 export function cantCard(ev){ const g=ev.go;
   addEl("msg a cant",html`<p>${ev.line}</p>${g&&g.label?html`<button class="mini" data-cango="${JSON.stringify(g)}">${g.label}</button>`:""}`); }
 export function cantGo(g){ if(!g) return; if(g.email){ if(PERS().some(p=>p.name===g.email)){ openDraftEmail(g.email,g.mode||"update"); return; } go("people"); return; } if(g.page) go(g.page,g.arg); }
@@ -1013,7 +1013,7 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
   const nRep=needsMe().length, nIr=irLiveCounts().badge, nReady=irLiveCounts().ready;   /* #232-C: one Go to entry, with the rail's number */   /* BL-337 */
-  [["today","Today",""],["intake-review","Intake",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v),v==="intake-review"?"review inbox proposals approve":""));   /* #232-C: the old names still find it */
+  [["today","Today",""],["intake-review","Intake",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v),v==="intake-review"?"review inbox suggestions approve":""));   /* #232-C: the old names still find it */
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
@@ -1080,7 +1080,7 @@ export const ckMs=id=>ckMilestones().find(m=>m.id===id);
 /* the item a phrase names: an ID, or the open items (and milestones) whose title shares the most words, in the project it names */
 export function ckTarget(phrase,{ms=true,kinds=["actions","raid","decisions"]}={}){ const raw=String(phrase||"").trim(); if(!raw) return {none:true};
   const idm=raw.toUpperCase().match(/\b[A-Z][A-Z0-9]{2,6}-(?:[AD]-|M-)?\d{3}\b/); if(idm){ const id=idm[0], k=ckKind(id);
-    if(k==="milestones") return ckMs(id)?{k,id}:{none:true,why:`${id} isn't a milestone creaite knows`}; return k&&REC(k,id)?{k,id}:{none:true,why:`${id} isn't in the tracker`}; }
+    if(k==="milestones") return ckMs(id)?{k,id}:{none:true,why:`${id} isn't a milestone creaite knows`}; return k&&REC(k,id)?{k,id}:{none:true,why:`${id} isn't in your project record`}; }
   if(shared.CKPICK.target&&shared.CKPICK.for===raw) return shared.CKPICK.target;
   const words=ckWords(raw), proj=P.find(p=>words.includes(p.code.toLowerCase())||p.name.toLowerCase().split(/\s+/).some(w=>w.length>3&&words.includes(w)));
   const pw=proj?new Set([proj.code.toLowerCase(),...proj.name.toLowerCase().split(/\s+/)]):new Set(), want=words.filter(w=>!pw.has(w));
@@ -1153,16 +1153,16 @@ export function ckTouches(c){ const out=[], x=c.k==="milestones"?ckMs(c.id):c.ne
   if(c.patch&&c.patch.fc){ const w=weekendNote(c.patch.fc); if(w) out.push(w.text); }
   const days=(D.calendar||{}).days||{}, next=Object.keys(days).filter(d=>d>=TODAY).sort().flatMap(d=>(days[d]||[]).filter(e=>!e.all_day&&e.p===p&&(d>TODAY||e.start>=new Date().toTimeString().slice(0,5))).map(e=>[d,e]))[0];
   if(next) out.push(`Next meeting for ${pName(p)}: ${next[1].title}, ${longDay(next[0])} ${next[1].start}`);
-  if(c.unknown) out.push(`“${c.patch.o||c.patch.by}” isn't in the people register: creaite asks before staging`);
+  if(c.unknown) out.push(`“${c.patch.o||c.patch.by}” isn't in the people register: creaite asks before saving`);
   return out; }
 export function ckPreview(c){ if(c.ask) return `<div class="ckpv"><div class="ckpvh">${ic("alert")} ${esc(c.ask)}</div><div class="sub">Press Enter to ask creaite to do it instead, or Esc.</div></div>`;
-  if(c.pick) return `<div class="ckpv"><div class="ckpvh">Which ${c.what==="person"?"person":"one"} do you mean?</div><div class="sub">Pick one from the list, then press Enter to stage.</div></div>`;
+  if(c.pick) return `<div class="ckpv"><div class="ckpvh">Which ${c.what==="person"?"person":"one"} do you mean?</div><div class="sub">Pick one from the list, then press Enter to save.</div></div>`;
   let title, rows;
   if(c.new){ title=`New ${c.k==="actions"?"action":c.k==="decisions"?"decision":(c.new.type||"risk").toLowerCase()} in ${pName(c.new.p)}`; rows=Object.entries(c.new).filter(([f])=>CKFN[f]&&f!=="p").map(([f,v])=>`<div class="ckln add"><span class="ckf">${CKFN[f]}</span><span class="ckb" aria-label="Added">+ ${esc(ckShow(f,v))}</span></div>`).join("")+ckChipsHtml(c); }
   else { const x=c.k==="milestones"?ckMs(c.id):REC(c.k,c.id); title=`${c.id} · ${x.t}`;
     rows=Object.entries(c.patch).map(([f,v])=>{ const was=c.k==="milestones"?(f==="fc"?x.due:""):x[f]; return `<div class="ckln"><span class="ckf">${CKFN[f]||f}</span><span class="ckdel" aria-label="Before">− ${esc(ckShow(f,was))}</span><span class="ckadd" aria-label="After">+ ${esc(ckShow(f,v))}</span></div>`; }).join(""); }
   const t=ckTouches(c);
-  return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows}${t.length?`<div class="cktch"><div class="sub">What else it touches</div><ul>${t.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:'<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`; }
+  return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows}${t.length?`<div class="cktch"><div class="sub">What else it touches</div><ul>${t.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:'<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> save · <kbd>${MOD}↵</kbd> save and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`; }
 export function ckSummary(c){ if(c.new) return `Add: ${c.new.t}`; const x=c.k==="milestones"?ckMs(c.id):REC(c.k,c.id), f=Object.keys(c.patch)[0];
   return `${c.label}: ${c.id} ${x?"· "+x.t:""} → ${ckShow(f,c.patch[f])}`; }
 /* ---- staging: the peek's path, never applied here ---- */
@@ -1177,16 +1177,16 @@ export async function ckStage(c,thenReview){ if(c.ask){ ckAsk($("#cmdkIn").value
     const err=validate(k,v,false,x); if(err){ snack(oneLine(err)); return; }
     ok=await pkCommit(k,c.id,f,c.label,String(x[f0]??""),String(f[f0]??"")); }
   if(!ok) return;
-  snack(`Staged: ${ckSummary(c)}. Nothing reaches the tracker until you apply`,()=>pkUndoLast());
+  snack(`Saved: ${ckSummary(c)}. Nothing is saved until you approve it`,()=>pkUndoLast());
   if(thenReview) go("intake-review"); }
 export async function ckStageNew(c){ const k=c.k, f={...c.new}; if(f.o&&f.o!=="TBC"){ const o=await ownerFinal(f.o); if(o===null) return false; f.o=o; } if(f.by){ const o=await ownerFinal(f.by); if(o===null) return false; f.by=o; }
   const err=validate(k,f,true,null); if(err){ snack(oneLine(err)); return false; } norm(k,f); const {values}=newItemOf(k,f); if(!await needVault()) return false;
   const meta={k,id:"nw"+Date.now().toString(36),patch:{},prev:{},label:"Created",from:"",to:f.t,at:nowStamp(),note:"⌘K",type:"act",isNew:true,title:f.t,p:f.p,known:pkArr(k).map(r=>r.id),ms:Date.now()};
-  let name; try{ name=await writeProposal([{op:"new",table:k,values}],{peek:meta}); }catch(e){ snack("Not staged: "+e.message); return false; }
+  let name; try{ name=await writeProposal([{op:"new",table:k,values}],{peek:meta}); }catch(e){ snack("Not saved: "+e.message); return false; }
   shared.PKS.push({name,...meta}); pkPersist(); refreshAll(); return true; }
 export async function ckStageMs(c){ const m=ckMs(c.id); if(!m||!await needVault()) return false; const changes={forecast_date:c.patch.fc};
   const meta={k:"milestones",id:c.id,patch:{},prev:{},label:"Forecast",from:m.due||"",to:c.patch.fc,at:nowStamp(),note:"⌘K",type:"act",ms:Date.now()};
-  let name; try{ name=await writeProposal([{op:"update",table:"milestones",id:c.id,changes}],{peek:meta}); }catch(e){ snack("Not staged: "+e.message); return false; }
+  let name; try{ name=await writeProposal([{op:"update",table:"milestones",id:c.id,changes}],{peek:meta}); }catch(e){ snack("Not saved: "+e.message); return false; }
   shared.PKS.push({name,...meta}); pkPersist(); refreshAll(); return true; }
 export function ckAsk(text){ $("#cmdk").open&&$("#cmdk").close(); openChat(); setTimeout(()=>{ const t=$("#chIn"); if(t){ t.value=text; t.dispatchEvent(new Event("input",{bubbles:true})); t.focus(); } },60); }
 /* ---- into the palette: a change first, marked Change; a pick list asks; the jump list under it ---- */

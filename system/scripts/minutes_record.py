@@ -405,7 +405,7 @@ def proposal_for(doc):
     name = (doc.get("meta") or {}).get("proposal") or ""
     p = paths.STAGING / name
     if not re.fullmatch(r"proposed-[\w.-]+\.json", name) or not p.is_file():
-        raise RecordError("These minutes' items aren't pending any more: they were approved or the proposal has gone.")
+        raise RecordError("These minutes' items aren't pending any more: they were approved or the suggestion has gone.")
     return p, json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -818,7 +818,7 @@ def change(path, op, base_version=None, via="dashboard"):
     {ok, message, version, doc}; refusals raise RecordError. Every change first settles the record (#268: settle)."""
     doc = creaite_doc.read(path)
     if doc.get("state") == "approved":
-        raise RecordError("These minutes are approved; their items are in the tracker. Change the items there.")
+        raise RecordError("These minutes are approved; their items are in your project record. Change the items there.")
     p, data = proposal_for(doc)
     settled = settle(doc, data)                             # #268: after an Undo of the approve, the record follows its items first
     kind, n = op.get("op"), op.get("n")
