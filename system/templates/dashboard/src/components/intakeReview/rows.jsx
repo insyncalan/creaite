@@ -131,7 +131,7 @@ export function FileKind({ m }) {
 }
 
 /** An uploaded file's lines, the same in the List, the Board's card and the Two panes' detail: when it was added and its likely
-    project, its state, and what kind it is while it waits. @param {{m: any, n: number}} props */
+    project, its state, and what kind it is while it waits. @param {{m: any, n: number, compact?: boolean}} props */
 export function FileFacts({ m, n, compact }) {
   const waiting = m.stage === "arrived" && m.state === "ready" && !irBusy.value.includes(m.id);
   if (compact) {   /* #341 item 8: in the List a file is one line of facts; what the kind means is in the Two panes' detail, and shows here only when the file needs a choice */

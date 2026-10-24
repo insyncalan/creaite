@@ -63,12 +63,12 @@ export function mcStep(s, label) {
 
 /** @param {McState} s @param {Record<string,string>} names */
 const placeList = (s, names) => s.places.map(p => names[p]).join(", ");
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const mcPlural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /** The working line, replacing the quip. @param {McState} s */
 export function mcLine(s) {
   if (!s.places.length) return "Starting";
-  return `Looked in so far: ${placeList(s, PLACE_NAMES)} · ${plural(s.searches, "search", "searches")}, ${plural(s.reads, "item", "items")} read`;
+  return `Looked in so far: ${placeList(s, PLACE_NAMES)} · ${mcPlural(s.searches, "search", "searches")}, ${mcPlural(s.reads, "item", "items")} read`;
 }
 
 /** The badge's label: places only, never a counter. @param {McState} s */

@@ -51820,7 +51820,7 @@ system/scripts/run launch.py agent ${what}`;
   var FTYPES = () => ["All", .../* @__PURE__ */ new Set(["docx", "pdf", "vtt", "xlsx", ...FILES.map((f5) => f5.type).filter(Boolean)])];
   var FVIEWS = [["all", "All files"], ["latest", "Latest reports"], ["week", "This week's meetings"], ["archived", "Archived"]];
   var ffCount = () => (shared.FSEL.quick !== "all" ? 1 : 0) + (FF.type !== "All" ? 1 : 0) + (FF.from ? 1 : 0) + (FF.to ? 1 : 0);
-  var ffChips = () => [...shared.FSEL.quick !== "all" ? [["view", `View: ${(FVIEWS.find((v5) => v5[0] === shared.FSEL.quick) || [, ""])[1]}`]] : [], ...FF.type !== "All" ? [["type", `Type: ${ftLabel(FF.type)}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
+  var ffChips = () => [...shared.FSEL.quick !== "all" ? [["view", `View: ${(FVIEWS.find((v5) => v5[0] === shared.FSEL.quick) || ["", ""])[1]}`]] : [], ...FF.type !== "All" ? [["type", `Type: ${ftLabel(FF.type)}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
   function filterChrome() {
     const n4 = ffCount(), c5 = ffChips(), btn = $("#fmBtn"), tip = n4 ? `Filter: ${n4} on` : "Filter";
     btn.setAttribute("aria-label", tip);
@@ -73981,10 +73981,10 @@ ${d5.text}`);
     return { places, searches: s5.searches + 1, reads: s5.reads };
   }
   var placeList = (s5, names) => s5.places.map((p6) => names[p6]).join(", ");
-  var plural2 = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
+  var mcPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
   function mcLine(s5) {
     if (!s5.places.length) return "Starting";
-    return `Looked in so far: ${placeList(s5, PLACE_NAMES)} · ${plural2(s5.searches, "search", "searches")}, ${plural2(s5.reads, "item", "items")} read`;
+    return `Looked in so far: ${placeList(s5, PLACE_NAMES)} · ${mcPlural(s5.searches, "search", "searches")}, ${mcPlural(s5.reads, "item", "items")} read`;
   }
   var mcBadge = (s5) => s5.places.length ? `Mail check: ${placeList(s5, PLACE_SHORT)}` : "Mail check: starting";
   var mcPlaces = (s5) => s5.places.length ? `Looked in so far: ${placeList(s5, PLACE_NAMES)}` : "";

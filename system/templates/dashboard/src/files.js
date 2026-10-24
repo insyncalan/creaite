@@ -42,7 +42,7 @@ export const ftLabel=t=>FTLAB[String(t).toLowerCase()]||t;
 const FTYPES=()=>["All",...new Set(["docx","pdf","vtt","xlsx",...FILES.map(f=>f.type).filter(Boolean)])];
 export const FVIEWS=[["all","All files"],["latest","Latest reports"],["week","This week's meetings"],["archived","Archived"]];
 export const ffCount=()=>(shared.FSEL.quick!=="all"?1:0)+(FF.type!=="All"?1:0)+(FF.from?1:0)+(FF.to?1:0);
-const ffChips=()=>[...(shared.FSEL.quick!=="all"?[["view",`View: ${(FVIEWS.find(v=>v[0]===shared.FSEL.quick)||[,""])[1]}`]]:[]),...(FF.type!=="All"?[["type",`Type: ${ftLabel(FF.type)}`]]:[]),...(FF.from?[["from",`From ${fd(FF.from)}`]]:[]),...(FF.to?[["to",`To ${fd(FF.to)}`]]:[])];
+const ffChips=()=>[...(shared.FSEL.quick!=="all"?[["view",`View: ${(FVIEWS.find(v=>v[0]===shared.FSEL.quick)||["",""])[1]}`]]:[]),...(FF.type!=="All"?[["type",`Type: ${ftLabel(FF.type)}`]]:[]),...(FF.from?[["from",`From ${fd(FF.from)}`]]:[]),...(FF.to?[["to",`To ${fd(FF.to)}`]]:[])];
 export function filterChrome(){ const n=ffCount(), c=ffChips(), btn=$("#fmBtn"), tip=n?`Filter: ${n} on`:"Filter";
   btn.setAttribute("aria-label",tip); btn.setAttribute("data-tip",tip); btn.classList.toggle("on",n>0); btn.querySelector(".fcount")?.remove();
   if(n) addHTML(btn,"beforeend",html`<span class="fcount" aria-hidden="true">${n}</span>`);
