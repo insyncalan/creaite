@@ -66,7 +66,7 @@ class ApprovedThisWeek(LiveBrowserCase):
         b.pump(0.5)
         if b.eval("!!document.getElementById('mnApproveGo')"):
             b.eval("document.getElementById('mnApproveGo').click()")
-        b.wait("(document.getElementById('toastHost')||{innerText:''}).innerText.includes('Minutes approved')", timeout=25)
+        self.wait_filing("(document.getElementById('toastHost')||{innerText:''}).innerText.includes('Minutes approved')", 25)   # #324: File and approve
         b.pump(1.5)
         b.pump(1.0)
         self.assertEqual(b.eval("D.intake_review.counts.approved"), before + 1, "Approved this week moved")

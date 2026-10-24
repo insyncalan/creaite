@@ -328,3 +328,4 @@ bootDayRoll();   /* #171 */
 bootAutostart();   /* #300 */
 bootProfile();   /* #312 */
 bootPageRefresh();   /* BL-327: last, once everything is drawn */
+export * from "./stores/minutesFiling.js";   /* #324: File the minutes (the box, its note, Open folder) */

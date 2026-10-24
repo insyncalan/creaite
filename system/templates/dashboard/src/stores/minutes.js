@@ -12,6 +12,8 @@ import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
 import { needsConnection } from "../core/say.js";
 import { REV } from "../core/data.js";
+import { askFiling, noteNumbered } from "./minutesFiling.js";
+import { mountFiling } from "../components/minutes/FilingDialog.jsx";
 import { api, applyNow, oneLine, REVIEW_CHANGED, STALE_ROW_MSG, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
@@ -146,6 +148,10 @@ export async function trackApprove(v, how = {}) {
   const doc = v && v.ok ? v.doc : null, plan = v && v.plan ? v.plan.items : null;
   if (!doc || !plan || !v.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
   const args = approveArgs(doc, plan);                     // review H1: only the ticked rows, never an item with no row
+  if (how.approve !== false && v.proposal) {                // #324, #332: where they are filed and what they are called, before anything changes
+    mountFiling();
+    if (!(await askFiling(v.proposal))) return { ok: false, message: "Cancelled: nothing was filed or approved.", made: 0 };
+  }
   let base = Number(doc.version) || undefined, made = 0; /** @type {Record<string, any>[]} */ const done = [];
   const change = how.change || (async (/** @type {Record<string, any>} */ op) => {
     const r = await api("/api/minutes/save", { path: v.path, op, base_version: base });
@@ -161,6 +167,7 @@ export async function trackApprove(v, how = {}) {
   if (how.approve === false) return { ok: true, made, done };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
   const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+  if (r && r.ok) noteNumbered(r.numbered);                    // #324: another meeting took the name first: the note says what it was filed as
   return { ...(r || { ok: false, message: "Nothing was saved or changed." }), made };
 }
 

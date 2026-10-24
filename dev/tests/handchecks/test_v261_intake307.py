@@ -198,10 +198,12 @@ class Intake307(HandcheckCase):
         b = self.b
         b.click("#mnApproveBtn")
         b.pump(1.2)
-        if anyway and b.eval("!!document.querySelector('dialog[open]')"):
-            b.eval("[...document.querySelectorAll('dialog[open] button')].find(x=>/^Approve/.test(x.innerText.trim())).setAttribute('data-hc','go')")
-            b.click("dialog[open] button[data-hc=go]")
-            b.eval("document.querySelectorAll('[data-hc]').forEach(x=>x.removeAttribute('data-hc'))")
+        for _ in range(2):                  # the box about a problem, then (#324) the File the minutes box
+            if anyway and b.eval("!!document.querySelector('dialog[open]')"):
+                b.eval("[...document.querySelectorAll('dialog[open] button')].find(x=>/^(Approve|File and approve)/.test(x.innerText.trim())).setAttribute('data-hc','go')")
+                b.click("dialog[open] button[data-hc=go]")
+                b.eval("document.querySelectorAll('[data-hc]').forEach(x=>x.removeAttribute('data-hc'))")
+                b.pump(1.0)
         b.pump(2.5)
 
     def assertPlain(self, text, what="the message"):
