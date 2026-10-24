@@ -15,18 +15,25 @@ sheet for 2.6.2 yet, so the numbers are the items in order and the PM can number
   10 #321                The New note drawer can be widened: a focusable separator handle (keyboard and pointer) up to the page width and
                          never beyond it, remembered per viewer (the page still works when storage throws), a Reset width button, full
                          width at 900 px, and no write to the server for a width change
+  11 #312                Your profile: a Settings card (name, email, other ways of writing the name, organisation, role) and a first-run
+                         About you step. The name is the setting identity.name and nothing else in settings.json changes; the details are
+                         the people register's row for you, saved through the file-change path (one row, Undo puts it back); the Follow
+                         column is never shown and a followed person's flag survives an edit; a bar or line break in a value adds no
+                         column or row (#312 review M1); a colleague's name asks whose row it is before it is edited (M2); no name is
+                         never filled with the placeholder (L1); the email is a label only (L2); About you is asked once, skippable,
+                         never blocks the app and is not asked again in this browser; with the server down nothing is written
 
 How a check is wired (every class has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Emit262                         a vault and no server: the engine's own commands, or its code run in the vault
   Discard262, Review262           a vault and its live server (the page's own token), no browser
   Inbox262                        a vault and a live server started with a file-size limit (a write past it fails, as a full disk does)
   Draft262                        a vault and a live server whose Claude is a stand-in that plays the draft run (never Microsoft 365)
-  Follow262, Today262, Drawer262  a vault, its live server and Chrome
+  Follow262, Today262, Drawer262, Profile262  a vault, its live server and Chrome
 
 The guarded parts (emit, discard, follow, #183, small2) are the 2.6.2 chain, dev/proposals/GUARDED-2.6.2.chain.
 A check that needs a guarded change this tree does not have is an EXPECTED FAILURE (the convention test_v261_intake307_identity.py
 uses): it still runs, is red for the right reason, and turns into an unexpected success (flagged) the moment the change is in. With the
-chain applied they are plain checks. #322 and #321 are not guarded and are on the line (check 10 is page-only: it passes with or without the chain).
+chain applied they are plain checks. #322, #321 and #312 are not guarded and are on the line (checks 10 and 11 are page-only: they pass with or without the chain).
 
 Run them (from the repository root; a release zip is built from this checkout first):
   python3 dev/tests/handchecks/test_v262.py                         all, with the committed tree (or --dirty: uncommitted engine files)
@@ -69,7 +76,7 @@ NOTES.clear()
 REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 
-KIND = {n: "scriptable" for n in range(1, 11)}
+KIND = {n: "scriptable" for n in range(1, 12)}
 LIVE_ONLY = {}        # check 4's last step (the draft in Outlook's Drafts folder) is live only, said in its note; the check itself runs
 
 
@@ -1202,6 +1209,487 @@ class Drawer262(HandcheckCase):
         self.note(10, "440 default; keys (step 24, Shift 96, End, Home, Enter) and mouse drag held between the default and the page width at "
                       "1400 and 900 px; kept for a reload (650) and forgotten by Reset width and a double-click; unreadable storage "
                       "starts the page and widens; 0 requests that write")
+
+
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# 11  #312: Your profile
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+FOLLOW_WORD = re.compile(r"\bfollow(ed|ing|s)?\b|\bVIPs?\b", re.I)
+ASKED_KEY = "creaite-profile-asked"
+
+
+class Profile262(HandcheckCase):
+    """Check 11. Own vault, the live server and Chrome. The vault is the demo's: no name is set yet (identity.name is empty), so the
+    page is a first run. Everything is done as a person does it: the Settings card, the details dialog, the Today question, Undo. The
+    one stand-in is the browser's confirm box (a headless page can't be answered by hand), which records what it was asked."""
+    own_vault = True
+
+    CARD = """(()=>{ const g=id=>{ const e=document.getElementById(id); return e?e.textContent.trim():null; },
+      c=document.getElementById('profileCard'), n=document.getElementById('pfName'), btn=document.getElementById('pfEdit'),
+      sv=document.getElementById('pfNameSave'), r=c&&c.getBoundingClientRect(), br=btn&&btn.getBoundingClientRect(), sr=sv&&sv.getBoundingClientRect();
+      return {present:!!c, name:n&&n.value, email:g('pfEmail'), aliases:g('pfAliases'), org:g('pfOrg'), role:g('pfRole'),
+        btn:btn&&btn.textContent.trim(), disabled:btn&&btn.disabled, text:c?c.innerText:'', note:g('pfNote'),
+        inputs:c?[...c.querySelectorAll('input,select,textarea')].map(e=>e.id):[], iw:innerWidth, sw:document.scrollingElement.scrollWidth,
+        inside:!!r&&r.left>=0&&r.right<=innerWidth, btnIn:!!br&&br.width>0&&br.left>=0&&br.right<=innerWidth,
+        saveIn:!!sr&&sr.width>0&&sr.left>=0&&sr.right<=innerWidth}; })()"""
+    DIALOG = """(()=>{ const d=document.getElementById('personDlg'), r=d.getBoundingClientRect(), v=e=>e.getClientRects().length>0;
+      const sv=document.getElementById('pdSave'), sr=sv.getBoundingClientRect();
+      return {open:d.open, title:document.getElementById('pdTitle').textContent.trim(),
+        controls:[...d.querySelectorAll('input,select,textarea')].filter(v).map(e=>e.id),
+        values:Object.fromEntries([...d.querySelectorAll('input,select,textarea')].filter(v).map(e=>[e.id,e.value])),
+        readonly:document.getElementById('pd_name').readOnly, text:[...d.querySelectorAll('label,legend,h1,h2,h3,p,small,span')].filter(v).map(e=>e.innerText).join(' '),
+        inside:d.open&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight, saveIn:sr.width>0&&sr.left>=0&&sr.right<=innerWidth,
+        err:document.getElementById('pdErr').textContent.trim()}; })()"""
+
+    # ── the files ──
+
+    @property
+    def reg_file(self):
+        return self.vault / "projects/_portfolio/people-register.md"
+
+    @property
+    def cfg_file(self):
+        return self.vault / "system/config/settings.json"
+
+    def reg_text(self):
+        return self.reg_file.read_text(encoding="utf-8")
+
+    def cfg(self):
+        return json.loads(self.cfg_file.read_text(encoding="utf-8"))
+
+    def people(self, text=None):
+        """The register's People table: (the columns, the rows as lists of cells). A cell with a bar in it would show up as a row with
+        more cells than the header, so every row is checked for that."""
+        lines = (self.reg_text() if text is None else text).splitlines()
+        at = lines.index("## People")
+        i = next(k for k in range(at, len(lines)) if lines[k].startswith("|"))
+        cell = lambda ln: [c.strip() for c in ln.strip().strip("|").split("|")]
+        cols, rows = cell(lines[i]), []
+        for ln in lines[i + 2:]:
+            if not ln.startswith("|"):
+                break
+            rows.append(cell(ln))
+        for r in rows:
+            self.assertEqual(len(r), len(cols), f"a row has {len(r)} cells for {len(cols)} columns: {r}")
+        return cols, rows
+
+    def row(self, name, text=None):
+        cols, rows = self.people(text)
+        found = [dict(zip(cols, r)) for r in rows if r[0] == name]
+        return found
+
+    def set_follow(self, name, value):
+        """Put a value in a person's Follow cell, in the file (the register as Alan would have edited it by hand)."""
+        cols, rows = self.people()
+        k = cols.index("Follow")
+        lines = self.reg_text().split("\n")
+        for n, ln in enumerate(lines):
+            if ln.startswith(f"| {name} |"):
+                cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+                cells[k] = value
+                lines[n] = "| " + " | ".join(cells) + " |"
+        self.reg_file.write_text("\n".join(lines), encoding="utf-8")
+
+    def tree_digest(self):
+        """A digest of what an email must not change: the project files (not the people register), the other configuration, the
+        root CLAUDE.md, the skills, and the work items in the record."""
+        import hashlib
+        h = hashlib.sha256()
+        skip = {"settings-log.jsonl", "files-log.jsonl", "settings.json"}
+        for top in ("projects", "system/config", ".claude", "CLAUDE.md"):
+            base = self.vault / top
+            for f in sorted([base] if base.is_file() else base.rglob("*")):
+                if f.is_file() and f != self.reg_file and f.name not in skip and "node_modules" not in f.parts:
+                    h.update(str(f.relative_to(self.vault)).encode() + f.read_bytes())
+        for t in ("projects", "milestones", "actions", "raid", "decisions", "promises"):
+            h.update(json.dumps(hcbase.db_rows(self.vault, f"SELECT * FROM {t} ORDER BY rowid"), default=str, sort_keys=True).encode())
+        return h.hexdigest()
+
+    def files_with(self, needle):
+        """Every file in the vault that holds `needle`, outside the engine and the templates."""
+        out, nb = [], needle.encode()
+        for f in self.vault.rglob("*"):
+            rel = f.relative_to(self.vault).as_posix()
+            if not f.is_file() or rel.startswith(("system/scripts/", "system/templates/", ".claude/", "dev/")):
+                continue
+            try:
+                if nb in f.read_bytes():
+                    out.append(rel)
+            except OSError:
+                pass
+        return out
+
+    def wait_file(self, path, before, what, timeout=25):
+        """Wait until the file differs from `before`; returns its text."""
+        import time
+        end = time.time() + timeout
+        while time.time() < end:
+            now = path.read_text(encoding="utf-8")
+            if now != before:
+                self.b.pump(0.6)                # let the apply finish and the page redraw
+                return path.read_text(encoding="utf-8")
+            self.b.pump(0.1)
+        self.fail(f"{what}: the file never changed")
+
+    def wait_cfg_name(self, name, timeout=20):
+        import time
+        end = time.time() + timeout
+        while time.time() < end:
+            if self.cfg().get("identity", {}).get("name") == name:
+                self.b.pump(0.5)
+                return
+            self.b.pump(0.1)
+        self.fail(f"identity.name never became {name!r}: {self.cfg().get('identity')}")
+
+    # ── the page ──
+
+    def boot(self, why):
+        try:
+            self.b.reload("typeof go==='function' && LIVE", timeout=60)
+        except TimeoutError as e:
+            self.fail(f"{why}: the page did not start ({str(e)[:200]})")
+        self.stub_confirm(True)
+
+    def stub_confirm(self, yes):
+        """The browser's confirm box, answering `yes` and keeping every question it was asked (window.__asked)."""
+        self.b.eval(f"window.__asked = window.__asked || []; window.__yes = {'true' if yes else 'false'}; "
+                    "window.confirm = m => { window.__asked.push(String(m)); return window.__yes; }; true")
+
+    def asked(self):
+        return self.b.eval("window.__asked.slice()")
+
+    def card_open(self):
+        b = self.b
+        b.eval("go('settings','profile')")
+        b.wait("!!document.querySelector('#profileCard') && !!document.querySelector('#pfNameSave')", 20)
+        b.pump(0.4)
+        return b.eval(self.CARD)
+
+    def save_name(self, name):
+        """Type a name in the card and press Save name."""
+        b = self.b
+        self.card_open()
+        b.eval(f"(()=>{{ const e=document.getElementById('pfName'); e.focus(); e.value={json.dumps(name)}; e.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+        b.click("#pfNameSave")
+
+    def snack(self):
+        return self.b.eval("document.getElementById('snackT').textContent.trim()")
+
+    def open_details(self):
+        b = self.b
+        b.click("#pfEdit")
+        b.wait("document.getElementById('personDlg').open", 10)
+        b.pump(0.3)
+        return b.eval(self.DIALOG)
+
+    def fill(self, **fields):
+        for k, v in fields.items():
+            self.b.eval(f"(()=>{{ const e=document.getElementById('pd_{k}'); e.focus(); e.value={json.dumps(v)}; e.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+
+    def save_details(self, **fields):
+        """Fill the open dialog and press Save; returns the register's new text."""
+        before = self.reg_text()
+        self.fill(**fields)
+        self.b.click("#pdSave")
+        return self.wait_file(self.reg_file, before, "Save")
+
+    def undo_last(self, expect):
+        b = self.b
+        b.wait("!!document.getElementById('snackU') && document.getElementById('snackU').getClientRects().length>0", 10)
+        b.click("#snackU")
+        import time
+        end = time.time() + 20
+        while time.time() < end and self.reg_text() != expect:
+            b.pump(0.1)
+        self.assertEqual(self.reg_text(), expect, "Undo puts the register back byte for byte")
+
+    # ── the check ──
+
+    def test_c11_your_profile_card_and_first_run_step(self):
+        """11. (#312) Your profile. A new vault has no name, so Today asks About you once (Add my details, Not now), without blocking
+        anything; Add my details with no name goes to Settings › Essentials › Your profile. The card shows the name and the details
+        from the people register, and says the email is a label only. Save name writes identity.name and nothing else in settings.json.
+        Add or Edit my details uses the person dialog and saves through the people register's file-change path: the file gains or
+        changes exactly one row, no column is added, Undo puts it back byte for byte. The Follow column is never shown (card or
+        dialog) and a followed person's flag survives an edit of their row. A bar or a line break in a name or a value adds no column
+        and no row (writing the same name twice is one row). A name that is already a colleague's asks whose row it is before anything
+        is edited, and No writes nothing. Changing the email changes nothing else (no other file, no work item, not who you are). With
+        identity.name missing the placeholder name is never used or written. Not now is kept in this browser: it is not asked again,
+        and the card stays. At 900 px the card, the dialog and the question fit. With the server down a plain message is shown and
+        nothing is written."""
+        b = self.b
+        b.eval(f"try{{ localStorage.removeItem({json.dumps(ASKED_KEY)}); }}catch(e){{}} true")
+        self.boot("a first run")
+        reg0, cfg0 = self.reg_text(), self.cfg()
+        cols0, rows0 = self.people()
+        self.assertNotIn("name", {k: v for k, v in cfg0.get("identity", {}).items() if v}, "the new vault has no name set")
+        self.assertIn("Follow", cols0)
+        self.assertNotIn("Profile", " ".join(cols0), "no column for you in the register")
+
+        # ── 1. the first run: About you, once, and nothing is blocked ──
+        self.screen("today")
+        b.pump(0.5)
+        q = b.eval("""(()=>({n:document.querySelectorAll('#pfQ').length, text:(document.getElementById('pfQ')||{innerText:''}).innerText,
+          buttons:[...document.querySelectorAll('#pfQ button')].map(e=>e.textContent.trim()), modal:!!document.querySelector('#pfQ').closest('dialog'),
+          open:document.querySelectorAll('dialog[open]').length, inert:!!document.querySelector('[inert]')}))()""")
+        self.assertEqual(q["n"], 1, q)
+        self.assertIn("About you", q["text"])
+        self.assertEqual(q["buttons"], ["Add my details", "Not now"], q)
+        self.assertEqual((q["modal"], q["open"], q["inert"]), (False, 0, False), f"the question blocks nothing: {q}")
+        for _ in range(3):
+            b.eval("renderSetup(); true")
+        b.pump(0.3)
+        self.assertEqual(b.eval("document.querySelectorAll('#pfQ').length"), 1, "however often Today is drawn it is asked once")
+        self.assertIsNone(b.eval(f"localStorage.getItem({json.dumps(ASKED_KEY)})"), "nothing is remembered before an answer")
+        self.screen("work")                                    # the app carries on while the question is open
+        self.screen("today")
+        self.assertEqual(b.eval("document.querySelectorAll('#pfQ').length"), 1, "it waits; it is not answered by leaving")
+        # Add my details with no name: the Settings card, nothing written
+        b.click("#pfQ [data-pfq=yes]")
+        b.wait("!!document.querySelector('#profileCard')", 15)
+        self.assertEqual(b.eval("VIEW"), "settings")
+        self.assertEqual(b.eval("document.getElementById('personDlg').open"), False, "no dialog without a name")
+        self.assertEqual((self.reg_text(), self.cfg()), (reg0, cfg0), "nothing was written")
+
+        # ── 2. the card with no name ──
+        c = self.card_open()
+        self.assertEqual((c["name"], c["email"], c["aliases"], c["org"], c["role"]), ("", "Not set", "Not set", "Not set", "Not set"), c)
+        self.assertEqual((c["btn"], c["disabled"]), ("Add my details", True), "no details can be added before there is a name")
+        self.assertRegex(c["note"], r"label only")
+        self.assertRegex(c["note"], r"not in the shared register")
+        self.assertEqual(sorted(c["inputs"]), ["pfName"], "the card has one input, your name")
+
+        # ── 3. Save name: identity.name, nothing else in settings.json ──
+        self.save_name("Alan Carter")
+        self.wait_cfg_name("Alan Carter")
+        cfg1 = self.cfg()
+        was = json.loads(json.dumps(cfg0))
+        was.setdefault("identity", {})["name"] = "Alan Carter"
+        self.assertEqual(cfg1, was, "settings.json differs from before in identity.name only")
+        self.assertEqual(self.reg_text(), reg0, "saving the name does not touch the register")
+        c = self.card_open()
+        self.assertEqual((c["name"], c["email"], c["org"], c["role"]), ("Alan Carter", "alan.carter@example.com", "Example Consulting", "Programme manager"), c)
+        self.assertEqual(c["btn"], "Edit my details")
+        self.assertFalse(FOLLOW_WORD.search(c["text"]), f"the card never shows the Follow column: {c['text']!r}")
+        self.screen("today")
+        self.assertEqual(b.eval("document.querySelectorAll('#pfQ').length"), 0, "with the details in the register the question is not asked")
+
+        # ── 4. Edit my details: one changed row, no new column, Undo ──
+        self.card_open()
+        self.stub_confirm(True)
+        b.eval("window.__asked.length = 0; true")
+        d = self.open_details()
+        asked = self.asked()
+        self.assertEqual(len(asked), 1, "the row was already in the register, so it asks once whether it is you")
+        self.assertIn("Alan Carter", asked[0])
+        self.assertIn("alan.carter@example.com", asked[0])
+        self.assertTrue(d["open"] and d["readonly"], d)
+        self.assertEqual(d["controls"], ["pd_name", "pd_email", "pd_aliases", "pd_org", "pd_role"], f"the dialog's fields: {d['controls']}")
+        self.assertFalse(FOLLOW_WORD.search(d["text"] + " " + d["title"]), f"the dialog never shows Follow: {d['text']!r}")
+        self.assertEqual(d["values"]["pd_email"], "alan.carter@example.com")
+        text1 = self.save_details(role="Programme director")
+        cols1, rows1 = self.people(text1)
+        self.assertEqual(cols1, cols0, "no column was added")
+        self.assertEqual(len(rows1), len(rows0), "no row was added")
+        diff = [(a, z) for a, z in zip(rows0, rows1) if a != z]
+        self.assertEqual(len(diff), 1, "exactly one row changed")
+        self.assertEqual((diff[0][0][0], diff[0][1][cols1.index("Role")]), ("Alan Carter", "Programme director"))
+        self.assertEqual([c for c, a, z in zip(cols1, *diff[0]) if a != z], ["Role"], "and only its Role cell")
+        self.assertEqual(len(self.asked()), 1, "and it is not asked again")
+        self.undo_last(reg0)
+        b.pump(0.5)
+
+        # ── 5. the email is a label only ──
+        digest = self.tree_digest()
+        names = hcbase.db_rows(self.vault, "SELECT count(*) AS n FROM actions WHERE owner = 'Alan Carter'")[0]["n"]
+        mine = b.eval("A.filter(a=>isMe(a.o)).length")
+        self.card_open()
+        self.open_details()
+        text2 = self.save_details(email="alan.c@example.test")
+        _, rows2 = self.people(text2)
+        self.assertEqual(len(rows2), len(rows0), "a new address finds the same row by name: no second row")
+        self.assertEqual(self.row("Alan Carter", text2)[0]["Email"], "alan.c@example.test")
+        self.assertEqual(self.cfg(), cfg1, "settings.json is as it was after the name")
+        self.assertEqual(self.tree_digest(), digest, "no project file, other setting or work item changed")
+        self.assertEqual((hcbase.db_rows(self.vault, "SELECT count(*) AS n FROM actions WHERE owner = 'Alan Carter'")[0]["n"],
+                          b.eval("A.filter(a=>isMe(a.o)).length"), b.eval("S.me")), (names, mine, "Alan Carter"), "who you are, and your items, are as they were")
+        found = [f for f in self.files_with("alan.c@example.test") if not f.startswith(("system/backups/", "system/staging/", "system/logs/", "system/history/", "system/search/", "system/guard/"))
+                 and f not in ("projects/_portfolio/people-register.md", "dashboard.html", "tracker-view.xlsx") and not f.startswith("system/tracker.db")]
+        self.assertEqual(found, [], f"the address is in files other than the register and creaite's own record of the change: {found}")
+        self.boot("a reload with the new address")
+        self.assertEqual(self.card_open()["email"], "alan.c@example.test")
+        self.assertEqual(b.eval("S.me"), "Alan Carter")
+        self.reg_file.write_text(reg0, encoding="utf-8")          # back to the first register for the next steps
+        self.boot("the register put back")
+
+        # ── 6. a followed person: never shown, flag kept; a colleague's name asks first ──
+        self.set_follow("Lena Fischer", "yes")
+        reg_f = self.reg_text()
+        self.boot("a followed colleague")
+        self.save_name("Lena Fischer")
+        self.wait_cfg_name("Lena Fischer")
+        c = self.card_open()
+        self.assertEqual(c["name"], "Lena Fischer")
+        self.assertFalse(FOLLOW_WORD.search(c["text"]), f"a followed person's card shows no Follow: {c['text']!r}")
+        self.stub_confirm(False)
+        b.eval("window.__asked.length = 0; true")
+        b.click("#pfEdit")
+        b.pump(1.0)
+        asked = self.asked()
+        self.assertEqual(len(asked), 1, asked)
+        self.assertIn("Lena Fischer", asked[0])
+        self.assertIn("lena.fischer@example.com", asked[0])
+        self.assertRegex(asked[0], r"(?i)is that row you")
+        self.assertEqual(b.eval("document.getElementById('personDlg').open"), False, "No: the dialog is not opened")
+        self.assertEqual(self.reg_text(), reg_f, "No: the colleague's row is not touched")
+        self.stub_confirm(True)
+        d = self.open_details()
+        self.assertEqual(len(self.asked()), 2)
+        self.assertEqual(d["controls"], ["pd_name", "pd_email", "pd_aliases", "pd_org", "pd_role"])
+        self.assertFalse(FOLLOW_WORD.search(d["text"] + " " + d["title"]), "and the dialog of a followed person shows no Follow")
+        self.assertNotIn("yes", d["values"].values())
+        cols_f, rows_f = self.people(reg_f)
+        text3 = self.save_details(role="Data director")
+        cols3, rows3 = self.people(text3)
+        diff = [(a, z) for a, z in zip(rows_f, rows3) if a != z]
+        self.assertEqual((cols3, len(rows3), len(diff)), (cols_f, len(rows_f), 1), "one row changed, none added")
+        lena = self.row("Lena Fischer", text3)[0]
+        self.assertEqual((lena["Follow"], lena["Role"]), ("yes", "Data director"), "Lena is still followed after the edit")
+        self.assertEqual(self.row("Rashid Al Suwaidi", text3)[0]["Follow"], "client", "and the other followed person's cell is as it was")
+        b.wait("(localStorage.getItem('creaite-profile-claimed')||'').includes('lena fischer')", 20)      # the save has finished
+        self.card_open()
+        b.click("#pfEdit")
+        b.wait("document.getElementById('personDlg').open", 10)
+        self.assertEqual(len(self.asked()), 2, "once it is yours it is not asked again")
+        b.eval("document.querySelector('#personForm [value=cancel]').click(); true")
+
+        # ── 7. a bar or a line break cannot add a column or a row ──
+        self.reg_file.write_text(reg0, encoding="utf-8")
+        self.boot("the register put back")
+        self.save_name("Kai | Example")
+        self.wait_cfg_name("Kai / Example")
+        self.assertEqual(self.cfg()["identity"]["name"], "Kai / Example", "a bar in the name is saved as a slash")
+        self.assertEqual(self.card_open()["name"], "Kai / Example")
+        self.assertEqual(self.reg_text(), reg0)
+        self.open_details()
+        text4 = self.save_details(email="kai@example.test")
+        cols4, rows4 = self.people(text4)
+        self.assertEqual((cols4, rows4[:-1]), (cols0, rows0), "the register gained one row and nothing else changed")
+        self.assertEqual(len(rows4), len(rows0) + 1)
+        self.assertEqual(rows4[-1][0], "Kai / Example")
+        self.assertNotIn("Kai | Example", text4)
+        b.pump(0.5)
+        self.card_open()
+        self.open_details()
+        text5 = self.save_details(email="kai2@example.test")           # the same name again
+        cols5, rows5 = self.people(text5)
+        self.assertEqual(len(rows5), len(rows0) + 1, "saving the same name again is one row, not two")
+        self.assertEqual([r[0] for r in rows5].count("Kai / Example"), 1)
+        self.assertEqual(self.row("Kai / Example", text5)[0]["Email"], "kai2@example.test")
+        self.card_open()
+        self.open_details()
+        b.eval("(()=>{ const e=document.getElementById('pd_role'); e.focus(); e.select(); document.execCommand('insertText', false, 'Lead\\nDelivery'); })()")
+        self.assertNotIn("\n", b.eval("document.getElementById('pd_role').value"), "a line break can't be typed or pasted into a one-line field")
+        text6 = self.save_details(role="Lead | Delivery", org="Org | Two", aliases="K | E, Kay")
+        cols6, rows6 = self.people(text6)
+        self.assertEqual((cols6, len(rows6)), (cols0, len(rows0) + 1), "a bar in a value adds no column and no row")
+        kai = self.row("Kai / Example", text6)[0]
+        self.assertEqual((kai["Role"], kai["Organisation"]), ("Lead / Delivery", "Org / Two"))
+        self.assertEqual(text6.count("\n"), text5.count("\n"), "and no line either")
+
+        # ── 8. 900 px ──
+        self.reg_file.write_text(reg0, encoding="utf-8")
+        self.boot("the register put back")
+        b.resize(900, 800)
+        c = self.card_open()
+        self.assertEqual(c["name"], "Kai / Example")
+        self.assertTrue(c["inside"] and c["btnIn"] and c["saveIn"], f"the card fits at 900 px: {c}")
+        self.assertLessEqual(c["sw"], 900, "no sideways scroll")
+        d = self.open_details()
+        self.assertTrue(d["inside"] and d["saveIn"], f"the dialog fits at 900 px: {d}")
+        b.eval("document.querySelector('#personForm [value=cancel]').click(); true")
+        b.pump(0.3)
+        self.cfg_file.write_text(json.dumps({**self.cfg(), "identity": {**self.cfg()["identity"], "name": ""}}, indent=2) + "\n", encoding="utf-8")
+        self.boot("a vault with no name at 900 px")
+        self.screen("today")
+        q = b.eval("""(()=>{ const q=document.getElementById('pfQ'), r=q&&q.getBoundingClientRect(); return {n:document.querySelectorAll('#pfQ').length,
+          in:!!r&&r.left>=0&&r.right<=innerWidth, sw:document.scrollingElement.scrollWidth,
+          btns:[...document.querySelectorAll('#pfQ button')].map(e=>{ const x=e.getBoundingClientRect(); return x.width>0&&x.left>=0&&x.right<=innerWidth; })}; })()""")
+        self.assertEqual((q["n"], q["in"], q["btns"]), (1, True, [True, True]), f"About you fits at 900 px: {q}")
+        self.assertLessEqual(q["sw"], 900)
+        b.resize(1400, 1000)
+
+        # ── 9. identity.name missing altogether: the placeholder is never used or written ──
+        cfg = self.cfg()
+        cfg["identity"].pop("name", None)
+        self.cfg_file.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+        reg_before = self.reg_text()
+        self.boot("a settings file with no identity.name")
+        c = self.card_open()
+        self.assertEqual((c["name"], c["btn"], c["disabled"]), ("", "Add my details", True), f"no name: no placeholder in the card: {c}")
+        b.pump(0.5)
+        self.assertEqual(self.reg_text(), reg_before, "and nothing is written to the register")
+        self.screen("today")
+        self.assertEqual(b.eval("document.querySelectorAll('#pfQ').length"), 1)
+        b.click("#pfQ [data-pfq=yes]")
+        b.wait("/Add your name first/.test(document.getElementById('snackT').textContent)", 15)       # the page still holds the placeholder name; it is not used
+        b.pump(0.5)
+        self.assertEqual((b.eval("document.getElementById('personDlg').open"), self.reg_text()), (False, reg_before), "Add my details without a name writes nothing")
+        self.assertNotIn("name", {k for k, v in self.cfg().get("identity", {}).items() if k == "name" and v})
+
+        # ── 10. Not now is kept in this browser, and the card stays ──
+        self.screen("today")
+        b.click("#pfQ [data-pfq=no]")
+        b.wait("document.querySelectorAll('#pfQ').length===0", 10)
+        self.assertIn("Okay", self.snack())
+        self.assertEqual(b.eval(f"localStorage.getItem({json.dumps(ASKED_KEY)})"), "true")
+        self.assertEqual((self.reg_text(), self.cfg().get("identity", {}).get("name")), (reg_before, None), "Not now writes nothing")
+        self.boot("a reload after Not now")
+        self.screen("today")
+        b.pump(0.5)
+        self.assertEqual(b.eval("document.querySelectorAll('#pfQ').length"), 0, "not asked again in this browser")
+        self.assertEqual(b.eval("document.querySelectorAll('#setupList').length"), 1, "(Getting started itself is still there)")
+        c = self.card_open()
+        self.assertTrue(c["present"] and c["name"] == "", "and the Settings card is still there")
+
+        # ── 11. the server down: a plain message, nothing written ──
+        self.save_name("Alan Carter")
+        self.wait_cfg_name("Alan Carter")
+        self.card_open()
+        self.stub_confirm(True)
+        d = self.open_details()
+        b.eval("document.querySelector('#personForm [value=cancel]').click(); true")
+        cfg_up, reg_up = self.cfg_file.read_bytes(), self.reg_file.read_bytes()
+        cls = type(self)
+        cls._hc.stop_server(cls.proc)
+        cls.proc = None
+        files_before = sorted(str(p.relative_to(self.vault)) for p in (self.vault / "system/staging").rglob("*"))
+        self.save_name("Zed Example")
+        b.pump(1.5)
+        say = self.snack()
+        self.assertTrue(say, "the page says something when the name can't be saved")
+        for bad in ("Traceback", "TypeError", "undefined", "Failed to fetch", "NetworkError", "ECONN", "127.0.0.1", "/api/", str(self.vault)):
+            self.assertNotIn(bad, say, say)
+        self.assertIn("reachable", say, "it says the server can't be reached")
+        self.note(11, f"server down, Save name says: {say[:80]}")
+        self.assertEqual(self.cfg_file.read_bytes(), cfg_up, "nothing was written to settings.json")
+        self.card_open()
+        b.click("#pfEdit")
+        b.wait("document.getElementById('personDlg').open", 10)
+        self.fill(role="Written with the server down")
+        b.click("#pdSave")
+        b.pump(2.0)
+        say2 = b.eval("document.getElementById('snackT').textContent.trim() + ' | ' + document.getElementById('pdErr').textContent.trim()")
+        for bad in ("Traceback", "TypeError", "undefined", "Failed to fetch", "NetworkError", "ECONN", "127.0.0.1", "/api/", str(self.vault)):
+            self.assertNotIn(bad, say2, say2)
+        self.assertEqual(self.reg_file.read_bytes(), reg_up, "nothing was written to the register")
+        self.assertEqual(sorted(str(p.relative_to(self.vault)) for p in (self.vault / "system/staging").rglob("*")), files_before,
+                         "and nothing was staged")
+        self.assertEqual(b.errors, [], "no page errors")
+        self.note(11, "first run asked once and skippable, nothing blocked; name = identity.name only; details = one register row, Undo; "
+                      "Follow never shown and kept; bar and line break add no column or row; colleague's name asks first; email a label; "
+                      "missing name never filled; Not now kept; fits at 900 px; server down writes nothing")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
