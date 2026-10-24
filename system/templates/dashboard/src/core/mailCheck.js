@@ -132,3 +132,8 @@ export function mcStepText(label) {
   const c = mcClassify(label);
   return c ? String(label) : "A creaite step";
 }
+
+/** Whether a saved chat's message was a mail check, from the words that were typed (or the catch-up's plain ask). Only used to draw a
+    saved chat's steps list, where the run record is gone: the steps of such a reply are drawn through mcStepText. A word list is the
+    fallback the live path avoids; here a miss only means today's text, and a false hit only means fixed phrases. @param {unknown} text */
+export const mcIsAsk = text => /^\s*(?:please\s+)?(?:sweep\b|check (?:my )?mail\b|refresh (?:the )?calendar\b)/i.test(String(text || ""));

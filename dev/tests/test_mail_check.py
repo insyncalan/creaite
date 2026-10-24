@@ -155,6 +155,11 @@ class Classifier(unittest.TestCase):
         self.assertEqual(e[15], "Stopped early. Looked in Outlook mail, Teams. Found 1 new so far, none need a project, and 1 update to an existing item.")
         self.assertEqual(e[16], "Stopped. Looked in Outlook mail, Teams. Nothing saved yet.")
 
+    def test_a_saved_chat_is_a_mail_check_by_its_ask(self):
+        o = run_node(script="""const f = await import(%s); console.log(JSON.stringify(["sweep", "Sweep mail and Teams since the last sweep", "please sweep", "check my mail", "Check mail",
+          "refresh calendar", "sweep and apply", "what did the sweep find", "hello", "", null].map(f.mcIsAsk)));""")
+        self.assertEqual(o, [True, True, True, True, True, True, True, False, False, False, False])
+
     def test_the_steps_list_shows_fixed_phrases_only(self):
         self.assertEqual(self.o["stepText"], ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail",
                                               "A creaite step", "A creaite step", "A creaite step", "A creaite step", "A creaite step"])
@@ -400,6 +405,21 @@ class MailCheckBrowser(_Live):
             self.assertNotIn(bad, every)
         steps = b.eval("[...document.querySelectorAll('#chLog .step.steps li')].map(e=>e.textContent)")
         self.assertTrue(steps and set(steps) <= FIXED_STEPS, steps)
+
+    def test_a_saved_mail_check_chat_shows_fixed_phrases_only(self):
+        """The saved history keeps the raw step labels (a subject, the followed-people command); drawing it applies the allow-list."""
+        b = self.b
+        self.begin("sweep")
+        self.finish()
+        chat = b.eval("ASKCHAT")
+        saved = "".join(f.read_text() for f in (self.v.root / "system/staging/ask").glob("*.json"))
+        self.assertIn("SECRETSUBJECT", saved)                                   # the precondition: the raw label is in the saved chat
+        b.reload("typeof go==='function' && LIVE")                              # the live steps are gone: only the saved chat can draw them
+        b.eval(f"openChat(); loadChat({chat!r}, false); 0")
+        b.wait("document.querySelectorAll('#chLog .step.steps li').length>0", 20)
+        steps = b.eval("[...document.querySelectorAll('#chLog .step.steps li')].map(e=>e.textContent)")
+        self.assertTrue(set(steps) <= FIXED_STEPS, steps)
+        self.assertNotIn("SECRETSUBJECT", self.everything())
 
     def test_only_a_mail_check_loses_the_quip(self):
         b = self.b

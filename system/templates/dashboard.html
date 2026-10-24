@@ -74026,6 +74026,7 @@ ${d5.text}`);
     const c5 = mcClassify(label);
     return c5 ? String(label) : "A creaite step";
   }
+  var mcIsAsk = (text) => /^\s*(?:please\s+)?(?:sweep\b|check (?:my )?mail\b|refresh (?:the )?calendar\b)/i.test(String(text || ""));
 
   // core/closeDayRows.js
   var CD_LABELS = [
@@ -75965,7 +75966,8 @@ ${d5.text}`);
       } else {
         {
           let g5 = null;
-          (m5.steps || []).forEach((l6) => g5 = stepGroup(g5, l6));
+          const mcr = i5 > 0 && rec.messages[i5 - 1].who === "you" && mcIsAsk(rec.messages[i5 - 1].text);
+          (m5.steps || []).forEach((l6) => g5 = stepGroup(g5, mcr ? mcStepText(l6) : l6));
         }
         if (m5.plain) {
           const b5 = runClosure({ line: m5.text, href: m5.href, link: m5.link });
