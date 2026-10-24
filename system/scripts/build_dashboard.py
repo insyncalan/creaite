@@ -2517,9 +2517,12 @@ def prep_match(title, projects, remembered):
     """(code, how) for a meeting: remembered for its series, matched by a code, name, alias or keyword in the title,
     the portfolio when it says so or names several projects, else (None, "unsure")."""
     s = series_of(title)
-    if remembered.get(s):
-        return remembered[s], "remembered"
     hits = project_hits(title, projects)
+    if remembered.get(s):
+        coded = {c for c in {p["code"] for p in projects} if re.search(rf"(?<![A-Za-z0-9]){c}(?![A-Za-z0-9])", title or "")}
+        if coded and remembered[s] not in coded:       # #328: a code in the title beats the series Alan chose before
+            return None, "unsure"
+        return remembered[s], "remembered"
     if "portfolio" in (title or "").lower() or len(hits) > 1:
         return "_portfolio", "portfolio"
     return (hits.pop(), "matched") if hits else (None, "unsure")
@@ -2788,6 +2791,18 @@ def restore_meetings(keys=None, day=None, today=None):
     return len(entries) - len(keep)
 
 
+def meeting_answer(title, ev, projects, remembered, confidential):
+    """#328: meeting_match's answer {p, level, reason, cands} for a calendar entry; a confidential meeting is matched on its
+    title alone. Plain code, no AI."""
+    import capture
+    import meeting_match
+    active = {p["code"] for p in projects}
+    rows = [r for r in capture.register()["projects"] if r["code"] in active]
+    own = ((paths.load_settings().get("identity") or {}).get("own_domains")) or []
+    return meeting_match.match_meeting(title, [] if confidential else ev.get("attendees"), rows,
+                                       remembered.get(series_of(title)), own, confidential=confidential)
+
+
 def inbox_meetings(settings, projects, today):
     """{"fetched", "from", "rows": [{day, start, end, title, teams, organiser, private, confidential, id, key, p, how, series,
     processed}], "cleared": [...]}, newest day first; all-day entries left out. Cleared meetings (Clear day) are
@@ -2820,12 +2835,16 @@ def inbox_meetings(settings, projects, today):
             private = sens == "private" or ("private" not in ev and title == "Busy" and not ev.get("where"))
             conf = sens == "confidential"                                           # #232: title and times only
             code, how = (None, "private") if private else prep_match(title, projects, remembered)
+            match = {} if private or how == "portfolio" else meeting_answer(title, ev, projects, remembered, conf)
+            if match and how != "remembered":
+                code, how = match["p"], match["level"]                      # #328: matched, likely or unsure
             eid = str(ev.get("id") or "") or None
             done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid)) if eid else None
             out.append({"day": day, "start": ev.get("start") or "", "end": ev.get("end") or "", "title": title,
                         "teams": bool(ev.get("teams")), "organiser": ev.get("organiser") or False, "private": private,
                         "confidential": conf, "id": eid, "key": meeting_clear_key(day, ev.get("start") or "", title, eid),
                         "p": code, "how": how, "series": series_of(title), "processed": done,
+                        **({} if conf or not match else {"level": match["level"], "reason": match["reason"], "cands": match["cands"]}),
                         "draft": bool(eid) and f"calendar:{eid}" in drafts,
                         "transcript": (checked.get(eid) or {}).get("status") if eid else None,     # available, not_transcribed, none, no_access; None: not checked yet
                         "transcript_checked": (checked.get(eid) or {}).get("checked") if eid else None,
@@ -2968,7 +2987,8 @@ def _ir_calendar(m, by_mkey, today, stale_after):
                    title=m.get("title") or "Meeting", day=m.get("day") or "", start=m.get("start") or "", end=m.get("end") or "",
                    p=None if m.get("confidential") else m.get("p") or (rows[0].get("p") if rows else None),
                    private=bool(m.get("private")), confidential=bool(m.get("confidential")), teams=bool(m.get("teams")),
-                   tx=m.get("transcript"), later_back=bool(m.get("later_back")))
+                   tx=m.get("transcript"), later_back=bool(m.get("later_back")),
+                   **{k: m[k] for k in ("level", "reason", "cands") if k in m and not m.get("confidential")})
 
 
 def _ir_upload_row(f, by_path, today, stale_after):
