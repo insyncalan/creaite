@@ -1,0 +1,108 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index a8fe10b6..21846971 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -6213,6 +6213,9 @@ def minutes_approve_route(handler, req):
+     import review
+     own = [n for n in req.get("own") or [] if isinstance(n, int)]
+     with LOCK:
++        why = expect_refusal([(req.get("file"), "meeting", req.get("expect"))]) if current_fp(req.get("file"), "meeting") else None
++        if why:                                                             # 2.6.4 (#345): before the name is settled, so nothing changes
++            return handler.send(200, {"ok": False, "message": why})
+         moved = minutes_destination.settle(str(req.get("file") or ""))      # #332: a name already used is numbered, never a stop
+         out = review.approve_minutes(str(req.get("file") or ""), group=req.get("group", True) is not False, own=own)
+     if moved and out.get("ok"):
+@@ -6277,6 +6280,51 @@ REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
+ # ===== end BL-200 =====
+ 
+ 
++# ===== 2.6.4 (#345) ===== `expect` (the item's 12-hex fingerprint, as /api/review requires since 2.6.3) on every route that decides an
++# item by (file, ref): reject, approve-instead, repeat, retarget and Approve minutes. The check reads the very file the route is about to
++# act on, under the same lock, and a missing, malformed or different fingerprint refuses the whole request before anything changes.
++# review.py's own commands (ask creaite, the Excel import) do not use these routes.
++EXPECT_FP = re.compile(r"[0-9a-f]{12}")
++EXPECT_BLOCKS = ("meeting", "report", "file_changes")
++EXPECT_MISSING = "This page didn't say which item it meant, so nothing was changed. Reload the page and try again."
++EXPECT_BAD = "Review can't check which item that is, so nothing was changed. Look at the list again."
++EXPECT_CHANGED = "That item has changed since you looked at it, so nothing was changed. Look at the list again."
++
++
++def current_fp(file, ref):
++    """The fingerprint of the item (or minutes, report or file-changes block) now at (file, ref) in a waiting or filed proposal, or None."""
++    name = Path(str(file or "")).name
++    if not re.fullmatch(r"proposed-[\w.-]+\.json", name):
++        return None
++    p = next((d / name for d in (paths.STAGING, paths.APPLIED) if (d / name).is_file()), None)
++    try:
++        data = json.loads(p.read_text(encoding="utf-8")) if p else None
++    except (OSError, ValueError):
++        return None
++    if not isinstance(data, dict):
++        return None
++    if ref in EXPECT_BLOCKS:
++        block = data.get(ref)
++        return build_dashboard.block_fp(block) if isinstance(block, dict) else None
++    item = next((i for i in data.get("items") or [] if isinstance(i, dict) and i.get("n") == ref and ref is not True), None)
++    return build_dashboard.item_fp(item) if item else None
++
++
++def key_ref(key):
++    """The ref in a "<file>#<ref>" key: the item's number as a number, or meeting, report or file_changes."""
++    ref = str(key).partition("#")[2]
++    return int(ref) if ref.isdigit() else ref
++
++
++def expect_refusal(rows):
++    """None when every (file, ref, expect) carries a fingerprint that matches the item now there; else the plain words that refuse the whole request."""
++    if any(e is None for _, _, e in rows):
++        return EXPECT_MISSING
++    if not all(isinstance(e, str) and EXPECT_FP.fullmatch(e) for _, _, e in rows):
++        return EXPECT_BAD
++    return None if all(current_fp(f, r) == e for f, r, e in rows) else EXPECT_CHANGED
++
++
+ # ===== BL-221 (sprint-drafts-extraction) ===== POST /api/review/repeat {file, ref, how: "merge" | "keep"}: Review's "Looks like" choices
+ # for a pending new item marked as repeating an existing one, through review.py merge or keep-new (their checks: the same project,
+ # an open item; nothing new to carry rejects it as a duplicate). Only the proposal changes; nothing reaches tracker.db before apply.
+@@ -6291,6 +6339,9 @@ def review_repeat_route(handler, req):
+         n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
+         if n is None:
+             return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
++        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345)
++        if why:
++            return handler.send(200, {"ok": False, "message": why})
+         rc, out = run("review.py", how, str(n))
+     return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
+ 
+@@ -6338,6 +6389,9 @@ def review_retarget_route(handler, req):
+         n = review_number(req.get("file"), req.get("ref"))
+         if n is None:
+             return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
++        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345); an undo (above) needs none
++        if why:
++            return handler.send(200, {"ok": False, "message": why})
+         rc, out = run("review.py", "retarget", str(n), target)
+     return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
+ 
+@@ -6429,6 +6483,9 @@ def review_reject_route(handler, req):
+         gone = [{"file": r.get("file"), "ref": r.get("ref")} for r in rows if (r.get("file"), r.get("ref")) not in listed]
+         if not found:
+             return handler.send(200, {"ok": False, "message": "That proposal is no longer pending.", "rejected": [], "gone": gone})
++        why = expect_refusal([(r.get("file"), r.get("ref"), r.get("expect")) for r, _ in found])      # 2.6.4 (#345): all rows or none
++        if why:
++            return handler.send(200, {"ok": False, "message": why, "rejected": [], "gone": gone})
+         spec = ",".join(str(n) for _, n in found)
+         rc, out = run("review.py", "reject", spec, *(["--guess"] if req.get("guess") else reject_args(req)))
+     ok = rc == 0 and not out.startswith("Rejected 0.")
+@@ -6443,6 +6500,11 @@ def review_rejected_route(handler, req):
+     if not cmd or not keys or not all(REJECT_KEY.fullmatch(k) for k in keys):
+         return handler.send(400, {"ok": False, "message": "Choose a rejected item and what to do with it."})
+     with LOCK:
++        if cmd == "approve-instead":                 # 2.6.4 (#345): approving is a decision; undo and a changed reason are not
++            rows = [r for r in req.get("rows") or [] if isinstance(r, dict)][:500]
++            why = expect_refusal([(r.get("file"), key_ref(k), r.get("expect")) for r, k in zip(rows, keys)])
++            if why:
++                return handler.send(200, {"ok": False, "message": why, "done": [], "open": []})
+         rc, out = run("review.py", cmd, *keys, "--json", *(reject_args(req) if cmd == "rereason" else []))
+     got = last_json(out, {}) if rc == 0 else {}
+     msg = out.replace("creaite: ", "", 1).strip() if rc != 0 else \

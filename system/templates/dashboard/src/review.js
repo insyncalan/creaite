@@ -208,9 +208,11 @@ export function llCompare(r){ const d=r.dup, x=REC(r.kind,d.id)||{t:d.t}, dlg=$(
   LLF.forEach(([f,lab])=>{ const a=mine[f], b=theirs[f]; if(!a&&!b) return; const tr=document.createElement("tr"), th=document.createElement("th"); th.scope="row"; th.textContent=lab; tr.append(th);
     [a,b].forEach(v=>{ const td=document.createElement("td"); td.textContent=f==="due"?(fd(v)||"—"):String(v||"—"); if(f!=="t"&&String(a||"")!==String(b||"")) td.className="lldiff"; tr.append(td); }); body.append(tr); });
   $("#llMerge").hidden=!(d.staged&&d.same!==false&&d.state!=="closed"); $("#llMerge").textContent=`Merge as an update to ${d.id}`; $("#llKeep").hidden=!d.staged; dlg.dataset.n=r.n; openDialog(dlg,{focus:"#llClose"}); }
+/** 2.6.4 (#345): the item's fingerprint, which the server needs on every route that decides an item (a tab from before gets a reload message) */
+export const rvExp=r=>r&&r.fp?{expect:r.fp}:{};
 export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ snack(needsConnection(how==="merge"?"Merging":"Keeping it as new")); return; }
   if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; }
-  const res=await api("/api/review/repeat",{file:r.file,ref:r.ref,how}); snack(saidPlain(res.message)||(res.ok?"Done":"Not changed")); if(res.ok){ closePanel(); await reloadData(); } }
+  const res=await api("/api/review/repeat",{file:r.file,ref:r.ref,how,...rvExp(r)}); snack(saidPlain(res.message)||(res.ok?"Done":"Not changed")); if(res.ok){ closePanel(); await reloadData(); } }
 /* ===== end BL-221 ===== */
 /* ===== BL-297 D (v19-review-picker) ===== "Update an existing item instead": any pending new action, RAID item or decision with a
    project can be pointed at an open item of its project and kind, whether or not Looks like marked one. The proposal's peek has the
@@ -236,7 +238,7 @@ export async function rtOpen(anchor,r){ if(!rtOK(r)) return;
     anchor=document.querySelector(`[data-rvrt="${r.n}"]`); if(!anchor) return; }
   openPicker(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
 export async function rtGo(r,id){ if(!(await guardFresh([r])).length){ snack(STALE_ROW_MSG); await reloadData(); return; } const at={file:r.file,ref:r.ref};
-  const res=await api("/api/review/retarget",{...at,id}); if(!res||!res.ok){ snack(saidPlain(res&&res.message)||"Not changed"); return; }
+  const res=await api("/api/review/retarget",{...at,id,...rvExp(r)}); if(!res||!res.ok){ snack(saidPlain(res&&res.message)||"Not changed"); return; }
   if(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===r.n) closePanel(); await reloadData();
   const dup=/duplicate/i.test(res.message||"");
   snack(dup?`Rejected as a duplicate of ${id}: it carried nothing new`:`Now an update to ${id}`,async()=>{ const back=await api("/api/review/retarget",{...at,undo:true});
@@ -394,7 +396,7 @@ export async function rjReject(list,c,after){ list=list.filter(r=>rvRejectOK(r))
   const done=[], msgs=[];
   { const fresh=await guardFresh(list); if(fresh.length<list.length) msgs.push(STALE_ROW_MSG); list=fresh; if(!list.length){ snack(STALE_ROW_MSG); await reloadData(); return; } }
   for(const {body,L} of rjBy(list,r=>c.guess?{guess:true}:{reason:c.reason||"",duplicate_of:dupOf(r)||""})){
-    const res=await api("/api/review/reject",{rows:L.map(r=>({file:r.file,ref:r.ref})),...body});
+    const res=await api("/api/review/reject",{rows:L.map(r=>({file:r.file,ref:r.ref,...rvExp(r)})),...body});
     if(res.ok) (res.rejected||[]).forEach(x=>{ const r=L.find(y=>y.file===x.file&&String(y.ref)===String(x.ref)); if(r) done.push(r); }); else msgs.push(saidPlain(res.message)); }
   if(!done.length){ snack("Not rejected: "+(msgs[0]||"nothing changed")); return; }
   const G=done.map(r=>rjGhost(r,why(r),dupOf(r)));
@@ -404,7 +406,7 @@ export async function rjReject(list,c,after){ list=list.filter(r=>rvRejectOK(r))
   const n=done.length, text=`Rejected ${n===1?"1":n} ${how}`+(ap&&!ap.ok?` · not saved: ${saidPlain(ap.message)}`:"")+(msgs.length?` · not rejected: ${msgs[0]}`:"");
   rjSay(text,()=>rjUnreject(G));
   if(after) after(); }
-async function rjRejected(rows,how,extra){ return api("/api/review/rejected",{rows:rows.map(r=>({file:r.file,ref:r.ref})),how,...(extra||{})}); }
+async function rjRejected(rows,how,extra){ return api("/api/review/rejected",{rows:rows.map(r=>({file:r.file,ref:r.ref,...rvExp(r)})),how,...(extra||{})}); }
 const rjOff=what=>{ snack(needsConnection(what)); };
 /* Undo a reject (pending or applied): back in Intake, waiting */
 export async function rjUnreject(rows){ if(!viaServer()){ rjOff("Putting a reject back"); return; }
@@ -433,9 +435,9 @@ export async function rjApproveInstead(rows){ if(!viaServer()){ rjOff("Approve i
   const ap=S.autoApply&&was.length?await applyNow():(await reloadData(),null);
   if(shared.VIEW==="activity") rjLoadRecent();
   const n=was.length, text=[n?`Approved instead: ${n}`:"",open.length?`${open.length} need${open.length===1?"s":""} approving on ${open.length===1?"its":"their"} own`:"",ap&&!ap.ok?`not saved: ${saidPlain(ap.message)}`:""].filter(Boolean).join(" · ");
-  const undo=n?async()=>{ const back=was.map(d=>({...rjRef(d.key),key:d.key,was:d.was||{}}));
+  const undo=n?async()=>{ const fpOf=new Map(rows.map(r=>[r.key||rjKey(r),r.fp])); const back=was.map(d=>({...rjRef(d.key),key:d.key,fp:fpOf.get(d.key),was:d.was||{}}));
     if(ap&&ap.ok&&ap.apply_id){ const u=await api("/api/undo",{apply_id:ap.apply_id}); if(!u.ok){ snack("Not undone: "+saidPlain(u.message)); return; } await reloadData();
-      for(const {body:b,L} of rjBy(back,x=>({reason:x.was.reason||"",duplicate_of:x.was.duplicate_of||""}))) await api("/api/review/reject",{rows:L.map(x=>({file:x.file,ref:x.ref})),...b}); }
+      for(const {body:b,L} of rjBy(back,x=>({reason:x.was.reason||"",duplicate_of:x.was.duplicate_of||""}))) await api("/api/review/reject",{rows:L.map(x=>({file:x.file,ref:x.ref,...rvExp(x)})),...b}); }
     else { for(const x of back){ try{ await editProposal(x.file,data=>{ const it=(data.items||[]).find(i=>i.n===x.ref); if(!it||it.applied) throw new Error("already saved"); it.decision="rejected"; it.decided_in="dashboard";
         if(x.was.reason) it.reject_reason=x.was.reason; else delete it.reject_reason; if(x.was.duplicate_of) it.duplicate_of=x.was.duplicate_of; else delete it.duplicate_of; }); }catch(e){ snack("Not rejected again: "+e.message); } } }
     rjAddGone(ghosts.filter(g=>back.some(x=>x.key===g.key))); if(S.autoApply) await applyNow(); else await reloadData(); if(shared.VIEW==="activity") rjLoadRecent(); snack(`Rejected again: ${back.length}`); }:null;

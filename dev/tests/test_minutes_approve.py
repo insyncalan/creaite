@@ -580,7 +580,11 @@ class ThroughTheServer(unittest.TestCase):
         else:
             self.assertTrue(ex["ok"], ex)
         self.assertFalse(self.post("/api/minutes/export", {"path": DRAFT, "format": "odt"})["ok"])
-        ok = self.post("/api/minutes/approve", {"file": self.name, "group": True, "own": [4]})
+        sys.path.insert(0, str(self.v.root / "system/scripts"))
+        import build_dashboard
+        meeting = json.loads((self.v.root / "system/staging" / self.name).read_text(encoding="utf-8"))["meeting"]
+        ok = self.post("/api/minutes/approve", {"file": self.name, "group": True, "own": [4],        # 2.6.4 (#345): the minutes' fingerprint
+                                                "expect": build_dashboard.block_fp(meeting)})
         self.assertTrue(ok["ok"], ok)
         self.assertIsInstance(ok["apply_id"], int)
         self.assertEqual(ok["waiting"], [5, 6, 7])

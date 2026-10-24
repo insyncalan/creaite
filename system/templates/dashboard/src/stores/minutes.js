@@ -14,7 +14,7 @@ import { needsConnection } from "../core/say.js";
 import { REV } from "../core/data.js";
 import { askFiling, noteNumbered } from "./minutesFiling.js";
 import { mountFiling } from "../components/minutes/FilingDialog.jsx";
-import { api, applyNow, oneLine, REVIEW_CHANGED, STALE_ROW_MSG, viaServer } from "../core/server.js";
+import { api, applyNow, oneLine, reloadData, REVIEW_CHANGED, STALE_ROW_MSG, viaServer } from "../core/server.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{n: number, who: string|null, start: string|null, end: string|null, text: string}} Turn */
@@ -166,7 +166,9 @@ export async function trackApprove(v, how = {}) {
   }
   if (how.approve === false) return { ok: true, made, done };
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
-  const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+  const meeting = REV.find(x => x.kind === "draft" && x.file === v.proposal && x.ref === "meeting");   // 2.6.4 (#345): the server approves these minutes only if they are still the ones on the page
+  const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own, ...(meeting && meeting.fp ? { expect: meeting.fp } : {}) });
+  if (r && !r.ok && REVIEW_CHANGED.test(r.message || "")) { await reloadData(); return { ok: false, message: STALE_ROW_MSG, made }; }
   if (r && r.ok) noteNumbered(r.numbered);                    // #324: another meeting took the name first: the note says what it was filed as
   return { ...(r || { ok: false, message: "Nothing was saved or changed." }), made };
 }
