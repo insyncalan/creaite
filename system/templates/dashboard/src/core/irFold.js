@@ -87,6 +87,10 @@ export function irHold(r) {
 /** The stage filter after a click on a stage's count ("all" is Show all). @param {string} cur @param {string} g */
 export const irStageClick = (cur, g) => (g === "all" || cur === g ? "all" : IR_STAGES.includes(g) ? g : cur);
 
+/** #340: the list leads with the work to decide. Drafted first (suggestions to check), then Approved, then Arrived; rows keep their order
+    inside a step. @param {any[]} list */
+export const irLeadWithWork = list => ["drafted", "approved", "arrived"].flatMap(g => list.filter(m => m.stage === g)).concat(list.filter(m => !["drafted", "approved", "arrived"].includes(m.stage)));
+
 /** The meetings the list shows under a stage filter. @param {IrModel} model @param {string} stage */
 export const irFiltered = (model, stage) => (model.meetings || []).filter(m => stage === "all" || m.stage === stage);
 
@@ -118,11 +122,68 @@ export function irNameOk(name) {
 /** Whether a file row's kind is not known yet: it is not ready to process, and not in the badge. */
 export const irUnsure = (/** @type {any} */ m, /** @type {Record<string, any>} */ kinds) => !!m && m.src === "upload" && !irKindOf(m, kinds);
 
+/** #325/#323: a meeting's state, defined once. The chip on its row, the stage boxes' counts and the Group by / filter all read this.
+    "waiting" (no transcript yet), "ready" (transcript here, not drafted), "check" (suggestions still to decide), "done" (everything
+    decided). `left` is how many of its suggestions are still waiting on the page. @param {{stage: string, state?: string}} m @param {number} left */
+export function irMeetingState(m, left) {
+  if (m.stage === "approved") return "done";
+  if (m.stage === "drafted") return left > 0 ? "check" : "done";
+  return m.state === "waiting" ? "waiting" : "ready";
+}
+/** The state's words (the chip's), and the stage the stage boxes count it under. */
+export const IR_STATE_CHIP = { waiting: "Waiting for the transcript", check: "Suggestions to check", done: "Done" };
+export const IR_STATE_STAGE = { waiting: "arrived", ready: "arrived", check: "drafted", done: "approved" };
+/** A meeting's state on the live model: the proposals left are the ones not yet decided on the page. @param {IrMeeting} m @param {(n:number)=>boolean} done */
+export function irStateOf(m, done) { const l = irLive(m.groups, done); return irMeetingState(m, l.needs.length + l.routine.length); }
+
+/** How many meetings are in each state, live: the numbers the Group by / filter shows beside its choices.
+    @param {IrModel} model @param {(n:number)=>boolean} done @returns {Record<string, number>} */
+export function irStateCounts(model, done) {
+  const o = { waiting: 0, ready: 0, check: 0, done: 0 };
+  for (const m of model.meetings || []) o[irStateOf(m, done)]++;
+  return o;
+}
+
+/* ===== #323: Group by and the state filter ===== pure; the list's headings and the "Show" choice read these. */
+/** Group by choices (None is today's flat list, newest day first; the first is the default). */
+export const IR_GROUPS = [["none", "None"], ["day", "Day"], ["project", "Project"], ["state", "Meeting state"], ["transcript", "Transcript"]];
+/** @param {any} v */
+export const irGroupNorm = v => (IR_GROUPS.some(x => x[0] === v) ? v : "none");
+/** The "Show" choices: every state, or one (Alan, 23-10-2026: he can filter to just the meetings waiting for the transcript). */
+export const IR_STATE_FILTERS = [["all", "All meetings"], ["waiting", "Waiting for the transcript"], ["ready", "Transcript ready"], ["check", "Suggestions to check"], ["done", "Done"]];
+/** @param {any} v */
+export const irStateFilterNorm = v => (IR_STATE_FILTERS.some(x => x[0] === v) ? v : "all");
+/** The meetings in one state, or all of them. @param {IrMeeting[]} list @param {string} st @param {(n:number)=>boolean} done */
+export const irByState = (list, st, done) => (st === "all" || !IR_STATE_FILTERS.some(x => x[0] === st) ? list : list.filter(m => irStateOf(m, done) === st));
+/** Whether a row has its transcript: a file that is a transcript, a meeting whose transcript has arrived (or that is past that step).
+    @param {any} m @param {Record<string, any>} [kinds] */
+export const irHasTranscript = (m, kinds) => (m.src === "upload" ? irKindOf(m, kinds) === "transcript" : m.state !== "waiting");
+/** The rows split under headings, in the order the headings should appear; rows keep their order inside a heading and an empty
+    heading is not drawn. `o.day` and `o.project` say a day's and a project's words. @param {any[]} list @param {string} by
+    @param {{done: (n:number)=>boolean, kinds?: Record<string, any>, day?: (d:string)=>string, project?: (c:string)=>string}} o
+    @returns {{key: string, label: string, items: any[]}[]} */
+export function irGroupMeetings(list, by, o) {
+  if (by === "none" || !IR_GROUPS.some(x => x[0] === by)) return [{ key: "", label: "", items: list }];
+  const heads = /** @type {Map<string, {key: string, label: string, items: any[]}>} */ (new Map());
+  const put = (/** @type {string} */ key, /** @type {string} */ label, /** @type {any} */ m) => { if (!heads.has(key)) heads.set(key, { key, label, items: [] }); /** @type {any} */ (heads.get(key)).items.push(m); };
+  for (const m of list) {
+    if (by === "day") put(m.day || "", m.day ? (o.day ? o.day(m.day) : m.day) : "No date", m);
+    else if (by === "project") put(m.p || "", m.p ? (o.project ? o.project(m.p) : m.p) : "No project", m);
+    else if (by === "state") { const st = irStateOf(m, o.done); put(st, st === "ready" ? "Transcript ready" : IR_STATE_CHIP[/** @type {"waiting"} */ (st)], m); }
+    else { const has = irHasTranscript(m, o.kinds); put(has ? "has" : "no", has ? "Has a transcript" : "No transcript yet", m); }
+  }
+  const all = [...heads.values()];
+  if (by === "state") return ["waiting", "ready", "check", "done"].map(k => heads.get(k)).filter(Boolean).map(x => /** @type {any} */ (x));
+  if (by === "transcript") return all.sort((a, b) => (a.key === "has" ? 0 : 1) - (b.key === "has" ? 0 : 1));
+  if (by === "project") return all.sort((a, b) => (a.key ? 0 : 1) - (b.key ? 0 : 1) || a.label.localeCompare(b.label));
+  return all;                                    /* day: the list is newest day first already */
+}
+
 /** The live counts: the server's, less what the page has decided since. A meeting whose proposals are all decided counts as
     approved. @param {IrModel} model @param {(n:number)=>boolean} done */
 export function irCounts(model, done, kinds) {
-  const ms = model.meetings || [], left = (/** @type {IrMeeting} */ m) => { const l = irLive(m.groups, done); return l.needs.length + l.routine.length; };
-  const stage = (/** @type {IrMeeting} */ m) => (m.stage === "drafted" && !left(m) ? "approved" : m.stage);
+  const ms = model.meetings || [];
+  const stage = (/** @type {IrMeeting} */ m) => IR_STATE_STAGE[irStateOf(m, done)];     /* the same state the chip shows */
   const all = [...ms.flatMap(m => [...(m.groups.needs || []), ...(m.groups.routine || [])]),
     ...["mail", "other"].flatMap(k => [...((/** @type {any} */ (model)[k] || {}).needs || []), ...((/** @type {any} */ (model)[k] || {}).routine || [])])];
   const toApprove = new Set(all.filter(n => !done(n))).size;

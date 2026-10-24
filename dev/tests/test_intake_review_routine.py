@@ -39,7 +39,7 @@ class Routine(LiveBrowserCase):
         S.open_meeting(b)
         heads = b.eval("[...document.querySelectorAll('#v-intake-review tr.icsubhead')].slice(0,2).map(t=>[t.dataset.irg,t.textContent])")
         self.assertEqual([h[0] for h in heads], ["needs", "routine"])
-        self.assertIn("Needs your decision · 4", heads[0][1])
+        self.assertIn("Needs your decision · 3", heads[0][1])        # #325: the minutes are the parent row above, not counted here
         self.assertIn("Routine · 4", heads[1][1])
         self.assertIn(WORDING, heads[1][1])
         self.assertIn("Approve routine (4)", b.eval("document.querySelector('[data-irg=routine] [data-ira=routine]').textContent"))

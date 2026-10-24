@@ -12,6 +12,22 @@
 </p>
 <div class="toolbar rvtools">
 <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off">
+<label class="irsel">Group by <select class="fsel" data-irgroupby="1" aria-label="Group by">
+<option value="none">None</option>
+<option value="day">Day</option>
+<option value="project">Project</option>
+<option value="state">Meeting state</option>
+<option value="transcript">Transcript</option>
+</select>
+</label>
+<label class="irsel">Show <select class="fsel" data-irshow="1" aria-label="Show">
+<option value="all">All meetings (4)</option>
+<option value="waiting">Waiting for the transcript (0)</option>
+<option value="ready">Transcript ready (2)</option>
+<option value="check">Suggestions to check (1)</option>
+<option value="done">Done (1)</option>
+</select>
+</label>
 <span class="sp">
 </span>
 <button type="button" class="btn" data-ira="processall" title="">Process all ready (2)</button>
@@ -118,11 +134,73 @@
 </div>
 </div>
 <div data-irv="list">
-<div class="tbl">
+<div class="tbl" data-irpart="work">
+<table>
+<tbody>
+<tr class="click irmeet" data-irm="m13fbd79c3d" data-stage="drafted" data-state="proposals" tabindex="0" aria-expanded="false">
+<td class="title">
+<span class="ki" aria-hidden="true" data-irki="meeting">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="meeting">
+<rect x="4" y="5" width="16" height="15" rx="2">
+</rect>
+<path d="M4 10h16M9 3v4M15 3v4">
+</path>
+</svg>
+</span>
+<b class="icmeethd">ABC Steering</b>
+<div class="why"> · Example Programme</div>
+<div class="why irstate">
+<span class="irchip check" data-irchip="check">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="drafted">
+<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z">
+</path>
+<path d="M14 3v5h5M9 13h6M9 17h4">
+</path>
+</svg>Suggestions to check · 4</span> 5 days</div>
+</td>
+<td class="iracts">
+<button type="button" class="mini" data-ira="open">Check them</button>
+</td>
+</tr>
+<tr class="click irmeet" data-irm="m43da0fe5df" data-stage="approved" data-state="done" tabindex="0">
+<td class="title">
+<span class="ki" aria-hidden="true" data-irki="file">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
+<path d="M6 3h8l4 4v14H6z">
+</path>
+<path d="M14 3v4h4">
+</path>
+</svg>
+</span>
+<b class="icmeethd">Copy of filed.vtt</b>
+<div class="why">Added today · Likely project: Not sure</div>
+<div class="why irstate">
+<span class="irchip done" data-irchip="done">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="approved">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M8 12.5l3 3 5-6">
+</path>
+</svg>Done</span> Already processed</div>
+</td>
+<td class="iracts">
+<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)">Remove</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="rgroup irsec" data-irsec="mail">
+<h2>From mail and Teams <span class="sub rgc">0 suggestions</span>
+</h2>
+</div>
+<div class="empty">Nothing from mail or Teams to approve.</div>
+<div class="tbl" data-irpart="arrived">
 <table>
 <tbody>
 <tr class="click irmeet" data-irm="m7f5532f81f" data-stage="arrived" data-state="ready" tabindex="0">
 <td class="title">
+<input type="checkbox" class="irtick" data-irtick-box="m7f5532f81f" aria-label="Select ABC weekly sync.vtt">
 <span class="ki" aria-hidden="true" data-irki="file">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
 <path d="M6 3h8l4 4v14H6z">
@@ -148,27 +226,9 @@
 </button>
 </td>
 </tr>
-<tr class="click irmeet" data-irm="m43da0fe5df" data-stage="approved" data-state="done" tabindex="0">
-<td class="title">
-<span class="ki" aria-hidden="true" data-irki="file">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
-<path d="M6 3h8l4 4v14H6z">
-</path>
-<path d="M14 3v4h4">
-</path>
-</svg>
-</span>
-<b class="icmeethd">Copy of filed.vtt</b>
-<div class="why">Added today · Likely project: Not sure</div>
-<div class="why">Already processed</div>
-</td>
-<td class="iracts">
-<span class="icsub">Done</span>
-<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)">Remove</button>
-</td>
-</tr>
 <tr class="click irmeet" data-irm="m5f7661d1cc" data-stage="arrived" data-state="ready" tabindex="0">
 <td class="title">
+<input type="checkbox" class="irtick" data-irtick-box="m5f7661d1cc" aria-label="Select Recording.vtt">
 <span class="ki" aria-hidden="true" data-irki="file">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="file">
 <path d="M6 3h8l4 4v14H6z">
@@ -194,32 +254,9 @@
 </button>
 </td>
 </tr>
-<tr class="click irmeet" data-irm="m13fbd79c3d" data-stage="drafted" data-state="proposals" tabindex="0" aria-expanded="false">
-<td class="title">
-<span class="ki" aria-hidden="true" data-irki="meeting">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-iric="meeting">
-<rect x="4" y="5" width="16" height="15" rx="2">
-</rect>
-<path d="M4 10h16M9 3v4M15 3v4">
-</path>
-</svg>
-</span>
-<b class="icmeethd">ABC Steering</b>
-<div class="why"> · Example Programme</div>
-<div class="why">4 suggestions to check · 5 days</div>
-</td>
-<td class="iracts">
-<button type="button" class="mini" data-ira="open">Check them</button>
-</td>
-</tr>
 </tbody>
 </table>
 </div>
-<div class="rgroup irsec" data-irsec="mail">
-<h2>From mail and Teams <span class="sub rgc">0 suggestions</span>
-</h2>
-</div>
-<div class="empty">Nothing from mail or Teams to approve.</div>
 </div>
 <div class="rgroup irsec" data-irsec="later">
 <h2>Later <span class="sub rgc">0</span>
