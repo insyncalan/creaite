@@ -212,10 +212,15 @@ def _rewrite(data, old, new):
     if meeting.get("source_map"):
         meeting["source_map"] = {(new if k == old else k): (new if v == old else v) for k, v in meeting["source_map"].items()}
     for it in data.get("items") or []:
-        v = it.get("values") or {}
-        src = v.get("source")
-        if isinstance(src, str) and (src == old or src.startswith(old + " ")):
-            v["source"] = new + src[len(old):]
+        for holder in (it.get("values") or {}, it):          # an update item keeps its source at the top (#355 M3), a new one in `values`
+            _follow(holder, old, new)
+
+
+def _follow(holder, old, new):
+    """The holder's `source`, when it starts with the filed path `old`, now starts with `new`."""
+    src = holder.get("source")
+    if isinstance(src, str) and (src == old or src.startswith(old + " ")):
+        holder["source"] = new + src[len(old):]
 
 
 def _save(p, data):

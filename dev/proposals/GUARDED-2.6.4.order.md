@@ -1,12 +1,15 @@
 # Guarded diffs for 2.6.4: order and why
 
-Chain order (each goes in on a clean origin/main at e6389af8 once the ones before it are in; the chain file itself is made elsewhere):
+This note covers the first three diffs of the chain. The whole list, in order, is `GUARDED-2.6.4.chain` (seven diffs: these three, then
+`line-reach/reach.diff`, the two `292-tracker` diffs and, last, `338/creaite-rules.after-chain.diff`); base: the 2.6.3 release commit e6389af8.
+
+Order of the first three (each goes in on a clean tree at e6389af8 once the ones before it are in):
 
 1. `dev/proposals/345/live_server.diff`: every route that decides an item names the item (`expect`).
 2. `dev/proposals/346/live_server.diff`: the runs chat carries nothing; a failed run set-up leaves no record.
 3. `dev/proposals/334/live_server.diff`: the weekly AI budget gate.
 
-All three change only `system/scripts/live_server.py`, in separate places:
+The three change only `system/scripts/live_server.py`, in separate places:
 
 | Diff | Where in the file |
 |------|-------------------|

@@ -12,7 +12,7 @@ import { approveArgs, reconcileOps } from "../components/minutes/track.js";
 import { store } from "../core/page.js";
 import { needsConnection } from "../core/say.js";
 import { REV } from "../core/data.js";
-import { askFiling, noteNumbered, renamedFp, forgetRenamed } from "./minutesFiling.js";
+import { askFiling, noteNumbered, renamedFp, forgetRenamed, dismissFiled } from "./minutesFiling.js";
 import { mountFiling } from "../components/minutes/FilingDialog.jsx";
 import { api, applyNow, oneLine, reloadData, REVIEW_CHANGED, STALE_ROW_MSG, viaServer } from "../core/server.js";
 
@@ -171,6 +171,7 @@ export async function trackApprove(v, how = {}) {
   for (const n of own) { const rv = (plan || []).find(i => i.n === n), fp = renamedFp(v.proposal, n) || (rv && rv.fp); if (fp) expects[String(n)] = fp; }   // and every ticked item, from the plan (an item approved in Review but not yet saved is in it)
   const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own, expects, ...(meeting && meeting.fp ? { expect: meeting.fp } : {}) });
   forgetRenamed(v.proposal);
+  if (!r || !r.ok) dismissFiled();                           // #355 M2: refused (stale page or anything else): nothing was filed, so the note must not say it was
   if (r && !r.ok && REVIEW_CHANGED.test(r.message || "")) { await reloadData(); return { ok: false, message: STALE_ROW_MSG, made }; }
   if (r && r.ok) noteNumbered(r.numbered);                    // #324: another meeting took the name first: the note says what it was filed as
   return { ...(r || { ok: false, message: "Nothing was saved or changed." }), made };
