@@ -131,6 +131,8 @@ def best_repeat(con, item, register=None):
         s, why = match_score(v, table, r, ctx, rare)
         s -= 0.0 if same or s >= 1.0 else 0.1                         # across projects only a close match with the same owner
         rank = (s, same, r["state"] == "open")
+        if not same and s < VERY:                                      # #333: another project's item is marked only when it is a close match
+            continue
         if s >= POSSIBLE and (best is None or rank > best[0]):
             best = (rank, r, s, why)
     if not best:
