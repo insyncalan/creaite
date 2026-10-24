@@ -1,0 +1,11 @@
+# The approved guarded chain for 2.6.3, one diff per line, in apply order (GUARDED-2.6.3.md). Read by dev/tests/guarded_chain.py.
+# Lines starting with # are comments. Paths are relative to the repo root. Change this list only when Alan approves a change to the chain.
+# Base: the 2.6.2 release commit's main (39c1060a; the 2.6.1 and 2.6.2 chains are already applied there).
+# 327 B: fresh ask creaite sessions by default, Continue this chat (live_server)
+dev/proposals/327b/live_server.diff
+# 324: File the minutes box, names and Open folder (live_server)
+dev/proposals/324/live_server.diff
+# SLOT for the follow-up guarded diffs from origin/v263-lows (add them here, after 324, one per line; re-set CHAIN3_SHA256 with Alan's say):
+#   draft_delivery.py into guarded_chain.GUARDED; review-expect mandatory at the route; reworded 'fails closed' comment
+# SLOT for #338 (creaite-rules.md, LAST, only after Alan's 'AM: approved'): use dev/proposals/GUARDED-2.6.3.with-338.chain, which ends with
+#   dev/proposals/338/creaite-rules.after-chain.diff (it applies to main's rules file after the 2.6.2 chain; creaite-rules.diff does not)

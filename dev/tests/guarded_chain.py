@@ -1,11 +1,11 @@
 """Which guarded scripts the commits in a range changed, with the approved guarded chains as the one allowed exception.
 
-The convention (dev/proposals/GUARDED-2.6.1.md, GUARDED-2.6.2.md): each approved chain is applied as ONE commit whose subject starts with
+The convention (dev/proposals/GUARDED-2.6.1.md, GUARDED-2.6.2.md, GUARDED-2.6.3.md): each approved chain is applied as ONE commit whose subject starts with
 exactly that chain's marker. That commit is allowed to change guarded scripts only if, with the diffs listed in the chain file (read from
 that commit's PARENT) reverse-applied to the guarded files, every guarded file equals its parent's content. A marked commit with anything
 extra, a missing or unreadable chain file, a pin mismatch, a listed diff that is missing or does not reverse, or a guarded file the
-diffs don't explain, fails closed: its guarded files are reported as changed. Two chains are known (2.6.1, then 2.6.2); a range may hold
-either or both, in order. Plain code, no network."""
+diffs don't explain, fails closed: its guarded files are reported as changed. Three chains are known (2.6.1, 2.6.2, then 2.6.3); a range may hold
+any of them, in order. Plain code, no network."""
 import hashlib
 import os
 import subprocess
@@ -30,9 +30,18 @@ CHAIN2_SHA256 = "d6441d5568bc7680a2e7f051e6fe3e91f1d14af079220743edf9910e09637c8
 # `python3 dev/tests/guarded_chain.py` prints; change it only with the chain list.
 BASE_261 = "9501f2cdc850618e2ae34419bf2c6cb1c0d94ba0"
 BASE2 = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
-BASE = BASE2
+BASE = BASE3                                  # the default base is the newest release; BASE2 and BASE_261 still work for the earlier chains
+# The 2.6.3 chain (dev/proposals/GUARDED-2.6.3.md): its own marker, list and pin. BASE3 is main after the 2.6.2 release (2.6.1 and 2.6.2
+# chains applied there). The marker commit "Guarded 2.6.3 chain:" is made by Jarvis at the cut. To add a diff to the chain: append its
+# path to GUARDED-2.6.3.chain (apply order; #338's rules diff goes LAST, only after Alan's approval) and re-set CHAIN3_SHA256 to the value
+# `python3 dev/tests/guarded_chain.py` prints, with Alan's say.
+CHAIN3_MARKER = "Guarded 2.6.3 chain:"
+CHAIN3_FILE = "dev/proposals/GUARDED-2.6.3.chain"
+CHAIN3_SHA256 = "PIN3"
+BASE3 = "39c1060aaeffa0c47a03a3c8e0e48208d3cb9ed6"
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
+SPEC3 = (CHAIN3_MARKER, CHAIN3_FILE, "CHAIN3_SHA256")
 
 
 class HistoryMissing(AssertionError):
@@ -106,13 +115,13 @@ def chain_explains(repo, sha, files, pin=None, spec=SPEC1):
     return back is not None and all(back[f] == _blob(repo, sha + "^", f) for f in files)
 
 
-def _marked_chains(repo, base, head, pin, pin2):
+def _marked_chains(repo, base, head, pin, pin2, pin3=None):
     """(peel, carried): per chain, latest first, (spec, pin, marked commit, guarded files its marked commits changed), and the union of
     those files. (None, set()) when a marked commit is not exactly its chain."""
     log = _git(repo, "log", "--no-merges", "--format=%H%x09%s", f"{base}..{head}")
     subjects = [l.split("\t", 1) for l in log.stdout.splitlines()]
     peel, carried = [], set()
-    for spec, p in ((SPEC2, pin2), (SPEC1, pin)):
+    for spec, p in ((SPEC3, pin3), (SPEC2, pin2), (SPEC1, pin)):
         marked = [h for h, subj in subjects if subj.startswith(spec[0])]
         if not marked:
             continue
@@ -137,9 +146,9 @@ def _peel_back(repo, head, peel, cur):
     return True
 
 
-def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None):
+def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None, pin3=None):
     """Guarded script paths whose content differs between base and head (the net change), except what the approved chain commits
-    explain: for each chain (2.6.1, 2.6.2) a commit in the range whose subject starts with its marker and which passes chain_explains.
+    explain: for each chain (2.6.1, 2.6.2, 2.6.3) a commit in the range whose subject starts with its marker and which passes chain_explains.
     Every net change must be carried by a marked commit, and the chains' diffs, reversed latest chain first, each only on the files its
     own marked commit changed, must give base's content. None when git history for base isn't available."""
     d = _git(repo, "diff", "--name-only", "--no-renames", base, head)
@@ -150,7 +159,7 @@ def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None):
     net = [f for f in d.stdout.splitlines() if _is_guarded(f)]
     if not net:
         return []
-    peel, carried = _marked_chains(repo, base, head, pin, pin2)
+    peel, carried = _marked_chains(repo, base, head, pin, pin2, pin3)
     if peel is None or not peel or not set(net) <= carried:     # a net change no marked commit made itself is somebody else's edit
         return net
     cur = {f: _blob(repo, head, f) for f in net}
@@ -163,3 +172,4 @@ if __name__ == "__main__":
     here = Path(__file__).resolve().parents[2]
     print("CHAIN_SHA256 ", chain_digest(here, "HEAD", SPEC1))
     print("CHAIN2_SHA256", chain_digest(here, "HEAD", SPEC2))
+    print("CHAIN3_SHA256", chain_digest(here, "HEAD", SPEC3))
