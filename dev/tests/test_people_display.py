@@ -96,7 +96,7 @@ class Builders(unittest.TestCase):
         const f = await import(%s); const o = {};
         o.sel = f.dispSelect({ id: "g", label: "Group by", options: [["a", "A<"], ["b", "B"]], cur: "b", hidden: true });
         o.ord = f.dispOrder({ id: "s", revId: "r", options: [["x", "X"]], cur: "x", reversed: true, extra: "<option>e</option>" });
-        o.props = f.dispProps({ shown: [["t", "Title"], ["o", "Owner"]], rest: [["z", "Zed"]], locked: "t", prefix: "dp" });
+        o.props = f.dispPropsMarkup({ shown: [["t", "Title"], ["o", "Owner"]], rest: [["z", "Zed"]], locked: "t", prefix: "dp" });
         o.foot = f.dispFoot({ resetId: "rs", doneId: "dn", resetLabel: "Reset" });
         console.log(JSON.stringify(o));""" % json.dumps(MENU.as_uri())
         try:

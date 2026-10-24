@@ -42,7 +42,7 @@ export const savedPeopleTab = () => ptabOf(store.get(TAB_KEY, "all"));
     start A to Z, the counts start with the most) @type {Record<string, (x: PersonRow) => any>} */
 const SORTS = { name: x => x.n.toLowerCase(), email: x => x.email.toLowerCase(), org: x => x.org.toLowerCase(), role: x => x.role.toLowerCase(),
   oa: x => x.oa.length, or: x => x.or.length, dw: x => x.dw.length, late: x => x.late };
-const ST = { s: newFilter() };
+const PLST = { s: newFilter() };
 /** @returns {{col: string, dir: string}} */
 const sortOf = () => shared.PSORT && SORTS[shared.PSORT.col] ? shared.PSORT : { col: "late", dir: "desc" };
 /** @param {any[]} L */
@@ -158,7 +158,7 @@ function rowsOf(L, st, cols) {
 /** `t` changes on every draw, so the page redraws with the data as it is now. @param {{t?: number}} _props */
 export function PeoplePage(_props) {
   pdSyncSort();     /* #360: the sort is read from this browser once, and saved after a change */
-  const s = ST.s, tab = ptabOf(shared.PTAB), st = pdState(), cols = pdColumns(st);
+  const s = PLST.s, tab = ptabOf(shared.PTAB), st = pdState(), cols = pdColumns(st);
   const all = registerRows(), F = useFields(all, s, {}), hit = all.filter(x => personPasses(x, F, s));
   const so = sortOf(), f = SORTS[so.col], dir = so.dir === "asc" ? 1 : -1;
   const L = hit.filter(IN_TAB[tab]).sort((a, b) => (a.me ? -1 : b.me ? 1 : 0)   /* you first, always */ || (() => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * dir; })() || a.n.localeCompare(b.n));

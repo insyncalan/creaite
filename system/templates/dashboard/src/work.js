@@ -3,7 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { drawPeoplePage, savedPeopleTab, setPeopleTab } from "./components/people/PeoplePage.jsx";   /* #248 */
-import { dispController, dispFoot, dispOrder, dispProps as dispPropsHtml, dispSelect } from "./core/displayMenu.js";   /* #360: the pieces Work and People share */
+import { dispController, dispFoot, dispOrder, dispPropsMarkup, dispSelect } from "./core/displayMenu.js";   /* #360: the pieces Work and People share */
 import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml, linkWords } from "./core/linkText.js";
@@ -306,7 +306,7 @@ export function loadTab(t){ clearAllFilters(); shared.WT=t; const st=TABSTATE[t]
    /* BL-159: on Decisions, the menu */
 /* column chooser */
 export function dispProps(){ const ord=orderedCols().map(c=>c[0]), rest=COLS[shared.WT].filter(c=>!ord.includes(c[0]));   /* BL-128: was the Columns menu; #360: the markup is core/displayMenu.js's */
-  return dispPropsHtml({shown:orderedCols().map(c=>[c[0],c[1]]),rest:rest.map(c=>[c[0],c[1]]),locked:"t",prefix:"dprop"}); }
+  return dispPropsMarkup({shown:orderedCols().map(c=>[c[0],c[1]]),rest:rest.map(c=>[c[0],c[1]]),locked:"t",prefix:"dprop"}); }
 /* BL-128 (sprint-work-views): the column chooser is the Display menu's Properties (dispProps); its moves and ticks are handled there */
 /* resize columns (remembered) */
 shared.RZ=store.obj("creaite-colwidths");   /* #256: a width is used only as a number (rzOf) */

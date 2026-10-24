@@ -6,23 +6,23 @@ import { store } from "../core/page.js";
 import { shared } from "../core/state.js";
 import { pdDefault, pdNormalise, pdSort, PD_DEFAULT_SORT } from "../core/peopleDisplay.js";
 
-const KEY = "creaite-peopledisplay", SORT_KEY = "creaite-peoplesort";
+const PD_KEY = "creaite-peopledisplay", PD_SORT_KEY = "creaite-peoplesort";
 /** @type {import("../core/peopleDisplay.js").PdState|null} */
-let ST = null;
+let PD_ST = null;
 let sortRead = false;
 
 /** The state now; read once from storage, then kept. */
-export const pdState = () => ST || (ST = pdNormalise(store.get(KEY, null)));
-export const pdSave = () => { store.set(KEY, pdState()); };
+export const pdState = () => PD_ST || (PD_ST = pdNormalise(store.get(PD_KEY, null)));
+export const pdSave = () => { store.set(PD_KEY, pdState()); };
 /** Put the state back to the starting one (and the sort). */
-export function pdReset() { ST = pdDefault(); pdSave(); shared.PSORT = { ...PD_DEFAULT_SORT }; pdSaveSort(); }
+export function pdReset() { PD_ST = pdDefault(); pdSave(); shared.PSORT = { ...PD_DEFAULT_SORT }; pdSaveSort(); }
 
 /** The sort: read once from storage (a heading click and Order by are the one thing, shared.PSORT), saved after each change. */
 export function pdSyncSort() {
-  if (!sortRead) { sortRead = true; shared.PSORT = pdSort(store.get(SORT_KEY, null)); return; }
+  if (!sortRead) { sortRead = true; shared.PSORT = pdSort(store.get(PD_SORT_KEY, null)); return; }
   pdSaveSort();
 }
-function pdSaveSort() { store.set(SORT_KEY, pdSort(shared.PSORT)); }
+function pdSaveSort() { store.set(PD_SORT_KEY, pdSort(shared.PSORT)); }
 
 /** Test seam: forget what was read, so the next draw reads storage again. */
-export function pdForget() { ST = null; sortRead = false; }
+export function pdForget() { PD_ST = null; sortRead = false; }

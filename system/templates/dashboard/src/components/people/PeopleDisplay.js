@@ -4,7 +4,7 @@
    (this browser only); the table reads it (PeoplePage.jsx). The options come from the allow-lists in core/peopleDisplay.js, so nothing
    private can appear here. Nothing in this file writes to a project, the register or a setting. */
 import { $, putHTML, raw, html } from "../../core/dom.js";
-import { dispController, dispFoot, dispOrder, dispProps, dispSelect } from "../../core/displayMenu.js";
+import { dispController, dispFoot, dispOrder, dispPropsMarkup, dispSelect } from "../../core/displayMenu.js";
 import { PD_COLS, PD_GROUPS, PD_KEYS, PD_LOCKED, PD_ORDER, PD_SORTS, pdSort } from "../../core/peopleDisplay.js";
 import { pdReset, pdSave, pdState } from "../../stores/peopleDisplay.js";
 import { shared } from "../../core/state.js";
@@ -22,7 +22,7 @@ export function drawPeopleDisplayMenu() {
   putHTML(m, html`${raw(dispSelect({ id: "pdgrp", label: "Group by", options: PD_GROUPS, cur: st.group }))}
     ${raw(dispSelect({ id: "pdsub", label: "Sub-group", options: [["none", "None"], ...PD_GROUPS.filter(g => g[0] !== "none" && g[0] !== st.group)], cur: st.sub, hidden: st.group === "none" }))}
     ${raw(dispOrder({ id: "pdsort", revId: "pdRev", options: PD_ORDER, cur: so.col, reversed: so.dir !== PD_SORTS[so.col] }))}
-    <h2>Properties</h2><div class="dprops">${raw(dispProps({ shown, rest, locked: PD_LOCKED, prefix: "pdprop", pinFirst: true }))}</div>
+    <h2>Properties</h2><div class="dprops">${raw(dispPropsMarkup({ shown, rest, locked: PD_LOCKED, prefix: "pdprop", pinFirst: true }))}</div>
     ${raw(dispFoot({ resetId: "pdReset", doneId: "pdDone", resetLabel: "Reset to the default" }))}`);
   if (focusKey) { const f = m.querySelector("#" + CSS.escape(focusKey)) || (focusKey.includes("|") ? m.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`) : null); if (f && !(/** @type {any} */ (f)).disabled) /** @type {HTMLElement} */ (f).focus(); else /** @type {HTMLElement|null} */ (m.querySelector("button,select,input"))?.focus(); }
 }
@@ -33,12 +33,12 @@ export const closePeopleDisplay = (/** @type {boolean} */ focus) => MENU.close(f
 export const peopleDisplayOpen = () => MENU.isOpen();
 
 /** A change: saved, the table redrawn, the menu drawn again. */
-function changed() { pdSave(); drawPeoplePage(); drawPeopleDisplayMenu(); }
+function pdChanged() { pdSave(); drawPeoplePage(); drawPeopleDisplayMenu(); }
 
-let bound = false;
+let pdBound = false;
 /** Listen once, at the document, so the menu works however many times the page is drawn. */
 export function bindPeopleDisplay() {
-  if (bound) return; bound = true;
+  if (pdBound) return; pdBound = true;
   window.addEventListener("hashchange", () => closePeopleDisplay(false));      /* leaving the page closes the menu */
   document.addEventListener("click", e => {
     const t = /** @type {Element} */ (e.target); if (!t || !t.closest) return;
@@ -49,23 +49,23 @@ export function bindPeopleDisplay() {
     const st = pdState(), mv = t.closest("[data-mv]");
     if (mv) {
       e.preventDefault(); const k = /** @type {HTMLElement} */ (mv).dataset.mv || "", i = st.cols.indexOf(k), j = i + Number(/** @type {HTMLElement} */ (mv).dataset.d);
-      if (i < 1 || j < 1 || j >= st.cols.length) return;     /* Name stays first */ [st.cols[i], st.cols[j]] = [st.cols[j], st.cols[i]]; changed(); return;
+      if (i < 1 || j < 1 || j >= st.cols.length) return;     /* Name stays first */ [st.cols[i], st.cols[j]] = [st.cols[j], st.cols[i]]; pdChanged(); return;
     }
     const id = /** @type {HTMLElement} */ (t).id;
-    if (id === "pdRev") { const so = sortNow(); shared.PSORT = { col: so.col, dir: so.dir === "asc" ? "desc" : "asc" }; changed(); return; }
-    if (id === "pdReset") { pdReset(); changed(); snack("Display reset to the default"); return; }
+    if (id === "pdRev") { const so = sortNow(); shared.PSORT = { col: so.col, dir: so.dir === "asc" ? "desc" : "asc" }; pdChanged(); return; }
+    if (id === "pdReset") { pdReset(); pdChanged(); snack("Display reset to the default"); return; }
     if (id === "pdDone") closePeopleDisplay(true);
   });
   document.addEventListener("change", e => {
     const i = /** @type {HTMLInputElement} */ (e.target); if (!i || !i.closest || !i.closest("#plDispMenu")) return;
     const st = pdState();
-    if (i.id === "pdgrp") { st.group = i.value; if (st.sub === st.group) st.sub = "none"; changed(); return; }
-    if (i.id === "pdsub") { st.sub = i.value; changed(); return; }
-    if (i.id === "pdsort") { const c = i.value; shared.PSORT = { col: c, dir: PD_SORTS[c] || "desc" }; changed(); return; }
+    if (i.id === "pdgrp") { st.group = i.value; if (st.sub === st.group) st.sub = "none"; pdChanged(); return; }
+    if (i.id === "pdsub") { st.sub = i.value; pdChanged(); return; }
+    if (i.id === "pdsort") { const c = i.value; shared.PSORT = { col: c, dir: PD_SORTS[c] || "desc" }; pdChanged(); return; }
     if (i.dataset.prop !== undefined) {
       const k = i.value; if (k === PD_LOCKED || !PD_KEYS.includes(k)) return;
       if (i.checked) { if (!st.cols.includes(k)) st.cols.push(k); } else st.cols = st.cols.filter(x => x !== k);
-      changed();
+      pdChanged();
     }
   });
   document.addEventListener("keydown", e => {

@@ -23,7 +23,7 @@ export function dispOrder({ id, revId, options, cur, reversed, extra = "" }) {
 /** Properties: every column, ticked when shown, the shown ones with ↑ ↓ (24 px targets; the first can't go earlier nor the last later).
     `shown` is in order. `pinFirst` keeps the first column where it is: it has no arrows and the next one can't go above it (People's Name).
     @param {{shown: [string, string][], rest: [string, string][], locked: string, prefix: string, pinFirst?: boolean}} o */
-export function dispProps({ shown, rest, locked, prefix, pinFirst }) {
+export function dispPropsMarkup({ shown, rest, locked, prefix, pinFirst }) {
   const ord = shown.map(c => c[0]);
   return [...shown, ...rest].map(c => {
     const on = ord.includes(c[0]), i = ord.indexOf(c[0]), l = esc(c[1]);
