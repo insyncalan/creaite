@@ -8,11 +8,11 @@ confidential meeting's row never carries a project, a name, a code or a reason.
 import json
 import sys
 import unittest
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
 import build_dashboard as bd  # noqa: E402
+from test_dashboard import today  # noqa: E402
 
 PROJECTS = [{"code": "ABC", "name": "Harbour Upgrade"}, {"code": "DEF", "name": "Orchard Rollout"},
             {"code": "ORX", "name": "Quay Works"}, {"code": "ORX2C", "name": "Quay Works Two"}]
@@ -65,7 +65,7 @@ class ConfidentialRow(unittest.TestCase):
         m = {"id": "e1", "title": "Catch-up", "day": "2026-10-20", "start": "10:00", "end": "11:00", "confidential": True,
              "p": "DEF", "how": "matched", "level": "likely", "reason": "Orchard Rollout fits orchard.example",
              "cands": ["DEF"], "offer": {"kind": "domain", "value": "orchard.example"}, "series": "catch up", **kw}
-        return bd._ir_calendar(m, {}, date.today(), 7)
+        return bd._ir_calendar(m, {}, today(), 7)
 
     def test_no_project_or_reason_leaks(self):
         r = self.row()

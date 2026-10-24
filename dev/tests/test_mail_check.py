@@ -319,7 +319,7 @@ if low.startswith(("sweep", "refresh")):
         call(M + "outlook_calendar_search")
         call(M + "sharepoint_search")
         call("Bash", {"command": "system/scripts/run sweep.py stage x"})
-        now = datetime.now()
+        now = datetime.fromtimestamp(time.time())      # the stand-in's own wall clock, like the server it drives
         item = lambda n, proj: {"n": n, "op": "new", "table": "actions", "match": "strong" if proj else "none", "flags": [], "decision": "pending",
                                 "values": {"project": proj, "description": f"Share the plan {n}", "owner": "Alan Carter", "raised": now.strftime("%Y-%m-%d"),
                                            "source": "Email · Subject: Zebra"}}
