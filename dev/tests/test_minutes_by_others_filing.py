@@ -115,6 +115,8 @@ def scratch(patched):
     v.run("init")
     tracker = v.root / "system" / "scripts" / "tracker.py"
     shutil.copy(REPO / "system" / "scripts" / "tracker.py", tracker)
+    if "Nothing to save: no decided items." in tracker.read_text(encoding="utf-8"):   # #292 wording: the older diffs below are built on the old words
+        subprocess.run(["git", "apply", "-R", str(REPO / "dev/proposals/292-tracker/tracker.diff")], cwd=v.root, check=True)
     if BASE_MARKER not in tracker.read_text(encoding="utf-8"):        # guard-small first: E1 is built on it (both copies have it)
         _patch(v.root, diff=BASE_DIFF)
     already = MARKER in tracker.read_text(encoding="utf-8")

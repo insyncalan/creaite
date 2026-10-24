@@ -233,7 +233,7 @@ class DefaultLayoutTests(Recode, unittest.TestCase):
         self.v.propose("other", [item(1, "decisions", {"project": "XPL", "decision": "Unrelated", "date": "2026-10-03",
                                                               "source": "projects/XPL Example Plus/minutes/2026-10-03 Call.docx — Decisions"})])
         out = self.v.run("apply").stdout
-        self.assertIn("is a recode: applying it first, on its own", out)
+        self.assertIn("applying it first, on its own" if "is a recode" in out else "saving it first, on its own", out)     # #292: the new words are the same fact
         self.assertEqual(self.ids("decisions"), ["XPL-D-005", "XPL-D-007"])                  # the other proposal waits
         self.assertIn("written 1", self.v.run("apply").stdout)
         self.assertEqual(self.ids("decisions"), ["XPL-D-005", "XPL-D-007", "XPL-D-008"])
