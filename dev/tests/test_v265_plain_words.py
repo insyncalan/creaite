@@ -42,7 +42,7 @@ class Guarded(unittest.TestCase):
         d = frontmatter_description(".claude/skills/cx-sweep/SKILL.md")
         if '"check my mail"' not in d:
             self.skipTest("GUARDED: needs dev/proposals/347/skills.diff")
-        for w in ('"check my mail for ABC"', '"sweep"', '"sweep mail for ABC"', '"refresh calendar"'):
+        for w in ('"check my mail for <CODE>"', '"sweep"', '"sweep mail for ABC"', '"refresh calendar"'):
             self.assertIn(w, d)
 
     def test_cx_review_accepts_save_and_undo_last_save_and_the_old(self):
@@ -52,7 +52,8 @@ class Guarded(unittest.TestCase):
         for w in ('"save"', '"apply"', '"undo last apply"'):
             self.assertIn(w, d)
         body = read(".claude/skills/cx-review/SKILL.md")
-        self.assertIn("follows a shown list of approved items", body)
+        self.assertIn("Saving n approved items", body)
+        self.assertIn("only as the whole message", body)
 
     def test_rules_table_lists_the_new_words(self):
         r = read("system/creaite-rules.md")
