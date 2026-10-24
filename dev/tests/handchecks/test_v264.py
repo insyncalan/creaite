@@ -1,7 +1,8 @@
 """creaite 2.6.4's hand checks, automated against a vault made from the release zip (the fictional demo portfolio: Falcon Data
 Platform and the rest). One check per item, `test_cNN_...`, its docstring quoting what the item must do. DRAFT, written from the issue
 texts and Team Cap's findings of 24-10-2026 while the plain notes (dev/release-notes/2.6.4-plain.md) were not posted; brought up to
-v264-line c62ff35b (#334 off by default, #352 Today's stale line gone, M1 fixed by the 345 diff): the numbers are the
+v264-line 7e10355b (#334 off by default, #352 Today's stale line gone, M1 fixed by the 345 diff, H1 fixed: the singular milestone
+message, #351 b: no follow-up under a past day's meetings): the numbers are the
 items in order and the PM can number them in; the wording of the plain-words checks (11, 12) follows dev/PLAIN-WORDS.md and the Help
 diff, and is to be confirmed against the plain notes.
 
@@ -11,7 +12,7 @@ diff, and is to be confirmed against the plain notes.
    4  #337  People at 900 and 1400 px: the table fits its box and Overdue (the sort column) is on screen
    5  #337  People at 900 and 1400 px: no word breaks in the middle                                  EXPECTED FAILURE (M2)
    6  #337  Milestones, Client view with several hidden milestones: "None of the N milestones are shown to the client yet", page and card
-   7  #337  Milestones, Client view with ONE hidden milestone says it is NOT shown                    EXPECTED FAILURE (H1)
+   7  #337  Milestones, Client view with ONE hidden milestone says it is NOT shown                    (fixed on the line; was H1)
    8  #292  Walk Today, Work, Intake, Files, Activity, Projects, a cockpit, People and every Settings tab: no file path, script name, "sweep"
          or Tier 2 word (proposal, staged, vault, live server, extract) in the words on screen
    9  #293  Help: the key renamed words are there and the old ones are gone
@@ -36,10 +37,13 @@ diff, and is to be confirmed against the plain notes.
   28  #334  The budget is OFF by default: over any use, in confirm and in stop, nothing is held, warned or refused
   29  #334  The Usage tab says the budget is off; in the ask panel a typed request is sent with no budget card or line (Chrome)
   30  #352  Today shows no stale-updates line and no Draft updates button, at 1400 and 900 px; the draft stays in Work
+  31  #351  A past day on Today shows no follow-up chips and no Check or Process links under its meetings; today's Prep peek and
+            Intake's Check and Process are unchanged                                                         (own vault, Chrome)
 
 How a check is wired (every class that changes data has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Design264, Words264, Figures264, Today264  the shared hand-check vault and Chrome; nothing is changed (Today264 sets the page's own data and puts it back)
-  Item264, Profile264, Card264, UsageOff264  a vault of its own, its server and Chrome (UsageOff264: the budget never switched on)
+  Item264, Profile264, Card264, UsageOff264, PastDay264  a vault of its own, its server and Chrome (UsageOff264: the budget never switched on;
+                                   PastDay264: a fictional calendar of the past day and today, with every transcript state)
   Routes264, Budget264             a vault of its own and its live server (the page's own token), no browser; Budget264's Claude is a stand-in
                                    (the budget is OFF by default: its checks switch it on the way Settings does; check 28 leaves it off)
   Commands264, Extraction264, Runs264  a vault of its own and the engine's own code run in it (Runs264: a stand-in for the thread and the process)
@@ -88,7 +92,7 @@ REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 DASH = REPO / "system/templates/dashboard/src"
 
-KIND = {n: "scriptable" for n in range(1, 31)}
+KIND = {n: "scriptable" for n in range(1, 32)}
 LIVE_ONLY = {}        # check 24 runs on the stand-in; a real model over a real week's use is Alan's own
 
 
@@ -496,10 +500,10 @@ class Design264(HandcheckCase):
         self.assertFalse(b.eval("!!document.querySelector('#v-milestones .mv-none')"), "the Internal view draws the plan")
         self.note(6, f"{total} hidden milestones: '{page[:60]}…' on the page and the card; two: 'None of the 2 milestones…'")
 
-    @known("Team Cap H1: milestones.js mvNoneMsg builds 'The milestone is' + ' shown to the client yet.' for one milestone, which says the opposite")
     def test_c07_client_view_with_one_hidden_milestone_says_it_is_not_shown(self):
-        """7. (#337) With ONE milestone, all internal, the Client view says it is NOT shown ("The milestone isn't shown to the client yet.
-        Switch to Internal view to see it."), on the page and on the cockpit card."""
+        """7. (#337) With ONE milestone, all internal, the Client view says it is NOT shown ("The milestone is not shown to the client yet.
+        Switch to Internal view to see it."), on the page and on the cockpit card. (Team Cap H1 found it reading "is shown"; fixed on the
+        line at 7e10355b, so this is a plain check.)"""
         page, card = self.milestones_client("FAL", 1)
         self.note(7, f"page says: '{page[:70]}'")
         for where, text in (("page", page), ("card", card)):
@@ -1284,6 +1288,115 @@ class Today264(HandcheckCase):
         self.assertIn("Draft updates", b.eval("document.querySelector('#wbulk [data-drbulk]').textContent"))
         b.eval("HL.clear(); hlPaint(); hlBar(); true")
         self.note(30, f"Today at 1400 and 900 px with {seen[1400]['open']} stale open actions: no line, no Draft updates button, no sideways scroll; Work's bulk bar still has Draft updates")
+
+
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# #351 b: a past day on Today
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+FOLLOW_UP_WORDS = ("No transcript", "Transcript ready", "Not checked yet", "Minutes made", "Draft in Review")
+MEETING_TIMES = [("09:00", "09:30", "Weekly sync", True), ("09:45", "10:30", "Project kickoff", True), ("10:30", "11:15", "Budget review", True),
+                 ("11:30", "12:15", "Demo day", True), ("12:15", "12:45", "Lunch and learn", True), ("13:00", "14:00", "Steering committee", True),
+                 ("14:00", "14:30", "Retro", True), ("14:30", "15:15", "Design review", True), ("15:30", "16:00", "Vendor check-in", True),
+                 ("16:00", "16:30", "Planning huddle", True)]
+
+
+class PastDay264(HandcheckCase):
+    """Check 31. A vault of its own with a fictional calendar of about ten Teams meetings on the day before today and on today, and
+    every state the old follow-up chips showed (transcript ready, none, not transcribed, minutes made, not checked yet)."""
+    own_vault = True
+
+    def world(self):
+        """Write the calendar, what the check found and what was processed; widen the calendar import so the past day is in it."""
+        vault, today = self.vault, date.fromisoformat(self.now[:10])
+        past = today - timedelta(days=1)
+        cfg = vault / "system/config/settings.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data.setdefault("inbox", {})["meetings_from"] = 7             # not "monday": on a Monday there would be no past day
+        cfg.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        days, checked, processed = {}, {}, []
+        for d in (past, today):
+            iso, rows = d.isoformat(), []
+            for i, (start, end, title, teams) in enumerate(MEETING_TIMES, 1):
+                eid = f"evt-{iso[8:]}-{i:02d}"
+                rows.append({"id": eid, "start": start, "end": end, "title": title, "where": "Microsoft Teams Meeting", "all_day": False,
+                             "private": False, "teams": teams, "organiser": "Riley Stone", "organiser_email": "", "sensitivity": "normal",
+                             "recurrence": "", "body": "", "attendees": [{"name": f"Guest {k}", "email": "", "type": "required", "response": "accepted"}
+                                                                          for k in range(3)], "attachments": []})
+                state = {1: "available", 6: "available", 7: "none", 8: "not_transcribed"}.get(i)
+                if state:
+                    checked[eid] = {"status": state, "checked": f"{today.isoformat()} 08:05"}
+            days[iso] = rows
+            processed.append(f"{iso} | calendar:evt-{iso[8:]}-02 | {iso} Project kickoff.docx | 4")
+        cal = {"fetched": f"{today.isoformat()} 08:05", "to": (today + timedelta(days=3)).isoformat(), "days": days}
+        st = vault / "system/staging"
+        (st / "calendar.json").write_text(json.dumps(cal, indent=1), encoding="utf-8")
+        (st / "transcripts.json").write_text(json.dumps({"checked": checked, "version": 1}, indent=1), encoding="utf-8")
+        (vault / "system/processed.txt").write_text("\n".join(processed) + "\n", encoding="utf-8")
+        code, out = self.run_in_vault("build_dashboard.py")
+        self.assertEqual(code, 0, out[-400:])
+        self.b.reload("typeof go==='function' && LIVE")
+        return past.isoformat(), today.isoformat()
+
+    def pick(self, iso):
+        b = self.b
+        b.eval("go('today')")
+        b.wait("document.querySelectorAll('#todayDate [role=tab]').length>1", 30)
+        if iso == self.today_iso:
+            b.click(f'#todayDate [data-tab="{iso}"]')
+        else:
+            b.click("#todayDate .dypastbtn")
+            b.wait("document.querySelector('#todayDate [role=menu]')", 10)
+            day = date.fromisoformat(iso)
+            want = f"^{day.strftime('%A')} {day.day}(st|nd|rd|th) "           # the menu writes the day out: "Friday 23rd October"
+            b.eval(f"[...document.querySelectorAll('#todayDate [role=menuitem]')].find(i=>new RegExp({json.dumps(want)}).test(i.textContent.trim())).click()")
+        b.wait(f"(document.querySelector('#todayDate [aria-selected=\"true\"]')||{{}}).dataset&&document.querySelector('#todayDate [aria-selected=\"true\"]').dataset.tab==={json.dumps(iso)}", 15)
+        b.wait("document.querySelectorAll('#dayMeets .dm').length>0", 15)
+        b.pump(0.4)
+
+    def test_c31_a_past_day_on_today_has_no_follow_up_chips_or_links_and_intake_keeps_them(self):
+        """31. (#351 b) On a past day, Today lists the meetings with their times, titles and projects and nothing under them: none of "No
+        transcript", "Transcript ready", "Not checked yet", "Minutes made" (or "Draft in Review"), and no Check or Process link, at 1400
+        and 900 px with no sideways scroll. Today is unchanged (a title still opens the Prep peek on hover) and Intake still offers
+        Process and Check again for the same meetings."""
+        b = self.b
+        past, today = self.world()
+        self.today_iso = today
+        meets = "document.querySelectorAll('#dayMeets .dm')"
+        seen = {}
+        for w in (1400, 900):
+            with width(self, w, 1000):
+                self.pick(past)
+                seen[w] = b.eval(f"""({{n:{meets}.length, acts:document.querySelectorAll('#dayMeets .acts, #dayMeets .chip, #dayMeets .lk').length,
+                    text:document.getElementById('dayMeets').textContent,
+                    links:[...document.querySelectorAll('#dayMeets button, #dayMeets a')].map(e=>(e.textContent||'').trim()).filter(t=>/^(Check|Process|Review)$/.test(t)),
+                    side:document.documentElement.scrollWidth>document.documentElement.clientWidth+1 || document.getElementById('dayMeets').scrollWidth>document.getElementById('dayMeets').clientWidth+1}})""")
+                self.assertEqual(seen[w]["n"], len(MEETING_TIMES), f"the past day's meetings are all there at {w} px")
+                self.assertEqual(seen[w]["acts"], 0, f"a follow-up chip or link is under a past meeting at {w} px")
+                self.assertEqual(seen[w]["links"], [], f"a Check, Process or Review link is on the past day at {w} px")
+                for word in FOLLOW_UP_WORDS:
+                    self.assertNotIn(word, seen[w]["text"], f"'{word}' is on the past day at {w} px")
+                self.assertFalse(seen[w]["side"], f"the past day scrolls sideways at {w} px")
+        # today is unchanged: nothing under the meeting, and the title opens the Prep peek on a real pointer rest
+        self.pick(today)
+        self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .acts').length"), 0)
+        self.assertEqual(b.eval("document.querySelector('#dayMeets .dayaway')"), None, "today: no 'as of today' line")
+        c = b.box("#dayMeets .dmti")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=c["x"] - 40, y=c["y"] - 40)
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=c["x"], y=c["y"])
+        b.wait("document.querySelector('#dayMeets .dmpop')", 15)
+        self.assertIn("Open the prep page", b.eval("document.querySelector('#dayMeets .dmpop').textContent"))
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=5, y=5)
+        # Intake keeps the jobs: the same meetings offer Process (transcript ready) and Check again (waiting for one)
+        self.screen("intake-review")
+        b.wait("document.querySelector('#v-intake-review [data-ira=process]')", 20)
+        intake = b.eval("""({process:document.querySelectorAll('#v-intake-review [data-ira=process]:not([disabled])').length,
+            check:document.querySelectorAll('#v-intake-review [data-ira=check]').length,
+            rows:[...document.querySelectorAll('#v-intake-review [data-ira=process]')].map(e=>(e.closest('tr,li,.ir-row,[data-id]')||e.parentElement).innerText.replace(/\\s+/g,' ').slice(0,60))})""")
+        self.assertGreaterEqual(intake["process"], 2, f"Intake offers Process for the meetings with a transcript ready: {intake}")
+        self.assertGreaterEqual(intake["check"], 1, f"Intake offers Check again for a meeting still waiting for its transcript: {intake}")
+        self.note(31, f"past day {past} at 1400 and 900 px: {seen[1400]['n']} meetings, no chip, no Check or Process, no sideways scroll; "
+                      f"today's title opens the Prep peek; Intake shows {intake['process']} Process and {intake['check']} Check again")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
