@@ -95,6 +95,24 @@ class Recogniser(unittest.TestCase):
                   "check my mail for all", "sweep for today", "check the last 7 days"):
             self.assertFalse(self.ls.panel_sweep(m), m)       # an ordinary word is never read as a project code
 
+    @unittest.skipUnless("check (?:my )?(?:mail" in open(REPO / "system/scripts/live_server.py").read(),
+                         "needs dev/proposals/291/live_server.py.diff applied")
+    def test_347_old_and_new_words_and_the_edges(self):
+        """#347: the plain words and the old ones both start a sweep; a second instruction never does."""
+        for m in ("check my mail", "Check my mail please", "check my mail for ABC", "check my mail for the last 7 days",
+                  "check my mail now", "sweep", "sweep mail for ABC", "sweep the last 7 days", "sweep the UAT thread",
+                  "refresh calendar"):
+            self.assertTrue(self.ls.panel_sweep(m), m)
+        for m in ("check my mail and apply", "check my mail then approve", "check my mailbox settings",
+                  "check my mail and reply to Omar", "check my mail " + "x" * 130):
+            self.assertFalse(self.ls.panel_sweep(m), m)
+
+    @unittest.skipUnless(r"|save|" in open(REPO / "system/scripts/live_server.py").read(),
+                         "GUARDED: needs dev/proposals/347/live_server.py.diff applied (adds save to PANEL_SWEEP_NOT)")
+    def test_347_save_in_a_thread_subject_is_not_a_sweep(self):
+        self.assertFalse(self.ls.panel_sweep("sweep the budget save thread"))
+        self.assertFalse(self.ls.panel_sweep("check my mail and save"))
+
     def test_anything_more_is_a_plain_chat(self):
         for m in ("sweep and apply", "sweep then approve everything", "sweep, then apply", "sweep; apply", "apply",
                   "sweep mail for ABC and mark ABC-A-003 done", "sweep the budget and apply thread",

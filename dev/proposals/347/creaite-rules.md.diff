@@ -1,0 +1,17 @@
+diff --git a/system/creaite-rules.md b/system/creaite-rules.md
+index b9f094b1..2f687016 100644
+--- a/system/creaite-rules.md
++++ b/system/creaite-rules.md
+@@ -56,10 +56,10 @@ Paths are defined once in `system/scripts/paths.py`; keep this table in step wit
+ | Alan says | Skill or action | Status |
+ |-----------|-----------------|--------|
+ | "process new minutes", "process <file>", "process <meeting>", "re-extract", "note: …" | **cx-minutes**: draft Word minutes and proposed items; filed on approval | Specified |
+-| "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the <subject> thread", "refresh calendar" | **cx-sweep**: mail and Teams become proposals; runs at session start when due; skips what `sweep.ignore` (BL-97) matches; records anything a VIP sends (BL-99) as an alert first | Specified |
++| "check my mail", "check my mail for ABC", "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the <subject> thread", "refresh calendar" | **cx-sweep**: mail and Teams become proposals; runs at session start when due; skips what `sweep.ignore` (BL-97) matches; records anything a VIP sends (BL-99) as an alert first | Specified |
+ | "prep for the <meeting>", "prep page for the ABC steering" | **cx-prep** (BL-98): one Internal HTML prep page, saved in the Agendas folder | Built |
+ | "follow Mia Hale", "mark the follow alerts seen" | **People you follow (BL-99)**: the follow flag in the person's People entry (cx-edit); alerts in `system/staging/vip.json` (`sweep.py vip`), shown at the top of Today | Built |
+-| "review", "review ABC", "what's pending", "approve…", "reject…", "apply", "undo last apply", "import excel" | **cx-review**: bulk approval never covers minutes, new decisions or new risks; explicit apply | Specified |
++| "review", "review ABC", "what's pending", "approve…", "reject…", "save", "apply", "undo last save", "undo last apply", "import excel" | **cx-review**: bulk approval never covers minutes, new decisions or new risks; explicit apply | Specified |
+ | "mark ABC-A-003 done", "set sweep time to 06:30", "add an action for ABC…", "move ABC go-live to 2026-11-20", "add to ABC memory…", "add project DEF…", "close project ABC", "archive project ABC", "restore project ABC", "change project ABC's code to XYZ", "add Sara Khan to the people register" | **cx-edit**: shown before → after, confirmed, written at the next apply | Specified |
+ | "weekly report", "weekly report ABC" | **cx-weekly-report**: manual, with a Friday reminder; blocks projects with pending items. Alan's own Claude Code session only: ask creaite never drafts, stages or writes a report | Specified |
+ | "client report ABC" | **cx-client-report**: client-safe; its Word, HTML and PDF files are made only from its checked copy (`client_snapshot.client_export`, #239); a partner's name reaches a client only as its logo picture; risks, issues and decisions appear only if flagged client-visible. Never sends. An email about it follows the Draft email setting (#183): off, it is copied and pasted; on, the live server puts it in Alan's Outlook Drafts folder for him to check and send. The report is never sent. Manual, with a per-project reminder. Alan's own Claude Code session only: ask creaite never drafts, stages or writes a report | Specified |

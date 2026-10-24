@@ -1,0 +1,97 @@
+diff --git a/.claude/skills/cx-edit/SKILL.md b/.claude/skills/cx-edit/SKILL.md
+index 6ca2c652..d93341ec 100644
+--- a/.claude/skills/cx-edit/SKILL.md
++++ b/.claude/skills/cx-edit/SKILL.md
+@@ -5,7 +5,7 @@ description: creaite plain-English changes. Changes or adds tracker items, proje
+ 
+ # cx-edit
+ 
+-Turn a plain-English instruction into a staged, approved change. It is written only on the next "apply".
++Turn a plain-English instruction into a staged, approved change. It is written only on the next "save" (or "apply").
+ 
+ **Projects by name (BL-101):** refer to a project by its full name in everything Alan reads (summaries, tables, messages, file names, drafts). The short code appears only inside a work item's ID (`ABC-A-003`) and in a command he can type; `tracker.project_label(code)` gives the name.
+ 
+diff --git a/.claude/skills/cx-review/SKILL.md b/.claude/skills/cx-review/SKILL.md
+index 275d013c..3e35e534 100644
+--- a/.claude/skills/cx-review/SKILL.md
++++ b/.claude/skills/cx-review/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: cx-review
+-description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "apply", "undo last apply", or "import excel".
++description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. "save" means "apply" only as the whole message ("save", "save ABC", "save all") after a review list shown in this session; "undo last save" means "undo last apply". Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "save", "apply", "undo last save", "undo last apply", or "import excel".
+ ---
+ 
+ # cx-review
+@@ -37,8 +37,8 @@ Read `dev/staging-format.md` first. Only `system/scripts/tracker.py` writes. Thi
+ | "review", "review ABC", "review minutes" | Show the review (everything, one project, or draft minutes only) |
+ | Decisions (see below) | Record them in the proposal files; nothing is written yet |
+ | "import excel" | Run `system/scripts/run excel_sync.py import`, then show the review |
+-| "apply" | Run `system/scripts/run tracker.py apply` for every proposal with decided items |
+-| "undo last apply" | Confirm first, then run `system/scripts/run tracker.py undo` |
++| "save" (or "apply") | Run `system/scripts/run tracker.py apply` for every proposal with decided items |
++| "undo last save" (or "undo last apply") | Confirm first, then run `system/scripts/run tracker.py undo` |
+ 
+ Before showing a review, if `system/scripts/run excel_sync.py changed` reports unimported edits, offer to import them first.
+ 
+@@ -113,7 +113,7 @@ Once filed, a report is Alan's document. Later edits to the filed copy don't cha
+ 
+ ## Apply
+ 
+-Only on an explicit "apply":
++Only on an explicit "apply", or "save" (the same step; "save" counts only as the whole message, "save", "save ABC" or "save all", and only after a review list shown in this session, never for a note, a setting or a draft; otherwise ask). Before running tracker.py apply for "save", first say "Saving n approved items: <IDs>":
+ 1. Run `tracker.py apply` on each proposal with decided items. In one transaction it:
+    - backs up the database;
+    - writes the approved items;
+@@ -127,7 +127,7 @@ Only on an explicit "apply":
+ 
+ If the apply fails, nothing is written. Show the error and the item it relates to.
+ 
+-## Undo last apply
++## Undo last save (or apply)
+ 
+ 1. Show what the most recent apply did: items written or changed, meetings filed. Ask "Undo this?".
+ 2. On yes, run `tracker.py undo`. It:
+@@ -136,7 +136,7 @@ If the apply fails, nothing is written. Show the error and the item it relates t
+    - returns the undone items to pending (moving the proposal back from `applied/`);
+    - **skips any item changed since that apply,** and reports it rather than overwriting newer data;
+    - logs the undo itself.
+-3. Repeating "undo last apply" steps back through earlier applies, one at a time.
++3. Repeating "undo last save" steps back through earlier applies, one at a time.
+ 
+ 
+ ## Dates
+diff --git a/.claude/skills/cx-sweep/SKILL.md b/.claude/skills/cx-sweep/SKILL.md
+index 0d4e5024..773dde6e 100644
+--- a/.claude/skills/cx-sweep/SKILL.md
++++ b/.claude/skills/cx-sweep/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: cx-sweep
+-description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
++description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "check my mail", "check my mail for <CODE>", "check my mail for the last N days" (these exact forms only; any other mail question, such as "find the invoice from Bob", is a read-only search, not a sweep), "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
+ ---
+ 
+ # cx-sweep
+@@ -25,6 +25,8 @@ Read these first:
+ | Trigger | Window |
+ |---------|--------|
+ | "sweep" or "sweep mail" | Since the last successful sweep (`system/staging/last-sweep.txt`) |
++| "check my mail" | The same as "sweep" (the plain words; both work) |
++| "check my mail for ABC", "check my mail for the last 7 days" | The same as "sweep mail for ABC" and "sweep the last 7 days" |
+ | "sweep mail for ABC" | Since the last sweep (never further back than `sweep.max_lookback_days`, 3), project ABC only. Does not advance the timestamp |
+ | "sweep mail for the last 7 days" | The stated window. Does not advance the timestamp |
+ | "sweep the <subject> thread" | That thread. Does not advance the timestamp |
+diff --git a/.claude/skills/cx-weekly-report/SKILL.md b/.claude/skills/cx-weekly-report/SKILL.md
+index 377ce58d..6a676566 100644
+--- a/.claude/skills/cx-weekly-report/SKILL.md
++++ b/.claude/skills/cx-weekly-report/SKILL.md
+@@ -5,7 +5,7 @@ description: creaite weekly report. For each active project, proposes health wit
+ 
+ # cx-weekly-report
+ 
+-A weekly picture of each project, drafted for review. Nothing is written or filed until "apply".
++A weekly picture of each project, drafted for review. Nothing is written or filed until "save" (or "apply").
+ 
+ **Not from ask creaite (Alan, 19-10-2026).** Reports are the user's to edit in the Reporting hub. In an ask creaite chat (and in any run the live server starts) this skill never drafts, stages or writes a report or its draft: `reach.py`'s guard hook refuses `report.py weekly-stage`, an Edit or Write of a report file or draft, and a Bash call that names one. If asked there, say the report is made and edited in the Reporting hub (Generate, then edit) and offer to read it or answer questions about it. The steps below are for Alan's own Claude Code session only.
+ 
