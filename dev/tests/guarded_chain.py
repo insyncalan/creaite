@@ -47,7 +47,7 @@ BASE3 = "39c1060aaeffa0c47a03a3c8e0e48208d3cb9ed6"
 # cut and CHAIN4_SHA256 set with it, on Alan's say. `python3 dev/tests/guarded_chain.py` prints the value.
 CHAIN4_MARKER = "Guarded 2.6.4 chain:"
 CHAIN4_FILE = "dev/proposals/GUARDED-2.6.4.chain"
-CHAIN4_SHA256 = ""
+CHAIN4_SHA256 = "46c5fd81e62ef6d2b9b915db910277977652f879b84e4575b975fdc4824d84b3"
 BASE4 = "e6389af8bd466dabd768b7f1a4fd170922fda255"
 BASE = BASE4
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
