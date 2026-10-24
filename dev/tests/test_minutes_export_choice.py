@@ -51,6 +51,16 @@ class MinutesExportChoice(LiveBrowserCase):
     def ev(self, js):
         return self.b.eval(js)
 
+    def approve_boxes(self):
+        """Approve minutes: the confirm box if it opens, then #324's File the minutes box (each only if it opens)."""
+        for box, go in (("mnApprove", "#mnApproveGo"), ("mnFiling", "#mnFilingGo")):
+            try:
+                self.b.wait(f"(document.getElementById('{box}')||{{}}).open", 5)
+            except Exception:
+                continue
+            self.b.click(go)
+            self.b.pump(0.7)
+
     def open_menu(self):
         self.b.click("#v-minutes [data-mnexport]")
         self.b.wait("document.querySelector('#v-minutes .ddmenu.on')")
@@ -100,8 +110,7 @@ class MinutesExportChoice(LiveBrowserCase):
             self.assertEqual(self.files(), before, "no Shareable file from a draft")
         self.b.click("#mnApproveBtn")
         self.b.pump(0.5)
-        if self.ev("!!(document.getElementById('mnApprove') && document.getElementById('mnApprove').open)"):
-            self.b.click("#mnApproveGo")
+        self.approve_boxes()
         self.b.wait("document.querySelector('#v-minutes .sheet-status') && !/Draft/i.test(document.getElementById('mnApproveBtn')?document.getElementById('mnApproveBtn').textContent:'')", 20)
         self.b.pump(1)
         for label, fmt in FMT.items():
