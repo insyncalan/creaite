@@ -62,7 +62,7 @@ class DataTests(unittest.TestCase):
                          ["Jobs: nope", "Screen Work: gone", "Screen Work: Reference nope"])
 
     def test_a_broken_screen_line_is_a_build_error_naming_the_line(self):
-        for bad in ("Screen: Review review-and-approve-proposals", "Screen: Review -> a, b | Reference: review extra"):
+        for bad in ("Screen: Review review-and-approve-suggestions", "Screen: Review -> a, b | Reference: review extra"):
             with self.assertRaises(ValueError) as cm:
                 bd.help_screens(bad + "\n")
             self.assertIn(bad, str(cm.exception))
