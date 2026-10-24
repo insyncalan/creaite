@@ -71,12 +71,21 @@ AI that writes to your record unchecked is how a status goes quietly wrong. crea
 
 ## New in 2.6
 
-- **One Intake.** Review and Intake are now one page, with List, Board and Two panes views, and **Approve routine** for the routine suggestions.
-- **Minutes, rebuilt.** One version of the minutes, a Track column, edit in place, and one-click **Approve minutes** with Undo.
-- **People page.** The whole register in one place, with search, filters, add, edit and remove.
-- **Page keys** and a reorganised Settings.
+2.6.3 is out; every item below is in it.
 
-The plain-English notes for every release are in [`dev/release-notes/`](dev/release-notes/) ([2.6.0](dev/release-notes/2.6.0-plain.md)). This README is refreshed with each release.
+- **Approving is safer.** A button can no longer approve a different item when the list changes behind an open page, and Approve minutes skips what you already approved and says which.
+- **A minutes editor that says what it does.** Track is three icons (track, minutes only, drop), Approve minutes says how much it tracks, and an attention strip counts what still needs an owner or a date.
+- **Minutes you can share.** HTML and PDF carry the firm's look, the shareable version leaves out sensitive items, and the follow-up email is shareable by default.
+- **Today** shows nothing twice and always looks to the Friday of next week; a Week ahead milestone shows how many open work items it depends on.
+- **One Intake.** Review and Intake are one page, with List, Board and Two panes views, and **Approve routine** for the routine suggestions.
+- **Work items** with marks, compact rows and keys, an avatar menu, and a switch to start creaite when you sign in.
+- **Minutes you can file and export.** Approve minutes asks where they will be filed and what they will be called, and numbers the name if it is taken. Export offers Shareable and Internal versions, and the Word minutes carry the project name, date and attendees.
+- **Intake is easier to work through.** Tick several meetings and act on them from one right-click menu, group by day, project or state, and see each meeting's items nested beneath it.
+- **Cheaper chats with ask creaite.** Each question starts fresh by default, and a long chat offers a fresh start with a short summary.
+- **Email drafts in Outlook.** An opt-in setting, off by default, puts a draft in your Outlook Drafts folder. It never sends anything.
+- **Your profile** in Settings, and an Undo for minutes you set aside.
+
+The plain-English notes for every release are in [`dev/release-notes/`](dev/release-notes/) ([2.6.0](dev/release-notes/2.6.0-plain.md), [2.6.1](dev/release-notes/2.6.1-plain.md), [2.6.2](dev/release-notes/2.6.2-plain.md), [2.6.3](dev/release-notes/2.6.3-plain.md)). This README is refreshed with each release.
 
 ## Your data stays local
 
