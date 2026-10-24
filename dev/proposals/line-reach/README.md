@@ -11,7 +11,7 @@ be told it may not run them (an unknown command is declined, so the failure is s
 ## Risk (for the reviewer)
 
 Classing a script as `READ` lets an unconfirmed chat run it with no card. Both only read counts from the usage log and print them; neither
-has a command that writes. The test below holds both to `read` (not stage, guarded or record) and checks that a one-word change to
+has a command that writes. The test below holds both to `read` (none of the other four kinds) and checks that a one-word change to
 `record` turns it red.
 
 ## Order
