@@ -277,10 +277,6 @@
    "count": 1,
    "text": "creaite is applying a change; try again in a moment."
   },
-  "live_server.py | apply | 53e9d023330b": {
-   "count": 1,
-   "text": "Nothing to apply: no decided items."
-  },
   "live_server.py | apply | 59c24e495d27": {
    "count": 1,
    "text": "Staged and approved: auto-apply is off, so it's written when you press Apply."
@@ -334,7 +330,7 @@
    "text": "it changes what ask creaite may do (a permission rule in .claude/settings.json)"
   },
   "live_server.py | proposal | fc64089924e4": {
-   "count": 7,
+   "count": 6,
    "text": "That proposal is no longer pending."
   },
   "live_server.py | script | 0eb251259b7c": {
@@ -641,10 +637,6 @@
    "count": 1,
    "text": "Apply stopped. Nothing was written."
   },
-  "tracker.py | apply | 38c0ef0fc21a": {
-   "count": 1,
-   "text": "{} pending proposal(s) still mention {}: {}. Apply or reject them first"
-  },
   "tracker.py | apply | 4a5a5171033c": {
    "count": 1,
    "text": "Apply failed; nothing was written. {}: {}"
@@ -652,14 +644,6 @@
   "tracker.py | apply | 4ac7ed23bd99": {
    "count": 1,
    "text": "Apply {}: written {}, filed {}, rejected {}, {}{} still pending."
-  },
-  "tracker.py | apply | 53e9d023330b": {
-   "count": 1,
-   "text": "Nothing to apply: no decided items."
-  },
-  "tracker.py | apply | 5987ca46b1d2": {
-   "count": 1,
-   "text": "Left in staging, not applied: {}. Delete note or Move back again, or remove {}."
   },
   "tracker.py | apply | 8268275a6f44": {
    "count": 1,
@@ -669,65 +653,17 @@
    "count": 1,
    "text": "Held in Review, not applied: {} {}"
   },
-  "tracker.py | apply | 88ea4fe2f7d5": {
-   "count": 1,
-   "text": "{} is a recode: applying it first, on its own. Run apply again for the other proposals."
-  },
-  "tracker.py | apply | a4d7f4d20d92": {
-   "count": 1,
-   "text": "Missed is retired: {} milestone(s) ({}) are now Planned with the state Overdue (apply {}, in Activit"
-  },
   "tracker.py | apply | ab216211262f": {
    "count": 1,
    "text": "Nothing applied: every decided item is held in Review."
-  },
-  "tracker.py | apply | bde9eabc503c": {
-   "count": 1,
-   "text": "Apply {} is the 1.5.0 migration that retired Missed (those milestones are now Overdue). It can't be "
   },
   "tracker.py | apply | c6de4379819c": {
    "count": 1,
    "text": "Undid apply {}: {} item(s) reversed."
   },
-  "tracker.py | apply | ed8faf5eeb31": {
-   "count": 1,
-   "text": "copy: {} is taken by a different file in this apply"
-  },
-  "tracker.py | apply | f0e473ca609c": {
-   "count": 1,
-   "text": "(The database backup from before the apply is {}.)"
-  },
-  "tracker.py | apply | fd6b6ac87f80": {
-   "count": 1,
-   "text": "Left in staging, not applied: {}: {}."
-  },
-  "tracker.py | cx- name | e301e6d45fe7": {
-   "count": 1,
-   "text": "unknown label {} (labels: {}); add it in Settings or with cx-edit first"
-  },
-  "tracker.py | cx- name | fcd4283cc529": {
-   "count": 1,
-   "text": "Workstreams added from items and settings ({}): {}. Leads and keywords are yours to fill (each proje"
-  },
   "tracker.py | path | 21ef5d43f88d": {
    "count": 1,
    "text": "system/guard is a symlink"
-  },
-  "tracker.py | path | 4e21da393591": {
-   "count": 1,
-   "text": "move: path must be a stored projects/ path ({})"
-  },
-  "tracker.py | path | 714bea0093ff": {
-   "count": 1,
-   "text": "remove: {} is not a file in inbox/"
-  },
-  "tracker.py | path | 93e6d4d04676": {
-   "count": 1,
-   "text": "copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({})"
-  },
-  "tracker.py | path | f20557cc81e7": {
-   "count": 1,
-   "text": "{}: {} is not in projects/, inbox/, system/staging/ or system/search/"
   },
   "tracker.py | proposal | 05dd21773efe": {
    "count": 1,
@@ -737,97 +673,21 @@
    "count": 2,
    "text": "write: {} changed since this proposal was made"
   },
-  "tracker.py | proposal | 38c0ef0fc21a": {
-   "count": 1,
-   "text": "{} pending proposal(s) still mention {}: {}. Apply or reject them first"
-  },
-  "tracker.py | proposal | 56b10ebfcf81": {
-   "count": 1,
-   "text": "{} {} refers to item {}, which isn't a new item written before it in this proposal"
-  },
   "tracker.py | proposal | 5b718c50d7c2": {
    "count": 1,
    "text": "{} changed at {} after this proposal was made"
-  },
-  "tracker.py | proposal | 88ea4fe2f7d5": {
-   "count": 1,
-   "text": "{} is a recode: applying it first, on its own. Run apply again for the other proposals."
   },
   "tracker.py | script | 78be3fdf20d1": {
    "count": 1,
    "text": "Schema changed for {}: run tracker.py migrate."
   },
-  "tracker.py | script | 7d20854244a8": {
-   "count": 1,
-   "text": "new items carry no ID; tracker.py assigns it"
-  },
   "tracker.py | script | fda1dfc69355": {
    "count": 1,
    "text": "Usage: tracker.py undo-changes [--dry-run] [--json] <rowid> [<rowid> …]"
   },
-  "tracker.py | stage | 0f6e092e77d2": {
-   "count": 1,
-   "text": "Item {}: Raised set to {} (source or staging date)"
-  },
-  "tracker.py | stage | 3f59e10c28ab": {
-   "count": 1,
-   "text": "remove: {}: the file changed since it was staged"
-  },
-  "tracker.py | stage | 4ddabcb55c45": {
-   "count": 2,
-   "text": "copy: {}: the file changed since it was staged"
-  },
-  "tracker.py | stage | 5987ca46b1d2": {
-   "count": 1,
-   "text": "Left in staging, not applied: {}. Delete note or Move back again, or remove {}."
-  },
-  "tracker.py | stage | 93e6d4d04676": {
-   "count": 1,
-   "text": "copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({})"
-  },
-  "tracker.py | stage | e02d54f8c2ae": {
-   "count": 1,
-   "text": "{} item {}: Raised set to {} (source or staging date)"
-  },
-  "tracker.py | stage | f20557cc81e7": {
-   "count": 1,
-   "text": "{}: {} is not in projects/, inbox/, system/staging/ or system/search/"
-  },
-  "tracker.py | stage | fd6b6ac87f80": {
-   "count": 1,
-   "text": "Left in staging, not applied: {}: {}."
-  },
-  "tracker.py | tracker | 019d43d339b6": {
-   "count": 1,
-   "text": "{} is not a project in the tracker"
-  },
-  "tracker.py | tracker | 3103a19f1c99": {
-   "count": 1,
-   "text": "{} (replaced by this decision) is not in the tracker"
-  },
-  "tracker.py | tracker | 3f1ddab9df9b": {
-   "count": 1,
-   "text": "{} isn't an action, RAID item or decision in the tracker, so it can't carry a label"
-  },
-  "tracker.py | tracker | 6d819a7bca74": {
-   "count": 1,
-   "text": "milestone {} is not in the tracker"
-  },
-  "tracker.py | tracker | 6f0c27faefcf": {
-   "count": 1,
-   "text": "project {} is not in the tracker"
-  },
-  "tracker.py | tracker | 739e6d09f0b5": {
-   "count": 1,
-   "text": "{} {} is not in the tracker"
-  },
   "tracker.py | tracker | 78be3fdf20d1": {
    "count": 1,
    "text": "Schema changed for {}: run tracker.py migrate."
-  },
-  "tracker.py | tracker | 7d20854244a8": {
-   "count": 1,
-   "text": "new items carry no ID; tracker.py assigns it"
   },
   "tracker.py | tracker | fda1dfc69355": {
    "count": 1,
@@ -840,26 +700,6 @@
   "tracker.py | valid | fbae96024e2a": {
    "count": 1,
    "text": "unknown field(s) for {}: {}. Valid: {}"
-  },
-  "tracker.py | vault | 430266afb6ee": {
-   "count": 1,
-   "text": "{}: path is outside the vault ({})"
-  },
-  "tracker.py | vault | 461b12bbf9ec": {
-   "count": 1,
-   "text": "{}: path is outside the vault and the projects folder ({})"
-  },
-  "tracker.py | vault | 4aed555b6627": {
-   "count": 1,
-   "text": "{}: path must be relative to the vault root ({})"
-  },
-  "tracker.py | vault | a1a55305f487": {
-   "count": 1,
-   "text": "copy: the source must be a path in the vault or the projects folder, with no '..' ({})"
-  },
-  "tracker.py | vault | a4a613ff0dff": {
-   "count": 1,
-   "text": "copy: the source is outside the vault and the projects folder ({})"
   },
   "update.py | path | df5aa8d53c57": {
    "count": 1,
