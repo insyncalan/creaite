@@ -6438,6 +6438,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvMovement: () => mvMovement,
     mvNoneMsg: () => mvNoneMsg,
     mvNoneShown: () => mvNoneShown,
+    mvNoneText: () => mvNoneText,
     mvOf: () => mvOf,
     mvOpen: () => mvOpen,
     mvOpenPage: () => mvOpenPage,
@@ -44926,9 +44927,10 @@ system/scripts/run launch.py agent ${what}`;
     const n4 = mvAll(code).length;
     return !!(cli && n4 && !mvVis(code, true, false).length);
   }
+  var mvNoneText = (n4) => n4 === 1 ? "The milestone is not shown to the client yet. Switch to Internal view to see it." : `None of the ${n4} milestones are shown to the client yet. Switch to Internal view to see them.`;
   function mvNoneMsg(code, add) {
     const n4 = mvAll(code).length;
-    return `<p class="mv-none">${n4 === 1 ? "The milestone is" : `None of the ${n4} milestones are`} shown to the client yet. Switch to Internal view to see ${n4 === 1 ? "it" : "them"}.${add ? ` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>` : ""}</p>`;
+    return `<p class="mv-none">${mvNoneText(n4)}${add ? ` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>` : ""}</p>`;
   }
   function mvOpen(code, cli, move) {
     return mvVis(code, cli, move).filter((m5) => m5.state !== "achieved").sort((a5, b5) => (a5.agr || a5.fc || "9").localeCompare(b5.agr || b5.fc || "9"));
@@ -55573,46 +55575,6 @@ ${pre}**Current state title:** ${title}`);
     const n4 = name(code);
     return /* @__PURE__ */ u4("span", { class: "pcode plink", "data-proj": code, role: "link", tabIndex: 0, title: `Open ${n4}`, children: n4 });
   }
-  function FollowUp({ m: m5, live, acts: acts2 }) {
-    const f5 = m5.follow, off = live ? void 0 : "creaite isn’t running";
-    if (!f5) return null;
-    if (m5.running) return /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: m5.running });
-    if (f5.state === "minutes") return f5.draft ? /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4(Chip, { tone: "warn", children: "Draft in Review" }),
-      /* @__PURE__ */ u4("button", { type: "button", class: "lk", "aria-label": `Review the draft minutes of ${m5.title}`, onClick: () => acts2.review(), children: "Review" })
-    ] }) : /* @__PURE__ */ u4(Chip, { tone: "ok", tip: f5.processed_shown ? `Processed ${f5.processed_shown}` : void 0, children: "Minutes made" });
-    if (f5.state === "transcript") return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4(Chip, { tone: "warn", children: "Transcript ready" }),
-      /* @__PURE__ */ u4(
-        "button",
-        {
-          type: "button",
-          class: "lk",
-          "aria-label": `Process the transcript of ${m5.title}`,
-          "data-tip": off || "Draft minutes and suggested items from it ",
-          disabled: !live,
-          onClick: () => acts2.process(m5),
-          children: "Process"
-        }
-      )
-    ] });
-    if (f5.checked === false && m5.id) return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4(Chip, { tone: "mute", children: "Not checked yet" }),
-      /* @__PURE__ */ u4(
-        "button",
-        {
-          type: "button",
-          class: "lk",
-          "aria-label": `Check for a transcript of ${m5.title}`,
-          "data-tip": off || "Look for its transcript in Teams",
-          disabled: !live,
-          onClick: () => acts2.check(m5),
-          children: "Check"
-        }
-      )
-    ] });
-    return /* @__PURE__ */ u4(Chip, { tone: "mute", tip: f5.why, children: "No transcript" });
-  }
   function Title({ m: m5, day, dow: dow2, isToday, live, acts: acts2 }) {
     const p6 = m5.prep, pk2 = usePeek(!m5.private && !!p6);
     if (m5.private || !p6) return /* @__PURE__ */ u4(S2, { children: m5.title ?? "" });
@@ -55659,7 +55621,6 @@ ${pre}**Current state title:** ${title}`);
     return /* @__PURE__ */ u4(S2, { children: [
       meetings.length ? /* @__PURE__ */ u4("div", { class: "daymeets", ref, children: meetings.map((e4) => {
         const hidden = e4.private || e4.confidential, wh2 = hidden ? "" : [e4.where, e4.organiser === true ? "You organise" : e4.organiser ? `Organised by ${e4.organiser}` : ""].filter(Boolean).join(" · ");
-        const acts22 = e4.private || !past ? null : /* @__PURE__ */ u4(FollowUp, { m: e4, live, acts: acts2 });
         return /* @__PURE__ */ u4("div", { class: `dm ${st2(e4)}`, children: [
           /* @__PURE__ */ u4("div", { class: "tm", children: [
             e4.start,
@@ -55673,8 +55634,7 @@ ${pre}**Current state title:** ${title}`);
               /* @__PURE__ */ u4(Proj, { code: e4.p, name: acts2.name })
             ] }) : null
           ] }),
-          wh2 ? /* @__PURE__ */ u4("div", { class: "wh", children: wh2 }) : null,
-          acts22 ? /* @__PURE__ */ u4("div", { class: "acts", children: acts22 }) : null
+          wh2 ? /* @__PURE__ */ u4("div", { class: "wh", children: wh2 }) : null
         ] });
       }) }) : null,
       allDay.length ? /* @__PURE__ */ u4("div", { class: "dayall", ref, children: [
@@ -81566,6 +81526,7 @@ Next: `;
         "mvEdDraw",
         "mvEdOpen",
         "mvGet",
+        "mvNoneText",
         "mvOpenPage",
         "mvRebaseline",
         "mvSetState",
