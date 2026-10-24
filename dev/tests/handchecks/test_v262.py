@@ -384,7 +384,9 @@ class Discard262(Engine262):
         """Held minutes set aside by Discard (POST /api/review, as the page's button does): (the proposal's name, its bytes before, the
         set-aside file's path)."""
         prop, before = self.held_minutes(title)
-        code, res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "discard"})
+        # 2.6.3 makes `expect` mandatory on /api/review: send the minutes row's fingerprint, as the page does
+        fp = self.py("import build_dashboard as b, json\nd = json.load(open('system/staging/%s'))\nprint(json.dumps(b.block_fp(d['meeting'])))" % prop.name)
+        code, res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "discard", "expect": fp})
         self.assertEqual((code, res.get("ok")), (200, True), res)
         aside = self.staging("discarded") / prop.name
         self.assertTrue(aside.is_file() and not prop.exists(), "Discard set the proposal aside")
