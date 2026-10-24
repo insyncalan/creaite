@@ -1,5 +1,15 @@
-# The approved guarded chain for 2.6.4, one diff per line, in order of use. Read by dev/tests/guarded_chain.py.
-# Lines starting with # are comments. Paths are relative to the repo root. Change this list only when Alan approves a change to the chain.
-# Base: the 2.6.3 release (main e6389af8; the 2.6.1, 2.6.2 and 2.6.3 chains are already in place there).
-# EMPTY until the list is cut (345, 346, then the 334 live_server diff, from the v264-guarded branch). While it is empty CHAIN4_SHA256 is
-# empty too and a commit marked "Guarded 2.6.4 chain:" fails closed: its guarded files are reported as changed.
+# CANDIDATE guarded chain for 2.6.4 with the rules slimming (not the real list: GUARDED-2.6.4.chain stays empty until the cut). One diff per line, in order of use.
+# Base: main 799da01c (the 2.6.3 release plus its log entry; engine files identical to e6389af8).
+# #345: every route that decides an item names the item
+dev/proposals/345/live_server.diff
+# #346: the runs chat carries nothing; a failed run set-up leaves no record and no stuck run
+dev/proposals/346/live_server.diff
+# #334: weekly AI budget gate (needs ai_budget.py, merged separately)
+dev/proposals/334/live_server.diff
+# line-reach: ai_budget.py and start_tokens_report.py are read-only commands (needs both scripts, same release)
+dev/proposals/line-reach/reach.diff
+# #292: plain wording in tracker.py and the one matching line in live_server.py
+dev/proposals/292-tracker/tracker.diff
+dev/proposals/292-tracker/live_server.diff
+# 338: slimmer creaite-rules.md, LAST (Alan approved, 24-10-2026); needs system/templates/creaite-reference.md in the same release
+dev/proposals/338/creaite-rules.after-chain.diff

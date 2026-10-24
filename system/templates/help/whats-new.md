@@ -2,6 +2,65 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.4
+
+2.6.4 contains all of 2.6.3. The headline: the words on screen and in Help are plain (suggestions, save, your project record, your creaite folder, a mail and Teams check), there is a weekly budget for creaite's own AI use that stays off until you switch it on, a set of design fixes, and a page that has gone stale is now turned away instead of deciding the wrong item. A few older wordings and paths are still on screen in places; they are listed under Good to know.
+
+
+### Plain words
+- **The words on screen are plain.** "Proposals" are suggestions, and they wait for you in Review. Approving a change now says save. What used to be called the tracker is your project record, "the vault" is your creaite folder, and a "sweep" is a mail and Teams check: Today says "Mail and Teams not checked yet today" with a Check now button, and Settings says "Daily check time". A message that says creaite isn't running says that, in those words. Your own change reads "Saved" with Undo. (#292)
+- **Health speaks plainly.** Every title and Fix it button in Settings › Health is written for a person. For example "Chrome's copy of the app shows an old icon" is now "The creaite app shows an old icon", and "Your launcher opens another vault" is now "Your creaite app opens a different copy of creaite". The Release button on a stuck check is now "Clear it". (#292)
+- **Help and What's new are rewritten in the same words.** The pages and the chat wording now match what the screens say. (#293)
+- **Commands.** You can say "check my mail", "check my mail and Teams", "check mail for ABC" or "check my mail the last 7 days" to ask creaite for a mail and Teams check. It runs at once and saves suggestions only. These words already worked; Help and the screens now use them. The older words ("sweep", "sweep mail for ABC", "refresh calendar") still work exactly as before. (#292, #293)
+
+### Design fixes
+- **Settings.** The tick rows (for example Weekend and "Week ahead shows") keep room for their label, so it no longer squeezes to one word beside the tick boxes. (#337)
+- **Activity.** The By column keeps "Rejected in review" on one line at 900 px, so the rows are shorter. (#337)
+- **Pencils and charts.** The edit pencils are easier to see (less faint), the small text on the charts is no smaller than 12 px, and the click targets are at least 24 px. (#337)
+- **People.** At 900 px the table is tighter and its headings can wrap, so the Overdue column, which it sorts by, is on screen without sideways scrolling. (#337)
+- **Milestones in Client view.** When none of a project's milestones are shown to the client, Client view says so, and that Internal view shows them, with Add milestone beside it, instead of "0 achieved, 0 to come". With one milestone it reads "The milestone is not shown to the client yet"; with several, "None of the 3 milestones are shown to the client yet" (the number is how many there are). (#337)
+
+### Minutes
+- **Three smaller fixes (#333).** The transcript pane says "1 turn", not "1 turns". A date shown as 20-11-2026 is no longer flagged as a figure the speaker never said when the transcript says "the 20th of November" (or the date in numbers). A possible duplicate from another project is marked only when it is a close match, so there are fewer false matches.
+
+### Chats with ask creaite
+- **A weekly budget for creaite's own AI use, off until you switch it on.** Settings › Advanced, in "creaite and ask creaite", has "Weekly AI budget". Switched on, it counts the week's AI use (ask creaite, drafts, the mail and Teams check and the alert check), Monday to Sunday, in dollars (50 to start) or tokens. From 80% a quiet line in the chat warns you. At 100% a request you type either asks first ("Run anyway" or "Cancel") or is refused until Monday, whichever you chose in "At the limit". The Usage tab shows used against the budget and the date the week ends. With it off, the Usage tab says so and where to switch it on, and nothing is ever held or warned about. It holds only a request you type to ask creaite: the buttons in the dashboard (Review, Save, Undo), the daily check and the alert check are never held. It keeps counts and dates only, never any text, and an ask creaite run cannot raise or reset it (changing Settings needs your approval card). (#334)
+
+### Review
+- **A stale page is turned away.** Every way of deciding on a suggestion from the page now says which item it means, and checks it is still the version you saw. If the list changed behind an open page, you read "That item has changed since you looked at it, so nothing was changed. Look at the list again." and nothing is decided on the wrong item. This now covers reject, Approve instead, repeat, make it an update, and moving an item to another project. (#345)
+- **Approve minutes checks the items too.** It now checks the minutes and every item you ticked, not only the minutes, so minutes that were re-extracted behind an open page are not approved with different items than you saw. (#345)
+
+### Today and your profile
+- **No "no update for 7 days" line on Today.** The line and its Draft updates button are gone from My Commitments. The draft is still there: in Work, select two or more actions and the bar offers Draft updates. (#352)
+- **Past days on Today are plainer.** When you look at a day that has passed, the meetings are listed with their times, titles and projects and nothing under them: the labels "No transcript", "Transcript ready", "Not checked yet" and "Minutes made" (and "Draft in Review"), and the Check and Process links, are gone. Check and Process are still in Intake for the same meetings (Intake offers Process and Check again). Today and later days are unchanged: a meeting's title still opens its Prep peek. (#351)
+- **A colleague's name no longer shows their details as yours.** If you set your name in Your profile to someone in the people register, the card no longer shows their email, organisation or role as yours. Add my details asks "Is that row you?" before it changes their row. (#348)
+
+### Behind the scenes
+- The chat of runs creaite started itself ("Runs creaite started") no longer carries what a run read into your next question. A run that fails to set up leaves nothing behind, and creaite no longer answers "busy" afterwards. (#346)
+- If you rename minutes while approving them, another open Review page is brought up to date instead of refusing until you reload it. (#346)
+- New reports for the team that measure how big each run is at the start, and the size of the rules files. They change nothing on screen. (#87)
+- Tests for the draft routes now run in the release checks (#350), and several tests that failed now and then no longer do (#349).
+
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+- If you want a weekly limit on creaite's AI use, switch on "Weekly AI budget" in Settings › Advanced and set the amount and what happens at the limit. It does nothing until you do.
+- Walk Today, Intake, Review, Work, Settings and Health once, looking for old wording or a file path.
+
+
+- A dashboard tab left open from before the update gets a "reload the page" message instead of deciding anything. Reload it.
+- The weekly budget is off by default. Once on, a count that goes wrong never blocks Review, Save or Undo, a mail check or an alert check.
+- Not in 2.6.4 (minutes): only the three #333 fixes above are in. The other six wait, among them the count in the toast after Approve minutes (it can say more work items registered than were saved when a ticked row is held back in Review) and the long dates ("23 October 2026") in the minutes headers, which need your decision.
+- Not in 2.6.4: the lighter rules file (#338). The rules every run reads are the same size as in 2.6.3.
+- Still on screen in a few places: a file path or a command (the hover on the portfolio folder in Files, the folder shown on a project's Settings page, the detail lines of some Health checks).
+- Help still says past days on Today show each meeting's follow-up ("Transcript ready", "Minutes made", "Check", "Process"). That is out of date since the change above; use Intake for those jobs.
+- Still wrong in one place: after you edit an item, the top says "Saved for Review" while the bar below says nothing is saved until you press Save.
+- On the People page at 900 px, a long word can still break in the middle.
+- The figure check does not look at the year when the transcript gives a date as a day and month in words: "20-11-2027" passes against "the 20th of November". A month word that is a verb ("may") can also pass as the month.
+- In a rare crash recovery (a stopped run that started its work in the same minute as an earlier suggestion), the earlier minutes can drop out of Review with nothing on the page showing it.
+- Older words you type still work: "sweep" and "process new minutes". Help's command table still lists them.
+- Not in 2.6.4: fetching transcripts as they appear, the shared-database work (paused).
+
 ## creaite 2.6.3
 
 2.6.3 contains all of 2.6.2. The headline: Intake is easier to work through (tick several meetings, one right-click menu, Group by, nested items), the minutes can be exported as Shareable or Internal, the Word minutes carry the project name, date and attendees, and ask creaite starts each question fresh so chats stay cheap. Some older wording is still on screen in a few places; it is replaced in 2.6.4.
