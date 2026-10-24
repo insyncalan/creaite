@@ -1195,7 +1195,7 @@ def page_title(doc):
 def audience_label(doc):
     """The audience as a document's title block and page say it (v2.6.1): an internal one says it is not for distribution, so an
     exported Word, PDF or HTML file is never mistaken for something to send; the distributed and client ones say what they are."""
-    names = {"internal": "Internal, not for distribution", "client": "Client", "distributed": "Distributed"}
+    names = {"internal": "Internal, not for distribution", "client": "Client", "distributed": "Shareable"}
     return names[doc.get("audience") or "internal"]
 
 

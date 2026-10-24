@@ -416,7 +416,7 @@ class Distributed(Base):
         self.assertNotIn("The committee met.", page)
         self.assertNotIn("Test data isn't anonymised", page)                          # marked as @2, filed as ABC-005
         self.assertIn("Book the UAT environment", page)
-        self.assertIn("Distributed", page)
+        self.assertIn("Shareable", page)
         self.assertEqual((self.v.root / FILED).read_bytes(), before)                  # the filed minutes are untouched
         left = [f.name for f in (self.v.root / "system/staging/drafts").iterdir() if "(shareable)" in f.name]
         self.assertEqual(left, [])                                                     # no working copy is left behind
