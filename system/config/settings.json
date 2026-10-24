@@ -148,7 +148,8 @@
     "enabled": true,
     "shortcut": "Cmd/Ctrl+J",
     "confirm_writes": true,
-    "run_timeout_minutes": 30
+    "run_timeout_minutes": 30,
+    "long_chat_turns": 30
   },
   "identity": {
     "name": "Alan Carter",

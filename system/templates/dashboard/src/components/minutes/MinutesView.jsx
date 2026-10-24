@@ -26,6 +26,7 @@ import { Attention } from "./Attention.jsx";
 import { MinutesCtx } from "./context.js";
 import { Coverage } from "./Coverage.jsx";
 import { ItemTable } from "./ItemTable.jsx";
+import { installRowKeys, rowKeysReset } from "./rowKeys.js";
 import { checksOf } from "./minutesDoc.js";
 import { SummaryText, TextLines } from "./TextLines.jsx";
 import { approveLabel, approveProblems, trackCounts, trackedKinds, trackSummary } from "./track.js";
@@ -326,10 +327,11 @@ let mnMounted = false;
 export function renderMinutes(arg) {
   const el = $("#v-minutes");
   if (!el) return;
-  if (!mnMounted) { render(<MinutesView />, el); mnMounted = true; }
+  if (!mnMounted) { render(<MinutesView />, el); mnMounted = true;
+    installRowKeys({ doc: () => minutesDoc.value, plan: () => { const v = minutesView.value; return v && v.plan ? v.plan.items : null; }, setDoc: onDoc }); }   // #302 C
   const a = typeof arg === "string" ? { path: arg } : arg;
   if (a && (a.file || a.path)) {
-    dirty = false; keptChecks.value = []; approveOpen.value = false; paneRemembered();
+    dirty = false; rowKeysReset(); keptChecks.value = []; approveOpen.value = false; paneRemembered();
     loadMinutes(a).then(() => { navWrite(false); tabTitle(); if (a.approve) approveNow(false); });   // #275: from Review's Approve
   }
 }

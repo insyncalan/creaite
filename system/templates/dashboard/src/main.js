@@ -103,6 +103,7 @@ export * from "./components/peek/SneakPeek.jsx";   /* BL-322: Sneak peek */
 export * from "./components/peek/PeekProps.jsx";   /* BL-316: the peek's properties as Chips */
 
 export * from "./sneak.js";
+export * from "./chatLength.js";   /* #335 */
 export * from "./notes.js";   /* BL-301 B: the Notes tab */
 export * from "./stores/notes.js";
 export * from "./components/notes/FindUpdates.jsx";   /* BL-301 E: Find updates, the panel beside a note */
@@ -131,6 +132,7 @@ export * from "./components/report/hub/ClientReportPanel.jsx";   /* H3 (#221): t
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";
 import { bootData } from "./core/data.js";
+import { bootChatLength } from "./chatLength.js";
 import { bootDayRoll } from "./core/dayroll.js";
 import { bootAutostart } from "./autostart.js";
 import { bootProfile } from "./profile.js";   /* #312 */
@@ -283,6 +285,7 @@ bootPanel0165();
 bootPanel0166();
 bootPanelChase();
 bootSneak();
+bootChatLength();
 bootPanel0167();
 bootPanel0168();
 bootPanel0169();

@@ -263,6 +263,14 @@
    "count": 1,
    "text": "Raised in {} meetings or sweeps, with no response yet"
   },
+  "chatLength.js | script | 003b1f99b9e6": {
+   "count": 1,
+   "text": "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and"
+  },
+  "chatLength.js | script | e9cadb97048f": {
+   "count": 1,
+   "text": "Names dev/tests use by name (b.eval(\"go('today')\")): each one a module exports is on window. Regener"
+  },
   "components/LinkPopover.jsx | apply | cfea419c3b4e": {
    "count": 1,
    "text": "Apply"
@@ -538,14 +546,6 @@
   "components/today/ToDecide.jsx | stage | edd000f39a20": {
    "count": 1,
    "text": "Close of {}: Staged for Review"
-  },
-  "core/dayroll.js | script | 003b1f99b9e6": {
-   "count": 1,
-   "text": "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and"
-  },
-  "core/dayroll.js | script | e9cadb97048f": {
-   "count": 1,
-   "text": "Names dev/tests use by name (b.eval(\"go('today')\")): each one a module exports is on window. Regener"
   },
   "core/fields.js | apply | 043583a00a66": {
    "count": 1,
