@@ -1408,7 +1408,6 @@ EXPORTS = {"html": ".html", "docx": ".docx", "pdf": ".pdf"}
 TEMPLATES = {"weekly": "weekly-report-template.docx", "client": "client-report-template.docx", "minutes": "minutes-template.docx"}
 WORD_EL = re.compile(r"<w:p(?: [^>]*)?/>|<w:p(?: [^>]*)?>.*?</w:p>|<w:tbl>.*?</w:tbl>", re.S)
 WORD_TEXT = re.compile(r"<w:t(?: [^>]*)?>([^<]*)</w:t>")
-FRONT_DROP = ("{{HEALTH_LINE}}", "{{ATTENDEES}}")     # the template's health and attendees lines: the document's sections instead
 CHROME_SECONDS = 90
 
 
@@ -2270,15 +2269,52 @@ def _front_values(doc):
             "MEETING_WHEN": meta.get("when") or tracker.long_date(d), "REPORT_DATE": tracker.long_date(d)}
 
 
-def _front(els, doc):
-    """The template's title block, filled: the project or meeting, the status line and the date. Health and attendees lines go
-    (they are sections)."""
+def _header_lines(shown):
+    """The When and Attendees lines of the shown header section, as the page prints them (the text after "**When:**" and
+    "**Attendees:**", as the page prints them: a link as its words, a list under the label included).
+    The header section is the page's own: a hidden header, or one a client or distributed
+    document doesn't show, is already empty in `shown` (clean), so nothing is read from it. Anything else is not read."""
+    header = next((s for s in shown.get("sections") or [] if s.get("type") == "header" and not s.get("hidden")), None)
+    import html
+    found, last = {"when": [], "attendees": []}, None
+    # The page's own reading of the text (md_html): a link keeps its words only, and a list under the label belongs to it.
+    for para, item in re.findall(r"<p>(.*?)</p>|<li>(.*?)</li>", md_html((header or {}).get("text") or ""), re.S):
+        line = html.unescape(re.sub(r"<[^>]*>", "", para or item)).strip()
+        m = re.match(r"(When|Attendees):\s*(.*)", line) if para else None
+        if m:
+            last = m[1].lower()
+            if m[2]:
+                found[last].append(m[2])
+        elif item and last == "attendees" and line:
+            found[last].append(line)
+        else:
+            last = None
+    return {k: _nobraces("; ".join(v)).strip() for k, v in found.items() if v}
+
+
+def _who_line(doc, els):
+    """The project's name (and the client) as a title-block line, when the template has no PROJECT_NAME of its own; else empty."""
+    if any("{{PROJECT_NAME}}" in _word_text(e) for e in els):
+        return ""
+    return _nobraces(doc.get("project_name") or "") + ((" · " + _nobraces(doc["client"])) if doc.get("client") else "")
+
+
+def _front(els, doc, lines=None):
+    """The template's title block, filled: the project or meeting, the status line, the date, and (#331) the project's name, the
+    meeting's When and the attendees, as the page has them (`lines`, _header_lines). The health line goes (it is a section)."""
     import docx_tools
     values, has_start = _front_values(doc), bool((doc.get("meta") or {}).get("period_start"))
+    lines = lines or {}
+    if lines.get("when") and not (doc.get("meta") or {}).get("when"):      # the page's title block follows meta.when first
+        values["MEETING_WHEN"] = lines["when"]
+    who = _who_line(doc, els)
     out = []
     for el in els:
         text = _word_text(el)
-        if any(p in text for p in FRONT_DROP):
+        if "{{HEALTH_LINE}}" in text:
+            continue
+        if "{{ATTENDEES}}" in text:
+            out += [docx_tools.put_text(el, t) for t in (who, "Attendees: " + lines["attendees"] if lines.get("attendees") else "") if t]
             continue
         if "{{" in text:
             text = text if has_start else text.replace("{{PERIOD_START}} to {{PERIOD_END}}", "week ending {{PERIOD_END}}")
@@ -2331,9 +2367,9 @@ def _word_body(doc, els, work):
         raise DocError("The Word template isn't one creaite can fill (no summary or table to copy).")
     heading, para = els[at - 1], els[at]
     total = sum(int(w) for w in re.findall(r'<w:gridCol w:w="(\d+)"', table)) or 9000
-    out, values = _front(els[:at - 1], doc), {}
-    out += [e for e, t in zip(els, texts) if "{{STYLE_" in t]              # the fill's style samples (topic headings)
     shown = clean(doc)
+    out, values = _front(els[:at - 1], doc, _header_lines(shown)), {}
+    out += [e for e, t in zip(els, texts) if "{{STYLE_" in t]              # the fill's style samples (topic headings)
     ctx = _Word(shown, work)
     values.update(_logos_front(ctx, shown, out, para))
     for n, s in enumerate(shown["sections"]):
