@@ -22,6 +22,7 @@ import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, now
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
+import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsRun, mcLine, mcNew, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { previewInbox } from "./core/intakeApi.js";
@@ -608,7 +609,8 @@ export let askLive = async function(q,confirmed){ const id=`r-${Date.now().toStr
    (steps so far replayed, then live), the ask creaite button shows it's working, and a note says when it's done. */
 export async function attachRun(run){ if(run&&run.kind==="search") return reattachSearch(run);   /* BL-07: a search answer */ if(shared.RUN||!run) return;   /* BL-326: a run creaite started (a draft, a Prep page, a check or load) is drawn plainly: its ask, steps and closure */ const ctl=new AbortController(); shared.RUN={id:run.id,ctl,attached:true}; setRunning(!run.done);
   ATTACHED=run.id; const after=await attachDraw(run);   /* BL-262 */
-  try{ await askStream("/api/ask/attach",{run:run.id,after},run.confirmed,ctl,run.done,!!run.plain); } finally{ shared.RUN=null; setRunning(false); } }
+  const mcRun=mcIsRun(run); shared.RUN.mailCheck=mcRun;   /* #358: a mail check is replayed from the start so its places and counts are complete; what the saved chat drew is not drawn twice */
+  try{ await askStream("/api/ask/attach",{run:run.id,after:mcRun?0:after},run.confirmed,ctl,run.done,!!run.plain,mcRun?{skip:after,started:run.started}:undefined); } finally{ shared.RUN=null; setRunning(false); } }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootAsk0101(){
 $("#chNew").onclick=newChat;
@@ -680,7 +682,7 @@ export let rbDraw = function(){ const el=$("#runBadge"); if(!el) return; if(!RB.
   $("#rbE").hidden=s!=="running"; $("#rbX").hidden=s==="running"; rbTick(); };
 export function rbTick(){ if(RB.state==="running") $("#rbE").textContent=rbClock(Date.now()-RB.t0); }
 export function rbGuess(q){ q=String(q||""); return /weekly report/i.test(q)?"Drafting the weekly report":/client report/i.test(q)?"Drafting the client report":/steerco|one-pager/i.test(q)?"Drafting the one-pager":
-  /refresh calendar/i.test(q)?"Refreshing the calendar":/^sweep/i.test(q)?"Checking mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
+  /refresh calendar/i.test(q)?"Refreshing the calendar":/^(please\s+)?sweep|^check (my )?mail/i.test(q)?"Checking mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
 export function rbUnmark(){ if(shared.RBMARKED){ shared.RBMARKED=false; if(document.title.startsWith(RBMARK)) document.title=document.title.slice(RBMARK.length); } }
 export function rbStart(label){ if(RB.state==="running"){ if(label) RB.label=label; rbDraw(); return; }       /* a confirmed follow-up of the same run keeps its clock */
   askMarkClear(); rbUnmark(); Object.assign(RB,{state:"running",t0:Date.now(),label:label||shared.RUNLABEL||"",took:""}); shared.RUNLABEL=""; clearInterval(RB.timer); RB.timer=setInterval(rbTick,1000); rbDraw(); }
@@ -710,7 +712,7 @@ export function askMarkSet(st,msg){ const b=$("#askBtn"), m=b.querySelector(".as
 export function askMarkClear(){ clearTimeout(ASKDONE.t); ASKDONE.t=null; const b=$("#askBtn"); if(!b) return;
   delete b.dataset.st; b.style.removeProperty("--life"); b.querySelector(".askmark").textContent=""; b.querySelector(".asklab").textContent=""; $("#askLive").textContent="";
   if(Object.values(ASKMARK).some(k=>k[2]===b.title)) b.removeAttribute("title"); }   /* only our own title: a run starting has just set "ask creaite (working)" */
-export function askMarkShow(st){ if(!ASKMARK[st]) return; askMarkClear(); askMarkSet(st);
+export function askMarkShow(st){ if(!ASKMARK[st]) return; askMarkClear(); askMarkSet(st,shared.MCEND?`${ASKMARK[st][1]}. ${shared.MCEND}`:undefined); shared.MCEND="";   /* #358: a mail check's Found line, once, with the finish mark */
   if(st!=="failed") ASKDONE.t=setTimeout(askMarkClear,ASKDONE.ms); }
 /* ===== end #231 ===== */
  
@@ -788,22 +790,31 @@ export function runClosure(c){ const href=/^#[\w=%.|:&-]*$/.test(String(c.href||
 /* #334: from 80% of the week's AI budget a plain line after a run (the figures come from GET /api/usage: counts and dates only). */
 async function budgetNote(){ try{ const res=await fetch("/api/usage",{headers:{"X-Creaite-Token":D.token||""}}); const r=res.ok?await res.json():null, b=r&&r.budget; if(!b||!b.enabled||(b.state!=="warn"&&b.state!=="over")) return;
   addEl("msg a info",html`${b.state==="over"?"Over this week's AI budget: ":"Heads-up: "}${b.line}`); }catch(e){ /* the note is a courtesy */ } }
-export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, outcome="done"; const live=!ended; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
+export async function askStream(url,body,confirmed,ctl,ended,plain,opts){ let res, outcome="done"; const live=!ended; shared.MCEND="";   /* #358: opts {skip, started} is a mail check reattached */ const startIso=nowIso(); let mc=opts?{s:mcNew(),started:opts.started||startIso,pl:""}:null, timedOut=false, doneAt="";
+  const mcFinish=async o=>{ if(!mc) return; const m=mc; mc=null; $("#mcLive").textContent=""; let found=null;   /* #358: Found N is read from the check's own files after a forced reload, never kept in memory */
+    try{ if(SERVED){ await reloadData(); found=mcFound(REV,m.started,doneAt||nowIso()); } }catch(e){}
+    const line=mcEnd(o,m.s,found); addEl("msg a runend",line); shared.MCEND=line; }; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
   try{ res=await fetch(url,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token,"X-Creaite-Seq":"1"},body:JSON.stringify(body)}); }   /* BL-262: numbered events */
-  catch(e){ askWorking(false); if(e.name==="AbortError"){ rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("creaite stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
+  catch(e){ askWorking(false); if(e.name==="AbortError"){ if(mc) await mcFinish("stopped"); rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("creaite stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
   if(res.status===429){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({}));   /* #334: this week's AI budget is used up */
     const b=j.budget||{}; if(b.can_continue&&await confirmCard("Weekly AI budget",html`${oneLine(j.message||"")}`,"Run anyway")) return askStream(url,{...body,over_budget:true},confirmed,ctl,ended,plain);
     await say(oneLine(j.message||"This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/,"")); return; }   /* declined: the question was just asked on the card, don't ask it again */
   if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check creaite window."); retryOffer("failed",body); return; }
-  const work=()=>live?working():document.createElement("div");   /* BL-262 */ let next=null;
+  const work=()=>{ const d=live?working():document.createElement("div"); if(mc&&live){ const q=d.querySelector(".quip"); if(q){ q.className="mcline"; q.textContent=mcLine(mc.s); } } return d; };   /* BL-262; #358: a mail check shows the true line in place of the quip */ let next=null;
   const rd=res.body.getReader(), dec=new TextDecoder(), t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
-  for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i; const replayed=url==="/api/ask/attach"&&performance.now()-t0<150;   /* #148: the backlog an attach opens with (the server sends it as soon as the stream opens), is drawn as it was: no words fading in */
+  for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); if(mc) await mcFinish(e.name==="AbortError"||(shared.RUN&&shared.RUN.stopping)?"stopped":"early"); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i; const replayed=url==="/api/ask/attach"&&performance.now()-t0<150;   /* #148: the backlog an attach opens with (the server sends it as soon as the stream opens), is drawn as it was: no words fading in */
     while((i=buf.indexOf("\n\n"))>=0){ const chunk=buf.slice(0,i); buf=buf.slice(i+2); if(!chunk.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(chunk.slice(6)); }catch(e){ continue; }
-      if(ev.seq&&runId) shared.SHOWN={run:runId,seq:ev.seq};   /* BL-262: the last event drawn */
+      if(ev.seq&&runId&&!(opts&&ev.seq<=opts.skip)) shared.SHOWN={run:runId,seq:ev.seq};   /* BL-262: the last event drawn */
+      if(opts&&opts.skip&&ev.seq&&ev.seq<=opts.skip&&ev.type!=="step") continue;   /* #358: already drawn from the saved chat */
       if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
       if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
-      else if(ev.type==="step"){ spin.remove(); grp=stepGroup(grp,ev.label); spin=work(); }
+      else if(ev.type==="step"){
+        if(!mc&&!plain&&ev.label===MC_MARKER){ mc={s:mcNew(),started:startIso,pl:""}; if(shared.RUN) shared.RUN.mailCheck=true; }   /* #358: the server's marker, first on a typed check */
+        if(mc){ mc.s=mcStep(mc.s,ev.label); const q=spin.querySelector&&spin.querySelector(".mcline"); if(q) q.textContent=mcLine(mc.s);
+          if(live&&mc.s.places.length){ const bl=mcBadge(mc.s); if(RB.state==="running"&&RB.label!==bl){ RB.label=bl; rbDraw(); } const l=$("#rbL"); if(l) l.title=mcLine(mc.s);
+            if(mcPlaces(mc.s)!==mc.pl){ mc.pl=mcPlaces(mc.s); $("#mcLive").textContent=mc.pl; } } }
+        if(!(mc&&opts&&opts.skip&&ev.seq&&ev.seq<=opts.skip)){ spin.remove(); grp=stepGroup(grp,mc?mcStepText(ev.label):ev.label); spin=work(); } }
       else if(ev.type==="text"){ spin.remove(); grp=null; { const d=await sayMd(fdText(ev.text)); replies.push(live&&!replayed?mWords(d):d); }   /* BL-136: a live reply's words fade in; #148: not a finished run replayed (ended: live is false) nor the backlog an attach opens with (replayed) */ claimsNote(ev.checked); spin=work(); }
       else if(ev.type==="cant"){ spin.remove(); grp=null; cantCard(ev); spin=work(); }   /* BL-314: the plain "I can't", with where it can be done */
       else if(ev.type==="confirm") conf=ev;
@@ -815,10 +826,11 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
       else if(ev.type==="prep") prep=ev;            /* BL-307: the live server's Prep page, offered on its own card */
       else if(ev.type==="denied"){ spin.remove(); refusedSteps(ev); spin=work(); }   /* BL-201: plain words, the command in a fold-out */
       else if(ev.type==="error"){ spin.remove(); outcome="failed"; await say(ev.message); }
-      else if(ev.type==="stopped"){ spin.remove(); outcome="stopped"; conf=null; spin=addEl("step stopped",ev.timed_out?"Stopped: nobody was watching for too long":ev.after_step?"Stopped after the current step finished":"Stopped"); }
-      else if(ev.type==="done"){ runId=ev.run||runId; next=ev.next||null;   /* BL-257: the queued message the server started */ setChat(ev.chat||shared.ASKCHAT,ev.session||shared.ASKSESSION); replies.forEach(b=>stampMsg(b,ev.done_at||nowIso())); replies=[]; } } }
+      else if(ev.type==="stopped"){ spin.remove(); outcome="stopped"; timedOut=!!ev.timed_out; conf=null; spin=addEl("step stopped",ev.timed_out?"Stopped: nobody was watching for too long":ev.after_step?"Stopped after the current step finished":"Stopped"); }
+      else if(ev.type==="done"){ runId=ev.run||runId; next=ev.next||null;   /* BL-257: the queued message the server started */ setChat(ev.chat||shared.ASKCHAT,ev.session||shared.ASKSESSION); doneAt=ev.done_at||doneAt; replies.forEach(b=>stampMsg(b,ev.done_at||nowIso())); replies=[]; } } }
   replies.forEach(b=>stampMsg(b,nowIso()));   /* a reply that ended without a done event (stopped, cut off) is finished now */
   if(!spin.classList.contains("stopped")) spin.remove();
+  if(mc) await mcFinish(outcome==="done"?"done":outcome==="stopped"&&!timedOut?"stopped":"early");
   askWorking(false); setRunning(false); if(runId) api("/api/ask/ack",{run:runId}); ATTACHED=null; askFinished(outcome); retryOffer(outcome,body); budgetNote();   /* BL-148; #334 */
   if(next){ setTimeout(()=>attachRun(next),0); return; } queueLoad();   /* BL-257: follow the next queued message once this run's caller has let go */
   if(perm) permissionFlow(perm);

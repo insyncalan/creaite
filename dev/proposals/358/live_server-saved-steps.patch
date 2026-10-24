@@ -1,0 +1,32 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e6..3811b644 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -3201,7 +3201,7 @@ class Run:
+             return
+         with self.cond:
+             self.chat = remember_chat(self.chat or self.session, self.session, self.message, self.said, self.steps,
+-                                      stopped=stopped, running=running, run=self.id, images=self.images, outside=run_marked(self),
++                                      stopped=stopped, running=running, run=self.id, images=self.images, outside=run_marked(self), sweep=bool(getattr(self, "sweep", False)),
+                                       sent=datetime.fromtimestamp(self.started).isoformat(timespec="seconds")) or self.chat
+             self.recorded = len(self.events)
+ 
+@@ -3507,7 +3507,7 @@ def chat_rec(p, chat, title, session, keep_session, now, outside=False):
+ 
+ 
+ def remember_chat(chat, session, message, said, steps, stopped=False, running=False, run=None, images=(), sent=None,
+-                  title=None, keep_session=False, extra=(), outside=False):
++                  title=None, keep_session=False, extra=(), outside=False, sweep=False):
+     """Keep this exchange in the chat's history file (BL-20); a run's entry is updated as it goes (BL-37). The chat
+     ID is its first session ID. BL-326: a run creaite started is kept with its plain lines only (`extra`: plain, its link), in
+     the day's own chat (`title`), which keeps the session Alan's own messages in it last ran in (`keep_session`)."""
+@@ -3517,7 +3517,8 @@ def remember_chat(chat, session, message, said, steps, stopped=False, running=Fa
+     now = datetime.now().isoformat(timespec="seconds")
+     rec = chat_rec(p, chat, title or message, session, keep_session, now, outside)
+     reply = {"who": "creaite", "text": "\n\n".join(said), "steps": list(steps), **({"run": run} if run else {}),
+-             **({"stopped": True} if stopped else {}), **({"running": True} if running else {}), **dict(extra)}
++             **({"stopped": True} if stopped else {}), **({"running": True} if running else {}),
++             **({"sweep": True} if sweep else {}), **dict(extra)}
+     at = next((i for i, m in enumerate(rec["messages"]) if run and m.get("run") == run and m.get("who") == "creaite"), None)
+     # Chat and sweep (BL-108): Alan's message carries when it was sent; the reply when it started (kept on later updates)
+     # and, once it has finished, done_at. The laptop's clock, to the second; an earlier chat simply has none.

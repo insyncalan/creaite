@@ -65,6 +65,18 @@
    "count": 1,
    "text": "Apply"
   },
+  "core/mailCheck.js | proposal | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | stage | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | sweep | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
   "core/page.js | path | 04747237af0a": {
    "count": 1,
    "text": "cd {} && python3 system/scripts/live_server.py"

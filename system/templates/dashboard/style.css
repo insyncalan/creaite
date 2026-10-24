@@ -1023,6 +1023,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .step.refused .rfwarn{color:var(--warn,#B54708)} .step.refused .rfraw summary{cursor:pointer;color:var(--faint);font-size:var(--fs-xs)} .step.refused .rfraw code{display:block;margin-top:4px;padding:6px 8px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-xs);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
 /* ===== BL-314 (v1.9.1) ===== */ .msg.a.cant p{margin:0 0 6px} .msg.a.cant{border-left:3px solid var(--warn,#B54708)} .step.checked{color:var(--faint);font-size:var(--fs-xs)}
 .step.working .quip{font-style:italic}
+.step.working .mcline{color:var(--muted)} .rbl{min-width:0}   /* #358: the mail check's true line, in place of the quip */
 .step.steps details summary{cursor:pointer;list-style:none;display:inline-flex;gap:4px;align-items:center} .step.steps details summary::-webkit-details-marker{display:none}
 .step.steps details summary::after{content:"›";transition:transform .15s} .step.steps details[open] summary::after{transform:rotate(90deg)}
 .step.steps ul{margin:4px 0 2px;padding-left:16px;font:var(--fs-xs)/1.5 ui-monospace,Menlo,monospace;color:var(--faint)}
