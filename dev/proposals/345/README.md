@@ -5,7 +5,7 @@ fingerprint, so a page left open could decide an item that had changed or moved 
 
 ## What changes
 
-`live_server.diff` (guarded; one file, `system/scripts/live_server.py`, +108 lines, 1 changed; `review.py` is not touched):
+`live_server.diff` (guarded; one file, `system/scripts/live_server.py`, +111 lines, 3 changed; `review.py` is not touched):
 
 - One shared check, `expect_refusal(rows)` (with two small helpers for the reject and Approve instead routes, kept out of the routes so they
   stay under check.py's complexity limit), with `current_fp(file, ref)` (reads the very file the route is about to act on, under the same

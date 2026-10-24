@@ -45,7 +45,7 @@ MUTANTS = {          # the line each route runs, and what stands in for it
                  "        why = None  # 2.6.4 (#345); an undo"),
     "minutes": ('why = minutes_refusal(req, own) if pending_file(req.get("file")) else None', "why = None"),
     "minutes-items": ('[(req.get("file"), n, expects.get(str(n))) for n in ns]', "[]"),
-    "assign": ("why = assign_refusal(req)", "why = None"),
+    "assign": ("stop = assign_stop(req, n)", "stop = None if n else 'That proposal is no longer pending.'"),
     "minutes-skip": ('if pending_file(req.get("file")) else None', 'if current_fp(req.get("file"), "meeting") else None'),
 }
 
@@ -528,7 +528,7 @@ class Page(unittest.TestCase):
         self.assertEqual(len(re.findall(r'api\("/api/review/(?:repeat|retarget|reject)"', src)), 5)       # no call outside these five (undo of a retarget is one)
         mins = (ROOT / "system/templates/dashboard/src/stores/minutes.js").read_text(encoding="utf-8")
         self.assertIn('...(meeting && meeting.fp ? { expect: meeting.fp } : {})', mins)
-        self.assertIn("for (const n of own) { const row = REV.find(x => x.file === v.proposal && x.ref === n); if (row && row.fp) expects[String(n)] = row.fp; }", mins)
+        self.assertIn("for (const n of own) { const rv = REV.find(x => x.file === v.proposal && x.ref === n); if (rv && rv.fp) expects[String(n)] = rv.fp; }", mins)
         self.assertIn('REVIEW_CHANGED.test(r.message || "")) { await reloadData();', mins)
 
     def test_the_recent_rejects_carry_their_fingerprint(self):
