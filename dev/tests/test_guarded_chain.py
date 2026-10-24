@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import guarded_chain  # noqa: E402
-from guarded_chain import HistoryMissing, SPEC1, SPEC2, chain_digest, guarded_touched  # noqa: E402
+from guarded_chain import HistoryMissing, SPEC1, SPEC2, SPEC3, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
 LIVE, LEAK, EDIT, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "dev/tests/snapshots/golden.txt"
@@ -92,7 +92,7 @@ class Repo:
     pin = "none"
 
     def touched(self, **kw):
-        key = "pin" if self.spec is SPEC1 else "pin2"
+        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3"}[self.spec[0]]
         if "pin" in kw and key != "pin":
             kw[key] = kw.pop("pin")
         kw.setdefault(key, self.pin)
@@ -246,6 +246,19 @@ class GuardedChain2(GuardedChain):
     SPEC = SPEC2
 
 
+class GuardedChain3(GuardedChain):
+    """The same cases for the 2.6.3 chain: its own marker, chain file and pin (a third marker; the base is the 2.6.2 release)."""
+    SPEC = SPEC3
+
+    def test_the_live_chain_lists_the_two_diffs_and_has_a_slot_for_more(self):
+        repo = Path(__file__).resolve().parents[2]
+        lines = (repo / SPEC3[1]).read_text().splitlines()
+        listed = [l for l in lines if l.strip() and not l.startswith("#")]
+        self.assertEqual(listed[:2], ["dev/proposals/327b/live_server.diff", "dev/proposals/324/live_server.diff"])
+        self.assertTrue(any("SLOT" in l for l in lines if l.startswith("#")), "keep the marked slot for the follow-up diffs")
+        self.assertEqual(guarded_chain.BASE, guarded_chain.BASE3)
+
+
 class BothChains(unittest.TestCase):
     """A range holding the 2.6.1 chain commit and then the 2.6.2 chain commit (2.6.2 touches tracker.py again and reach.py)."""
     def setUp(self):
@@ -307,6 +320,70 @@ class BothChains(unittest.TestCase):
         self.r.commit(SPEC2[0] + " tracker and reach")
         first = run(self.r.d, "log", "--format=%H", "--grep", SPEC1[0]).strip()
         self.assertEqual(guarded_touched(self.r.d, first, "HEAD", pin2=self.r.pin2), [])
+
+
+class AllThreeChains(unittest.TestCase):
+    """A range holding the 2.6.1, 2.6.2 and 2.6.3 chain commits (2.6.3 touches live_server.py, which none of the others did)."""
+    def setUp(self):
+        self.r = Repo(SPEC1)
+        self.addCleanup(self.r._t.cleanup)
+
+    def build(self, mark3=True):
+        r = self.r
+        r.chain()
+        pin1 = r.pin
+        r.commit(SPEC1[0] + " tracker and update")
+        d2t = r.diff_of(TRK, "a\nB\nc\nd\n")
+        r.write("dev/proposals/y/tracker.diff", d2t)
+        r.write(SPEC2[1], "dev/proposals/y/tracker.diff\n")
+        r.commit("add the 2.6.2 chain files")
+        pin2 = chain_digest(r.d, "HEAD", SPEC2)
+        run(r.d, "apply", "dev/proposals/y/tracker.diff")
+        r.commit(SPEC2[0] + " tracker")
+        d3 = r.diff_of(LIVE, "l1\nL2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n")
+        r.write("dev/proposals/z/live.diff", d3)
+        r.write(SPEC3[1], "# slot for more\ndev/proposals/z/live.diff\n")
+        r.commit("add the 2.6.3 chain files")
+        pin3 = chain_digest(r.d, "HEAD", SPEC3)
+        run(r.d, "apply", "dev/proposals/z/live.diff")
+        return pin1, pin2, pin3
+
+    def touched(self, pins, base="base"):
+        return guarded_touched(self.r.d, base, "HEAD", pin=pins[0], pin2=pins[1], pin3=pins[2])
+
+    def test_all_three_marked_pass(self):
+        pins = self.build()
+        self.r.commit(SPEC3[0] + " live_server")
+        self.assertEqual(self.touched(pins), [])
+
+    def test_third_chain_unmarked_fails(self):
+        pins = self.build()
+        self.r.commit("live_server")
+        self.assertIn(LIVE, self.touched(pins))
+
+    def test_third_chain_with_an_extra_edit_fails(self):
+        pins = self.build()
+        self.r.write(REA, "r1\nr2\nr3\n")
+        self.r.commit(SPEC3[0] + " live_server")
+        self.assertIn(REA, self.touched(pins))
+
+    def test_third_chain_pin_mismatch_fails(self):
+        pins = self.build()
+        self.r.commit(SPEC3[0] + " live_server")
+        self.assertIn(LIVE, self.touched((pins[0], pins[1], "0" * 64)))
+
+    def test_a_later_unmarked_edit_after_all_three_fails(self):
+        pins = self.build()
+        self.r.commit(SPEC3[0] + " live_server")
+        self.r.write(LIVE, (self.r.d / LIVE).read_text() + "later\n")
+        self.r.commit("later")
+        self.assertIn(LIVE, self.touched(pins))
+
+    def test_base_after_the_second_chain_checks_the_third_alone(self):
+        pins = self.build()
+        self.r.commit(SPEC3[0] + " live_server")
+        second = run(self.r.d, "log", "--format=%H", "--grep", SPEC2[0]).strip()
+        self.assertEqual(self.touched(pins, base=second), [])
 
 
 if __name__ == "__main__":

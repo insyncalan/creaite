@@ -30,15 +30,15 @@ CHAIN2_SHA256 = "d6441d5568bc7680a2e7f051e6fe3e91f1d14af079220743edf9910e09637c8
 # `python3 dev/tests/guarded_chain.py` prints; change it only with the chain list.
 BASE_261 = "9501f2cdc850618e2ae34419bf2c6cb1c0d94ba0"
 BASE2 = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
-BASE = BASE3                                  # the default base is the newest release; BASE2 and BASE_261 still work for the earlier chains
 # The 2.6.3 chain (dev/proposals/GUARDED-2.6.3.md): its own marker, list and pin. BASE3 is main after the 2.6.2 release (2.6.1 and 2.6.2
 # chains applied there). The marker commit "Guarded 2.6.3 chain:" is made by Jarvis at the cut. To add a diff to the chain: append its
 # path to GUARDED-2.6.3.chain (apply order; #338's rules diff goes LAST, only after Alan's approval) and re-set CHAIN3_SHA256 to the value
 # `python3 dev/tests/guarded_chain.py` prints, with Alan's say.
 CHAIN3_MARKER = "Guarded 2.6.3 chain:"
 CHAIN3_FILE = "dev/proposals/GUARDED-2.6.3.chain"
-CHAIN3_SHA256 = "PIN3"
+CHAIN3_SHA256 = "3ea88c0a0bf283a10fc7b51ded796dec770e110c36d7f6c226863eb4b0daa48b"
 BASE3 = "39c1060aaeffa0c47a03a3c8e0e48208d3cb9ed6"
+BASE = BASE3                                  # the default base is the newest release; BASE2 and BASE_261 still work for the earlier chains
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
 SPEC3 = (CHAIN3_MARKER, CHAIN3_FILE, "CHAIN3_SHA256")
