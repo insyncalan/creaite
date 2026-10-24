@@ -37,7 +37,7 @@ export function pdNormalise(saved) {
 
 /** A saved sort made safe. @param {any} s @returns {{col: string, dir: "asc"|"desc"}} */
 export function pdSort(s) {
-  return s && PD_SORTS[s.col] && (s.dir === "asc" || s.dir === "desc") ? { col: s.col, dir: s.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
+  return s && typeof s.col === "string" && Object.prototype.hasOwnProperty.call(PD_SORTS, s.col) && (s.dir === "asc" || s.dir === "desc") ? { col: s.col, dir: s.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
 }
 
 /** @typedef {{n: string, org: string, role: string, on: string[], late: number, missing: string[]}} PdPerson */
