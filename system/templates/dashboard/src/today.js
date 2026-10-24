@@ -432,7 +432,7 @@ document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".c
    "sweep"), Open Intake (ticked once Intake has been opened in this browser). It goes when all five are ticked, or for good with
    Dismiss (kept with the dismissed reminders, so Settings › Reminders › Restore brings it back). Nothing it does is new. */
 export function setupSteps(){ const seen=store.get(SETUPK,{});
-  return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the mail and Teams check has read your mail":`Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it`],
+  return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the mail and Teams check has read your mail":`Connect it in Claude itself; this page can’t. The first mail and Teams check confirms it`],
     ["proj","Add a project",P.length>0,"Add a project","proj",`${P.length} project${P.length===1?"":"s"}`],
     ["people","Add people",shared.REG.length>0,"Add people","people",`${shared.REG.length} in the people register`],
     ["sweep","Run the first check",swept(),"Run the first check","sweep",swept()?`Last checked ${esc(fd(String(D.last_sweep)))}`:"Reads mail, Teams and the calendar since the look-back days"],

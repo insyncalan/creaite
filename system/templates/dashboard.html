@@ -520,7 +520,7 @@
    they inherited content-box (Today's Week ahead buttons drew 34 px, not 32). Its children take the page's border-box again. */
 details>*{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px var(--font);font-variant-numeric:tabular-nums}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px var(--font);font-variant-numeric:tabular-nums;text-wrap:pretty}   /* #343: no one-word last line in a paragraph */
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
@@ -930,6 +930,8 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .tl .today{position:absolute;top:8px;bottom:0;width:1px;background:var(--accent)} .tl .today span{position:absolute;top:-8px;left:4px;font-size:var(--fs-xs);color:var(--accent)}
 .mini-list>div{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)} .mini-list>div:first-child{border-top:0}
 /* BL-300: Top risks and issues: at most five lines under each item, ending in an ellipsis; a cut one says More */
+/* #343: the top risks do not run together: a dot after the priority and the type, the title weighted, the owner apart (and a missing one said) */
+.rk-m::after{content:"\00b7";margin-left:6px;color:var(--muted)} .rk-t{font-weight:500} .rk-o::before{content:"\2014\00a0"}
 .rk-txt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .rk-more{display:block;font-size:var(--fs-xs);color:var(--muted);text-decoration:underline;text-underline-offset:2px;margin-top:1px}
 .rkrow:hover .rk-more,.rkrow:focus-visible .rk-more{color:var(--ink)}
@@ -1086,10 +1088,10 @@ a.plink2{color:inherit;text-decoration:underline dotted;text-underline-offset:3p
 .boardctl{display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted)}
 /* ===== BL-128 (sprint-work-views) ===== the Display menu */
 .dispmenu{width:340px;max-height:min(560px,80vh);padding:4px 14px 12px;right:auto;left:0} .dispmenu[hidden]{display:none}
-.dispmenu h3{margin:10px 0 4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)} .dispmenu h3 .sub{text-transform:none;letter-spacing:0;font-weight:400}
+.dispmenu h2{margin:10px 0 4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)} .dispmenu h2 .sub{text-transform:none;letter-spacing:0;font-weight:400}
 .dispmenu .dline{display:flex;align-items:center;gap:8px;margin:2px 0;font-size:var(--fs-sm)} .dispmenu .dline[hidden]{display:none}
 .dispmenu select{flex:1;min-width:0}
-.dispmenu .dprops label{padding:4px 0} .dispmenu h3 label{display:inline;padding:0;cursor:default} .dispmenu h3 label:hover{background:none} .dispmenu .dchk{padding:0;display:flex;gap:8px;align-items:center;cursor:pointer}
+.dispmenu .dprops label{padding:4px 0} .dispmenu h2 label{display:inline;padding:0;cursor:default} .dispmenu h2 label:hover{background:none} .dispmenu .dchk{padding:0;display:flex;gap:8px;align-items:center;cursor:pointer}
 .dispmenu .dfoot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 #dispBtn.on{border-color:var(--accent)} .bprop{font-size:var(--fs-xs);color:var(--muted);margin-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12ch}
 /* ===== BL-129 (sprint-work-views) ===== group headers in the List and swimlanes on the Board */
@@ -2421,7 +2423,7 @@ svg .flk text{text-decoration:underline dotted}
 /* ===== BL-213 (sprint-ui-audit) ===== words in the milestone strip use --muted (4.5:1 in every theme); --faint stays for marks
    (rules, ticks, the scroll arrows). The same for the small uppercase headings of menus and lists that carried words in --faint. */
 .mv-strip .mon,.mv-lbl,.mv-detog button{color:var(--muted)} .mv-detog button:hover{color:var(--ink)}
-.fsec2,.cgrp,.dispmenu h3,.step.steps ul{color:var(--muted)}
+.fsec2,.cgrp,.dispmenu h2,.step.steps ul{color:var(--muted)}
 /* ===== end BL-213 ===== */
 .mv-sugg{font-size:var(--fs-xs);color:var(--warn);margin-top:4px}
 .mv-compact .mv-prow{grid-template-columns:minmax(0,1.4fr) 112px 150px 130px;gap:8px;padding:10px 4px}
@@ -2610,6 +2612,8 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evfact{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line)}
 .evfact .evpart{font-size:var(--fs-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .evrow{margin:8px 0 0;font-size:var(--fs-sm);line-height:var(--lh-18)}
+/* #343: the cockpit's health numbers share the row in equal columns, so "Early warnings" is not left alone on a second line at 900 px */
+#v-cockpit .evrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px 16px} #v-cockpit .evrow .evbox{min-width:0}
 .evrow .hlink{font-weight:600}
 .evq{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--r-md) var(--r-md) 0;font-size:var(--fs-sm)}
 .evqsrc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;word-break:break-word}
@@ -40999,11 +41003,11 @@ system/scripts/run launch.py agent ${what}`;
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
     const gopts = bd2 ? groupsOf(t47) : [["none", "None"], ...groupsOf(t47)], gcur = bd2 ? groupOf(t47) : listGroupOf(t47), sub = subOf(t47, bd2 ? "board" : "list");
-    putHTML(m5, html`<div><h3><label for="wgrp">${bd2 ? "Group by (columns)" : "Group by"}</label></h3><div class="dline"><select id="wgrp">${gopts.map((g5) => html`<option value="${g5[0]}" ${g5[0] === gcur ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <div ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><h3><label for="wsub">${bd2 ? "Sub-group (swimlanes)" : "Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => html`<option value="${g5[0]}" ${g5[0] === sub ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <h3><label for="wbsort">Order by</label></h3><div class="dline"><select id="wbsort">${opts.map((o5) => html`<option value="${o5[0]}" ${o5[0] === cur ? "selected" : ""}>${o5[1]}</option>`)}${cur && !opts.some((o5) => o5[0] === cur) ? html`<option value="${cur}" selected>Sorted by ${cur}</option>` : ""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s5 && s5.dir === "desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
-    <h3>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h3><div class="dprops">${raw(dispProps())}</div>
-    <h3>Show</h3><div class="dline" ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
+    putHTML(m5, html`<div><h2><label for="wgrp">${bd2 ? "Group by (columns)" : "Group by"}</label></h2><div class="dline"><select id="wgrp">${gopts.map((g5) => html`<option value="${g5[0]}" ${g5[0] === gcur ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
+    <div ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><h2><label for="wsub">${bd2 ? "Sub-group (swimlanes)" : "Sub-group"}</label></h2><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => html`<option value="${g5[0]}" ${g5[0] === sub ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
+    <h2><label for="wbsort">Order by</label></h2><div class="dline"><select id="wbsort">${opts.map((o5) => html`<option value="${o5[0]}" ${o5[0] === cur ? "selected" : ""}>${o5[1]}</option>`)}${cur && !opts.some((o5) => o5[0] === cur) ? html`<option value="${cur}" selected>Sorted by ${cur}</option>` : ""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s5 && s5.dir === "desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
+    <h2>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h2><div class="dprops">${raw(dispProps())}</div>
+    <h2>Show</h2><div class="dline" ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
     <div class="dline"><label for="wclosed">${t47 === "decisions" ? "Decided" : "Closed"} column</label><select id="wclosed"><option value="recent" ${BCLALL.has(t47) ? "" : "selected"}>Last ${raw(+S.boardClosedDays || 14)} days</option><option value="all" ${BCLALL.has(t47) ? "selected" : ""}>All</option></select></div>` : html`<div class="dline sub">Closed items: use the Status filter.</div>`}
     <div class="dfoot"><button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button><span class="sp"></span><button type="button" class="btn primary" id="dispDone">Done</button></div>`);
     if (focusKey) {
@@ -41331,7 +41335,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   function grpHead(t47, gr2, lvl, key2, coll, n4) {
     if (t47 === "all") t47 = "raid";
-    const late = gr2.items.filter((x5) => itemLate(t47, x5)).length;
+    const late = gr2.key === "overdue" ? 0 : gr2.items.filter((x5) => itemLate(t47, x5)).length;
     return `<tr class="wgh lv${lvl}${coll ? " coll" : ""}" data-gk="${esc(key2)}"><td colspan="${n4}"><button type="button" class="wgtog" data-gtog="${esc(key2)}" aria-expanded="${!coll}" aria-label="${coll ? "Expand" : "Collapse"} ${esc(gr2.label)}">${ic("chevdown", "chev")}</button><input type="checkbox" class="wgtick" data-gtick="${esc(key2)}" aria-label="Select the rows in ${esc(gr2.label)}" ${coll || !gr2.items.length ? "disabled" : ""}> <b class="wgn">${esc(gr2.label)}</b> <span class="sub">${grpNoun(t47, gr2.items.length)}${late ? ` · <span class="late">${late} overdue</span>` : ""}${coll ? " · collapsed" : ""}</span></td></tr>`;
   }
   function listBody(t47, C5, L3) {
@@ -41339,7 +41343,7 @@ system/scripts/run launch.py agent ${what}`;
     if (g5 === "none" || !L3.length) return L3.map((x5) => row2(x5, "")).join("");
     const sg2 = subOf(t47, "list");
     let h5 = "";
-    wgGroups(t47, g5, L3, !BHIDE[t47]).forEach((gr2) => {
+    wgGroups(t47, g5, L3, false).forEach((gr2) => {
       const k5 = `${t47}|${g5}|${gr2.key}`, coll = lcollOf(k5);
       h5 += grpHead(t47, gr2, 1, k5, coll, C5.length);
       if (coll) return;
@@ -52730,7 +52734,7 @@ system/scripts/run launch.py agent ${what}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"}">${r4.pr}</span> <span class="sub">${r4.type}</span> ${esc(r4.t)}<div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(r4.o) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -56851,7 +56855,7 @@ ${pre}**Current state title:** ${title}`);
   function setupSteps() {
     const seen = store.get(SETUPK, {});
     return [
-      ["m365", "Connect Microsoft 365", swept(), "Show me how", "help", swept() ? "Connected: the mail and Teams check has read your mail" : `Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it`],
+      ["m365", "Connect Microsoft 365", swept(), "Show me how", "help", swept() ? "Connected: the mail and Teams check has read your mail" : `Connect it in Claude itself; this page can’t. The first mail and Teams check confirms it`],
       ["proj", "Add a project", P4.length > 0, "Add a project", "proj", `${P4.length} project${P4.length === 1 ? "" : "s"}`],
       ["people", "Add people", shared.REG.length > 0, "Add people", "people", `${shared.REG.length} in the people register`],
       ["sweep", "Run the first check", swept(), "Run the first check", "sweep", swept() ? `Last checked ${esc(fd(String(D.last_sweep)))}` : "Reads mail, Teams and the calendar since the look-back days"],
@@ -78110,7 +78114,7 @@ ${d5.text}`);
     return [];
   }
   var irQuote = (r4) => noTime(r4.dn && r4.dn.ev || r4.kind === "update" && r4.rec && r4.rec.why || "");
-  function SourceLine({ r: r4 }) {
+  function sourceLine(r4) {
     let o5 = srcParse(r4.src);
     if (o5 && o5.type === "Text") {
       const m5 = /^((?:projects|system)\/.+?\.html)(?: — (.+))?$/.exec(String(o5.text));
@@ -78130,14 +78134,11 @@ ${d5.text}`);
     ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
     const match = r4.p ? null : r4.why;
     where2 = fdText(where2);
-    return /* @__PURE__ */ u4("span", { class: "icsrc", children: [
-      where2,
-      match ? ` · ${match}` : "",
-      link ? /* @__PURE__ */ u4(S2, { children: [
-        " · ",
-        link
-      ] }) : null
-    ] });
+    const bits = [where2, match ? String(match) : "", link].filter((x5) => x5);
+    return bits.length ? /* @__PURE__ */ u4("span", { class: "icsrc", children: bits.map((x5, i5) => /* @__PURE__ */ u4(S2, { children: [
+      i5 ? " · " : null,
+      x5
+    ] })) }) : null;
   }
   function WeekendNote({ r: r4 }) {
     const f5 = WKRVF[
@@ -78284,6 +78285,7 @@ ${d5.text}`);
       /** @type {keyof HOLD_WORDS} */
       r4.hold
     ] || "approve individually" : "";
+    const src = sourceLine(r4);
     const rej = !!r4.kind && r4.kind !== "files", conflict = isConflict(r4), tip = rvTipText(r4) || TIP_FALLBACK[
       /** @type {keyof TIP_FALLBACK} */
       r4.kind
@@ -78329,7 +78331,7 @@ ${d5.text}`);
             conflict ? /* @__PURE__ */ u4(ConflictBlock, { rec: r4.rec }) : null,
             /* @__PURE__ */ u4("div", { class: "icchg", "data-tip": tip || void 0, children: [
               /* @__PURE__ */ u4("span", { class: "ickind", children: irPill(r4) }),
-              parts.map((p6) => /* @__PURE__ */ u4(S2, { children: [
+              parts.filter((p6) => p6.t).map((p6) => /* @__PURE__ */ u4(S2, { children: [
                 " · ",
                 /* @__PURE__ */ u4("span", { class: p6.warn ? "h-warn" : "", children: p6.t })
               ] })),
@@ -78344,8 +78346,10 @@ ${d5.text}`);
                 " · ",
                 /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-drrisk": r4.n, onClick: () => draftResponse(r4.n), children: "Draft a response" })
               ] }) : null,
-              " · ",
-              /* @__PURE__ */ u4(SourceLine, { r: r4 })
+              src ? /* @__PURE__ */ u4(S2, { children: [
+                " · ",
+                src
+              ] }) : null
             ] }),
             quote ? /* @__PURE__ */ u4("div", { class: "icq", children: quote }) : null,
             r4.ws_suggest && !r4.done && (r4.flags || []).includes("new-workstream") ? /* @__PURE__ */ u4("div", { class: "wsq", children: [

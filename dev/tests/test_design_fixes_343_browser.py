@@ -72,5 +72,81 @@ class ContrastAndTargets(LiveBrowserCase):
         self.assertTrue(b.eval("(%s)('#v-work')" % SMALL_TEXT))
 
 
+# A text of known words, in a box that is stepped from narrow to wide: on how many widths the last line is a single word. It reads the
+# page's own wrapping (Range rects of the last two words), so it holds for any font.
+LAST_LINE = r"""(el=>{ const tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT), words=[];
+  for(let n=tw.nextNode();n;n=tw.nextNode()){ const re=/\S+/g; let m; while((m=re.exec(n.textContent))){ const r=document.createRange(); r.setStart(n,m.index); r.setEnd(n,m.index+m[0].length); words.push(r.getBoundingClientRect().top); } }
+  return words.length<2||Math.abs(words[words.length-1]-words[words.length-2])<2; })"""
+BAD_DOTS = r"""(()=>[...document.querySelectorAll('.icchg')].map(e=>e.textContent.replace(/\s+/g,' ').trim()).filter(t=>/^·|·$|·\s*·/.test(t)))()"""
+
+
+class WordingAndRepetition(LiveBrowserCase):
+    shared_server = True
+    width, height = 1400, 900
+
+    def one_word_last_lines(self, wrap):
+        b = self.b
+        b.eval("""(()=>{ const d=document.createElement('p'); d.id='lastline'; d.style.cssText='margin:0;position:absolute;left:0;top:0;width:300px;text-wrap:%s';
+          d.textContent='alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike'; document.body.appendChild(d); })()""" % wrap)
+        n = b.eval("""(()=>{ const d=document.getElementById('lastline'); let bad=0; for(let w=140;w<=420;w+=3){ d.style.width=w+'px'; if(!(%s)(d)) bad++; } d.remove(); return bad; })()""" % LAST_LINE)
+        return n
+
+    def test_paragraphs_do_not_leave_a_one_word_last_line(self):
+        self.assertEqual(self.one_word_last_lines("inherit"), 0)
+        self.assertGreater(self.one_word_last_lines("wrap"), 0)         # mutant: plain wrapping does leave some
+
+    def test_review_meta_line_has_no_stray_or_doubled_dots(self):
+        b = self.b
+        for w in (1400, 900):
+            b.resize(w, 900)
+            b.eval("go('review')")
+            b.pump(1)
+            self.assertEqual(b.eval(BAD_DOTS), [], w)
+        b.eval("document.body.insertAdjacentHTML('beforeend','<div class=icchg>Action · · Routine</div>')")
+        self.assertTrue(b.eval(BAD_DOTS))        # mutant: a doubled dot is caught
+
+    def test_cockpit_health_numbers_share_one_row_at_900(self):
+        b = self.b
+        for w in (1400, 900):
+            b.resize(w, 900)
+            b.eval("go('cockpit','ABC')")
+            b.wait("document.querySelectorAll('#v-cockpit .evbox').length>=5")
+            tops = b.eval("[...document.querySelectorAll('#v-cockpit .evrow .evbox')].map(e=>Math.round(e.getBoundingClientRect().top))")
+            self.assertEqual(len(set(tops)), 1, (w, tops))
+
+    def test_top_risks_are_apart_and_say_whose(self):
+        b = self.b
+        b.eval("go('cockpit','ABC')")
+        b.wait("document.querySelector('.rkrow')")
+        rows = b.eval("[...document.querySelectorAll('.rkrow')].map(r=>[!!r.querySelector('.rk-t'), (r.querySelector('.rk-o')||{}).textContent||'', getComputedStyle(r.querySelector('.rk-m'),'::after').content])")
+        self.assertTrue(rows)
+        for has_title, owner, dot in rows:
+            self.assertTrue(has_title and owner.strip())
+            self.assertIn("\u00b7", dot)
+
+    def test_work_list_hides_empty_groups_and_says_overdue_once(self):
+        b = self.b
+        b.eval("go('work')")
+        b.wait("document.querySelector('#workTbl tr.wgh')")
+        EMPTY = "[...document.querySelectorAll('#workTbl tr.wgh')].filter(h=>{const n=h.nextElementSibling;return !n||n.classList.contains('wgh')}).map(h=>h.textContent.trim())"
+        self.assertEqual(b.eval(EMPTY), [])
+        b.eval("document.querySelector('#workTbl tbody').insertAdjacentHTML('beforeend','<tr class=wgh data-gk=x><td>Empty group 0 actions</td></tr>')")
+        self.assertTrue(b.eval(EMPTY))             # mutant: a header with no rows under it is caught
+        b.eval("go('work')")
+        b.wait("document.querySelector('#workTbl tr.wgh')")
+        heads = b.eval("[...document.querySelectorAll('#workTbl tr.wgh')].map(h=>h.textContent.replace(/\\s+/g,' ').trim())")
+        for h in heads:
+            self.assertLessEqual(h.lower().count("overdue"), 1, h)
+
+    def test_display_menu_headings_do_not_skip_a_level(self):
+        b = self.b
+        b.eval("go('work')")
+        b.wait("document.querySelector('#workTbl')")
+        b.click("#dispBtn")
+        b.wait("document.querySelector('#dispMenu h2')")
+        self.assertEqual(b.eval("document.querySelectorAll('#dispMenu h3').length"), 0)
+        self.assertGreaterEqual(b.eval("document.querySelectorAll('#dispMenu h2').length"), 3)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -510,7 +510,7 @@
    they inherited content-box (Today's Week ahead buttons drew 34 px, not 32). Its children take the page's border-box again. */
 details>*{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px var(--font);font-variant-numeric:tabular-nums}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px var(--font);font-variant-numeric:tabular-nums;text-wrap:pretty}   /* #343: no one-word last line in a paragraph */
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
@@ -920,6 +920,8 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .tl .today{position:absolute;top:8px;bottom:0;width:1px;background:var(--accent)} .tl .today span{position:absolute;top:-8px;left:4px;font-size:var(--fs-xs);color:var(--accent)}
 .mini-list>div{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)} .mini-list>div:first-child{border-top:0}
 /* BL-300: Top risks and issues: at most five lines under each item, ending in an ellipsis; a cut one says More */
+/* #343: the top risks do not run together: a dot after the priority and the type, the title weighted, the owner apart (and a missing one said) */
+.rk-m::after{content:"\00b7";margin-left:6px;color:var(--muted)} .rk-t{font-weight:500} .rk-o::before{content:"\2014\00a0"}
 .rk-txt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .rk-more{display:block;font-size:var(--fs-xs);color:var(--muted);text-decoration:underline;text-underline-offset:2px;margin-top:1px}
 .rkrow:hover .rk-more,.rkrow:focus-visible .rk-more{color:var(--ink)}
@@ -1076,10 +1078,10 @@ a.plink2{color:inherit;text-decoration:underline dotted;text-underline-offset:3p
 .boardctl{display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted)}
 /* ===== BL-128 (sprint-work-views) ===== the Display menu */
 .dispmenu{width:340px;max-height:min(560px,80vh);padding:4px 14px 12px;right:auto;left:0} .dispmenu[hidden]{display:none}
-.dispmenu h3{margin:10px 0 4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)} .dispmenu h3 .sub{text-transform:none;letter-spacing:0;font-weight:400}
+.dispmenu h2{margin:10px 0 4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)} .dispmenu h2 .sub{text-transform:none;letter-spacing:0;font-weight:400}
 .dispmenu .dline{display:flex;align-items:center;gap:8px;margin:2px 0;font-size:var(--fs-sm)} .dispmenu .dline[hidden]{display:none}
 .dispmenu select{flex:1;min-width:0}
-.dispmenu .dprops label{padding:4px 0} .dispmenu h3 label{display:inline;padding:0;cursor:default} .dispmenu h3 label:hover{background:none} .dispmenu .dchk{padding:0;display:flex;gap:8px;align-items:center;cursor:pointer}
+.dispmenu .dprops label{padding:4px 0} .dispmenu h2 label{display:inline;padding:0;cursor:default} .dispmenu h2 label:hover{background:none} .dispmenu .dchk{padding:0;display:flex;gap:8px;align-items:center;cursor:pointer}
 .dispmenu .dfoot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 #dispBtn.on{border-color:var(--accent)} .bprop{font-size:var(--fs-xs);color:var(--muted);margin-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12ch}
 /* ===== BL-129 (sprint-work-views) ===== group headers in the List and swimlanes on the Board */
@@ -2411,7 +2413,7 @@ svg .flk text{text-decoration:underline dotted}
 /* ===== BL-213 (sprint-ui-audit) ===== words in the milestone strip use --muted (4.5:1 in every theme); --faint stays for marks
    (rules, ticks, the scroll arrows). The same for the small uppercase headings of menus and lists that carried words in --faint. */
 .mv-strip .mon,.mv-lbl,.mv-detog button{color:var(--muted)} .mv-detog button:hover{color:var(--ink)}
-.fsec2,.cgrp,.dispmenu h3,.step.steps ul{color:var(--muted)}
+.fsec2,.cgrp,.dispmenu h2,.step.steps ul{color:var(--muted)}
 /* ===== end BL-213 ===== */
 .mv-sugg{font-size:var(--fs-xs);color:var(--warn);margin-top:4px}
 .mv-compact .mv-prow{grid-template-columns:minmax(0,1.4fr) 112px 150px 130px;gap:8px;padding:10px 4px}
@@ -2600,6 +2602,8 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evfact{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line)}
 .evfact .evpart{font-size:var(--fs-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .evrow{margin:8px 0 0;font-size:var(--fs-sm);line-height:var(--lh-18)}
+/* #343: the cockpit's health numbers share the row in equal columns, so "Early warnings" is not left alone on a second line at 900 px */
+#v-cockpit .evrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px 16px} #v-cockpit .evrow .evbox{min-width:0}
 .evrow .hlink{font-weight:600}
 .evq{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--r-md) var(--r-md) 0;font-size:var(--fs-sm)}
 .evqsrc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;word-break:break-word}
