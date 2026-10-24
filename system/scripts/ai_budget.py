@@ -3,12 +3,14 @@
 Pure code: no file is written, no clock but the one passed in (CREAITE_NOW fixes it in tests), nothing here raises. It reads the
 counts the usage monitor already keeps (system/staging/run-usage.jsonl: dollars and token counts per run, never any text) and the
 `ai_budget` block of settings.json. The live server's run engine asks `gate()` before it starts a typed request; the Usage tab and
-the ask panel draw `status()`. Review, Apply and Undo are not runs and are never asked: only the kinds in BLOCKABLE can be held,
+the ask panel draw `status()`. The buttons in the dashboard (Review, Apply, Undo) are not runs and are never asked: only
+the kinds in BLOCKABLE can be held,
 and a confirmed request (the answer to a question the last run asked) is never held, so a change in flight is never cut off.
 
 The week runs from Monday 00:00 to the next Monday 00:00, local time (the usage file's own times). Dates shown are DD-MM-YYYY.
 """
 import json
+import math
 import os
 import sys
 from datetime import date, datetime, timedelta
@@ -37,14 +39,17 @@ def _now() -> datetime:
 
 
 def _num(v) -> float:
-    """A count or dollar figure: finite, 0 to MAX_COUNT, else 0 (a text, NaN, a negative or a flag counts nothing)."""
-    if isinstance(v, bool):
+    """A count or dollar figure: only a real int or float counts (not a flag, a text or None); it must be finite and is held between
+    0 and MAX_COUNT. Anything else counts nothing (a corrupt line is not spend)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
         return 0.0
     try:
         x = float(v)
-    except (TypeError, ValueError, OverflowError):
+    except (OverflowError, ValueError):
         return 0.0
-    return min(max(x, 0.0), float(MAX_COUNT)) if x == x else 0.0
+    if not math.isfinite(x):
+        return 0.0
+    return min(max(x, 0.0), float(MAX_COUNT))
 
 
 def settings(raw=None) -> dict:
@@ -65,7 +70,7 @@ def settings(raw=None) -> dict:
         out["at_limit"] = raw["at_limit"]
     for k, (lo, hi) in LIMITS.items():
         v = raw.get(k)
-        if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf"):
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and v > 0:      # zero or below: the default
             out[k] = min(max(v, lo), hi)
     return out
 
@@ -78,9 +83,12 @@ def week_of(now=None) -> tuple:
 
 
 def _row_day(row):
-    """A usage line's day, or None when its `at` isn't a date."""
+    """A usage line's day, or None when its `at` isn't the log's timestamp text (YYYY-MM-DDTHH:MM:SS, as usage_log writes it)."""
     try:
-        return date.fromisoformat(str(row.get("at"))[:10])
+        at = row.get("at")
+        if not isinstance(at, str):
+            return None
+        return date.fromisoformat(at[:10])
     except (AttributeError, ValueError):
         return None
 
@@ -162,7 +170,7 @@ def gate(kind, st=None, confirmed=None, over_budget=False):
     except Exception:               # a fault in the count never holds a run
         return None
     base = (f"This week's AI budget is used up ({st['line'].split(' used')[0]}). It starts again on Monday {_dmy(resets)}. "
-            "Review, Apply and Undo still work.")
+            "The buttons in the dashboard still work.")
     msg = base + (" Run this request anyway?" if can else " Raise the budget in Settings, Advanced, creaite and ask creaite, to run more.")
     brief = {k: st[k] for k in ("unit", "limit", "used", "percent", "state", "at_limit", "resets")}
     return {"ok": False, "budget": dict(brief, can_continue=can), "message": msg}

@@ -92,7 +92,8 @@ class Gate(unittest.TestCase):
         self.assertTrue(held["budget"]["can_continue"])
         self.assertIn("Run this request anyway?", held["message"])
         self.assertIn("26-10-2026", held["message"])
-        self.assertIn("Review, Apply and Undo still work", held["message"])
+        self.assertIn("The buttons in the dashboard still work.", held["message"])
+        self.assertNotIn("Apply", held["message"])
         self.assertIsNone(ai_budget.gate("ask", self.over(), over_budget=True))
         self.assertIsNotNone(ai_budget.gate("ask", self.over(), over_budget="yes"))       # only the boolean is a click
 
@@ -131,13 +132,48 @@ class CountsOnly(unittest.TestCase):
             self.assertNotIn(bad, src)
 
 
+class Corrupt(unittest.TestCase):
+    """A corrupt usage line counts nothing, never spend (each case has a mutant in the review notes: drop the check and it fails)."""
+    def cost(self, v, at="2026-10-20T09:00:00"):
+        return ai_budget.used([{"at": at, "cost_usd": v}], WED)
+
+    def test_not_finite_counts_nothing(self):
+        for v in (float("inf"), float("-inf"), float("nan"), 1e999, "1e999", "Infinity"):
+            self.assertEqual(self.cost(v), 0.0, repr(v))
+        self.assertEqual(self.cost(-3), 0.0)
+        self.assertEqual(ai_budget._num(float("inf")), 0.0)
+
+    def test_a_text_cost_counts_nothing(self):
+        for v in ("999", "1.5", " 2 ", b"3", [4], {"a": 1}, None, True):
+            self.assertEqual(self.cost(v), 0.0, repr(v))
+        self.assertEqual(self.cost(2), 2.0)
+        self.assertEqual(self.cost(2.5), 2.5)
+        self.assertEqual(ai_budget.used([{"at": "2026-10-20T09:00:00", "input": "5"}], WED, "tokens"), 0.0)
+
+    def test_a_number_is_not_a_date(self):
+        for at in (20261020, 20261020.0, True, None, ["2026-10-20"]):
+            self.assertEqual(self.cost(5, at), 0.0, repr(at))
+        self.assertEqual(self.cost(5, "2026-10-20T09:00:00"), 5.0)
+
+    def test_an_infinite_line_never_locks_a_typed_ask(self):
+        rows = [{"at": "2026-10-20T09:00:00", "cost_usd": 1e999}]
+        st = ai_budget.status(rows, ai_budget.settings({"at_limit": "stop"}), WED)
+        self.assertEqual(st["state"], "ok")
+        self.assertIsNone(ai_budget.gate("ask", st))
+
+
 class Settings(unittest.TestCase):
+    def test_a_limit_of_zero_or_below_or_not_a_number_is_the_default(self):
+        for v in (0, -5, 0.0, -0.0, "ten", None, float("inf"), float("nan"), True):
+            self.assertEqual(ai_budget.settings({"weekly_dollars": v})["weekly_dollars"], 50, repr(v))
+            self.assertEqual(ai_budget.settings({"weekly_tokens": v})["weekly_tokens"], 50000000, repr(v))
+
     def test_defaults_and_hand_edits(self):
         d = ai_budget.settings({})
         self.assertEqual((d["enabled"], d["unit"], d["at_limit"]), (True, "dollars", "confirm"))
         s = ai_budget.settings({"enabled": "no", "unit": "pounds", "at_limit": "ignore", "weekly_dollars": "lots", "weekly_tokens": True})
         self.assertEqual(s, d)                                   # junk falls back to the defaults
-        self.assertEqual(ai_budget.settings({"weekly_dollars": 0})["weekly_dollars"], 1)           # held between its limits
+        self.assertEqual(ai_budget.settings({"weekly_dollars": 0.5})["weekly_dollars"], 1)           # held between its limits
         self.assertEqual(ai_budget.settings({"weekly_dollars": 10 ** 9})["weekly_dollars"], 10000)
         self.assertEqual(ai_budget.settings({"weekly_dollars": float("nan")})["weekly_dollars"], 50)
 

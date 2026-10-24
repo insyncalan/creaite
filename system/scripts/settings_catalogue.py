@@ -309,7 +309,7 @@ CATALOGUE = {
                                   "Thirty: long enough for a real job, before each reply gets slow and costly."),
     # ── Weekly AI budget (#334)
     "ai_budget.enabled": ("creaite and ask creaite", "Weekly AI budget", "Warn at 80% of the week's budget, and ask or stop at 100%.",
-                          "On: a heavy week should not be a surprise. Review, Apply and Undo are never held."),
+                          "On: a heavy week should not be a surprise. The buttons in the dashboard are never held."),
     "ai_budget.unit": ("creaite and ask creaite", "Budget counted in", "dollars or tokens (what the runs report).",
                        "Dollars: the figure you pay; tokens are there if your plan is counted that way."),
     "ai_budget.weekly_dollars": ("creaite and ask creaite", "Weekly budget (dollars)",

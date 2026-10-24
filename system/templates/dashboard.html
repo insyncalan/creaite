@@ -76112,7 +76112,7 @@ ${d5.text}`);
       const j5 = await res.json().catch(() => ({}));
       const b5 = j5.budget || {};
       if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, plain);
-      await say(oneLine(j5.message || "This week's AI budget is used up."));
+      await say(oneLine(j5.message || "This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/, ""));
       return;
     }
     if (!res.ok || !res.body) {

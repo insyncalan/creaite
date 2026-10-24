@@ -12,7 +12,7 @@ Never held: a confirmed request (the answer to a question the last run asked, so
 - Settings, Advanced, "creaite and ask creaite": Weekly AI budget (on/off), Budget counted in (dollars or tokens), the two amounts, At the limit (confirm or stop). Each with a reason for its default.
 - Usage tab: a bar "$41.20 of $50.00 (82%)", the state and the week's last day (DD-MM-YYYY).
 - From 80%: after each ask run, one plain line in the chat: "Heads-up: $41.20 of $50.00 used this week; the week ends on 25-10-2026."
-- At 100%, confirm mode: a card "This week's AI budget is used up ($52.10 of $50.00). It starts again on Monday 26-10-2026. Review, Apply and Undo still work. Run this request anyway?" with a Run anyway button (the page resends with `over_budget: true`). Stop mode: the same words without the question, and a pointer to the setting. A queued message waits (Run now overrides in confirm mode only).
+- At 100%, confirm mode: a card "This week's AI budget is used up ($52.10 of $50.00). It starts again on Monday 26-10-2026. The buttons in the dashboard still work. Run this request anyway?" with a Run anyway button (the page resends with `over_budget: true`). Stop mode: the same words without the question, and a pointer to the setting. A queued message waits (Run now overrides in confirm mode only).
 
 ## What is counted
 The usage monitor's own lines (`run-usage.jsonl`): `cost_usd`, or input + output + cache read + cache create tokens, summed for lines dated in the week. The week is Monday 00:00 to Sunday 23:59, local time (the file's own clock). A stopped run counts what it cost. Counts and dates only: the module never reads a label, model, skill, name or path, and the status holds none.

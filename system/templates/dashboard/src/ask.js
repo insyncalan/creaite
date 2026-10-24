@@ -794,7 +794,7 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
   if(res.status===429){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({}));   /* #334: this week's AI budget is used up */
     const b=j.budget||{}; if(b.can_continue&&await confirmCard("Weekly AI budget",html`${oneLine(j.message||"")}`,"Run anyway")) return askStream(url,{...body,over_budget:true},confirmed,ctl,ended,plain);
-    await say(oneLine(j.message||"This week's AI budget is used up.")); return; }
+    await say(oneLine(j.message||"This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/,"")); return; }   /* declined: the question was just asked on the card, don't ask it again */
   if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check creaite window."); retryOffer("failed",body); return; }
   const work=()=>live?working():document.createElement("div");   /* BL-262 */ let next=null;
   const rd=res.body.getReader(), dec=new TextDecoder(), t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
