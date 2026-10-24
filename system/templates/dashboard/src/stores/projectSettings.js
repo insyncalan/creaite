@@ -164,7 +164,7 @@ export function addPartner(code, name) {
     if (bad) return bad;
     if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
     const v = cleanPartnerName(name);
-    if (!await needVault()) return "Not saved: creaite can't reach the vault.";
+    if (!await needVault()) return "Not saved: creaite can't reach your creaite folder.";
     if (!await writePartners(code, [...was, v])) return "Not saved.";
     snack(`${v} added as a partner`, undoer(code, was)); return "";
   });

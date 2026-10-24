@@ -255,7 +255,7 @@ export function dnHtml(r){ const d=r.dn, cls=d.strength==="Looks done"?"dn ok":d
 /* ===== BL-197 (sprint-review-work) ===== right-click a work item for a menu of its common actions. One component (components/review/ContextMenu.jsx since BL-316: a menu
    with submenus, a real menu, the icon set beside each word, never colour alone) and per-kind action lists (cxWork for actions,
    RAID items and decisions; cxReview for Review's proposals), wired to the save paths that exist: one item through boardMove (the
-   cell editor's save: the same checks, one proposal, Undo in the message, a line in Activity); several through batchMove (BL-124's
+   cell editor's save: the same checks, one suggestion, Undo in the message, a line in Activity); several through batchMove (BL-124's
    bar: what can't take the change is left out and named); a decision through recordFromBoard and withdrawDecision; a proposal
    through rvSet (Review's own edit path: kept as Alan's edit, still pending, nothing in the tracker until apply), decide, and
    Review's own Approve and Reject for the highlighted rows, whose bulk rule is unchanged (minutes, new decisions and new risks are

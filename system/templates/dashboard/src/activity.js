@@ -49,7 +49,7 @@ export function actLine(a){ let id=a.id, text=a.item, change=a.change;
    selection that is the whole latest apply uses it. Anything else goes through a confirm built from a dry run, then one new apply. */
 export const ACTKINDS=[["action","Action","action"],["Risk","Risk","risk"],["Issue","Issue","issue"],["Assumption","Assumption","assumption"],["Dependency","Dependency","dependency"],
   ["decision","Decision","decision"],["milestone","Milestone","milestone"],["project","Project","projects"],["update","Weekly update","filetext"],["workstream","Workstream","work"],
-  ["promise","Promise","handover"],["label","Label","label"],["setting","Setting","gear"],["file","File","folder"],["rejected","Rejected proposal","x"],["revert","Undo","undo"]];
+  ["promise","Promise","handover"],["label","Label","label"],["setting","Setting","gear"],["file","File","folder"],["rejected","Rejected suggestion","x"],["revert","Undo","undo"]];
 export const actKindOf=k=>ACTKINDS.find(x=>x[0]===k);
 export const actId=a=>a.id||(String(a.what||"").match(ID_RE)||[])[1]||"";
 export function actKind(a){ if(a.kind) return a.kind; const id=actId(a);
@@ -91,7 +91,7 @@ export function actTools(){ let box=$("#actTools"); if(!box) return; box.hidden=
   const bar=$("#actFbar"); drawFilterBar(bar,actBarProps()); }
 export function actRow(a,i){ const rid=a.rowid&&!a.reverted&&!a.undone?`r${a.rowid}`:"";
   const end=a.reverted?html`<span class="x actundone" title="Put back by a later undo">undone</span>`:a.undo?raw(ibtn("undo","Undo this change",html`data-undoact="${i}"`,"sm"))
-    :viaServer()&&a.apply_id&&a.apply_id===D.latest_apply&&!a.undone?raw(ibtn("undo","Undo this apply",html`data-undoapply="${a.apply_id}"`,"sm")):html`<span class="x" title="Only the latest apply can be undone here; tick older changes to undo them">Applied</span>`;
+    :viaServer()&&a.apply_id&&a.apply_id===D.latest_apply&&!a.undone?raw(ibtn("undo","Undo this save",html`data-undoapply="${a.apply_id}"`,"sm")):html`<span class="x" title="Only the latest save can be undone here; tick older changes to undo them">Saved</span>`;
   return html`<tr${rid?html` data-row="${rid}"`:""}${a.reverted?html` class="undone"`:""}><td class="actck">${rid?html`<input type="checkbox" aria-label="Select: ${actId(a)} ${a.change||a.what||""}">`:html`<input type="checkbox" disabled title="This change can't be undone here" aria-label="Not selectable: ${actId(a)} ${a.change||a.what||""}">`}</td><td class="actwhen" style="white-space:nowrap">${fd(a.at)}</td><td class="actchg">${actIcon(a)}${actLine(a)}</td><td class="x">${a.by}</td><td style="text-align:right">${end}</td></tr>`; }
 export const ACTSHOW=300;
 export function renderActivity(){ if(ACTTAB==="u") usageDraw(); actTools(); [...HL].forEach(([id,k])=>{ if(k!=="act") HL.delete(id); });
@@ -102,18 +102,18 @@ export function renderActivity(){ if(ACTTAB==="u") usageDraw(); actTools(); [...
       :html`<div class="empty">Nothing matches ${what||"these filters"} in the changes shown here. <button type="button" class="btn" data-actclear>Clear</button></div>`}${!on&&LA.length>L.length&&html`<p class="sub" id="actMore" style="margin:10px 14px">The newest ${L.length} of ${LA.length} changes. Search or filter to look through all of them.</p>`}<p class="sub" id="actCap" ${raw(D.activity_capped?"":"hidden")} style="margin:10px 14px">These are the newest 2,000 changes (search and filters look at these). Older ones are kept in the tracker's change log.</p>`);
   const vis=new Set($$("#actTbl tr[data-row]").map(t=>t.dataset.row)); [...HL.keys()].forEach(id=>{ if(!vis.has(id)) HL.delete(id); }); if(shared.HLA!=null&&!vis.has(shared.HLA)) shared.HLA=null; if(shared.HLC!=null&&!vis.has(shared.HLC)) shared.HLC=null;
   actPaint(); renderAskChanges();
-  if(!shared.LOADING&&!shared.ACT.length) putHTML($("#actTbl"),html`<div class="empty">Nothing has changed yet. What you approve, edit or apply shows here, newest first, with Undo. <a href="#" data-go="review">Open Intake</a></div>`); }
+  if(!shared.LOADING&&!shared.ACT.length) putHTML($("#actTbl"),html`<div class="empty">Nothing has changed yet. What you approve, edit or save shows here, newest first, with Undo. <a href="#" data-go="review">Open Intake</a></div>`); }
 export const actSel=()=>[...HL].filter(([,k])=>k==="act").map(([id])=>+id.slice(1));
 export function actPaint(){ $$("#actTbl tr[data-row]").forEach(tr=>{ const on=HL.has(tr.dataset.row); tr.classList.toggle("hl",on); tr.classList.toggle("cur",tr.dataset.row===shared.HLC); const cb=tr.querySelector("input[type=checkbox]"); if(cb) cb.checked=on; });
   const n=actSel().length, bar=$("#actBar"); if(!bar) return; bar.hidden=!n;
-  putHTML(bar,html`${n>0&&html`<span class="bkn" aria-live="polite">${n} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer()&&html`disabled title="Undoing needs the live server"`}>${raw(ic("undo"))}Undo ${n}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`); }
+  putHTML(bar,html`${n>0&&html`<span class="bkn" aria-live="polite">${n} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer()&&html`disabled title="Undoing needs creaite to be running"`}>${raw(ic("undo"))}Undo ${n}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`); }
    /* Shift-click picks a range, not text */
 /* "/" searches Activity while it is open (elsewhere it is still ask creaite); Esc clears the selection before anything else */
 export const actTyping=()=>typing()&&!document.activeElement.matches("input[type=checkbox]");   /* a tick box has the focus after a click: not typing */
 /* the address: #activity&q=…&type=Risk,action&from=YYYY-MM-DD&to=… (also read with "?" after activity) */
 /* undo several: the whole latest apply uses its exact undo; anything else is planned (a dry run), confirmed, then done as one apply */
 export const ACT_ASK_AGAIN=25;
-export async function actUndoSelected(){ const ids=actSel(); if(!ids.length) return; if(!viaServer()){ snack("Undoing needs the live server"); return; }
+export async function actUndoSelected(){ const ids=actSel(); if(!ids.length) return; if(!viaServer()){ snack("Undoing needs creaite to be running"); return; }
   const latest=D.latest_apply, whole=shared.ACT.filter(a=>a.rowid&&!a.reverted&&a.apply_id===latest).map(a=>a.rowid);
   if(latest&&whole.length&&ids.length===whole.length&&ids.every(r=>whole.includes(r))){ hlClear(); actPaint(); await undoApply(latest); return; }
   const plan=await api("/api/undo-changes",{rowids:ids,dry_run:true}); if(!plan.ok){ snack("Not undone: "+oneLine(plan.message)); return; }
@@ -126,7 +126,7 @@ export function actPlanLine(d){ const val=v=>v==null||v===""?"—":DATE.test(Str
 export function actConfirm(ids,plan){ const dlg=$("#actDlg")||makeUndoDialog();
   const done=plan.done||[], skipped=plan.skipped||[], n=done.length; let asked=false;
   putHTML($("#actDlgBody"),html`<h2 id="actDlgH" style="margin:0 0 6px">${n?html`Undo ${raw(n)} change${n===1?"":"s"}?`:"Nothing here can be undone"}</h2>
-    <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n?"Each goes back to what it was before, only where it still holds the value that change gave it. It is one new apply, so you can undo it too.":html`Each of these has changed since, or can't be put back here.`}</p>
+    <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n?"Each goes back to what it was before, only where it still holds the value that change gave it. It is one new save, so you can undo it too.":html`Each of these has changed since, or can't be put back here.`}</p>
     <ul class="actplan">${raw(done.map(actPlanLine).join(""))}${raw(skipped.map(actPlanLine).join(""))}</ul>
     <div class="curacts"><span class="sp"></span><button type="button" class="btn" id="actDlgCancel">${n?"Cancel":"Close"}</button>${n?html`<button type="button" class="btn primary" id="actDlgGo">Undo ${raw(n)}</button>`:""}</div>`);
   $("#actDlgCancel").onclick=()=>dlg.close();
@@ -168,16 +168,16 @@ export function qRow(body,head,cells,note){ const tr=document.createElement("tr"
   if(note){ const s=document.createElement("span"); s.className="qnr"; s.textContent=note; th.append(s); } tr.append(th); cells.forEach(c=>qCell(tr,c)); body.append(tr); }
 export function qEmpty(body,cols,text){ const tr=document.createElement("tr"), td=document.createElement("td"); td.colSpan=cols; td.className="empty"; td.textContent=text; tr.append(td); body.replaceChildren(tr); }
 export const qNR=(r,n,w="decided")=>r?"":n?`Not rated yet: ${n} ${w}, rated from ${(D.quality||{}).min||10}`:`Not ${w} yet`;
-export function qGroups(id,L){ const body=$(id); body.replaceChildren(); if(!L.length){ qEmpty(body,5,"Nothing proposed in this period."); return; }
+export function qGroups(id,L){ const body=$(id); body.replaceChildren(); if(!L.length){ qEmpty(body,5,"Nothing suggested in this period."); return; }
   L.forEach(r=>qRow(body,r.label,[r.approved.text,r.edited.text,r.rejected.text,String(r.pending)],qNR(r.rated,r.decided))); }
 export function renderQuality(){ const q=D.quality||{}; if(q.error){ $("#qPeriod").textContent=`Quality couldn't be counted (${q.error}).`; return; }
-  const p=q.period||{}; $("#qPeriod").textContent=p.from?`The last ${p.weeks} weeks: ${fd(p.from)} to ${fd(p.to)}, by the day each proposal was made.`:"";
+  const p=q.period||{}; $("#qPeriod").textContent=p.from?`The last ${p.weeks} weeks: ${fd(p.from)} to ${fd(p.to)}, by the day each suggestion was made.`:"";
   $("#qMoved").textContent=q.moved||""; qGroups("#qSrc",q.by_source||[]); qGroups("#qType",q.by_type||[]);
   const why=$("#qWhy"); why.replaceChildren(); (q.reasons||[]).forEach(r=>qRow(why,r.reason,[r.text])); if(!(q.reasons||[]).length) qEmpty(why,2,"No rejections in this period.");
-  const dup=q.duplicates||{}; $("#qDup").textContent=dup.of?`The tracker recorded ${dup.text} rejections in this period as a duplicate of an existing item.`:"";
+  const dup=q.duplicates||{}; $("#qDup").textContent=dup.of?`Your project record recorded ${dup.text} rejections in this period as a duplicate of an existing item.`:"";
   const fl=$("#qFields"); fl.replaceChildren(); const lab=q.source_labels||{};
   (q.fields||[]).forEach(r=>qRow(fl,r.field,[r.text,Object.entries(r.by_source||{}).map(([k,n])=>`${lab[k]||k} ${n}`).join(" · ")])); if(!(q.fields||[]).length) qEmpty(fl,3,"No edits with a known field in this period.");
-  const u=q.unknown||{}; $("#qUnknown").textContent=u.n?`${u.n} of ${u.of} edited proposals were edited before creaite kept what was first proposed: field unknown.`:"";
+  const u=q.unknown||{}; $("#qUnknown").textContent=u.n?`${u.n} of ${u.of} edited suggestions were edited before creaite kept what was first suggested: field unknown.`:"";
   const dr=$("#qDrafts"); dr.replaceChildren(); (q.drafts||[]).forEach(r=>qRow(dr,r.label,r.offered?[String(r.offered),r.used.text,r.edited.text,r.rejected.text]:["0","—","—","—"],qNR(r.rated,r.offered,"offered"))); }
 /* BL-316: Activity's tabs are the Tabs building block (drawn into #actTabsHost). #238: a third, Usage (read only, counts only) */
 export const ACTTABS=[{id:"ch",label:"Changes",tabId:"actTabCh",controls:"actTbl"},{id:"q",label:"Quality",tabId:"actTabQ",controls:"actQuality"},{id:"u",label:"Usage",tabId:"actTabU",controls:"actUsage"}];

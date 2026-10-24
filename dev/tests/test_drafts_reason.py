@@ -89,7 +89,7 @@ class Reason(DraftCase):
         dr = next(e for e in events if e["type"] == "draft")
         self.assertEqual(dr["text"], "The data access escalation is overdue, so UAT start moves.")
         reply, _ = self.draft({"kind": "forecast", "id": "DEF-M-001", "fc": d(60)})
-        self.assertIn("Nothing in the tracker explains the move", reply["nothing"])
+        self.assertIn("Nothing in your project record explains the move", reply["nothing"])
 
     def test_forecast_in_the_milestone_editor(self):
         b = self.b

@@ -127,7 +127,7 @@ class ReplyChecks(unittest.TestCase):
     def test_an_unknown_focus_id_and_a_missing_objective_are_errors(self):
         out = self.parse(GOOD.replace("FOCUS: ABC-A-001", "FOCUS: ABC-A-999").split("OBJECTIVE:")[0] + "ASK:\n- x [S1]\n")
         notes = [c["note"] for c in out["checks"] if c["level"] == "error"]
-        self.assertIn("ABC-A-999 isn't in the tracker.", notes)
+        self.assertIn("ABC-A-999 isn't in your project record.", notes)
         self.assertIn("The reply has no Objective section.", notes)
 
 

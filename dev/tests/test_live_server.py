@@ -508,7 +508,7 @@ class LivePageTests(unittest.TestCase):
         self.assertFalse(r["vaultBtn"])                          # no folder access needed when served live
         self.assertEqual((r["staged"], r["stagedAfter"]), (1, 0))   # BL-176: staged, then applied by Apply
         self.assertEqual(r["afterSave"], "Omar Ali")          # applied and reloaded
-        self.assertIn("Applied 1 change", r["snack"])
+        self.assertIn("Saved 1 change", r["snack"])
         self.assertNotEqual(r["afterUndo"], "Omar Ali")       # Undo reversed the apply
         self.assertTrue(r["routineApplied"])
         self.assertNotIn("labelled", r["draftMsg"])                  # BL-121: no label question, no label buttons

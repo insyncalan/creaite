@@ -113,7 +113,7 @@ function General({ code }) {
           if (box) { box.value = `change the code ${code} to `; box.focus(); box.dispatchEvent(new Event("input", { bubbles: true })); }
         }}>Change code…</button>
       </PsRow>
-      <PsRow label="Status" help="Active projects are swept and reported. A closed project is kept, with everything in it." kw="active closed on hold">
+      <PsRow label="Status" help="Active projects are checked and reported. A closed project is kept, with everything in it." kw="active closed on hold">
         <select id="psStatus" aria-label="Status" value={state === "closed" ? "closed" : "active"} disabled={state === "archived" || !viaServer()}
           onChange={async e => {
             const el = /** @type {HTMLSelectElement} */ (e.target), to = el.value;
@@ -299,9 +299,9 @@ function Archive({ code }) {
             <AskButton id="psArchive" label="Archive…" ask={`Archive ${name}?`} yes="Archive" onYes={() => projArchive(code, "archive", false)} />
           </PsRow>}
       {state === "closed"
-        ? <PsRow label="Reopen this project" help="Makes it active again: it is swept and reported again." kw="active">
+        ? <PsRow label="Reopen this project" help="Makes it active again: it is checked and reported again." kw="active">
             <button type="button" class="btn" id="psReopen" onClick={() => setProjectActive(code, true)}>Reopen</button></PsRow>
-        : <PsRow label="Close this project" help="Marks it closed in the tracker; nothing is deleted." kw="close closed">
+        : <PsRow label="Close this project" help="Marks it closed in your project record; nothing is deleted." kw="close closed">
             <AskButton id="psClose" label="Close…" ask={`Close ${name}?`} yes="Close it" danger onYes={() => setProjectActive(code, false)} />
           </PsRow>}
     </div></div>

@@ -199,7 +199,7 @@ export function renderToday(){
   renderSweepDue();   /* #200 */
   { $("#drStale")?.remove(); const host=$("#mineMore"); if(host&&draftOn("update")){
     const st=A.filter(x=>isStale("actions",x)); if(st.length){
-    addHTML(host,"afterend",html`<div class="drstale" id="drStale"><span>${raw(plur(st.length,"open action"))} ${st.length===1?"has":"have"} had no update for ${raw(+S.staleDays||7)} days.</span>${raw(draftBtn("update-bulk","Draft updates","Draft an update for each from what has happened since, as proposals in Review",'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`); } } }   /* AI drafts: stale actions */
+    addHTML(host,"afterend",html`<div class="drstale" id="drStale"><span>${raw(plur(st.length,"open action"))} ${st.length===1?"has":"have"} had no update for ${raw(+S.staleDays||7)} days.</span>${raw(draftBtn("update-bulk","Draft updates","Draft an update for each from what has happened since, as suggestions in Review",'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`); } } }   /* AI drafts: stale actions */
   dcIcon(); } }   /* BL-205 */
 /* Today's day view: Alan's meetings (saved locally by cx-sweep from Outlook) as a line with a bump per meeting,
    a sun at the current time, and a headline naming the day's shape. Without a calendar the line is flat. */
@@ -337,15 +337,15 @@ document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) irR
    drafting). A conflicting proposal in Review shows the tracker's current value beside the proposed one, with Keep current
    and Use this one (review.py keep / override through /api/review, then the usual apply and Undo). Approve on a draft already
    goes through review.py (reviewViaServer). Nothing here writes on its own: each change is Alan's click. */
-export const PEOPLE_MOVE="setup: move the people still listed in settings.json into the people register";
+export const PEOPLE_MOVE="setup: move the people still listed in settings into the people register";
 export function remLabel(r){ return r.id.startsWith("weekly:")?"Draft weekly report":r.id.startsWith("client:")?"Draft client report":"Run it"; }
-export function remBody(r){ if(!r.cmd) return ""; return viaServer()?"":`It needs the live server; or say <span data-codeok>“${esc(r.cmd)}”</span> in Claude Code.`; }
+export function remBody(r){ if(!r.cmd) return ""; return viaServer()?"":`It needs creaite to be running; or say <span data-codeok>“${esc(r.cmd)}”</span> in Claude Code.`; }
 export function remBtn(r){ if(!r.cmd) return ""; const run=RUNNING.has(r.id), live=viaServer(), why=run?"Already running":live?"":"creaite isn’t running";
   return `<span class="rmgo tacts">${tib("filetext",run?"Running…":remLabel(r),`${remLabel(r)}: ${r.text}`,`data-d="run"${why?` data-why="${esc(why)}"`:""}`,true,why)}</span>`; }   /* BL-319: an icon, named on hover */
 export const isConflict=r=>!!r&&!r.done&&(r.flags||[]).includes("conflict");
 export function conflictHtml(r){ const ch=(r.rec.changes&&r.rec.changes.length?r.rec.changes:r.rec.field?[{field:r.rec.field,from:r.rec.from,to:r.rec.to}]:[]);
   const v=x=>x==null||x===""?"(empty)":esc(DATE.test(String(x).slice(0,10))&&String(x).length===10?fd(x):String(x));
-  return `<div class="cfvs">${ch.map(c=>`<div><span class="cff">${esc(c.field)}</span><span class="cfnow">Now: <b>${v(c.from)}</b></span><span class="cfnew">This one: <b>${v(c.to)}</b></span></div>`).join("")||'<div class="sub">Changed in the tracker after this was proposed.</div>'}</div>`; }
+  return `<div class="cfvs">${ch.map(c=>`<div><span class="cff">${esc(c.field)}</span><span class="cfnow">Now: <b>${v(c.from)}</b></span><span class="cfnew">This one: <b>${v(c.to)}</b></span></div>`).join("")||'<div class="sub">Changed in your project record after this was suggested.</div>'}</div>`; }
 /* ===== end BL-149 ===== */
 export const kindLabel=r=>({actions:"Action",raid:r.rec.type||"Risk",decisions:"Decision",update:"Update",draft:"Draft",files:"File change"}[r.kind]);
 export function evidence(p){ const nw=WARNS().filter(w=>w.p===p.code).length, ov=A.filter(x=>x.p===p.code&&overdue(x)).length, urg=R.filter(r=>r.p===p.code&&r.st==="Open"&&r.pr==="Urgent").length;
@@ -551,7 +551,7 @@ if(viaServer()){ const sig=()=>JSON.stringify(setupSteps().map(x=>[x[2],x[5]]));
    attention, Your commitments (with You owe and Waiting on, and #245's one quiet Intake line at its foot), Messages (BL-334; was To decide, then Intake and Review), Week ahead, Resolved (folded to one line) and Portfolio. Each
    row's actions are icons (IconButton, or tib for the rows still drawn as text), named on hover and to a screen reader,
    55% until the row is pointed at or tabbed into; nothing moves. Every change has Undo: an approval or a rejection the
-   apply's Undo, a dismissed message its own, Mark done and Move the date the staged change's (Undo last). */
+   apply's Undo, a dismissed message its own, Mark done and Move the date the saved change's (Undo last). */
 /** an icon button in a text-drawn row: `label` on hover, `name` to a screen reader; `why` blocks it (aria-disabled, the reason as its tooltip) */
 export function tib(icon,label,name,attrs="",primary=false,why=""){
   return `<button type="button" class="ib sm${primary?" pri":""}" aria-label="${esc(name||label)}" data-tip="${esc(why||label)}"${why?' aria-disabled="true"':""} ${attrs}>${ic(icon)}</button>`; }
@@ -564,7 +564,7 @@ const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
 /** a meeting whose transcript is ready (Intake's calendar import, #245; the old Intake page's own test, kept here since #232 retired it) */
 export const txReady=/** @param {any} m */m=>m.transcript==="available"&&!m.processed&&!m.draft;
-const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
+const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Suggestion";
 /** the Messages section's rows (BL-319 called it To decide, #168 Intake and Review), newest first: messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]); void live;
   /* #208 (Alan, 17-10-2026): proposals in Review and transcripts in Intake are not listed here; #245: intakeParts() counts them, in a line under Your commitments */
@@ -592,7 +592,7 @@ const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
    without that time falls back to when it was recorded */
 const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
 const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
-  a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
+  a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", waiting in Review"}`:""].filter(Boolean).join(" · ");
 /** #236 (Alan, 19-10-2026): the followed-person alerts that are Needs attention rows, not To decide cards: what the sweep pulled out of a
     message (a proposal row, a memory-note row) and a private conversation @param {any} a */
 export const attnAlert=a=>a.kind==="proposal"||a.kind==="note"||a.marker==="private";
@@ -638,7 +638,7 @@ export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
   const mt=a.match&&a.match.relation?a.match:null, rel=mt?RELCHIP[mt.relation]||"":"", others=mt&&mt.id&&mt.count>1?mt.count-1:0;
   if(mt&&mt.relation==="chase"&&mt.id) acts.push({id:"chase",icon:"chasemail",label:"Chase",name:`Chase the owner of ${mt.id}: ${t}`,data:{alertdo:"chase",id:a.id}});
   /* BL-342 Part 3 B, step 9: "Looks done: close ABC-A-007" beside Log, when the check offered a close the code kept; once
-     staged, "Staged for Review" with Undo. Hidden on a private card, a New match or an item no longer open. */
+     staged, "Waiting in Review" with Undo. Hidden on a private card, a New match or an item no longer open. */
   const cl=cardClose(a,mt);
   if(cl&&!cl.staged) acts.push({id:"close",icon:"checks",label:`Looks done: close ${cl.id}`,name:`Stage a close of ${cl.id} for Review`,data:{alertdo:"close",id:a.id}});
   /* BL-342 Part 5: a promise of the project that looks kept: "Looks kept: mark kept" beside Log; once staged, Staged for Review with Undo */
@@ -765,10 +765,10 @@ export function itemActs(k,x){ return `<span class="tacts">${workActs(k,x).map(a
 /** do one: each change is staged with Undo; a chase, an update and a decision open where they are written */
 export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="open") return;
   if(what==="done"){ const was=x.st; if(!await pkCommit(k,id,{st:"Closed",closed:TODAY},"Status",was,"Closed")) return;
-    snack(`${id} marked done. Staged: nothing reaches the tracker until you apply`,()=>pkUndoLast()); return; }
+    snack(`${id} marked done. Waiting to be saved: nothing is saved until you press Save`,()=>pkUndoLast()); return; }
   if(what==="move"){ const commit=async v=>{ if(!v||v===x.due) return; const was=x.due;   /* BL-316: the Picker block's calendar */
       if(!await pkCommit(k,id,{due:v},"Due date",fd(was)||"none",fd(v)||"none")) return;
-      snack(`${id} moved to ${longDay(v)}. Staged until you apply`,()=>pkUndoLast()); };
+      snack(`${id} moved to ${longDay(v)}. Waiting to be saved until you press Save`,()=>pkUndoLast()); };
     openDatePicker(btn,{value:x.due||"",label:`Due date of ${id}`,parse:t=>parseWhen(t,TODAY,true),weekend:iso=>!!weekendNote(iso),
       error:"Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d.",
       typedNote:t=>{ const n=weekendNote(t?parseWhen(t,TODAY,true):null); return n?`${n.text} You'll be offered the nearest working days.`:""; },

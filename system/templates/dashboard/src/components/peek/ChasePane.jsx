@@ -132,7 +132,7 @@ export function ChasePane({ id, onBack, start }) {
 
   useEffect(() => { if (back.current) back.current.focus(); }, []);
   useEffect(() => {
-    if (!viaServer()) { setErr("Draft email needs the live server: start it, then try again."); return undefined; }
+    if (!viaServer()) { setErr("Draft email needs creaite to be running: start it, then try again."); return undefined; }
     const n = ++seq.current;
     const t = setTimeout(async () => {
       const r = await api("/api/chase/pane", { id, hour: new Date().getHours(), ...opts });

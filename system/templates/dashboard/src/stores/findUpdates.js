@@ -58,7 +58,7 @@ export function fuReset(path) {
 export async function fuFind(o = {}) {
   const path = fuPath.value;
   if (!path || fuState.value === "busy") return;
-  if (!viaServer()) { fuState.value = "error"; fuMsg.value = "Find updates needs the live server."; return; }
+  if (!viaServer()) { fuState.value = "error"; fuMsg.value = "Find updates needs creaite to be running."; return; }
   const confirm = !!o.confirm || ASKED.has(path);
   fuState.value = "busy"; fuSteps.value = 0; fuMsg.value = ""; fuOpen.value = "";
   const body = { path, ...(o.p ? { p: o.p } : {}), ...(confirm ? { confirm: true } : {}) };
@@ -72,7 +72,7 @@ export async function fuFind(o = {}) {
   fuRows.value = r.items.map(x => ({ ...x, notes: x.notes || [], flags: x.flags || [], fields: x.fields || [] }));
   fuQuiet.value = r.quiet || 0;
   fuState.value = r.items.length ? "ready" : "none";
-  if (!r.items.length) fuMsg.value = "Nothing in the new lines to turn into tracker changes. That's fine: not every line needs to be an item.";
+  if (!r.items.length) fuMsg.value = "Nothing in the new lines to turn into project record changes. That's fine: not every line needs to be an item.";
 }
 
 /** A confidential note: Alan said yes, once. */
@@ -117,7 +117,7 @@ export async function fuApply(mode) {
   if (!viaServer()) {
     try {
       await writeProposal(picked.filter(r => r.item && r.item.op).map(r => ({ ...r.item, decision: "pending" })), { source_run: "note", files: [path] });
-      snack("The live server isn't running: saved for Review instead");
+      snack("creaite isn't running: saved for Review instead");
       fuDrop(picked);
     } catch (e) { snack("Not saved: " + oneLine(String(e && e.message || e))); }
     return;
@@ -127,7 +127,7 @@ export async function fuApply(mode) {
   fuSaving.value = "";
   if (!r.ok) {
     if (r.problems) fuRefused(r.problems);
-    snack(oneLine(r.message) || (mode === "apply" ? "Nothing applied" : "Nothing saved"));
+    snack(oneLine(r.message) || (mode === "apply" ? "Nothing saved" : "Nothing saved"));
     return;
   }
   fuDrop(picked);

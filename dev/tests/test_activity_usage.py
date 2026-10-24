@@ -113,7 +113,7 @@ class UsageTab(UsageBase):
         rows = self.open_usage().eval("[...document.querySelectorAll('#actUsage table[aria-label=\"By kind of run\"] tbody tr')]"
                                       ".map(tr=>[...tr.children].map(c=>c.textContent))")
         self.assertEqual(rows, [["ask creaite", "3", "20,667", "20,000", "$5.00", "53%"],
-                                ["Sweep", "2", "23,000", "20,500", "$4.00", "42%"],
+                                ["Check", "2", "23,000", "20,500", "$4.00", "42%"],
                                 ["Alert check", "1", "21,000", "21,000", "$0.50", "5%"]])
 
     def test_what_every_run_loads_with_the_thirty_day_change(self):

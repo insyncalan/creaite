@@ -50,7 +50,7 @@ FIXES = {
 # doctor check id -> (plain words for the line, the fix kind)
 PLAIN = {
     "python_version": ("Python needs attention", "launcher"),
-    "launcher_vault": ("Your launcher opens another vault", "launcher"),
+    "launcher_vault": ("Your creaite app opens a different copy of creaite", "launcher"),
     "fts5": ("This Python's SQLite can't search", "manual"),
     "vendored": ("A bundled library doesn't load", "reinstall"),
     "vendor_manifest": ("Bundled libraries don't match their manifest", "reinstall"),
@@ -61,12 +61,12 @@ PLAIN = {
     "mapped_folders": ("Some folders creaite files into are missing or read-only", "manual"),
     "assistant_permissions": ("ask creaite's permissions are broader than creaite asks for", "permissions"),
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
-    "vault_not_synced": ("The vault is in a synced folder", "manual"),
+    "vault_not_synced": ("Your creaite folder is in a synced folder", "manual"),
     "online_only": ("Some project files are online-only", "manual"),
     "archive_reports": ("Old reports and minutes to archive", "manual"),     # BL-03: health_fixes builds its Fix it (the card)
     "archive_items": ("Archiving of old items", "manual"),                   # BL-10: information only (never a warning)
-    "extraction_scope": ("Something was extracted from documents or reports", "manual"),
-    "no_absolute_paths": ("A full path was stored", "manual"),
+    "extraction_scope": ("Items were found in documents or reports", "manual"),
+    "no_absolute_paths": ("A full file location was stored", "manual"),
     "config_files": ("A configuration file is missing", "setup"),
     "people_register": ("The people register needs attention", "setup"),
     "workstreams_moved": ("Old workstream lists to retire", "setup"),
@@ -76,14 +76,14 @@ PLAIN = {
     "offsite_backup": ("The OneDrive backup copy is missing or out of date", "offsite"),
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
-    "sweep_lock": ("A sweep lock is held with no sweep running", "manual"),   # BL-328: health_fixes builds its Release
+    "sweep_lock": ("A mail and Teams check looks stuck", "manual"),   # BL-328: health_fixes builds its Release
     "debug_log": ("Errors keep coming back", "manual"),
-    "minutes_drafts": ("Staged minutes have lost their Word draft", "manual"),
+    "minutes_drafts": ("Minutes waiting in Review have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),
     "autostart": ("creaite won't start by itself after a restart", "autostart"),      # #300: a suggestion, dismissible
     "version": ("The version file is wrong", "reinstall"),
-    "rules_imported": ("CLAUDE.md doesn't import creaite's rules", "setup"),
-    "scripts_use_paths": ("A script doesn't take its locations from paths.py", "reinstall"),
+    "rules_imported": ("Your Claude instructions don't include creaite's rules", "setup"),
+    "scripts_use_paths": ("A creaite file doesn't take its folder locations from one place", "reinstall"),
 }
 
 BACKUP_LINES = ("offsite_backup", "backup_check", "tidy_up")      # BL-323: shown under Backups when fine (the last copy, check, tidy)

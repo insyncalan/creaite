@@ -273,7 +273,7 @@ class ItemLinks(LiveBrowserCase):
         b.eval("closePanel&&closePanel(true)")
         self.assertEqual(b.eval("curEd.cxed.value()"), md)
         b.click('[data-cure="save"]')
-        b.wait("/saved and applied|Not saved/i.test(document.getElementById('snackT').textContent)", 15)
+        b.wait("/— saved|Not saved/i.test(document.getElementById('snackT').textContent)", 15)
         saved = self.section()
         self.assertIn(link.group(0), saved)                                         # plain Markdown in the project's CLAUDE.md
         self.assertTrue(saved.startswith("### Top"))

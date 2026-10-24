@@ -247,7 +247,7 @@ class Health(unittest.TestCase):
         self.assertEqual(out["fine"], 1)
         self.assertEqual([p["id"] for p in out["problems"]], ["database", "offsite_backup", "launcher_vault", "brand_new_check"])
         p = {x["id"]: x for x in out["problems"]}
-        self.assertEqual(p["launcher_vault"]["title"], "Your launcher opens another vault")
+        self.assertEqual(p["launcher_vault"]["title"], "Your creaite app opens a different copy of creaite")
         self.assertEqual(p["launcher_vault"]["detail"], "~/x.app")
         self.assertIn("make-launcher", p["launcher_vault"]["fix"]["would_run"])
         self.assertEqual(p["database"]["fix"]["kind"], "migrate")

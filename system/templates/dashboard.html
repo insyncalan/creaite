@@ -4454,7 +4454,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <h1>Files</h1>
         <!-- ===== Search (BL-07) ===== -->
         <div class="vsearch" id="vsearch" role="search"><div class="vscol">
-          <div class="vsbar"><input id="vsInput" type="search" placeholder="Search the vault" aria-label="Search the vault" autocomplete="off">
+          <div class="vsbar"><input id="vsInput" type="search" placeholder="Search everything" aria-label="Search everything" autocomplete="off">
             <span class="askwrap"><button type="button" class="askbtn" id="vsAskBtn" data-state="idle" aria-disabled="true" title="ask creaite: an answer with a link to the source for every point."><svg class="spark" viewBox="320 210 92 92" aria-hidden="true"><path d="M366 214Q366 256 408 256Q366 256 366 298Q366 256 324 256Q366 256 366 214Z" fill="currentColor"/></svg><span class="asklab">ask creaite</span><span class="askret" aria-hidden="true">↵</span></button><button type="button" class="askstop" id="vsAskStop" hidden>Stop</button></span></div>
           <div class="vshint sub" id="vsHint" data-codeok>For example: risks ABC last month, or what did Sara say about UAT?</div>
           <div class="vschips" id="vsChips" aria-live="polite"></div><div class="sub" id="vsNote" aria-live="polite"></div><div id="vsAnswer" hidden></div><div id="vsResults" hidden></div></div></div>
@@ -4464,12 +4464,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
             <div class="tbl" id="filesTbl"></div><p class="sub"><span id="filesAt">File list as of the last build.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p></div></div>
       </div></section>
       <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tabhost" id="actTabsHost"></div><!-- BL-316: Changes and Quality, the Tabs building block --><!-- BL-233 (sprint-drafts-extraction) -->
-<div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden><p class="sub" id="qPeriod"></p><p class="qmoved" id="qMoved"></p><p class="sub qnote">Each figure is a count out of its total. Nothing is rated until a group has 10. These count extraction and drafts only, never a person, and stay internal: no report or export reads them.</p>
-<h2>By source</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Source</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qSrc"></tbody></table></div>
-<h2>By type</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Type</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qType"></tbody></table></div>
-<h2>Why proposals were rejected</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Reason</th><th scope="col">Rejections</th></tr></thead><tbody id="qWhy"></tbody></table></div><p class="sub" id="qDup"></p>
+<div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden><p class="sub" id="qPeriod"></p><p class="qmoved" id="qMoved"></p><p class="sub qnote">Each figure is a count out of its total. Nothing is rated until a group has 10. These count items found in meetings and drafts only, never a person, and stay internal: no report or export reads them.</p>
+<h2>By source</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Source</th><th scope="col">Approved as suggested</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qSrc"></tbody></table></div>
+<h2>By type</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Type</th><th scope="col">Approved as suggested</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qType"></tbody></table></div>
+<h2>Why suggestions were rejected</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Reason</th><th scope="col">Rejections</th></tr></thead><tbody id="qWhy"></tbody></table></div><p class="sub" id="qDup"></p>
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
-<h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
+<h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited suggestions</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
 <div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden></div><!-- #238: Usage, drawn by components/activity/UsagePanel.jsx -->
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
@@ -4483,7 +4483,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       <section class="view" id="v-help" hidden><div class="hp-shell"><div class="hp-search" id="helpSearch" role="search"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><input id="helpQ" type="search" placeholder="Search Help: a job, a button, a word" aria-label="Search Help" autocomplete="off"><kbd>/</kbd></div><div class="tabhost" id="helpTabsHost"></div><div id="helpResults" class="hp-results" hidden></div><div id="helpPane" role="tabpanel"></div></div></section>
       <aside class="panel" id="panel" aria-label="Details"><div class="pin">
         <div class="ph"><div style="flex:1"><div class="id" id="pId"></div><h2 id="pTitle"></h2></div><button class="btn quiet" id="pClose">Close</button></div>
-        <div class="pb" id="pBody"><div class="editbanner" id="editBanner">Editing — changes apply when you save</div><dl class="fgrid" id="pFields"></dl></div>
+        <div class="pb" id="pBody"><div class="editbanner" id="editBanner">Editing — changes are kept when you save</div><dl class="fgrid" id="pFields"></dl></div>
         <div class="ferr" id="pErr"></div><div class="pkeys" id="pKeys"></div>
         <div class="pf" id="pFoot"></div>
       </div></aside>
@@ -10708,11 +10708,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       ] }),
       /* @__PURE__ */ u4(Dialog, { cmdEnter: false, id: "llDlg", class: "rvdlg lldlg", labelledBy: "llTitle", children: [
         /* @__PURE__ */ u4("h2", { id: "llTitle", children: "Compare" }),
-        /* @__PURE__ */ u4("p", { class: "sub", children: "The proposal beside the item it looks like. Nothing changes until you choose." }),
+        /* @__PURE__ */ u4("p", { class: "sub", children: "The suggestion beside the item it looks like. Nothing changes until you choose." }),
         /* @__PURE__ */ u4("table", { class: "lltab", children: [
           /* @__PURE__ */ u4("thead", { children: /* @__PURE__ */ u4("tr", { children: [
             /* @__PURE__ */ u4("th", { scope: "col", children: /* @__PURE__ */ u4("span", { class: "vh", children: "Field" }) }),
-            /* @__PURE__ */ u4("th", { scope: "col", id: "llNew", children: "Proposed" }),
+            /* @__PURE__ */ u4("th", { scope: "col", id: "llNew", children: "Suggested" }),
             /* @__PURE__ */ u4("th", { scope: "col", id: "llOld", children: "Existing" })
           ] }) }),
           /* @__PURE__ */ u4("tbody", { id: "llRows" })
@@ -28028,7 +28028,7 @@ ${s5}`;
       noteMarks.value = { markers: {}, hover: 0 };
     }
     if (!viaServer()) {
-      notesMsg.value = "Opening a note needs the live server.";
+      notesMsg.value = "Opening a note needs creaite to be running.";
       return false;
     }
     const rev = ses.rev;
@@ -28136,7 +28136,7 @@ ${s5}`;
       return false;
     }
     if (!viaServer()) {
-      notesMsg.value = "Changing a note needs the live server.";
+      notesMsg.value = "Changing a note needs creaite to be running.";
       return false;
     }
     const g5 = await api("/api/notes/get", { path });
@@ -28171,7 +28171,7 @@ ${s5}`;
     if (!c5) return true;
     if (!ses.dirty) return final ? settleAndRecheck() : true;
     if (!viaServer()) {
-      noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." };
+      noteSave.value = { state: "error", msg: "Not saved: creaite isn't running. Your typing is still here." };
       return false;
     }
     const sent = { ...ses.changes }, b5 = body(), rev = ses.rev, oldTitle = c5.note.title;
@@ -28255,7 +28255,7 @@ ${s5}`;
   async function createNote(code, o5) {
     if (!await mayLeave()) return null;
     if (!viaServer()) {
-      notesMsg.value = "Making a note needs the live server.";
+      notesMsg.value = "Making a note needs creaite to be running.";
       return null;
     }
     const rev = ses.rev;
@@ -28465,7 +28465,7 @@ ${s5}`;
       return null;
     }
     if (!viaServer()) {
-      notesMsg.value = "Adding a picture needs the live server.";
+      notesMsg.value = "Adding a picture needs creaite to be running.";
       return null;
     }
     const src = await new Promise((res) => {
@@ -28555,7 +28555,7 @@ ${s5}`;
     if (!path || fuState.value === "busy") return;
     if (!viaServer()) {
       fuState.value = "error";
-      fuMsg.value = "Find updates needs the live server.";
+      fuMsg.value = "Find updates needs creaite to be running.";
       return;
     }
     const confirm2 = !!o5.confirm || ASKED.has(path);
@@ -28597,7 +28597,7 @@ ${s5}`;
     fuRows.value = r4.items.map((x5) => ({ ...x5, notes: x5.notes || [], flags: x5.flags || [], fields: x5.fields || [] }));
     fuQuiet.value = r4.quiet || 0;
     fuState.value = r4.items.length ? "ready" : "none";
-    if (!r4.items.length) fuMsg.value = "Nothing in the new lines to turn into tracker changes. That's fine: not every line needs to be an item.";
+    if (!r4.items.length) fuMsg.value = "Nothing in the new lines to turn into project record changes. That's fine: not every line needs to be an item.";
   }
   function fuConfirm() {
     ASKED.add(fuPath.value);
@@ -28632,7 +28632,7 @@ ${s5}`;
     if (!viaServer()) {
       try {
         await writeProposal(picked.filter((r5) => r5.item && r5.item.op).map((r5) => ({ ...r5.item, decision: "pending" })), { source_run: "note", files: [path] });
-        snack("The live server isn't running: saved for Review instead");
+        snack("creaite isn't running: saved for Review instead");
         fuDrop(picked);
       } catch (e4) {
         snack("Not saved: " + oneLine(String(e4 && e4.message || e4)));
@@ -28644,7 +28644,7 @@ ${s5}`;
     fuSaving.value = "";
     if (!r4.ok) {
       if (r4.problems) fuRefused(r4.problems);
-      snack(oneLine(r4.message) || (mode === "apply" ? "Nothing applied" : "Nothing saved"));
+      snack(oneLine(r4.message) || (mode === "apply" ? "Nothing saved" : "Nothing saved"));
       return;
     }
     fuDrop(picked);
@@ -28935,7 +28935,7 @@ ${s5}`;
   }
   async function ask(s5) {
     if (!viaServer()) {
-      aiSug.value = { ...s5, status: "failed", message: "AI on selected text needs the live server" };
+      aiSug.value = { ...s5, status: "failed", message: "AI on selected text needs creaite to be running" };
       return;
     }
     if (s5.ai.enabled && !s5.ai.enabled()) {
@@ -29212,7 +29212,7 @@ ${s5}`;
           ] }, f5.f)) }),
           !row2.fields.length && /* @__PURE__ */ u4("p", { class: "sub", children: "Nothing to edit on this row." }),
           /* @__PURE__ */ u4("div", { class: "fu-pf", children: [
-            /* @__PURE__ */ u4("span", { class: "sub", children: "Checked again by the tracker when you apply." }),
+            /* @__PURE__ */ u4("span", { class: "sub", children: "Checked again by your project record when you save." }),
             /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: back2, children: "Done" })
           ] })
         ]
@@ -29298,7 +29298,7 @@ ${s5}`;
               }
             ),
             row2.notes.map((n4) => /* @__PURE__ */ u4("div", { class: "fu-q", children: n4 }, n4)),
-            (row2.lock || row2.invalid) && /* @__PURE__ */ u4("div", { class: row2.invalid ? "fu-bad" : "fu-q", id: `fun-${row2.key}`, children: row2.invalid ? `Can't be applied: ${row2.invalid}` : row2.lock === "hedged" ? "Tentative: confirm it first. Change the milestone itself once it's confirmed." : "" }),
+            (row2.lock || row2.invalid) && /* @__PURE__ */ u4("div", { class: row2.invalid ? "fu-bad" : "fu-q", id: `fun-${row2.key}`, children: row2.invalid ? `Can't be saved: ${row2.invalid}` : row2.lock === "hedged" ? "Tentative: confirm it first. Change the milestone itself once it's confirmed." : "" }),
             open2 && /* @__PURE__ */ u4(RowPeek, { row: row2, back: back2 })
           ] })
         ]
@@ -29418,7 +29418,7 @@ ${s5}`;
               ] }, g5);
             }),
             /* @__PURE__ */ u4("div", { class: "fu-ft", children: [
-              /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "fuApply", disabled: !ticked || !!saving, onClick: () => fuApply("apply"), children: saving === "apply" ? "Applying…" : `Apply ${ticked} change${ticked === 1 ? "" : "s"}` }),
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "fuApply", disabled: !ticked || !!saving, onClick: () => fuApply("apply"), children: saving === "apply" ? "Saving…" : `Save ${ticked} change${ticked === 1 ? "" : "s"}` }),
               /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "fuLater", disabled: !ticked || !!saving, onClick: () => fuApply("later"), children: "Save for later" }),
               /* @__PURE__ */ u4("span", { class: "sub", children: "Save for later puts them in Review" })
             ] })
@@ -29462,7 +29462,7 @@ ${s5}`;
   async function askDeleteNote(row2) {
     if (row2 && !(noteCur.value && noteCur.value.path === row2.path)) {
       if (!viaServer()) {
-        snack("Deleting a note needs the live server");
+        snack("Deleting a note needs creaite to be running");
         return;
       }
       const rows2 = (
@@ -29482,7 +29482,7 @@ ${s5}`;
     const c5 = noteCur.value;
     if (!c5) return;
     if (!viaServer()) {
-      snack("Deleting a note needs the live server");
+      snack("Deleting a note needs creaite to be running");
       return;
     }
     const more = (
@@ -31381,7 +31381,7 @@ ${s5}`;
   }
   function itemState(id2) {
     const found = itemOf(id2);
-    if (!found) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
+    if (!found) return { tone: "off", words: "not in your project record", title: `${id2}: not in your project record` };
     const x5 = (
       /** @type {any} */
       found.x
@@ -32329,7 +32329,7 @@ ${s5}`;
         "aria-expanded": on2 ? "true" : "false",
         "aria-controls": "noteSide",
         disabled: !viaServer(),
-        "data-tip": viaServer() ? "Find the tracker changes this note's new lines state" : "Find updates needs the live server",
+        "data-tip": viaServer() ? "Find your project record changes this note's new lines state" : "Find updates needs creaite to be running",
         onClick: () => toggleFind(),
         children: [
           /* @__PURE__ */ u4("span", { "aria-hidden": "true", children: "✦ " }),
@@ -32452,7 +32452,7 @@ ${s5}`;
     if (!cur) return /* @__PURE__ */ u4("article", { class: "ndoc empty", children: noteLoading.value ? /* @__PURE__ */ u4("p", { class: "sub", children: "Opening…" }) : /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("h2", { children: notesList.value.length ? "Pick a note on the left, or start a new one" : "No notes yet" }),
       /* @__PURE__ */ u4("p", { class: "sub", children: /* @__PURE__ */ u4("a", { class: "hhow", href: "#help-reference-notes", "data-hhow": "notes", children: "How Notes works" }) }),
-      /* @__PURE__ */ u4("p", { class: "sub", children: "Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay internal and are never extracted on their own." })
+      /* @__PURE__ */ u4("p", { class: "sub", children: "Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay internal and are never read for items on their own." })
     ] }) });
     const m5 = cur.meta || {}, n4 = cur.note, tags = (
       /** @type {string[]} */
@@ -32784,7 +32784,7 @@ ${s5}`;
         if (id2 === "overview") onGo("cockpit", code);
       } }) : null,
       notesMsg.value ? /* @__PURE__ */ u4("div", { class: "nmsg", role: "status", children: notesMsg.value }) : null,
-      !viaServer() ? /* @__PURE__ */ u4("div", { class: "nmsg", role: "status", children: "Notes open and save through the live server. Start it to edit; the list is as of the last build." }) : null,
+      !viaServer() ? /* @__PURE__ */ u4("div", { class: "nmsg", role: "status", children: "Notes open and save through creaite. Start it to edit; the list is as of the last build." }) : null,
       /* @__PURE__ */ u4("div", { class: `nsplit${notesListOpen.value ? "" : " collapsed"}${noteFind.value && noteCur.value ? " finding" : ""}`, id: "notesSplit", children: [
         /* @__PURE__ */ u4(NotesList, { code, onOpen: openPath2, onOpenFile }),
         /* @__PURE__ */ u4(NoteDoc, { code, onOpen: openPath2, onOpenItem, onNew: (t47) => setDlg(t47), onOpenFile }),
@@ -33580,7 +33580,7 @@ system/scripts/run launch.py agent ${what}`;
     weeklyArg.value = arg;
     weeklyEditing.value = false;
     if (!viaServer()) {
-      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      weeklyView.value = { ok: false, message: "The weekly report view needs creaite to be running." };
       return;
     }
     weeklyBusy.value = "Opening the weekly report…";
@@ -33621,7 +33621,7 @@ system/scripts/run launch.py agent ${what}`;
       base_version: weeklyBase.value,
       force: force || void 0
     });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+    return r4 || { ok: false, message: "The save didn't run; nothing was changed." };
   }
   async function exportWeekly(doc, fmt, page) {
     return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
@@ -33695,7 +33695,7 @@ system/scripts/run launch.py agent ${what}`;
     crCheck.value = null;
     crDirty.value = false;
     if (!viaServer()) {
-      crOpen.value = { ok: false, message: "The client view needs the live server." };
+      crOpen.value = { ok: false, message: "The client view needs creaite to be running." };
       return;
     }
     crBusy.value = "Opening the client report…";
@@ -34155,7 +34155,7 @@ system/scripts/run launch.py agent ${what}`;
       return null;
     }
     if (!viaServer()) {
-      textMsg.value = "Adding a picture needs the live server.";
+      textMsg.value = "Adding a picture needs creaite to be running.";
       return null;
     }
     const src = await new Promise((res) => {
@@ -34639,7 +34639,7 @@ system/scripts/run launch.py agent ${what}`;
     milestone_form: null,
     cx_edit: null
   };
-  var POINT_SAY = { cx_edit: "Say it in Claude Code (cx-edit) instead.", milestone_form: "Use Rebaseline… in the milestone's Dates: a rebaseline also records a decision." };
+  var POINT_SAY = { cx_edit: "You can change it by asking creaite instead.", milestone_form: "Use Rebaseline… in the milestone's Dates: a rebaseline also records a decision." };
   var END_WORD = { Cancelled: "Cancel", Withdrawn: "Withdraw", Dropped: "Drop" };
   var DRAFTS = {
     client: () => ({ field: "client_message", word: "Client message" }),
@@ -34737,7 +34737,7 @@ system/scripts/run launch.py agent ${what}`;
       if (!viaServer()) {
         const r6 = (
           /** @type {any} */
-          { ok: false, message: "Sneak peek needs the live server: start it, then try again." }
+          { ok: false, message: "Sneak peek needs creaite to be running: start it, then try again." }
         );
         setReply(r6);
         return r6;
@@ -35299,7 +35299,7 @@ system/scripts/run launch.py agent ${what}`;
             "New ",
             t47.kind
           ] }),
-          " · ID given when applied"
+          " · ID given when saved"
         ] }),
         /* @__PURE__ */ u4("span", { class: "to", children: v5.description || "" }),
         /* @__PURE__ */ u4("span", { class: "sub", children: [
@@ -35507,7 +35507,7 @@ system/scripts/run launch.py agent ${what}`;
     clearTimeout(timer);
     const n4 = capNote.value;
     if (!viaServer()) {
-      capMsg.value = "Saving a note needs the live server.";
+      capMsg.value = "Saving a note needs creaite to be running.";
       return false;
     }
     if (!hasText(n4)) {
@@ -35682,7 +35682,7 @@ system/scripts/run launch.py agent ${what}`;
       }
     };
     const why = n4.chosen ? "chosen by you" : n4.reason;
-    const off = live ? void 0 : "Saving a note needs the live server";
+    const off = live ? void 0 : "Saving a note needs creaite to be running";
     const meeting = n4.template === "working-session";
     const drafts = recent.drafts.filter((d5) => d5.id !== n4.id);
     return /* @__PURE__ */ u4(S2, { children: [
@@ -35791,7 +35791,7 @@ system/scripts/run launch.py agent ${what}`;
               }
             ),
             /* @__PURE__ */ u4("div", { class: "capfoot", children: [
-              /* @__PURE__ */ u4("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need the live server") }),
+              /* @__PURE__ */ u4("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need creaite to be running") }),
               /* @__PURE__ */ u4("span", { class: "sp" }),
               /* @__PURE__ */ u4(
                 "button",
@@ -42424,7 +42424,7 @@ system/scripts/run launch.py agent ${what}`;
           if (sp2) addHTML(
             sp2,
             "beforebegin",
-            html`${raw(draftBtn("update-bulk", "Draft updates", `Draft an update for each of the ${L3.length} from what has happened since, as proposals in Review`, 'data-drbulk="1"'))}<span class="drbst" role="status"></span>`
+            html`${raw(draftBtn("update-bulk", "Draft updates", `Draft an update for each of the ${L3.length} from what has happened since, as suggestions in Review`, 'data-drbulk="1"'))}<span class="drbst" role="status"></span>`
           );
         }
       }
@@ -44282,7 +44282,7 @@ system/scripts/run launch.py agent ${what}`;
     return {
       commit: (stage, item, o5) => sneakCommit(at2, stage, item, o5),
       undo: async (applyId) => {
-        if (!viaServer()) return { ok: false, message: "Undo needs the live server." };
+        if (!viaServer()) return { ok: false, message: "Undo needs creaite to be running." };
         const u5 = await api("/api/undo", { apply_id: applyId });
         await reloadData();
         afterChange(at2);
@@ -44380,7 +44380,7 @@ system/scripts/run launch.py agent ${what}`;
     if (task.target === "source") {
       if (task.path) {
         if (!viaServer()) {
-          snack("Opening a file needs the live server");
+          snack("Opening a file needs creaite to be running");
           return;
         }
         const o5 = await api("/api/open", { path: task.path });
@@ -44398,8 +44398,8 @@ system/scripts/run launch.py agent ${what}`;
     if (task.target === "project") go2("cockpit", task.ref || item.project || projectOf(at2));
   }
   async function sneakCommit(at2, stage, item, o5) {
-    if (!viaServer()) return { ok: false, message: "Sneak peek needs the live server: start it, then try again." };
-    if (!await needVault()) return { ok: false, message: "Not saved: the vault isn't connected." };
+    if (!viaServer()) return { ok: false, message: "Sneak peek needs creaite to be running: start it, then try again." };
+    if (!await needVault()) return { ok: false, message: "Not saved: your creaite folder isn't connected." };
     const k5 = at2.where === "ms" ? "milestones" : at2.k;
     const meta = { k: k5, id: item.id, patch: {}, prev: {}, label: stage.label, from: "", to: o5.said || "", at: nowStamp(), note: "Sneak peek", type: "act", ms: Date.now() };
     let name;
@@ -44430,7 +44430,7 @@ system/scripts/run launch.py agent ${what}`;
       LASTF = stageFields(stage, item.id);
       sneakFlash(at2, LASTF);
     }
-    if (!r4.ok) return { ok: false, message: `Staged, but the apply stopped: ${oneLine(r4.message)}. It is in the staged list.` };
+    if (!r4.ok) return { ok: false, message: `Saved, but it wasn't approved: ${oneLine(r4.message)}. It is waiting in Review.` };
     return { ok: true, applyId: r4.apply_id };
   }
   var LASTF = [];
@@ -44706,7 +44706,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   function feedListHtml(items2, tab) {
     const icn = { act: "pencil", upd: "msg", src: "filetext" }, L3 = items2.filter((e4) => tab === "all" || e4.type === tab);
-    return L3.length ? L3.map((e4) => `<div class="pk-fe${e4.state === "undone" ? " undone" : ""}" data-t="${e4.type}"><span class="pk-fi" aria-hidden="true">${ic(icn[e4.type] || "pencil")}</span><div><b>${esc(e4.who)}</b> ${e4.html}${e4.when ? `<span class="when">· ${esc(fd(e4.when))}</span>` : ""}${e4.state === "staged" ? '<span class="pk-pill st">staged</span>' : e4.state === "applied" ? '<span class="pk-pill ap">applied</span>' : e4.state === "undone" ? '<span class="pk-pill un">undone</span>' : ""}${e4.note ? `<div class="sub">${esc(e4.note)}</div>` : ""}</div></div>`).join("") : '<div class="sub">Nothing here yet.</div>';
+    return L3.length ? L3.map((e4) => `<div class="pk-fe${e4.state === "undone" ? " undone" : ""}" data-t="${e4.type}"><span class="pk-fi" aria-hidden="true">${ic(icn[e4.type] || "pencil")}</span><div><b>${esc(e4.who)}</b> ${e4.html}${e4.when ? `<span class="when">· ${esc(fd(e4.when))}</span>` : ""}${e4.state === "staged" ? '<span class="pk-pill st">waiting</span>' : e4.state === "applied" ? '<span class="pk-pill ap">saved</span>' : e4.state === "undone" ? '<span class="pk-pill un">undone</span>' : ""}${e4.note ? `<div class="sub">${esc(e4.note)}</div>` : ""}</div></div>`).join("") : '<div class="sub">Nothing here yet.</div>';
   }
   var FDTAB = {};
   function feedBlock(host2, items2) {
@@ -44761,7 +44761,7 @@ system/scripts/run launch.py agent ${what}`;
     shared.STALE = true;
     const b5 = $("#staleAlert");
     if (!b5) return;
-    $("#staleMsg").textContent = msg || "The live server was restarted since this page was opened. Reload the page (Cmd+R) and try again.";
+    $("#staleMsg").textContent = msg || "creaite was restarted since this page was opened. Reload the page (Cmd+R) and try again.";
     if (b5.hidden) {
       b5.hidden = false;
       b5.classList.add("on");
@@ -45182,14 +45182,14 @@ system/scripts/run launch.py agent ${what}`;
     h5 += `<div class="mv-box" style="margin-top:12px" id="mvDetail"><div class="mv-head" style="margin:0"><h2>${esc(m5.n)}</h2><span class="mv-hint">${m5.id}</span>${mvTag(st2)}<span class="sp"></span><button type="button" class="mv-btn sm" data-mvedit="${m5.id}">Edit milestone</button></div>
     <div class="mv-dchips"><span>Original <b>${fd(m5.orig) || "not set"}</b></span><span>Agreed <b>${fd(m5.agr) || "not set"}</b>${rb2 ? " (rebaselined)" : ""}</span><span>Forecast <b>${fd(m5.fc) || "not set"}</b></span><span>Moved <b>${m5.moves}×</b></span><span>Progress <b>${m5.pct == null ? "not set" : m5.pct + "%"}</b></span><span>Owner <b>${esc(m5.owner) || "not set"}</b></span></div>${mvRangeLine(m5)}
     <div class="mv-grid2" style="margin-top:6px"><div><h3 style="margin:10px 0 4px;font-size:14px">Movement by reporting week</h3>${mvTrend(m5)}</div><div><h3 style="margin:10px 0 2px;font-size:14px">What changed</h3>${m5.log.length ? `<ul class="mv-log">${m5.log.map((l6) => `<li class="${l6.k}"><div class="w">${fd(l6.d)}</div><div class="c">${esc(l6.c)}</div><div class="w">${esc(fdText(l6.w))}</div></li>`).join("")}</ul>` : '<p class="mv-hint">Nothing has changed since it was first agreed.</p>'}</div></div></div>`;
-    h5 += `<div class="mv-grid2"><div class="mv-box" id="mvDecide"><h3>Decide what to do</h3><p class="mv-cap">${vs2 > 0 || st2 === "overdue" ? "Each choice is staged for Review; nothing changes until you approve it there." : "No variance to decide on."}</p><div class="mv-adj">
+    h5 += `<div class="mv-grid2"><div class="mv-box" id="mvDecide"><h3>Decide what to do</h3><p class="mv-cap">${vs2 > 0 || st2 === "overdue" ? "Each choice is waiting in Review; nothing changes until you approve it there." : "No variance to decide on."}</p><div class="mv-adj">
     <button type="button" class="mv-btn" data-mvadj="hold">Hold: keep forecast, agreed date unchanged</button><button type="button" class="mv-btn pri" data-mvadj="rebase">Rebaseline</button><button type="button" class="mv-btn" data-mvadj="recover">Add recovery action</button><button type="button" class="mv-btn" data-mvadj="escalate">Escalate to steering</button></div>`;
     if (shared.MV.rb && shared.MV.rb.id === m5.id) h5 += `<div class="mv-form" id="mvRbForm"><div class="mv-fld">New agreed date${mvDpBtn("mvRbDate", shared.MV.rb.date, "New agreed date", shared.MV.rb.date !== m5.agr)}</div>
       <div class="mv-fld full">Agreed with<div class="mv-chiprow">${shared.MV.rb.with.length ? shared.MV.rb.with.map((n4) => `<span class="mv-chip">${esc(n4)}${mvOrg(n4)}<button type="button" data-mvrmw="${esc(n4)}" aria-label="Remove ${esc(n4)}">${ic("x", { bare: true })}</button></span>`).join("") : '<span class="mv-hint">Nobody chosen yet</span>'}<button type="button" class="mv-cb small" id="mvRbAdd" data-mvppl="rbwith" aria-haspopup="listbox" aria-expanded="false" aria-label="Add person">+ Add person</button></div></div>
       <label class="mv-fld full">Reason<input type="text" class="mv-in" id="mvRbWhy" value="${esc(shared.MV.rb.why || "")}" placeholder="Why the agreed date has to move"></label><div class="mv-err full" id="mvRbErr" role="alert"></div>
-      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvrb="ok" data-key="${MOD}↵" data-tip="Stage rebaseline and decision">Stage rebaseline and decision</button><button type="button" class="mv-btn" data-mvrb="no">Cancel</button></div></div>`;
+      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvrb="ok" data-key="${MOD}↵" data-tip="Save rebaseline and decision">Save rebaseline and decision</button><button type="button" class="mv-btn" data-mvrb="no">Cancel</button></div></div>`;
     if (shared.MV.adj && shared.MV.adj.id === m5.id) h5 += `<div class="mv-form" id="mvAdjForm"><label class="mv-fld full">${shared.MV.adj.k === "hold" ? "Why hold? One line, for the decision record" : shared.MV.adj.k === "recover" ? "The recovery action" : "What to ask the steering committee"}<input type="text" class="mv-in" id="mvAdjWhy" value="${esc(shared.MV.adj.text || "")}"></label><div class="mv-err full" id="mvAdjErr" role="alert"></div>
-      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvadjok="1" data-key="${MOD}↵">${shared.MV.adj.k === "hold" ? "Stage the hold" : shared.MV.adj.k === "recover" ? "Stage the action" : "Stage the ask"}</button><button type="button" class="mv-btn" data-mvadjno="1">Cancel</button></div></div>`;
+      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvadjok="1" data-key="${MOD}↵">${shared.MV.adj.k === "hold" ? "Save the hold" : shared.MV.adj.k === "recover" ? "Save the action" : "Save the ask"}</button><button type="button" class="mv-btn" data-mvadjno="1">Cancel</button></div></div>`;
     h5 += `</div><div class="mv-box"><h3>Internal note</h3><p class="mv-cap">Your own words. Never shown to the client.</p><textarea class="mv-in" id="mvNote" data-mvnote="${m5.id}" rows="3" aria-label="Internal note" placeholder="What is going on, what you are waiting for">${esc(m5.note)}</textarea><div class="mv-hint" style="margin-top:6px">Saves when you leave the box.</div></div></div>`;
     return h5;
   }
@@ -45890,19 +45890,19 @@ system/scripts/run launch.py agent ${what}`;
     try {
       name = await writeProposal(items2.map((i5) => ({ ...i5, decision: "pending" })));
     } catch (e4) {
-      snack("Not staged: " + e4.message);
+      snack("Not saved: " + e4.message);
       return;
     }
     await reloadData();
     renderBadge();
-    snack(`${what} Staged for Review: nothing changes until you approve it there.`, async () => {
+    snack(`${what} Waiting in Review: nothing changes until you approve it there.`, async () => {
       try {
         await vq(async () => {
           const pth = "system/staging/" + name;
           if (await shared.VW.exists(pth)) await shared.VW.remove(pth);
         });
         await reloadData();
-        snack("Unstaged");
+        snack("Taken back");
       } catch (e4) {
         snack("Already decided: undo it in Activity");
       }
@@ -48518,7 +48518,7 @@ system/scripts/run launch.py agent ${what}`;
           client && period ? `Period ${period}` : `Week ending ${wkLongDate(doc.date)}`,
           d5.client ? ` · for ${d5.client}` : ""
         ] }),
-        client && ctx.editing ? /* @__PURE__ */ u4("div", { class: "wr-facts sub", children: meta.facts_week ? `Facts from the internal report for week ending ${wkDmy(meta.facts_week)}${meta.locked ? ", locked" : ""}` : "Facts as the tracker stands now: they lock when the internal report is approved" }) : null
+        client && ctx.editing ? /* @__PURE__ */ u4("div", { class: "wr-facts sub", children: meta.facts_week ? `Facts from the internal report for week ending ${wkDmy(meta.facts_week)}${meta.locked ? ", locked" : ""}` : "Facts as your project record stands now: they lock when the internal report is approved" }) : null
       ] }),
       /* @__PURE__ */ u4("div", { class: "wr-logos", children: edit ? slots.map((k5, i5) => /* @__PURE__ */ u4("span", { class: "wr-logo", children: [
         i5 ? /* @__PURE__ */ u4("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
@@ -48559,7 +48559,7 @@ system/scripts/run launch.py agent ${what}`;
     const r4 = await api("/api/report/reshow", { doc: asked2, section: sid, refs: [ref] });
     if (ident() !== opened) return "";
     const got = r4 && r4.ok ? (r4.rows || {})[ref] : null;
-    if (!got || !got.row || !got.row.cells) return String((r4 && r4.ok ? (r4.missing || {})[ref] : r4 && r4.message) || "the tracker couldn't be read").split("\n")[0];
+    if (!got || !got.row || !got.row.cells) return String((r4 && r4.ok ? (r4.missing || {})[ref] : r4 && r4.message) || "your project record couldn't be read").split("\n")[0];
     const ctx = live.current, doc = ctx.doc, sec = doc.sections.find((x5) => x5.id === sid);
     if (ident(doc) !== opened || !sec || !(sec.rows || []).some((x5) => x5.ref === ref && bareRow(x5, doc))) return "";
     ctx.setDoc({
@@ -48574,7 +48574,7 @@ system/scripts/run launch.py agent ${what}`;
       /* @__PURE__ */ u4(ctx.ItemRef, { id: String(row2.ref) }),
       " ",
       /* @__PURE__ */ u4("span", { class: "crlk wr-leftout", children: "Left out" }),
-      /* @__PURE__ */ u4("span", { class: "wr-leftwhy", children: why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from the tracker." })
+      /* @__PURE__ */ u4("span", { class: "wr-leftwhy", children: why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from your project record." })
     ] });
   }
   function flipRow(live, cellsFor2, i5, setWhy) {
@@ -48621,7 +48621,7 @@ system/scripts/run launch.py agent ${what}`;
             ctx.editing ? /* @__PURE__ */ u4("td", { class: "eyec", children: /* @__PURE__ */ u4(EyeButton, { on: !off, subject, onClick: () => flip2(i5) }) }) : null,
             cols.map((c5, k5) => /* @__PURE__ */ u4("td", { class: c5.num ? "num" : "", children: [
               c5.cell({ ctx, row: row2, i: i5, cells, item }),
-              k5 === 0 && isNew ? /* @__PURE__ */ u4("span", { class: "rs-new", title: "Added from the tracker by you", children: "New" }) : null
+              k5 === 0 && isNew ? /* @__PURE__ */ u4("span", { class: "rs-new", title: "Added from your project record by you", children: "New" }) : null
             ] }, c5.key))
           ] }, row2.ref || i5);
         }) })
@@ -48702,7 +48702,7 @@ system/scripts/run launch.py agent ${what}`;
       if (r4 && r4.ok) setList((r4.sections || {})[s5.id] || []);
       else {
         setList([]);
-        setMsg(String(r4 && r4.message || "The tracker couldn't be read").split("\n")[0]);
+        setMsg(String(r4 && r4.message || "Your project record couldn't be read").split("\n")[0]);
       }
     };
     const words = q5.trim().toLowerCase();
@@ -48716,25 +48716,25 @@ system/scripts/run launch.py agent ${what}`;
           items: { ...doc.items || {}, ...Object.fromEntries(picked.map((c5) => [c5.ref, c5.item])) },
           sections: doc.sections.map((x5) => x5.id === s5.id ? { ...x5, rows: [...x5.rows || [], ...picked.filter((c5) => !(x5.rows || []).some((r4) => r4.ref === c5.ref)).map((c5) => c5.row)] } : x5)
         },
-        picked.length === 1 ? "Item added from the tracker" : "Items added from the tracker"
+        picked.length === 1 ? "Item added from your project record" : "Items added from your project record"
       );
       close();
     };
     const toggle = (ref) => setSel(sel.includes(ref) ? sel.filter((x5) => x5 !== ref) : [...sel, ref]);
     return /* @__PURE__ */ u4("div", { class: "rs-pick", children: [
-      !open2 ? /* @__PURE__ */ u4("button", { type: "button", class: "wr-link rs-pick-open", ref: btn, "aria-expanded": "false", onClick: start, children: "+ Add from the tracker" }) : null,
-      open2 ? /* @__PURE__ */ u4("div", { class: "rs-picker", role: "group", "aria-label": `Add to ${s5.heading} from the tracker`, onKeyDown: (e4) => {
+      !open2 ? /* @__PURE__ */ u4("button", { type: "button", class: "wr-link rs-pick-open", ref: btn, "aria-expanded": "false", onClick: start, children: "+ Add from your project record" }) : null,
+      open2 ? /* @__PURE__ */ u4("div", { class: "rs-picker", role: "group", "aria-label": `Add to ${s5.heading} from your project record`, onKeyDown: (e4) => {
         if (e4.key === "Escape") {
           e4.stopPropagation();
           close();
         }
       }, children: [
-        /* @__PURE__ */ u4("input", { type: "search", class: "rs-pick-search", ref: search, "aria-label": "Search the tracker", placeholder: "Search", value: q5, onInput: (e4) => setQ(
+        /* @__PURE__ */ u4("input", { type: "search", class: "rs-pick-search", ref: search, "aria-label": "Search your project record", placeholder: "Search", value: q5, onInput: (e4) => setQ(
           /** @type {HTMLInputElement} */
           e4.currentTarget.value
         ) }),
         /* @__PURE__ */ u4("div", { class: "rs-pick-list", children: [
-          list === null ? /* @__PURE__ */ u4("p", { class: "sub rs-pick-wait", role: "status", children: "Looking in the tracker…" }) : null,
+          list === null ? /* @__PURE__ */ u4("p", { class: "sub rs-pick-wait", role: "status", children: "Looking in your project record…" }) : null,
           list !== null && !list.length ? /* @__PURE__ */ u4("p", { class: "sub rs-pick-none", children: msg || "Nothing else is open that could be added." }) : null,
           list !== null && list.length && !shownList.length ? /* @__PURE__ */ u4("p", { class: "sub rs-pick-none", children: "Nothing matches." }) : null,
           shownList.map((c5) => /* @__PURE__ */ u4("label", { class: "rs-pick-row", "data-ref": c5.ref, children: [
@@ -48745,7 +48745,7 @@ system/scripts/run launch.py agent ${what}`;
           ] }, c5.ref))
         ] }),
         /* @__PURE__ */ u4("div", { class: "rs-pick-foot", children: [
-          /* @__PURE__ */ u4("span", { class: "sub", children: sel.length ? `${sel.length} ticked` : "Tick the items to include. The tracker is not changed." }),
+          /* @__PURE__ */ u4("span", { class: "sub", children: sel.length ? `${sel.length} ticked` : "Tick the items to include. Your project record is not changed." }),
           /* @__PURE__ */ u4("button", { type: "button", class: "btn sm rs-pick-cancel", onClick: close, children: "Cancel" }),
           /* @__PURE__ */ u4("button", { type: "button", class: "btn sm primary rs-pick-add", disabled: !sel.length, onClick: add, children: "Add to the report" })
         ] })
@@ -48917,7 +48917,7 @@ system/scripts/run launch.py agent ${what}`;
       let live = true;
       setGot(null);
       if (!viaServer()) {
-        setGot({ ok: false, message: "Show as exported needs the live server." });
+        setGot({ ok: false, message: "Show as exported needs creaite to be running." });
         return void 0;
       }
       (async () => {
@@ -49336,7 +49336,7 @@ system/scripts/run launch.py agent ${what}`;
     ${diff ? `<div class="hsg-diff" role="note">${esc(diff)}</div>` : ""}
     <textarea id="hsgReason" class="hsg-reason" aria-label="Suggested reason">${esc(reason)}</textarea>
     ${hsEvidenceHtml(d5.evidence)}
-    <div class="drnote">A draft from the tracker. Nothing is saved until you press Save.</div>
+    <div class="drnote">A draft from your project record. Nothing is saved until you press Save.</div>
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-hsdo="reject">Reject</button><button type="button" class="btn" data-hsdo="use">Use</button><button type="button" class="btn primary" data-hsdo="save">Save</button></div></div>`;
   }
 
@@ -49484,7 +49484,7 @@ system/scripts/run launch.py agent ${what}`;
                 " · ",
                 /* @__PURE__ */ u4(ctx.ItemRef, { id: row2.ref })
               ] }) : null,
-              ctx.editing && row2.source === "added" ? /* @__PURE__ */ u4("span", { class: "rs-new", title: "Added from the tracker by you", children: "New" }) : null
+              ctx.editing && row2.source === "added" ? /* @__PURE__ */ u4("span", { class: "rs-new", title: "Added from your project record by you", children: "New" }) : null
             ] })
           ] })
         ] }, row2.ref || i5);
@@ -51556,7 +51556,7 @@ system/scripts/run launch.py agent ${what}`;
     });
     $("#filesRefresh").onclick = () => {
       refreshFiles(true);
-      if (!SERVED) snack("Refresh needs the live server; this page shows the file list of the last build");
+      if (!SERVED) snack("Refresh needs creaite to be running; this page shows the file list of the last build");
     };
     $("#filesTbl").addEventListener("click", (e4) => {
       const mb2 = e4.target.closest("[data-moveback]");
@@ -51572,7 +51572,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   async function moveBack(path, kind) {
     if (!viaServer()) {
-      snack("Moving a file back needs the live server");
+      snack("Moving a file back needs creaite to be running");
       return;
     }
     if (kind === "notes") {
@@ -51816,7 +51816,7 @@ system/scripts/run launch.py agent ${what}`;
     const key2 = shapeKey.value;
     if (!key2 || shapeBusy.value || !shapeReading.value) return false;
     if (!viaServer()) {
-      snack("Saving needs the live server");
+      snack("Saving needs creaite to be running");
       return false;
     }
     shapeBusy.value = "save";
@@ -52189,7 +52189,7 @@ system/scripts/run launch.py agent ${what}`;
           ] }),
           /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-shback": "1", onClick: closeShape, children: "Back to the brief" })
         ] }),
-        conf ? /* @__PURE__ */ u4("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents." }) : null,
+        conf ? /* @__PURE__ */ u4("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and your project record only. creaite doesn't read the invite, minutes or documents." }) : null,
         /* @__PURE__ */ u4("label", { class: "sub", for: "shapeTxt", children: "Your focus and aim. Write as much as you like; drag the corner to make the box bigger." }),
         /* @__PURE__ */ u4(
           "textarea",
@@ -52242,7 +52242,7 @@ system/scripts/run launch.py agent ${what}`;
           /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-drstop": true, children: "Stop" })
         ] }) : null,
         shapeMsg.value && !busy2 ? /* @__PURE__ */ u4("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
-        !viaServer() ? /* @__PURE__ */ u4("p", { class: "wnote", children: "Shaping needs the live server." }) : null,
+        !viaServer() ? /* @__PURE__ */ u4("p", { class: "wnote", children: "Shaping needs creaite to be running." }) : null,
         /* @__PURE__ */ u4(ReadAs, {})
       ] }),
       /* @__PURE__ */ u4(Notes, {}),
@@ -52265,7 +52265,7 @@ system/scripts/run launch.py agent ${what}`;
     const flat2 = (L3) => (L3 || []).map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
     const changed2 = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
     return /* @__PURE__ */ u4("div", { class: "ppshape", children: [
-      conf ? /* @__PURE__ */ u4("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents." }) : null,
+      conf ? /* @__PURE__ */ u4("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and your project record only. creaite doesn't read the invite, minutes or documents." }) : null,
       /* @__PURE__ */ u4("div", { class: "ppshrow", children: [
         /* @__PURE__ */ u4(
           "input",
@@ -52315,7 +52315,7 @@ system/scripts/run launch.py agent ${what}`;
         /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-drstop": true, children: "Stop" })
       ] }) : null,
       shapeMsg.value && !busy2 ? /* @__PURE__ */ u4("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
-      !viaServer() ? /* @__PURE__ */ u4("p", { class: "wnote", children: "Shaping needs the live server." }) : null,
+      !viaServer() ? /* @__PURE__ */ u4("p", { class: "wnote", children: "Shaping needs creaite to be running." }) : null,
       prop && !busy2 ? /* @__PURE__ */ u4("div", { class: "ppsug", role: "region", "aria-label": "Suggestion from creaite", children: [
         /* @__PURE__ */ u4("div", { class: "shdh", children: [
           /* @__PURE__ */ u4("span", { class: "tag shai", children: [
@@ -52556,7 +52556,7 @@ system/scripts/run launch.py agent ${what}`;
       if (bad) return bad;
       if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
       const v5 = cleanPartnerName(name);
-      if (!await needVault()) return "Not saved: creaite can't reach the vault.";
+      if (!await needVault()) return "Not saved: creaite can't reach your creaite folder.";
       if (!await writePartners(code, [...was, v5])) return "Not saved.";
       snack(`${v5} added as a partner`, undoer(code, was));
       return "";
@@ -52683,7 +52683,7 @@ system/scripts/run launch.py agent ${what}`;
       putHTML($("#v-cockpit"), html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p6.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div></div>
    <div id="cockTabs"></div>
-   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
+   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs creaite to be running" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}${raw(legBtn())}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v5, b5, nav, ex2]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex2))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v5 && v5 !== "None" ? "bad" : ""}">${v5}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
@@ -52758,7 +52758,7 @@ system/scripts/run launch.py agent ${what}`;
       mvBindScroll($("#v-cockpit"));
       paintIcons($("#mvCard"));
       const h5 = [...$$("#v-cockpit .card>h2")].find((x5) => x5.textContent === "Client messaging"), card = h5 && h5.parentElement;
-      if (card && DRAFTKIND["client-bulk"] && !card.querySelector("[data-drcmall]") && draftOn("client")) addHTML(card, "beforeend", html`<div class="drstale">${raw(draftBtn("client-bulk", "Draft all", "Draft client wording for each of them, as proposals in Review (each approved on its own)", `data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`);
+      if (card && DRAFTKIND["client-bulk"] && !card.querySelector("[data-drcmall]") && draftOn("client")) addHTML(card, "beforeend", html`<div class="drstale">${raw(draftBtn("client-bulk", "Draft all", "Draft client wording for each of them, as suggestions in Review (each approved on its own)", `data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`);
     }
   }
   var slashOn = (t47) => !!t47 && /** @type {Element} */
@@ -52799,12 +52799,12 @@ system/scripts/run launch.py agent ${what}`;
       }
     });
   }
-  var GEN_SRC = [["tracker", "Tracker changes and open items", 1, "tracker"], ["minutes", "Minutes and transcripts", 1, "minutes and transcripts"], ["reports", "Weekly and client reports", 1, "reports"], ["updates", "Weekly updates", 1, "weekly updates"], ["swept", "Mail and Teams items already swept", 1, "swept mail and Teams"], ["documents", "Project documents (internal; off by default)", 0, "project documents"]];
+  var GEN_SRC = [["tracker", "Project record changes and open items", 1, "tracker"], ["minutes", "Minutes and transcripts", 1, "minutes and transcripts"], ["reports", "Weekly and client reports", 1, "reports"], ["updates", "Weekly updates", 1, "weekly updates"], ["swept", "Mail and Teams items already checked", 1, "checked mail and Teams"], ["documents", "Project documents (internal; off by default)", 0, "project documents"]];
   var GEN_STARTERS = [["risks", "Lead with risks"], ["decisions", "Lead with decisions needed"], ["plain", "Plain words, no jargon"]];
   var GEN_FORMS = [["current", "Current state"], ["steering", "Steering note"], ["three", "Three-line update"], ["email", "Email paragraph"], ["teams", "Teams message"]];
   var GEN_AUDNOTE = {
     internal: "Candid: the internal view of every item.",
-    client: "Only items marked client-visible, in their client wording. Nothing else from the vault is used.",
+    client: "Only items marked client-visible, in their client wording. Nothing else from your creaite folder is used.",
     steering: "Internal wording for the steering committee, decisions and asks first; nothing confidential, restricted or marked Client-safe: no.",
     sponsor: "Internal wording for the sponsor, what is needed from them first; nothing confidential, restricted or marked Client-safe: no."
   };
@@ -52860,7 +52860,7 @@ system/scripts/run launch.py agent ${what}`;
         return;
       }
       if (!viaServer()) {
-        snack("Generate needs the live server");
+        snack("Generate needs creaite to be running");
         return;
       }
       if (shared.RUN || shared.GEN.run || DRRUN) {
@@ -52909,7 +52909,7 @@ system/scripts/run launch.py agent ${what}`;
         shared.GEN.run = null;
         genStatus("");
         shared.RBOUT = "failed";
-        snack("The live server isn't reachable");
+        snack("creaite isn't reachable");
         return;
       }
       if (res.status === 409 || !res.ok || !res.body) {
@@ -53316,7 +53316,7 @@ system/scripts/run launch.py agent ${what}`;
       return;
     }
     if (!viaServer()) {
-      snack("Make it executive needs the live server");
+      snack("Make it executive needs creaite to be running");
       return;
     }
     const text = edValue($("#curEd"));
@@ -53578,7 +53578,7 @@ system/scripts/run launch.py agent ${what}`;
         if (msg) snack(msg);
         cur2.saving = false;
       };
-      const ups = shared.CURED.uploads || {}, ids = [...md2.matchAll(/\]\(new:([a-z0-9]+)\)/g)].map((m5) => m5[1]).filter((id2) => ups[id2]), ops = [], added = [], notSaved = () => $("#snack").classList.contains("on") ? "" : "Not saved: the live server isn't running and the vault isn't connected. Your text and pictures are still here.";
+      const ups = shared.CURED.uploads || {}, ids = [...md2.matchAll(/\]\(new:([a-z0-9]+)\)/g)].map((m5) => m5[1]).filter((id2) => ups[id2]), ops = [], added = [], notSaved = () => $("#snack").classList.contains("on") ? "" : "Not saved: creaite isn't running and your creaite folder isn't connected. Your text and pictures are still here.";
       if (ids.length) {
         if (!await needVault()) {
           await giveUp(notSaved());
@@ -54380,7 +54380,7 @@ ${pre}**Current state title:** ${title}`);
         return x5 ? { id: id2, kind: k5, title: x5.t, status: x5.st, owner: x5.o || x5.by, due: x5.due, closed: x5.closed } : { id: id2, kind: k5, title: k5 === "milestones" ? ((D.milestone_names || {})[id2] || [])[0] || "" : "", status: "" };
       });
       const rows2 = got && got !== "…" && got.rows ? got.rows : local, files = got && got !== "…" ? got.files || [] : (f5.src || []).filter((s5) => s5.startsWith("projects/")).map((p6) => ({ path: p6, line: 0, text: "" }));
-      return `<div class="evfact"><div class="evpart">${esc(f5.part || "Fact")}</div><div>${esc(f5.text)}</div>${rows2.map(evRowHtml).join("")}${files.map((q5) => `<div class="evrow">${evQuote(q5) || `<div class="evqsrc">${esc(String(q5.path).split("/").pop())}</div>`}</div>`).join("")}${!viaServer() && (f5.src || []).length ? '<div class="evqsrc">The quoted lines need the live server.</div>' : ""}</div>`;
+      return `<div class="evfact"><div class="evpart">${esc(f5.part || "Fact")}</div><div>${esc(f5.text)}</div>${rows2.map(evRowHtml).join("")}${files.map((q5) => `<div class="evrow">${evQuote(q5) || `<div class="evqsrc">${esc(String(q5.path).split("/").pop())}</div>`}</div>`).join("")}${!viaServer() && (f5.src || []).length ? '<div class="evqsrc">The quoted lines need creaite to be running.</div>' : ""}</div>`;
     }).join("");
   }
   function claimsAdopt() {
@@ -54424,7 +54424,7 @@ ${pre}**Current state title:** ${title}`);
   }
   async function checkSources(code) {
     if (!viaServer()) {
-      snack("Check sources needs the live server");
+      snack("Check sources needs creaite to be running");
       return;
     }
     if (!shared.CURED) {
@@ -55030,7 +55030,7 @@ ${pre}**Current state title:** ${title}`);
     {
       const m5 = prepOf(shared.PREPEV) || {}, code = m5.p, body2 = $("#prepBody");
       if (body2 && code && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
-        const bar = `<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer() ? "" : "; needs the live server"})</span></p>`;
+        const bar = `<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer() ? "" : "; needs creaite to be running"})</span></p>`;
         addHTML(body2, "afterbegin", raw(bar));
       }
     }
@@ -55077,7 +55077,7 @@ ${pre}**Current state title:** ${title}`);
       if (SERVED) {
         await reloadData();
         snack("Saved; early warnings updated");
-      } else snack("Saved to settings.json; the flags update at the next rebuild");
+      } else snack("Saved; the flags update at the next rebuild");
     }, true);
   }
 
@@ -55374,7 +55374,7 @@ ${pre}**Current state title:** ${title}`);
               return;
             }
             if (!live) {
-              snack("The Prep page needs the live server");
+              snack("The Prep page needs creaite to be running");
               return;
             }
             openPrepView(key2, day);
@@ -55522,7 +55522,7 @@ ${pre}**Current state title:** ${title}`);
             "Worth preparing: ",
             plan
           ] }) : null,
-          pk2 && !L3 ? /* @__PURE__ */ u4("p", { class: "sub agnone", children: live ? "The peek couldn't be read. The prep page may still open." : "The peek needs the live server." }) : null,
+          pk2 && !L3 ? /* @__PURE__ */ u4("p", { class: "sub agnone", children: live ? "The peek couldn't be read. The prep page may still open." : "The peek needs creaite to be running." }) : null,
           page ? /* @__PURE__ */ u4("div", { class: "agsaved", children: [
             /* @__PURE__ */ u4("span", { class: "agok", "aria-hidden": "true", children: "✓" }),
             /* @__PURE__ */ u4("span", { class: "agw", children: [
@@ -55586,7 +55586,7 @@ ${pre}**Current state title:** ${title}`);
           type: "button",
           class: "lk",
           "aria-label": `Process the transcript of ${m5.title}`,
-          "data-tip": off || "Draft minutes and proposed items from it (cx-minutes)",
+          "data-tip": off || "Draft minutes and suggested items from it ",
           disabled: !live,
           onClick: () => acts2.process(m5),
           children: "Process"
@@ -55826,7 +55826,7 @@ ${pre}**Current state title:** ${title}`);
         ] }) : null,
         r4.closeWhy ? /* @__PURE__ */ u4("p", { class: "tdwhy tddone", children: r4.closeWhy }) : null,
         r4.closeStaged ? /* @__PURE__ */ u4("p", { class: "tdstaged", children: [
-          `Close of ${r4.closeStaged}: Staged for Review`,
+          `Close of ${r4.closeStaged}: Waiting in Review`,
           " · ",
           /* @__PURE__ */ u4(
             "button",
@@ -55835,14 +55835,14 @@ ${pre}**Current state title:** ${title}`);
               class: "qa",
               "data-alertdo": "closeundo",
               "data-id": r4.closeCard,
-              "aria-label": `Undo the staged close of ${r4.closeStaged}`,
+              "aria-label": `Undo the saved close of ${r4.closeStaged}`,
               children: "Undo"
             }
           )
         ] }) : null,
         r4.keptWhy ? /* @__PURE__ */ u4("p", { class: "tdwhy tddone", children: r4.keptWhy }) : null,
         r4.keptStaged ? /* @__PURE__ */ u4("p", { class: "tdstaged", children: [
-          `${r4.keptStaged} kept: Staged for Review`,
+          `${r4.keptStaged} kept: Waiting in Review`,
           " · ",
           /* @__PURE__ */ u4(
             "button",
@@ -55888,7 +55888,7 @@ ${pre}**Current state title:** ${title}`);
             c5.sub ? /* @__PURE__ */ u4("span", { class: "cs", children: ` · ${c5.sub}` }) : null
           ] }),
           c5.staged ? /* @__PURE__ */ u4("span", { class: "tdstaged", children: [
-            "Staged for Review · ",
+            "Waiting in Review · ",
             /* @__PURE__ */ u4(
               "button",
               {
@@ -56294,7 +56294,7 @@ ${pre}**Current state title:** ${title}`);
         if (host2 && draftOn("update")) {
           const st2 = A4.filter((x5) => isStale("actions", x5));
           if (st2.length) {
-            addHTML(host2, "afterend", html`<div class="drstale" id="drStale"><span>${raw(plur(st2.length, "open action"))} ${st2.length === 1 ? "has" : "have"} had no update for ${raw(+S.staleDays || 7)} days.</span>${raw(draftBtn("update-bulk", "Draft updates", "Draft an update for each from what has happened since, as proposals in Review", 'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`);
+            addHTML(host2, "afterend", html`<div class="drstale" id="drStale"><span>${raw(plur(st2.length, "open action"))} ${st2.length === 1 ? "has" : "have"} had no update for ${raw(+S.staleDays || 7)} days.</span>${raw(draftBtn("update-bulk", "Draft updates", "Draft an update for each from what has happened since, as suggestions in Review", 'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`);
           }
         }
       }
@@ -56610,13 +56610,13 @@ ${pre}**Current state title:** ${title}`);
       if (e4.target.closest("[data-refcal]")) irRefreshCalendar();
     });
   }
-  var PEOPLE_MOVE = "setup: move the people still listed in settings.json into the people register";
+  var PEOPLE_MOVE = "setup: move the people still listed in settings into the people register";
   function remLabel(r4) {
     return r4.id.startsWith("weekly:") ? "Draft weekly report" : r4.id.startsWith("client:") ? "Draft client report" : "Run it";
   }
   function remBody(r4) {
     if (!r4.cmd) return "";
-    return viaServer() ? "" : `It needs the live server; or say <span data-codeok>“${esc(r4.cmd)}”</span> in Claude Code.`;
+    return viaServer() ? "" : `It needs creaite to be running; or say <span data-codeok>“${esc(r4.cmd)}”</span> in Claude Code.`;
   }
   function remBtn(r4) {
     if (!r4.cmd) return "";
@@ -56627,7 +56627,7 @@ ${pre}**Current state title:** ${title}`);
   function conflictHtml(r4) {
     const ch2 = r4.rec.changes && r4.rec.changes.length ? r4.rec.changes : r4.rec.field ? [{ field: r4.rec.field, from: r4.rec.from, to: r4.rec.to }] : [];
     const v5 = (x5) => x5 == null || x5 === "" ? "(empty)" : esc(DATE.test(String(x5).slice(0, 10)) && String(x5).length === 10 ? fd(x5) : String(x5));
-    return `<div class="cfvs">${ch2.map((c5) => `<div><span class="cff">${esc(c5.field)}</span><span class="cfnow">Now: <b>${v5(c5.from)}</b></span><span class="cfnew">This one: <b>${v5(c5.to)}</b></span></div>`).join("") || '<div class="sub">Changed in the tracker after this was proposed.</div>'}</div>`;
+    return `<div class="cfvs">${ch2.map((c5) => `<div><span class="cff">${esc(c5.field)}</span><span class="cfnow">Now: <b>${v5(c5.from)}</b></span><span class="cfnew">This one: <b>${v5(c5.to)}</b></span></div>`).join("") || '<div class="sub">Changed in your project record after this was suggested.</div>'}</div>`;
   }
   var kindLabel = (r4) => ({ actions: "Action", raid: r4.rec.type || "Risk", decisions: "Decision", update: "Update", draft: "Draft", files: "File change" })[r4.kind];
   function evidence(p6) {
@@ -57185,7 +57185,7 @@ ${pre}**Current state title:** ${title}`);
     /** @param {any} m */
     (m5) => m5.transcript === "available" && !m5.processed && !m5.draft
   );
-  var tdTag = (r4) => r4.kind === "draft" ? r4.ref === "meeting" ? "Minutes" : "Report" : kindLabel(r4) || "Proposal";
+  var tdTag = (r4) => r4.kind === "draft" ? r4.ref === "meeting" ? "Minutes" : "Report" : kindLabel(r4) || "Suggestion";
   function toDecideRows() {
     const live = viaServer(), tdl = (
       /** @type {any[]} */
@@ -57234,7 +57234,7 @@ ${pre}**Current state title:** ${title}`);
     `${VIPKIND[a5.kind] || "Message"}${convWhen(a5) ? " · updated " + whenWords(convWhen(a5)) : ""}`,
     a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project",
     a5.found === "start-up" ? "found on start-up" : "",
-    a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
+    a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", waiting in Review"}` : ""
   ].filter(Boolean).join(" · ");
   var attnAlert = (a5) => a5.kind === "proposal" || a5.kind === "note" || a5.marker === "private";
   var VIPCARDS = () => VIPS().filter((a5) => !attnAlert(a5));
@@ -57596,7 +57596,7 @@ ${pre}**Current state title:** ${title}`);
     if (what === "done") {
       const was = x5.st;
       if (!await pkCommit(k5, id2, { st: "Closed", closed: TODAY }, "Status", was, "Closed")) return;
-      snack(`${id2} marked done. Staged: nothing reaches the tracker until you apply`, () => pkUndoLast());
+      snack(`${id2} marked done. Waiting to be saved: nothing is saved until you press Save`, () => pkUndoLast());
       return;
     }
     if (what === "move") {
@@ -57604,7 +57604,7 @@ ${pre}**Current state title:** ${title}`);
         if (!v5 || v5 === x5.due) return;
         const was = x5.due;
         if (!await pkCommit(k5, id2, { due: v5 }, "Due date", fd(was) || "none", fd(v5) || "none")) return;
-        snack(`${id2} moved to ${longDay(v5)}. Staged until you apply`, () => pkUndoLast());
+        snack(`${id2} moved to ${longDay(v5)}. Waiting to be saved until you press Save`, () => pkUndoLast());
       };
       openDatePicker(btn, {
         value: x5.due || "",
@@ -58408,7 +58408,7 @@ ${pre}**Current state title:** ${title}`);
     const c5 = catalogue.value;
     if (!c5) return /* @__PURE__ */ u4("div", { class: "card wide", children: [
       /* @__PURE__ */ u4("h2", { children: "Essentials" }),
-      /* @__PURE__ */ u4("p", { class: "sub", role: "status", children: catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.") })
+      /* @__PURE__ */ u4("p", { class: "sub", role: "status", children: catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need creaite to be running: open creaite from it.") })
     ] });
     const w6 = settingWords(query.value);
     const rows2 = c5.essentials.filter((r4) => !w6.length || settingHasAll(essText(r4), w6));
@@ -59034,7 +59034,7 @@ ${pre}**Current state title:** ${title}`);
   }
   async function projArchive(code, action, cancel) {
     if (!viaServer()) {
-      snack("Archiving needs the live server");
+      snack("Archiving needs creaite to be running");
       return;
     }
     const r4 = await api("/api/project/archive", { code, action, cancel_open: !!cancel });
@@ -59137,7 +59137,7 @@ ${pre}**Current state title:** ${title}`);
       cat: "sweep",
       title: "Close the day",
       groups: ["Close the day"],
-      kw: "close the day evening catch up catch-up sweep before closing minutes shutdown",
+      kw: "close the day evening catch up catch-up check before closing minutes shutdown",
       /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
       render: () => row("Catch up when the last check is older than (minutes)", nm2("catchupAfter"), "A check more recent than this says “Caught up” instead, with Check again. Whether the card catches up is in Essentials › Your day")
     },
@@ -59176,7 +59176,7 @@ ${pre}**Current state title:** ${title}`);
       sub: "review",
       title: "Review and health",
       groups: ["Review", "Health thresholds"],
-      kw: "stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
+      kw: "stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next suggestion duplicate overlap spot check",
       render: () => row("Stale after (days)", nm2("staleDays")) + row("Review: move to the next suggestion after a decision", sw2("rvAdvance"), "After Approve or Reject, the next undecided row is ready for the keyboard") + row("Review: possible duplicate when words overlap at least", `<input type="number" data-k="dupOverlap" value="${S.dupOverlap ?? 0.6}" min="0.1" max="1" step="0.05" style="width:80px">`, "0.6 by default: the share of words a suggestion has in common with an open item of the same type in the same project") + row("Due soon means within (days)", nm2("dueSoon")) + row("At risk: action overdue more than (days)", nm2("overdueDays")) + row("At risk: milestone slip up to (weeks)", nm2("slipAtRisk")) + row("Off track: slip more than (weeks)", nm2("slipOff")) + row("Off track: Urgent risks at least", nm2("urgentOff"))
     },
     { id: "warnings", cat: "advanced", sub: "review", title: "Early warnings", groups: ["Early warnings"], elid: "warnSettings", kw: "early warnings signals re-dated repeat risk milestone slip long open key person vip dependency", render: () => warnSectionHtml() },
@@ -59479,12 +59479,12 @@ ${pre}**Current state title:** ${title}`);
     };
     if (b5("liveStop")) b5("liveStop").onclick = async () => {
       if (!viaServer()) {
-        snack("The live server isn't running");
+        snack("creaite isn't running");
         return;
       }
       const r4 = await api("/api/stop", {});
       if (r4.ok) {
-        snack("Live server stopped");
+        snack("creaite stopped");
         setTimeout(() => setLive(false), 600);
       } else snack(oneLine(r4.message));
     };
@@ -59562,7 +59562,7 @@ ${pre}**Current state title:** ${title}`);
       updOut(updMsg("Choose the creaite-X.Y.Z.zip attached to the release, not GitHub's “Source code (zip)”.", true));
       return;
     }
-    updOut('<p class="sub">Copying to system/releases…</p>');
+    updOut('<p class="sub">Copying the update…</p>');
     const data = await new Promise((ok2, no2) => {
       const rd2 = new FileReader();
       rd2.onload = () => ok2(String(rd2.result).split(",")[1] || "");
@@ -59605,7 +59605,7 @@ ${pre}**Current state title:** ${title}`);
       const res = await api("/api/update/install", { source, reinstall });
       await drawUpdates(true);
       updOut(updMsg(res.message, !res.ok));
-      snack(res.ok ? `creaite ${p6.to} installed; restart the live server` : "The update didn't install");
+      snack(res.ok ? `creaite ${p6.to} installed; restart creaite` : "The update didn't install");
     };
   }
   async function updUndo(btn, keep2) {
@@ -59628,7 +59628,7 @@ ${pre}**Current state title:** ${title}`);
     }
     await drawUpdates(true);
     updOut(updMsg(r4.message, !r4.ok));
-    if (r4.ok) snack("Update undone; restart the live server");
+    if (r4.ok) snack("Update undone; restart creaite");
   }
   function bootSettings0078() {
     $("#setcatsel").onchange = (e4) => {
@@ -59674,7 +59674,7 @@ ${pre}**Current state title:** ${title}`);
       if (k5 === "flowWeeks") reloadData();
       if (k5 === "showArchived") reloadData().then(() => renderSettings());
       status();
-      snack("Saved to settings.json");
+      snack("Saved");
     });
   }
   var PCOLS = ["Full name", "Email", "Aliases", "Organisation", "Role", "Hidden", "Labels"], PFIELD = { "Full name": "name", "Email": "email", "Aliases": "aliases", "Organisation": "org", "Role": "role", "Hidden": "hidden", "Labels": "labels" };
@@ -60254,7 +60254,7 @@ ${pre}**Current state title:** ${title}`);
       try {
         await editProposal(r4.file, (data) => {
           const items2 = data.items || [], it2 = items2.find((i5) => i5.n === r4.ref);
-          if (!it2 || it2.applied) throw new Error("that proposal has already been applied");
+          if (!it2 || it2.applied) throw new Error("that suggestion has already been saved");
           it2.flags = (it2.flags || []).filter((f5) => f5 !== "new-workstream");
           delete it2.ws_suggest;
           if (!add) return;
@@ -60391,7 +60391,7 @@ ${pre}**Current state title:** ${title}`);
   }
   async function alertDismiss(id2, cand) {
     if (!viaServer()) {
-      snack("Dismiss needs the live server");
+      snack("Dismiss needs creaite to be running");
       return;
     }
     const c5 = cand ? { cand } : {}, r4 = await api("/api/alerts/dismiss", { ids: [id2], ...c5 });
@@ -60436,7 +60436,7 @@ ${pre}**Current state title:** ${title}`);
   }
   async function alertSeen(id2) {
     if (!viaServer()) {
-      snack("Seen needs the live server");
+      snack("Seen needs creaite to be running");
       return;
     }
     const r4 = await api("/api/vip/seen", { ids: [id2] });
@@ -60466,7 +60466,7 @@ ${pre}**Current state title:** ${title}`);
   }
   async function alertHandled(id2) {
     if (!viaServer()) {
-      snack("Handled needs the live server");
+      snack("Handled needs creaite to be running");
       return;
     }
     const r4 = await api("/api/alerts/handled", { ids: [id2] });
@@ -60515,7 +60515,7 @@ ${pre}**Current state title:** ${title}`);
   }
   async function alertLog(id2) {
     if (!viaServer()) {
-      snack("Log needs the live server");
+      snack("Log needs creaite to be running");
       return;
     }
     const r4 = await api("/api/alerts/log", { id: id2 });
@@ -60527,23 +60527,23 @@ ${pre}**Current state title:** ${title}`);
     if (a5 && a5.match) a5.match.logged = r4.logged;
     await reloadData();
     renderToday();
-    snack(r4.message || "Staged for Review");
+    snack(r4.message || "Waiting in Review");
   }
   async function alertClose(id2, undo) {
     if (!viaServer()) {
-      snack("Closing needs the live server");
+      snack("Closing needs creaite to be running");
       return;
     }
     const r4 = await api("/api/alerts/close", { id: id2, ...undo ? { undo: true } : {} });
     if (!r4.ok) {
-      snack(r4.message || r4.error || "Not staged");
+      snack(r4.message || r4.error || "Not saved");
       return;
     }
     const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2);
     if (a5) a5.closes = r4.closes;
     await reloadData();
     renderToday();
-    snack(r4.message || (undo ? "Taken back" : "Staged for Review"), undo ? void 0 : () => alertClose(id2, true));
+    snack(r4.message || (undo ? "Taken back" : "Waiting in Review"), undo ? void 0 : () => alertClose(id2, true));
   }
   var PROMISEDO = (
     /** @type {Record<string,[string,boolean]>} */
@@ -60551,12 +60551,12 @@ ${pre}**Current state title:** ${title}`);
   );
   async function alertPromise(id2, what, key2, undo) {
     if (!viaServer()) {
-      snack("Promises need the live server");
+      snack("Promises need creaite to be running");
       return;
     }
     const r4 = await api("/api/alerts/promise", { id: id2, what, key: key2 || "", ...undo ? { undo: true } : {} });
     if (!r4.ok) {
-      snack(r4.message || r4.error || "Not staged");
+      snack(r4.message || r4.error || "Not saved");
       return;
     }
     const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2);
@@ -60566,13 +60566,13 @@ ${pre}**Current state title:** ${title}`);
     }
     await reloadData();
     renderToday();
-    snack(r4.message || (undo ? "Taken back" : "Staged for Review"), undo ? void 0 : () => alertPromise(id2, what, key2, true));
+    snack(r4.message || (undo ? "Taken back" : "Waiting in Review"), undo ? void 0 : () => alertPromise(id2, what, key2, true));
   }
   var ALERTTYPES = [["action", "Action"], ["risk", "Risk"], ["issue", "Issue"], ["decision", "Decision"]];
   var alertTypeOf = (k5, x5) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(x5 && x5.type || "risk").toLowerCase();
   async function alertMake(id2, type, keep2, cand) {
     if (!viaServer()) {
-      snack("Create work item needs the live server");
+      snack("Create work item needs creaite to be running");
       return;
     }
     const r4 = await api("/api/alerts/prefill", { id: id2, ...type ? { type } : {}, ...cand ? { cand } : {} });
@@ -60620,7 +60620,7 @@ ${pre}**Current state title:** ${title}`);
     const r4 = await api("/api/alerts/make", { id: al2.id, type, values: alertValues(k5, f5), ...al2.cand ? { cand: al2.cand } : {} });
     if (!r4.ok) {
       pkSaving("fail");
-      pkNote(r4.message || "Not staged");
+      pkNote(r4.message || "Not saved");
       return "wait";
     }
     if (shared.CUR && shared.CUR.nid === nid) {
@@ -60652,7 +60652,7 @@ ${pre}**Current state title:** ${title}`);
     if (!d5) return;
     await reloadData();
     renderToday();
-    snack(`Staged the new ${d5.word} for Review: “${String(d5.title).slice(0, 60)}”`, () => alertUnstage(d5));
+    snack(`Saved the new ${d5.word} for Review: “${String(d5.title).slice(0, 60)}”`, () => alertUnstage(d5));
   }
   async function alertUnstage(d5) {
     let ok2 = false;
@@ -60692,10 +60692,10 @@ ${pre}**Current state title:** ${title}`);
     vipBadge();
     await reloadData();
     renderToday();
-    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Messages` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
+    snack(u5.ok ? `Undone: the new ${d5.word} is no longer saved, and the message is back in Messages` : `Taken back; the message wasn't put back: ${u5.message || "try again"}`);
   }
   function alertDraftWhy(al2) {
-    return /^(private|confidential)$/i.test(al2.marker || "") ? `Not for a ${al2.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs the live server" : "";
+    return /^(private|confidential)$/i.test(al2.marker || "") ? `Not for a ${al2.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs creaite to be running" : "";
   }
   function alertPeekDraw(x5, k5) {
     let el2 = $("#pkAlert");
@@ -60718,7 +60718,7 @@ ${pre}**Current state title:** ${title}`);
     <div class="pk-alert-row"><span class="pk-alert-types" role="group" aria-label="Make it">${ALERTTYPES.map(([t47, w6]) => html`<button type="button" class="mini" data-alerttype="${t47}" aria-pressed="${t47 === cur ? "true" : "false"}">${w6}</button>`)}</span>
     <button type="button" class="drbtn" data-alertdraft="1" aria-label="Draft from the message" data-tip="${why || "Reads the message (read only) and suggests a sharper title and any date it states. Nothing is saved until you save"}"${why ? raw(' aria-disabled="true"') : ""}>${raw(ic("spark"))}<span>Draft from the message</span></button>
     <span class="pk-alert-st" role="status" id="pkAlertSt"></span><span class="sp"></span>
-    <button type="button" class="btn" data-alertpeek="cancel">Cancel</button><button type="button" class="btn primary" data-alertpeek="save" data-tip="Stages it and dismisses the message (${MOD}↵)">Save</button></div>`);
+    <button type="button" class="btn" data-alertpeek="cancel">Cancel</button><button type="button" class="btn primary" data-alertpeek="save" data-tip="Saves it for Review and dismisses the message (${MOD}↵)">Save</button></div>`);
   }
   async function alertDraft() {
     const al2 = shared.CUR && shared.CUR.mode === "new" ? shared.CUR.alert : null;
@@ -60893,7 +60893,7 @@ ${pre}**Current state title:** ${title}`);
       const was = VIPD()[k5];
       if (await writeSettings({ ["vip." + k5]: val2 })) {
         VIPD()[k5] = val2;
-        snack("Saved to settings.json");
+        snack("Saved");
         if (k5 === "notify" && val2 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
       } else if (el2.type === "checkbox") el2.checked = !!was;
       else el2.value = was;
@@ -60911,7 +60911,7 @@ ${pre}**Current state title:** ${title}`);
   ) : "";
   function diagCardHtml() {
     const off = SERVED ? "" : "disabled";
-    const h5 = `<div class="card" id="diagCard" data-sec="diag"><h2>Diagnostics</h2>${SERVED ? "" : '<p class="sub">The log is written by the live server: start it to see errors here.</p>'}
+    const h5 = `<div class="card" id="diagCard" data-sec="diag"><h2>Diagnostics</h2>${SERVED ? "" : '<p class="sub">The log is written by creaite: start it to see errors here.</p>'}
    ${row("Log level", `<select id="diagLevel" ${off}><option value="info" ${DIAG.level === "info" ? "selected" : ""}>info</option><option value="debug" ${DIAG.level === "debug" ? "selected" : ""}>debug</option></select>`, "info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault")}
    ${row("Log folder", `<button class="btn" id="diagOpen" ${off}>Open the folder</button>`, `${DIAG.days} day${DIAG.days === 1 ? "" : "s"} of log, in system/logs`)}
    ${row("Report", `<button class="btn" id="diagCopy" ${off}>Copy diagnostics</button>`, "The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths")}
@@ -61178,7 +61178,7 @@ ${pre}**Current state title:** ${title}`);
     }, []);
     h2(() => {
       if (!viaServer()) {
-        setErr("Draft email needs the live server: start it, then try again.");
+        setErr("Draft email needs creaite to be running: start it, then try again.");
         return void 0;
       }
       const n4 = ++seq2.current;
@@ -62120,7 +62120,7 @@ ${d5.text}`);
       if (k5 === "actions") return [["t", "Action", "area"], ["p", "Project", "sel", projOpts], ["ws", "Workstream", "ws"], ["o", "Owner", "owner"], ["pr", "Priority", "sel", ["Urgent", "High", "Medium", "Low"]], ["due", "Due date", "date"], ["st", "Status", "sel", ["Open", "Delayed", "Closed", "Cancelled"]], ["raised", "Raised", "date"], ["closed", "Closed", "date"], ["upd", "Latest update", "area"], ["ms", "Milestone", "sel", msOpts2], ["#", "Client messaging"], ["client", "Client-visible", "check"], ["cm", "Client messaging", "cm"]];
       if (k5 === "raid") return [["t", "Description", "area"], ["type", "Type", "sel", ["Risk", "Issue", "Assumption", "Dependency"]], ["p", "Project", "sel", projOpts], ["ws", "Workstream", "ws"], ["o", "Owner", "owner"], ["resp", RESPL(x5.type), "area"], ["imp", "Impact", "sel", ["High", "Medium", "Low"]], ["lik", "Likelihood", "sel", ["High", "Medium", "Low"]], ["pr", "Priority", "calc"], ["due", "Due date", "date"], ["st", "Status", "sel", ["Open", "Closed", "Cancelled"]], ["raised", "Raised", "date"], ["closed", "Date closed", "date"], ["ms", "Milestone", "sel", msOpts2], ["#", "Client messaging"], ["client", "Client-visible", "check"], ["cm", "Client messaging", "cm"]];
       if (k5 === "decisions") return decisionFields(x5, projOpts);
-      if (k5 === "update") return [["target", "Item", "ro"], ["from", "Current value", "ro"], ["to", x5.field === "status" ? "Status" : "Proposed value", x5.field === "status" ? "sel" : "text", ["Open", "Delayed", "Closed", "Cancelled"]]];
+      if (k5 === "update") return [["target", "Item", "ro"], ["from", "Current value", "ro"], ["to", x5.field === "status" ? "Status" : "Suggested value", x5.field === "status" ? "sel" : "text", ["Open", "Delayed", "Closed", "Cancelled"]]];
       if (k5 === "project") return [["health", "Health", "sel", ["On track", "At risk", "Off track"]], ["reason", "Health reason", "area"]];
       if (k5 === "milestone") return shared.CUR.mode === "rebase" ? [["fc", "New baseline (and forecast)", "date"], ["with", "Agreed with (full names, separated by commas)", "text"], ["reason", "Reason for rebaselining", "area"]] : [["name", "Milestone", "text"], ["desc", "Description", "area"], ["fc", shared.CUR.mode === "msnew" ? "Date (baseline and forecast)" : "Forecast date", "date"], ["st", "Status", "sel", ["Planned", "Done"]], ["pc", "% complete", "pct"], ["ord", "Order", "text"], ...shared.CUR.mode === "msnew" ? [] : [["base", "Baseline", "ro"]]];
       return [];
@@ -62497,12 +62497,12 @@ ${d5.text}`);
         return;
       }
       openPath(r4.src);
-      snack("Check the minutes, then approve them in Claude Code (the live server isn't running)");
+      snack("Check the minutes, then approve them in Claude Code (creaite isn't running)");
       return;
     }
     if (r4.kind === "draft") {
       openPath(r4.src);
-      snack(viaServer() ? "Edit in Word if needed, close it, then press Approve here" : "Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)");
+      snack(viaServer() ? "Edit in Word if needed, close it, then press Approve here" : "Edit in Word if needed, close it, then approve it in Claude Code (creaite isn't running)");
       return;
     }
     if (r4.kind === "files") {
@@ -62531,7 +62531,7 @@ ${d5.text}`);
   function updOpen(r4) {
     const rec = r4.rec || {}, t47 = rec.table, id2 = rec.target, x5 = PKK.includes(t47) ? REC(t47, id2) : null;
     if (!x5) {
-      if (PKK.includes(t47)) snack(`${id2} is no longer in the tracker: its change is shown in the old form`);
+      if (PKK.includes(t47)) snack(`${id2} is no longer in your project record: its change is shown in the old form`);
       return null;
     }
     const cols = (rec.changes || []).filter((c5) => c5.col);
@@ -62573,8 +62573,8 @@ ${d5.text}`);
   }
   function updDraw(x5, k5, r4) {
     const { u: u5, now, list } = updModel(), t47 = u5.table;
-    putHTML($("#pkId"), html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u5.id}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}`);
-    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>${r4.bad && !r4.done ? html`<div class="cmnote pk-bad">Can't be saved as it is: ${r4.bad}. Change it here and save: it's checked again.</div>` : ""}`);
+    putHTML($("#pkId"), html`<span>Update suggestion</span><span aria-hidden="true">·</span><span>${u5.id}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}`);
+    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a suggestion — nothing is saved until it's approved. Changed fields are highlighted.</div>${r4.bad && !r4.done ? html`<div class="cmnote pk-bad">Can't be saved as it is: ${r4.bad}. Change it here and save: it's checked again.</div>` : ""}`);
     $("#pkPropEnd").textContent = "";
     const show = (col, v5) => col === "project" ? v5 ? pName(v5) || v5 : "—" : col === "owner" || col === "made_by" ? pkWho(v5) || "—" : col === "milestone" ? v5 ? msName(v5) : "—" : irWord(col, v5);
     const { row1, row2 } = updateChips(t47, list, now, show);
@@ -62619,7 +62619,7 @@ ${d5.text}`);
     try {
       await editProposal(r4.file, (data) => {
         const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
-        if (!it2 || it2.applied) throw new Error("that proposal has already been applied");
+        if (!it2 || it2.applied) throw new Error("that suggestion has already been saved");
         const m5 = irMergeEdits(it2.changes || {}, plan);
         if ("error" in m5) throw new Error(m5.error);
         const cols2 = Object.keys(m5.changes).sort((a5, b5) => (a5 === "status" ? -1 : 0) - (b5 === "status" ? -1 : 0));
@@ -62649,7 +62649,7 @@ ${d5.text}`);
     if (approve) decide(r4.n, "approved", true);
     else {
       refreshAll();
-      snack(`Proposal updated — still waiting for review`);
+      snack(`Suggestion updated — still waiting for review`);
     }
   }
   function openProject(code, what) {
@@ -62691,14 +62691,14 @@ ${d5.text}`);
       try {
         const x5 = curObj(), k5 = shared.CUR.k, F5 = fieldsFor(k5, x5);
         $("#pErr").textContent = "";
-        const title = { record: x5.t, new: k5 === "actions" ? "New action" : k5 === "raid" ? "New RAID item" : "New decision", proposal: `Proposal: ${x5.t}`, health: `${pName(shared.CUR.code)} health`, milestone: x5.name, msnew: "New milestone", rebase: `Rebaseline: ${x5.name}` }[shared.CUR.mode];
+        const title = { record: x5.t, new: k5 === "actions" ? "New action" : k5 === "raid" ? "New RAID item" : "New decision", proposal: `Suggestion: ${x5.t}`, health: `${pName(shared.CUR.code)} health`, milestone: x5.name, msnew: "New milestone", rebase: `Rebaseline: ${x5.name}` }[shared.CUR.mode];
         const pl2 = (c5) => c5 ? `<a href="#" class="hlink" data-proj="${c5}" title="Open the project page">${esc(pName(c5))}</a>` : "";
         putHTML($("#pId"), shared.CUR.mode === "milestone" || shared.CUR.mode === "rebase" ? html`${shared.CUR.id} · ${raw(pl2(shared.CUR.code))}` : shared.CUR.mode === "msnew" ? html`Not yet saved · ${raw(pl2(shared.CUR.code))}` : shared.CUR.mode === "record" ? html`${shared.CUR.id} · ${raw(pl2(x5.p))}` : shared.CUR.mode === "proposal" ? html`Review #${shared.CUR.n} · ${x5.p ? raw(pl2(x5.p)) : "needs a project"}` : shared.CUR.mode === "new" ? html`Not yet saved` : raw(pl2(shared.CUR.code)));
         $("#pTitle").textContent = title || "";
         $("#panel").classList.toggle("pwide", !!shared.EDITING);
         $("#panel").classList.toggle("pover", shared.CUR.mode === "health");
         $("#pBody").classList.toggle("editing", shared.EDITING);
-        $("#editBanner").textContent = shared.CUR.mode === "proposal" ? "Editing a proposal — nothing reaches the tracker until it's approved" : "Editing — changes apply when you save";
+        $("#editBanner").textContent = shared.CUR.mode === "proposal" ? "Editing a suggestion — nothing is saved until it's approved" : "Editing — changes are kept when you save";
         let h5 = "";
         for (const [n4, l6, t47, opts] of F5) {
           if (n4 === "#") {
@@ -62839,15 +62839,15 @@ ${d5.text}`);
     if (!cb2) return;
     const code = $("#f_p")?.value || "";
     cb2.closest("dd").previousElementSibling.previousElementSibling.hidden = cb2.closest("dd").hidden = !code;
-    $("#learnTxt").textContent = `Remember ${cb2.dataset.value} (${KINDL[cb2.dataset.kind]}) for ${pName(code)}, so items like this match on their own. Added to the register when applied.`;
+    $("#learnTxt").textContent = `Remember ${cb2.dataset.value} (${KINDL[cb2.dataset.kind]}) for ${pName(code)}, so items like this match on their own. Added to the register when saved.`;
   }
   async function learnSignal(code, kind, value) {
     if (!viaServer()) {
-      snack("Remembering a signal needs the live server; or say it in Claude Code");
+      snack("Remembering a signal needs creaite to be running; or say it in Claude Code");
       return;
     }
     const res = await api("/api/learn", { code, kind, value });
-    snack(res.ok ? `${value} will be remembered for ${pName(code)} at apply` : oneLine(res.message) || "Not remembered");
+    snack(res.ok ? `${value} will be remembered for ${pName(code)} once saved` : oneLine(res.message) || "Not remembered");
     if (res.ok && S.autoApply) applySoon();
   }
   var HRANK = { "On track": 0, "At risk": 1, "Off track": 2 };
@@ -63019,7 +63019,7 @@ ${d5.text}`);
       try {
         await editProposal(r4.file, (data) => {
           const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
-          if (!it2 || it2.applied) throw new Error("that proposal has already been applied");
+          if (!it2 || it2.applied) throw new Error("that suggestion has already been saved");
           if (r4.kind === "update") {
             it2.changes = it2.changes || {};
             it2.changes[r4.rec.field] = f5.to;
@@ -63076,7 +63076,7 @@ ${d5.text}`);
       if (approve) decide(r4.n, "approved", true);
       else {
         refreshAll();
-        snack(`Proposal updated — still waiting for review`);
+        snack(`Suggestion updated — still waiting for review`);
       }
       return;
     }
@@ -63099,7 +63099,7 @@ ${d5.text}`);
       return;
     }
     if (now && approve) return decide(now.n, "approved");
-    snack(`Proposal updated — still waiting for review`);
+    snack(`Suggestion updated — still waiting for review`);
   }
   async function saveCurrent(code, md2, imgOps = [], added = [], dropped = []) {
     const p6 = P4.find((x5) => x5.code === code), before = p6.current, imgsBefore = p6.images;
@@ -63718,13 +63718,13 @@ ${d5.text}`);
     const el2 = $("#pkSave");
     if (!el2) return;
     el2.classList.toggle("fail", state === "fail");
-    putHTML(el2, state === "busy" ? msg || "Saving…" : state === "fail" ? msg || "Not saved" : state === "ok" ? html`${raw(ic("check"))}${msg || "Saved to staging"}` : "");
+    putHTML(el2, state === "busy" ? msg || "Saving…" : state === "fail" ? msg || "Not saved" : state === "ok" ? html`${raw(ic("check"))}${msg || "Saved for Review"}` : "");
   }
   function pkStageDraw() {
     const st2 = $("#pkStage"), n4 = shared.PKS.length, m5 = new Set(shared.PKS.map((s5) => s5.id)).size;
     st2.hidden = !n4;
     document.body.classList.toggle("pkstaged", !!n4);
-    if (n4) $("#pkStN").textContent = `${n4} change${n4 === 1 ? "" : "s"} staged on ${m5} item${m5 === 1 ? "" : "s"}`;
+    if (n4) $("#pkStN").textContent = `${n4} change${n4 === 1 ? "" : "s"} waiting to be saved on ${m5} item${m5 === 1 ? "" : "s"}`;
   }
   function pkLast(x5, k5) {
     let el2 = $("#pkLast");
@@ -63738,8 +63738,8 @@ ${d5.text}`);
       return;
     }
     const s5 = pkStagedOf(pkCid()), d5 = shared.PKDONE.filter((e4) => e4.id === pkCid());
-    putHTML(el2, html`${raw(ic("history"))}<span>${s5.length ? html`You edited this ${s5[s5.length - 1].at.slice(11) === nowStamp().slice(11) ? "just now" : raw("at " + s5[s5.length - 1].at.slice(11))} · ${s5.length} change${s5.length === 1 ? "" : "s"} staged` : d5.length ? html`Last applied ${fd(d5[d5.length - 1].at)}` : x5.upd_at ? html`Last updated ${fd(x5.upd_at)}` : ""}</span>`);
-    pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Saved to staging" : d5.length ? "Applied" : "");
+    putHTML(el2, html`${raw(ic("history"))}<span>${s5.length ? html`You edited this ${s5[s5.length - 1].at.slice(11) === nowStamp().slice(11) ? "just now" : raw("at " + s5[s5.length - 1].at.slice(11))} · ${s5.length} change${s5.length === 1 ? "" : "s"} waiting to be saved` : d5.length ? html`Last saved ${fd(d5[d5.length - 1].at)}` : x5.upd_at ? html`Last updated ${fd(x5.upd_at)}` : ""}</span>`);
+    pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Saved for Review" : d5.length ? "Saved" : "");
   }
   function markStagedRows() {
     const ids = /* @__PURE__ */ new Set([...shared.PKS.map((s5) => s5.id), ...(shared.PENDING || []).flatMap((p6) => p6.ids || [])]), sv = savingIds();
@@ -63750,7 +63750,7 @@ ${d5.text}`);
       );
       if (d5 && d5.dataset.st !== st2) d5.remove();
       if (!st2 || d5 && d5.dataset.st === st2) return;
-      const x5 = r4.querySelector("td.title>.x"), dot = statusDotNodes({ status: "staged", cls: st2 === "saving" ? "pkdot saving" : "pkdot", label: st2 === "saving" ? "Saving…" : "Staged, not yet applied" });
+      const x5 = r4.querySelector("td.title>.x"), dot = statusDotNodes({ status: "staged", cls: st2 === "saving" ? "pkdot saving" : "pkdot", label: st2 === "saving" ? "Saving…" : "Waiting to be saved" });
       dot[0].dataset.st = st2;
       if (x5) x5.before(...dot);
       else (r4.querySelector("td.title") || r4.firstElementChild || r4).append(...dot);
@@ -63817,22 +63817,22 @@ ${d5.text}`);
     const n4 = shared.PKS.length;
     if (!n4) return 0;
     if (!viaServer()) {
-      snack("Applying needs the live server: start it, or say “apply” in Claude Code");
+      snack("Saving needs creaite to be running: start it, or say “save” in Claude Code");
       return -1;
     }
     $("#pkApply").disabled = true;
-    pkSaving("busy", "Applying…");
+    pkSaving("busy", "Saving…");
     try {
       const r4 = await applyNow({ peek: true });
       await pkReconcile();
       if (!r4.ok) {
-        pkSaving("fail", "Not applied");
+        pkSaving("fail", "Not saved");
         snack(oneLine(applyWords(r4.message)));
         return -1;
       }
       const done = n4 - shared.PKS.length;
       if (shared.CUR && pkOn()) pkDraw();
-      snack(done ? `Applied ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still staged (changed elsewhere since)` : ""}. A backup was taken first` : "Nothing applied: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null);
+      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}. A backup was taken first` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null);
       return done;
     } finally {
       $("#pkApply").disabled = false;
@@ -63842,7 +63842,7 @@ ${d5.text}`);
     await shared.PKQ;
     const s5 = only || shared.PKS[shared.PKS.length - 1];
     if (only && !shared.PKS.includes(only)) {
-      snack("Already applied or undone");
+      snack("Already saved or undone");
       return;
     }
     await (async () => {
@@ -63867,7 +63867,7 @@ ${d5.text}`);
       if (!ok2) {
         pkPersist();
         refreshAll();
-        snack("Already applied: undo it in Activity");
+        snack("Already saved: undo it in Activity");
         return;
       }
       const x5 = pkX(s5.k, s5.id);
@@ -63884,7 +63884,7 @@ ${d5.text}`);
         shared.CUR.staged = null;
         pkDraw();
       }
-      snack(`Undone: the new ${pkNewWord(s5.k)} “${pkShort(s5.title, 40)}” is no longer staged`);
+      snack(`Undone: the new ${pkNewWord(s5.k)} “${pkShort(s5.title, 40)}” is no longer saved`);
     }
     if (s5 && s5.wsNew && !shared.PKS.includes(s5)) {
       const i5 = WSD().findIndex((w6) => !w6.id && w6.p === s5.wsP && w6.name === s5.wsNew);
@@ -63895,7 +63895,7 @@ ${d5.text}`);
     }
   }
   function bootPanel0167() {
-    addHTML(document.body, "beforeend", html`<div class="pkstage" id="pkStage" role="region" aria-label="Staged changes" hidden><small>Nothing reaches the tracker until you apply</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Apply everything staged" data-key="${raw(MOD)}↵">Apply<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
+    addHTML(document.body, "beforeend", html`<div class="pkstage" id="pkStage" role="region" aria-label="Changes waiting to be saved" hidden><small>Nothing is saved until you press Save</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Save everything waiting" data-key="${raw(MOD)}↵">Save<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
     $("#pkStage").prepend(...statusDotNodes({ status: "staged", wordId: "pkStN", live: true }));
     PKDRAW.push(pkLast);
     $("#pkUndo").onclick = () => pkUndoLast();
@@ -63996,7 +63996,7 @@ ${d5.text}`);
       }
       if (!shared.PKS.length) {
         closePanel();
-        snack("Nothing to apply");
+        snack("Nothing to save");
         return;
       }
       const n4 = await pkApply();
@@ -64186,9 +64186,9 @@ ${d5.text}`);
       return;
     }
     putHTML($("#pkId"), html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p) ?? ""}</a>` : html`<span>needs a project</span>`}${k5 === "raid" ? html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x5.type ?? ""}" data-tip="Type">${x5.type ?? ""}${raw(ic("chevdown"))}</button>` : ""}`);
-    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x5.p ? "" : html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r4) && !r4.done ? raw(llNoteHtml(r4)) : ""}${raw(rtNoteHtml(r4))}${r4.bad && !r4.done ? html`<div class="cmnote pk-bad">Can't be saved as it is: ${r4.bad}. ${(r4.badf || []).length ? `Saving leaves out ${r4.badf.join(", ")}.` : "Change it here and save: it's checked again."}</div>` : ""}`);
+    putHTML($("#pkPropTop"), html`<div class="pk-propline">Editing a suggestion — nothing is saved until it's approved</div>${x5.p ? "" : html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r4) && !r4.done ? raw(llNoteHtml(r4)) : ""}${raw(rtNoteHtml(r4))}${r4.bad && !r4.done ? html`<div class="cmnote pk-bad">Can't be saved as it is: ${r4.bad}. ${(r4.badf || []).length ? `Saving leaves out ${r4.badf.join(", ")}.` : "Change it here and save: it's checked again."}</div>` : ""}`);
     const sig = learnable(r4), was = $("#f_learn")?.checked;
-    putHTML($("#pkPropEnd"), sig && x5.p ? html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind ?? ""}" data-value="${sig.value ?? ""}"${was ? raw(" checked") : ""}><span>Remember ${sig.value ?? ""} (${KINDL[sig.kind] || sig.kind || ""}) for ${pName(x5.p) ?? ""}, so items like this match on their own. Added to the register when applied.</span></label>` : html``);
+    putHTML($("#pkPropEnd"), sig && x5.p ? html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind ?? ""}" data-value="${sig.value ?? ""}"${was ? raw(" checked") : ""}><span>Remember ${sig.value ?? ""} (${KINDL[sig.kind] || sig.kind || ""}) for ${pName(x5.p) ?? ""}, so items like this match on their own. Added to the register when saved.</span></label>` : html``);
     putHTML($("#pkFeed"), html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("filetext"))}</span><div><b>Source</b><div class="pk-src">${raw(srcHTML(r4.src))}</div></div></div>`);
   }
   async function pkPropSave(approve) {
@@ -64401,7 +64401,7 @@ ${d5.text}`);
     try {
       await editProposal(shared.CUR.staged, (data) => {
         const it2 = (data.items || []).find((i5) => i5.op === "new" && i5.table === k5);
-        if (!it2 || it2.applied) throw new Error("it has already been applied");
+        if (!it2 || it2.applied) throw new Error("it has already been saved");
         it2.values = values;
         pkWsPreSync(data, x5);
         if (data.peek) Object.assign(data.peek, { title: f5.t, p: f5.p, to: f5.t, at: nowStamp() });
@@ -64442,9 +64442,9 @@ ${d5.text}`);
     if (shared.CUR.mode !== "new") return;
     const st2 = !!shared.CUR.staged, w6 = pkNewWord(k5);
     let el2 = $("#pkLast");
-    if (el2) putHTML(el2, html`${raw(ic("history"))}<span>${st2 ? html`Staged · created when you apply` : shared.CUR.alert ? html`Not staged yet · Save (${MOD}↵) stages it and dismisses the message` : html`Not staged yet · it is staged once it has a title and a project`}</span>`);
-    pkSaving(st2 ? "ok" : "", st2 ? "Saved to staging" : "");
-    putHTML($("#pkFeed"), st2 ? html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w6}<span class="pk-pill st">staged</span></div></div>` : html`<div class="sub">Nothing here yet.</div>`);
+    if (el2) putHTML(el2, html`${raw(ic("history"))}<span>${st2 ? html`Waiting to be saved · created when you save` : shared.CUR.alert ? html`Not saved yet · Save (${MOD}↵) saves it for Review and dismisses the message` : html`Not saved yet · it is saved once it has a title and a project`}</span>`);
+    pkSaving(st2 ? "ok" : "", st2 ? "Saved for Review" : "");
+    putHTML($("#pkFeed"), st2 ? html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w6}<span class="pk-pill st">waiting</span></div></div>` : html`<div class="sub">Nothing here yet.</div>`);
     pkNewMarkDraw();
   }
   function bootPanel0176() {
@@ -64515,7 +64515,7 @@ ${d5.text}`);
   function pkNewAsk(retry) {
     PKN.retry = retry || null;
     const w6 = pkNewWord(shared.CUR.k);
-    $("#pkAskT").textContent = `This new ${w6} isn't staged yet: ${pkNewWhy()}. Keep it in this browser (New offers it back), or discard it?`;
+    $("#pkAskT").textContent = `This new ${w6} isn't saved yet: ${pkNewWhy()}. Keep it in this browser (New offers it back), or discard it?`;
     $("#pkAsk").hidden = false;
     shared.EDITING = true;
     $("#pkScroll").scrollTop = 0;
@@ -64572,7 +64572,7 @@ ${d5.text}`);
     const sel = getSelection();
     sel.removeAllRanges();
     sel.addRange(r4);
-    snack(`Restored. Press Enter in the title to stage it`);
+    snack(`Restored. Press Enter in the title to save it`);
   }
   function bootPanel0177() {
     document.addEventListener("input", (e4) => {
@@ -64659,7 +64659,7 @@ ${d5.text}`);
     if (DIAG.loaded && DIAG.newest && DIAG.newest > ebSeen()) store.set(EBKEY, DIAG.newest);
   }
   var EBAREA = {
-    sweep: ["sweep run failed", "sweep runs failed"],
+    sweep: ["check run failed", "check runs failed"],
     server: ["live-server request", "live-server requests"],
     run: ["ask creaite or prep run", "ask creaite or prep runs"],
     dashboard: ["in the page", "in the page"],
@@ -64723,7 +64723,7 @@ ${d5.text}`);
         ebMarkSeen();
         errBanner();
         openChat();
-        send("Look at the errors in creaite's debug log from the last day (Settings › Diagnostics, system/logs) and their context, and explain the likely causes in plain words. This is read only: don't change anything.");
+        send("Look at the errors in creaite's debug log from the last day (Settings › Diagnostics, Settings › Diagnostics) and their context, and explain the likely causes in plain words. This is read only: don't change anything.");
       }
     });
     errBanner();
@@ -64831,7 +64831,7 @@ ${d5.text}`);
       ),
       suggest: (nm3) => wsSuggest(p6, nm3),
       onClose: pkPopDone(anchor),
-      note: `${name ? `Suggested from ${s5.items} item${s5.items === 1 ? "" : "s"}; change anything.` : "A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
+      note: `${name ? `Suggested from ${s5.items} item${s5.items === 1 ? "" : "s"}; change anything.` : "A lead, keywords and aliases help creaite match items to it."} Saved with this item's change.`,
       onAdd: async (v5) => {
         const w6 = wsRow(p6, v5.name);
         if (w6 && w6.st === "Closed") return `“${w6.name}” is retired in ${pName(p6)}: choose another (${pName(p6)}'s settings › Workstreams lists the ones in use).`;
@@ -64848,7 +64848,7 @@ ${d5.text}`);
           shared.CUR.wsPre = { item, row: row2 };
           (D.ws_table = D.ws_table || []).push(row2);
         }
-        pkCommit(k5, id2, { ws: v5.name }, "Workstream", x5.ws || "none", v5.name, { pre: [item], wsRow: String(id2).startsWith("nw") ? null : row2, note: `New workstream “${v5.name}” for ${pName(p6)}, staged with this change` });
+        pkCommit(k5, id2, { ws: v5.name }, "Workstream", x5.ws || "none", v5.name, { pre: [item], wsRow: String(id2).startsWith("nw") ? null : row2, note: `New workstream “${v5.name}” for ${pName(p6)}, saved with this change` });
       }
     });
   }
@@ -64950,7 +64950,7 @@ ${d5.text}`);
     s5.removeAllRanges();
     s5.addRange(r4);
     DRPEND[pkCid() + "|" + c5.f] = { feature: c5.feature, text: text ?? c5.d.text };
-    pkNote("The draft is in the field, not saved yet. Edit it, then click away to stage it as usual; Esc puts the old text back.");
+    pkNote("The draft is in the field, not saved yet. Edit it, then click away to save it as usual; Esc puts the old text back.");
   }
   var drSame = (a5, b5) => String(a5 || "").replace(/\s+/g, " ").trim() === String(b5 || "").replace(/\s+/g, " ").trim();
   async function draftBulk(ids, statusEl) {
@@ -65272,7 +65272,7 @@ ${d5.text}`);
       host2 = $("#mvFcDraft");
     }
     const c5 = shared.DRF && shared.DRF.id === shared.MV.pend.id && shared.DRF.fc === shared.MV.pend.fc ? shared.DRF : null;
-    putHTML(host2, html`<div>${raw(draftBtn("forecast", "Draft the reason", "Word why it moves from what the tracker shows: overdue work behind it, dependencies, pending decisions", 'data-drfc="1"'))}</div>${c5 ? raw(c5.html) : ""}`);
+    putHTML(host2, html`<div>${raw(draftBtn("forecast", "Draft the reason", "Word why it moves from what your project record shows: overdue work behind it, dependencies, pending decisions", 'data-drfc="1"'))}</div>${c5 ? raw(c5.html) : ""}`);
   }
   function bootPanel0200() {
     Object.assign(DRAFTKIND, { health: "reason", forecast: "reason" });
@@ -65660,7 +65660,7 @@ ${d5.text}`);
     }
     const all = (m5.items || []).filter((x5) => x5.id && (x5.k === "actions" || x5.k === "decisions")).map((x5) => REC(x5.k, x5.id) && deItem(x5.k, REC(x5.k, x5.id))).filter(Boolean), ok2 = all.filter((i5) => !deBarred(i5));
     if (!ok2.length) {
-      snack("The meeting has no actions or decisions in the tracker yet: approve and apply them first");
+      snack("The meeting has no actions or decisions in your project record yet: approve and save them first");
       return;
     }
     shared.DE = {
@@ -65674,7 +65674,7 @@ ${d5.text}`);
       attendees: [],
       lead: "",
       summary: "",
-      note: viaServer() ? "Reading the attendees and the minutes' summary…" : "The attendees and the minutes' summary need the live server.",
+      note: viaServer() ? "Reading the attendees and the minutes' summary…" : "The attendees and the minutes' summary need creaite to be running.",
       picked: /* @__PURE__ */ new Set(),
       includeUpdate: false,
       replyBy: "",
@@ -66058,7 +66058,7 @@ ${d5.text}`);
   }
   async function deSent(btn) {
     if (!viaServer()) {
-      snack("Recording a chase needs the live server");
+      snack("Recording a chase needs creaite to be running");
       return;
     }
     const picked = shared.DE.items.filter((i5) => shared.DE.picked.has(i5.k + ":" + i5.id));
@@ -66267,7 +66267,7 @@ ${d5.text}`);
   var DRRUN = null;
   function draftWhyNot(kind) {
     const f5 = DRAFTKIND[kind] || kind, name = (DRAFTFEATURES.find((x5) => x5[0] === f5) || [])[1] || "Drafting";
-    return !draftOn(f5) ? `${name} is off in Settings › Advanced › AI drafts` : !viaServer() ? `${name} needs the live server` : DRRUN ? "A draft is being written; wait for it or stop it" : "";
+    return !draftOn(f5) ? `${name} is off in Settings › Advanced › AI drafts` : !viaServer() ? `${name} needs creaite` : DRRUN ? "A draft is being written; wait for it or stop it" : "";
   }
   function draftBtn(kind, word, tip, attrs = "") {
     const why = draftWhyNot(kind);
@@ -66282,7 +66282,7 @@ ${d5.text}`);
     });
     if (DRRUN) return { ok: false, message: "A draft is already being written" };
     if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) return { ok: false, message: "ask creaite is busy; try again when it's finished" };
-    if (!viaServer()) return { ok: false, message: "Drafting needs the live server" };
+    if (!viaServer()) return { ok: false, message: "Drafting needs creaite to be running" };
     const id2 = `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
     DRRUN = { id: id2, ctl };
     let steps = 0, res, started = false;
@@ -66294,7 +66294,7 @@ ${d5.text}`);
       try {
         res = await fetch(o5.url || "/api/draft", { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token }, body: JSON.stringify({ ...body2, run: id2 }) });
       } catch (e4) {
-        return { ok: false, message: "The live server isn't reachable" };
+        return { ok: false, message: "creaite isn't reachable" };
       }
       if (!res.ok || !res.body || (res.headers.get("Content-Type") || "").includes("json")) {
         const j5 = await res.json().catch(() => ({}));
@@ -66406,7 +66406,7 @@ ${d5.text}`);
       if (!a5) return;
       e4.preventDefault();
       if (!viaServer()) {
-        snack("Opening a file needs the live server");
+        snack("Opening a file needs creaite to be running");
         return;
       }
       const r4 = await api("/api/open", { path: a5.dataset.dropen });
@@ -66419,7 +66419,7 @@ ${d5.text}`);
       groups: ["AI drafts"],
       /* v2.6 (#246): its own tab; the agenda style joins it */
       kw: "ai drafts draft suggest model claude latest update stale client wording messaging reasoning options response impact likelihood health forecast reason counts used rejected",
-      render: () => `<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a suggestion in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs creaite running.</p>` + DRAFTFEATURES.map(([f5, l6, h5]) => row(l6, `<input type="checkbox" class="switch" data-drsw="${f5}" ${draftOn(f5) ? "checked" : ""} aria-label="${esc(l6)}">`, h5)).join("") + `<div class="drstats" id="drStats">${viaServer() ? "" : "How often each kind of draft is used shows here while the live server runs."}</div>`,
+      render: () => `<p class="sub" style="margin:0 0 4px">A draft is a suggestion, never a save: it fills a field, a suggestion in Review or a box for you to edit. creaite picks the facts; Claude only words them. Each needs creaite running.</p>` + DRAFTFEATURES.map(([f5, l6, h5]) => row(l6, `<input type="checkbox" class="switch" data-drsw="${f5}" ${draftOn(f5) ? "checked" : ""} aria-label="${esc(l6)}">`, h5)).join("") + `<div class="drstats" id="drStats">${viaServer() ? "" : "How often each kind of draft is used shows here while creaite is running."}</div>`,
       after: () => drStatsLoad()
     });
     $("#settingsBody").addEventListener("change", async (e4) => {
@@ -66817,7 +66817,7 @@ ${d5.text}`);
     if (c5.k !== "actions" || !c5.new) return "";
     c5.chips = capChips(c5.new.t, c5.new.p, { ...c5.new, o: c5.new.o === "TBC" ? "" : c5.new.o, pr: "" }).filter((x5) => !(x5.f === "pr" && x5.v === c5.new.pr));
     const v5 = vagueWhy(c5.new.t);
-    return `${c5.chips.length ? `<div class="ckchips" role="group" aria-label="Suggested fields">${c5.chips.map((x5, i5) => `<button type="button" class="chip capchip" data-ckchip="${i5}" title="Suggested ${esc(x5.why)}; click to set it">+ ${esc(x5.label)}</button>`).join("")}</div>` : ""}${v5 ? `<div class="sub ckvague">The title is vague (${esc(v5)}): write what is to be done, or stage it and Sharpen it in the item.</div>` : ""}`;
+    return `${c5.chips.length ? `<div class="ckchips" role="group" aria-label="Suggested fields">${c5.chips.map((x5, i5) => `<button type="button" class="chip capchip" data-ckchip="${i5}" title="Suggested ${esc(x5.why)}; click to set it">+ ${esc(x5.label)}</button>`).join("")}</div>` : ""}${v5 ? `<div class="sub ckvague">The title is vague (${esc(v5)}): write what is to be done, or save it and Sharpen it in the item.</div>` : ""}`;
   }
   function bootDrafts0204() {
     Object.assign(DRAFTKIND, { sharpen: "sharpen" });
@@ -66916,7 +66916,7 @@ ${d5.text}`);
     prepViewKey.value = key2;
     if (!o5.keepTab && !same2) prepTab.value = "prep";
     if (!viaServer()) {
-      prepView.value = { ok: false, message: "The prep page needs the live server." };
+      prepView.value = { ok: false, message: "The prep page needs creaite to be running." };
       return;
     }
     prepLoading.value = true;
@@ -66930,7 +66930,7 @@ ${d5.text}`);
     const key2 = prepViewKey.value;
     if (!key2) return false;
     if (!viaServer()) {
-      snack("Saving needs the live server");
+      snack("Saving needs creaite to be running");
       return false;
     }
     prepSaving.value = what;
@@ -67065,7 +67065,7 @@ ${d5.text}`);
     if (!was && viaServer()) rbStart("Making the prep page");
     try {
       if (!viaServer()) {
-        snack("The Prep page needs the live server");
+        snack("The Prep page needs creaite to be running");
         return;
       }
       if (shared.PREPRUN) {
@@ -67103,7 +67103,7 @@ ${d5.text}`);
       try {
         res = await fetch("/api/prep/page", { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token }, body: JSON.stringify({ key: key2, run: id2 }) });
       } catch (e4) {
-        return end("The live server isn't reachable");
+        return end("creaite isn't reachable");
       }
       if (!res.ok || !res.body || (res.headers.get("Content-Type") || "").includes("json")) {
         const j5 = await res.json().catch(() => ({}));
@@ -67164,7 +67164,7 @@ ${d5.text}`);
   }
   async function prepOpen(path) {
     if (!viaServer()) {
-      snack("Opening a prep page needs the live server");
+      snack("Opening a prep page needs creaite to be running");
       return;
     }
     const w6 = window.open("", "_blank");
@@ -67219,7 +67219,7 @@ ${d5.text}`);
       if (!g5) return;
       e4.preventDefault();
       if (g5.getAttribute("aria-disabled") === "true") {
-        snack("Opening a prep page needs the live server");
+        snack("Opening a prep page needs creaite to be running");
         return;
       }
       location.hash = prepViewHref(g5.dataset.prepgo, g5.dataset.prepgoday);
@@ -67476,7 +67476,7 @@ ${d5.text}`);
   }
   async function agendaSave(btn) {
     if (!viaServer()) {
-      snack("Saving needs the live server");
+      snack("Saving needs creaite to be running");
       return;
     }
     const d5 = AGD.d;
@@ -68240,7 +68240,7 @@ ${d5.text}`);
       try {
         await editProposal(r4.file, (data) => {
           const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
-          if (!it2 || it2.applied) throw new Error("that proposal has already been applied");
+          if (!it2 || it2.applied) throw new Error("that suggestion has already been saved");
           it2.values = it2.values || {};
           it2.values[db2] = to2;
           it2.edited_in = "dashboard";
@@ -68252,7 +68252,7 @@ ${d5.text}`);
       r4.rec[ui2] = to2;
       r4.edited = true;
       refreshAll();
-      snack(`Proposal moved to ${wkLong(to2)}: still waiting for review`);
+      snack(`Suggestion moved to ${wkLong(to2)}: still waiting for review`);
     }, true);
     WSIG.push(["weekend", "Open item due on a weekend", null, null]);
     PKDRAW.push((x5, k5) => {
@@ -68280,7 +68280,7 @@ ${d5.text}`);
   function RejectsList({ onReason, onApprove, onUndo, name, when: when2 }) {
     const { state, items: items2, message } = rjRecent.value;
     if (state === "idle") return null;
-    if (state === "off") return /* @__PURE__ */ u4("p", { class: "sub", id: "rjListMsg", children: "What you rejected needs the live server." });
+    if (state === "off") return /* @__PURE__ */ u4("p", { class: "sub", id: "rjListMsg", children: "What you rejected needs creaite to be running." });
     if (state === "error") return /* @__PURE__ */ u4("p", { class: "sub", id: "rjListMsg", children: message || "The list couldn't be read." });
     if (state === "loading" && !items2.length) return /* @__PURE__ */ u4("p", { class: "sub", id: "rjListMsg", role: "status", children: "Reading what you rejected…" });
     if (!items2.length) return /* @__PURE__ */ u4("p", { class: "sub", id: "rjListMsg", children: "Nothing has been rejected." });
@@ -68321,7 +68321,7 @@ ${d5.text}`);
   // components/activity/UsagePanel.jsx
   var KIND = {
     ask: "ask creaite",
-    sweep: "Sweep",
+    sweep: "Check",
     generate: "Generate current state",
     prep: "Prep page",
     draft: "Drafts",
@@ -68471,7 +68471,7 @@ ${d5.text}`);
           " ",
           `Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round(rules.tokens / total * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`
         ] })
-      ] }) : /* @__PURE__ */ u4("p", { class: "sub", children: "Not measured yet. The live server measures these files once a day." })
+      ] }) : /* @__PURE__ */ u4("p", { class: "sub", children: "Not measured yet. creaite measures these files once a day." })
     ] });
   }
   function ctxChange(r4, fd3) {
@@ -68481,7 +68481,7 @@ ${d5.text}`);
     return `${r4.change_bytes > 0 ? "+" : "−"}${Number((k5 >= 10 ? Math.round(k5) : k5).toFixed(1))} KB since ${fd3(r4.since)}`;
   }
   var REVIEW_ROUTE = "/api/usage/review", MAX_NOTE = 200;
-  var NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs the live server";
+  var NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs creaite to be running";
   var FORMULA = /^[=+\-@\t\r]/;
   var csvCell = (v5) => {
     let s5 = String(v5 ?? "");
@@ -68620,9 +68620,9 @@ ${d5.text}`);
       /* @__PURE__ */ u4("p", { class: "sub", children: [
         "Last ",
         u5.days || 14,
-        " days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4)."
+        " days, as counted by creaite for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4)."
       ] }),
-      bad || u5.empty ? /* @__PURE__ */ u4("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here." }) : /* @__PURE__ */ u4(Runs, { u: u5, fd: fd3 }),
+      bad || u5.empty ? /* @__PURE__ */ u4("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run creaite makes will be counted here." }) : /* @__PURE__ */ u4(Runs, { u: u5, fd: fd3 }),
       /* @__PURE__ */ u4(Loads, { rows: u5.context || [], start: u5.cards?.start?.now, fd: fd3 }),
       bad || u5.empty ? null : /* @__PURE__ */ u4(Skills, { skills: u5.skills || [] }),
       /* @__PURE__ */ u4(Reviews, { list: u5.reviews || [], fd: fd3, held: !live ? NEEDS_LIVE : u5.reviews_save ? "" : NEEDS_UPDATE, onSaved: onReviews })
@@ -68683,7 +68683,7 @@ ${d5.text}`);
     ["label", "Label", "label"],
     ["setting", "Setting", "gear"],
     ["file", "File", "folder"],
-    ["rejected", "Rejected proposal", "x"],
+    ["rejected", "Rejected suggestion", "x"],
     ["revert", "Undo", "undo"]
   ];
   var actKindOf = (k5) => ACTKINDS.find((x5) => x5[0] === k5);
@@ -68793,7 +68793,7 @@ ${d5.text}`);
   }
   function actRow(a5, i5) {
     const rid = a5.rowid && !a5.reverted && !a5.undone ? `r${a5.rowid}` : "";
-    const end = a5.reverted ? html`<span class="x actundone" title="Put back by a later undo">undone</span>` : a5.undo ? raw(ibtn("undo", "Undo this change", html`data-undoact="${i5}"`, "sm")) : viaServer() && a5.apply_id && a5.apply_id === D.latest_apply && !a5.undone ? raw(ibtn("undo", "Undo this apply", html`data-undoapply="${a5.apply_id}"`, "sm")) : html`<span class="x" title="Only the latest apply can be undone here; tick older changes to undo them">Applied</span>`;
+    const end = a5.reverted ? html`<span class="x actundone" title="Put back by a later undo">undone</span>` : a5.undo ? raw(ibtn("undo", "Undo this change", html`data-undoact="${i5}"`, "sm")) : viaServer() && a5.apply_id && a5.apply_id === D.latest_apply && !a5.undone ? raw(ibtn("undo", "Undo this save", html`data-undoapply="${a5.apply_id}"`, "sm")) : html`<span class="x" title="Only the latest save can be undone here; tick older changes to undo them">Saved</span>`;
     return html`<tr${rid ? html` data-row="${rid}"` : ""}${a5.reverted ? html` class="undone"` : ""}><td class="actck">${rid ? html`<input type="checkbox" aria-label="Select: ${actId(a5)} ${a5.change || a5.what || ""}">` : html`<input type="checkbox" disabled title="This change can't be undone here" aria-label="Not selectable: ${actId(a5)} ${a5.change || a5.what || ""}">`}</td><td class="actwhen" style="white-space:nowrap">${fd(a5.at)}</td><td class="actchg">${actIcon(a5)}${actLine(a5)}</td><td class="x">${a5.by}</td><td style="text-align:right">${end}</td></tr>`;
   }
   var ACTSHOW = 300;
@@ -68816,7 +68816,7 @@ ${d5.text}`);
     if (shared.HLC != null && !vis.has(shared.HLC)) shared.HLC = null;
     actPaint();
     renderAskChanges();
-    if (!shared.LOADING && !shared.ACT.length) putHTML($("#actTbl"), html`<div class="empty">Nothing has changed yet. What you approve, edit or apply shows here, newest first, with Undo. <a href="#" data-go="review">Open Intake</a></div>`);
+    if (!shared.LOADING && !shared.ACT.length) putHTML($("#actTbl"), html`<div class="empty">Nothing has changed yet. What you approve, edit or save shows here, newest first, with Undo. <a href="#" data-go="review">Open Intake</a></div>`);
   }
   var actSel = () => [...HL].filter(([, k5]) => k5 === "act").map(([id2]) => +id2.slice(1));
   function actPaint() {
@@ -68830,7 +68830,7 @@ ${d5.text}`);
     const n4 = actSel().length, bar = $("#actBar");
     if (!bar) return;
     bar.hidden = !n4;
-    putHTML(bar, html`${n4 > 0 && html`<span class="bkn" aria-live="polite">${n4} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer() && html`disabled title="Undoing needs the live server"`}>${raw(ic("undo"))}Undo ${n4}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`);
+    putHTML(bar, html`${n4 > 0 && html`<span class="bkn" aria-live="polite">${n4} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer() && html`disabled title="Undoing needs creaite to be running"`}>${raw(ic("undo"))}Undo ${n4}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`);
   }
   var actTyping = () => typing() && !document.activeElement.matches("input[type=checkbox]");
   var ACT_ASK_AGAIN = 25;
@@ -68838,7 +68838,7 @@ ${d5.text}`);
     const ids = actSel();
     if (!ids.length) return;
     if (!viaServer()) {
-      snack("Undoing needs the live server");
+      snack("Undoing needs creaite to be running");
       return;
     }
     const latest = D.latest_apply, whole = shared.ACT.filter((a5) => a5.rowid && !a5.reverted && a5.apply_id === latest).map((a5) => a5.rowid);
@@ -68868,7 +68868,7 @@ ${d5.text}`);
     const done = plan.done || [], skipped = plan.skipped || [], n4 = done.length;
     let asked2 = false;
     putHTML($("#actDlgBody"), html`<h2 id="actDlgH" style="margin:0 0 6px">${n4 ? html`Undo ${raw(n4)} change${n4 === 1 ? "" : "s"}?` : "Nothing here can be undone"}</h2>
-    <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n4 ? "Each goes back to what it was before, only where it still holds the value that change gave it. It is one new apply, so you can undo it too." : html`Each of these has changed since, or can't be put back here.`}</p>
+    <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n4 ? "Each goes back to what it was before, only where it still holds the value that change gave it. It is one new save, so you can undo it too." : html`Each of these has changed since, or can't be put back here.`}</p>
     <ul class="actplan">${raw(done.map(actPlanLine).join(""))}${raw(skipped.map(actPlanLine).join(""))}</ul>
     <div class="curacts"><span class="sp"></span><button type="button" class="btn" id="actDlgCancel">${n4 ? "Cancel" : "Close"}</button>${n4 ? html`<button type="button" class="btn primary" id="actDlgGo">Undo ${raw(n4)}</button>` : ""}</div>`);
     $("#actDlgCancel").onclick = () => dlg.close();
@@ -69011,7 +69011,7 @@ ${d5.text}`);
     const body2 = $(id2);
     body2.replaceChildren();
     if (!L3.length) {
-      qEmpty(body2, 5, "Nothing proposed in this period.");
+      qEmpty(body2, 5, "Nothing suggested in this period.");
       return;
     }
     L3.forEach((r4) => qRow(body2, r4.label, [r4.approved.text, r4.edited.text, r4.rejected.text, String(r4.pending)], qNR(r4.rated, r4.decided)));
@@ -69023,7 +69023,7 @@ ${d5.text}`);
       return;
     }
     const p6 = q5.period || {};
-    $("#qPeriod").textContent = p6.from ? `The last ${p6.weeks} weeks: ${fd(p6.from)} to ${fd(p6.to)}, by the day each proposal was made.` : "";
+    $("#qPeriod").textContent = p6.from ? `The last ${p6.weeks} weeks: ${fd(p6.from)} to ${fd(p6.to)}, by the day each suggestion was made.` : "";
     $("#qMoved").textContent = q5.moved || "";
     qGroups("#qSrc", q5.by_source || []);
     qGroups("#qType", q5.by_type || []);
@@ -69032,14 +69032,14 @@ ${d5.text}`);
     (q5.reasons || []).forEach((r4) => qRow(why, r4.reason, [r4.text]));
     if (!(q5.reasons || []).length) qEmpty(why, 2, "No rejections in this period.");
     const dup = q5.duplicates || {};
-    $("#qDup").textContent = dup.of ? `The tracker recorded ${dup.text} rejections in this period as a duplicate of an existing item.` : "";
+    $("#qDup").textContent = dup.of ? `Your project record recorded ${dup.text} rejections in this period as a duplicate of an existing item.` : "";
     const fl2 = $("#qFields");
     fl2.replaceChildren();
     const lab = q5.source_labels || {};
     (q5.fields || []).forEach((r4) => qRow(fl2, r4.field, [r4.text, Object.entries(r4.by_source || {}).map(([k5, n4]) => `${lab[k5] || k5} ${n4}`).join(" · ")]));
     if (!(q5.fields || []).length) qEmpty(fl2, 3, "No edits with a known field in this period.");
     const u5 = q5.unknown || {};
-    $("#qUnknown").textContent = u5.n ? `${u5.n} of ${u5.of} edited proposals were edited before creaite kept what was first proposed: field unknown.` : "";
+    $("#qUnknown").textContent = u5.n ? `${u5.n} of ${u5.of} edited suggestions were edited before creaite kept what was first suggested: field unknown.` : "";
     const dr2 = $("#qDrafts");
     dr2.replaceChildren();
     (q5.drafts || []).forEach((r4) => qRow(dr2, r4.label, r4.offered ? [String(r4.offered), r4.used.text, r4.edited.text, r4.rejected.text] : ["0", "—", "—", "—"], qNR(r4.rated, r4.offered, "offered")));
@@ -69217,7 +69217,7 @@ ${d5.text}`);
     if (s5.type === "mail") return ["mail", sourceHref(s5) ? "Opens in Outlook" : "Mail · no link was kept"];
     if (s5.type === "teams") return ["chat", sourceHref(s5) ? "Opens in Teams" : "Teams · no link was kept"];
     if (s5.type === "item") return ["work", "Opens the item"];
-    if (s5.type === "tracker") return ["work", "The tracker"];
+    if (s5.type === "tracker") return ["work", "Your project record"];
     if (s5.type === "invite") return ["calendar", "The calendar invite"];
     return ["list", ""];
   }
@@ -69230,7 +69230,7 @@ ${d5.text}`);
         return;
       }
       if (!viaServer()) {
-        snack("Choosing the project needs the live server");
+        snack("Choosing the project needs creaite to be running");
         return;
       }
       const map = { ...(D.prep || {}).series || {}, [series]: code };
@@ -69269,7 +69269,7 @@ ${d5.text}`);
     };
     const refresh = () => {
       if (!viaServer()) {
-        snack("Refreshing the research needs the live server");
+        snack("Refreshing the research needs creaite to be running");
         return;
       }
       if (past) {
@@ -70308,7 +70308,7 @@ ${d5.text}`);
           }
         }, children: "Change code…" })
       ] }),
-      /* @__PURE__ */ u4(PsRow, { label: "Status", help: "Active projects are swept and reported. A closed project is kept, with everything in it.", kw: "active closed on hold", children: /* @__PURE__ */ u4(
+      /* @__PURE__ */ u4(PsRow, { label: "Status", help: "Active projects are checked and reported. A closed project is kept, with everything in it.", kw: "active closed on hold", children: /* @__PURE__ */ u4(
         "select",
         {
           id: "psStatus",
@@ -70620,7 +70620,7 @@ ${d5.text}`);
     return /* @__PURE__ */ u4("div", { class: "psdanger", children: /* @__PURE__ */ u4("div", { class: "card", "data-pscard": true, "data-cat": "arch", children: [
       /* @__PURE__ */ u4("h2", { children: "Archive and close" }),
       state === "archived" ? /* @__PURE__ */ u4(PsRow, { label: "Restore this project", help: "Brings its folder back from the archive. It goes on the approval card in ask creaite first.", kw: "archive restore", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "psRestore", onClick: () => projArchive(code, "restore", false), children: "Restore" }) }) : /* @__PURE__ */ u4(PsRow, { label: "Archive this project", help: "Moves its folder to the archive and keeps everything; it can be restored from the Projects page (Show archived). It goes on the approval card in ask creaite first.", kw: "archive restore", children: /* @__PURE__ */ u4(AskButton, { id: "psArchive", label: "Archive…", ask: `Archive ${name}?`, yes: "Archive", onYes: () => projArchive(code, "archive", false) }) }),
-      state === "closed" ? /* @__PURE__ */ u4(PsRow, { label: "Reopen this project", help: "Makes it active again: it is swept and reported again.", kw: "active", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "psReopen", onClick: () => setProjectActive(code, true), children: "Reopen" }) }) : /* @__PURE__ */ u4(PsRow, { label: "Close this project", help: "Marks it closed in the tracker; nothing is deleted.", kw: "close closed", children: /* @__PURE__ */ u4(AskButton, { id: "psClose", label: "Close…", ask: `Close ${name}?`, yes: "Close it", danger: true, onYes: () => setProjectActive(code, false) }) })
+      state === "closed" ? /* @__PURE__ */ u4(PsRow, { label: "Reopen this project", help: "Makes it active again: it is checked and reported again.", kw: "active", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "psReopen", onClick: () => setProjectActive(code, true), children: "Reopen" }) }) : /* @__PURE__ */ u4(PsRow, { label: "Close this project", help: "Marks it closed in your project record; nothing is deleted.", kw: "close closed", children: /* @__PURE__ */ u4(AskButton, { id: "psClose", label: "Close…", ask: `Close ${name}?`, yes: "Close it", danger: true, onYes: () => setProjectActive(code, false) }) })
     ] }) });
   }
   var ClientAndLogos = ({ code }) => /* @__PURE__ */ u4(S2, { children: [
@@ -71530,7 +71530,7 @@ ${d5.text}`);
         quote: "",
         kind: "item",
         n: n4,
-        note: "The tracker's checks refused this item as it stands: change it in Review.",
+        note: "The project record's checks couldn't accept this item as it stands: change it in Review.",
         actions: [{ id: "keep", label: "Keep mine" }]
       });
     return out;
@@ -72040,7 +72040,7 @@ ${d5.text}`);
               held ? /* @__PURE__ */ u4("span", { class: "mck info mnsens", "data-tip": `Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`, children: held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}` }) : null,
               !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("span", { class: "mck info", children: [
                 /* @__PURE__ */ u4(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }),
-                row2.ref ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn mnstaged", "data-tip": "Open the staged update in Review", onClick: () => m5.openItem(String(row2.ref)), children: "Open" }) : null
+                row2.ref ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn mnstaged", "data-tip": "Open the saved update in Review", onClick: () => m5.openItem(String(row2.ref)), children: "Open" }) : null
               ] }) : null,
               need && need.owner ? /* @__PURE__ */ u4("span", { class: "mnflag2", "data-flag": "owner", children: "Needs an owner" }) : null,
               need && need.date ? /* @__PURE__ */ u4("span", { class: "mnflag2", "data-flag": "date", children: need.vague ? "Vague date: pick one" : "Needs a date" }) : null,
@@ -73603,7 +73603,7 @@ ${d5.text}`);
               r4 && !r4.done ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-dcadd": i5, onClick: () => onAdd(i5), children: "Add it to your commitments" }) : r4 && r4.done ? /* @__PURE__ */ u4("span", { class: "tag", children: "Added" }) : null
             ] });
           }) }),
-          /* @__PURE__ */ u4("p", { class: "sub", children: "Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the tracker at the next apply." })
+          /* @__PURE__ */ u4("p", { class: "sub", children: "Suggested today, owned by you, still waiting in Review. Adding approves it there; it reaches your project record at the next save." })
         ] }) : /* @__PURE__ */ u4("p", { class: "sub", children: "Nothing from today is waiting with your name on it." })
       ] })
     ] });
@@ -73909,7 +73909,7 @@ ${d5.text}`);
       if (!open2) return;
       if (closed && !pending) return;
       if (!viaServer()) {
-        setErr("Close the day needs the live server: start it, then try again.");
+        setErr("Close the day needs creaite to be running: start it, then try again.");
         return;
       }
       if (pending) {
@@ -73995,7 +73995,7 @@ ${d5.text}`);
     const close = async () => {
       if (busy2) return;
       if (!viaServer()) {
-        snack("Closing the day needs the live server");
+        snack("Closing the day needs creaite to be running");
         return;
       }
       setBusy(true);
@@ -74202,7 +74202,7 @@ ${d5.text}`);
     if (!viaServer()) {
       SRCH.res = null;
       $("#vsResults").textContent = "";
-      putHTML($("#vsNote"), html`Live server needed: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`);
+      putHTML($("#vsNote"), html`creaite needs to be running: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`);
       $("#vsChips").textContent = "";
       return;
     }
@@ -74257,7 +74257,7 @@ ${d5.text}`);
   }
   async function searchPreview(path, q5) {
     if (!viaServer()) {
-      snack("Previewing needs the live server");
+      snack("Previewing needs creaite to be running");
       return;
     }
     const r4 = await api("/api/search/preview", { path, q: q5 });
@@ -74288,7 +74288,7 @@ ${d5.text}`);
   function searchCkItems() {
     const q5 = $("#cmdkIn").value.trim();
     if (q5.length < 3) return [];
-    const out = [{ g: "Search", l: `Search the vault for “${q5}”…`, h: "Files", fn: () => openSearch(q5) }];
+    const out = [{ g: "Search", l: `Search everything for “${q5}”…`, h: "Files", fn: () => openSearch(q5) }];
     if (questionLike(q5)) out.unshift({ g: "Search", l: `ask creaite: “${q5}”`, h: "An answer with sources", fn: () => {
       openSearch(q5);
       askClaude();
@@ -74349,7 +74349,7 @@ ${d5.text}`);
     }
     box.hidden = false;
     const running = !!a5.run && !a5.done, text = a5.said.join("\n\n").trim();
-    putHTML(box, html`<div class="vsah"><b>Answer</b> <span class="sub">from your vault · “${a5.q}”</span><span class="sp"></span>${running ? html`<button class="mini" data-vsstop>Stop</button>` : raw('<button class="mini" data-vsdismiss aria-label="Close the answer">' + ic("x") + "</button>")}</div>
+    putHTML(box, html`<div class="vsah"><b>Answer</b> <span class="sub">from your creaite folder · “${a5.q}”</span><span class="sp"></span>${running ? html`<button class="mini" data-vsstop>Stop</button>` : raw('<button class="mini" data-vsdismiss aria-label="Close the answer">' + ic("x") + "</button>")}</div>
     ${running && !text ? html`<div class="vsab sub"><span class="spin"></span> Reading your files…${a5.steps ? html` ${a5.steps} step${a5.steps === 1 ? "" : "s"}` : ""}</div>` : ""}
     ${text ? html`<div class="vsab">${raw(vsCite(mdHtml(text)))}</div>` : ""}
     ${a5.err ? html`<div class="vsab" style="color:var(--bad)">${a5.err}</div>` : ""}${a5.stopped ? html`<div class="vsab sub">Stopped.</div>` : ""}
@@ -74402,7 +74402,7 @@ ${d5.text}`);
     try {
       if (!q5) return;
       if (!viaServer()) {
-        putHTML($("#vsNote"), html`Live server needed: Ask runs through it. <button class="mini" data-copycmd>Copy the start command</button>`);
+        putHTML($("#vsNote"), html`creaite needs to be running: Ask runs through it. <button class="mini" data-copycmd>Copy the start command</button>`);
         return;
       }
       if (shared.ASKQ.run && !shared.ASKQ.done) {
@@ -74419,7 +74419,7 @@ ${d5.text}`);
       } catch (e4) {
         shared.ASKQ = { run: null };
         vsAnswerDraw();
-        if (e4.name !== "AbortError") snack("The live server isn't reachable");
+        if (e4.name !== "AbortError") snack("creaite isn't reachable");
         return;
       }
       if (!res.ok || !res.body || (res.headers.get("Content-Type") || "").includes("json")) {
@@ -74547,8 +74547,8 @@ ${d5.text}`);
   }
   function permissionInfoText(ev) {
     const asked2 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
-    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked2} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
-    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
+    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked2} is already allowed by ${ev.covered}. The request was stopped for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
+    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}. If you do want it, change that setting yourself in Settings.`;
     return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}.`;
   }
   function permissionInfo(ev) {
@@ -74561,7 +74561,7 @@ ${d5.text}`);
     a5.querySelector("button").onclick = () => {
       if (shared.BUSY) return;
       putHTML(a5, html`<span class='sub'>Trying again</span>`);
-      send(`${ev.rule} is already allowed, so no rule is needed. Run the script on its own (python3 system/scripts/<name>.py …, with no cd, pipe, redirect or heredoc) and carry on with my last request.`);
+      send(`${ev.rule} is already allowed, so no rule is needed. Carry on with my last request.`);
     };
   }
   var ACHG_OP = { create: "Created", edit: "Changed", move: "Moved", delete: "Deleted" };
@@ -74645,7 +74645,7 @@ ${d5.text}`);
         renderAskChanges();
       });
     }
-    if (!viaServer()) putHTML($("#achgTbl"), html`<div class="empty">This list needs the live server.</div>`);
+    if (!viaServer()) putHTML($("#achgTbl"), html`<div class="empty">This list needs creaite to be running.</div>`);
     else {
       const r4 = await api("/api/changes/list", {});
       putHTML($("#achgTbl"), r4.ok ? askChangesHtml(r4.changes || []) : html`<div class="empty">${oneLine(r4.message || "Couldn't read the list.")}</div>`);
@@ -74672,7 +74672,7 @@ ${d5.text}`);
     return `<div class="confirm chgcard" role="group" aria-label="Changes waiting for your approval" data-card="${esc(c5.card)}"><b>${n4} change${n4 === 1 ? "" : "s"} need${n4 === 1 ? "s" : ""} your approval</b><span class="sub">Nothing has been changed yet. Approve makes ${n4 === 1 ? "it" : "all of them"}, Decline makes none. Each is backed up first and can be undone in Activity.</span>${nh2 ? `<span class="sub chgtiers">${nh2 === n4 ? n4 === 1 ? "It is" : "All are" : `${nh2} ${nh2 === 1 ? "is" : "are"}`} High-risk: ${nh2 === 1 ? "it changes" : "they change"} what ask creaite is allowed to do. Read ${nh2 === 1 ? "it" : "them"} closely.</span>` : ""}<ol class="chglist">${c5.items.map((it2, i5) => {
       const hi2 = it2.tier === "high";
       return `<li class="chgtier ${hi2 ? "tier-high" : "tier-sens"}" data-tier="${hi2 ? "high" : "sensitive"}" style="--i:${Math.min(i5, 7)}">${chgTierTag(hi2)} <b>${esc(it2.title)}</b><div class="sub">${esc(it2.reason)}.${hi2 && it2.tier_reason ? ` High-risk because ${esc(it2.tier_reason)}.` : ""}${it2.why ? ` Why: ${esc(it2.why)}` : ""}</div>${(it2.diff || []).length ? `<pre class="permdiff">${esc(it2.diff.join("\n"))}</pre>` : it2.summary ? `<div class="sub">${esc(it2.summary)}</div>` : ""}${(it2.files || []).length ? `<div class="sub">Deletes: ${it2.files.map((f5) => `<code>${esc(f5)}</code>`).join(", ")}</div>` : ""}${hi2 ? chgRollback(it2.id) : ""}</li>`;
-    }).join("")}</ol>${(c5.refused || []).length ? `<div class="sub">Refused, whatever is approved: ${esc(c5.refused.join("; "))}</div>` : ""}<div class="acts"><button class="btn" data-chg="no">Decline</button><button class="btn primary" data-chg="yes">Approve</button></div></div>`;
+    }).join("")}</ol>${(c5.refused || []).length ? `<div class="sub">creaite can't do that: ${esc(c5.refused.join("; "))}</div>` : ""}<div class="acts"><button class="btn" data-chg="no">Decline</button><button class="btn primary" data-chg="yes">Approve</button></div></div>`;
   }
   async function changesFlow(c5) {
     if (!c5.card) {
@@ -74757,7 +74757,7 @@ ${d5.text}`);
     return `<div class="confirm edcard" role="group" aria-label="A change waiting for your approval" data-ecard="${esc(c5.card)}"><b>${esc(c5.title)}</b><span class="sub">Nothing has been saved yet. ${c5.valid ? `Approve saves ${n4 === 1 ? "this change" : `all ${n4} changes`} to your project record at once; Reject discards ${n4 === 1 ? "it" : "them"}.` : "It has problems, so it can't be saved: ask creaite to fix it."}</span><ul class="edlines">${c5.lines.map(edLine).join("")}</ul>${(c5.problems || []).length ? `<div class="sub edprob">${c5.problems.map(esc).join("<br>")}</div>` : ""}${(c5.clash || []).length ? `<div class="sub">${esc(c5.clash.join(", "))} already ${c5.clash.length === 1 ? "has" : "have"} a change waiting in Review, so this one can only wait in Review.</div>` : ""}<div class="acts"></div></div>`;
   }
   function edActs(acts2, kinds) {
-    const word = { reject: "Reject", stage: "Stage for review", approve: "Approve" };
+    const word = { reject: "Reject", stage: "Save for Review", approve: "Approve" };
     acts2.replaceChildren(...kinds.map((k5) => {
       const b5 = document.createElement("button");
       b5.type = "button";
@@ -74782,9 +74782,9 @@ ${d5.text}`);
       acts2.textContent = "Working…";
       const r4 = await api(`/api/edit/${how}`, { card: c5.card });
       if (r4.ok) {
-        acts2.textContent = how === "approve" ? "✓ Approved" : how === "stage" ? "Staged for review" : "Rejected";
+        acts2.textContent = how === "approve" ? "✓ Approved" : how === "stage" ? "Waiting in Review" : "Rejected";
         if (how === "reject") {
-          addEl("step stopped", "Rejected: nothing was staged or changed");
+          addEl("step stopped", "Rejected: nothing was saved or changed");
           return;
         }
         const m5 = addEl("msg a", html`${r4.message}${how === "approve" && r4.apply_id ? html` <button class="mini" data-edundo="${String(r4.apply_id)}">Undo</button>` : ""}`);
@@ -74803,8 +74803,8 @@ ${d5.text}`);
         edActs(acts2, ["reject"]);
         continue;
       }
-      acts2.textContent = "Not applied";
-      addEl("msg a info", html`${oneLine(r4.message || "Not applied")}`);
+      acts2.textContent = "Not saved";
+      addEl("msg a info", html`${oneLine(r4.message || "Not saved")}`);
       return;
     }
   }
@@ -74828,7 +74828,7 @@ ${d5.text}`);
   }
   function fieldCardHtml(c5) {
     const n4 = (c5.items || []).length;
-    return `<div class="confirm edcard" role="group" aria-label="A change waiting for you" data-fcard="${esc(c5.card)}"><b>${esc(c5.title)}</b><span class="sub">Nothing has been written yet. ${c5.valid ? `Go ahead saves ${n4 === 1 ? "it" : `all ${n4} items`} as an edit in the dashboard does${S.autoApply ? ", applied at once, with Undo" : "; press Apply to write it"}.` : "It has problems, so it can't be saved: ask creaite to fix it, or edit the item yourself."}</span><ul class="edlines">${(c5.lines || []).map(edLine).join("")}</ul>${(c5.problems || []).length ? `<div class="sub edprob">${c5.problems.map(esc).join("<br>")}</div>` : ""}${(c5.notes || []).length ? `<div class="sub">${c5.notes.map(esc).join("<br>")}</div>` : ""}<div class="acts"></div></div>`;
+    return `<div class="confirm edcard" role="group" aria-label="A change waiting for you" data-fcard="${esc(c5.card)}"><b>${esc(c5.title)}</b><span class="sub">Nothing has been written yet. ${c5.valid ? `Go ahead saves ${n4 === 1 ? "it" : `all ${n4} items`} as an edit in the dashboard does${S.autoApply ? ", saved at once, with Undo" : "; press Save to write it"}.` : "It has problems, so it can't be saved: ask creaite to fix it, or edit the item yourself."}</span><ul class="edlines">${(c5.lines || []).map(edLine).join("")}</ul>${(c5.problems || []).length ? `<div class="sub edprob">${c5.problems.map(esc).join("<br>")}</div>` : ""}${(c5.notes || []).length ? `<div class="sub">${c5.notes.map(esc).join("<br>")}</div>` : ""}<div class="acts"></div></div>`;
   }
   async function fieldFlow(c5) {
     if (document.querySelector(`#chLog [data-fcard="${CSS.escape(c5.card)}"]`)) return;
@@ -74854,7 +74854,7 @@ ${d5.text}`);
     const r4 = await itemsMove(c5.items.map((it2) => ({ k: it2.k, id: it2.id, patch: { ...it2.patch } })), what, { wait: true });
     const done = r4.done, left = [...r4.left, ...r4.missing.map((id2) => `${id2} (not on this page: reload and ask again)`)];
     acts2.textContent = done.length ? "✓ Saved" : "Not saved";
-    if (done.length) addEl("msg a", html`${S.autoApply ? "Applied" : "Saved, waiting for Apply"}: ${done.join(", ")}.${S.autoApply && D.latest_apply ? html` <button class="mini" data-edundo="${String(D.latest_apply)}">Undo</button>` : ""}`);
+    if (done.length) addEl("msg a", html`${S.autoApply ? "Saved" : "Saved, waiting for Save"}: ${done.join(", ")}.${S.autoApply && D.latest_apply ? html` <button class="mini" data-edundo="${String(D.latest_apply)}">Undo</button>` : ""}`);
     if (left.length) addEl("msg a info", html`${`Left out: ${left.join("; ")}.`}`);
     else if (!done.length) addEl("msg a info", "Not saved: nothing was changed (the message at the bottom of the screen says why).");
     return done.length;
@@ -74930,7 +74930,7 @@ ${d5.text}`);
   }
   var sleep = (ms2) => new Promise((r4) => setTimeout(r4, ms2));
   shared.BUSY = false;
-  var GREET = "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.";
+  var GREET = "Hello. I run your requests through Claude Code in creaite, so your skills and rules still apply. Anything that writes asks you first.";
   shared.SHOWN = null;
   function greet() {
     addEl("msg a", html`${GREET}`);
@@ -75411,7 +75411,7 @@ ${d5.text}`);
           if (m5.done_at) stampMsg(b5, m5.done_at);
         }
         if (m5.stopped && !m5.plain) addEl("step stopped", "Stopped");
-        if (m5.interrupted) addEl("step stopped", "Interrupted: the live server stopped");
+        if (m5.interrupted) addEl("step stopped", "Interrupted: creaite stopped");
       }
     });
     dayDividers();
@@ -75428,7 +75428,7 @@ ${d5.text}`);
     }
     if (shared.BUSY) return;
     if (!viaServer()) {
-      snack("History needs the live server");
+      snack("History needs creaite to be running");
       return;
     }
     await drawHistory();
@@ -75463,7 +75463,7 @@ ${d5.text}`);
     const m5 = /^note:\s*([\s\S]+)/i.exec(q5);
     if (m5) {
       if (!viaServer()) {
-        await say("Saving a note needs the live server.");
+        await say("Saving a note needs creaite to be running.");
         return;
       }
       const r4 = await api("/api/notes/capture/done", { code: "auto", body: m5[1].trim(), template: "blank" });
@@ -75472,11 +75472,11 @@ ${d5.text}`);
         return;
       }
       const un2 = r4.code === "_portfolio";
-      await say(`Saved the note “${r4.title}” in ${un2 ? "Unfiled" : pName(r4.code)}${r4.reason ? un2 ? `: ${r4.reason}` : ` (${r4.reason})` : ""}. Find updates on the note turns it into tracker changes.`);
+      await say(`Saved the note “${r4.title}” in ${un2 ? "Unfiled" : pName(r4.code)}${r4.reason ? un2 ? `: ${r4.reason}` : ` (${r4.reason})` : ""}. Find updates on the note turns it into project record changes.`);
       return;
     }
     if (!viaServer()) {
-      await say(SERVED ? "The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code." : "This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.", `<button class="mini" id="cpy">Copy command</button>`);
+      await say(SERVED ? "creaite isn't running, so I can't run this here. Start it again, or copy the request into Claude Code." : "This is the file version of the dashboard. Open the live dashboard (start creaite), or copy the request into Claude Code.", `<button class="mini" id="cpy">Copy command</button>`);
       const c5 = $("#cpy");
       if (c5) {
         c5.id = "";
@@ -75708,7 +75708,7 @@ ${d5.text}`);
   }
   function rbGuess(q5) {
     q5 = String(q5 || "");
-    return /weekly report/i.test(q5) ? "Drafting the weekly report" : /client report/i.test(q5) ? "Drafting the client report" : /steerco|one-pager/i.test(q5) ? "Drafting the one-pager" : /refresh calendar/i.test(q5) ? "Refreshing the calendar" : /^sweep/i.test(q5) ? "Sweeping mail and Teams" : /prep/i.test(q5) ? "Making the prep page" : /^process/i.test(q5) ? "Processing a meeting" : "";
+    return /weekly report/i.test(q5) ? "Drafting the weekly report" : /client report/i.test(q5) ? "Drafting the client report" : /steerco|one-pager/i.test(q5) ? "Drafting the one-pager" : /refresh calendar/i.test(q5) ? "Refreshing the calendar" : /^sweep/i.test(q5) ? "Checking mail and Teams" : /prep/i.test(q5) ? "Making the prep page" : /^process/i.test(q5) ? "Processing a meeting" : "";
   }
   function rbUnmark() {
     if (shared.RBMARKED) {
@@ -75910,7 +75910,7 @@ ${d5.text}`);
     "Parking that for now",
     "Coming back to that",
     "Noting the dependency",
-    "Updating the tracker",
+    "Updating your project record",
     "Colour-coding the spreadsheet",
     "Merging two spreadsheets",
     "Finding the latest version",
@@ -76064,7 +76064,7 @@ ${d5.text}`);
       }
       rbEnd("failed");
       setLive(false);
-      await say("The live server stopped.");
+      await say("creaite stopped.");
       retryOffer("failed", body2);
       return;
     }
@@ -76079,7 +76079,7 @@ ${d5.text}`);
     if (!res.ok || !res.body) {
       askWorking(false);
       rbEnd("failed");
-      await say("ask creaite couldn't start: check the live server window.");
+      await say("ask creaite couldn't start: check creaite window.");
       retryOffer("failed", body2);
       return;
     }
@@ -76203,7 +76203,7 @@ ${d5.text}`);
       await askStream("/api/ask", { message: `Go ahead: ${conf.title}`, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed: conf.title, run: shared.RUN.id }, conf.title, shared.RUN.ctl);
       return;
     }
-    if (prep && await confirmCard("Prep page", html`Research ${prep.title}${prep.project ? html` (${prep.project})` : ""} and save a page in the project's Agendas folder. The live server writes it, marked Internal.`, "Go ahead")) {
+    if (prep && await confirmCard("Prep page", html`Research ${prep.title}${prep.project ? html` (${prep.project})` : ""} and save a page in the project's Agendas folder. creaite writes it, marked Internal.`, "Go ahead")) {
       addEl("msg u", html`${"Go ahead: Prep page"}`);
       await prepPage(prep.key);
     }
@@ -76258,7 +76258,7 @@ ${d5.text}`);
   }
   async function addImages(files) {
     if (!viaServer()) {
-      imgFlash("Images need the live server");
+      imgFlash("Images need creaite to be running");
       return;
     }
     for (const f5 of files) {
@@ -76439,8 +76439,8 @@ ${d5.text}`);
   function claimsNote(found) {
     if (!found || !found.length) return;
     const n4 = (k5) => found.filter((f5) => f5.kind === k5).length, t47 = n4("title"), o5 = n4("owner"), m5 = n4("missing");
-    const parts = [t47 ? `${t47} title${t47 === 1 ? "" : "s"} didn't match` : "", o5 ? `${o5} owner${o5 === 1 ? "" : "s"} corrected` : "", m5 ? `${m5} ID${m5 === 1 ? "" : "s"} not in the tracker` : ""].filter(Boolean);
-    addEl("step checked", html`<span>Checked against the tracker: ${parts.join(", ")}.</span>`);
+    const parts = [t47 ? `${t47} title${t47 === 1 ? "" : "s"} didn't match` : "", o5 ? `${o5} owner${o5 === 1 ? "" : "s"} corrected` : "", m5 ? `${m5} ID${m5 === 1 ? "" : "s"} not in your project record` : ""].filter(Boolean);
+    addEl("step checked", html`<span>Checked against your project record: ${parts.join(", ")}.</span>`);
   }
   function cantCard(ev) {
     const g5 = ev.go;
@@ -76742,7 +76742,7 @@ ${d5.text}`);
         if (!q6 || (l6 + " " + h5 + " " + (kw2 || "")).toLowerCase().includes(q6)) out2.push({ g: g5, l: l6, h: h5, fn: fn2 });
       };
       const nRep = needsMe().length, nIr = irLiveCounts().badge, nReady = irLiveCounts().ready;
-      [["today", "Today", ""], ["intake-review", "Intake", nIr ? `${nIr} waiting` : ""], ["projects", "Projects", ""], ["reports", "Reports", nRep ? `${nRep} need${nRep === 1 ? "s" : ""} you` : ""], ["work", "Work", ""], ["people", "People", ""], ["mine", "Your commitments", ""], ["files", "Files", ""], ["activity", "Activity", ""], ["settings", "Settings", ""], ["help", "Help", ""]].forEach(([v5, l6, h5]) => add("Go to", l6, h5, () => go2(v5), v5 === "intake-review" ? "review inbox proposals approve" : ""));
+      [["today", "Today", ""], ["intake-review", "Intake", nIr ? `${nIr} waiting` : ""], ["projects", "Projects", ""], ["reports", "Reports", nRep ? `${nRep} need${nRep === 1 ? "s" : ""} you` : ""], ["work", "Work", ""], ["people", "People", ""], ["mine", "Your commitments", ""], ["files", "Files", ""], ["activity", "Activity", ""], ["settings", "Settings", ""], ["help", "Help", ""]].forEach(([v5, l6, h5]) => add("Go to", l6, h5, () => go2(v5), v5 === "intake-review" ? "review inbox suggestions approve" : ""));
       [["actions", "Actions"], ["raid", "RAID"], ["decisions", "Decisions"]].forEach(([t47, tl3]) => allViews(t47).forEach((v5) => add("Views", `${tl3}: ${v5.label}`, v5.builtin ? "" : "saved view", () => {
         if (navBlocked()) return;
         saveTab();
@@ -76964,7 +76964,7 @@ ${d5.text}`);
     if (idm) {
       const id2 = idm[0], k5 = ckKind(id2);
       if (k5 === "milestones") return ckMs(id2) ? { k: k5, id: id2 } : { none: true, why: `${id2} isn't a milestone creaite knows` };
-      return k5 && REC(k5, id2) ? { k: k5, id: id2 } : { none: true, why: `${id2} isn't in the tracker` };
+      return k5 && REC(k5, id2) ? { k: k5, id: id2 } : { none: true, why: `${id2} isn't in your project record` };
     }
     if (shared.CKPICK.target && shared.CKPICK.for === raw2) return shared.CKPICK.target;
     const words = ckWords(raw2), proj = P4.find((p6) => words.includes(p6.code.toLowerCase()) || p6.name.toLowerCase().split(/\s+/).some((w6) => w6.length > 3 && words.includes(w6)));
@@ -77127,12 +77127,12 @@ ${d5.text}`);
     }
     const days2 = (D.calendar || {}).days || {}, next = Object.keys(days2).filter((d5) => d5 >= TODAY).sort().flatMap((d5) => (days2[d5] || []).filter((e4) => !e4.all_day && e4.p === p6 && (d5 > TODAY || e4.start >= (/* @__PURE__ */ new Date()).toTimeString().slice(0, 5))).map((e4) => [d5, e4]))[0];
     if (next) out.push(`Next meeting for ${pName(p6)}: ${next[1].title}, ${longDay(next[0])} ${next[1].start}`);
-    if (c5.unknown) out.push(`“${c5.patch.o || c5.patch.by}” isn't in the people register: creaite asks before staging`);
+    if (c5.unknown) out.push(`“${c5.patch.o || c5.patch.by}” isn't in the people register: creaite asks before saving`);
     return out;
   }
   function ckPreview(c5) {
     if (c5.ask) return `<div class="ckpv"><div class="ckpvh">${ic("alert")} ${esc(c5.ask)}</div><div class="sub">Press Enter to ask creaite to do it instead, or Esc.</div></div>`;
-    if (c5.pick) return `<div class="ckpv"><div class="ckpvh">Which ${c5.what === "person" ? "person" : "one"} do you mean?</div><div class="sub">Pick one from the list, then press Enter to stage.</div></div>`;
+    if (c5.pick) return `<div class="ckpv"><div class="ckpvh">Which ${c5.what === "person" ? "person" : "one"} do you mean?</div><div class="sub">Pick one from the list, then press Enter to save.</div></div>`;
     let title, rows2;
     if (c5.new) {
       title = `New ${c5.k === "actions" ? "action" : c5.k === "decisions" ? "decision" : (c5.new.type || "risk").toLowerCase()} in ${pName(c5.new.p)}`;
@@ -77146,7 +77146,7 @@ ${d5.text}`);
       }).join("");
     }
     const t47 = ckTouches(c5);
-    return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows2}${t47.length ? `<div class="cktch"><div class="sub">What else it touches</div><ul>${t47.map((x5) => `<li>${esc(x5)}</li>`).join("")}</ul></div>` : '<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> stage · <kbd>${MOD}↵</kbd> stage and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`;
+    return `<div class="ckpv" aria-live="polite"><div class="ckpvh">${esc(title)}</div>${rows2}${t47.length ? `<div class="cktch"><div class="sub">What else it touches</div><ul>${t47.map((x5) => `<li>${esc(x5)}</li>`).join("")}</ul></div>` : '<div class="sub cktch">Nothing else is tied to it.</div>'}<div class="sub ckkeys"><kbd>↵</kbd> save · <kbd>${MOD}↵</kbd> save and open Intake · <kbd>Esc</kbd> nothing changes</div></div>`;
   }
   function ckSummary(c5) {
     if (c5.new) return `Add: ${c5.new.t}`;
@@ -77191,7 +77191,7 @@ ${d5.text}`);
       ok2 = await pkCommit(k5, c5.id, f5, c5.label, String(x5[f02] ?? ""), String(f5[f02] ?? ""));
     }
     if (!ok2) return;
-    snack(`Staged: ${ckSummary(c5)}. Nothing reaches the tracker until you apply`, () => pkUndoLast());
+    snack(`Saved: ${ckSummary(c5)}. Nothing is saved until you approve it`, () => pkUndoLast());
     if (thenReview) go2("intake-review");
   }
   async function ckStageNew(c5) {
@@ -77219,7 +77219,7 @@ ${d5.text}`);
     try {
       name = await writeProposal([{ op: "new", table: k5, values }], { peek: meta });
     } catch (e4) {
-      snack("Not staged: " + e4.message);
+      snack("Not saved: " + e4.message);
       return false;
     }
     shared.PKS.push({ name, ...meta });
@@ -77236,7 +77236,7 @@ ${d5.text}`);
     try {
       name = await writeProposal([{ op: "update", table: "milestones", id: c5.id, changes }], { peek: meta });
     } catch (e4) {
-      snack("Not staged: " + e4.message);
+      snack("Not saved: " + e4.message);
       return false;
     }
     shared.PKS.push({ name, ...meta });
@@ -79449,22 +79449,22 @@ ${d5.text}`);
       if (VH && shared.VSTATE === "prompt") {
         shared.VSTATE = await VH.requestPermission({ mode: "readwrite" }) === "granted" ? "ok" : "prompt";
         status();
-        if (shared.VSTATE === "ok") snack("Vault reconnected");
+        if (shared.VSTATE === "ok") snack("Folder reconnected");
         return shared.VSTATE === "ok";
       }
       const h5 = await window.showDirectoryPicker({ id: "creaite-vault", mode: "readwrite" });
       if (!await isVault(h5)) {
-        snack("That folder isn't the creaite vault. Choose the folder that holds CLAUDE.md and system/.");
+        snack("That folder isn't your creaite folder. Choose the folder you set creaite up in.");
         return false;
       }
       VH = h5;
       await vput(h5);
       shared.VSTATE = "ok";
       status();
-      snack("Vault connected");
+      snack("Folder connected");
       return true;
     } catch (e4) {
-      if (e4.name !== "AbortError") snack("Couldn't connect the vault: " + e4.message);
+      if (e4.name !== "AbortError") snack("Couldn't connect your creaite folder: " + e4.message);
       return false;
     }
   }
@@ -79522,7 +79522,7 @@ ${d5.text}`);
     }
   };
   var SERVED = !!D.live && location.protocol.startsWith("http");
-  var OLDSERVER = "The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Terminal window, then python3 system/scripts/live_server.py";
+  var OLDSERVER = "creaite is older than this page and doesn't know this yet. Close creaite and open it again.";
   var OWNPOST = 0;
   var api = async function(path, body2) {
     if (!/^\/api\/(here|pulse|vip|files|ask\/running|review\/guesses|review\/rejects|review\/candidates|edit\/ai\/caps)$/.test(path)) OWNPOST = Date.now();
@@ -79534,7 +79534,7 @@ ${d5.text}`);
       return j5;
     } catch (e4) {
       setLive(false);
-      return { ok: false, message: "The live server isn't reachable" };
+      return { ok: false, message: "creaite isn't reachable" };
     }
   };
   var SVW = {
@@ -79859,7 +79859,7 @@ ${d5.text}`);
         text = await shared.VW.read(path);
         data = JSON.parse(text);
       } catch (e4) {
-        throw new Error("that proposal has already been applied or removed");
+        throw new Error("that suggestion has already been saved or removed");
       }
       const guarded = rws ? [].concat(rws) : [];
       for (const r4 of guarded) if (!findGuarded(data, r4, same2)) throw new Error("already approved or changed");
@@ -80050,7 +80050,7 @@ ${d5.text}`);
         }
         const left = wrote && !(res.apply_id != null && (await api("/api/undo", { apply_id: res.apply_id })).ok);
         await opDropFile(op2.name);
-        return await opFail(op2, "Not saved: " + oneLine(why.join("\n")) + (left ? " (the rest was applied: undo it in Activity)" : ""), false);
+        return await opFail(op2, "Not saved: " + oneLine(why.join("\n")) + (left ? " (the rest was saved: undo it in Activity)" : ""), false);
       }
       if (held) {
         await opDropFile(op2.name);
@@ -80068,12 +80068,12 @@ ${d5.text}`);
         return false;
       }
       const undo = () => undoApply(op2.apply_id, opTargeted(op2) ? opIds(op2) : null);
-      if (!op2.recs.length) snack(`${op2.what} — saved and applied`, undo);
+      if (!op2.recs.length) snack(`${op2.what} — saved`, undo);
       else if (SNACKOP === op2 && TOAST.open) {
-        TOAST.text = `${op2.what} — saved and applied`;
+        TOAST.text = `${op2.what} — saved`;
         shared.UNDO = undo;
         drawPageToast();
-      } else if (SNACKOP === op2) snack(`${op2.what} — saved and applied`, undo);
+      } else if (SNACKOP === op2) snack(`${op2.what} — saved`, undo);
       return true;
     } finally {
       PULSE.reloads--;
@@ -80108,7 +80108,7 @@ ${d5.text}`);
           else throw 0;
         });
       } catch (e4) {
-        snack(viaServer() ? "Already applied: undo it in Activity" : "Already applied: use “undo last apply” in Claude Code");
+        snack(viaServer() ? "Already saved: undo it in Activity" : "Already saved: use “undo last save” in Claude Code");
       }
     }, op2.by, opIds(op2));
     return true;
@@ -80176,7 +80176,7 @@ ${d5.text}`);
       await vq(async () => {
         const path = memPath(code), text = await shared.VW.read(path), re2 = /(\*\*Client report rhythm:\*\*[ \t]*)([A-Za-z]+)/;
         const m5 = text.match(re2);
-        if (!m5) throw new Error(`no “Client report rhythm:” line in ${path}; use cx-edit`);
+        if (!m5) throw new Error(`no “Client report rhythm:” line in ${path}; ask creaite to change it`);
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
         await shared.VW.write(path, text.replace(re2, "$1" + val2.toLowerCase()));
         await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val2.toLowerCase() }) + "\n");
@@ -80272,7 +80272,7 @@ ${d5.text}`);
     try {
       await vq(async () => {
         const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
-        if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
+        if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; ask creaite to change it`);
         if (r4.text === text) return;
         if (await shared.VW.read(path) !== text) throw new Error("this project's memory file changed in another window since it was read, so nothing was saved; try again");
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
@@ -80347,7 +80347,7 @@ ${d5.text}`);
       shared.HELD.forEach((h5) => h5());
       shared.HELD = [];
       shared.DATA_AT = nowStamp();
-      snack(`Live server back — applied ${n4} held change${n4 === 1 ? "" : "s"}`);
+      snack(`creaite is back — saved ${n4} held change${n4 === 1 ? "" : "s"}`);
     }
     status();
   }
@@ -80362,7 +80362,7 @@ ${d5.text}`);
       const pend = { what, commit, undo: undoIt, ids };
       shared.PENDING.push(pend);
       refreshAll();
-      snack(`${what} — saved; press Apply to write it`, () => {
+      snack(`${what} — saved; press Save to approve it`, () => {
         undoIt();
         const i5 = shared.PENDING.indexOf(pend);
         if (i5 >= 0) shared.PENDING.splice(i5, 1);
@@ -80373,7 +80373,7 @@ ${d5.text}`);
     if (shared.LIVE) commit();
     else shared.HELD.push(commit);
     refreshAll();
-    snack(shared.LIVE ? `${what} — saved and applied` : `${what} — saved; applies when the server is back`, () => {
+    snack(shared.LIVE ? `${what} — saved` : `${what} — saved; it is approved when creaite is back`, () => {
       undoIt();
       const i5 = shared.ACT.indexOf(entry);
       if (i5 >= 0) shared.ACT.splice(i5, 1);
@@ -80389,7 +80389,7 @@ ${d5.text}`);
       snack(r4.ok ? oneLine(r4.message) : oneLine(applyWords(r4.message)), r4.ok ? () => undoApply(r4.apply_id) : null);
       return;
     }
-    snack("Say “apply” in Claude Code, or start the live server");
+    snack("Say “save” in Claude Code, or start creaite");
   }
   function refreshAll() {
     const cells = mCells(), cnts = mCounts(), hp2 = new Map(P4.map((p6) => [p6.code, p6.health])), wt2 = typeof shared.WT === "undefined" ? "" : shared.WT, v5 = shared.VIEW;
@@ -80469,7 +80469,7 @@ ${d5.text}`);
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("#checkLive")) {
         checkLive();
-        snack(SERVED ? "Checking…" : "Looking for the live server…");
+        snack(SERVED ? "Checking…" : "Looking for creaite…");
       }
     });
     document.addEventListener("click", (e4) => {

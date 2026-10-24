@@ -195,7 +195,7 @@ class FieldCardBrowser(LiveBrowserCase):
         self.assertEqual(b.eval("A.find(x=>x.id==='ABC-A-001').st"), "Open")
         self.assertEqual(set(self.proposals()), before)                             # nothing before Go ahead
         b.click("#chLog [data-fcard] [data-fc=go]")
-        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Applied: ABC-A-001'))", 30)
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Saved: ABC-A-001'))", 30)
         b.wait("A.find(x=>x.id==='ABC-A-001').st==='Closed'", 20)
         self.assertEqual(b.eval("A.find(x=>x.id==='ABC-A-001').pr"), "Urgent")
         new = set(self.proposals()) - before

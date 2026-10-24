@@ -21,7 +21,7 @@ import { api, OLDSERVER, snack } from "../../core/server.js";
 /** @typedef {{date: string, saw: string, decided: string}} Review */
 /** @typedef {{as_of?: string, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[], reviews?: Review[], reviews_save?: boolean}} Usage */
 
-const KIND = { ask: "ask creaite", sweep: "Sweep", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
+const KIND = { ask: "ask creaite", sweep: "Check", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
   check: "Transcript check", load: "Transcript load", vip: "Alert check", process: "Intake processing",
   calendar: "Calendar refresh", reextract: "Read again", other: "Other" };
 const FILE = { rules: "Rules (creaite-rules.md)", claude_md: "Your CLAUDE.md", memory: "Project memory and registers",
@@ -128,7 +128,7 @@ function Loads({ rows, start, fd }) {
           <div class="unote"><b>Why this matters:</b>{" "}
             {`Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round((rules.tokens / total) * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`}</div>
         </>
-      ) : <p class="sub">Not measured yet. The live server measures these files once a day.</p>}
+      ) : <p class="sub">Not measured yet. creaite measures these files once a day.</p>}
     </>
   );
 }
@@ -143,7 +143,7 @@ function ctxChange(r, fd) {
 
 /* ===== v2.5.3 (#238 delta): Your reviews ===== */
 const REVIEW_ROUTE = "/api/usage/review", MAX_NOTE = 200;
-const NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs the live server";
+const NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs creaite to be running";
 const FORMULA = /^[=+\-@\t\r]/;          /* a spreadsheet would run a cell starting with one of these (usage_reviews.FORMULA) */
 /** One CSV cell: always quoted, quotes doubled, an apostrophe before a formula. @param {unknown} v */
 export const csvCell = v => { let s = String(v ?? ""); if (FORMULA.test(s)) s = `'${s}`; return `"${s.replace(/"/g, '""')}"`; };
@@ -221,9 +221,9 @@ export function UsagePanel({ usage, fd, live = false, onReviews = () => {} }) {
   const bad = !usage || usage.error;
   return (
     <>
-      <p class="sub">Last {u.days || 14} days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name.
+      <p class="sub">Last {u.days || 14} days, as counted by creaite for each Claude run. Counts only: never the text of a message, a note or a name.
         Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4).</p>
-      {bad || u.empty ? <p class="sub uempty" role="status">{bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here."}</p>
+      {bad || u.empty ? <p class="sub uempty" role="status">{bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run creaite makes will be counted here."}</p>
         : <Runs u={u} fd={fd} />}
       <Loads rows={u.context || []} start={u.cards?.start?.now} fd={fd} />
       {bad || u.empty ? null : <Skills skills={u.skills || []} />}

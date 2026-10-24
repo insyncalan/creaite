@@ -1,8 +1,6 @@
 {
  "about": "#290: the plain-words guard's data (dev/tests/test_plain_words.py, dev/PLAIN-WORDS.md step 2). severity: a rule set to warn reports and never fails (tracker until #292 lands Tier 2; then delete its line). allow: by file or by file#identifier (a function, or a Help section), never by word; each with its reason. offenders: today's strings that break a rule, which may only fall; rewrite with CREAITE_UPDATE_PLAIN_BASELINE=1.",
- "severity": {
-  "tracker": "warn"
- },
+ "severity": {},
  "allow": {
   "files": {
    "doctor.py": "the health check's own output, read in Settings › Diagnostics and Claude Code",
@@ -19,309 +17,29 @@
   }
  },
  "offenders": {
-  "activity.js | apply | 2150ee0801be": {
-   "count": 1,
-   "text": "Only the latest apply can be undone here; tick older changes to undo them"
-  },
-  "activity.js | apply | a3e4a569ead0": {
-   "count": 1,
-   "text": "Applied"
-  },
-  "activity.js | apply | b796ce2be928": {
-   "count": 1,
-   "text": "Each goes back to what it was before, only where it still holds the value that change gave it. It is"
-  },
-  "activity.js | apply | c6f7e8e0d9d0": {
-   "count": 1,
-   "text": "Undo this apply"
-  },
-  "activity.js | apply | fbd163d5a4ee": {
-   "count": 1,
-   "text": "Nothing has changed yet. What you approve, edit or apply shows here, newest first, with Undo."
-  },
-  "activity.js | live server | 57083c829914": {
-   "count": 1,
-   "text": "Undoing needs the live server"
-  },
-  "activity.js | live server | e5c9d1398624": {
-   "count": 1,
-   "text": "disabled title=\"Undoing needs the live server\""
-  },
-  "activity.js | proposal | 2b38d97643cd": {
-   "count": 1,
-   "text": "Nothing proposed in this period."
-  },
-  "activity.js | proposal | 32ffd846422d": {
-   "count": 1,
-   "text": "{} of {} edited proposals were edited before creaite kept what was first proposed: field unknown."
-  },
-  "activity.js | proposal | 7984b433ffee": {
-   "count": 1,
-   "text": "Rejected proposal"
-  },
-  "activity.js | proposal | 7e0ba53ca0cf": {
-   "count": 1,
-   "text": "The last {} weeks: {} to {}, by the day each proposal was made."
-  },
-  "activity.js | tracker | 0fbe066ecd45": {
-   "count": 1,
-   "text": "The tracker recorded {} rejections in this period as a duplicate of an existing item."
-  },
   "activity.js | tracker | d39ffa216865": {
    "count": 1,
    "text": "These are the newest 2,000 changes (search and filters look at these). Older ones are kept in the tr"
   },
-  "ask.js | apply | 354edd5017f1": {
+  "ask.js | apply | 9e6a7cfa15cb": {
    "count": 1,
-   "text": "Staged: {}. Nothing reaches the tracker until you apply"
-  },
-  "ask.js | apply | 3b172f79f9d1": {
-   "count": 1,
-   "text": "; press Apply to write it"
-  },
-  "ask.js | apply | 4d9bfd544ebb": {
-   "count": 1,
-   "text": "Saved, waiting for Apply"
-  },
-  "ask.js | apply | 68d1e1222698": {
-   "count": 2,
-   "text": "Not applied"
-  },
-  "ask.js | apply | 97ea5d32e098": {
-   "count": 1,
-   "text": ", applied at once, with Undo"
-  },
-  "ask.js | apply | a3e4a569ead0": {
-   "count": 1,
-   "text": "Applied"
-  },
-  "ask.js | apply | fa1fe9777e86": {
-   "count": 1,
-   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anythin"
-  },
-  "ask.js | live server | 0067b4023192": {
-   "count": 1,
-   "text": "Images need the live server"
-  },
-  "ask.js | live server | 177dc32b9bcf": {
-   "count": 1,
-   "text": "History needs the live server"
-  },
-  "ask.js | live server | 2b5a70a4e06c": {
-   "count": 1,
-   "text": "This list needs the live server."
-  },
-  "ask.js | live server | 568cca70012c": {
-   "count": 1,
-   "text": "Live server needed: search runs through it."
-  },
-  "ask.js | live server | 59d55183601e": {
-   "count": 1,
-   "text": "This is the file version of the dashboard. Open the live dashboard (start the live server), or copy "
-  },
-  "ask.js | live server | 74ee3ae85295": {
-   "count": 1,
-   "text": "Research {}{} and save a page in the project's Agendas folder. The live server writes it, marked Int"
-  },
-  "ask.js | live server | 80e660ed4f22": {
-   "count": 1,
-   "text": "Live server needed: Ask runs through it."
-  },
-  "ask.js | live server | 818aec9f63e7": {
-   "count": 1,
-   "text": "Saving a note needs the live server."
-  },
-  "ask.js | live server | c1aa2b1b7243": {
-   "count": 1,
-   "text": "The live server isn't running, so I can't run this here. Start it again, or copy the request into Cl"
-  },
-  "ask.js | live server | c264629e880e": {
-   "count": 1,
-   "text": "The live server stopped."
-  },
-  "ask.js | live server | c354c366ed93": {
-   "count": 1,
-   "text": "Interrupted: the live server stopped"
-  },
-  "ask.js | live server | dcdb9a80336d": {
-   "count": 1,
-   "text": "ask creaite couldn't start: check the live server window."
-  },
-  "ask.js | live server | e990465954de": {
-   "count": 1,
-   "text": "Previewing needs the live server"
-  },
-  "ask.js | live server | f2d0017fdb76": {
-   "count": 1,
-   "text": "The live server isn't reachable"
+   "text": "Hello. I run your requests through Claude Code in creaite, so your skills and rules still apply. Any"
   },
   "ask.js | path | 1204debd8f20": {
    "count": 1,
    "text": "python3 system/scripts/filechange.py undo"
   },
-  "ask.js | path | 75d8b9d16867": {
-   "count": 1,
-   "text": "{} is already allowed, so no rule is needed. Run the script on its own (python3 system/scripts/"
-  },
-  "ask.js | path | badb0db85c37": {
-   "count": 1,
-   "text": "ask creaite asked for {}{}, which creaite won't add: {}. If you do want it, edit .claude/settings.js"
-  },
-  "ask.js | proposal | 25459bfce809": {
-   "count": 1,
-   "text": "review inbox proposals approve"
-  },
-  "ask.js | refused | 96fc7cb350bd": {
-   "count": 1,
-   "text": "Nothing to add: {}{} is already allowed by {}. The request was refused for another reason"
-  },
-  "ask.js | refused | e6a03681dad9": {
-   "count": 1,
-   "text": "Refused, whatever is approved: {}"
-  },
   "ask.js | script | 1204debd8f20": {
    "count": 1,
    "text": "python3 system/scripts/filechange.py undo"
-  },
-  "ask.js | script | 75d8b9d16867": {
-   "count": 1,
-   "text": "{} is already allowed, so no rule is needed. Run the script on its own (python3 system/scripts/"
-  },
-  "ask.js | stage | 0cbca4ffb566": {
-   "count": 1,
-   "text": "Stage for review"
-  },
-  "ask.js | stage | 17602570aed7": {
-   "count": 1,
-   "text": "Staged for review"
-  },
-  "ask.js | stage | 179d5bc7f897": {
-   "count": 1,
-   "text": "“{}” isn't in the people register: creaite asks before staging"
-  },
-  "ask.js | stage | 354edd5017f1": {
-   "count": 1,
-   "text": "Staged: {}. Nothing reaches the tracker until you apply"
-  },
-  "ask.js | stage | 56d58a827a22": {
-   "count": 1,
-   "text": "Pick one from the list, then press Enter to stage."
-  },
-  "ask.js | stage | c698226babad": {
-   "count": 1,
-   "text": "stage and open Intake ·"
-  },
-  "ask.js | stage | f45f0885348a": {
-   "count": 1,
-   "text": "Rejected: nothing was staged or changed"
-  },
-  "ask.js | stage | f4d192ef3882": {
-   "count": 2,
-   "text": "Not staged:"
-  },
-  "ask.js | sweep | f6fc490e6d98": {
-   "count": 1,
-   "text": "Sweeping mail and Teams"
-  },
-  "ask.js | tracker | 1343068896aa": {
-   "count": 1,
-   "text": "Saved the note “{}” in {}{}. Find updates on the note turns it into tracker changes."
-  },
-  "ask.js | tracker | 29a68d3290b3": {
-   "count": 1,
-   "text": "{} ID{} not in the tracker"
-  },
-  "ask.js | tracker | 354edd5017f1": {
-   "count": 1,
-   "text": "Staged: {}. Nothing reaches the tracker until you apply"
-  },
-  "ask.js | tracker | 78f7ecbeaa8d": {
-   "count": 1,
-   "text": "Checked against the tracker: {}."
-  },
-  "ask.js | tracker | c1b9d73ceb71": {
-   "count": 1,
-   "text": "Updating the tracker"
-  },
-  "ask.js | tracker | f2b13c5af259": {
-   "count": 1,
-   "text": "{} isn't in the tracker"
-  },
-  "ask.js | vault | 1216abd95419": {
-   "count": 1,
-   "text": "from your vault · “{}”"
-  },
-  "ask.js | vault | 617eafff582c": {
-   "count": 1,
-   "text": "Search the vault for “{}”…"
-  },
-  "ask.js | vault | fa1fe9777e86": {
-   "count": 1,
-   "text": "Hello. I run your requests through Claude Code in the vault, so your skills and rules apply. Anythin"
   },
   "build_dashboard.py | sweep | 7baa85f2636f": {
    "count": 1,
    "text": "Raised in {} meetings or sweeps, with no response yet"
   },
-  "chatLength.js | script | 003b1f99b9e6": {
-   "count": 1,
-   "text": "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and"
-  },
-  "chatLength.js | script | e9cadb97048f": {
-   "count": 1,
-   "text": "Names dev/tests use by name (b.eval(\"go('today')\")): each one a module exports is on window. Regener"
-  },
   "components/LinkPopover.jsx | apply | cfea419c3b4e": {
    "count": 1,
    "text": "Apply"
-  },
-  "components/activity/UsagePanel.jsx | live server | 1c45572064b3": {
-   "count": 1,
-   "text": "Saving a review note needs the live server"
-  },
-  "components/activity/UsagePanel.jsx | live server | 7fcf9449a5d9": {
-   "count": 1,
-   "text": "No runs yet. Each Claude run the live server makes will be counted here."
-  },
-  "components/activity/UsagePanel.jsx | live server | be6758117566": {
-   "count": 1,
-   "text": "days, as counted by the live server for each Claude run. Counts only: never the text of a message, a"
-  },
-  "components/activity/UsagePanel.jsx | live server | d5b99e7bc145": {
-   "count": 1,
-   "text": "Not measured yet. The live server measures these files once a day."
-  },
-  "components/activity/UsagePanel.jsx | sweep | dfdd7fcf67ed": {
-   "count": 1,
-   "text": "Sweep"
-  },
-  "components/closeday/CloseDay.jsx | apply | 5b9d88aaf7f4": {
-   "count": 1,
-   "text": "Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the trac"
-  },
-  "components/closeday/CloseDay.jsx | live server | 6b0735ad6d40": {
-   "count": 1,
-   "text": "Close the day needs the live server: start it, then try again."
-  },
-  "components/closeday/CloseDay.jsx | live server | fea77995b4a5": {
-   "count": 1,
-   "text": "Closing the day needs the live server"
-  },
-  "components/closeday/CloseDay.jsx | proposal | 5b9d88aaf7f4": {
-   "count": 1,
-   "text": "Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the trac"
-  },
-  "components/closeday/CloseDay.jsx | tracker | 5b9d88aaf7f4": {
-   "count": 1,
-   "text": "Proposed today, owned by you, still waiting in Review. Adding approves it there; it reaches the trac"
-  },
-  "components/dialogs/PageDialogs.jsx | proposal | 3134a1d8ea9f": {
-   "count": 1,
-   "text": "The proposal beside the item it looks like. Nothing changes until you choose."
-  },
-  "components/dialogs/PageDialogs.jsx | proposal | 70cbd1d6b10a": {
-   "count": 1,
-   "text": "Proposed"
   },
   "components/intakeReview/UpdatePeek.jsx | proposal | a1461b9a5277": {
    "count": 1,
@@ -331,241 +49,21 @@
    "count": 1,
    "text": "Changed in the tracker after this was proposed."
   },
-  "components/minutes/ItemTable.jsx | stage | 232be7b4edab": {
-   "count": 1,
-   "text": "Open the staged update in Review"
-  },
-  "components/minutes/minutesDoc.js | refused | 78bc250ea494": {
-   "count": 1,
-   "text": "The tracker's checks refused this item as it stands: change it in Review."
-  },
-  "components/minutes/minutesDoc.js | tracker | 78bc250ea494": {
-   "count": 1,
-   "text": "The tracker's checks refused this item as it stands: change it in Review."
-  },
-  "components/notes/CaptureDrawer.jsx | live server | 4c771fcc2937": {
-   "count": 1,
-   "text": "Saving a note needs the live server"
-  },
-  "components/notes/CaptureDrawer.jsx | live server | 818aec9f63e7": {
-   "count": 1,
-   "text": "Saving a note needs the live server."
-  },
-  "components/notes/CaptureDrawer.jsx | live server | 97151ecfe0e0": {
-   "count": 1,
-   "text": "Notes need the live server"
-  },
-  "components/notes/DeleteNote.jsx | live server | 67cd9858d6ac": {
-   "count": 2,
-   "text": "Deleting a note needs the live server"
-  },
-  "components/notes/FindUpdates.jsx | apply | 4373fb66f0ff": {
-   "count": 1,
-   "text": "Checked again by the tracker when you apply."
-  },
-  "components/notes/FindUpdates.jsx | apply | a143036aa1d8": {
-   "count": 1,
-   "text": "Apply {} change{}"
-  },
-  "components/notes/FindUpdates.jsx | apply | e578c2745862": {
-   "count": 1,
-   "text": "Applying…"
-  },
-  "components/notes/FindUpdates.jsx | apply | f80740dd3d56": {
-   "count": 1,
-   "text": "Can't be applied: {}"
-  },
-  "components/notes/FindUpdates.jsx | tracker | 4373fb66f0ff": {
-   "count": 1,
-   "text": "Checked again by the tracker when you apply."
-  },
-  "components/notes/NotesPage.jsx | extract | 7faf91603b1c": {
-   "count": 1,
-   "text": "Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay int"
-  },
-  "components/notes/NotesPage.jsx | live server | 0ca9cc7454c8": {
-   "count": 1,
-   "text": "Find updates needs the live server"
-  },
-  "components/notes/NotesPage.jsx | live server | 980a2580983f": {
-   "count": 1,
-   "text": "Notes open and save through the live server. Start it to edit; the list is as of the last build."
-  },
-  "components/notes/NotesPage.jsx | tracker | cbf49dfcf896": {
-   "count": 1,
-   "text": "Find the tracker changes this note's new lines state"
-  },
-  "components/peek/ChasePane.jsx | live server | 3e022de42ccf": {
-   "count": 1,
-   "text": "Draft email needs the live server: start it, then try again."
-  },
-  "components/peek/SneakPeek.jsx | apply | b9e1a32384de": {
-   "count": 1,
-   "text": "· ID given when applied"
-  },
-  "components/peek/SneakPeek.jsx | cx- name | a89d28a0e6c0": {
-   "count": 1,
-   "text": "Say it in Claude Code (cx-edit) instead."
-  },
-  "components/peek/SneakPeek.jsx | live server | 04282545b18f": {
-   "count": 1,
-   "text": "Sneak peek needs the live server: start it, then try again."
-  },
-  "components/prep/PrepPage.jsx | live server | 5b3b99f66c48": {
-   "count": 1,
-   "text": "Choosing the project needs the live server"
-  },
-  "components/prep/PrepPage.jsx | live server | c4a1effed701": {
-   "count": 1,
-   "text": "Refreshing the research needs the live server"
-  },
-  "components/prep/PrepPage.jsx | tracker | 8d5a71ffcbb8": {
-   "count": 1,
-   "text": "The tracker"
-  },
-  "components/prep/PrepPopup.jsx | live server | 7b956f5e12e2": {
-   "count": 1,
-   "text": "The peek needs the live server."
-  },
-  "components/prep/PrepShape.jsx | live server | aeaec205821c": {
-   "count": 2,
-   "text": "Shaping needs the live server."
-  },
-  "components/prep/PrepShape.jsx | tracker | a2ceafbc9b18": {
-   "count": 2,
-   "text": "Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, m"
-  },
-  "components/prep/PrepToolbar.jsx | live server | 50754708208c": {
-   "count": 1,
-   "text": "The Prep page needs the live server"
-  },
-  "components/project/ProjectSettings.jsx | sweep | a12232e45c81": {
-   "count": 1,
-   "text": "Active projects are swept and reported. A closed project is kept, with everything in it."
-  },
-  "components/project/ProjectSettings.jsx | sweep | b8b2bded4074": {
-   "count": 1,
-   "text": "Makes it active again: it is swept and reported again."
-  },
-  "components/project/ProjectSettings.jsx | tracker | fa0c4fbed1cf": {
-   "count": 1,
-   "text": "Marks it closed in the tracker; nothing is deleted."
-  },
-  "components/report/ClientParts.jsx | live server | 9a8d6387782a": {
-   "count": 1,
-   "text": "Show as exported needs the live server."
-  },
-  "components/report/ReportParts.jsx | tracker | 2765bdbfdbff": {
-   "count": 1,
-   "text": "Facts as the tracker stands now: they lock when the internal report is approved"
-  },
-  "components/report/ReportParts.jsx | tracker | 43860a9da86b": {
-   "count": 1,
-   "text": "Item added from the tracker"
-  },
-  "components/report/ReportParts.jsx | tracker | 52ad0e8bd7d6": {
-   "count": 1,
-   "text": "Looking in the tracker…"
-  },
-  "components/report/ReportParts.jsx | tracker | 613df98b46d1": {
-   "count": 1,
-   "text": "Click the eye to put it back from the tracker."
-  },
-  "components/report/ReportParts.jsx | tracker | 6fe90d5bc990": {
-   "count": 1,
-   "text": "Items added from the tracker"
-  },
-  "components/report/ReportParts.jsx | tracker | 706b63c60155": {
-   "count": 1,
-   "text": "the tracker couldn't be read"
-  },
-  "components/report/ReportParts.jsx | tracker | 74ec62c7fbd0": {
-   "count": 1,
-   "text": "Add to {} from the tracker"
-  },
-  "components/report/ReportParts.jsx | tracker | 93d19003cbc1": {
-   "count": 1,
-   "text": "Added from the tracker by you"
-  },
-  "components/report/ReportParts.jsx | tracker | 9768f2f0ca0b": {
-   "count": 1,
-   "text": "Search the tracker"
-  },
-  "components/report/ReportParts.jsx | tracker | b48747daad0b": {
-   "count": 1,
-   "text": "The tracker couldn't be read"
-  },
-  "components/report/ReportParts.jsx | tracker | cb4eba34ed8a": {
-   "count": 1,
-   "text": "+ Add from the tracker"
-  },
-  "components/report/ReportParts.jsx | tracker | e15d4574d0cf": {
-   "count": 1,
-   "text": "Tick the items to include. The tracker is not changed."
-  },
   "components/report/hub/ClientReportPanel.jsx | apply | 74a595852efc": {
    "count": 1,
    "text": "This applies to every future report of this project until you change it. Reports already written are"
-  },
-  "components/report/weekly/Tables.jsx | tracker | 93d19003cbc1": {
-   "count": 1,
-   "text": "Added from the tracker by you"
-  },
-  "components/review/RejectsList.jsx | live server | 32cfe593505d": {
-   "count": 1,
-   "text": "What you rejected needs the live server."
   },
   "components/settings/Essentials.jsx | apply | cfea419c3b4e": {
    "count": 1,
    "text": "Apply"
   },
-  "components/settings/Essentials.jsx | live server | aa906851d4a9": {
+  "core/dayroll.js | script | 003b1f99b9e6": {
    "count": 1,
-   "text": "The Essentials need the live server: open creaite from it."
+   "text": "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and"
   },
-  "components/today/DayMeetings.jsx | cx- name | 1318c80312fd": {
+  "core/dayroll.js | script | e9cadb97048f": {
    "count": 1,
-   "text": "Draft minutes and proposed items from it (cx-minutes)"
-  },
-  "components/today/DayMeetings.jsx | proposal | 1318c80312fd": {
-   "count": 1,
-   "text": "Draft minutes and proposed items from it (cx-minutes)"
-  },
-  "components/today/ToDecide.jsx | stage | 1a2d30311b03": {
-   "count": 1,
-   "text": "Staged for Review ·"
-  },
-  "components/today/ToDecide.jsx | stage | 50d7ceffbcbd": {
-   "count": 1,
-   "text": "{} kept: Staged for Review"
-  },
-  "components/today/ToDecide.jsx | stage | 7dbbb3795af5": {
-   "count": 1,
-   "text": "Undo the staged close of {}"
-  },
-  "components/today/ToDecide.jsx | stage | edd000f39a20": {
-   "count": 1,
-   "text": "Close of {}: Staged for Review"
-  },
-  "core/fields.js | apply | 043583a00a66": {
-   "count": 1,
-   "text": "that proposal has already been applied"
-  },
-  "core/fields.js | proposal | 043583a00a66": {
-   "count": 1,
-   "text": "that proposal has already been applied"
-  },
-  "core/fields.js | proposal | 8e2aeba716d1": {
-   "count": 1,
-   "text": "Proposal moved to {}: still waiting for review"
-  },
-  "core/itemLink.js | tracker | 4d40a158a573": {
-   "count": 1,
-   "text": "not in the tracker"
-  },
-  "core/itemLink.js | tracker | eb654705c9b3": {
-   "count": 1,
-   "text": "{}: not in the tracker"
+   "text": "Names dev/tests use by name (b.eval(\"go('today')\")): each one a module exports is on window. Regener"
   },
   "core/page.js | path | 04747237af0a": {
    "count": 1,
@@ -575,73 +73,9 @@
    "count": 1,
    "text": "cd {} && python3 system/scripts/live_server.py"
   },
-  "core/server.js | apply | 1b0f365dfc4f": {
-   "count": 1,
-   "text": "(the rest was applied: undo it in Activity)"
-  },
-  "core/server.js | apply | 50f824128a1e": {
-   "count": 1,
-   "text": "Say “apply” in Claude Code, or start the live server"
-  },
-  "core/server.js | apply | 75a67b76590b": {
-   "count": 1,
-   "text": "{} — saved; applies when the server is back"
-  },
-  "core/server.js | apply | 90d2481c9e0f": {
-   "count": 1,
-   "text": "Live server back — applied {} held change{}"
-  },
   "core/server.js | apply | 92b85d19e9ba": {
    "count": 1,
    "text": "Held in Review, not applied:"
-  },
-  "core/server.js | apply | b6fce0bf5ca0": {
-   "count": 4,
-   "text": "{} — saved and applied"
-  },
-  "core/server.js | apply | cc249626f107": {
-   "count": 1,
-   "text": "Already applied: use “undo last apply” in Claude Code"
-  },
-  "core/server.js | apply | e8dcf7cfc737": {
-   "count": 1,
-   "text": "{} — saved; press Apply to write it"
-  },
-  "core/server.js | apply | ed5f7918eb13": {
-   "count": 1,
-   "text": "Already applied: undo it in Activity"
-  },
-  "core/server.js | apply | f5732392a182": {
-   "count": 1,
-   "text": "that proposal has already been applied or removed"
-  },
-  "core/server.js | cx- name | 67cdccfa47b5": {
-   "count": 1,
-   "text": "no “{}:” line, and no “Client report rhythm:” line to put it under, in {}; use cx-edit"
-  },
-  "core/server.js | cx- name | c0887ef0a49b": {
-   "count": 1,
-   "text": "no “Client report rhythm:” line in {}; use cx-edit"
-  },
-  "core/server.js | live server | 210112c9166a": {
-   "count": 1,
-   "text": "Looking for the live server…"
-  },
-  "core/server.js | live server | 50f824128a1e": {
-   "count": 1,
-   "text": "Say “apply” in Claude Code, or start the live server"
-  },
-  "core/server.js | live server | 90d2481c9e0f": {
-   "count": 1,
-   "text": "Live server back — applied {} held change{}"
-  },
-  "core/server.js | live server | c3d3cb7a42c8": {
-   "count": 1,
-   "text": "The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Te"
-  },
-  "core/server.js | live server | f2d0017fdb76": {
-   "count": 1,
-   "text": "The live server isn't reachable"
   },
   "core/server.js | path | 17cfdf659fd0": {
    "count": 1,
@@ -650,38 +84,6 @@
   "core/server.js | path | 2a764e6d9e8b": {
    "count": 2,
    "text": "system/backups/files/{}-CLAUDE-"
-  },
-  "core/server.js | path | c3d3cb7a42c8": {
-   "count": 1,
-   "text": "The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Te"
-  },
-  "core/server.js | path | cb42433219b1": {
-   "count": 1,
-   "text": "That folder isn't the creaite vault. Choose the folder that holds CLAUDE.md and system/."
-  },
-  "core/server.js | proposal | f5732392a182": {
-   "count": 1,
-   "text": "that proposal has already been applied or removed"
-  },
-  "core/server.js | script | c3d3cb7a42c8": {
-   "count": 1,
-   "text": "The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Te"
-  },
-  "core/server.js | vault | 1520bbaa12a6": {
-   "count": 1,
-   "text": "Vault connected"
-  },
-  "core/server.js | vault | 619a5fe7f7a5": {
-   "count": 1,
-   "text": "Vault reconnected"
-  },
-  "core/server.js | vault | cb42433219b1": {
-   "count": 1,
-   "text": "That folder isn't the creaite vault. Choose the folder that holds CLAUDE.md and system/."
-  },
-  "core/server.js | vault | f4bf6ae8ffd9": {
-   "count": 1,
-   "text": "Couldn't connect the vault:"
   },
   "creaite_doc.py | tracker | 40e9438b14b3": {
    "count": 1,
@@ -694,82 +96,6 @@
   "docx_tools.py | script | 172c8c949cbc": {
    "count": 1,
    "text": "{} is missing its {} block; rebuild it with dev/tools/build_templates.py adhoc"
-  },
-  "drafts.js | apply | f9f2ff94a4df": {
-   "count": 1,
-   "text": "The meeting has no actions or decisions in the tracker yet: approve and apply them first"
-  },
-  "drafts.js | live server | 300737b7fe09": {
-   "count": 1,
-   "text": "{} needs the live server"
-  },
-  "drafts.js | live server | 3effc3adf900": {
-   "count": 1,
-   "text": "Drafting needs the live server"
-  },
-  "drafts.js | live server | 6f887603019b": {
-   "count": 1,
-   "text": "Recording a chase needs the live server"
-  },
-  "drafts.js | live server | 9184e88ef03f": {
-   "count": 1,
-   "text": "Opening a file needs the live server"
-  },
-  "drafts.js | live server | cb3eb0fcf0da": {
-   "count": 1,
-   "text": "How often each kind of draft is used shows here while the live server runs."
-  },
-  "drafts.js | live server | edfee49e6cbc": {
-   "count": 1,
-   "text": "The attendees and the minutes' summary need the live server."
-  },
-  "drafts.js | live server | f2d0017fdb76": {
-   "count": 1,
-   "text": "The live server isn't reachable"
-  },
-  "drafts.js | stage | d4579611bbc1": {
-   "count": 1,
-   "text": "The title is vague ({}): write what is to be done, or stage it and Sharpen it in the item."
-  },
-  "drafts.js | tracker | f9f2ff94a4df": {
-   "count": 1,
-   "text": "The meeting has no actions or decisions in the tracker yet: approve and apply them first"
-  },
-  "drafts.py | apply | bb01b134a624": {
-   "count": 1,
-   "text": "That proposal has been applied or removed."
-  },
-  "drafts.py | proposal | bb01b134a624": {
-   "count": 1,
-   "text": "That proposal has been applied or removed."
-  },
-  "drafts.py | proposal | c975e8f6d2b5": {
-   "count": 1,
-   "text": "Not a proposal."
-  },
-  "drafts.py | proposal | d05a9f8d4923": {
-   "count": 1,
-   "text": "That proposal isn't a new item."
-  },
-  "drafts.py | tracker | 68d548ba1605": {
-   "count": 1,
-   "text": "The tracker's criteria give {}: {}"
-  },
-  "drafts.py | tracker | 8dcb0198648b": {
-   "count": 1,
-   "text": "The tracker holds nothing to explain a health: no overdue actions, slipped milestones, open risks or"
-  },
-  "drafts.py | tracker | 996618d98a88": {
-   "count": 1,
-   "text": "Nothing in the tracker explains the move: no overdue work, dependency or pending decision behind it."
-  },
-  "drafts.py | tracker | bf8c01f17df4": {
-   "count": 1,
-   "text": "{} isn't in the tracker."
-  },
-  "export_page.py | tracker | f1f776df4955": {
-   "count": 1,
-   "text": "the tracker couldn't be read to check the page"
   },
   "extraction.py | extract | 725164897955": {
    "count": 2,
@@ -790,30 +116,6 @@
   "filechange.py | stage | 81e65cd7b272": {
    "count": 1,
    "text": "creaite: --from <file in system/staging/> is required"
-  },
-  "files.js | live server | 7e6b808fdac4": {
-   "count": 1,
-   "text": "Refresh needs the live server; this page shows the file list of the last build"
-  },
-  "files.js | live server | f13fb47253dd": {
-   "count": 1,
-   "text": "Moving a file back needs the live server"
-  },
-  "healthSuggest.js | tracker | e162a0f1c59c": {
-   "count": 1,
-   "text": "A draft from the tracker. Nothing is saved until you press Save."
-  },
-  "health_fixes.py | script | f2893bef4277": {
-   "count": 1,
-   "text": "Python runs under Rosetta"
-  },
-  "health_fixes.py | sweep | b4f5588ce4d8": {
-   "count": 1,
-   "text": "A sweep lock is held with no sweep running"
-  },
-  "health_fixes.py | vault | 620a1133acd9": {
-   "count": 1,
-   "text": "Your launcher opens another vault"
   },
   "help.js | path | bd67e06dfaf0": {
    "count": 1,
@@ -2509,7 +1811,7 @@
   },
   "live_server.py | apply | 53e9d023330b": {
    "count": 1,
-   "text": "Nothing to apply: no decided items."
+   "text": "Nothing to save: no decided items."
   },
   "live_server.py | apply | 59c24e495d27": {
    "count": 1,
@@ -2647,309 +1949,17 @@
    "count": 1,
    "text": "That day isn't valid."
   },
-  "meetings.js | live server | 50754708208c": {
-   "count": 1,
-   "text": "The Prep page needs the live server"
-  },
-  "meetings.js | live server | 9b4ed35eac9a": {
-   "count": 2,
-   "text": "Opening a prep page needs the live server"
-  },
-  "meetings.js | live server | d76dd93b04ae": {
-   "count": 1,
-   "text": "Saving needs the live server"
-  },
-  "meetings.js | live server | f2d0017fdb76": {
-   "count": 1,
-   "text": "The live server isn't reachable"
-  },
-  "milestones.js | live server | f4ffb4f49db2": {
-   "count": 1,
-   "text": "The live server was restarted since this page was opened. Reload the page (Cmd+R) and try again."
-  },
-  "milestones.js | stage | 019c37c75be9": {
-   "count": 1,
-   "text": "{} Staged for Review: nothing changes until you approve it there."
-  },
-  "milestones.js | stage | 0432e3e727ab": {
-   "count": 1,
-   "text": "Stage the action"
-  },
-  "milestones.js | stage | 6e7695b6f970": {
-   "count": 1,
-   "text": "Stage the hold"
-  },
-  "milestones.js | stage | b7bb87905220": {
-   "count": 1,
-   "text": "Stage the ask"
-  },
-  "milestones.js | stage | c67233de5f0a": {
-   "count": 2,
-   "text": "Stage rebaseline and decision"
-  },
-  "milestones.js | stage | f4d192ef3882": {
-   "count": 1,
-   "text": "Not staged:"
-  },
-  "milestones.js | stage | f7ecc6079f1f": {
-   "count": 1,
-   "text": "Each choice is staged for Review; nothing changes until you approve it there."
-  },
-  "minutes.py | tracker | dacc7e43ac53": {
-   "count": 1,
-   "text": "creaite: {} isn't a project in the tracker"
-  },
-  "minutes_record.py | proposal | a65c9aaaf02b": {
-   "count": 1,
-   "text": "These minutes' items aren't pending any more: they were approved or the proposal has gone."
-  },
   "minutes_record.py | proposal | fc64089924e4": {
    "count": 1,
    "text": "That proposal is no longer pending."
-  },
-  "minutes_record.py | tracker | e25dd85ca629": {
-   "count": 1,
-   "text": "These minutes are approved; their items are in the tracker. Change the items there."
-  },
-  "notes_find.py | apply | 4cb790ac02ec": {
-   "count": 1,
-   "text": "Under four words or no verb: make it clearer before applying"
-  },
-  "notes_find.py | apply | ce7d415b7876": {
-   "count": 1,
-   "text": "Some rows can't be applied as they are"
-  },
-  "notes_find.py | tracker | 43a4a4625c9f": {
-   "count": 1,
-   "text": "Some rows don't pass the tracker's checks"
-  },
-  "panel.js | apply | 0078a90daa74": {
-   "count": 1,
-   "text": "Staged · created when you apply"
-  },
-  "panel.js | apply | 043583a00a66": {
-   "count": 2,
-   "text": "that proposal has already been applied"
-  },
-  "panel.js | apply | 0af16cb7b384": {
-   "count": 1,
-   "text": "Last applied {}"
-  },
-  "panel.js | apply | 2c122d685132": {
-   "count": 1,
-   "text": "{} will be remembered for {} at apply"
-  },
-  "panel.js | apply | 2f88a85db246": {
-   "count": 1,
-   "text": "Staged, not yet applied"
-  },
-  "panel.js | apply | 3e5ba84eea7d": {
-   "count": 1,
-   "text": "Apply everything staged"
-  },
-  "panel.js | apply | 4305fde52c54": {
-   "count": 2,
-   "text": "Remember {} ({}) for {}, so items like this match on their own. Added to the register when applied."
-  },
-  "panel.js | apply | 5f4eafd95eba": {
-   "count": 1,
-   "text": "Already applied or undone"
-  },
-  "panel.js | apply | 68d1e1222698": {
-   "count": 1,
-   "text": "Not applied"
-  },
-  "panel.js | apply | 7b4691da362a": {
-   "count": 1,
-   "text": "Nothing applied:"
-  },
-  "panel.js | apply | 8877874c59b6": {
-   "count": 1,
-   "text": "Nothing to apply"
-  },
-  "panel.js | apply | 8a2baa2304f2": {
-   "count": 1,
-   "text": "Editing — changes apply when you save"
-  },
-  "panel.js | apply | 8b7b7caeca9c": {
-   "count": 1,
-   "text": "Applying needs the live server: start it, or say “apply” in Claude Code"
-  },
-  "panel.js | apply | 9781bddc1540": {
-   "count": 1,
-   "text": "Nothing reaches the tracker until you apply"
-  },
-  "panel.js | apply | a3e4a569ead0": {
-   "count": 1,
-   "text": "Applied"
-  },
-  "panel.js | apply | cfea419c3b4e": {
-   "count": 1,
-   "text": "Apply"
-  },
-  "panel.js | apply | d165d395b12e": {
-   "count": 1,
-   "text": "Applied {} change{}{}{}. A backup was taken first"
-  },
-  "panel.js | apply | d433657755a5": {
-   "count": 1,
-   "text": "it has already been applied"
-  },
-  "panel.js | apply | e578c2745862": {
-   "count": 1,
-   "text": "Applying…"
-  },
-  "panel.js | apply | ed5f7918eb13": {
-   "count": 1,
-   "text": "Already applied: undo it in Activity"
-  },
-  "panel.js | live server | 5a4ac34986df": {
-   "count": 1,
-   "text": "Check the minutes, then approve them in Claude Code (the live server isn't running)"
-  },
-  "panel.js | live server | 7b92bdbbbc49": {
-   "count": 1,
-   "text": "Remembering a signal needs the live server; or say it in Claude Code"
-  },
-  "panel.js | live server | 8b7b7caeca9c": {
-   "count": 1,
-   "text": "Applying needs the live server: start it, or say “apply” in Claude Code"
-  },
-  "panel.js | live server | ada25bf789a0": {
-   "count": 1,
-   "text": "Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"
-  },
-  "panel.js | path | 7c461fc5bd27": {
-   "count": 1,
-   "text": "Look at the errors in creaite's debug log from the last day (Settings › Diagnostics, system/logs) an"
   },
   "panel.js | path | abfe1d94c710": {
    "count": 1,
    "text": "proposed-{}-{}{}-dashboard.json"
   },
-  "panel.js | proposal | 043583a00a66": {
-   "count": 2,
-   "text": "that proposal has already been applied"
-  },
-  "panel.js | proposal | 16e13eaa98ef": {
-   "count": 1,
-   "text": "Update proposal"
-  },
-  "panel.js | proposal | 1c4d995cc1d3": {
-   "count": 1,
-   "text": "Proposed value"
-  },
-  "panel.js | proposal | 496b91f50062": {
-   "count": 2,
-   "text": "Editing a proposal — nothing reaches the tracker until it's approved"
-  },
   "panel.js | proposal | abfe1d94c710": {
    "count": 1,
    "text": "proposed-{}-{}{}-dashboard.json"
-  },
-  "panel.js | proposal | bb23246fadd5": {
-   "count": 1,
-   "text": "Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted"
-  },
-  "panel.js | proposal | d4e07e769c72": {
-   "count": 1,
-   "text": "Proposal: {}"
-  },
-  "panel.js | proposal | e7d9c9967f4e": {
-   "count": 3,
-   "text": "Proposal updated — still waiting for review"
-  },
-  "panel.js | stage | 0078a90daa74": {
-   "count": 1,
-   "text": "Staged · created when you apply"
-  },
-  "panel.js | stage | 2f88a85db246": {
-   "count": 1,
-   "text": "Staged, not yet applied"
-  },
-  "panel.js | stage | 3e5ba84eea7d": {
-   "count": 1,
-   "text": "Apply everything staged"
-  },
-  "panel.js | stage | 3f5f84115c2c": {
-   "count": 1,
-   "text": "Not staged yet · it is staged once it has a title and a project"
-  },
-  "panel.js | stage | 45330a4587ae": {
-   "count": 1,
-   "text": "New workstream “{}” for {}, staged with this change"
-  },
-  "panel.js | stage | 4b3f60c25ff2": {
-   "count": 1,
-   "text": "You edited this {} · {} change{} staged"
-  },
-  "panel.js | stage | 57da094492e7": {
-   "count": 1,
-   "text": "This new {} isn't staged yet: {}. Keep it in this browser (New offers it back), or discard it?"
-  },
-  "panel.js | stage | 736e8654d458": {
-   "count": 1,
-   "text": "The draft is in the field, not saved yet. Edit it, then click away to stage it as usual; Esc puts th"
-  },
-  "panel.js | stage | 7a0c3c5bf0ac": {
-   "count": 1,
-   "text": "Staged changes"
-  },
-  "panel.js | stage | 7e892de9ec12": {
-   "count": 1,
-   "text": "Not staged yet · Save ({}↵) stages it and dismisses the message"
-  },
-  "panel.js | stage | 810a41d2f803": {
-   "count": 1,
-   "text": "Undone: the new {} “{}” is no longer staged"
-  },
-  "panel.js | stage | a3ad91d9d1cb": {
-   "count": 1,
-   "text": "Restored. Press Enter in the title to stage it"
-  },
-  "panel.js | stage | ab2830406a11": {
-   "count": 1,
-   "text": "{} change{} staged on {} item{}"
-  },
-  "panel.js | stage | c1a61596acb9": {
-   "count": 1,
-   "text": "; {} still staged (changed elsewhere since)"
-  },
-  "panel.js | stage | d1ea6af8c0b0": {
-   "count": 1,
-   "text": "{} Staged with this item's change."
-  },
-  "panel.js | stage | e2b2b067fe7f": {
-   "count": 3,
-   "text": "Saved to staging"
-  },
-  "panel.js | sweep | 9f56536c89de": {
-   "count": 1,
-   "text": "sweep run failed"
-  },
-  "panel.js | sweep | eed947348cfd": {
-   "count": 1,
-   "text": "sweep runs failed"
-  },
-  "panel.js | tracker | 2bb4284a1505": {
-   "count": 1,
-   "text": "{} is no longer in the tracker: its change is shown in the old form"
-  },
-  "panel.js | tracker | 496b91f50062": {
-   "count": 2,
-   "text": "Editing a proposal — nothing reaches the tracker until it's approved"
-  },
-  "panel.js | tracker | 70be09e0aad7": {
-   "count": 1,
-   "text": "Word why it moves from what the tracker shows: overdue work behind it, dependencies, pending decisio"
-  },
-  "panel.js | tracker | 9781bddc1540": {
-   "count": 1,
-   "text": "Nothing reaches the tracker until you apply"
-  },
-  "panel.js | tracker | bb23246fadd5": {
-   "count": 1,
-   "text": "Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted"
   },
   "paths.py | path | 95a91a774a9a": {
    "count": 1,
@@ -2999,34 +2009,6 @@
    "count": 1,
    "text": "creaite tracker (actions, risks and issues, decisions, updates)"
   },
-  "projects.js | live server | 48e32bae8b9f": {
-   "count": 1,
-   "text": "; needs the live server"
-  },
-  "projects.js | live server | 76760f6e2ab5": {
-   "count": 1,
-   "text": "Make it executive needs the live server"
-  },
-  "projects.js | live server | baa38fa2591d": {
-   "count": 1,
-   "text": "Not saved: the live server isn't running and the vault isn't connected. Your text and pictures are s"
-  },
-  "projects.js | live server | c0c65ef1fe36": {
-   "count": 1,
-   "text": "Check sources needs the live server"
-  },
-  "projects.js | live server | c9bdc5124e5a": {
-   "count": 1,
-   "text": "The quoted lines need the live server."
-  },
-  "projects.js | live server | ca0f31516109": {
-   "count": 2,
-   "text": "Generate needs the live server"
-  },
-  "projects.js | live server | f2d0017fdb76": {
-   "count": 1,
-   "text": "The live server isn't reachable"
-  },
   "projects.js | path | 2a764e6d9e8b": {
    "count": 2,
    "text": "system/backups/files/{}-CLAUDE-"
@@ -3039,37 +2021,9 @@
    "count": 1,
    "text": "system/staging/uploads/{}-{}.{}"
   },
-  "projects.js | path | be8bef526cfa": {
-   "count": 1,
-   "text": "Saved to settings.json; the flags update at the next rebuild"
-  },
-  "projects.js | proposal | cbac9ef7e9fb": {
-   "count": 1,
-   "text": "Draft client wording for each of them, as proposals in Review (each approved on its own)"
-  },
   "projects.js | stage | 8ba0bc5b49a5": {
    "count": 1,
    "text": "system/staging/uploads/{}-{}.{}"
-  },
-  "projects.js | sweep | 6c5a761bcd6b": {
-   "count": 1,
-   "text": "Mail and Teams items already swept"
-  },
-  "projects.js | sweep | 9d4d6cd4a726": {
-   "count": 1,
-   "text": "swept mail and Teams"
-  },
-  "projects.js | tracker | 65d9633f2011": {
-   "count": 1,
-   "text": "Tracker changes and open items"
-  },
-  "projects.js | vault | 05805c8b95c0": {
-   "count": 1,
-   "text": "Only items marked client-visible, in their client wording. Nothing else from the vault is used."
-  },
-  "projects.js | vault | baa38fa2591d": {
-   "count": 1,
-   "text": "Not saved: the live server isn't running and the vault isn't connected. Your text and pictures are s"
   },
   "reach.py | path | 14e78f14cafa": {
    "count": 1,
@@ -3115,10 +2069,6 @@
    "count": 1,
    "text": "Client report drafted (cx-client-report)"
   },
-  "report.py | tracker | bf8c01f17df4": {
-   "count": 1,
-   "text": "{} isn't in the tracker."
-  },
   "report_doc.py | tracker | 335adcc60dd4": {
    "count": 1,
    "text": "it is no longer open in the tracker"
@@ -3138,10 +2088,6 @@
   "report_doc.py | tracker | c9c47e840ed3": {
    "count": 1,
    "text": "it is no longer client-visible and open in the tracker"
-  },
-  "report_server.py | tracker | bf8c01f17df4": {
-   "count": 1,
-   "text": "{} isn't in the tracker."
   },
   "review.py | extract | c455bdd8f621": {
    "count": 1,
@@ -3195,269 +2141,13 @@
    "count": 1,
    "text": "The projects live in the vault, so there is no OneDrive copy to make."
   },
-  "settings.js | apply | 043583a00a66": {
-   "count": 1,
-   "text": "that proposal has already been applied"
-  },
   "settings.js | apply | bc20a71ac629": {
    "count": 1,
    "text": "Choose where it applies"
   },
-  "settings.js | live server | 0d4a504701d6": {
-   "count": 1,
-   "text": "Seen needs the live server"
-  },
-  "settings.js | live server | 201907cd4712": {
-   "count": 1,
-   "text": "Update undone; restart the live server"
-  },
-  "settings.js | live server | 3effc3adf900": {
-   "count": 1,
-   "text": "Drafting needs the live server"
-  },
-  "settings.js | live server | 5374deb2d44e": {
-   "count": 1,
-   "text": "Log needs the live server"
-  },
-  "settings.js | live server | 764d8cc3fa0c": {
-   "count": 1,
-   "text": "Dismiss needs the live server"
-  },
-  "settings.js | live server | 86d35cbc8055": {
-   "count": 1,
-   "text": "Live server stopped"
-  },
-  "settings.js | live server | b3f05c1d68e8": {
-   "count": 1,
-   "text": "The live server isn't running"
-  },
-  "settings.js | live server | d0cfc256c7e8": {
-   "count": 1,
-   "text": "Promises need the live server"
-  },
-  "settings.js | live server | db515d2a6880": {
-   "count": 1,
-   "text": "Archiving needs the live server"
-  },
-  "settings.js | live server | e91c5d00731d": {
-   "count": 1,
-   "text": "Create work item needs the live server"
-  },
-  "settings.js | live server | efe4d6087562": {
-   "count": 1,
-   "text": "Closing needs the live server"
-  },
-  "settings.js | live server | f11e6d6627df": {
-   "count": 1,
-   "text": "Handled needs the live server"
-  },
-  "settings.js | live server | f13e89832c23": {
-   "count": 1,
-   "text": "creaite {} installed; restart the live server"
-  },
-  "settings.js | path | 53d4f252fddf": {
-   "count": 1,
-   "text": "Copying to system/releases…"
-  },
-  "settings.js | path | 7634d72c4d08": {
-   "count": 2,
-   "text": "Saved to settings.json"
-  },
-  "settings.js | proposal | 043583a00a66": {
-   "count": 1,
-   "text": "that proposal has already been applied"
-  },
-  "settings.js | stage | 1f22e07160cd": {
-   "count": 3,
-   "text": "Not staged"
-  },
-  "settings.js | stage | 9227adae9bff": {
-   "count": 1,
-   "text": "Stages it and dismisses the message ({}↵)"
-  },
-  "settings.js | stage | a59defcaf2c8": {
-   "count": 1,
-   "text": "Staged the new {} for Review: “{}”"
-  },
-  "settings.js | stage | a9498bdfa884": {
-   "count": 1,
-   "text": "Undone: the new {} is no longer staged, and the message is back in Messages"
-  },
-  "settings.js | stage | fae6a56747ee": {
-   "count": 3,
-   "text": "Staged for Review"
-  },
-  "shell.html | apply | 8a2baa2304f2": {
-   "count": 1,
-   "text": "Editing — changes apply when you save"
-  },
-  "shell.html | extract | 51e06808f0c6": {
-   "count": 1,
-   "text": "Each figure is a count out of its total. Nothing is rated until a group has 10. These count extracti"
-  },
-  "shell.html | proposal | 5f6ccf3466ce": {
-   "count": 1,
-   "text": "Edited proposals"
-  },
-  "shell.html | proposal | d2f2a84108c8": {
-   "count": 1,
-   "text": "Why proposals were rejected"
-  },
-  "shell.html | proposal | edf6ccf053a5": {
-   "count": 2,
-   "text": "Approved as proposed"
-  },
-  "shell.html | vault | e29a5c46a520": {
-   "count": 2,
-   "text": "Search the vault"
-  },
-  "sneak.js | apply | f7e2c74a6925": {
-   "count": 1,
-   "text": "Staged, but the apply stopped: {}. It is in the staged list."
-  },
-  "sneak.js | live server | 04282545b18f": {
-   "count": 1,
-   "text": "Sneak peek needs the live server: start it, then try again."
-  },
-  "sneak.js | live server | 9184e88ef03f": {
-   "count": 1,
-   "text": "Opening a file needs the live server"
-  },
-  "sneak.js | live server | b37371f7763a": {
-   "count": 1,
-   "text": "Undo needs the live server."
-  },
-  "sneak.js | stage | f7e2c74a6925": {
-   "count": 1,
-   "text": "Staged, but the apply stopped: {}. It is in the staged list."
-  },
-  "sneak.js | vault | 18ae84738cf9": {
-   "count": 1,
-   "text": "Not saved: the vault isn't connected."
-  },
-  "sneak_peek.py | stage | bf9ef64ddb42": {
-   "count": 1,
-   "text": "Sneak peek staged a change to another item"
-  },
-  "sneak_peek.py | tracker | bf8c01f17df4": {
-   "count": 1,
-   "text": "{} isn't in the tracker."
-  },
-  "sneak_peek.py | tracker | f7a95f723681": {
-   "count": 1,
-   "text": "No tracker yet ({})."
-  },
-  "stores/aiEdit.js | live server | 3fa5a81ac2a4": {
-   "count": 1,
-   "text": "AI on selected text needs the live server"
-  },
-  "stores/clientReport.js | live server | 2aa50409082a": {
-   "count": 1,
-   "text": "The client view needs the live server."
-  },
-  "stores/findUpdates.js | apply | 03bbcc3aa9dc": {
-   "count": 1,
-   "text": "Nothing applied"
-  },
-  "stores/findUpdates.js | live server | 104d7f70fd59": {
-   "count": 1,
-   "text": "The live server isn't running: saved for Review instead"
-  },
-  "stores/findUpdates.js | live server | f68bac5044d3": {
-   "count": 1,
-   "text": "Find updates needs the live server."
-  },
-  "stores/findUpdates.js | tracker | 9c2e869a2bfe": {
-   "count": 1,
-   "text": "Nothing in the new lines to turn into tracker changes. That's fine: not every line needs to be an it"
-  },
-  "stores/notes.js | live server | 28f5cce4b664": {
-   "count": 1,
-   "text": "Adding a picture needs the live server."
-  },
-  "stores/notes.js | live server | 40c85b809e87": {
-   "count": 1,
-   "text": "Changing a note needs the live server."
-  },
-  "stores/notes.js | live server | 9097e397c930": {
-   "count": 1,
-   "text": "Making a note needs the live server."
-  },
-  "stores/notes.js | live server | ec52c332d128": {
-   "count": 1,
-   "text": "Opening a note needs the live server."
-  },
-  "stores/notes.js | live server | f99c98caa861": {
-   "count": 1,
-   "text": "Not saved: the live server isn't running. Your typing is still here."
-  },
-  "stores/prep.js | live server | 630975257d63": {
-   "count": 1,
-   "text": "The prep page needs the live server."
-  },
-  "stores/prep.js | live server | d76dd93b04ae": {
-   "count": 1,
-   "text": "Saving needs the live server"
-  },
-  "stores/prepShape.js | live server | d76dd93b04ae": {
-   "count": 1,
-   "text": "Saving needs the live server"
-  },
-  "stores/projectSettings.js | vault | 66e3b9da7717": {
-   "count": 1,
-   "text": "Not saved: creaite can't reach the vault."
-  },
-  "stores/textSection.js | live server | 28f5cce4b664": {
-   "count": 1,
-   "text": "Adding a picture needs the live server."
-  },
-  "stores/weekly.js | apply | 0d4ad046bee6": {
-   "count": 1,
-   "text": "The apply didn't run; nothing was changed."
-  },
-  "stores/weekly.js | live server | 200e63215969": {
-   "count": 1,
-   "text": "The weekly report view needs the live server."
-  },
   "sweep.py | path | c711c885064b": {
    "count": 1,
    "text": "Sweep: {} item{} ({} possible), {} transcript(s) to Intake (inbox/), {} document(s) to file"
-  },
-  "sweep.py | proposal | 8c13d91781f5": {
-   "count": 1,
-   "text": "That is a proposal already in Review; open it there."
-  },
-  "sweep.py | stage | 24308bb4c80b": {
-   "count": 1,
-   "text": "It's staged for Review: Undo that first."
-  },
-  "sweep.py | stage | 30bcfc06ee38": {
-   "count": 3,
-   "text": "Nothing staged to undo."
-  },
-  "sweep.py | stage | 37878fb9275f": {
-   "count": 1,
-   "text": "Staged the promise for Review."
-  },
-  "sweep.py | stage | 4bfc121e5507": {
-   "count": 1,
-   "text": "Staged {} as kept for Review."
-  },
-  "sweep.py | stage | 72a27ddf0ac1": {
-   "count": 3,
-   "text": "Not staged: {}"
-  },
-  "sweep.py | stage | 80e63b771cf4": {
-   "count": 2,
-   "text": "This thread was marked seen: nothing to stage."
-  },
-  "sweep.py | stage | a12320e9b504": {
-   "count": 3,
-   "text": "Already staged for Review."
-  },
-  "sweep.py | stage | c37edc35d180": {
-   "count": 2,
-   "text": "This thread is handled: nothing to stage."
   },
   "sweep.py | sweep | c711c885064b": {
    "count": 1,
@@ -3467,61 +2157,13 @@
    "count": 1,
    "text": "Read the last {} days; {} older day{} not read. Say 'sweep the last {} days' to include {}."
   },
-  "today.js | apply | 2164335b4450": {
-   "count": 1,
-   "text": "{} moved to {}. Staged until you apply"
-  },
-  "today.js | apply | 4791054850e7": {
-   "count": 1,
-   "text": "{} marked done. Staged: nothing reaches the tracker until you apply"
-  },
-  "today.js | live server | 8d13650096be": {
-   "count": 1,
-   "text": "It needs the live server; or say"
-  },
-  "today.js | path | 3efb5abde950": {
-   "count": 1,
-   "text": "setup: move the people still listed in settings.json into the people register"
-  },
   "today.js | path | 72240901a1c2": {
    "count": 1,
    "text": "cd {} && python3 system/scripts/launch.py make-launcher"
   },
-  "today.js | proposal | 76974187aab3": {
-   "count": 1,
-   "text": "Draft an update for each from what has happened since, as proposals in Review"
-  },
-  "today.js | proposal | 929017ada05a": {
-   "count": 1,
-   "text": "Proposal"
-  },
-  "today.js | proposal | a1461b9a5277": {
-   "count": 1,
-   "text": "Changed in the tracker after this was proposed."
-  },
   "today.js | script | 72240901a1c2": {
    "count": 1,
    "text": "cd {} && python3 system/scripts/launch.py make-launcher"
-  },
-  "today.js | stage | 2164335b4450": {
-   "count": 1,
-   "text": "{} moved to {}. Staged until you apply"
-  },
-  "today.js | stage | 4791054850e7": {
-   "count": 1,
-   "text": "{} marked done. Staged: nothing reaches the tracker until you apply"
-  },
-  "today.js | stage | 76fc390263ad": {
-   "count": 1,
-   "text": ", staged for Review"
-  },
-  "today.js | tracker | 4791054850e7": {
-   "count": 1,
-   "text": "{} marked done. Staged: nothing reaches the tracker until you apply"
-  },
-  "today.js | tracker | a1461b9a5277": {
-   "count": 1,
-   "text": "Changed in the tracker after this was proposed."
   },
   "tracker.py | apply | 05dd21773efe": {
    "count": 1,
@@ -3545,7 +2187,7 @@
   },
   "tracker.py | apply | 53e9d023330b": {
    "count": 1,
-   "text": "Nothing to apply: no decided items."
+   "text": "Nothing to save: no decided items."
   },
   "tracker.py | apply | 5987ca46b1d2": {
    "count": 1,
@@ -3775,10 +2417,6 @@
    "count": 1,
    "text": "{} already exists and isn't empty. Choose a new folder, or an empty one; to update an existing vault"
   },
-  "usage_reviews.py | apply | 3f52418c6ab6": {
-   "count": 1,
-   "text": "creaite is applying a change; try again in a moment."
-  },
   "whats-new.md | apply | 36f2b0549547": {
    "count": 1,
    "text": "- **Open an item and just change it.** An action, risk or decision opens over the page, already edit"
@@ -3962,10 +2600,6 @@
   "whats-new.md | vault | 305e1c738e12": {
    "count": 1,
    "text": "- **A daily backup you can restore from.** One closed daily zip of everything needed to rebuild the "
-  },
-  "work.js | proposal | 43409b647b9c": {
-   "count": 1,
-   "text": "Draft an update for each of the {} from what has happened since, as proposals in Review"
   }
  }
 }

@@ -186,7 +186,7 @@ class GenerateDialog(DraftCase):
         hint = lambda: b.eval("document.getElementById('genHint').textContent")                       # noqa: E731
         self.assertEqual(hint(), "Into the editor, for you to edit and save. Candid: the internal view of every item.")
         self.pick("#genAud", "Client-safe")
-        self.assertEqual(hint(), "Into the editor, for you to edit and save. Only items marked client-visible, in their client wording. Nothing else from the vault is used.")
+        self.assertEqual(hint(), "Into the editor, for you to edit and save. Only items marked client-visible, in their client wording. Nothing else from your creaite folder is used.")
         self.pick("#genFormKind", "Email paragraph")
         self.assertTrue(hint().startswith("Shown here to copy; never saved. Only items marked client-visible"))
 
@@ -262,7 +262,7 @@ class GenerateDialog(DraftCase):
         b = self.b
         self.assertEqual(b.eval("document.getElementById('genSrcSum').textContent"), "Drawing on 5 sources")
         self.assertEqual(b.eval("document.getElementById('genSrcNames').textContent"),
-                         "· tracker, minutes and transcripts, reports, weekly updates, swept mail and Teams")
+                         "· tracker, minutes and transcripts, reports, weekly updates, checked mail and Teams")
         self.assertEqual(b.eval("document.getElementById('genSrcBtn').getAttribute('aria-expanded')"), "false")
         self.assertFalse(self.visible("#genSrc"))
         b.click("#genSrcBtn")

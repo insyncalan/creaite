@@ -41,7 +41,7 @@ const busy = signal(false);
     @param {{path: string, title: string, code: string}} [row] */
 export async function askDeleteNote(row) {
   if (row && !(noteCur.value && noteCur.value.path === row.path)) {      // #194: a note in the list that is not the open one: the open note is left alone
-    if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
+    if (!viaServer()) { snack("Deleting a note needs creaite to be running"); return; }
     const rows = /** @type {HTMLElement[]} */ ([...document.querySelectorAll(".nlist .ni")]), at = rows.findIndex(x => x.dataset.path === row.path);
     const near = at >= 0 ? rows[at + 1] || rows[at - 1] : undefined, next = near ? near.dataset.path : undefined;
     const g = await api("/api/notes/get", { path: row.path });         // the version the box is opened on: Delete sends THIS one, so a note changed since is refused
@@ -51,7 +51,7 @@ export async function askDeleteNote(row) {
   }
   const c = noteCur.value;
   if (!c) return;
-  if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
+  if (!viaServer()) { snack("Deleting a note needs creaite to be running"); return; }
   /* The menu item that was used goes with the closed menu, so make the … button the dialog's recorded opener: Esc and Cancel
      then return focus to it (Dialog.jsx restores only an opener that is still connected). */
   const more = /** @type {HTMLElement | null} */ (document.querySelector(".nmorewrap .nmore"));

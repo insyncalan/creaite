@@ -80,7 +80,7 @@ class Base(LiveBrowserCase):
         self.b.click(sel, **kw)
 
     def applied(self):
-        self.b.wait("(()=>{ const s=document.querySelector('#snackT'); return /saved and applied/.test(s.textContent) && s.textContent!==s.dataset.seen; })()", timeout=15)
+        self.b.wait("(()=>{ const s=document.querySelector('#snackT'); return /— saved/.test(s.textContent) && s.textContent!==s.dataset.seen; })()", timeout=15)
         self.b.eval("document.querySelector('#snackT').dataset.seen=document.querySelector('#snackT').textContent")
         time.sleep(0.3)
 

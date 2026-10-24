@@ -125,7 +125,7 @@ def routes(lock):
     def review_route(handler, req):
         """POST /api/usage/review {date, saw, decided}: add one review note; answers with every note."""
         if not lock.acquire(timeout=15):
-            return handler.send(200, {"ok": False, "busy": True, "message": "creaite is applying a change; try again in a moment."})
+            return handler.send(200, {"ok": False, "busy": True, "message": "creaite is saving a change; try again in a moment."})
         try:
             notes, why = add(req)
         finally:

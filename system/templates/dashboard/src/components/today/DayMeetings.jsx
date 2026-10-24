@@ -47,7 +47,7 @@ function FollowUp({ m, live, acts }) {
     : <Chip tone="ok" tip={f.processed_shown ? `Processed ${f.processed_shown}` : undefined}>Minutes made</Chip>;
   if (f.state === "transcript") return (
     <><Chip tone="warn">Transcript ready</Chip>
-      <button type="button" class="lk" aria-label={`Process the transcript of ${m.title}`} data-tip={off || "Draft minutes and proposed items from it (cx-minutes)"}
+      <button type="button" class="lk" aria-label={`Process the transcript of ${m.title}`} data-tip={off || "Draft minutes and suggested items from it "}
         disabled={!live} onClick={() => acts.process(m)}>Process</button></>);
   if (f.checked === false && m.id) return (
     <><Chip tone="mute">Not checked yet</Chip>

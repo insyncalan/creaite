@@ -49,7 +49,7 @@ class HoldPeek(LiveBrowserCase):
         self.assertEqual(len(self.peek_files()), 1)
         self.assertEqual(self.desc(self.peek_id), self.before)
         b.wait("PKS.length===1&&!document.getElementById('pkStage').hidden", timeout=15)
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change staged on 1 item")
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change waiting to be saved on 1 item")
 
     def then_the_peek_applies(self):
         b = self.b
@@ -101,7 +101,7 @@ class HoldPeek(LiveBrowserCase):
             return json.loads(urllib.request.urlopen(req, timeout=60).read())
         r = post({"hold_peek": True})                       # only the peek's change is staged: nothing to apply
         self.assertTrue(r["ok"])
-        self.assertIn("Nothing to apply", r["message"])
+        self.assertIn("Nothing to save", r["message"])
         self.assertEqual(r["held"], 1)
         self.assertEqual(len(self.peek_files()), 1)
         r = post({})                                        # the peek's own Apply: everything decided

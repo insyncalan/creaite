@@ -77,7 +77,7 @@ class CellEdit(LiveBrowserCase):
 
     # dev-test-steadiness: each step waits for its own condition. saved() took any message as the save's and then slept
     # half a second; ready() didn't exist, so a click could reach a cell the page was still drawing again.
-    SAVED = r"saved and applied|apply stopped|Not saved|isn't|can't|Not a date"   # the save's own message, done or refused
+    SAVED = r"— saved|apply stopped|Not saved|isn't|can't|Not a date"   # the save's own message, done or refused
 
     def saved(self, expect=SAVED):
         """Wait for the save's own message (the apply can take a while under load), then for the page to finish the reload

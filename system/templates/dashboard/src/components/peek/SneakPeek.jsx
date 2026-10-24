@@ -63,7 +63,7 @@ export function SneakIcon({ shapes, size }) {
 const POINT = { draft_chase: "Open Draft email", ask: "Open ask creaite", project_page: "Open the project page", settings: "Open Settings",
   people: "Open People", milestone_form: null, cx_edit: null };
 /** A refusal's second sentence, where it points. @type {Record<string, string>} */
-const POINT_SAY = { cx_edit: "Say it in Claude Code (cx-edit) instead.", milestone_form: "Use Rebaseline… in the milestone's Dates: a rebaseline also records a decision." };
+const POINT_SAY = { cx_edit: "You can change it by asking creaite instead.", milestone_form: "Use Rebaseline… in the milestone's Dates: a rebaseline also records a decision." };
 /** The confirm button's verb for an ending status. @type {Record<string, string>} */
 const END_WORD = { Cancelled: "Cancel", Withdrawn: "Withdraw", Dropped: "Drop" };
 /** The draft kinds' fields and their words. @type {Record<string, (r: Record<string, any>) => {field: string, word: string}>} */
@@ -131,7 +131,7 @@ export function SneakPeek({ id, onClose, acts }) {
   async function read(t, pk) {
     const n = ++seq.current;
     if (!t.trim()) { setReply(null); return null; }
-    if (!viaServer()) { const r = /** @type {any} */ ({ ok: false, message: "Sneak peek needs the live server: start it, then try again." }); setReply(r); return r; }
+    if (!viaServer()) { const r = /** @type {any} */ ({ ok: false, message: "Sneak peek needs creaite to be running: start it, then try again." }); setReply(r); return r; }
     const body = { id, text: t, ...(pk && Object.keys(pk).length ? { picks: pk } : {}) };
     let r = /** @type {SneakReply} */ (await api("/api/sneak/read", body));
     for (let i = 0; i < 4 && r && r.busy && n === seq.current; i++) {      // an apply holds the tracker: ask again shortly
@@ -393,7 +393,7 @@ function Card({ r, id, text, shown, busy, flash, closing, setClosing, onMake, on
       {rows.map((c, i) => <div class="chgrow" key={i}><span class="k">{c.label}</span>
         <span>{c.from_shown !== "" && c.from_shown != null ? <><span class="old">{c.from_shown}</span> → </> : null}<span class="to">{c.to_shown}</span>{c.derived ? <span class="sub"> (worked out)</span> : null}</span></div>)}
       {t && t.kind === "link" ? <div class="chgrow"><span class="k">Link</span><span><span class="to">{t.from_item === id ? `${id} blocks ${t.to_item}` : `${id} is blocked by ${t.from_item}`}</span>{t.other && t.other.title ? <span class="sub"> · {t.other.title}</span> : null}</span></div> : null}
-      {isNew ? <div class="newitem"><span class="sub"><b>New {t.kind}</b> · ID given when applied</span><span class="to">{v.description || ""}</span>
+      {isNew ? <div class="newitem"><span class="sub"><b>New {t.kind}</b> · ID given when saved</span><span class="to">{v.description || ""}</span>
         <span class="sub">{t.kind === "risk" ? `Owner ${v.owner || "not set"} · impact ${v.impact || "Medium"} × likelihood ${v.likelihood || "Medium"} (change them after)`
           : t.kind === "promise" ? `Promised by ${v.promised_by || "you"} to ${v.promised_to || "—"} · by ${v.due_date ? dmyShown(v.due_date) : "no date"}`
           : `Owner ${v.owner || "not set"} · due ${v.due_date ? dmyShown(v.due_date) : "not set"}`} · linked to {id}</span></div> : null}

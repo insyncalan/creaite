@@ -72,7 +72,7 @@ function ppSrcKind(s) {
   if (s.type === "mail") return ["mail", sourceHref(s) ? "Opens in Outlook" : "Mail · no link was kept"];
   if (s.type === "teams") return ["chat", sourceHref(s) ? "Opens in Teams" : "Teams · no link was kept"];
   if (s.type === "item") return ["work", "Opens the item"];
-  if (s.type === "tracker") return ["work", "The tracker"];
+  if (s.type === "tracker") return ["work", "Your project record"];
   if (s.type === "invite") return ["calendar", "The calendar invite"];
   return ["list", ""];
 }
@@ -85,7 +85,7 @@ function ProjectChip({ mt }) {
   const pick = async (/** @type {string} */ code) => {
     if (!code) return;
     if (!series) { snack("This meeting has no series to remember a project for"); return; }
-    if (!viaServer()) { snack("Choosing the project needs the live server"); return; }
+    if (!viaServer()) { snack("Choosing the project needs creaite to be running"); return; }
     const map = { ...((D.prep || {}).series || {}), [series]: code };
     if (!await writeSettings({ "prep.series": map })) return;
     if (!D.prep) D.prep = {};
@@ -114,7 +114,7 @@ function Header({ v, researching }) {
     if (agenda) draftAgenda();
   };
   const refresh = () => {
-    if (!viaServer()) { snack("Refreshing the research needs the live server"); return; }
+    if (!viaServer()) { snack("Refreshing the research needs creaite to be running"); return; }
     if (past) { snack("That meeting has passed: prep is for today and the days ahead"); return; }
     const key = prepViewKey.value;
     prepPage(briefKey(key), { quiet: true, status: t => { prepSaving.value = t ? `research:${t}` : ""; }, done: () => loadPrep(key, { keepTab: true }) });

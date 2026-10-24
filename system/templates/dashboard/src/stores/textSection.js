@@ -74,7 +74,7 @@ export async function loadReportImages(code, refs, kind = "") {
 export async function addReportImage(code, file, kind = "") {
   if (!/^image\/(png|jpeg)$/.test(file.type)) { textMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`; return null; }
   if (file.size > 2 * 1024 * 1024) { textMsg.value = `${file.name} is over 2 MB: pictures can be 2 MB at most.`; return null; }
-  if (!viaServer()) { textMsg.value = "Adding a picture needs the live server."; return null; }
+  if (!viaServer()) { textMsg.value = "Adding a picture needs creaite to be running."; return null; }
   const src = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result || "")); fr.onerror = () => res(""); fr.readAsDataURL(file); });
   const r = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1), kind: kind === "client" ? "client" : undefined }) : null;
   if (!r || !r.ok) { textMsg.value = oneLine((r && r.message) || `${file.name} couldn't be added.`); return null; }

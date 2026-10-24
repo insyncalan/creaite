@@ -97,7 +97,7 @@ function RowPeek({ row, back }) {
         </Fragment>)}
       </dl>
       {!row.fields.length && <p class="sub">Nothing to edit on this row.</p>}
-      <div class="fu-pf"><span class="sub">Checked again by the tracker when you apply.</span><button type="button" class="btn sm" onClick={back}>Done</button></div>
+      <div class="fu-pf"><span class="sub">Checked again by your project record when you save.</span><button type="button" class="btn sm" onClick={back}>Done</button></div>
     </div>
   );
 }
@@ -124,7 +124,7 @@ function Row({ row, marker }) {
         </button>
         {row.notes.map(n => <div key={n} class="fu-q">{n}</div>)}
         {(row.lock || row.invalid) && <div class={row.invalid ? "fu-bad" : "fu-q"} id={`fun-${row.key}`}>
-          {row.invalid ? `Can't be applied: ${row.invalid}` : row.lock === "hedged" ? "Tentative: confirm it first. Change the milestone itself once it's confirmed." : ""}</div>}
+          {row.invalid ? `Can't be saved: ${row.invalid}` : row.lock === "hedged" ? "Tentative: confirm it first. Change the milestone itself once it's confirmed." : ""}</div>}
         {open && <RowPeek row={row} back={back} />}
       </div>
     </li>
@@ -196,7 +196,7 @@ export function FindUpdates({ path, noteEl, p, onClose, onMarks }) {
         })}
         <div class="fu-ft">
           <button type="button" class="btn primary" id="fuApply" disabled={!ticked || !!saving} onClick={() => fuApply("apply")}>
-            {saving === "apply" ? "Applying…" : `Apply ${ticked} change${ticked === 1 ? "" : "s"}`}</button>
+            {saving === "apply" ? "Saving…" : `Save ${ticked} change${ticked === 1 ? "" : "s"}`}</button>
           <button type="button" class="btn" id="fuLater" disabled={!ticked || !!saving} onClick={() => fuApply("later")}>Save for later</button>
           <span class="sub">Save for later puts them in Review</span>
         </div>

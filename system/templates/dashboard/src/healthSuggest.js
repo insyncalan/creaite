@@ -73,6 +73,6 @@ export function hsCardHtml(d, reason) {
     ${diff ? `<div class="hsg-diff" role="note">${esc(diff)}</div>` : ""}
     <textarea id="hsgReason" class="hsg-reason" aria-label="Suggested reason">${esc(reason)}</textarea>
     ${hsEvidenceHtml(d.evidence)}
-    <div class="drnote">A draft from the tracker. Nothing is saved until you press Save.</div>
+    <div class="drnote">A draft from your project record. Nothing is saved until you press Save.</div>
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-hsdo="reject">Reject</button><button type="button" class="btn" data-hsdo="use">Use</button><button type="button" class="btn primary" data-hsdo="save">Save</button></div></div>`;
 }

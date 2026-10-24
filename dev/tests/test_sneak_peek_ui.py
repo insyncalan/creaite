@@ -411,7 +411,7 @@ class MoreFields(Case):
         self.box()
         self.say("add an action for Tom to confirm the test dates, due Friday")
         self.assertIn("New action", self.out())
-        self.assertIn("ID given when applied", self.out())
+        self.assertIn("ID given when saved", self.out())
         before = len(self.v.rows("actions"))
         b.key("Enter")
         self.done()

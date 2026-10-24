@@ -456,7 +456,7 @@ def tracker_candidates(doc):
         try:
             row = item_lookup(ref)
         except Exception as e:        # fails closed: the page can't be compared with the tracker
-            raise PageRefused("the tracker couldn't be read to check the page") from e
+            raise PageRefused("your project record couldn't be read to check the page") from e
         cand += [row.get(k) for k in ITEM_WORDS if row and isinstance(row.get(k), str)]
     return cand
 

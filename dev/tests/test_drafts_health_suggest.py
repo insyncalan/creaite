@@ -127,7 +127,7 @@ class Suggest(unittest.TestCase):
         self.assertEqual(ids, {act, risk})
         texts = " | ".join(s["text"] for s in c["sources"])
         self.assertIn("Access to your data is late", texts)
-        for internal in ("Test licences", "Go-live moves", "UAT start slipped", "The tracker's criteria give", "Health was last set"):
+        for internal in ("Test licences", "Go-live moves", "UAT start slipped", "Your project record's criteria give", "Health was last set"):
             self.assertNotIn(internal, texts)
             self.assertNotIn(internal, c["prompt"])
         self.assertIn("A client will read", c["prompt"])

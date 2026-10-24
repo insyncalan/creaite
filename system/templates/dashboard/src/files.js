@@ -103,7 +103,7 @@ export function filesOpened(){ if(FSEEN){ FNEW.clear(); FSEEN=new Set(FILES.map(
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootFiles0069(){
 window.addEventListener("focus",()=>{ if(shared.VIEW==="files"||shared.VIEW==="intake-review") refreshFiles(false); });
-$("#filesRefresh").onclick=()=>{ refreshFiles(true); if(!SERVED) snack("Refresh needs the live server; this page shows the file list of the last build"); };
+$("#filesRefresh").onclick=()=>{ refreshFiles(true); if(!SERVED) snack("Refresh needs creaite to be running; this page shows the file list of the last build"); };
 $("#filesTbl").addEventListener("click",e=>{ const mb=e.target.closest("[data-moveback]"); if(mb){ moveBack(mb.dataset.moveback,mb.dataset.mbkind); return; } const tr=e.target.closest("tr[data-fp]"); if(!tr||e.target.closest("a,button")) return; shared.FSELFILE=tr.dataset.fp; $$("#filesTbl tr[data-fp]").forEach(r=>r.classList.toggle("sel",r===tr)); });
 }
 /* BL-331: Move back one archived report or minutes. The server builds the move (only a file the archive moved, back to its own
@@ -111,7 +111,7 @@ $("#filesTbl").addEventListener("click",e=>{ const mb=e.target.closest("[data-mo
    #255 (Alan, 20-10-2026): a deleted note's Move back (kind "notes") is the click itself: the server moves it at once
    (/api/files/move-back/now, the same checks and the same one-time approval inside the server, no card) and the toast has Undo.
    A server from before #255 doesn't know that route: the note's Move back then goes on the card as before. */
-export async function moveBack(path,kind){ if(!viaServer()){ snack("Moving a file back needs the live server"); return; }
+export async function moveBack(path,kind){ if(!viaServer()){ snack("Moving a file back needs creaite to be running"); return; }
   if(kind==="notes"){ const n=await api("/api/files/move-back/now",{path});
     if(n.ok&&n.moved){ await refreshFiles(true); snack(oneLine(n.message),async()=>{ await undoApply(n.apply_id); await refreshFiles(true); }); return; }
     if(n.message!==OLDSERVER){ snack(oneLine(n.message||"It couldn't be moved back")); return; } }   /* an older server: on to the card */
