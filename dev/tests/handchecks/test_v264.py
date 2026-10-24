@@ -1,6 +1,7 @@
 """creaite 2.6.4's hand checks, automated against a vault made from the release zip (the fictional demo portfolio: Falcon Data
 Platform and the rest). One check per item, `test_cNN_...`, its docstring quoting what the item must do. DRAFT, written from the issue
-texts and Team Cap's findings of 24-10-2026 while the plain notes (dev/release-notes/2.6.4-plain.md) were not posted: the numbers are the
+texts and Team Cap's findings of 24-10-2026 while the plain notes (dev/release-notes/2.6.4-plain.md) were not posted; brought up to
+v264-line c62ff35b (#334 off by default, #352 Today's stale line gone, M1 fixed by the 345 diff): the numbers are the
 items in order and the PM can number them in; the wording of the plain-words checks (11, 12) follows dev/PLAIN-WORDS.md and the Help
 diff, and is to be confirmed against the plain notes.
 
@@ -21,7 +22,7 @@ diff, and is to be confirmed against the plain notes.
   14  #333  Another project's item is marked a possible duplicate only on a close match
   15  #333  The toast counts the items the apply wrote, not the rows ticked                           EXPECTED FAILURE (deferred, guarded)
   16  #345  expect on every deciding route: reject, Approve instead, repeat, retarget and Approve minutes refuse a missing or stale one
-  17  #345  /api/review/assign names the item (expect)                                                EXPECTED FAILURE (M1)
+  17  #345  /api/review/assign names the item (expect)                                                (fixed in the 345 diff; Team Cap M1)
   18  #346  The day's "Runs creaite started" chat carries nothing into a fresh run
   19  #346  A run that fails to set up leaves no record and the server is not left "busy"
   20  #334  Over budget (confirm): the card appears and the typed ask is refused plainly; Run anyway goes through; nothing is echoed
@@ -32,11 +33,15 @@ diff, and is to be confirmed against the plain notes.
   25  #348  The profile card with the name set to a colleague in the register shows nothing of theirs as yours
   26  #292  No file path is on screen (Files' tooltip, the project's Settings page, Health's detail lines)  EXPECTED FAILURE
   27  #334  The new report scripts (ai_budget.py, start_tokens_report.py) are classified read only in reach.py (test_record_commands)
+  28  #334  The budget is OFF by default: over any use, in confirm and in stop, nothing is held, warned or refused
+  29  #334  The Usage tab says the budget is off; in the ask panel a typed request is sent with no budget card or line (Chrome)
+  30  #352  Today shows no stale-updates line and no Draft updates button, at 1400 and 900 px; the draft stays in Work
 
 How a check is wired (every class that changes data has a vault of its own, made from the zip, so nothing a check changes reaches another):
-  Design264, Words264, Figures264  the shared hand-check vault and Chrome; nothing is changed
-  Item264, Profile264, Card264     a vault of its own, its server and Chrome
+  Design264, Words264, Figures264, Today264  the shared hand-check vault and Chrome; nothing is changed (Today264 sets the page's own data and puts it back)
+  Item264, Profile264, Card264, UsageOff264  a vault of its own, its server and Chrome (UsageOff264: the budget never switched on)
   Routes264, Budget264             a vault of its own and its live server (the page's own token), no browser; Budget264's Claude is a stand-in
+                                   (the budget is OFF by default: its checks switch it on the way Settings does; check 28 leaves it off)
   Commands264, Extraction264, Runs264  a vault of its own and the engine's own code run in it (Runs264: a stand-in for the thread and the process)
 
 The guarded parts (#345, #346, #334 and the reach.py entries) are the 2.6.4 chain: dev/proposals/GUARDED-2.6.4.chain is empty on the
@@ -83,7 +88,7 @@ REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 DASH = REPO / "system/templates/dashboard/src"
 
-KIND = {n: "scriptable" for n in range(1, 28)}
+KIND = {n: "scriptable" for n in range(1, 31)}
 LIVE_ONLY = {}        # check 24 runs on the stand-in; a real model over a real week's use is Alan's own
 
 
@@ -314,6 +319,13 @@ class Engine264(HandcheckCase):
         return self.py("import build_dashboard as b, json\nd = json.load(open('system/staging/%s'))\n"
                        "ref = %s\nprint(json.dumps(b.block_fp(d[ref]) if isinstance(ref, str) else "
                        "b.item_fp(next(i for i in d['items'] if i['n'] == ref))))" % (name, json.dumps(ref)))
+
+    def minutes_body(self, name, own=()):
+        """What the page sends with Approve minutes (#345): the minutes' fingerprint (`expect`) and one for every item it will approve
+        (`expects`, {number as text: fingerprint}): the group's and the ticked ones in `own`."""
+        return self.py("import build_dashboard as b, review, json\nd = json.load(open('system/staging/%s'))\nown = %s\n"
+                       "print(json.dumps({'expect': b.block_fp(d['meeting']), 'expects': {str(i['n']): b.item_fp(i) for i in d['items'] "
+                       "if review.minutes_group(i) == 'group' or i['n'] in own}}))" % (name, json.dumps(list(own))))
 
     def take_out(self, name, text):
         """Take an item out of a proposal and number the rest again (the list moves on under an open page)."""
@@ -729,8 +741,8 @@ class Routes264(Engine264):
     @needs("expect")
     def test_c16_every_route_that_decides_an_item_needs_its_fingerprint(self):
         """16. (#345) /api/review/reject, Approve instead (/api/review/rejected), /api/review/repeat, /api/review/retarget and
-        /api/minutes/approve each refuse a request without `expect`, with a malformed one and with another item's (the list moved on) in
-        one plain sentence, deciding nothing; the right one goes through to review.py; Undo and a new reason need none; several rows
+        /api/minutes/approve each refuse a request without `expect` (Approve minutes: also without `expects`, one for every item it
+        approves), with a malformed one and with another item's (the list moved on) in one plain sentence, deciding nothing; the right one goes through to review.py; Undo and a new reason need none; several rows
         are all or none."""
         # reject
         name = self.mail_proposal(["Alpha lantern check", "Bravo anchor weigh", "Charlie gazebo paint"])
@@ -771,15 +783,23 @@ class Routes264(Engine264):
             res = self.post(path, dict(file=name2, ref=2, expect=fp2, **extra))[1]
             for words in (MISSING, CHANGED, BAD):
                 self.assertNotIn(words, res.get("message", ""), (path, res))            # review.py answers (not a repeat; no such item)
-        # Approve minutes
+        # Approve minutes: the minutes' fingerprint and one for every item it approves
         name3 = self.minutes_proposal(["Foxtrot ladder count"])
         before = self.staging(name3).read_bytes()
         body = {"file": name3, "group": True, "own": []}
+        good = self.minutes_body(name3)
+        self.assertTrue(good["expects"], "the minutes have a group item to name")
         self.declined(self.post("/api/minutes/approve", body)[1], MISSING, "approve minutes")
-        self.declined(self.post("/api/minutes/approve", dict(body, expect="x"))[1], BAD, "approve minutes")
-        self.declined(self.post("/api/minutes/approve", dict(body, expect=self.fingerprint(name3, 1)))[1], CHANGED, "approve minutes, an item's")
+        self.declined(self.post("/api/minutes/approve", dict(body, expect="x", expects=good["expects"]))[1], BAD, "approve minutes")
+        self.declined(self.post("/api/minutes/approve", dict(body, expect=self.fingerprint(name3, 1), expects=good["expects"]))[1], CHANGED,
+                      "approve minutes, an item's")
+        self.declined(self.post("/api/minutes/approve", dict(body, expect=good["expect"]))[1], MISSING, "approve minutes, no fingerprint for the item")
+        self.declined(self.post("/api/minutes/approve", dict(body, expect=good["expect"], expects={k: "zz" for k in good["expects"]}))[1], BAD,
+                      "approve minutes, a malformed item fingerprint")
+        self.declined(self.post("/api/minutes/approve", dict(body, expect=good["expect"], expects={k: self.fingerprint(name3, "meeting") for k in good["expects"]}))[1],
+                      CHANGED, "approve minutes, another's item fingerprint")
         self.assertEqual(self.staging(name3).read_bytes(), before, "the minutes were not touched")
-        res = self.post("/api/minutes/approve", dict(body, expect=self.fingerprint(name3, "meeting")))[1]
+        res = self.post("/api/minutes/approve", dict(body, **good))[1]
         for words in (MISSING, CHANGED, BAD):
             self.assertNotIn(words, res.get("message", ""), f"the minutes' own checks answer: {res}")
         # the list moved on under an open page: Bravo's number now names Charlie
@@ -792,7 +812,7 @@ class Routes264(Engine264):
         self.note(16, "reject, Approve instead, repeat, retarget and Approve minutes: missing, malformed and another item's expect all refused "
                       "in plain words, nothing decided; the right one reaches review.py")
 
-    @known("Team Cap M1: review_assign_route (/api/review/assign) decides by file and ref alone; the 345 diff does not touch it")
+    @needs("expect")
     def test_c17_assign_names_the_item(self):
         """17. (#345) /api/review/assign, which moves a pending item to another project, refuses a request without `expect` and one with
         another item's, like the other routes: it moves nothing."""
@@ -817,7 +837,7 @@ class Routes264(Engine264):
         d["items"][1]["id"] = "FAL-A-999"                              # gone by the time of the apply
         f.write_text(json.dumps(d), encoding="utf-8")
         before = self.sql("SELECT count(*) AS n FROM actions")[0]["n"]
-        code, res = self.post("/api/minutes/approve", {"file": name, "group": True, "own": [], "expect": self.fingerprint(name, "meeting")})
+        code, res = self.post("/api/minutes/approve", dict({"file": name, "group": True, "own": []}, **self.minutes_body(name)))
         wrote = self.sql("SELECT count(*) AS n FROM actions")[0]["n"] - before
         self.note(15, f"ticked 2, the apply wrote {wrote} new item (and held the update back); the answer says approved {res.get('approved')}")
         self.assertTrue(res.get("ok"), res)
@@ -909,8 +929,9 @@ out({"type": "result", "result": "Stand-in reply.", "session_id": "sess-hc264"})
 
 
 class Budget264(Engine264):
-    """Checks 20 to 23. A vault and a live server whose Claude is the stand-in above; the budget is set to 1 dollar and the week's use
-    is written to the usage log (counts only, as the run monitor writes it)."""
+    """Checks 20 to 23 and 28. A vault and a live server whose Claude is the stand-in above. The budget is OFF by default (#334, 96d64e70),
+    so each check switches it on first the way Settings does (`switch_on`: settings_catalogue.save), sets it to 1 dollar and writes
+    the week's use to the usage log (counts only, as the run monitor writes it). Check 28 leaves it off."""
     with_server = True
 
     @classmethod
@@ -924,9 +945,19 @@ class Budget264(Engine264):
         return sum(1 for ln in p.read_text().splitlines() if "--" in json.loads(ln) and "hc264-ask" in json.loads(ln)[json.loads(ln).index("--") + 1]) \
             if p.exists() else 0
 
+    def switch_on(self, **cfg):
+        """Switch the weekly budget on the way Settings does (settings_catalogue.save: a backup, the file written, one log line per key).
+        The budget is OFF until this is done (#334, 96d64e70)."""
+        keys = {f"ai_budget.{k}": v for k, v in dict({"enabled": True}, **cfg).items()}
+        self.py("import settings_catalogue as sc\nsc.save(%r)\nprint(1)" % (keys,))
+
     def week(self, spent, limit=1, at_limit="confirm", unit="dollars", enabled=True):
-        """Set the budget and write this week's use (and last week's, which must not count) to the usage log."""
-        self.set_setting("ai_budget", {"enabled": enabled, "unit": unit, "weekly_dollars": limit, "at_limit": at_limit})
+        """Set the budget and write this week's use (and last week's, which must not count) to the usage log. `enabled` False leaves the
+        budget as it is by default (off) with the same limits written, to show that off holds nothing whatever the limits say."""
+        if enabled:
+            self.switch_on(unit=unit, weekly_dollars=limit, at_limit=at_limit)
+        else:
+            self.set_setting("ai_budget", {"enabled": False, "unit": unit, "weekly_dollars": limit, "at_limit": at_limit})
         now = (self.now or str(date.today()))[:10]
         monday = date.fromisoformat(now) - timedelta(days=date.fromisoformat(now).weekday())
         rows = [{"at": f"{monday.isoformat()}T09:00:00", "kind": "ask", "cost_usd": spent, "input": 1000, "output": 500},
@@ -938,7 +969,7 @@ class Budget264(Engine264):
 
     @needs("budget")
     def test_c20_over_budget_in_confirm_mode_asks_first_and_refuses_plainly(self):
-        """20. (#334) With this week's use over the budget and "at the limit" on confirm, a typed ask is answered 429 with plain words (the
+        """20. (#334) With the budget switched on, this week's use over it and "at the limit" on confirm, a typed ask is answered 429 with plain words (the
         budget used up, the Monday it starts again, "The buttons in the dashboard still work", "Run this request anyway?"), the figures
         and a can_continue flag; no run is started and the message is not echoed; with Run anyway (over_budget true, the page's own
         click) it goes through; under budget nothing is held; last week's use does not count."""
@@ -965,7 +996,7 @@ class Budget264(Engine264):
 
     @needs("budget")
     def test_c21_stop_mode_refuses_but_never_the_approval_path(self):
-        """21. (#334) With "at the limit" on stop, a typed ask is refused even with Run anyway and says to raise the budget in Settings;
+        """21. (#334) With the budget switched on and "at the limit" on stop, a typed ask is refused even with Run anyway and says to raise the budget in Settings;
         a confirmed request (the answer to a question the run asked) goes through; Review, Apply and Undo are never blocked: a pending
         item is approved over budget."""
         self.week(spent=5, at_limit="stop")
@@ -984,7 +1015,7 @@ class Budget264(Engine264):
         self.note(21, "stop: refused with Run anyway, can_continue false; confirmed runs; Review approved an item over budget")
 
     def test_c22_the_week_the_warning_and_the_counts(self):
-        """22. (#334) The week runs from Monday 00:00 to the next Monday 00:00; the Usage figures (ai_budget.py, GET /api/usage) say used,
+        """22. (#334) With the budget switched on, the week runs from Monday 00:00 to the next Monday 00:00; the Usage figures (ai_budget.py, GET /api/usage) say used,
         the budget and the week's end, warn from 80% and hold at 100%; they are counts and dates only (no text of a message, a name or a
         path)."""
         self.week(spent=0.5)
@@ -1011,9 +1042,9 @@ class Budget264(Engine264):
         self.note(22, f"ok/warn/over at 50/85/100%; Monday starts a new week; line: {usage['budget']['line']}")
 
     def test_c23_an_ask_run_cannot_raise_its_own_budget(self):
-        """23. (#334) The budget is a setting in settings.json and its count is the usage log. In an ask creaite run (the guard hook, which
+        """23. (#334) The budget (off until switched on) is a setting in settings.json and its count is the usage log. In an ask creaite run (the guard hook, which
         refuses whatever a settings file allows) a direct write of settings.json or of the usage log is refused, so is the setting
-        command, and a change through filechange.py is a sensitive change that waits on Alan's card; the budget code and its tests
+        command (a new limit, or switching the budget off), and a change through filechange.py is a sensitive change that waits on Alan's card; the budget code and its tests
         are on the never-change list. The dashboard's own Save (the page's token) is the only way."""
         r = self.py("""
 import reach
@@ -1021,6 +1052,7 @@ def hook(tool, inp, mode):
     ok, why = reach.hook_decision(tool, inp, mode, 'r-hc264')
     return [ok, why]
 set_cmd = 'system/scripts/run propose.py setting ai_budget.weekly_dollars 9999'
+off_cmd = 'system/scripts/run propose.py setting ai_budget.enabled false'
 out = {}
 for mode in ('ask', 'confirmed'):
     out[mode] = {
@@ -1028,6 +1060,7 @@ for mode in ('ask', 'confirmed'):
       'edit_settings': hook('Edit', {'file_path': 'system/config/settings.json', 'old_string': 'a', 'new_string': 'b'}, mode),
       'write_usage': hook('Write', {'file_path': 'system/staging/run-usage.jsonl', 'content': ''}, mode),
       'setting_command': hook('Bash', {'command': set_cmd}, mode),
+      'switch_off_command': hook('Bash', {'command': off_cmd}, mode),
       'edit_budget_code': hook('Write', {'file_path': 'system/scripts/ai_budget.py', 'content': ''}, mode)}
 out['classify_settings'] = list(reach.classify('system/config/settings.json', 'change'))
 out['classify_code'] = list(reach.classify('system/scripts/ai_budget.py', 'change'))
@@ -1042,6 +1075,39 @@ print(json.dumps(out))""")
         self.assertEqual(r["classify_code"][0], "never", "the budget's code is never changed by an ask run")
         self.note(23, "settings.json, the usage log, the setting command and ai_budget.py all refused to an ask run; settings.json is sensitive (card)")
 
+
+    @needs("budget")
+    def test_c28_the_budget_is_off_by_default_and_off_holds_nothing(self):
+        """28. (#334) The weekly AI budget is OFF until it is switched on: the shipped default is off and in a vault that never set it
+        its status says off, and with this week's use far over any limit, in confirm and in stop, a typed ask is answered (200, never 429), a
+        run starts, the answer carries no budget line, and GET /api/usage reports it off with no state, so the Usage tab can say so. Review
+        is untouched. Switched on (the way Settings does it) the same use holds."""
+        f = self.vault / "system/config/settings.json"                              # the earlier checks switched it on: back to untouched
+        cfg = json.loads(f.read_text(encoding="utf-8"))
+        cfg.pop("ai_budget", None)
+        f.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+        shipped = json.loads((self.vault / "system/templates/settings-defaults.json").read_text(encoding="utf-8"))["ai_budget"]
+        self.assertIs(shipped["enabled"], False, "the shipped default is off")
+        st = self.py("import ai_budget\nprint(json.dumps(ai_budget.status()))")
+        self.assertIs(st["enabled"], False, f"a vault that never touched the budget has it on: {st}")
+        for at_limit in ("confirm", "stop"):
+            self.week(spent=500, enabled=False, at_limit=at_limit)                  # 500 dollars against a limit of 1, but the budget is off
+            base = self.started()
+            code, res = self.ask()
+            self.assertEqual(code, 200, f"off ({at_limit}): a typed ask was held: {res}")
+            self.assertNotIn("budget", json.dumps({k: v for k, v in res.items() if k != "stream"}).lower(), res)
+            self.assertNotRegex(res.get("stream", ""), r"(?i)AI budget|Heads-up", f"off ({at_limit}): a budget line was said")
+            self.assertEqual(self.started(), base + 1, f"off ({at_limit}): the run did not start")
+        req = urllib.request.Request(self.base + "/api/usage", headers={"X-Creaite-Token": self.page_token()})
+        usage = json.loads(urllib.request.urlopen(req, timeout=30).read())["budget"]
+        self.assertIs(usage["enabled"], False, usage)
+        self.assertNotIn(usage.get("state"), ("warn", "over"), usage)
+        name = self.mail_proposal(["Mike lighthouse check"])
+        code, res = self.post("/api/review", {"file": name, "ref": 1, "decision": "approved", "modes": [], "expect": self.fingerprint(name, 1)})
+        self.assertTrue(res.get("ok"), res)
+        self.week(spent=500)                                                        # switched on, the same use holds
+        self.assertEqual(self.ask()[0], 429, "switched on, 500 dollars against 1 holds")
+        self.note(28, f"default off ({st['enabled']}); 500 dollars used, limit 1: ask answered in confirm and in stop, no line; usage says enabled {usage['enabled']}; on: 429")
 
     @needs("reach")
     def test_c27_the_new_report_scripts_are_classified_as_read_only(self):
@@ -1065,7 +1131,7 @@ class Card264(HandcheckCase):
 
     @needs("budget")
     def test_c24_the_ask_panel_shows_the_budget_card_and_cancel_starts_nothing(self):
-        """24. (#334) Over budget on confirm, sending a message in the ask panel shows the card "Weekly AI budget" (the plain words, a
+        """24. (#334) With the budget switched on and over budget on confirm, sending a message in the ask panel shows the card "Weekly AI budget" (the plain words, a
         Run anyway button and Cancel); Cancel starts nothing and says it plainly once, and Run anyway runs the request."""
         b, vault = self.b, self.vault
         cfg = vault / "system/config/settings.json"
@@ -1105,6 +1171,44 @@ class Card264(HandcheckCase):
         self.note(24, "card text: " + " ".join(card.split())[:110])
 
 
+class UsageOff264(HandcheckCase):
+    """Check 29. A vault of its own that never switched the budget on: the Usage tab and the ask panel."""
+    own_vault = True
+
+    def test_c29_the_usage_tab_says_the_budget_is_off_and_the_panel_holds_nothing(self):
+        """29. (#334) With the budget as the zip gives it (off) and this week's use far over any limit, the Usage tab says the weekly AI
+        budget is off, as it is until you switch it on (and where to switch it on), draws no budget bar, and a typed request in the ask
+        panel is sent with no "Weekly AI budget" card and no budget line (the answer is the stand-in's). At 1400 and 900 px."""
+        b, vault = self.b, self.vault
+        data = json.loads((vault / "system/config/settings.json").read_text(encoding="utf-8"))
+        self.assertIsNot((data.get("ai_budget") or {}).get("enabled"), True, "the vault's settings have the budget on")
+        monday = date.fromisoformat(self.now[:10]) - timedelta(days=date.fromisoformat(self.now[:10]).weekday())
+        (vault / "system/staging/run-usage.jsonl").write_text(json.dumps({"at": f"{monday.isoformat()}T09:00:00", "kind": "ask", "cost_usd": 500}) + "\n")
+        for w in (1400, 900):
+            b.resize(w, 1000)
+            b.eval("go('activity')")
+            b.wait("!!document.querySelector('#actTabU')", 15)
+            b.click("#actTabU")
+            b.wait("!!document.querySelector('#actUsage [data-budget-off]')", 20)
+            text = b.eval("document.querySelector('#actUsage [data-budget-off]').textContent")
+            self.assertRegex(text, r"weekly AI budget is off, as it is until you switch it on", f"at {w} px: {text}")
+            self.assertRegex(text, r"Settings, Advanced", text)
+            self.assertFalse(b.eval("!!document.querySelector('#actUsage .ubudget')"), f"a budget bar is drawn at {w} px")
+            self.assertTrue(b.eval("document.documentElement.scrollWidth<=document.documentElement.clientWidth+1"), f"sideways scroll at {w} px")
+        b.resize(1400, 1000)
+        b.eval("openChat()")
+        b.wait("document.getElementById('chat').classList.contains('on')", 10)
+        b.eval("(()=>{ const t=document.getElementById('chIn'); t.value='hc264 what is due'; t.dispatchEvent(new Event('input',{bubbles:true})); return true; })()")
+        b.click("#chSend")
+        b.wait("document.querySelectorAll('#chLog .msg.a').length>0", 40)
+        b.wait("document.getElementById('chSend').dataset.tip==='Send'", 40)
+        self.assertFalse(b.eval("!!document.querySelector('#chLog .confirm')"), "a budget card was shown with the budget off")
+        log = b.eval("document.getElementById('chLog').innerText")
+        self.assertNotRegex(log, r"(?i)AI budget|Heads-up", log[:300])
+        self.note(29, "Usage: 'The weekly AI budget is off, as it is until you switch it on…' at 1400 and 900; 500 dollars used, a typed request runs with no card or line")
+
+
+
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 # #348: the profile card
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -1134,6 +1238,52 @@ class Profile264(HandcheckCase):
         b.pump(0.3)
         self.assertIn(sara["email"], b.eval("document.getElementById('profileCard').innerText"), "claimed, the row is shown as yours")
         self.note(25, f"not claimed: no email, organisation or role shown, button '{button}'; claimed: her details shown")
+
+
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# #352: Today's stale-updates line
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+class Today264(HandcheckCase):
+    """Check 30. The shared hand-check vault and Chrome; the page's own data is set (nothing is saved) so every open action is stale."""
+
+    def test_c30_today_has_no_stale_updates_line_and_the_draft_stays_in_work(self):
+        """30. (#352) With every open action stale (no update for more than the stale threshold), Today's My Commitments shows no
+        "N open actions have had no update for 7 days" line and no "Draft updates" button, at 1400 and 900 px, with no sideways scroll;
+        the draft stays: selecting two actions in Work offers Draft updates in the bulk bar."""
+        b, seen = self.b, {}
+        b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
+        try:
+            for w in (1400, 900):
+                with width(self, w, 1000):
+                    b.eval("window.__upd = A.map(x=>x.upd_at); A.forEach(x=>x.upd_at='2026-01-01'); true")
+                    try:
+                        self.screen("today")
+                        b.eval("renderToday(); true")
+                        b.pump(0.8)
+                        seen[w] = b.eval("({stale:!!document.querySelector('#drStale, #v-today [data-drstale]'), "
+                                         "line:/had no update for/.test(document.getElementById('v-today').textContent), "
+                                         "btn:[...document.querySelectorAll('#v-today button, #v-today a')].some(e=>/^\\s*Draft updates\\s*$/.test(e.textContent)), "
+                                         "open:A.filter(x=>OPENST(x.st)).length, "
+                                         "side:document.documentElement.scrollWidth>document.documentElement.clientWidth+1})")
+                    finally:
+                        b.eval("A.forEach((x,i)=>{ x.upd_at=window.__upd[i]; }); true")
+                    self.assertGreater(seen[w]["open"], 0, "the demo has open actions")
+                    self.assertFalse(seen[w]["stale"], f"the stale block is on Today at {w} px")
+                    self.assertFalse(seen[w]["line"], f"'had no update for' is on Today at {w} px")
+                    self.assertFalse(seen[w]["btn"], f"a Draft updates button is on Today at {w} px")
+                    self.assertFalse(seen[w]["side"], f"Today scrolls sideways at {w} px")
+        finally:
+            b.eval("HL.clear(); hlPaint(); hlBar(); true")
+        self.screen("work")
+        b.eval("WT='actions'; renderWork(); true")
+        b.wait("document.querySelector('#workTbl tr[data-row]')", 15)
+        ids = b.eval("A.filter(x=>OPENST(x.st)).slice(0, 2).map(x=>x.id)")
+        b.eval("HL.clear(); %s.forEach(i=>HL.set(i,'actions')); hlPaint(); hlBar(); true" % json.dumps(ids))
+        b.wait("document.querySelector('#wbulk [data-drbulk]')", 15)
+        self.assertIn("Draft updates", b.eval("document.querySelector('#wbulk [data-drbulk]').textContent"))
+        b.eval("HL.clear(); hlPaint(); hlBar(); true")
+        self.note(30, f"Today at 1400 and 900 px with {seen[1400]['open']} stale open actions: no line, no Draft updates button, no sideways scroll; Work's bulk bar still has Draft updates")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
