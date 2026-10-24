@@ -25,6 +25,32 @@ REF_PATH = "system/templates/creaite-reference.md"
 DIFFS = [REPO / "dev/proposals/338/creaite-rules.diff", REPO / "dev/proposals/338/creaite-rules.after-chain.diff"]
 CHAIN_MARK = "People you follow first"          # the 2.6.2 VIP/follow rules diff is in the file
 
+# #347 (v2.6.6): dev/proposals/347/creaite-rules.md.diff changes two trigger cells of the skills table (the plain words "check my mail",
+# "save", "undo last save"). It adds words and removes none, so no "never" sentence changes. The test takes the 347 wording off
+# before it works out the 338 state (the 338 diffs were cut before it and do not apply over it) and puts it back on both sides, so the
+# comparison is the same whichever way round the tree is. SUBS_347 is checked against the real diff (test_the_347_substitutions...).
+RULES_347 = REPO / "dev/proposals/347/creaite-rules.md.diff"
+MARK_347 = '"check my mail", "check my mail for ABC", "sweep"'
+SUBS_347 = [
+    ('"sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the <subject> thread", "refresh calendar"',
+     '"check my mail", "check my mail for ABC", "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the <subject> thread", "refresh calendar"'),
+    ('"reject…", "apply", "undo last apply", "import excel"',
+     '"reject…", "save", "apply", "undo last save", "undo last apply", "import excel"'),
+]
+STATE = {"347": False}         # whether the tree holds the 347 wording (set by setUpClass; fixture() reads it)
+
+
+def with_347(text):
+    for old, new in SUBS_347:
+        text = text.replace(new, old).replace(old, new)         # idempotent
+    return text
+
+
+def without_347(text):
+    for old, new in SUBS_347:
+        text = text.replace(new, old)
+    return text
+
 FAMILIES = {
     'Header': [
         'Each update replaces this file; never edit it in a live vault.',
@@ -393,6 +419,15 @@ def git_apply(text, diff, reverse=False):
 def states():
     """(original, slim) for the tree's state, whichever way round the tree is."""
     tree = RULES.read_text(encoding="utf-8")
+    STATE["347"] = MARK_347 in tree
+    if STATE["347"]:
+        tree = without_347(tree)          # work out the 338 state on the wording the 338 diffs were cut on
+        orig, slim = _states(tree)
+        return with_347(orig), with_347(slim)
+    return _states(tree)
+
+
+def _states(tree):
     if "creaite-reference.md" in tree:
         for diff in DIFFS:
             orig = git_apply(tree, diff, reverse=True)
@@ -428,6 +463,8 @@ def guard_paragraph(text):
 def fixture(chain):
     """name -> whole sentences for the state, state-specific wording included."""
     out = {k: list(v) for k, v in FAMILIES.items()}
+    if STATE["347"]:                      # the cx-review trigger cell as the 347 diff words it
+        out["Skills and commands"] = [with_347(x) for x in out["Skills and commands"]]
     for k, v in (CHAIN_FAMILIES if chain else LINE_FAMILIES).items():
         out.setdefault(k, []).extend(v)
     return out
@@ -486,6 +523,16 @@ class RetainedRules(unittest.TestCase):
         cls.chain = CHAIN_MARK in cls.orig
         cls.ref = REFERENCE.read_text(encoding="utf-8")
 
+    def test_the_347_substitutions_are_what_the_347_diff_does(self):
+        """SUBS_347 stands in for the 347 diff: applied to the tree's rules (without the 347 wording) the real diff must give the
+        same file (so the substitutions cannot drift from the diff)."""
+        if not RULES_347.exists():
+            self.skipTest("no 347 diff in this tree")
+        plain = without_347(RULES.read_text(encoding="utf-8"))
+        applied = git_apply(plain, RULES_347)
+        self.assertIsNotNone(applied, "dev/proposals/347/creaite-rules.md.diff no longer applies to the rules")
+        self.assertEqual(applied, with_347(plain))
+
     def test_the_non_negotiables_and_the_development_guard_are_unchanged(self):
         self.assertNotEqual(section(self.orig, "Non-negotiables"), "")
         self.assertEqual(section(self.slim, "Non-negotiables"), section(self.orig, "Non-negotiables"))
@@ -526,11 +573,12 @@ class RetainedRules(unittest.TestCase):
         self.assertIn("YYYY-MM-DD", self.slim)
 
     def test_the_diffs_apply_forward_and_reverse(self):
-        self.assertEqual(git_apply(self.orig, DIFFS[1 if self.chain else 0]), self.slim)
-        self.assertEqual(git_apply(self.slim, DIFFS[1 if self.chain else 0], reverse=True), self.orig)
+        orig, slim = without_347(self.orig), without_347(self.slim)      # the 338 diffs were cut before the 347 wording
+        self.assertEqual(git_apply(orig, DIFFS[1 if self.chain else 0]), slim)
+        self.assertEqual(git_apply(slim, DIFFS[1 if self.chain else 0], reverse=True), orig)
 
     def test_the_line_diff_adds_no_chain_wording(self):
-        line_slim = git_apply(self.orig, DIFFS[0]) if not self.chain else None
+        line_slim = git_apply(without_347(self.orig), DIFFS[0]) if not self.chain else None
         if line_slim is not None:
             for word in ("Follow check", "Create draft in Outlook", "People you follow"):
                 self.assertNotIn(word, line_slim)
