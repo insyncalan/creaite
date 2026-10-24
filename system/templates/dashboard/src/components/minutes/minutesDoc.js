@@ -110,6 +110,22 @@ export function leftOut(doc, held) {
 
 const DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
 const FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
+const DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+
+/** #333: the figures a line says that its turn doesn't. A date shown as 20-11-2026 is one figure and is said when the turn has
+    its day and month in words ("20th of November") or in numbers; it is never split into 20, 11 and 2026.
+    @param {string} text @param {string} said the turn's words @returns {string[]} */
+export function figuresMissing(text, said) {
+  const low = String(said || "").toLowerCase(), out = new Set();
+  const rest = String(text || "").replace(DATE_FIG, (all, d, m) => {
+    const word = MONTHS[+m - 1] || "", day = new RegExp(`\\b0?${+d}(?:st|nd|rd|th)?\\b`);
+    if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
+    return " ";
+  });
+  for (const f of new Set(rest.match(FIGURE) || [])) if (!said.includes(f)) out.add(f);
+  return [...out];
+}
 
 /** The checks on one item row. @param {SheetDoc} doc @param {SheetSection} s @param {any} r @param {number} i
     @param {any[]} turns @param {(name: string) => boolean} unknown @returns {Check[]} */
@@ -131,7 +147,7 @@ function rowChecks(doc, s, r, i, turns, unknown) {
     out.push({ id: `due:${r.ref}`, section: s.id, row: i, field: "due", quote: v.due_date ? fd(v.due_date) : "Not set", kind: "due", n, turn: turn.n, words: said[0],
       note: `${turn.who || "Someone"} said “${said[0]}”: ${deadlineDay(meant)}.`, last: v.due_date ? `The row says ${deadlineDay(v.due_date)}.` : "The row has no deadline.",
       actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }] });
-  if (turn) for (const f of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f))
+  if (turn) for (const f of figuresMissing(label, turn.text))
     out.push({ id: `fig:${r.ref}:${f}`, section: s.id, row: i, quote: f, kind: "figure", n, turn: turn.n,
       note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f}.`, last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
       actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }] });
@@ -148,7 +164,7 @@ function lineChecks(s, turns) {
   mdLines(s.text || "").forEach((l, i) => {
     const t = lineTag(l, /** @type {TimeTag[]} */ (s.tags || [])), turn = t ? turns.find(x => x.n === t.turn) : null;
     if (!turn) return;
-    for (const f of new Set(l.text.match(FIGURE) || [])) if (!turn.text.includes(f))
+    for (const f of figuresMissing(l.text, turn.text))
       out.push({ id: `fig:${s.id}:${i}:${f}`, section: s.id, line: i, field: "text", quote: f, kind: "figure", turn: turn.n,
         note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f}.`, last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
         actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }] });
