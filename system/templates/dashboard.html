@@ -39267,7 +39267,7 @@ system/scripts/run launch.py agent ${what}`;
               else delete it2.duplicate_of;
             });
           } catch (e4) {
-            snack("Not rejected again: " + e4.message);
+            replies.push({ ok: false, message: e4.message });
           }
         }
       }

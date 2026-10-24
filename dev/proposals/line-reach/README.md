@@ -19,3 +19,8 @@ has a command that writes. The test below holds both to `read` (none of the othe
 Last in the 2.6.4 chain: 345, 346, 334, then this. It touches a different file, so it goes in at any point. Tests:
 `dev/tests/test_reach_line_entries.py` (works with or without the diff in the tree: it puts the diff on a copy of `reach.py`);
 `test_record_commands` passes with it (run on a tree with all four diffs).
+
+## Staging note
+
+The diff lands only together with the two scripts it names, `ai_budget.py` and `start_tokens_report.py` (both from v264-line): the same
+release, and the chain is never cut without them. On their own the entries would list scripts that are not there.

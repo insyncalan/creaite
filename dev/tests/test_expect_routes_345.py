@@ -428,6 +428,22 @@ class UndoWords(unittest.TestCase):
             f.write_text(src.replace(old, "i = -1;"), encoding="utf-8")
             self.assertEqual(self.words(f, [{"ok": False, "message": "no"}], 1), "Rejected again: 1")
 
+    @staticmethod
+    def catch_reports(src):
+        """The in-place path's catch (auto-save off) hands its miss to `replies`, which the final words read."""
+        return "catch(e){ replies.push({ok:false,message:e.message}); }" in src and 'snack("Not rejected again: "+e.message)' not in src
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_a_miss_on_the_in_place_path_is_reported_as_a_miss(self):
+        js = (ROOT / "system/templates/dashboard/src/review.js").read_text(encoding="utf-8")
+        self.assertTrue(self.catch_reports(js))
+        self.assertEqual(self.words(self.SAY, [{"ok": False, "message": "already saved"}], 2), "Not rejected again: already saved")
+
+    def test_mutant_a_catch_that_only_snacks_is_not_seen_by_the_final_words(self):
+        js = (ROOT / "system/templates/dashboard/src/review.js").read_text(encoding="utf-8")
+        mutant = js.replace("catch(e){ replies.push({ok:false,message:e.message}); }", 'catch(e){ snack("Not rejected again: "+e.message); }')
+        self.assertFalse(self.catch_reports(mutant))
+
     def test_the_page_reads_the_replies_and_only_marks_the_rows_rejected_when_all_were(self):
         js = (ROOT / "system/templates/dashboard/src/review.js").read_text(encoding="utf-8")
         self.assertIn('replies.push(await api("/api/review/reject"', js)

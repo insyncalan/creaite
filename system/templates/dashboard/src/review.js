@@ -439,7 +439,7 @@ export async function rjApproveInstead(rows){ if(!viaServer()){ rjOff("Approve i
     if(ap&&ap.ok&&ap.apply_id){ const u=await api("/api/undo",{apply_id:ap.apply_id}); if(!u.ok){ snack("Not undone: "+saidPlain(u.message)); return; } await reloadData();
       for(const {body:b,L} of rjBy(back,x=>({reason:x.was.reason||"",duplicate_of:x.was.duplicate_of||""}))) replies.push(await api("/api/review/reject",{rows:L.map(x=>({file:x.file,ref:x.ref,...rvExp(x)})),...b})); }
     else { for(const x of back){ try{ await editProposal(x.file,data=>{ const it=(data.items||[]).find(i=>i.n===x.ref); if(!it||it.applied) throw new Error("already saved"); it.decision="rejected"; it.decided_in="dashboard";
-        if(x.was.reason) it.reject_reason=x.was.reason; else delete it.reject_reason; if(x.was.duplicate_of) it.duplicate_of=x.was.duplicate_of; else delete it.duplicate_of; }); }catch(e){ snack("Not rejected again: "+e.message); } } }
+        if(x.was.reason) it.reject_reason=x.was.reason; else delete it.reject_reason; if(x.was.duplicate_of) it.duplicate_of=x.was.duplicate_of; else delete it.duplicate_of; }); }catch(e){ replies.push({ok:false,message:e.message}); } } }   /* the final words say it (rejectedAgainWords), never "Rejected again: N" over a miss */
     if(replies.every(r=>r&&r.ok)) rjAddGone(ghosts.filter(g=>back.some(x=>x.key===g.key))); if(S.autoApply) await applyNow(); else await reloadData(); if(shared.VIEW==="activity") rjLoadRecent(); snack(rejectedAgainWords(replies,back.length)); }:null;
   rjSay(text||"Nothing changed",undo);
   if(open.length){ const L=REV.filter(x=>open.includes(rjKey(x))&&!x.done); if(L.length){ if(shared.VIEW!=="intake-review") go("intake-review"); openProposal(L[0].n); } } }
