@@ -1,0 +1,1 @@
+<script>function tok(){const cs=getComputedStyle(document.documentElement);document.querySelectorAll('[data-tok]').forEach(e=>e.textContent=cs.getPropertyValue(e.dataset.tok).trim())}tok();new MutationObserver(tok).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']})</script>

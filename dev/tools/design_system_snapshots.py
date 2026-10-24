@@ -15,13 +15,40 @@ from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
-VIEWS = [("today", "go('today')"), ("work", "go('work')"), ("review", "go('review')"), ("projects", "go('projects')"),
+VIEWS = [("today", "go('today')"), ("work", "go('work')"), ("projects", "go('projects')"),
          ("cockpit", None), ("milestones", None), ("intake", "go('inbox')"), ("files", "go('files')"), ("people", "go('people')"),
          ("activity", "go('activity')"), ("settings", "go('settings')"), ("help", "go('help')")]
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:'
          'wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">')
 TOGGLE = ("<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;"
           "r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>")
+
+
+PARTS = Path(__file__).resolve().parent / "design_system_parts"
+
+
+def shell_pages(files_page, info):
+    """Make gallery.html and blank.html from the files page, so they share the shell (rail, top bar, every other view) with the pages.
+
+    Only the content of #v-files differs, plus the gallery's own chrome style and token script, kept as fragments in design_system_parts/.
+    Returns {file name: text}; the stylesheet link is one folder up from pages/, so it is changed to sit beside the file."""
+    stamp = "commit " + info["commit"] + " (" + info["branch"] + ", VERSION file " + info["version_file"] + ") on " + info["taken"]
+    page = files_page.split("-->\n", 1)[1].replace('href="../style.snapshot.css"', 'href="style.snapshot.css"')
+    i, j = page.index('<section class="view" id="v-files"'), page.index('<section class="view" id="v-activity"')
+
+    def part(name):
+        """Read one fragment."""
+        return (PARTS / name).read_text()
+    link = 'href="style.snapshot.css">'
+    gallery = (page[:i] + part("gallery-files.html") + page[j:]).replace(link, link + part("gallery-style.html"), 1)
+    gallery = gallery.replace("</body>", part("gallery-tail.html") + "</body>")
+    blank = page[:i] + part("blank-files.html") + page[j:]
+    return {
+        "gallery.html": "<!doctype html>\n<!-- The design system gallery: real markup, real classes, drawn by style.snapshot.css. "
+                        "Shell taken from " + stamp + "; the gallery sections inside #v-files are curated by hand and kept in "
+                        "dev/tools/design_system_parts/. -->\n" + gallery,
+        "blank.html": "<!doctype html>\n<!-- A blank page in the real app shell (rail, top bar), drawn by style.snapshot.css, taken from "
+                      + stamp + ". Copy it and build inside #v-files. Alt+D toggles dark. See DESIGN-SYSTEM.md. -->\n" + blank}
 
 
 def git(repo, *a):
@@ -54,6 +81,7 @@ def main():
             "taken from "
             + "commit " + info["commit"] + " (" + info["branch"] + ", VERSION file " + info["version_file"] + ") on " + info["taken"]
             + ". Alt+D toggles dark. Copy this file to start a mockup; see ../README.md.")
+    files_page = None
     v, proc, base = ui_audit.start_server()
     try:
         b = Browser(1400, 1000)
@@ -78,9 +106,14 @@ def main():
                 head = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + FONTS + \
                        '<link rel="stylesheet" href="../style.snapshot.css">'
                 html = html[:html.index("<head>") + 6] + head + html[html.index("</head>"):]
-                (out / "pages" / f"{name}.html").write_text("<!doctype html>\n<!-- " + (note % name) + " -->\n"
-                                                            + html.replace("</body>", TOGGLE + "</body>"))
+                text = "<!doctype html>\n<!-- " + (note % name) + " -->\n" + html.replace("</body>", TOGGLE + "</body>")
+                (out / "pages" / f"{name}.html").write_text(text)
+                if name == "files":
+                    files_page = text
                 print(name, len(html))
+            for fname, text in shell_pages(files_page, info).items():
+                (out / fname).write_text(text)
+                print(fname, len(text))
             print("errors:", list(b.errors)[:3])
         finally:
             b.close()
