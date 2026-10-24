@@ -124,8 +124,8 @@ Plain English works. These are the phrases each skill listens for.
 | Say | What happens |
 |---|---|
 | `process new minutes` | Transcripts become draft minutes and suggested items on Intake. |
-| `sweep` | Outlook and Teams since the last check become suggestions. From 07:00, until it has run that day, Today shows "Mail and Teams not checked yet today" with a **Check now** button that does the same (it needs creaite). |
-| `review` · `apply` | Go through what's pending, then write the approved items to your project record. `undo last apply` reverses it. |
+| `check my mail` | Outlook and Teams since the last check become suggestions (`sweep` also works). From 07:00, until it has run that day, Today shows "Mail and Teams not checked yet today" with a **Check now** button that does the same (it needs creaite). |
+| `review` · `save` | Go through what's pending, then save the approved items to your project record. `undo last save` reverses it (`apply` and `undo last apply` also work). |
 | `mark ABC-A-003 done` | Any change in plain words, shown before → after, then saved. |
 | `weekly report` | Health with reasons, an update, and a report page for each project, filed when you approve. |
 | `client report ABC` | A client-safe report page. Only items marked client-visible appear in it. |
@@ -165,7 +165,7 @@ Where: the creaite app · Claude Code · Today
 2. Open your creaite folder in Claude Code. The first session after 07:00 backs up your project record, runs the mail and Teams check, and lists reminders and what's waiting.
 3. Read **Today** from the top: **Decisions needed** (when any wait on someone), **Needs attention**, **Your commitments** (with **You owe** and **Waiting on** when there are any, and at its foot one quiet line saying what waits in Intake), **Messages** (when there are any), **Week ahead** and **Resolved**.
 
-Or say: `sweep` to run the check again at any time.
+Or say: `check my mail` to run the check again at any time (`sweep` also works).
 
 ## Close the day
 
@@ -199,7 +199,7 @@ Where: Intake
 11. **Every reject can be changed:** the message has **Undo**, which puts the row back on Intake. **Activity › Quality › What you rejected** lists recent rejects with their reason: change it, undo the reject, or **Approve instead**, which undoes it and approves it in one step. Minutes, new decisions, new risks and anything else approved on its own go back to Intake and open for their own approval. The reasons are counted in Quality and read by the minutes and the check as guidance.
 12. **Looks done:** when a mail you sent, a reply, a Teams message or a meeting shows an open item is finished, the check or the minutes propose closing it. The row leads with **Looks done** (or **Maybe done**, with the reason) and the evidence ("Mail 09-10-2026 15:02 by Alan Carter: “attached the SOW”"); **Open source** opens the message. **Approve** closes it; **Reject** with a reason says why, and the reading for items reads it next time. Closing is always approved on its own, never by **Approve routine**. **Not done** re-dates an item that has moved.
 
-Or say: `review` `approve minutes for the ABC steering` `9 is DEF` `minutes 3 is DEF` `reject 4 as a duplicate of ABC-A-009` `reject 3, 5 as chatter` `reject 2-6 with their guesses` `approve that reject instead` `merge 4` `keep-new 4` `4 is an update to ABC-A-009` `apply`
+Or say: `review` `approve minutes for the ABC steering` `9 is DEF` `minutes 3 is DEF` `reject 4 as a duplicate of ABC-A-009` `reject 3, 5 as chatter` `reject 2-6 with their guesses` `approve that reject instead` `merge 4` `keep-new 4` `4 is an update to ABC-A-009` `save` (`apply` also works)
 
 ## Find anything
 
@@ -222,7 +222,7 @@ Where: ⌘K, anywhere
 4. Press Enter to **save** it: nothing reaches your project record until you save, and the bar offers **Undo last**. [[⌘↵]] saves it and opens Intake. Esc changes nothing.
 5. A request it can't read as a change is offered to ask creaite ("Give it to ask creaite"). Nothing in ⌘K deletes.
 
-Or say: `move ABC-A-002 to fri` `Omar owns the SOW action` (ask creaite shows the change and waits for `apply`)
+Or say: `move ABC-A-002 to fri` `Omar owns the SOW action` (ask creaite shows the change and waits for `save`; `apply` also works)
 
 ### Meetings
 
@@ -570,7 +570,7 @@ Where: The message bar · Activity
 3. For anything older, say the phrase below. Every save is logged, so it can be reversed.
 4. A file ask creaite changed: **Activity › What ask creaite changed** lists the last seven days, each with its tier (Ordinary, Sensitive or High-risk) and **Undo**.
 
-Or say: `undo last apply`
+Or say: `undo last save` (`undo last apply` also works)
 
 ## Update creaite
 
@@ -1047,9 +1047,9 @@ Where: Reports › a project · address `#reporting=` (the old `#weekly=` and `#
 - **Your draft is kept:** an unsent message (and the names of its images) stays in this browser for that chat, and is back after a reload. It goes when you send it, and never leaves the laptop.
 
 ## Commands for Claude
-As you type in ask creaite, suggestions appear from your skills and commands, with project codes, open item IDs and review numbers where a command needs one; type `/` to see everything. Nothing is chosen until you choose it: **Enter sends what you typed** (type `apply`, press Enter, and `apply` is sent). Press ↓ or ↑ to choose a suggestion, then Enter puts it in the box to finish and send; Tab puts the first one in; a click picks one; Esc closes the list. Drag the panel's left edge to make it wider or narrower (double-click to reset); it remembers the width. The clock icon lists your 10 most recent chats (older ones are deleted); + starts a new one. A request keeps running if you close the panel or reload the page (the ask creaite button shows a dot, and a note tells you when it's done); only Stop ends it. While a request runs, Send becomes **Stop** (or press Esc): a question stops at once, and a confirmed change stops once its current step has finished, so nothing is left half-done.
+As you type in ask creaite, suggestions appear from your skills and commands, with project codes, open item IDs and review numbers where a command needs one; type `/` to see everything. Nothing is chosen until you choose it: **Enter sends what you typed** (type `save`, press Enter, and `save` is sent). Press ↓ or ↑ to choose a suggestion, then Enter puts it in the box to finish and send; Tab puts the first one in; a click picks one; Esc closes the list. Drag the panel's left edge to make it wider or narrower (double-click to reset); it remembers the width. The clock icon lists your 10 most recent chats (older ones are deleted); + starts a new one. A request keeps running if you close the panel or reload the page (the ask creaite button shows a dot, and a note tells you when it's done); only Stop ends it. While a request runs, Send becomes **Stop** (or press Esc): a question stops at once, and a confirmed change stops once its current step has finished, so nothing is left half-done.
 
-In ask creaite or Claude Code: `sweep`, `process new minutes`, `review`, `apply`, `undo last apply`, `weekly report`, `client report ABC`, `mark ABC-A-003 closed`, `move ABC-A-003 to 20-11-2026`, `add milestone for ABC: UAT complete 20-11-2026`, `make ABC-A-002 client-visible`, `set sweep time to 06:30`, `import excel`, `setup`, `health check`.
+In ask creaite or Claude Code: `check my mail`, `process new minutes`, `review`, `save`, `undo last save`, `weekly report`, `client report ABC`, `mark ABC-A-003 closed`, `move ABC-A-003 to 20-11-2026`, `add milestone for ABC: UAT complete 20-11-2026`, `make ABC-A-002 client-visible`, `set sweep time to 06:30`, `import excel`, `setup`, `health check`.
 
 ## Updating creaite
 - Say **update creaite** in Claude Code: with the GitHub command-line tool (`gh`) installed and signed in, it fetches the newest `creaite-X.Y.Z.zip` (pre-releases included) into the updates folder itself and checks it against its checksums (it installs nothing until you say yes). Without `gh`, download the zip from the GitHub release (the attached file, not "Source code (zip)") into the updates folder yourself.
