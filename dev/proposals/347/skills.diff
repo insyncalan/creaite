@@ -12,14 +12,14 @@ index 6ca2c652..d93341ec 100644
  **Projects by name (BL-101):** refer to a project by its full name in everything Alan reads (summaries, tables, messages, file names, drafts). The short code appears only inside a work item's ID (`ABC-A-003`) and in a command he can type; `tracker.project_label(code)` gives the name.
  
 diff --git a/.claude/skills/cx-review/SKILL.md b/.claude/skills/cx-review/SKILL.md
-index 275d013c..9083bc22 100644
+index 275d013c..3e35e534 100644
 --- a/.claude/skills/cx-review/SKILL.md
 +++ b/.claude/skills/cx-review/SKILL.md
 @@ -1,6 +1,6 @@
  ---
  name: cx-review
 -description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "apply", "undo last apply", or "import excel".
-+description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. "save" means "apply" and "undo last save" means "undo last apply". Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "save", "apply", "undo last save", "undo last apply", or "import excel".
++description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. "save" means "apply" only as the whole message ("save", "save ABC", "save all") after a review list shown in this session; "undo last save" means "undo last apply". Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "save", "apply", "undo last save", "undo last apply", or "import excel".
  ---
  
  # cx-review
@@ -39,7 +39,7 @@ index 275d013c..9083bc22 100644
  ## Apply
  
 -Only on an explicit "apply":
-+Only on an explicit "save" or "apply" (the same word; "save" counts as Alan's go-ahead only when it follows a shown list of approved items, exactly like "apply", never for a note, a setting or a draft):
++Only on an explicit "apply", or "save" (the same step; "save" counts only as the whole message, "save", "save ABC" or "save all", and only after a review list shown in this session, never for a note, a setting or a draft; otherwise ask). Before running tracker.py apply for "save", first say "Saving n approved items: <IDs>":
  1. Run `tracker.py apply` on each proposal with decided items. In one transaction it:
     - backs up the database;
     - writes the approved items;
@@ -62,14 +62,14 @@ index 275d013c..9083bc22 100644
  
  ## Dates
 diff --git a/.claude/skills/cx-sweep/SKILL.md b/.claude/skills/cx-sweep/SKILL.md
-index 0d4e5024..50814549 100644
+index 0d4e5024..773dde6e 100644
 --- a/.claude/skills/cx-sweep/SKILL.md
 +++ b/.claude/skills/cx-sweep/SKILL.md
 @@ -1,6 +1,6 @@
  ---
  name: cx-sweep
 -description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
-+description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "check my mail", "check my mail for ABC", "check my mail for the last 7 days", "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
++description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "check my mail", "check my mail for <CODE>", "check my mail for the last N days" (these exact forms only; any other mail question, such as "find the invoice from Bob", is a read-only search, not a sweep), "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
  ---
  
  # cx-sweep
