@@ -8,14 +8,14 @@ Change the chain list or any listed diff, and `CHAIN3_SHA256` must be re-set (Al
 ## Chain (apply order)
 1. `dev/proposals/327b/live_server.diff` - #327 B, fresh ask creaite sessions by default (owner `origin/v263-327b`, edcb17d8).
 2. `dev/proposals/324/live_server.diff` - #324 #326 #332, File the minutes box (owner `origin/v263-324`, bf4fba34).
-3. SLOT (not written): the three follow-up diffs from `origin/v263-lows` (draft_delivery.py into `guarded_chain.GUARDED`; review-expect mandatory at the route; the reworded 'fails closed' comment). Add each path to the .chain after 324 and re-set the pin.
-4. LAST, only after Alan's "AM: approved": `dev/proposals/338/creaite-rules.after-chain.diff` (owner `origin/v263-338`, 74e56de3). The variant list is `GUARDED-2.6.3.with-338.chain` (not read by the guard until it replaces the main list).
+3. `dev/proposals/draft-delivery-guarded/draft_delivery.diff` (docstring anchor; draft_delivery.py is in `guarded_chain.GUARDED`), 4. `dev/proposals/expect-mandatory/live_server.diff` (/api/review refuses a missing `expect`; a dashboard tab left open from before 2.6.2 gets a reload message), 5. `dev/proposals/draft-comment/live_server.diff` (comment only); all from `origin/v263-lows` 467c86f4.
+6. LAST, only after Alan's "AM: approved": `dev/proposals/338/creaite-rules.after-chain.diff` (owner `origin/v263-338`, 74e56de3). The variant list is `GUARDED-2.6.3.with-338.chain` (not read by the guard until it replaces the main list).
 
 ## Pins
 | List | CHAIN3_SHA256 |
 |------|---------------|
-| `GUARDED-2.6.3.chain` (327b, 324), set in guarded_chain.py | `3ea88c0a0bf283a10fc7b51ded796dec770e110c36d7f6c226863eb4b0daa48b` |
-| `GUARDED-2.6.3.with-338.chain` (327b, 324, 338 after-chain) | `0bc7e8932e3437e2d6fb3998430ae977a37e73de43b071e3f93b7cc0f9938522` |
+| `GUARDED-2.6.3.chain` (327b, 324, draft-delivery-guarded, expect-mandatory, draft-comment), set in guarded_chain.py | `6208c3068e72f16b154a3360ac09586c7cecb3a8602679af9882a3984e99b14a` |
+| `GUARDED-2.6.3.with-338.chain` (the five above, then 338 after-chain) | `618b5fc27e15ea16914a3618d6f18caaa3e1d21691b0b7796359978f966a4c6a` |
 The with-338 pin was computed with the 338 diff's bytes from `origin/v263-338` 74e56de3 (path plus bytes, the same way `chain_digest` does). To use it, copy the variant over the main list, add `dev/proposals/338/` to the tree, and set the pin.
 
 ## Which 338 diff
@@ -23,8 +23,8 @@ The with-338 pin was computed with the 338 diff's bytes from `origin/v263-338` 7
 `creaite-rules.after-chain.diff` applies to main, and still applies after the 327b and 324 diffs (they do not touch the rules). Use `after-chain`.
 
 ## Re-verified (24-10-2026), no diff regenerated
-`git apply --check` forward and reverse, in chain order, on `origin/main` 39c1060a (a detached scratch worktree: 327b, 324 apply; 324, 327b reverse; clean tree after).
-`live_server.py` is untouched on `v263-line`, so the same holds there. The 327b and 324 diffs are byte for byte the branch versions.
+`git apply --check` forward and reverse, in chain order, on `origin/main` 39c1060a (a detached scratch worktree: all five apply in chain order, 338's after-chain diff applies after them and reverses; the five reverse last first; clean tree after).
+`live_server.py` and `draft_delivery.py` are untouched on `v263-line`, so the same holds there. No diff was regenerated. `guarded_chain.py` and `test_guarded_chain.py` are `origin/v263-lows`' versions (it already holds the 2.6.3 machinery); this line adds only the list, the pin and BASE3 agreement.
 
 ## Guard checks
 `dev/tests/test_guarded_chain.py` now runs every case for the 2.6.3 chain too (`GuardedChain3`) and has `AllThreeChains` (all three marked pass, unmarked third, extra edit, pin mismatch, later unmarked edit, base after the second). 2.6.1 and 2.6.2 behaviour is unchanged.

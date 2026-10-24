@@ -1,18 +1,18 @@
 """Which guarded scripts the commits in a range changed, with the approved guarded chains as the one allowed exception.
 
-The convention (dev/proposals/GUARDED-2.6.1.md, GUARDED-2.6.2.md, GUARDED-2.6.3.md): each approved chain is applied as ONE commit whose subject starts with
+The convention (dev/proposals/GUARDED-2.6.1.md, GUARDED-2.6.2.md): each approved chain is applied as ONE commit whose subject starts with
 exactly that chain's marker. That commit is allowed to change guarded scripts only if, with the diffs listed in the chain file (read from
 that commit's PARENT) reverse-applied to the guarded files, every guarded file equals its parent's content. A marked commit with anything
 extra, a missing or unreadable chain file, a pin mismatch, a listed diff that is missing or does not reverse, or a guarded file the
-diffs don't explain, fails closed: its guarded files are reported as changed. Three chains are known (2.6.1, 2.6.2, then 2.6.3); a range may hold
-any of them, in order. Plain code, no network."""
+diffs don't explain, fails closed: its guarded files are reported as changed. Three chains are known (2.6.1, 2.6.2, then 2.6.3); a range may
+hold any of them, in order. Plain code, no network."""
 import hashlib
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
-GUARDED = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py", "live_server.py", "client_leak.py", "edit_ai.py")
+GUARDED = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py", "live_server.py", "client_leak.py", "edit_ai.py", "draft_delivery.py")
 CHAIN_MARKER = "Guarded 2.6.1 chain:"
 CHAIN_FILE = "dev/proposals/GUARDED-2.6.1.chain"
 # The releases the check starts from are BASE_261 and BASE below, as commits (a branch name can move). Alan's say to change.
@@ -25,20 +25,22 @@ CHAIN_SHA256 = "a598a48e87c29f40227e21f2233329bd816e0c5154c1037e12f96a9b14cb3c8f
 CHAIN2_MARKER = "Guarded 2.6.2 chain:"
 CHAIN2_FILE = "dev/proposals/GUARDED-2.6.2.chain"
 CHAIN2_SHA256 = "d6441d5568bc7680a2e7f051e6fe3e91f1d14af079220743edf9910e09637c8d"
-# BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE2 (also BASE, the default) is the 2.6.1 release commit, published:
+# BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE2 is the 2.6.1 release commit, published:
 # the full sha of 5bf7da29 (Jarvis, 23-10-2026; main's merge commit 256fdcc2 changes no content). CHAIN2_SHA256 is the value
 # `python3 dev/tests/guarded_chain.py` prints; change it only with the chain list.
 BASE_261 = "9501f2cdc850618e2ae34419bf2c6cb1c0d94ba0"
 BASE2 = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
-# The 2.6.3 chain (dev/proposals/GUARDED-2.6.3.md): its own marker, list and pin. BASE3 is main after the 2.6.2 release (2.6.1 and 2.6.2
-# chains applied there). The marker commit "Guarded 2.6.3 chain:" is made by Jarvis at the cut. To add a diff to the chain: append its
-# path to GUARDED-2.6.3.chain (apply order; #338's rules diff goes LAST, only after Alan's approval) and re-set CHAIN3_SHA256 to the value
-# `python3 dev/tests/guarded_chain.py` prints, with Alan's say.
+# The 2.6.3 chain (dev/proposals/draft-delivery-guarded/README.md): its own marker, list and pin. draft_delivery.py joined GUARDED with it
+# (it holds the hook that checks the Outlook create-draft call; the 2.6.2 blocker was found there). BASE3 is the published 2.6.2 release
+# commit, main's merge 39c1060a: draft_delivery.py was written in the 2.6.2 range by unmarked commits, so the check now starts from the
+# release (BASE below) and a range from BASE2 would report the whole file as new. CHAIN3_SHA256 is "" until the 2.6.3 chain list is cut
+# (a "" pin matches nothing, so a marked 2.6.3 commit fails closed until it is set, on Alan's say); then
+# `python3 dev/tests/guarded_chain.py` prints the value.
 CHAIN3_MARKER = "Guarded 2.6.3 chain:"
 CHAIN3_FILE = "dev/proposals/GUARDED-2.6.3.chain"
-CHAIN3_SHA256 = "3ea88c0a0bf283a10fc7b51ded796dec770e110c36d7f6c226863eb4b0daa48b"
+CHAIN3_SHA256 = "6208c3068e72f16b154a3360ac09586c7cecb3a8602679af9882a3984e99b14a"
 BASE3 = "39c1060aaeffa0c47a03a3c8e0e48208d3cb9ed6"
-BASE = BASE3                                  # the default base is the newest release; BASE2 and BASE_261 still work for the earlier chains
+BASE = BASE3
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
 SPEC3 = (CHAIN3_MARKER, CHAIN3_FILE, "CHAIN3_SHA256")
