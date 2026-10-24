@@ -56,7 +56,7 @@ LEGACY_TESTS = {
 # reextract.py (#283): 4 time.time() stamps (held, ended, replaced, undone) that are compared across processes: wall-clock on purpose, like the timers
 # below. test_calendar_refresh.py: 1 date.today() in its stand-in harness, which runs as a subprocess on the real clock (#318), like test_run_chat's.
 SCRIPTS = {
-    "archive.py": 3, "backup.py": 3, "build_dashboard.py": 5, "capture.py": 1, "creaite_doc.py": 3, "doctor.py": 2,
+    "ai_budget.py": 1, "archive.py": 3, "backup.py": 3, "build_dashboard.py": 5, "capture.py": 1, "creaite_doc.py": 3, "doctor.py": 2,
     "drafts.py": 7, "excel_sync.py": 5, "extraction.py": 1, "filechange.py": 3, "health.py": 1, "health_fixes.py": 1,
     "launch.py": 2, "live_server.py": 46, "log.py": 1, "minutes.py": 4, "notes.py": 3, "notes_find.py": 3, "permissions.py": 4,
     "propose.py": 7, "reextract.py": 4, "quality.py": 1, "reach.py": 3, "review.py": 5, "search.py": 1, "settings_catalogue.py": 2,
