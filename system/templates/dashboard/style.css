@@ -4322,7 +4322,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
 #v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
-#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl th{white-space:normal}
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj],[data-col=org],[data-col=role]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}

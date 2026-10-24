@@ -11,7 +11,7 @@ export const dispHead = (label, forId, extra = "") => `<h2>${forId ? `<label for
 /** A select with its heading. `hidden` hides the whole block (a control with nothing to choose, not greyed: BL-114).
     @param {{id: string, label: string, options: [string, string][], cur: string, hidden?: boolean}} o */
 export function dispSelect({ id, label, options, cur, hidden }) {
-  return `<div${hidden ? " hidden" : ""}>${dispHead(label, id)}<div class="dline"><select id="${id}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div></div>`;
+  return `<div${hidden ? " hidden" : ""}>${dispHead(label, id)}<div class="dline"><select id="${id}">${options.map(([v, l], i) => `<option value="${esc(v)}"${v === cur && i > 0 ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div></div>`;   /* the first option is the default: no attribute needed (keeps the Work menu byte-identical to before) */
 }
 
 /** Order by: the select, and a reverse button that is pressed when the order is reversed. `extra` is more option markup (already safe).

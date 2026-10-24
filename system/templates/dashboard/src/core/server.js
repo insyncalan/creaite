@@ -405,7 +405,7 @@ function drawPageToast(){ const host=document.getElementById("toastHost"); if(!h
 export let snack = function(msg,undo,label,opts){ shared.UNDO=undo||null;
   Object.assign(TOAST,{open:true,text:msg,action:undo?(label||"Undo"):"",run:TOAST.run+1,tone:opts&&opts.tone,note:(opts&&opts.note)||""}); drawPageToast(); };
 /** #357: hide the calm confirmation of a save, when something new is waiting to be saved (the bar comes back at once, with one Undo). */
-export function hideSavedSnack(){ if(TOAST.open&&TOAST.tone==="ok") hideSnack(); }
+export function hideSavedSnack(){ if(TOAST.open&&TOAST.tone==="ok") snack("The earlier save can still be undone in Activity"); }   /* the old Undo goes; say where it is */
 /** Hide the message (its time is up, Esc, its action, ⌘Z). */
 export function hideSnack(){ if(!TOAST.open) return; TOAST.open=false; drawPageToast(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js (pieces 0019 and 0020's place). ⌘Z (Ctrl+Z) in Work

@@ -85,8 +85,16 @@ class Rules(unittest.TestCase):
             self.assertNotIn(bad, text)
 
     def test_mutant_a_followed_option_in_the_allow_list_is_caught(self):
-        text = json.dumps(self.o["opts"] + [["followed", "Followed"]]).lower()
-        self.assertIn("follow", text)                                # the check above would go red
+        # a real source mutant: a copy of the rules with a Followed option added to PD_GROUPS must make the privacy check go red
+        import tempfile
+        src = RULES.read_text()
+        mut = src.replace('["details", "Details"]]', '["details", "Details"], ["followed", "Followed"]]')
+        self.assertNotEqual(mut, src)
+        with tempfile.TemporaryDirectory() as d:
+            m = Path(d) / "peopleDisplay.js"
+            m.write_text(mut)
+            o = node("const f = await import(%s); console.log(JSON.stringify(f.PD_GROUPS));" % json.dumps(m.as_uri()))
+        self.assertIn("follow", json.dumps(o).lower())              # the check in test_nothing_private_in_any_option would fail on this
 
 
 @unittest.skipUnless(shutil.which("node"), "needs Node")
@@ -241,6 +249,10 @@ class Page(LiveBrowserCase):
             b = self.people(w)
             fit = b.eval("(()=>{const c=document.querySelector('#peopleTbl'),t=c.querySelector('table'),h=[...t.querySelectorAll('th')].find(x=>x.dataset.col==='late');return [t.scrollWidth<=c.clientWidth+4, h.getBoundingClientRect().right<=c.getBoundingClientRect().right+1, document.scrollingElement.scrollWidth<=innerWidth]})()")
             self.assertEqual(fit, [True, True, True], w)
+            # the Projects column keeps room for whole words (about 9 letters); its heading is not broken mid-word
+            pj = b.eval("(()=>{const h=document.querySelector('#peopleTbl th[data-col=proj]');return [h.getBoundingClientRect().width, h.getBoundingClientRect().height]})()")
+            self.assertGreaterEqual(pj[0], 90, w)
+            self.assertLess(pj[1], 80, w)
             self.assertEqual(b.eval("(()=>{const ids=[...document.querySelectorAll('[id]')].map(e=>e.id);return ids.length-new Set(ids).size})()"), 0)
             self.assertEqual(b.errors, [])
 
@@ -249,6 +261,8 @@ class Page(LiveBrowserCase):
         staged = lambda: sorted(p.name for p in (self.v.root / "system/staging").glob("proposed-*"))      # noqa: E731
         before, register = staged(), (self.v.root / "projects/_portfolio/people-register.md")
         text = register.read_text() if register.exists() else None
+        settings = self.v.root / "system/config/settings.json"
+        stext = settings.read_text() if settings.exists() else None
         self.open_menu()
         self.change("#pdgrp", "role")
         b.eval("document.getElementById('pdRev').click()")
@@ -256,6 +270,7 @@ class Page(LiveBrowserCase):
         self.assertEqual(b.eval("shared.PKS.length"), 0)
         self.assertEqual(staged(), before)                         # nothing proposed, nothing written
         self.assertEqual(register.read_text() if register.exists() else None, text)
+        self.assertEqual(settings.read_text() if settings.exists() else None, stext)      # the Display choices never reach settings.json
 
 
 if __name__ == "__main__":

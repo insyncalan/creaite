@@ -71,7 +71,8 @@ class CalmSave(LiveBrowserCase):
         b.wait(f"CUR&&CUR.id==={ids[0]!r}")
         b.eval(f"pkCommit('actions',{ids[0]!r},{{t:'Again'}},'Title',curObj().t,'Again')")
         b.wait("PKS.length===1&&!document.getElementById('pkStage').hidden", timeout=15)
-        b.wait("!document.getElementById('snack').classList.contains('on')")
+        b.wait("document.getElementById('snackT').textContent.includes('still be undone in Activity')")
+        self.assertFalse(b.eval("document.getElementById('snack').classList.contains('ok')"))
 
     def test_undo_reverses_the_save(self):
         b = self.b

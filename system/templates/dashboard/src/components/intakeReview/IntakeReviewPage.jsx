@@ -13,7 +13,7 @@ import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
 import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irNextJob, irEsc, irFiltered, irIsFolded, irStateCounts } from "../../core/irFold.js";
-import { D, fd, S, TODAY } from "../../core/page.js";
+import { D, days, fd, S, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irSetShown, irTickedShown, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
@@ -166,11 +166,11 @@ function TickBar() {
 /** #356: when there is nothing to decide, one plain sentence and the one button that does the next job. A button that cannot act
     right now is disabled with the reason (offline, or another run busy), as the page's other buttons are. */
 function NextJob({ c }) {
-  const tomorrow = (dayList() || []).find((/** @type {any} */ d) => d.date > TODAY);
+  const tomorrow = (dayList() || []).find((/** @type {any} */ d) => days(d.date) === 1);   /* tomorrow itself, never the next saved day */
   const j = irNextJob(c, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
   if (!j) return null;
-  const live = viaServer(), busy = irBlocked() || irRefreshing.value;
-  const why = j.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy ? "ask creaite is busy; try again when it’s finished" : "";
+  const live = viaServer(), busy = irBlocked() || irRefreshing.value || !!shared.RUN || !!shared.BUSY;   /* as mtgBusy() (core/intakeApi.js), which cannot be imported here: a cycle */
+  const why = busy ? "ask creaite is busy; try again when it’s finished" : j.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy ? "ask creaite is busy; try again when it’s finished" : "";
   const act = () => {
     if (j.job === "refresh") irRefreshCalendar();
     else if (j.job === "mail") { if (shared.BUSY) { snack("ask creaite is busy; try again when it’s finished"); return; } openChat(); send("sweep"); }

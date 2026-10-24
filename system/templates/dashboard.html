@@ -4332,7 +4332,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
 #v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
-#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl th{white-space:normal}
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj],[data-col=org],[data-col=role]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
@@ -9782,7 +9782,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     const f5 = String(fetched || ""), none = "Nothing is ready to process or approve.";
     if (!/^\d{4}-\d{2}-\d{2}/.test(f5) || f5.slice(0, 10) < today) return { job: "refresh", text: `${none} Next: refresh the calendar.`, button: "Refresh calendar" };
     if (mailDue) return { job: "mail", text: `${none} Next: check mail and Teams.`, button: "Check now" };
-    if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: look at tomorrow.`, button: "Look at tomorrow" };
+    if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: open tomorrow’s meetings.`, button: "Open tomorrow’s meetings" };
     return { job: "none", text: none };
   }
   var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
@@ -36453,7 +36453,7 @@ system/scripts/run launch.py agent ${what}`;
   // core/displayMenu.js
   var dispHead = (label, forId, extra = "") => `<h2>${forId ? `<label for="${forId}">${esc(label)}</label>` : esc(label)}${extra}</h2>`;
   function dispSelect({ id: id2, label, options, cur, hidden }) {
-    return `<div${hidden ? " hidden" : ""}>${dispHead(label, id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}</select></div></div>`;
+    return `<div${hidden ? " hidden" : ""}>${dispHead(label, id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6], i5) => `<option value="${esc(v5)}"${v5 === cur && i5 > 0 ? " selected" : ""}>${esc(l6)}</option>`).join("")}</select></div></div>`;
   }
   function dispOrder({ id: id2, revId, options, cur, reversed, extra = "" }) {
     return `${dispHead("Order by", id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}${extra}</select><button type="button" class="btn" id="${revId}" aria-pressed="${reversed}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>`;
@@ -53105,7 +53105,7 @@ system/scripts/run launch.py agent ${what}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(r4.o) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? isMe(r4.o) ? "you" : esc(r4.o) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -58116,7 +58116,7 @@ ${pre}**Current state title:** ${title}`);
     const groups = weekGroups(), n4 = groups.reduce((t47, g5) => t47 + g5.rows.length, 0);
     const above = groups.above || 0;
     $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}${above ? ` · ${above} more listed above` : ""}` : "";
-    const nextDay = !above && dayShown() === TODAY && S.srcCalendar !== false ? dayList().find((d5) => d5.date > TODAY) : null;
+    const nextDay = !above && dayShown() === TODAY && S.srcCalendar !== false ? dayList().find((d5) => days(d5.date) === 1) : null;
     drawWeekAhead(host2, {
       groups,
       openFile: (p6) => {
@@ -64213,7 +64213,7 @@ ${d5.text}`);
       }
       const done = n4 - shared.PKS.length;
       if (shared.CUR && pkOn()) pkDraw();
-      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null, void 0, done ? { tone: "ok", note: "A backup was taken first" } : void 0);
+      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null, void 0, done && !shared.PKS.length ? { tone: "ok", note: "A backup was taken first" } : void 0);
       return done;
     } finally {
       $("#pkApply").disabled = false;
@@ -79305,11 +79305,11 @@ ${d5.text}`);
     ] });
   }
   function NextJob({ c: c5 }) {
-    const tomorrow = (dayList() || []).find((d5) => d5.date > TODAY);
+    const tomorrow = (dayList() || []).find((d5) => days(d5.date) === 1);
     const j5 = irNextJob(c5, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
     if (!j5) return null;
-    const live = viaServer(), busy2 = irBlocked() || irRefreshing.value;
-    const why = j5.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy2 ? "ask creaite is busy; try again when it’s finished" : "";
+    const live = viaServer(), busy2 = irBlocked() || irRefreshing.value || !!shared.RUN || !!shared.BUSY;
+    const why = busy2 ? "ask creaite is busy; try again when it’s finished" : j5.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy2 ? "ask creaite is busy; try again when it’s finished" : "";
     const act = () => {
       if (j5.job === "refresh") irRefreshCalendar();
       else if (j5.job === "mail") {
@@ -80753,7 +80753,7 @@ ${d5.text}`);
     drawPageToast();
   };
   function hideSavedSnack() {
-    if (TOAST.open && TOAST.tone === "ok") hideSnack();
+    if (TOAST.open && TOAST.tone === "ok") snack("The earlier save can still be undone in Activity");
   }
   function hideSnack() {
     if (!TOAST.open) return;

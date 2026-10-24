@@ -211,7 +211,7 @@ export function irNextJob(counts, fetched, today, mailDue, hasTomorrow) {
   const f = String(fetched || ""), none = "Nothing is ready to process or approve.";
   if (!/^\d{4}-\d{2}-\d{2}/.test(f) || f.slice(0, 10) < today) return { job: "refresh", text: `${none} Next: refresh the calendar.`, button: "Refresh calendar" };
   if (mailDue) return { job: "mail", text: `${none} Next: check mail and Teams.`, button: "Check now" };
-  if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: look at tomorrow.`, button: "Look at tomorrow" };
+  if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: open tomorrow’s meetings.`, button: "Open tomorrow’s meetings" };
   return { job: "none", text: none };
 }
 /** A remembered view made safe. @param {any} v */

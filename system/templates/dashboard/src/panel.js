@@ -705,7 +705,7 @@ export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.P
   try{ const r=await applyNow({peek:true}); await pkReconcile();
     if(!r.ok){ pkSaving("fail","Not saved"); snack(oneLine(applyWords(r.message))); return -1; }
     const done=n-shared.PKS.length; if(shared.CUR&&pkOn()) pkDraw();
-    snack(done?`Saved ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)`:""}`:"Nothing saved: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null,undefined,done?{tone:"ok",note:"A backup was taken first"}:undefined);   /* BL-179: names what it created */
+    snack(done?`Saved ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)`:""}`:"Nothing saved: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null,undefined,done&&!shared.PKS.length?{tone:"ok",note:"A backup was taken first"}:undefined);   /* #357: part saved and part waiting: a plain message, not the calm one beside the waiting bar */   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }
 export async function pkUndoLast(only){ await shared.PKQ; const s=only||shared.PKS[shared.PKS.length-1];   /* only: undo exactly this staged entry (#153), not the last one */
   if(only&&!shared.PKS.includes(only)){ snack("Already saved or undone"); return; }
