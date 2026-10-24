@@ -11,7 +11,8 @@
 import { openChat } from "../../ask.js";
 import { calendarLive, jobLive, mtgBusy, mtgCheckable, mtgProcessFile, mtgSkip, processLive, stopRun, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
 import { D, fd, fdText, TODAY } from "../../core/page.js";
-import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
+import { api, OLDSERVER, oneLine, reloadData, snack, viaServer, writeSettings } from "../../core/server.js";
+import { signal } from "@preact/signals";
 import { addFailed, needsConnection, plainSay } from "../../core/say.js";
 import { shared } from "../../core/state.js";
 import { openFiled } from "../../stores/minutesFiling.js";
@@ -325,4 +326,44 @@ export function irPickFiles() {
   el.addEventListener("cancel", () => el.remove());
   document.body.appendChild(el);
   el.click();
+}
+
+
+/* #328: the project Alan picks for a meeting whose match was only Likely or Not sure (or whose Matched project he changes). The
+   choice is kept for the meeting's series (settings prep.series, as the Prep brief does); nothing is filed, loaded or read because
+   of it. Then, once, one concrete signal is offered for the register (irOffer), which propose.learn_check still checks. */
+export const irOffer = signal(/** @type {{id: string, code: string, kind: string, value: string} | null} */ (null));
+const OFFER_ASKED = "creaite-ir-offers";
+const offerAsked = () => { try { return JSON.parse(localStorage.getItem(OFFER_ASKED) || "[]"); } catch (x) { return []; } };
+const offerMark = (/** @type {string} */ k) => { try { localStorage.setItem(OFFER_ASKED, JSON.stringify([...offerAsked(), k].slice(-200))); } catch (x) { /* storage blocked: it may be asked again */ } };
+
+/** @param {any} m @param {string} code */
+export async function irChooseProject(m, code) {
+  if (!m || !code || !m.series) return false;
+  if (!viaServer()) { snack(needsConnection("Choosing a project")); return false; }
+  const map = { ...((D.prep || {}).series || {}), [m.series]: code };
+  const kept = await writeSettings({ "prep.series": map });
+  if (!kept) return false;
+  D.prep.series = map;
+  const o = m.offer;
+  irOffer.value = o && !offerAsked().includes(`${code}|${o.kind}|${o.value}`) ? { id: m.id, code, kind: o.kind, value: o.value } : null;
+  await reloadData();
+  return true;
+}
+
+/** Yes to the offer: remember the signal for the project (the existing, undoable learn route). */
+export async function irLearnOffer() {
+  const o = irOffer.value;
+  if (!o) return;
+  offerMark(`${o.code}|${o.kind}|${o.value}`);
+  irOffer.value = null;
+  const res = await api("/api/learn", { code: o.code, kind: o.kind, value: o.value });
+  snack(res.ok ? `Remembered for ${pName(o.code)} once saved` : oneLine(res.message) || "Not remembered");
+}
+
+/** No to the offer: not asked again for the same signal and project. */
+export function irDismissOffer() {
+  const o = irOffer.value;
+  if (o) offerMark(`${o.code}|${o.kind}|${o.value}`);
+  irOffer.value = null;
 }

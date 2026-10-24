@@ -19,6 +19,9 @@ export const IR_ICONS = {
   stop: [["rect", { x: "6", y: "6", width: "12", height: "12", rx: "2" }]],     /* the refresh's Stop while it runs (core/dom.js's stop) */
   refresh: [["path", { d: "M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" }]],
   /* a row's kind: a calendar meeting or a file */
+  mTick: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M8 12.5l3 3 5-6" }]],                  /* #328 chip: Matched */
+  mTilde: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M7.5 13c1.5-3 3-3 4.5-1s3 2 4.5-1" }]],     /* Likely */
+  mAsk: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 16.8v.4" }]],  /* Not sure */
   meeting: [["rect", { x: "4", y: "5", width: "16", height: "15", rx: "2" }], ["path", { d: "M4 10h16M9 3v4M15 3v4" }]],
   file: [["path", { d: "M6 3h8l4 4v14H6z" }], ["path", { d: "M14 3v4h4" }]],
   /* the kinds of proposal (the mockup's KI), for the proposal rows */
