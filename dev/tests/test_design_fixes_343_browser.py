@@ -124,6 +124,17 @@ class WordingAndRepetition(LiveBrowserCase):
             self.assertTrue(has_title and owner.strip())
             self.assertIn("\u00b7", dot)
 
+    def test_top_risks_call_your_own_risk_You_as_the_actions_card_does(self):
+        b = self.b
+        b.eval("go('cockpit','ABC')")
+        b.wait("document.querySelector('.rkrow')")
+        # make the first shown risk Alan's own: the owner reads "You" (capital, as who() gives on the Actions card), never "you"
+        b.eval("(()=>{const id=document.querySelector('.rkrow').dataset.open.split(':')[1];const r=R.find(x=>String(x.id)===id);r.o=S.me||(meNames()[0]||'');window.__ro=r.o})()")
+        b.eval("go('work'); go('cockpit','ABC')")
+        b.wait("document.querySelector('.rkrow')")
+        owner = b.eval("document.querySelector('.rkrow .rk-o').textContent")
+        self.assertEqual(owner, "You")
+
     def test_work_list_hides_empty_groups_and_says_overdue_once(self):
         b = self.b
         b.eval("go('work')")

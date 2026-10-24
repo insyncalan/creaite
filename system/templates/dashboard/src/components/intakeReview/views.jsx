@@ -26,12 +26,13 @@ const GroupHead = ({ g }) => <tr class="icgrouphd" data-irgroup={g.key || "none"
 
 /** #340: the meetings still waiting for a transcript fold away like Later and Not needed. They open by themselves when a stage, a Show
     choice, a search or a Group by is looking at them, so nothing the person asked for is hidden. */
-export const irTailFolded = () => irGroup.value === "none" && irIsFolded(irFolded.value, "waiting") && irStage.value !== "arrived" && irStateFilter.value !== "waiting" && !irQuery.value.trim();
+export const irTailHeld = () => irStage.value === "arrived" || irStateFilter.value === "waiting" || !!irQuery.value.trim();      /* something the person asked for holds the tail open */
+export const irTailFolded = () => irGroup.value === "none" && irIsFolded(irFolded.value, "waiting") && !irTailHeld();
 
 /** The waiting tail's heading: its count and Show / Hide. @param {{n: number}} props */
 function TailHead({ n }) {
-  const folded = irTailFolded();
-  return <div class="rgroup irsec" data-irsec="waiting"><h2>Waiting for the transcript <span class="sub rgc">{n}</span> <button type="button" class="linkbtn" data-irfold="waiting" aria-expanded={!folded} onClick={() => irClickFold("waiting")}>{folded ? "Show" : "Hide"}</button></h2></div>;
+  const folded = irTailFolded(), held = irTailHeld();      /* held open by a step, Show choice or search: Hide would do nothing, so it is not offered */
+  return <div class="rgroup irsec" data-irsec="waiting"><h2>Waiting for the transcript <span class="sub rgc">{n}</span> {held ? null : <button type="button" class="linkbtn" data-irfold="waiting" aria-expanded={!folded} onClick={() => irClickFold("waiting")}>{folded ? "Show" : "Hide"}</button>}</h2></div>;
 }
 
 /** @param {{model: any}} props */
@@ -117,7 +118,7 @@ export function BoardView({ model }) {
 /** @param {{model: any, list: any[]}} props */
 export function TwoPanes({ model, list }) {
   const { work, tail } = irSplitTail(list), folded = irTailFolded(), ordered = [...work, ...tail];
-  const sel = ordered.find(m => m.id === irSel.value) || ordered[0], c = irLiveCounts();
+  const sel = ordered.filter(m => !folded || !tail.includes(m)).find(m => m.id === irSel.value) || (folded ? work : ordered)[0], c = irLiveCounts();
   const hidden = (/** @type {any} */ m) => m.private || m.confidential;      /* title and times only */
   const right = (/** @type {any} */ m) => { const n = liveN(m); return n ? `${n} suggestion${n === 1 ? "" : "s"}` : m.stage === "arrived" && m.state === "ready" ? "ready" : ""; };
   const paneRows = (/** @type {any[]} */ rs) => rs.length ? <div class="tbl"><table><tbody>{irGroups(rs).map(g => <>{irGroup.value !== "none" ? <GroupHead g={g} /> : null}{g.items.map((/** @type {any} */ m) => (

@@ -152,13 +152,13 @@ function GroupControls({ view }) {
 
 /** #323: what the ticked rows can do at once, above the list. The same actions as the right-click menu on a ticked row. */
 function TickBar() {
-  const shown = irTickedShown(), ms = irTargets(shown[0] || ""), n = shown.length, hidden = irTicked.value.length - n;
+  const shown = irTickedShown(), n = shown.length, hidden = irTicked.value.length - n;
   if (!n && !hidden) return null;
   return <div class="irtickbar" role="group" aria-label="Selected meetings" data-irtickbar="1">
     <b>{n} selected{hidden ? `, ${hidden} hidden` : ""}</b>
-    <button type="button" class="mini" data-ira="laterall" onClick={() => irAsideMany(ms, "later")}>Later</button>
+    <button type="button" class="mini" data-ira="laterall" onClick={() => irAsideMany(irTargets(irTickedShown()[0] || ""), "later")}>Later</button>
     <button type="button" class="mini" data-ira="reasonall" aria-haspopup="menu" onClick={e => {
-      const el = /** @type {HTMLElement} */ (e.currentTarget); openContextMenuAt(el, /** @type {any} */ (irMenuItems(ms).find(x => x.sub) || { label: "", sub: [] }).sub, { label: "Not needed because" }); }}>Not needed because…</button>
+      const el = /** @type {HTMLElement} */ (e.currentTarget); openContextMenuAt(el, /** @type {any} */ (irMenuItems(irTargets(irTickedShown()[0] || "")).find(x => x.sub) || { label: "", sub: [] }).sub, { label: "Not needed because" }); }}>Not needed because…</button>
     <button type="button" class="linkbtn" data-ira="clearticks" onClick={() => irClearTicks()}>Clear</button>
   </div>;
 }
@@ -170,7 +170,7 @@ function NextJob({ c }) {
   const j = irNextJob(c, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
   if (!j) return null;
   const live = viaServer(), busy = irBlocked() || irRefreshing.value || !!shared.RUN || !!shared.BUSY;   /* as mtgBusy() (core/intakeApi.js), which cannot be imported here: a cycle */
-  const why = busy ? "ask creaite is busy; try again when it’s finished" : j.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy ? "ask creaite is busy; try again when it’s finished" : "";
+  const why = j.job === "tomorrow" ? "" : busy ? "ask creaite is busy; try again when it’s finished" : !live ? "creaite isn’t running" : "";      /* opening tomorrow only moves to another page, so busy never blocks it */
   const act = () => {
     if (j.job === "refresh") irRefreshCalendar();
     else if (j.job === "mail") { if (shared.BUSY) { snack("ask creaite is busy; try again when it’s finished"); return; } openChat(); send("sweep"); }

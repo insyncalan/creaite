@@ -4332,11 +4332,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
 #v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
-#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj],[data-col=org],[data-col=role]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl th{white-space:normal}
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl :is(th,td)[data-col=org]{min-width:112px} #v-people #peopleTbl :is(th,td)[data-col=role]{min-width:92px}   /* org and role keep whole words; only an address or a project name breaks */ #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
-@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
+@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }
+@media (max-width:1100px){ #v-people #peopleTbl th.num{white-space:normal} #v-people #peopleTbl td.title{min-width:112px} #v-people #peopleTbl :is(th,td).num,#v-people #peopleTbl td.mgract{padding-left:5px;padding-right:5px} }   /* #343 M1: the count headings wrap by word, so Organisation and Role keep their room at 900px */   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
 /* #360: People's Display menu sits under its button like Work's, and its group rows are Work's */
 #v-people .toolbar>.ddisp .dispmenu{left:auto;right:0;transform-origin:top right}
 #v-people #peopleTbl tr.wgh td{cursor:pointer}   /* the email is in the person's record; the room goes to the counts */
@@ -9950,6 +9951,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function irClickFold(sec) {
     irFolded.value = irFoldClick(irFolded.value, sec);
+    irClearTicks();
   }
   function irAfterData() {
     irOpen.value = irKeepOpen(irOpen.value, irModel());
@@ -53121,7 +53123,7 @@ system/scripts/run launch.py agent ${what}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? isMe(r4.o) ? "you" : esc(r4.o) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(who(r4.o)) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -78930,14 +78932,15 @@ ${d5.text}`);
     " ",
     /* @__PURE__ */ u4("span", { class: "sub", children: g5.items.length })
   ] }) });
-  var irTailFolded = () => irGroup.value === "none" && irIsFolded(irFolded.value, "waiting") && irStage.value !== "arrived" && irStateFilter.value !== "waiting" && !irQuery.value.trim();
+  var irTailHeld = () => irStage.value === "arrived" || irStateFilter.value === "waiting" || !!irQuery.value.trim();
+  var irTailFolded = () => irGroup.value === "none" && irIsFolded(irFolded.value, "waiting") && !irTailHeld();
   function TailHead({ n: n4 }) {
-    const folded = irTailFolded();
+    const folded = irTailFolded(), held = irTailHeld();
     return /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "waiting", children: /* @__PURE__ */ u4("h2", { children: [
       "Waiting for the transcript ",
       /* @__PURE__ */ u4("span", { class: "sub rgc", children: n4 }),
       " ",
-      /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-irfold": "waiting", "aria-expanded": !folded, onClick: () => irClickFold("waiting"), children: folded ? "Show" : "Hide" })
+      held ? null : /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-irfold": "waiting", "aria-expanded": !folded, onClick: () => irClickFold("waiting"), children: folded ? "Show" : "Hide" })
     ] }) });
   }
   function MailSections({ model }) {
@@ -79056,7 +79059,7 @@ ${d5.text}`);
   }
   function TwoPanes({ model, list }) {
     const { work, tail } = irSplitTail(list), folded = irTailFolded(), ordered = [...work, ...tail];
-    const sel = ordered.find((m5) => m5.id === irSel.value) || ordered[0], c5 = irLiveCounts();
+    const sel = ordered.filter((m5) => !folded || !tail.includes(m5)).find((m5) => m5.id === irSel.value) || (folded ? work : ordered)[0], c5 = irLiveCounts();
     const hidden = (m5) => m5.private || m5.confidential;
     const right = (m5) => {
       const n4 = liveN(m5);
@@ -79328,7 +79331,7 @@ ${d5.text}`);
     ] });
   }
   function TickBar() {
-    const shown2 = irTickedShown(), ms2 = irTargets(shown2[0] || ""), n4 = shown2.length, hidden = irTicked.value.length - n4;
+    const shown2 = irTickedShown(), n4 = shown2.length, hidden = irTicked.value.length - n4;
     if (!n4 && !hidden) return null;
     return /* @__PURE__ */ u4("div", { class: "irtickbar", role: "group", "aria-label": "Selected meetings", "data-irtickbar": "1", children: [
       /* @__PURE__ */ u4("b", { children: [
@@ -79336,7 +79339,7 @@ ${d5.text}`);
         " selected",
         hidden ? `, ${hidden} hidden` : ""
       ] }),
-      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "laterall", onClick: () => irAsideMany(ms2, "later"), children: "Later" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "laterall", onClick: () => irAsideMany(irTargets(irTickedShown()[0] || ""), "later"), children: "Later" }),
       /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "reasonall", "aria-haspopup": "menu", onClick: (e4) => {
         const el2 = (
           /** @type {HTMLElement} */
@@ -79345,7 +79348,7 @@ ${d5.text}`);
         openContextMenuAt(
           el2,
           /** @type {any} */
-          (irMenuItems(ms2).find((x5) => x5.sub) || { label: "", sub: [] }).sub,
+          (irMenuItems(irTargets(irTickedShown()[0] || "")).find((x5) => x5.sub) || { label: "", sub: [] }).sub,
           { label: "Not needed because" }
         );
       }, children: "Not needed because…" }),
@@ -79357,7 +79360,7 @@ ${d5.text}`);
     const j5 = irNextJob(c5, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
     if (!j5) return null;
     const live = viaServer(), busy2 = irBlocked() || irRefreshing.value || !!shared.RUN || !!shared.BUSY;
-    const why = busy2 ? "ask creaite is busy; try again when it’s finished" : j5.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy2 ? "ask creaite is busy; try again when it’s finished" : "";
+    const why = j5.job === "tomorrow" ? "" : busy2 ? "ask creaite is busy; try again when it’s finished" : !live ? "creaite isn’t running" : "";
     const act = () => {
       if (j5.job === "refresh") irRefreshCalendar();
       else if (j5.job === "mail") {

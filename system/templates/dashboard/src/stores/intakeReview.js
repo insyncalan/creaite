@@ -106,7 +106,7 @@ export function irClickMeeting(id) { irOpen.value = irToggle(irOpen.value, id, i
 /** @param {string} g */
 export function irClickStage(g) { irStage.value = irStageClick(irStage.value, g); irClearTicks(); }
 /** @param {string} sec */
-export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); }
+export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); irClearTicks(); }      /* #340: a fold changes what is on the page, so nothing stays ticked behind it */
 /** After new data: the open meeting stays open while it is in the list. */
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel());
   const have = new Set((irModel().meetings || []).filter((/** @type {any} */ x) => x.stage === "arrived" && x.src !== "draft" && !irBusy.value.includes(x.id)).map((/** @type {any} */ x) => x.id)), keep = irTicked.value.filter(x => have.has(x));      /* a row that started processing or was drafted is unticked too */

@@ -253,6 +253,11 @@ class Page(LiveBrowserCase):
             pj = b.eval("(()=>{const h=document.querySelector('#peopleTbl th[data-col=proj]');return [h.getBoundingClientRect().width, h.getBoundingClientRect().height]})()")
             self.assertGreaterEqual(pj[0], 90, w)
             self.assertLess(pj[1], 80, w)
+            # Organisation and Role keep whole words too: no word in their headings or cells is split across two lines (#343 M1)
+            broken = b.eval("""(()=>{const out=[];for(const e of document.querySelectorAll('#peopleTbl th,#peopleTbl :is(th,td):is([data-col=org],[data-col=role])')){const wk=document.createTreeWalker(e,NodeFilter.SHOW_TEXT);let n;while((n=wk.nextNode())){const re=/\\S+/g;let m;while((m=re.exec(n.data))){const r=document.createRange();r.setStart(n,m.index);r.setEnd(n,m.index+m[0].length);const tops=new Set([...r.getClientRects()].map(x=>Math.round(x.top)));if(tops.size>1)out.push(m[0])}}}return out})()""")
+            self.assertEqual(broken, [], w)
+            heads = b.eval("[...document.querySelectorAll('#peopleTbl th:is([data-col=org],[data-col=role])')].length")
+            self.assertEqual(heads, 2, w)
             self.assertEqual(b.eval("(()=>{const ids=[...document.querySelectorAll('[id]')].map(e=>e.id);return ids.length-new Set(ids).size})()"), 0)
             self.assertEqual(b.errors, [])
 

@@ -57,7 +57,9 @@ class NextJobPage(LiveBrowserCase):
     def intake(self, w):
         b = self.b
         b.resize(w, 900)
-        b.eval("REV.splice(0); D.inbox=[]; D.intake_review=%s; D.meetings=Object.assign({},D.meetings,{fetched:'2000-01-01 08:00'}); go('intake-review')" % EMPTY)
+        b.eval("go('intake-review')")
+        b.pump(0.8)                                                                                # opening the page reloads its data; set ours after
+        b.eval("REV.splice(0); D.inbox=[]; D.intake_review=%s; D.meetings=Object.assign({},D.meetings,{fetched:'2000-01-01 08:00'}); shared.BUSY=false; shared.RUN=null; irTick.value++" % EMPTY)
         b.wait("document.querySelector('[data-irnext]')")
 
     def test_clear_intake_says_so_and_has_one_button_that_fits(self):
@@ -79,6 +81,40 @@ class NextJobPage(LiveBrowserCase):
         self.assertIn("isn", b.eval("document.querySelector('[data-irnext] button').title"))
         b.eval("shared.LIVE=window.__live")
 
+    def tomorrow_job(self, ahead=1, bare=False):
+        """Intake with nothing to do, the calendar read today, mail checked, and a saved day `ahead` days on (bare: no saved days at all)."""
+        b = self.b
+        b.resize(1400, 900)
+        b.eval("window.plusDays=n=>{const d=new Date(TODAY+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}")
+        b.eval("go('intake-review')")
+        b.pump(0.8)                                                                                # opening the page reloads its data; set ours after
+        b.eval("REV.splice(0); D.inbox=[]; D.dev=false; D.calendar=D.calendar||{days:{}}; D.sweep_due={due:false}; D.intake_review=%s; D.meetings=Object.assign({},D.meetings,{fetched:TODAY+' 08:00'}); D.days={days:[synthDay(TODAY)%s]}; S.srcCalendar=true; shared.BUSY=false; shared.RUN=null; irTick.value++" % (EMPTY, "" if bare else ",synthDay(plusDays(%d))" % ahead))
+        b.pump(0.5)
+
+    def test_next_is_disabled_while_ask_creaite_is_busy_and_says_why(self):
+        self.intake(1400)
+        b = self.b
+        for flag in ("shared.BUSY=true", "shared.RUN={}"):
+            b.wait("(shared.BUSY=false, shared.RUN=null, irTick.value++, !document.querySelector('[data-irnext] button').disabled)")
+            b.wait("(%s, irTick.value++, document.querySelector('[data-irnext] button').disabled)" % flag)      # set on each poll: a data refresh may clear it
+            self.assertIn("busy", b.eval("document.querySelector('[data-irnext] button').title"), flag)
+        b.eval("shared.BUSY=false; shared.RUN=null")
+
+    def test_open_tomorrow_only_when_tomorrow_itself_is_saved_and_busy_never_blocks_it(self):
+        b = self.b
+        self.tomorrow_job(1)
+        self.assertEqual(b.eval("(document.querySelector('[data-irnext]')||{dataset:{}}).dataset.irnext"), "tomorrow")
+        b.eval("shared.BUSY=true; irTick.value++")
+        b.pump(0.3)
+        self.assertFalse(b.eval("document.querySelector('[data-irnext] button').disabled"))      # it only moves to another page
+        b.eval("shared.BUSY=false")
+        self.tomorrow_job(3)                                                                      # a day three ahead is not tomorrow
+        self.assertEqual(b.eval("document.querySelectorAll('[data-irnext] button').length"), 0)
+        self.assertNotIn("tomorrow", b.eval("document.querySelector('[data-irnext]').textContent"))
+        self.tomorrow_job(bare=True)                                                              # no saved day: it says nothing about tomorrow
+        self.assertEqual(b.eval("document.querySelectorAll('[data-irnext] button').length"), 0)
+        self.assertNotIn("tomorrow", b.eval("document.querySelector('[data-irnext]').textContent"))
+
     def test_nothing_is_shown_while_there_is_work(self):
         b = self.b
         b.eval("go('intake-review')")
@@ -92,10 +128,11 @@ class NextJobPage(LiveBrowserCase):
         b.wait("!document.querySelector('[data-irnext]')")
     def test_week_ahead_with_nothing_offers_tomorrow_only_when_the_calendar_has_one(self):
         b = self.b
+        b.eval("window.plusDays=n=>{const d=new Date(TODAY+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}")      # tomorrow from the page's own today, never a fixed date
         EMPTYWEEK = "D.week=Object.assign({},D.week,{items:[],groups:[],undated:[],further:[],days:[]}); go('cockpit','ABC'); go('today')"
         for w in (1400, 900):
             b.resize(w, 900)
-            b.eval("go('today'); D.calendar=D.calendar||{days:{}}; D.days={days:[synthDay(TODAY),synthDay('2026-10-25')]}; " + EMPTYWEEK)
+            b.eval("go('today'); D.calendar=D.calendar||{days:{}}; D.days={days:[synthDay(TODAY),synthDay(plusDays(1))]}; " + EMPTYWEEK)
             b.wait("document.querySelector('[data-wknext]')")
             self.assertIn("Next: look at tomorrow.", b.eval("document.querySelector('#weekList').textContent"))
             self.assertTrue(b.eval("document.scrollingElement.scrollWidth<=innerWidth"))
