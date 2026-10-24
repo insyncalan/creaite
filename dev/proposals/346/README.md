@@ -46,4 +46,4 @@ queue has no effect when it runs. Safe (a fresh session carries the last lines a
 `dev/tests/test_run_setup_346.py` (skips without the diff): the runs chat carries nothing, with the real `Run` and a stand-in process, other
 chats still carry; a late `ValueError`, `RuntimeError` or `KeyError` leaves no record; the error reaches the caller unchanged; a started
 process is ended; another run's record stays; a run that starts keeps its record; a mutant (no clean-up) leaves the record.
-`test_minutes_destination.py` has the item 2 tests. Second in the 2.6.4 chain; applies to origin/main alone and after 345 or 334.
+`test_minutes_destination.py` has the item 2 tests. Second in the 2.6.4 chain; goes in on origin/main alone and after 345 or 334.

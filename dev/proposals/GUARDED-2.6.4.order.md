@@ -1,6 +1,6 @@
 # Guarded diffs for 2.6.4: order and why
 
-Chain order (each applies on a clean origin/main at e6389af8 once the ones before it are in; the chain file itself is made elsewhere):
+Chain order (each goes in on a clean origin/main at e6389af8 once the ones before it are in; the chain file itself is made elsewhere):
 
 1. `dev/proposals/345/live_server.diff`: every route that decides an item names the item (`expect`).
 2. `dev/proposals/346/live_server.diff`: the runs chat carries nothing; a failed run set-up leaves no record.
@@ -18,5 +18,5 @@ Why this order: 345 is the largest and touches the part of the file furthest fro
 review alone. 346 follows because 334's `queue_start` hunk sits just above the `Run` class that 346 edits, and keeping the run engine
 changes together reads best. 334 is last because it needs `ai_budget.py` (merged separately) and is the only one with a setting.
 
-Checked (24-10-2026): in this order they apply to origin/main with `git apply --check`, apply, and reverse in the reverse order; and each
-applies on its own and in every other order of the three (no hunk overlaps). 334 alone also applies to a tree without 345 and 346.
+Checked (24-10-2026): in this order they pass git's patch check on origin/main, go in, and come out again in the reverse order; and each
+goes in on its own and in every other order of the three (no hunk overlaps). 334 alone also goes in on a tree without 345 and 346.

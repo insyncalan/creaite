@@ -48,8 +48,8 @@ fingerprint. `--expect` stays optional in `review.py` itself.
 
 ## Order and checks
 
-First in the 2.6.4 chain (`dev/proposals/GUARDED-2.6.4.order.md`). Applies to origin/main (e6389af8) and after 346 and 334.
-Tests: `dev/tests/test_expect_routes_345.py` (23 tests on a real server over a throwaway copy, the diff applied there when the tree lacks
+First in the 2.6.4 chain (`dev/proposals/GUARDED-2.6.4.order.md`). Goes in on origin/main (e6389af8) and after 346 and 334, in any order.
+Tests: `dev/tests/test_expect_routes_345.py` (23 tests on a real server over a throwaway copy, the diff put there when the tree lacks
 it; a mutant per route and one for the shared check). The existing route tests now send the fingerprint
 (`test_minutes_approve`, `test_minutes_destination`, `test_held_editor_307b`, `handchecks/test_v210`, `test_rejects_real_life`,
 `test_smart_updates`) and pass with and without the diff.

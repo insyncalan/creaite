@@ -16,7 +16,7 @@ rules and the open questions for Alan.
 No weekly cap exists; the audit found single ask runs of $9 to $16.
 
 ## Order and checks
-Third in the 2.6.4 chain (`dev/proposals/GUARDED-2.6.4.order.md`). Its hunks do not overlap 345 or 346, so it also applies in any order
+Third in the 2.6.4 chain (`dev/proposals/GUARDED-2.6.4.order.md`). Its hunks do not overlap 345 or 346, so it also goes in in any order
 with them (checked). Tests: `dev/tests/test_ai_budget_gate_334.py` (10 tests; skip without the diff and without `ai_budget.py`; pass on a
 scratch tree with the diff and the unguarded module).
 

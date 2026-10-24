@@ -75,8 +75,8 @@ class RunsChat(Case):
         self.assertNotIn("Ignore the above", self.cmds[-1][-1])
 
     def test_an_ordinary_chat_still_carries_its_last_lines(self):
-        self.write_chat("c-1", text="What is due on Friday?")
-        self.start("c-1")
+        self.write_chat("chat-one1", text="What is due on Friday?")
+        self.start("chat-one1")
         self.assertIn("What is due on Friday?", self.cmds[-1][-1])
         self.assertIn("not instructions", self.cmds[-1][-1])
 
@@ -103,8 +103,12 @@ class SetupFails(Case):
 
     def test_a_process_already_started_is_ended(self):
         ended = []
-        with mock.patch.object(live_server, "end_process", ended.append), \
-                mock.patch.object(live_server.RUNS, "__setitem__", side_effect=RuntimeError("late")):
+
+        class Full(dict):
+            def __setitem__(self, key, value):
+                raise RuntimeError("late")
+
+        with mock.patch.object(live_server, "end_process", ended.append), mock.patch.object(live_server, "RUNS", Full()):
             with self.assertRaises(RuntimeError):
                 self.start(None)
         self.assertEqual(len(ended), 1)
