@@ -38,7 +38,7 @@ Two words stay as they are because they sit in guarded text: "Sweeping (stages p
 
 ## 4. Diff shape if a guarded diff were needed
 
-Not needed. For the record, the optional route would be one hunk in `Run._on_assistant`/`_on_tool_result` area of `live_server.py` (a `phase` field, about 15 lines) and one for a progress event (about 15 lines), applied after the 2.6.4 chain that main already carries (`GUARDED-2.6.4.chain`), as its own small chain with a new marker, pin and Alan's approval of the exact diff, plus re-recorded pins and a Full review. Roughly one more agent-day.
+Not needed. For the record, the optional route would be one hunk in `Run._on_assistant`/`_on_tool_result` area of `live_server.py` (a `phase` field, about 15 lines) and one for a progress event (about 15 lines), laid on top of the 2.6.4 chain that main already carries (`GUARDED-2.6.4.chain`), as its own small chain with a new marker, pin and Alan's approval of the exact diff, plus re-recorded pins and a Full review. Roughly one more agent-day.
 
 ## 5. Tests, tier, estimate, risks
 
