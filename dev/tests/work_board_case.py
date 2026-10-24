@@ -96,8 +96,8 @@ class BoardCase(LiveBrowserCase):
         return next(r for r in self.v.rows("raid") if r["id"] == id_)
 
     def wait_saved(self, moved=None):
-        """The snackbar says the move was saved and applied (and, with `moved`, that it is about this move: an earlier message may still be up)."""
-        self.b.wait(f"/saved and applied/.test(document.getElementById('snackT').textContent) && document.getElementById('snackT').textContent.includes({(moved or '')!r})", 15)
+        """The snackbar says the move was — saved (and, with `moved`, that it is about this move: an earlier message may still be up)."""
+        self.b.wait(f"/— saved/.test(document.getElementById('snackT').textContent) && document.getElementById('snackT').textContent.includes({(moved or '')!r})", 15)
 
     def dialog_open(self):
         return self.b.eval("document.getElementById('boardDlg').open")

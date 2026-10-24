@@ -228,7 +228,7 @@ export function PrepShape() {
           <h3 id="shapeH"><Icon name="spark" />Tell creaite how you want to run this meeting</h3>
           <button type="button" class="linkbtn" data-shback="1" onClick={closeShape}>Back to the brief</button>
         </div>
-        {conf ? <p class="sub shconf" role="note">Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents.</p> : null}
+        {conf ? <p class="sub shconf" role="note">Confidential meeting: shaped from your text and your project record only. creaite doesn't read the invite, minutes or documents.</p> : null}
         <label class="sub" for="shapeTxt">Your focus and aim. Write as much as you like; drag the corner to make the box bigger.</label>
         <textarea id="shapeTxt" ref={box} class="shgrow" rows={4} maxLength={4000} value={shapeInstruction.value}
           placeholder="For example: Focus on the latency risk only. I want Tom to commit to a date for the fix."
@@ -246,7 +246,7 @@ export function PrepShape() {
             <button type="button" class="mini" data-drstop>Stop</button></div>
         ) : null}
         {shapeMsg.value && !busy ? <p class="wnote" role="status">{shapeMsg.value}</p> : null}
-        {!viaServer() ? <p class="wnote">Shaping needs the live server.</p> : null}
+        {!viaServer() ? <p class="wnote">Shaping needs creaite to be running.</p> : null}
         <ReadAs />
       </div>
       <Notes />
@@ -277,7 +277,7 @@ export function PageShape({ rec, again, onUsed }) {
   const changed = prop ? SHAPE_SECTIONS.filter(([k]) => flat(prop.notes[k]) !== flat(saved[k])) : [];
   return (
     <div class="ppshape">
-      {conf ? <p class="sub shconf" role="note">Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents.</p> : null}
+      {conf ? <p class="sub shconf" role="note">Confidential meeting: shaped from your text and your project record only. creaite doesn't read the invite, minutes or documents.</p> : null}
       <div class="ppshrow">
         <input id="pp-shape-txt" type="text" maxLength={4000} value={shapeInstruction.value} aria-label="What to focus on (optional)"
           placeholder="What to focus on? Optional: lead with the decision…"
@@ -293,7 +293,7 @@ export function PageShape({ rec, again, onUsed }) {
           <button type="button" class="mini" data-drstop>Stop</button></div>
       ) : null}
       {shapeMsg.value && !busy ? <p class="wnote" role="status">{shapeMsg.value}</p> : null}
-      {!viaServer() ? <p class="wnote">Shaping needs the live server.</p> : null}
+      {!viaServer() ? <p class="wnote">Shaping needs creaite to be running.</p> : null}
       {prop && !busy ? (
         <div class="ppsug" role="region" aria-label="Suggestion from creaite">
           <div class="shdh">

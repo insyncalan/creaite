@@ -319,7 +319,7 @@ class Movement(Case):
         b.wait("document.querySelectorAll('#mvRbForm .mv-chip').length===1")
         b.eval("document.getElementById('mvRbWhy').value='Hypercare follows the new go-live'")
         b.click('#mvRbForm [data-mvrb="ok"]')
-        b.wait("document.getElementById('snackT').textContent.includes('Staged for Review')")
+        b.wait("document.getElementById('snackT').textContent.includes('Waiting in Review')")
         props = [json.loads(p.read_text()) for p in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")]
         item = next(i for p in props for i in p["items"] if i.get("rebaseline"))
         self.assertEqual((item["decision"], item["changes"]["baseline_date"], item["rebaseline"]["agreed_with"]), ("pending", d(118), ["Sara Example"]))
@@ -340,7 +340,7 @@ class Movement(Case):
             if text:
                 b.eval(f"document.getElementById('mvAdjWhy').value={text!r}")
             b.click("#mvAdjForm [data-mvadjok]")
-            b.wait("document.getElementById('snackT').textContent.includes('Staged for Review')")
+            b.wait("document.getElementById('snackT').textContent.includes('Waiting in Review')")
         items = [i for p in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json") for i in json.loads(p.read_text())["items"]]
         kinds = sorted((i["table"], i["values"].get("status", "")) for i in items)
         self.assertEqual(kinds, [("actions", ""), ("decisions", "Made"), ("decisions", "Pending")])

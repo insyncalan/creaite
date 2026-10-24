@@ -110,7 +110,7 @@ export function mWords(d){ if(!d||reduced()) return d; const walk=document.creat
 export const MLV=store.get("creaite-lastviewed",{}), MLVAT={}, MNEWGONE=new Set();
 shared.MNEWIO=null;
 /* 38. New since your last visit: Work (with All items and a person's tables), Review and Today's Needs attention. Existing timestamps
-   (an item's "created" in Activity, else its raised date; a proposal's file stamp) against a last-viewed time this browser keeps
+   (an item's "created" in Activity, else its raised date; a suggestion's file stamp) against a last-viewed time this browser keeps
    (localStorage only: nothing in the vault, the database or staging). First visit: none. A dot fades once its row has been on screen
    for about 2s, or is opened; the page's last-viewed time moves on when the page is left. */
 /* BL-250 (sprint-milestone-ui): the joined history, so an item created before Activity's newest 2000 rows keeps its date: ACT's

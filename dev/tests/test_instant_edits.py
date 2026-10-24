@@ -82,7 +82,7 @@ class InstantEdits(LiveBrowserCase):
         self.assertEqual(r["rec"], "Urgent")
         self.assertTrue(r["saving"], "the row carries the saving dot while it saves")
         self.assertLess(r["ms"], 500)   # one frame; generous for a loaded runner (the value check is the frame)
-        self.wait_snack("saved and applied")
+        self.wait_snack("— saved")
         self.settle()
         self.assertEqual(self.row("ABC-A-002")["priority"], "Urgent")
         self.assertEqual(len(self.v.rows("applies")), before + 1)
@@ -107,7 +107,7 @@ class InstantEdits(LiveBrowserCase):
         TIMINGS["board"] = r["ms"]
         self.assertEqual(r["rec"], "Delayed")
         self.assertLess(r["ms"], 500)   # one frame; generous for a loaded runner (the value check is the frame)
-        self.wait_snack("saved and applied")
+        self.wait_snack("— saved")
         self.settle()
         self.assertEqual(self.row("ABC-A-002")["status"], "Delayed")
         self.assertEqual(b.eval(col), r["col"], "the card was already where the save left it")
@@ -145,7 +145,7 @@ class InstantEdits(LiveBrowserCase):
         self.assertEqual(r["rec"], "Urgent")
         self.assertIn("Urgent", r["cell"])
         self.assertLess(r["ms"], 500)   # one frame; generous for a loaded runner (the value check is the frame)
-        self.wait_snack("^Staged")
+        self.wait_snack("^Saved")
         self.assertEqual(len(self.staged()), 1)
 
     # ── failure, Retry and Undo ──
@@ -164,7 +164,7 @@ class InstantEdits(LiveBrowserCase):
         b.eval("window.api=__api0")
         b.eval("document.getElementById('snackU').click()")
         b.wait("REC('actions','ABC-A-002').pr==='Urgent'", 2)              # Retry: on screen again at once
-        self.wait_snack("saved and applied")
+        self.wait_snack("— saved")
         self.settle()
         self.assertEqual(self.row("ABC-A-002")["priority"], "Urgent")
         self.assertEqual(self.counts()["data"], 0)
@@ -183,7 +183,7 @@ class InstantEdits(LiveBrowserCase):
     def test_undo_after_the_save_and_while_it_is_saving(self):
         b = self.open_list()
         self.cell_edit("ABC-A-002", "pr", "Urgent")
-        self.wait_snack("saved and applied")
+        self.wait_snack("— saved")
         self.settle()
         b.click("#snackU")
         self.wait_snack("^Undone")
@@ -263,7 +263,7 @@ class InstantEdits(LiveBrowserCase):
         b.eval("S.autoApply=false")
         r = self.cell_edit("ABC-A-002", "pr", "Urgent")
         self.assertEqual(r["rec"], "Urgent")
-        self.wait_snack("press Apply")
+        self.wait_snack("press Save")
         b.wait("!!document.querySelector('#workTbl tr[data-row=\"ABC-A-002\"] .pkdot[data-st=\"staged\"]')")
         self.assertEqual(len(self.staged()), 1)
         self.assertEqual(self.row("ABC-A-002")["priority"], "Medium")

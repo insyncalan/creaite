@@ -266,8 +266,16 @@ def _rename_in(data, others, code, name):
     return fixed
 
 
+def _fingerprints(data):
+    """{item number as text: the item's fingerprint} as the file now stands (#346): a new name changes each item's source, so the
+    open Review page needs the new ones to go on deciding those items. Numbers and hex digits only."""
+    import build_dashboard
+    items = [it for it in data.get("items") or [] if isinstance(it, dict) and isinstance(it.get("n"), int)]
+    return {str(it["n"]): build_dashboard.item_fp(it) for it in items}
+
+
 def set_names(file, names):
-    """File the minutes under {code: name}: {ok, names: {code: name}, message}. All or none: every name is checked and applied to
+    """File the minutes under {code: name}: {ok, names: {code: name}, fps, message}. All or none: every name is checked and applied to
     the loaded proposal, which is written once at the end, so a refusal on any project changes nothing."""
     try:
         p, data = _proposal(file)
@@ -275,9 +283,10 @@ def set_names(file, names):
         for code, name in (names or {}).items():
             used[code] = _rename_in(data, others, str(code), name)
         _save(p, data)
+        fps = _fingerprints(json.loads(p.read_text(encoding="utf-8")))       # as written, whatever the save added
     except DestinationError as e:
         return {"ok": False, "message": str(e)}
-    return {"ok": True, "names": used, "message": ""}
+    return {"ok": True, "names": used, "fps": fps, "message": ""}
 
 
 def set_name(file, code, name):

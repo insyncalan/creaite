@@ -170,7 +170,7 @@ class FirstCommit(NewCase):
         self.assertEqual(v["source"], f"{b.eval('S.me')} (dashboard), {TODAY}")
         self.assertEqual(self.proposal(files[0])["source_run"], "dashboard")
         self.assertFalse(b.eval("document.querySelector('#panel .pkbad')"))
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change staged on 1 item")
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change waiting to be saved on 1 item")
         # later edits rewrite that one proposal
         self.pick("pr", "High")
         self.settle()
@@ -187,9 +187,9 @@ class FirstCommit(NewCase):
         self.assertEqual(self.staged(), files)
         v = self.proposal(files[0])["items"][0]["values"]
         self.assertEqual((v["priority"], v["due_date"], v["latest_update"]), ("High", "2026-10-15", "Asked facilities"))
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change staged on 1 item")
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change waiting to be saved on 1 item")
         self.assertEqual(self.find("actions", "description", "Book the steering room"), [])     # nothing in the tracker yet
-        self.assertIn("staged", b.eval("document.getElementById('pkFeed').textContent"))
+        self.assertIn("waiting", b.eval("document.getElementById('pkFeed').textContent"))
         self.assertEqual(b.errors, [])
 
     def test_cmd_enter_commits_applies_and_closes(self):
@@ -270,7 +270,7 @@ class FirstCommit(NewCase):
         b.click("#pkUndo")
         b.wait("CUR&&CUR.mode==='new'&&!CUR.staged")
         self.assertEqual(self.staged(), [])
-        self.assertIn("no longer staged", b.eval("document.querySelector('.snack').textContent"))
+        self.assertIn("no longer saved", b.eval("document.querySelector('.snack').textContent"))
         self.assertTrue(b.eval("document.getElementById('pkStage').hidden"))
         b.click("#pkTitle")
         b.key("Enter")                                                                            # committing the title again stages it again

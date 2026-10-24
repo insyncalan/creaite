@@ -8,6 +8,7 @@
    by components/minutes/FilingDialog.jsx. */
 import { signal } from "@preact/signals";
 import { api, oneLine } from "../core/server.js";
+import { REV } from "../core/data.js";
 
 /** @typedef {{code: string, project: string, folder_label: string, name: string, ext: string, taken: boolean, numbered: string|null,
     will_be: string, local: boolean, filed_copy?: boolean, transcript: {name: string, will_be: string, folder_label: string}|null}} Destination */
@@ -61,11 +62,29 @@ export async function confirmFiling() {
     const r = await api("/api/minutes/destination/name", { file: a.file, names });
     if (!r || !r.ok) { filingError.value = oneLine((r && r.message) || "That name can't be used."); return; }
     used = r.names || {};
+    keepFingerprints(a.file, r.fps);
   }
   const shown = a.items.map(it => ({ code: it.code, project: it.project, folder_label: it.folder_label, name: used[it.code] || it.will_be }));
   filingAsk.value = null;
   filedNote.value = { key: a.key, items: shown };
   a.resolve(true);
+}
+
+/** The items' fingerprints after a new name, by file: Approve minutes takes them over the minutes view's plan, which was drawn before
+    the name changed (#345). @type {Map<string, Record<string, string>>} */
+const renamed = new Map();
+/** One item's fingerprint after a new name, or "" (no new name for this file). @param {string} file @param {number} n */
+export const renamedFp = (file, n) => ((renamed.get(file) || {})[String(n)]) || "";
+/** Done with a file's new-name fingerprints (an approve was tried: the view is drawn again from the server). @param {string} file */
+export const forgetRenamed = file => { renamed.delete(file); };
+
+/** 2.6.4 (#346): a new name changes what each of the meeting's items says about where it came from, so the server sends their
+    fingerprints again and the open Review rows take them (otherwise the next decision on one would be declined until a reload).
+    @param {string} file @param {Record<string, string>|undefined} fps by item number */
+export function keepFingerprints(file, fps) {
+  if (!fps) return;
+  renamed.set(file, fps);
+  for (const r of REV) if (r.file === file && Object.prototype.hasOwnProperty.call(fps, String(r.ref))) r.fp = fps[String(r.ref)];
 }
 
 /** The approve numbered a name after all (another pending meeting took it first): the note says the name it was filed under.

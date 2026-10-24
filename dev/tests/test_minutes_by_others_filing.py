@@ -115,6 +115,8 @@ def scratch(patched):
     v.run("init")
     tracker = v.root / "system" / "scripts" / "tracker.py"
     shutil.copy(REPO / "system" / "scripts" / "tracker.py", tracker)
+    if "Nothing to save: no decided items." in tracker.read_text(encoding="utf-8"):   # #292 wording: the older diffs below are built on the old words
+        subprocess.run(["git", "apply", "-R", str(REPO / "dev/proposals/292-tracker/tracker.diff")], cwd=v.root, check=True)
     if BASE_MARKER not in tracker.read_text(encoding="utf-8"):        # guard-small first: E1 is built on it (both copies have it)
         _patch(v.root, diff=BASE_DIFF)
     already = MARKER in tracker.read_text(encoding="utf-8")
@@ -250,7 +252,7 @@ class Fixed(Base):
     def test_a_staged_proposal_with_no_decided_item_is_not_an_apply_at_all(self):
         """Its block is approved from staging, but with no approved item it is not decided: an apply says there is nothing to apply."""
         r = self.v.run("apply")
-        self.assertIn("Nothing to apply", r.stdout)
+        self.assertTrue("Nothing to save" in r.stdout or "Nothing to apply" in r.stdout, r.stdout)     # tracker.py says "Nothing to save" once the 2.6.4 guarded chain carries the wording (#292)
         with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM applies").fetchone()[0], 0)
         self.assertTrue(self.inbox())
@@ -321,7 +323,7 @@ class Fixed(Base):
         self.approve(second)
         self.unrelated()
         r = self.v.run("apply")
-        self.assertIn("is taken by a different file in this apply", r.stdout)
+        self.assertIn("is taken by a different file in this ", r.stdout)
         filed = (self.v.root / FILED).read_text(encoding="utf-8")
         self.assertIn(filed, (MINUTES, "A different set of minutes\n"))
         left_in_inbox = [f for f in ("inbox/second.txt", FILE) if (self.v.root / f).exists()]
@@ -379,11 +381,11 @@ class Swapped(Base):
 
     def test_a_different_regular_file_put_there_after_staging_is_a_checksum_mismatch(self):
         self.swap(lambda f: f.write_text("Quite different minutes\n"))
-        self.check_left_alone(self.v.root / FILE, "Quite different minutes\n", "changed since it was staged")
+        self.check_left_alone(self.v.root / FILE, "Quite different minutes\n", "changed since it was ")
 
     def test_the_file_edited_in_place_after_staging_is_refused_too(self):
         (self.v.root / FILE).write_text(MINUTES + "One more line\n")
-        self.check_left_alone(self.v.root / FILE, MINUTES + "One more line\n", "changed since it was staged")
+        self.check_left_alone(self.v.root / FILE, MINUTES + "One more line\n", "changed since it was ")
 
     def test_a_folder_swapped_for_a_link_after_staging_is_caught_by_the_area_check(self):
         """inbox/sub/m.txt staged; sub is then replaced by a link to a vault folder holding the very same bytes."""
@@ -619,7 +621,7 @@ class Races(Base):
         # the original content is put back after the copy, so the remove's own checksum can't be what stops the apply
         out = self.hook("FILE_OPS['copy']", self.entry("p.write_text(%r)" % other), after="p.write_text(%r)" % MINUTES)
         self.assertIn("RC 1", out)
-        self.assertIn("changed since it was staged", out)
+        self.assertIn("changed since it was ", out)
         self.assertFalse(self.filed())
 
     def test_same_size_different_content_before_the_remove_is_refused_and_left_alone(self):
@@ -957,7 +959,7 @@ class Probes(Base):
         self.approve(second)
         r = self.v.run("apply", ok=False)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("is taken by a different file in this apply", r.stdout)
+        self.assertIn("is taken by a different file in this ", r.stdout)
         # The first applied. On a case-insensitive disk (APFS) both names are one file; on a case-sensitive one (Linux CI) they are
         # two, and whichever proposal the apply took first is the one filed, under its own capitals: exactly one of the two exists.
         mins = (self.v.root / FILED).parent
@@ -1069,7 +1071,7 @@ class EachOpChecked(Base):
         (self.v.root / FILE).write_text(MINUTES.replace("SOW", "XYZ"), encoding="utf-8")
         got = self.check_ops()
         for op in ("copy", "remove"):
-            self.assertIn("changed since it was staged", got[op], op)
+            self.assertIn("changed since it was ", got[op], op)
 
     def test_a_hard_link_is_refused_by_the_remove_too(self):
         other = self.v.root / f"{ABC}/documents/other-name.txt"

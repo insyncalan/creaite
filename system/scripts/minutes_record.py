@@ -405,7 +405,7 @@ def proposal_for(doc):
     name = (doc.get("meta") or {}).get("proposal") or ""
     p = paths.STAGING / name
     if not re.fullmatch(r"proposed-[\w.-]+\.json", name) or not p.is_file():
-        raise RecordError("These minutes' items aren't pending any more: they were approved or the proposal has gone.")
+        raise RecordError("These minutes' items aren't pending any more: they were approved or the suggestion has gone.")
     return p, json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -818,7 +818,7 @@ def change(path, op, base_version=None, via="dashboard"):
     {ok, message, version, doc}; refusals raise RecordError. Every change first settles the record (#268: settle)."""
     doc = creaite_doc.read(path)
     if doc.get("state") == "approved":
-        raise RecordError("These minutes are approved; their items are in the tracker. Change the items there.")
+        raise RecordError("These minutes are approved; their items are in your project record. Change the items there.")
     p, data = proposal_for(doc)
     settled = settle(doc, data)                             # #268: after an Undo of the approve, the record follows its items first
     kind, n = op.get("op"), op.get("n")
@@ -929,10 +929,22 @@ def _report_place(rel, doc):
         return False                  # no reports folder to be in (the portfolio's minutes); the name check above still ran
 
 
+def plan_with_fps(data):
+    """review.minutes_plan(data) with each item's fingerprint (`fp`) on its row (#345): Approve minutes names every item it approves,
+    and an item already approved in Review but not yet saved is not in Review's list, so the plan is where the page finds it."""
+    import review
+    import build_dashboard
+    plan = review.minutes_plan(data)
+    by_n = {it.get("n"): it for it in data.get("items") or [] if isinstance(it, dict)}
+    for row in plan["items"]:
+        if row.get("n") in by_n:
+            row["fp"] = build_dashboard.item_fp(by_n[row["n"]])
+    return plan
+
+
 def view(file=None, path=None):
     """What the minutes view opens: the record, its versions, the transcript's turns for the pane, and (while its items are
     pending) the approve popup's plan. By the proposal's file name, or the record's stored path."""
-    import review
     data = None
     if file:
         p = paths.STAGING / Path(str(file)).name
@@ -951,7 +963,7 @@ def view(file=None, path=None):
     meta = doc.get("meta") or {}
     labels = item_labels(doc)
     return {"ok": True, "path": rel, "doc": doc, "versions": creaite_doc.versions(rel), "turns": turns(meta.get("transcript")),
-            "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None,
+            "proposal": meta.get("proposal"), "plan": plan_with_fps(data) if data and doc["state"] == "draft" else None,
             "labels": labels, "withheld": withheld(doc, labels),
             "settle": unsettled(doc, data) if data and doc["state"] == "draft" else []}
 

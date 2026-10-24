@@ -21,7 +21,7 @@ from test_dashboard import populate  # noqa: E402
 READY = "typeof go==='function' && LIVE"
 MENU = ".cxmenu"
 CMD = 4
-SAVED = r"saved and applied|apply stopped|Not saved|isn't|can't"
+SAVED = r"— saved|apply stopped|Not saved|isn't|can't"
 
 
 class KeysV2(LiveBrowserCase):

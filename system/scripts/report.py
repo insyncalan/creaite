@@ -103,10 +103,10 @@ def report_file(day, kind, name, ext=".docx"):
 
 
 def project(con, code):
-    """(project row, project folder, memory) for a code; exits with a message when the code isn't in the tracker."""
+    """(project row, project folder, memory) for a code; exits with a message when the code isn't in your project record."""
     p = rows(con, "SELECT * FROM projects WHERE code = ?", code)
     if not p:
-        sys.exit(f"{code} isn't in the tracker.")
+        sys.exit(f"{code} isn't in your project record.")
     folder = paths.project_dir(code)
     return p[0], folder, build_dashboard.memory(folder)
 
@@ -1220,7 +1220,7 @@ def client_item_context(con, item_id):
         raise drafts.Refused("Client wording is drafted for actions, RAID items and decisions.")
     row = con.execute(f"SELECT * FROM {table} WHERE id = ?", (item_id,)).fetchone()
     if not row:
-        raise drafts.Refused(f"{item_id} isn't in the tracker.")
+        raise drafts.Refused(f"{item_id} isn't in your project record.")
     x = dict(row)
     _, excluded = project_labels(con, x["project"])
     if item_id in excluded:

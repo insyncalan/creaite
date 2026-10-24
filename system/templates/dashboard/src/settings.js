@@ -107,7 +107,7 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
 export function openItemsAsk(name,open){ return new Promise(res=>{ const dlg=$("#parchDlg")||makeArchiveAskDialog();
   putHTML($("#parchBody"),html`<h2 id="parchH">${name} has ${open.length} open item${open.length===1?"":"s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open.slice(0,30).map(o=>html`<li><b>${o.id}</b> ${o.text}</li>`)}</ul>${open.length>30?html`<p class="sub">and ${open.length-30} more</p>`:""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
   const fin=v=>{ res(v); closeDialog(dlg); }; dlg.querySelector('[data-a="stop"]').onclick=()=>fin(false); dlg.querySelector('[data-a="go"]').onclick=()=>fin(true); dlg.addEventListener("close",()=>res(false),{once:true}); openDialog(dlg); }); }
-export async function projArchive(code,action,cancel){ if(!viaServer()){ snack("Archiving needs the live server"); return; }
+export async function projArchive(code,action,cancel){ if(!viaServer()){ snack("Archiving needs creaite to be running"); return; }
   const r=await api("/api/project/archive",{code,action,cancel_open:!!cancel});
   if(!r.ok&&(r.open||[]).length&&!cancel){ if(await openItemsAsk(pName(code),r.open)) return projArchive(code,action,true); snack("Stopped: nothing was archived"); return; }
   if(!r.ok){ snack(oneLine(r.message||"It couldn't be prepared")); return; }
@@ -145,7 +145,7 @@ export const SETSECTIONS=[
    +row("Show possible matches",sw("possible"))+'<div id="ignMgr"></div>',
   after:()=>renderIgnore()},
  moreSection("sweep"),
- {id:"closeday",cat:"sweep",title:"Close the day",groups:["Close the day"],kw:"close the day evening catch up catch-up sweep before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
+ {id:"closeday",cat:"sweep",title:"Close the day",groups:["Close the day"],kw:"close the day evening catch up catch-up check before closing minutes shutdown",   /* BL-295; whether to catch up is in Essentials › Your day (BL-320) */
   render:()=>row("Catch up when the last check is older than (minutes)",nm("catchupAfter"),"A check more recent than this says “Caught up” instead, with Check again. Whether the card catches up is in Essentials › Your day")},
  moreSection("reports"),
  {id:"reminders",cat:"reports",title:"Reminders",groups:["Reminders"],kw:"reminders weekly report day dismissed restore",   /* v2.6 (#246): each project's client report rhythm is in that project's settings */
@@ -157,7 +157,7 @@ export const SETSECTIONS=[
  {id:"help",cat:"look",title:"Help",groups:["Help"],kw:"help start here first run first-run show again welcome",   /* v2.6 (#246): help.start_seen as a quiet button */
   render:()=>row("Show the first-run help again",'<button type="button" class="btn" id="helpAgain" data-setkey="help.start_seen">Show it again</button>',"Help › Start here opens by itself the next time creaite starts, as it did the first time")},
  moreSection("look"),
- {id:"thresholds",cat:"advanced",sub:"review",title:"Review and health",groups:["Review","Health thresholds"],kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next proposal duplicate overlap spot check",
+ {id:"thresholds",cat:"advanced",sub:"review",title:"Review and health",groups:["Review","Health thresholds"],kw:"stale due soon at risk off track overdue slip milestone urgent risks thresholds health review auto advance next suggestion duplicate overlap spot check",
   render:()=>row("Stale after (days)",nm("staleDays"))+row("Review: move to the next suggestion after a decision",sw("rvAdvance"),"After Approve or Reject, the next undecided row is ready for the keyboard")
    +row("Review: possible duplicate when words overlap at least",`<input type="number" data-k="dupOverlap" value="${S.dupOverlap??0.6}" min="0.1" max="1" step="0.05" style="width:80px">`,"0.6 by default: the share of words a suggestion has in common with an open item of the same type in the same project")+row("Due soon means within (days)",nm("dueSoon"))+row("At risk: action overdue more than (days)",nm("overdueDays"))
    +row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))+row("Off track: slip more than (weeks)",nm("slipOff"))+row("Off track: Urgent risks at least",nm("urgentOff"))},
@@ -298,7 +298,7 @@ export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) share
   if(b("helpAgain")) b("helpAgain").onclick=async()=>{ if(!await writeSettings({"help.start_seen":false})) return; S.helpSeen=false; snack("Help › Start here opens by itself next time creaite starts"); };   /* v2.6 (#246) */
   if(b("remRestore")) b("remRestore").onclick=async()=>{ if(!await writeSettings({"reminders.dismissed_forever":[]})) return; store.set("creaite-dismiss",[]); if(D.dismissed) D.dismissed.length=0;   /* BL-157: the set-up checklist comes back at once */ sessionStorage.removeItem("creaite-dismiss-s"); snack("Dismissed reminders restored"); };
   if(b("liveCheck")) b("liveCheck").onclick=()=>{ setLive(true); renderSettings(); };
-  if(b("liveStop")) b("liveStop").onclick=async()=>{ if(!viaServer()){ snack("The live server isn't running"); return; } const r=await api("/api/stop",{}); if(r.ok){ snack("Live server stopped"); setTimeout(()=>setLive(false),600); } else snack(oneLine(r.message)); };
+  if(b("liveStop")) b("liveStop").onclick=async()=>{ if(!viaServer()){ snack("creaite isn't running"); return; } const r=await api("/api/stop",{}); if(r.ok){ snack("creaite stopped"); setTimeout(()=>setLive(false),600); } else snack(oneLine(r.message)); };
   if(SECT){ const c=document.querySelector(`#settingsBody [data-sec="${SECT}"]`); SECT=null; if(c) c.scrollIntoView({block:"start"}); }
   showSaved(); }
 /* ===== end BL-320 ===== */
@@ -335,7 +335,7 @@ export function updOut(html){ const o=document.getElementById("updPlan"); if(o) 
 export const updMsg=(m,bad)=>`<pre class="sub" style="white-space:pre-wrap;margin:8px 0 0;${bad?"color:var(--bad)":""}">${esc(m||"")}</pre>`;
 export async function updUpload(f){ if(!f) return;
   if(!/^creaite-\d+\.\d+\.\d+\.zip$/.test(f.name)){ updOut(updMsg("Choose the creaite-X.Y.Z.zip attached to the release, not GitHub's “Source code (zip)”.",true)); return; }
-  updOut('<p class="sub">Copying to system/releases…</p>');
+  updOut('<p class="sub">Copying the update…</p>');
   const data=await new Promise((ok,no)=>{ const rd=new FileReader(); rd.onload=()=>ok(String(rd.result).split(",")[1]||""); rd.onerror=no; rd.readAsDataURL(f); });
   const r=await api("/api/update/upload",{name:f.name,data}); if(!r.ok){ updOut(updMsg(r.message,true)); return; }
   await drawUpdates(true); updReview("releases",false); }
@@ -354,12 +354,12 @@ export async function updReview(source,reinstall){ updOut('<p class="sub">Checki
   const nc=document.getElementById("updNotesCopy"); if(nc) nc.onclick=()=>(navigator.clipboard?navigator.clipboard.writeText(p.notes):Promise.reject()).then(()=>{ copied(nc); snack("Copied"); },()=>snack("Couldn't copy"));   /* BL-196: the original text */
   document.getElementById("updGo").onclick=async e=>{ e.currentTarget.disabled=true; e.currentTarget.textContent="Installing…";
     const res=await api("/api/update/install",{source,reinstall});
-    await drawUpdates(true); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart the live server`:"The update didn't install"); }; }
+    await drawUpdates(true); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart creaite`:"The update didn't install"); }; }
 export async function updUndo(btn,keep){ if(!btn.dataset.armed){ btn.dataset.armed="1"; btn.textContent="Confirm undo"; btn.classList.add("danger"); return; }
   btn.disabled=true; const r=await api("/api/update/undo",{keep_database:keep});
   if(!r.ok&&/--keep-database/.test(r.message||"")){ updOut(updMsg("The database has changed since the update; undoing it would lose those changes.",true)+'<div style="margin-top:8px"><button class="btn" id="updKeep">Undo engine and settings only</button></div>');
     document.getElementById("updKeep").onclick=e=>{ e.currentTarget.dataset.armed="1"; updUndo(e.currentTarget,true); }; btn.disabled=false; return; }
-  await drawUpdates(true); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart the live server"); }
+  await drawUpdates(true); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart creaite"); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0078(){
 $("#setcatsel").onchange=e=>{ if(e.target.value) setOpen(e.target.value); };
@@ -370,7 +370,7 @@ $("#settingsBody").addEventListener("change",e=>{ const r=mounted(e.target)?null
 $("#settingsBody").addEventListener("change",async e=>{ const el=e.target; const k=el.dataset.k; if(!k||!SKEY[k]) return;
   let v=el.type==="checkbox"?el.checked:el.type==="number"?Number(el.value):el.value; if((k==="sweepDue"||k==="weeklyTime")&&!/^\d{2}:\d{2}$/.test(v)){ snack("Use 24-hour HH:MM"); el.value=S[k]; return; }
   const was=S[k]; if(!await writeSettings({[SKEY[k]]:k==="short"?String(v).split(",").map(x=>x.trim()).filter(Boolean):k==="ownDomains"?(v=String(v).split(",").map(x=>x.trim().toLowerCase()).filter(Boolean)):v})){ if(el.type==="checkbox") el.checked=!!was; else el.value=was; return; }
-  S[k]=v; if(k==="theme"||k==="palette"){ themeFade(); applyTheme(); } if(k==="motion") applyMotion(); if(k==="palette") renderSettings(); if(k==="autoApply") renderSettings(); if(k==="filesDocs") refreshFiles(true); if(k==="flowWeeks") reloadData(); if(k==="showArchived") reloadData().then(()=>renderSettings());   /* BL-09 */ status(); snack("Saved to settings.json"); });
+  S[k]=v; if(k==="theme"||k==="palette"){ themeFade(); applyTheme(); } if(k==="motion") applyMotion(); if(k==="palette") renderSettings(); if(k==="autoApply") renderSettings(); if(k==="filesDocs") refreshFiles(true); if(k==="flowWeeks") reloadData(); if(k==="showArchived") reloadData().then(()=>renderSettings());   /* BL-09 */ status(); snack("Saved"); });
 }
 /* ===== People (BL-55, BL-56) ===== */
 /* BL-55: the people register, projects/_portfolio/people-register.md. It is edited only through proposals (file changes), so
@@ -432,7 +432,7 @@ export async function regSave(what,mutate,items,doIt,undoIt){ if(!await needVaul
   try{ disk=await vq(()=>shared.VW.read(REGD.path)); }catch(e){ disk=null; }
   const chained=disk!==null&&REGPEND!==null&&disk===REGPEND&&!!REGTEXT;
   if(disk!==null) text=chained?REGTEXT:disk;
-  else if(REGD.exists&&REGTEXT) text=REGTEXT;   /* a file that exists but can't be read here is edited from the last known text; apply checks it hasn't changed */
+  else if(REGD.exists&&REGTEXT) text=REGTEXT;   /* a file that exists but can't be read here is edited from the last known text; save checks it hasn't changed */
   else{ text=REGD.template; exists=false; }
   const next=mutate(peopleParse(text)), content=peopleText(text,next), before=shared.REG;
   if(exists&&content===text) return true;
@@ -597,7 +597,7 @@ export function bootSettings0127(){
 /* Review: an item whose workstream isn't one of its project's offers to add it, or to leave it blank */
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wsq]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=revForModelN(+b.dataset.n); if(!r||!await needVault()) return;
   const name=r.ws_suggest, add=b.dataset.wsq==="add", s=add?wsSuggest(r.p,name):null;
-  try{ await editProposal(r.file,data=>{ const items=data.items||[], it=items.find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
+  try{ await editProposal(r.file,data=>{ const items=data.items||[], it=items.find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that suggestion has already been saved");
       it.flags=(it.flags||[]).filter(f=>f!=="new-workstream"); delete it.ws_suggest; if(!add) return;
       const known=wsRow(r.p,name), target=it.values||(it.changes=it.changes||{}); target.workstream=known?known.name:name;
       if(!known) items.splice(items.indexOf(it),0,{n:Math.max(0,...items.map(i=>+i.n||0))+1,op:"new",table:"workstreams",values:Object.fromEntries(Object.entries({project:r.p,name,lead:s.lead,keywords:s.keywords,aliases:s.aliases,channel:s.channel,source:`${S.me} in review, ${TODAY}`}).filter(([,x])=>x)),match:"strong",flags:[],decision:"approved"}); },r); }
@@ -665,7 +665,7 @@ export function alertFocus(id,what){ const vis=()=>$$("#attnList > li.alrow, #td
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
   const h=$("#hTd"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); return; } const h2=$("#hAttn"); if(h2){ h2.tabIndex=-1; h2.focus(); } }; }
-export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss needs the live server"); return; }
+export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss needs creaite to be running"); return; }
   const c=cand?{cand}:{}, r=await api("/api/alerts/dismiss",{ids:[id],...c}); if(!r.ok){ snack(r.message||"Not dismissed"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"), it=cand&&a?(a.candidates||[]).find(/** @param {any} x */x=>x.n===cand):null;
   if(it){ it.dismissed=r.at||nowStamp(); if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=r.at||nowStamp(); }   /* BL-334: that item only; nothing is staged */
@@ -675,14 +675,14 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
     if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Messages"); }); }
 /* #276: Seen on a quiet line (nothing for you, or you replied): marked seen (/api/vip/seen), so it stays gone after a reload and
    the next check; a later message that asks something brings the card back. Undo puts the line back. */
-export async function alertSeen(id){ if(!viaServer()){ snack("Seen needs the live server"); return; }
+export async function alertSeen(id){ if(!viaServer()){ snack("Seen needs creaite to be running"); return; }
   const r=await api("/api/vip/seen",{ids:[id]}); if(!r.ok){ snack(r.message||"Not marked seen"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"seen");
   if(a) a.seen=r.at||nowStamp(); await vipPoll(); vipBadge(); renderToday(); back();
   snack("Marked seen",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
     if(a) delete a.seen; VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Messages"); }); }
 /* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
-export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
+export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs creaite to be running"); return; }
   const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
   if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } await vipPoll(); vipBadge(); renderToday(); back();
@@ -695,32 +695,32 @@ export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), 
   const owner=String(it.o||"");
   if(!owner||!PERS().some(y=>y.name===owner)){ snack(`${owner||"The owner"} isn't on the People page, so there's no one to draft to`); return; }
   openDraftEmail(owner,"chase",m.id); }
-export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live server"); return; }
+export async function alertLog(id){ if(!viaServer()){ snack("Log needs creaite to be running"); return; }
   const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a&&a.match) a.match.logged=r.logged;
-  await reloadData(); renderToday(); snack(r.message||"Staged for Review"); }
+  await reloadData(); renderToday(); snack(r.message||"Waiting in Review"); }
 /* BL-342 Part 3 B, step 9: "Looks done: close <ID>" stages one pending close of the matched action for Review (nothing is
    applied); Undo takes it back while it is still pending. The page's data is reloaded so the Review count follows. */
-export async function alertClose(id,undo){ if(!viaServer()){ snack("Closing needs the live server"); return; }
-  const r=await api("/api/alerts/close",{id,...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
+export async function alertClose(id,undo){ if(!viaServer()){ snack("Closing needs creaite to be running"); return; }
+  const r=await api("/api/alerts/close",{id,...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not saved"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a) a.closes=r.closes;
-  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertClose(id,true)); }
+  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Waiting in Review"),undo?undefined:()=>alertClose(id,true)); }
 /* BL-342 Part 5: Add a promise, Dismiss a promise and Looks kept: mark kept, each by the card's ID and the promise's key (never
    its position or words). Add and mark kept stage one pending proposal for Review (nothing is applied) and Undo takes it back
    while it is still pending; Dismiss stages nothing, and its Undo puts the promise back. The page's data is reloaded, so the
    Review count follows. */
 /** data-alertdo → [what, undo] for /api/alerts/promise */
 const PROMISEDO=/** @type {Record<string,[string,boolean]>} */({promise:["add",false],promiseundo:["add",true],promisedismiss:["dismiss",false],kept:["kept",false],keptundo:["kept",true]});
-export async function alertPromise(id,what,key,undo){ if(!viaServer()){ snack("Promises need the live server"); return; }
-  const r=await api("/api/alerts/promise",{id,what,key:key||"",...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
+export async function alertPromise(id,what,key,undo){ if(!viaServer()){ snack("Promises need creaite to be running"); return; }
+  const r=await api("/api/alerts/promise",{id,what,key:key||"",...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not saved"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a){ a.promises=r.promises; a.kept=r.kept; }
-  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertPromise(id,what,key,true)); }
+  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Waiting in Review"),undo?undefined:()=>alertPromise(id,what,key,true)); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
    leaves the message as it was. */
 export const ALERTTYPES=[["action","Action"],["risk","Risk"],["issue","Issue"],["decision","Decision"]];
 export const alertTypeOf=(k,x)=>k==="actions"?"action":k==="decisions"?"decision":String((x&&x.type)||"risk").toLowerCase();
-export async function alertMake(id,type,keep,cand){ if(!viaServer()){ snack("Create work item needs the live server"); return; }
+export async function alertMake(id,type,keep,cand){ if(!viaServer()){ snack("Create work item needs creaite to be running"); return; }
   const r=await api("/api/alerts/prefill",{id,...(type?{type}:{}),...(cand?{cand}:{})}); if(!r.ok||!r.prefill){ snack(r.message||"That message can't be read"); return; }
   type=r.prefill.type||type||"action";
   const pre=r.prefill, k=pre.table, v=pre.values||{}; openNew(k,k==="decisions"?"needed":"");
@@ -739,7 +739,7 @@ export function alertValues(k,f){ const v=toDb(k,f); return {...v,project:f.p||"
    pkSaveAndClose then closes the peek through alertStaged, with Undo. */
 export async function alertStage(k,nid,f){ const al=shared.CUR.alert, type=alertTypeOf(k,shared.CUR.draft); pkSaving("busy");
   const r=await api("/api/alerts/make",{id:al.id,type,values:alertValues(k,f),...(al.cand?{cand:al.cand}:{})});
-  if(!r.ok){ pkSaving("fail"); pkNote(r.message||"Not staged"); return "wait"; }
+  if(!r.ok){ pkSaving("fail"); pkNote(r.message||"Not saved"); return "wait"; }
   if(shared.CUR&&shared.CUR.nid===nid){ shared.CUR.staged=r.proposal; shared.CUR.alertDone={al,name:r.proposal,word:pkNewWordOf(k,type),title:f.t}; } pkSaving("ok");
   const a=(VIPD().alerts||[]).find(z=>z.id===al.id), it=a&&al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===al.cand):null;
   if(it){ it.made=r.made||{proposal:r.proposal}; if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=nowStamp(); }   /* BL-334: that item only */
@@ -749,7 +749,7 @@ const pkNewWordOf=(k,type)=>k==="actions"?"action":k==="decisions"?"decision":St
    decided it yet) and brings the message back */
 export async function alertStaged(){ const d=shared.CUR&&shared.CUR.alertDone; closePanel(); if(!d) return;
   await reloadData(); renderToday();
-  snack(`Staged the new ${d.word} for Review: “${String(d.title).slice(0,60)}”`,()=>alertUnstage(d)); }
+  snack(`Saved the new ${d.word} for Review: “${String(d.title).slice(0,60)}”`,()=>alertUnstage(d)); }
 export async function alertUnstage(d){ let ok=false;
   try{ ok=await vq(async()=>{ const path="system/staging/"+d.name; if(!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d.name)||!await shared.VW.exists(path)) return false;
       const data=JSON.parse(await shared.VW.read(path)); if((data.items||[]).some(/** @param {any} i */i=>i.applied||i.decision!=="pending")) return false;
@@ -759,9 +759,9 @@ export async function alertUnstage(d){ let ok=false;
   const a=(VIPD().alerts||[]).find(z=>z.id===d.al.id), it=a&&d.al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===d.al.cand):null;
   if(it){ delete it.made; delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; }
   VIPNOTED.add(d.al.id); vipBadge(); await reloadData(); renderToday();
-  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in Messages`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
+  snack(u.ok?`Undone: the new ${d.word} is no longer saved, and the message is back in Messages`:`Taken back; the message wasn't put back: ${u.message||"try again"}`); }
 /* why Draft from the message can't run, or "" */
-export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs the live server":""; }
+export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs creaite to be running":""; }
 /* the strip at the top of the peek: where it came from, the type, Draft from the message, Save and Cancel */
 export function alertPeekDraw(x,k){ let el=$("#pkAlert"); const al=shared.CUR&&shared.CUR.mode==="new"&&!shared.CUR.staged?shared.CUR.alert:null;
   if(!al){ if(el) el.hidden=true; return; }
@@ -772,7 +772,7 @@ export function alertPeekDraw(x,k){ let el=$("#pkAlert"); const al=shared.CUR&&s
     <div class="pk-alert-row"><span class="pk-alert-types" role="group" aria-label="Make it">${ALERTTYPES.map(([t,w])=>html`<button type="button" class="mini" data-alerttype="${t}" aria-pressed="${t===cur?"true":"false"}">${w}</button>`)}</span>
     <button type="button" class="drbtn" data-alertdraft="1" aria-label="Draft from the message" data-tip="${why||"Reads the message (read only) and suggests a sharper title and any date it states. Nothing is saved until you save"}"${why?raw(' aria-disabled="true"'):""}>${raw(ic("spark"))}<span>Draft from the message</span></button>
     <span class="pk-alert-st" role="status" id="pkAlertSt"></span><span class="sp"></span>
-    <button type="button" class="btn" data-alertpeek="cancel">Cancel</button><button type="button" class="btn primary" data-alertpeek="save" data-tip="Stages it and dismisses the message (${MOD}↵)">Save</button></div>`); }
+    <button type="button" class="btn" data-alertpeek="cancel">Cancel</button><button type="button" class="btn primary" data-alertpeek="save" data-tip="Saves it for Review and dismisses the message (${MOD}↵)">Save</button></div>`); }
 export async function alertDraft(){ const al=shared.CUR&&shared.CUR.mode==="new"?shared.CUR.alert:null; if(!al) return;
   const why=alertDraftWhy(al); if(why){ snack(why); return; } const k=shared.CUR.k, nid=shared.CUR.nid, st=$("#pkAlertSt");
   const d=await draftAsk({id:al.id,type:alertTypeOf(k,shared.CUR.draft),...(al.cand?{cand:al.cand}:{})},{url:"/api/alerts/draft",label:"Reading the message",status:h=>{ if(st) putHTML(st,raw(h)); }});
@@ -833,7 +833,7 @@ FX.vip=new Set();
 WSIG.push(["vip_overdue","Overdue item owned by someone you follow closely","days","Overdue by at least (days)"]);
 $("#settingsBody").addEventListener("change",async e=>{ const el=e.target, k=el.dataset.vipk; if(!k) return;
   const val=el.type==="checkbox"?el.checked:Math.max(5,Number(el.value)||30); const was=VIPD()[k];
-  if(await writeSettings({["vip."+k]:val})){ VIPD()[k]=val; snack("Saved to settings.json"); if(k==="notify"&&val&&"Notification" in window&&Notification.permission==="default") Notification.requestPermission(); }
+  if(await writeSettings({["vip."+k]:val})){ VIPD()[k]=val; snack("Saved"); if(k==="notify"&&val&&"Notification" in window&&Notification.permission==="default") Notification.requestPermission(); }
   else if(el.type==="checkbox") el.checked=!!was; else el.value=was; });
 }
 /* ===== BL-252 (fix-small-17) ===== how many commands ask creaite's guard refused in the last 7 days, by shape (a pipe, a redirect,
@@ -847,7 +847,7 @@ export const diagRepeats=()=>SERVED&&(DIAG.repeats||[]).length?row("Repeated err
   "Errors seen three or more times in the last 7 days. Only one seen in the last day is a warning; older ones have stopped"):"";
 /* ===== end BL-263 ===== */
 export function diagCardHtml(){ const off=SERVED?"":"disabled";
-  const h=`<div class="card" id="diagCard" data-sec="diag"><h2>Diagnostics</h2>${SERVED?"":'<p class="sub">The log is written by the live server: start it to see errors here.</p>'}
+  const h=`<div class="card" id="diagCard" data-sec="diag"><h2>Diagnostics</h2>${SERVED?"":'<p class="sub">The log is written by creaite: start it to see errors here.</p>'}
    ${row("Log level",`<select id="diagLevel" ${off}><option value="info" ${DIAG.level==="info"?"selected":""}>info</option><option value="debug" ${DIAG.level==="debug"?"selected":""}>debug</option></select>`,"info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault")}
    ${row("Log folder",`<button class="btn" id="diagOpen" ${off}>Open the folder</button>`,`${DIAG.days} day${DIAG.days===1?"":"s"} of log, in system/logs`)}
    ${row("Report",`<button class="btn" id="diagCopy" ${off}>Copy diagnostics</button>`,"The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths")}

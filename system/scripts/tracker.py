@@ -281,7 +281,7 @@ def canonical_labels(con, value):
         r = con.execute("SELECT name FROM labels WHERE name = ?", (n,)).fetchone()
         if not r:
             known = ", ".join(x[0] for x in con.execute("SELECT name FROM labels ORDER BY name")) or "none"
-            raise Invalid(f"unknown label {n!r} (labels: {known}); add it in Settings or with cx-edit first")
+            raise Invalid(f"unknown label {n!r} (labels: {known}); add it in Settings or ask creaite first")
         out.append(r[0])
     return out
 
@@ -402,7 +402,7 @@ def _safe_resolved(rel_path, purpose):
         p = paths.resolve(rel_path).resolve()          # projects/… maps to the projects root when it is outside the vault (BL-85)
         return p, paths.rel(p)
     except ValueError:
-        raise Invalid(f"{purpose}: path is outside the vault ({rel_path!r})")
+        raise Invalid(f"{purpose}: path is outside your creaite folder ({rel_path!r})")
     except OSError as e:
         raise Invalid(f"{purpose}: {rel_path} changed while it was being checked ({type(e).__name__})") from None
 
@@ -410,12 +410,12 @@ def _safe_resolved(rel_path, purpose):
 def safe_path(rel_path, purpose):
     """Resolve a vault-relative path and refuse anything outside the writable areas."""
     if not rel_path or Path(rel_path).is_absolute() or re.match(r"^[A-Za-z]:", rel_path):
-        raise Invalid(f"{purpose}: path must be relative to the vault root ({rel_path!r})")
+        raise Invalid(f"{purpose}: path must be relative to your creaite folder ({rel_path!r})")
     p, r = _safe_resolved(rel_path, purpose)
     if not any(p == base or base in p.parents for base in paths.allowed_roots()):
-        raise Invalid(f"{purpose}: path is outside the vault and the projects folder ({rel_path!r})")
+        raise Invalid(f"{purpose}: path is outside your creaite folder and the projects folder ({rel_path!r})")
     if not r.startswith(WRITABLE):
-        raise Invalid(f"{purpose}: {r} is not in projects/, inbox/, system/staging/ or system/search/")
+        raise Invalid(f"{purpose}: {r} is not in a project folder, Intake, the waiting suggestions or the search index")
     proot = paths.projects_root().resolve()
     below = [x.lower() for x in p.parts[len(proot.parts):]] if proot in p.parents else []
     if purpose == "mkdir" and below:            # a new project's own empty 99 Archive folder (from the skeleton) may be made
@@ -537,7 +537,7 @@ def _link_rules(con, table, row, changed):
 def _item_label(con, table, row, changed):
     t = item_table(row.get("item_id"))
     if t not in LABELLED or not fetch(con, t, row["item_id"]):
-        raise Invalid(f"{row.get('item_id')} isn't an action, RAID item or decision in the tracker, so it can't carry a label")
+        raise Invalid(f"{row.get('item_id')} isn't an action, RAID item or decision in your project record, so it can't carry a label")
     row["label"] = canonical_labels(con, row.get("label"))[0]
 
 
@@ -567,7 +567,7 @@ def _workstream_unique(con, table, row, changed):
 
 def _project_exists(con, table, row, changed):
     if row.get("project") and not con.execute("SELECT 1 FROM projects WHERE code = ?", (row["project"],)).fetchone():
-        raise Invalid(f"project {row['project']} is not in the tracker")
+        raise Invalid(f"project {row['project']} is not in your project record")
     if row.get("project") and is_archived(con, row["project"]):         # BL-09
         raise Invalid(f"{project_label(row['project'])} is archived: restore it first (restore project {row['project']})")
 
@@ -576,7 +576,7 @@ def _milestone_link(con, table, row, changed):
     if row.get("milestone"):  # optional link; must exist, in the same project
         ms = con.execute("SELECT project FROM milestones WHERE id = ?", (row["milestone"],)).fetchone()
         if not ms:
-            raise Invalid(f"milestone {row['milestone']} is not in the tracker")
+            raise Invalid(f"milestone {row['milestone']} is not in your project record")
         if row.get("project") and ms[0] != row["project"]:
             raise Invalid(f"milestone {row['milestone']} belongs to {ms[0]}, not {row['project']}")
 
@@ -607,7 +607,7 @@ def check_decision(con, row, changed):
     if str(row.get("replaces") or "").strip():
         old = fetch(con, "decisions", row["replaces"])
         if not old:
-            raise Invalid(f"{row['replaces']} (replaced by this decision) is not in the tracker")
+            raise Invalid(f"{row['replaces']} (replaced by this decision) is not in your project record")
         if row.get("project") and old["project"] != row["project"]:
             raise Invalid(f"{row['replaces']} belongs to {old['project']}, not {row['project']}")
         if row.get("id"):
@@ -626,7 +626,7 @@ def check_link(con, row):
         if item_table(end) not in LINKABLE:
             raise Invalid(f"{label} {end!r} isn't an action, RAID item, milestone, decision or promise ID")
         if not item_row(con, end):
-            raise Invalid(f"{label} {end} is not in the tracker")
+            raise Invalid(f"{label} {end} is not in your project record")
     if a == b:
         raise Invalid("an item can't block itself")
     if blocks_reach(con, b, a):
@@ -929,7 +929,7 @@ def _check_new_fields(table, values, cols):
     if unknown:
         raise Invalid(unknown_fields_message(table, unknown, cols))       # BL-249: lists the valid fields
     if table in ID_PREFIX and values.get("id"):
-        raise Invalid("new items carry no ID; tracker.py assigns it")
+        raise Invalid("new items carry no ID; creaite gives them one")
     missing = [f for f in REQUIRED_NEW[table] if not str(values.get(f) or "").strip()]
     if missing:
         raise Invalid(f"missing required field(s): {', '.join(missing)}")
@@ -1434,7 +1434,7 @@ def cmd_validate(arg):
     prop = resolve_proposal(arg)
     data = load(prop)
     for n, d in fill_raised(data):
-        print(f"Item {n}: Raised set to {shown(d)} (source or staging date)")
+        print(f"Item {n}: Raised set to {shown(d)} (the source's date or the date it was suggested)")
     con = connect()
     problems = dry_run(con, data, via_for(prop, data), only_approved=False)
     for item in data.get("items", []):
@@ -1504,15 +1504,15 @@ class CopySource:
         if not s or "\x00" in s:
             raise Invalid(f"copy: source not found ({stored!r})")
         if Path(s).is_absolute() or re.match(r"^[A-Za-z]:", s) or ".." in s.split("/"):
-            raise Invalid(f"copy: the source must be a path in the vault or the projects folder, with no '..' ({stored!r})")
+            raise Invalid(f"copy: the source must be a path in your creaite folder or the projects folder, with no '..' ({stored!r})")
         top = Path(s).parts
         ask = _apfs_folded(top[:4]) == ("system", "staging", "uploads", "ask")
         if ask or not any(top[:len(a)] == a and len(top) > len(a) for a in COPY_SOURCE_AREAS):
-            raise Invalid(f"copy: a source is filed only from inbox/, staging drafts or uploads, or a project folder ({stored!r})")
+            raise Invalid(f"copy: a source is filed only from Intake, your drafts or uploads, or a project folder ({stored!r})")
         p = paths.resolve(s)
         base = next(((b, real) for b, real in _copy_bases() if b in p.parents), None)
         if base is None:
-            raise Invalid(f"copy: the source is outside the vault and the projects folder ({stored!r})")
+            raise Invalid(f"copy: the source is outside your creaite folder and the projects folder ({stored!r})")
         self._open(p.relative_to(base[0]).parts, base[1])
 
     def _open(self, parts, base):
@@ -1611,7 +1611,7 @@ def _by_others_source_problem(src, fop, blk):
     why = by_others_area_problem(rel, blk, fop.get("src_sha256"))
     if why:
         return why
-    return None if _source_sha(src) == fop.get("src_sha256") else f"{rel}: the file changed since it was staged"
+    return None if _source_sha(src) == fop.get("src_sha256") else f"{rel}: the file changed since it was saved for review"
 
 
 def _check_copy(fop, blk):
@@ -1842,7 +1842,7 @@ def _op_copy(apply_id, fop, blk, done):
             raise Invalid(f"copy: {why}")
         if dst.exists():
             if by_others and _source_sha(src) != fop.get("src_sha256"):
-                raise Invalid(f"copy: {op_source(fop, blk)}: the file changed since it was staged")
+                raise Invalid(f"copy: {op_source(fop, blk)}: the file changed since it was saved for review")
             if _dst_is_same(dst, src, fop, blk):
                 return      # already filed (an earlier proposal made the same copy): nothing to copy or undo
             raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
@@ -1885,7 +1885,7 @@ def _copy_into(src, dst, sha=None):
             out.flush()
             src.check_name()                     # still the file that was checked: one link, unchanged
             if sha is not None and h.hexdigest() != sha:     # #232 E1: someone else's minutes are filed only as staged
-                raise Invalid(f"copy: {src.stored}: the file changed since it was staged")
+                raise Invalid(f"copy: {src.stored}: the file changed since it was saved for review")
             os.fchmod(out.fileno(), stat.S_IMODE(src.st.st_mode))
             os.utime(out.fileno(), ns=(src.st.st_atime_ns, src.st.st_mtime_ns))
         try:
@@ -1918,7 +1918,7 @@ def _open_inbox_folder(rel):
     on the path afterwards changes nothing, because the descriptor is the folder that was opened. Raises Invalid."""
     parts = rel.split("/")
     if parts[0] != "inbox" or len(parts) < 2 or any(x in ("", ".", "..") for x in parts):
-        raise Invalid(f"remove: {rel} is not a file in inbox/")
+        raise Invalid(f"remove: {rel} is not a file in Intake")
     flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(os.path.realpath(paths.ROOT), os.O_RDONLY | os.O_DIRECTORY)
     try:
@@ -1952,7 +1952,7 @@ def _remove_checked(apply_id, fop, blk, done):
         except OSError as e:
             raise Invalid(f"remove: {rel} is not a regular file ({type(e).__name__})") from None
         if st.st_nlink > 1 or hashlib.sha256(data).hexdigest() != fop.get("src_sha256"):
-            raise Invalid(f"remove: {rel}: the file changed since it was staged")
+            raise Invalid(f"remove: {rel}: the file changed since it was saved for review")
         kept = stash(apply_id, paths.resolve(rel), data)
         _unlink_same(dfd, name, st, rel)
         done.append({"op": "remove", "path": rel, "kept": kept})
@@ -2058,7 +2058,7 @@ def archive_project(con, item, apply_id, via):
     code = item.get("id")
     row = fetch(con, "projects", code)
     if row is None:
-        raise Invalid(f"{code} is not a project in the tracker")
+        raise Invalid(f"{code} is not a project in your project record")
     flags, active = _archive_target(con, item, row)
     keep = set() if flags else age_archived_before(con, code)       # BL-10: a restore leaves items archived for their age alone
     for t in ARCHIVABLE:
@@ -2289,7 +2289,7 @@ def check_move(fop, blk):
     src, dst = fop.get("from"), fop.get("to")
     for p in (src, dst):
         if not p or Path(str(p)).is_absolute() or not str(p).startswith("projects/"):
-            raise Invalid(f"move: path must be a stored projects/ path ({p!r})")
+            raise Invalid(f"move: the path must be inside a project folder ({p!r})")
     problem = reach.archive_move_problem(src, dst, kind)
     if problem:
         raise Invalid(f"move: {problem}")
@@ -2781,7 +2781,7 @@ def by_others_file_problem(rel, blk, sha):
     except OSError as e:
         return f"{rel} can't be read as a regular file ({type(e).__name__})"
     if got != sha:
-        return f"{rel}: the file changed since it was staged"
+        return f"{rel}: the file changed since it was saved for review"
     return None
 
 
@@ -2851,7 +2851,7 @@ def cmd_apply(args):
         work = _skip_by_others_problems(work)
     work = _hold_missing_sources(work)  # #280: a proposal whose file to be filed has gone is held in Review, never a blocker
     if not work:
-        print("Nothing to apply: no decided items.")
+        print("Nothing to save: no decided items.")
         return 0
     work = recode_barrier(work)        # BL-111: a recode is applied on its own
     if work is None:
@@ -2911,7 +2911,7 @@ def _load_work(args):
     for p in props:
         data = load(p, bind=True)
         for n, d in fill_raised(data):   # BL-26; kept in the proposal when it's saved after apply
-            print(f"{p.name} item {n}: Raised set to {shown(d)} (source or staging date)")
+            print(f"{p.name} item {n}: Raised set to {shown(d)} (the source's date or the date it was suggested)")
         items, blks = decided(data)
         if items or blks:
             work.append((p, data))
@@ -3018,7 +3018,7 @@ def by_others_problem(data, claimed):
                     to = paths.rel(safe_path(fop["to"], "copy"))
                     same = _folded(to)            # one file on macOS whatever its case or normalisation ("Vendor call", "Vendor Call")
                     if claimed.get(same, fop.get("src_sha256")) != fop.get("src_sha256"):
-                        raise Invalid(f"copy: {to} is taken by a different file in this apply")
+                        raise Invalid(f"copy: {to} is taken by a different file in this save")
                     claimed[same] = fop.get("src_sha256")
             except Invalid as e:
                 return str(e)
@@ -3033,7 +3033,7 @@ def _skip_by_others_problems(work):
         why = by_others_problem(data, claimed)
         if why:
             debuglog.warn("tracker", f"apply: left {p.name} in staging: {debuglog.rule(why)}")
-            print(f"Left in staging, not applied: {p.name}: {why}.")
+            print(f"Left waiting, not saved: {p.name}: {why}.")
         else:
             keep.append((p, data))
     return keep
@@ -3048,7 +3048,7 @@ def _skip_card_leftovers(work):
         why = card_move_problems(p, data)
         if why:
             debuglog.warn("tracker", f"apply: left {p.name} in staging: a card-only move with no approval card")
-            print(f"Left in staging, not applied: {why[0]}. Delete note or Move back again, or remove {p.name}.")
+            print(f"Left waiting, not saved: {why[0]}. Delete note or Move back again, or remove {p.name}.")
         else:
             keep.append((p, data))
     return keep
@@ -3218,7 +3218,7 @@ def sibling_refs(item, ids):
         if m:
             n = int(m.group(1))
             if n not in ids or n == item.get("n"):
-                raise Invalid(f"{end} {values[end]} refers to item {n}, which isn't a new item written before it in this proposal")
+                raise Invalid(f"{end} {values[end]} refers to item {n}, which isn't a new item written before it in this suggestion")
             values[end], hit = ids[n], True
     return {**item, "values": values} if hit else item
 
@@ -3317,7 +3317,7 @@ def _report_rolled_back(e, file_records, backup):
     print(f"Apply failed; nothing was written. {type(e).__name__}: {e}")
     for r in report:
         print("  " + r)
-    print(f"(The database backup from before the apply is {paths.rel(backup)}.)")
+    print(f"(The backup from before this save is {paths.rel(backup)}.)")
 
 
 def _finish_apply(work, apply_id, summary):
@@ -3416,7 +3416,7 @@ def cmd_undo():
     rows = con.execute("SELECT rowid, * FROM change_log WHERE apply_id = ? AND op != 'undo' ORDER BY rowid",
                        (apply_id,)).fetchall()
     if rows and all(r["via"] == MIGRATE_VIA for r in rows):           # BL-186: Missed can't come back
-        print(f"Apply {apply_id} is the 1.5.0 migration that retired Missed (those milestones are now Overdue). It can't be "
+        print(f"Save {apply_id} is the 1.5.0 migration that retired Missed (those milestones are now Overdue). It can't be "
               "undone, as Missed no longer exists; change a milestone's state instead. Nothing was changed.")
         return 1
     by_item = {}
@@ -3861,7 +3861,7 @@ def migrate_workstreams(con):
         raise
     if added:
         print(f"Workstreams added from items and settings ({len(added)}): {', '.join(added)}. Leads and keywords are "
-              "yours to fill (each project's settings › Workstreams, or cx-edit).")
+              "yours to fill (each project's settings › Workstreams, or ask creaite).")
 
 
 def cmd_migrate():
@@ -3936,7 +3936,7 @@ def migrate_schema():
     if retired:
         debuglog.info("tracker", f"migrate: {len(retired)} Missed milestone(s) became Planned, state Overdue (apply {retired[0]})")
         print(f"Missed is retired: {len(retired[1])} milestone(s) ({', '.join(retired[1])}) are now Planned with the state Overdue "
-              f"(apply {retired[0]}, in Activity).")
+              f"(save {retired[0]}, in Activity).")
     migrate_workstreams(con)
     return 0
 
@@ -4930,7 +4930,7 @@ def _recode_search(con, old, new):
 def recode_code_problem(con, old, new):
     """Why OLD can't become NEW, or None."""
     if not con.execute("SELECT 1 FROM projects WHERE code = ?", (old,)).fetchone():
-        return f"{old} is not a project in the tracker"
+        return f"{old} is not a project in your project record"
     if not new or not re.fullmatch(CODE_RE, str(new)):
         return f"the new code must be 3 to 7 capital letters or digits, starting with a letter (got {new!r})"
     if new == old:
@@ -4957,7 +4957,7 @@ def recode_project(con, item, apply_id, via):
         raise Invalid(problem)
     pending = recode_pending(old, new)
     if pending:
-        raise Invalid(f"{len(pending)} pending proposal(s) still mention {old}: {', '.join(pending)}. Apply or reject them first")
+        raise Invalid(f"{len(pending)} waiting suggestion(s) still mention {old}: {', '.join(pending)}. Save or reject them first")
     if folder.get("to") and not paths.resolve(f"projects/{folder['to']}").is_dir():
         raise Invalid(f"the folder “{folder['to']}” doesn't exist; rename the engagement folder first")
     fps = recode_fingerprints(con, old, new)
@@ -5001,7 +5001,7 @@ def recode_barrier(work):
         print(f"Apply stopped. Nothing was written.\n  {p.name}: a recode is applied on its own, with no other items in its proposal.")
         return None
     if len(work) > 1:
-        print(f"{p.name} is a recode: applying it first, on its own. Run apply again for the other proposals.")
+        print(f"{p.name} is a change of project code: saving it first, on its own. Save again for the other suggestions.")
     return [(p, d)]
 
 

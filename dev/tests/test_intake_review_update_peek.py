@@ -72,7 +72,7 @@ class UpdatePeek(LiveBrowserCase, Fixture):
         b = self.b
         open_update(b, self.uat)
         b.wait("document.getElementById('panel').classList.contains('pkprop') && !!document.querySelector('#pkUpd')")
-        self.assertIn("Update proposal", b.eval("document.getElementById('pkId').textContent"))
+        self.assertIn("Update suggestion", b.eval("document.getElementById('pkId').textContent"))
         self.assertIn(self.uat, b.eval("document.getElementById('pkId').textContent"))
         self.assertEqual(b.eval("document.getElementById('pkTitle').textContent"), UAT)                                    # the item's own text
         self.assertFalse(b.eval("document.getElementById('pkTitle').cxed.editor.isEditable"))                         # the item's own text is read-only here
@@ -147,8 +147,8 @@ class UpdatePeek(LiveBrowserCase, Fixture):
         click_update(b, "ABC-A-998")
         b.wait("document.getElementById('panel').classList.contains('on')")
         self.assertFalse(b.eval("document.getElementById('panel').classList.contains('peek')"))
-        self.assertIn("Proposed value", b.eval("document.getElementById('panel').textContent"))
-        self.assertIn("no longer in the tracker", b.eval("document.getElementById('snack')?.textContent||document.body.textContent"))
+        self.assertIn("Suggested value", b.eval("document.getElementById('panel').textContent"))
+        self.assertIn("no longer in your project record", b.eval("document.getElementById('snack')?.textContent||document.body.textContent"))
 
     def test_previous_and_next_include_the_updates(self):
         b = self.b

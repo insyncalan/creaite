@@ -80,7 +80,7 @@ export function PrepPeek(p) {
       {L && L.since ? <Block label="Since last time"><div class="sub">{L.since}</div></Block> : null}
       {L && !L.shaped && !L.confidential ? <p class="sub agnone">Not shaped yet. Open the prep page to set your aim.</p> : null}
       {plan ? <p class="sub agnone">Worth preparing: {plan}</p> : null}
-      {pk && !L ? <p class="sub agnone">{live ? "The peek couldn't be read. The prep page may still open." : "The peek needs the live server."}</p> : null}
+      {pk && !L ? <p class="sub agnone">{live ? "The peek couldn't be read. The prep page may still open." : "The peek needs creaite to be running."}</p> : null}
       {page ? <div class="agsaved"><span class="agok" aria-hidden="true">✓</span>
         <span class="agw"><b>Agenda saved</b><small>Prep page made {pageWhen || ""}</small></span></div> : null}
       <div class="agrow">

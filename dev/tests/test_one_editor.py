@@ -63,7 +63,7 @@ class CurrentState(LiveBrowserCase):
         b.eval("document.getElementById('snackT').textContent=''")
         b.key("Enter", META)
         b.wait("!document.getElementById('curEd')||/Not saved/.test(document.getElementById('snackT').textContent)", 15)
-        b.wait("/saved and applied|Not saved/i.test(document.getElementById('snackT').textContent)", 15)
+        b.wait("/— saved|Not saved/i.test(document.getElementById('snackT').textContent)", 15)
         return b.eval("document.getElementById('snackT').textContent")
 
     def test_each_pane_is_the_one_editor_named_for_screen_readers(self):
@@ -88,7 +88,7 @@ class CurrentState(LiveBrowserCase):
         shown = self.open_editor()
         self.end("curEd")
         self.b.type(" Added.")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertEqual(self.section(), shown.replace("Last line.", "Last line. Added."))
         self.assertIn(MARKER, self.section())
         self.assertIn("<!-- kept out of sight -->", self.section())
@@ -117,7 +117,7 @@ class CurrentState(LiveBrowserCase):
         b.key("b", MOD)                                     # bold off again for the next line
         b.type("Item")
         b.click('.inplace [data-rc="insertUnorderedList"]')
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertTrue(self.section().endswith(f"{MARKER}\n\n{RIGHT}\n\n**Bold**\n\n- Item"), self.section())
 
     def test_escape_asks_before_losing_an_edit(self):

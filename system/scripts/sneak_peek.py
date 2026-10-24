@@ -324,7 +324,7 @@ def read(con, item_id, text, picks=None):
     """The whole reading for one instruction on one item (the contract's reply), with no write."""
     table, row = load_item(con, item_id)
     if not row:
-        return {"ok": False, "message": f"{item_id} isn't in the tracker."}
+        return {"ok": False, "message": f"{item_id} isn't in your project record."}
     raw = str(text or "")[:1000]
     r = Reading(raw, table, row, con, picks)
     if raw.strip():
@@ -1134,7 +1134,7 @@ def _checked(r):
         return []
     items = _stage(r)
     if any(i["op"] != "new" and i.get("id") != r.row["id"] for i in items):       # never another existing item
-        raise RuntimeError("Sneak peek staged a change to another item")
+        raise RuntimeError("Sneak peek saved a change to another item")
     bad = _dry_run(r.con, items) if items else {}
     if bad:
         r.problems += [f"The tracker won't take it: {why}" for why in bad.values()]
@@ -1182,7 +1182,7 @@ def read_request(req):
     try:
         con = tracker.connect_or_raise()
     except tracker.NoDatabase as e:
-        return {"ok": False, "message": f"No tracker yet ({e})."}
+        return {"ok": False, "message": f"No project record yet ({e})."}
     try:
         return read(con, item_id, req["text"], picks)
     finally:

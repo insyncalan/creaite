@@ -11,7 +11,7 @@
    column whose new value differs from the live value; one that already has the value is `same` (shown plain: "already this
    value").
 
-   Columns are the tracker's (`due_date`, `latest_update`, `needed_by`), as the proposal's `changes` and the server's `col` name
+   Columns are the tracker's (`due_date`, `latest_update`, `needed_by`), as the suggestion's `changes` and the server's `col` name
    them. A row's own keys are the dashboard's (`st`, `due`, `upd`): UI maps one to the other and is pinned to core/server.js's
    FIELD by the test. Internal only: nothing here reaches a client report; client message text is never shown, only on or off. */
 
@@ -92,7 +92,7 @@ export const irChanged = list => list.filter(c => !c.same);
 
 /** The row as it would be: the live row, the proposal's changes, then what Alan edited in the peek (the editable columns, and the
     side column a decision made today carries). @param {string} table @param {Record<string, any>} live @param {Record<string, any>} changes
-    @param {Record<string, any>} draft the peek's draft, under the tracker's column names */
+    @param {Record<string, any>} draft the peek's draft, under your project record's column names */
 export function irNowRow(table, live, changes, draft) {
   const now = { ...live, ...changes };
   for (const col of [...(EDITABLE[table] || []), ...(SIDE[table] || [])]) if (col in draft) now[col] = draft[col];
@@ -163,10 +163,10 @@ export const STATUSES = /** @type {Record<string, string[]>} */ ({ actions: ["Op
     A column he did not touch stays exactly as the proposal had it; one he changed takes his value, or comes out of the proposal
     when his value is the live one (so the apply leaves it alone). Never a column outside EDITABLE (and SIDE with its status).
     @param {string} table
-    @param {Record<string, any>} changes the proposal's changes, under the tracker's column names
+    @param {Record<string, any>} changes the proposal's changes, under your project record's column names
     @param {Record<string, any>} live the tracker row as it is now
     @param {Record<string, any>} opened the editable columns' values when the peek opened
-    @param {Record<string, any>} draft the peek's draft now, under the tracker's column names
+    @param {Record<string, any>} draft the peek's draft now, under your project record's column names
     @returns {{changes: Record<string, any>, edited: string[]} | {error: string}} */
 export function irSaveChanges(table, changes, live, opened, draft) {
   const out = { ...changes }, edited = [];

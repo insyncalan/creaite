@@ -1404,7 +1404,7 @@ class Handler(BaseHTTPRequestHandler):
                     rest = ["system/staging/" + p.name for p in sorted(paths.STAGING.glob("proposed-*.json"))  # #280: the
                             if p.name not in held]                                # staging file by path, never a root namesake
                     if not rest:
-                        return self.send(200, {"ok": True, "message": "Nothing to apply: no decided items.",
+                        return self.send(200, {"ok": True, "message": "Nothing to save: no decided items.",
                                                "apply_id": latest_apply(), "held": len(held)})
                     code, out = run("tracker.py", "apply", *rest)
                     return self.send(200, {"ok": code == 0, "message": out, "apply_id": latest_apply(), "held": len(held)})
@@ -1650,6 +1650,9 @@ class Handler(BaseHTTPRequestHandler):
             else f"r-{secrets.token_hex(6)}"
         if req.get("permfile"):                           # BL-141: a permission file is changed on the one card, never by a run
             return self.send(400, {"ok": False, "message": "Permission files are changed on the approval card now: ask creaite again."})
+        held = budget_gate(req)                           # #334: this week's AI budget (confirm or stop, by setting)
+        if held:
+            return self.send(429, held)
         with START_LOCK:                                  # #264 review: the busy check and the start are one step, like every other start
             busy = current_run()
             if busy and not busy.done:
@@ -2595,6 +2598,21 @@ def run_dirs(policy, guarded):
     return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
 
 
+def budget_gate(req):
+    """#334: the weekly AI budget (ai_budget.py), asked before a typed request or a queued message starts a run. None: go ahead.
+    Otherwise the reply to send (HTTP 429): the budget's counts and plain words, never text. Only a typed ask is ever held; a
+    confirmed request, a sweep or alert check running on its own, Review, Apply and Undo never are, and a fault in the count holds
+    nothing. `over_budget` is the page's "Run anyway" in confirm mode. A typed sweep (panel_sweep: the same words the run itself
+    uses) is never held, whatever the figures say."""
+    try:
+        import ai_budget
+        if panel_sweep(req.get("message"), req.get("images") or (), req.get("confirmed")):
+            return None
+        return ai_budget.gate("ask", confirmed=req.get("confirmed"), over_budget=req.get("over_budget"))
+    except Exception:
+        return None
+
+
 CARRY_TURNS, CARRY_CHARS = 4, 600       # #327 B: the last two exchanges, each message cut to this length, go into a fresh session
 
 
@@ -2606,7 +2624,11 @@ def fresh_session(req):
 
 def carry_over(chat):
     """#327 B: the last few messages of a chat as plain text, for a fresh session to read as background (data, never instructions);
-    "" if the chat has none. Taken from the chat's own history, so no more than this chat already holds."""
+    "" if the chat has none. Taken from the chat's own history, so no more than this chat already holds. 2.6.4 (#346): never from
+    the day's "runs creaite started" chat (runs-YYYY-MM-DD): it is never marked as having read outside content, and its lines hold a
+    calendar title, so carrying them would hand that text to a fresh run as Alan's words, unmarked."""
+    if str(chat or "").lower().startswith("runs-"):          # a case-insensitive disk reaches the same chat by RUNS-…
+        return ""
     p = chat_file(chat)
     try:
         msgs = json.loads(p.read_text(encoding="utf-8")).get("messages") if p and p.is_file() else None
@@ -2654,8 +2676,28 @@ def fresh_plan(fresh, sweep, kind, session, chat):
 class Run:
     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
 
-    def __init__(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
-                 sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
+    def __init__(self, run_id, *args, **kwargs):
+        """Set the run up (_start). 2.6.4 (#346): whatever stops the set-up, the run's record in system/guard/run.json (written by
+        guard_args, early) is taken away again, and a process already started is ended. Only this run's own record: end_run leaves
+        any other run's alone."""
+        try:
+            self._start(run_id, *args, **kwargs)
+        except BaseException:
+            try:
+                try:
+                    reach.end_run(run_id)
+                finally:                                    # these happen even if the record can't be removed
+                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends
+                        RUNS.pop(run_id, None)              # (before the process is ended: that can raise)
+                    if getattr(self, "proc", None) is not None:
+                        end_process(self.proc)
+            except Exception as e:                          # the error that stopped the set-up matters more; this one goes in the log
+                if debuglog is not None:
+                    debuglog.info("run", f"{run_id} clean-up after a failed set-up also failed: {type(e).__name__}")
+            raise
+
+    def _start(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
+               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
@@ -3282,9 +3324,19 @@ def queue_start(q, prev=None):
     #264 round 2 (review L2): the busy check and the start are one step under START_LOCK, like every other start, so a queued
     message never starts beside a run that began meanwhile (Process, a calendar refresh, a prep page): the queue holds instead,
     and Run now starts it. `prev`, the run that is ending, doesn't count as busy."""
+    first = q["items"][0]
+    images = [i for i in first.get("images") or [] if ask_image_files(i)]               # only the pictures still there
+    ask = {"over_budget": prev is None, "message": first.get("text"), "images": images}
+    held = budget_gate(ask)                                 # #334: read before the lock (up to 8 MB of usage lines)
+    q.pop("why", None)
     with START_LOCK:
         if any(not r.done and r is not prev for r in list(RUNS.values())):
             q["held"] = True
+            queue_save(q)
+            return None
+        if held:                                            # #334: over the week's budget the queue holds (Run now: confirm mode)
+            q["held"] = True
+            q["why"] = held["message"]                      # and Run now says why, and until when
             queue_save(q)
             return None
         item = q["items"].pop(0)
@@ -3292,7 +3344,6 @@ def queue_start(q, prev=None):
         mine = prev is not None and prev.kind == "ask"
         chat = q["chat"] or (prev.chat or prev.session if mine else None)
         session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
-        images = [i for i in item.get("images") or [] if ask_image_files(i)]
         try:
             nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
                       sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
@@ -3366,7 +3417,7 @@ def queue_route(handler, req):
             if live:
                 return handler.send(200, queue_public(q, message="ask creaite is still working: the queue runs when it finishes."))
             nxt = queue_start(q) if q["items"] else None
-            return handler.send(200, queue_public(q, run=nxt))
+            return handler.send(200, queue_public(q, run=nxt, **({"message": q["why"]} if not nxt and q.get("why") else {})))
         elif op != "list":
             return handler.send(400, {"ok": False, "message": "Unknown queue operation"})
     return handler.send(200, queue_public(q))
@@ -6159,8 +6210,9 @@ def review_assign_route(handler, req):
         rc, out = run("review.py", "list", "--json")
         rows = json.loads(out) if rc == 0 else []
         n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
-        if n is None:
-            return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
+        stop = assign_stop(req, n)                           # 2.6.4 (#345): gone, or not named by its fingerprint
+        if stop:
+            return handler.send(200, {"ok": False, "message": stop})
         args = ["assign", str(n), code.upper()] + ([f"--from={frm.upper()}"] if frm else []) \
             + (["--all"] if req.get("moved") == "all" else []) + (["--dry-run", "--json"] if req.get("dry_run") else [])
         rc, out = run("review.py", *args)
@@ -6213,6 +6265,9 @@ def minutes_approve_route(handler, req):
     import review
     own = [n for n in req.get("own") or [] if isinstance(n, int)]
     with LOCK:
+        why = minutes_refusal(req, own) if pending_file(req.get("file")) else None
+        if why:                                                             # 2.6.4 (#345): before the name is settled, so nothing changes
+            return handler.send(200, {"ok": False, "message": why})
         moved = minutes_destination.settle(str(req.get("file") or ""))      # #332: a name already used is numbered, never a stop
         out = review.approve_minutes(str(req.get("file") or ""), group=req.get("group", True) is not False, own=own)
     if moved and out.get("ok"):
@@ -6277,6 +6332,101 @@ REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
 # ===== end BL-200 =====
 
 
+# ===== 2.6.4 (#345) ===== `expect` (the item's 12-hex fingerprint, as /api/review requires since 2.6.3) on every route that decides an
+# item by (file, ref): reject, approve-instead, repeat, retarget and Approve minutes. The check reads the very file the route is about to
+# act on, under the same lock, and a missing, malformed or different fingerprint refuses the whole request before anything changes.
+# review.py's own commands (ask creaite, the Excel import) do not use these routes.
+EXPECT_FP = re.compile(r"[0-9a-f]{12}")
+EXPECT_BLOCKS = ("meeting", "report", "file_changes")
+EXPECT_MISSING = "This page didn't say which item it meant, so nothing was changed. Reload the page and try again."
+EXPECT_BAD = "Review can't check which item that is, so nothing was changed. Look at the list again."
+EXPECT_CHANGED = "That item has changed since you looked at it, so nothing was changed. Look at the list again."
+
+
+def load_waiting(file):
+    """A waiting (or filed) proposal file by name, as data, or None."""
+    name = Path(str(file or "")).name
+    if not re.fullmatch(r"proposed-[\w.-]+\.json", name):
+        return None
+    p = next((d / name for d in (paths.STAGING, paths.APPLIED) if (d / name).is_file()), None)
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p else None
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def current_fp(file, ref):
+    """The fingerprint of the item (or minutes, report or file-changes block) now at (file, ref) in a waiting or filed proposal, or None."""
+    data = load_waiting(file)
+    if data is None:
+        return None
+    if ref in EXPECT_BLOCKS:
+        block = data.get(ref)
+        return build_dashboard.block_fp(block) if isinstance(block, dict) else None
+    item = next((i for i in data.get("items") or [] if isinstance(i, dict) and i.get("n") == ref and ref is not True), None)
+    return build_dashboard.item_fp(item) if item else None
+
+
+def pending_file(file):
+    """Whether a waiting file by this name is still there; a gone one is answered by the route's own "no longer pending" words."""
+    name = Path(str(file or "")).name
+    return bool(re.fullmatch(r"proposed-[\w.-]+\.json", name)) and (paths.STAGING / name).is_file()
+
+
+def minutes_refusal(req, own):
+    """expect_refusal for Approve minutes: the minutes' fingerprint (`expect`) and one for every item it will approve, from `expects`
+    ({number as text: fingerprint}): the ticked ones (`own`) and, if `group` is not false, the group's. A re-extract that keeps the
+    minutes but changes an item is declined."""
+    expects = req.get("expects") if isinstance(req.get("expects"), dict) else {}
+    ns = list(own)
+    if req.get("group", True) is not False:
+        import review
+        data = load_waiting(req.get("file")) or {}
+        group = [i for i in data.get("items") or [] if isinstance(i, dict) and review.minutes_group(i) == "group"]
+        ns += [i["n"] for i in group if i.get("n") not in ns]
+    return expect_refusal([(req.get("file"), "meeting", req.get("expect"))] + [(req.get("file"), n, expects.get(str(n))) for n in ns])
+
+
+def assign_stop(req, n):
+    """Why the assign route stops: the entry is gone (n is None), or a real move does not name its item. A preview changes nothing and
+    needs no fingerprint."""
+    if n is None:
+        return "That proposal is no longer pending."
+    return None if req.get("dry_run") else expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])
+
+
+def key_ref(key):
+    """The ref in a "<file>#<ref>" key: the item's number as a number, or meeting, report or file_changes."""
+    ref = str(key).partition("#")[2]
+    return int(ref) if ref.isdigit() else ref
+
+
+def expect_refusal(rows):
+    """None when every (file, ref, expect) carries the fingerprint of the item now there; else the plain words that decline the request."""
+    if any(e is None for _, _, e in rows):
+        return EXPECT_MISSING
+    if not all(isinstance(e, str) and EXPECT_FP.fullmatch(e) for _, _, e in rows):
+        return EXPECT_BAD
+    return None if all(current_fp(f, r) == e for f, r, e in rows) else EXPECT_CHANGED
+
+
+def rows_refusal(found):
+    """expect_refusal for the reject route's pending rows, [({file, ref, expect}, review number)]: all rows or none."""
+    return expect_refusal([(r.get("file"), r.get("ref"), r.get("expect")) for r, _ in found])
+
+
+def rejected_run(cmd, keys, req):
+    """(exit code, text) of review.py for the rejected route's command. 2.6.4 (#345): Approve instead first needs each row's fingerprint
+    (rows pair with `keys`); a declined one is (2, the plain words) and nothing runs. Undo and a new reason need none."""
+    if cmd == "approve-instead":
+        rows = [r for r in req.get("rows") or [] if isinstance(r, dict)][:500]
+        why = expect_refusal([(r.get("file"), key_ref(k), r.get("expect")) for r, k in zip(rows, keys)])
+        if why:
+            return 2, why
+    return run("review.py", cmd, *keys, "--json", *(reject_args(req) if cmd == "rereason" else []))
+
+
 # ===== BL-221 (sprint-drafts-extraction) ===== POST /api/review/repeat {file, ref, how: "merge" | "keep"}: Review's "Looks like" choices
 # for a pending new item marked as repeating an existing one, through review.py merge or keep-new (their checks: the same project,
 # an open item; nothing new to carry rejects it as a duplicate). Only the proposal changes; nothing reaches tracker.db before apply.
@@ -6291,6 +6441,9 @@ def review_repeat_route(handler, req):
         n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
         if n is None:
             return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
+        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345)
+        if why:
+            return handler.send(200, {"ok": False, "message": why})
         rc, out = run("review.py", how, str(n))
     return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
 
@@ -6338,6 +6491,9 @@ def review_retarget_route(handler, req):
         n = review_number(req.get("file"), req.get("ref"))
         if n is None:
             return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
+        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345); an undo (above) needs none
+        if why:
+            return handler.send(200, {"ok": False, "message": why})
         rc, out = run("review.py", "retarget", str(n), target)
     return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
 
@@ -6429,6 +6585,9 @@ def review_reject_route(handler, req):
         gone = [{"file": r.get("file"), "ref": r.get("ref")} for r in rows if (r.get("file"), r.get("ref")) not in listed]
         if not found:
             return handler.send(200, {"ok": False, "message": "That proposal is no longer pending.", "rejected": [], "gone": gone})
+        why = rows_refusal(found)                            # 2.6.4 (#345): all rows or none
+        if why:
+            return handler.send(200, {"ok": False, "message": why, "rejected": [], "gone": gone})
         spec = ",".join(str(n) for _, n in found)
         rc, out = run("review.py", "reject", spec, *(["--guess"] if req.get("guess") else reject_args(req)))
     ok = rc == 0 and not out.startswith("Rejected 0.")
@@ -6443,7 +6602,7 @@ def review_rejected_route(handler, req):
     if not cmd or not keys or not all(REJECT_KEY.fullmatch(k) for k in keys):
         return handler.send(400, {"ok": False, "message": "Choose a rejected item and what to do with it."})
     with LOCK:
-        rc, out = run("review.py", cmd, *keys, "--json", *(reject_args(req) if cmd == "rereason" else []))
+        rc, out = rejected_run(cmd, keys, req)
     got = last_json(out, {}) if rc == 0 else {}
     msg = out.replace("creaite: ", "", 1).strip() if rc != 0 else \
         {"unreject": "Back in Review", "rereason": "Reason changed", "approve-instead": "Approved instead"}[cmd]

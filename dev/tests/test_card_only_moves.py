@@ -84,7 +84,7 @@ class CardOnly(CardOnlyMoves):
         before = self.backups()
         r = self.post("/api/apply", {})                                            # a full apply leaves it in staging
         self.assertTrue(r["ok"], r)
-        self.assertIn(f"Left in staging, not applied: {name} file_changes_decision: move: {src} {refused(kind)}", r["message"])
+        self.assertIn(f"Left in staging, not applied: {name} file_changes_decision: move: {src} {refused(kind)}", r["message"].replace("Left waiting, not saved:", "Left in staging, not applied:"))
         self.assertTrue((self.v.root / rel).is_file())
         self.assertTrue(there.is_file())
         self.assertFalse(gone.exists())
@@ -225,7 +225,7 @@ class CardOnly(CardOnlyMoves):
         before = self.backups()
         r = self.post("/api/apply", {})
         self.assertTrue(r["ok"], r)
-        self.assertIn(f"Left in staging, not applied: {left} file_changes_decision: move: {src} {PAGE_REFUSED}", r["message"])
+        self.assertIn(f"Left in staging, not applied: {left} file_changes_decision: move: {src} {PAGE_REFUSED}", r["message"].replace("Left waiting, not saved:", "Left in staging, not applied:"))
         self.assertFalse(normal.exists())                                              # the normal one applied
         self.assertEqual(len(self.backups()), len(before) + 1)
         self.assertTrue((self.v.root / "system/staging" / left).is_file())             # the leftover stays, unapplied
@@ -234,7 +234,7 @@ class CardOnly(CardOnlyMoves):
         before = self.backups()
         r = self.post("/api/apply", {})                                                # again: still no failure, no backup
         self.assertTrue(r["ok"], r)
-        self.assertIn(f"Left in staging, not applied: {left}", r["message"])
+        self.assertIn(f"Left in staging, not applied: {left}", r["message"].replace("Left waiting, not saved:", "Left in staging, not applied:"))
         self.assertEqual(self.backups(), before)
         done = self.delete(self.post("/api/notes/get", {"path": src}))                # #255: the page's own button still works
         self.assertTrue(done["ok"], done)

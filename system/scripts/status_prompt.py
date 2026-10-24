@@ -64,7 +64,7 @@ def main(argv):
         print(e)
         return 2
     except SystemExit:
-        print("That project isn't in the tracker.")
+        print("That project isn't in your project record.")
         return 2
     return 0
 

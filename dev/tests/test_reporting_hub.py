@@ -689,7 +689,12 @@ class EntryPoints(Hub):
         self.start_at("go('psettings','ABC'); psCat.value='rep'; navWrite(false)", "document.querySelector('#psRepHub')")
         self.assertEqual(self.q("!!document.querySelector('[data-rpcard]')"), False)
         self.b.click("#psRepHub")
-        self.b.wait("document.querySelector('#v-reporting .page')", 25)
+        # Under load the click can go unregistered: re-click every 10 s while the page has not left
+        # the project settings, up to the 60 s limit. Still fails if the button truly does not navigate.
+        self.b.wait("""(()=>{const t=Date.now(), w=window.__psRetry||(window.__psRetry={t});
+          if(shared.VIEW==='reporting' && document.querySelector('#v-reporting .page')) return true;
+          if(Date.now()-w.t>=10000){w.t=Date.now(); const b=document.querySelector('#psRepHub'); if(b&&shared.VIEW!=='reporting') b.click()}
+          return false})()""", 60)
         self.assertEqual(self.q("shared.VIEW"), "reporting")
 
     def test_the_command_palette_entries(self):

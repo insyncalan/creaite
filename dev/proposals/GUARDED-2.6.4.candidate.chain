@@ -1,0 +1,13 @@
+# CANDIDATE guarded chain for 2.6.4 (not the real list: GUARDED-2.6.4.chain stays empty until the cut). One diff per line, in order of use.
+# Base: main 799da01c (the 2.6.3 release plus its log entry; engine files identical to e6389af8).
+# #345: every route that decides an item names the item
+dev/proposals/345/live_server.diff
+# #346: the runs chat carries nothing; a failed run set-up leaves no record and no stuck run
+dev/proposals/346/live_server.diff
+# #334: weekly AI budget gate (needs ai_budget.py, merged separately)
+dev/proposals/334/live_server.diff
+# line-reach: ai_budget.py and start_tokens_report.py are read-only commands (needs both scripts, same release)
+dev/proposals/line-reach/reach.diff
+# #292: plain wording in tracker.py and the one matching line in live_server.py
+dev/proposals/292-tracker/tracker.diff
+dev/proposals/292-tracker/live_server.diff

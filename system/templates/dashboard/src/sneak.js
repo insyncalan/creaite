@@ -8,7 +8,7 @@
    - the quiet "// Change this item in words" line at the foot of the peek.
    Esc closes it and focus goes back where it was. The box is a Preact component (components/peek/SneakPeek.jsx); this module puts
    it in place, keeps the peek scrolled so nothing hides behind it (the scroll area's bottom padding follows the box's height), and
-   gives it the peek's own save path: one dashboard proposal with the peek's envelope (`peek` meta, so the staged pill and the feed
+   gives it the peek's own save path: one dashboard suggestion with the peek's envelope (`peek` meta, so the staged pill and the feed
    show it), applied at once (BL-306), Undo straight after through /api/undo. Nothing is sent from here. */
 import { closeChat, openChat } from "./ask.js";
 import { SNEAK_CMD, SNEAK_ICON, mountSneak, unmountSneak } from "./components/peek/SneakPeek.jsx";
@@ -124,7 +124,7 @@ export function sneakClose(back) {
 function acts(at) {
   return {
     commit: (stage, item, o) => sneakCommit(at, stage, item, o),
-    undo: async applyId => { if (!viaServer()) return { ok: false, message: "Undo needs the live server." };
+    undo: async applyId => { if (!viaServer()) return { ok: false, message: "Undo needs creaite to be running." };
       const u = await api("/api/undo", { apply_id: applyId }); await reloadData(); afterChange(at); if (u.ok) sneakFlash(at, LASTF);
       return { ok: !!u.ok, message: u.ok ? "" : oneLine(u.message) || "Couldn't undo it: undo it in Activity." }; },
     chase: pane => { const start = {};
@@ -166,7 +166,7 @@ function sneakAsk(at, text) {
 async function sneakGo(at, task, item) {
   if (task.target === "ask") { sneakAsk(at, ""); return; }
   if (task.target === "source") {
-    if (task.path) { if (!viaServer()) { snack("Opening a file needs the live server"); return; } const o = await api("/api/open", { path: task.path }); snack(o.ok ? "Opened in its own app" : oneLine(o.message) || "Couldn't open it"); return; }
+    if (task.path) { if (!viaServer()) { snack("Opening a file needs creaite to be running"); return; } const o = await api("/api/open", { path: task.path }); snack(o.ok ? "Opened in its own app" : oneLine(o.message) || "Couldn't open it"); return; }
     snack(task.ref ? `The source: ${task.ref}` : "This item's source names no file"); return; }
   sneakClose(false);
   if (task.target === "milestone" && task.ref) { openMilestone(task.ref); return; }
@@ -177,8 +177,8 @@ async function sneakGo(at, task, item) {
     @param {SneakAt} at @param {{label: string, items: Record<string, any>[]}} stage @param {{id: string, table: string}} item
     @param {{by: string, said: string}} o @returns {Promise<{ok: boolean, message?: string, applyId?: any}>} */
 export async function sneakCommit(at, stage, item, o) {
-  if (!viaServer()) return { ok: false, message: "Sneak peek needs the live server: start it, then try again." };
-  if (!await needVault()) return { ok: false, message: "Not saved: the vault isn't connected." };
+  if (!viaServer()) return { ok: false, message: "Sneak peek needs creaite to be running: start it, then try again." };
+  if (!await needVault()) return { ok: false, message: "Not saved: your creaite folder isn't connected." };
   const k = at.where === "ms" ? "milestones" : at.k;
   const meta = { k, id: item.id, patch: {}, prev: {}, label: stage.label, from: "", to: o.said || "", at: nowStamp(), note: "Sneak peek", type: "act", ms: Date.now() };
   let name;
@@ -191,7 +191,7 @@ export async function sneakCommit(at, stage, item, o) {
   shared.PKS.push({ name, ...meta }); pkPersist();
   const r = await applyNow({ peek: true }); await pkReconcile(); afterChange(at);
   if (r.ok) { LASTF = stageFields(stage, item.id); sneakFlash(at, LASTF); }
-  if (!r.ok) return { ok: false, message: `Staged, but the apply stopped: ${oneLine(r.message)}. It is in the staged list.` };
+  if (!r.ok) return { ok: false, message: `Saved, but it wasn't approved: ${oneLine(r.message)}. It is waiting in Review.` };
   return { ok: true, applyId: r.apply_id };
 }
 /** the item redrawn after a change or an undo @param {SneakAt} at */

@@ -15,7 +15,7 @@ import { rjRecent } from "../../stores/rejects.js";
 export function RejectsList({ onReason, onApprove, onUndo, name, when }) {
   const { state, items, message } = rjRecent.value;
   if (state === "idle") return null;                     /* read when Quality opens */
-  if (state === "off") return <p class="sub" id="rjListMsg">What you rejected needs the live server.</p>;
+  if (state === "off") return <p class="sub" id="rjListMsg">What you rejected needs creaite to be running.</p>;
   if (state === "error") return <p class="sub" id="rjListMsg">{message || "The list couldn't be read."}</p>;
   if (state === "loading" && !items.length) return <p class="sub" id="rjListMsg" role="status">Reading what you rejected…</p>;
   if (!items.length) return <p class="sub" id="rjListMsg">Nothing has been rejected.</p>;

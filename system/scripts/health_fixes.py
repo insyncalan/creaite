@@ -23,14 +23,14 @@ FIX_LOG = paths.STAGING / "health-fixes.jsonl"       # when each fix ran and whe
 
 # id: what it is, the button, what it will do (shown first), and its one command (a creaite script and fixed words) or the page
 FIXES = {
-    "launcher": {"title": "Your launcher opens another vault", "button": "Fix it",
-                 "does": "Make this vault's launcher again in ~/Applications, replacing the one that opens another vault.",
+    "launcher": {"title": "Your creaite app opens a different copy of creaite", "button": "Fix it",
+                 "does": "Make the creaite app for this copy again, replacing the one that opens a different copy.",
                  "command": ("launch.py", "make-launcher", "--replace")},
-    "rosetta": {"title": "Python runs under Rosetta", "button": "Fix it",
-                "does": "Make this vault's launchers again so they start creaite natively (arm64), not as an Intel program.",
+    "rosetta": {"title": "creaite is running in compatibility mode on this Mac", "button": "Fix it",
+                "does": "Make the creaite app again so it starts natively on this Mac, not as an Intel program.",
                 "command": ("launch.py", "make-launcher", "--if-present")},
-    "icon": {"title": "Chrome's copy of the app shows an old icon", "button": "Fix it",
-             "does": "Point the app's manifest at new icon addresses, so Chrome offers to update its copy of the icon.",
+    "icon": {"title": "The creaite app shows an old icon", "button": "Fix it",
+             "does": "Refresh the app's icon, so Chrome offers to update it.",
              "command": ("launch.py", "refresh-icon")},
     "m365": {"title": "Microsoft 365 isn't connected", "button": "Open connector settings",
              "does": "Open Claude's connector settings, where you reconnect Microsoft 365 yourself. creaite never signs in for you.",
@@ -46,9 +46,9 @@ FIXES = {
                                 "you approve it there; links keep working, nothing is deleted, and Undo moves them back.",
                         "command": ("archive.py", "reports"), "card": True},
     # BL-328: the lock file only, and only when no sweep holds it (sweep.py checks again before it removes anything)
-    "sweep_lock": {"title": "A sweep lock is held with no sweep running", "button": "Release",
-                   "does": "Release the sweep lock left by a sweep that has ended, so the next sweep can start. A sweep that is "
-                           "still running keeps its lock.",
+    "sweep_lock": {"title": "A mail and Teams check looks stuck", "button": "Clear it",
+                   "does": "Clear the marker left by a check that has ended, so the next check can start. A check that is "
+                           "still running keeps it.",
                    "command": ("sweep.py", "unlock", "--if-idle")},
 }
 

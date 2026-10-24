@@ -1,0 +1,13 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 79466eef..33d54370 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1404,7 +1404,7 @@ class Handler(BaseHTTPRequestHandler):
+                     rest = ["system/staging/" + p.name for p in sorted(paths.STAGING.glob("proposed-*.json"))  # #280: the
+                             if p.name not in held]                                # staging file by path, never a root namesake
+                     if not rest:
+-                        return self.send(200, {"ok": True, "message": "Nothing to apply: no decided items.",
++                        return self.send(200, {"ok": True, "message": "Nothing to save: no decided items.",
+                                                "apply_id": latest_apply(), "held": len(held)})
+                     code, out = run("tracker.py", "apply", *rest)
+                     return self.send(200, {"ok": code == 0, "message": out, "apply_id": latest_apply(), "held": len(held)})

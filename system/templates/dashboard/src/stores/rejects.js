@@ -51,6 +51,6 @@ export function rjLeave() { if (rjGone.value.length) rjGone.value = []; }
 
 /** One of Activity's recent rejects (POST /api/review/rejects).
     @typedef {{key: string, file: string, ref: any, applied?: boolean, project?: string, table?: string, kind?: string, text?: string,
-      reason?: string | null, duplicate_of?: string | null, at?: string}} RjRecent */
+      reason?: string | null, duplicate_of?: string | null, at?: string, fp?: string}} RjRecent */
 /** @type {import("@preact/signals").Signal<{state: "idle" | "loading" | "ok" | "off" | "error", items: RjRecent[], message?: string}>} */
 export const rjRecent = signal({ state: "idle", items: [] });

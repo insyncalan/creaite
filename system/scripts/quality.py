@@ -260,7 +260,7 @@ def repeats(start, end):
 # ===== BL-315 (v1.9.2) ===== Activity › What you rejected: the latest rejects, pending or applied, each named "<file>#<n>" so its
 # reason can be changed, the reject undone or approved instead (review.py). The item's text and kind, never an owner or a sender.
 def recent_rejects(limit=50):
-    """The latest rejected items, newest first: [{key, file, ref, applied, project, table, kind, text, reason, duplicate_of, at}]."""
+    """The latest rejected items, newest first: [{key, file, ref, applied, project, table, kind, text, reason, duplicate_of, at, fp}]."""
     out = []
     for folder in (paths.APPLIED, paths.STAGING):
         for p in sorted(folder.glob("proposed-*.json")):
@@ -276,13 +276,15 @@ def recent_rejects(limit=50):
 
 def reject_row(name, data, it):
     """One line of recent_rejects."""
+    import build_dashboard
     v = it.get("values") or {}
     text = v.get("description") or v.get("decision") or v.get("summary") or v.get("name") or it.get("id") or ""
     return {"key": f"{name}#{it.get('n')}", "file": name, "ref": it.get("n"), "applied": bool(it.get("applied")),
             "project": v.get("project") or str(it.get("id") or "").split("-")[0], "table": it.get("table"),
             "kind": type_of(it), "text": str(text)[:300], "reason": it.get("reject_reason") or None,
             "duplicate_of": it.get("duplicate_of") or None,
-            "at": str(it.get("rejected_at") or data.get("created") or name[9:19])[:19]}
+            "at": str(it.get("rejected_at") or data.get("created") or name[9:19])[:19],
+            "fp": build_dashboard.item_fp(it)}      # 2.6.4 (#345): Approve instead names the item it means
 # ===== end BL-315 =====
 
 

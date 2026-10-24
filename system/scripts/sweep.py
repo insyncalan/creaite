@@ -2241,7 +2241,7 @@ def prefill_target(aid, cand):
     a = vip_find(aid)
     if a is None or a.get("kind") in FOLLOWED_KINDS:
         raise LookupError("That message isn't in Needs attention any more." if a is None else
-                          "That is a proposal already in Review; open it there.")
+                          "That is a suggestion already in Review; open it there.")
     c = cand_of(a, cand) if cand is not None else None
     if cand is not None and c is None:
         raise LookupError("That item isn't on the card any more.")
@@ -2310,7 +2310,7 @@ def vip_make(aid, kind=None, values=None, cand=None):
     propose.people_check_spec(spec)                                     # BL-55: a registered name as the register has it
     bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
     if bad:
-        raise ValueError(f"Not staged: {bad[0]}")
+        raise ValueError(f"Not saved: {bad[0]}")
     stamp, out, n = now().strftime("%Y-%m-%d-%H%M%S"), None, 1
     while out is None or out.exists() or (paths.APPLIED / out.name).exists():    # never a name already used
         out = paths.STAGING / f"proposed-{stamp}-dashboard{f'-{n}' if n > 1 else ''}.json"
@@ -3047,7 +3047,7 @@ def _new_update_spec(a, m, row, line, source, confidential):
     spec["items"][0]["based_on"] = row["updated_at"]
     bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
     if bad:
-        raise ValueError(f"Not staged: {bad[0]}")
+        raise ValueError(f"Not saved: {bad[0]}")
     return spec
 
 
@@ -3605,9 +3605,9 @@ def _close_target(a):
     if a.get("marker") == "private":
         raise ValueError("Nothing to close for a private conversation.")
     if a.get("state") == "handled":
-        raise ValueError("This thread is handled: nothing to stage.")
+        raise ValueError("This thread is handled: nothing to save.")
     if a.get("seen"):
-        raise ValueError("This thread was marked seen: nothing to stage.")
+        raise ValueError("This thread was marked seen: nothing to save.")
     if not c or not isinstance(c.get("id"), str) or not c["id"]:
         raise ValueError("Nothing on this thread looks done.")
     if not extraction.switched_on("done"):
@@ -3646,7 +3646,7 @@ def _checked(spec):
     import propose
     bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
     if bad:
-        raise ValueError(f"Not staged: {bad[0]}")
+        raise ValueError(f"Not saved: {bad[0]}")
 
 
 def vip_close_stage(aid):
@@ -3663,7 +3663,7 @@ def vip_close_stage(aid):
     if isinstance(was, dict):
         state = logged_state(was, c["id"])
         if state == "staged":
-            raise ValueError("Already staged for Review.")
+            raise ValueError("Already waiting in Review.")
         if state in ("decided", "applied"):
             raise ValueError("Already decided in Review.")
     line, why, done = _close_parts(a, c, row)
@@ -3708,7 +3708,7 @@ def vip_close_unstage(aid):
     c = a.get("closes") if isinstance(a.get("closes"), dict) else {}
     was = c.get("staged") if isinstance(c.get("staged"), dict) else None
     if not was:
-        raise ValueError("Nothing staged to undo.")
+        raise ValueError("Nothing waiting to undo.")
     state = logged_state(was, c.get("id"))
     if state in ("decided", "applied"):
         raise ValueError("Already decided in Review.")
@@ -4124,9 +4124,9 @@ def _card_ready(st, aid):
     if a.get("marker") == "private":
         raise ValueError("No promises for a private conversation.")
     if a.get("state") == "handled":
-        raise ValueError("This thread is handled: nothing to stage.")
+        raise ValueError("This thread is handled: nothing to save.")
     if a.get("seen"):
-        raise ValueError("This thread was marked seen: nothing to stage.")
+        raise ValueError("This thread was marked seen: nothing to save.")
     return a
 
 
@@ -4152,7 +4152,7 @@ def _not_staged_yet(staged, state):
         return
     got = state(staged)
     if got == "staged":
-        raise ValueError("Already staged for Review.")
+        raise ValueError("Already waiting in Review.")
     if got in ("decided", "applied"):
         raise ValueError("Already decided in Review.")
 
@@ -4253,7 +4253,7 @@ def vip_promise_stage(aid, key):
     name = _write_new(spec)
     p.update({"state": "staged", "staged": {"proposal": name, "at": now().strftime("%Y-%m-%d %H:%M")}})
     vip_save(st)
-    return {"proposal": name, "key": key, "state": "staged", "message": "Staged the promise for Review."}
+    return {"proposal": name, "key": key, "state": "staged", "message": "Saved the promise for Review."}
 
 
 def _take_item(out, match, cards):
@@ -4289,7 +4289,7 @@ def vip_promise_unstage(aid, key):
     p = _card_promise(a, key)
     was = p.get("staged") if isinstance(p.get("staged"), dict) else None
     if not was:
-        raise ValueError("Nothing staged to undo.")
+        raise ValueError("Nothing waiting to undo.")
     state = promise_state(was, key)
     if state in ("decided", "applied"):
         raise ValueError("Already decided in Review.")
@@ -4311,7 +4311,7 @@ def vip_promise_dismiss(aid, key, undo=False):
     if undo:
         p["state"] = "offered" if p.get("state") == "dismissed" else p.get("state")
     elif p.get("state") == "staged":
-        raise ValueError("It's staged for Review: Undo that first.")
+        raise ValueError("It's waiting in Review: Undo that first.")
     else:
         p["state"] = "dismissed"
     vip_save(st)
@@ -4365,13 +4365,13 @@ def vip_kept_stage(aid):
     if row is None:
         raise ValueError(f"{k['id']} isn't open any more.")
     if _pending_kept(k["id"]):
-        raise ValueError("Already staged for Review.")
+        raise ValueError("Already waiting in Review.")
     spec = _kept_spec(a, k, row)
     _checked(spec)
     name = _write_new(spec)
     k["staged"] = {"proposal": name, "at": now().strftime("%Y-%m-%d %H:%M"), "card": aid}
     vip_save(st)
-    return {"proposal": name, "id": k["id"], "state": "staged", "message": f"Staged {k['id']} as kept for Review."}
+    return {"proposal": name, "id": k["id"], "state": "staged", "message": f"Saved {k['id']} as kept for Review."}
 
 
 def _kept_take(k, cards):
@@ -4395,7 +4395,7 @@ def vip_kept_unstage(aid):
     a = _card_any(st, aid)
     k = a.get("kept") if isinstance(a.get("kept"), dict) else {}
     if not isinstance(k.get("staged"), dict):
-        raise ValueError("Nothing staged to undo.")
+        raise ValueError("Nothing waiting to undo.")
     cards = _card_ids(a)
     for one in [k] + [m for m in a.get("kept_more") or [] if isinstance(m, dict)]:
         _kept_take(one, cards)

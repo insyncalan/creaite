@@ -2,6 +2,67 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.4
+
+2.6.4 contains all of 2.6.3. The headline: the words on screen and in Help are plain (suggestions, save, your project record, your creaite folder, a mail and Teams check), there is a weekly budget for creaite's own AI use that stays off until you switch it on, a set of design fixes, rules for each run that are half the size, and a page that has gone stale is now turned away instead of deciding the wrong item. A few older wordings and paths are still on screen in places; they are listed under Good to know.
+
+
+### Plain words
+- **The words on screen are plain.** What creaite puts forward is now called a suggestion, and it waits for you in Review. Approving a change now says save. The record creaite keeps is your project record, the folder it all lives in is your creaite folder, and looking through your mail and Teams is called a check: Today says "Mail and Teams not checked yet today" with a Check now button, and Settings says "Daily check time". A message that says creaite isn't running says that, in those words. Your own change reads "Saved" with Undo. (#292)
+- **Health speaks plainly.** Every title and Fix it button in Settings › Health is written for a person. For example the message about the app showing an old icon now reads "The creaite app shows an old icon", and the one about the launcher now reads "Your creaite app opens a different copy of creaite". The Release button on a stuck check is now "Clear it". (#292)
+- **Help and What's new are rewritten in the same words.** The pages and the chat wording now match what the screens say. (#293)
+- **Commands.** You can say "check my mail", "check my mail and Teams", "check mail for ABC" or "check my mail the last 7 days" to ask creaite for a mail and Teams check. It runs at once and saves suggestions only. These words already worked; Help and the screens now use them. The older words you used before still work exactly as before. (#292, #293)
+
+### Design fixes
+- **Settings.** The tick rows (for example Weekend and "Week ahead shows") keep room for their label, so it no longer squeezes to one word beside the tick boxes. (#337)
+- **Activity.** The By column keeps "Rejected in review" on one line at 900 px, so the rows are shorter. (#337)
+- **Pencils and charts.** The edit pencils are easier to see (less faint), the small text on the charts is no smaller than 12 px, and the click targets are at least 24 px. (#337)
+- **People.** At 900 px the table is tighter and its headings can wrap, so the Overdue column, which it sorts by, is on screen without sideways scrolling. (#337)
+- **Milestones in Client view.** When none of a project's milestones are shown to the client, Client view says so, and that Internal view shows them, with Add milestone beside it, instead of "0 achieved, 0 to come". With one milestone it reads "The milestone is not shown to the client yet"; with several, "None of the 3 milestones are shown to the client yet" (the number is how many there are). (#337)
+
+### Minutes
+- **Three smaller fixes (#333).** The transcript pane says "1 turn", not "1 turns". A date shown as 20-11-2026 is no longer flagged as a figure the speaker never said when the transcript says "the 20th of November" (or the date in numbers). A possible duplicate from another project is marked only when it is a close match, so there are fewer false matches.
+
+### Chats with ask creaite
+- **A weekly budget for creaite's own AI use, off until you switch it on.** Settings › Advanced, in "creaite and ask creaite", has "Weekly AI budget". Switched on, it counts the week's AI use (ask creaite, drafts, the mail and Teams check and the alert check), Monday to Sunday, in dollars (50 to start) or tokens. From 80% a quiet line in the chat warns you. At 100% a request you type either asks first ("Run anyway" or "Cancel") or is turned away until Monday, whichever you chose in "At the limit". The Usage tab shows used against the budget and the date the week ends. With it off, the Usage tab says so and where to switch it on, and nothing is ever held or warned about. It holds only a request you type to ask creaite: the buttons in the dashboard (Review, Save, Undo), the daily check and the alert check are never held. It keeps counts and dates only, never any text, and an ask creaite run cannot raise or reset it (changing Settings needs your approval card). (#334)
+
+### Lighter rules
+- **The rules every run reads at the start are about half the size.** The rules file went from 66,315 to 32,736 bytes, about 8,400 fewer tokens each time a run starts, so runs start cheaper. The full wording moved to a reference file that a run reads only when it needs a section. The part with the never list and the approval rules is unchanged, and a test checks that every other "never" is still in the short file or in the reference. What ask creaite may read, change or never touch is decided in code, and that is not changed. You see nothing different and need do nothing. If you want to check: ask ask creaite to delete something inside the .git folder and it still says no. (#338)
+
+### Review
+- **A stale page is turned away.** Every way of deciding on a suggestion from the page now says which item it means, and checks it is still the version you saw. If the list changed behind an open page, you read "That item has changed since you looked at it, so nothing was changed. Look at the list again." and nothing is decided on the wrong item. This now covers reject, Approve instead, repeat, make it an update, and moving an item to another project. (#345)
+- **Approve minutes checks the items too.** It now checks the minutes and every item you ticked, not only the minutes, so minutes that were read again behind an open page are not approved with different items than you saw. (#345)
+
+### Today and your profile
+- **No "no update for 7 days" line on Today.** The line and its Draft updates button are gone from My Commitments. The draft is still there: in Work, select two or more actions and the bar offers Draft updates. (#352)
+- **Past days on Today are plainer.** When you look at a day that has passed, the meetings are listed with their times, titles and projects and nothing under them: the labels "No transcript", "Transcript ready", "Not checked yet" and "Minutes made" (and "Draft in Review"), and the Check and Process links, are gone. Check and Process are still in Intake for the same meetings (Intake offers Process and Check again). Today and later days are unchanged: a meeting's title still opens its Prep peek. (#351)
+- **A colleague's name no longer shows their details as yours.** If you set your name in Your profile to someone in the people register, the card no longer shows their email, organisation or role as yours. Add my details asks "Is that row you?" before it changes their row. (#348)
+
+### Behind the scenes
+- The chat of runs creaite started itself ("Runs creaite started") no longer carries what a run read into your next question. A run that fails to set up leaves nothing behind, and creaite no longer answers "busy" afterwards. (#346)
+- If you rename minutes while approving them, the Review page you are on carries on with the new name. A second Review tab that was already open is not brought up to date: its next decision on those items is turned away with "That item has changed since you looked at it" until you reload it. (#345)
+- New reports for the team that measure how big each run is at the start, and the size of the rules files. They change nothing on screen. (#87)
+- Tests for the draft routes now run in the release checks (#350), and several tests that failed now and then no longer do (#349).
+
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+- If you want a weekly limit on creaite's AI use, switch on "Weekly AI budget" in Settings › Advanced and set the amount and what happens at the limit. It does nothing until you do.
+- Walk Today, Intake, Review, Work, Settings and Health once, looking for old wording or a file path.
+
+
+- A dashboard tab left open from before the update gets a "reload the page" message instead of deciding anything. Reload it.
+- The weekly budget is off by default. Once on, a count that goes wrong never blocks Review, Save or Undo, a mail check or an alert check.
+- Not in 2.6.4 (minutes): only the three #333 fixes above are in. The other six wait, among them the count in the toast after Approve minutes (it can say more work items registered than were saved when a ticked row is held back in Review) and the long dates ("23 October 2026") in the minutes headers, which need your decision.
+- Still on screen in a few places: a file path or a command (the hover on the portfolio folder in Files, the folder shown on a project's Settings page, the detail lines of some Health checks).
+- Help still says past days on Today show each meeting's follow-up ("Transcript ready", "Minutes made", "Check", "Process"). That is out of date since the change above; use Intake for those jobs.
+- Still wrong in one place: after you edit an item, the top says "Saved for Review" while the bar below says nothing is saved until you press Save.
+- On the People page at 900 px, a long word can still break in the middle.
+- The figure check does not look at the year when the transcript gives a date as a day and month in words: "20-11-2027" passes against "the 20th of November". A month word that is a verb ("may") can also pass as the month.
+- In a rare crash recovery (a stopped run that started its work in the same minute as an earlier suggestion), the earlier minutes can drop out of Review with nothing on the page showing it.
+- Older words you type still work. Help's command table still lists them.
+- Not in 2.6.4: fetching transcripts as they appear, the shared-database work (paused).
+
 ## creaite 2.6.3
 
 2.6.3 contains all of 2.6.2. The headline: Intake is easier to work through (tick several meetings, one right-click menu, Group by, nested items), the minutes can be exported as Shareable or Internal, the Word minutes carry the project name, date and attendees, and ask creaite starts each question fresh so chats stay cheap. Some older wording is still on screen in a few places; it is replaced in 2.6.4.
@@ -29,9 +90,6 @@ What changed for you in each release of creaite, newest first. Written in plain 
 ### Behind the scenes
 - Deciding on a suggestion from the page now always says which item it means; a page without that is told to reload and decides nothing.
 - The Outlook draft code is now on the list of files that change only with Alan's say.
-
-### Conditional: a lighter rules file (#338, only if approved)
-- Cuts the rules every run reads by about half (roughly 7,900 fewer tokens to start each run). Every "never" and every approval rule stays; the long reference moves to a file read only when needed. Not included unless Alan approves it.
 
 
 - Update from the release zip as usual.
@@ -129,14 +187,14 @@ Nothing is required. To have creaite start by itself, turn on Start creaite when
 
 ## creaite 2.6.0
 
-2.6.0 contains all of 2.5.4; those items are not repeated here. Old words ("Review", "proposal", "staged", "sweep") stay on screen until 2.6.1, so the lines below quote the labels as they appear today.
+2.6.0 contains all of 2.5.4; those items are not repeated here. Old words ("Review", "suggestion", "saved", "check") stay on screen until 2.6.1, so the lines below quote the labels as they appear today.
 
 A bigger release: Intake becomes one page for everything that arrives and waits, the Minutes view is rebuilt as one clean document, approving minutes follows your Track choices, and Settings and People are reorganised.
 
 
 ### Intake: one page for everything that arrives and waits
 - Intake and Review are now one page, **Intake**, with one entry in the sidebar and one number. The old Review and Intake addresses open it.
-- Three views, remembered in this browser: List, Board and Two panes. Stage boxes across the top (Arrived, Drafted and so on, with Show all), each with its count.
+- Three views, remembered in this browser: List, Board and Two panes. Save boxes across the top (Arrived, Drafted and so on, with Show all), each with its count.
 - Suggestions are split into routine and needs-your-decision. **Approve routine** approves the routine group in one go, with one Undo.
 - Click a meeting row to open it, and again to close it. Enter, N (not needed) and H (later) work on the focused row.
 - Each meeting row has Process, Later, Not needed (with a reason) and Restore. **Process all ready** skips private meetings, and Stop ends it. Process and Refresh run as their own jobs with progress and Stop.
@@ -176,7 +234,7 @@ A bigger release: Intake becomes one page for everything that arrives and waits,
 ### Settings, People and project settings
 - Settings is reorganised into tabs, one card per group.
 - **People** is now the home of the whole register: four tabs, search and filters, add, edit details and remove. Every link to a person opens the People page, and the old Settings addresses for People, Workstreams and Projects open their new homes.
-- Removing someone is refused, with the reason, while they still own items or are named as a stakeholder, milestone owner or workstream lead.
+- Removing someone is stopped, with the reason, while they still own items or are named as a stakeholder, milestone owner or workstream lead.
 - Project settings is one scrolling page: General, People on the project, Workstreams, Logos, Reporting, and Archive and close. Following someone is set on the project's settings page only. (#246, #247, #248)
 
 ### Page keys
@@ -192,8 +250,8 @@ A bigger release: Intake becomes one page for everything that arrives and waits,
 Nothing is required. Find your project's people on the new People page, and try the page keys.
 
 
-- Some words you will still see are being replaced in 2.6.1 ("Review" on labels that now point at Intake, "proposal", "staged" and the mail check's old name).
-- Not in 2.6.0: Re-extract on the chat as "Read again" (2.6.1), Plain words (2.6.1), the avatar menu (2.6.1), the work-item refinements (#241), Draft email into Outlook (#183) and fetching transcripts as they appear (#250).
+- Some words you will still see are being replaced in 2.6.1 ("Review" on labels that now point at Intake, "suggestion", "saved" and the mail check's old name).
+- Not in 2.6.0: Re-read for items on the chat as "Read again" (2.6.1), Plain words (2.6.1), the avatar menu (2.6.1), the work-item refinements (#241), Draft email into Outlook (#183) and fetching transcripts as they appear (#250).
 
 ## creaite 2.5.4
 
@@ -201,7 +259,7 @@ A release of fixes and small tidy-ups: Prep opens for any meeting, one stuck ite
 
 
 - **Prep opens for any meeting, with or without a project.** If a meeting has no project, the Prep page opens anyway and the Project chip becomes a picker: choose a project, or "No project (general meeting)". Your choice is remembered for that meeting. A "No project" meeting files to the portfolio's Agendas folder and looks across all your projects. If earlier research was done for another project, the page says so and offers Refresh research instead of showing old text. (#279)
-- **One stuck item no longer stops everything else from saving.** Saving a work item or approving items used to fail with "unknown field(s)" or "source not found" because of an older, unrelated item. Now a save only saves its own change. An older item that can't be saved is held in Review and says why on its own row, for example "Can't be saved as it is: … Edit it or reject it" (Approve is switched off until it's fixed), or "Held: transcript no longer in the inbox". For held minutes you can approve without the transcript copy, discard them, or edit the item. Minutes no longer write a field that a decision doesn't have. (#280)
+- **One stuck item no longer stops everything else from saving.** Saving a work item or approving items used to fail with an error about a field or a missing source because of an older, unrelated item. Now a save only saves its own change. An older item that can't be saved is held in Review and says why on its own row, for example "Can't be saved as it is: … Edit it or reject it" (Approve is switched off until it's fixed), or "Held: transcript no longer in the inbox". For held minutes you can approve without the transcript copy, discard them, or edit the item. Minutes no longer write a field that a decision doesn't have. (#280)
 - **The Draft email preview can be resized.** Drag the grip in the bottom corner to make the mail window taller or shorter, in every Draft email window (the dialog and the chase pane). (#281)
 - **Exports say "Actions", not "Action Items".** The Word, PDF, HTML and follow-up email exports use the same word as the Minutes view. (#282)
 - **The type icon names its type when you point at it.** Actions, decisions, risks, issues, assumptions, dependencies and milestones show a tooltip in Work, Review, search, project pages, the person page and Week ahead, including the milestone markers on the Milestones page and the project's Milestones card. (#286)
@@ -209,21 +267,21 @@ A release of fixes and small tidy-ups: Prep opens for any meeting, one stuck ite
 - **A tidier project page and Milestones page.** The project dropdown, the ‹ › arrows and the [ ] keys are gone from both; open a project from the Projects list or search, and its Milestones from the project's Milestones card. (#285)
 - **The "?" button is gone from Today's header.** The ? key still opens Help for Today, and Close the day is unchanged. (#284)
 - **The "Replied" and "nothing for you" lines on Today can be cleared.** Both get a Seen action. A new ask reopens the line. (#276)
-- **A document with a list as its project code no longer breaks the match check.** It is refused with a clear message instead of failing. (#277)
+- **A document with a list as its project code no longer breaks the match check.** It is stopped with a clear message instead of failing. (#277)
 
 
-Nothing is required. Any minutes that were stuck before this release (they failed with "unknown field" or "source not found") now show in Review as held items: approve them without the transcript copy, or discard them.
+Nothing is required. Any minutes that were stuck before this release (they failed with an error about a field or a missing source) now show in Review as held items: approve them without the transcript copy, or discard them.
 
 
 - Each item's source note still ends "— Action Items" in the item's own record; that changes in 2.6.
-- Single-key page shortcuts are planned for 2.6.0, and Re-extract on the chat for 2.6.1.
+- Single-key page shortcuts are planned for 2.6.0, and Re-read for items on the chat for 2.6.1.
 
 ## creaite 2.5.3
 
 A release of fixes and follow-ups: Process and Refresh calendar run as their own jobs, the last client-export gaps are closed, milestones show on Today, and the alert check pauses overnight. Written only from what landed.
 
 
-- **Process in Intake runs as its own job.** Pressing Process no longer ends with "I've drafted the files but haven't staged them". It runs in the background with progress and a Stop button, and the minutes and items arrive in Review. The ask creaite panel is used only if a transcript has to be loaded first. (#264)
+- **Process in Intake runs as its own job.** Pressing Process no longer ends with "I've drafted the files but haven't saved them". It runs in the background with progress and a Stop button, and the minutes and items arrive in Review. The ask creaite panel is used only if a transcript has to be loaded first. (#264)
 - **Refresh calendar runs as its own job, and keeps no join links.** Refresh has progress and Stop on the button. The saved calendar no longer keeps meeting join links or passcodes, and a confidential meeting keeps only its title and times. (#265)
 - **Milestones on Today.** Needs attention lists a milestone that is due or overdue ("Milestone Pilot go-live is due …"), and "Open all n in Work" opens Work > All items already filtered by that milestone. The Milestone filter is also under More fields. (#251)
 - **The alert check pauses overnight and at weekends.** It skips 19:00 to 07:00 and weekends by default (set under Essentials > People I follow), about two thirds fewer checks. The first check after a quiet spell looks back to the last one, so nothing is missed. (#97)
@@ -234,8 +292,8 @@ A release of fixes and follow-ups: Process and Refresh calendar run as their own
 - **The Review list no longer grows wider when you open a minutes row.** Expanding "n items" used to stretch the list and show a "more columns" button; long source lines now shorten, and the buttons stay in view. Intake rows get the same check. (#271)
 - **Suggest no longer writes "I can't suggest" into a field.** When there is nothing to base a suggestion on, the field stays as it was and a short note says so. This covers the mitigation, decision and update suggestions. (#272)
 - **Your reviews on the Usage tab.** Add your own dated notes (what you saw, what you decided), and download them as a CSV. (#238 follow-up)
-- **Minutes are staged for the right project.** A meeting file in another project's folder is staged only for that project, and ask creaite says plainly that a chat cannot save a retrieved transcript: use Intake's Load into inbox. (#269)
-- **Stricter limits on ask creaite, and quieter logs.** More ways of phrasing a forbidden path are refused, and a failure that used to be logged without its cause now says why (an error kind and where; never any text). Nothing you see changes. (#174, #253)
+- **Minutes are saved for the right project.** A meeting file in another project's folder is saved only for that project, and ask creaite says plainly that a chat cannot save a retrieved transcript: use Intake's Load into inbox. (#269)
+- **Stricter limits on ask creaite, and quieter logs.** More ways of phrasing a forbidden path are stopped, and a failure that used to be logged without its cause now says why (an error kind and where; never any text). Nothing you see changes. (#174, #253)
 
 
 Nothing is required. To use the new archive name on your existing archives, rename those folders to "99 Archive" yourself; until then the old names still work.
@@ -253,15 +311,15 @@ Client exports are now made from one checked copy of the report, so nothing can 
   - A page posted with a client export is never used, and a client report is always treated as a client report, whatever its file says.
   - The header, the logos and the audience come from the project at the moment you export. Only the project's own logo files and the report's own pictures can be drawn, and any extra fields are dropped.
   - The older Word report route goes through the same check. Words hidden in look-alike letters or escapes are caught, and so are another project's words and owners.
-  - The minutes export refuses a client report, and a typed export name can't claim another report's filing name.
+  - The minutes export stops a client report, and a typed export name can't claim another report's filing name.
   - This closes the client-export items listed as "still to come" in 2.5.1.
 - **A Usage tab on Activity.** It shows what each Claude run costs and what it loads before it starts, over time: summary cards, a 14-day chart (cost per day, and what each run loads at the start, in two aligned panels), a table by kind of run, what every run loads (the always-loaded files, measured once a day) and the skills used. It counts only: it never records what anything said.
-- **Intake is a quiet line on Today.** The Intake and Review section on Today is replaced by one small line at the foot of Your commitments saying how many meetings are ready to process and how many proposals wait. Its links go to Intake and Review, and a small x hides it until something new arrives. With nothing waiting there is no line. The quick Approve and Reject on Today's rows are gone: approve in Intake and Review.
+- **Intake is a quiet line on Today.** The Intake and Review section on Today is replaced by one small line at the foot of Your commitments saying how many meetings are ready to process and how many suggestions wait. Its links go to Intake and Review, and a small x hides it until something new arrives. With nothing waiting there is no line. The quick Approve and Reject on Today's rows are gone: approve in Intake and Review.
 - **Messages from people you follow** sit in their own Messages section on Today, above Week ahead, only when there are any: each is a card with Make a work item and Dismiss.
 
 - **No Reporting card on the project page.** The Reporting card is gone from the project page; Reports (the icon beside Browse files), Project settings › Open reporting, the Reports page and Today's reminder still open the project's reporting.
 - **Intake line dismiss is exact.** The small x on Today's Intake line now remembers which items you dismissed, so something new always brings it back.
-- **Quieter debug log.** The sweep's log line now holds counts only.
+- **Quieter debug log.** The check's log line now holds counts only.
 
 
 Nothing.
@@ -272,13 +330,13 @@ Nothing.
 
 ## creaite 2.5.1
 
-A release of fixes: you can clear health items and dismiss the Sweep banner, the filter panel is no longer cut off, weekly report rows left out by mistake are fixed, and ask creaite no longer writes reports. Client exports are safer.
+A release of fixes: you can clear health items and dismiss the Check banner, the filter panel is no longer cut off, weekly report rows left out by mistake are fixed, and ask creaite no longer writes reports. Client exports are safer.
 
 
 - **Clear health items.** In Settings › Health each problem has a Dismiss button (with an optional reason). A dismissed problem stops counting in the number in your menu; it comes back by itself if its detail changes, and "Dismissed" lists them with Restore. Problems that mean creaite itself is not safe to use cannot be dismissed.
-- **Dismiss the Sweep banner.** A small close icon on the "Sweep due" banner on Today hides it for the day without running a sweep. It returns the next day, or when the last-swept time changes.
+- **Dismiss the Check banner.** A small close icon on the "not checked yet" banner on Today hides it for the day without running a check. It returns the next day, or when the last-checked time changes.
 - **The Work filter panel is never cut off.** On a short list the filter panel used to be clipped near the bottom; it now stays fully visible.
-- **Weekly report rows left out.** A work item that showed blank with "Click to write" and the left-out eye now keeps its text; a row you leave out and save says it is left out, and its eye refills it from the tracker.
+- **Weekly report rows left out.** A work item that showed blank with "Click to write" and the left-out eye now keeps its text; a row you leave out and save says it is left out, and its eye refills it from your project record.
 - **No cog on the Projects list.** The cog beside each project name in the Projects list is gone; project settings open from the project page (the cog beside Reports and Browse files) and from Settings.
 - **Today.** The permanent "How Today works" box under an empty Needs attention is gone.
 - **ask creaite no longer writes reports.** Reports are yours to edit in the Reporting hub; ask creaite can read them and answer questions about them, but cannot create or change a weekly or client report or its draft.
@@ -300,10 +358,10 @@ Project settings get a page of their own, both reports can be edited side by sid
 - **ask creaite shows when it has finished.** With the panel closed, a small mark appears on the ask creaite button when a run ends (a tick for done, a different mark for stopped or failed). It goes after 30 seconds, or when you open the panel.
 - **A tidier report hub.** The label row (name, status, Match internal, Refresh, Edit again) sits inside each grey pane and scrolls with it, and the weeks in the week menu show their real health colours.
 - **A roomier Add actions picker.** The picker in the report no longer feels cramped.
-- **Safer settings and exports.** Settings that change a project's memory file refuse a file that changed in another window, keep the rest of a line, and never show full file paths in messages. Client exports drop more kinds of hidden content (unclosed styles, damaged pictures, GIF and WebP pictures).
+- **Safer settings and exports.** Settings that change a project's memory file stop a file that changed in another window, keep the rest of a line, and never show full file paths in messages. Client exports drop more kinds of hidden content (unclosed styles, damaged pictures, GIF and WebP pictures).
 
 
-- With a project's client report switched off, creaite now refuses to create, save, export or approve a client report for it; existing client reports can still be opened.
+- With a project's client report switched off, creaite now stops to create, save, export or approve a client report for it; existing client reports can still be opened.
 - Partner names are 1 to 60 characters (letters, digits, spaces and . , & ' - ( )); other names on the Partners line are ignored.
 - Intake and Review are still two separate pages in this release.
 - In Side by side, only one click-to-edit summary box is open at a time (clicking into the other pane closes it), and the section menu is one popup.
@@ -326,7 +384,7 @@ Weekly reporting is rebuilt as one place for the internal and the client report,
 - **The same editing in both reports.** One report sheet is used for both, so every improvement reaches both. The client report keeps what is special to it: client-visible items only, "Not in this report", and "Matching internal / Edited for the client" with a Match internal button for each section.
 - **One title block and your logos.** The repeated page title is gone: the header reads "Weekly report · Internal" or "Client report · Client", with the project and the week. Add or change the firm's, the client's or a partner's logo in the cog panel. Logos sit straight on the page, keep their transparency, and print in every export. JPEGs work, but a transparent PNG or SVG looks better.
 - **A tidier report page.** The section menu is small, with an icon for each item, and always fully on screen. The health indicator is narrower, with its six-week strip and the Change button inside it. The include or leave-out switch is an eye everywhere (a crossed-out eye when left out).
-- **Add from the tracker.** Under Risks and issues, Overdue actions and Decisions, you can pick open items that are already in the tracker and add them to the report, including actions not yet due. The client report offers only client-visible items. Nothing in the tracker changes until you approve.
+- **Add from your project record.** Under Risks and issues, Overdue actions and Decisions, you can pick open items that are already in your project record and add them to the report, including actions not yet due. The client report offers only client-visible items. Nothing in your project record changes until you approve.
 - **A free-text section, anywhere.** Add a section of your own at the foot or from any section's menu, with its own heading and the same editor as Notes (headings, lists, checklists, code, tables, pictures, links). Move it, leave it out of the export or delete it. A text section is internal until you write or match it in the client report.
 - **Exports look like the report.** HTML and PDF are made from the report's own "Show as exported" page, so the header and logos, the health block with its six weeks, the figures, the milestone timeline as a picture with its table, the full tables and your text all come out as you see them, with dates as DD-MM-YYYY. If that is not possible you get a plain version and are told so. Word is rebuilt the same way: one title, one health label, the strip and timeline as pictures, full tables, no empty headings.
 - **Exports are saved, and you are told where.** Every export is saved in the project's Reports folder first; the message names the folder (a link that opens it) with Show in Finder and Open. If a file with that name is already there, you choose whether to add a number, rename it or overwrite it. Before a report is filed, the first HTML export is offered a numbered name so it never gets in the way of "Approve and file". The Advanced setting "File report exports beside it" is gone, because reports always save into the Reports folder (the one for minutes stays).
@@ -384,7 +442,7 @@ The screens you use every day become calmer and more consistent: one set of size
 - **Choose how big the side bar icons are.** Small, Medium or Large, in the existing Customise sidebar dialog. Small is what you have today.
 - **Files, easier to find your way around.** A Filter button sits beside four view pills, and the date filter opens as a popup calendar.
 - **A calmer Today.** What is waiting in Intake and Review is one quiet line, not a list.
-- **A reminder when the sweep is late.** A "Sweep due since 07:00" banner on Today, with a Run sweep button.
+- **A reminder when the check is late.** A "Mail and Teams not checked yet today" banner on Today, with a Check now button.
 - **Right-click a note in the Notes list** to get that note's menu without opening it.
 - **"Choose a project"** appears on Cockpit and Milestones, instead of a blank page, when no project is chosen.
 - **Draft email is clearer.** Both Review items read "Draft email". "I sent it" updates every item you sent and keeps the email internal. Right-click a person's name to draft an email to them.
@@ -404,7 +462,7 @@ Notes become a place you can write in freely, creaite's AI reaches the text you 
 - **Links in every editor.** Add, change and remove a link anywhere you write text, and see links wherever text is shown.
 - **One editor everywhere.** The plain version and Draft email, report pages and the capture drawer join the same editor and toolbar; Current state gets a checklist and a focus mode.
 - **Generate current state, further.** Steer a draft again and again, keep versions and refine.
-- **Health with a ✦.** The sparkle beside a project's health, on its page and on the weekly report's health row, suggests the health and its reason from the tracker's facts, with the evidence shown. It is a draft; nothing changes until you accept it.
+- **Health with a ✦.** The sparkle beside a project's health, on its page and on the weekly report's health row, suggests the health and its reason from your project record's facts, with the evidence shown. It is a draft; nothing changes until you accept it.
 - **The weekly report gets out of your way.** Scroll down and the search bar and title block go at once, leaving one slim bar with zoom, Export and Approve and file; they return only at the top of the report. The report has nearly the whole window.
 - **Meeting Prep on one page.** A single prep page, a peek when you hover on a meeting, and the agenda as a document you can edit.
 - **A calmer Today.** Saturday and Sunday hide unless something is planned, past days fold into one small icon, the Note link and Prepare pill are gone, a meeting's title opens its Prepare popup, and dates are smaller. Your commitments shows five items, then "Show more". The section that was called "To decide" is now Intake and Review, and folds like the others.
@@ -415,7 +473,7 @@ Notes become a place you can write in freely, creaite's AI reaches the text you 
 - **Health bars on Portfolio** have a legend and a tooltip showing the week and its reason.
 - **Work board.** You can resize the board's width, and the choice is remembered.
 - **ask creaite is steadier.** Esc closes the panel but never stops a running request (only Stop does), and a long old reply no longer rewrites itself on screen when you reopen it. One Esc now closes an item's peek (it took two).
-- **Calendar import and the sweep are tidier.** The sweep reads only today and the future for meetings, finished meetings no longer say "Not happened yet", and a window left open past midnight keeps today's date.
+- **Calendar import and the check are tidier.** The check reads only today and the future for meetings, finished meetings no longer say "Not happened yet", and a window left open past midnight keeps today's date.
 - **creaite keeps a counts-only record of what each AI run costs,** so decisions about cost rest on numbers. It stores no text from your mail, notes or chats.
 
 ## creaite 2.1.0
@@ -442,7 +500,7 @@ A security patch. Nothing for you to do.
 A security patch that narrows what creaite's background runs can do, so a message or document they read cannot make them run commands or change files.
 
 - **The check for messages from people you follow can only read Microsoft 365.** It has no file, command or web tools.
-- **Search answers read your vault's text only.** They cannot reach Microsoft 365 or change anything.
+- **Search answers read your creaite folder's text only.** They cannot reach Microsoft 365 or change anything.
 - **Drafting runs cannot edit or write files.** That covers Prep pages, Current state, the AI drafts, Shape this meeting and the transcript checks.
 
 ## creaite 2.0.0
@@ -452,7 +510,7 @@ Notes arrive, with one editor everywhere, and AI on text you select.
 - **One editor.** Current state, an item's text fields and Prep's notes and questions share one editor, with Undo and the same keys.
 - **Notes on every project.** Each project has Overview and Notes tabs, and the portfolio has notes of its own.
 - **A note from any page.** Press ⌘⇧N, or N when you aren't typing, to jot a note without leaving what you're doing.
-- **Find updates in a note.** ✦ Find updates reads a note's new lines and proposes the tracker changes they state, for you to approve.
+- **Find updates in a note.** ✦ Find updates reads a note's new lines and proposes your project record changes they state, for you to approve.
 - **Pictures in notes,** and changing a note's title renames its file and keeps the links to it in your other notes working.
 - **AI on selected text.** Select words in Current state, an item's title or longer fields, or Prep's notes, and press AI: rewrite clearly, shorter, longer, make it executive, fix spelling, or say what you want. It is a suggestion; nothing changes until you press Accept, and ⌘Z undoes it.
 
@@ -475,14 +533,14 @@ Archive, and no waiting.
 - **Changes appear at once.** An edit in Work, on the board, from the right-click menu, the bulk bar, the peek or ⌘K shows on screen immediately and saves in the background.
 - **Saves and the first page no longer wait** for the search index or the OneDrive copy.
 - **ask creaite shows what creaite started.** A Prep page or a Generate run appears in ask creaite as one plain request, its steps and its outcome.
-- **Smaller fixes.** A sweep's lock no longer outlives the sweep, opening creaite twice quickly starts one server not two, and a remembered chat that has gone is handled cleanly.
+- **Smaller fixes.** A check's lock no longer outlives the check, opening creaite twice quickly starts one server not two, and a remembered chat that has gone is handled cleanly.
 
 ## creaite 1.9.3
 
 Sneak peek and safe backups.
 
 - **Change an item in words.** With an action, risk, decision or milestone open, type // and say what should change ("Sara owns this, due Friday"). You see the change as you type; Enter makes it, Undo takes it back.
-- **A daily backup you can restore from.** One closed daily zip of everything needed to rebuild the vault goes to your OneDrive backup folder. Old copies are tidied on an agreed schedule, and a weekly check proves a restore would work.
+- **A daily backup you can restore from.** One closed daily zip of everything needed to rebuild your creaite folder goes to your OneDrive backup folder. Old copies are tidied on an agreed schedule, and a weekly check proves a restore would work.
 - **Restore from a backup.** Settings › Health lists the backups by date and restores from the one you choose.
 - **Search reads PDFs.** PDFs exported from Word or PowerPoint are now searched by their text, not only their name.
 - **Worth knowing:** a copy of your backup now leaves the laptop, into your company OneDrive folder only. Old backups are now removed automatically.
@@ -496,13 +554,13 @@ Calmer.
 - **Rejecting asks for a reason.** One menu of seven reasons, with creaite's own guess, works from Review and from Today.
 - **Today becomes one home,** with To decide first: what waits in Review, transcripts ready in Intake and messages from people you follow.
 - **A sidebar that collapses to icons,** with Today, Work, Review, Projects and People at the top and the rarer pages under More.
-- **Updates finish themselves.** From the next update, creaite remakes the launcher, refreshes the app's icon and restarts the live server for you.
+- **Updates finish themselves.** From the next update, creaite remakes the launcher, refreshes the app's icon and restarts creaite for you.
 
 ## creaite 1.9.1
 
 A small update for ask creaite and Today.
 
-- **ask creaite checks what it says.** Every work item it names is checked against the tracker before you see the reply.
+- **ask creaite checks what it says.** Every work item it names is checked against your project record before you see the reply.
 - **A plain "I can't".** When something is outside what it can ever do, such as sending mail, it says so first.
 - **Field changes use the dashboard's own save.** Changing an owner, due date or status shows a card with the change, the same rules and Undo.
 - **Today's day arrows stay put.** The ‹ › controls sit in the same place on every day.
@@ -539,11 +597,11 @@ creaite's drafts reach your meetings and your Review.
 - **Draft the agenda and the invite text,** and follow-up and chase emails, from a meeting or an item.
 - **Decisions needed.** A band on Today lists each pending decision that has a decision maker and a needed-by date.
 - **One set of facts, many forms.** Generate can write the project's status as a Current state, a steering note, a three-line update, an email paragraph or a Teams message, each sentence with its sources.
-- **Looks like an item you already have.** When the minutes or the sweep propose something you already track, Review says so.
+- **Looks like an item you already have.** When the minutes or the check propose something you already track, Review says so.
 - **Probably done.** When a mail or meeting shows an open item is finished, creaite proposes closing it.
 - **Sharpen on capture.** As you type a new action, chips suggest the owner, due date and wording.
-- **Activity › Quality** shows what you approve as proposed, approve after an edit and reject, by source.
-- **ask creaite reopens at once,** queues what you send while it works, and applies a change from one card.
+- **Activity › Quality** shows what you approve as suggested, approve after an edit and reject, by source.
+- **ask creaite reopens at once,** queues what you send while it works, and saves a change from one card.
 - **Changes show within a second** on an open dashboard, and a new wordmark sits at the top of the rail.
 - **Two security fixes.** ask creaite now asks before it changes the record, and Word files written from the command line go to drafts only.
 
@@ -556,8 +614,8 @@ The largest update so far. creaite drafts the wording and you decide.
 - **Close the day.** A one-minute card: what moved today, what you promised, what is still waiting, and the next working day.
 - **⌘K makes changes.** Type "move ABC-A-002 to fri" or "Omar owns the SOW action" and it does it.
 - **Right-click a work item** for a menu of the common actions, wherever the item appears.
-- **Review one at a time,** with the source beside each proposal, and a way to move a proposal, or a whole set of minutes, to another project.
-- **The live server can start when you log in,** and "update creaite" can fetch the release itself.
+- **Review one at a time,** with the source beside each suggestion, and a way to move a suggestion, or a whole set of minutes, to another project.
+- **creaite can start when you log in,** and "update creaite" can fetch the release itself.
 - **Smaller things.** Undo waits for you, the open item follows your click, and ask creaite sends exactly what you typed.
 
 ## creaite 1.5.2
@@ -589,7 +647,7 @@ Milestones get a page of their own.
 
 Items open for editing, and every count is a link.
 
-- **Open an item and just change it.** An action, risk or decision opens over the page, already editable. Each change is staged with Undo; ⌘↵ applies and closes. New items open the same way.
+- **Open an item and just change it.** An action, risk or decision opens over the page, already editable. Each change is saved with Undo; ⌘↵ saves and closes. New items open the same way.
 - **Every count opens its list.** A number of actions, risks or decisions anywhere opens Work showing exactly those.
 - **ask creaite opens over the page** instead of squeezing it.
 - **Rename a project's Current state card,** arrange the left rail, and search Activity and undo several older changes.
@@ -616,7 +674,7 @@ Transcripts load themselves, Work has a board.
 - **Projects are called by their name** everywhere, with the short code only inside item IDs like ABC-A-003.
 - **Clear day** sets a day's meetings aside, with Undo and a list you can restore from.
 - **ask creaite can read all of Microsoft 365** (calendar, mail, Teams, SharePoint, OneDrive), while writing is still confirmed and sending or changing anything there stays off.
-- **Followed people, an ignore list and Prep pages.** Alerts come first in Today and Review, the sweep skips what you tell it to, and a Prep page for a meeting is saved in the project's Agendas folder.
+- **Followed people, an ignore list and Prep pages.** Alerts come first in Today and Review, the check skips what you tell it to, and a Prep page for a meeting is saved in the project's Agendas folder.
 
 ## creaite 1.1.0
 
@@ -627,15 +685,15 @@ Project files can live in your company OneDrive.
 - **Draft email.** On a person's page, a ready-to-copy message asking where their items stand. creaite never sends mail.
 - **Roomier editing.** The side panel is wider while you edit, and ⌘+Enter saves and closes it.
 - **Inbox is now Intake,** Help has three tabs, and there is a new teal theme.
-- **One-off Word documents** from the tracker, such as an actions register or a decision log.
+- **One-off Word documents** from your project record, such as an actions register or a decision log.
 
 ## creaite 1.0.0
 
 The first release for real use (Beta).
 
-- **Meetings to minutes.** A Teams transcript becomes draft Word minutes and proposed actions, decisions, risks and issues. Nothing is filed until you approve.
-- **A daily sweep** of Outlook and Teams proposes items from your mail and chats.
-- **Review and apply.** Proposals are grouped by project, bulk approval covers routine items only, and every apply can be undone.
+- **Meetings to minutes.** A Teams transcript becomes draft Word minutes and suggested actions, decisions, risks and issues. Nothing is filed until you approve.
+- **A daily check** of Outlook and Teams proposes items from your mail and chats.
+- **Review and save.** Suggestions are grouped by project, bulk approval covers routine items only, and every save can be undone.
 - **A dashboard:** Today, project pages, Work, People, Intake, Review, Files and Activity, with search that cites its sources and ask creaite, the assistant.
 - **Weekly and client-safe reports in Word,** and an Excel export you can browse and edit.
 - **Safe by design.** One writer for the record, approval before every write, a daily backup and updates that roll back if a step fails. Everything stays on your laptop.

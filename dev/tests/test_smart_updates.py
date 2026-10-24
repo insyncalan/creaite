@@ -237,6 +237,19 @@ class Signals(unittest.TestCase):
         self.assertTrue(extraction.raised_after(r, "2026-10-05"))
         self.assertFalse(extraction.raised_after(r, "2026-10-06"))
 
+    def test_another_projects_item_is_marked_only_when_it_is_a_close_match(self):   # #333
+        row = {**self.ROW, "id": "ABC-A-009", "project": "ABC", "owner": "Omar Ali", "text": "Reach out to Dana on back to back commercials"}
+        def mark(text):
+            item = {"op": "new", "table": "actions", "values": {"project": "FAL", "description": text, "owner": "Omar Ali", "source": OTHER}}
+            real = extraction.candidate_rows
+            extraction.candidate_rows = lambda *a, **k: [row]
+            try:
+                return extraction.best_repeat(None, item, REGISTER)
+            finally:
+                extraction.candidate_rows = real
+        self.assertIsNone(mark("Reach out to the vendor about licences"))                    # shares words, not the same action
+        self.assertEqual((mark("Reach out to Dana on back to back commercials") or {}).get("id"), "ABC-A-009")
+
     def test_the_two_thresholds(self):
         self.assertEqual([extraction.strength_of(x) for x in (1.0, 0.75, 0.74, 0.5, 0.49, 0.0)],
                          ["Very likely", "Very likely", "Possible", "Possible", None, None])
@@ -376,9 +389,11 @@ class Server(unittest.TestCase):
                 self.got = (code, body)
 
         old, live_server.run = live_server.run, fake
+        had, real_fp = hasattr(live_server, "current_fp"), getattr(live_server, "current_fp", None)
+        live_server.current_fp = lambda file, ref: "a" * 12          # 2.6.4 (#345): the check itself is test_expect_routes_345
         try:
             h = H()
-            live_server.REVIEW_WORK_ROUTES["/api/review/retarget"](h, {"file": "p.json", "ref": 2, "id": "FAL-A-007"})
+            live_server.REVIEW_WORK_ROUTES["/api/review/retarget"](h, {"file": "p.json", "ref": 2, "id": "FAL-A-007", "expect": "a" * 12})
             self.assertTrue(h.got[1]["ok"])
             live_server.REVIEW_WORK_ROUTES["/api/review/retarget"](h, {"file": "../p.json", "ref": 2, "undo": True})
             live_server.REVIEW_WORK_ROUTES["/api/review/candidates"](h, {"file": "p.json", "ref": 2})
@@ -387,6 +402,10 @@ class Server(unittest.TestCase):
             self.assertFalse(h.got[1]["ok"])
         finally:
             live_server.run = old
+            if had:
+                live_server.current_fp = real_fp
+            else:
+                del live_server.current_fp
         self.assertIn(("review.py", "retarget", "4", "FAL-A-007"), calls)
         self.assertIn(("review.py", "unmerge", "p.json#2"), calls)
         self.assertIn(("review.py", "candidates", "4", "--json"), calls)

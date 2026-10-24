@@ -1,0 +1,73 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index d397895d..10748150 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1650,6 +1650,9 @@ class Handler(BaseHTTPRequestHandler):
+             else f"r-{secrets.token_hex(6)}"
+         if req.get("permfile"):                           # BL-141: a permission file is changed on the one card, never by a run
+             return self.send(400, {"ok": False, "message": "Permission files are changed on the approval card now: ask creaite again."})
++        held = budget_gate(req)                           # #334: this week's AI budget (confirm or stop, by setting)
++        if held:
++            return self.send(429, held)
+         with START_LOCK:                                  # #264 review: the busy check and the start are one step, like every other start
+             busy = current_run()
+             if busy and not busy.done:
+@@ -2595,6 +2598,21 @@ def run_dirs(policy, guarded):
+     return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
+ 
+ 
++def budget_gate(req):
++    """#334: the weekly AI budget (ai_budget.py), asked before a typed request or a queued message starts a run. None: go ahead.
++    Otherwise the reply to send (HTTP 429): the budget's counts and plain words, never text. Only a typed ask is ever held; a
++    confirmed request, a sweep or alert check running on its own, Review, Apply and Undo never are, and a fault in the count holds
++    nothing. `over_budget` is the page's "Run anyway" in confirm mode. A typed sweep (panel_sweep: the same words the run itself
++    uses) is never held, whatever the figures say."""
++    try:
++        import ai_budget
++        if panel_sweep(req.get("message"), req.get("images") or (), req.get("confirmed")):
++            return None
++        return ai_budget.gate("ask", confirmed=req.get("confirmed"), over_budget=req.get("over_budget"))
++    except Exception:
++        return None
++
++
+ CARRY_TURNS, CARRY_CHARS = 4, 600       # #327 B: the last two exchanges, each message cut to this length, go into a fresh session
+ 
+ 
+@@ -3306,17 +3324,26 @@ def queue_start(q, prev=None):
+     #264 round 2 (review L2): the busy check and the start are one step under START_LOCK, like every other start, so a queued
+     message never starts beside a run that began meanwhile (Process, a calendar refresh, a prep page): the queue holds instead,
+     and Run now starts it. `prev`, the run that is ending, doesn't count as busy."""
++    first = q["items"][0]
++    images = [i for i in first.get("images") or [] if ask_image_files(i)]               # only the pictures still there
++    ask = {"over_budget": prev is None, "message": first.get("text"), "images": images}
++    held = budget_gate(ask)                                 # #334: read before the lock (up to 8 MB of usage lines)
++    q.pop("why", None)
+     with START_LOCK:
+         if any(not r.done and r is not prev for r in list(RUNS.values())):
+             q["held"] = True
+             queue_save(q)
+             return None
++        if held:                                            # #334: over the week's budget the queue holds (Run now: confirm mode)
++            q["held"] = True
++            q["why"] = held["message"]                      # and Run now says why, and until when
++            queue_save(q)
++            return None
+         item = q["items"].pop(0)
+         q["held"] = False
+         mine = prev is not None and prev.kind == "ask"
+         chat = q["chat"] or (prev.chat or prev.session if mine else None)
+         session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
+-        images = [i for i in item.get("images") or [] if ask_image_files(i)]
+         try:
+             nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
+                       sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
+@@ -3390,7 +3417,7 @@ def queue_route(handler, req):
+             if live:
+                 return handler.send(200, queue_public(q, message="ask creaite is still working: the queue runs when it finishes."))
+             nxt = queue_start(q) if q["items"] else None
+-            return handler.send(200, queue_public(q, run=nxt))
++            return handler.send(200, queue_public(q, run=nxt, **({"message": q["why"]} if not nxt and q.get("why") else {})))
+         elif op != "list":
+             return handler.send(400, {"ok": False, "message": "Unknown queue operation"})
+     return handler.send(200, queue_public(q))

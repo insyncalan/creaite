@@ -307,6 +307,20 @@ CATALOGUE = {
     "assistant.long_chat_turns": ("creaite and ask creaite", "Offer a fresh chat after (messages)",
                                   "After this many of your messages, ask creaite offers to continue in a fresh chat with a summary.",
                                   "Thirty: long enough for a real job, before each reply gets slow and costly."),
+    # ── Weekly AI budget (#334)
+    "ai_budget.enabled": ("creaite and ask creaite", "Weekly AI budget", "Warn at 80% of the week's budget, and ask or stop at 100%.",
+                          "Off until you switch it on: a limit nobody asked for gets in the way. Once on, a heavy week is no surprise; "
+                          "the buttons in the dashboard are never held."),
+    "ai_budget.unit": ("creaite and ask creaite", "Budget counted in", "dollars or tokens (what the runs report).",
+                       "Dollars: the figure you pay; tokens are there if your plan is counted that way."),
+    "ai_budget.weekly_dollars": ("creaite and ask creaite", "Weekly budget (dollars)",
+                                 "Between 1 and 10,000; the week runs Monday to Sunday.",
+                                 "50: a first guess; watch Usage for a few weeks, then set your own."),
+    "ai_budget.weekly_tokens": ("creaite and ask creaite", "Weekly budget (tokens)",
+                                "Between 100,000 and 10,000,000,000; only used when counted in tokens.",
+                                "50 million, cache reads included: a first guess, like the dollars."),
+    "ai_budget.at_limit": ("creaite and ask creaite", "At the limit", "Confirm asks before a new request runs; stop refuses it.",
+                           "Confirm: you stay in charge and a wrong count never locks you out."),
     # ── You
     "identity.name": ("You", "Your name", "Who \"me\" is: items you own, mail you sent.", "Empty until set-up asks for it."),
     "identity.short_forms": ("You", "Short forms of your name", "Other ways people write your name (Al, AC).",

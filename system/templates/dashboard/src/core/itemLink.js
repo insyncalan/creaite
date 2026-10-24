@@ -22,7 +22,7 @@ export function itemOf(id) {
   return null;
 }
 /** The item's designation, in the dashboard's own words (core/page.js kindOf, capitalised): Action, Decision, or the RAID type
-    (Risk, Issue, Assumption, Dependency). "" when the item is not in the tracker. @param {string} id */
+    (Risk, Issue, Assumption, Dependency). "" when the item is not in your project record. @param {string} id */
 export function designation(id) {
   const found = itemOf(id);
   if (!found) return "";
@@ -46,7 +46,7 @@ export function itemContent(id) {
     @param {string} id @returns {{tone: string, words: string, title: string}} */
 export function itemState(id) {
   const found = itemOf(id);
-  if (!found) return { tone: "off", words: "not in the tracker", title: `${id}: not in the tracker` };
+  if (!found) return { tone: "off", words: "not in your project record", title: `${id}: not in your project record` };
   const x = /** @type {any} */ (found.x), st = String(x.st || ""), isOpen = /^(Open|Delayed|Pending|Proposed)$/i.test(st);
   let tone = isOpen ? "warn" : "ok", words = st;
   if (found.k === "actions") {

@@ -61,7 +61,7 @@ export function prepShow(w,html,path){ if(w&&!w.closed){ w.document.open(); writ
 /* BL-286 D: `o.quiet` is Refresh research on the in-app prep page (#prep=…): no new tab; o.status(text) follows the run and
    o.done(result) gets the saved page, so the page reloads its view. */
 export async function prepPage(given,o){ const was=shared.PREPRUN; o=o||{}; shared.RBOUT=""; if(!was&&viaServer()) rbStart("Making the prep page"); try{
-  if(!viaServer()){ snack("The Prep page needs the live server"); return; } if(shared.PREPRUN){ snack("A prep page is already being made"); return; }
+  if(!viaServer()){ snack("The Prep page needs creaite to be running"); return; } if(shared.PREPRUN){ snack("A prep page is already being made"); return; }
   const asked=typeof given==="string"&&!!given;     /* BL-307: a meeting named by ask creaite, from its finished run's card */
   if(shared.BUSY&&!asked){ snack("ask creaite is busy; try again when it's finished"); return; }
   const key=asked?given:prepKey(shared.PREPEV,shared.PREPDAY);
@@ -74,7 +74,7 @@ export async function prepPage(given,o){ const was=shared.PREPRUN; o=o||{}; shar
   let steps=0, stopped=false, res, failed="";
   const show=()=>{ prepPgStat(`<span class="spin"></span> Researching${steps?` · ${steps} step${steps===1?"":"s"}`:""} <button class="mini" data-prepstop>Stop</button>`); if(o.status) o.status(`Researching${steps?` · ${steps} step${steps===1?"":"s"}`:""}`); }; show();
   const end=msg=>{ shared.RBOUT=/^Stopped/.test(msg||"")?"stopped":msg?"failed":""; shared.PREPRUN=null; prepPgStat(""); if(o.status) o.status(""); if(w&&!w.closed) w.close(); if(msg) snack(msg); };
-  try{ res=await fetch("/api/prep/page",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({key,run:id})}); }catch(e){ return end("The live server isn't reachable"); }
+  try{ res=await fetch("/api/prep/page",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({key,run:id})}); }catch(e){ return end("creaite isn't reachable"); }
   if(!res.ok||!res.body||(res.headers.get("Content-Type")||"").includes("json")){ const j=await res.json().catch(()=>({})); return end(res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message)||"Couldn't start the prep page"); }
   const rd=res.body.getReader(), dec=new TextDecoder(); let buf="";
   for(;;){ let c; try{ c=await rd.read(); }catch(e){ stopped=true; break; } if(c.done) break; buf+=dec.decode(c.value,{stream:true}); let i;
@@ -89,7 +89,7 @@ export async function prepPage(given,o){ const was=shared.PREPRUN; o=o||{}; shar
   if(shared.VIEW==="today") renderToday();   /* BL-287, BL-293: the Open icon appears at once (the day band and the Week ahead) */
   if($("#prepDlg")&&$("#prepDlg").open&&prepKey(shared.PREPEV,shared.PREPDAY)===key) drawPrep(); snack(`Prep page saved: ${r.path}`); }
   finally{ rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
-export async function prepOpen(path){ if(!viaServer()){ snack("Opening a prep page needs the live server"); return; } const w=window.open("","_blank");
+export async function prepOpen(path){ if(!viaServer()){ snack("Opening a prep page needs creaite to be running"); return; } const w=window.open("","_blank");
   const r=await api("/api/prep/open",{path}); if(!r.ok){ if(w) w.close(); snack(r.message||"Couldn't open it"); return; } prepShow(w,r.html,r.path); }
 export async function choosePrep(code){ const m=prepOf(shared.PREPEV); if(!m||!code) return; const map={...((D.prep||{}).series||{}),[m.series]:code};
   const kept=await writeSettings({"prep.series":map}); if(kept) D.prep.series=map;
@@ -106,7 +106,7 @@ document.addEventListener("click",e=>{ if(e.target.closest("[data-preppage]")){ 
   if(e.target.closest("[data-prepstop]")&&shared.PREPRUN){ api("/api/ask/stop",{run:shared.PREPRUN.id}).then(r=>{ if(!r.ok&&shared.PREPRUN) shared.PREPRUN.ctl.abort(); }); } });
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-prep]"); if(b) openPrep(prepTimed()[+b.dataset.prep],TODAY); });
 document.addEventListener("click",e=>{ const g=e.target.closest("[data-prepgo]"); if(!g) return; e.preventDefault();   /* BL-287 */
-  if(g.getAttribute("aria-disabled")==="true"){ snack("Opening a prep page needs the live server"); return; } location.hash=prepViewHref(g.dataset.prepgo,g.dataset.prepgoday); });
+  if(g.getAttribute("aria-disabled")==="true"){ snack("Opening a prep page needs creaite to be running"); return; } location.hash=prepViewHref(g.dataset.prepgo,g.dataset.prepgoday); });
 /* #111: a later day's meeting (Week ahead) opens the Prep peek, then the prep page, through data-prepgo above (the old data-prepday popup is gone) */
 document.addEventListener("click",e=>{ if(e.target.closest("#prepDlg [data-nav], #prepDlg [data-proj]")) $("#prepDlg").close(); },true);
 }
@@ -259,7 +259,7 @@ export async function agendaCopyDo(rich,btn){ const c=agendaCopy(AGD.d);
     copied(btn); $("#agMsg").textContent=rich?"Copied: paste it into the invite":"Copied as plain text"; }
   catch(err){ $("#agMsg").textContent=`Your browser blocked copying: select the text and press ${MOD}C`; return; }
   if(!AGD.used){ AGD.used=true; draftStat("agenda","used"); } }
-export async function agendaSave(btn){ if(!viaServer()){ snack("Saving needs the live server"); return; } const d=AGD.d; btn.disabled=true;
+export async function agendaSave(btn){ if(!viaServer()){ snack("Saving needs creaite to be running"); return; } const d=AGD.d; btn.disabled=true;
   const r=await api("/api/agenda/save",{key:AGD.key,parts:(d.parts||[]).map(x=>({head:x.head,text:x.text})),agenda:d.agenda||[],attendees:!!AGD.attendees}); btn.disabled=false;
   if(!r.ok){ snack(oneLine(r.message)||"The agenda wasn't saved"); return; }
   $("#agMsg").textContent=`Saved: ${r.path}`; snack(`Agenda saved in the Agendas folder${AGD.attendees?" (for attendees)":" (Internal)"}`); if(!AGD.used){ AGD.used=true; draftStat("agenda","used"); } }

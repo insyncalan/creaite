@@ -472,7 +472,8 @@ class TrackerTests(unittest.TestCase):
                                              "transcript": None, "file_ops": [
                                                  {"op": "write", "path": "system/scripts/evil.py", "content": "x"}]})
         r = self.v.run("apply", str(p), ok=False)
-        self.assertIn("not in projects/, inbox/, system/staging/ or system/search/", r.stdout)
+        self.assertTrue("not in projects/, inbox/, system/staging/ or system/search/" in r.stdout
+                        or "not in a project folder, Intake, the waiting suggestions or the search index" in r.stdout, r.stdout)     # #292 wording
         self.assertFalse((self.v.root / "system/scripts/evil.py").exists())
 
     def test_write_and_mkdir_undo(self):

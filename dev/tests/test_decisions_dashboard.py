@@ -123,7 +123,7 @@ class DecisionCase(LiveBrowserCase):
     def apply(self, n):
         self.b.wait(f"PKS.length==={n}", 10)
         self.b.click("#pkApply")
-        self.b.wait("PKS.length===0&&/Applied/.test(document.getElementById('snackT').textContent)", 20)
+        self.b.wait("PKS.length===0&&/Saved/.test(document.getElementById('snackT').textContent)", 20)
 
     def details(self):
         if self.b.eval("document.getElementById('pkDetT').getAttribute('aria-expanded')") != "true":
@@ -134,7 +134,7 @@ class DecisionCase(LiveBrowserCase):
         self.b.eval(f"(()=>{{ const e=document.getElementById('f_{field}'); e.value={value!r}; e.dispatchEvent(new Event('input',{{bubbles:true}})); e.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
 
     def saved(self):
-        self.b.wait("/saved and applied/.test(document.getElementById('snackT').textContent)", 15)
+        self.b.wait("/— saved/.test(document.getElementById('snackT').textContent)", 15)
 
 
 class ReadingTests(DecisionCase):

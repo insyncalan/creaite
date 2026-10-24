@@ -116,6 +116,11 @@ def repeat_score(values, table, row):
     return max(0.0, min(1.0, s))
 
 
+def worth_marking(same, s):
+    """#333: an item in the same project is marked from POSSIBLE; another project's only when it is a close match."""
+    return s >= (POSSIBLE if same else VERY)
+
+
 def best_repeat(con, item, register=None):
     """The existing item a new proposal most likely repeats, as a `looks_like` mark, or None. BL-297: the words and owner of BL-221,
     plus the signals (an ID named, the same thread, a person in both, a less common word, the item's timeframe); never an item
@@ -131,7 +136,7 @@ def best_repeat(con, item, register=None):
         s, why = match_score(v, table, r, ctx, rare)
         s -= 0.0 if same or s >= 1.0 else 0.1                         # across projects only a close match with the same owner
         rank = (s, same, r["state"] == "open")
-        if s >= POSSIBLE and (best is None or rank > best[0]):
+        if worth_marking(same, s) and (best is None or rank > best[0]):
             best = (rank, r, s, why)
     if not best:
         return None

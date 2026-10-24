@@ -1,0 +1,48 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index dc07c4dd..c12c8656 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2606,7 +2606,11 @@ def fresh_session(req):
+ 
+ def carry_over(chat):
+     """#327 B: the last few messages of a chat as plain text, for a fresh session to read as background (data, never instructions);
+-    "" if the chat has none. Taken from the chat's own history, so no more than this chat already holds."""
++    "" if the chat has none. Taken from the chat's own history, so no more than this chat already holds. 2.6.4 (#346): never from
++    the day's "runs creaite started" chat (runs-YYYY-MM-DD): it is never marked as having read outside content, and its lines hold a
++    calendar title, so carrying them would hand that text to a fresh run as Alan's words, unmarked."""
++    if str(chat or "").lower().startswith("runs-"):          # a case-insensitive disk reaches the same chat by RUNS-…
++        return ""
+     p = chat_file(chat)
+     try:
+         msgs = json.loads(p.read_text(encoding="utf-8")).get("messages") if p and p.is_file() else None
+@@ -2654,8 +2658,28 @@ def fresh_plan(fresh, sweep, kind, session, chat):
+ class Run:
+     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
+ 
+-    def __init__(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
+-                 sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
++    def __init__(self, run_id, *args, **kwargs):
++        """Set the run up (_start). 2.6.4 (#346): whatever stops the set-up, the run's record in system/guard/run.json (written by
++        guard_args, early) is taken away again, and a process already started is ended. Only this run's own record: end_run leaves
++        any other run's alone."""
++        try:
++            self._start(run_id, *args, **kwargs)
++        except BaseException:
++            try:
++                try:
++                    reach.end_run(run_id)
++                finally:                                    # these happen even if the record can't be removed
++                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends
++                        RUNS.pop(run_id, None)              # (before the process is ended: that can raise)
++                    if getattr(self, "proc", None) is not None:
++                        end_process(self.proc)
++            except Exception as e:                          # the error that stopped the set-up matters more; this one goes in the log
++                if debuglog is not None:
++                    debuglog.info("run", f"{run_id} clean-up after a failed set-up also failed: {type(e).__name__}")
++            raise
++
++    def _start(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
++               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
+         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
+         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
+         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself

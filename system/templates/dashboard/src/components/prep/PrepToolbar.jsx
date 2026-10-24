@@ -35,7 +35,7 @@ export function PrepToolbar() {
           onClick={() => shape(key)}><Icon name="spark" />Shape this meeting</button>
       ) : null}
       <button type="button" class="btn primary" data-prepview="1" aria-disabled={openWhy ? "true" : undefined} data-tip={openTip}
-        onClick={() => { if (!code) { snack("Choose the project first"); return; } if (!live) { snack("The Prep page needs the live server"); return; }
+        onClick={() => { if (!code) { snack("Choose the project first"); return; } if (!live) { snack("The Prep page needs creaite to be running"); return; }
           openPrepView(key, day); }}>Open prep page</button>
       <span class="sp"></span>
       {code ? (

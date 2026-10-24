@@ -51,7 +51,7 @@ export function fieldsFor(k,x){ const F=(()=>{ const projOpts=P.map(p=>[p.code,p
   if(k==="actions") return [["t","Action","area"],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["pr","Priority","sel",["Urgent","High","Medium","Low"]],["due","Due date","date"],["st","Status","sel",["Open","Delayed","Closed","Cancelled"]],["raised","Raised","date"],["closed","Closed","date"],["upd","Latest update","area"],["ms","Milestone","sel",msOpts],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
   if(k==="raid") return [["t","Description","area"],["type","Type","sel",["Risk","Issue","Assumption","Dependency"]],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["resp",RESPL(x.type),"area"],["imp","Impact","sel",["High","Medium","Low"]],["lik","Likelihood","sel",["High","Medium","Low"]],["pr","Priority","calc"],["due","Due date","date"],["st","Status","sel",["Open","Closed","Cancelled"]],["raised","Raised","date"],["closed","Date closed","date"],["ms","Milestone","sel",msOpts],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
   if(k==="decisions") return decisionFields(x,projOpts);   /* BL-53: status, needed by, reasoning, options, revisit, replaces */
-  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to",x.field==="status"?"Status":"Proposed value",x.field==="status"?"sel":"text",["Open","Delayed","Closed","Cancelled"]]];
+  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to",x.field==="status"?"Status":"Suggested value",x.field==="status"?"sel":"text",["Open","Delayed","Closed","Cancelled"]]];
   if(k==="project") return [["health","Health","sel",["On track","At risk","Off track"]],["reason","Health reason","area"]];
   if(k==="milestone") return shared.CUR.mode==="rebase"?[["fc","New baseline (and forecast)","date"],["with","Agreed with (full names, separated by commas)","text"],["reason","Reason for rebaselining","area"]]
     :[["name","Milestone","text"],["desc","Description","area"],["fc",shared.CUR.mode==="msnew"?"Date (baseline and forecast)":"Forecast date","date"],["st","Status","sel",["Planned","Done"]],["pc","% complete","pct"],["ord","Order","text"],...(shared.CUR.mode==="msnew"?[]:[["base","Baseline","ro"]])];
@@ -207,8 +207,8 @@ export function openNew(k,how){ (()=>{ if(!PKK.includes(k)) return; if(curGuard(
 export const NODRAFT_MSG="No Word draft was made for these minutes: Reject them and process the meeting again";
 /* ===== end BL-260 ===== */
 export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if(r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 */
-  if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (the live server isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
-  if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
+  if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (creaite isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
+  if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (creaite isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   if(r.kind==="update"){ const u=updOpen(r); if(u){ shared.CUR={mode:"proposal",k:u.table,n,rf:r.file,fp:r.fp,draft:u.draft,upd:u.upd}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); return; } }   /* #232-B: an update proposal opens the whole item in the peek; one that can't keeps the old form */
   shared.CUR={mode:"proposal",k:r.kind,n,rf:r.file,fp:r.fp,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
@@ -218,7 +218,7 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
    CUR.upd keeps the row as it was when the peek opened (live), the proposal's own changes, and the editable columns as opened. */
 export const updPeekable=r=>{ const rec=(r&&r.rec)||{}; return PKK.includes(rec.table)&&!!REC(rec.table,rec.target)&&(rec.changes||[]).some(c=>c.col); };   /* the item is in the tracker and the changes name their columns */
 export function updOpen(r){ const rec=r.rec||{}, t=rec.table, id=rec.target, x=PKK.includes(t)?REC(t,id):null;
-  if(!x){ if(PKK.includes(t)) snack(`${id} is no longer in the tracker: its change is shown in the old form`); return null; }
+  if(!x){ if(PKK.includes(t)) snack(`${id} is no longer in your project record: its change is shown in the old form`); return null; }
   const cols=(rec.changes||[]).filter(c=>c.col); if(!cols.length) return null;
   const live={...x}, liveDb=toDb(t,live), changes=Object.fromEntries(cols.map(c=>[c.col,c.to])), draft={...live};
   for(const col of [...(EDITABLE[t]||[])]) if(col in changes&&UI[t][col]) draft[UI[t][col]]=changes[col]??"";
@@ -236,8 +236,8 @@ export function pkUpdReset(on){ if(on) pkUpdMount(); const t=$("#pkTitle"), ed=t
   $("#pkDesc").classList.toggle("updnew",false);
   if(!on&&$("#pkUpd")){ drawUpdateBody($("#pkUpd"),null); drawLatestWas($("#pkUpdWas"),null); drawLast($("#pkUpdLast"),null); } }
 export function updDraw(x,k,r){ const {u,now,list}=updModel(), t=u.table;
-  putHTML($("#pkId"),html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u.id}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}`);
-  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. Change it here and save: it's checked again.</div>`:""}`); $("#pkPropEnd").textContent="";   /* #291 fix */
+  putHTML($("#pkId"),html`<span>Update suggestion</span><span aria-hidden="true">·</span><span>${u.id}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}`);
+  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a suggestion — nothing is saved until it's approved. Changed fields are highlighted.</div>${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. Change it here and save: it's checked again.</div>`:""}`); $("#pkPropEnd").textContent="";   /* #291 fix */
   const show=(col,v)=>col==="project"?(v?pName(v)||v:"—"):col==="owner"||col==="made_by"?(pkWho(v)||"—"):col==="milestone"?(v?msName(v):"—"):irWord(col,v);
   const {row1,row2}=updateChips(t,list,now,show); $("#pkProps").replaceChildren(...updateChipNodes(row1)); $("#pkProps2").replaceChildren(...updateChipNodes(row2));
   drawUpdateBody($("#pkUpd"),{id:u.id,title:u.live.t||"",table:t,list,rec:r.rec,conflict:isConflict(r),current:u.liveDb});
@@ -255,7 +255,7 @@ export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=sha
   if(!plan.edited.length){ closePanel(); if(approve) decide(r.n,"approved",true); else snack("Nothing was changed"); return; }   /* nothing edited: the proposal is as it was */
   if(!await needVault()) return;
   let fin=null;
-  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
+  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that suggestion has already been saved");
       const m=irMergeEdits(it.changes||{},plan); if("error" in m) throw new Error(m.error);   /* the file's own changes now, with only the columns edited here put right */
       const cols=Object.keys(m.changes).sort((a,b)=>(a==="status"?-1:0)-(b==="status"?-1:0));   /* status first: the proposal's field is its first change, and the hold reads it */
       fin=Object.fromEntries(cols.map(c=>[c,m.changes[c]])); it.changes=fin; it.edited_in="dashboard"; if(approve&&!r.bad){ it.decision="approved"; it.decided_in="dashboard"; } },r,approve?undefined:{table:u.table,id:u.id}); }catch(e){ snack(/already|no longer/.test(e.message)?STALE_ROW:"Not saved: "+e.message); return; }   /* #291 fix: a held item is approved only once it's checked again */
@@ -264,7 +264,7 @@ export async function updSave(approve){ const u=shared.CUR.upd, r=pkRev(), x=sha
   if(was.length&&String(r.rec.t||"").startsWith(u.id+":")&&!("why" in r.rec)) r.rec.t=`${u.id}: ${irLineParts(r.rec.changes).join("; ")}`;   /* in words ("due 20-10-2026 → 23-10-2026"), never a column name or a long text */
   r.edited=true; if("hold" in r) r.hold=irHold(r);
   if(r.bad) return badSaved(r,approve);   /* #291 fix, as savePanel: checked again, approved only once it passes, else Edit */
-  closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } }
+  closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Suggestion updated — still waiting for review`); } }
 /* ===== end #232-B ===== */
 export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; HSUSED=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
@@ -280,13 +280,13 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   const was=shared.PDKEY;   /* BL-169 */
   if(shared.CUR&&shared.CUR.pre&&!shared.EDITING) shared.CUR.pre=null;   /* BL-53 */
   PANELF=true; try{ const x=curObj(), k=shared.CUR.k, F=fieldsFor(k,x); $("#pErr").textContent="";
-  const title={record:x.t,new:k==="actions"?"New action":k==="raid"?"New RAID item":"New decision",proposal:`Proposal: ${x.t}`,health:`${pName(shared.CUR.code)} health`,milestone:x.name,msnew:"New milestone",rebase:`Rebaseline: ${x.name}`}[shared.CUR.mode];
+  const title={record:x.t,new:k==="actions"?"New action":k==="raid"?"New RAID item":"New decision",proposal:`Suggestion: ${x.t}`,health:`${pName(shared.CUR.code)} health`,milestone:x.name,msnew:"New milestone",rebase:`Rebaseline: ${x.name}`}[shared.CUR.mode];
   const pl=c=>c?`<a href="#" class="hlink" data-proj="${c}" title="Open the project page">${esc(pName(c))}</a>`:"";   /* BL-38: items → project */
   putHTML($("#pId"),shared.CUR.mode==="milestone"||shared.CUR.mode==="rebase"?html`${shared.CUR.id} · ${raw(pl(shared.CUR.code))}`:shared.CUR.mode==="msnew"?html`Not yet saved · ${raw(pl(shared.CUR.code))}`:shared.CUR.mode==="record"?html`${shared.CUR.id} · ${raw(pl(x.p))}`:shared.CUR.mode==="proposal"?html`Review #${shared.CUR.n} · ${x.p?raw(pl(x.p)):"needs a project"}`:shared.CUR.mode==="new"?html`Not yet saved`:raw(pl(shared.CUR.code)));
   $("#pTitle").textContent=title||"";
   $("#panel").classList.toggle("pwide",!!shared.EDITING);   /* BL-80 */
   $("#panel").classList.toggle("pover",shared.CUR.mode==="health");   /* #109: the health form is over the page, not beside it */
-  $("#pBody").classList.toggle("editing",shared.EDITING); $("#editBanner").textContent=shared.CUR.mode==="proposal"?"Editing a proposal — nothing reaches the tracker until it's approved":"Editing — changes apply when you save";
+  $("#pBody").classList.toggle("editing",shared.EDITING); $("#editBanner").textContent=shared.CUR.mode==="proposal"?"Editing a suggestion — nothing is saved until it's approved":"Editing — changes are kept when you save";
   let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=shared.CUR.pre&&n in shared.CUR.pre?shared.CUR.pre[n]:x[n];   /* CUR.pre: "Record the decision" fills the form first (BL-53) */
     h+=`<dt>${l}${shared.EDITING?labelAdorn(shared.CUR.k,shared.CUR.mode,n):""}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
   if(shared.CUR.mode==="proposal"&&!x.p) h=`<div class="cmnote">Choose a project before saving.</div>`+h;
@@ -329,9 +329,9 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
 export const KINDL={sender:"sender",domain:"email domain",channel:"Teams channel",alias:"alias",stakeholder:"stakeholder"};
 export const learnable=r=>r&&(r.signals||[]).find(s=>s.ok&&!(s.owners||[]).length);
 export function learnLabel(){ const cb=$("#f_learn"); if(!cb) return; const code=$("#f_p")?.value||""; cb.closest("dd").previousElementSibling.previousElementSibling.hidden=cb.closest("dd").hidden=!code;
-  $("#learnTxt").textContent=`Remember ${cb.dataset.value} (${KINDL[cb.dataset.kind]}) for ${pName(code)}, so items like this match on their own. Added to the register when applied.`; }
-export async function learnSignal(code,kind,value){ if(!viaServer()){ snack("Remembering a signal needs the live server; or say it in Claude Code"); return; }
-  const res=await api("/api/learn",{code,kind,value}); snack(res.ok?`${value} will be remembered for ${pName(code)} at apply`:oneLine(res.message)||"Not remembered"); if(res.ok&&S.autoApply) applySoon(); }
+  $("#learnTxt").textContent=`Remember ${cb.dataset.value} (${KINDL[cb.dataset.kind]}) for ${pName(code)}, so items like this match on their own. Added to the register when saved.`; }
+export async function learnSignal(code,kind,value){ if(!viaServer()){ snack("Remembering a signal needs creaite to be running; or say it in Claude Code"); return; }
+  const res=await api("/api/learn",{code,kind,value}); snack(res.ok?`${value} will be remembered for ${pName(code)} once saved`:oneLine(res.message)||"Not remembered"); if(res.ok&&S.autoApply) applySoon(); }
 /* BL-52: health is checked against the evidence (the same criteria as the weekly report, from Settings). A health
    better than the evidence needs a new reason before it saves; creaite never changes health itself. */
 export const HRANK={"On track":0,"At risk":1,"Off track":2};
@@ -393,7 +393,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
     if(r){ if(closeAfter){ if(shared.CUR&&shared.CUR.id===id) closePanel(); } else { shared.EDITING=false; if(shared.CUR&&shared.CUR.id===id){ drawPanel(); $("#pTitle").textContent=x.t; } } } return; }
   /* tidy-up (sprint-milestones): the Create form's branch for new work items is gone; they are the peek (BL-179), staged through newItemOf */
   if(shared.CUR.mode==="proposal"){ const r=pkRev(); if(!r){ snack(STALE_ROW); return; } const before=JSON.parse(JSON.stringify(r)); if(!await needVault()) return;
-    try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied");
+    try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that suggestion has already been saved");
       if(r.kind==="update"){ it.changes=it.changes||{}; it.changes[r.rec.field]=f.to; }
       else { /* only the fields Alan changed; required dates are never blanked */
         const same=(a,b)=>String(a??"").trim()===String(b??"").trim(), ch={};
@@ -406,7 +406,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
     if("hold" in r) r.hold=irHold(r);   /* #232-B: the server's rule (review.hold_reason) again on what the edit left: an Issue made a Risk is held, a project set clears "need a project" */
     if(r.bad) return badSaved(r,approve);   /* #291 fix */
-    closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } return; }
+    closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Suggestion updated — still waiting for review`); } return; }
   if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; hsSaved(); closePanel();
     await save(`${p.name} health: ${before.health||"not set"} → ${f.health}`,[{op:"update",table:"projects",id:p.code,changes:{health:f.health,health_reason:f.reason}}],null,()=>Object.assign(p,f),()=>Object.assign(p,before)); return; }
 }
@@ -416,7 +416,7 @@ export async function badSaved(r,approve){ const file=r.file, ref=r.ref; closePa
   const now=REV.find(x=>x.file===file&&x.ref===ref&&!["draft","files"].includes(x.kind)); refreshAll();
   if(now&&now.bad){ snack(`Saved, but it still can't be saved as it is: ${now.bad}. Edit it or reject it`,()=>openProposal(now.n),"Edit"); return; }
   if(now&&approve) return decide(now.n,"approved");
-  snack(`Proposal updated — still waiting for review`); }
+  snack(`Suggestion updated — still waiting for review`); }
 /* Current state is saved as a proposal that rewrites the section in the project's CLAUDE.md (undoable) */
 export async function saveCurrent(code,md,imgOps=[],added=[],dropped=[]){ const p=P.find(x=>x.code===code), before=p.current, imgsBefore=p.images; if(!await needVault()) return false; let old;
   try{ old=await vq(()=>shared.VW.read(memPath(p.code))); }catch(e){ snack(`Can't read ${memPath(p.code)}: ${e.message}`); return false; }
@@ -673,19 +673,19 @@ export function pkPersist(){ try{ localStorage.setItem(PKSTORE,JSON.stringify(sh
 export function pkFile(){ const d=new Date(); return `proposed-${stampFile()}-${String(d.getMilliseconds()).padStart(3,"0")}${String(shared.PKSEQ++%100).padStart(2,"0")}-dashboard.json`; }
 export const pkStagedOf=id=>shared.PKS.filter(s=>s.id===id);
 export function pkSaving(state,msg){ const el=$("#pkSave"); if(!el) return; el.classList.toggle("fail",state==="fail");
-  putHTML(el,state==="busy"?msg||"Saving…":state==="fail"?msg||"Not saved":state==="ok"?html`${raw(ic("check"))}${(msg||"Saved to staging")}`:""); }
+  putHTML(el,state==="busy"?msg||"Saving…":state==="fail"?msg||"Not saved":state==="ok"?html`${raw(ic("check"))}${(msg||"Saved for Review")}`:""); }
 export function pkStageDraw(){ const st=$("#pkStage"), n=shared.PKS.length, m=new Set(shared.PKS.map(s=>s.id)).size; st.hidden=!n; document.body.classList.toggle("pkstaged",!!n);
-  if(n) $("#pkStN").textContent=`${n} change${n===1?"":"s"} staged on ${m} item${m===1?"":"s"}`; }
+  if(n) $("#pkStN").textContent=`${n} change${n===1?"":"s"} waiting to be saved on ${m} item${m===1?"":"s"}`; }
 export function pkLast(x,k){ let el=$("#pkLast"); if(!el){ addHTML($("#pkAfter"),"afterbegin",html`<div class="pk-last" id="pkLast"></div>`); el=$("#pkLast"); }
   if(shared.CUR.mode!=="record"){ el.textContent=""; pkSaving(""); return; }
   const s=pkStagedOf(pkCid()), d=shared.PKDONE.filter(e=>e.id===pkCid());
-  putHTML(el,html`${raw(ic("history"))}<span>${s.length?html`You edited this ${s[s.length-1].at.slice(11)===nowStamp().slice(11)?"just now":raw("at "+s[s.length-1].at.slice(11))} · ${s.length} change${s.length===1?"":"s"} staged`:d.length?html`Last applied ${fd(d[d.length-1].at)}`:x.upd_at?html`Last updated ${fd(x.upd_at)}`:""}</span>`);
-  pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Saved to staging":d.length?"Applied":""); }
+  putHTML(el,html`${raw(ic("history"))}<span>${s.length?html`You edited this ${s[s.length-1].at.slice(11)===nowStamp().slice(11)?"just now":raw("at "+s[s.length-1].at.slice(11))} · ${s.length} change${s.length===1?"":"s"} waiting to be saved`:d.length?html`Last saved ${fd(d[d.length-1].at)}`:x.upd_at?html`Last updated ${fd(x.upd_at)}`:""}</span>`);
+  pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Saved for Review":d.length?"Saved":""); }
 /* the dot on a row with something staged: the StatusDot block, named by its word (BL-316) */
 export function markStagedRows(){ const ids=new Set([...shared.PKS.map(s=>s.id),...(shared.PENDING||[]).flatMap(p=>p.ids||[])]), sv=savingIds();   /* BL-304: also a change still saving (hollow), and one waiting for Apply */
   $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const id=r.dataset.row, st=sv.has(id)?"saving":ids.has(id)?"staged":"", d=/** @type {HTMLElement|null} */ (r.querySelector(".pkdot"));
     if(d&&d.dataset.st!==st) d.remove(); if(!st||(d&&d.dataset.st===st)) return;
-    const x=r.querySelector("td.title>.x"), dot=statusDotNodes({status:"staged",cls:st==="saving"?"pkdot saving":"pkdot",label:st==="saving"?"Saving…":"Staged, not yet applied"});
+    const x=r.querySelector("td.title>.x"), dot=statusDotNodes({status:"staged",cls:st==="saving"?"pkdot saving":"pkdot",label:st==="saving"?"Saving…":"Waiting to be saved"});
     /** @type {HTMLElement} */ (dot[0]).dataset.st=st;
     if(x) x.before(...dot); else (r.querySelector("td.title")||r.firstElementChild||r).append(...dot); }); }
 /* after any apply or reload: what left staging was applied; what is still there stays staged and is shown again on the fresh data */
@@ -700,31 +700,31 @@ export async function pkReconcile(){ pkFromVault(); const news=shared.PKS.filter
       if(shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===s.id){ shared.CUR={mode:"record",k:s.k,id}; shared.SEL=id; PKN.bad=null; if(shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person") markSel(); drawPanel(); navWrite(false); } }
   return r; }
 export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.PKS.length; if(!n) return 0;
-  if(!viaServer()){ snack("Applying needs the live server: start it, or say “apply” in Claude Code"); return -1; }
-  $("#pkApply").disabled=true; pkSaving("busy","Applying…");
+  if(!viaServer()){ snack("Saving needs creaite to be running: start it, or say “save” in Claude Code"); return -1; }
+  $("#pkApply").disabled=true; pkSaving("busy","Saving…");
   try{ const r=await applyNow({peek:true}); await pkReconcile();
-    if(!r.ok){ pkSaving("fail","Not applied"); snack(oneLine(applyWords(r.message))); return -1; }
+    if(!r.ok){ pkSaving("fail","Not saved"); snack(oneLine(applyWords(r.message))); return -1; }
     const done=n-shared.PKS.length; if(shared.CUR&&pkOn()) pkDraw();
-    snack(done?`Applied ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still staged (changed elsewhere since)`:""}. A backup was taken first`:"Nothing applied: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
+    snack(done?`Saved ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)`:""}. A backup was taken first`:"Nothing saved: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }
 export async function pkUndoLast(only){ await shared.PKQ; const s=only||shared.PKS[shared.PKS.length-1];   /* only: undo exactly this staged entry (#153), not the last one */
-  if(only&&!shared.PKS.includes(only)){ snack("Already applied or undone"); return; }
+  if(only&&!shared.PKS.includes(only)){ snack("Already saved or undone"); return; }
   await (async()=>{ if(!s) return; let ok=false;
   try{ ok=await vq(async()=>{ const path="system/staging/"+s.name; if(!/-dashboard(-\d+)?\.json$/.test(s.name)||!await shared.VW.exists(path)) return false;
       const data=JSON.parse(await shared.VW.read(path)); if(data.source_run!=="dashboard"||(data.items||[]).some(i=>i.applied)) return false;
       await shared.VW.remove(path); return true; }); }catch(e){ ok=false; }
   { const i=shared.PKS.indexOf(s); if(i>=0) shared.PKS.splice(i,1); }
-  if(!ok){ pkPersist(); refreshAll(); snack("Already applied: undo it in Activity"); return; }
+  if(!ok){ pkPersist(); refreshAll(); snack("Already saved: undo it in Activity"); return; }
   const x=pkX(s.k,s.id); if(x){ for(const n in s.prev) if(pkSame(x[n],s.patch[n])) x[n]=s.prev[n]; if(s.k==="raid") x.pr=prio(x.imp,x.lik); }
   pkPersist(); refreshAll(); snack(`Undone: ${s.id} ${String(s.label||"").toLowerCase()}`); })();
-    if(s&&s.isNew&&!shared.PKS.includes(s)){ if(shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===s.id){ shared.CUR.staged=null; pkDraw(); } snack(`Undone: the new ${pkNewWord(s.k)} “${pkShort(s.title,40)}” is no longer staged`); }
+    if(s&&s.isNew&&!shared.PKS.includes(s)){ if(shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===s.id){ shared.CUR.staged=null; pkDraw(); } snack(`Undone: the new ${pkNewWord(s.k)} “${pkShort(s.title,40)}” is no longer saved`); }
     if(s&&s.wsNew&&!shared.PKS.includes(s)){ const i=WSD().findIndex(w=>!w.id&&w.p===s.wsP&&w.name===s.wsNew); if(i>=0){ D.ws_table.splice(i,1); refreshAll(); } } }
  
 /* ===== end BL-176 (staging) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0167(){
 /* the pill */
-addHTML(document.body,"beforeend",html`<div class="pkstage" id="pkStage" role="region" aria-label="Staged changes" hidden><small>Nothing reaches the tracker until you apply</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Apply everything staged" data-key="${raw(MOD)}↵">Apply<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
+addHTML(document.body,"beforeend",html`<div class="pkstage" id="pkStage" role="region" aria-label="Changes waiting to be saved" hidden><small>Nothing is saved until you press Save</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Save everything waiting" data-key="${raw(MOD)}↵">Save<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
 $("#pkStage").prepend(...statusDotNodes({status:"staged",wordId:"pkStN",live:true}));   /* BL-316: the StatusDot block; pkStageDraw writes its word */
 PKDRAW.push(pkLast);
 $("#pkUndo").onclick=()=>pkUndoLast();
@@ -746,7 +746,7 @@ pkStageDraw();
    - Impact or Likelihood recalculates Priority, said in the feed.
    - ⌘↵ (Ctrl+↵), as before (Alan, 10-10-2026): commits the field the cursor is in, applies everything staged (the pill's Apply) and
      closes the peek; a picker open closes first; an item waiting for its client messaging stays open and says why; with nothing
-     staged it closes and says "Nothing to apply". */
+     staged it closes and says "Nothing to save". */
 export const pkMsgF=k=>k==="decisions"?"cmd":"cm";
 export const pkMsgOK=(k,t)=>k==="decisions"?cmdOK(t):cmOK(t);
 export const PKMSGNEED=k=>k==="decisions"?"To make this client-visible, write the plain wording the client will see. Nothing is saved until you do.":"To make this client-visible, complete the client messaging: a few words after each of the three headings. Nothing is saved until you do.";
@@ -765,7 +765,7 @@ export async function pkSaveAndClose(){ if(shared.CUR&&shared.CUR.mode==="new"&&
     const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur();   /* commits the field (queued) */
     await shared.PKQ;
     if(PK.pc){ pkNote(`${PKMSGNEED(PK.pc.k)} Or turn Client-visible off. Then press ${MOD}↵ again.`); $(`#panel [data-pkf="${pkMsgF(PK.pc.k)}"]`)?.focus(); return; }
-    if(!shared.PKS.length){ closePanel(); snack("Nothing to apply"); return; }
+    if(!shared.PKS.length){ closePanel(); snack("Nothing to save"); return; }
     const n=await pkApply(); if(n>=0) closePanel(); } finally{ PK.closing=false; } }
 /* ===== end BL-176 (rules) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -864,7 +864,7 @@ if(shared.CUR&&pkOn()) drawPanel();
    title, key row, free text, Details and Source. Nothing here is in the tracker yet, so the edits are held in the panel (CUR.draft)
    until Alan chooses, and it keeps an explicit footer: Reject, Cancel, Save and Save and approve. Save runs the panel's own save
    for proposals (savePanel: the same validation, owner check, norm and editProposal), given the draft in place of the old form's
-   fields; ⌘↵ is Save, as before. The "Editing a proposal" line, the "needs a project" note, the duplicate note and the Learn tick
+   fields; ⌘↵ is Save, as before. The "Editing a suggestion" line, the "needs a project" note, the duplicate note and the Learn tick
    stay. EDITING stays on for a proposal, as before, so a click away or leaving the page asks Alan to finish or cancel first. Draft
    minutes, files and update proposals keep their own panels. */
 export function pkCid(){ return shared.CUR&&shared.CUR.mode==="new"?shared.CUR.nid:shared.CUR?(shared.CUR.mode==="proposal"?"rv"+shared.CUR.n:shared.CUR.id):null; }
@@ -879,9 +879,9 @@ export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#pane
   const r=pkRev(); if(!r) return;
   if(shared.CUR.upd){ updDraw(x,k,r); return; }   /* #232-B: an update proposal draws the whole item (updDraw) */
   putHTML($("#pkId"),html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type??""}" data-tip="Type">${x.type??""}${raw(ic("chevdown"))}</button>`:""}`);
-  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved</div>${x.p?"":html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r)&&!r.done?raw(llNoteHtml(r)):""}${raw(rtNoteHtml(r))}${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. ${(r.badf||[]).length?`Saving leaves out ${r.badf.join(", ")}.`:"Change it here and save: it's checked again."}</div>`:""}`);   /* BL-297 D; #291 fix */
+  putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a suggestion — nothing is saved until it's approved</div>${x.p?"":html`<div class="cmnote">Choose a project before saving.</div>`}${rvDup(r)&&!r.done?raw(llNoteHtml(r)):""}${raw(rtNoteHtml(r))}${r.bad&&!r.done?html`<div class="cmnote pk-bad">Can't be saved as it is: ${r.bad}. ${(r.badf||[]).length?`Saving leaves out ${r.badf.join(", ")}.`:"Change it here and save: it's checked again."}</div>`:""}`);   /* BL-297 D; #291 fix */
   const sig=learnable(r), was=$("#f_learn")?.checked;
-  putHTML($("#pkPropEnd"),sig&&x.p?html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind??""}" data-value="${sig.value??""}"${was?raw(" checked"):""}><span>Remember ${sig.value??""} (${KINDL[sig.kind]||sig.kind||""}) for ${pName(x.p)??""}, so items like this match on their own. Added to the register when applied.</span></label>`:html``);
+  putHTML($("#pkPropEnd"),sig&&x.p?html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind??""}" data-value="${sig.value??""}"${was?raw(" checked"):""}><span>Remember ${sig.value??""} (${KINDL[sig.kind]||sig.kind||""}) for ${pName(x.p)??""}, so items like this match on their own. Added to the register when saved.</span></label>`:html``);
   putHTML($("#pkFeed"),html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("filetext"))}</span><div><b>Source</b><div class="pk-src">${raw(srcHTML(r.src))}</div></div></div>`); }
 /* Save: the draft goes through the panel's own save for proposals (readForm is given the draft for that one call) */
 export async function pkPropSave(approve){ if(!shared.CUR||shared.CUR.mode!=="proposal"||PK.closing) return; PK.closing=true;
@@ -1004,7 +1004,7 @@ export async function pkNewSync(k,id,commit){ if(!shared.CUR||shared.CUR.mode!==
     shared.PKS.push({name,...meta});
     if(shared.CUR&&shared.CUR.nid===id) shared.CUR.staged=name; pdDrop(`new:${k}`); pkPersist(); pkSaving("ok"); refreshAll(); return "ok"; }   /* staged: its browser draft (below) goes */
   pkSaving("busy");
-  try{ await editProposal(shared.CUR.staged,data=>{ const it=(data.items||[]).find(i=>i.op==="new"&&i.table===k); if(!it||it.applied) throw new Error("it has already been applied"); it.values=values; pkWsPreSync(data,x); if(data.peek) Object.assign(data.peek,{title:f.t,p:f.p,to:f.t,at:nowStamp()}); }); }   /* BL-187; BL-188: the file says what the item is now */
+  try{ await editProposal(shared.CUR.staged,data=>{ const it=(data.items||[]).find(i=>i.op==="new"&&i.table===k); if(!it||it.applied) throw new Error("it has already been saved"); it.values=values; pkWsPreSync(data,x); if(data.peek) Object.assign(data.peek,{title:f.t,p:f.p,to:f.t,at:nowStamp()}); }); }   /* BL-187; BL-188: the file says what the item is now */
   catch(e){ pkSaving("fail"); snack("Not saved: "+e.message); return "fail"; }
   const s=shared.PKS.find(e=>e.name===shared.CUR.staged); if(s){ s.title=f.t; s.p=f.p; s.to=f.t; s.at=nowStamp(); pkPersist(); } pkSaving("ok"); return "ok"; }
 export function pkNewFocus(){ if(!PKN.bad||(document.activeElement&&document.activeElement!==document.body)) return; pkNewMarkDraw()?.focus(); }   /* only when nothing else has the cursor */
@@ -1014,9 +1014,9 @@ export function pkNewFound(s){ const c=pkArr(s.k).filter(r=>r.p===s.p&&!(s.known
   const m=c.filter(r=>pkSame(r.t,s.title)); return (m.length?m[m.length-1]:c.length===1?c[0]:{}).id||null; }
 /* the save state, the last-edited line and the feed for a new item */
 export function pkNewState(x,k){ if(shared.CUR.mode!=="new") return; const st=!!shared.CUR.staged, w=pkNewWord(k);
-  let el=$("#pkLast"); if(el) putHTML(el,html`${raw(ic("history"))}<span>${st?html`Staged · created when you apply`:shared.CUR.alert?html`Not staged yet · Save (${MOD}↵) stages it and dismisses the message`:html`Not staged yet · it is staged once it has a title and a project`}</span>`);
-  pkSaving(st?"ok":"",st?"Saved to staging":"");
-  putHTML($("#pkFeed"),st?html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w}<span class="pk-pill st">staged</span></div></div>`:html`<div class="sub">Nothing here yet.</div>`);
+  let el=$("#pkLast"); if(el) putHTML(el,html`${raw(ic("history"))}<span>${st?html`Waiting to be saved · created when you save`:shared.CUR.alert?html`Not saved yet · Save (${MOD}↵) saves it for Review and dismisses the message`:html`Not saved yet · it is saved once it has a title and a project`}</span>`);
+  pkSaving(st?"ok":"",st?"Saved for Review":"");
+  putHTML($("#pkFeed"),st?html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w}<span class="pk-pill st">waiting</span></div></div>`:html`<div class="sub">Nothing here yet.</div>`);
   pkNewMarkDraw(); }
 /* ===== end BL-179 (the first commit) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -1050,7 +1050,7 @@ shared.PKNT=null; export const pkNewStoreSoon=()=>{ clearTimeout(shared.PKNT); s
 export function pkNewWhy(){ const f=pkNewForm(shared.CUR.k,{...shared.CUR.draft,t:pkNewTitle()}), n=pkNewBadField(shared.CUR.k,f);
   return {p:"it needs a project",srcIn:"it needs its source",cm:"it needs client messaging",cmd:"it needs client messaging",date:"it needs the date it was made"}[n]||"it hasn't been committed"; }
 export function pkNewAsk(retry){ PKN.retry=retry||null; const w=pkNewWord(shared.CUR.k);
-  $("#pkAskT").textContent=`This new ${w} isn't staged yet: ${pkNewWhy()}. Keep it in this browser (New offers it back), or discard it?`;
+  $("#pkAskT").textContent=`This new ${w} isn't saved yet: ${pkNewWhy()}. Keep it in this browser (New offers it back), or discard it?`;
   $("#pkAsk").hidden=false; shared.EDITING=true; $("#pkScroll").scrollTop=0; $('#pkAsk [data-pkask="keep"]').focus(); }   /* EDITING while it asks: a click away or Back waits for the answer */
 export function pkNewAskOff(){ if(!$("#pkAsk").hidden) shared.EDITING=false; $("#pkAsk").hidden=true; PKN.retry=null; }
 export function pkNewLeave(how){ const retry=PKN.retry, w=shared.CUR?pkNewWord(shared.CUR.k):"item"; pkNewAskOff();
@@ -1064,7 +1064,7 @@ export function pkNewRestore(){ const key=pkNewKey(), d=key&&pdAll()[key]; PKN.o
   for(const n of Object.keys(F)){ if(!(n in x)) continue; let v=F[n]; if(typeof v==="string"&&DDATE.test(v.trim())) v=toIso(v.trim()); x[n]=v; }   /* the Create form kept a date as typed */
   if(shared.CUR.k==="raid") x.pr=prio(x.imp,x.lik); if(x.client) PK.det[shared.CUR.nid]=true;
   pkDraw(); const t=$("#pkTitle"); t.textContent=x.t||""; t.focus(); const r=document.createRange(); r.selectNodeContents(t); r.collapse(false); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
-  snack(`Restored. Press Enter in the title to stage it`); }
+  snack(`Restored. Press Enter in the title to save it`); }
 /* ===== end BL-179 (leaving and reloads) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0177(){
@@ -1085,7 +1085,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-pknd]"); 
 /* ===== BL-179 (sprint-peek-new) ===== a dependency's suggested milestones in the peek. The Create form offered them under its Milestone
    field (depFormDraw: up to three it could threaten, nearest first, then None needed, remembered until the text changes); the peek has no
    form, so the same suggestions (depSuggest, depHash, the same store) show under the key row of a RAID Dependency with no milestone,
-   new or existing. Attach is the milestone chip's own change (staged, or into the new item's draft). Nothing is attached by itself. */
+   new or existing. Attach is the milestone chip's own change (saved, or into the new item's draft). Nothing is attached by itself. */
 export function pkDepDraw(x,k){ const box=$("#pkDep"); if(!box) return; box.textContent="";
   if(k!=="raid"||x.type!=="Dependency"||x.ms||!x.p||!OPENST(x.st||"Open")) return; const key=shared.CUR.mode==="new"?"new":pkCid();
   if((store.obj("creaite-dep-none")[key])===depHash(x.t)) return;
@@ -1103,7 +1103,7 @@ if(shared.CUR&&pkOn()) drawPanel();
 }
 /* ===== BL-180 (sprint-peek-new) ===== errors: a banner to dismiss or investigate, not a permanent header link. When the debug log
    holds errors from the last day that Alan hasn't seen, a quiet banner under the header (and under the live-server alert) says how
-   many ("3 errors in the last day"; repeats of one message are one error: "1 error (30 times)"), what kind ("2 sweep runs failed,
+   many ("3 errors in the last day"; repeats of one message are one error: "1 error (30 times)"), what kind ("2 check runs failed,
    1 live-server request"), and offers Investigate (Settings › Diagnostics, at the latest errors), ask creaite to look (only with the
    live server: it asks for an explanation and says to change nothing) and Dismiss (×). Dismissing, Investigate or opening Diagnostics
    remembers the newest error seen, in this browser (localStorage creaite-errors-seen); the banner comes back only for an error
@@ -1111,7 +1111,7 @@ if(shared.CUR&&pkOn()) drawPanel();
 export const EBKEY="creaite-errors-seen";
 export const ebSeen=()=>{ const v=store.get(EBKEY,""); return typeof v==="string"?v:""; };
 export function ebMarkSeen(){ if(DIAG.loaded&&DIAG.newest&&DIAG.newest>ebSeen()) store.set(EBKEY,DIAG.newest); }
-export const EBAREA={sweep:["sweep run failed","sweep runs failed"],server:["live-server request","live-server requests"],run:["ask creaite or prep run","ask creaite or prep runs"],
+export const EBAREA={sweep:["check run failed","check runs failed"],server:["live-server request","live-server requests"],run:["ask creaite or prep run","ask creaite or prep runs"],
   dashboard:["in the page","in the page"],build:["dashboard rebuild failed","dashboard rebuilds failed"]};
 export function ebState(){ if(!DIAG.loaded) return null; const seen=ebSeen();
   const G=(DIAG.groups||[]).map(g=>({...g,n:(g.times||[g.last]).filter(t=>t>seen).length})).filter(g=>g.n>0); if(!G.length) return null;
@@ -1132,7 +1132,7 @@ document.addEventListener("click",e=>{ const t=e.target;
   if(t.closest("#ebX")){ ebMarkSeen(); errBanner(); snack("Dismissed: the banner comes back only for a new error"); return; }
   if(t.closest("#ebInv")){ ebMarkSeen(); errBanner(); go("settings","diag"); return; }
   if(t.closest("#ebAsk")){ if(!viaServer()) return; ebMarkSeen(); errBanner(); openChat();
-    send("Look at the errors in creaite's debug log from the last day (Settings › Diagnostics, system/logs) and their context, and explain the likely causes in plain words. This is read only: don't change anything."); } });
+    send("Look at the errors in creaite's debug log from the last day (Settings › Diagnostics, Settings › Diagnostics) and their context, and explain the likely causes in plain words. This is read only: don't change anything."); } });
 errBanner();
 }
 /* ===== BL-185 (sprint-peek-new) ===== the status cockpit refined. The metrics row under the project's status line drops "No due date"
@@ -1160,7 +1160,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e
    a stranger is "New person “…”…" (the details dialog, ownerFinal). With nothing typed it lists the project's people first, then
    everyone, Unassigned, and "Open <name>'s page" (kept whatever is typed). Workstream: "Add workstream…" (or "Add “typed” as a
    workstream…") opens a small form with the details suggested from the project's items (wsSuggest, as BL-58's confirm box did). Add
-   stages the item's change with the new workstream ahead of it in the same proposal (wsNewOf, the route the old panel's save used),
+   stages the item's change with the new workstream ahead of it in the same suggestion (wsNewOf, the route the old panel's save used),
    so Undo last removes both and nothing reaches the tracker until Apply. A proposal in Review keeps its own route (the row's
    "Add workstream"), so its list is unchanged. */
 export function pkOwnerOpts(x,k,q){ const cur=pkWho(x[pkOwnF(k)]), pool=projFirst(peopleAll(),projPeople(x.p));
@@ -1186,7 +1186,7 @@ export function pkWsOpts(x,q){ const L=wsFor(x.p), t=String(q||"").toLowerCase()
 export function pkWsForm(anchor,x,k,id,name){ const p=x.p, s=name?wsSuggest(p,name):{};
   if(!anchor||!anchor.isConnected) anchor=$('#panel [data-pkp="ws"]')||$("#pkTitle");
   return openNewWorkstream(anchor,{title:`New workstream for ${pName(p)}`,name,fields:/** @type {[string, string][]} */(WS_FIELDS),suggest:nm=>wsSuggest(p,nm),onClose:pkPopDone(anchor),
-    note:`${name?`Suggested from ${s.items} item${s.items===1?"":"s"}; change anything.`:"A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
+    note:`${name?`Suggested from ${s.items} item${s.items===1?"":"s"}; change anything.`:"A lead, keywords and aliases help creaite match items to it."} Saved with this item's change.`,
     onAdd:async v=>{ const w=wsRow(p,v.name);
       if(w&&w.st==="Closed") return `“${w.name}” is retired in ${pName(p)}: choose another (${pName(p)}'s settings › Workstreams lists the ones in use).`;
       const known=w?w.name:wsFor(p).find(n=>n.toLowerCase()===v.name.toLowerCase());
@@ -1195,7 +1195,7 @@ export function pkWsForm(anchor,x,k,id,name){ const p=x.p, s=name?wsSuggest(p,na
       if(v.lead){ const o=await ownerFinal(v.lead); if(o===null) return; v.lead=o; }
       const {item,row}=wsNewOf({...v,project:p});
       if(String(id).startsWith("nw")&&shared.CUR&&shared.CUR.nid===id){ shared.CUR.wsPre={item,row}; (D.ws_table=D.ws_table||[]).push(row); }   /* a new item carries it in its one proposal */
-      pkCommit(k,id,{ws:v.name},"Workstream",x.ws||"none",v.name,{pre:[item],wsRow:String(id).startsWith("nw")?null:row,note:`New workstream “${v.name}” for ${pName(p)}, staged with this change`}); }}); }
+      pkCommit(k,id,{ws:v.name},"Workstream",x.ws||"none",v.name,{pre:[item],wsRow:String(id).startsWith("nw")?null:row,note:`New workstream “${v.name}” for ${pName(p)}, saved with this change`}); }}); }
 /* a new item's one proposal: the new workstream rides ahead of it while its workstream is that one (pkNewSync calls these) */
 export const pkWsPre=x=>{ const w=shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.wsPre; return w&&String(x.ws||"").toLowerCase()===w.row.name.toLowerCase()?[w.item]:[]; };
 export function pkWsPreSync(data,x){ const main=(data.items||[]).filter(i=>i.table!=="workstreams"||i.applied);
@@ -1258,7 +1258,7 @@ export function pkDrUse(c,text){ const x=curObj(); if(!x) return;
   shared.PKDRC=null; pkDrDraw(); el.focus(); el.textContent=text??c.d.text;
   const r=document.createRange(); r.selectNodeContents(el); r.collapse(false); const s=getSelection(); s.removeAllRanges(); s.addRange(r);
   DRPEND[pkCid()+"|"+c.f]={feature:c.feature,text:text??c.d.text};
-  pkNote("The draft is in the field, not saved yet. Edit it, then click away to stage it as usual; Esc puts the old text back."); }
+  pkNote("The draft is in the field, not saved yet. Edit it, then click away to save it as usual; Esc puts the old text back."); }
 export const drSame=(a,b)=>String(a||"").replace(/\s+/g," ").trim()===String(b||"").replace(/\s+/g," ").trim();
    /* Esc: the old text came back */
 /* ---- several at once: Work's change-several bar and Today's stale line ---- */
@@ -1404,7 +1404,7 @@ shared.DRF=null;                                         /* {id, fc, html, d, us
 export function drFcDraw(){ const w=$("#mvFcWhy"); if(!w||!shared.MV.pend) return; const lab=w.closest(".mv-inl"); if(!lab) return; let host=$("#mvFcDraft");
   if(!host){ addHTML(lab,"afterend",html`<div id="mvFcDraft" class="pkdrhost"></div>`); host=$("#mvFcDraft"); }
   const c=shared.DRF&&shared.DRF.id===shared.MV.pend.id&&shared.DRF.fc===shared.MV.pend.fc?shared.DRF:null;
-  putHTML(host,html`<div>${raw(draftBtn("forecast","Draft the reason","Word why it moves from what the tracker shows: overdue work behind it, dependencies, pending decisions",'data-drfc="1"'))}</div>${c?raw(c.html):""}`); }
+  putHTML(host,html`<div>${raw(draftBtn("forecast","Draft the reason","Word why it moves from what your project record shows: overdue work behind it, dependencies, pending decisions",'data-drfc="1"'))}</div>${c?raw(c.html):""}`); }
 /* Movement: the slip range in one sentence, from the same numbers (forecast.py's template) */
 /* ===== end BL-226 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */

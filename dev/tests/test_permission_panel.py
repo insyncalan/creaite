@@ -331,14 +331,14 @@ class PermissionCardTests(unittest.TestCase):
         self.assertIn("propose.py with a pipe", info["allowed"])
         self.assertNotIn("Terminal", info["allowed"])
         self.assertNotIn("Terminal", info["refused"])
-        self.assertIn("edit .claude/settings.json yourself in Terminal", info["oob"])
+        self.assertIn("change that setting yourself in Settings", info["oob"])
         no_card, text, buttons = self.r["allowedCard"]
         self.assertTrue(no_card)                                                                 # information, not a card to approve
         self.assertIn("Nothing to add", text)
         self.assertNotIn("Terminal", text)
         self.assertEqual(buttons, ["Try again"])
         self.assertEqual(len(self.r["retry"]), 2)
-        self.assertIn("is already allowed, so no rule is needed. Run the script on its own", self.r["retry"][1])
+        self.assertIn("is already allowed, so no rule is needed. Carry on with my last request", self.r["retry"][1])
 
 
 if __name__ == "__main__":

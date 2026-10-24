@@ -78,7 +78,7 @@ export function feedLines(lines,typeOf,textOf){ return lines.map(a=>{ const ch=S
 /* function declarations (hoisted): the peek can be drawn before this block runs (BL-176's "if(CUR&&pkOn()) drawPanel()" on load) */
 export function feedTabItems(tab,attr,sel){ return PKTABS.map(([v,l])=>({id:v,label:l,tabId:tab===v?sel:undefined,data:{[attr]:v}})); }
 export function feedListHtml(items,tab){ const icn={act:"pencil",upd:"msg",src:"filetext"}, L=items.filter(e=>tab==="all"||e.type===tab);
-  return L.length?L.map(e=>`<div class="pk-fe${e.state==="undone"?" undone":""}" data-t="${e.type}"><span class="pk-fi" aria-hidden="true">${ic(icn[e.type]||"pencil")}</span><div><b>${esc(e.who)}</b> ${e.html}${e.when?`<span class="when">· ${esc(fd(e.when))}</span>`:""}${e.state==="staged"?'<span class="pk-pill st">staged</span>':e.state==="applied"?'<span class="pk-pill ap">applied</span>':e.state==="undone"?'<span class="pk-pill un">undone</span>':""}${e.note?`<div class="sub">${esc(e.note)}</div>`:""}</div></div>`).join(""):'<div class="sub">Nothing here yet.</div>'; }
+  return L.length?L.map(e=>`<div class="pk-fe${e.state==="undone"?" undone":""}" data-t="${e.type}"><span class="pk-fi" aria-hidden="true">${ic(icn[e.type]||"pencil")}</span><div><b>${esc(e.who)}</b> ${e.html}${e.when?`<span class="when">· ${esc(fd(e.when))}</span>`:""}${e.state==="staged"?'<span class="pk-pill st">waiting</span>':e.state==="applied"?'<span class="pk-pill ap">saved</span>':e.state==="undone"?'<span class="pk-pill un">undone</span>':""}${e.note?`<div class="sub">${esc(e.note)}</div>`:""}</div></div>`).join(""):'<div class="sub">Nothing here yet.</div>'; }
 /* the feed outside the peek: a section with its own tabs (data-fdtab), remembered per host ("ms", "proj") for the session. It draws
    every entry once; a tab only changes attributes (the section's data-tab, which CSS reads, and the tabs' selection), so the
    entries are never drawn again for a tab. The milestone feed is drawn again with its editor; the project panel's with the panel. */
@@ -110,7 +110,7 @@ export function bootMilestones0172(){
    start, so its requests are refused with {stale:true}; any such refusal (an apply, a save, the pulse) shows a banner under the
    header with the server's words and a Reload button, instead of a bare "Not allowed". */
 shared.STALE=false;   /* BL-269 (sprint-live-updates): once a reply says stale, the page asks the server nothing more until reloaded */
-export function staleShow(msg){ shared.STALE=true; const b=$("#staleAlert"); if(!b) return; $("#staleMsg").textContent=msg||"The live server was restarted since this page was opened. Reload the page (Cmd+R) and try again.";
+export function staleShow(msg){ shared.STALE=true; const b=$("#staleAlert"); if(!b) return; $("#staleMsg").textContent=msg||"creaite was restarted since this page was opened. Reload the page (Cmd+R) and try again.";
   if(b.hidden){ b.hidden=false; b.classList.add("on"); } }
 /* ===== end BL-174 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -191,6 +191,10 @@ export const mvMismatch=m=>m.state!=="achieved"&&MVRANK[m.state]<MVRANK[m.sug];
 /* what each view shows: the client sees client-visible milestones with their wording only (the client report's filter, in
    tracker.client_milestones, given here as cvis); Movement and the internal view show every one */
 export function mvVis(code,cli,move){ return mvAll(code).filter(m=>!cli||move||m.cvis); }
+/* #337: the Client view of a project whose milestones are all internal says so, rather than "0 achieved, 0 to come." over an empty line */
+export function mvNoneShown(code,cli){ const n=mvAll(code).length; return !!(cli&&n&&!mvVis(code,true,false).length); }
+export const mvNoneText=n=>n===1?"The milestone is not shown to the client yet. Switch to Internal view to see it.":`None of the ${n} milestones are shown to the client yet. Switch to Internal view to see them.`;
+export function mvNoneMsg(code,add){ const n=mvAll(code).length; return `<p class="mv-none">${mvNoneText(n)}${add?` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>`:""}</p>`; }
 export function mvOpen(code,cli,move){ return mvVis(code,cli,move).filter(m=>m.state!=="achieved").sort((a,b)=>(a.agr||a.fc||"9").localeCompare(b.agr||b.fc||"9")); }
 /* #286: a milestone marker on the Plan strip and the Movement list names its type first, "Milestone: …", on hover (data-tip) and to a screen reader */
 const MSW=typeWord("milestone");
@@ -269,7 +273,7 @@ export function mvCardHtml(p){ if(!shared.MVREADY) return '<div class="mv-card c
   return `<div class="${mvCardCls(cli)} mv-compact" id="mvCard"><div class="mv-head"><h2>Milestones</h2>${mvPill(cli)}<span class="sp"></span>
     <button type="button" class="mv-ib" id="mvSwap" data-mvact="aud" aria-pressed="${cli}" aria-label="${cli?"Switch to internal view":"Switch to client view"}" data-tip="${cli?"Switch to internal view":"Switch to client view"}">${ic("swap",{bare:true})}</button>
     <button type="button" class="mv-ib" id="mvPencil" data-mvpage="${code}" aria-label="Open milestones: Plan and Movement" data-tip="Open milestones: Plan and Movement">${ic("pencil",{bare:true})}</button></div>
-    ${any?mvPlan(code,cli,"card"):`<div class="mv-empty">No milestones yet. <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add a milestone</button></div>`}</div>`; }
+    ${mvNoneShown(code,cli)?mvNoneMsg(code,true):any?mvPlan(code,cli,"card"):`<div class="mv-empty">No milestones yet. <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add a milestone</button></div>`}</div>`; }
 
 /* ---- the page: Milestones: Plan and Movement ---- */
 export function mvAnswer(code,list,cli){ const done=mvVis(code,cli,false).length-list.length, late=list.filter(m=>m.state==="overdue"), end=list[list.length-1]; let a="";
@@ -286,7 +290,7 @@ export function renderMilestones(){ const code=shared.MSCODE, p=P.find(x=>x.code
   if(shared.MV.view==="move") h+=`<div class="mv-card internal"><div class="mv-head"><h2>Movement</h2>${mvPill(false)}<span class="mv-tag warn">Internal only: never in client output</span></div>${mvMovement(code)}</div>`;
   else { const list=mvOpen(code,cli,false), any=mvAll(code).length;
     h+=`<div class="${mvCardCls(cli)}" id="mvPlanCard"><div class="mv-head"><h2>Plan</h2>${mvPill(cli)}</div>${cli?"":'<div class="mv-banner">Internal view includes internal-only milestones and a note where a state differs from what the dates suggest. Switch to Client view to see what a client sees.</div>'}
-      ${any?`<p class="mv-answer">${mvAnswer(code,list,cli)}</p><p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>${mvPlan(code,cli,"page")}`
+      ${mvNoneShown(code,cli)?mvNoneMsg(code):any?`<p class="mv-answer">${mvAnswer(code,list,cli)}</p><p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>${mvPlan(code,cli,"page")}`
         :`<div class="mv-empty">No milestones yet for ${esc(p.name)}. <button type="button" class="mv-btn sm" data-mvadd="1">${ic("plus")}Add milestone</button></div>`}</div>`; }
   putHTML(el,html`${raw(h)}</div>`); mvBindScroll(el); paintIcons(el); }
 
@@ -324,14 +328,14 @@ export function mvDetail(code){ const m=mvGet(code,shared.MV.sel); if(!m||m.stat
   h+=`<div class="mv-box" style="margin-top:12px" id="mvDetail"><div class="mv-head" style="margin:0"><h2>${esc(m.n)}</h2><span class="mv-hint">${m.id}</span>${mvTag(st)}<span class="sp"></span><button type="button" class="mv-btn sm" data-mvedit="${m.id}">Edit milestone</button></div>
     <div class="mv-dchips"><span>Original <b>${fd(m.orig)||"not set"}</b></span><span>Agreed <b>${fd(m.agr)||"not set"}</b>${rb?" (rebaselined)":""}</span><span>Forecast <b>${fd(m.fc)||"not set"}</b></span><span>Moved <b>${m.moves}×</b></span><span>Progress <b>${m.pct==null?"not set":m.pct+"%"}</b></span><span>Owner <b>${esc(m.owner)||"not set"}</b></span></div>${mvRangeLine(m)}
     <div class="mv-grid2" style="margin-top:6px"><div><h3 style="margin:10px 0 4px;font-size:14px">Movement by reporting week</h3>${mvTrend(m)}</div><div><h3 style="margin:10px 0 2px;font-size:14px">What changed</h3>${m.log.length?`<ul class="mv-log">${m.log.map(l=>`<li class="${l.k}"><div class="w">${fd(l.d)}</div><div class="c">${esc(l.c)}</div><div class="w">${esc(fdText(l.w))}</div></li>`).join("")}</ul>`:'<p class="mv-hint">Nothing has changed since it was first agreed.</p>'}</div></div></div>`;
-  h+=`<div class="mv-grid2"><div class="mv-box" id="mvDecide"><h3>Decide what to do</h3><p class="mv-cap">${vs>0||st==="overdue"?"Each choice is staged for Review; nothing changes until you approve it there.":"No variance to decide on."}</p><div class="mv-adj">
+  h+=`<div class="mv-grid2"><div class="mv-box" id="mvDecide"><h3>Decide what to do</h3><p class="mv-cap">${vs>0||st==="overdue"?"Each choice is waiting in Review; nothing changes until you approve it there.":"No variance to decide on."}</p><div class="mv-adj">
     <button type="button" class="mv-btn" data-mvadj="hold">Hold: keep forecast, agreed date unchanged</button><button type="button" class="mv-btn pri" data-mvadj="rebase">Rebaseline</button><button type="button" class="mv-btn" data-mvadj="recover">Add recovery action</button><button type="button" class="mv-btn" data-mvadj="escalate">Escalate to steering</button></div>`;
   if(shared.MV.rb&&shared.MV.rb.id===m.id) h+=`<div class="mv-form" id="mvRbForm"><div class="mv-fld">New agreed date${mvDpBtn("mvRbDate",shared.MV.rb.date,"New agreed date",shared.MV.rb.date!==m.agr)}</div>
       <div class="mv-fld full">Agreed with<div class="mv-chiprow">${shared.MV.rb.with.length?shared.MV.rb.with.map(n=>`<span class="mv-chip">${esc(n)}${mvOrg(n)}<button type="button" data-mvrmw="${esc(n)}" aria-label="Remove ${esc(n)}">${ic("x",{bare:true})}</button></span>`).join(""):'<span class="mv-hint">Nobody chosen yet</span>'}<button type="button" class="mv-cb small" id="mvRbAdd" data-mvppl="rbwith" aria-haspopup="listbox" aria-expanded="false" aria-label="Add person">+ Add person</button></div></div>
       <label class="mv-fld full">Reason<input type="text" class="mv-in" id="mvRbWhy" value="${esc(shared.MV.rb.why||"")}" placeholder="Why the agreed date has to move"></label><div class="mv-err full" id="mvRbErr" role="alert"></div>
-      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvrb="ok" data-key="${MOD}↵" data-tip="Stage rebaseline and decision">Stage rebaseline and decision</button><button type="button" class="mv-btn" data-mvrb="no">Cancel</button></div></div>`;
+      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvrb="ok" data-key="${MOD}↵" data-tip="Save rebaseline and decision">Save rebaseline and decision</button><button type="button" class="mv-btn" data-mvrb="no">Cancel</button></div></div>`;
   if(shared.MV.adj&&shared.MV.adj.id===m.id) h+=`<div class="mv-form" id="mvAdjForm"><label class="mv-fld full">${shared.MV.adj.k==="hold"?"Why hold? One line, for the decision record":shared.MV.adj.k==="recover"?"The recovery action":"What to ask the steering committee"}<input type="text" class="mv-in" id="mvAdjWhy" value="${esc(shared.MV.adj.text||"")}"></label><div class="mv-err full" id="mvAdjErr" role="alert"></div>
-      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvadjok="1" data-key="${MOD}↵">${shared.MV.adj.k==="hold"?"Stage the hold":shared.MV.adj.k==="recover"?"Stage the action":"Stage the ask"}</button><button type="button" class="mv-btn" data-mvadjno="1">Cancel</button></div></div>`;
+      <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvadjok="1" data-key="${MOD}↵">${shared.MV.adj.k==="hold"?"Save the hold":shared.MV.adj.k==="recover"?"Save the action":"Save the ask"}</button><button type="button" class="mv-btn" data-mvadjno="1">Cancel</button></div></div>`;
   h+=`</div><div class="mv-box"><h3>Internal note</h3><p class="mv-cap">Your own words. Never shown to the client.</p><textarea class="mv-in" id="mvNote" data-mvnote="${m.id}" rows="3" aria-label="Internal note" placeholder="What is going on, what you are waiting for">${esc(m.note)}</textarea><div class="mv-hint" style="margin-top:6px">Saves when you leave the box.</div></div></div>`;
   return h; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -581,9 +585,9 @@ export function mvDatePicked(id,v){ const code=mvCode(), m=shared.MV.peek?mvGet(
   if(id==="mvFc"){ shared.MV.pend=v===m.fc?null:{id:m.id,fc:v,why:""}; mvEdDraw(); $("#mvFcWhy")?.focus(); } }
 /* Decide what to do: each choice is staged for Review (a pending proposal), nothing changes until it is approved there */
 export async function mvStage(items,what){ if(!await needVault()) return; let name;
-  try{ name=await writeProposal(items.map(i=>({...i,decision:"pending"}))); }catch(e){ snack("Not staged: "+e.message); return; }
+  try{ name=await writeProposal(items.map(i=>({...i,decision:"pending"}))); }catch(e){ snack("Not saved: "+e.message); return; }
   await reloadData(); renderBadge();
-  snack(`${what} Staged for Review: nothing changes until you approve it there.`,async()=>{ try{ await vq(async()=>{ const pth="system/staging/"+name; if(await shared.VW.exists(pth)) await shared.VW.remove(pth); }); await reloadData(); snack("Unstaged"); }catch(e){ snack("Already decided: undo it in Activity"); } }); }
+  snack(`${what} Waiting in Review: nothing changes until you approve it there.`,async()=>{ try{ await vq(async()=>{ const pth="system/staging/"+name; if(await shared.VW.exists(pth)) await shared.VW.remove(pth); }); await reloadData(); snack("Taken back"); }catch(e){ snack("Already decided: undo it in Activity"); } }); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootMilestones0190(){
 document.addEventListener("click",e=>{ const j=e.target.closest&&e.target.closest("[data-msjump],[data-cockjump$='|milestones']"); if(!j) return; e.preventDefault(); e.stopImmediatePropagation();

@@ -228,6 +228,11 @@ def json_report(days=JSON_DAYS, usage_file=None, context_file=None, skills_dir=N
     import usage_reviews
     out = report(load(usage_file), usage_log.read(context_file), days=days, skills_dir=skills_dir)
     out.update(reviews=usage_reviews.load(reviews_root), reviews_save=usage_reviews.REGISTERED)
+    try:                    # #334: the week's budget (counts and dates only); a fault leaves it out and the tab draws without it
+        import ai_budget
+        out["budget"] = ai_budget.status(load(usage_file))
+    except Exception as e:      # the budget is a courtesy on this tab; the figures above stand without it
+        out["budget_error"] = type(e).__name__
     return out
 # ===== end #238 =====
 

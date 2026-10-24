@@ -62,7 +62,7 @@ export async function loadClientReport(arg, fresh) {
   crArg.value = arg;
   crCheck.value = null;
   crDirty.value = false;
-  if (!viaServer()) { crOpen.value = { ok: false, message: "The client view needs the live server." }; return; }
+  if (!viaServer()) { crOpen.value = { ok: false, message: "The client view needs creaite to be running." }; return; }
   crBusy.value = "Opening the client report…";
   const base = { code: arg.code, week_ending: arg.week || undefined };
   const [i, c] = await Promise.all([api("/api/report/draft", { kind: "weekly", ...base }), api("/api/report/draft", { kind: "client", ...base, client: arg.client || undefined, fresh: fresh || undefined })]);

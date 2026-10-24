@@ -201,13 +201,13 @@ class ProjectSettings(LiveBrowserCase):
         self.change("#psName", "Example Programme Two")
         self.wait_for(lambda: b.eval("P.find(p=>p.code==='ABC').name") == "Example Programme Two", "the page has the new name")
         self.wait_for(lambda: b.eval("document.querySelector('#snackU').style.display") != "none"
-                      and "saved and applied" in b.eval("document.querySelector('#snackT').textContent"), "saved, with Undo offered")
+                      and "— saved" in b.eval("document.querySelector('#snackT').textContent"), "saved, with Undo offered")
         b.reload("typeof go==='function' && LIVE")                                          # the record, not just the page
         self.assertEqual(b.eval("P.find(p=>p.code==='ABC').name"), "Example Programme Two")
         self.open("general")
         self.change("#psName", "Example Programme Three")
         self.wait_for(lambda: b.eval("P.find(p=>p.code==='ABC').name") == "Example Programme Three", "renamed again")
-        self.wait_for(lambda: "saved and applied" in b.eval("document.querySelector('#snackT').textContent"), "applied")
+        self.wait_for(lambda: "— saved" in b.eval("document.querySelector('#snackT').textContent"), "applied")
         b.click("#snackU")
         self.wait_for(lambda: b.eval("P.find(p=>p.code==='ABC').name") == "Example Programme Two", "Undo puts the name back")
 
