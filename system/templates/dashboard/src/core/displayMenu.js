@@ -27,7 +27,7 @@ export function dispPropsMarkup({ shown, rest, locked, prefix, pinFirst }) {
   const ord = shown.map(c => c[0]);
   return [...shown, ...rest].map(c => {
     const on = ord.includes(c[0]), i = ord.indexOf(c[0]), l = esc(c[1]);
-    return `<label><input type="checkbox" data-prop id="${prefix}-${c[0]}" value="${c[0]}" ${on ? "checked" : ""} ${c[0] === locked ? "disabled" : ""}>${l}${on && !(pinFirst && i === 0) ? `<span class="colmv"><button type="button" data-mv="${c[0]}" data-d="-1" aria-label="Move ${l} earlier" ${i === 0 || (pinFirst && i === 1) ? "disabled" : ""}>↑</button><button type="button" data-mv="${c[0]}" data-d="1" aria-label="Move ${l} later" ${i === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+    return `<label><input type="checkbox" data-prop id="${esc(prefix)}-${esc(c[0])}" value="${esc(c[0])}" ${on ? "checked" : ""} ${c[0] === locked ? "disabled" : ""}>${l}${on && !(pinFirst && i === 0) ? `<span class="colmv"><button type="button" data-mv="${esc(c[0])}" data-d="-1" aria-label="Move ${l} earlier" ${i === 0 || (pinFirst && i === 1) ? "disabled" : ""}>↑</button><button type="button" data-mv="${esc(c[0])}" data-d="1" aria-label="Move ${l} later" ${i === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
   }).join("");
 }
 

@@ -264,11 +264,11 @@ class PageTests(unittest.TestCase):
           const key=k=>document.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true}));
           go("settings"); key("?"); out.first=[VIEW,HELPARG];      /* #158: Today and the other eight screens open the ? panel; a screen with no list opens Help */
           helpGo("reference"); go("settings"); key("?"); out.second=[VIEW,HELPARG,location.hash];
-          document.querySelector('[data-go=help]'); go("settings"); $q('#v-settings [data-go=help]').click(); out.settings=[VIEW,HELPARG];
+          out.card=!!document.querySelector('#v-settings [data-go=help]');   /* #341 item 16: the Settings help card is gone */
           window.OUT=out;""")
         self.assertEqual(o["first"], ["help", "start"])
         self.assertEqual(o["second"], ["help", "reference", "#help-reference"])
-        self.assertEqual(o["settings"], ["help", "reference"])
+        self.assertFalse(o["card"])
 
     def test_the_vault_command_replaces_the_placeholder_and_a_section_address_jumps(self):
         o = self.probe("""
