@@ -528,7 +528,16 @@ class Page(unittest.TestCase):
         self.assertEqual(len(re.findall(r'api\("/api/review/(?:repeat|retarget|reject)"', src)), 5)       # no call outside these five (undo of a retarget is one)
         mins = (ROOT / "system/templates/dashboard/src/stores/minutes.js").read_text(encoding="utf-8")
         self.assertIn('...(meeting && meeting.fp ? { expect: meeting.fp } : {})', mins)
-        self.assertIn("for (const n of own) { const rv = (plan || []).find(i => i.n === n); if (rv && rv.fp) expects[String(n)] = rv.fp; }", mins)
+        # Intent, not a source line (2.6.4 gate): the Approve minutes call sends `expects` (item number -> fingerprint, taken from the
+        # plan rows' .fp, or the renamed one) and the meeting's `expect`; the wording around them may change.
+        call = re.search(r'api\("/api/minutes/approve",\s*\{(.*?)\}\s*\)', mins, re.S)
+        self.assertTrue(call, "the Approve minutes call is gone")
+        self.assertTrue(re.search(r"\bexpects\b", call.group(1)), "Approve minutes does not send expects")
+        self.assertTrue(re.search(r"\bexpect\s*:", call.group(1)), "Approve minutes does not send the meeting's expect")
+        fill = re.search(r"for\s*\(\s*const\s+n\s+of\s+own\s*\)(.*?)\n", mins)
+        self.assertTrue(fill, "expects is no longer filled per ticked item")
+        self.assertTrue(re.search(r"\bexpects\s*\[\s*String\(\s*n\s*\)\s*\]\s*=\s*\w+", fill.group(1)), fill.group(1))
+        self.assertTrue(re.search(r"\.fp\b", fill.group(1)), "expects is not taken from the plan rows' fingerprints")
         self.assertIn('REVIEW_CHANGED.test(r.message || "")) { await reloadData();', mins)
 
     def test_the_recent_rejects_carry_their_fingerprint(self):
