@@ -26,7 +26,7 @@ WED = datetime(2026, 10, 21, 12, 0)
 
 def status(spent, **cfg):
     rows = [{"at": "2026-10-20T09:00:00", "cost_usd": spent}]
-    return ai_budget.status(rows, ai_budget.settings(dict({"weekly_dollars": 50}, **cfg)), WED)
+    return ai_budget.status(rows, ai_budget.settings(dict({"enabled": True, "weekly_dollars": 50}, **cfg)), WED)      # the budget is off by default: a test turns it on
 
 
 class Reached(Exception):
