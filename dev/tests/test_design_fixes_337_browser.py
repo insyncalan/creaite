@@ -38,6 +38,12 @@ class DesignFixes(LiveBrowserCase):
         b.wait("document.getElementById('mvCard')")
         self.assertFalse(b.eval("!!document.querySelector('#mvCard .mv-none')"))
 
+    def test_the_message_says_not_shown_for_one_milestone_and_for_many(self):        # PM: the singular dropped its "not"
+        b = self.b
+        self.assertEqual(b.eval("mvNoneText(1)"), "The milestone is not shown to the client yet. Switch to Internal view to see it.")
+        self.assertEqual(b.eval("mvNoneText(2)"), "None of the 2 milestones are shown to the client yet. Switch to Internal view to see them.")
+        self.assertEqual(b.eval("mvNoneText(7)"), "None of the 7 milestones are shown to the client yet. Switch to Internal view to see them.")
+
     def test_pencil_contrast(self):
         b = self.b
         b.eval("go('cockpit','ABC')")
