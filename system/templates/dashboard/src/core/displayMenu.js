@@ -39,16 +39,16 @@ export const dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"
 export function dispController({ btn, menu, draw }) {
   const isOpen = () => !!$(menu) && $(menu).classList.contains("on");
   /** @param {boolean} [focus] */
-  const close = focus => {
+  const hide = focus => {
     const m = $(menu), b = $(btn); if (!m || !b || (!isOpen() && m.hidden)) return;
     m.classList.remove("on"); m.hidden = true; b.setAttribute("aria-expanded", "false"); b.classList.remove("on"); if (focus) b.focus();
   };
-  const open = () => {
+  const show = () => {
     const m = $(menu), b = $(btn); if (!m || !b) return;
-    if (isOpen()) { close(true); return; }
+    if (isOpen()) { hide(true); return; }
     $$(".ddmenu.on").forEach(x => x.classList.remove("on"));
     draw(); m.hidden = false; m.classList.add("on"); b.setAttribute("aria-expanded", "true"); b.classList.add("on");
     /** @type {HTMLElement|null} */ (m.querySelector('[aria-pressed="true"]') || m.querySelector("button,select,input"))?.focus();
   };
-  return { isOpen, open, close };
+  return { isOpen, open: show, close: hide };
 }

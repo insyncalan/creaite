@@ -54,13 +54,13 @@ export function pdGroupsOf(x, g, projectName) {
 const FIXED = /** @type {Record<string, string[]>} */ ({ late: ["has", "none"], details: ["needs", "complete"] });
 
 /** The people in groups, in a stable order: fixed groups in their own order, others A to Z with the "no value" group last. Rows keep the
-    order they came in. @template T @param {(T & PdPerson)[]} rows @param {string} g @param {(code: string) => string} projectName
+    order they came in. @template T @param {(T & PdPerson)[]} list @param {string} g @param {(code: string) => string} projectName
     @returns {{key: string, label: string, items: (T & PdPerson)[]}[]} */
-export function pdGroup(rows, g, projectName) {
-  if (!GROUP_KEYS.includes(g) || g === "none") return [{ key: "", label: "", items: rows }];
+export function pdGroup(list, g, projectName) {
+  if (!GROUP_KEYS.includes(g) || g === "none") return [{ key: "", label: "", items: list }];
   /** @type {Map<string, {key: string, label: string, items: (T & PdPerson)[]}>} */
   const by = new Map();
-  for (const x of rows) for (const [v, label] of pdGroupsOf(x, g, projectName)) {
+  for (const x of list) for (const [v, label] of pdGroupsOf(x, g, projectName)) {
     if (!by.has(v)) by.set(v, { key: v, label, items: [] });
     /** @type {any} */ (by.get(v)).items.push(x);
   }

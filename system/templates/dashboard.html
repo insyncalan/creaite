@@ -36468,7 +36468,7 @@ system/scripts/run launch.py agent ${what}`;
   var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
   function dispController({ btn, menu, draw: draw2 }) {
     const isOpen = () => !!$(menu) && $(menu).classList.contains("on");
-    const close = (focus) => {
+    const hide = (focus) => {
       const m5 = $(menu), b5 = $(btn);
       if (!m5 || !b5 || !isOpen() && m5.hidden) return;
       m5.classList.remove("on");
@@ -36477,11 +36477,11 @@ system/scripts/run launch.py agent ${what}`;
       b5.classList.remove("on");
       if (focus) b5.focus();
     };
-    const open2 = () => {
+    const show = () => {
       const m5 = $(menu), b5 = $(btn);
       if (!m5 || !b5) return;
       if (isOpen()) {
-        close(true);
+        hide(true);
         return;
       }
       $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
@@ -36492,7 +36492,7 @@ system/scripts/run launch.py agent ${what}`;
       b5.classList.add("on");
       (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
     };
-    return { isOpen, open: open2, close };
+    return { isOpen, open: show, close: hide };
   }
 
   // core/peopleDisplay.js
@@ -36554,10 +36554,10 @@ system/scripts/run launch.py agent ${what}`;
     /** @type {Record<string, string[]>} */
     { late: ["has", "none"], details: ["needs", "complete"] }
   );
-  function pdGroup(rows2, g5, projectName) {
-    if (!GROUP_KEYS.includes(g5) || g5 === "none") return [{ key: "", label: "", items: rows2 }];
+  function pdGroup(list, g5, projectName) {
+    if (!GROUP_KEYS.includes(g5) || g5 === "none") return [{ key: "", label: "", items: list }];
     const by2 = /* @__PURE__ */ new Map();
-    for (const x5 of rows2) for (const [v5, label] of pdGroupsOf(x5, g5, projectName)) {
+    for (const x5 of list) for (const [v5, label] of pdGroupsOf(x5, g5, projectName)) {
       if (!by2.has(v5)) by2.set(v5, { key: v5, label, items: [] });
       by2.get(v5).items.push(x5);
     }
@@ -81730,7 +81730,7 @@ Next: `;
         "dispFoot",
         "dispOpen",
         "dispOrder",
-        "dispProps",
+        "dispPropsMarkup",
         "dispReset",
         "dispSelect",
         "dnBlock",
