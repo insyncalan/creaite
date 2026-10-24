@@ -20,12 +20,14 @@ Roles (simple on purpose; override any session with --role SESSION_ID=role, a sh
             Merely mentioning Jarvis is not enough: every lead's charter names Jarvis.
   - lead:   any other top-level session.
 
-Privacy: the report shows only shortened session ids, never prompt or reply text. The laptop label is the short
-hostname unless --laptop is given.
+Privacy: the report shows only counts, model ids, day, role and shortened session ids, never prompt or reply text, a
+tool input or output, or a path. The laptop label is "laptop-" and six characters of a hash of the hostname (the
+hostname itself is never printed) unless --laptop is given.
 """
 import argparse
 import datetime as dt
 import glob
+import hashlib
 import json
 import os
 import re
@@ -83,10 +85,18 @@ def short(session_id):
     return (session_id or "?")[:SHORT]
 
 
+def laptop_label():
+    """A stable anonymous label for this laptop: 'laptop-' and six hex characters of a hash of its hostname."""
+    return "laptop-" + hashlib.sha256(socket.gethostname().encode("utf-8")).hexdigest()[:6]
+
+
 def local_day(timestamp):
     """The local YYYY-MM-DD of an ISO timestamp, or None if it can't be read."""
     try:
-        when = dt.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        text = timestamp.replace("Z", "+00:00")
+        # Python 3.9's fromisoformat only takes 3 or 6 fraction digits: pad or cut to 6.
+        text = re.sub(r"\.(\d+)", lambda m: "." + (m.group(1) + "000000")[:6], text, count=1)
+        when = dt.datetime.fromisoformat(text)
     except (AttributeError, ValueError):
         return None
     if when.tzinfo is not None:
@@ -320,7 +330,7 @@ def parse_args(argv):
     p.add_argument("--since", help="YYYY-MM-DD: report from this day to --day")
     p.add_argument("--summary", action="store_true", help="three or four plain lines for the digest")
     p.add_argument("--json", action="store_true", help="rows, sessions and totals as JSON")
-    p.add_argument("--laptop", default=socket.gethostname().split(".")[0], help="laptop label (default hostname)")
+    p.add_argument("--laptop", default=laptop_label(), help="laptop label (default: an anonymous hash of the hostname)")
     p.add_argument("--role", action="append", metavar="SESSION_ID=role", help="force a session's role")
     p.add_argument("--root", default=DEFAULT_ROOT, help="Claude Code projects folder")
     p.add_argument("--glob", default=DEFAULT_GLOB, help="project folders to read")

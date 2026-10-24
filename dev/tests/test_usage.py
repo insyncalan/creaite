@@ -5,6 +5,7 @@ Run: python3 dev/tests/test_usage.py
 import contextlib
 import io
 import json
+import socket
 import sys
 import tempfile
 import unittest
@@ -131,6 +132,40 @@ class UsageCase(unittest.TestCase):
         self.write("aaaa3333.jsonl", [assistant("q", model="mystery", out=5)])
         out = self.run_cli()
         self.assertIn("model not in the price table", out)
+
+    def test_no_text_leaks_into_any_output(self):
+        # Every text field a real log carries (reply, prompt, tool input and output, a home path, the working folder)
+        # holds a marker; no output form may contain one.
+        markers = ["ZEBRA-REPLY-TEXT", "ZEBRA-PROMPT-TEXT", "ZEBRA-TOOL-INPUT", "ZEBRA-TOOL-RESULT", "/Users/zebra.user",
+                   "ZEBRA-TITLE"]
+        reply = assistant("t1", inp=3, cw=100, cr=1000, out=7)
+        reply["cwd"] = "/Users/zebra.user/dev/ZEBRA-TOOL-INPUT"
+        reply["message"]["content"] = [{"type": "text", "text": "ZEBRA-REPLY-TEXT"},
+                                       {"type": "tool_use", "input": {"command": "cat /Users/zebra.user/ZEBRA-TOOL-INPUT"}}]
+        result = {"type": "user", "timestamp": TS, "message": {"role": "user", "content": [
+            {"type": "tool_result", "content": "ZEBRA-TOOL-RESULT"}]}}
+        self.write("lead0009.jsonl", [prompt("ZEBRA-PROMPT-TEXT"), {"type": "custom-title", "customTitle": "ZEBRA-TITLE"},
+                                      reply, result])
+        self.write("lead0009/subagents/agent-zz9999.jsonl", [dict(assistant("t2", out=5, sidechain=True), cwd="/Users/zebra.user")])
+        for args in ((), ("--summary",), ("--json",), ("--json", "--since", "2026-10-01")):
+            out = self.run_cli(*args)
+            self.assertIn("laptop-1", out)
+            for marker in markers:
+                self.assertNotIn(marker, out, "leaked in " + " ".join(args))
+        self.assertEqual(self.report()["total_cost"], round(usage.cost("claude-opus-5-5", {
+            "input": 3, "cache_write": 100, "cache_read": 1000, "output": 12}), 4))
+
+    def test_default_laptop_label_is_anonymous(self):
+        label = usage.laptop_label()
+        self.assertRegex(label, r"^laptop-[0-9a-f]{6}$")
+        self.assertEqual(label, usage.laptop_label())
+        self.assertNotIn(socket.gethostname().split(".")[0].lower(), label)
+
+    def test_timestamps_with_odd_fractions(self):
+        for ts in ("2026-10-15T12:00:00.5", "2026-10-15T12:00:00.123456789", "2026-10-15T12:00:00"):
+            self.assertEqual(usage.local_day(ts), DAY)
+        self.assertIsNone(usage.local_day("not a time"))
+        self.assertIsNone(usage.local_day(None))
 
 
 if __name__ == "__main__":
