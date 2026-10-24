@@ -104,3 +104,25 @@ def _unsure(codes, names, lead):
     ordered = _cands(codes, names)
     return {"p": None, "level": "unsure", "cands": ordered,
             "reason": lead + ": " + " or ".join(names[c] for c in ordered)}
+
+
+PUBLIC_DOMAINS = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com", "yahoo.com", "icloud.com", "me.com",
+                  "aol.com", "proton.me", "protonmail.com"}
+
+
+def offer_signal(attendees, rows, own_domains=(), confidential=False):
+    """The one concrete signal worth offering to remember after Alan picks a project for a meeting: the email domain of an
+    attendee that no project lists yet (never Alan's own, a public mail provider or a confidential meeting's), else None.
+    {"kind": "domain", "value": "client.example"}. propose.learn_check still has the last word."""
+    if confidential:
+        return None
+    own = {str(d).lower().lstrip("@") for d in own_domains or []}
+    listed = {d for r in rows for d in r["domains"]}
+    counts = {}
+    for a in _addresses(attendees):
+        d = a.split("@")[-1]
+        if d not in own and d not in listed and d not in PUBLIC_DOMAINS:
+            counts[d] = counts.get(d, 0) + 1
+    if not counts:
+        return None
+    return {"kind": "domain", "value": sorted(counts, key=lambda d: (-counts[d], d))[0]}

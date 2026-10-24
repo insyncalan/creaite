@@ -105,5 +105,41 @@ class PrepMatchH1(unittest.TestCase):
         self.assertEqual(bd.prep_match("Weekly sync", projects, mem), ("ABC", "remembered"))
 
 
+class Offer(unittest.TestCase):
+    """The learn offer: one concrete domain nobody lists yet; never an own, public or confidential one."""
+
+    def test_offer(self):
+        att = [{"email": "a@newco.example"}, {"email": "b@newco.example"}, {"email": "c@orchard.example"}]
+        self.assertEqual(mm.offer_signal(att, ROWS), {"kind": "domain", "value": "newco.example"})
+        self.assertEqual(mm.offer_signal(att, ROWS, own_domains=["newco.example"]), None)
+        self.assertIsNone(mm.offer_signal([{"email": "a@gmail.com"}], ROWS))
+        self.assertIsNone(mm.offer_signal(att, ROWS, confidential=True))
+
+
+class EntryMatch(unittest.TestCase):
+    """prep_match_ev and the row model (build_dashboard): the same answer for Intake, Today and Prep."""
+
+    def test_row_fields_and_no_leak(self):
+        import build_dashboard as bd
+        import capture
+        orig = capture.register
+        capture.register = lambda: {"projects": ROWS, "shared": set()}
+        try:
+            projects = [{"code": r["code"], "name": r["name"]} for r in ROWS]
+            ev = {"title": "Catch-up", "attendees": [{"email": "s@orchard.example"}]}
+            self.assertEqual(bd.prep_match_ev("Catch-up", ev, projects, {}), ("DEF", "likely"))
+            self.assertEqual(bd.prep_match_ev("Catch-up", dict(ev, sensitivity="confidential"), projects, {}), (None, "unsure"))
+            self.assertEqual(bd.prep_match_ev("Quay inspection", {"title": "x"}, projects, {}), (None, "unsure"))
+            row = bd._ir_calendar({"id": "e1", "title": "Catch-up", "confidential": True, "p": "DEF", "level": "likely",
+                                   "reason": "x", "cands": ["DEF"], "series": "catch up"}, {}, bd.date.today(), 7)
+            self.assertIsNone(row["p"])
+            self.assertNotIn("level", row)
+            row = bd._ir_calendar({"id": "e1", "title": "Catch-up", "p": "DEF", "level": "likely", "reason": "r",
+                                   "cands": ["DEF"], "series": "catch up"}, {}, bd.date.today(), 7)
+            self.assertEqual((row["level"], row["reason"], row["cands"], row["series"]), ("likely", "r", ["DEF"], "catch up"))
+        finally:
+            capture.register = orig
+
+
 if __name__ == "__main__":
     unittest.main()
