@@ -989,7 +989,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
    theme's own primary button, so it reads in every theme and mode */
 .chlogbox{position:relative;flex:1;min-height:0;display:flex;flex-direction:column} .chlogbox .chlog{flex:1;min-height:0}
 /* ===== BL-257 (sprint-ask-flow) ===== the queued messages, under the log */
-.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:13px} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
+.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:var(--fs-sm)} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
 .chqueue{border-top:1px solid var(--line);padding:6px 14px 4px;display:flex;flex-direction:column;gap:4px;max-height:30%;overflow:auto} .chqueue[hidden]{display:none}
 .chqhead{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .chqitem{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm)} .chqitem .chqtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

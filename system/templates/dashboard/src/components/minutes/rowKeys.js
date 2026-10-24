@@ -34,18 +34,18 @@ export function moveRow(d) {
   const n = at < 0 ? (d === 1 ? list[0] : list[list.length - 1]) : list[Math.max(0, Math.min(list.length - 1, at + d))];
   keyRow.value = n;
   requestAnimationFrame(() => {
-    const row = /** @type {HTMLElement|null} */ (document.querySelector(`#v-minutes tr.mi[data-n='${n}']`));
-    if (row) { row.focus({ preventScroll: true }); row.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+    const rowEl = /** @type {HTMLElement|null} */ (document.querySelector(`#v-minutes tr.mi[data-n='${n}']`));
+    if (rowEl) { rowEl.focus({ preventScroll: true }); rowEl.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
   });
 }
 
 /** Whether the keys apply on this page now. */
 const active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
 
-/** One keydown. Returns true when the key was taken. @param {KeyboardEvent} e @param {RowKeyApi} api */
-export function rowKey(e, api) {
+/** One keydown. Returns true when the key was taken. @param {KeyboardEvent} e @param {RowKeyApi} keyApi */
+export function rowKey(e, keyApi) {
   if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.isComposing || !e.key || e.key.length !== 1 || !active()) return false;
-  const doc = api.doc();
+  const doc = keyApi.doc();
   if (!doc || doc.state !== "draft") return false;
   const k = e.key.toLowerCase();
   if (k === "j" || k === "k") { moveRow(k === "j" ? 1 : -1); return true; }
@@ -55,7 +55,7 @@ export function rowKey(e, api) {
     if (!u) return false;
     const track = { ...(((doc.layout || {}).track) || {}) };
     if (u.was === undefined) delete track[String(u.n)]; else track[String(u.n)] = u.was;
-    api.setDoc({ ...doc, layout: { ...(doc.layout || {}), track } }, "Track");
+    keyApi.setDoc({ ...doc, layout: { ...(doc.layout || {}), track } }, "Track");
     keyRow.value = u.n;
     return true;
   }
@@ -73,16 +73,16 @@ export function rowKey(e, api) {
     return true;
   }
   const want = k === "y" ? "y" : k === "n" ? "n" : "";
-  if (trackOf(doc, r, api.plan()) === want) return true;
+  if (trackOf(doc, r, keyApi.plan()) === want) return true;
   rememberTrack(doc, n);
-  api.setDoc(setTrack(doc, n, want), "Track");
+  keyApi.setDoc(setTrack(doc, n, want), "Track");
   return true;
 }
 
 let installed = false;
-/** Listen once for the keys, ahead of the page's own (capture), taking a key only when rowKey does. @param {RowKeyApi} api */
-export function installRowKeys(api) {
+/** Listen once for the keys, ahead of the page's own (capture), taking a key only when rowKey does. @param {RowKeyApi} keyApi */
+export function installRowKeys(keyApi) {
   if (installed) return;
   installed = true;
-  document.addEventListener("keydown", e => { if (rowKey(e, api)) { e.preventDefault(); e.stopPropagation(); } }, true);
+  document.addEventListener("keydown", e => { if (rowKey(e, keyApi)) { e.preventDefault(); e.stopPropagation(); } }, true);
 }

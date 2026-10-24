@@ -999,7 +999,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
    theme's own primary button, so it reads in every theme and mode */
 .chlogbox{position:relative;flex:1;min-height:0;display:flex;flex-direction:column} .chlogbox .chlog{flex:1;min-height:0}
 /* ===== BL-257 (sprint-ask-flow) ===== the queued messages, under the log */
-.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:13px} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
+.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:var(--fs-sm)} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
 .chqueue{border-top:1px solid var(--line);padding:6px 14px 4px;display:flex;flex-direction:column;gap:4px;max-height:30%;overflow:auto} .chqueue[hidden]{display:none}
 .chqhead{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .chqitem{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm)} .chqitem .chqtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -71702,20 +71702,20 @@ ${d5.text}`);
     const n4 = at2 < 0 ? d5 === 1 ? list[0] : list[list.length - 1] : list[Math.max(0, Math.min(list.length - 1, at2 + d5))];
     keyRow.value = n4;
     requestAnimationFrame(() => {
-      const row2 = (
+      const rowEl = (
         /** @type {HTMLElement|null} */
         document.querySelector(`#v-minutes tr.mi[data-n='${n4}']`)
       );
-      if (row2) {
-        row2.focus({ preventScroll: true });
-        row2.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      if (rowEl) {
+        rowEl.focus({ preventScroll: true });
+        rowEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
     });
   }
   var active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
-  function rowKey(e4, api2) {
+  function rowKey(e4, keyApi) {
     if (e4.metaKey || e4.ctrlKey || e4.altKey || e4.shiftKey || e4.isComposing || !e4.key || e4.key.length !== 1 || !active()) return false;
-    const doc = api2.doc();
+    const doc = keyApi.doc();
     if (!doc || doc.state !== "draft") return false;
     const k5 = e4.key.toLowerCase();
     if (k5 === "j" || k5 === "k") {
@@ -71729,7 +71729,7 @@ ${d5.text}`);
       const track = { ...(doc.layout || {}).track || {} };
       if (u5.was === void 0) delete track[String(u5.n)];
       else track[String(u5.n)] = u5.was;
-      api2.setDoc({ ...doc, layout: { ...doc.layout || {}, track } }, "Track");
+      keyApi.setDoc({ ...doc, layout: { ...doc.layout || {}, track } }, "Track");
       keyRow.value = u5.n;
       return true;
     }
@@ -71751,17 +71751,17 @@ ${d5.text}`);
       return true;
     }
     const want = k5 === "y" ? "y" : k5 === "n" ? "n" : "";
-    if (trackOf(doc, r4, api2.plan()) === want) return true;
+    if (trackOf(doc, r4, keyApi.plan()) === want) return true;
     rememberTrack(doc, n4);
-    api2.setDoc(setTrack(doc, n4, want), "Track");
+    keyApi.setDoc(setTrack(doc, n4, want), "Track");
     return true;
   }
   var installed = false;
-  function installRowKeys(api2) {
+  function installRowKeys(keyApi) {
     if (installed) return;
     installed = true;
     document.addEventListener("keydown", (e4) => {
-      if (rowKey(e4, api2)) {
+      if (rowKey(e4, keyApi)) {
         e4.preventDefault();
         e4.stopPropagation();
       }
