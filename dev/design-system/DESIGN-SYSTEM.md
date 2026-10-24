@@ -117,6 +117,7 @@ Each row is every visible instance of the selector across the 12 snapshot pages:
 | View pill | `.vchip` | 28 (14) | 13px (14) | 400 (14) | 12px (14) | radius 12 in creaite (Linear and Cursor draw it as a full pill); selected = ink fill |
 | Tag | `.tag` | 17 (11), 20 (4) | 12px (15) | 400 (10), 500 (5) | 0px (11), 999px (4) | plain muted 12 px text by default; the pill form is added by its context (line 3099, 3565) |
 | Chip | `.chip` | 20 (3) | 12px (3) | 500 (3) | 999px (3) | a small pill, 20 px |
+| State chip (Intake) | `.irchip` | about 20 | 12px | 500 | 4px (`--r-sm`) | #325 approved exception: a meeting's state (Waiting for the transcript, Suggestions to check, Done) with an icon, words and a 3 px coloured left edge, so it never relies on colour alone. A rectangle, not the `.chip` pill, so it reads as a status and not a filter. Used on Intake only; `#v-intake-review .irchip` |
 | Filter chip | `.fchip` | 24 (1) | 13px (1) | 400 (1) | 999px (1) | a removable filter, 24 px pill |
 | Key hint | `.kbd` | 19 (13) | 12px (13) | 500 (13) | 4px (13) | mono |
 | Search (top bar) | `.search` | 36 (12) | 14px (12) | 400 (12) | 8px (12) | the app-wide search; `--bg` fill |
