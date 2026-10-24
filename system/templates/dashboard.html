@@ -821,7 +821,7 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .spark:not(.mini) i:last-child::after,.spk-kdot{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
 .spark i.cur{outline:1.5px solid var(--ink);outline-offset:1.5px}
 .spark.mini{height:18px;padding:0;margin:0;gap:0}
-.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 11px/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn::after{content:"";position:absolute;inset:-3px}   /* #337: 12px glyph, a 24px target */ .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sparkTip,.spk-key{position:fixed;z-index:var(--z-tip,200);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:10px 12px;font-size:var(--fs-sm,13px);line-height:var(--lh-snug);pointer-events:none}
 #sparkTip{width:260px} #sparkTip[hidden]{display:none} .spk-key{width:250px;pointer-events:auto} .spk-key:focus{outline:none}
 .spk-wk{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em} .spk-h{display:flex;align-items:center;gap:7px;font-weight:700;margin:2px 0} .spk-dot{width:9px;height:9px;border-radius:50%}
@@ -846,7 +846,7 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .kbdhint{color:var(--muted);font-size:var(--fs-xs);margin-top:8px}
 .dd{position:relative;display:inline-block}
 .ddmenu{display:none;position:absolute;top:36px;right:0;z-index:var(--z-menu);min-width:240px;max-height:360px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:6px 0}
-.card.edt{position:relative;padding-bottom:32px} .pencil{position:absolute;right:8px;bottom:6px;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:var(--r-md);line-height:0;opacity:.55}
+.card.edt{position:relative;padding-bottom:32px} .pencil{position:absolute;right:8px;bottom:6px;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:var(--r-md);line-height:0;opacity:.8;min-width:24px;min-height:24px;box-sizing:border-box}   /* #337: 4.25:1, was .55 (2.49:1, under the 3:1 icons need) */
 .pencil.second{right:34px} .pencil.third{right:60px}
 .cimg{margin:10px 0;display:block} .cimg img{display:block;max-width:min(100%,560px);max-height:360px;border:1px solid var(--line);border-radius:var(--r-md)} .cimg figcaption{font-size:var(--fs-xs);color:var(--muted);margin-top:4px}
 .rted .cimg{position:relative;width:fit-content;max-width:100%;padding:4px;border-radius:var(--r-md);outline:1px dashed var(--line);outline-offset:2px} .rted .cimg figcaption{min-height:18px;outline:none;cursor:text;border-bottom:1px dashed var(--line)} .rted .cimg figcaption:empty::before{content:"Add a caption";color:var(--faint)}
@@ -941,7 +941,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .tree .n{margin-left:auto;color:var(--muted);font-size:var(--fs-xs);font-weight:400} .tree .chev{width:12px;flex:none;color:var(--muted)}
 .ftype{display:inline-block;min-width:36px;text-align:center;font-size:var(--fs-xs);font-weight:500;border-radius:var(--r-sm);padding:0 4px;margin-right:8px;background:var(--sunk);color:var(--muted)}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}
-.srow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.srow{display:grid;grid-template-columns:minmax(min(220px,100%),1fr) minmax(0,auto);gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}
 .swatch{display:inline-flex;gap:4px;vertical-align:middle;margin-right:8px} .swatch i{width:14px;height:14px;border-radius:50%;border:1px solid var(--line)}
 .srow:first-of-type{border-top:0} .srow small{display:block;color:var(--muted);font-size:var(--fs-xs)}
 .srow input[type=text],.srow input[type=number],.srow select{min-width:110px}
@@ -1510,7 +1510,7 @@ ol.bl>li.vipl .vipend{display:flex;gap:6px;align-items:flex-start;flex:none}
 /* BL-91: Flow */
 .flowcard{margin-top:16px} .flowcard h2{margin-bottom:4px} .flsum{margin:0 0 12px;color:var(--muted)}
 .flgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px 24px} .flc{margin:0} .flc figcaption{font-size:var(--fs-sm);font-weight:500;margin-bottom:2px} .flc svg{width:100%;height:auto;display:block}
-.fl-ax{stroke:var(--line);stroke-width:1} .fl-t{fill:var(--ink);font:var(--fs-2xs) var(--font)} .fl-m{fill:var(--muted);font:var(--fs-2xs) var(--font)} .fl-on{fill:var(--accent-ink)}
+.fl-ax{stroke:var(--line);stroke-width:1} .fl-t{fill:var(--ink);font:var(--fs-xs) var(--font)} .fl-m{fill:var(--muted);font:var(--fs-xs) var(--font)}   /* #337: chart text 12px, was 10px */ .fl-on{fill:var(--accent-ink)}
 .fl-hp{fill:var(--surface);opacity:.7} .fl-op,.fl-a0,.fl-a1,.fl-pM{fill:var(--accent)} .fl-cl,.fl-a2,.fl-pH{fill:var(--warn)} .fl-od,.fl-a3,.fl-pU{fill:var(--bad)} .fl-pL{fill:var(--muted)}
 .flfoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px;margin-top:12px;font-size:var(--fs-sm)} .flfoot b{font-weight:500}
 /* BL-90: Dependencies */
@@ -2021,6 +2021,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 #actTypes{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%} #actTypes .vchip{display:inline-flex;align-items:center;gap:4px} #actTypes .vchip svg{width:14px;height:14px}
 .acticon{display:inline-flex;vertical-align:-3px;margin-right:6px;color:var(--muted)} .acticon svg{width:16px;height:16px}
 #actTbl th.actck,#actTbl td.actck{width:30px;padding-right:0} #actTbl td.actck input{vertical-align:middle;cursor:pointer} #actTbl td.actck input:disabled{cursor:default;opacity:.4}
+#actTbl th:nth-child(4),#actTbl td:nth-child(4){white-space:nowrap}   /* #337: "Rejected in review" stays on one line at 900px (rows 49px, were 57px) */
 #actTbl tr.undone td.actchg{text-decoration:line-through;color:var(--muted)} .actundone{font-style:italic}
 .actvh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #actDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(580px,92vw);background:var(--surface);color:var(--ink)}
@@ -2383,6 +2384,7 @@ svg .flk text{text-decoration:underline dotted}
 .mv-ib:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .mv-hidenote{font-size:var(--fs-xs);color:var(--ink);background:var(--accent-soft);border-radius:var(--r-md);padding:4px 10px;margin:0 0 8px}
 .mv-banner{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:var(--r-md);padding:10px 14px;margin:0 0 12px;font-size:var(--fs-sm)}
+.mv-none{margin:6px 0 14px;color:var(--muted);max-width:900px}
 .mv-answer{font-size:var(--fs-lg);margin:6px 0 14px;max-width:900px} .mv-answer b{font-weight:600}
 .mv-cap{color:var(--muted);font-size:var(--fs-xs);margin:0 0 10px}
 .mv-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-md);height:32px;padding:0 12px;cursor:pointer;font:inherit;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px}
@@ -4151,7 +4153,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
-#peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
+#peopleTbl td.num a.cntl{text-decoration:none;min-width:24px;text-align:center} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
 /* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
@@ -4318,6 +4320,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.num .late{color:var(--bad);font-weight:600}
 #v-people .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;white-space:normal}
 #v-people .plnone{padding:16px}
+/* #337: People fits its box (Overdue, the sort column, was off screen at 900px): cells wrap, an email breaks anywhere, the row's
+   buttons wrap under each other, and the counts keep a narrow column */
+#v-people #peopleTbl table{width:100%}
+#v-people #peopleTbl td.title,#v-people #peopleTbl .pj a{white-space:normal}
+#v-people #peopleTbl td.title{min-width:140px}
+#v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
+#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:anywhere}
+#v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
+#v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
+#v-people #peopleTbl td.mgract>*{vertical-align:middle}
+@media (max-width:1100px){ #v-people #peopleTbl :is(th,td):nth-child(2){display:none} }   /* the email is in the person's record; the room goes to the counts */
 
 /* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
 .tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
@@ -6421,6 +6434,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvGet: () => mvGet,
     mvMismatch: () => mvMismatch,
     mvMovement: () => mvMovement,
+    mvNoneMsg: () => mvNoneMsg,
+    mvNoneShown: () => mvNoneShown,
     mvOf: () => mvOf,
     mvOpen: () => mvOpen,
     mvOpenPage: () => mvOpenPage,
@@ -44904,6 +44919,14 @@ system/scripts/run launch.py agent ${what}`;
   function mvVis(code, cli, move) {
     return mvAll(code).filter((m5) => !cli || move || m5.cvis);
   }
+  function mvNoneShown(code, cli) {
+    const n4 = mvAll(code).length;
+    return !!(cli && n4 && !mvVis(code, true, false).length);
+  }
+  function mvNoneMsg(code, add) {
+    const n4 = mvAll(code).length;
+    return `<p class="mv-none">${n4 === 1 ? "The milestone is" : `None of the ${n4} milestones are`} shown to the client yet. Switch to Internal view to see ${n4 === 1 ? "it" : "them"}.${add ? ` <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add milestone</button>` : ""}</p>`;
+  }
   function mvOpen(code, cli, move) {
     return mvVis(code, cli, move).filter((m5) => m5.state !== "achieved").sort((a5, b5) => (a5.agr || a5.fc || "9").localeCompare(b5.agr || b5.fc || "9"));
   }
@@ -45066,7 +45089,7 @@ system/scripts/run launch.py agent ${what}`;
     return `<div class="${mvCardCls(cli)} mv-compact" id="mvCard"><div class="mv-head"><h2>Milestones</h2>${mvPill(cli)}<span class="sp"></span>
     <button type="button" class="mv-ib" id="mvSwap" data-mvact="aud" aria-pressed="${cli}" aria-label="${cli ? "Switch to internal view" : "Switch to client view"}" data-tip="${cli ? "Switch to internal view" : "Switch to client view"}">${ic("swap", { bare: true })}</button>
     <button type="button" class="mv-ib" id="mvPencil" data-mvpage="${code}" aria-label="Open milestones: Plan and Movement" data-tip="Open milestones: Plan and Movement">${ic("pencil", { bare: true })}</button></div>
-    ${any ? mvPlan(code, cli, "card") : `<div class="mv-empty">No milestones yet. <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add a milestone</button></div>`}</div>`;
+    ${mvNoneShown(code, cli) ? mvNoneMsg(code, true) : any ? mvPlan(code, cli, "card") : `<div class="mv-empty">No milestones yet. <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add a milestone</button></div>`}</div>`;
   }
   function mvAnswer(code, list, cli) {
     const done = mvVis(code, cli, false).length - list.length, late = list.filter((m5) => m5.state === "overdue"), end = list[list.length - 1];
@@ -45094,7 +45117,7 @@ system/scripts/run launch.py agent ${what}`;
     else {
       const list = mvOpen(code, cli, false), any = mvAll(code).length;
       h5 += `<div class="${mvCardCls(cli)}" id="mvPlanCard"><div class="mv-head"><h2>Plan</h2>${mvPill(cli)}</div>${cli ? "" : '<div class="mv-banner">Internal view includes internal-only milestones and a note where a state differs from what the dates suggest. Switch to Client view to see what a client sees.</div>'}
-      ${any ? `<p class="mv-answer">${mvAnswer(code, list, cli)}</p><p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>${mvPlan(code, cli, "page")}` : `<div class="mv-empty">No milestones yet for ${esc(p6.name)}. <button type="button" class="mv-btn sm" data-mvadd="1">${ic("plus")}Add milestone</button></div>`}</div>`;
+      ${mvNoneShown(code, cli) ? mvNoneMsg(code) : any ? `<p class="mv-answer">${mvAnswer(code, list, cli)}</p><p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>${mvPlan(code, cli, "page")}` : `<div class="mv-empty">No milestones yet for ${esc(p6.name)}. <button type="button" class="mv-btn sm" data-mvadd="1">${ic("plus")}Add milestone</button></div>`}</div>`;
     }
     putHTML(el2, html`${raw(h5)}</div>`);
     mvBindScroll(el2);
