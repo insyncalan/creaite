@@ -29,6 +29,8 @@
 <div class="chs" id="chSub">
 <span class="dot" aria-hidden="true">
 </span>Claude, working in your creaite folder</div>
+<label class="chcont" id="chContL" hidden="">
+<input type="checkbox" id="chCont"> Continue this chat (keeps the whole thread: slower and costs more)</label>
 <div class="chq" id="chQuick">
 <button class="mini" data-q="sweep mail">Check mail and Teams</button>
 <button class="mini" data-q="process new minutes">Process minutes</button>
@@ -48,6 +50,14 @@
 </div>
 </div>
 <button type="button" class="btn primary chjump" id="chJump" hidden="">↓ New activity</button>
+</div>
+<div class="chlong" id="chLong" role="region" aria-label="Long chat" hidden="">
+<span id="chLongText">
+</span>
+<span class="chlongact">
+<button type="button" class="mini" id="chLongGo">Continue fresh with a summary</button>
+<button type="button" class="mini" id="chLongNo">Not now</button>
+</span>
 </div>
 <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden="">
 </div>

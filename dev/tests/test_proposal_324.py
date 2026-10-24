@@ -1,5 +1,5 @@
 """The guarded proposal for #324, #326 and #332 (dev/proposals/324/live_server.diff) applies, forwards and back, to live_server.py as it
-is now and with the 2.6.2 chain's live_server.py diffs applied first, in the chain's order (simulated on a throwaway copy of the file,
+is now and with the live_server.py diffs listed before it in the 2.6.3 chain applied first, in the chain's order (simulated on a throwaway copy of the file,
 as dev/tests/guarded_chain.py simulates a chain commit; nothing in this tree is touched). It is skipped once the tree already has it
 (the proposal has landed). It must not add a line over 140 characters, and it must touch only live_server.py.
 
@@ -16,7 +16,7 @@ REPO = Path(__file__).resolve().parents[2]
 DIFF = REPO / "dev/proposals/324/live_server.diff"
 LIVE = REPO / "system/scripts/live_server.py"
 LANDED = "minutes_destination" in LIVE.read_text(encoding="utf-8")
-CHAIN = REPO / "dev/proposals/GUARDED-2.6.2.chain"
+CHAIN = REPO / "dev/proposals/GUARDED-2.6.3.chain"       # the 2.6.2 chain is already applied in main's live_server.py; the diffs before this one in 2.6.3's are not
 
 
 def git(d, *a):
@@ -33,6 +33,8 @@ class Proposal324(unittest.TestCase):
         if with_chain:
             for line in CHAIN.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
+                if line == "dev/proposals/324/live_server.diff":
+                    break
                 if line and not line.startswith("#") and "live_server" in line:
                     r = git(d, "apply", str(REPO / line))
                     self.assertEqual(r.returncode, 0, f"{line}: {r.stderr}")
