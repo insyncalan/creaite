@@ -2520,7 +2520,7 @@ def prep_match(title, projects, remembered):
     hits = project_hits(title, projects)
     if remembered.get(s):
         coded = {c for c in {p["code"] for p in projects} if re.search(rf"(?<![A-Za-z0-9]){c}(?![A-Za-z0-9])", title or "")}
-        if coded and remembered[s] not in coded:       # #328: a code in the title beats the series Alan chose before
+        if coded and remembered[s] != "_portfolio" and remembered[s] not in coded:       # #328: a code in the title beats the series Alan chose before
             return None, "unsure"
         return remembered[s], "remembered"
     if "portfolio" in (title or "").lower() or len(hits) > 1:
