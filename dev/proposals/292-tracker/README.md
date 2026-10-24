@@ -1,7 +1,31 @@
 # #292 plain words in `tracker.py`: the exact strings (README first, no diff yet)
 
-Status: for a check by Jarvis before `tracker.diff` is written. Nothing here changes code. `tracker.py` is guarded, so the change will be
-one diff, Full review.
+Status: written (`tracker.diff`, `live_server.diff`), after Jarvis's decisions: the save-id line `Apply N:`, `Held in Review, not applied`, the
+usage line and the "Schema changed ... run tracker.py migrate" line all STAY. Only rows no other code reads are changed. Two guarded files,
+one diff each, Full review. Chain order: 345, 346, 334, line-reach, then `tracker.diff`, then `live_server.diff` (checked on clean main
+in that order and reversed, and in other orders: the same tree each time).
+
+## Final table: changed and left
+
+Changed (36 lines of `tracker.py`; one line of `live_server.py`): every row marked "wording" in the table below whose words no
+page code, `review.py`, `claims.py`, `build_dashboard.py`, Help or skill reads, and that no golden file pins. Checked by grep per row at
+write time: the only hits outside `tracker.py` were a comment in `itemLink.js` and the same sentence in `live_server.py:1407`
+(changed in `live_server.diff`, so the page's "Nothing to save" and `test_hold_peek` agree). Also changed, the two returned (not raised)
+copies of "the file changed since it was staged" (lines 1614 and 2784), so the sentence reads the same everywhere.
+
+| Left for 2.6.5 | Why | What must move with it |
+|---|---|---|
+| 825 unknown fields (`. Valid:`) | meaning and shape change; `build_dashboard.py:828` cuts at `. Valid:` | that reader, same step |
+| 891 conflict reason (`after this proposal was made`) | pinned in `pinned/conflict.json` (4 places); stored in the waiting files | re-record the pin, deliberately |
+| 1675 / 2013 `write: ... since this proposal was made` | read by `core/server.js` applyWords | the page reader |
+| 2467 guard folder text | second raise of the same words in `live_server.py:5396`, 2 tests | both guarded files |
+| 2866 `Nothing applied: every decided item is held` | pinned in 3 goldens | re-record the pins |
+| 2939 / 3084 `Held in Review, not applied` | decision: stays; read by review.js, core/server.js, 38 tests | -- |
+| 3121 / 5001 `Apply stopped` (and the recode line) | read by core/server.js, findUpdates.js, Help, ~10 tests | the page reader |
+| 3317 `Apply failed` | read by core/server.js, test_refused_apply_words | the page reader |
+| 3337 `Apply N: written ...` | decision: stays; read by review.py:2608, live_server.py:8401, say.js, review.js, minutes.js | -- |
+| 3450 `Undid apply N` | pinned in 17 goldens and read in 6 tests | re-record the pins |
+| 3737 usage line, 3985 `Schema changed` | decision: stay | -- |
 
 The quoted "before" strings are the engine's own words and so contain the words the plain-words rule bans; that is the point of the
 table. Everything else in this note avoids them.
@@ -115,7 +139,10 @@ different sentence with the same words; each hit is checked when the diff is wri
 - `test_plain_words` (baseline down by the number changed), `check.py`, `test_refused_apply_words`, `test_save_not_blocked`,
   `test_propose`, `test_schema_sprint5`, `test_recode`, `test_held_*`, `test_minutes_*` on a scratch tree.
 
-## Waiting for
+## Checked
 
-Jarvis's check of this table, and a decision on: the finishing line (3337), the held lines (2939, 3084), and the two typed-command lines
-(3737, 3985).
+`dev/tests/test_tracker_words_292.py` (works with or without the diffs in the tree): every changed sentence is the new one and the old one
+is gone; every sentence in the left column is untouched; the command line says "Nothing to save", "is not in your project record" and still
+prints `Apply 1: written 1, filed 0, rejected 0`; a mutant puts the old words back and the matching check goes red. Tests that asserted
+the old text now accept both (a normalising `.replace` or a shorter fixed part), so the suite is green with and without the diffs;
+`test_hold_peek`, `test_refused_apply_words` and `test_minutes_by_others_filing` already expect the new "Nothing to save" on v264-line.

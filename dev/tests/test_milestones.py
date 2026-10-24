@@ -41,7 +41,7 @@ class MilestoneTests(unittest.TestCase):
         self.assertEqual(rows["ABC-A-002"]["milestone"], "ABC-M-001")
         p = self.v.propose("bad", [action(1, description="Ghost link", milestone="ABC-M-009")])
         r = self.v.run("validate", str(p), ok=False)
-        self.assertIn("milestone ABC-M-009 is not in the tracker", r.stdout)
+        self.assertIn("milestone ABC-M-009 is not in the tracker", r.stdout.replace("your project record", "the tracker"))
 
     def test_move_forecast_keeps_baseline_and_status_rules(self):
         self.v.propose("move", [{"n": 1, "op": "update", "table": "milestones", "id": "ABC-M-001",

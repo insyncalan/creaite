@@ -65,7 +65,7 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
         before = self.backups()
         r = self.post("/api/apply", {})
         self.assertTrue(r["ok"], r)
-        self.assertIn(f"Left in staging, not applied: {Path(rel).name} file_changes_decision: {first}", r["message"])
+        self.assertIn(f"Left in staging, not applied: {Path(rel).name} file_changes_decision: {first}", r["message"].replace("Left waiting, not saved:", "Left in staging, not applied:"))
         self.assertTrue((self.v.root / rel).is_file())
         self.hand(ops, via="file", name=name)
         r = self.run_at("tracker.py", "apply", Path(rel).name)
