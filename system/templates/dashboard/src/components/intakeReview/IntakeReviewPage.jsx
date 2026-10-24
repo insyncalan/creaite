@@ -12,7 +12,7 @@
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
-import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irNextJob, irEsc, irFiltered, irIsFolded, irStateCounts } from "../../core/irFold.js";
+import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irNextJob, irEsc, irFiltered, irIsFolded, irSplitTail, irStateCounts } from "../../core/irFold.js";
 import { D, days, fd, S, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irSetShown, irTickedShown, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
@@ -20,7 +20,7 @@ import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, i
 import { IrIcon } from "./icons.js";
 import { irAsideMany } from "./actions.js";
 import { irMenuItems, irTargets } from "./selection.js";
-import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
+import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes, irTailFolded } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
 import { dayList, goDay, sweepDueShown } from "../../today.js";
@@ -185,7 +185,8 @@ function IntakeReviewView() {
   const found = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
   const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };     /* #323: Show */
   const list = irFiltered(model, irStage.value);
-  irSetShown((view === "list" ? list : model.meetings).map((/** @type {any} */ m) => m.id));       /* #323: ticked rows a filter hides are not acted on */
+  const seen = (view === "list" ? list : model.meetings), hiddenTail = irTailFolded() ? irSplitTail(seen).tail : [];       /* #340: a folded waiting row is not shown, so a tick on it is not acted on */
+  irSetShown(seen.filter((/** @type {any} */ m) => !hiddenTail.includes(m)).map((/** @type {any} */ m) => m.id));       /* #323: ticked rows a filter hides are not acted on */
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
