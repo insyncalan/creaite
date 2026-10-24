@@ -43,6 +43,14 @@ class Source(unittest.TestCase):
         self.assertEqual(re.findall(r"[\w.+-]+@[\w-]+\.\w+", t), [])
 
 
+def _claim(self, name):
+    """The row is yours ("this is me", #312 M2), as the page remembers it: the name in lower case, in this browser only."""
+    self.b.eval(f"localStorage.setItem('creaite-profile-claimed', JSON.stringify([{' '.join(name.lower().split())!r}]))")
+
+
+Base.claim = _claim
+
+
 class Card(Base):
     shared_server = False
 
@@ -117,6 +125,7 @@ class Card(Base):
         self.assertNotIn("sara@example.com", json.dumps(cfg), "which person is you stays a name on this computer")
 
     def test_it_shows_the_register_entry_for_you(self):
+        self.claim("Sara Example")
         self.open_card("Sara Example")
         b = self.b
         self.assertEqual(b.eval("document.querySelector('#pfName').value"), "Sara Example")
@@ -195,6 +204,7 @@ class Card(Base):
 
     def test_an_alias_is_you_so_no_second_row_is_made(self):                          # #312 review 2
         b = self.b
+        self.claim("SE")
         self.open_card("SE")
         self.assertEqual(b.eval("profileEntry().name"), "Sara Example")
         self.assertEqual(b.eval("profileDetails().role"), "Delivery lead")
@@ -250,7 +260,24 @@ class FirstRun(Base):
         b.eval("go('settings','profile')")
         b.wait("!!document.querySelector('#profileCard')", 20)
 
+    def test_a_colleague_with_your_name_is_not_shown_as_you_until_you_say_so(self):        # #348
+        b = self.b
+        b.eval("localStorage.removeItem('creaite-profile-claimed')")
+        Card.open_card(self, "Sara Example")                            # a colleague's row, never claimed
+        for sel in ("#pfEmail", "#pfOrg", "#pfRole", "#pfAliases"):
+            self.assertEqual(b.eval(f"document.querySelector({sel!r}).textContent.trim()"), "Not set", sel)
+        self.assertNotIn("example.com", b.eval("document.getElementById('profileCard').textContent"))
+        self.assertEqual(b.eval("document.querySelector('#pfEdit').textContent.trim()"), "Add my details")
+        self.assertEqual(b.eval("profileDetails().email"), "")
+        self.assertFalse(b.eval("profileDone()"))
+        self.assertTrue(b.eval("profileQuestionDue()") or b.eval("!!store.get('creaite-profile-asked',false)"))
+        self.claim("Sara Example")                                      # "this is me": now the row is shown
+        b.eval("profileRedraw()")
+        self.assertIn("@", b.eval("document.querySelector('#pfEmail').textContent"))
+        self.assertEqual(b.eval("document.querySelector('#pfEdit').textContent.trim()"), "Edit my details")
+
     def test_it_is_not_asked_when_the_details_are_in(self):
+        self.claim("Sara Example")
         self.b.eval("S.me='Sara Example'; try{localStorage.removeItem('creaite-profile-asked')}catch(e){}")
         self.assertTrue(self.b.eval("profileDone()"))
         self.assertFalse(self.b.eval("profileQuestionDue()"))

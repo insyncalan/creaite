@@ -6845,6 +6845,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     profileDone: () => profileDone,
     profileEdit: () => profileEdit,
     profileEntry: () => profileEntry,
+    profileMine: () => profileMine,
     profileQuestionDue: () => profileQuestionDue,
     profileQuestionHtml: () => profileQuestionHtml,
     profileRedraw: () => profileRedraw,
@@ -57848,8 +57849,12 @@ ${pre}**Current state title:** ${title}`);
     if (!me2) return null;
     return pFindOrAlias(shared.REG, me2) || null;
   }
-  function profileDetails() {
+  function profileMine() {
     const p6 = profileEntry();
+    return p6 && claimed(myName()) ? p6 : null;
+  }
+  function profileDetails() {
+    const p6 = profileMine();
     return { name: myName(), email: p6 ? String(p6.email || "") : "", aliases: p6 ? p6.aliases || [] : [], org: p6 ? p6.org || "" : "", role: p6 ? p6.role || "" : "" };
   }
   var profileDone = () => {
@@ -57897,6 +57902,7 @@ ${pre}**Current state title:** ${title}`);
     }
     const p6 = profileEntry();
     if (p6 && !claimed(name) && !confirm(`“${p6.name}” is already in the people register${p6.email ? ` (${p6.email})` : ""}. Is that row you? Editing it changes it for everyone who uses this register.`)) return false;
+    if (p6 && !claimed(name)) claim(name);
     const res = await askPerson(p6 ? { edit: true, person: p6 } : { details: true, person: pBlank(name) });
     if (!res || !res.person) return false;
     const { name: _n2, ...f5 } = res.person;
@@ -57918,7 +57924,7 @@ ${pre}**Current state title:** ${title}`);
     return `<div class="card" id="profileCard" data-sec="profile"><h2>Your profile</h2>
    <div class="srow"><div><span id="pfNameLab">Your name</span><small>Which person in the people register is you</small></div><div><input type="text" id="pfName" aria-labelledby="pfNameLab" value="${esc(S.meSet === false ? "" : pCell(String(S.me || "").trim()))}" autocomplete="off"> <button type="button" class="btn" id="pfNameSave">Save name</button></div></div>
    ${line("Email", d5.email, "pfEmail")}${line("Other ways people write your name", d5.aliases.join(", "), "pfAliases")}${line("Organisation", d5.org, "pfOrg")}${line("Role", d5.role, "pfRole")}
-   <div class="srow"><div><span id="pfDetailsLab">Details</span><small>Saved in the people register, like anyone else's, and you can undo a change</small></div><div><button type="button" class="btn primary" id="pfEdit" ${d5.name ? "" : "disabled"}>${profileEntry() ? "Edit my details" : "Add my details"}</button></div></div>
+   <div class="srow"><div><span id="pfDetailsLab">Details</span><small>Saved in the people register, like anyone else's, and you can undo a change</small></div><div><button type="button" class="btn primary" id="pfEdit" ${d5.name ? "" : "disabled"}>${profileMine() ? "Edit my details" : "Add my details"}</button></div></div>
    <p class="sub" id="pfNote">Your email is a label only. creaite doesn't check it, and it doesn't give you or anyone else access to anything. Which person is you is kept in this computer's settings, not in the shared register.</p></div>`;
   }
   function profileRedraw() {

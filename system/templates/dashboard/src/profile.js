@@ -39,9 +39,14 @@ export function profileEntry() {
   const me = myName(); if (!me) return null;
   return pFindOrAlias(shared.REG, me) || null;
 }
-/** The details shown: what the register holds for you (empty strings when it holds nothing). */
+/** #348: your entry only once you have said it is yours ("this is me", #312 M2). A colleague whose name matches yours is not you:
+    nothing of theirs (email, organisation, role) is shown as yours, nor counted as your details being in. null otherwise. */
+export function profileMine() {
+  const p = profileEntry(); return p && claimed(myName()) ? p : null;
+}
+/** The details shown: what the register holds for you, once the row is yours (empty strings when it holds nothing or isn't yours yet). */
 export function profileDetails() {
-  const p = profileEntry();
+  const p = profileMine();
   return { name: myName(), email: p ? String(p.email || "") : "", aliases: p ? (p.aliases || []) : [], org: p ? p.org || "" : "", role: p ? p.role || "" : "" };
 }
 /** Done when you have a name and an email in your entry. */
@@ -76,6 +81,7 @@ export async function profileEdit() {
   const p = profileEntry();
   /* #312 M2: a row that is already in the register, and that you haven't said is yours, may be a colleague's: ask first */
   if (p && !claimed(name) && !confirm(`“${p.name}” is already in the people register${p.email ? ` (${p.email})` : ""}. Is that row you? Editing it changes it for everyone who uses this register.`)) return false;
+  if (p && !claimed(name)) claim(name);                       /* said yes: it is yours from now on, and is not asked again */
   const res = await askPerson(p ? { edit: true, person: p } : { details: true, person: pBlank(name) });
   if (!res || !res.person) return false;
   const { name: _n, ...f } = res.person;
@@ -101,7 +107,7 @@ export function profileCardHtml() {
   return `<div class="card" id="profileCard" data-sec="profile"><h2>Your profile</h2>
    <div class="srow"><div><span id="pfNameLab">Your name</span><small>Which person in the people register is you</small></div><div><input type="text" id="pfName" aria-labelledby="pfNameLab" value="${esc(S.meSet === false ? "" : pCell(String(S.me || "").trim()))}" autocomplete="off"> <button type="button" class="btn" id="pfNameSave">Save name</button></div></div>
    ${line("Email", d.email, "pfEmail")}${line("Other ways people write your name", d.aliases.join(", "), "pfAliases")}${line("Organisation", d.org, "pfOrg")}${line("Role", d.role, "pfRole")}
-   <div class="srow"><div><span id="pfDetailsLab">Details</span><small>Saved in the people register, like anyone else's, and you can undo a change</small></div><div><button type="button" class="btn primary" id="pfEdit" ${d.name ? "" : "disabled"}>${profileEntry() ? "Edit my details" : "Add my details"}</button></div></div>
+   <div class="srow"><div><span id="pfDetailsLab">Details</span><small>Saved in the people register, like anyone else's, and you can undo a change</small></div><div><button type="button" class="btn primary" id="pfEdit" ${d.name ? "" : "disabled"}>${profileMine() ? "Edit my details" : "Add my details"}</button></div></div>
    <p class="sub" id="pfNote">Your email is a label only. creaite doesn't check it, and it doesn't give you or anyone else access to anything. Which person is you is kept in this computer's settings, not in the shared register.</p></div>`;
 }
 /** Draw the card again, in place. */
