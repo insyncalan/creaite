@@ -146,3 +146,11 @@ is gone; every sentence in the left column is untouched; the command line says "
 prints `Apply 1: written 1, filed 0, rejected 0`; a mutant puts the old words back and the matching check goes red. Tests that asserted
 the old text now accept both (a normalising `.replace` or a shorter fixed part), so the suite is green with and without the diffs;
 `test_hold_peek`, `test_refused_apply_words` and `test_minutes_by_others_filing` already expect the new "Nothing to save" on v264-line.
+
+## The ratchet's record
+
+`plain_words_baseline.diff` removes the strings this change fixed from `dev/tests/plain_words_baseline.json` (160 lines, against the
+v264-line baseline). It goes in with the chain at the cut, in the same step as the two diffs: `test_plain_words` fails ("GONE ... take it out of
+the baseline") the moment the diffs are in and the baseline is not, and fails the other way before. Made with
+`CREAITE_UPDATE_PLAIN_BASELINE=1 python3 dev/tests/test_plain_words.py` on a tree with the whole chain in; checked there: the test passes.
+
