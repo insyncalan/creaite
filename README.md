@@ -8,7 +8,6 @@
   <img alt="macOS" src="https://img.shields.io/badge/macOS-only-18181B?style=flat-square&logo=apple&logoColor=white">
   <img alt="Local-first" src="https://img.shields.io/badge/local--first-your%20data%20stays%20local-F2B544?style=flat-square&labelColor=18181B">
   <img alt="Runs on Claude and Microsoft 365" src="https://img.shields.io/badge/runs%20on-Claude%20%2B%20Microsoft%20365-0B6E7F?style=flat-square&labelColor=18181B">
-  <img alt="Early access" src="https://img.shields.io/badge/early%20access-pilot%20users%20wanted-18181B?style=flat-square">
 </p>
 
 ---
