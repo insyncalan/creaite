@@ -128,6 +128,8 @@ class Names(Dest):
         src = (REPO / "system/templates/dashboard/src/stores/minutesFiling.js").read_text(encoding="utf-8")
         self.assertIn("keepFingerprints(a.file, r.fps);", src)
         self.assertIn("r.fp = fps[String(r.ref)]", src)
+        mins = (REPO / "system/templates/dashboard/src/stores/minutes.js").read_text(encoding="utf-8")
+        self.assertIn("renamedFp(v.proposal, n) || (rv && rv.fp)", mins)      # Approve minutes takes the new ones over the plan drawn before the name changed
 
     def test_a_renamed_meeting_still_files_and_the_items_cite_the_new_name(self):
         self.lib(f"print(json.dumps(md.set_name({self.name!r}, 'ABC', '2026-10-14 Steering (pm)')))")

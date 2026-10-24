@@ -70,11 +70,20 @@ export async function confirmFiling() {
   a.resolve(true);
 }
 
+/** The items' fingerprints after a new name, by file: Approve minutes takes them over the minutes view's plan, which was drawn before
+    the name changed (#345). @type {Map<string, Record<string, string>>} */
+const renamed = new Map();
+/** One item's fingerprint after a new name, or "" (no new name for this file). @param {string} file @param {number} n */
+export const renamedFp = (file, n) => ((renamed.get(file) || {})[String(n)]) || "";
+/** Done with a file's new-name fingerprints (an approve was tried: the view is drawn again from the server). @param {string} file */
+export const forgetRenamed = file => { renamed.delete(file); };
+
 /** 2.6.4 (#346): a new name changes what each of the meeting's items says about where it came from, so the server sends their
     fingerprints again and the open Review rows take them (otherwise the next decision on one would be declined until a reload).
     @param {string} file @param {Record<string, string>|undefined} fps by item number */
 export function keepFingerprints(file, fps) {
   if (!fps) return;
+  renamed.set(file, fps);
   for (const r of REV) if (r.file === file && Object.prototype.hasOwnProperty.call(fps, String(r.ref))) r.fp = fps[String(r.ref)];
 }
 

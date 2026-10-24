@@ -5911,6 +5911,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     fmSet: () => fmSet,
+    forgetRenamed: () => forgetRenamed,
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
@@ -6960,6 +6961,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renamePerson: () => renamePerson,
     renameProject: () => renameProject,
     renameView: () => renameView,
+    renamedFp: () => renamedFp,
     renderActivity: () => renderActivity,
     renderApplied: () => renderApplied,
     renderAskChanges: () => renderAskChanges,
@@ -32742,10 +32744,10 @@ ${s5}`;
         if (await openNote(p6)) onAddressChange();
       }
     );
-    const renamed = noteRenamed.value;
+    const renamed2 = noteRenamed.value;
     h2(() => {
-      if (renamed) onAddressChange();
-    }, [renamed]);
+      if (renamed2) onAddressChange();
+    }, [renamed2]);
     return /* @__PURE__ */ u4("div", { class: "wrapmax notespage", children: [
       /* @__PURE__ */ u4("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
         code === "_portfolio" ? /* @__PURE__ */ u4(S2, { children: [
@@ -37819,8 +37821,14 @@ system/scripts/run launch.py agent ${what}`;
     filedNote.value = { key: a5.key, items: shown2 };
     a5.resolve(true);
   }
+  var renamed = /* @__PURE__ */ new Map();
+  var renamedFp = (file, n4) => (renamed.get(file) || {})[String(n4)] || "";
+  var forgetRenamed = (file) => {
+    renamed.delete(file);
+  };
   function keepFingerprints(file, fps) {
     if (!fps) return;
+    renamed.set(file, fps);
     for (const r4 of REV) if (r4.file === file && Object.prototype.hasOwnProperty.call(fps, String(r4.ref))) r4.fp = fps[String(r4.ref)];
   }
   function noteNumbered(moved2) {
@@ -38078,10 +38086,11 @@ system/scripts/run launch.py agent ${what}`;
       {}
     );
     for (const n4 of own) {
-      const rv = (plan || []).find((i5) => i5.n === n4);
-      if (rv && rv.fp) expects[String(n4)] = rv.fp;
+      const rv = (plan || []).find((i5) => i5.n === n4), fp2 = renamedFp(v5.proposal, n4) || rv && rv.fp;
+      if (fp2) expects[String(n4)] = fp2;
     }
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own, expects, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });
+    forgetRenamed(v5.proposal);
     if (r4 && !r4.ok && REVIEW_CHANGED.test(r4.message || "")) {
       await reloadData();
       return { ok: false, message: STALE_ROW_MSG, made };
@@ -81713,6 +81722,7 @@ Next: `;
         "renamePartner",
         "renamePerson",
         "renameProject",
+        "renamedFp",
         "renderActivity",
         "renderBadge",
         "renderCockpit",

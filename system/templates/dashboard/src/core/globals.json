@@ -780,6 +780,7 @@
    "renamePartner",
    "renamePerson",
    "renameProject",
+   "renamedFp",
    "renderActivity",
    "renderBadge",
    "renderCockpit",
