@@ -46,9 +46,11 @@ let one = f.mcStep(f.mcStep(f.mcNew(), "Searching mail"), "Reading a meeting, a 
 out.isRun = [f.mcIsRun({sweep: true}), f.mcIsRun({kind: "sweep"}), f.mcIsRun({sweep: false, kind: "chat"}), f.mcIsRun(null)];
 out.stamp = ["proposed-2026-10-25-0905-sweep.json", "proposed-2026-10-25-0905-sweep-3.json", "proposed-2026-10-25-0905-dashboard.json",
   "x/proposed-2026-10-25-0905-sweep.json", "proposed-2026-10-25-0905-sweepx.json", null].map(f.mcFileStamp);
-const rows = [{file: "proposed-2026-10-25-0905-sweep.json", p: "ABC"}, {file: "proposed-2026-10-25-0905-sweep.json", p: ""},
-  {file: "proposed-2026-10-25-0906-sweep-2.json", p: null}, {file: "proposed-2026-10-25-0905-dashboard-x.json", p: ""},
-  {file: "proposed-2026-10-25-0850-sweep.json", p: ""}, {file: "proposed-2026-10-25-0920-sweep.json", p: ""}, {file: "m.docx", p: ""}];
+const N = "new", U = "update";
+const rows = [{file: "proposed-2026-10-25-0905-sweep.json", op: N, p: "ABC"}, {file: "proposed-2026-10-25-0905-sweep.json", op: N, p: ""},
+  {file: "proposed-2026-10-25-0906-sweep-2.json", op: N, p: null}, {file: "proposed-2026-10-25-0905-dashboard-x.json", op: N, p: ""},
+  {file: "proposed-2026-10-25-0850-sweep.json", op: N, p: ""}, {file: "proposed-2026-10-25-0920-sweep.json", op: N, p: ""}, {file: "m.docx", op: N, p: ""},
+  {file: "proposed-2026-10-25-0905-sweep.json", op: U, p: ""}, {file: "proposed-2026-10-25-0906-sweep-2.json", op: U, p: "ABC"}, {file: "proposed-2026-10-25-0905-sweep.json", p: ""}];
 out.found = f.mcFound(rows, "2026-10-25T09:04:10", "2026-10-25T09:10:59"); out.foundNone = f.mcFound([], "2026-10-25T09:04:10", "2026-10-25T09:10:59");
 const two = f.mcStep(f.mcStep(f.mcNew(), "Searching mail"), "Reading Teams channels");
 out.ends = [f.mcEnd("done", two, {n: 7, need: 4}), f.mcEnd("done", two, {n: 1, need: 1}), f.mcEnd("done", two, {n: 0, need: 0}), f.mcEnd("done", two, null),
@@ -126,7 +128,7 @@ class Classifier(unittest.TestCase):
 
     def test_found_n_counts_only_the_checks_own_files_inside_the_window(self):
         self.assertEqual(self.o["stamp"], ["2026-10-25T09:05", "2026-10-25T09:05", None, "2026-10-25T09:05", None, None])
-        self.assertEqual(self.o["found"], {"n": 3, "need": 2})    # not the dashboard row, not 08:50 or 09:20, not a docx
+        self.assertEqual(self.o["found"], {"n": 3, "need": 2})    # not the dashboard row, not 08:50 or 09:20, not a docx, and no update items
         self.assertEqual(self.o["foundNone"], {"n": 0, "need": 0})
 
     def test_the_closing_lines(self):
@@ -166,6 +168,8 @@ class Classifier(unittest.TestCase):
         broke("sweep(?:-\\d+)?\\.json$", "(?:sweep|dashboard-x)(?:-\\d+)?\\.json$", lambda o: o["found"] != self.o["found"])
         # the raw label in the steps list
         broke("return c ? String(label) : \"A creaite step\";", "return String(label);", lambda o: o["stepText"] != self.o["stepText"])
+        # update items counted as new
+        broke("|| !r || r.op !== \"new\") continue;", ") continue;", lambda o: o["found"] != self.o["found"])
         # "Found 0"
         broke("found.n ? `Finished.${looked}", "true ? `Finished.${looked}", lambda o: o["ends"][2] != self.o["ends"][2])
 

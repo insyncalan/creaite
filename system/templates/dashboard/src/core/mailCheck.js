@@ -90,16 +90,16 @@ export function mcFileStamp(file) {
 /** A local ISO time cut to its minute. @param {string} iso */
 const minute = iso => String(iso || "").slice(0, 16);
 
-/** Found N: the Review rows that are the check's own files, stamped from the minute the run started to the minute it ended.
+/** Found N: the new items among the Review rows that are the check's own files, stamped from the minute the run started to the minute it ended.
     Rows Alan made on the dashboard, or from another file, are never counted.
-    @param {{file?: string, p?: string|null}[]} rows @param {string} startedIso @param {string} endedIso
+    @param {{file?: string, op?: string, p?: string|null}[]} rows @param {string} startedIso @param {string} endedIso
     @returns {{n: number, need: number}} */
 export function mcFound(rows, startedIso, endedIso) {
   const a = minute(startedIso), b = minute(endedIso);
   let n = 0, need = 0;
   for (const r of rows || []) {
     const st = mcFileStamp(r && r.file);
-    if (!st || !a || !b || st < a || st > b) continue;
+    if (!st || !a || !b || st < a || st > b || !r || r.op !== "new") continue;   // new items only: an update to an existing item is not "new"
     n++;
     if (!r.p) need++;
   }

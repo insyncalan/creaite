@@ -73552,7 +73552,7 @@ ${d5.text}`);
     let n4 = 0, need = 0;
     for (const r4 of rows2 || []) {
       const st2 = mcFileStamp(r4 && r4.file);
-      if (!st2 || !a5 || !b5 || st2 < a5 || st2 > b5) continue;
+      if (!st2 || !a5 || !b5 || st2 < a5 || st2 > b5 || !r4 || r4.op !== "new") continue;
       n4++;
       if (!r4.p) need++;
     }
