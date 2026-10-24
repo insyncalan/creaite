@@ -7,7 +7,7 @@ For Alan's approval: the exact diff of a guarded file. Nothing is weakened; the 
 | | Before | After | Cut |
 |---|---|---|---|
 | Rules on `origin/v262-line` | 62,721 B (about 15,680 tokens) | 31,282 B (about 7,820 tokens) | 50.1% |
-| Rules after the 2.6.2 VIP/follow chain | 66,315 B (about 16,580 tokens) | 32,678 B (about 8,170 tokens) | 50.7% |
+| Rules on main 799da01c (the 2.6.2 and 2.6.3 chains in; the 2.6.4 chain does not touch the file) | 66,315 B (about 16,580 tokens) | 32,736 B (about 8,180 tokens) | 50.6% |
 
 Every run loads the rules file, so each run starts about 7,900 tokens lighter. That is the size of this lever (about 3% of a 503k ask start, as #327 says); the 60k and 150k run targets come mostly from part B (fresh sessions).
 The moved text is in the new `system/templates/creaite-reference.md` (62 KB, read by section only when a task needs it; it ships because `system/templates/` is part of the engine). Nothing is deleted from the project: the reference holds the old wording of every section I shortened, word for word.
@@ -61,3 +61,10 @@ Second review (24-10-2026): the two client-safety rules (a partner's name reache
 - The reference is only read if a run chooses to; the rules say when. Everything a run needs every time is still in the rules. If a run misses a mechanism detail it can still not do anything the code refuses.
 - The reference has the 2.6.2 wording (follow flag, Create drafts in Outlook); on a tree without the chain it describes slightly more than is built. Apply the chain first.
 - Root `CLAUDE.md` (0.7 KB) and the new-vault template (0.7 KB) are already tiny; nothing to trim there.
+
+## Fixed after the 2.6.4 review (24-10-2026)
+
+Two small things were put back in the slimmed file: "`system/` is never hidden" in the Other paths cell, and `calendar.json` again says "never join
+links or passcodes" in the staging row (it is 58 bytes longer than before; the cut is 50.6%). The retained-rules test holds both
+(a whole-sentence check and the MAPPED entry for the table's closing bar). The diff was regenerated against main 799da01c.
+

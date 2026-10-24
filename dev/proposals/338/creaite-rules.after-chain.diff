@@ -1,5 +1,5 @@
 diff --git a/system/creaite-rules.md b/system/creaite-rules.md
-index 1a24e1e..2b0a419 100644
+index 1a24e1eb..b9f094b1 100644
 --- a/system/creaite-rules.md
 +++ b/system/creaite-rules.md
 @@ -1,6 +1,6 @@
@@ -52,11 +52,11 @@ index 1a24e1e..2b0a419 100644
 +| `projects/_portfolio/` | Cross-project meetings and notes, `PORTFOLIO.md`, `project-register.md` and `people-register.md` (the last two are read every run) |
 +| `projects/99 Archive/` | Archived projects (BL-09) and each engagement's archive of old reports, minutes and Steerco one-pagers (BL-03). Only `tracker.py apply` moves a folder into or out of it; ask creaite never reads, writes or moves anything there |
 +| `system/tracker.db`, `system/processed.txt` | The record (SQLite); the log of meeting files already extracted |
-+| `system/staging/` | Proposals awaiting review, drafts, ask creaite chats, the run log, `discarded/` (#280: a proposal Alan discards in Review is moved here, never deleted) and creaite's working records. Those records keep item IDs, references, counts, fingerprints, times and short gists, never message text, join links, passcodes or PINs. Exceptions, each listed in the reference: `calendar.json` keeps each invite's body as plain text (a confidential meeting keeps only its title and times, BL-98), `vip.json` a gist and Claude's own summary, never message text, and `usage-reviews.jsonl` Alan's own notes (written only by the live server, never by ask creaite) |
++| `system/staging/` | Proposals awaiting review, drafts, ask creaite chats, the run log, `discarded/` (#280: a proposal Alan discards in Review is moved here, never deleted) and creaite's working records. Those records keep item IDs, references, counts, fingerprints, times and short gists, never message text, join links, passcodes or PINs. Exceptions, each listed in the reference: `calendar.json` keeps each invite's body as plain text, never join links or passcodes (a confidential meeting keeps only its title and times, BL-98), `vip.json` a gist and Claude's own summary, never message text, and `usage-reviews.jsonl` Alan's own notes (written only by the live server, never by ask creaite) |
 +| `system/guard/` | The ask creaite run in progress and the chats that have read outside content. Written only by the live server and the guard hook; on the never list for everything else |
 +| `system/logs/` | The debug log (BL-102): item IDs, paths, counts and durations only, never the text of mail, minutes, notes or chats |
 +| `system/creaite-rules.md` | This file. Replaced by each update |
-+| Other paths | `VERSION`; `dashboard.html` (generated, never edit it by hand); `tracker-view.xlsx`; `system/scripts/` (`tracker.py` is the only database writer, `reach.py` decides what ask creaite may touch, locations come from `paths.py`; Activity › Quality is read only, internal only, never about a person); `system/templates/` (with `creaite-reference.md`); `system/branding/` (local only, out of git; logos stay in the git-ignored folder and never leave the laptop); `system/config/settings.json` (all tunable values; every change is backed up and logged); `.claude/` (must stay in the root) |
++| Other paths | `VERSION`; `dashboard.html` (generated, never edit it by hand); `tracker-view.xlsx`; `system/scripts/` (`tracker.py` is the only database writer, `reach.py` decides what ask creaite may touch, locations come from `paths.py`; Activity › Quality is read only, internal only, never about a person); `system/templates/` (with `creaite-reference.md`); `system/branding/` (local only, out of git; logos stay in the git-ignored folder and never leave the laptop); `system/config/settings.json` (all tunable values; every change is backed up and logged); `.claude/` (must stay in the root); `system/` is never hidden |
  
  ## Starting a session (creaite rule)
  

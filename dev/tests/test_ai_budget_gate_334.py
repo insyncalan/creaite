@@ -174,6 +174,25 @@ class SweepsAreNeverHeld(unittest.TestCase):
         self.assertFalse(reached)
         self.assertTrue(q["held"])
 
+    def queued_with_images(self, st, files, ls=None):
+        ls = ls or live_server
+        q = {"chat": "c-1", "items": [{"id": "1", "text": "sweep", "images": ["i-gone"]}], "held": False}
+        with mock.patch.object(ai_budget, "status", return_value=st), mock.patch.object(ls, "queue_save"), \
+                mock.patch.object(ls, "Run", side_effect=Reached), mock.patch.object(ls, "ask_image_files", return_value=files):
+            try:
+                ls.queue_start(q, mock.Mock(done=True, kind="ask", chat="c-1", session="s"))
+                return False
+            except Reached:
+                return True
+
+    def test_a_queued_sweep_whose_picture_is_gone_is_still_a_sweep(self):
+        self.assertTrue(self.queued_with_images(status(500, at_limit="stop"), []))          # the file has gone: filtered out first
+        self.assertFalse(self.queued_with_images(status(500, at_limit="stop"), ["x.png"]))  # a picture still there makes it a chat
+
+    def test_mutant_unfiltered_pictures_hold_a_queued_sweep(self):
+        ls = mutated('[i for i in first.get("images") or [] if ask_image_files(i)]', 'first.get("images")')
+        self.assertFalse(self.queued_with_images(status(500, at_limit="stop"), [], ls))
+
     def test_mutant_without_the_message_the_queue_path_holds_a_sweep(self):
         ls = mutated('"message": first.get("text"), "images": first.get("images")}', "}")
         self.assertFalse(self.queued("sweep", status(500, at_limit="stop"), ls)[1])

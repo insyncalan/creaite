@@ -18,7 +18,7 @@ Never held: a confirmed request (the answer to a question the last run asked, so
 The usage monitor's own lines (`run-usage.jsonl`): `cost_usd`, or input + output + cache read + cache create tokens, summed for lines dated in the week. The week is Monday 00:00 to Sunday 23:59, local time (the file's own clock). A stopped run counts what it cost. Counts and dates only: the module never reads a label, model, skill, name or path, and the status holds none.
 
 ## Defaults
-On, dollars, $50 a week, confirm at the limit (tokens: 50 million, cache reads included). Confirm is the issue's default and cannot lock Alan out; $50 is a first guess to be set from a few weeks of Usage.
+The budget is OFF by default: the setting's default is off, and only a real true switches it on, so nothing is held until Alan turns it on. When on: dollars, $50 a week, confirm at the limit (tokens: 50 million, cache reads included). Confirm is the issue's default and cannot lock Alan out; $50 is a first guess to be set from a few weeks of Usage.
 
 ## Failure modes
 - Clock wrong: lines dated outside this week count nothing; a clock set back counts nothing extra; a future-dated line inside the week counts.
