@@ -2,6 +2,53 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.3
+
+2.6.3 contains all of 2.6.2. The headline: Intake is easier to work through (tick several meetings, one right-click menu, Group by, nested items), the minutes can be exported as Shareable or Internal, the Word minutes carry the project name, date and attendees, and ask creaite starts each question fresh so chats stay cheap. Some older wording is still on screen in a few places; it is replaced in 2.6.4.
+
+
+### Minutes
+- **Export offers Shareable and Internal.** Export now has two groups. Shareable (for sending): Word, PDF, HTML and the follow-up email. Internal (colleagues only): the same, each marked Internal. On minutes you have not approved yet the Shareable files are greyed out, with the reason "Approve the minutes first". The Shareable files say "Sensitive items left out; check the Updates text", because the check covers the item rows, not free wording in the Updates section (see Good to know). (#330)
+- **The Word minutes match the page.** The title block shows the project name (with the client), the When line and the attendees, as the page, the PDF and the HTML already did. Shareable and Internal alike. (#331)
+- **File the minutes.** Approve minutes now asks first where they will be filed (project and folder, in words) and what they will be called; you can change the name, or cancel and nothing is filed. If the name is taken, it is numbered, for example "Title (2)", instead of stopping with an error. After approving, a note says where the minutes went, with Open file and Open folder; Approved this week has Open folder too. (#324, #326, #332)
+- **Keyboard for the minutes.** J and K move from row to row. Y keeps the row as Tracked, M as Minutes only, N drops it. E edits its words, S shows its source in the transcript, Z undoes your last Track choice (keys and clicks, in order). Keys never act while you are typing, and nothing on screen advertises them. (#302)
+
+### Intake
+- **Tick boxes and one right-click menu.** Tick several meetings, then right-click: Later, or Not needed because (with a reason), applied to all of them, with one Undo. Ticks hidden by a filter are never acted on; the bar says "n selected, m hidden" when some are. (#323)
+- **Group by and Show.** Group by None, Day, Project, Meeting state or Transcript. Show picks one meeting state, including "Waiting for the transcript". (#323)
+- **A state on each meeting, and items nested under their minutes.** Each meeting shows Waiting for the transcript, Suggestions to check or Done. Its items sit indented beneath it with a count; the row folds and unfolds with the mouse or Left and Right. (#325)
+- **The work to decide comes first.** Drafted and Approved sit above the long tail of meetings waiting for a transcript, so the first approvals are in the first screen. (#340)
+
+### Ask creaite
+- **A fresh start by default.** Each new question starts a fresh session, carrying only the last four messages of the chat as background, so long chats stop growing in cost. A "Continue this chat" tick in the panel carries on the whole thread; carrying on after Approve does so automatically. Messages queued while a run goes are always fresh. A chat that has read outside material stays marked as before. (#327)
+- **A warning when a chat gets long.** After 30 of your messages (a setting) a quiet line offers "Continue fresh with a summary": a new chat with a short summary in the box. Nothing is sent until you add your question and press Send; "Not now" hides it for that chat. (#335)
+
+### Today
+- **The "start on sign-in" question no longer shifts the page.** Its place is reserved before the answer arrives on a Mac, so the cards never jump.
+
+### Behind the scenes
+- Deciding on a suggestion from the page now always says which item it means; a page without that is told to reload and decides nothing.
+- The Outlook draft code is now on the list of files that change only with Alan's say.
+
+### Conditional: a lighter rules file (#338, only if approved)
+- Cuts the rules every run reads by about half (roughly 7,900 fewer tokens to start each run). Every "never" and every approval rule stays; the long reference moves to a file read only when needed. Not included unless Alan approves it.
+
+
+- Update from the release zip as usual.
+- Try File the minutes on one meeting, and Export Shareable on an approved one.
+- Reload any dashboard tab that was open before the update.
+
+
+- A dashboard tab left open from before the update gets a "reload the page" message instead of deciding anything. Reload it.
+- Shareable minutes: a line in the Updates section that repeats a Sensitive decision's words stays in the Shareable files unless you mark it Internal only. This is why those files say "check the Updates text". The Shareable follow-up email's summary has the same gap and shows "Draft: check before sending" on a draft.
+- Minutes approved from a Word draft, and ask creaite's own approve command, still stop on a name that is taken; only the page's Approve numbers it.
+- Search's "continue as chat" carries an answer that has not been marked as read from outside material.
+- The list of chats marked as having read outside material is never tidied; it grows by one entry per marked run.
+- The "Routine" grouping in Intake is not built yet.
+- Some messages still say "Distributed" where the page says "Shareable".
+- The usage report cannot yet split runs by fresh or continued; read the usage log by hand to compare start sizes (aim: under 150,000 tokens to start a plain question, 500,000 is the red line).
+- Not in 2.6.3: fetching transcripts as they appear, the shared-database work (paused), and the plain-words pass (2.6.4).
+
 ## creaite 2.6.2
 
 2.6.2 contains all of 2.6.1. It adds a way to put an email draft in Outlook, a short "About you" card, an Undo for set-aside minutes, a wider notes drawer, and a handful of fixes that make approving and undoing safer. Some older wording is still on screen in a few places; it is replaced in 2.6.4.
