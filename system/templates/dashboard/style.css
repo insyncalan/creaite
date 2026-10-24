@@ -811,7 +811,7 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .spark:not(.mini) i:last-child::after,.spk-kdot{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
 .spark i.cur{outline:1.5px solid var(--ink);outline-offset:1.5px}
 .spark.mini{height:18px;padding:0;margin:0;gap:0}
-.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 11px/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn::after{content:"";position:absolute;inset:-3px}   /* #337: 12px glyph, a 24px target */ .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sparkTip,.spk-key{position:fixed;z-index:var(--z-tip,200);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:10px 12px;font-size:var(--fs-sm,13px);line-height:var(--lh-snug);pointer-events:none}
 #sparkTip{width:260px} #sparkTip[hidden]{display:none} .spk-key{width:250px;pointer-events:auto} .spk-key:focus{outline:none}
 .spk-wk{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em} .spk-h{display:flex;align-items:center;gap:7px;font-weight:700;margin:2px 0} .spk-dot{width:9px;height:9px;border-radius:50%}
@@ -836,7 +836,7 @@ td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:var(--fs-x
 .kbdhint{color:var(--muted);font-size:var(--fs-xs);margin-top:8px}
 .dd{position:relative;display:inline-block}
 .ddmenu{display:none;position:absolute;top:36px;right:0;z-index:var(--z-menu);min-width:240px;max-height:360px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:6px 0}
-.card.edt{position:relative;padding-bottom:32px} .pencil{position:absolute;right:8px;bottom:6px;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:var(--r-md);line-height:0;opacity:.8}   /* #337: 4.25:1, was .55 (2.49:1, under the 3:1 icons need) */
+.card.edt{position:relative;padding-bottom:32px} .pencil{position:absolute;right:8px;bottom:6px;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:var(--r-md);line-height:0;opacity:.8;min-width:24px;min-height:24px;box-sizing:border-box}   /* #337: 4.25:1, was .55 (2.49:1, under the 3:1 icons need) */
 .pencil.second{right:34px} .pencil.third{right:60px}
 .cimg{margin:10px 0;display:block} .cimg img{display:block;max-width:min(100%,560px);max-height:360px;border:1px solid var(--line);border-radius:var(--r-md)} .cimg figcaption{font-size:var(--fs-xs);color:var(--muted);margin-top:4px}
 .rted .cimg{position:relative;width:fit-content;max-width:100%;padding:4px;border-radius:var(--r-md);outline:1px dashed var(--line);outline-offset:2px} .rted .cimg figcaption{min-height:18px;outline:none;cursor:text;border-bottom:1px dashed var(--line)} .rted .cimg figcaption:empty::before{content:"Add a caption";color:var(--faint)}
@@ -4139,7 +4139,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
-#peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
+#peopleTbl td.num a.cntl{text-decoration:none;min-width:24px;text-align:center} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
 /* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}

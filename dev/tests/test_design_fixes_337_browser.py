@@ -31,7 +31,8 @@ class DesignFixes(LiveBrowserCase):
         b.eval("go('cockpit','ABC')")
         b.wait("document.getElementById('mvCard')")
         card = b.eval("(document.querySelector('#mvCard .mv-none')||{}).textContent||''")
-        self.assertEqual(card, txt)
+        self.assertTrue(card.startswith(txt), card)      # the card also offers Add milestone
+        self.assertTrue(b.eval("!!document.querySelector('#mvCard .mv-none [data-mvadd]')"))
         # Internal view still draws the plan
         b.eval("MVAUD='int'; go('cockpit','ABC')")
         b.wait("document.getElementById('mvCard')")
@@ -42,6 +43,18 @@ class DesignFixes(LiveBrowserCase):
         b.eval("go('cockpit','ABC')")
         b.wait("document.querySelector('.card.edt .pencil')")
         self.assertGreaterEqual(float(b.eval("getComputedStyle(document.querySelector('.card.edt .pencil')).opacity")), 0.8)
+
+    def test_targets_and_chart_text(self):
+        b = self.b
+        b.eval("go('cockpit','ABC')")
+        b.wait("document.querySelector('.card.edt .pencil')")
+        small = b.eval("[...document.querySelectorAll('.card.edt .pencil')].filter(e=>e.getBoundingClientRect().width).map(e=>e.getBoundingClientRect()).filter(r=>r.width<24||r.height<24).length")
+        self.assertEqual(small, 0)
+        sizes = b.eval("[...document.querySelectorAll('svg text')].filter(e=>e.getBoundingClientRect().width).map(e=>parseFloat(getComputedStyle(e).fontSize))")
+        self.assertTrue(sizes and min(sizes) >= 12, sizes)
+        b.eval("go('people')")
+        b.wait("document.querySelector('#peopleTbl a.cntl')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#peopleTbl a.cntl')].filter(e=>e.getBoundingClientRect().width<24||e.getBoundingClientRect().height<24).length"), 0)
 
     def test_settings_tick_labels_keep_room(self):
         b = self.b
@@ -65,6 +78,20 @@ class DesignFixes(LiveBrowserCase):
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#actTbl tbody tr td:nth-child(4)')).whiteSpace"), "nowrap")
         h = b.eval("[...document.querySelectorAll('#actTbl tbody tr')].slice(0,6).map(r=>r.getBoundingClientRect().height)")
         self.assertLessEqual(max(h), 52, h)
+
+
+class DesignFixesWide(LiveBrowserCase):
+    shared_server = True
+    width, height = 1400, 900
+
+    def test_people_and_settings_do_not_overflow(self):
+        b = self.b
+        b.eval("go('people')")
+        b.wait("document.querySelector('#peopleTbl table')")
+        self.assertTrue(b.eval("(()=>{const c=document.querySelector('#peopleTbl');return c.querySelector('table').scrollWidth<=c.clientWidth+1})()"))
+        b.eval("go('settings')")
+        b.wait("document.querySelector('.setticks')")
+        self.assertGreaterEqual(b.eval("Math.min(...[...document.querySelectorAll('.setticks')].map(t=>t.closest('.srow').firstElementChild.getBoundingClientRect().width))"), 200)
 
 
 if __name__ == "__main__":
