@@ -101,7 +101,7 @@ class HoldPeek(LiveBrowserCase):
             return json.loads(urllib.request.urlopen(req, timeout=60).read())
         r = post({"hold_peek": True})                       # only the peek's change is staged: nothing to apply
         self.assertTrue(r["ok"])
-        self.assertIn("Nothing to apply", r["message"])
+        self.assertIn("Nothing to save", r["message"])
         self.assertEqual(r["held"], 1)
         self.assertEqual(len(self.peek_files()), 1)
         r = post({})                                        # the peek's own Apply: everything decided

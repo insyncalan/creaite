@@ -219,7 +219,7 @@ class Staging(PeekCase):
         self.assertEqual(self.others(), others)                                                 # the sweep's and minutes' are untouched
         self.assertNotEqual(b.eval(f"REC('actions',{id_!r}).upd"), "Chased on Friday")
         b.click("#pkApply")
-        b.wait("PKS.length===0&&/Applied 2 changes/.test(document.getElementById('snackT').textContent)", 20)
+        b.wait("PKS.length===0&&/Saved 2 changes/.test(document.getElementById('snackT').textContent)", 20)
         row = self.action(id_)
         self.assertEqual((row["priority"], row["status"]), ("Low", "Delayed"))
         self.assertEqual(self.staged(), [])
@@ -384,7 +384,7 @@ class CommandEnter(PeekCase):
         b.wait("document.querySelector('.pkpop')")
         b.key("Enter", modifiers=CTRL)                                                           # a picker open: it closes first
         b.wait("!document.getElementById('panel').classList.contains('on')", 10)
-        b.wait("/Nothing to apply/.test(document.getElementById('snackT').textContent)", 5)
+        b.wait("/Nothing to save/.test(document.getElementById('snackT').textContent)", 5)
         self.assertFalse(b.eval("!!document.querySelector('.pkpop')"))
 
 

@@ -1811,7 +1811,7 @@
   },
   "live_server.py | apply | 53e9d023330b": {
    "count": 1,
-   "text": "Nothing to apply: no decided items."
+   "text": "Nothing to save: no decided items."
   },
   "live_server.py | apply | 59c24e495d27": {
    "count": 1,
@@ -2187,7 +2187,7 @@
   },
   "tracker.py | apply | 53e9d023330b": {
    "count": 1,
-   "text": "Nothing to apply: no decided items."
+   "text": "Nothing to save: no decided items."
   },
   "tracker.py | apply | 5987ca46b1d2": {
    "count": 1,
