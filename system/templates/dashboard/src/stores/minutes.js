@@ -161,7 +161,7 @@ export async function trackApprove(v, how = {}) {
   for (const op of reconcileOps(doc, plan)) {
     if (how.only && !how.only(op.n)) continue;
     const r = await change(op);
-    if (!r.ok) return { ok: false, message: r.message, made, done };
+    if (!r.ok) { if (how.approve !== false) dismissFiled(); return { ok: false, message: r.message, made, done }; }   // #355 M2: a change that failed stops the approve: nothing was filed
     made++; done.push(op);
   }
   if (how.approve === false) return { ok: true, made, done };

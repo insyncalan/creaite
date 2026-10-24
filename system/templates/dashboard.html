@@ -38093,7 +38093,10 @@ system/scripts/run launch.py agent ${what}`;
     for (const op2 of reconcileOps(doc, plan)) {
       if (how.only && !how.only(op2.n)) continue;
       const r5 = await change2(op2);
-      if (!r5.ok) return { ok: false, message: r5.message, made, done };
+      if (!r5.ok) {
+        if (how.approve !== false) dismissFiled();
+        return { ok: false, message: r5.message, made, done };
+      }
       made++;
       done.push(op2);
     }

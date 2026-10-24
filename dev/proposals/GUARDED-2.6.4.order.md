@@ -21,5 +21,5 @@ Why this order: 345 is the largest and touches the part of the file furthest fro
 review alone. 346 follows because 334's `queue_start` hunk sits just above the `Run` class that 346 edits, and keeping the run engine
 changes together reads best. 334 is last because it needs `ai_budget.py` (merged separately) and is the only one with a setting.
 
-Checked (24-10-2026): in this order they pass git's patch check on origin/main, go in, and come out again in the reverse order; and each
+Checked (24-10-2026): in this order they pass git's patch check on the base commit e6389af8 (not on today's main, which has moved on), go in, and come out again in the reverse order; and each
 goes in on its own and in every other order of the three (no hunk overlaps). 334 alone also goes in on a tree without 345 and 346.

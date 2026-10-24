@@ -59,6 +59,14 @@ class Page(unittest.TestCase):
         self.assertRegex(self.MIN, r"forgetRenamed\(v\.proposal\);\s*\n\s*if \(!r \|\| !r\.ok\) dismissFiled\(\);")
         self.assertRegex(self.MIN, r"import \{[^}]*\bdismissFiled\b[^}]*\} from \"\./minutesFiling\.js\"")
 
+    def test_a_failed_track_change_clears_the_filed_note(self):
+        self.assertRegex(self.MIN, r"if \(!r\.ok\) \{ if \(how\.approve !== false\) dismissFiled\(\); return \{ ok: false, message: r\.message, made, done \};")
+
+    def test_mutant_without_the_clear_on_a_failed_change_leaves_the_note(self):
+        mutant = self.MIN.replace("if (how.approve !== false) dismissFiled(); ", "")
+        self.assertNotEqual(mutant, self.MIN)
+        self.assertNotRegex(mutant, r"if \(!r\.ok\) \{ if \(how\.approve !== false\) dismissFiled\(\);")
+
     def test_mutant_without_the_clear_leaves_the_note(self):
         mutant = self.MIN.replace("if (!r || !r.ok) dismissFiled();", "")
         self.assertNotRegex(mutant, r"if \(!r \|\| !r\.ok\) dismissFiled\(\)")
