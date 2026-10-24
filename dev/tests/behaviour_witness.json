@@ -18,6 +18,7 @@
  "dialog Dialog id:searchPrev (src/components/dialogs/PageDialogs.jsx)": "searchprev",
  "dialog Opener id:dispMenu label:Display: grouping, order and properties (shell.html)": "work",
  "dialog Opener id:fmenu label:Filter (shell.html)": "files",
+ "dialog Opener id:plDispMenu label:Display: grouping, order and properties (src/components/people/PeopleParts.jsx)": "people-display",
  "dialog Opener label:Change health (src/components/report/ClientParts.jsx)": "clientreport",
  "dialog Opener label:Choose date (src/components/notes/NoteHeader.jsx)": "notes-session",
  "dialog Opener label:Close the day (shell.html)": "today",

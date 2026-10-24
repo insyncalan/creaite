@@ -147,12 +147,14 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
 SCREENS["intake-review"] = ("go('intake-review')", "VIEW==='intake-review' && !!document.querySelector('#v-intake-review [data-ira=notneeded]')", "#v-intake-review")
 us.SCREENS["intake-review"] = SCREENS["intake-review"]      # #232 C2: test_snapshots' own "intake-review" waits for less; this one needs a row with Not needed
 SCREENS["project-settings"] = ("go('psettings','ABC')", "!!document.getElementById('psArchive')", "#v-psettings")   # the Settings line: Archive's home
-EXTRA = ("clientreport", "today-days", "project-settings")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+# #360: People's Display menu (button plDispBtn, a dialog opener like Work's); open for the keys test and the Undo check
+SCREENS["people-display"] = ("go('people'); setTimeout(()=>document.getElementById('plDispBtn').click(),30)", "document.getElementById('plDispMenu').classList.contains('on')", "#v-people")
+EXTRA = ("clientreport", "today-days", "project-settings", "people-display")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
 ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
 # Still on the screen (settle goes back when not): its ready test, except where that test is a popup being open.
-ON_SCREEN = {"work-display": "VIEW==='work'"}
+ON_SCREEN = {"work-display": "VIEW==='work'", "people-display": "VIEW==='people'"}
 # Controls whose choices are what the list shows, never a saved change: the filter bars and Work's views. The Undo check
 # leaves them alone (a choice there would also change what every later screen shows).
 VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#pmFBtn")
@@ -165,16 +167,16 @@ VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#pmFBtn")
 # part a of each; Settings › People and projects went with #228 and #246, so its slot holds the AI drafts tab and the project
 # settings page.
 KEYS_PARTS = {"a": ("intake-review", "activity", "person", "help", "settings-health", "rail-expanded", "rail-icons", "work-board", "work-panel-decision", "review-peek", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "archive-ask", "notes", "notes-ai", "notes-session"),
-              "b": ("work-panel", "cockpit", "people", "settings-essentials", "settings-advanced", "rail-collapsed", "activity-selected", "work-panel-details", "work-panel-raid", "work-panel-new", "work-display", "work-views", "shell", "clientreport"),
+              "b": ("work-panel", "cockpit", "people", "settings-essentials", "settings-advanced", "rail-collapsed", "activity-selected", "work-panel-details", "work-panel-raid", "work-panel-new", "work-display", "work-views", "shell", "clientreport", "people-display"),
               "c": ("today", "work", "files", "projects", "milestones", "settings-ai", "ask", "work-decisions", "milestone-editor", "minutes-approve", "weekly", "reports", "reporting", "today-days", "project-settings")}
 UNDO_PARTS = {"a": ("intake-review", "activity", "cockpit", "people", "help", "settings-essentials", "settings-advanced", "settings-health", "rail-expanded", "rail-collapsed", "activity-selected", "work-panel-raid", "work-panel-decision", "work-panel-new", "work-decisions", "work-views", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "weekly", "shell"),
-              "b": ("today", "work", "work-panel", "files", "projects", "milestones", "person", "settings-ai", "ask", "rail-icons", "work-board", "work-panel-details", "review-peek", "work-display", "milestone-editor", "minutes-approve", "reports", "reporting", "archive-ask", "today-days", "notes", "notes-ai", "notes-session", "clientreport", "project-settings")}
+              "b": ("today", "work", "work-panel", "files", "projects", "milestones", "person", "settings-ai", "ask", "rail-icons", "work-board", "work-panel-details", "review-peek", "work-display", "milestone-editor", "minutes-approve", "reports", "reporting", "archive-ask", "today-days", "notes", "notes-ai", "notes-session", "clientreport", "project-settings", "people-display")}
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
 SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
                 "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
                 "review-peek": "Review", "intake-review": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
-                "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
+                "cockpit": "Projects", "milestones": "Milestones", "people": "People", "people-display": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
                 "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
                 "archive-ask": "Settings", "notes": "Core", "notes-ai": "Core", "notes-session": "Core"}
