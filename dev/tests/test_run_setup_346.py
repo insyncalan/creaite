@@ -178,6 +178,28 @@ class SetupFails(Case):
                 self.start(None, "r-thread346")
         self.assertEqual(list(runs), ["r-keep"])
 
+    def test_an_end_process_that_raises_still_leaves_no_run_in_the_table(self):
+        runs = {}
+        with mock.patch.object(live_server, "end_process", side_effect=OSError("gone")), mock.patch.object(live_server, "RUNS", runs), \
+                mock.patch.object(live_server.threading, "Thread", side_effect=RuntimeError("no thread")):
+            with self.assertRaises(RuntimeError) as cm:
+                self.start(None, "r-endproc346")
+        self.assertEqual(str(cm.exception), "no thread")                 # the original error, not the clean-up's
+        self.assertEqual(runs, {})
+
+    def test_mutant_ending_the_process_first_lets_a_raise_skip_the_table(self):
+        ls = mutated("                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends\n"
+                     "                        RUNS.pop(run_id, None)              # (before the process is ended: that can raise)\n"
+                     "                    if getattr(self, \"proc\", None) is not None:\n                        end_process(self.proc)",
+                     "                    if getattr(self, \"proc\", None) is not None:\n                        end_process(self.proc)\n"
+                     "                    if RUNS.get(run_id) is self:\n                        RUNS.pop(run_id, None)")
+        runs = {}
+        with mock.patch.object(ls, "end_process", side_effect=OSError("gone")), mock.patch.object(ls, "RUNS", runs), \
+                mock.patch.object(ls, "run_usage", lambda *a, **k: None), mock.patch.object(ls.threading, "Thread", side_effect=RuntimeError("x")):
+            with self.assertRaises(Exception):
+                self.start(None, "r-m3346", ls)
+        self.assertIn("r-m3346", runs)                                    # what the real order prevents
+
     def test_mutant_without_finally_a_failing_clean_up_skips_ending_the_process(self):
         ls = mutated("                finally:                                    # these happen even if the record can't be removed",
                      "                except ZeroDivisionError:")

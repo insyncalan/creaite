@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index dc07c4dd..fb09f615 100644
+index dc07c4dd..c12c8656 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -2606,7 +2606,11 @@ def fresh_session(req):
@@ -32,10 +32,10 @@ index dc07c4dd..fb09f615 100644
 +                try:
 +                    reach.end_run(run_id)
 +                finally:                                    # these happen even if the record can't be removed
++                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends
++                        RUNS.pop(run_id, None)              # (before the process is ended: that can raise)
 +                    if getattr(self, "proc", None) is not None:
 +                        end_process(self.proc)
-+                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends
-+                        RUNS.pop(run_id, None)
 +            except Exception as e:                          # the error that stopped the set-up matters more; this one goes in the log
 +                if debuglog is not None:
 +                    debuglog.info("run", f"{run_id} clean-up after a failed set-up also failed: {type(e).__name__}")
