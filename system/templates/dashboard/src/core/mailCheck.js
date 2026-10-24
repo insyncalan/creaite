@@ -91,34 +91,38 @@ export function mcFileStamp(file) {
 const minute = iso => String(iso || "").slice(0, 16);
 
 /** Found N: the new items among the Review rows that are the check's own files, stamped from the minute the run started to the minute it ended.
-    Rows Alan made on the dashboard, or from another file, are never counted.
-    @param {{file?: string, op?: string, p?: string|null}[]} rows @param {string} startedIso @param {string} endedIso
-    @returns {{n: number, need: number}} */
-export function mcFound(rows, startedIso, endedIso) {
+    Rows Alan made on the dashboard, or from another file, are never counted. An update to an existing item is not new: it is counted
+    apart (upd), so a check that saved only updates is not described as having found nothing.
+    @param {{file?: string, op?: string, p?: string|null}[]} found_rows @param {string} startedIso @param {string} endedIso
+    @returns {{n: number, need: number, upd: number}} */
+export function mcFound(found_rows, startedIso, endedIso) {
   const a = minute(startedIso), b = minute(endedIso);
-  let n = 0, need = 0;
-  for (const r of rows || []) {
+  let n = 0, need = 0, upd = 0;
+  for (const r of found_rows || []) {
     const st = mcFileStamp(r && r.file);
-    if (!st || !a || !b || st < a || st > b || !r || r.op !== "new") continue;   // new items only: an update to an existing item is not "new"
-    n++;
-    if (!r.p) need++;
+    if (!st || !a || !b || st < a || st > b || !r) continue;
+    if (r.op === "new") { n++; if (!r.p) need++; }
+    else if (r.op === "update") upd++;
   }
-  return { n, need };
+  return { n, need, upd };
 }
 
 /** The closing line. outcome: "done", "stopped" (Stop pressed) or "early" (timed out or failed). found: from mcFound, or null when the
-    page could not read Review.
-    @param {"done"|"stopped"|"early"} outcome @param {McState} s @param {{n: number, need: number}|null} found */
+    page could not read Review. Found N counts new items only; updates to existing items are said apart.
+    @param {"done"|"stopped"|"early"} outcome @param {McState} s @param {{n: number, need: number, upd?: number}|null} found */
 export function mcEnd(outcome, s, found) {
   const looked = s.places.length ? ` Looked in ${placeList(s, PLACE_NAMES)}.` : "";
-  const need = n => (n === 1 ? "1 needs a project" : `${n} need a project`);
-  if (outcome === "done") {
-    if (!found) return "Finished. Open Review to see what it found.";
-    return found.n ? `Finished.${looked} Found ${found.n} new, ${need(found.need)}.` : "Finished. Nothing new to review.";
-  }
-  const head = outcome === "early" ? "Stopped early." : "Stopped.";
-  if (!found) return `${head}${looked}`;
-  return found.n ? `${head}${looked} Found ${found.n} new so far, ${need(found.need)}.` : `${head}${looked} Nothing saved yet.`;
+  const need = n => (n === 0 ? "none need a project" : n === 1 ? "1 needs a project" : `${n} need a project`);
+  const upd = found && found.upd ? found.upd : 0;
+  const updText = upd === 1 ? "1 update to an existing item" : `${upd} updates to existing items`;
+  const done = outcome === "done";
+  if (done && !found) return "Finished. Open Review to see what it found.";
+  if (!done && !found) return `${outcome === "early" ? "Stopped early." : "Stopped."}${looked}`;
+  const head = done ? "Finished." : outcome === "early" ? "Stopped early." : "Stopped.";
+  const so = done ? "" : " so far";
+  if (found.n) return `${head}${looked} Found ${found.n} new${so}, ${need(found.need)}${upd ? `, and ${updText}` : ""}.`;
+  if (upd) return `${head}${looked} No new items; ${updText}${so}.`;
+  return done ? "Finished. Nothing new to review." : `${head}${looked} Nothing saved yet.`;
 }
 
 /** The fixed phrase a mail check's steps list shows for a live step. A label is shown only when it is one of the fixed phrases the

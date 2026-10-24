@@ -55,7 +55,10 @@ out.found = f.mcFound(rows, "2026-10-25T09:04:10", "2026-10-25T09:10:59"); out.f
 const two = f.mcStep(f.mcStep(f.mcNew(), "Searching mail"), "Reading Teams channels");
 out.ends = [f.mcEnd("done", two, {n: 7, need: 4}), f.mcEnd("done", two, {n: 1, need: 1}), f.mcEnd("done", two, {n: 0, need: 0}), f.mcEnd("done", two, null),
   f.mcEnd("stopped", two, {n: 2, need: 1}), f.mcEnd("early", two, {n: 2, need: 2}), f.mcEnd("stopped", two, {n: 0, need: 0}), f.mcEnd("early", f.mcNew(), {n: 0, need: 0}),
-  f.mcEnd("stopped", two, null)];
+  f.mcEnd("stopped", two, null),
+  f.mcEnd("done", two, {n: 0, need: 0, upd: 3}), f.mcEnd("done", two, {n: 0, need: 0, upd: 1}), f.mcEnd("done", two, {n: 2, need: 1, upd: 3}),
+  f.mcEnd("done", two, {n: 2, need: 1, upd: 0}), f.mcEnd("done", two, {n: 0, need: 0, upd: 0}), f.mcEnd("stopped", two, {n: 0, need: 0, upd: 2}),
+  f.mcEnd("early", two, {n: 1, need: 0, upd: 1}), f.mcEnd("stopped", two, {n: 0, need: 0, upd: 0})];
 out.stepText = ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail", "Running sweep.py followed --subject Q3", "Write followed-x.json", "Running tracker.py x", "ToolSearch", "Microsoft 365: nonsense"].map(f.mcStepText);
 out.marker = f.MC_MARKER;
 console.log(JSON.stringify(out));
@@ -128,8 +131,8 @@ class Classifier(unittest.TestCase):
 
     def test_found_n_counts_only_the_checks_own_files_inside_the_window(self):
         self.assertEqual(self.o["stamp"], ["2026-10-25T09:05", "2026-10-25T09:05", None, "2026-10-25T09:05", None, None])
-        self.assertEqual(self.o["found"], {"n": 3, "need": 2})    # not the dashboard row, not 08:50 or 09:20, not a docx, and no update items
-        self.assertEqual(self.o["foundNone"], {"n": 0, "need": 0})
+        self.assertEqual(self.o["found"], {"n": 3, "need": 2, "upd": 2})    # not the dashboard row, not 08:50 or 09:20, not a docx, and no update items
+        self.assertEqual(self.o["foundNone"], {"n": 0, "need": 0, "upd": 0})
 
     def test_the_closing_lines(self):
         e = self.o["ends"]
@@ -142,6 +145,15 @@ class Classifier(unittest.TestCase):
         self.assertEqual(e[6], "Stopped. Looked in Outlook mail, Teams. Nothing saved yet.")
         self.assertEqual(e[7], "Stopped early. Nothing saved yet.")
         self.assertEqual(e[8], "Stopped. Looked in Outlook mail, Teams.")
+        # updates are never "nothing": update-only, mixed, new-only, neither
+        self.assertEqual(e[9], "Finished. Looked in Outlook mail, Teams. No new items; 3 updates to existing items.")
+        self.assertEqual(e[10], "Finished. Looked in Outlook mail, Teams. No new items; 1 update to an existing item.")
+        self.assertEqual(e[11], "Finished. Looked in Outlook mail, Teams. Found 2 new, 1 needs a project, and 3 updates to existing items.")
+        self.assertEqual(e[12], "Finished. Looked in Outlook mail, Teams. Found 2 new, 1 needs a project.")
+        self.assertEqual(e[13], "Finished. Nothing new to review.")
+        self.assertEqual(e[14], "Stopped. Looked in Outlook mail, Teams. No new items; 2 updates to existing items so far.")
+        self.assertEqual(e[15], "Stopped early. Looked in Outlook mail, Teams. Found 1 new so far, none need a project, and 1 update to an existing item.")
+        self.assertEqual(e[16], "Stopped. Looked in Outlook mail, Teams. Nothing saved yet.")
 
     def test_the_steps_list_shows_fixed_phrases_only(self):
         self.assertEqual(self.o["stepText"], ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail",
@@ -169,9 +181,13 @@ class Classifier(unittest.TestCase):
         # the raw label in the steps list
         broke("return c ? String(label) : \"A creaite step\";", "return String(label);", lambda o: o["stepText"] != self.o["stepText"])
         # update items counted as new
-        broke("|| !r || r.op !== \"new\") continue;", ") continue;", lambda o: o["found"] != self.o["found"])
+        broke("if (r.op === \"new\") { n++;", "if (r.op === \"new\" || r.op === \"update\") { n++;", lambda o: o["found"] != self.o["found"])
+        # an update-only check described as nothing new
+        broke("if (upd) return", "if (false) return", lambda o: o["ends"][9] != self.o["ends"][9])
+        # updates dropped from a mixed check
+        broke("${upd ? `, and ${updText}` : \"\"}", "", lambda o: o["ends"][11] != self.o["ends"][11])
         # "Found 0"
-        broke("found.n ? `Finished.${looked}", "true ? `Finished.${looked}", lambda o: o["ends"][2] != self.o["ends"][2])
+        broke("if (found.n) return `${head}${looked} Found", "if (true) return `${head}${looked} Found", lambda o: o["ends"][2] != self.o["ends"][2])
 
 
 ROWS = REPO / "system/templates/dashboard/src/core/closeDayRows.js"
@@ -321,10 +337,13 @@ FIXED_STEPS = {"Sweeping (stages proposals only)", "A creaite step", "Microsoft 
                "Microsoft 365: sharepoint search"}
 
 
-class _MailCheckTests:
-    """The mail check's browser tests (width and height are set by the subclasses). A plain mixin, so the module imports without
-    live_browser; _live_cls() puts it in front of LiveBrowserCase."""
+try:
+    from live_browser import LiveBrowserCase as _Live
+except Exception:                                   # no Chrome helper here: the browser tests are not collected
+    _Live = object
 
+
+class MailCheckBrowser(_Live):
     width, height = 1400, 900
 
     @classmethod
@@ -489,31 +508,12 @@ class _MailCheckTests:
         (self.v.root / "fail-sweep").unlink()
 
 
-def _live_cls():
-    from live_browser import LiveBrowserCase
-
-    class MailCheckBrowser(_MailCheckTests, LiveBrowserCase):
-        pass
-
-    return MailCheckBrowser
-
-
-try:
-    import live_browser  # noqa: F401
-    _have = True
-except Exception:
-    _have = False
-
-if _have:
-    _Base = _live_cls()
-
-    class MailCheck1400(_Base):
+if _Live is not object:
+    class MailCheck1400(MailCheckBrowser):
         width, height = 1400, 900
 
-    class MailCheck900(_Base):
+    class MailCheck900(MailCheckBrowser):
         width, height = 900, 800
-
-    del _Base
 
 if __name__ == "__main__":
     unittest.main()
