@@ -443,7 +443,7 @@ class DashboardEditingTests(unittest.TestCase):
                                               "<ul><li>one</li><li>two</li></ul><ol><li>first</li></ol>")
 
     def test_pencil_icons_on_editable_tiles(self):
-        self.assertEqual(self.result["pencils"], ["Generate needs the live server", "Edit current state", "Edit health and project details"])  # BL-21, 23, 61; images are added in the editor (BL-63); BL-186: the milestone card's pencil opens its page
+        self.assertEqual(self.result["pencils"], ["Generate needs creaite to be running", "Edit current state", "Edit health and project details"])  # BL-21, 23, 61; images are added in the editor (BL-63); BL-186: the milestone card's pencil opens its page
         self.assertEqual(self.result["mvpencil"], "Open milestones: Plan and Movement")
         self.assertFalse(self.result["oldEdit"])
 

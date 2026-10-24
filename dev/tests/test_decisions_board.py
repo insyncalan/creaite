@@ -76,7 +76,7 @@ class BoardCase(LiveBrowserCase):
         return f'#workBoard .bcol[data-col="{key}"] .bch'
 
     def wait_saved(self, moved=""):
-        self.b.wait(f"/saved and applied/.test(document.getElementById('snackT').textContent) && document.getElementById('snackT').textContent.includes({moved!r})", 15)
+        self.b.wait(f"/— saved/.test(document.getElementById('snackT').textContent) && document.getElementById('snackT').textContent.includes({moved!r})", 15)
 
 
 class Layout(BoardCase):
@@ -206,7 +206,7 @@ class Moves(BoardCase):
         self.assertIn("Sara Example", b.eval("document.querySelector('#panel [data-pkp=\"o\"]').textContent"))
         self.assertEqual(self.row("ABC-D-006")["status"], "Pending")                                # staged, not written
         b.click("#pkApply")
-        b.wait("PKS.length===0&&/Applied 1 change/.test(document.getElementById('snackT').textContent)", 20)
+        b.wait("PKS.length===0&&/Saved 1 change/.test(document.getElementById('snackT').textContent)", 20)
         row = self.row("ABC-D-006")
         self.assertEqual((row["status"], row["date"], row["made_by"]), ("Made", TODAY.isoformat(), "Sara Example"))
         self.assertEqual(len(self.v.rows("decisions")), 5)                                           # the same record and number
@@ -244,7 +244,7 @@ class Moves(BoardCase):
         b.click('#bdMoveMenu [data-bto="Withdrawn"]')
         b.wait("document.getElementById('boardDlg').open")
         b.click("#bdOk")
-        b.wait("/saved and applied/.test(document.getElementById('snackT').textContent)", 15)
+        b.wait("/— saved/.test(document.getElementById('snackT').textContent)", 15)
         row = self.row("ABC-D-007")
         self.assertEqual((row["status"], row["date"]), ("Withdrawn", None))
         self.assertIn("ABC-D-007", self.columns().get("Withdrawn", []))

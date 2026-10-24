@@ -192,7 +192,7 @@ function MnRow({ r, ctx, full }) {
             {held ? <span class="mck info mnsens" data-tip={`Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`}>
               {held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}`}</span> : null}
             {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} />
-              {row.ref ? <button type="button" class="linkbtn mnstaged" data-tip="Open the staged update in Review" onClick={() => m.openItem(String(row.ref))}>Open</button> : null}</span> : null}
+              {row.ref ? <button type="button" class="linkbtn mnstaged" data-tip="Open the saved update in Review" onClick={() => m.openItem(String(row.ref))}>Open</button> : null}</span> : null}
             {need && need.owner ? <span class="mnflag2" data-flag="owner">Needs an owner</span> : null}
             {need && need.date ? <span class="mnflag2" data-flag="date">{need.vague ? "Vague date: pick one" : "Needs a date"}</span> : null}
             {own ? <span class="mck" data-check={own.id}><span>{own.quote} needs details</span>

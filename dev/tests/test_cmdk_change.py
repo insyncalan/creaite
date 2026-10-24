@@ -104,7 +104,7 @@ class CmdKChange(LiveBrowserCase):
         self.palette(f"move ABC-A-002 to {to}")
         b.eval("document.getElementById('snackT').textContent=''")
         b.key("Enter")
-        b.wait("/Staged: /.test(document.getElementById('snackT').textContent)", 15)
+        b.wait("/Saved: /.test(document.getElementById('snackT').textContent)", 15)
         new = [n for n in self.staged() if n not in before]
         self.assertEqual(len(new), 1)
         data = json.loads((self.v.root / "system/staging" / new[0]).read_text())

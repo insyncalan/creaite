@@ -66,7 +66,7 @@ class StageTests(Base):
         self.assertEqual(item["suggested"]["closes"], [self.aid])
         self.assertEqual(item["why"], "Looks done: Sara says the revised plan went out")
         self.assertEqual(self.cards()[0]["closes"]["staged"]["proposal"], name)
-        self.assertEqual(self.call("vip_close_stage"), {"refused": "Already staged for Review."})   # again: nothing new
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "Already waiting in Review."})   # again: nothing new
         self.assertEqual(len(self.staged()), 1)
         self.assertEqual(self.v.rows("actions")[6]["status"], "Open")                                # nothing applied
 
@@ -182,8 +182,8 @@ class StageTests(Base):
     def test_the_click_checks_the_card_again(self):
         """Review point 5: the card may have changed since the check offered the close."""
         card = self.cards()[0]
-        cases = {"handled": ({"state": "handled", "seen": "2026-10-08 09:20"}, "This thread is handled: nothing to stage."),
-                 "seen": ({"seen": "2026-10-08 09:20"}, "This thread was marked seen: nothing to stage."),
+        cases = {"handled": ({"state": "handled", "seen": "2026-10-08 09:20"}, "This thread is handled: nothing to save."),
+                 "seen": ({"seen": "2026-10-08 09:20"}, "This thread was marked seen: nothing to save."),
                  "private": ({"marker": "private"}, "Nothing to close for a private conversation."),
                  "other match": ({"match": {**card["match"], "id": "ABC-A-008"}}, "This thread isn't matched to ABC-A-007 any more."),
                  "now new": ({"match": {"id": None, "relation": "new", "why": "x"}}, "This thread isn't matched to ABC-A-007 any more.")}
@@ -207,7 +207,7 @@ class StageTests(Base):
 
     def test_handled_after_the_check_refuses_the_click(self):
         py(self.v, "print(json.dumps(sweep.vip_handled([" + json.dumps(self.aid) + "])))")
-        self.assertEqual(self.call("vip_close_stage"), {"refused": "This thread is handled: nothing to stage."})
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "This thread is handled: nothing to save."})
         self.assertEqual(self.staged(), [])
 
     def test_a_closed_item_is_refused(self):
@@ -253,7 +253,7 @@ class MergeCloseTests(Base):
         kept = self.merge(b, self.a)
         self.assertEqual((kept["closes"]["id"], kept["match"]["id"]), ("ABC-A-007", "ABC-A-007"))
         self.assertIn("staged", kept["closes"])
-        self.assertEqual(self.stage("vip_close_stage", b), {"refused": "Already staged for Review."})
+        self.assertEqual(self.stage("vip_close_stage", b), {"refused": "Already waiting in Review."})
         self.assertEqual(self.stage("vip_close_unstage", b)["state"], "undone")
         self.assertEqual(self.proposals(), [])                                              # nothing orphaned
         self.assertNotIn("staged", next(a for a in self.cards() if a["id"] == b)["closes"])
@@ -467,7 +467,7 @@ class SingleCallServerTests(unittest.TestCase):
         self.assertEqual((said[0]["ok"], said[0]["state"], said[0]["id"]), (True, "staged", "ABC-A-007"))
         self.assertEqual(said[0]["closes"]["staged"]["proposal"], said[0]["proposal"])
         said.append(self.s.post("/api/alerts/close", {"id": aid}))
-        self.assertEqual((said[1]["ok"], said[1]["error"]), (False, "Already staged for Review."))
+        self.assertEqual((said[1]["ok"], said[1]["error"]), (False, "Already waiting in Review."))
         said.append(self.s.post("/api/vip", {}))
         card = next(a for a in said[-1]["alerts"] if a["id"] == aid)
         self.assertIn("staged", card["closes"])

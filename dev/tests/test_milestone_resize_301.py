@@ -21,6 +21,9 @@ class MilestoneResize(LiveBrowserCase):
         b = self.b
         b.eval("try{localStorage.removeItem('creaite.mvStripH')}catch(e){}")
         b.eval("go('cockpit','ABC')")
+        b.wait("!!document.querySelector('#v-cockpit #mvSwap')")
+        # #337: the Client view of a project whose milestones are all internal shows a message instead of the line: use the Internal view
+        b.eval("(()=>{const s=document.querySelector('#v-cockpit #mvSwap'); if(s&&s.getAttribute('aria-pressed')==='true') s.click()})()")
         b.wait(f"!!document.querySelector({SEL!r})")
         b.pump(0.3)
 

@@ -176,7 +176,7 @@ class StagedInEveryWindow(FixCase):
         b.eval("reloadData()")                                                                    # the page's own data refresh
         b.wait("PKS.length===1&&!document.getElementById('pkStage').hidden", timeout=15)
         b.wait("curObj().pr==='Low'")
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change staged on 1 item")
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "1 change waiting to be saved on 1 item")
         self.assertEqual(b.eval("document.querySelector('#panel [data-pkp=\"pr\"]').getAttribute('aria-label')"), "Priority: Low")
         self.assertEqual(b.eval("[...document.querySelectorAll('#pkFeed .pk-fe')].filter(e=>e.querySelector('.pk-pill.st')).map(e=>e.textContent.includes('Low'))"), [True])
         self.assertTrue(b.eval(f"!!document.querySelector('#workTbl tr[data-row=\"{id_}\"] .pkdot')"))

@@ -51,7 +51,7 @@ export async function loadPrep(key, o = {}) {
   const mine = ++pageAsked, same = prepViewKey.value === key;
   prepViewKey.value = key;
   if (!o.keepTab && !same) prepTab.value = "prep";
-  if (!viaServer()) { prepView.value = { ok: false, message: "The prep page needs the live server." }; return; }
+  if (!viaServer()) { prepView.value = { ok: false, message: "The prep page needs creaite to be running." }; return; }
   prepLoading.value = true;
   if (!same) prepView.value = null;
   const r = await api("/api/prep/view", { key });
@@ -67,7 +67,7 @@ export async function loadPrep(key, o = {}) {
 export async function saveFocus(part, what, o = {}) {
   const key = prepViewKey.value;
   if (!key) return false;
-  if (!viaServer()) { snack("Saving needs the live server"); return false; }
+  if (!viaServer()) { snack("Saving needs creaite to be running"); return false; }
   prepSaving.value = what;
   prepSavedSay.value = "";                                  // cleared first, so the same word is announced again after the next save
   const r = await api("/api/prep/focus/save", { key, ...part });

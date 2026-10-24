@@ -8,7 +8,7 @@
      the logos at the right (the firm's always; the client's and a partner's when ticked), drawn straight on the page;
    - HealthBlock: the flag, the six-week strip and its two dates, and the Change button, all inside a 96 px indicator;
    - EyeTable: a table with an eye on each row (in the report or left out), "Showing 4 of 5", and a slot under it;
-   - AddFromTracker: "+ Add from the tracker" under Risks and issues, Overdue actions and Decisions: a picker over the open items that
+   - AddFromTracker: "+ Add from your project record" under Risks and issues, Overdue actions and Decisions: a picker over the open items that
      are not in the report yet (the client report is offered client-visible ones only, by the server). Adding changes the report only,
      marks the row New, and nothing is saved before the report is approved except the draft the sheet autosaves.
    Text only through JSX. */
@@ -90,7 +90,7 @@ export function ReportHeader({ ctx, logos, data }) {
         <div class="wr-pn">{doc.project_name}</div>
         <div class="wr-wk">{client && period ? `Period ${period}` : `Week ending ${wkLongDate(doc.date)}`}{d.client ? ` · for ${d.client}` : ""}</div>
         {client && ctx.editing ? <div class="wr-facts sub">{meta.facts_week ? `Facts from the internal report for week ending ${wkDmy(meta.facts_week)}${meta.locked ? ", locked" : ""}`
-          : "Facts as the tracker stands now: they lock when the internal report is approved"}</div> : null}
+          : "Facts as your project record stands now: they lock when the internal report is approved"}</div> : null}
       </div>
       <div class="wr-logos">
         {edit ? slots.map((k, i) => <span key={k} class="wr-logo">{i ? <span class="wr-lsep" aria-hidden="true" /> : null}
@@ -124,15 +124,15 @@ export function HealthBlock({ ctx, flag, trend, change, why, below, flagCls = ""
     </div>);
 }
 
-/** The sections whose tables take items from the tracker. */
+/** The sections whose tables take items from your project record. */
 export const PICKABLE = new Set(["risks", "overdue", "decisions"]);
 
 /** Whether a row has nothing the page can show (#234): it was left out and saved, so it holds only its reference and the document
     no longer has its item, or its cells are all empty (a row turned back on before the fix). It is drawn as left out, an export leaves
-    it out, and its eye fills it from the tracker. @param {SheetRow} row @param {SheetDoc} doc */
+    it out, and its eye fills it from your project record. @param {SheetRow} row @param {SheetDoc} doc */
 export const bareRow = (row, doc) => !!row.ref && (row.cells ? blankCells(row.cells, row.ref) : !(doc.items || {})[row.ref]);
 
-/** Show a bare row again (#234): its cells come from the tracker through the server (/api/report/reshow, read only; a client report
+/** Show a bare row again (#234): its cells come from your project record through the server (/api/report/reshow, read only; a client report
     gets only its client-safe facts there), never from the page. `live` holds the section's latest ctx, so an edit made while the
     tracker is read is kept. Answers "" when the row is back in the report, else the reason it stays left out.
     @param {{current: SectionCtx}} live @param {string} ref @returns {Promise<string>} */
@@ -144,7 +144,7 @@ export async function reshowRow(live, ref) {
   const r = await api("/api/report/reshow", { doc: asked, section: sid, refs: [ref] });
   if (ident() !== opened) return "";                       // another report (or this one again) opened while the tracker was read: dropped
   const got = r && r.ok ? (r.rows || {})[ref] : null;
-  if (!got || !got.row || !got.row.cells) return String((r && r.ok ? (r.missing || {})[ref] : r && r.message) || "the tracker couldn't be read").split("\n")[0];
+  if (!got || !got.row || !got.row.cells) return String((r && r.ok ? (r.missing || {})[ref] : r && r.message) || "your project record couldn't be read").split("\n")[0];
   const ctx = live.current, doc = ctx.doc, sec = doc.sections.find(x => x.id === sid);
   if (ident(doc) !== opened || !sec || !(sec.rows || []).some(x => x.ref === ref && bareRow(x, doc))) return "";       // changed meanwhile: nothing to fill
   ctx.setDoc({ ...doc, items: { ...(doc.items || {}), [ref]: got.item },
@@ -156,11 +156,11 @@ export async function reshowRow(live, ref) {
     why it can't come back, once that is known. @param {{ctx: SectionCtx, row: SheetRow, why?: string}} props */
 export function LeftOutNote({ ctx, row, why }) {
   return <><ctx.ItemRef id={String(row.ref)} /> <span class="crlk wr-leftout">Left out</span>
-    <span class="wr-leftwhy">{why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from the tracker."}</span></>;
+    <span class="wr-leftwhy">{why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from your project record."}</span></>;
 }
 
 /** The eye's click on a row: hide it; show it with its cells (made again from the item the document holds), or, for a bare row,
-    from the tracker (reshowRow). @param {{current: SectionCtx}} live @param {(sid: string, item: any, on: string) => Record<string, string>} cellsFor
+    from your project record (reshowRow). @param {{current: SectionCtx}} live @param {(sid: string, item: any, on: string) => Record<string, string>} cellsFor
     @param {number} i @param {(ref: string, why: string) => void} setWhy */
 export function flipRow(live, cellsFor, i, setWhy) {
   const ctx = live.current, s = ctx.section, rows = s.rows || [], r = rows[i], on = r.shown === false;
@@ -198,7 +198,7 @@ export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "t
             return (
               <tr key={row.ref || i} class={off ? "hidrow" : ""} data-ref={row.ref || undefined}>
                 {ctx.editing ? <td class="eyec"><EyeButton on={!off} subject={subject} onClick={() => flip(i)} /></td> : null}
-                {cols.map((c, k) => <td key={c.key} class={c.num ? "num" : ""}>{c.cell({ ctx, row, i, cells, item })}{k === 0 && isNew ? <span class="rs-new" title="Added from the tracker by you">New</span> : null}</td>)}
+                {cols.map((c, k) => <td key={c.key} class={c.num ? "num" : ""}>{c.cell({ ctx, row, i, cells, item })}{k === 0 && isNew ? <span class="rs-new" title="Added from your project record by you">New</span> : null}</td>)}
               </tr>);
           })}</tbody>
         </table>) : <p class="sub">{empty}</p>}
@@ -208,7 +208,7 @@ export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "t
 }
 
 const CLOSE_PICKER = /** @type {Map<Element|null, () => void>} */ (new Map());   // the picker open on each page: one at a time per page (a stable closer, not the render's own); in Side by side each pane has its own
-/** "+ Add from the tracker": a picker over the open items that are not in this table yet. Cancel changes nothing; Add puts the ticked
+/** "+ Add from your project record": a picker over the open items that are not in this table yet. Cancel changes nothing; Add puts the ticked
     items in the table (marked New, each with its eye) and changes only the report. @param {{ctx: SectionCtx}} props */
 export function AddFromTracker({ ctx }) {
   const s = ctx.section;
@@ -235,7 +235,7 @@ export function AddFromTracker({ ctx }) {
     setOpen(true); setList(null); setMsg("");
     const r = await api("/api/report/pick", { doc: ctx.doc });
     if (r && r.ok) setList((r.sections || {})[s.id] || []);
-    else { setList([]); setMsg(String((r && r.message) || "The tracker couldn't be read").split("\n")[0]); }
+    else { setList([]); setMsg(String((r && r.message) || "Your project record couldn't be read").split("\n")[0]); }
   };
   const words = q.trim().toLowerCase();
   const shownList = (list || []).filter(c => !words || `${c.ref} ${c.title} ${c.meta}`.toLowerCase().includes(words));
@@ -244,18 +244,18 @@ export function AddFromTracker({ ctx }) {
     if (!picked.length) return;
     ctx.setDoc({ ...doc, items: { ...(doc.items || {}), ...Object.fromEntries(picked.map(c => [c.ref, c.item])) },
       sections: doc.sections.map(x => x.id === s.id ? { ...x, rows: [...(x.rows || []), ...picked.filter(c => !(x.rows || []).some(r => r.ref === c.ref)).map(c => c.row)] } : x) },
-    picked.length === 1 ? "Item added from the tracker" : "Items added from the tracker");
+    picked.length === 1 ? "Item added from your project record" : "Items added from your project record");
     close();
   };
   const toggle = (/** @type {string} */ ref) => setSel(sel.includes(ref) ? sel.filter(x => x !== ref) : [...sel, ref]);
   return (
     <div class="rs-pick">
-      {!open ? <button type="button" class="wr-link rs-pick-open" ref={btn} aria-expanded="false" onClick={start}>+ Add from the tracker</button> : null}
+      {!open ? <button type="button" class="wr-link rs-pick-open" ref={btn} aria-expanded="false" onClick={start}>+ Add from your project record</button> : null}
       {open ? (
-        <div class="rs-picker" role="group" aria-label={`Add to ${s.heading} from the tracker`} onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}>
-          <input type="search" class="rs-pick-search" ref={search} aria-label="Search the tracker" placeholder="Search" value={q} onInput={e => setQ(/** @type {HTMLInputElement} */ (e.currentTarget).value)} />
+        <div class="rs-picker" role="group" aria-label={`Add to ${s.heading} from your project record`} onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}>
+          <input type="search" class="rs-pick-search" ref={search} aria-label="Search your project record" placeholder="Search" value={q} onInput={e => setQ(/** @type {HTMLInputElement} */ (e.currentTarget).value)} />
           <div class="rs-pick-list">
-            {list === null ? <p class="sub rs-pick-wait" role="status">Looking in the tracker…</p> : null}
+            {list === null ? <p class="sub rs-pick-wait" role="status">Looking in your project record…</p> : null}
             {list !== null && !list.length ? <p class="sub rs-pick-none">{msg || "Nothing else is open that could be added."}</p> : null}
             {list !== null && list.length && !shownList.length ? <p class="sub rs-pick-none">Nothing matches.</p> : null}
             {shownList.map(c => (
@@ -265,7 +265,7 @@ export function AddFromTracker({ ctx }) {
               </label>))}
           </div>
           <div class="rs-pick-foot">
-            <span class="sub">{sel.length ? `${sel.length} ticked` : "Tick the items to include. The tracker is not changed."}</span>
+            <span class="sub">{sel.length ? `${sel.length} ticked` : "Tick the items to include. Your project record is not changed."}</span>
             <button type="button" class="btn sm rs-pick-cancel" onClick={close}>Cancel</button>
             <button type="button" class="btn sm primary rs-pick-add" disabled={!sel.length} onClick={add}>Add to the report</button>
           </div>

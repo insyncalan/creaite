@@ -39,7 +39,7 @@ export function wkIdentity(d) {
 export async function loadWeekly(arg, fresh = false) {
   const mine = ++wkAsked;
   weeklyArg.value = arg; weeklyEditing.value = false;
-  if (!viaServer()) { weeklyView.value = { ok: false, message: "The weekly report view needs the live server." }; return; }
+  if (!viaServer()) { weeklyView.value = { ok: false, message: "The weekly report view needs creaite to be running." }; return; }
   weeklyBusy.value = "Opening the weekly report…";
   const r = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || undefined, fresh: fresh || undefined });
   if (mine !== wkAsked) return;
@@ -79,7 +79,7 @@ export async function approveWeekly(doc, force) {
   const a = weeklyArg.value;
   const r = await api("/api/report/approve", { kind: "weekly", code: doc.project || (a && a.code), week_ending: doc.date, doc,
     base_version: weeklyBase.value, force: force || undefined });
-  return r || { ok: false, message: "The apply didn't run; nothing was changed." };
+  return r || { ok: false, message: "The save didn't run; nothing was changed." };
 }
 
 /** Export the saved report as html, docx or pdf and save it in the project's Reports folder (#220: a taken name asks, a save says

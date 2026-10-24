@@ -1,14 +1,13 @@
 // @ts-check
 /* DayMeetings (BL-293): the meetings of the day the band shows, drawn into #dayMeets. A column per meeting: its times, its
    title and project (by name, BL-101), where and who organises it, and what to do about it:
-   - a past day: the follow-up, as Calendar import works it out: Minutes made, Draft in Review (with Review), Transcript ready
-     (with Process), or No transcript; a transcript not checked yet offers Check (Alan, 13-10-2026);
+   - a past day: the meetings and nothing under them (#351 b, Alan, 24-10-2026, took away the follow-up chips and the Check and Process
+     links; Intake still does those jobs);
    - today and later: nothing under the meeting; its title opens the Prep peek (#111; #140, Alan, 16-10-2026, took away the Prepare /
      Prep pill, BL-287's Open icon, "Prep page made" and the Note link).
    A private meeting is "Busy" with its times only. A confidential one shows only its title and times: no project, no where,
    no peek (Alan, 13-10-2026). Off today, one quiet line says that everything below is as of today. */
 import { Fragment, render } from "preact";
-import { Chip } from "../Chip.jsx";
 import { PrepPeek, usePeek } from "../prep/PrepPopup.jsx";
 import { minsOf } from "./DayCurve.jsx";
 import { wheelRef } from "./wheel.js";
@@ -35,25 +34,6 @@ function Proj({ code, name }) {
   if (code === "_portfolio") return <span class="pcode">Portfolio</span>;
   const n = name(code);
   return <span class="pcode plink" data-proj={code} role="link" tabIndex={0} title={`Open ${n}`}>{n}</span>;
-}
-
-/** What a past meeting's follow-up is. @param {{m: DayMeeting, live: boolean, acts: DayActs}} props */
-function FollowUp({ m, live, acts }) {
-  const f = m.follow, off = live ? undefined : "creaite isn’t running";
-  if (!f) return null;
-  if (m.running) return <span class="sub" role="status">{m.running}</span>;
-  if (f.state === "minutes") return f.draft
-    ? <><Chip tone="warn">Draft in Review</Chip><button type="button" class="lk" aria-label={`Review the draft minutes of ${m.title}`} onClick={() => acts.review()}>Review</button></>
-    : <Chip tone="ok" tip={f.processed_shown ? `Processed ${f.processed_shown}` : undefined}>Minutes made</Chip>;
-  if (f.state === "transcript") return (
-    <><Chip tone="warn">Transcript ready</Chip>
-      <button type="button" class="lk" aria-label={`Process the transcript of ${m.title}`} data-tip={off || "Draft minutes and proposed items from it (cx-minutes)"}
-        disabled={!live} onClick={() => acts.process(m)}>Process</button></>);
-  if (f.checked === false && m.id) return (
-    <><Chip tone="mute">Not checked yet</Chip>
-      <button type="button" class="lk" aria-label={`Check for a transcript of ${m.title}`} data-tip={off || "Look for its transcript in Teams"}
-        disabled={!live} onClick={() => acts.check(m)}>Check</button></>);
-  return <Chip tone="mute" tip={f.why}>No transcript</Chip>;
 }
 
 /** A meeting's title; on today or a later day it carries the Prep peek (#111, which grew #140's popup): pointer rest or keyboard focus
@@ -90,13 +70,11 @@ export function DayMeetings(props) {
     <Fragment key={day}>
       {meetings.length ? <div class="daymeets" ref={ref}>{meetings.map(e => {
         const hidden = e.private || e.confidential, wh = hidden ? "" : [e.where, e.organiser === true ? "You organise" : e.organiser ? `Organised by ${e.organiser}` : ""].filter(Boolean).join(" · ");
-        const acts2 = e.private || !past ? null : <FollowUp m={e} live={live} acts={acts} />;
         return (
           <div class={`dm ${st(e)}`}>
             <div class="tm">{e.start} – {e.end}</div>
             <div class="tt"><Title m={e} day={day} dow={dow} isToday={isToday} live={live} acts={acts} />{!hidden && e.p ? <> <Proj code={e.p} name={acts.name} /></> : null}</div>
             {wh ? <div class="wh">{wh}</div> : null}
-            {acts2 ? <div class="acts">{acts2}</div> : null}
           </div>);
       })}</div> : null}
       {allDay.length ? <div class="dayall" ref={ref}>All day: {allDay.map((e, i) => <>{i ? " · " : ""}{e.title ?? ""}{e.p ? <> <Proj code={e.p} name={acts.name} /></> : null}</>)}</div> : null}

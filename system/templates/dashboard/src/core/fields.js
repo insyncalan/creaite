@@ -271,9 +271,9 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&WK.ask&&WK.ask.box
 /* Review: a proposal's weekend date, with the two working days, which edit the proposal; approving it unchanged keeps the date */
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-wkrv]"); if(!b) return; e.preventDefault(); e.stopPropagation(); const r=revForModelN(+b.dataset.wkrv); if(!r||!WKRVF[r.kind]) return;
   const [ui,db]=WKRVF[r.kind], to=b.dataset.to; if(!await needVault()) return;
-  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that proposal has already been applied"); it.values=it.values||{}; it.values[db]=to; it.edited_in="dashboard"; },r); }
+  try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("that suggestion has already been saved"); it.values=it.values||{}; it.values[db]=to; it.edited_in="dashboard"; },r); }
   catch(err){ snack(/already|no longer/.test(err.message)?"That one was already approved or changed, so nothing was saved. The list has been refreshed.":"Not saved: "+err.message); return; }
-  r.rec[ui]=to; r.edited=true; refreshAll(); snack(`Proposal moved to ${wkLong(to)}: still waiting for review`); },true);
+  r.rec[ui]=to; r.edited=true; refreshAll(); snack(`Suggestion moved to ${wkLong(to)}: still waiting for review`); },true);
 /* the early warning: listed with the others (Settings › Health and warnings › Early warnings), and in the peek with the two days */
 WSIG.push(["weekend","Open item due on a weekend",null,null]);
 PKDRAW.push((x,k)=>{ if(!shared.CUR||shared.CUR.mode!=="record") return; const w=warnsOf(k,shared.CUR.id).find(z=>z.sig==="weekend"), f=k==="decisions"?"due":"due"; const n=w?weekendNote(x[f]):null; if(!n) return;

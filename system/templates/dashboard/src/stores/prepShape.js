@@ -219,7 +219,7 @@ export async function runShape(o = {}) {
 export async function acceptShape() {
   const key = shapeKey.value;
   if (!key || shapeBusy.value || !shapeReading.value) return false;
-  if (!viaServer()) { snack("Saving needs the live server"); return false; }
+  if (!viaServer()) { snack("Saving needs creaite to be running"); return false; }
   shapeBusy.value = "save";
   const r = await api("/api/prep/focus/save", { key, accept: true, instruction: shapeInstruction.value, reading: shapeReading.value,
     notes: notesNow(), drafted: shapeDrafted.value || emptyNotes(), excluded: shapeExcluded.value }).catch(() => null);

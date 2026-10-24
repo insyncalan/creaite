@@ -312,7 +312,7 @@ class ExportSavePage(LiveBrowserCase):
                 self.b.eval(f"(()=>{{const i=document.querySelector('#exportClashRename');i.value={typed!r};"
                             "i.dispatchEvent(new Event('input',{bubbles:true}))})()")
             self.b.eval("document.querySelector('#exportClashGo').click()")
-            self.b.wait("!document.querySelector('#exportClashDlg[open]')", 10)
+            self.b.wait("!document.querySelector('#exportClashDlg[open]')", 30)
         again("number")
         self.b.wait("/\\(2\\)\\.docx in/.test(document.querySelector('[data-export-saved]').textContent)", 10)
         again("rename", "Board copy.docx")

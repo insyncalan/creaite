@@ -528,7 +528,7 @@ class ReportRoutes(unittest.TestCase):
         e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-23", "fmt": "html"})
         self.assertEqual(e, {"ok": False, "message": "Save the report before exporting it."})
         bad = self.post("/api/report/draft", {"kind": "weekly", "code": "ZZZ"})
-        self.assertEqual(bad, {"ok": False, "message": "ZZZ isn't in the tracker."})
+        self.assertEqual(bad, {"ok": False, "message": "ZZZ isn't in your project record."})
 # ===== end v2.1.0 P3 =====
 
 

@@ -254,7 +254,7 @@ export function aiSend() {
 
 /** @param {Sug} s */
 async function ask(s) {
-  if (!viaServer()) { aiSug.value = { ...s, status: "failed", message: "AI on selected text needs the live server" }; return; }
+  if (!viaServer()) { aiSug.value = { ...s, status: "failed", message: "AI on selected text needs creaite to be running" }; return; }
   if (s.ai.enabled && !s.ai.enabled()) { aiSug.value = { ...s, status: "failed", message: "AI suggestions are off here" }; return; }   // #186: switched off since the bar opened
   if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) { aiSug.value = { ...s, status: "failed", message: "ask creaite is busy; try again when it's finished" }; return; }
   const cur = { ...s, status: /** @type {"running"} */ ("running"), steps: 0 };

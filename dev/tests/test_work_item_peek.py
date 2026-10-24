@@ -206,8 +206,8 @@ class Staging(PeekCase):
         files = self.staged()
         self.assertEqual(len(files), 3)                                                         # each edit its own proposal
         self.assertEqual(self.action(id_), before)                                              # nothing in the tracker yet
-        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "3 changes staged on 1 item")
-        self.assertIn("staged", b.eval("document.getElementById('pkLast').textContent"))
+        self.assertEqual(b.eval("document.getElementById('pkStN').textContent"), "3 changes waiting to be saved on 1 item")
+        self.assertIn("waiting", b.eval("document.getElementById('pkLast').textContent"))
         self.assertEqual(b.eval("document.querySelectorAll('#pkFeed .pk-pill.st').length"), 3)
         first = json.loads((self.v.root / "system/staging" / files[0]).read_text())
         self.assertEqual((first["source_run"], first["items"][0]["decision"], first["items"][0]["changes"]), ("dashboard", "approved", {"priority": "Low"}))
@@ -219,7 +219,7 @@ class Staging(PeekCase):
         self.assertEqual(self.others(), others)                                                 # the sweep's and minutes' are untouched
         self.assertNotEqual(b.eval(f"REC('actions',{id_!r}).upd"), "Chased on Friday")
         b.click("#pkApply")
-        b.wait("PKS.length===0&&/Applied 2 changes/.test(document.getElementById('snackT').textContent)", 20)
+        b.wait("PKS.length===0&&/Saved 2 changes/.test(document.getElementById('snackT').textContent)", 20)
         row = self.action(id_)
         self.assertEqual((row["priority"], row["status"]), ("Low", "Delayed"))
         self.assertEqual(self.staged(), [])
@@ -384,7 +384,7 @@ class CommandEnter(PeekCase):
         b.wait("document.querySelector('.pkpop')")
         b.key("Enter", modifiers=CTRL)                                                           # a picker open: it closes first
         b.wait("!document.getElementById('panel').classList.contains('on')", 10)
-        b.wait("/Nothing to apply/.test(document.getElementById('snackT').textContent)", 5)
+        b.wait("/Nothing to save/.test(document.getElementById('snackT').textContent)", 5)
         self.assertFalse(b.eval("!!document.querySelector('.pkpop')"))
 
 
@@ -399,7 +399,7 @@ class Review(PeekCase):
         self.assertTrue(b.eval("!!document.querySelector('#pkTitle[contenteditable]')"))
         self.assertEqual(b.eval("[...document.querySelectorAll('#pkFoot2 button')].map(x=>x.textContent.trim())"), ["Reject", "Cancel", "Save", "Save and approve"])
         top = b.eval("document.getElementById('pkPropTop').textContent")
-        self.assertIn("Editing a proposal", top)
+        self.assertIn("Editing a suggestion", top)
         self.assertIn("Choose a project before saving.", top)
         self.pick("pr", "Low")
         b.pump(0.3)

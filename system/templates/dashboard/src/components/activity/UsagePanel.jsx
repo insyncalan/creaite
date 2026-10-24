@@ -19,9 +19,10 @@ import { api, OLDSERVER, snack } from "../../core/server.js";
 /** @typedef {{skill: string, runs: number, cost_usd: number, days_since: number | null, last: string | null}} Skill */
 /** @typedef {{file: string, date: string, bytes: number, tokens: number, since: string | null, change_bytes: number | null, change_tokens: number | null}} Ctx */
 /** @typedef {{date: string, saw: string, decided: string}} Review */
-/** @typedef {{as_of?: string, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[], reviews?: Review[], reviews_save?: boolean}} Usage */
+/** @typedef {{enabled: boolean, unit: string, limit: number, used: number, percent: number, state: string, at_limit: string, week_end: string, resets: string, counted: boolean, line: string}} Budget */
+/** @typedef {{as_of?: string, budget?: Budget, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[], reviews?: Review[], reviews_save?: boolean}} Usage */
 
-const KIND = { ask: "ask creaite", sweep: "Sweep", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
+const KIND = { ask: "ask creaite", sweep: "Check", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
   check: "Transcript check", load: "Transcript load", vip: "Alert check", process: "Intake processing",
   calendar: "Calendar refresh", reextract: "Read again", other: "Other" };
 const FILE = { rules: "Rules (creaite-rules.md)", claude_md: "Your CLAUDE.md", memory: "Project memory and registers",
@@ -67,6 +68,23 @@ function Chart({ days, fd }) {
   );
 }
 
+/** The week's AI budget (#334): used against the limit and when the week ends. Counts only; the figures come from the server.
+    @param {{b: Budget | undefined, fd: (s: string) => string}} p */
+function BudgetBar({ b, fd }) {
+  if (!b || !b.enabled) return b ? <p class="sub" data-budget-off="1">The weekly AI budget is off, as it is until you switch it on. Switched on, it counts this week's AI use, warns you at 80%, and at 100% asks first (or stops) before a request you type runs. The buttons in the dashboard and the daily mail check are never held. Switch it on in Settings, Advanced, creaite and ask creaite.</p> : null;
+  const fmt = (/** @type {number} */ n) => (b.unit === "dollars" ? usd(n) : `${num(n)} tokens`), pct = Math.min(100, Math.round(b.percent));
+  const word = b.state === "over" ? "Used up" : b.state === "warn" ? "Nearly used" : "Within budget";
+  return (
+    <div class={`ubudget ${b.state}`} role="group" aria-label="Weekly AI budget">
+      <h2>Weekly AI budget</h2>
+      <div class="ubar-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={`${pct}% of the weekly budget used`}>
+        <div class="ubar-fill" style={`width:${pct}%`} /></div>
+      <p class="sub">{`${fmt(b.used)} of ${fmt(b.limit)} (${Math.round(b.percent)}%). ${word}. The week ends on ${fd(b.week_end)}.`}
+        {b.counted ? "" : " The usage file could not be read, so nothing is held."}</p>
+    </div>
+  );
+}
+
 /** @param {{u: Usage, fd: (s: string) => string}} p */
 function Runs({ u, fd }) {
   const c = u.cards || {}, kinds = u.by_kind || [];
@@ -77,6 +95,7 @@ function Runs({ u, fd }) {
     ["avg", "Cost of an average run", usd(c.avg_cost?.now), c.avg_cost && delta(c.avg_cost, true)]];
   return (
     <>
+      <BudgetBar b={u.budget} fd={fd} />
       <div class="usum">
         {cards.map(([k, label, v, d]) => (
           <div class="ucard" key={k}><div class="v">{v}</div><div class="l">{label}</div><div class={`d ${d ? d[1] : ""}`}>{d ? d[0] : ""}</div></div>))}
@@ -128,7 +147,7 @@ function Loads({ rows, start, fd }) {
           <div class="unote"><b>Why this matters:</b>{" "}
             {`Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round((rules.tokens / total) * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`}</div>
         </>
-      ) : <p class="sub">Not measured yet. The live server measures these files once a day.</p>}
+      ) : <p class="sub">Not measured yet. creaite measures these files once a day.</p>}
     </>
   );
 }
@@ -143,7 +162,7 @@ function ctxChange(r, fd) {
 
 /* ===== v2.5.3 (#238 delta): Your reviews ===== */
 const REVIEW_ROUTE = "/api/usage/review", MAX_NOTE = 200;
-const NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs the live server";
+const NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs creaite to be running";
 const FORMULA = /^[=+\-@\t\r]/;          /* a spreadsheet would run a cell starting with one of these (usage_reviews.FORMULA) */
 /** One CSV cell: always quoted, quotes doubled, an apostrophe before a formula. @param {unknown} v */
 export const csvCell = v => { let s = String(v ?? ""); if (FORMULA.test(s)) s = `'${s}`; return `"${s.replace(/"/g, '""')}"`; };
@@ -221,9 +240,9 @@ export function UsagePanel({ usage, fd, live = false, onReviews = () => {} }) {
   const bad = !usage || usage.error;
   return (
     <>
-      <p class="sub">Last {u.days || 14} days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name.
+      <p class="sub">Last {u.days || 14} days, as counted by creaite for each Claude run. Counts only: never the text of a message, a note or a name.
         Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4).</p>
-      {bad || u.empty ? <p class="sub uempty" role="status">{bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here."}</p>
+      {bad || u.empty ? <p class="sub uempty" role="status">{bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run creaite makes will be counted here."}</p>
         : <Runs u={u} fd={fd} />}
       <Loads rows={u.context || []} start={u.cards?.start?.now} fd={fd} />
       {bad || u.empty ? null : <Skills skills={u.skills || []} />}

@@ -46,11 +46,11 @@ export async function vaultInit(){ if(!("showDirectoryPicker" in window)){ share
   try{ shared.VSTATE=(await VH.queryPermission({mode:"readwrite"}))==="granted"?"ok":"prompt"; }catch(e){ shared.VSTATE="none"; } status(); }
 export async function isVault(h){ try{ const sc=await (await h.getDirectoryHandle("system")).getDirectoryHandle("scripts"); await sc.getFileHandle("paths.py"); await h.getFileHandle("CLAUDE.md"); return true; }catch(e){ return false; } }
 export async function vaultConnect(){ try{
-    if(VH&&shared.VSTATE==="prompt"){ shared.VSTATE=(await VH.requestPermission({mode:"readwrite"}))==="granted"?"ok":"prompt"; status(); if(shared.VSTATE==="ok") snack("Vault reconnected"); return shared.VSTATE==="ok"; }
+    if(VH&&shared.VSTATE==="prompt"){ shared.VSTATE=(await VH.requestPermission({mode:"readwrite"}))==="granted"?"ok":"prompt"; status(); if(shared.VSTATE==="ok") snack("Folder reconnected"); return shared.VSTATE==="ok"; }
     const h=await window.showDirectoryPicker({id:"creaite-vault",mode:"readwrite"});
-    if(!await isVault(h)){ snack("That folder isn't the creaite vault. Choose the folder that holds CLAUDE.md and system/."); return false; }
-    VH=h; await vput(h); shared.VSTATE="ok"; status(); snack("Vault connected"); return true;
-  }catch(e){ if(e.name!=="AbortError") snack("Couldn't connect the vault: "+e.message); return false; } }
+    if(!await isVault(h)){ snack("That folder isn't your creaite folder. Choose the folder you set creaite up in."); return false; }
+    VH=h; await vput(h); shared.VSTATE="ok"; status(); snack("Folder connected"); return true;
+  }catch(e){ if(e.name!=="AbortError") snack("Couldn't connect your creaite folder: "+e.message); return false; } }
 export let needVault = async function(){ if(viaServer()||shared.VSTATE==="ok") return true; if(shared.VSTATE==="unsupported"){ snack("Saving needs Chrome or Edge"); return false; } return await vaultConnect(); };
 export async function vdir(path,create){ let d=VH; for(const part of path.split("/").filter(Boolean)) d=await d.getDirectoryHandle(part,{create:!!create}); return d; }
 export const split=path=>{ const i=path.lastIndexOf("/"); return [path.slice(0,i),path.slice(i+1)]; };
@@ -65,7 +65,7 @@ export const FVW={
 /* Served by live_server.py: writes, applies and ask creaite go through it (no folder access needed). Opened as a
    file: folder access is used for saves, and the page looks for a running server to offer the live dashboard. */
 export const SERVED=!!D.live&&location.protocol.startsWith("http");
-export const OLDSERVER="The live server is older than this dashboard and doesn't know this yet. Restart it: Ctrl+C in its Terminal window, then python3 system/scripts/live_server.py";
+export const OLDSERVER="creaite is older than this page and doesn't know this yet. Close creaite and open it again.";
 /* ===== BL-253 (sprint-live-updates) ===== when the page last saved through the server: its own change event waits for its reload */
 export let OWNPOST=0;
 /* ===== end BL-253 ===== */
@@ -73,7 +73,7 @@ export let api = async function(path,body){ if(!/^\/api\/(here|pulse|vip|files|a
     const j=await r.json().catch(()=>({ok:false,message:`HTTP ${r.status}`})); if(!r.ok) j.ok=false;
     if(r.status===404&&j.message==="Not found") j.message=OLDSERVER;   /* the page is newer than the running server */
     return j; }
-  catch(e){ setLive(false); return {ok:false,message:"The live server isn't reachable"}; } };
+  catch(e){ setLive(false); return {ok:false,message:"creaite isn't reachable"}; } };
 export const SVW={ async read(p){ const r=await api("/api/fs",{op:"read",path:p}); if(!r.ok) throw new Error(r.message); return r.text; },
   async write(p,t,expect){ const r=await api("/api/fs",{op:"write",path:p,text:t,...(expect==null?{}:{expect_text:expect})});   /* expect_text: what the file held when read; a server that knows it refuses a changed file (dev/proposals/233b-fs-check.md) */ if(!r.ok) throw new Error(r.message); },
   async remove(p){ const r=await api("/api/fs",{op:"remove",path:p}); if(!r.ok) throw new Error(r.message); },
@@ -220,7 +220,7 @@ export function writeProposal(items,extra){ return vq(async()=>{ let name=`propo
    is set to the item's number in that file, so the callers' `i.n===r.ref` finds the right one; none found (renumbered and changed, the
    file deleted and written again, approved elsewhere) refuses with "already ... changed". The write carries expect_text (/api/fs), so a
    file that changed between the read and the write (a second tab, an apply, a sweep) is never written over. */
-export let editProposal = function(file,mut,rws,same){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that proposal has already been applied or removed"); }
+export let editProposal = function(file,mut,rws,same){ return vq(async()=>{ const path="system/staging/"+file; let text, data; try{ text=await shared.VW.read(path); data=JSON.parse(text); }catch(e){ throw new Error("that suggestion has already been saved or removed"); }
   const guarded=rws?[].concat(rws):[]; for(const r of guarded) if(!findGuarded(data,r,same)) throw new Error("already approved or changed");
   const apWas=apSnap(data); mut(data); apStamp(data,apWas); try{ await shared.VW.write(path,JSON.stringify(data,null,2)+"\n",text); }catch(e){ if(/changed since it was read/.test(e.message)) throw new Error("already approved or changed"); throw e; }
   guarded.forEach(r=>{ const was=r.fp; refreshGuard(data,r); snapFollowEdit(file,r.ref,was,r.fp); }); }); };
@@ -294,15 +294,15 @@ async function saveApply(op){ PULSE.reloads++;   /* its own change event waits f
     if(why.length){   /* #280: its own item refused (held in Review, exit 0): a save is all or nothing, so what was written is undone */
       let wrote=false; try{ wrote=JSON.parse(await shared.VW.read("system/staging/"+op.name)).items.some(i=>i&&i.applied); }catch(e){ wrote=false; }
       const left=wrote&&!(res.apply_id!=null&&(await api("/api/undo",{apply_id:res.apply_id})).ok);
-      await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(why.join("\n"))+(left?" (the rest was applied: undo it in Activity)":""),false); }
+      await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(why.join("\n"))+(left?" (the rest was saved: undo it in Activity)":""),false); }
     if(held){ await opDropFile(op.name); const ids=opIds(op); return await opFail(op,`Not saved: ${ids.join(", ")||"it"} changed elsewhere; reloaded ${ids.length>1?"them":"it"}`); }   /* held as a conflict: not applied */
     op.state="done"; op.apply_id=res.apply_id; ovDrop(op.recs);
     if(!(opTargeted(op)&&await refreshRecords(opIds(op)))) await reloadData();
     if(op.cancel){ const u=await api("/api/undo",{apply_id:op.apply_id}); if(!(opTargeted(op)&&await refreshRecords(opIds(op)))) await reloadData(); if(!u.ok) snack("Not undone: "+oneLine(u.message)); return false; }
     const undo=()=>undoApply(op.apply_id,opTargeted(op)?opIds(op):null);
-    if(!op.recs.length) snack(`${op.what} — saved and applied`,undo);
-    else if(SNACKOP===op&&TOAST.open){ TOAST.text=`${op.what} — saved and applied`; shared.UNDO=undo; drawPageToast(); }   /* the same message, its time kept (BL-316: the Toast block) */
-    else if(SNACKOP===op) snack(`${op.what} — saved and applied`,undo);   /* the message had gone (Retry hides it as it starts) */
+    if(!op.recs.length) snack(`${op.what} — saved`,undo);
+    else if(SNACKOP===op&&TOAST.open){ TOAST.text=`${op.what} — saved`; shared.UNDO=undo; drawPageToast(); }   /* the same message, its time kept (BL-316: the Toast block) */
+    else if(SNACKOP===op) snack(`${op.what} — saved`,undo);   /* the message had gone (Retry hides it as it starts) */
     return true;
   }finally{ PULSE.reloads--; } }
 /* Undo pressed while it is still saving: back on screen now; nothing is written, or what was applied is undone */
@@ -312,7 +312,7 @@ function opUndo(op){ if(op.state==="done"){ undoApply(op.apply_id,opTargeted(op)
 async function saveStage(op){ let name;
   try{ name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
   ovDrop(op.recs); refreshAll();
-  apply(op.what,()=>{},async()=>{ op.undoIt(); ovReapply(); try{ await vq(async()=>{ if(await shared.VW.exists("system/staging/"+name)) await shared.VW.remove("system/staging/"+name); else throw 0; }); }catch(e){ snack(viaServer()?"Already applied: undo it in Activity":"Already applied: use “undo last apply” in Claude Code"); } },op.by,opIds(op)); return true; }   /* BL-149 */
+  apply(op.what,()=>{},async()=>{ op.undoIt(); ovReapply(); try{ await vq(async()=>{ if(await shared.VW.exists("system/staging/"+name)) await shared.VW.remove("system/staging/"+name); else throw 0; }); }catch(e){ snack(viaServer()?"Already saved: undo it in Activity":"Already saved: use “undo last save” in Claude Code"); } },op.by,opIds(op)); return true; }   /* BL-149 */
 /* settings.json: backup, change, log line per key */
 export const SKEY={bgActions:"work.board.group.actions",bgRaid:"work.board.group.raid",bgDecisions:"work.board.group.decisions",boardClosedDays:"work.board.closed_days",flowWeeks:"dashboard.flow_weeks",undatedGrace:"dashboard.undated_grace_days",filesDocs:"dashboard.files_show_documents",showArchived:"dashboard.show_archived",railLabels:"dashboard.rail_labels",helpLine:"help.first_line",listCap:"dashboard.project_list_cap",me:"identity.name",short:"identity.short_forms",defPriority:"defaults.new_action_priority",defActionView:"defaults.actions_status_filter",defRaidView:"defaults.raid_status_filter",defDecisionView:"defaults.decisions_view",dueSoon:"review.due_soon_days",autoApply:"dashboard.auto_apply",theme:"dashboard.theme",palette:"dashboard.palette",motion:"dashboard.motion",remindersOn:"reminders.enabled",weeklyDay:"reminders.weekly_report_day",weeklyTime:"reminders.weekly_report_from",sweepDue:"sweep.due_from",lookback:"sweep.first_run_lookback_days",srcInbox:"sweep.sources.inbox",srcSent:"sweep.sources.sent_items",srcChats:"sweep.sources.teams_chats",srcChannels:"sweep.sources.teams_channels",srcCalendar:"sweep.sources.calendar",possible:"sweep.show_possible_matches",staleDays:"review.stale_after_days",rvAdvance:"review.auto_advance",dupOverlap:"review.duplicate_overlap",overdueDays:"health.at_risk_overdue_days",slipAtRisk:"health.at_risk_milestone_slip_weeks_max",slipOff:"health.off_track_milestone_slip_weeks_over",urgentOff:"health.off_track_urgent_risks_min",port:"live_mode.port",dailyBackup:"backups.daily",ownDomains:"identity.own_domains",catchupSweep:"day.catchup_sweep",catchupAfter:"day.catchup_after_minutes"};
 export async function writeSettings(changes){ let sp=null;
@@ -335,7 +335,7 @@ export function replaceCurrent(md,text,dropped=[]){ const re=/(^## Current state
     return h+"\n"+(g.length?g.join("\n")+"\n\n":"")+text.trim()+"\n"+(im.length?"\n"+im.join("\n")+"\n":"")+"\n"; }); }
 export async function setRhythm(code,val){ if(!await needVault()) return false;
   try{ await vq(async()=>{ const path=memPath(code), text=await shared.VW.read(path), re=/(\*\*Client report rhythm:\*\*[ \t]*)([A-Za-z]+)/;
-    const m=text.match(re); if(!m) throw new Error(`no “Client report rhythm:” line in ${path}; use cx-edit`);
+    const m=text.match(re); if(!m) throw new Error(`no “Client report rhythm:” line in ${path}; ask creaite to change it`);
     await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`,".md"),text); await shared.VW.write(path,text.replace(re,"$1"+val.toLowerCase()));
     await shared.VW.append("system/config/settings-log.jsonl",JSON.stringify({at:stampFull(),key:`client_report_rhythm.${code}`,old:m[2],new:val.toLowerCase()})+"\n"); }); return true;
   }catch(e){ snack("Not saved: "+plainPaths(e.message)); return false; } }
@@ -384,7 +384,7 @@ export async function setMemLine(code,label,val,key){ const problem=memValueProb
   if(problem){ snack("Not saved: "+problem+"."); return false; }
   if(!await needVault()) return false;
   try{ await vq(async()=>{ const path=memPath(code), text=await shared.VW.read(path), r=memLineEdit(text,label,val);
-    if(!r) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
+    if(!r) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; ask creaite to change it`);
     if(r.text===text) return;
     /* L5: the file is read again just before it is written; a file that changed since (another tab or window) is never written over. */
     if(await shared.VW.read(path)!==text) throw new Error("this project's memory file changed in another window since it was read, so nothing was saved; try again");
@@ -423,18 +423,18 @@ export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE
   if(!shared.LOADING) errBanner(); }
 /* BL-86: the installed app. The service worker shows an offline page when the server is stopped; the page says "still here"
    every 10 seconds, so a server the launcher started can stop itself when the last window closes. */
-export function setLive(on){ const was=shared.LIVE; shared.LIVE=on; if(on&&!was&&SERVED){ reloadData(); reattach(); } if(on&&shared.HELD.length){ const n=shared.HELD.length; shared.HELD.forEach(h=>h()); shared.HELD=[]; shared.DATA_AT=nowStamp(); snack(`Live server back — applied ${n} held change${n===1?"":"s"}`); } status(); }
+export function setLive(on){ const was=shared.LIVE; shared.LIVE=on; if(on&&!was&&SERVED){ reloadData(); reattach(); } if(on&&shared.HELD.length){ const n=shared.HELD.length; shared.HELD.forEach(h=>h()); shared.HELD=[]; shared.DATA_AT=nowStamp(); snack(`creaite is back — saved ${n} held change${n===1?"":"s"}`); } status(); }
 /* every write goes through apply(): logs to Activity, applies now (or holds), offers Undo */
 export function apply(what,doIt,undoIt,by="You, in the dashboard",ids=[]){
   doIt(); const entry={at:nowStamp(),what,by,undo:undoIt};
   const commit=()=>{ shared.ACT.unshift(entry); shared.DATA_AT=entry.at; };
-  if(!S.autoApply){ const pend={what,commit,undo:undoIt,ids}; shared.PENDING.push(pend); refreshAll(); snack(`${what} — saved; press Apply to write it`,()=>{ undoIt(); const i=shared.PENDING.indexOf(pend); if(i>=0) shared.PENDING.splice(i,1); refreshAll(); }); return; }   /* BL-304: ids, the staged dot */
+  if(!S.autoApply){ const pend={what,commit,undo:undoIt,ids}; shared.PENDING.push(pend); refreshAll(); snack(`${what} — saved; press Save to approve it`,()=>{ undoIt(); const i=shared.PENDING.indexOf(pend); if(i>=0) shared.PENDING.splice(i,1); refreshAll(); }); return; }   /* BL-304: ids, the staged dot */
   if(shared.LIVE) commit(); else shared.HELD.push(commit);
-  refreshAll(); snack(shared.LIVE?`${what} — saved and applied`:`${what} — saved; applies when the server is back`,()=>{ undoIt(); const i=shared.ACT.indexOf(entry); if(i>=0) shared.ACT.splice(i,1); refreshAll(); });
+  refreshAll(); snack(shared.LIVE?`${what} — saved`:`${what} — saved; it is approved when creaite is back`,()=>{ undoIt(); const i=shared.ACT.indexOf(entry); if(i>=0) shared.ACT.splice(i,1); refreshAll(); });
 }
 shared.PENDING=[];
 export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):oneLine(applyWords(r.message)),r.ok?()=>undoApply(r.apply_id):null); return; }
-  snack("Say “apply” in Claude Code, or start the live server"); }
+  snack("Say “save” in Claude Code, or start creaite"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
   if(shared.VIEW==="psettings") psTick.value++;   /* #228: the project settings page redraws with the fresh data */
@@ -457,7 +457,7 @@ export function bootLive(){
 if(SERVED){ if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
   const here=()=>{ fetch("/api/here",{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:"{}"}).catch(()=>{}); };
   here(); setInterval(here,10000); }
-document.addEventListener("click",e=>{ if(e.target.closest("#checkLive")){ checkLive(); snack(SERVED?"Checking…":"Looking for the live server…"); } });
+document.addEventListener("click",e=>{ if(e.target.closest("#checkLive")){ checkLive(); snack(SERVED?"Checking…":"Looking for creaite…"); } });
 document.addEventListener("click",e=>{ if(e.target.closest("#vaultBtn")) vaultConnect(); });
 }
 /* ===== Chat and sweep: the open page refreshes itself (BL-110 part 2) ===== */

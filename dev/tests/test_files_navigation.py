@@ -76,7 +76,7 @@ class FilesNavigation(LiveBrowserCase):
     def test_one_search_bar_with_the_ask_button(self):
         b = self.open()
         self.assertEqual(b.eval("document.querySelectorAll('#v-files input[type=search]').length"), 1)
-        self.assertEqual(b.eval("document.querySelector('#vsInput').placeholder"), "Search the vault")
+        self.assertEqual(b.eval("document.querySelector('#vsInput').placeholder"), "Search everything")
         self.assertTrue(b.eval("!!document.querySelector('#vsAskBtn')"))
         self.assertFalse(b.eval("!!document.getElementById('fsName')"))
 

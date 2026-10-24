@@ -1,0 +1,11 @@
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -1016,6 +1016,8 @@
+     "backup.py": {"list": READ, "show": READ, "check": DERIVED, "tidy": (RECORD, "--dry-run"), "restore": (RECORD, "--dry-run")},
+     "quality.py": {"": READ},
+     "usage_report.py": {"": READ},     # #197: the run usage report, read only
++    "ai_budget.py": {"": READ},        # #334: this week's AI budget figures, read only
++    "start_tokens_report.py": {"": READ},   # #339 A0: start tokens per run kind, read only
+     "build_dashboard.py": {"": DERIVED},
+     "permissions.py": {"": RECORD},      # also never run by the panel (_script_refused)
+     "live_server.py": {"": RECORD},      # also never run by the panel

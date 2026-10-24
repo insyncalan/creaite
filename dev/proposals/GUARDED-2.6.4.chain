@@ -1,0 +1,5 @@
+# The approved guarded chain for 2.6.4, one diff per line, in order of use. Read by dev/tests/guarded_chain.py.
+# Lines starting with # are comments. Paths are relative to the repo root. Change this list only when Alan approves a change to the chain.
+# Base: the 2.6.3 release (main e6389af8; the 2.6.1, 2.6.2 and 2.6.3 chains are already in place there).
+# EMPTY until the list is cut (345, 346, then the 334 live_server diff, from the v264-guarded branch). While it is empty CHAIN4_SHA256 is
+# empty too and a commit marked "Guarded 2.6.4 chain:" fails closed: its guarded files are reported as changed.

@@ -109,7 +109,7 @@ class LiveCurrentState(LiveBrowserCase):
         b = self.b
         b.eval("document.getElementById('snackT').textContent=''")          # so an earlier message isn't mistaken for this one
         b.click('[data-cure="save"]')
-        b.wait("/saved and applied|Not saved|stopped|only|at most|Only|Saving needs|Can.t read/i.test(document.getElementById('snackT').textContent)", 15)
+        b.wait("/— saved|Not saved|stopped|only|at most|Only|Saving needs|Can.t read/i.test(document.getElementById('snackT').textContent)", 15)
         return b.eval("document.getElementById('snackT').textContent")
 
     def card(self, code="ABC"):
@@ -130,7 +130,7 @@ class LiveCurrentState(LiveBrowserCase):
         self.open_editor()
         self.add_image(shot, "Pipeline view")
         msg = self.save()
-        self.assertIn("saved and applied", msg)
+        self.assertIn("— saved", msg)
         name = f"{TODAY}-pipeline-view.png"
         self.assertIn(name, self.images())                                   # copied into the project's images/
         self.assertIn(f"![Pipeline view](images/{name})", self.current_md())  # the file's text names that file
@@ -156,7 +156,7 @@ class LiveCurrentState(LiveBrowserCase):
         self.open_editor()
         self.b.click("#curEd p")
         self.b.type(" Edited.")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         md = self.current_md()
         self.assertIn("![Plan view](images/2026-10-05-plan-view.png)", md)
         self.assertIn("(https://example.com/2026-10-05/pack.pdf)", md)
@@ -168,7 +168,7 @@ class LiveCurrentState(LiveBrowserCase):
     def test_a_removed_image_stays_removed(self):
         self.open_editor()
         self.b.click('#curEd figure[data-ref="images/plan.png"] .cimgdel')
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertNotIn("images/plan.png", self.current_md())               # not put back at the end
         self.assertIn("plan.png", self.images())                              # the file is never deleted
         self.reload_to()
@@ -195,7 +195,7 @@ class LiveCurrentState(LiveBrowserCase):
         self.open_editor()
         b.eval("genDraft('ABC','A fresh draft with no pictures. {F1}','tracker')")
         b.wait("document.getElementById('curEd').innerText.includes('A fresh draft')", 3)
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertIn("A fresh draft with no pictures.", self.current_md())
         self.assertIn("images/plan.png", self.current_md())               # not lost: a drafted text didn't take it out
 
@@ -203,7 +203,7 @@ class LiveCurrentState(LiveBrowserCase):
         self.open_editor()
         self.add_image(self.pic("photo.jpeg", JPEG), "Site photo")
         self.add_image(self.pic("Chart.PNG", png(120, 80, (20, 20, 20))), "Chart")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertEqual([n for n in self.images() if n.startswith(TODAY)], [f"{TODAY}-chart.png", f"{TODAY}-site-photo.jpg"])
         self.reload_to()
         shown = {c["cap"]: c for c in self.card()}
@@ -213,13 +213,13 @@ class LiveCurrentState(LiveBrowserCase):
         self.open_editor()
         self.add_image(self.pic("same.png", png(100, 60, (1, 2, 3))), "Same")
         self.add_image(self.pic("same-2.png", png(110, 60, (3, 2, 1))), "Same")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertEqual([n for n in self.images() if n.startswith(TODAY)], [f"{TODAY}-same-2.png", f"{TODAY}-same.png"])
         self.assertEqual(len(re.findall(rf"images/{TODAY}-same(-2)?\.png", self.current_md())), 2)
         # a second save, later, with the same caption again: a third name, never an overwrite
         self.open_editor()
         self.add_image(self.pic("same-3.png", png(90, 60, (9, 9, 9))), "Same")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertEqual(len([n for n in self.images() if n.startswith(f"{TODAY}-same")]), 3)
 
     def test_a_project_with_no_images_folder_gets_one(self):
@@ -232,7 +232,7 @@ class LiveCurrentState(LiveBrowserCase):
         self.assertFalse((folder / "images").exists())
         self.open_editor("DEF")
         self.add_image(self.pic("first.png", png(80, 80, (5, 5, 5))), "First")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertEqual(self.images("DEF"), [f"{TODAY}-first.png"])
         self.reload_to("DEF")
         self.assertTrue(self.card()[0]["w"] > 0)
@@ -319,7 +319,7 @@ class LiveCurrentState(LiveBrowserCase):
         before = self.memory().read_text()
         self.open_editor()
         self.add_image(self.pic("undo-me.png", png(60, 60, (7, 7, 7))), "Undo me")
-        self.assertIn("saved and applied", self.save())
+        self.assertIn("— saved", self.save())
         self.assertIn(f"{TODAY}-undo-me.png", self.images())
         self.b.click("#snackU")
         self.b.wait("/undone|Undone|undid/i.test(document.getElementById('snackT').textContent)", 10)

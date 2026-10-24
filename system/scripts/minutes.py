@@ -1360,7 +1360,7 @@ def expected_items(code, title="", day=None):
     con = tracker.connect()
     project = con.execute("SELECT code, name FROM projects WHERE code = ?", (code,)).fetchone()
     if not project:
-        raise SystemExit(f"creaite: {code} isn't a project in the tracker")
+        raise SystemExit(f"creaite: {code} isn't a project in your project record")
     projects = [dict(r) for r in con.execute("SELECT code, name FROM projects WHERE active = 1 ORDER BY code")]
     day = day or _today()
     remembered = (paths.load_settings().get("prep") or {}).get("series") or {}

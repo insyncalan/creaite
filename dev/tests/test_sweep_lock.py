@@ -229,9 +229,9 @@ class HeldWithNoSweep(Base):
         import health
         h = health.health({"checks": [c]})
         p = h["problems"][0]
-        self.assertEqual(p["title"], "A sweep lock is held with no sweep running")
+        self.assertEqual(p["title"], "A mail and Teams check looks stuck")
         self.assertTrue(p["fix"]["built"])
-        self.assertEqual(p["fix"]["button"], "Release")
+        self.assertEqual(p["fix"]["button"], "Clear it")
         self.assertEqual(p["fix"]["command"], "system/scripts/run sweep.py unlock --if-idle")
 
     def test_release_removes_it(self):

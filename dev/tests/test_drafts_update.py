@@ -190,7 +190,7 @@ class InThePage(DraftCase):
         b.wait("document.querySelector('#pkAiDraft .drnone')", 30)
         self.assertIn("Nothing new since", b.eval("document.querySelector('#pkAiDraft .drnone').textContent"))
 
-    def test_the_bar_and_todays_stale_line_offer_draft_updates(self):
+    def test_the_bar_offers_draft_updates_and_today_has_no_stale_line(self):      # #352: Today's stale-updates line is gone; the Work bar keeps the draft
         b = self.b
         b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)       # BL-327: the page's own data reload would redraw the bar away
         b.eval("go('work'); WT='actions'; renderWork()")
@@ -203,8 +203,9 @@ class InThePage(DraftCase):
         b.wait("document.getElementById('snackT').textContent.includes('in Intake')", 30)
         self.assertIn("in Intake", b.eval("document.getElementById('snackT').textContent"))
         b.eval("HL.clear(); hlPaint(); hlBar(); A.forEach(x=>x.upd_at='2026-01-01'); go('today'); renderToday()")
-        b.wait("document.querySelector('#drStale [data-drstale]')")
-        self.assertIn("had no update for 7 days", b.eval("document.getElementById('drStale').textContent"))
+        b.wait("document.querySelector('#v-today')")
+        b.pump(0.8)
+        self.assertFalse(b.eval("!!document.getElementById('drStale') || /had no update for/.test(document.getElementById('v-today').textContent)"))     # #352
         b.eval("go('intake-review')")                                              # #232 C2: the drafted rows carry their tag on the Intake page
         b.wait("document.querySelector('#v-intake-review tr.irprop .drrv')")
         for f in self.staged():

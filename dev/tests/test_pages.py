@@ -343,7 +343,7 @@ class FilesFileVersionTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertTrue(out["before"].startswith("File list as of the last build."))
         self.assertEqual(out["after"], out["before"])
-        self.assertIn("live server", out["snack"])
+        self.assertIn("creaite", out["snack"])
         self.assertGreater(out["rows"], 0)
 
 
@@ -383,7 +383,7 @@ class SearchBarTests(LiveBrowserCase):
             self.assertAlmostEqual(tree[2], page, delta=2)                                            # the tree and table stay full width
 
     def test_the_placeholder_and_the_hint_line(self):
-        self.assertEqual(self.b.eval("document.getElementById('vsInput').placeholder"), "Search the vault")
+        self.assertEqual(self.b.eval("document.getElementById('vsInput').placeholder"), "Search everything")
         hint = self.b.eval("document.getElementById('vsHint').textContent")
         self.assertIn("risks ABC last month", hint)
         self.assertIn("what did Sara say about UAT?", hint)
@@ -450,7 +450,7 @@ class SearchBarTests(LiveBrowserCase):
         self.type_in("data access")
         b.eval("LIVE=false")
         b.click("#vsAskBtn")
-        b.wait("document.getElementById('vsNote').textContent.includes('Live server needed')")
+        b.wait("document.getElementById('vsNote').textContent.includes('creaite needs to be running')")
         b.eval("LIVE=true")
 
     def test_narrow_windows_stack_the_button_under_the_bar(self):
