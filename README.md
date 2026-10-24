@@ -8,7 +8,6 @@
   <img alt="macOS" src="https://img.shields.io/badge/macOS-only-18181B?style=flat-square&logo=apple&logoColor=white">
   <img alt="Local-first" src="https://img.shields.io/badge/local--first-your%20data%20stays%20local-F2B544?style=flat-square&labelColor=18181B">
   <img alt="Runs on Claude and Microsoft 365" src="https://img.shields.io/badge/runs%20on-Claude%20%2B%20Microsoft%20365-0B6E7F?style=flat-square&labelColor=18181B">
-  <img alt="Early access" src="https://img.shields.io/badge/early%20access-pilot%20users%20wanted-18181B?style=flat-square">
 </p>
 
 ---
@@ -106,10 +105,6 @@ Claude reads the content it works on, under your own Claude plan. Confidential m
 **What do I need?** A Mac, the Claude desktop app with a Claude subscription and Microsoft 365 connected, Python 3.9 or later, git, and Chrome or Edge. Set-up is guided: say "setup" and creaite checks your machine.
 
 **Is it finished?** No. It is an early product with frequent releases, and the plain-English notes for each one are in [`dev/release-notes/`](dev/release-notes/).
-
-## Be one of the first ten
-
-We are looking for a small group of programme managers to use creaite on real work and tell us what is missing. If you run one to five programmes and spend your week writing up meetings and chasing owners, [open an issue](https://github.com/insyncalan/creaite/issues/new) titled **Pilot** and tell us what you run.
 
 ## Get started
 
