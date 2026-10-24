@@ -14,7 +14,7 @@
 
 /** @typedef {"y"|"n"|""} Track */
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
-/** @typedef {{n: number, group: string, why: string|null, label: string}} PlanItem */
+/** @typedef {{n: number, group: string, why: string|null, label: string, fp?: string}} PlanItem */
 /** @typedef {{n: number, section: string, row: any, item: any, kept: boolean}} TrackRow */
 
 export const TRACK_SECTIONS = ["decisions", "raid", "actions"];

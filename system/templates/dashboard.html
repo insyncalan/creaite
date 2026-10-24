@@ -38078,7 +38078,7 @@ system/scripts/run launch.py agent ${what}`;
       {}
     );
     for (const n4 of own) {
-      const rv = REV.find((x5) => x5.file === v5.proposal && x5.ref === n4);
+      const rv = (plan || []).find((i5) => i5.n === n4);
       if (rv && rv.fp) expects[String(n4)] = rv.fp;
     }
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own, expects, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });

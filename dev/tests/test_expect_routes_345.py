@@ -528,7 +528,7 @@ class Page(unittest.TestCase):
         self.assertEqual(len(re.findall(r'api\("/api/review/(?:repeat|retarget|reject)"', src)), 5)       # no call outside these five (undo of a retarget is one)
         mins = (ROOT / "system/templates/dashboard/src/stores/minutes.js").read_text(encoding="utf-8")
         self.assertIn('...(meeting && meeting.fp ? { expect: meeting.fp } : {})', mins)
-        self.assertIn("for (const n of own) { const rv = REV.find(x => x.file === v.proposal && x.ref === n); if (rv && rv.fp) expects[String(n)] = rv.fp; }", mins)
+        self.assertIn("for (const n of own) { const rv = (plan || []).find(i => i.n === n); if (rv && rv.fp) expects[String(n)] = rv.fp; }", mins)
         self.assertIn('REVIEW_CHANGED.test(r.message || "")) { await reloadData();', mins)
 
     def test_the_recent_rejects_carry_their_fingerprint(self):

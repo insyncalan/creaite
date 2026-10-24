@@ -929,6 +929,19 @@ def _report_place(rel, doc):
         return False                  # no reports folder to be in (the portfolio's minutes); the name check above still ran
 
 
+def plan_with_fps(data):
+    """review.minutes_plan(data) with each item's fingerprint (`fp`) on its row (#345): Approve minutes names every item it approves,
+    and an item already approved in Review but not yet saved is not in Review's list, so the plan is where the page finds it."""
+    import review
+    import build_dashboard
+    plan = review.minutes_plan(data)
+    by_n = {it.get("n"): it for it in data.get("items") or [] if isinstance(it, dict)}
+    for row in plan["items"]:
+        if row.get("n") in by_n:
+            row["fp"] = build_dashboard.item_fp(by_n[row["n"]])
+    return plan
+
+
 def view(file=None, path=None):
     """What the minutes view opens: the record, its versions, the transcript's turns for the pane, and (while its items are
     pending) the approve popup's plan. By the proposal's file name, or the record's stored path."""
@@ -951,7 +964,7 @@ def view(file=None, path=None):
     meta = doc.get("meta") or {}
     labels = item_labels(doc)
     return {"ok": True, "path": rel, "doc": doc, "versions": creaite_doc.versions(rel), "turns": turns(meta.get("transcript")),
-            "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None,
+            "proposal": meta.get("proposal"), "plan": plan_with_fps(data) if data and doc["state"] == "draft" else None,
             "labels": labels, "withheld": withheld(doc, labels),
             "settle": unsettled(doc, data) if data and doc["state"] == "draft" else []}
 

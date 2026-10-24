@@ -168,7 +168,7 @@ export async function trackApprove(v, how = {}) {
   if (!v.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
   const meeting = REV.find(x => x.kind === "draft" && x.file === v.proposal && x.ref === "meeting");   // 2.6.4 (#345): the server approves these minutes only if they are still the ones on the page
   const own = how.mine ? args.own.filter(how.mine) : args.own, expects = /** @type {Record<string, string>} */ ({});
-  for (const n of own) { const rv = REV.find(x => x.file === v.proposal && x.ref === n); if (rv && rv.fp) expects[String(n)] = rv.fp; }   // and every ticked item
+  for (const n of own) { const rv = (plan || []).find(i => i.n === n); if (rv && rv.fp) expects[String(n)] = rv.fp; }   // and every ticked item, from the plan (an item approved in Review but not yet saved is in it)
   const r = await api("/api/minutes/approve", { file: v.proposal, group: args.group, own, expects, ...(meeting && meeting.fp ? { expect: meeting.fp } : {}) });
   if (r && !r.ok && REVIEW_CHANGED.test(r.message || "")) { await reloadData(); return { ok: false, message: STALE_ROW_MSG, made }; }
   if (r && r.ok) noteNumbered(r.numbered);                    // #324: another meeting took the name first: the note says what it was filed as
