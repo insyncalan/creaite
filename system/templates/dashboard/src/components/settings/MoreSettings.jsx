@@ -15,8 +15,10 @@ import { rowId, SettingRow } from "./SettingRow.jsx";
 /* Limits and shapes the generic controls can't guess (the old Advanced card's, BL-206 and BL-208). */
 const LIMITS = { "assistant.run_timeout_minutes": [1, 240], "assistant.long_chat_turns": [5, 500], "logging.max_mb": [1, 500], "logging.keep_days": [1, 90],
   "search.debounce_ms": [0, 2000], "search.ask_budget_chars": [1000, 200000], "review.spot_check_every": [0, 100],
-  "logging.repeat_window_hours": [1, 168], "live_mode.health_check_seconds": [5, 3600] };
+  "logging.repeat_window_hours": [1, 168], "live_mode.health_check_seconds": [5, 3600],
+  "ai_budget.weekly_dollars": [1, 10000], "ai_budget.weekly_tokens": [100000, 10000000000] };    /* #334 */
 const CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"],
+  "ai_budget.unit": ["dollars", "tokens"], "ai_budget.at_limit": ["confirm", "stop"],      /* #334 */
   "dashboard.rail_icon_size": ["small", "medium", "large"] };   /* #182 */
 
 /** A value as words. @param {any} v */

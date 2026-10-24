@@ -80,6 +80,14 @@
     "quiet_to": "07:00",
     "quiet_weekend": true
   },
+  "ai_budget": {
+    "_about": "Weekly budget for creaite's own AI runs (#334): ask creaite, drafts, the sweep and the alert check; not the cost of building creaite. Counted from the usage monitor's counts (system/staging/run-usage.jsonl), Monday to Sunday. unit: dollars or tokens. A plain warning from 80% of the week. at_limit: confirm asks before a new typed request runs once the week is used up; stop refuses it until Monday. Review, Apply and Undo are never held, nor a sweep or the alert check running on their own.",
+    "enabled": true,
+    "unit": "dollars",
+    "weekly_dollars": 50,
+    "weekly_tokens": 50000000,
+    "at_limit": "confirm"
+  },
   "reminders": {
     "enabled": true,
     "weekly_report_day": "Friday",

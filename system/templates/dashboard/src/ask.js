@@ -785,10 +785,16 @@ export function runAsk(d){ if(d) d.classList.add("runask"); return d; }
 export function runClosure(c){ const href=/^#[\w=%.|:&-]*$/.test(String(c.href||""))?String(c.href):"";
   return addEl("msg a runend"+(c.ok===false?" info":""),html`${String(c.line||"")}${href?html` · <a href="${href}" class="hlink" data-runhref="${href}">${c.link||"Open"}</a>`:""}`); }
 /* ===== end BL-326 ===== */
+/* #334: from 80% of the week's AI budget a plain line after a run (the figures come from GET /api/usage: counts and dates only). */
+async function budgetNote(){ try{ const res=await fetch("/api/usage",{headers:{"X-Creaite-Token":D.token||""}}); const r=res.ok?await res.json():null, b=r&&r.budget; if(!b||!b.enabled||(b.state!=="warn"&&b.state!=="over")) return;
+  addEl("msg a info",html`${b.state==="over"?"Over this week's AI budget: ":"Heads-up: "}${b.line}`); }catch(e){ /* the note is a courtesy */ } }
 export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, outcome="done"; const live=!ended; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
   try{ res=await fetch(url,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token,"X-Creaite-Seq":"1"},body:JSON.stringify(body)}); }   /* BL-262: numbered events */
   catch(e){ askWorking(false); if(e.name==="AbortError"){ rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("creaite stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
+  if(res.status===429){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({}));   /* #334: this week's AI budget is used up */
+    const b=j.budget||{}; if(b.can_continue&&await confirmCard("Weekly AI budget",html`${oneLine(j.message||"")}`,"Run anyway")) return askStream(url,{...body,over_budget:true},confirmed,ctl,ended,plain);
+    await say(oneLine(j.message||"This week's AI budget is used up.")); return; }
   if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check creaite window."); retryOffer("failed",body); return; }
   const work=()=>live?working():document.createElement("div");   /* BL-262 */ let next=null;
   const rd=res.body.getReader(), dec=new TextDecoder(), t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
@@ -813,7 +819,7 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
       else if(ev.type==="done"){ runId=ev.run||runId; next=ev.next||null;   /* BL-257: the queued message the server started */ setChat(ev.chat||shared.ASKCHAT,ev.session||shared.ASKSESSION); replies.forEach(b=>stampMsg(b,ev.done_at||nowIso())); replies=[]; } } }
   replies.forEach(b=>stampMsg(b,nowIso()));   /* a reply that ended without a done event (stopped, cut off) is finished now */
   if(!spin.classList.contains("stopped")) spin.remove();
-  askWorking(false); setRunning(false); if(runId) api("/api/ask/ack",{run:runId}); ATTACHED=null; askFinished(outcome); retryOffer(outcome,body);   /* BL-148 */
+  askWorking(false); setRunning(false); if(runId) api("/api/ask/ack",{run:runId}); ATTACHED=null; askFinished(outcome); retryOffer(outcome,body); budgetNote();   /* BL-148; #334 */
   if(next){ setTimeout(()=>attachRun(next),0); return; } queueLoad();   /* BL-257: follow the next queued message once this run's caller has let go */
   if(perm) permissionFlow(perm);
   if(chg&&await changesFlow(chg)) return;
