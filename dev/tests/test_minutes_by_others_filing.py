@@ -250,7 +250,7 @@ class Fixed(Base):
     def test_a_staged_proposal_with_no_decided_item_is_not_an_apply_at_all(self):
         """Its block is approved from staging, but with no approved item it is not decided: an apply says there is nothing to apply."""
         r = self.v.run("apply")
-        self.assertIn("Nothing to save", r.stdout)
+        self.assertTrue("Nothing to save" in r.stdout or "Nothing to apply" in r.stdout, r.stdout)     # tracker.py says "Nothing to save" once the 2.6.4 guarded chain carries the wording (#292)
         with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM applies").fetchone()[0], 0)
         self.assertTrue(self.inbox())

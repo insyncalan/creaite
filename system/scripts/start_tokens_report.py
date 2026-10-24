@@ -16,6 +16,7 @@ from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402,F401  (every script takes its locations from paths.py)
 import usage_report  # noqa: E402
 
 # The 2.6.3 baseline from #339 (measured on the build before the lighter runs), for comparison only. Tokens and dollars.
