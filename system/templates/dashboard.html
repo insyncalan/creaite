@@ -5445,10 +5445,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     cardProps: () => cardProps,
     catName: () => catName,
     catOf: () => catOf,
-    cdNow: () => cdNow,
     cdOpen: () => cdOpen,
     cdOpenPlaces: () => cdOpenPlaces,
-    cdSourceOf: () => cdSourceOf,
     ceApply: () => ceApply,
     ceClick: () => ceClick,
     ceClose: () => ceClose,
@@ -73577,6 +73575,17 @@ ${d5.text}`);
     return c5 ? String(label) : "A creaite step";
   }
 
+  // core/closeDayRows.js
+  var CD_LABELS = [
+    ["Searching mail", "Microsoft 365: outlook email search"],
+    ["Searching Teams chats", "Reading Teams chats", "Microsoft 365: chat message search", "Microsoft 365: teams list chats"],
+    ["Reading Teams channels", "Microsoft 365: teams list channels", "Microsoft 365: teams list channel messages"]
+  ];
+  function cdSourceOf(label) {
+    return CD_LABELS.findIndex((l6) => l6.includes(label));
+  }
+  var cdNow = (cu2) => cu2.steps > 0 ? [0, 1, 2].find((i5) => !cu2.done.includes(i5)) ?? -1 : -1;
+
   // components/closeday/CloseDay.jsx
   var CD_STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"];
   var PLACES = [["review", "Review now"], ["first", "First thing tomorrow"], ["leave", "Leave"]];
@@ -73598,15 +73607,6 @@ ${d5.text}`);
     }
     cdOpen.value = true;
   }
-  var CD_LABELS = [
-    ["Searching mail", "Microsoft 365: outlook email search"],
-    ["Searching Teams chats", "Reading Teams chats", "Microsoft 365: chat message search", "Microsoft 365: teams list chats"],
-    ["Reading Teams channels", "Microsoft 365: teams list channels", "Microsoft 365: teams list channel messages"]
-  ];
-  function cdSourceOf(label) {
-    return CD_LABELS.findIndex((l6) => l6.includes(label));
-  }
-  var cdNow = (cu2) => cu2.steps > 0 ? [0, 1, 2].find((i5) => !cu2.done.includes(i5)) ?? -1 : -1;
   var cdTyping = (t47) => t47 instanceof HTMLElement && !!t47.closest("input,textarea,select,[contenteditable]");
   function Tick() {
     return /* @__PURE__ */ u4(
@@ -76201,6 +76201,7 @@ ${d5.text}`);
     } catch (e4) {
       askWorking(false);
       if (e4.name === "AbortError") {
+        if (mc2) await mcFinish("stopped");
         rbEnd("stopped");
         addEl("step stopped", "Stopped");
         retryOffer("stopped", body2);
@@ -76257,7 +76258,7 @@ ${d5.text}`);
       } catch (e4) {
         spin.remove();
         askWorking(false);
-        if (mc2) await mcFinish(shared.RUN && shared.RUN.stopping ? "stopped" : "early");
+        if (mc2) await mcFinish(e4.name === "AbortError" || shared.RUN && shared.RUN.stopping ? "stopped" : "early");
         rbEnd(shared.RUN && shared.RUN.stopping ? "stopped" : "failed");
         if (shared.RUN && shared.RUN.stopping) addEl("step stopped", "Stopped");
         retryOffer(shared.RUN && shared.RUN.stopping ? "stopped" : "failed", body2);

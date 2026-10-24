@@ -170,6 +170,51 @@ class Classifier(unittest.TestCase):
         broke("found.n ? `Finished.${looked}", "true ? `Finished.${looked}", lambda o: o["ends"][2] != self.o["ends"][2])
 
 
+ROWS = REPO / "system/templates/dashboard/src/core/closeDayRows.js"
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class CloseDayRows(unittest.TestCase):
+    """Close the day keeps its four rows; each ticks only from its own finished search and never from a script step."""
+
+    @classmethod
+    def setUpClass(cls):
+        script = """
+const f = await import(%s); const out = {};
+const L = ["Searching mail", "Microsoft 365: outlook email search", "Searching Teams chats", "Reading Teams chats", "Microsoft 365: teams list chats",
+  "Microsoft 365: chat message search", "Reading Teams channels", "Microsoft 365: teams list channel messages", "Reading the calendar",
+  "Staging what the sweep found", "Running sweep.py stage mail Teams channel", "Matching to projects", "Reading Teams", "", null];
+out.rows = L.map(f.cdSourceOf);
+out.now = [f.cdNow({steps: 0, done: []}), f.cdNow({steps: 1, done: []}), f.cdNow({steps: 2, done: [1]}), f.cdNow({steps: 3, done: [0, 1]}),
+  f.cdNow({steps: 4, done: [0, 1, 2]}), f.cdNow({steps: 1, done: [2]})];
+console.log(JSON.stringify(out));
+"""
+        cls.o = run_node(ROWS, script)
+
+    def test_rows_tick_from_their_own_whole_labels_only(self):
+        self.assertEqual(self.o["rows"], [0, 0, 1, 1, 1, 1, 2, 2, -1, -1, -1, -1, -1, -1, -1])
+
+    def test_nothing_is_now_before_the_first_step_and_matching_to_projects_is_never_now(self):
+        n = self.o["now"]
+        self.assertEqual(n[0], -1)             # before any step every row waits
+        self.assertEqual(n[1], 0)
+        self.assertEqual(n[2], 0)              # Teams chats done first: mail is still the first not done
+        self.assertEqual(n[3], 2)
+        self.assertEqual(n[4], -1)             # all three done: nothing shows as now, the fourth row never does
+        self.assertEqual(n[5], 0)
+
+    def test_a_mutant_that_ticks_on_free_text_fails(self):
+        src = ROWS.read_text(encoding="utf-8")
+        tmp = HERE / ".mc_rows"
+        tmp.mkdir(exist_ok=True)
+        f = tmp / "m.mjs"
+        f.write_text(src.replace("return CD_LABELS.findIndex(l => l.includes(label));", "return /channel/i.test(label) ? 2 : /mail/i.test(label) ? 0 : -1;"))
+        r = subprocess.run(["node", "--input-type=module", "-e", """const f = await import(%s); console.log(JSON.stringify(["Running sweep.py stage mail Teams channel"].map(f.cdSourceOf)));""" % json.dumps(f.as_uri())],
+                           capture_output=True, text=True)
+        shutil.rmtree(tmp, ignore_errors=True)
+        self.assertNotEqual(json.loads(r.stdout), [-1])
+
+
 class Pin(unittest.TestCase):
     def test_the_page_marker_equals_the_servers_marker(self):
         """Read as text, never imported (importing live_server would run it): a changed letter on either side fails."""
@@ -390,6 +435,33 @@ def _live_cls():
             b.eval("stopAsk()")
             b.pump(1.0)
             (self.v.root / "slow-sweep").unlink()
+
+        def test_the_abort_path_still_writes_a_stopped_line(self):
+            """The Stop route could not reach the server: the page cancels its own read. The closing line is still drawn."""
+            b = self.b
+            (self.v.root / "slow-sweep").write_text("")
+            self.begin("sweep")
+            b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
+            b.eval("RUN.ctl.abort(); 0")
+            self.finish(30)
+            end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+            self.assertRegex(end, r"^Stopped\. Looked in Outlook mail, Teams\.")
+            (self.v.root / "slow-sweep").unlink()
+            b.pump(1.0)
+
+        def test_a_reload_with_no_saved_reply_still_ends_with_a_line(self):
+            """Reload mid-run, let the check finish while the chat is closed, then a finished run is attached again from its record."""
+            b = self.b
+            self.begin("sweep")
+            b.reload("typeof go==='function' && LIVE")
+            b.wait("RB.state==='running'||RB.state==='done'", 40)
+            b.wait("RB.state!=='running'", 90)
+            b.pump(1.0)
+            b.eval("openChat()")
+            b.pump(1.0)
+            last = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].map(m=>m.textContent).pop()||''")
+            live = b.eval("document.getElementById('askLive').textContent")
+            self.assertTrue(last.startswith("Finished.") or "Found 2 new, 1 needs a project" in live or "Finished." in live, (last, live))
 
         def test_stopped_and_failed_endings(self):
             b = self.b

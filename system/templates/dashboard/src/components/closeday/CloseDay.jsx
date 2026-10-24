@@ -12,6 +12,7 @@
    approves, rejects or applies anything; the server keeps references only (dev/sprints/BL-295-server.md). Text only through JSX.
    The Close the day door (BL-270) and ⌘K open it through openCloseDay(); its state lives here while the page is open. */
 import { render } from "preact";
+import { cdNow, cdSourceOf } from "../../core/closeDayRows.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import { Dialog } from "../Dialog.jsx";
@@ -62,24 +63,6 @@ export function openCloseDay() {
   }
   cdOpen.value = true;
 }
-
-/** Which of SOURCES a run's step line is (its index), or -1 for any other step. #358: whole labels only, matched exactly (the server's
-    describe_tool form, or, for the catch-up, a run creaite started, its plain_step words), never a search of the text, so a mail subject
-    with "Teams" in it ticks nothing. The calendar has no row, and a script step ("Staging what the sweep found") ticks nothing.
-    "Matching to projects" (3) is never ticked by a step. */
-const CD_LABELS = [
-  ["Searching mail", "Microsoft 365: outlook email search"],
-  ["Searching Teams chats", "Reading Teams chats", "Microsoft 365: chat message search", "Microsoft 365: teams list chats"],
-  ["Reading Teams channels", "Microsoft 365: teams list channels", "Microsoft 365: teams list channel messages"],
-];
-/** @param {string} label */
-export function cdSourceOf(label) {
-  return CD_LABELS.findIndex(l => l.includes(label));
-}
-
-/** The row shown as now: the first of the three source rows not done, and only once the run has finished a step (before that every row
-    waits). Matching to projects is never shown as now. @param {Catchup} cu */
-export const cdNow = cu => (cu.steps > 0 ? [0, 1, 2].find(i => !cu.done.includes(i)) ?? -1 : -1);
 
 /** The ← → keys move only when focus isn't in a field. @param {EventTarget | null} t */
 const cdTyping = t => t instanceof HTMLElement && !!t.closest("input,textarea,select,[contenteditable]");
