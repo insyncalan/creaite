@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import { P, pName } from "../../core/data.js";
 import { creaiteEditor } from "../../core/editor.js";
-import { fd, TODAY } from "../../core/page.js";
+import { fd, store, TODAY } from "../../core/page.js";
 import { api, oneLine, snack, viaServer } from "../../core/server.js";
 import { openNoteAt } from "../../notes.js";
 import { capOpen } from "../../stores/capture.js";
@@ -39,6 +39,24 @@ const WAIT = 600;                                    // ms after the last key be
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 /** @returns {Note} */
 const blank = () => ({ id: newId(), code: "", chosen: false, how: "", reason: "", title: "", body: "", template: "blank", date: "", with: [], confidential: false, saved: "" });
+
+/* #321: the drawer's width. Drag the handle on its left edge (or use the arrow keys on it) to widen it up to the page's width; double-click
+   or Home/Enter puts it back to the default. Kept per viewer in localStorage (the page works without it). */
+export const CAP_W0 = 440, CAP_STEP = 24;
+const WKEY = "creaite-capture-width";
+const pageW = () => Math.max(CAP_W0, window.innerWidth || CAP_W0);
+/** @param {number} w */
+const clampW = w => Math.round(Math.min(pageW(), Math.max(CAP_W0, Number(w) || CAP_W0)));
+const capW = signal(clampW(store.get(WKEY, CAP_W0)));
+/** Back to the default width, and forget the remembered one. */
+function resetCapW() {
+  capW.value = CAP_W0;
+  try { localStorage.removeItem(WKEY); } catch (e) { /* no storage: nothing was kept */ }
+  const h = document.getElementById("capResize");              // the Reset width button goes with the width: focus stays on the handle
+  if (h) h.focus();
+}
+/** Set the width; with `keep` it is also remembered. @param {number} w @param {boolean} [keep] */
+function setCapW(w, keep) { capW.value = clampW(w); if (keep) store.set(WKEY, capW.value); }
 
 /** The note in the drawer (kept while the drawer is closed, so ⌘⇧N carries on). */
 export const capNote = signal(blank());
@@ -189,6 +207,40 @@ async function discard() {
 /** A time stamp as the foot shows it: today's as HH:MM, another day's as DD-MM-YYYY. @param {string} at */
 const capWhen = at => !at ? "" : at.slice(0, 10) === TODAY ? at.slice(11, 16) : fd(at.slice(0, 10));
 
+/** The handle on the drawer's left edge: drag, arrow keys, double-click or Home/Enter to reset. */
+function CapHandle() {
+  const w = Math.min(capW.value, pageW());
+  /** @param {PointerEvent} e */
+  const down = e => {
+    const el = /** @type {HTMLElement} */ (e.currentTarget);
+    e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (x) { /* a test or an old browser: the move still reaches the handle */ }
+    el.classList.add("dragging");
+  };
+  /** @param {PointerEvent} e */
+  const move = e => { if (/** @type {HTMLElement} */ (e.currentTarget).classList.contains("dragging")) setCapW(window.innerWidth - e.clientX); };
+  /** @param {PointerEvent} e */
+  const up = e => {
+    const el = /** @type {HTMLElement} */ (e.currentTarget);
+    if (!el.classList.contains("dragging")) return;
+    el.classList.remove("dragging");
+    setCapW(capW.value, true);
+  };
+  /** @param {KeyboardEvent} e */
+  const key = e => {
+    const big = e.shiftKey ? 4 : 1, now = w;
+    const to = e.key === "ArrowLeft" ? now + CAP_STEP * big : e.key === "ArrowRight" ? now - CAP_STEP * big
+      : e.key === "End" ? pageW() : e.key === "Home" || e.key === "Enter" ? CAP_W0 : null;
+    if (to === null) return;
+    e.preventDefault(); e.stopPropagation();
+    if (to === CAP_W0) resetCapW(); else setCapW(to, true);
+  };
+  return <div id="capResize" class="capresize" role="separator" aria-orientation="vertical" tabindex={0} aria-label="Width of the note"
+    aria-valuemin={CAP_W0} aria-valuemax={pageW()} aria-valuenow={w} aria-valuetext={`${w} pixels wide`}
+    data-tip="Drag to change the width; double-click to put it back" style={{ right: `min(${w}px, 100vw)` }}
+    onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onKeyDown={key} onDblClick={resetCapW} />;
+}
+
 /** The drawer. */
 export function CaptureDrawer() {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
@@ -221,11 +273,14 @@ export function CaptureDrawer() {
   const off = live ? undefined : "Saving a note needs the live server";
   const meeting = n.template === "working-session";
   const drafts = recent.drafts.filter(d => d.id !== n.id);
-  return (
-    <aside id="capDrawer" class="capdrawer" role="dialog" aria-modal="false" aria-labelledby="capH" hidden={!open} onKeyDown={keys}>
+  return (<>
+    {open ? <CapHandle /> : null}
+    <aside id="capDrawer" class="capdrawer" role="dialog" aria-modal="false" aria-labelledby="capH" hidden={!open} onKeyDown={keys}
+      style={{ width: `min(${capW.value}px, 100vw)` }}>
       <div class="caphead">
         <h2 id="capH">{meeting ? "Note for this meeting" : "New note"}</h2>
         <span class="sp" />
+        {capW.value !== CAP_W0 ? <button type="button" class="linkbtn capdiscard" id="capWidthReset" onClick={() => resetCapW()}>Reset width</button> : null}
         {typed(n) ? <button type="button" class="linkbtn capdiscard" onClick={() => discard()}>Discard</button> : null}
         <IconButton icon="x" label="Close" name="Close the note (what you typed is kept)" onClick={() => closeCapture()} />
       </div>
@@ -273,5 +328,5 @@ export function CaptureDrawer() {
           </ul>
         </div>) : null}
     </aside>
-  );
+  </>);
 }

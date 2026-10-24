@@ -35,7 +35,7 @@ import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
 import { mtgBusy, reLive, reUndoLive, stopRun } from "../../core/intakeApi.js";
-import { oneLine, reloadData, snack, undoApply, viaServer } from "../../core/server.js";
+import { heldNow, oneLine, reloadData, snack, undoApply, viaServer } from "../../core/server.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
@@ -149,7 +149,7 @@ async function approveNow(anyway) {
   const v = minutesView.value, doc = minutesDoc.value;
   if (!v || !v.plan || !doc || approving.value) return;
   const plan = v.plan.items;
-  if (v.proposal && REV.some(r => r.kind === "draft" && r.file === v.proposal && r.held)) {   // #307: the transcript has gone: say so before anything is written (a failed approve bumped the version)
+  if (v.proposal && (await heldNow(v.proposal) || REV.some(r => r.kind === "draft" && r.file === v.proposal && r.held))) {   // #307: the transcript has gone: say so before anything is written (a failed approve bumped the version); 2.6.2: read now, not as it was at load
     snack(HELD_MINUTES_WORDS, () => fileWithout(v), "File without the transcript copy");
     return;
   }
@@ -183,6 +183,7 @@ async function minutesMoved() {
 /** #306: file the minutes without the transcript copy, then say what was saved (with Undo) or why not. @param {any} v the minutes view */
 async function fileWithout(v) {
   const r = await fileWithoutTranscript(v.proposal);
+  if (r.stale) { snack(r.message); await reloadData(); return; }   /* 2.6.2 (#314): the minutes changed since the page loaded; nothing was filed */
   if (!r.ok) { snack(`Not saved because ${r.message.replace(/\.$/, "")}`); return; }
   snack(`Filed without the transcript copy: ${r.n} item${r.n === 1 ? "" : "s"} saved`,
     r.apply_id ? async () => { await undoApply(r.apply_id); loadMinutes({ file: v.proposal }); } : null);

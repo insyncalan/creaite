@@ -88,7 +88,7 @@ Spacing is a 4 px base (2 px steps to 16, 4 px steps to 32, 8 px steps above); w
 - `--shadow-lg`: 0 12px 32px rgba(0,0,0,.26)
 - `--shadow-side`: -14px 0 32px rgba(0,0,0,.16)
 - A palette may also set `--shadow-card` and `--shadow-pop` (creaite sets soft layered ones; some palettes set none).
-- Layers: `--z-under` 0, `--z-raised` 1, `--z-raised-2` 2, `--z-sticky` 3, `--z-sticky-2` 4, `--z-local` 5, `--z-menu` 30, `--z-popup-scrim` 38, `--z-popup` 39, `--z-panel` 40, `--z-panel-over` 41, `--z-chat` 45, `--z-badge` 46, `--z-stage` 47, `--z-pop` 60, `--z-pop-over` 65, `--z-drag` 80, `--z-viewer` 90, `--z-tip` 200, `--z-top` 210, `--z-toast` 220.
+- Layers: `--z-under` 0, `--z-raised` 1, `--z-raised-2` 2, `--z-sticky` 3, `--z-sticky-2` 4, `--z-local` 5, `--z-menu` 30, `--z-popup-scrim` 38, `--z-popup` 39, `--z-panel` 40, `--z-panel-over` 41, `--z-chat` 45, `--z-badge` 46, `--z-stage` 47, `--z-stage-over` 48, `--z-pop` 60, `--z-pop-over` 65, `--z-drag` 80, `--z-viewer` 90, `--z-tip` 200, `--z-top` 210, `--z-toast` 220.
 
 ### Rail width
 

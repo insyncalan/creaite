@@ -1,0 +1,44 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 9b6f5144..463844e0 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1430,6 +1430,8 @@ class Handler(BaseHTTPRequestHandler):
+             n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
+             if n is None:
+                 return self.send(200, {"ok": False, "message": "That proposal is no longer pending."})
++            if self.expect_args(req) is None:                           # 2.6.2 (#314, Cap's note): say what is wrong
++                return self.send(200, {"ok": False, "message": "Review can't check which item that is, so nothing was decided. Look at the list again."})
+             args = self.review_args(req, n)
+             if args is None:
+                 return self.send(200, {"ok": False, "message": "That isn't a decision Review knows."})
+@@ -1443,8 +1445,11 @@ class Handler(BaseHTTPRequestHandler):
+     def review_args(req, n):
+         """review.py's arguments for one decision on row n, or None for a decision Review doesn't know. #280: discard is
+         `reject N --discard` (review.py checks the proposal is held); without-transcript goes only with an approve."""
++        guard = Handler.expect_args(req)
++        if guard is None:
++            return None
+         if req.get("decision") == "discard":
+-            return ["reject", str(n), "--discard"]
++            return ["reject", str(n), "--discard", *guard]
+         action = {"approved": "approve", "rejected": "reject", "keep": "keep", "override": "override"}.get(req.get("decision"))
+         if action is None:
+             return None
+@@ -1456,7 +1461,16 @@ class Handler(BaseHTTPRequestHandler):
+                 args.append(f"--reason={reason}")
+             if dup and re.fullmatch(r"[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}", dup):
+                 args.append(f"--duplicate-of={dup}")
+-        return args
++        return args + guard
++
++    @staticmethod
++    def expect_args(req):
++        """2.6.2 (#314): ["--expect=<fp>"] when the page sent the item's fingerprint (review.py refuses if item n is not it), [] when it
++        sent none, None when it sent something that is not 12 hex digits (refused, nothing decided)."""
++        expect = req.get("expect")
++        if expect is None:
++            return []
++        return [f"--expect={expect}"] if isinstance(expect, str) and re.fullmatch(r"[0-9a-f]{12}", expect) else None
+ 
+     def refresh(self, req):
+         """POST /api/refresh {file}: re-extract a meeting's items from its edited draft minutes (minutes.py refresh)."""

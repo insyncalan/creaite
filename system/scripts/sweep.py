@@ -37,7 +37,10 @@ sweep.json (written by cx-sweep):
   {"window": {"start": "...", "end": "..."}, "normal": true,
    "items": [{"table": "actions", "match": "strong|medium|possible", "values": {..., "source": "Email · From: … · Link: …"},
               "flags": []}, ...],
-   "status_signals": [...], "attachments": {"to_inbox": [...], "to_file": [...]}}
+   "status_signals": [...], "attachments": {"to_inbox": [...], "to_file": [...]},
+   "sent_items": [{"subject": "…", "to": ["<address>"], "sent": "YYYY-MM-DD HH:MM"}]}
+  #183: sent_items, every Sent Items message in the window (subject, To addresses, sent time; never its text), marks a drafted
+  or copied Draft email sent (system/staging/drafted.json, fingerprints only); see draft_delivery.match_sent.
   A promise (BL-125 A) is {"table": "promises", "values": {"project", "promised_by", "promised_to", "description",
   "due_date", "source"}}: raised the message's Sent day; one already open is a mention, not a second promise. A message
   showing an open promise kept, dropped or re-dated is {"op": "update", "table": "promises", "id": "ABC-P-004",
@@ -419,12 +422,33 @@ def stage(spec_file):
     print(summary + (f" — {paths.rel(out)}" if out else "") + (" — say review" if items else ""))
     for name in att.get("to_file", []):
         print(f"  To file in documents/: {name}")
-    for note in notes:
-        print("  Note: " + note)
+    print("".join(f"  Note: {n}\n" for n in notes), end="")
     tally_ignored(ignored)
     tally_run(items=len(items), possible=possible, skipped=sum(skipped.values()))     # #253: done logs these, not the summary
+    sent_items(spec)                                                    # #183: drafted emails seen in Sent Items
     paths.consume_draft(spec_file)                                      # BL-118: staged and checked, so the input has done its job
     return 0
+
+
+# ===== #183 (2.6) ===== Draft email delivery: the sweep sees a drafted (or copied) email in Sent Items.
+# sweep.json may carry "sent_items": [{"subject": "…", "to": ["<address>", …], "sent": "YYYY-MM-DD HH:MM"}], the subject, the To
+# addresses and the sent time of each Sent Items message in the window (never its text). draft_delivery.match_sent matches them by
+# fingerprint against system/staging/drafted.json (subject, every drafted recipient, within two weeks of the draft) and marks the
+# chase sent, recording it if the email was copied instead of drafted. Only counts are printed and logged.
+def sent_items(spec):
+    """Match the spec's Sent Items against the drafted emails; print one line of counts when any matched. Returns the counts."""
+    msgs = spec.get("sent_items") if isinstance(spec, dict) else None
+    if not msgs:
+        return {"seen": 0, "matched": 0, "recorded": 0}
+    import draft_delivery
+    counts = draft_delivery.match_sent(msgs)
+    debuglog.info("sweep", f"sent items: {counts['seen']} read, {counts['matched']} drafted emails seen sent, "
+                           f"{counts['recorded']} chase(s) recorded")
+    if counts["matched"]:
+        print(f"  Sent Items: {counts['matched']} drafted email(s) seen sent"
+              + (f", {counts['recorded']} chase(s) recorded" if counts["recorded"] else ""))
+    return counts
+# ===== end #183 =====
 
 
 # ===== Decisions needed (BL-113) =====
@@ -2329,7 +2353,7 @@ FOLLOWED_TAGS = {"actions": "action", "decisions": "decision", "promises": "prom
 
 
 def followed_names():
-    """({address: name}, {lower-case name: name}) of the people Alan follows (the register's VIP column)."""
+    """({address: name}, {lower-case name: name}) of the people Alan follows (the register's Follow column)."""
     vips = vip_addresses()
     return vips, {n.lower(): n for n in vips.values()}
 
@@ -2565,7 +2589,7 @@ def vip_cmd(a):
         return 0
     if a.what == "seen":
         n = vip_seen(None if a.all else set(a.args))
-        print(f"Marked {n} VIP alert{'s' if n != 1 else ''} seen.")
+        print(f"Marked {n} follow alert{'s' if n != 1 else ''} seen.")
         return 0
     if not a.args:
         print("Give the found messages' JSON file.")
@@ -2576,7 +2600,7 @@ def vip_cmd(a):
         print(f"Can't read {a.args[0]}: {e}")
         return 1
     new = vip_record(found.get("messages") if isinstance(found, dict) else found, a.found)
-    print(f"VIP: {len(new)} new alert{'s' if len(new) != 1 else ''}" +
+    print(f"Followed: {len(new)} new alert{'s' if len(new) != 1 else ''}" +
           "".join(f"\n  {x['who']}: {x['subject']} ({x['sent']}){' · ' + x['marker'] if x['marker'] else ''}"
                   for x in new))
     paths.consume_draft(a.args[0])                                      # BL-118: recorded

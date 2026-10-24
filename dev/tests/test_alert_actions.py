@@ -28,7 +28,7 @@ import json, sys
 from pathlib import Path
 args = sys.argv[1:]
 p = args[args.index("--") + 1]
-if p.startswith("creaite VIP check"):
+if p.startswith(("creaite VIP check", "creaite follow check")):
     print(json.dumps({"type": "result", "result": "[]"}))
     sys.exit(0)
 Path(__file__).with_name("draft-args.json").write_text(json.dumps(args))

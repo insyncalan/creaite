@@ -70,6 +70,7 @@ NEVER = (
     ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
     ("vault", "system/search", "write", RECORD),                         # #269: search summaries, written by search.py itself only
     ("vault", "system/staging/reextract", "write", RECORD),              # #283: Read again holds: the live server only
+    ("vault", "system/staging/discarded", "write", RECORD),             # #307: Discard's set-aside proposals: review.py only
     ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
     ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
     ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),
@@ -972,7 +973,8 @@ SCRIPT_COMMANDS = {
                   "merge": RECORD, "keep-new": RECORD,
                   "retarget": RECORD, "unmerge": RECORD, "candidates": READ,    # BL-297
                   "reasons": READ, "guesses": READ, "rejects": READ,            # BL-315
-                  "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
+                  "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD,
+                  "restore-discarded": RECORD},                                 # #307 path 12: Discard's Undo
     "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
                    "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
                    "register-columns": RECORD, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec

@@ -1,0 +1,42 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 9b6f5144..32c744ce 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -6228,6 +6228,37 @@ REVIEW_WORK_ROUTES["/api/review/retarget"] = review_retarget_route
+ # ===== end BL-297 =====
+ 
+ 
++# ===== #307 path 12: Discard's Undo =====
++# POST /api/review/restore-discarded {file}: put a proposal Discard set aside back in staging (review.py restore-discarded), as it was.
++# `file` is the bare name Discard's reply gave (system/staging/discarded/<name>); review.py refuses anything else, and a name that
++# is already waiting in staging. The open page's own call only (page_call, as the Health fixes and the Notes moves), the job lock
++# waited for ten seconds at most, the development copy refuses, and the reply is review.py's plain words. Not a permission: reach.py classes
++# `review.py restore-discarded` as record, so an ask creaite run Alan hasn't confirmed can't run it.
++RESTORE_NAME = re.compile(r"proposed-[\w.-]+\.json")
++
++
++def review_restore_discarded_route(handler, req):
++    """POST /api/review/restore-discarded {file}: Discard's Undo. {ok, message}."""
++    if not page_call(handler):
++        return handler.send(403, {"ok": False, "message": "Not allowed"})
++    name = req.get("file")
++    if not isinstance(name, str) or not RESTORE_NAME.fullmatch(name) or ".." in name:
++        return handler.send(400, {"ok": False, "message": "Say which discarded suggestion to put back."})
++    if (paths.ROOT / ".creaite-dev").exists():
++        return handler.send(200, {"ok": False, "message": "This is the development copy, so nothing was put back."})
++    if not LOCK.acquire(timeout=10):                         # a moment's wait for a short job, never behind a long one
++        return handler.send(200, {"ok": False, "message": "Something else is running: try again when it has finished."})
++    try:
++        rc, out = run("review.py", "restore-discarded", name)
++    finally:
++        LOCK.release()
++    return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
++
++
++REVIEW_WORK_ROUTES["/api/review/restore-discarded"] = review_restore_discarded_route
++# ===== end #307 path 12 =====
++
++
+ # ===== BL-315 (v1.9.2) ===== Rejects, in real life, through review.py (its checks), as approve and reject are. Only the proposals change;
+ # the page applies as after any decision (Save at once), and tracker.py apply writes `rejected`.
+ #   POST /api/review/guesses {}: {ok, reasons: the seven, guesses: [{n, file, ref, reason, why, of}]} (read only)

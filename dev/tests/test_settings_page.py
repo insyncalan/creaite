@@ -27,7 +27,7 @@ import settings_catalogue  # noqa: E402
 CATS = ["essentials", "work", "sweep", "reports", "ai", "look", "advanced", "health"]
 SUBS = ["review", "state", "arch", "folders", "server"]
 ADVANCED = ["thresholds", "warnings", "more-review"]              # Advanced opens on Review and warnings
-WANT = {"essentials": ["essentials"], "work": ["views", "board", "projpage", "files", "more-work"],
+WANT = {"essentials": ["profile", "essentials"], "work": ["views", "board", "projpage", "files", "more-work"],
         "sweep": ["sweep", "more-sweep", "closeday"], "reports": ["more-reports", "reminders"], "ai": ["drafts", "more-ai"],
         "look": ["appearance", "help", "more-look"], "advanced": ADVANCED,
         "health": ["health", "more-health", "live", "setup", "diag", "version", "signin", "danger"],
@@ -123,7 +123,7 @@ class SettingsPage(LiveBrowserCase):
     def test_sections_come_from_one_list_and_the_page_has_no_wrappers(self):
         # v2.6 (#246): 33: You and People I follow joined Essentials, Everything else became each tab's More, Help joined;
         # the Settings line: 30, as People, Workstreams and Projects and register left for their own pages
-        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 31)
+        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 32)
         self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.id && SETCATS.some(c=>c[0]===catOf(s)) && typeof s.kw==='string' && (typeof s.render==='function' || typeof s.mount==='function'))"))
         self.assertEqual(self.b.eval("renderSettings.toString().includes('const rs=')"), False)
 

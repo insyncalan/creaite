@@ -247,6 +247,9 @@ class Browser:
         A, P, REV ... and redraws. A test that changes page data before that lands has its change silently undone. The re-read is
         counted in PULSE.reloads from the moment the page boots, so: a no-op (one evaluation) when none is in flight; otherwise wait
         (at most `timeout` s) for it to finish, then for the frames of its redraw. Pages without PULSE pass at once."""
+        # The autostart status answers after the first paint and adds Today's first-run card, which moves everything below it: a
+        # click measured before that lands on whatever is there afterwards. Wait for that one answer (at most 3 s) before anything else.
+        self.eval("typeof AS!=='undefined' && AS.ready ? Promise.race([AS.ready, new Promise(r=>setTimeout(r,3000))]).then(()=>true) : true")
         if not self.eval("typeof PULSE!=='undefined' && PULSE.reloads>0"):
             return
         try:

@@ -292,16 +292,7 @@ CREATE TABLE updates (
   key_changes  TEXT,
   PRIMARY KEY (week_ending, project)
 );
-PRAGMA writable_schema=ON;
-INSERT INTO sqlite_master(type,name,tbl_name,rootpage,sql)VALUES('table','vault_search','vault_search',0,'CREATE VIRTUAL TABLE vault_search USING fts5(path, project, kind, date, content, tokenize = ''porter unicode61'')');
-CREATE TABLE 'vault_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
-INSERT INTO "vault_search_config" VALUES('version',4);
-CREATE TABLE 'vault_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2, c3, c4);
-CREATE TABLE 'vault_search_data'(id INTEGER PRIMARY KEY, block BLOB);
-INSERT INTO "vault_search_data" VALUES(1,X'');
-INSERT INTO "vault_search_data" VALUES(10,X'00000000000000');
-CREATE TABLE 'vault_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
-CREATE TABLE 'vault_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
+CREATE VIRTUAL TABLE vault_search USING fts5(path, project, kind, date, content, tokenize = 'porter unicode61');
 CREATE TABLE workstreams (
   id         TEXT PRIMARY KEY CHECK (id GLOB '[A-Z]*-W-[0-9][0-9][0-9]' AND length(id) BETWEEN 9 AND 13
                                      AND substr(id, 1, length(id) - 6) NOT GLOB '*[^A-Z0-9]*'),
@@ -323,7 +314,6 @@ CREATE TRIGGER labels_keep_builtin_delete BEFORE DELETE ON labels WHEN OLD.built
 CREATE TRIGGER labels_keep_builtin_rename BEFORE UPDATE OF name, builtin ON labels
   WHEN OLD.builtin = 1 AND (NEW.name <> OLD.name OR NEW.builtin = 0)
   BEGIN SELECT RAISE(ABORT, 'a built-in label cannot be renamed'); END;
-PRAGMA writable_schema=OFF;
 DELETE FROM "sqlite_sequence";
 INSERT INTO "sqlite_sequence" VALUES('applies',3);
 COMMIT;

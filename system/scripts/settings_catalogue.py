@@ -39,6 +39,10 @@ ESSENTIAL_ROWS = (
      ("identity.short_forms",)),                                                            # v2.6 (#246): the old "You" card joined
     ("You", "Own email domains", "Comma-separated; addresses at these domains are inside your company, so Draft email warns "
      "about anyone outside.", ("identity.own_domains",)),
+    ("Draft email", "Create drafts in Outlook",                       # #183 (Alan, 19-10-2026): off by default
+     "Off: creaite builds the email and you copy and paste it into Outlook. On: creaite puts it in your Outlook Drafts folder, "
+     "ready for you to check and send. It never sends anything. Turn it off if you can't write to Outlook.",
+     ("draft_email.outlook_drafts",)),
     ("Your day", "Daily check time", "creaite checks mail and Teams when you first open it after this time.",
      ("sweep.due_from",)),
     ("Your day", "What the check reads", "Inbox, Sent Items, Teams chats and channels, your calendar.",
@@ -132,6 +136,10 @@ CATALOGUE = {
     "sweep.ignore": ("Checking mail and Teams", "What creaite skips",
                      "Mail, Teams and invites the check skips (counted, never read into suggestions).",
                      "Private items are always skipped; the rest are common noise you can switch off or edit."),
+    # ── Draft email (#183)
+    "draft_email.outlook_drafts": ("Draft email", "Create drafts in Outlook",
+                                   "Create draft in Outlook puts the email in your Drafts folder, for you to check and send.",
+                                   "Off: some people can't write to Outlook; creaite never sends, and copy and paste always works."),
     # ── People I follow
     "vip.enabled": ("People I follow", "Tell me when they write", "Messages from people you follow head Today.",
                     "On: these are the people you can't afford to miss."),
@@ -469,7 +477,7 @@ CATALOGUE = {
                                             "On: the copy you send sits with the minutes it came from (BL-338; Alan, "
                                             "15-10-2026)."),
 }
-GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
+GROUP_ORDER = ("You", "Draft email", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Opening views", "Work board", "Project page", "Files",
                "Checking mail and Teams", "Meeting prep and Intake", "Close the day", "Reports and minutes", "Reminders", "AI drafts",
                "Look and layout", "Help", "Review", "Health thresholds", "Early warnings", "Current state",
@@ -485,8 +493,8 @@ TABS = (("essentials", "Essentials"), ("work", "Work and reports"), ("sweep", "M
 ADVANCED_SUBS = (("review", "Review and warnings"), ("state", "Current state"), ("arch", "Archiving and backups"),
                  ("folders", "Folders and OneDrive"), ("server", "Server, search and logs"))
 GROUP_TAB = {
-    "You": "essentials", "Your day": "essentials", "Saving and review": "essentials", "People I follow": "essentials",
-    "Safety": "essentials",
+    "You": "essentials", "Draft email": "essentials", "Your day": "essentials", "Saving and review": "essentials",
+    "People I follow": "essentials", "Safety": "essentials",
     "Opening views": "work", "Work board": "work", "Project page": "work", "Files": "work",
     "Checking mail and Teams": "sweep", "Meeting prep and Intake": "sweep", "Close the day": "sweep",
     "Reports and minutes": "reports", "Reminders": "reports",

@@ -48,7 +48,7 @@
   --shadow-side:-14px 0 32px rgba(0,0,0,.16);
   --scrim:rgba(0,0,0,.25);   /* a modal dialog's backdrop; darker in dark mode (below), where .25 black barely shows */
   --z-under:0; --z-raised:1; --z-raised-2:2; --z-sticky:3; --z-sticky-2:4; --z-local:5;
-  --z-menu:30; --z-popup-scrim:38; --z-popup:39; --z-panel:40; --z-panel-over:41; --z-chat:45; --z-badge:46; --z-stage:47;
+  --z-menu:30; --z-popup-scrim:38; --z-popup:39; --z-panel:40; --z-panel-over:41; --z-chat:45; --z-badge:46; --z-stage:47; --z-stage-over:48;
   --z-crpop:10; --z-pop:60; --z-pop-over:65; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210; --z-spark:219; --z-toast:220; --z-linkpop:221; --z-linkcorner:218;   /* v1.9.5 check 19: a toast is over everything, menus included (inside a modal it sits in the dialog, BL-316) */
   --lh-1:1; --lh-1-25:1.25; --lh-snug:1.4; --lh-body:1.5; --lh-14:14px; --lh-16:16px; --lh-18:18px; --lh-20:20px; --lh-22:22px; --lh-24:24px; --lh-28:28px;   /* line heights (#193): the unitless ones scale with the text, the px ones are fixed rows */
   --fs-h1:var(--fs-2xl); --fs-h2:var(--fs-lg); --lh-h1:var(--lh-28); --lh-h2:var(--lh-22);   /* #193: page title and section heading; --fs-display is the two deliberate display titles */
@@ -685,7 +685,7 @@ h2{font:500 var(--fs-h2)/var(--lh-h2) var(--font);margin:0}   /* BL-325: the one
 .th{display:flex;align-items:baseline;gap:10px;margin:0 0 14px;color:var(--day-ink)}
 #hWeek,#hRes{gap:4px}   /* "Week ahead to 09-10" reads as one phrase, not a count */ .th .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)} .th a{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--day-muted)}
 ol.bl{list-style:none;margin:0;padding:0} ol.bl>li{position:relative;display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--day-rule)}
-ol.bl>li[hidden],.tsec .sub[hidden]{display:none}
+ol.bl>li[hidden],.tsec .sub[hidden]{display:none} .tsec[hidden]{display:none}
 ol.bl>li[data-msattn] .t u{text-decoration:underline;text-underline-offset:3px;font-weight:700}   /* #251: "Milestone <u>name</u> is due …", the name the link */
 .bl .n{flex:none;width:16px;font-size:var(--fs-md);color:var(--day-muted)} .bl .tb{min-width:0;flex:1}
 .bl .tb p,.tb .none{margin:4px 0 0;font-size:var(--fs-md);color:var(--day-muted)}
@@ -1235,6 +1235,9 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .deinc .it .sub{margin-left:auto;white-space:nowrap} .deopts{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0;font-size:var(--fs-sm)} .deopts .dwrap{width:150px}
 #dePrev{background:#FFFFFF;color:#1E1F1E;border:1px solid #D9D9E0;border-radius:var(--r-md);padding:14px 16px;margin:10px 0;overflow:auto}
 .deacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .deacts .sp{flex:1} .denote{background:var(--sunk);border-radius:var(--r-md);padding:8px 12px;margin:8px 0;font-size:var(--fs-sm)}
+/* #183: Draft email delivery: the Outlook draft's outcome above the buttons, the no-address To line, Settings' Outlook access row */
+.ddstat.ok{background:var(--ok-soft);color:var(--ink)} .ddstat.bad{background:var(--bad-soft);box-shadow:inset 0 0 0 1px var(--bad)} .ddstat a{margin-left:6px}
+.deto-no{color:var(--muted)} .ddacc.dim{opacity:.55} #deMade .i{margin-right:4px}
 .prepbody{padding:10px 16px 16px;overflow:auto;max-height:calc(84vh - 72px)} .prepbody>p.sub{margin:8px 0 0}
 .preppick select{margin-left:6px}
 .prepsec h3{font:600 var(--fs-sm)/18px var(--font);margin:16px 0 4px}
@@ -3178,6 +3181,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 /* ===== BL-301 C (v20-capture): the capture drawer (components/notes/CaptureDrawer.jsx), at the right of any page, not modal ===== */
 .capdrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);box-sizing:border-box;z-index:var(--z-stage);background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
 .capdrawer[hidden]{display:none}
+.capresize{position:fixed;top:0;bottom:0;width:10px;margin-right:-5px;z-index:var(--z-stage-over);cursor:col-resize;touch-action:none;outline:0}
+.capresize::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;border-radius:var(--r-sm)}
+.capresize:hover::before,.capresize.dragging::before{width:4px;left:3px;background:var(--accent)}
+.capresize:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r-sm)}
 .caphead{display:flex;align-items:center;gap:8px} .caphead h2{margin:0;font-size:var(--fs-h2);line-height:var(--lh-24)} .caphead .sp,.capfoot .sp,.caprow .sp{flex:1}
 .capwhere{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:var(--fs-sm)}
 .capwhere select{max-width:100%}

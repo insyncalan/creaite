@@ -13,6 +13,7 @@ Commands:
   approve <number> --without-transcript
                                 #280: minutes whose transcript is no longer in the inbox (held by apply) are approved without
                                 the transcript copy: the draft is filed, the transcript is not; refused while it is still there
+  restore-discarded <file>      #307: put a discarded proposal back in Intake (Discard's Undo); refuses a taken name
   reject <number> --discard     #280: set a held proposal aside (minutes or a report whose file to be filed has gone) in
                                 system/staging/discarded/, writing nothing to the tracker; only a held proposal
   reject <numbers> [--reason=TEXT] [--duplicate-of=ID]
@@ -1226,11 +1227,93 @@ def cmd_discard(n):
     dest, k = DISCARDED / p.name, 2
     while dest.exists():
         dest, k = DISCARDED / f"{p.stem}-{k}{p.suffix}", k + 1
-    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block)}
+    data["discarded"] = {"at": clock().isoformat(timespec="seconds"), "why": held_reason(block), "name": p.name}
     save(p, data)
     p.replace(dest)
+    _ledger_add({"name": dest.name, "sha256": _sha(dest), "at": data["discarded"]["at"]})       # #307: what Discard itself set aside
     debuglog.info("review", f"discarded {p.name} ({ref}): held")
     print(f"Discarded 1. {block.get('title') or p.name}: set aside in {paths.rel(dest)}; nothing was written to the tracker.")
+    return 0
+
+
+# #307 path 12 (Cap's H1): Undo puts back only what Discard itself set aside. Discard appends {name, sha256 of the file as set aside, at}
+# to this ledger, which is in system/staging/ and so on reach.py's never list (system/staging/*.jsonl, as system/staging/discarded/ is):
+# ask creaite, a sweep and filechange can neither add a line nor edit the file. A restore needs the newest line for the name to be a
+# Discard line whose checksum is the file's, so a planted or edited file is refused.
+DISCARD_LEDGER = paths.STAGING / "discarded-ledger.jsonl"
+
+
+def _sha(path):
+    import hashlib
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _ledger_add(entry):
+    with open(DISCARD_LEDGER, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+def _ledger_last(name):
+    """The newest ledger line for this name in discarded/, or None (no ledger, an unreadable line is skipped)."""
+    last = None
+    try:
+        lines = DISCARD_LEDGER.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue                                        # a line that isn't JSON is no record
+        if isinstance(e, dict) and e.get("name") == name:
+            last = e
+    return last
+
+
+def _discarded_problem(name):
+    """Why `name` can't be put back, in words (the part after "not put back — "), else None. Reads only."""
+    src = DISCARDED / name
+    if not re.fullmatch(r"proposed-[\w.-]+\.json", name or "") or ".." in name or not src.is_file():
+        return "that proposal isn't among the ones set aside."
+    if src.is_symlink() or src.lstat().st_nlink > 1:
+        return "that file isn't one Discard set aside."
+    rec = _ledger_last(name)
+    if not rec or not rec.get("sha256"):
+        return "Discard has no record of setting that proposal aside."
+    if rec.get("sha256") != _sha(src):
+        return "that file has changed since Discard set it aside."
+    return None
+
+
+def cmd_restore_discarded(name):
+    """#307 path 12: put a discarded proposal back in system/staging/ as it was (Discard's Undo). `name` is the file's bare name in
+    system/staging/discarded/; the marker cmd_discard added is the only thing removed. Refuses what Discard did not set aside (its
+    ledger line and checksum), and a name already taken in staging (nothing is overwritten)."""
+    bad = f"{name or 'Nothing'}: not put back — "
+    why = _discarded_problem(name)
+    if why:
+        print(bad + why)
+        return 2
+    src = DISCARDED / name
+    try:
+        data = json.loads(src.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        print(bad + "that file can't be read.")
+        return 2
+    marker = data.pop("discarded", None) if isinstance(data, dict) else None
+    if not isinstance(marker, dict):
+        print(bad + "that proposal wasn't set aside by Discard.")
+        return 2
+    back = marker.get("name") if re.fullmatch(r"proposed-[\w.-]+\.json", str(marker.get("name") or "")) else name
+    dest = paths.STAGING / back
+    if dest.exists():
+        print(bad + "a proposal with that name is already waiting in Intake.")
+        return 2
+    dest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    src.unlink()
+    _ledger_add({"name": name, "restored": True, "at": clock().isoformat(timespec="seconds")})     # a replayed Undo finds no Discard line
+    debuglog.info("review", f"restored {back} from discarded")
+    print(f"Put back: {(data.get('meeting') or data.get('report') or {}).get('title') or back} is waiting in Intake again.")
     return 0
 # ===== end #280 (round 3) =====
 
@@ -2572,6 +2655,8 @@ def _main_with_held(argv):
             print(f"{' '.join(keys) or 'Nothing'}: not discarded — give one review number, as in \"reject 4 --discard\".")
             return 2
         return cmd_discard(keys[0])
+    if cmd == "restore-discarded":                                      # #307 path 12: Discard's Undo
+        return cmd_restore_discarded(keys[0] if len(keys) == 1 else "")
     if cmd == "approve" and "--without-transcript" in rest and keys:
         mode = "sync" if "--sync" in rest else "as-staged" if "--as-staged" in rest else None
         return cmd_decide(" ".join(keys), "approved", mode, drop=True)
@@ -2594,6 +2679,74 @@ def _main_with_numbers(argv):
 
 _main_before_numbers = main
 main = _main_with_numbers
+
+# ===== 2.6.2 (#314) ===== "approve N --expect <fp>" and "reject N --expect <fp>": act only if item N is still the one the caller meant
+EXPECT_FP = re.compile(r"[0-9a-f]{12}")
+BLOCK_REFS = ("meeting", "report", "file_changes")
+
+
+class ExpectMismatch(Exception):
+    """The item at a review number is not the one whose fingerprint the caller gave."""
+
+
+def _expecting(real, want):
+    """lookup with the check made on the very file read for the decision (build_dashboard.item_fp / block_fp, 12 hex)."""
+    def look(n):
+        """The same four values as lookup; ExpectMismatch when the item at n is not the one fingerprinted `want`."""
+        p, data, ref, item = real(n)
+        import build_dashboard
+        if item is None or (build_dashboard.block_fp(item) if ref in BLOCK_REFS else build_dashboard.item_fp(item)) != want:   # None: taken out
+            raise ExpectMismatch(f"{n}: not recorded — that item has changed since you looked at it, "
+                                 "so nothing was changed. Look at the list again.")
+        return p, data, ref, item
+    return look
+
+
+def _split_expect(argv):
+    """(the arguments without --expect, the fingerprint given); both forms, --expect FP and --expect=FP."""
+    rest, wants, i = [], [], 1
+    while i < len(argv):
+        if argv[i] == "--expect":
+            wants.append(argv[i + 1] if i + 1 < len(argv) else "")
+            i += 2
+            continue
+        if argv[i].startswith("--expect="):
+            wants.append(argv[i][len("--expect="):])
+        else:
+            rest.append(argv[i])
+        i += 1
+    return rest, wants[0] if len(wants) == 1 else ""      # a repeated --expect is no fingerprint: refused, never the last one
+
+
+def _main_with_expect(argv):
+    """--expect <fp> (or --expect=<fp>) on approve, reject, keep or override of one number; every other call is unchanged."""
+    if not any(a == "--expect" or a.startswith("--expect=") for a in argv[1:]):
+        return _main_before_expect(argv)
+    rest, want = _split_expect(argv)
+    keys = [a for a in rest if not a.startswith("--")]
+    if argv[0] not in ("approve", "reject", "keep", "override") or len(keys) != 1 or not keys[0].isdigit() or not EXPECT_FP.fullmatch(want):
+        print(f"{' '.join(keys) or 'Nothing'}: not recorded — --expect goes with approve, reject, keep or override, "
+              "one review number and the item's 12-character fingerprint.")
+        return 2
+    global lookup
+    real, lookup = lookup, _expecting(lookup, want)
+    try:
+        return _main_before_expect([argv[0], *rest])
+    except ExpectMismatch as e:
+        print(e)
+        return 2
+    except SystemExit as e:                       # lookup's own "no longer pending" / "already applied", in one plain line and exit 2
+        if isinstance(e.code, str):
+            print(e.code)
+            return 2
+        raise
+    finally:
+        lookup = real
+
+
+_main_before_expect = main
+main = _main_with_expect
+# ===== end 2.6.2 (#314) =====
 
 if __name__ == "__main__":
     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))

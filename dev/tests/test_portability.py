@@ -691,10 +691,12 @@ class RunEnv(unittest.TestCase):
     def test_every_child_the_server_starts_gets_it(self):
         src = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
         launches = re.findall(r'claude_path\(\), "-p".*?(subprocess\.(?:Popen|run)\((?:[^()]|\([^()]*\))*\))', src, re.S)
-        self.assertEqual(len(launches), 2)                                      # ask runs and the VIP check
+        # ask runs and the VIP check; with #183 (Draft email delivery) also its draft run, which merges NO_CONTEXT_ENV onto run_env()
+        expected = 3 if "def draft_run(" in src else 2
+        self.assertEqual(len(launches), expected)
         for call in launches:                                                   # each launch passes the run environment
-            self.assertRegex(call, r"\benv=(?:env|run_env\([^()]*\))(?=[,)\s])")
-        self.assertEqual(len(re.findall(r"\benv\s*=\s*run_env\(", src)), 2)    # BL-328, #60: run_env() or run_env(kind)
+            self.assertRegex(call, r"\benv=(?:env|run_env\([^()]*\)|\{\*\*run_env\(\), \*\*NO_CONTEXT_ENV\})(?=[,)\s])")
+        self.assertEqual(len(re.findall(r"\benv\s*=\s*(?:\{\*\*)?run_env\(", src)), expected)   # BL-328, #60: run_env() or run_env(kind)
 
     def test_a_script_that_never_started_is_named_a_creaite_fault(self):
         import live_server
