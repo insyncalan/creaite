@@ -301,7 +301,7 @@ class CellEdit(LiveBrowserCase):
         b = self.open_work()
         # #241 a: the Compact row puts the ID and the project link on the title's line, so the cell's centre can be a link; the
         # double-click lands on the title cell's own marks (not a link), as it landed on the cell before
-        b.click('#workTbl tr[data-row="ABC-A-002"] td.title', count=2)
+        b.click('#workTbl tr[data-row="ABC-A-002"] td.title', inset=3, count=2)
         b.wait("document.getElementById('panel').classList.contains('on')")
         self.assertFalse(b.eval("EDITING"))
 

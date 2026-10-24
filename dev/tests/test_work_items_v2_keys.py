@@ -115,13 +115,13 @@ class KeysV2(LiveBrowserCase):
         b = self.open_work()
         ids = self.ids()
         w0 = b.eval("Math.round(document.getElementById('workWrap').getBoundingClientRect().width)")
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         self.assertEqual(b.eval("[...HL.keys()]"), [ids[0]])
         self.assertIsNone(self.peek_id())                                      # a click selects only
-        b.click(self.row(ids[0]) + " td.title", count=2)                       # double-click opens
+        b.click(self.row(ids[0]) + " td.title", inset=3, count=2)                       # double-click opens
         b.wait(f"pkOn()&&CUR&&CUR.id==={ids[0]!r}")
         self.assertLessEqual(abs(b.eval("Math.round(document.getElementById('workWrap').getBoundingClientRect().width)") - w0), 2)   # over the page
-        b.click(self.row(ids[2]) + " td.title")                               # with the peek open, a click shows that row
+        b.click(self.row(ids[2]) + " td.title", inset=3)                               # with the peek open, a click shows that row
         b.wait(f"CUR&&CUR.id==={ids[2]!r}")
         self.assertLessEqual(abs(b.eval("Math.round(document.getElementById('workWrap').getBoundingClientRect().width)") - w0), 2)
         b.key("Escape")
@@ -134,7 +134,7 @@ class KeysV2(LiveBrowserCase):
     def test_o_opens_the_cell_editor_on_the_cursor_row(self):
         b = self.open_work()
         ids = self.ids()
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         self.blur()
         b.key("o")
         b.wait(f"document.querySelector('{self.row(ids[0])} td.editing[data-f=\"o\"]')")
@@ -145,13 +145,13 @@ class KeysV2(LiveBrowserCase):
     def test_s_p_t_are_the_page_keys_until_the_peek_is_open(self):
         b = self.open_work()
         ids = self.ids()
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         self.blur()
         b.key("p")                                                             # #288: P is Projects, whatever row is highlighted
         b.wait("VIEW==='projects'")
         b.eval("go('work')")
         b.wait("document.querySelector('#workTbl tbody tr[data-row]')")
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         b.key("Enter")
         b.wait(f"pkOn()&&CUR&&CUR.id==={ids[0]!r}")
         self.blur()
@@ -168,7 +168,7 @@ class KeysV2(LiveBrowserCase):
         b = self.open_work()
         ids = self.ids()
         b.eval("COLVIS.actions=COLVIS.actions.filter(c=>c!=='o'); renderWork()")   # Owner hidden (not saved)
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         self.blur()
         b.key("o")
         b.wait(f'!!document.querySelector("{MENU}")')
@@ -184,8 +184,8 @@ class KeysV2(LiveBrowserCase):
     def test_a_key_on_a_selection_is_the_bulk_change(self):
         b = self.open_work()
         ids = [i for i in self.ids() if b.eval(f"REC('actions',{i!r}).st")=="Open"][:2]
-        b.click(self.row(ids[0]) + " td.title")
-        b.click(self.row(ids[1]) + " td.title", modifiers=CMD)
+        b.click(self.row(ids[0]) + " td.title", inset=3)
+        b.click(self.row(ids[1]) + " td.title", inset=3, modifiers=CMD)
         self.blur()
         b.key("o")
         b.wait(f'!!document.querySelector("{MENU}")')
@@ -196,7 +196,7 @@ class KeysV2(LiveBrowserCase):
     def test_c_closes_the_cursor_row_with_undo(self):
         b = self.open_work()
         id_ = next(i for i in self.ids() if b.eval(f"REC('actions',{i!r}).st") == "Open")
-        b.click(self.row(id_) + " td.title")
+        b.click(self.row(id_) + " td.title", inset=3)
         self.blur()
         self.arm()
         b.key("c")
@@ -212,7 +212,7 @@ class KeysV2(LiveBrowserCase):
     def test_decisions_have_no_priority_and_are_not_closed(self):
         b = self.open_work("decisions")
         ids = self.ids()
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         b.key("Enter")                                                         # P is a page key until the peek is open
         b.wait(f"pkOn()&&CUR&&CUR.id==={ids[0]!r}")
         self.blur()
@@ -220,7 +220,7 @@ class KeysV2(LiveBrowserCase):
         b.wait("/no priority/.test(document.getElementById('snackT').textContent)")
         b.key("Escape")
         b.wait("!pkOn()")
-        b.click(self.row(ids[0]) + " td.title")
+        b.click(self.row(ids[0]) + " td.title", inset=3)
         self.blur()
         b.key("c")
         b.wait("/not closed/.test(document.getElementById('snackT').textContent)")
@@ -245,7 +245,7 @@ class KeysV2(LiveBrowserCase):
     def test_no_letter_acts_while_a_menu_or_dialog_is_open(self):
         b = self.open_work()
         id_ = next(i for i in self.ids() if b.eval(f"REC('actions',{i!r}).st") == "Open")
-        b.click(self.row(id_) + " td.title")
+        b.click(self.row(id_) + " td.title", inset=3)
         self.blur()
         b.key("d")                                                             # Display opens
         b.wait("document.getElementById('moreMenu') ? true : true")
@@ -265,7 +265,7 @@ class KeysV2(LiveBrowserCase):
     def test_a_held_key_counts_once(self):
         b = self.open_work()
         id_ = self.client_with_messaging()
-        b.click(self.row(id_) + " td.title")
+        b.click(self.row(id_) + " td.title", inset=3)
         self.blur()
         self.arm()
         key = "document.dispatchEvent(new KeyboardEvent('keydown',{key:'v',bubbles:true,cancelable:true,repeat:%s}))"
@@ -313,7 +313,7 @@ class KeysV2(LiveBrowserCase):
         b = self.open_work()
         id_ = self.client_with_messaging()
         self.assertTrue(b.eval(f"!!document.querySelector('{self.row(id_)} td.title .tg[data-tg=cv]')"))
-        b.click(self.row(id_) + " td.title")
+        b.click(self.row(id_) + " td.title", inset=3)
         self.blur()
         self.arm()
         b.key("v")
@@ -326,7 +326,7 @@ class KeysV2(LiveBrowserCase):
         self.saved("^Undone")
         self.assertEqual(self.rec("actions", id_)["client_visible"], 1)
         b.wait(f"!!document.querySelector('{self.row(id_)} td.title .tg[data-tg=cv]')")
-        b.click(self.row(id_) + " td.title", button="right")                                     # the row's menu
+        b.click(self.row(id_) + " td.title", inset=3, button="right")                                     # the row's menu
         b.wait(f'!!document.querySelector("{MENU}")')
         self.assertIn("Client-visible", self.menu_labels())
         self.assertEqual(b.eval(f"""[...document.querySelectorAll("{MENU} [role=menuitem]")].find(x=>x.querySelector("span").firstChild.textContent==="Client-visible").getAttribute("aria-current")"""), "true")
@@ -338,7 +338,7 @@ class KeysV2(LiveBrowserCase):
     def test_turning_on_without_messaging_opens_the_peek_and_saves_nothing(self):
         b = self.open_work()
         id_ = b.eval("A.filter(x=>!x.client&&x.st==='Open').map(x=>x.id)")[0]
-        b.click(self.row(id_) + " td.title")
+        b.click(self.row(id_) + " td.title", inset=3)
         self.blur()
         b.key("v")
         b.wait(f"pkOn()&&CUR&&CUR.id==={id_!r}")
