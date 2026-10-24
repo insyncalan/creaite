@@ -328,7 +328,7 @@ def outcomes_for(mod, result):
     notes = getattr(mod, "NOTES", {})
     out = {}
     for n, (status, note) in result.by_check.items():
-        kind = mod.KIND.get(n, "")
+        kind = getattr(mod, "KIND", {}).get(n, "")
         if status == "pass" and kind == "judgement":
             status, note = "judgement", "judgement: on the screenshot sheet"
         extra = notes.get(n, "")
