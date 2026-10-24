@@ -1694,11 +1694,8 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
   #projTbl:hover::after{opacity:1}
 }
 :root[data-reduced] #projTbl::after{display:none}
-/* 29. The ask creaite input, only while it has focus: a gradient border turning once every 5s; a plain line otherwise */
-@property --mang{syntax:"<angle>";inherits:false;initial-value:0deg}
-#chIn:focus{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,conic-gradient(from var(--mang),var(--accent),var(--accent-soft),var(--accent)) border-box;animation:mang calc(5s*var(--k)) linear infinite}
-@keyframes mang{to{--mang:360deg}}
-:root[data-reduced] #chIn:focus{animation:none;background:var(--bg);border-color:var(--accent)}
+/* 29. The ask creaite input, while it has focus: a plain accent border, nothing moves */
+#chIn:focus{border-color:var(--accent)}
 /* 30. Empty states: a small icon that floats 6px for two 5s cycles, then rests */
 .rvdone>h2::before,.wempty>h2::before,.empty.minbox::before{content:"";display:block;width:28px;height:28px;margin:0 auto 8px;background:var(--faint);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 13l2.5-7h11L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z'/%3E%3Cpath d='M4 13h4.5l1 2h5l1-2H20'/%3E%3C/svg%3E") center/contain no-repeat;

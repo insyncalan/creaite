@@ -82,7 +82,7 @@ class StaticRules(unittest.TestCase):
         loops = set()
         for m in re.finditer(r"animation:\s*([\w-]+)[^;}]*\binfinite\b", c):
             loops.add(m.group(1))
-        self.assertLessEqual(loops, {"sp", "askpulse", "mshim", "mhair", "mwave", "mripple", "mang", "mrbp"}, loops)   # spinner, ask pulse, loading shimmer, run hairline, typing dots, now ripple, the focused ask input, the run badge (BL-139)
+        self.assertLessEqual(loops, {"sp", "askpulse", "mshim", "mhair", "mwave", "mripple", "mrbp"}, loops)   # spinner, ask pulse, loading shimmer, run hairline, typing dots, now ripple, the run badge (BL-139)
 
     def test_every_smooth_scroll_goes_through_the_helper(self):
         s = script()
@@ -697,7 +697,10 @@ class MotionPages(LiveBrowserCase):
         b.wait("document.activeElement!==document.getElementById('chIn')")
         self.assertEqual(b.eval("getComputedStyle(document.getElementById('chIn')).animationName"), "none")
         b.eval("document.getElementById('chIn').focus()")
-        self.assertEqual(b.eval("getComputedStyle(document.getElementById('chIn')).animationName"), "mang")
+        self.assertEqual(b.eval("getComputedStyle(document.getElementById('chIn')).animationName"), "none")      # #359: the border no longer turns
+        self.assertEqual(b.eval("getComputedStyle(document.getElementById('chIn')).borderTopColor"),
+                         b.eval("(()=>{const e=document.createElement('i');e.style.color='var(--accent)';document.body.appendChild(e);const c=getComputedStyle(e).color;e.remove();return c})()"))   # a plain accent border
+        self.assertEqual(b.eval("getComputedStyle(document.getElementById('chIn')).backgroundImage"), "none")
         b.eval("document.getElementById('chIn').blur()")
         self.assertEqual(b.eval("getComputedStyle(document.getElementById('chIn')).animationName"), "none")
 

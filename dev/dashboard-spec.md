@@ -901,7 +901,7 @@ attention; fades after 2s on screen or when opened), count-up (700ms, once per p
 bars (staggered, once), the changed-value flash (more than 12: one line, said by `#mlive`), a health change's ring, Today's
 "now" ripple (paused while the tab is hidden, as is every animation), the run hairline, ask creaite's typing dots and word
 fade (live replies of up to about 400 words), Today's staggered first paint (under a second), the spotlight (one card,
-pointer devices), the ask input's turning border (only while focused) and the empty-state icon's two floats.
+pointer devices), the ask input's plain accent border (only while focused, nothing moves) and the empty-state icon's two floats.
 
 **ask creaite's approval card (BL-141):** the card rises in (320ms), its changes follow at 40ms steps (at most 8), and
 "Approved" shows the drawn tick only when the changes were made. The What ask creaite changed list rises in once; a row just
