@@ -52,7 +52,7 @@ class RefusedApplyWords(unittest.TestCase):
         self.assertNotIn("Apply failed", shown)
 
     def test_other_messages_pass_through(self):
-        self.assertEqual(words("Nothing to save: no decided items."), "Nothing to save: no decided items.")
+        self.assertEqual(words("Nothing to apply: no decided items."), "Nothing to apply: no decided items.")
         failed = words("Apply failed; nothing was written. Invalid: x")           # #275 (Cap's 1): a failure Review can't fix
         self.assertIn("nothing was changed", failed)
         self.assertIn("Diagnostics", failed)
