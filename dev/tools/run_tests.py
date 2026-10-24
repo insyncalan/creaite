@@ -1,6 +1,6 @@
 """Run creaite's test files in parallel and report each one (development only).
 
-Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--deep] [--list] [--flaky] [--clean]
+Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--push [BASE]] [--deep] [--list] [--flaky] [--clean]
                                     [--repeat N [--stress N]] [--file-timeout S] [--rerun-max N] [--shard I/N] [name ...]
   name       only the test files whose name contains it (e.g. "people" runs test_people.py and test_people_dashboard.py)
   -j N       how many quick-tier files run at once (default: half the processor cores, at least 2)
@@ -12,7 +12,11 @@ Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--deep]
              the changed script or helper (forecast.py reaches 1 test file, sweep.py 29, tracker.py 127 of 129). It does not
              follow a script through the scripts that import it, so a change to a script the dashboard uses can still break
              a dashboard test it skips. --deep follows them all, which for an engine script is the whole suite.
-  --list     print the test files that would run and stop (with or without --changed)
+  --push     the run for an ordinary push (dev speed; Alan, 25-10-2026): the quick tier plus the Chrome-tier files --changed
+             reaches, so a push is checked in minutes. Not the gate: the full suite runs only at the release gate (plain
+             `run_tests.py`, no flag; dev/HOW-WE-WORK.md, "Push checklist and the release gate"). When the change can reach any
+             test (the rules, a skill, the settings, VERSION) --changed already says "everything" and so does --push.
+  --list     print the test files that would run and stop (with or without --changed or --push)
   --clean    stop orphaned test live servers and Chromes (parent gone, running over 15 minutes) and remove test folders
              over an hour old that nothing uses, then stop; every run does this first (BL-247)
   --update-snapshots [screen …]
@@ -494,6 +498,7 @@ def main(argv):
     ap.add_argument("-j", type=int, default=max(2, (os.cpu_count() or 4) // 2))
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--changed", nargs="?", const="main", metavar="BASE")
+    ap.add_argument("--push", nargs="?", const="main", metavar="BASE")
     ap.add_argument("--deep", action="store_true")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--flaky", action="store_true")
@@ -510,6 +515,12 @@ def main(argv):
     if a.flaky or a.clean or a.update_snapshots:
         return one_off(a)
     files = [f for f in sorted(TESTS.glob("test_*.py")) if not a.names or any(n in f.name for n in a.names)]
+    if a.push:
+        quick = [f for f in files if not support.is_chrome(f)]
+        reached, why = select(files, a.push, a.deep)
+        files = [f for f in files if f in set(quick) | set(reached)]
+        print(f"--push: {len(quick)} quick-tier files plus {len(files) - len(quick)} Chrome-tier files reached by the change "
+              f"({why}); the full suite runs at the release gate.", flush=True)
     if a.quick:
         files = [f for f in files if not support.is_chrome(f)]
     if a.changed:
