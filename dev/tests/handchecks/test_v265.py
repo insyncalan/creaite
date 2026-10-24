@@ -1,4 +1,4 @@
-"""creaite 2.6.4b's hand checks that need no browser. Release string: the tooling accepts only X.Y.Z (update.py VERSION_RE, doctor.py,
+"""creaite 2.6.5's (also called 2.6.4b) hand checks that need no browser. Release string: the tooling accepts only X.Y.Z (update.py VERSION_RE, doctor.py,
 the zip name, the tag and What's new's headings), so 2.6.4b ships as VERSION 2.6.5 and is called 2.6.4b in the notes and file names.
 The page behaviour (Intake first screen, Next job, People Display menu, the calm save, the design fixes) is measured in Chrome by the
 branches' own tests (test_intake_first_screen_340, test_next_job_356, test_people_display, test_calm_save_357,
@@ -17,7 +17,7 @@ test_design_fixes_343_browser) and in the gate; this file checks the release is 
   11  #355        minutes_destination follows an update item's top-level source (test_355_followups, no browser)
   12  not in      #341 and #362 are not claimed in What's new as done
 
-Run (from the repository root):  python3 dev/tests/handchecks/test_v264b.py
+Run (from the repository root):  python3 dev/tests/handchecks/test_v265.py
 """
 import re
 import subprocess
@@ -45,7 +45,7 @@ def git(*a):
     return subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True)
 
 
-class V264b(unittest.TestCase):
+class V265(unittest.TestCase):
     def test_c01_version(self):
         v = read("VERSION").strip()
         self.assertRegex(v, r"^\d+\.\d+\.\d+$")
@@ -58,8 +58,8 @@ class V264b(unittest.TestCase):
         sec = wn.split("## creaite 2.6.4\n")[0]
         for n in ("340", "343", "355", "356", "357", "359", "360"):
             self.assertIn(f"(#{n})", sec, f"What's new does not mention #{n}")
-        self.assertTrue((REPO / "dev/release-notes/2.6.4b-plain.md").exists())
-        self.assertTrue((REPO / "dev/handchecks/v2.6.4b.md").exists())
+        self.assertTrue((REPO / "dev/release-notes/2.6.5-plain.md").exists())
+        self.assertTrue((REPO / "dev/handchecks/v2.6.5.md").exists())
 
     def test_c03_guides(self):
         for g in ("guide-first-day.html", "guide-how-to.html"):
