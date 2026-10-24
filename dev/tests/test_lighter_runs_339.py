@@ -110,13 +110,33 @@ class Patched(unittest.TestCase):
         self.assertFalse(f("refresh calendar", images=["a.png"]))
         self.assertFalse(f("refresh calendar", confirmed="Add action"))
 
-    def test_ask_routes_calendar_to_its_kind(self):
+    def test_ask_routes_calendar_to_its_kind_with_no_chat_and_a_409(self):
         self.assertRegex(self.src, r'kind="calendar",\s*\n\s+label=calendar_refresh\.label\(\)')
-        self.assertIn("calendar_refresh.precheck()", self.src)
-        self.assertIn("sweep_running()", self.src)
+        route = self.src[self.src.index("if panel_calendar(message"):self.src.index("sweep = panel_sweep(message")]
+        self.assertIn("None, None, None, kind=\"calendar\"", route)             # no session, no chat: no history
+        self.assertIn("self.send(409", route)                                    # a sweep running
+        self.assertIn("calendar_refresh.precheck()", route)
+        ask = self.src[self.src.index("    def ask(self, req):"):self.src.index("if panel_calendar(message")]
+        self.assertIn("busy = current_run()", ask)                               # a run going: the existing 409, before the route
+        self.assertIn("self.send(409", ask)
 
     def test_sweep_run_dirs_leave_out_the_home_folder(self):
         self.assertIn('policy not in ("process", "reextract", "sweep")', self.src)
+
+    def test_both_sweep_prompts_carry_the_followed_people_rule(self):
+        for name in ("KIND_PROMPTS = {\"sweep\"", "PANEL_SWEEP_PROMPT = ("):
+            start = self.src.index(name)
+            block = self.src[start:self.src.index("\n# ", start)]
+            self.assertIn("VIP_PRIVATE_RULE", block, name)
+
+    def test_pins_in_test_panel_sweep_are_not_loosened(self):
+        """Honest note: test_panel_sweep test_2 pins a typed "refresh calendar" as a sweep (--mode sweep). The calendar route
+        contradicts it, so calendar-route.diff is HELD until Alan decides and that test is changed by him; this test only
+        records that the pin is still in place."""
+        pin = (REPO / "dev/tests/test_panel_sweep.py").read_text(encoding="utf-8")
+        self.assertIn('for m in ("refresh calendar", "sweep mail for ABC")', pin)
+        self.assertIn('self.assertEqual(run.get("kind"), "ask")', pin)
+
 
 
 if __name__ == "__main__":
