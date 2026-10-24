@@ -7354,6 +7354,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     txReady: () => txReady,
     typeFiling: () => typeFiling,
     typeWord: () => typeWord,
+    typedCalendar: () => typedCalendar,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
     undCommit: () => undCommit,
@@ -76134,12 +76135,13 @@ ${d5.text}`);
     }
     if (!res.ok && shared.RUN && shared.RUN.ctl) shared.RUN.ctl.abort();
   }
+  var typedCalendar = (q5, confirmed) => !confirmed && !SENDIMG.length && /^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(String(q5 || "").trim().replace(/\s+/g, " "));
   var askLive = async function(q5, confirmed) {
     const id2 = `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl);
+      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl, void 0, typedCalendar(q5, confirmed));
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -76726,7 +76728,7 @@ ${d5.text}`);
       askWorking(false);
       rbCancel();
       const j5 = await res.json().catch(() => ({}));
-      await say("ask creaite is still working on the last request. Stop it, or wait until it finishes.");
+      await say(j5.message && !j5.run ? j5.message : "ask creaite is still working on the last request. Stop it, or wait until it finishes.");
       if (j5.run && !shared.RUN) attachRun(j5.run);
       return;
     }
@@ -76737,6 +76739,13 @@ ${d5.text}`);
       const b5 = j5.budget || {};
       if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, plain);
       await say(oneLine(j5.message || "This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/, ""));
+      return;
+    }
+    if (plain && res.status === 400) {
+      askWorking(false);
+      rbCancel();
+      const j5 = await res.json().catch(() => ({}));
+      await say(oneLine(j5.message || "The calendar can't be refreshed now."));
       return;
     }
     if (!res.ok || !res.body) {
