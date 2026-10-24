@@ -191,6 +191,9 @@ export const mvMismatch=m=>m.state!=="achieved"&&MVRANK[m.state]<MVRANK[m.sug];
 /* what each view shows: the client sees client-visible milestones with their wording only (the client report's filter, in
    tracker.client_milestones, given here as cvis); Movement and the internal view show every one */
 export function mvVis(code,cli,move){ return mvAll(code).filter(m=>!cli||move||m.cvis); }
+/* #337: the Client view of a project whose milestones are all internal says so, rather than "0 achieved, 0 to come." over an empty line */
+export function mvNoneShown(code,cli){ const n=mvAll(code).length; return !!(cli&&n&&!mvVis(code,true,false).length); }
+export function mvNoneMsg(code){ const n=mvAll(code).length; return `<p class="mv-none">None of the ${n} milestone${n===1?" is":"s are"} shown to the client yet. Switch to Internal view to see ${n===1?"it":"them"}.</p>`; }
 export function mvOpen(code,cli,move){ return mvVis(code,cli,move).filter(m=>m.state!=="achieved").sort((a,b)=>(a.agr||a.fc||"9").localeCompare(b.agr||b.fc||"9")); }
 /* #286: a milestone marker on the Plan strip and the Movement list names its type first, "Milestone: …", on hover (data-tip) and to a screen reader */
 const MSW=typeWord("milestone");
@@ -269,7 +272,7 @@ export function mvCardHtml(p){ if(!shared.MVREADY) return '<div class="mv-card c
   return `<div class="${mvCardCls(cli)} mv-compact" id="mvCard"><div class="mv-head"><h2>Milestones</h2>${mvPill(cli)}<span class="sp"></span>
     <button type="button" class="mv-ib" id="mvSwap" data-mvact="aud" aria-pressed="${cli}" aria-label="${cli?"Switch to internal view":"Switch to client view"}" data-tip="${cli?"Switch to internal view":"Switch to client view"}">${ic("swap",{bare:true})}</button>
     <button type="button" class="mv-ib" id="mvPencil" data-mvpage="${code}" aria-label="Open milestones: Plan and Movement" data-tip="Open milestones: Plan and Movement">${ic("pencil",{bare:true})}</button></div>
-    ${any?mvPlan(code,cli,"card"):`<div class="mv-empty">No milestones yet. <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add a milestone</button></div>`}</div>`; }
+    ${mvNoneShown(code,cli)?mvNoneMsg(code):any?mvPlan(code,cli,"card"):`<div class="mv-empty">No milestones yet. <button type="button" class="mv-btn sm" data-mvpage="${code}" data-mvadd="1">${ic("plus")}Add a milestone</button></div>`}</div>`; }
 
 /* ---- the page: Milestones: Plan and Movement ---- */
 export function mvAnswer(code,list,cli){ const done=mvVis(code,cli,false).length-list.length, late=list.filter(m=>m.state==="overdue"), end=list[list.length-1]; let a="";
@@ -286,7 +289,7 @@ export function renderMilestones(){ const code=shared.MSCODE, p=P.find(x=>x.code
   if(shared.MV.view==="move") h+=`<div class="mv-card internal"><div class="mv-head"><h2>Movement</h2>${mvPill(false)}<span class="mv-tag warn">Internal only: never in client output</span></div>${mvMovement(code)}</div>`;
   else { const list=mvOpen(code,cli,false), any=mvAll(code).length;
     h+=`<div class="${mvCardCls(cli)}" id="mvPlanCard"><div class="mv-head"><h2>Plan</h2>${mvPill(cli)}</div>${cli?"":'<div class="mv-banner">Internal view includes internal-only milestones and a note where a state differs from what the dates suggest. Switch to Client view to see what a client sees.</div>'}
-      ${any?`<p class="mv-answer">${mvAnswer(code,list,cli)}</p><p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>${mvPlan(code,cli,"page")}`
+      ${mvNoneShown(code,cli)?mvNoneMsg(code):any?`<p class="mv-answer">${mvAnswer(code,list,cli)}</p><p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>${mvPlan(code,cli,"page")}`
         :`<div class="mv-empty">No milestones yet for ${esc(p.name)}. <button type="button" class="mv-btn sm" data-mvadd="1">${ic("plus")}Add milestone</button></div>`}</div>`; }
   putHTML(el,html`${raw(h)}</div>`); mvBindScroll(el); paintIcons(el); }
 
