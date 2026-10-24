@@ -38,14 +38,19 @@ diff, and is to be confirmed against the plain notes.
   29  #334  The Usage tab says the budget is off; in the ask panel a typed request is sent with no budget card or line (Chrome)
   30  #352  Today shows no stale-updates line and no Draft updates button, at 1400 and 900 px; the draft stays in Work
   31  #351  A past day on Today shows no follow-up chips and no Check or Process links under its meetings; today's Prep peek and
-            Intake's Check and Process are unchanged                                                         (own vault, Chrome)
+            Intake's Check and Process are unchanged once the waiting tail is opened (#340 folds it: opened by Show, the Arrived box,
+            Show: Waiting or a search; folded without, folded again when released)                       (own vault, Chrome)
   32  #338  The rules file every run reads is at most 60% of its 2.6.3 size, the reference file is there and the rules point to it, and
             every never clause survives; a mutant that drops one turns the check red                          (own vault, no browser)
+  33  #343  Show the waiting tail, tick a waiting meeting, Hide it: the bar says "0 selected, 1 hidden" and Later and Not needed
+            because... do not move the hidden meeting                                  EXPECTED FAILURE (Team Cap #343 H1; own vault, Chrome)
+  34  #343  People's Organisation and Role columns (headings included) keep a word on one line at 900 and 1400 px; a sibling of
+            check 5, narrowed to the two columns                                                  EXPECTED FAILURE (Team Cap #343 M1)
 
 How a check is wired (every class that changes data has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Design264, Words264, Figures264, Today264  the shared hand-check vault and Chrome; nothing is changed (Today264 sets the page's own data and puts it back)
-  Item264, Profile264, Card264, UsageOff264, PastDay264  a vault of its own, its server and Chrome (UsageOff264: the budget never switched on;
-                                   PastDay264: a fictional calendar of the past day and today, with every transcript state)
+  Item264, Profile264, Card264, UsageOff264, PastDay264, TickFold264  a vault of its own, its server and Chrome (UsageOff264: the budget never switched on;
+                                   PastDay264, TickFold264: a fictional calendar of the past day and today, with every transcript state)
   Routes264, Budget264             a vault of its own and its live server (the page's own token), no browser; Budget264's Claude is a stand-in
                                    (the budget is OFF by default: its checks switch it on the way Settings does; check 28 leaves it off)
   Commands264, Extraction264, Runs264, Rules264  a vault of its own and the engine's own code run in it (Runs264: a stand-in for the thread and the process)
@@ -94,7 +99,7 @@ REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 DASH = REPO / "system/templates/dashboard/src"
 
-KIND = {n: "scriptable" for n in range(1, 33)}
+KIND = {n: "scriptable" for n in range(1, 35)}
 LIVE_ONLY = {}        # check 24 runs on the stand-in; a real model over a real week's use is Alan's own
 
 
@@ -465,6 +470,37 @@ class Design264(HandcheckCase):
                 found[w] = self.b.eval(self.BROKEN_WORDS)
         self.note(5, f"words broken in the middle: {len(found[900])} at 900, {len(found[1400])} at 1400 ({', '.join(sorted(set(found[900]))[:4])})")
         self.assertEqual(found, {900: [], 1400: []}, f"words broken in the middle: {found}")
+
+    ORG_ROLE_WORDS = """(()=>{ const t=document.querySelector('#peopleTbl table'), heads=[...t.querySelectorAll('th')];
+      const cols=['Organisation','Role'].map(n=>({n, i:heads.findIndex(h=>h.textContent.trim().toLowerCase().indexOf(n.toLowerCase())===0)}));
+      const out=[], seen=[];
+      const broken=(node, tag)=>{ const re=/[^\\s]+/g; let m;
+        while ((m=re.exec(node.data))) {
+          if (/[-\\/@.:,;()]/.test(m[0]) || m[0].length<5) continue;
+          const r=document.createRange(); r.setStart(node,m.index); r.setEnd(node,m.index+m[0].length);
+          const rects=[...r.getClientRects()]; if (rects.length<2) continue;
+          if (Math.max(...rects.map(x=>x.top))-Math.min(...rects.map(x=>x.top))>4) out.push(tag+': '+m[0]);
+        } };
+      for (const c of cols) { if (c.i<0 || !heads[c.i].getClientRects().length) continue; seen.push(c.n);
+        for (const cell of [heads[c.i], ...[...t.querySelectorAll('tbody tr')].map(r=>r.children[c.i]).filter(Boolean)]) {
+          const w=document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+          for (let n; (n=w.nextNode()); ) if (n.parentElement.getClientRects().length) broken(n, c.n); } }
+      return {seen, out}; })()"""
+
+    @known("Team Cap #343 M1: People's Organisation and Role columns break words mid-word at 900 px, and the Organisation heading reads 'ORGANISATIO/N' at 1400 px")
+    def test_c34_people_organisation_and_role_do_not_break_in_the_middle(self):
+        """34. (#343 M1) People at 900 px and at 1400 px: the Organisation and Role columns, their headings included, keep a word on one
+        line (the heading was "ORGANISATIO/N" at 1400 px). A sibling of check 5, which looks at every word of the table; this one
+        looks at the two columns Team Cap named and says which column broke."""
+        found = {}
+        for w in (900, 1400):
+            with width(self, w):
+                self.people(w)
+                got = self.b.eval(self.ORG_ROLE_WORDS)
+                self.assertEqual(sorted(got["seen"]), ["Organisation", "Role"], f"the two columns are on screen at {w} px: {got}")
+                found[w] = got["out"]
+        self.note(34, f"Organisation and Role words broken in the middle: {len(found[900])} at 900, {len(found[1400])} at 1400 ({', '.join(sorted(set(found[900] + found[1400]))[:4])})")
+        self.assertEqual(found, {900: [], 1400: []}, f"words broken in the middle in Organisation or Role: {found}")
 
     def milestones_client(self, code, hidden):
         """The Client view of project `code`'s Milestones page and its cockpit card with its milestones cut down to `hidden` (all of them
@@ -1303,9 +1339,10 @@ MEETING_TIMES = [("09:00", "09:30", "Weekly sync", True), ("09:45", "10:30", "Pr
                  ("16:00", "16:30", "Planning huddle", True)]
 
 
-class PastDay264(HandcheckCase):
-    """Check 31. A vault of its own with a fictional calendar of about ten Teams meetings on the day before today and on today, and
-    every state the old follow-up chips showed (transcript ready, none, not transcribed, minutes made, not checked yet)."""
+class PastWorld264(HandcheckCase):
+    """The base of checks 31 and 33. A vault of its own with a fictional calendar of about ten Teams meetings on the day before today and
+    on today, and every state the old follow-up chips showed (transcript ready, none, not transcribed, minutes made, not checked yet).
+    No checks of its own."""
     own_vault = True
 
     def world(self):
@@ -1340,6 +1377,51 @@ class PastDay264(HandcheckCase):
         self.b.reload("typeof go==='function' && LIVE")
         return past.isoformat(), today.isoformat()
 
+    def intake(self):
+        """Intake, freshly drawn, as a person finds it: the waiting tail folded (the page's own start)."""
+        b = self.b
+        self.screen("intake-review")
+        b.wait("document.querySelector('#v-intake-review [data-ira=process]')", 20)
+        b.pump(0.3)
+
+    BUTTONS = """({process:document.querySelectorAll('#v-intake-review [data-ira=process]:not([disabled])').length,
+        check:document.querySelectorAll('#v-intake-review [data-ira=check]').length,
+        open:document.querySelectorAll('#v-intake-review [data-ira=open]').length,
+        waiting:document.querySelectorAll('#v-intake-review tr.irmeet[data-stage=arrived][data-state=waiting]').length,
+        head:(()=>{ const h=document.querySelector('#v-intake-review [data-irsec=waiting] h2'), k=h&&h.querySelector('[data-irfold=waiting]');
+          return h?{text:h.textContent.replace(/\\s+/g,' ').trim(), button:k?k.textContent.trim():null, expanded:k?k.getAttribute('aria-expanded'):null}:null; })()})"""
+
+    def buttons(self):
+        return self.b.eval(self.BUTTONS)
+
+    def open_fold(self, how, term="Retro"):
+        """Open the waiting tail the way a person does: how is 'show' (the Show link on the Waiting for the transcript heading), 'arrived'
+        (the Arrived box), 'filter' (Show: Waiting for the transcript) or 'search' (a word of a waiting meeting's title in the search)."""
+        b = self.b
+        if how == "show":
+            b.click("#v-intake-review [data-irfold=waiting]")
+        elif how == "arrived":
+            b.click("#v-intake-review [data-irstage=arrived]")
+        elif how == "filter":
+            b.eval("(()=>{ const s=document.querySelector('#v-intake-review [data-irshow]'); s.value='waiting'; s.dispatchEvent(new Event('change',{bubbles:true})); })()")
+        elif how == "search":
+            b.click("#irQ")
+            b.type(term)
+        b.pump(0.4)
+
+    def release_fold(self, how):
+        """Let go of the opener the way a person does: the Hide link, the Arrived box again, Show: All meetings, the search cleared."""
+        b = self.b
+        if how == "show":
+            b.click("#v-intake-review [data-irfold=waiting]")
+        elif how == "arrived":
+            b.click("#v-intake-review [data-irstage=arrived]")
+        elif how == "filter":
+            b.eval("(()=>{ const s=document.querySelector('#v-intake-review [data-irshow]'); s.value='all'; s.dispatchEvent(new Event('change',{bubbles:true})); })()")
+        elif how == "search":
+            b.eval("(()=>{ const q=document.querySelector('#irQ'); q.value=''; q.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.pump(0.4)
+
     def pick(self, iso):
         b = self.b
         b.eval("go('today')")
@@ -1356,11 +1438,19 @@ class PastDay264(HandcheckCase):
         b.wait("document.querySelectorAll('#dayMeets .dm').length>0", 15)
         b.pump(0.4)
 
+
+
+class PastDay264(PastWorld264):
+    """Check 31, in the past-day world."""
+
     def test_c31_a_past_day_on_today_has_no_follow_up_chips_or_links_and_intake_keeps_them(self):
         """31. (#351 b) On a past day, Today lists the meetings with their times, titles and projects and nothing under them: none of "No
         transcript", "Transcript ready", "Not checked yet", "Minutes made" (or "Draft in Review"), and no Check or Process link, at 1400
         and 900 px with no sideways scroll. Today is unchanged (a title still opens the Prep peek on hover) and Intake still offers
-        Process and Check again for the same meetings."""
+        Process and Check again for the same meetings: the meetings waiting for a transcript start folded in Intake (#340), so Check again
+        is not in view until the person opens them (the Show link on the Waiting for the transcript heading, the Arrived box, Show:
+        Waiting for the transcript, or a search that finds one); without that it is folded, and it folds again when the opener is
+        released."""
         b = self.b
         past, today = self.world()
         self.today_iso = today
@@ -1389,16 +1479,90 @@ class PastDay264(HandcheckCase):
         b.wait("document.querySelector('#dayMeets .dmpop')", 15)
         self.assertIn("Open the prep page", b.eval("document.querySelector('#dayMeets .dmpop').textContent"))
         b.call("Input.dispatchMouseEvent", type="mouseMoved", x=5, y=5)
-        # Intake keeps the jobs: the same meetings offer Process (transcript ready) and Check again (waiting for one)
-        self.screen("intake-review")
-        b.wait("document.querySelector('#v-intake-review [data-ira=process]')", 20)
-        intake = b.eval("""({process:document.querySelectorAll('#v-intake-review [data-ira=process]:not([disabled])').length,
-            check:document.querySelectorAll('#v-intake-review [data-ira=check]').length,
-            rows:[...document.querySelectorAll('#v-intake-review [data-ira=process]')].map(e=>(e.closest('tr,li,.ir-row,[data-id]')||e.parentElement).innerText.replace(/\\s+/g,' ').slice(0,60))})""")
-        self.assertGreaterEqual(intake["process"], 2, f"Intake offers Process for the meetings with a transcript ready: {intake}")
-        self.assertGreaterEqual(intake["check"], 1, f"Intake offers Check again for a meeting still waiting for its transcript: {intake}")
+        # Intake keeps the jobs (#340: the waiting tail starts folded, so Check again is in view only once the person opens the fold)
+        self.intake()
+        folded = self.buttons()
+        self.assertGreaterEqual(folded["process"], 2, f"Intake offers Process for the meetings with a transcript ready: {folded}")
+        self.assertGreaterEqual(folded["open"], 1, f"Intake offers Check them for the meeting whose suggestions are waiting (work stays up): {folded}")
+        self.assertEqual(folded["check"], 0, f"the waiting meetings are folded when Intake opens, so no Check again is in view: {folded}")
+        self.assertEqual(folded["waiting"], 0, f"no waiting row is drawn while the tail is folded: {folded}")
+        self.assertIsNotNone(folded["head"], "the folded tail still has its Waiting for the transcript heading")
+        self.assertRegex(folded["head"]["text"], r"Waiting for the transcript\s+\d+")
+        self.assertEqual((folded["head"]["button"], folded["head"]["expanded"]), ("Show", "false"), folded)
+        seen_open, term = {}, ""
+        for how, words in (("show", "the Show link"), ("arrived", "the Arrived box"), ("filter", "Show: Waiting for the transcript"),
+                           ("search", "a search for a waiting meeting")):
+            self.open_fold(how, term)
+            got = seen_open[how] = self.buttons()
+            if how == "show":                         # the search then looks for a meeting that offers Check again (a title the demo has)
+                term = b.eval("(()=>{ const r=document.querySelector('#v-intake-review [data-ira=check]').closest('tr[data-irm]'); return D.intake_review.meetings.find(m=>m.id===r.dataset.irm).title; })()")
+            self.assertGreaterEqual(got["check"], 1, f"Intake offers Check again for a meeting still waiting for its transcript once {words} opens the fold: {got}")
+            self.assertGreater(got["waiting"], 0, f"the waiting rows are drawn ({words}): {got}")
+            self.assertLessEqual(got["check"], got["waiting"], f"Check again is on waiting rows only ({words}): {got}")
+            if how in ("show", "arrived"):            # the Show link adds the tail to the work, and the Arrived box keeps the ready rows beside it
+                self.assertGreaterEqual(got["process"], 2, f"Process is still offered ({words}): {got}")
+            self.release_fold(how)
+            back = self.buttons()
+            self.assertEqual((back["check"], back["waiting"]), (0, 0), f"the tail folds again when {words} is released: {back}")
+            self.assertGreaterEqual(back["process"], 2, f"Process is still offered after {words} is released: {back}")
+            self.assertEqual((back["head"] or {}).get("button"), "Show", back)
+        # the Hide link folds it again after Show
+        self.open_fold("show")
+        self.assertEqual(self.buttons()["head"]["button"], "Hide")
+        self.release_fold("show")
+        self.assertEqual(self.buttons()["check"], 0)
         self.note(31, f"past day {past} at 1400 and 900 px: {seen[1400]['n']} meetings, no chip, no Check or Process, no sideways scroll; "
-                      f"today's title opens the Prep peek; Intake shows {intake['process']} Process and {intake['check']} Check again")
+                      f"today's title opens the Prep peek; Intake: waiting tail folded ({folded['process']} Process, 0 Check again, Show on the heading), "
+                      f"opened by Show / the Arrived box / Show: Waiting / a search it shows {seen_open['show']['check']} Check again and "
+                      f"{seen_open['show']['process']} Process, and folds again when released; {folded['open']} Check them stays up throughout")
+
+
+class TickFold264(PastWorld264):
+    """Check 33. The past-day world's Intake, for the tick bar and a folded waiting tail."""
+
+    def tick_bar(self):
+        return self.b.eval("(()=>{ const t=document.querySelector('[data-irtickbar]'); return t?t.innerText.replace(/\\s+/g,' ').trim():null; })()")
+
+    def waiting_ids(self):
+        return self.b.eval("D.intake_review.meetings.filter(m=>m.stage==='arrived'&&m.state==='waiting'&&m.src!=='draft').map(m=>m.id)")
+
+    def moved(self, mid):
+        """Whether the meeting has been set aside (Later or Not needed): it has left the list, or the server wrote it to the cleared file."""
+        self.b.pump(1.5)
+        gone = self.b.eval(f"!D.intake_review.meetings.some(m=>m.id==={json.dumps(mid)})")
+        f = self.vault / "system/staging/intake-cleared.json"
+        return gone or (f.is_file() and mid in f.read_text(encoding="utf-8"))
+
+    @known("Team Cap #343 H1: TickBar does not redraw on a fold")
+    def test_c33_the_tick_bar_does_not_act_on_a_meeting_the_fold_has_hidden(self):
+        """33. (#343 H1) Show the waiting tail, tick a waiting meeting, press Hide: the bar says "0 selected, 1 hidden", and Later and
+        Not needed because... do not move the hidden meeting (the bar was drawn for the tick and kept its buttons)."""
+        b = self.b
+        self.world()
+        self.intake()
+        problems, said = [], {}
+        for action in ("later", "reason"):
+            self.intake()                                # a fresh page: the tail folded, nothing ticked
+            self.open_fold("show")
+            mid = self.waiting_ids()[0 if action == "later" else 1]
+            b.click(f'#v-intake-review input.irtick[data-irtick-box="{mid}"]')
+            b.wait("(document.querySelector('[data-irtickbar]')||{innerText:''}).innerText.indexOf('1 selected')>=0", 10)
+            self.release_fold("show")                    # Hide
+            self.assertEqual(self.buttons()["waiting"], 0, "the tail folded")
+            bar = said[action] = self.tick_bar()
+            if not (bar and "0 selected" in bar and "1 hidden" in bar):
+                problems.append(f"after Hide the bar says {bar!r}, not '0 selected, 1 hidden'")
+            if bar:
+                if action == "later":
+                    b.eval("(()=>{ const x=document.querySelector('[data-ira=laterall]'); if (x && !x.disabled) x.click(); })()")
+                else:
+                    b.eval("(()=>{ const x=document.querySelector('[data-ira=reasonall]'); if (x && !x.disabled) x.click(); })()")
+                    b.pump(0.4)
+                    b.eval("(()=>{ const x=document.querySelector('.cxmenu .pkopt'); if (x) x.click(); })()")
+                if self.moved(mid):
+                    problems.append(f"{'Later' if action == 'later' else 'Not needed because'} moved the hidden meeting")
+        self.note(33, f"tick a waiting meeting, Hide the tail: the bar says {said['later']!r}")
+        self.assertEqual(problems, [], "; ".join(problems))
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
