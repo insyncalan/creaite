@@ -1,6 +1,5 @@
-"""#183 (2.6): the live server's Draft email routes (POST /api/email/draft, /api/email/outlook-access), with live_server.diff applied.
+"""#183 (2.6): the live server's Draft email routes (POST /api/email/draft, /api/email/outlook-access). The 2.6.3 release carries them.
 
-Move to dev/tests/ when Jarvis applies dev/proposals/draft-delivery/live_server.diff.
 Run: python3 dev/tests/test_draft_route.py   (needs Google Chrome; skipped otherwise)
 A stand-in `claude` (never a real model or Microsoft 365 call) answers in the stream-json shape: it calls the create-draft tool with
 the arguments in its prompt and gives a fixed tool result (made, or refused, as its .mode file says), and keeps its argv.
@@ -13,7 +12,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-for up in HERE.parents:                       # run from dev/tests/ or from dev/proposals/draft-delivery/
+for up in HERE.parents:                       # found from any depth
     if (up / "dev" / "tests" / "live_browser.py").exists():
         sys.path.insert(0, str(up / "dev" / "tests"))
         sys.path.insert(0, str(up / "system" / "scripts"))
