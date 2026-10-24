@@ -70,6 +70,21 @@ export function pdGroup(list, g, projectName) {
 
 /** The key a group's collapsed state is kept under: the grouping and the value (an organisation or a project code), never a person.
     @param {string} g @param {string} v @param {string} [sub] @param {string} [sv] */
+/** (#341 hardening) Forget folded groups that no longer exist: a key holds an organisation, role or project, so one that nobody has
+    any more must not stay in this browser for good. Keeps only the keys the current grouping (and sub-grouping) can make from everyone.
+    With no grouping nothing is touched (the folds come back when a grouping is chosen again). @template T
+    @param {PdState} st @param {(T & PdPerson)[]} everyone @param {(code: string) => string} projectName @returns {number} how many were dropped */
+export function pdPrune(st, everyone, projectName) {
+  if (st.group === "none") return 0;
+  const live = new Set();
+  for (const g of pdGroup(everyone, st.group, projectName)) {
+    live.add(pdKey(st.group, g.key));
+    if (st.sub !== "none") for (const g2 of pdGroup(g.items, st.sub, projectName)) live.add(pdKey(st.group, g.key, st.sub, g2.key));
+  }
+  let n = 0;
+  for (const k of Object.keys(st.collapsed)) if (!live.has(k)) { delete st.collapsed[k]; n++; }
+  return n;
+}
 export const pdKey = (g, v, sub, sv) => `${g}|${v}${sub ? `|${sub}|${sv}` : ""}`;
 
 /** The columns to draw, in order: the saved ones that exist, Name first and always. @param {PdState} st */

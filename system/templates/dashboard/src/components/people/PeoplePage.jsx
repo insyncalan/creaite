@@ -20,7 +20,7 @@ import { addPerson, inRegister, missingFlag, namedIn, newFilter, personPasses, r
 import { Count, Dash, DisplayButton, NameCell, PeopleApplied, PeopleTools, openPersonForm, peopleWord, peoplePlural, useFields } from "./PeopleParts.jsx";
 import { Icon } from "../Icon.jsx";
 import { bindPeopleDisplay } from "./PeopleDisplay.js";
-import { PD_COLS, PD_SORTS, pdColumns, pdGroup, pdKey } from "../../core/peopleDisplay.js";
+import { PD_COLS, PD_SORTS, pdColumns, pdGroup, pdKey, pdPrune } from "../../core/peopleDisplay.js";
 import { pdSave, pdState, pdSyncSort } from "../../stores/peopleDisplay.js";
 
 /** @typedef {import("../../stores/peopleRegister.js").PersonRow} PersonRow */
@@ -159,7 +159,8 @@ function rowsOf(L, st, cols) {
 export function PeoplePage(_props) {
   pdSyncSort();     /* #360: the sort is read from this browser once, and saved after a change */
   const s = PLST.s, tab = ptabOf(shared.PTAB), st = pdState(), cols = pdColumns(st);
-  const all = registerRows(), F = useFields(all, s, {}), hit = all.filter(x => personPasses(x, F, s));
+  const all = registerRows(); if (pdPrune(st, all, pName)) pdSave();   /* #341 hardening: folds of groups nobody is in any more are dropped */
+  const F = useFields(all, s, {}), hit = all.filter(x => personPasses(x, F, s));
   const so = sortOf(), f = SORTS[so.col], dir = so.dir === "asc" ? 1 : -1;
   const L = hit.filter(IN_TAB[tab]).sort((a, b) => (a.me ? -1 : b.me ? 1 : 0)   /* you first, always */ || (() => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * dir; })() || a.n.localeCompare(b.n));
   const need = all.filter(IN_TAB.att).length;
