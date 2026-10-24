@@ -2,6 +2,43 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.5
+
+2.6.5 (also called 2.6.4b) contains all of 2.6.4. The headline: Intake leads with the work you have to do, People gets the same Display menu as Work, and a round of smaller design fixes makes the screens calmer and easier to read.
+
+### Intake
+- **The work comes first.** The decisions to approve can be reached without scrolling in all three views. Meetings still waiting for a transcript fold away under "Waiting for the transcript". Mail and Teams shows five and a Show all. (#340)
+- **A clear Intake names the next job** with one button. The Week ahead offers tomorrow. Later and Not needed appear only when they hold something. (#356)
+- **Ticks no longer hide behind a folded waiting meeting.** Folding it, pressing Esc in the search box and changing Group by all clear them.
+
+### People
+- **A Display menu like Work's.** Group by, sub-group, order by (with reverse) and properties, and press D to open it. People fits at 900 px. (#360)
+
+### Saving and asking
+- **A calm confirmation on a bulk save.** It says "Saved N changes" with one Undo, and the note about the backup is a hover. (#357)
+- **The ask creaite box** has a plain accent border when you click into it, with no turning gradient. (#359)
+
+### Design fixes
+- **Larger click targets.** The help button, evidence, row ID and source links are 24 px, and nothing is under 12 px on the screens that changed. (#343)
+- **Fewer stray words.** No one-word last lines, no stray dots in Review's line, Work hides empty groups and says "overdue" once, the health numbers on the cockpit sit in one row, top risks show an owner, and Step 1 is shorter. (#343)
+- **Files** says Word, Transcript or Excel for a file's type. (#343)
+
+### Behind the scenes
+- A failed Track change clears the Filed note, and renaming minutes follows an update item's source. (#355)
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+- Walk Today, Intake, Review, Work, People, Files and the cockpit once, looking for anything crowded or oddly worded.
+
+### Good to know
+- A file path still shows in a few places, for example the hover on the portfolio folder in Files and the folder on a project's Settings page.
+- Help still says past days on Today show each meeting's follow-up. That has been out of date since 2.6.4; use Intake for those jobs.
+- After you edit an item, the top can still say "Saved for Review" while the bar below says nothing is saved until you press Save.
+- The figure check does not look at the year when the transcript gives a date as a day and month in words.
+- The count in the toast after Approve minutes can say more than was saved when a ticked row is held back in Review.
+- In a rare crash recovery (a stopped run that started its work in the same minute as an earlier suggestion), the earlier minutes can drop out of Review with nothing on the page showing it.
+- Not in this release: the design decisions and one more fix. They come later.
+
 ## creaite 2.6.4
 
 2.6.4 contains all of 2.6.3. The headline: the words on screen and in Help are plain (suggestions, save, your project record, your creaite folder, a mail and Teams check), there is a weekly budget for creaite's own AI use that stays off until you switch it on, a set of design fixes, rules for each run that are half the size, and a page that has gone stale is now turned away instead of deciding the wrong item. A few older wordings and paths are still on screen in places; they are listed under Good to know.
