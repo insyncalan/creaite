@@ -73,7 +73,8 @@ class Queue(unittest.TestCase):
     def test_off_in_ci_and_when_zero(self):
         self.assertEqual(q.runs_allowed({"CI": "1"}), 0)
         self.assertEqual(q.runs_allowed({"CREAITE_SUITE_RUNS": "off"}), 0)
-        self.assertEqual(q.runs_allowed({}), 1)
+        self.assertEqual(q.runs_allowed({}), 0)                      # opt-in: off unless asked for
+        self.assertEqual(q.runs_allowed({"CREAITE_SUITE_RUNS": "1"}), 1)
         self.assertEqual(q.runs_allowed({"CREAITE_SUITE_RUNS": "2"}), 2)
 
     def test_small_runs_never_queue(self):

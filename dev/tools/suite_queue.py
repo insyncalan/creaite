@@ -2,12 +2,17 @@
 machine otherwise run side by side, every file runs several times slower, and nobody finishes sooner. This lets the runs take
 turns, first come first served, like browser_slots does for Chrome.
 
+OPT-IN, UNPROVEN (Alan, 25-10-2026): it is OFF unless CREAITE_SUITE_RUNS is set to a number (1 = one big run at a time). In a clean
+test (two simultaneous runs of three client-gate files on a 12-core machine) it did not save total time: side by side finished both
+in 238 s, queued took 337 s, though the first run finished sooner (186 s). It may pay off when the combined load saturates the
+machine (full suites with Chrome); that comparison is still to be made on a quiet machine.
+
 `wait_turn()` is called by run_tests.py before a run of CREAITE_QUEUE_MIN_FILES files or more (default 60); smaller runs (a few
 files, --changed) never wait. A run takes a ticket (a file in the system temp folder, `creaite-suite-queue/<time>-<pid>`) and
 holds an exclusive flock on it until the process ends, so a crash frees its place at once. It may start when fewer than
-CREAITE_SUITE_RUNS (default 1) live tickets are older than its own. It says where it stands while it waits.
+CREAITE_SUITE_RUNS live tickets are older than its own. It says where it stands while it waits.
 
-Off in CI (CI or GITHUB_ACTIONS set: a runner is one job's), with CREAITE_SUITE_RUNS=0 or "off", and where there is no flock.
+Off by default, in CI (CI or GITHUB_ACTIONS set: a runner is one job's), with CREAITE_SUITE_RUNS=0 or "off", and where there is no flock.
 CREAITE_QUEUE_WAIT: seconds to wait (default 14400, four hours), then it fails loudly naming the runs ahead.
 """
 import atexit
@@ -22,7 +27,7 @@ try:
 except ImportError:                 # Windows: no flock; no queue there
     fcntl = None
 
-DEFAULT_RUNS = 1
+DEFAULT_RUNS = 0                   # off unless CREAITE_SUITE_RUNS says how many big runs may go at once
 DEFAULT_WAIT = 14400
 DEFAULT_MIN_FILES = 60
 _ticket = []                        # this process's ticket (kept so the lock lives until exit)
