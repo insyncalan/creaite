@@ -96,6 +96,15 @@ class AskPath(unittest.TestCase):
     def test_a_confirmed_request_is_never_held(self):
         self.assertTrue(ask({"confirmed": "Apply these changes"}, status(500, at_limit="stop"))[1])
 
+    def test_off_by_default_holds_nothing(self):
+        """The budget is OFF by default: with the default settings (and only a real true switching it on) nothing is held, however much is used."""
+        rows = [{"at": "2026-10-20T09:00:00", "cost_usd": 5000}]
+        self.assertFalse(ai_budget.settings({})["enabled"])
+        self.assertFalse(ai_budget.settings({"enabled": "true"})["enabled"])        # text is not a switch
+        self.assertFalse(ai_budget.settings({"enabled": 1})["enabled"])
+        st = ai_budget.status(rows, ai_budget.settings({}), WED)
+        self.assertTrue(ask({}, st)[1])
+
     def test_off_and_faults_hold_nothing(self):
         self.assertTrue(ask({}, status(500, enabled=False))[1])
         h = FakeHandler()
