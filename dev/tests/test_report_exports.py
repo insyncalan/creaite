@@ -197,7 +197,7 @@ class Word(Base):
             self.in_order(text, ["Steering", "Minutes of Meeting", "16 October 2026, 10:00", "Example Programme",
                                  "Attendees: Sam Patel; Ola Berg", "Executive summary"])
             self.assertNotIn("{{", text)
-        self.assertIn("Distributed", got["distributed"])
+        self.assertIn("Shareable", got["distributed"])
         for same in ("Example Programme", "10:00", "Sam Patel; Ola Berg"):     # the page (HTML, so PDF) says the same
             self.assertIn(same, got["page"], same)
         for gone in ("Attendees", "Sam Patel", "Ola Berg", "10:00"):       # a hidden header is on no output: leak test
