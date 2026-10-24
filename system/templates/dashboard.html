@@ -38496,7 +38496,10 @@ system/scripts/run launch.py agent ${what}`;
     for (const op2 of reconcileOps(doc, plan)) {
       if (how.only && !how.only(op2.n)) continue;
       const r5 = await change2(op2);
-      if (!r5.ok) return { ok: false, message: r5.message, made, done };
+      if (!r5.ok) {
+        if (how.approve !== false) dismissFiled();
+        return { ok: false, message: r5.message, made, done };
+      }
       made++;
       done.push(op2);
     }
@@ -38513,6 +38516,7 @@ system/scripts/run launch.py agent ${what}`;
     }
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own, expects, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });
     forgetRenamed(v5.proposal);
+    if (!r4 || !r4.ok) dismissFiled();
     if (r4 && !r4.ok && REVIEW_CHANGED.test(r4.message || "")) {
       await reloadData();
       return { ok: false, message: STALE_ROW_MSG, made };
@@ -76040,7 +76044,7 @@ ${d5.text}`);
         return;
       }
       if (go3) {
-        const r4 = await api("/api/ask/queue", { op: "resume" });
+        const r4 = await api("/api/ask/queue", { op: "resume", run_now: true });
         if (r4.ok && r4.run) attachRun(r4.run);
         else if (r4.message) snack(oneLine(r4.message));
       }
@@ -81782,6 +81786,7 @@ Next: `;
         "designation",
         "diagCardHtml",
         "diagHook",
+        "dismissFiled",
         "dispFoot",
         "dispOpen",
         "dispOrder",
@@ -81833,6 +81838,7 @@ Next: `;
         "fitFilterBar",
         "flip",
         "flowCard",
+        "forgetRenamed",
         "fpCanon",
         "fpSha256",
         "fuApply",
@@ -82016,6 +82022,7 @@ Next: `;
         "mdChat",
         "mdHtml",
         "mdInline",
+        "meNames",
         "meetingOfFile",
         "meetingRoute",
         "memLineEdit",
@@ -82209,6 +82216,7 @@ Next: `;
         "putHTML",
         "putHtml",
         "query",
+        "queueResume",
         "quip",
         "quipNow",
         "railIconSize",
