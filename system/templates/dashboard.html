@@ -71040,11 +71040,11 @@ ${d5.text}`);
   var DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
   var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
   var DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
-  var MONTHS2 = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  var FIG_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
   function figuresMissing(text, said2) {
     const low = String(said2 || "").toLowerCase(), out = /* @__PURE__ */ new Set();
     const rest = String(text || "").replace(DATE_FIG, (all, d5, m5) => {
-      const word = MONTHS2[+m5 - 1] || "", day = new RegExp(`\\b0?${+d5}(?:st|nd|rd|th)?\\b`);
+      const word = FIG_MONTHS[+m5 - 1] || "", day = new RegExp(`\\b0?${+d5}(?:st|nd|rd|th)?\\b`);
       if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
       return " ";
     });

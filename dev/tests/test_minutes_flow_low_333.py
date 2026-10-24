@@ -7,7 +7,6 @@ duplicate only on a close match (see test_smart_updates).
 Run: python3 dev/tests/test_minutes_flow_low_333.py      (needs node)
 """
 import json
-import re
 import shutil
 import subprocess
 import unittest

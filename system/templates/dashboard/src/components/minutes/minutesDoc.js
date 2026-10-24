@@ -111,7 +111,7 @@ export function leftOut(doc, held) {
 const DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
 const FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
 const DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
-const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const FIG_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
 /** #333: the figures a line says that its turn doesn't. A date shown as 20-11-2026 is one figure and is said when the turn has
     its day and month in words ("20th of November") or in numbers; it is never split into 20, 11 and 2026.
@@ -119,7 +119,7 @@ const MONTHS = ["january", "february", "march", "april", "may", "june", "july", 
 export function figuresMissing(text, said) {
   const low = String(said || "").toLowerCase(), out = new Set();
   const rest = String(text || "").replace(DATE_FIG, (all, d, m) => {
-    const word = MONTHS[+m - 1] || "", day = new RegExp(`\\b0?${+d}(?:st|nd|rd|th)?\\b`);
+    const word = FIG_MONTHS[+m - 1] || "", day = new RegExp(`\\b0?${+d}(?:st|nd|rd|th)?\\b`);
     if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
     return " ";
   });
